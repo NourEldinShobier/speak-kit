@@ -296,7 +296,6 @@ function TitleBar(p: { s: AppState; canBack: boolean; canFwd: boolean; onBack():
       <div className="sk-title__l">
         <span className="sk-brand">
           <Logo size={20} />
-          Speak Kit
         </span>
         <IconButton name="layout-sidebar" label="Toggle sidebar" size={28} onClick={p.onToggleSide} />
         <IconButton name="chevron-left" label="Back" size={28} disabled={!p.canBack} onClick={p.onBack} />
