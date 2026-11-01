@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, IconButton, Icon, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
+import { Button, IconButton, Icon, Logo, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import type { Command } from "../shared/palette";
-import { api, Logo, useAppState, usePreview, useVisible } from "./ui";
+import { api, useAppState, usePreview, useVisible } from "./ui";
 import { BrowserPage, Engines, Home, PreviewCtx, usePlayer, Voices } from "./pages";
 import { Settings, SETTINGS_NAV } from "./settings";
 import { Palette } from "./Palette";

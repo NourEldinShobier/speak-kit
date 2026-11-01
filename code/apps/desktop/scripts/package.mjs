@@ -5,8 +5,9 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { icoFromBgra, importedPackages } from "./stage-lib.mjs";
+import { fileURLToPath } from "node:url";
+import { ICO_SIZES, logoPng } from "./icons-lib.mjs";
+import { icoFromPngs, importedPackages } from "./stage-lib.mjs";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const code = path.resolve(desktop, "../..");
@@ -96,10 +97,9 @@ if (existsSync(ort)) {
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
 if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (d !== "win32_x64") rm(path.join(koffiBuild, d));
 
-// 3. icon from the same drawing as the tray
+// 3. installer icon, rasterised from the logo SVGs
 mkdirSync(res, { recursive: true });
-const { logoBitmap } = await import(pathToFileURL(path.join(desktop, "src/main/icon-bitmap.ts")).href);
-writeFileSync(path.join(res, "icon.ico"), icoFromBgra(logoBitmap(256), 256));
+writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) => ({ size, png: logoPng(size) }))));
 
 // 4. electron-builder
 console.log("== electron-builder");

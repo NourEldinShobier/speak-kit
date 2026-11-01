@@ -68,19 +68,6 @@ html[data-hidden] *::after {
   font-size: 13px;
   margin-right: 8px;
 }
-.sk-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5px;
-  border-radius: 6px;
-  background: var(--accent-default);
-}
-.sk-logo i {
-  display: block;
-  border-radius: 1px;
-  background: var(--text-on-accent);
-}
 .sk-search {
   height: 30px;
   width: 420px;

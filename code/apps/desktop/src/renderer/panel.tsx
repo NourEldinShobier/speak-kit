@@ -1,11 +1,11 @@
 import { createRoot } from "react-dom/client";
-import { Button, IconButton, ProgressBar, StatusPill } from "@speakkit/ui";
+import { Button, Logo, IconButton, ProgressBar, StatusPill } from "@speakkit/ui";
 import "@speakkit/ui/lumen.css";
 import "./float.css";
 import { engineView } from "../shared/engine-view";
 import { exportRunning } from "../shared/export";
 import { clock, statusLine } from "../shared/reader";
-import { api, Logo, useAppState, useTheme } from "./ui";
+import { api, useAppState, useTheme } from "./ui";
 
 /** Left click on the tray icon: what is playing, what is next, what is rendering, and the two actions people reach for. */
 function Panel() {

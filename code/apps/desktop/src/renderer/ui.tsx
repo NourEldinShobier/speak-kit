@@ -42,16 +42,6 @@ export function useVisible(): boolean {
   return vis;
 }
 
-export function Logo({ size = 24 }: { size?: number }) {
-  return (
-    <span className="sk-logo" style={{ width: size, height: size, gap: Math.max(1.5, size * 0.07) }} aria-hidden>
-      {[0.28, 0.5, 0.7, 0.42, 0.22].map((h, i) => (
-        <i key={i} style={{ height: size * h, width: Math.max(2, size * 0.08) }} />
-      ))}
-    </span>
-  );
-}
-
 export const formatBytes = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${Math.round(n / 1e6)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
 
 const mask = (t: string) => (t ? `${"•".repeat(14)}-${t.slice(-4)}` : "starting…");

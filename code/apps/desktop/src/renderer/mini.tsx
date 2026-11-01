@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { IconButton, ProgressBar } from "@speakkit/ui";
+import { IconButton, Logo, ProgressBar } from "@speakkit/ui";
 import "@speakkit/ui/lumen.css";
 import "./float.css";
 import { clock, statusLine } from "../shared/reader";
 import { ChunkPlayer, type AudioLike } from "./player";
-import { api, Logo, useAppState, useTheme } from "./ui";
+import { api, useAppState, useTheme } from "./ui";
 
 /** The mini player owns the audio output: main sends sentences here and follows the start and end events. */
 const player = new ChunkPlayer((rate) => new AudioContext({ sampleRate: rate }) as unknown as AudioLike, {

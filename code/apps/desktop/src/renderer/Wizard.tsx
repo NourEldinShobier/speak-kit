@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { InstallExtension } from "./pages";
-import { Banner, Button, Icon, LoadingLabel, ProgressBar, SettingRow, SettingsSection, Stepper, StatusPill, Toggle, type IconName } from "@speakkit/ui";
+import { Banner, Logo, Button, Icon, LoadingLabel, ProgressBar, SettingRow, SettingsSection, Stepper, StatusPill, Toggle, type IconName } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
-import { api, Logo, TokenField, usePreview } from "./ui";
+import { api, TokenField, usePreview } from "./ui";
 
 const STEPS = ["Welcome", "Voice engine", "Download", "Connect browser", "Done"];
 const MODEL_MB = 177;

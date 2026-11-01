@@ -7,8 +7,8 @@ const gz = (file) => gzipSync(readFileSync(file), { level: 9 }).length;
 
 /** Budgets in KB of gzip. Pages count their JS and CSS as the HTML loads them (script + modulepreload), not chunks loaded later on demand. */
 export const BUDGET_KB = {
-  popup: 120,
-  options: 120,
+  popup: 123, // was 120 before the Voice hub logo data (about 2 KB gzip)
+  options: 123,
   sidepanel: 100,
   offscreen: 14,
   background: 8,

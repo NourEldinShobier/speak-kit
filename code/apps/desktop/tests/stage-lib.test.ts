@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { icoFromBgra, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
+import { icoFromPngs, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -30,19 +30,17 @@ describe("importedPackages", () => {
   });
 });
 
-describe("icoFromBgra", () => {
-  it("writes an ICO header, a 32-bit DIB and flips the rows bottom-up", () => {
-    const size = 2;
-    const px = Buffer.from([1, 1, 1, 255, 2, 2, 2, 255, 3, 3, 3, 255, 4, 4, 4, 255]);
-    const ico = icoFromBgra(px, size) as Buffer;
-    expect([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([0, 1, 1]);
-    expect([ico[6], ico[7], ico.readUInt16LE(12)]).toEqual([2, 2, 32]);
-    const dibLen = ico.readUInt32LE(14);
-    expect(ico.length).toBe(22 + dibLen);
-    expect(ico.readUInt32LE(22)).toBe(40);
-    expect(ico.readInt32LE(30)).toBe(4); // height counts image and mask
-    // bottom row (pixels 3, 4) comes first
-    expect([ico[62], ico[66]]).toEqual([3, 4]);
-    expect([ico[70], ico[74]]).toEqual([1, 2]);
+describe("icoFromPngs", () => {
+  it("writes an ICO directory pointing at each PNG; 256 px is stored as 0", () => {
+    const a = Buffer.from("aaaa");
+    const b = Buffer.from("bbbbbb");
+    const ico = icoFromPngs([
+      { size: 16, png: a },
+      { size: 256, png: b },
+    ]) as Buffer;
+    expect([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([0, 1, 2]);
+    expect([ico[6], ico[7], ico.readUInt32LE(14), ico.readUInt32LE(18)]).toEqual([16, 16, 4, 38]);
+    expect([ico[22], ico[23], ico.readUInt32LE(30), ico.readUInt32LE(34)]).toEqual([0, 0, 6, 42]);
+    expect(ico.subarray(38).toString()).toBe("aaaabbbbbb");
   });
 });

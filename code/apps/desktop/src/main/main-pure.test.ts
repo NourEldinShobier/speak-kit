@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { authedCall, emptyPairing } from "./pairing";
-import { logoBitmap } from "./icon-bitmap";
+import { APP_ICON_PNG, TRAY_ICON_PNG } from "./icon-data";
 import { parseConfig } from "../shared/schemas";
 
 const req = (headers: Record<string, string>, localPort = 5000) => ({ headers, socket: { localPort } }) as never;
@@ -18,16 +18,16 @@ describe("pairing detection", () => {
   });
 });
 
-describe("tray icon bitmaps", () => {
-  it("every state is a different 32x32 BGRA image; asleep is grey, error has a red dot", () => {
-    const px = (b: Buffer, x: number, y: number) => [...b.subarray((y * 32 + x) * 4, (y * 32 + x) * 4 + 4)];
-    const normal = logoBitmap(32, "normal");
-    expect(normal.length).toBe(32 * 32 * 4);
-    expect(px(normal, 8, 8)).toEqual([0xf5, 0x57, 0x24, 255]); // brand blue, BGRA
-    expect(px(logoBitmap(32, "asleep"), 8, 8)).toEqual([0x85, 0x7d, 0x7a, 255]); // grey
-    expect(px(logoBitmap(32, "error"), 26, 26)).toEqual([0x5a, 0x55, 0xf2, 255]); // red dot, bottom right
-    const states = ["normal", "working", "asleep", "error"] as const;
-    expect(new Set(states.map((s) => logoBitmap(32, s).toString("base64"))).size).toBe(4);
+describe("app and tray icons", () => {
+  const dims = (b64: string) => {
+    const png = Buffer.from(b64, "base64");
+    return [png.subarray(1, 4).toString(), png.readUInt32BE(16), png.readUInt32BE(20)];
+  };
+  it("the app icon is a 256x256 PNG and every tray state is its own 32x32 PNG", () => {
+    expect(dims(APP_ICON_PNG)).toEqual(["PNG", 256, 256]);
+    expect(Object.keys(TRAY_ICON_PNG).sort()).toEqual(["asleep", "attention", "error", "normal", "paused", "working"]);
+    for (const b64 of Object.values(TRAY_ICON_PNG)) expect(dims(b64)).toEqual(["PNG", 32, 32]);
+    expect(new Set(Object.values(TRAY_ICON_PNG)).size).toBe(6);
   });
 });
 
