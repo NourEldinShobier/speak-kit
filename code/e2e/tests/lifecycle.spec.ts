@@ -9,6 +9,8 @@ const health = async (app: App) =>
   (await (await fetch(`http://127.0.0.1:${app.port}/v1/health`, { headers: { Authorization: `Bearer ${app.token}` } })).json()) as {
     engine: { state: string; idleUnloadAtMs?: number | null };
   };
+// The idle windows below are short to keep the specs quick. A slow runner needs longer ones: opening a page can take more than a window.
+const SCALE = Number(process.env.E2E_TIME_SCALE ?? 1);
 const warms = (app: App) => app.hits("/v1/engine/warm");
 /** Read the open page through the service worker (no popup, so no warm request). */
 const readTab = async (ext: Ext, page: Page) => ext.bg({ t: "read-tab", tabId: await ext.tabId(page), mode: "page" });
@@ -120,7 +122,7 @@ test.describe("model lifecycle: unloaded", () => {
   });
 
   test("the engine unloads when idle, health says so, and the next play reloads it without an error", async ({ ext }) => {
-    const app = await startApp({ idleUnloadMs: 1500 });
+    const app = await startApp({ idleUnloadMs: 1500 * SCALE });
     try {
       await ext.pair(app);
       const page = await ext.open("/article");
@@ -130,7 +132,7 @@ test.describe("model lifecycle: unloaded", () => {
       await ext.waitState("playing");
       expect(app.engine.unloads, "never unloads under an active stream").toBe(0);
       await ext.bg({ t: "player", command: { cmd: "stop" } });
-      await expect.poll(() => app.engine.unloads, { timeout: 10_000 }).toBe(1);
+      await expect.poll(() => app.engine.unloads, { timeout: 10_000 + 1500 * SCALE }).toBe(1);
       expect((await health(app)).engine.state).toBe("unloaded");
       expect(app.engine.status().state).toBe("unloaded");
 
@@ -161,7 +163,7 @@ test.describe("model lifecycle: unloaded", () => {
 
 test.describe("model lifecycle: hold while paused", () => {
   test("pause holds the model past the idle window, resume releases the hold, then it unloads", async ({ ext }) => {
-    const app = await startApp({ idleUnloadMs: 1200 });
+    const app = await startApp({ idleUnloadMs: 1200 * SCALE });
     try {
       await ext.pair(app);
       const page = await ext.open("/article");
@@ -170,7 +172,7 @@ test.describe("model lifecycle: hold while paused", () => {
       await ext.bg({ t: "player", command: { cmd: "pause" } });
       await ext.waitState("paused");
       await expect.poll(() => app.holds).toEqual([600_000]);
-      await page.waitForTimeout(3600); // three idle windows
+      await page.waitForTimeout(3 * 1200 * SCALE); // three idle windows
       expect(app.engine.unloads, "held model stays loaded while paused").toBe(0);
       expect((await health(app)).engine.state).toBe("ready");
 
@@ -178,7 +180,7 @@ test.describe("model lifecycle: hold while paused", () => {
       await ext.waitState("playing");
       await expect.poll(() => app.holds.at(-1)).toBe(0);
       await ext.bg({ t: "player", command: { cmd: "stop" } });
-      await expect.poll(() => app.engine.unloads, { timeout: 10_000 }).toBe(1);
+      await expect.poll(() => app.engine.unloads, { timeout: 10_000 + 1200 * SCALE }).toBe(1);
     } finally {
       await app.stop();
     }

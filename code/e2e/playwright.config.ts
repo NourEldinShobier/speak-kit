@@ -10,7 +10,8 @@ export default defineConfig({
   timeout: full ? 120_000 : 60_000,
   expect: { timeout: 8_000 },
   workers: Number(process.env.E2E_WORKERS ?? 3),
-  retries: 0,
+  // CI sets E2E_RETRIES: a shared 2-vCPU runner makes the timing-based specs (idle windows, hover delays) fail now and then; a retry that passes is listed as flaky.
+  retries: Number(process.env.E2E_RETRIES ?? 0),
   reporter: [["list"], ["json", { outputFile: `results-${process.env.E2E_PHASE ?? "main"}.json` }]],
   grepInvert: full ? undefined : /@slow/,
   use: { trace: "off" },

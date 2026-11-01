@@ -280,6 +280,9 @@ export const test = base.extend<Fx, Wx>({
     });
     const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker"));
     const id = new URL(sw.url()).host;
+    // At install the service worker reads the settings and writes them back normalized. A page that saves between its read and its write
+    // loses the change, so start only once that write is done (a slow machine makes the window long).
+    await expect.poll(() => sw.evaluate(async () => (await chrome.storage.sync.get("speakkit.settingsVersion"))["speakkit.settingsVersion"]), { timeout: 15_000 }).toBeDefined();
     const ext = new Ext(ctx, id, sw, dir, fx);
     const rec = (where: string, text: string) => ext.errors.push(`${where}: ${text}`);
     const watch = (p: Page) => {
