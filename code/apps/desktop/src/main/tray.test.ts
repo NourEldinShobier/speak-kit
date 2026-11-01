@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
     menu: { items: Record<string, unknown>[] } | null = null;
     handlers = new Map<string, () => void>();
     destroyed = false;
+    popped: { items: Record<string, unknown>[] }[] = [];
     constructor(image: unknown) {
       this.image = image;
       state.trays.push(this);
@@ -28,6 +29,9 @@ const mocks = vi.hoisted(() => {
     }
     setContextMenu(m: { items: Record<string, unknown>[] }) {
       this.menu = m;
+    }
+    popUpContextMenu(m: { items: Record<string, unknown>[] }) {
+      this.popped.push(m);
     }
     getBounds() {
       return { x: 1800, y: 1040, width: 24, height: 40 };
@@ -118,6 +122,20 @@ describe("tray wiring", () => {
     const [clipboard] = t.fake.menu!.items;
     expect(clipboard).toMatchObject({ label: "Read clipboard", enabled: false, accelerator: DEFAULT_SHORTCUTS["read-clipboard"].replace("Ctrl", "CommandOrControl"), registerAccelerator: false });
     expect(t.fake.menu!.items.find((i) => i.label === "Do not disturb")).toMatchObject({ type: "checkbox", checked: true });
+  });
+
+  it("on macOS the menu opens on right click only, so the plain click can open the panel", () => {
+    const original = process.platform;
+    Object.defineProperty(process, "platform", { value: "darwin" });
+    try {
+      const t = setup();
+      expect(t.fake.menu).toBeNull();
+      t.fake.handlers.get("right-click")!();
+      expect(t.fake.popped).toHaveLength(1);
+      expect(t.fake.popped[0]!.items[0]).toMatchObject({ label: "Read clipboard", accelerator: "Control+Alt+C" });
+    } finally {
+      Object.defineProperty(process, "platform", { value: original });
+    }
   });
 
   it("clicking an item runs the handler of its action", () => {

@@ -46,6 +46,17 @@ describe("sendCopyKeys", () => {
     expect(k.calls).toHaveLength(6);
   });
 
+  it("presses Cmd+C through osascript on macOS", async () => {
+    const runs: [string, string[]][] = [];
+    vi.resetModules();
+    vi.doMock("node:child_process", () => ({ execFile: (cmd: string, args: string[], _o: unknown, cb: (e: null) => void) => (runs.push([cmd, args]), cb(null)) }));
+    Object.defineProperty(process, "platform", { value: "darwin" });
+    const { sendCopyKeys } = await import("./keys");
+    await sendCopyKeys();
+    vi.doUnmock("node:child_process");
+    expect(runs).toEqual([["osascript", ["-e", 'tell application "System Events" to keystroke "c" using command down']]]);
+  });
+
   it("refuses on other platforms", async () => {
     const k = await press("linux");
     await expect(k.run()).rejects.toThrow("only available on Windows");

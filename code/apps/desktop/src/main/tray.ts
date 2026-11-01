@@ -11,6 +11,7 @@ type TrayHandlers = Record<TrayAction, () => void>;
  * only when what they show has changed.
  */
 export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandlers) {
+  const mac = process.platform === "darwin";
   const tray = new Tray(trayIcon("asleep"));
   const panel = new FloatWindow("panel", { width: 340, height: 330 }, () => ctx.state);
   ctx.sinks.add((s) => panel.sendState(s));
@@ -27,6 +28,8 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
     win.once("blur", () => panel.close());
   };
   tray.on("click", togglePanel);
+  // macOS opens a context menu on the normal click, which would hide the panel: show it on right click only.
+  if (mac) tray.on("right-click", () => menu && tray.popUpContextMenu(menu));
 
   const refresh = () => {
     const c = context();
@@ -46,12 +49,12 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
             label: i.label,
             enabled: i.enabled,
             ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
-            ...(i.hint ? { accelerator: i.hint.replace("Ctrl", "CommandOrControl"), registerAccelerator: false } : {}),
+            ...(i.hint ? { accelerator: i.hint.replace("Ctrl", mac ? "Control" : "CommandOrControl"), registerAccelerator: false } : {}),
             click: () => run[i.action](),
           },
     );
     menu = Menu.buildFromTemplate(template);
-    tray.setContextMenu(menu);
+    if (!mac) tray.setContextMenu(menu);
   };
   refresh();
 

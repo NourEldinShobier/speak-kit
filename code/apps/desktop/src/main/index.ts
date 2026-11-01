@@ -9,6 +9,7 @@ import { applyMemory } from "../shared/memory";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
+import { appMenuTemplate } from "./app-menu";
 import { openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { createAppHandlers, metrics } from "./handlers";
@@ -130,11 +131,18 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     if (link) onDeepLink(link);
     else mainWindow.show();
   });
+  // macOS delivers speakkit:// links as open-url events, also at launch, before the app is ready.
+  let launchLink: DeepLink | null = null;
   app.on("open-url", (e, url) => {
     e.preventDefault();
     const link = findDeepLink([url]);
-    if (link) onDeepLink(link);
+    if (!link) return;
+    if (app.isReady()) onDeepLink(link);
+    else launchLink = link;
   });
+  // Dock icon clicked while the window is hidden to the menu bar (the activation at launch must not defeat --hidden).
+  let booted = false;
+  app.on("activate", () => booted && mainWindow.show());
   app.on("before-quit", () => {
     mainWindow.quitting = true;
   });
@@ -147,7 +155,8 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   });
 
   app.whenReady().then(async () => {
-    Menu.setApplicationMenu(null);
+    const menu = appMenuTemplate(process.platform);
+    Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     nativeTheme.themeSource = config.theme;
     await setupLibrary({ dataDir, window: () => mainWindow.window, target: () => ({ port: state.port, token: state.token }), allowLocalUrls: test.allowLocalUrls });
     state.onBattery = powerMonitor.isOnBatteryPower();
@@ -218,9 +227,10 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     // Test hook: native menus and global key presses cannot be driven from Playwright.
     if (test.hook) (globalThis as Record<string, unknown>).__speakkit = { metrics, ...desktop.testHook() };
 
-    const boot = findDeepLink(process.argv);
+    const boot = findDeepLink(process.argv) ?? launchLink;
     const hidden = config.setupDone && (process.argv.includes("--hidden") || (config.startMinimized && app.getLoginItemSettings().wasOpenedAtLogin));
     mainWindow.create(hidden && !boot);
+    booted = true;
     await runtime.start(test.token);
     if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "browser" });
     publish();

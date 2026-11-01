@@ -79,7 +79,7 @@ export class MainWindow {
   applyMode(first = false): void {
     const w = this.window;
     if (!w) return;
-    w.setTitleBarOverlay(this.#overlay());
+    if (process.platform !== "darwin") w.setTitleBarOverlay(this.#overlay()); // macOS keeps its traffic lights
     if (this.#config.setupDone) {
       w.setMinimumSize(960, 640);
       w.setResizable(true);
@@ -106,7 +106,7 @@ export class MainWindow {
         backgroundColor: appBackground(nativeTheme.shouldUseDarkColors),
         icon: appIcon(),
         titleBarStyle: "hidden",
-        titleBarOverlay: this.#overlay(),
+        ...(process.platform === "darwin" ? { trafficLightPosition: { x: 16, y: 14 } } : { titleBarOverlay: this.#overlay() }),
         webPreferences: { backgroundThrottling: true }, // hidden window: timers and rendering are throttled by Chromium
       },
       (loaded) => {
