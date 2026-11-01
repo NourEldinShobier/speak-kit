@@ -1,6 +1,6 @@
 // Builds designs/review.html from designs/manifest.json (data inlined so it opens from file://).
 import { readFileSync, writeFileSync } from "fs";
-const APP = process.env.APP_NAME ?? "SpeakKit";
+const APP = process.env.APP_NAME ?? "Speak Kit";
 const D = process.env.DIR ?? "D:/workspaces/speak-it/designs"; // DIR=.../designs/next builds the staging review
 const raw = JSON.parse(readFileSync(`${D}/manifest.json`, "utf8"));
 // feature rows = numbered sections of the design file, stacked in file order; each row is a horizontal strip

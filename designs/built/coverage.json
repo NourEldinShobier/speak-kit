@@ -106,7 +106,7 @@
   {
    "id": "B3",
    "title": "Page · context menu (Chrome extension)",
-   "reason": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are SpeakKit > Read selection, Read from here, Add to queue (asserted in the e2e suite)."
+   "reason": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are Speak Kit > Read selection, Read from here, Add to queue (asserted in the e2e suite)."
   },
   {
    "id": "B21",
@@ -115,8 +115,8 @@
   },
   {
    "id": "C14",
-   "title": "Open SpeakKit link flow (Chrome extension)",
-   "reason": "The Open SpeakKit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it."
+   "title": "Open Speak Kit link flow (Chrome extension)",
+   "reason": "The Open Speak Kit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it."
   },
   {
    "id": "C17",

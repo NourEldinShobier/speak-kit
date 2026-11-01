@@ -292,7 +292,7 @@ const titleBar = (b: B, t: T, win: Ref, w: number, o: { title: string; search: s
   return tb;
 };
 export const desktopWindow = (b: B, t: T, root: Ref, o: { title?: string; nav?: "home" | "library" | "voices" | "engines" | "settings" | "none"; w?: number; h?: number; status?: { label: string; sub: string; tone: "ok" | "warn" | "err" | "neutral" }; pill?: Pill | false; search?: string; update?: boolean; settingsKey?: string; settingsDot?: string; inset?: boolean; bell?: boolean | "dot"; rail?: boolean } = {}) => {
-  const { title = "SpeakKit", nav = "library", w = 1280, h = 800 } = o;
+  const { title = "Speak Kit", nav = "library", w = 1280, h = 800 } = o;
   const win = b.col(root, { x: 0, y: 0, w, h, fill: t.bg, gap: 0, clip: true, r: 12, stroke: t.border, sw: 1, sa: "inside" });
   const isSet = nav === "settings";
   titleBar(b, t, win, w, { title, search: o.search ?? (isSet ? "Search settings" : "Search readings, voices and commands"), pill: o.pill === false ? undefined : o.pill ?? (o.status ? { label: o.status.label.split(" · ")[1] ?? o.status.label, tone: o.status.tone } : { label: "Kokoro ready", tone: "ok" }), update: o.update, bell: o.bell });
@@ -437,9 +437,9 @@ export const dock = (b: B, t: T, p: Ref | undefined, state: DockState, o: O & { 
   const ib = (ic: string, size: number, dimmed = false) => { const x = b.frame(f, { w: size, h: size, r: 999, layout: "horizontal", align: "center", justify: "center", opacity: dimmed ? 0.4 : undefined }); b.icon(x, ic, 16, PILL.dim); return x; };
   if (state === "error") {
     b.icon(f, "alertCircle", 16, "#FF9A8F");
-    const x = b.col(f, { gap: 1 }); b.text(x, "SpeakKit isn't running", { size: 12, weight: "Medium", c: PILL.text }); b.text(x, "Your page is untouched. Start the app to read it.", { size: 11, c: PILL.dim });
+    const x = b.col(f, { gap: 1 }); b.text(x, "Speak Kit isn't running", { size: 12, weight: "Medium", c: PILL.text }); b.text(x, "Your page is untouched. Start the app to read it.", { size: 11, c: PILL.dim });
     const sp = b.frame(f, { w: 24, h: 1 });
-    btn(b, t, f, "Open SpeakKit", { v: "primary", sz: "sm" });
+    btn(b, t, f, "Open Speak Kit", { v: "primary", sz: "sm" });
     const rt = b.row(f, { h: 30, pad: [0, 12], r: 999, stroke: PILL.line, sw: 1, sa: "inside" }); b.text(rt, "Retry", { size: 12, weight: "Medium", c: PILL.text });
     ib("x", 30);
     return f;

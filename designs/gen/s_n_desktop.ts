@@ -74,13 +74,13 @@ export const N1: S[] = [
   scr("W0", "W", "First launch", "Small window, no sidebar: real checks with the port number; the tray icon is already running.", (b, t, root) => {
     X.wallpaper(b, t, root);
     const w = b.col(root, { x: 400, y: 200, w: 480, h: 320, fill: t.bg, r: 8, stroke: t.control, sw: 1, sa: "inside", shadow: "xl", align: "center", justify: "center", gap: 14, clip: true });
-    K.logo(b, t, w, 56, { r: 14 }); b.text(w, "Starting SpeakKit", { size: 20, weight: "SemiBold", c: t.text });
+    K.logo(b, t, w, 56, { r: 14 }); b.text(w, "Starting Speak Kit", { size: 20, weight: "SemiBold", c: t.text });
     const l = b.col(w, { gap: 8 });
     [["circleCheck", t.ok, "Voice engine ready (port 51730)"], ["circleCheck", t.ok, "Library checked"], ["loader", t.accent, "Looking for the Chrome extension…"]].forEach(([ic, c, s]) => { const r = b.row(l, { gap: 8 }); b.icon(r, ic as string, 16, c as string); b.text(r, s as string, { size: 13, c: t.text }); });
     b.text(w, "First start takes a few seconds. Next time it opens from the tray.", { size: 11, c: t.text3 });
   }),
   scr("W1", "W", "Setup 1 · Welcome", "Setup window 960x680: title bar, 5-step stepper, 720 px column, footer with the only navigation.", (b, t, root) => {
-    X.setupWindow(b, t, root, 0, { h1: "Welcome to SpeakKit", sub: "Listen to pages, files and anything you copy. The voice runs on this computer, so nothing you read is uploaded.", back: false, next: "Get started", body: (c) => {
+    X.setupWindow(b, t, root, 0, { h1: "Welcome to Speak Kit", sub: "Listen to pages, files and anything you copy. The voice runs on this computer, so nothing you read is uploaded.", back: false, next: "Get started", body: (c) => {
       X.group(b, t, c, "WHAT YOU GET", [
         (f) => X.iconRow(b, t, f, "globe", "Reads any web page in Chrome", "The extension adds a play pill to the page you are on."),
         (f) => X.iconRow(b, t, f, "clipboard", "Reads what you copy", "Press Ctrl Alt C in any app to hear the clipboard.", undefined, "ok"),
@@ -107,7 +107,7 @@ export const N1: S[] = [
     } });
   }),
   scr("W3", "W", "Setup 3 · Download", "One row per file with size, speed and Pause; Continue stays disabled until everything is on disk.", (b, t, root) => {
-    X.setupWindow(b, t, root, 2, { h1: "Downloading the voice engine", sub: "Downloaded once and stored on this computer. After this SpeakKit works offline.", nextDisabled: true, body: (c) => {
+    X.setupWindow(b, t, root, 2, { h1: "Downloading the voice engine", sub: "Downloaded once and stored on this computer. After this Speak Kit works offline.", nextDisabled: true, body: (c) => {
       X.group(b, t, c, "ON THIS COMPUTER · 390 MB", [
         (f) => dl(b, t, f, "Kokoro-82M model", "330 MB", 0.62, "204 of 330 MB · 14 MB/s · 9 s left", "Pause"),
         (f) => dl(b, t, f, "Voices (54)", "18 MB", 1, "Done", undefined, true),
@@ -116,7 +116,7 @@ export const N1: S[] = [
     } });
   }),
   scr("W3b", "W", "Setup 3 · Download paused", "Paused is amber, says where it resumes and offers Resume; losing the connection looks the same.", (b, t, root) => {
-    X.setupWindow(b, t, root, 2, { h1: "Downloading the voice engine", sub: "Downloaded once and stored on this computer. After this SpeakKit works offline.", nextDisabled: true, body: (c) => {
+    X.setupWindow(b, t, root, 2, { h1: "Downloading the voice engine", sub: "Downloaded once and stored on this computer. After this Speak Kit works offline.", nextDisabled: true, body: (c) => {
       X.banner(b, t, c, { tone: "warn", title: "Download paused at 204 of 330 MB", body: "It continues from here, nothing is downloaded twice.", primary: "Resume", secondary: "Choose another folder" });
       X.group(b, t, c, "ON THIS COMPUTER · 390 MB", [
         (f) => dl(b, t, f, "Kokoro-82M model", "330 MB", 0.62, "Paused", "Resume"),
@@ -125,10 +125,10 @@ export const N1: S[] = [
     } });
   }),
   scr("W4", "W", "Setup 4 · Connect browser", "Lumen BR4 pairing: numbered steps left, six-box code right; Skip for now is always available.", (b, t, root) => {
-    X.setupWindow(b, t, root, 3, { h1: "Connect Chrome", sub: "The extension reads pages with SpeakKit on this computer. Pairing takes one code and stays on this computer.", left: "You can pair later in Settings, Browser integration.", next: "Continue", body: (c) => {
+    X.setupWindow(b, t, root, 3, { h1: "Connect Chrome", sub: "The extension reads pages with Speak Kit on this computer. Pairing takes one code and stays on this computer.", left: "You can pair later in Settings, Browser integration.", next: "Continue", body: (c) => {
       const cd = b.row(c, { w: "fill", pad: 20, gap: 24, r: 12, stroke: t.accent, sw: 1, sa: "inside", fill: t.surface, align: "center" });
       const l = b.col(cd, { gap: 12, w: "fill" });
-      [["Install SpeakKit for Chrome", "From the Chrome Web Store."], ["Click the SpeakKit icon in Chrome", "Choose Pair this browser."], ["Enter this code", "It is valid for 5 minutes."]].forEach(([a, d], i) => {
+      [["Install Speak Kit for Chrome", "From the Chrome Web Store."], ["Click the Speak Kit icon in Chrome", "Choose Pair this browser."], ["Enter this code", "It is valid for 5 minutes."]].forEach(([a, d], i) => {
         const r = b.row(l, { gap: 10, align: "start" }); const n = b.frame(r, { w: 20, h: 20, r: 999, fill: t.subtle, layout: "horizontal", align: "center", justify: "center" }); b.text(n, String(i + 1), { size: 11, weight: "Medium", c: t.accent });
         const x = b.col(r, { gap: 1 }); b.text(x, a, { size: 13, weight: "Medium", c: t.text }); b.text(x, d, { size: 12, c: t.text3 });
       });
@@ -144,7 +144,7 @@ export const N1: S[] = [
       const x = b.col(s, { gap: 4, w: "fill" }); b.text(x, "Hear a sample", { size: 13, weight: "Medium", c: t.text }); b.text(x, "“Small models now run on an ordinary laptop, and nobody asks where the audio came from.”", { size: 12, c: t.text2, w: "fill", lh: 17 });
       K.select(b, t, s, "Heart", 110);
       X.group(b, t, c, "BACKGROUND", [
-        (f) => X.toggleRow(b, t, f, "Start SpeakKit when I sign in", "It starts in the tray and uses about 120 MB of memory when idle.", true),
+        (f) => X.toggleRow(b, t, f, "Start Speak Kit when I sign in", "It starts in the tray and uses about 120 MB of memory when idle.", true),
         (f) => X.toggleRow(b, t, f, "Closing the window keeps it in the tray", "The extension keeps working while the window is closed.", true),
         (f) => X.toggleRow(b, t, f, "Unload the voice engine after 5 minutes idle", "Gives back 420 MB; it wakes in about 2 seconds when you press play.", true)]);
     } });

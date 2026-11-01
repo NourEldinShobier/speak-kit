@@ -78,7 +78,7 @@ const trayMenu = (b: B, t: T, root: Ref, kind: TK) => {
   if (kind === "menu") { const np = b.col(m, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.surface2 }); b.text(np, "NOW READING", { size: 12, weight: "SemiBold", c: t.text2, ls: 1 }); b.text(np, "The quiet return of local-first software", { size: 13.5, weight: "SemiBold", c: t.text, w: "fill", lh: 18 }); const pr = b.row(np, { w: "fill", gap: 8 }); b.text(pr, "2:27", { size: 12, c: t.text2, mono: true }); K.bar(b, t, pr, 0.36, 230, { knob: false }); b.text(pr, "4:21 left", { size: 12, c: t.text2 }); const cr = b.row(np, { w: "fill", justify: "center", gap: 10 }); trayBtn(b, t, cr, "skipBack"); skipTxt(b, t, cr, "back", t.text); const pb = b.frame(cr, { w: 38, h: 38, r: 19, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 15, t.accentText); skipTxt(b, t, cr, "fwd", t.text); trayBtn(b, t, cr, "skipFwd"); }
   const off = kind === "menu-loading" || kind === "menu-error";
   if (kind === "menu-error") { const e = b.row(m, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.errSoft, align: "start" }); b.icon(e, "alertCircle", 18, t.err); const q = b.col(e, { gap: 6, w: "fill" }); b.text(q, "The voice engine stopped", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(q, "Reading can't start until it restarts.", { size: 12.5, c: t.text2, w: "fill" }); K.btn(b, t, q, "Restart engine", { v: "primary", sz: "sm", icon: "refresh" }); }
-  [["clipboard", "Read clipboard", "Ctrl+Alt+C", true], ["scan", "Read selected text", "Ctrl+Alt+S", true], ["book", "Open library", "", false], ["mic", "Voice: Heart · 1.2×", "", false], ["sliders", "Settings", "", false], ["power", "Quit SpeakKit", "", false]].forEach(([i, l, k], n) => {
+  [["clipboard", "Read clipboard", "Ctrl+Alt+C", true], ["scan", "Read selected text", "Ctrl+Alt+S", true], ["book", "Open library", "", false], ["mic", "Voice: Heart · 1.2×", "", false], ["sliders", "Settings", "", false], ["power", "Quit Speak Kit", "", false]].forEach(([i, l, k], n) => {
     const dis = off && n < 2;
     const r = b.row(m, { w: "fill", h: 36, pad: [0, 10], gap: 10, r: 7, justify: "spaceBetween", fill: n === 0 && kind === "menu-idle" ? t.accentSoft : "none", opacity: dis ? 0.45 : undefined }); const q = b.row(r, { gap: 10 }); b.icon(q, i as string, 15, t.text2); b.text(q, l as string, { size: 13, c: t.text });
     if (k) b.text(r, k as string, { size: 12, c: t.text2 }); if (n === 3) b.icon(r, "right", 14, t.text3);
@@ -129,7 +129,7 @@ const tray = (id: string, title: string, note: string, kind: IK, dark = false): 
     }
     if (kind === "clip") {
       const c = b.col(anchor(b, root, 360), { w: 360, pad: 16, gap: 10, r: 14, fill: t.surface, stroke: t.border, sw: 1, shadow: "lg" });
-      const h = b.row(c, { w: "fill", justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 20); b.text(hl, "SpeakKit", { size: 12.5, weight: "SemiBold", c: t.text2 }); const hr = b.row(h, { gap: 2 }); kebab(b, t, hr, 28); trayBtn(b, t, hr, "x", 28);
+      const h = b.row(c, { w: "fill", justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 20); b.text(hl, "Speak Kit", { size: 12.5, weight: "SemiBold", c: t.text2 }); const hr = b.row(h, { gap: 2 }); kebab(b, t, hr, 28); trayBtn(b, t, hr, "x", 28);
       b.text(c, "Copied text: read it?", { size: 15, weight: "Bold", c: t.text }); b.text(c, "“For a decade, the default answer to every software question…” · 412 words · about 2 min", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
       b.text(c, "Click to read it. A Windows toast carries no buttons.", { size: 12, c: t.text3 });
       const cd = b.row(c, { w: "fill", gap: 10 }); K.bar(b, t, cd, 0.7, 190, { knob: false }); b.text(cd, "Closes in 6 s", { size: 12, c: t.text2 });
@@ -168,7 +168,7 @@ const exp = (id: string, title: string, note: string, st: JS, dark = false): S =
       const d = modalBox(b, t, win, 520); closeX(b, t, d, 520);
       const bd = b.col(d, { w: "fill", pad: [28, 28, 20, 28], gap: 14 });
       const ic = b.frame(bd, { w: 52, h: 52, r: 26, fill: t.warnSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "file", 24, t.warn);
-      b.text(bd, "Replace the existing file?", { size: 19, weight: "Bold", c: t.text }); b.text(bd, "A file named quiet-return-of-local-first-software.mp3 already exists in D:\\Audio\\SpeakKit.", { size: 14, c: t.text2, w: "fill", lh: 21 });
+      b.text(bd, "Replace the existing file?", { size: 19, weight: "Bold", c: t.text }); b.text(bd, "A file named quiet-return-of-local-first-software.mp3 already exists in D:\\Audio\\Speak Kit.", { size: 14, c: t.text2, w: "fill", lh: 21 });
       const f = b.row(bd, { w: "fill", pad: [10, 12], gap: 10, r: 8, fill: t.surface2 }); b.icon(f, "info", 15, t.text2); b.text(f, "6.5 MB · saved yesterday at 4:12 PM. Keep both saves the new one as …(2).mp3.", { size: 12.5, c: t.text2, w: "fill" });
       dFoot(b, t, d, undefined, (r) => { K.btn(b, t, r, "Choose another name", { v: "ghost" }); K.btn(b, t, r, "Keep both", { v: "secondary" }); K.btn(b, t, r, "Replace", { v: "danger" }); });
       return;
@@ -182,16 +182,16 @@ const exp = (id: string, title: string, note: string, st: JS, dark = false): S =
       K.settingRow(b, t, bd, "Voice and speed", "Uses the voice and speed of this reading.", (f) => { b.text(f, "Heart · 1.2×", { size: 13.5, weight: "SemiBold", c: t.text }); K.btn(b, t, f, "Change", { v: "ghost", sz: "sm" }); }); K.divider(b, t, bd);
       K.settingRow(b, t, bd, "Split by section", "One file per heading, named 01, 02…", (f) => K.toggle(b, t, f, false)); K.divider(b, t, bd);
       K.settingRow(b, t, bd, "File name", undefined, (f) => K.input(b, t, f, { value: "quiet-return-of-local-first-software", right: ".mp3", w: 340, h: 34 })); K.divider(b, t, bd);
-      K.settingRow(b, t, bd, "Save to", undefined, (f) => { K.input(b, t, f, { value: "D:\\Audio\\SpeakKit", icon: "folder", w: 250, h: 34 }); K.btn(b, t, f, "Browse…", { v: "secondary", sz: "sm" }); });
+      K.settingRow(b, t, bd, "Save to", undefined, (f) => { K.input(b, t, f, { value: "D:\\Audio\\Speak Kit", icon: "folder", w: 250, h: 34 }); K.btn(b, t, f, "Browse…", { v: "secondary", sz: "sm" }); });
       const e = b.row(bd, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.surface2 }); b.icon(e, "info", 15, t.text2); b.text(e, "About 6.5 MB at 128 kbps. Takes under a minute on this PC.", { size: 12.5, c: t.text2, w: "fill" });
       dFoot(b, t, d, undefined, (r) => { K.btn(b, t, r, "Cancel", { v: "ghost" }); K.btn(b, t, r, "Export", { v: "primary", icon: "download" }); });
     } else if (st === "progress") {
       const r = b.row(bd, { w: "fill", justify: "spaceBetween" }); b.text(r, "Rendering sentence 52 of 118", { size: 14, weight: "SemiBold", c: t.text }); b.text(r, "44% · 0:26 left", { size: 13, c: t.text2 });
-      K.bar(b, t, bd, 0.44, 512, { knob: false }); b.text(bd, "Run in background to keep using SpeakKit. A notice appears when the file is ready.", { size: 12.5, c: t.text2, w: "fill" });
+      K.bar(b, t, bd, 0.44, 512, { knob: false }); b.text(bd, "Run in background to keep using Speak Kit. A notice appears when the file is ready.", { size: 12.5, c: t.text2, w: "fill" });
       dFoot(b, t, d, undefined, (r) => { dangerBtn(b, t, r, "Cancel export"); K.btn(b, t, r, "Run in background", { v: "primary" }); });
     } else {
       const r = b.row(bd, { w: "fill", gap: 14, pad: [6, 0] }); const ic = b.frame(r, { w: 48, h: 48, r: 24, fill: t.okSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "check", 24, t.ok); const x = b.col(r, { gap: 2, w: "fill" }); b.text(x, "quiet-return-of-local-first-software.mp3", { size: 14, weight: "SemiBold", c: t.text }); b.text(x, "6.5 MB · 6:48 · 128 kbps", { size: 12.5, c: t.text2 });
-      const pr = b.row(bd, { w: "fill", gap: 10 }); b.icon(pr, "folder", 14, t.text3); b.text(pr, "D:\\Audio\\SpeakKit\\quiet-return-of-local-first-software.mp3", { size: 12.5, c: t.text2, w: "fill" }); K.btn(b, t, pr, "Copy path", { v: "ghost", sz: "sm", icon: "copy" });
+      const pr = b.row(bd, { w: "fill", gap: 10 }); b.icon(pr, "folder", 14, t.text3); b.text(pr, "D:\\Audio\\Speak Kit\\quiet-return-of-local-first-software.mp3", { size: 12.5, c: t.text2, w: "fill" }); K.btn(b, t, pr, "Copy path", { v: "ghost", sz: "sm", icon: "copy" });
       const p = b.row(bd, { w: "fill", gap: 12, pad: 12, r: 10, fill: t.surface2 }); const pb = b.frame(p, { w: 36, h: 36, r: 18, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 14, t.accentText); K.waveform(b, t, p, 350, 28, 0, 3); b.text(p, "0:00 / 6:48", { size: 12, c: t.text2, mono: true });
       dFoot(b, t, d, undefined, (r) => { K.btn(b, t, r, "Done", { v: "ghost" }); K.btn(b, t, r, "Open file", { v: "secondary", icon: "external" }); K.btn(b, t, r, "Show in folder", { v: "primary", icon: "folder" }); });
     }
@@ -211,13 +211,13 @@ export const J: S[] = [
 type KS = "crash" | "port" | "disk" | "corrupt" | "repair" | "version" | "mic" | "instance" | "offline-ok";
 type KD = { icon: string; tone: "err" | "warn" | "info"; title: string; body: string; detail?: string; primary: string; secondary?: string };
 const KDEF: Record<string, KD> = {
-  crash: { icon: "alert", tone: "err", title: "The voice engine stopped unexpectedly", body: "SpeakKit is restarting Kokoro. Your reading was interrupted at 2:27 and your library and settings are safe.", detail: "tts-worker exited with code 3221225477 (0xC0000005) at 12:04:31", primary: "Resume reading", secondary: "Copy diagnostics" },
-  port: { icon: "alert", tone: "warn", title: "SpeakKit can't reach the browser extension", body: "Another program is using the port the extension talks to. Pick another port; the extension is re-paired automatically.", detail: "Port 51730 is in use (EADDRINUSE 127.0.0.1:51730)", primary: "Use port 51731", secondary: "Choose a port…" },
+  crash: { icon: "alert", tone: "err", title: "The voice engine stopped unexpectedly", body: "Speak Kit is restarting Kokoro. Your reading was interrupted at 2:27 and your library and settings are safe.", detail: "tts-worker exited with code 3221225477 (0xC0000005) at 12:04:31", primary: "Resume reading", secondary: "Copy diagnostics" },
+  port: { icon: "alert", tone: "warn", title: "Speak Kit can't reach the browser extension", body: "Another program is using the port the extension talks to. Pick another port; the extension is re-paired automatically.", detail: "Port 51730 is in use (EADDRINUSE 127.0.0.1:51730)", primary: "Use port 51731", secondary: "Choose a port…" },
   disk: { icon: "hardDrive", tone: "warn", title: "Not enough disk space", body: "Chatterbox needs 2.4 GB, but the models folder on E:\\ has only 1.1 GB free. Free some space or choose another models folder.", primary: "Choose another folder", secondary: "Manage storage" },
   corrupt: { icon: "shield", tone: "err", title: "A model file failed its check", body: "Kokoro's model file doesn't match its checksum, so it won't be loaded. This can happen after an interrupted download or if antivirus changed the file.", detail: "kokoro-v1.0.q8.onnx · expected sha256 3f9a…c1d2 · got 77b0…e8a4", primary: "Repair", secondary: "Open Engines" },
   repair: { icon: "shield", tone: "err", title: "Repairing the Kokoro model", body: "Downloading a fresh copy and checking it. You can keep using the app; reading resumes when it's done.", primary: "Run in background", secondary: "Cancel" },
   version: { icon: "refresh", tone: "info", title: "The extension is out of date", body: "Chrome extension 0.3.9 can't talk to app 0.4.2. Update it from the Chrome Web Store; reading from the desktop app still works.", primary: "Open Web Store", secondary: "Remind me later" },
-  mic: { icon: "mic", tone: "warn", title: "Microphone access is off", body: "Windows blocks SpeakKit from using the microphone, which is needed to record a voice sample. You can upload an audio file instead.", primary: "Open Windows settings", secondary: "Upload a file" },
+  mic: { icon: "mic", tone: "warn", title: "Microphone access is off", body: "Windows blocks Speak Kit from using the microphone, which is needed to record a voice sample. You can upload an audio file instead.", primary: "Open Windows settings", secondary: "Upload a file" },
 };
 const sys = (id: string, title: string, note: string, st: KS, dark = false): S => ({
   id, group: "K", title, note, w: W, h: H, dark,
@@ -230,7 +230,7 @@ const sys = (id: string, title: string, note: string, st: KS, dark = false): S =
     else if (st === "disk") enginesScreen(b, t, win, main, "engines");
     else if (st === "mic") cloneScreen(b, t, win, main, "clone1");
     else if (st === "version") libBackdrop(b, t, main, { banner: (m) => { const bn = b.row(m, { w: "fill", h: 52, pad: [0, 20], gap: 12, fill: t.infoSoft }); b.icon(bn, "refresh", 18, t.info); b.text(bn, "Chrome extension 0.3.9 is out of date. It can't talk to app 0.4.2; reading in the desktop app still works.", { size: 13, weight: "Medium", c: t.text, w: "fill" }); K.btn(b, t, bn, "Open Web Store", { v: "secondary", sz: "sm", icon: "external" }); K.btn(b, t, bn, "Remind me later", { v: "ghost", sz: "sm" }); K.iconBtn(b, t, bn, "x", { size: 28 }); b.rect(m, { w: "fill", h: 1, fill: t.border }); } });
-    else if (st === "instance") { libBackdrop(b, t, main); K.toast(b, t, corner(b, win), "SpeakKit was already running. Showing your window.", "neutral"); }
+    else if (st === "instance") { libBackdrop(b, t, main); K.toast(b, t, corner(b, win), "Speak Kit was already running. Showing your window.", "neutral"); }
     else if (st === "offline-ok") { libBackdrop(b, t, main, { right: (r) => K.badge(b, t, r, "Offline", "warn", "wifiOff") }); K.toast(b, t, corner(b, win), "You're offline. Reading still works; downloads wait until you're back.", "neutral", { icon: "wifiOff" }); }
     else libBackdrop(b, t, main);
     const d = st === "version" ? undefined : KDEF[st]; if (!d) return;

@@ -88,7 +88,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       back(); next("Download Kokoro", { icon: "download", iconRight: undefined });
     } else if (st === "download" || st === "dlfail") {
       const ok = st === "download";
-      head(ok ? "Downloading Kokoro-82M" : "Download paused", ok ? "One time only. After this, SpeakKit works fully offline." : "The connection dropped at 62%. Everything downloaded so far is kept.");
+      head(ok ? "Downloading Kokoro-82M" : "Download paused", ok ? "One time only. After this, Speak Kit works fully offline." : "The connection dropped at 62%. Everything downloaded so far is kept.");
       const cd = K.card(b, t, body, { w: "fill", pad: 22, gap: 12 });
       const hd = b.row(cd, { w: "fill", justify: "spaceBetween" }); b.text(hd, "204 MB of 330 MB", { size: 15, weight: "SemiBold", c: t.text }); b.text(hd, ok ? "12.4 MB/s · about 10 s left" : "Paused", { size: 13, weight: ok ? "Regular" : "SemiBold", c: ok ? t.text2 : t.warn });
       K.bar(b, ok ? t : { ...t, accent: t.warn }, cd, 0.62, 716, { knob: false });
@@ -104,7 +104,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
         K.divider(b, t, cd);
         const nx = b.row(cd, { w: "fill", gap: 12, opacity: 0.7 } as any); const nb = b.frame(nx, { w: 22, h: 22, r: 11, stroke: t.text3, sw: 1.5, dashes: [3, 3], layout: "horizontal", align: "center", justify: "center" } as any); b.text(nb, "4", { size: 12, weight: "Bold", c: t.text2 });
         const nc = b.col(nx, { gap: 1, w: "fill" }); b.text(nc, "Next: connect your browser", { size: 13.5, weight: "Medium", c: t.text }); b.text(nc, "Install the extension and pair it, about a minute.", { size: 12, c: t.text2 });
-        b.text(cd, "At this speed it takes under a minute. Continue in the background to set up your browser now; the download finishes on its own and SpeakKit tells you when the voice is ready. Adding Chatterbox later (2.4 GB) takes several minutes.", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
+        b.text(cd, "At this speed it takes under a minute. Continue in the background to set up your browser now; the download finishes on its own and Speak Kit tells you when the voice is ready. Adding Chatterbox later (2.4 GB) takes several minutes.", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
       } else {
         const e = b.row(cd, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.warnSoft, align: "start" }); b.icon(e, "alertCircle", 18, t.warn);
         const ec = b.col(e, { gap: 3, w: "fill" }); b.text(ec, "Lost the connection to the model server.", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(ec, "Check your internet connection, then retry. Downloading resumes from 85 MB.", { size: 12.5, c: t.text2, w: "fill", lh: 18 }); b.text(ec, "Details: huggingface.co, connection reset (ECONNRESET)", { size: 12, c: t.text3, mono: true });
@@ -118,8 +118,8 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       const cd = K.card(b, t, body, { w: "fill", pad: 20, gap: 14 });
       const num = (r: Ref, n: string) => { const nb = b.frame(r, { w: 30, h: 30, r: 15, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.text(nb, n, { size: 14, weight: "Bold", c: t.accent }); };
       const r1 = b.row(cd, { w: "fill", gap: 14, align: "start" }); num(r1, "1");
-      const x1 = b.col(r1, { gap: 8, w: "fill" }); b.text(x1, "Install the extension", { size: 15, weight: "SemiBold", c: t.text }); b.text(x1, "Add SpeakKit from the Chrome Web Store. It also installs in Edge and Brave.", { size: 13, c: t.text2, w: "fill", lh: 19 });
-      const pin = b.row(x1, { gap: 8 }); const e1 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e1, "puzzle", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e2 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e2, "pin", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e3 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); K.logo(b, t, e3, 20); b.text(pin, "Open the puzzle menu, pin SpeakKit to the toolbar", { size: 12.5, c: t.text2 });
+      const x1 = b.col(r1, { gap: 8, w: "fill" }); b.text(x1, "Install the extension", { size: 15, weight: "SemiBold", c: t.text }); b.text(x1, "Add Speak Kit from the Chrome Web Store. It also installs in Edge and Brave.", { size: 13, c: t.text2, w: "fill", lh: 19 });
+      const pin = b.row(x1, { gap: 8 }); const e1 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e1, "puzzle", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e2 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e2, "pin", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e3 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); K.logo(b, t, e3, 20); b.text(pin, "Open the puzzle menu, pin Speak Kit to the toolbar", { size: 12.5, c: t.text2 });
       K.btn(b, t, r1, "Open Web Store", { v: "secondary", icon: "external" });
       K.divider(b, t, cd);
       const r2 = b.row(cd, { w: "fill", gap: 14, align: "start" }); num(r2, "2");
@@ -127,7 +127,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       const tk = b.row(x2, { w: "fill", gap: 8 }); const tf = b.row(tk, { w: "fill", h: 38, pad: [0, 12], r: 9, fill: t.surface2, stroke: t.border, sw: 1 }); b.text(tf, "skt_••••-••••-••••-VH8W", { size: 14, mono: true, c: t.text }); K.btn(b, t, tk, "Reveal", { v: "secondary", icon: "eye" }); K.btn(b, t, tk, "Copy", { v: "primary", icon: "copy" });
       K.divider(b, t, cd);
       const w = b.row(cd, { w: "fill", gap: 10, align: "start" }); b.icon(w, "loader", 16, t.accent); const wc = b.col(w, { gap: 2, w: "fill" }); b.text(wc, "Waiting for the extension to pair…", { size: 13.5, weight: "Medium", c: t.text }); b.text(wc, "Details: listening on 127.0.0.1:51730", { size: 12, c: t.text3, mono: true });
-      const fw = b.row(cd, { w: "fill", pad: 10, gap: 10, r: 10, fill: t.infoSoft, align: "start" }); b.icon(fw, "info", 16, t.info); b.text(fw, "If Windows asks about the firewall, choose Private networks, or Cancel. SpeakKit only listens on 127.0.0.1.", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
+      const fw = b.row(cd, { w: "fill", pad: 10, gap: 10, r: 10, fill: t.infoSoft, align: "start" }); b.icon(fw, "info", 16, t.info); b.text(fw, "If Windows asks about the firewall, choose Private networks, or Cancel. Speak Kit only listens on 127.0.0.1.", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
       back(); const rg = b.row(foot, { gap: 10 }); K.btn(b, t, rg, "Skip for now", { v: "ghost" }); K.btn(b, t, rg, "Continue", { v: "primary", sz: "lg", iconRight: "arrowRight", disabled: true });
     } else {
       const paired = st === "pairok";
@@ -135,7 +135,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       const cd = K.card(b, t, body, { w: "fill", pad: 20, gap: 14 });
       const r = b.row(cd, { w: "fill", gap: 14 });
       const ic = b.frame(r, { w: 40, h: 40, r: 20, fill: paired ? t.okSoft : t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, paired ? "check" : "puzzle", 20, paired ? t.ok : t.text2);
-      const x = b.col(r, { gap: 2, w: "fill" }); b.text(x, paired ? "Browser extension connected" : "Browser extension not connected", { size: 15, weight: "SemiBold", c: t.text }); b.text(x, paired ? "Paired today at 12:04 · SpeakKit 0.4.2" : "You can connect it later in Settings > Browser integration.", { size: 12.5, c: t.text2 });
+      const x = b.col(r, { gap: 2, w: "fill" }); b.text(x, paired ? "Browser extension connected" : "Browser extension not connected", { size: 15, weight: "SemiBold", c: t.text }); b.text(x, paired ? "Paired today at 12:04 · Speak Kit 0.4.2" : "You can connect it later in Settings > Browser integration.", { size: 12.5, c: t.text2 });
       if (!paired) K.btn(b, t, r, "Connect now", { v: "secondary", sz: "sm" });
       K.divider(b, t, cd); b.text(cd, "“Notes, documents and even voices lived on someone else's server, rented back to us by the month.”", { size: 16, c: t.text, w: "fill", lh: 25 });
       const p = b.row(cd, { w: "fill", gap: 14 }); const pb = b.frame(p, { w: 44, h: 44, r: 22, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 18, t.accentText); const pc = b.col(p, { gap: 1 }); b.text(pc, "Play sample", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(pc, "0:08", { size: 12, c: t.text2, mono: true }); K.waveform(b, t, p, 330, 28, 0.3); b.frame(p, { w: "fill", h: 1 }); K.select(b, t, p, "Heart", 120);
@@ -143,7 +143,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       const hr = (fn: (l: Ref) => void, txt: string, fn2?: (r: Ref) => void) => { const q = b.row(hd, { w: "fill", gap: 12 }); const l = b.row(q, { w: 130, gap: 8 }); fn(l); b.text(q, txt, { size: 13, c: t.text2, w: "fill" }); fn2?.(q); };
       hr((l) => K.kbd(b, t, l, ["Ctrl", "Alt", "S"]), "Reads the text you selected, in any app.");
       hr((l) => { const e = b.frame(l, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e, "headphones", 15, t.text2); b.text(l, "Tray icon", { size: 13, weight: "SemiBold", c: t.text }); }, "Lives in the system tray. Windows 11 may hide it under the ^ arrow; drag the icon out to keep it in view.");
-      hr((l) => b.text(l, "Startup", { size: 13, weight: "SemiBold", c: t.text }), "Launch SpeakKit when you sign in to Windows.", (q) => K.toggle(b, t, q, true));
+      hr((l) => b.text(l, "Startup", { size: 13, weight: "SemiBold", c: t.text }), "Launch Speak Kit when you sign in to Windows.", (q) => K.toggle(b, t, q, true));
       back(); next("Open library");
     }
   },
@@ -250,7 +250,7 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
           const x2 = b.col(pv, { gap: 4, w: "fill" }); b.text(x2, "TITLE FOUND", { size: 12, weight: "SemiBold", c: t.text3, ls: 1 }); b.text(x2, "Why on-device voices finally sound human", { size: 15, weight: "Bold", c: t.text }); b.text(x2, "blog.example.org · counting words…", { size: 12.5, c: t.text2 });
         } else {
           const r = b.row(bd, { w: "fill", pad: 14, gap: 12, r: 10, fill: t.errSoft, align: "start" }); b.icon(r, "alertCircle", 18, t.err); const x = b.col(r, { gap: 3, w: "fill" });
-          b.text(x, "Couldn't read this page", { size: 14, weight: "SemiBold", c: t.text }); b.text(x, "It needs a login, and SpeakKit can't sign in for you. In Chrome, the extension reads pages you're already signed in to.", { size: 13, c: t.text2, w: "fill", lh: 19 }); b.text(x, "Details: blog.example.org answered 403 (sign-in required)", { size: 12, c: t.text3, mono: true });
+          b.text(x, "Couldn't read this page", { size: 14, weight: "SemiBold", c: t.text }); b.text(x, "It needs a login, and Speak Kit can't sign in for you. In Chrome, the extension reads pages you're already signed in to.", { size: 13, c: t.text2, w: "fill", lh: 19 }); b.text(x, "Details: blog.example.org answered 403 (sign-in required)", { size: 12, c: t.text3, mono: true });
           const rr = b.row(x, { gap: 14, pad: [4, 0, 0, 0] }); b.text(rr, "Try again", { size: 13, weight: "SemiBold", c: t.accent }); b.text(rr, "How the extension helps", { size: 13, weight: "SemiBold", c: t.accent });
         }
       }
@@ -265,7 +265,7 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
       const ic = b.frame(z, { w: 76, h: 76, r: 38, fill: col, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, bad ? "x" : "download", 34, bad ? "#FFFFFF" : t.accentText);
       b.text(z, bad ? "This file type isn't supported" : st === "drag" ? "Drop to add to your library" : "Drop 3 files to add them", { size: 26, weight: "Bold", c: t.text });
       if (st === "drag") b.text(z, "Attention Is All You Need.pdf · PDF · 15 pages", { size: 14, c: t.text2 });
-      else if (bad) { b.text(z, "setup.exe (.exe) can't be read aloud.", { size: 14, c: t.text2 }); b.text(z, "SpeakKit reads PDF, EPUB, DOCX, TXT, Markdown and HTML.", { size: 14, c: t.text2 }); }
+      else if (bad) { b.text(z, "setup.exe (.exe) can't be read aloud.", { size: 14, c: t.text2 }); b.text(z, "Speak Kit reads PDF, EPUB, DOCX, TXT, Markdown and HTML.", { size: 14, c: t.text2 }); }
       else { const l = b.col(z, { gap: 6, pad: [4, 0, 0, 0] }); ["Attention Is All You Need.pdf · PDF", "Thesis chapter 3 (draft).docx · DOCX", "reading-list.txt · TXT"].forEach((s) => { const r = b.row(l, { gap: 8 }); b.icon(r, "circleCheck", 15, t.ok); b.text(r, s, { size: 14, c: t.text2 }); }); }
       if (bad) b.text(z, "Release to cancel", { size: 13, weight: "SemiBold", c: t.err });
     }
@@ -274,7 +274,7 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
       dHead(b, t, d, paste ? "Delete this pasted text?" : "Delete this reading?", undefined, false);
       const bd = b.col(d, { w: "fill", pad: [0, 24, 20, 24], gap: 10 });
       b.text(bd, paste ? "“Meeting notes: Q4 planning”" : "“Attention Is All You Need.pdf”", { size: 14, weight: "SemiBold", c: t.text });
-      b.text(bd, paste ? "This pasted text exists only in SpeakKit. Deleting it removes the only copy, along with your saved position." : "It will be removed from your library, along with your saved position. The original file on your computer isn't touched.", { size: 14, c: t.text2, w: "fill", lh: 21 });
+      b.text(bd, paste ? "This pasted text exists only in Speak Kit. Deleting it removes the only copy, along with your saved position." : "It will be removed from your library, along with your saved position. The original file on your computer isn't touched.", { size: 14, c: t.text2, w: "fill", lh: 21 });
       dFoot(b, t, d, "You can undo for 10 seconds", ["Cancel", { v: "secondary" }, true], ["Delete", { v: "danger", icon: "trash" }]);
     }
     if (st === "deleted") { const w = centered(b, win, 232, 736, 1048); K.toast(b, t, w, "Deleted “Attention Is All You Need.pdf”", "neutral", { action: "Undo", icon: "trash" }); }

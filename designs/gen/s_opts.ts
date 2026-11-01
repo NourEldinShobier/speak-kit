@@ -45,14 +45,14 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
   id, group: "C", title, note, w: 1280, h: 800, dark,
   build: (b, t0, root) => {
     const t: T = dark ? { ...t0, hlSent: "#78621F" } : t0;
-    const c = K.browser(b, t, root, { url: "chrome-extension://speakkit/options.html", title: "SpeakKit options", ext: true });
+    const c = K.browser(b, t, root, { url: "chrome-extension://speakkit/options.html", title: "Speak Kit options", ext: true });
     b.rect(c, { x: 0, y: 0, w: 1280, h: 720, fill: t.bg });
     const nav = b.col(c, { x: 0, y: 0, w: 248, h: 720, pad: [24, 12], gap: 2, fill: t.bg });
-    const lg = b.row(nav, { gap: 8, pad: [0, 8, 14, 8] }); K.logo(b, t, lg, 26); b.text(lg, "SpeakKit", { size: 16, weight: "Bold", c: t.text });
+    const lg = b.row(nav, { gap: 8, pad: [0, 8, 14, 8] }); K.logo(b, t, lg, 26); b.text(lg, "Speak Kit", { size: 16, weight: "Bold", c: t.text });
     NAV.forEach(([k, l, ic]) => { K.navItem(b, t, nav, l, ic, { selected: sec.startsWith(k) }); });
     b.frame(nav, { w: "fill", h: "fill" });
     const sv = b.row(nav, { gap: 6, pad: [0, 8] }); b.icon(sv, "circleCheck", 14, t.ok); b.text(sv, "Changes save automatically", { size: 12, c: t.text2 });
-    b.text(nav, "SpeakKit extension 0.4.2", { size: 12, c: t.text3 });
+    b.text(nav, "Speak Kit extension 0.4.2", { size: 12, c: t.text3 });
     const m = b.col(c, { x: 240, y: 0, w: 1040, h: 720, pad: [28, 48], gap: 16 });
     const head = (s: string, d: string, reset?: string, saved = false) => {
       const h = b.row(m, { w: "fill", justify: "spaceBetween", align: "end" });
@@ -61,22 +61,22 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
     };
     if (sec.startsWith("general")) {
       const bad = sec !== "general"; const pair = sec === "general-pair";
-      head("General", "How the extension talks to the SpeakKit desktop app and where it shows up.");
+      head("General", "How the extension talks to the Speak Kit desktop app and where it shows up.");
       const cn = section(b, t, m, "Desktop app connection");
       const st = b.row(cn, { w: "fill", pad: [14, 0, 12, 0], gap: 14, justify: "spaceBetween" });
       const l = b.row(st, { gap: 12 });
       const ic = b.frame(l, { w: 40, h: 40, r: 20, fill: bad ? t.errSoft : t.okSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, bad ? "x" : "check", 20, bad ? t.err : t.ok); if (bad) { /* x keeps the status icon distinct from the toast triangle */ }
       const tx = b.col(l, { gap: 2 });
-      b.text(tx, !bad ? "Connected to SpeakKit 0.4.2" : pair ? "Pairing token rejected" : "SpeakKit isn't running", { size: 14.5, weight: "SemiBold", c: t.text });
+      b.text(tx, !bad ? "Connected to Speak Kit 0.4.2" : pair ? "Pairing token rejected" : "Speak Kit isn't running", { size: 14.5, weight: "SemiBold", c: t.text });
       b.text(tx, !bad ? "Kokoro-82M is ready · answered in 38 ms" : pair ? "This browser's token doesn't match the app." : "Nothing is answering on this computer.", { size: 12.5, c: t.text2 });
       const r = b.row(st, { gap: 8 });
       if (!bad) { K.btn(b, t, r, "Test connection", { v: "secondary", icon: "refresh" }); K.btn(b, t, r, "Re-pair", { v: "secondary", icon: "link" }); }
       else if (pair) { K.btn(b, t, r, "Test connection", { v: "ghost", icon: "refresh" }); K.btn(b, t, r, "Re-pair", { v: "secondary", icon: "link" }); K.btn(b, t, r, "Paste new token", { v: "primary", icon: "clipboard" }); }
-      else { K.btn(b, t, r, "Test connection", { v: "ghost", icon: "refresh" }); K.btn(b, t, r, "Download app", { v: "secondary", icon: "download" }); K.btn(b, t, r, "Open SpeakKit", { v: "primary", icon: "external" }); }
+      else { K.btn(b, t, r, "Test connection", { v: "ghost", icon: "refresh" }); K.btn(b, t, r, "Download app", { v: "secondary", icon: "download" }); K.btn(b, t, r, "Open Speak Kit", { v: "primary", icon: "external" }); }
       if (bad) {
         const e = b.col(cn, { w: "fill", pad: [12, 14], gap: 6, r: 10, fill: t.errSoft });
         const e1 = b.row(e, { w: "fill", gap: 10, align: "start" }); b.icon(e1, "alert", 16, t.err);
-        b.text(e1, pair ? "SpeakKit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch." : "Open SpeakKit and this page reconnects by itself. If it doesn't, download the app first.", { size: 12.5, c: errTx(t), w: "fill", lh: 18 });
+        b.text(e1, pair ? "Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch." : "Open Speak Kit and this page reconnects by itself. If it doesn't, download the app first.", { size: 12.5, c: errTx(t), w: "fill", lh: 18 });
         const d = b.row(e, { gap: 4, pad: [0, 0, 0, 26] }); b.text(d, "Details", { size: 12, weight: "SemiBold", c: errTx(t) }); b.icon(d, "down", 12, errTx(t));
       }
       b.frame(cn, { w: 1, h: 12 });
@@ -85,7 +85,7 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
       const f1 = b.col(fr, { w: "fill", gap: 4 }); b.text(f1, "Port", { size: 13.5, weight: "Medium", c: t.text }); b.text(f1, "Must match the desktop app. Loopback only; nothing leaves your computer.", { size: 12, c: t.text2, w: "fill", lh: 17 }); K.input(b, t, f1, { value: "51730", w: 120, h: 36 });
       const f2 = b.col(fr, { w: "fill", gap: 4 }); b.text(f2, "Pairing token", { size: 13.5, weight: "Medium", c: t.text }); b.text(f2, "Sent with every request so other websites can't use your voice engine.", { size: 12, c: t.text2, w: "fill", lh: 17 });
       K.input(b, t, f2, pair ? { placeholder: "Paste the new token here", state: "error", w: 300, h: 36, icon: "clipboard" } : { value: "sk_local_••••••••c42e", w: 300, h: 36 });
-      if (pair) { const e = b.row(f2, { gap: 6, w: "fill", align: "start" }); b.icon(e, "alert", 13, errTx(t)); b.text(e, "Token rejected. Copy a new one from SpeakKit > Settings > Browser integration.", { size: 12, c: errTx(t), w: "fill", lh: 17 }); }
+      if (pair) { const e = b.row(f2, { gap: 6, w: "fill", align: "start" }); b.icon(e, "alert", 13, errTx(t)); b.text(e, "Token rejected. Copy a new one from Speak Kit > Settings > Browser integration.", { size: 12, c: errTx(t), w: "fill", lh: 17 }); }
       const sh = section(b, t, m, "Where it appears");
       grid2(b, t, sh, [["Selection bubble", "Show Listen when you select text.", true], ["Read-aloud pill", "The read-aloud pill at the bottom of the page while reading.", true], ["Edge launcher", "A tab at the page edge. Hover to open, click Listen.", true], ["Paragraph play button", "A play button in the margin when you hover a paragraph.", true], ["Auto-scroll while reading", "Keep the current sentence in view.", true], ["Right-click menu entries", "Read selection, read from here, add to queue.", true]]);
     } else if (sec === "launcher") {
@@ -124,7 +124,7 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
       const bx = b.row(pv, { w: "fill", gap: 12, pad: 12, r: 12, fill: t.surface2, align: "center" }); // padded preview box
       K.input(b, t, bx, { value: "Notes, documents and even voices lived on someone else's server.", w: "fill" }); K.btn(b, t, bx, "Play sample", { v: "primary", icon: "play" });
     } else if (sec === "highlight") {
-      head("Highlighting", "How the sentence and the current word are marked while SpeakKit reads.", "Reset section");
+      head("Highlighting", "How the sentence and the current word are marked while Speak Kit reads.", "Reset section");
       const dk = t.mode === "dark";
       const pv = K.card(b, t, m, { w: "fill", pad: 16, gap: 12 });
       const ph = b.row(pv, { w: "fill", justify: "spaceBetween" });
@@ -160,7 +160,7 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
       const pr = (cells: [string, string[]][]) => { const r = b.row(c2, { w: "fill", gap: 48, align: "start" }); cells.forEach(([n, k]) => { const cell = b.col(r, { w: "fill" }); K.settingRow(b, t, cell, n, undefined, (f) => { const g = b.row(f, { gap: 10 }); kb(b, t, g, k); K.iconBtn(b, t, g, "edit", { size: 32, ring: true }); }); }); };
       pr([["Next paragraph", ["→"]], ["Previous paragraph", ["←"]]]); K.divider(b, t, c2); pr([["Faster / slower", ["↑", "↓"]], ["Stop and close pill", ["Esc"]]]);
     } else if (sec === "sites") {
-      head("Sites and filters", "Choose where SpeakKit appears and what it skips when it reads.", "Reset section");
+      head("Sites and filters", "Choose where Speak Kit appears and what it skips when it reads.", "Reset section");
       const f1 = section(b, t, m, "What to skip");
       grid2(b, t, f1, [["Navigation, menus and footers", undefined, true], ["Footnote numbers and citations [12]", undefined, true], ["Code blocks", undefined, true], ["Long URLs (say “link” instead)", undefined, true], ["Image captions", undefined, false]]);
       const s1 = section(b, t, m, "Site rules");
@@ -200,12 +200,12 @@ const panel = (id: string, title: string, note: string, st: PanelState, dark = f
     const inner = b.frame(vp, { x: -200, y: 0, w: 1280, h: 720 });
     K.article(b, t, inner, { w: 520, hl: st === "queue" ? { para: 0, sent: 1, word: 3 } : undefined });
     const p = b.col(c, { x: 880, y: 0, w: 400, h: 720, fill: t.surface, stroke: t.border, sw: 1, gap: 0 });
-    const h = b.row(p, { w: "fill", h: 56, pad: [0, 12, 0, 16], justify: "spaceBetween" }); const l = b.row(h, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "SpeakKit queue", { size: 14, weight: "Bold", c: t.text }); K.iconBtn(b, t, h, "x", { size: 32, c: t.text2 });
+    const h = b.row(p, { w: "fill", h: 56, pad: [0, 12, 0, 16], justify: "spaceBetween" }); const l = b.row(h, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "Speak Kit queue", { size: 14, weight: "Bold", c: t.text }); K.iconBtn(b, t, h, "x", { size: 32, c: t.text2 });
     b.rect(p, { w: "fill", h: 1, fill: t.border });
     if (st === "empty") {
       const e = b.col(p, { w: "fill", h: "fill", align: "center", justify: "center", pad: 32, gap: 12 });
       const ic = b.frame(e, { w: 56, h: 56, r: 28, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "list", 24, t.text2);
-      b.text(e, "Nothing queued", { size: 16, weight: "Bold", c: t.text }); b.text(e, "Line up several articles. Add this page now, or right-click a page or selection and choose SpeakKit, then Add to queue.", { size: 13, c: t.text2, ta: "center", w: "fill", lh: 19 });
+      b.text(e, "Nothing queued", { size: 16, weight: "Bold", c: t.text }); b.text(e, "Line up several articles. Add this page now, or right-click a page or selection and choose Speak Kit, then Add to queue.", { size: 13, c: t.text2, ta: "center", w: "fill", lh: 19 });
       K.btn(b, t, e, "Add this page", { v: "primary", icon: "plus" }); return;
     }
     const tt: T = { ...t, border: dark ? "#3A4570" : "#BFCBF0" };

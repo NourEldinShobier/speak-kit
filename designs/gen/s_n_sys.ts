@@ -11,7 +11,7 @@ const keys = (b: B, t: T, f: Ref, k: string[], state?: "rec") => { const r = b.r
 
 // ---------------- settings pages ----------------
 const memory = (asleep: boolean) => (b: B, t: T, root: Ref) => {
-  X.settingsPage(b, t, root, "memory", "Memory and performance", "SpeakKit keeps the voice engine loaded while you listen and unloads it when you stop, so it holds no memory in the background.", (c) => {
+  X.settingsPage(b, t, root, "memory", "Memory and performance", "Speak Kit keeps the voice engine loaded while you listen and unloads it when you stop, so it holds no memory in the background.", (c) => {
     X.group(b, t, c, "VOICE ENGINE", [
       (f) => K.settingRow(b, t, f, "Unload the engine after", "Gives back about 420 MB. It wakes in about 2 seconds when you press play.", (r) => K.seg(b, t, r, ["1 min", "5 min", "15 min", "Never"], 1)),
       (f) => X.toggleRow(b, t, f, "Load the engine at startup", "On: the first play is instant and memory is used from sign-in. Off: the engine wakes on play.", false),
@@ -29,15 +29,15 @@ const memory = (asleep: boolean) => (b: B, t: T, root: Ref) => {
   }, { pill: asleep ? { label: "Engine asleep", tone: "neutral", icon: "zzz" } : undefined });
 };
 const keysPage = (mode: "conflict" | "rec") => (b: B, t: T, root: Ref) => {
-  X.settingsPage(b, t, root, "keys", "Shortcuts", "Global shortcuts work in any app, even when SpeakKit is in the tray. Change them any time.", (c) => {
-    if (mode === "conflict") X.banner(b, t, c, { tone: "warn", title: "Ctrl Alt S is also used by Microsoft Word (New comment)", body: "SpeakKit takes priority while it runs, so Word's shortcut stops working. Pick another shortcut, or keep both.", primary: "Use Ctrl Alt Shift S instead", secondary: "Keep Ctrl Alt S" });
+  X.settingsPage(b, t, root, "keys", "Shortcuts", "Global shortcuts work in any app, even when Speak Kit is in the tray. Change them any time.", (c) => {
+    if (mode === "conflict") X.banner(b, t, c, { tone: "warn", title: "Ctrl Alt S is also used by Microsoft Word (New comment)", body: "Speak Kit takes priority while it runs, so Word's shortcut stops working. Pick another shortcut, or keep both.", primary: "Use Ctrl Alt Shift S instead", secondary: "Keep Ctrl Alt S" });
     const rows: [string, string[]][] = [["Read selected text", ["Ctrl", "Alt", "S"]], ["Read clipboard", ["Ctrl", "Alt", "C"]], ["Play or pause", ["Ctrl", "Alt", "Space"]], ["Stop", ["Ctrl", "Alt", "X"]]];
     X.group(b, t, c, "GLOBAL", rows.map(([l, k], i) => (f: Ref) => K.settingRow(b, t, f, l, undefined, (r) => keys(b, t, r, k, mode === "rec" && i === 1 ? "rec" : undefined))));
     X.group(b, t, c, "IN THE BROWSER", [(f) => K.settingRow(b, t, f, "Read selection", "Set in Chrome: chrome://extensions/shortcuts", (r) => keys(b, t, r, ["Ctrl", "Shift", "S"])), (f) => K.settingRow(b, t, f, "Play or pause", undefined, (r) => keys(b, t, r, ["Ctrl", "Shift", "P"]))]);
   }, { colW: 820 });
 };
 const notify = (b: B, t: T, root: Ref) => {
-  X.settingsPage(b, t, root, "notify", "Notifications", "Windows toasts open SpeakKit at the right place. They carry no buttons; everything also lands in the bell.", (c) => {
+  X.settingsPage(b, t, root, "notify", "Notifications", "Windows toasts open Speak Kit at the right place. They carry no buttons; everything also lands in the bell.", (c) => {
     const card = b.col(c, { w: "fill", pad: [0, 16], r: 8, fill: t.surface, stroke: t.border, sw: 1, sa: "inside" });
     const hd = b.row(card, { w: "fill", h: 34, gap: 0 }); b.text(hd, "EVENT", { size: 11, weight: "SemiBold", c: t.text3, w: "fill" }); ["Toast", "Bell", "Sound"].forEach((s) => b.text(hd, s, { size: 11, weight: "SemiBold", c: t.text3, w: 90, ta: "center" }));
     [["Reading finished", 1, 1, 0], ["Export done", 1, 1, 0], ["Model download done", 1, 1, 0], ["Engine error", 1, 1, 1], ["Update ready", 0, 1, 0]].forEach(([n, a, bb, s]) => {
@@ -48,8 +48,8 @@ const notify = (b: B, t: T, root: Ref) => {
   }, { colW: 820 });
 };
 const startup = (b: B, t: T, root: Ref) => {
-  X.settingsPage(b, t, root, "startup", "Startup and tray", "SpeakKit uses about 120 MB of memory when idle. The voice engine is not loaded until you listen.", (c) => {
-    X.group(b, t, c, "WHEN I SIGN IN", [(f) => X.toggleRow(b, t, f, "Start SpeakKit when I sign in", "Starts hidden in the tray so the extension is ready.", true), (f) => X.toggleRow(b, t, f, "Open the window at start", "Off: only the tray icon appears.", false)]);
+  X.settingsPage(b, t, root, "startup", "Startup and tray", "Speak Kit uses about 120 MB of memory when idle. The voice engine is not loaded until you listen.", (c) => {
+    X.group(b, t, c, "WHEN I SIGN IN", [(f) => X.toggleRow(b, t, f, "Start Speak Kit when I sign in", "Starts hidden in the tray so the extension is ready.", true), (f) => X.toggleRow(b, t, f, "Open the window at start", "Off: only the tray icon appears.", false)]);
     X.group(b, t, c, "WHEN THE WINDOW IS CLOSED", [(f) => X.toggleRow(b, t, f, "Keep running in the tray", "The extension and global shortcuts keep working.", true), (f) => X.toggleRow(b, t, f, "Show the tray icon state", "Working, needs you and paused change the icon.", true), (f) => X.toggleRow(b, t, f, "Keep the computer awake while reading", "Off by default. Closing a laptop lid still sleeps.", false)]);
   });
 };
@@ -67,7 +67,7 @@ const upd = (b: B, t: T, root: Ref) => {
   const { win, main } = K.desktopWindow(b, t, root, { nav: "home", update: true });
   homeContent(b, t, main);
   const p = K.popover(b, t, win, { abs: true, x: 800, y: 44, w: 380, gap: 12 } as any);
-  const h = b.row(p, { w: "fill", justify: "spaceBetween" }); b.text(h, "SpeakKit 1.1.0 is ready", { size: 14, weight: "SemiBold", c: t.text }); K.badge(b, t, h, "18 MB", "neutral");
+  const h = b.row(p, { w: "fill", justify: "spaceBetween" }); b.text(h, "Speak Kit 1.1.0 is ready", { size: 14, weight: "SemiBold", c: t.text }); K.badge(b, t, h, "18 MB", "neutral");
   ["The engine wakes in about 1.2 s instead of 2 s", "New Pause between paragraphs setting", "Fixes a crash when pairing a second browser"].forEach((s) => { const r = b.row(p, { w: "fill", gap: 8, align: "start" }); b.icon(r, "check", 14, t.ok); b.text(r, s, { size: 12, c: t.text2, w: "fill", lh: 17 }); });
   b.text(p, "1 reading is playing. Restarting waits for it to finish.", { size: 11, c: t.text3 });
   const r = b.row(p, { w: "fill", gap: 8, justify: "max" }); K.btn(b, t, r, "Install when I quit", { v: "secondary" }); K.btn(b, t, r, "Restart now", { v: "primary" });
@@ -75,8 +75,8 @@ const upd = (b: B, t: T, root: Ref) => {
 const updating = (b: B, t: T, root: Ref) => {
   const { win, main } = K.desktopWindow(b, t, root, { nav: "home", update: true }); homeContent(b, t, main); dim(b, t, win);
   const c = b.col(win, { abs: true, x: 440, y: 290, w: 400, pad: 24, gap: 14, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", align: "center" });
-  K.logo(b, t, c, 44, { r: 12 }); b.text(c, "Updating SpeakKit…", { size: 16, weight: "SemiBold", c: t.text }); K.progress(b, t, c, 0.4, { w: 352 });
-  b.text(c, "SpeakKit will reopen where you left off. Your readings and settings stay as they are.", { size: 12, c: t.text2, w: "fill", ta: "center", lh: 17 });
+  K.logo(b, t, c, 44, { r: 12 }); b.text(c, "Updating Speak Kit…", { size: 16, weight: "SemiBold", c: t.text }); K.progress(b, t, c, 0.4, { w: 352 });
+  b.text(c, "Speak Kit will reopen where you left off. Your readings and settings stay as they are.", { size: 12, c: t.text2, w: "fill", ta: "center", lh: 17 });
 };
 
 // ---------------- engine states ----------------
@@ -93,7 +93,7 @@ const engBoard = (b: B, t: T, root: Ref) => {
     const r = b.row(c, { w: "fill", gap: 24, pad: [16, 0], align: "center" }); K.divider(b, t, c);
     const a = b.col(r, { w: 270, gap: 6 }); const h = b.row(a, { gap: 8 }); b.text(h, e.k, { size: 16, weight: "SemiBold", c: t.text }); K.badge(b, t, h, e.k, e.tone); b.text(a, e.meaning, { size: 12, c: t.text2, w: "fill", lh: 17 });
     const pp = b.row(r, { w: 330, h: 52, pad: [0, 16], justify: "spaceBetween", r: 12, fill: t.raised, stroke: t.control, sw: 1, sa: "inside" });
-    const l = b.row(pp, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "SpeakKit", { size: 14, weight: "SemiBold", c: t.text }); K.badge(b, t, pp, e.popup, e.tone === "neutral" ? "neutral" : e.tone);
+    const l = b.row(pp, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "Speak Kit", { size: 14, weight: "SemiBold", c: t.text }); K.badge(b, t, pp, e.popup, e.tone === "neutral" ? "neutral" : e.tone);
     const pw = b.row(r, { w: 649 }); K.dock(b, t, pw, e.pill);
     const sb = K.card(b, t, r, { w: 248, pad: 12, gap: 6, r: 10 }); const r1 = b.row(sb, { gap: 8 }); b.icon(r1, e.side.tone === "ok" ? "circleCheck" : e.side.tone === "neutral" ? "zzz" : "alertCircle", 16, X.toneC(t, e.side.tone === "ok" ? "ok" : e.side.tone === "warn" ? "warn" : "neutral")); b.text(r1, e.side.label, { size: 13, weight: "Medium", c: t.text }); b.text(sb, e.side.sub, { size: 12, c: t.text2 });
     X.trayIcon(b, t, r, e.tray, 48);
@@ -121,7 +121,7 @@ const enginesPage = (st: "unloaded" | "loading") => (b: B, t: T, root: Ref) => {
 // ---------------- tray, toasts, mini player ----------------
 const trayPanel = (b: B, t: T, p: Ref, o: O1 = {}) => {
   const f = b.col(p, { w: 306, pad: 0, gap: 0, r: 12, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", clip: true, ...o });
-  const h = b.row(f, { w: "fill", h: 44, pad: [0, 12], justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 20); b.text(hl, "SpeakKit", { size: 13, weight: "SemiBold", c: t.text });
+  const h = b.row(f, { w: "fill", h: 44, pad: [0, 12], justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 20); b.text(hl, "Speak Kit", { size: 13, weight: "SemiBold", c: t.text });
   const hr = b.row(h, { gap: 0 }); K.iconBtn(b, t, hr, "settings", { size: 28 }); K.iconBtn(b, t, hr, "maximize", { size: 28 });
   K.divider(b, t, f);
   const rows: [string, string, string, string, string?][] = [["loader", t.accent, "The quiet return of local-first software", "Reading · paragraph 2 of 14"], ["circleCheck", t.ok, "Attention Is All You Need.pdf", "Export ready · 4.2 MB"], ["alertCircle", t.warn, "Meeting notes: Q4 planning", "Needs you: pick a voice for this language"]];
@@ -133,9 +133,9 @@ const trayPanel = (b: B, t: T, p: Ref, o: O1 = {}) => {
 type O1 = Record<string, any>;
 const tray = (b: B, t: T, root: Ref) => {
   X.wallpaper(b, t, root);
-  X.nativeMenu(b, t, root, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open SpeakKit" }, "-", { l: "Pause", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit SpeakKit" }], { x: 660, y: 800 - 48 - 14 - 284 } as any);
+  X.nativeMenu(b, t, root, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open Speak Kit" }, "-", { l: "Pause", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit Speak Kit" }], { x: 660, y: 800 - 48 - 14 - 284 } as any);
   trayPanel(b, t, root, { x: 962, y: 800 - 48 - 12 - 330 });
-  X.rulesCard(b, t, root, "Tray rules", ["Right-click: a short native menu. Left-click: SpeakKit's own panel.", "Icon states: normal, working (animated), needs you (orange dot), paused (grey), asleep (dim).", "Closing the window keeps SpeakKit in the tray. Quit is in both places and asks first when work is running."], { x: 40, y: 800 - 48 - 24 - 150 });
+  X.rulesCard(b, t, root, "Tray rules", ["Right-click: a short native menu. Left-click: Speak Kit's own panel.", "Icon states: normal, working (animated), needs you (orange dot), paused (grey), asleep (dim).", "Closing the window keeps Speak Kit in the tray. Quit is in both places and asks first when work is running."], { x: 40, y: 800 - 48 - 24 - 150 });
 };
 const trayStates = (b: B, t: T, root: Ref) => {
   const c = b.col(root, { x: 0, y: 0, w: 1280, h: 800, pad: 40, gap: 24, fill: t.bg });
@@ -145,16 +145,16 @@ const trayStates = (b: B, t: T, root: Ref) => {
     const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10 }); X.trayIcon(b, t, k, s, 56); b.text(k, n, { size: 13, weight: "SemiBold", c: t.text }); b.text(k, d, { size: 12, c: t.text2, w: "fill", lh: 17 });
   });
   const m = b.row(c, { w: "fill", gap: 32, align: "start" });
-  const a = b.col(m, { gap: 8 }); X.caps(b, t, a, "WHILE READING"); X.nativeMenu(b, t, a, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open SpeakKit" }, "-", { l: "Pause", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit SpeakKit" }], {});
-  const a2 = b.col(m, { gap: 8 }); X.caps(b, t, a2, "ENGINE ASLEEP"); X.nativeMenu(b, t, a2, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open SpeakKit" }, "-", { l: "Wake the engine" }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit SpeakKit" }], {});
-  const a3 = b.col(m, { gap: 8 }); X.caps(b, t, a3, "UPDATE READY"); X.nativeMenu(b, t, a3, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open SpeakKit" }, "-", { l: "Install update 1.1.0", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, "-", { l: "Quit SpeakKit" }], {});
+  const a = b.col(m, { gap: 8 }); X.caps(b, t, a, "WHILE READING"); X.nativeMenu(b, t, a, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open Speak Kit" }, "-", { l: "Pause", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit Speak Kit" }], {});
+  const a2 = b.col(m, { gap: 8 }); X.caps(b, t, a2, "ENGINE ASLEEP"); X.nativeMenu(b, t, a2, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open Speak Kit" }, "-", { l: "Wake the engine" }, { l: "Do not disturb" }, "-", { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit Speak Kit" }], {});
+  const a3 = b.col(m, { gap: 8 }); X.caps(b, t, a3, "UPDATE READY"); X.nativeMenu(b, t, a3, [{ l: "Read clipboard", k: "Ctrl Alt C" }, { l: "Open Speak Kit" }, "-", { l: "Install update 1.1.0", hi: true }, { l: "Do not disturb" }, "-", { l: "Settings" }, "-", { l: "Quit Speak Kit" }], {});
 };
 const toasts = (b: B, t: T, root: Ref) => {
   X.wallpaper(b, t, root);
-  X.winToast(b, t, root, { title: "Export done: Attention Is All You Need", body: "MP3 · 4.2 MB · 14 min. Saved to Documents\\SpeakKit.", hint: "Click to show the file", tone: "ok", x: 900, y: 800 - 48 - 16 - 3 * 128 - 20 } as any);
+  X.winToast(b, t, root, { title: "Export done: Attention Is All You Need", body: "MP3 · 4.2 MB · 14 min. Saved to Documents\\Speak Kit.", hint: "Click to show the file", tone: "ok", x: 900, y: 800 - 48 - 16 - 3 * 128 - 20 } as any);
   X.winToast(b, t, root, { title: "Read what you copied?", body: "412 words copied from Chrome. About 2 min 10 s at 1.2x.", hint: "Click to read it", x: 900, y: 800 - 48 - 16 - 2 * 128 - 10 } as any);
-  X.winToast(b, t, root, { title: "The voice engine stopped", body: "Your readings are saved. SpeakKit restarted the engine and playback can continue.", hint: "Click to open SpeakKit", tone: "err", x: 900, y: 800 - 48 - 16 - 128 } as any);
-  X.rulesCard(b, t, root, "Notification rules", ["No buttons: Windows toasts cannot carry them reliably. Every toast opens SpeakKit at the exact place.", "Grouped per event, at most one toast per event every 10 minutes.", "Do not disturb and Windows Focus are respected; everything also appears in the bell."], { x: 40, y: 800 - 48 - 24 - 150 });
+  X.winToast(b, t, root, { title: "The voice engine stopped", body: "Your readings are saved. Speak Kit restarted the engine and playback can continue.", hint: "Click to open Speak Kit", tone: "err", x: 900, y: 800 - 48 - 16 - 128 } as any);
+  X.rulesCard(b, t, root, "Notification rules", ["No buttons: Windows toasts cannot carry them reliably. Every toast opens Speak Kit at the exact place.", "Grouped per event, at most one toast per event every 10 minutes.", "Do not disturb and Windows Focus are respected; everything also appears in the bell."], { x: 40, y: 800 - 48 - 24 - 150 });
 };
 const mini = (b: B, t: T, root: Ref) => {
   const c = b.col(root, { x: 0, y: 0, w: 1280, h: 800, pad: 40, gap: 22, fill: t.bg });
@@ -176,7 +176,7 @@ const mini = (b: B, t: T, root: Ref) => {
 const quit = (b: B, t: T, root: Ref) => {
   const { win, main } = K.desktopWindow(b, t, root, { nav: "home" }); homeContent(b, t, main); dim(b, t, win);
   const d = b.col(win, { abs: true, x: 400, y: 220, w: 480, pad: 24, gap: 16, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg" });
-  const h = b.row(d, { w: "fill", gap: 12, align: "center" }); const tile = b.frame(h, { w: 36, h: 36, r: 8, fill: tint(t.warn, 0.16), layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, "alert", 18, t.warn); b.text(h, "Quit SpeakKit?", { size: 16, weight: "SemiBold", c: t.text });
+  const h = b.row(d, { w: "fill", gap: 12, align: "center" }); const tile = b.frame(h, { w: 36, h: 36, r: 8, fill: tint(t.warn, 0.16), layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, "alert", 18, t.warn); b.text(h, "Quit Speak Kit?", { size: 16, weight: "SemiBold", c: t.text });
   b.text(d, "1 reading is playing and 2 exports are rendering.", { size: 13, c: t.text2 });
   const l = b.col(d, { w: "fill", pad: [0, 14], r: 8, fill: t.surface, stroke: t.border, sw: 1, sa: "inside" });
   [["The quiet return of local-first software", "Stops now; resume from Library later"], ["Export: Attention Is All You Need.mp3", "Stops now; start it again from Library"], ["Export: Meeting notes.wav", "Stops now; start it again from Library"]].forEach(([n, c], i) => { if (i) K.divider(b, t, l); const r = b.col(l, { w: "fill", pad: [10, 0], gap: 1 }); b.text(r, n, { size: 13, weight: "Medium", c: t.text }); b.text(r, c, { size: 12, c: t.text3 }); });
@@ -187,14 +187,14 @@ const edge = (b: B, t: T, root: Ref) => {
   b.text(c, "Edge states: each shows where the problem happened, keeps what worked, and offers one next step", { size: 22, weight: "SemiBold", c: t.text });
   const cases: [string, X.BTone, string, string, string, string?][] = [
     ["OFFLINE", "info", "You're offline", "Reading on this computer still works. Updates and the Web Store wait.", "Read something"],
-    ["ENGINE NOT RESPONDING", "err", "SpeakKit's engine stopped", "Your readings are saved. Restarting takes about 2 seconds.", "Restart engine", "Send crash report"],
+    ["ENGINE NOT RESPONDING", "err", "Speak Kit's engine stopped", "Your readings are saved. Restarting takes about 2 seconds.", "Restart engine", "Send crash report"],
     ["PORT IN USE", "err", "Port 51730 is in use", "Another program holds the port, so Chrome can't connect. Nothing was lost.", "Choose port", "Show what uses it"],
     ["DISK ALMOST FULL", "warn", "Only 1.1 GB left on drive D", "New audio can't be cached. Existing readings are unaffected.", "Clear cache", "Manage storage"],
     ["MODEL CHECKSUM FAILED", "err", "The voice model didn't verify", "The download was damaged. The previous model keeps working.", "Download again"],
     ["EXTENSION OUT OF DATE", "warn", "The Chrome extension is older than the app", "Reading still works. Update to get the new pill.", "Update extension"],
     ["MICROPHONE BLOCKED", "warn", "Windows blocks the microphone", "Recording a voice sample needs it. Reading is unaffected.", "Open System Settings"],
     ["SHORTCUT TAKEN", "warn", "Another app now uses Ctrl Alt S", "Read selection moved to Ctrl Alt Shift S for now.", "Choose shortcut"],
-    ["OUT OF GPU MEMORY", "warn", "The GPU ran out of memory", "SpeakKit switched this reading to the CPU, about 3x slower.", "Use CPU always", "Retry on GPU"],
+    ["OUT OF GPU MEMORY", "warn", "The GPU ran out of memory", "Speak Kit switched this reading to the CPU, about 3x slower.", "Use CPU always", "Retry on GPU"],
     ["DOWNLOAD PAUSED", "warn", "Model download paused at 62%", "It continues from here, nothing is downloaded twice.", "Resume"],
     ["UPDATE FAILED", "err", "The update couldn't be installed", "You are still on 1.0.4 and everything works.", "Try again", "Download manually"],
     ["PAIRING TOKEN REJECTED", "err", "Chrome no longer matches this app", "Readings in the app work. Pair the browser again to read pages.", "Pair again"],
@@ -223,11 +223,11 @@ export const N3: S[] = [
   scr("H16", "H", "Settings · Shortcuts (conflict)", "A conflict names the other app and offers one alternative, never a silent override.", keysPage("conflict")),
   scr("H17", "H", "Settings · Search settings", "The title-bar search finds a row and names the page it lives on.", searchRes),
   scr("H18", "H", "Update ready · pill and popover", "Never forced: a green pill in the title bar opens a popover with Install when I quit or Restart now.", upd),
-  scr("H19", "H", "Updating", "Restart shows one small progress card and says SpeakKit will reopen where you left off.", updating),
+  scr("H19", "H", "Updating", "Restart shows one small progress card and says Speak Kit will reopen where you left off.", updating),
   scr("O1", "O", "Engine states board", "Unloaded, Loading and Ready use the same words and icons in the popup, the pill, the sidebar and the tray.", engBoard, 1760, 760),
   scr("O2", "O", "Engines · unloaded", "Unloaded: 0 MB, wakes on play, Load now; the title-bar pill says Engine asleep.", enginesPage("unloaded")),
   scr("O3", "O", "Engines · loading", "Loading: looping bar, Cancel, memory rising; the title-bar pill is amber with a spinner.", enginesPage("loading")),
-  scr("I10", "I", "Tray menu and left-click panel", "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.", tray),
+  scr("I10", "I", "Tray menu and left-click panel", "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.", tray),
   scr("I11", "I", "Tray icon states", "Normal, working, needs you, paused and asleep; menus change one row for asleep and update ready.", trayStates),
   scr("I12", "I", "Windows toasts", "Export done, clipboard prompt and engine error: no buttons, each click opens the exact place.", toasts),
   scr("I13", "I", "Mini player storyboard", "36 px pill, spring width, stop never moves, shrinks to a dot after 4 s of quiet.", mini),

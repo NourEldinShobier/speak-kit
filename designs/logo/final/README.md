@@ -1,4 +1,4 @@
-# SpeakKit logo: Voice hub (final)
+# Speak Kit logo: Voice hub (final)
 
 A kit of four pieces cut apart by two voice waves, held together by a round voice disc. The blue disc speaks; the yellow piece is the word being read.
 

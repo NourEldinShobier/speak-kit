@@ -20,7 +20,7 @@ const dim = (b: B, p: Ref, size: number, on: boolean) => b.frame(p, { w: size + 
 
 const popHeader = (b: B, t: T, pop: Ref, status: "ok" | "err" | "warn" | "neutral", label?: string) => {
   const h = b.row(pop, { w: "fill", h: 52, pad: [0, 16], justify: "spaceBetween", fill: t.surface });
-  const l = b.row(h, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "SpeakKit", { size: 14, weight: "Bold", c: t.text });
+  const l = b.row(h, { gap: 8 }); K.logo(b, t, l, 24); b.text(l, "Speak Kit", { size: 14, weight: "Bold", c: t.text });
   const r = b.row(h, { gap: 6 });
   stat(b, t, r, label ?? { ok: "Kokoro ready", warn: "Loading model", err: "App offline", neutral: "Not set up" }[status], status);
   K.iconBtn(b, t, r, "sliders", { size: 32 });
@@ -110,23 +110,23 @@ const popup = (id: string, title: string, note: string, state: PS, h: number, da
     const pop = K.popupCanvas(b, t, root, h);
     if (state === "noapp") {
       popHeader(b, t, pop, "err");
-      const c = msg(b, t, pop, "power", "err", "SpeakKit isn't running", "The extension reads with the SpeakKit desktop app on this computer. Open the app and this popup connects by itself.");
-      K.btn(b, t, c, "Open SpeakKit", { v: "primary", sz: "lg", w: "fill", icon: "external" });
+      const c = msg(b, t, pop, "power", "err", "Speak Kit isn't running", "The extension reads with the Speak Kit desktop app on this computer. Open the app and this popup connects by itself.");
+      K.btn(b, t, c, "Open Speak Kit", { v: "primary", sz: "lg", w: "fill", icon: "external" });
       K.btn(b, t, c, "Download the app", { v: "secondary", sz: "md", w: "fill", icon: "download" });
             foot(b, t, pop, "Runs on this computer", "Troubleshooting"); return;
     }
     if (state === "install") {
       popHeader(b, t, pop, "neutral");
-      const c = msg(b, t, pop, "download", "accent", "Install SpeakKit to start listening", "SpeakKit reads pages aloud with a voice that runs on this computer. Nothing you read is uploaded.");
-      K.btn(b, t, c, "Download SpeakKit for Windows", { v: "primary", sz: "lg", w: "fill", icon: "download" });
+      const c = msg(b, t, pop, "download", "accent", "Install Speak Kit to start listening", "Speak Kit reads pages aloud with a voice that runs on this computer. Nothing you read is uploaded.");
+      K.btn(b, t, c, "Download Speak Kit for Windows", { v: "primary", sz: "lg", w: "fill", icon: "download" });
       K.btn(b, t, c, "I already installed it", { v: "secondary", sz: "md", w: "fill", icon: "refresh" });
             foot(b, t, pop, "Free. Works offline.", "Learn more"); return;
     }
     if (state === "token") {
       popHeader(b, t, pop, "warn", "Not paired");
-      const c = msg(b, t, pop, "link", "warn", "Pair SpeakKit with this browser again", "The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them.");
+      const c = msg(b, t, pop, "link", "warn", "Pair Speak Kit with this browser again", "The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them.");
       K.btn(b, t, c, "Paste new token", { v: "primary", sz: "lg", w: "fill", icon: "clipboard" });
-      K.btn(b, t, c, "Open SpeakKit", { v: "secondary", sz: "md", w: "fill", icon: "external" });
+      K.btn(b, t, c, "Open Speak Kit", { v: "secondary", sz: "md", w: "fill", icon: "external" });
             foot(b, t, pop, "Runs on this computer", "Extension options"); return;
     }
     if (state === "fileurl") {
@@ -296,7 +296,7 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
     if (o.ctx) {
       winMenu(b, t, c, 560, 290, 360, [
         { l: "Copy", k: "Ctrl+C" }, { l: "Search Google for “Notes, documents and even…”" }, { l: "Print…", k: "Ctrl+P" }, { sep: true },
-        { l: "SpeakKit", sub: true, hi: true, logo: true }, { sep: true }, { l: "Inspect", k: "Ctrl+Shift+I" },
+        { l: "Speak Kit", sub: true, hi: true, logo: true }, { sep: true }, { l: "Inspect", k: "Ctrl+Shift+I" },
       ]);
       winMenu(b, t, c, 916, 290 + 105, 190, [{ l: "Read selection" }, { l: "Read from here" }, { l: "Add to queue" }]);
     }
@@ -365,13 +365,13 @@ const HL = { para: 0, sent: 1, word: 6 };
 export const Bs: S[] = [
   page("B1", "Page · selection bubble", "Selecting text pops a bubble 8 px above the selection: Listen (with its shortcut on hover), voice and speed, copy.", { selection: true, bubble: true }),
   page("B2", "Page · paragraph play gutter, after reading started", "The paragraph play button appears only after reading has started on this page load; on a fresh page the margin is empty. Hovering a paragraph then tints it and shows read from here.", { hover: true, hl: HL, dock: "playing" }),
-  page("B3", "Page · context menu", "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.", { selection: true, ctx: true }),
+  page("B3", "Page · context menu", "Native Chrome menu: Speak Kit submenu with read selection, read from here and add to queue.", { selection: true, ctx: true }),
   page("B4", "Page · pill idle", "The read-aloud pill appears at the bottom after the first use (can be hidden per site).", { dock: "idle" }),
   page("B5", "Page · pill preparing", "Spinner while the first chunk is synthesized.", { dock: "loading" }),
   page("B6", "Page · reading with highlight", "Sentence background plus a stronger current-word marker; auto-scroll follows.", { hl: HL, dock: "playing" }),
   page("B7", "Page · paused", "Highlight stays on the last spoken sentence; pill shows elapsed and total time.", { hl: HL, dock: "paused" }),
   page("B8", "Page · finished", "The pill confirms the end and offers Read again.", { dock: "done" }),
-  page("B9", "Page · app offline error", "One surface only: the pill explains the problem and offers Open SpeakKit and Retry; technical detail sits behind Details.", { dock: "error", details: true }),
+  page("B9", "Page · app offline error", "One surface only: the pill explains the problem and offers Open Speak Kit and Retry; technical detail sits behind Details.", { dock: "error", details: true }),
   page("B10", "Page · reader view", "Paper reader at full fidelity: 680 px serif column, current sentence block, Reading popover and the pill. Close keeps playback running.", { reader: true, rpop: true, hl: { para: 0, sent: 1, word: 4 }, dock: "playing" }),
   page("B11", "Page · reading (dark)", "Dark page and dark highlight palette.", { hl: HL, dock: "playing" }, true),
   page("B12", "Page · reader view (dark)", "Dark reader: same column and highlight, paused state in the pill.", { reader: true, rtheme: "dark", hl: { para: 0, sent: 1, word: 4 }, dock: "paused" }),

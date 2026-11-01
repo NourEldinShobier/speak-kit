@@ -25,7 +25,7 @@ const featureMap = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "Feature map: every feature lives on one surface and carries v1 or v1.1", "Version 1 is the Chrome extension plus the desktop companion that hosts the voice engine. Library, reader, export and cloning wait for v1.1.");
   const r = b.row(c, { w: "fill", gap: 14, align: "start" });
   const cols: [string, string, [string, boolean][]][] = [
-    ["Chrome extension", "globe", [["Popup: play, selection, voice, speed", true], ["Read-aloud pill on the page", true], ["Reader view and Reading popover", true], ["Selection bubble, paragraph gutter", true], ["Options, per-site permissions", true], ["Pairing: token and Open SpeakKit link", true], ["Queue side panel", true], ["Edge launcher tab", true]]],
+    ["Chrome extension", "globe", [["Popup: play, selection, voice, speed", true], ["Read-aloud pill on the page", true], ["Reader view and Reading popover", true], ["Selection bubble, paragraph gutter", true], ["Options, per-site permissions", true], ["Pairing: token and Open Speak Kit link", true], ["Queue side panel", true], ["Edge launcher tab", true]]],
     ["Desktop app", "desktop", [["Setup window, 5 steps", true], ["Home, command palette, status pill", true], ["Tray menu, panel, mini player", true], ["Settings: memory, notifications, updates", true], ["Voices and engines", true], ["Library and reader", false], ["Export audio", false], ["Voice cloning (Chatterbox)", false]]],
     ["Loopback server", "plug", [["127.0.0.1 only, token required", true], ["Streaming audio per sentence", true], ["Events: progress, state", true], ["POST /v1/engine/warm", true], ["Health with idle unload time", true]]],
     ["Voice engine", "cpu", [["Kokoro-82M on this computer", true], ["Unload when idle, wake on play", true], ["Battery saver", true], ["GPU when it fits, CPU otherwise", true], ["Chatterbox cloning", false]]],
@@ -44,13 +44,13 @@ const surfaces = (b: B, t: T, root: Ref) => {
   box("plug", "Loopback server", "Validates the token, queues sentences, streams audio back as it is made.", "ok"); arrow("in process");
   box("cpu", "Kokoro engine", "Loads on demand, unloads when idle, runs on the GPU or CPU.", "warn");
   const d = b.row(c, { w: "fill", gap: 14, align: "start" });
-  X.rulesCard(b, t, d, "Rules", ["The extension never talks to the internet for reading.", "The desktop app owns the window, tray and settings; the server runs inside it.", "If the app is not running the pill says so and offers Open SpeakKit."], { w: 520 });
+  X.rulesCard(b, t, d, "Rules", ["The extension never talks to the internet for reading.", "The desktop app owns the window, tray and settings; the server runs inside it.", "If the app is not running the pill says so and offers Open Speak Kit."], { w: 520 });
   X.rulesCard(b, t, d, "Where each surface is drawn", ["Chrome extension page: A, B, C frames", "Desktop app page: W, L, H, I, K, O frames", "Foundations page: Q frames; Motion page: MO frames"], { w: 520 });
 };
 const flows = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "First read in four steps", "The path from install to sound, with the frame that shows each step.");
   const r = b.row(c, { w: "fill", gap: 14, align: "start" });
-  [["1", "Set up", "Setup window: engine, download 390 MB once, done.", "W1  W2  W3  W5"], ["2", "Pair", "Six-character code, or the Open SpeakKit link.", "W4  C13  C14"], ["3", "Play", "Press the pill. If the engine is asleep it wakes in about 2 s and starts reading.", "B4  B22  B23  B6"], ["4", "Adjust", "Reading popover, speed and voice from the pill; memory and shortcuts in Settings.", "B24  B15  H12  H5"]].forEach(([n, ti, d, ids]) => {
+  [["1", "Set up", "Setup window: engine, download 390 MB once, done.", "W1  W2  W3  W5"], ["2", "Pair", "Six-character code, or the Open Speak Kit link.", "W4  C13  C14"], ["3", "Play", "Press the pill. If the engine is asleep it wakes in about 2 s and starts reading.", "B4  B22  B23  B6"], ["4", "Adjust", "Reading popover, speed and voice from the pill; memory and shortcuts in Settings.", "B24  B15  H12  H5"]].forEach(([n, ti, d, ids]) => {
     const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10, h: 230 }); const nb = b.frame(k, { w: 28, h: 28, r: 999, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.text(nb, n, { size: 13, weight: "SemiBold", c: "#FFFFFF" });
     b.text(k, ti, { size: 16, weight: "SemiBold", c: t.text }); b.text(k, d, { size: 12, c: t.text2, w: "fill", lh: 17 }); b.frame(k, { w: 1, h: "fill" }); const ch = b.row(k, { gap: 6, wrap: true }); ids.split("  ").forEach((i) => K.chip(b, t, ch, i));
   });
@@ -71,8 +71,8 @@ const lifecycle = (b: B, t: T, root: Ref) => {
     ["Popup header", "Engine asleep", "Waking engine", "Kokoro ready"], ["Read-aloud pill", "Engine asleep · wakes on play", "Waking the engine · about 2 s", "Paragraph 2 of 14 · 9 min left"], ["Sidebar card", "Kokoro-82M · Asleep", "Kokoro-82M · Loading…", "Kokoro-82M · Ready"], ["Title-bar pill", "Engine asleep (grey)", "Loading engine (amber)", "Kokoro ready (green)"], ["Tray icon", "Dim bars", "Animated bars", "White bars"]], { rowH: 30 });
 };
 const patterns = (b: B, t: T, root: Ref) => {
-  const c = board(b, t, root, "Lumen patterns adopted", "Every SpeakKit surface names the Lumen frame it copies. The Lumen file is the source of truth for layout, components and behavior.");
-  table(b, t, c, [200, 180, "fill"], ["SpeakKit surface", "Lumen frame", "What is copied"], [
+  const c = board(b, t, root, "Lumen patterns adopted", "Every Speak Kit surface names the Lumen frame it copies. The Lumen file is the source of truth for layout, components and behavior.");
+  table(b, t, c, [200, 180, "fill"], ["Speak Kit surface", "Lumen frame", "What is copied"], [
     ["Read-aloud pill, Reading popover", "F5 (46082)", "Dark pill 649x52, 40 px play, paragraph text, speed and voice pills; 236 px popover"], ["Desktop shell, Home", "X15 / X16", "Title bar search 420x30, status pill, 248 px sidebar, inset content card"], ["Setup window", "X9 to X14", "960x680, 5-step stepper, 720 px column, footer navigation only"],
     ["Settings", "SD1 to SD9", "Settings nav 248, search in the title bar, 760 px column, caps group labels"], ["Command palette", "CP1", "640x432 panel, grouped results, Enter hint, footer keys"], ["Tray menu and panel", "TR1", "Short native menu, own panel with state icons, rules card"],
     ["Notifications", "NO1", "364 px toasts without buttons, grouped, Do not disturb respected"], ["Updates", "UP1", "Green pill in the title bar, popover, restart card"], ["Quit confirmation", "QT1", "What stops and how to resume"], ["Edge and empty states", "ES1 / EM1", "Banner cases, empty cards with one action"],
@@ -128,7 +128,7 @@ const deskComponents = (b: B, t: T, root: Ref) => {
   const r = b.row(c, { w: "fill", gap: 24, align: "start" });
   const a = b.col(r, { w: 560, gap: 12 });
   X.stepper(b, t, a, 2);
-  (["info", "warn", "err"] as const).forEach((k) => X.banner(b, t, a, { tone: k, title: k === "info" ? "Found NVIDIA GeForce RTX 3060 · 8 GB" : k === "warn" ? "Download paused at 204 of 330 MB" : "SpeakKit's engine stopped", body: "What happened, what still works.", primary: "Primary", secondary: "Secondary" }));
+  (["info", "warn", "err"] as const).forEach((k) => X.banner(b, t, a, { tone: k, title: k === "info" ? "Found NVIDIA GeForce RTX 3060 · 8 GB" : k === "warn" ? "Download paused at 204 of 330 MB" : "Speak Kit's engine stopped", body: "What happened, what still works.", primary: "Primary", secondary: "Secondary" }));
   X.group(b, t, a, "SETTING ROWS", [(f) => X.toggleRow(b, t, f, "Toggle row", "Description in 12 px secondary.", true), (f) => X.selectRow(b, t, f, "Select row", undefined, "5 minutes", 130), (f) => K.settingRow(b, t, f, "Segmented row", undefined, (g) => K.seg(b, t, g, ["1", "5", "15", "Never"], 1))]);
   const m = b.col(r, { w: "fill", gap: 12 });
   X.caps(b, t, m, "STATUS PILLS"); const pr = b.row(m, { gap: 8 }); (["ok", "warn", "err", "neutral"] as const).forEach((k) => K.badge(b, t, pr, ["Kokoro ready", "Loading engine", "Engine error", "Engine asleep"][["ok", "warn", "err", "neutral"].indexOf(k)], k));
@@ -189,7 +189,7 @@ export const N5: S[] = [
   scr("R2", "R", "Surfaces", "Extension, loopback server and engine are separate; everything is local.", surfaces),
   scr("R3", "R", "First read in four steps", "Set up, pair, play and adjust, each with the frames that draw it.", flows),
   scr("R4", "R", "Resource lifecycle", "Unloaded, Loading, Ready with the same words on every surface.", lifecycle),
-  scr("R5", "R", "Lumen patterns adopted", "Each SpeakKit surface names the Lumen frame it copies.", patterns),
+  scr("R5", "R", "Lumen patterns adopted", "Each Speak Kit surface names the Lumen frame it copies.", patterns),
   scr("R6", "R", "Decisions that shape the UI", "Local only, packages first, dark first, performance, calm status.", decisions),
   scr("Q1", "Q", "Tokens", "Color, type, radius and elevation in dark and light.", tokens),
   scr("Q2", "Q", "Icon set", "Tabler outline icons at a constant 1.5 px stroke.", iconSet, 1280, 800),

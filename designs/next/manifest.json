@@ -68,19 +68,19 @@
     {
      "n": 3,
      "title": "Lumen patterns adopted",
-     "cover": "which Lumen frame each SpeakKit surface copies",
+     "cover": "which Lumen frame each Speak Kit surface copies",
      "frames": [
       {
        "id": "R5",
        "src": "R5",
        "title": "Lumen patterns adopted",
-       "rule": "Every SpeakKit surface names the Lumen frame it copies; no new look is invented.",
-       "note": "Each SpeakKit surface names the Lumen frame it copies.",
+       "rule": "Every Speak Kit surface names the Lumen frame it copies; no new look is invented.",
+       "note": "Each Speak Kit surface names the Lumen frame it copies.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "R5 · Lumen patterns adopted — Every SpeakKit surface names the Lumen frame it copies; no new look is invented."
+       "name": "R5 · Lumen patterns adopted — Every Speak Kit surface names the Lumen frame it copies; no new look is invented."
       },
       {
        "id": "R6",
@@ -390,13 +390,13 @@
        "id": "B9",
        "src": "B9",
        "title": "Page · app offline error",
-       "rule": "One surface: the pill explains the problem, Open SpeakKit and Retry.",
-       "note": "One surface only: the pill explains the problem and offers Open SpeakKit and Retry; technical detail sits behind Details.",
+       "rule": "One surface: the pill explains the problem, Open Speak Kit and Retry.",
+       "note": "One surface only: the pill explains the problem and offers Open Speak Kit and Retry; technical detail sits behind Details.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "B9 · Page, app offline error — One surface, the pill explains the problem, Open SpeakKit and Retry."
+       "name": "B9 · Page, app offline error — One surface, the pill explains the problem, Open Speak Kit and Retry."
       },
       {
        "id": "B22",
@@ -457,13 +457,13 @@
        "id": "B3",
        "src": "B3",
        "title": "Page · context menu",
-       "rule": "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.",
-       "note": "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.",
+       "rule": "Native Chrome menu: Speak Kit submenu with read selection, read from here and add to queue.",
+       "note": "Native Chrome menu: Speak Kit submenu with read selection, read from here and add to queue.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "B3 · Page, context menu — Native Chrome menu, SpeakKit submenu with read selection, read from here and add to queue."
+       "name": "B3 · Page, context menu — Native Chrome menu, Speak Kit submenu with read selection, read from here and add to queue."
       },
       {
        "id": "B13",
@@ -750,14 +750,14 @@
     {
      "n": 11,
      "title": "Pairing and permissions",
-     "cover": "token field and test connection, Open SpeakKit deep link, per-site permissions, shortcut conflict",
+     "cover": "token field and test connection, Open Speak Kit deep link, per-site permissions, shortcut conflict",
      "frames": [
       {
        "id": "C13",
        "src": "C13",
        "title": "Options · Pair this browser",
        "rule": "Pairing card: token field, Paste, Test connection with a real result line, and the Open...",
-       "note": "Pairing card: token field, Paste, Test connection with a real result line, and the Open SpeakKit link as the easy path.",
+       "note": "Pairing card: token field, Paste, Test connection with a real result line, and the Open Speak Kit link as the easy path.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
@@ -767,14 +767,14 @@
       {
        "id": "C14",
        "src": "C14",
-       "title": "Open SpeakKit link flow",
+       "title": "Open Speak Kit link flow",
        "rule": "Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
        "note": "Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "C14 · Open SpeakKit link flow — Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired."
+       "name": "C14 · Open Speak Kit link flow — Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired."
       },
       {
        "id": "C15",
@@ -1960,13 +1960,13 @@
        "id": "H19",
        "src": "H19",
        "title": "Updating",
-       "rule": "Restart shows one small progress card and says SpeakKit will reopen where you left off.",
-       "note": "Restart shows one small progress card and says SpeakKit will reopen where you left off.",
+       "rule": "Restart shows one small progress card and says Speak Kit will reopen where you left off.",
+       "note": "Restart shows one small progress card and says Speak Kit will reopen where you left off.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "H19 · Updating — Restart shows one small progress card and says SpeakKit will reopen where you left off."
+       "name": "H19 · Updating — Restart shows one small progress card and says Speak Kit will reopen where you left off."
       }
      ]
     },
@@ -2022,13 +2022,13 @@
        "id": "I10",
        "src": "I10",
        "title": "Tray menu and left-click panel",
-       "rule": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
-       "note": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
+       "rule": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
+       "note": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
        "theme": "dark",
        "tag": "",
        "w": 1440,
        "h": 900,
-       "name": "I10 · Tray menu and left-click panel — Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons."
+       "name": "I10 · Tray menu and left-click panel — Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons."
       },
       {
        "id": "I11",
@@ -2490,7 +2490,7 @@
        "src": "I10",
        "title": "Tray menu and left-click panel",
        "rule": "Light twin: same layout and radii, only the tokens swap.",
-       "note": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
+       "note": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
        "theme": "light",
        "tag": "",
        "w": 1440,
@@ -2853,7 +2853,7 @@
    "page": "Research & feature map",
    "n": 3,
    "title": "Lumen patterns adopted",
-   "cover": "which Lumen frame each SpeakKit surface copies",
+   "cover": "which Lumen frame each Speak Kit surface copies",
    "ids": [
     "R5",
     "R6"
@@ -3002,7 +3002,7 @@
    "page": "Chrome extension",
    "n": 11,
    "title": "Pairing and permissions",
-   "cover": "token field and test connection, Open SpeakKit deep link, per-site permissions, shortcut conflict",
+   "cover": "token field and test connection, Open Speak Kit deep link, per-site permissions, shortcut conflict",
    "ids": [
     "C13",
     "C14",
@@ -3500,13 +3500,13 @@
    "id": "R5",
    "src": "R5",
    "title": "Lumen patterns adopted",
-   "rule": "Every SpeakKit surface names the Lumen frame it copies; no new look is invented.",
-   "note": "Each SpeakKit surface names the Lumen frame it copies.",
+   "rule": "Every Speak Kit surface names the Lumen frame it copies; no new look is invented.",
+   "note": "Each Speak Kit surface names the Lumen frame it copies.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "R5 · Lumen patterns adopted — Every SpeakKit surface names the Lumen frame it copies; no new look is invented.",
+   "name": "R5 · Lumen patterns adopted — Every Speak Kit surface names the Lumen frame it copies; no new look is invented.",
    "feature": "1.3",
    "page": "Research & feature map"
   },
@@ -3822,13 +3822,13 @@
    "id": "B9",
    "src": "B9",
    "title": "Page · app offline error",
-   "rule": "One surface: the pill explains the problem, Open SpeakKit and Retry.",
-   "note": "One surface only: the pill explains the problem and offers Open SpeakKit and Retry; technical detail sits behind Details.",
+   "rule": "One surface: the pill explains the problem, Open Speak Kit and Retry.",
+   "note": "One surface only: the pill explains the problem and offers Open Speak Kit and Retry; technical detail sits behind Details.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "B9 · Page, app offline error — One surface, the pill explains the problem, Open SpeakKit and Retry.",
+   "name": "B9 · Page, app offline error — One surface, the pill explains the problem, Open Speak Kit and Retry.",
    "feature": "2.5",
    "page": "Chrome extension"
   },
@@ -3892,13 +3892,13 @@
    "id": "B3",
    "src": "B3",
    "title": "Page · context menu",
-   "rule": "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.",
-   "note": "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.",
+   "rule": "Native Chrome menu: Speak Kit submenu with read selection, read from here and add to queue.",
+   "note": "Native Chrome menu: Speak Kit submenu with read selection, read from here and add to queue.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "B3 · Page, context menu — Native Chrome menu, SpeakKit submenu with read selection, read from here and add to queue.",
+   "name": "B3 · Page, context menu — Native Chrome menu, Speak Kit submenu with read selection, read from here and add to queue.",
    "feature": "2.6",
    "page": "Chrome extension"
   },
@@ -4201,7 +4201,7 @@
    "src": "C13",
    "title": "Options · Pair this browser",
    "rule": "Pairing card: token field, Paste, Test connection with a real result line, and the Open...",
-   "note": "Pairing card: token field, Paste, Test connection with a real result line, and the Open SpeakKit link as the easy path.",
+   "note": "Pairing card: token field, Paste, Test connection with a real result line, and the Open Speak Kit link as the easy path.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
@@ -4213,14 +4213,14 @@
   {
    "id": "C14",
    "src": "C14",
-   "title": "Open SpeakKit link flow",
+   "title": "Open Speak Kit link flow",
    "rule": "Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
    "note": "Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "C14 · Open SpeakKit link flow — Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
+   "name": "C14 · Open Speak Kit link flow — Three steps, one Chrome confirmation, one code to compare; denying leaves the browser unpaired.",
    "feature": "2.11",
    "page": "Chrome extension"
   },
@@ -5460,13 +5460,13 @@
    "id": "H19",
    "src": "H19",
    "title": "Updating",
-   "rule": "Restart shows one small progress card and says SpeakKit will reopen where you left off.",
-   "note": "Restart shows one small progress card and says SpeakKit will reopen where you left off.",
+   "rule": "Restart shows one small progress card and says Speak Kit will reopen where you left off.",
+   "note": "Restart shows one small progress card and says Speak Kit will reopen where you left off.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "H19 · Updating — Restart shows one small progress card and says SpeakKit will reopen where you left off.",
+   "name": "H19 · Updating — Restart shows one small progress card and says Speak Kit will reopen where you left off.",
    "feature": "3.14",
    "page": "Desktop app"
   },
@@ -5516,13 +5516,13 @@
    "id": "I10",
    "src": "I10",
    "title": "Tray menu and left-click panel",
-   "rule": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
-   "note": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
+   "rule": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
+   "note": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
    "theme": "dark",
    "tag": "",
    "w": 1440,
    "h": 900,
-   "name": "I10 · Tray menu and left-click panel — Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
+   "name": "I10 · Tray menu and left-click panel — Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
    "feature": "3.16",
    "page": "Desktop app"
   },
@@ -6021,7 +6021,7 @@
    "src": "I10",
    "title": "Tray menu and left-click panel",
    "rule": "Light twin: same layout and radii, only the tokens swap.",
-   "note": "Right-click opens a short native menu; left-click opens SpeakKit's own panel with state icons.",
+   "note": "Right-click opens a short native menu; left-click opens Speak Kit's own panel with state icons.",
    "theme": "light",
    "tag": "",
    "w": 1440,

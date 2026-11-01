@@ -79,7 +79,7 @@ export const wallpaper = (b: B, t: T, root: Ref, W = 1280, H = 800, tray?: { x: 
 export const winToast = (b: B, t: T, p: Ref | undefined, o: { title: string; body: string; hint: string; tone?: BTone } & O) => {
   const { title, body, hint, tone, ...rest } = o;
   const f = b.col(p, { w: 364, pad: [12, 14], gap: 6, r: 8, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "md", ...rest });
-  const h = b.row(f, { w: "fill", gap: 8, justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 16); b.text(hl, "SpeakKit", { size: 12, c: t.text3 }); b.icon(h, "x", 12, t.text3);
+  const h = b.row(f, { w: "fill", gap: 8, justify: "spaceBetween" }); const hl = b.row(h, { gap: 8 }); K.logo(b, t, hl, 16); b.text(hl, "Speak Kit", { size: 12, c: t.text3 }); b.icon(h, "x", 12, t.text3);
   const tr = b.row(f, { w: "fill", gap: 8 }); if (tone) b.icon(tr, tone === "err" ? "alertCircle" : "circleCheck", 16, toneC(t, tone)); b.text(tr, title, { size: 13, weight: "SemiBold", c: t.text, w: "fill" });
   b.text(f, body, { size: 12, c: t.text2, w: "fill", lh: 17 });
   b.text(f, hint, { size: 11, c: t.text3 });
@@ -90,7 +90,7 @@ export const setupWindow = (b: B, t: T, root: Ref, step: number, o: { h1: string
   wallpaper(b, t, root);
   const w = b.col(root, { x: 160, y: 40, w: 960, h: 680, fill: t.bg, r: 8, stroke: t.control, sw: 1, sa: "inside", shadow: "xl", clip: true, gap: 0 });
   const tb = b.row(w, { w: "fill", h: 32, pad: [0, 0, 0, 12], justify: "spaceBetween" });
-  const l = b.row(tb, { gap: 8 }); K.logo(b, t, l, 14); b.text(l, "Set up SpeakKit", { size: 12, c: t.text2 });
+  const l = b.row(tb, { gap: 8 }); K.logo(b, t, l, 14); b.text(l, "Set up Speak Kit", { size: 12, c: t.text2 });
   const r = b.row(tb, { gap: 0 }); ["minus", "square", "x"].forEach((ic) => { const c = b.frame(r, { w: 46, h: 32, layout: "horizontal", align: "center", justify: "center" }); b.icon(c, ic, 12, t.text2); });
   const sr = b.row(w, { w: "fill", h: 52, pad: [0, 28], justify: "center" }); stepper(b, t, sr, step);
   const body = b.col(w, { w: "fill", h: "fill", pad: [14, 120, 0, 120], gap: 14, clip: true });

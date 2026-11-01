@@ -16,7 +16,7 @@ export const PAGES: Pg[] = [
     sections: [
       { title: "Feature map", cover: "what ships in v1 and what waits, per surface", frames: [f("R1", "Every feature sits on one surface and carries v1 or v1.1; nothing is on two."), f("R2", "Surfaces stay separate: extension, desktop app, loopback server, engine.")] },
       { title: "Flows and resources", cover: "the three flows that matter, and the engine lifecycle behind them", frames: [f("R3", "First read in four steps: install, pair, play, and the engine wakes by itself."), f("R4", "The engine unloads when idle and wakes on play; the model never reloads while reading.")] },
-      { title: "Lumen patterns adopted", cover: "which Lumen frame each SpeakKit surface copies", frames: [f("R5", "Every SpeakKit surface names the Lumen frame it copies; no new look is invented."), f("R6", "Decisions that shape the UI: local only, no account, no cloud voice.")] },
+      { title: "Lumen patterns adopted", cover: "which Lumen frame each Speak Kit surface copies", frames: [f("R5", "Every Speak Kit surface names the Lumen frame it copies; no new look is invented."), f("R6", "Decisions that shape the UI: local only, no account, no cloud voice.")] },
     ],
   },
   {
@@ -28,7 +28,7 @@ export const PAGES: Pg[] = [
       { title: "Popup problems", cover: "app not running or installed, pairing, permissions, unreadable page", frames: [f("A9"), f("A13"), f("A14"), f("A15"), f("A11")] },
       { title: "Read-aloud pill", cover: "Lumen F5 pill on the page: idle, preparing, reading, paused, finished, error, engine states", frames: [
         f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."),
-        f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open SpeakKit and Retry."),
+        f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open Speak Kit and Retry."),
         f("B22"), f("B23")] },
       { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3"), f("B13"), f("B14")] },
       { title: "Pill popovers and reading settings", cover: "speed, voice and the Reading popover (Sans, Serif, Dyslexic, size, width, theme, highlight)", frames: [f("B15"), f("B16"), f("B24")] },
@@ -37,7 +37,7 @@ export const PAGES: Pg[] = [
       { title: "Edge launcher", cover: "the 14 px tab at the page edge; the expanded vertical pill is replaced by the read-aloud pill", frames: [
         f("B17"), f("B19"), sup("B18", "B4", "Hover now opens the horizontal read-aloud pill (B4), not a vertical one."), sup("B20", "B6", "Expanded reading state is the read-aloud pill (B6)."), sup("B21", "B4", "Dark is the default theme; the vertical pill is gone.")] },
       { title: "Options page", cover: "connection, voice, highlighting, shortcuts, sites, edge launcher", frames: [f("C1"), f("C2"), f("C3"), f("C4"), f("C5"), f("C6"), f("C7"), f("C12")] },
-      { title: "Pairing and permissions", cover: "token field and test connection, Open SpeakKit deep link, per-site permissions, shortcut conflict", frames: [f("C13"), f("C14"), f("C15"), f("C16")] },
+      { title: "Pairing and permissions", cover: "token field and test connection, Open Speak Kit deep link, per-site permissions, shortcut conflict", frames: [f("C13"), f("C14"), f("C15"), f("C16")] },
       { title: "Side panel", cover: "queue and outline, empty queue", frames: [f("C9"), f("C10")] },
       { title: "Responsive options page", cover: "breakpoint rules and the narrow layout below 1025 px", frames: [f("C17"), f("C18")] },
       { title: "Light mode", cover: "light twins for popup, pill, reader, options and side panel", frames: [L("A1"), L("A4"), L("A9"), L("B6"), L("B15"), L("C1"), L("C6"), L("C9")] },
