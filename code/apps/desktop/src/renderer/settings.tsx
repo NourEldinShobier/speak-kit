@@ -20,8 +20,20 @@ export const SETTINGS_NAV: { group: string; items: { id: SettingsSub; label: str
       { id: "notifications", label: "Notifications", icon: "bell" },
     ],
   },
-  { group: "Device", items: [{ id: "memory", label: "Memory", icon: "cpu" }, { id: "storage", label: "Storage", icon: "folder" }] },
-  { group: "App", items: [{ id: "browser", label: "Browser integration", icon: "world" }, { id: "about", label: "About", icon: "info-circle" }] },
+  {
+    group: "Device",
+    items: [
+      { id: "memory", label: "Memory", icon: "cpu" },
+      { id: "storage", label: "Storage", icon: "folder" },
+    ],
+  },
+  {
+    group: "App",
+    items: [
+      { id: "browser", label: "Browser integration", icon: "world" },
+      { id: "about", label: "About", icon: "info-circle" },
+    ],
+  },
 ];
 
 const IDLE_LABEL: Record<IdleChoice, string> = { "1": "After 1 minute", "5": "After 5 minutes", "15": "After 15 minutes", never: "Never" };
@@ -31,18 +43,54 @@ function General({ s }: { s: AppState }) {
   return (
     <Page title="General" lead="Startup, language and notifications.">
       <SettingsSection title="Startup">
-        <SettingRow label="Launch at login" description="Start SpeakKit when you sign in so the extension is ready." control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />} />
-        <SettingRow label="Start minimized to tray" description="When it starts at login, stay in the tray instead of opening a window." control={<Toggle aria-label="Start minimized to tray" checked={c.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />} />
+        <SettingRow
+          label="Launch at login"
+          description="Start SpeakKit when you sign in so the extension is ready."
+          control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
+        />
+        <SettingRow
+          label="Start minimized to tray"
+          description="When it starts at login, stay in the tray instead of opening a window."
+          control={<Toggle aria-label="Start minimized to tray" checked={c.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />}
+        />
       </SettingsSection>
       <SettingsSection title="Appearance">
-        <SettingRow label="Language" control={<Select label="Language" value={c.language} onChange={(v) => api.patchConfig({ language: v as "system" | "en" })} options={[{ value: "system", label: "System default" }, { value: "en", label: "English" }]} />} />
+        <SettingRow
+          label="Language"
+          control={
+            <Select
+              label="Language"
+              value={c.language}
+              onChange={(v) => api.patchConfig({ language: v as "system" | "en" })}
+              options={[
+                { value: "system", label: "System default" },
+                { value: "en", label: "English" },
+              ]}
+            />
+          }
+        />
         <SettingRow
           label="Theme"
-          control={<Segmented label="Theme" value={c.theme} onChange={(v) => api.patchConfig({ theme: v as "system" | "light" | "dark" })} items={[{ id: "system", label: "System" }, { id: "light", label: "Light" }, { id: "dark", label: "Dark" }]} />}
+          control={
+            <Segmented
+              label="Theme"
+              value={c.theme}
+              onChange={(v) => api.patchConfig({ theme: v as "system" | "light" | "dark" })}
+              items={[
+                { id: "system", label: "System" },
+                { id: "light", label: "Light" },
+                { id: "dark", label: "Dark" },
+              ]}
+            />
+          }
         />
       </SettingsSection>
       <SettingsSection title="Tray">
-        <SettingRow label="Closing the window" description="Keeps SpeakKit in the tray so the extension and the shortcuts keep working. Quit from the tray menu." control={<span>Keeps running</span>} />
+        <SettingRow
+          label="Closing the window"
+          description="Keeps SpeakKit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
+          control={<span>Keeps running</span>}
+        />
       </SettingsSection>
       <SettingsSection title="Privacy">
         <SettingRow
@@ -58,7 +106,10 @@ function General({ s }: { s: AppState }) {
 function VoicePage({ s }: { s: AppState }) {
   const [voices, setVoices] = useState<Voice[]>([]);
   useEffect(() => {
-    api.voices().then((v) => setVoices(v.voices), () => {});
+    api.voices().then(
+      (v) => setVoices(v.voices),
+      () => {},
+    );
   }, [s.health?.engine.state === "missing", s.token]);
   return (
     <Page title="Voice and playback" lead="Used for previews in this app. The extension keeps its own voice and speed.">
@@ -91,7 +142,11 @@ function Memory({ s }: { s: AppState }) {
   useEffect(() => {
     if (!visible) return; // hidden window: no polling
     let on = true;
-    const tick = () => api.metrics().then((x) => on && setM(x), () => {});
+    const tick = () =>
+      api.metrics().then(
+        (x) => on && setM(x),
+        () => {},
+      );
     tick();
     const t = setInterval(tick, 2000);
     return () => {
@@ -106,11 +161,17 @@ function Memory({ s }: { s: AppState }) {
       <SettingsSection title="Right now">
         <SettingRow
           label="Voice engine"
-          description={v.key === "ready" && at ? `Unloads at ${new Date(at).toLocaleTimeString()} if idle` : v.key === "unloaded" ? "0 MB in memory. Wakes on play." : v.hint ?? "Kokoro-82M"}
+          description={v.key === "ready" && at ? `Unloads at ${new Date(at).toLocaleTimeString()} if idle` : v.key === "unloaded" ? "0 MB in memory. Wakes on play." : (v.hint ?? "Kokoro-82M")}
           control={
             <div className="sk-row-actions">
-              <span data-testid="memory-engine"><EngineBadge s={s} /></span>
-              {v.key === "unloaded" && <Button size="sm" onClick={() => api.warmEngine()}>Load now</Button>}
+              <span data-testid="memory-engine">
+                <EngineBadge s={s} />
+              </span>
+              {v.key === "unloaded" && (
+                <Button size="sm" onClick={() => api.warmEngine()}>
+                  Load now
+                </Button>
+              )}
             </div>
           }
         />
@@ -120,10 +181,25 @@ function Memory({ s }: { s: AppState }) {
         <SettingRow
           label="Unload the model when idle"
           description="Frees its memory after the last reading. The next play loads it again in a moment."
-          control={<Select label="Idle unload" value={c.idleUnload} onChange={(x) => api.patchConfig({ idleUnload: x as IdleChoice })} options={IDLE_CHOICES.map((x) => ({ value: x, label: IDLE_LABEL[x] }))} />}
+          control={
+            <Select
+              label="Idle unload"
+              value={c.idleUnload}
+              onChange={(x) => api.patchConfig({ idleUnload: x as IdleChoice })}
+              options={IDLE_CHOICES.map((x) => ({ value: x, label: IDLE_LABEL[x] }))}
+            />
+          }
         />
-        <SettingRow label="Load at startup" description="Keep the model ready as soon as SpeakKit starts. Uses memory all day." control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => api.patchConfig({ loadAtStart: x })} />} />
-        <SettingRow label="Battery saver" description={s.onBattery ? "On battery now: the model unloads sooner." : "On battery, the model unloads sooner."} control={<Toggle aria-label="Battery saver" checked={c.batterySaver} onChange={(x) => api.patchConfig({ batterySaver: x })} />} />
+        <SettingRow
+          label="Load at startup"
+          description="Keep the model ready as soon as SpeakKit starts. Uses memory all day."
+          control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => api.patchConfig({ loadAtStart: x })} />}
+        />
+        <SettingRow
+          label="Battery saver"
+          description={s.onBattery ? "On battery now: the model unloads sooner." : "On battery, the model unloads sooner."}
+          control={<Toggle aria-label="Battery saver" checked={c.batterySaver} onChange={(x) => api.patchConfig({ batterySaver: x })} />}
+        />
       </SettingsSection>
     </Page>
   );
@@ -149,19 +225,37 @@ function BrowserSettings({ s }: { s: AppState }) {
   };
   return (
     <Page title="Browser integration" lead="How the extension finds and trusts this app.">
-      {s.portFallback && <Banner tone="warning" title={`Port ${s.config.preferredPort} is busy`}>Using {s.port} for now. Enter {s.port} in the extension.</Banner>}
+      {s.portFallback && (
+        <Banner tone="warning" title={`Port ${s.config.preferredPort} is busy`}>
+          Using {s.port} for now. Enter {s.port} in the extension.
+        </Banner>
+      )}
       <SettingsSection title="Connection">
         <SettingRow
           label="Server port"
           description="The extension connects here. Default 47615. If it is busy, the next free port is used."
           control={
             <div className="sk-row-actions">
-              <TextInput size="sm" aria-label="Server port" inputMode="numeric" value={port} error={!valid ? "1024 to 65535" : err || undefined} onChange={(e) => setPort(e.target.value)} style={{ width: 96 }} />
-              <Button disabled={!valid || busy || n === s.config.preferredPort} loading={busy} onClick={apply}>Apply</Button>
+              <TextInput
+                size="sm"
+                aria-label="Server port"
+                inputMode="numeric"
+                value={port}
+                error={!valid ? "1024 to 65535" : err || undefined}
+                onChange={(e) => setPort(e.target.value)}
+                style={{ width: 96 }}
+              />
+              <Button disabled={!valid || busy || n === s.config.preferredPort} loading={busy} onClick={apply}>
+                Apply
+              </Button>
             </div>
           }
         />
-        <SettingRow label="Paired browser" description={paired ? `Last call ${new Date(s.pairing.lastSeenMs!).toLocaleTimeString()}` : "No extension has called yet."} control={<StatusPill tone={paired ? "green" : "neutral"}>{paired ? "Connected" : "Waiting"}</StatusPill>} />
+        <SettingRow
+          label="Paired browser"
+          description={paired ? `Last call ${new Date(s.pairing.lastSeenMs!).toLocaleTimeString()}` : "No extension has called yet."}
+          control={<StatusPill tone={paired ? "green" : "neutral"}>{paired ? "Connected" : "Waiting"}</StatusPill>}
+        />
       </SettingsSection>
       <SettingsSection title="Pairing token" description="Regenerating signs out every paired browser.">
         <div className="sk-pad">
@@ -190,14 +284,33 @@ function Storage() {
     <Page title="Storage" lead={st ? `On this computer: ${formatBytes(total)}` : "Measuring..."}>
       <SettingsSection title="Models folder" description={st?.modelsDir}>
         <div className="sk-pad" data-testid="storage-bar">
-          <div className="sk-bar">
-            {st && rows.map(([k, n]) => <i key={k} style={{ width: pct(n) }} />)}
-          </div>
+          <div className="sk-bar">{st && rows.map(([k, n]) => <i key={k} style={{ width: pct(n) }} />)}</div>
         </div>
         {rows.map(([k, n, color]) => (
-          <SettingRow key={k} label={<><span className="sk-sw" style={{ background: color }} />{k}</>} control={<span>{formatBytes(n)}</span>} />
+          <SettingRow
+            key={k}
+            label={
+              <>
+                <span className="sk-sw" style={{ background: color }} />
+                {k}
+              </>
+            }
+            control={<span>{formatBytes(n)}</span>}
+          />
         ))}
-        <SettingRow label="Open folder" control={<div className="sk-row-actions"><Button size="sm" iconLeft="folder" onClick={() => api.openPath("models")}>Models</Button><Button size="sm" iconLeft="folder" onClick={() => api.openPath("logs")}>Logs</Button></div>} />
+        <SettingRow
+          label="Open folder"
+          control={
+            <div className="sk-row-actions">
+              <Button size="sm" iconLeft="folder" onClick={() => api.openPath("models")}>
+                Models
+              </Button>
+              <Button size="sm" iconLeft="folder" onClick={() => api.openPath("logs")}>
+                Logs
+              </Button>
+            </div>
+          }
+        />
       </SettingsSection>
     </Page>
   );
@@ -240,7 +353,11 @@ function About({ s }: { s: AppState }) {
           <SettingRow key={k} label={k} control={<span>{l}</span>} />
         ))}
       </SettingsSection>
-      <div><Button iconLeft="folder" onClick={() => api.openPath("logs")}>Open log folder</Button></div>
+      <div>
+        <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
+          Open log folder
+        </Button>
+      </div>
     </Page>
   );
 }

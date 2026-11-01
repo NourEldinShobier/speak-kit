@@ -104,7 +104,10 @@ describe("settings", () => {
     await l.page.getByRole("link", { name: "Memory" }).click();
     await l.page.getByRole("heading", { name: "Memory" }).waitFor();
     expect(await l.page.getByTestId("memory-engine").textContent()).toBe("Ready");
-    await l.page.getByTestId("memory-rss").filter({ hasText: /\d+ MB/ }).waitFor();
+    await l.page
+      .getByTestId("memory-rss")
+      .filter({ hasText: /\d+ MB/ })
+      .waitFor();
     await l.page.getByRole("combobox", { name: "Idle unload" }).click();
     await l.page.getByRole("option", { name: "After 15 minutes" }).click();
     await l.page.getByRole("switch", { name: "Load at startup" }).click();
@@ -159,8 +162,7 @@ describe("tray and lifecycle", () => {
   it("native tray menu is short, the icon follows engine state, Quit asks what stops", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const hook = <T>(fn: string, ...a: unknown[]) =>
-      l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
+    const hook = <T>(fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     expect(items.filter((i) => i.type !== "separator").map((i) => i.label)).toEqual([
       "Read clipboard",

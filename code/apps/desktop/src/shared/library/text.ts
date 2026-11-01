@@ -26,5 +26,8 @@ export function textToBlocks(text: string): Block[] {
   if (!norm) return [];
   const hasBlank = /\n[ \t]*\n/.test(norm);
   const chunks = hasBlank ? norm.split(/\n[ \t]*\n+/) : norm.split("\n");
-  return chunks.map(squash).filter(Boolean).map((t) => ({ kind: "paragraph" as const, text: t }));
+  return chunks
+    .map(squash)
+    .filter(Boolean)
+    .map((t) => ({ kind: "paragraph" as const, text: t }));
 }

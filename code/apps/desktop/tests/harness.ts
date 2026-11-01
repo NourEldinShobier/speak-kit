@@ -22,15 +22,12 @@ export interface Launched {
   cleanup(): Promise<void>;
 }
 
-export async function launch(
-  opts: { env?: Record<string, string>; config?: object; userData?: string; port?: number; args?: string[] } = {},
-): Promise<Launched> {
+export async function launch(opts: { env?: Record<string, string>; config?: object; userData?: string; port?: number; args?: string[] } = {}): Promise<Launched> {
   const userData = opts.userData ?? mkdtempSync(path.join(tmpdir(), "speakkit-desktop-"));
   if (opts.config) writeFileSync(path.join(userData, "config.json"), JSON.stringify(opts.config));
   const port = opts.port ?? freePort();
   const env: Record<string, string> = {};
-  for (const [k, v] of Object.entries(process.env))
-    if (v !== undefined && k !== "ELECTRON_RUN_AS_NODE") env[k] = v;
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined && k !== "ELECTRON_RUN_AS_NODE") env[k] = v;
   Object.assign(env, {
     SPEAKKIT_ENGINE: "fake",
     SPEAKKIT_USER_DATA: userData,
@@ -52,7 +49,4 @@ export async function launch(
   };
 }
 
-export const health = (port: number) =>
-  fetch(`http://127.0.0.1:${port}/v1/health`).then(
-    (r) => r.json() as Promise<{ app: string; engine: { state: string } }>,
-  );
+export const health = (port: number) => fetch(`http://127.0.0.1:${port}/v1/health`).then((r) => r.json() as Promise<{ app: string; engine: { state: string } }>);

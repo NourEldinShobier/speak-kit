@@ -226,7 +226,11 @@
   color: var(--tag-green);
 }
 .lib-badge--new {
-  color: var(--accent-default);
+  color: var(--tag-blue);
+}
+/* the status column stacks its children; a badge keeps its own width instead of stretching across it */
+.lib-row__status > .lib-badge {
+  align-self: flex-start;
 }
 .lib-mark {
   color: inherit;

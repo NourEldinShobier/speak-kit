@@ -20,9 +20,7 @@ describe("desktop app", () => {
   it("first run: wizard, title, health at the port, token reveal and copy, quit", async () => {
     const { app, page, port, userData } = await start();
     expect(await page.title()).toBe("SpeakKit");
-    expect(
-      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle()),
-    ).toBe("SpeakKit");
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe("SpeakKit");
 
     await page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
     await page.getByRole("button", { name: /Get started/ }).click();
@@ -77,12 +75,7 @@ describe("desktop app", () => {
     const box = page.getByTestId("token");
     const before = (await box.textContent())!;
     await page.getByRole("button", { name: "Regenerate" }).click();
-    await page.waitForFunction(
-      (old) =>
-        document.querySelector("[data-testid=token]")?.getAttribute("data-revealed") === "false" &&
-        !document.body.textContent?.includes(old),
-      before,
-    );
+    await page.waitForFunction((old) => document.querySelector("[data-testid=token]")?.getAttribute("data-revealed") === "false" && !document.body.textContent?.includes(old), before);
     await page.getByRole("button", { name: "Reveal" }).click();
     const after = (await box.textContent())!;
     expect(after).toMatch(/^[0-9a-f]{64}$/);
@@ -117,14 +110,9 @@ describe("desktop app", () => {
     const first = await start({ config: SETUP_DONE });
     await first.page.getByRole("heading", { name: "Home" }).waitFor();
     await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
-    const visible = () =>
-      first.app.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows().some((w) => w.isVisible()),
-      );
+    const visible = () => first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.isVisible()));
     expect(await visible()).toBe(false);
-    expect(
-      await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
-    ).toBe(1);
+    expect(await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
     expect((await health(first.port)).app).toBe("speakkit");
 
     // Same userData -> same single-instance lock: the second process quits and the first shows its window.

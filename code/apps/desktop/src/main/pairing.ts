@@ -21,13 +21,7 @@ export function emptyPairing(): Pairing {
 }
 
 /** Records authenticated calls in `p`; calls `onChange` when the first call arrives or the last-seen time moves by 5 s or more. */
-export function watchPairing(
-  p: Pairing,
-  getToken: () => string,
-  getPort: () => number,
-  onChange: () => void,
-  now: () => number = Date.now,
-): () => void {
+export function watchPairing(p: Pairing, getToken: () => string, getPort: () => number, onChange: () => void, now: () => number = Date.now): () => void {
   const fn = (m: unknown) => {
     const hit = authedCall((m as { request: IncomingMessage }).request, getToken(), getPort());
     if (!hit) return;

@@ -1,17 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import {
-  Avatar,
-  Badge,
-  Banner,
-  Button,
-  EmptyState,
-  Segmented,
-  SettingRow,
-  SettingsSection,
-  StatusPill,
-  TextInput,
-  type Tone,
-} from "@speakkit/ui";
+import { Avatar, Badge, Banner, Button, EmptyState, Segmented, SettingRow, SettingsSection, StatusPill, TextInput, type Tone } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
@@ -39,7 +27,15 @@ export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") =>
   return (
     <Page title="Home" lead="SpeakKit runs a private voice server on this computer. Your browser extension talks to it.">
       {s.serverError && (
-        <Banner tone="error" title="The server could not start" action={<Button size="sm" onClick={() => api.retryEngine()}>Retry</Button>}>
+        <Banner
+          tone="error"
+          title="The server could not start"
+          action={
+            <Button size="sm" onClick={() => api.retryEngine()}>
+              Retry
+            </Button>
+          }
+        >
           {s.serverError}
         </Banner>
       )}
@@ -101,12 +97,24 @@ export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") =>
           description={s.pairing.lastSeenMs ? "Connected" : "Not connected yet"}
           control={
             <div className="sk-row-actions">
-              <Button size="sm" onClick={() => go("browser")}>Pair</Button>
-              <Button size="sm" iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button>
+              <Button size="sm" onClick={() => go("browser")}>
+                Pair
+              </Button>
+              <Button size="sm" iconLeft="external-link" onClick={() => api.openExternal("webstore")}>
+                Open Web Store
+              </Button>
             </div>
           }
         />
-        <SettingRow label="Engines" description="Kokoro-82M is installed. Chatterbox comes later." control={<Button size="sm" onClick={() => go("engines")}>Manage</Button>} />
+        <SettingRow
+          label="Engines"
+          description="Kokoro-82M is installed. Chatterbox comes later."
+          control={
+            <Button size="sm" onClick={() => go("engines")}>
+              Manage
+            </Button>
+          }
+        />
       </SettingsSection>
     </Page>
   );
@@ -230,9 +238,18 @@ export function InstallExtension() {
         <div className="sk-guide" data-testid="install-guide">
           <b>Almost there</b>
           <ol className="sk-steps">
-            <li>In the extensions page that just opened, turn on <b>Developer mode</b> (top right).</li>
-            <li>Choose <b>Load unpacked</b>.</li>
-            <li>Pick this folder, which is open in Explorer: <code>{folder}</code> <Button size="sm" iconLeft="copy" onClick={() => api.copy(folder)}>Copy path</Button></li>
+            <li>
+              In the extensions page that just opened, turn on <b>Developer mode</b> (top right).
+            </li>
+            <li>
+              Choose <b>Load unpacked</b>.
+            </li>
+            <li>
+              Pick this folder, which is open in Explorer: <code>{folder}</code>{" "}
+              <Button size="sm" iconLeft="copy" onClick={() => api.copy(folder)}>
+                Copy path
+              </Button>
+            </li>
           </ol>
         </div>
       )}
@@ -259,7 +276,9 @@ export function BrowserPage({ s }: { s: AppState }) {
         </ol>
         <TokenField token={s.token} regenerate confirmRegenerate />
         <div className="sk-row-actions">
-          <Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button>
+          <Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>
+            Open Web Store
+          </Button>
           <InstallExtension />
         </div>
       </div>
@@ -268,8 +287,16 @@ export function BrowserPage({ s }: { s: AppState }) {
         <div className="lm-card">
           <SettingRow
             label="Chrome extension"
-            description={paired ? `Last call ${new Date(s.pairing.lastSeenMs!).toLocaleTimeString()}${s.pairing.origin ? `, ${s.pairing.origin}` : ""}` : "No call from an extension yet. It appears here after the first request."}
-            control={<StatusPill tone={paired ? "green" : "neutral"} icon={paired ? "circle-check" : undefined}>{paired ? "Connected" : "Waiting"}</StatusPill>}
+            description={
+              paired
+                ? `Last call ${new Date(s.pairing.lastSeenMs!).toLocaleTimeString()}${s.pairing.origin ? `, ${s.pairing.origin}` : ""}`
+                : "No call from an extension yet. It appears here after the first request."
+            }
+            control={
+              <StatusPill tone={paired ? "green" : "neutral"} icon={paired ? "circle-check" : undefined}>
+                {paired ? "Connected" : "Waiting"}
+              </StatusPill>
+            }
           />
           <SettingRow label="Connection" description="Connected over this computer only (127.0.0.1)." control={<code>127.0.0.1:{s.port || "-"}</code>} />
         </div>
@@ -278,4 +305,3 @@ export function BrowserPage({ s }: { s: AppState }) {
     </Page>
   );
 }
-

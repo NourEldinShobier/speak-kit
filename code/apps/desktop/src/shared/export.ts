@@ -50,7 +50,14 @@ export interface ExportTarget {
 const isIllegal = (c: string) => '\\/:*?"<>|'.includes(c) || c < " ";
 /** A file name Windows accepts, without extension. */
 export function safeFileName(raw: string): string {
-  const n = [...raw].map((c) => (isIllegal(c) ? " " : c)).join("").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0, 80).trim();
+  const n = [...raw]
+    .map((c) => (isIllegal(c) ? " " : c))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/, "")
+    .slice(0, 80)
+    .trim();
   return /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(n) ? `${n} reading` : n || "SpeakKit reading";
 }
 

@@ -5,6 +5,7 @@ import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ip
 import type { Config } from "../shared/schemas";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
+import { appBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const TITLE = "SpeakKit";
@@ -102,7 +103,7 @@ export class MainWindow {
         height: done ? 800 : 680,
         title: TITLE,
         show: false,
-        backgroundColor: nativeTheme.shouldUseDarkColors ? "#191A1B" : "#F3F3F6",
+        backgroundColor: appBackground(nativeTheme.shouldUseDarkColors),
         icon: appIcon(),
         titleBarStyle: "hidden",
         titleBarOverlay: this.#overlay(),
@@ -149,7 +150,7 @@ export class MainWindow {
   #overlay() {
     return {
       color: "#00000000",
-      symbolColor: nativeTheme.shouldUseDarkColors ? "#BFBFBF" : "#3B3B3B",
+      symbolColor: titleBarSymbol(nativeTheme.shouldUseDarkColors),
       height: this.#config.setupDone ? 40 : 32, // Lumen: shell title bar 40, setup window 32
     };
   }

@@ -34,23 +34,9 @@ export function trayTooltipFor(c: TrayContext): string {
   return trayTooltip(c.health, c.serverError);
 }
 
-export type TrayAction =
-  | "read-clipboard"
-  | "open"
-  | "pause"
-  | "resume"
-  | "stop"
-  | "wake"
-  | "restart-engine"
-  | "dnd"
-  | "settings"
-  | "check-updates"
-  | "restart-update"
-  | "quit";
+export type TrayAction = "read-clipboard" | "open" | "pause" | "resume" | "stop" | "wake" | "restart-engine" | "dnd" | "settings" | "check-updates" | "restart-update" | "quit";
 
-type TrayItem =
-  | { type: "separator" }
-  | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
+type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
 
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
 export function trayMenuModel(c: TrayContext): TrayItem[] {

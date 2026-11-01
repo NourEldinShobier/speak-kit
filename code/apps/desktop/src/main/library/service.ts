@@ -2,16 +2,15 @@ import { randomUUID } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { MAX_FILE_BYTES, type Block, type DocMeta, type Format, type ImportResult, type LibraryApi, type Progress, type Source } from "../../shared/library/contract";
-import { fetchPage, type Resolve } from "./fetch-url";
+import { fetchPage } from "./fetch-url";
 import { ImportError, parseFile } from "./parse";
 import { textToBlocks, titleFromBlocks, wordCount, type Parsed } from "../../shared/library/text";
 import { LibraryStore } from "./store";
 
 interface LibraryDeps {
   dir: string;
+  /** Fetches web addresses; the default refuses non-public addresses. Replaced in tests. */
   fetch?: typeof fetch;
-  /** DNS lookup used to refuse private addresses; replaced in tests. */
-  resolve?: Resolve;
   readClipboard(): Promise<string> | string;
   /** system open dialog: absolute paths of the chosen files (empty when cancelled) */
   chooseFiles(): Promise<string[]>;
@@ -28,11 +27,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
   const store = await LibraryStore.open(deps.dir);
   const now = deps.now ?? Date.now;
 
-  async function add(
-    parsed: Parsed,
-    info: { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string },
-    original?: Uint8Array,
-  ): Promise<ImportResult> {
+  async function add(parsed: Parsed, info: { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string }, original?: Uint8Array): Promise<ImportResult> {
     const meta: DocMeta = {
       id: randomUUID(),
       title: info.title?.trim() || parsed.title.trim() || titleFromBlocks(parsed.blocks, info.origin),
@@ -95,7 +90,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       ),
     importUrl: async (url) => {
       try {
-        const page = await fetchPage(url, deps.fetch, deps.resolve);
+        const page = await fetchPage(url, deps.fetch);
         return await add(page, { source: "url", format: "url", origin: page.host });
       } catch (e) {
         return failure(e);
@@ -110,6 +105,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       return patch(id, {});
     },
     setFinished: (id, finished) => patch(id, { finished, ...(finished ? { progress: { sentence: 0, fraction: 1 } } : { progress: { sentence: 0, fraction: 0 } }) }),
+    setBookmarks: (id, bookmarks) => patch(id, { bookmarks }),
     setProgress: (id, progress: Progress) => patch(id, { progress, finished: progress.fraction >= 1 }),
     markOpened: (id) => patch(id, { openedAt: now() }),
     remove: (id) => store.remove(id),

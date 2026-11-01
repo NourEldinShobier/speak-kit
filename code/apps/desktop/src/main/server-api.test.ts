@@ -19,7 +19,10 @@ async function stub(handler: (req: http.IncomingMessage, body: string, res: http
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   servers.push(server);
-  const api = new ServerApi(() => `http://127.0.0.1:${(server.address() as AddressInfo).port}`, () => "tok");
+  const api = new ServerApi(
+    () => `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    () => "tok",
+  );
   return { api, seen };
 }
 const json = (res: http.ServerResponse, status: number, body: unknown) => {
@@ -40,11 +43,7 @@ describe("ServerApi", () => {
     await api.selectEngine("chatterbox");
     await api.installEngine("chatterbox");
     await api.removeEngine("chatterbox");
-    expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual([
-      'POST /v1/engines/select {"id":"chatterbox"}',
-      "POST /v1/engines/chatterbox/install ",
-      "DELETE /v1/engines/chatterbox ",
-    ]);
+    expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual(['POST /v1/engines/select {"id":"chatterbox"}', "POST /v1/engines/chatterbox/install ", "DELETE /v1/engines/chatterbox "]);
   });
 
   it("turns the server's error body into a ServerError with status, code and message", async () => {
@@ -76,12 +75,7 @@ describe("ServerApi", () => {
     expect(await api.exportStatus(job.id)).toEqual(job);
     expect([...(await api.exportAudio(job.id))]).toEqual([1, 2, 3]);
     await api.cancelExport(job.id);
-    expect(seen.map((s) => `${s.method} ${s.url}`)).toEqual([
-      "POST /v1/export",
-      `GET /v1/export/${job.id}`,
-      `GET /v1/export/${job.id}/audio`,
-      `DELETE /v1/export/${job.id}`,
-    ]);
+    expect(seen.map((s) => `${s.method} ${s.url}`)).toEqual(["POST /v1/export", `GET /v1/export/${job.id}`, `GET /v1/export/${job.id}/audio`, `DELETE /v1/export/${job.id}`]);
     expect(JSON.parse(seen[0]!.body)).toEqual({ sentences: ["A.", "B."], voice: "af_heart", speed: 1, gapMs: 250 });
   });
 });

@@ -15,21 +15,33 @@ export function UpdateCard({ s }: { s: AppState }) {
       return (
         <div className="sk-row-actions" data-testid="update-idle">
           <span>{u.checkedAtMs ? "SpeakKit is up to date." : "SpeakKit checks for updates in the background."}</span>
-          <Button size="sm" onClick={act("check")}>Check for updates</Button>
+          <Button size="sm" onClick={act("check")}>
+            Check for updates
+          </Button>
         </div>
       );
     case "checking":
       return <LoadingLabel>Checking for updates</LoadingLabel>;
     case "available":
       return (
-        <Banner tone="info" title={`SpeakKit ${u.version} is available`} action={<Button size="sm" variant="primary" onClick={act("download")}>Download</Button>}>
+        <Banner
+          tone="info"
+          title={`SpeakKit ${u.version} is available`}
+          action={
+            <Button size="sm" variant="primary" onClick={act("download")}>
+              Download
+            </Button>
+          }
+        >
           It downloads in the background. Nothing is installed until you say so.
         </Banner>
       );
     case "downloading":
       return (
         <div data-testid="update-downloading">
-          <p className="sk-modal-text">Downloading {u.version}, {u.percent}%</p>
+          <p className="sk-modal-text">
+            Downloading {u.version}, {u.percent}%
+          </p>
           <ProgressBar value={u.percent} label="Update download" />
         </div>
       );
@@ -42,8 +54,14 @@ export function UpdateCard({ s }: { s: AppState }) {
             title={`SpeakKit ${u.version} is ready`}
             action={
               <div className="sk-row-actions">
-                {!u.onQuit && <Button size="sm" onClick={act("install-on-quit")}>Install when I quit</Button>}
-                <Button size="sm" variant="primary" onClick={act("install-now")}>Restart now</Button>
+                {!u.onQuit && (
+                  <Button size="sm" onClick={act("install-on-quit")}>
+                    Install when I quit
+                  </Button>
+                )}
+                <Button size="sm" variant="primary" onClick={act("install-now")}>
+                  Restart now
+                </Button>
               </div>
             }
           >
@@ -60,7 +78,15 @@ export function UpdateCard({ s }: { s: AppState }) {
       return <LoadingLabel>Restarting to install {u.version}</LoadingLabel>;
     case "error":
       return (
-        <Banner tone="error" title="Could not check for updates" action={<Button size="sm" onClick={act("check")}>Try again</Button>}>
+        <Banner
+          tone="error"
+          title="Could not check for updates"
+          action={
+            <Button size="sm" onClick={act("check")}>
+              Try again
+            </Button>
+          }
+        >
           {u.message}
         </Banner>
       );

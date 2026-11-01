@@ -46,8 +46,7 @@ export async function parseFile(name: string, bytes: Uint8Array): Promise<{ form
     else if (format === "markdown") {
       const blocks = markdownToBlocks(decode(bytes));
       parsed = { title: blocks.find((b) => b.kind === "heading")?.text ?? "", blocks };
-    }
-    else if (format === "html") parsed = htmlToParsed(decode(bytes), { readable: true });
+    } else if (format === "html") parsed = htmlToParsed(decode(bytes), { readable: true });
     else if (format === "pdf") parsed = await pdfToParsed(bytes);
     else if (format === "docx") parsed = await docxToParsed(bytes);
     else parsed = await epubToParsed(bytes);

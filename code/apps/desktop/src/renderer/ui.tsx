@@ -52,23 +52,12 @@ export function Logo({ size = 24 }: { size?: number }) {
   );
 }
 
-export const formatBytes = (n: number) =>
-  n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${Math.round(n / 1e6)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`;
+export const formatBytes = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${Math.round(n / 1e6)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
 
 const mask = (t: string) => (t ? `${"•".repeat(14)}-${t.slice(-4)}` : "starting…");
 
 /** Pairing token: masked until revealed. Regenerate can ask for confirmation (Settings) or act at once (Home). */
-export function TokenField({
-  token,
-  regenerate,
-  confirmRegenerate,
-  onCopied,
-}: {
-  token: string;
-  regenerate?: boolean;
-  confirmRegenerate?: boolean;
-  onCopied?: () => void;
-}) {
+export function TokenField({ token, regenerate, confirmRegenerate, onCopied }: { token: string; regenerate?: boolean; confirmRegenerate?: boolean; onCopied?: () => void }) {
   const [shown, setShown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -185,8 +174,7 @@ export function playAudio(a: PreviewAudio, onEnd: () => void): () => void {
   };
 }
 
-export const cleanError = (e: unknown) =>
-  e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : String(e);
+export const cleanError = (e: unknown) => (e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : String(e));
 
 /** Preview player: at most one reading plays at a time; returns the playing key. */
 export function usePreview(speed = 1) {

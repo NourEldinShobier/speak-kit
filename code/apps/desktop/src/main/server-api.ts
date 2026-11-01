@@ -46,9 +46,7 @@ export class ServerApi {
     });
     if (res.ok) return res;
     const parsed = v.safeParse(errorBodySchema, await res.json().catch(() => null));
-    throw parsed.success
-      ? new ServerError(res.status, parsed.output.error.code, parsed.output.error.message)
-      : new ServerError(res.status, "internal", `The server answered HTTP ${res.status}.`);
+    throw parsed.success ? new ServerError(res.status, parsed.output.error.code, parsed.output.error.message) : new ServerError(res.status, "internal", `The server answered HTTP ${res.status}.`);
   }
 
   async #json<T>(schema: v.GenericSchema<unknown, T>, res: Promise<Response>): Promise<T> {

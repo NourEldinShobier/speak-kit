@@ -75,13 +75,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     reading.controller.command({ type: "stop" });
     exports.dispose();
   };
-  const updates = createUpdates(
-    ctx,
-    toasts,
-    () => tray.refresh(),
-    stopWork,
-    o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined,
-  );
+  const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   // ---- global shortcuts ----
   const actions: Record<ShortcutId, () => void> = {
@@ -243,4 +237,3 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     }),
   };
 }
-

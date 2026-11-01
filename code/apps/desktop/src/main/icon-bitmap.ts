@@ -35,11 +35,7 @@ export function logoBitmap(size: number, state: TrayState = "normal"): Buffer {
       const cy = Math.min(Math.max(y + 0.5, r), size - r);
       if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 > r * r) continue;
       const bi = Math.floor((x + 0.5 - x0) / (bw + gap));
-      const inBar =
-        bi >= 0 &&
-        bi < bars.length &&
-        (x + 0.5 - x0) % (bw + gap) < bw &&
-        Math.abs(y + 0.5 - size / 2) < (bars[bi]! * size) / 2;
+      const inBar = bi >= 0 && bi < bars.length && (x + 0.5 - x0) % (bw + gap) < bw && Math.abs(y + 0.5 - size / 2) < (bars[bi]! * size) / 2;
       const c: RGB = inBar ? [255, 255, 255] : base;
       buf[o] = c[2];
       buf[o + 1] = c[1];

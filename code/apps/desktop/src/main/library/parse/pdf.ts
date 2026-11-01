@@ -17,9 +17,7 @@ export async function pdfToParsed(bytes: Uint8Array): Promise<Parsed> {
       const content = await page.getTextContent();
       pages.push(
         content.items.flatMap((it) =>
-          "str" in it
-            ? [{ str: it.str, x: it.transform[4] ?? 0, y: it.transform[5] ?? 0, w: it.width, h: it.height || Math.hypot(it.transform[0] ?? 0, it.transform[1] ?? 0) }]
-            : [],
+          "str" in it ? [{ str: it.str, x: it.transform[4] ?? 0, y: it.transform[5] ?? 0, w: it.width, h: it.height || Math.hypot(it.transform[0] ?? 0, it.transform[1] ?? 0) }] : [],
         ),
       );
       page.cleanup();

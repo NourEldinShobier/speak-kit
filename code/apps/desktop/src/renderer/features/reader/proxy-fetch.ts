@@ -64,7 +64,15 @@ export function createProxyFetch(bridge: Bridge): typeof fetch {
       pending.set(req.id, {
         head(status) {
           settled = true;
-          const body = NO_BODY.has(status) ? null : new ReadableStream<Uint8Array>({ start: (c) => void (controller = c), cancel: () => { bridge.proxyCancel(req.id); done(); } });
+          const body = NO_BODY.has(status)
+            ? null
+            : new ReadableStream<Uint8Array>({
+                start: (c) => void (controller = c),
+                cancel: () => {
+                  bridge.proxyCancel(req.id);
+                  done();
+                },
+              });
           resolve(new Response(body, { status }));
           if (!body) done();
         },

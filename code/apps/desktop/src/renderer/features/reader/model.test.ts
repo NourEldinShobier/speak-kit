@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Block } from "../../../shared/library/contract";
-import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toReadDoc, wordAt } from "./model";
+import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toggleBookmark, toReadDoc, wordAt } from "./model";
 
 const blocks: Block[] = [
   { kind: "heading", text: "Title here", level: 1, page: 1 },
@@ -109,7 +109,11 @@ describe("ProgressSaver", () => {
   it("saves at most once per interval and always on flush", () => {
     let now = 10_000;
     const saved: number[] = [];
-    const s = new ProgressSaver((p) => saved.push(p.sentence), () => now, 3000);
+    const s = new ProgressSaver(
+      (p) => saved.push(p.sentence),
+      () => now,
+      3000,
+    );
     s.update({ sentence: 1, fraction: 0.1 });
     now += 1000;
     s.update({ sentence: 2, fraction: 0.2 });
@@ -124,5 +128,30 @@ describe("ProgressSaver", () => {
     expect(saved).toEqual([1, 4, 5]);
     s.flush();
     expect(saved).toEqual([1, 4, 5]);
+  });
+});
+
+describe("toggleBookmark", () => {
+  it("adds a bookmark labelled with the start of the sentence, keeping text order", () => {
+    const one = toggleBookmark([], 4, "Part two");
+    expect(one).toEqual([{ sentence: 4, label: "Part two" }]);
+    expect(toggleBookmark(one, 1, "First   sentence.  ").map((b) => [b.sentence, b.label])).toEqual([
+      [1, "First sentence."],
+      [4, "Part two"],
+    ]);
+  });
+
+  it("removes the bookmark when the sentence already has one", () => {
+    const list = [
+      { sentence: 1, label: "a" },
+      { sentence: 3, label: "b" },
+    ];
+    expect(toggleBookmark(list, 1, "a")).toEqual([{ sentence: 3, label: "b" }]);
+  });
+
+  it("shortens a long label to 60 characters ending in an ellipsis", () => {
+    const [b] = toggleBookmark([], 0, "word ".repeat(30));
+    expect(b!.label).toHaveLength(60);
+    expect(b!.label.endsWith("…")).toBe(true);
   });
 });

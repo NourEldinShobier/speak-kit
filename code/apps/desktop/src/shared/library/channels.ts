@@ -12,6 +12,7 @@ export const LIBRARY_METHODS = [
   "rename",
   "setVoice",
   "setFinished",
+  "setBookmarks",
   "setProgress",
   "markOpened",
   "remove",

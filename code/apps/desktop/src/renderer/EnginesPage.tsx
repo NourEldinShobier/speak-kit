@@ -57,8 +57,16 @@ export function EnginesPage({ s }: { s: AppState }) {
 
   return (
     <Page title="Engines" lead="One heavy engine sits in memory at a time, and only while you need it.">
-      {error && !list && shown && <Banner tone="warning" title="Showing the basics">{error}</Banner>}
-      {error && list && <Banner tone="error" title="That did not work">{error}</Banner>}
+      {error && !list && shown && (
+        <Banner tone="warning" title="Showing the basics">
+          {error}
+        </Banner>
+      )}
+      {error && list && (
+        <Banner tone="error" title="That did not work">
+          {error}
+        </Banner>
+      )}
       <div className="lm-card" data-testid="engines">
         {shown?.engines.map((e) => {
           const active = shown.active === e.id;
@@ -74,7 +82,11 @@ export function EnginesPage({ s }: { s: AppState }) {
                   {active && <span className="sk-active"> · In use</span>}
                 </b>
                 <span>{BLURB[e.id]}</span>
-                {e.gpu && <span>Found {e.gpu.name}, {Math.round(e.gpu.vramMb / 1024)} GB</span>}
+                {e.gpu && (
+                  <span>
+                    Found {e.gpu.name}, {Math.round(e.gpu.vramMb / 1024)} GB
+                  </span>
+                )}
                 {d.note && <span data-testid={`engine-note-${e.id}`}>{d.note}</span>}
                 {d.progress !== null && <ProgressBar thin value={Math.round(d.progress * 100)} label={`${e.name} progress`} />}
               </div>
@@ -83,13 +95,7 @@ export function EnginesPage({ s }: { s: AppState }) {
                   {d.pill.label}
                 </StatusPill>
                 {d.actions.map((a) => (
-                  <Button
-                    key={a}
-                    size="sm"
-                    variant={a === "remove" ? "danger" : "secondary"}
-                    loading={busy === `${e.id}:${a}`}
-                    onClick={() => (a === "remove" ? setRemoving(e) : run(e, a))}
-                  >
+                  <Button key={a} size="sm" variant={a === "remove" ? "danger" : "secondary"} loading={busy === `${e.id}:${a}`} onClick={() => (a === "remove" ? setRemoving(e) : run(e, a))}>
                     {label[a]}
                   </Button>
                 ))}

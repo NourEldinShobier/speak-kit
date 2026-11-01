@@ -1,5 +1,5 @@
 // Builds the Windows installer and the portable exe into apps/desktop/release.
-//   node scripts/package.mjs [--version 0.2.0] [--dir]   (--dir: unpacked app only, for smoke tests)
+//   node scripts/package.mjs [--version 0.3.0] [--dir]   (--dir: unpacked app only, for smoke tests)
 // Steps: build engine worker, extension and desktop; stage a plain app folder with a real node_modules (pnpm's symlinks do not
 // survive packaging); run electron-builder. Code signing is not set up: the installer is unsigned.
 import { spawnSync } from "node:child_process";
@@ -38,7 +38,7 @@ const version = value("--version") ?? pkg.version;
 console.log("== build engine worker, extension, desktop");
 run("pnpm", ["exec", "vp", "pack"], path.join(code, "packages/engine"));
 run("pnpm", ["exec", "vp", "build", "--outDir", "dist-pack"], path.join(code, "apps/extension"));
-run("pnpm", ["exec", "vp", "build"], desktop);
+run("pnpm", ["exec", "vp", "build"], desktop, { SPEAKKIT_PACKAGE: "1" }); // SPEAKKIT_PACKAGE strips test-only code
 
 // 2. staging folder
 console.log("== stage");
@@ -78,7 +78,12 @@ writeFileSync(
     2,
   ),
 );
-console.log("runtime packages:", Object.entries(dependencies).map(([k, v]) => `${k}@${v}`).join(", "));
+console.log(
+  "runtime packages:",
+  Object.entries(dependencies)
+    .map(([k, v]) => `${k}@${v}`)
+    .join(", "),
+);
 run("npm", ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel=error"], stage);
 
 // Drop binaries for other platforms (onnxruntime ships all of them; koffi too).
@@ -103,8 +108,20 @@ const electronVersion = json(path.join(electronDir, "package.json")).version;
 const targets = flag("--dir") ? ["--dir"] : ["nsis", "portable"];
 run(
   "pnpm",
-  ["exec", "electron-builder", "--win", ...targets, "--x64", "--publish", "never", "--config", "electron-builder.yml",
-    `-c.electronVersion=${electronVersion}`, `-c.electronDist=${path.join(electronDir, "dist")}`, `-c.extraMetadata.version=${version}`],
+  [
+    "exec",
+    "electron-builder",
+    "--win",
+    ...targets,
+    "--x64",
+    "--publish",
+    "never",
+    "--config",
+    "electron-builder.yml",
+    `-c.electronVersion=${electronVersion}`,
+    `-c.electronDist=${path.join(electronDir, "dist")}`,
+    `-c.extraMetadata.version=${version}`,
+  ],
   desktop,
   { CSC_IDENTITY_AUTO_DISCOVERY: "false" },
 );

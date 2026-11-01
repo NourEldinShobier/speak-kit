@@ -18,7 +18,10 @@ describe("Settings > Memory wiring", () => {
   it("pushes idle unload and battery saver to the server setters", () => {
     const { t, calls } = recorder();
     expect(applyMemory(t, { idleUnload: "1", batterySaver: true }, true)).toEqual([]);
-    expect(calls).toEqual([["idle", 60000], ["battery", true]]);
+    expect(calls).toEqual([
+      ["idle", 60000],
+      ["battery", true],
+    ]);
   });
   it("battery saver only counts while on battery", () => {
     const a = recorder();

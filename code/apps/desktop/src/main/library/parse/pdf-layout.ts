@@ -48,8 +48,7 @@ function toLines(items: PdfItem[]): Line[] {
 const ENDS_SENTENCE = /[.!?:;"')\]]$/;
 
 /** Join wrapped lines; a hyphen at a line end is dropped when the next line continues in lower case. */
-const joinLines = (lines: string[]) =>
-  lines.reduce((acc, l) => (!acc ? l : /[a-z]-$/.test(acc) && /^[a-z]/.test(l) ? acc.slice(0, -1) + l : `${acc} ${l}`), "");
+const joinLines = (lines: string[]) => lines.reduce((acc, l) => (!acc ? l : /[a-z]-$/.test(acc) && /^[a-z]/.test(l) ? acc.slice(0, -1) + l : `${acc} ${l}`), "");
 
 /**
  * Layout-aware paragraphs for one page: larger type and short lines become headings; a paragraph ends at a vertical gap
@@ -59,7 +58,10 @@ export function pageBlocks(items: PdfItem[], body: number, page: number): Block[
   const lines = toLines(items);
   if (!lines.length) return [];
   // line spacing: the typical gap between wrapped lines; gaps between paragraphs and to a footer are excluded
-  const gaps = lines.slice(1).map((l, i) => lines[i]!.y - l.y).filter((g) => g > 0 && g < body * 2);
+  const gaps = lines
+    .slice(1)
+    .map((l, i) => lines[i]!.y - l.y)
+    .filter((g) => g > 0 && g < body * 2);
   const spacing = median(gaps) || body * 1.2;
   const left = Math.min(...lines.map((l) => l.x));
   const width = Math.max(...lines.map((l) => l.right)) - left;
@@ -108,4 +110,10 @@ export function stripRunning(pages: Block[][]): Block[][] {
   });
 }
 
-export const bodyHeight = (pages: PdfItem[][]) => median(pages.flat().filter((i) => i.str.trim()).map((i) => i.h));
+export const bodyHeight = (pages: PdfItem[][]) =>
+  median(
+    pages
+      .flat()
+      .filter((i) => i.str.trim())
+      .map((i) => i.h),
+  );

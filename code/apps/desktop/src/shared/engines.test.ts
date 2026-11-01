@@ -26,7 +26,10 @@ describe("describeEngine", () => {
 
   it("downloading and installing show the percent and a bar", () => {
     expect(describeEngine(engine("downloading", { progress: 0.424 }), true)).toMatchObject({ pill: { label: "Download 42%" }, progress: 0.424 });
-    expect(describeEngine(chatterbox("installing", { progress: 0.1, detail: "Creating the Python environment" }), false)).toMatchObject({ pill: { label: "Installing 10%" }, note: "Creating the Python environment" });
+    expect(describeEngine(chatterbox("installing", { progress: 0.1, detail: "Creating the Python environment" }), false)).toMatchObject({
+      pill: { label: "Installing 10%" },
+      note: "Creating the Python environment",
+    });
   });
 
   it("missing: the core engine downloads, an optional one installs", () => {

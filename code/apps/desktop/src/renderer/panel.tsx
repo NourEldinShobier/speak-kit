@@ -37,7 +37,11 @@ function Panel() {
                 <b title={r.title}>{r.title}</b>
                 <span data-testid="panel-status">{statusLine(r)}</span>
               </div>
-              <IconButton name={r.status === "finished" ? "refresh" : active ? "player-pause" : "player-play"} label={r.status === "finished" ? "Read again" : active ? "Pause" : "Play"} onClick={() => api.reader({ type: "toggle" })} />
+              <IconButton
+                name={r.status === "finished" ? "refresh" : active ? "player-pause" : "player-play"}
+                label={r.status === "finished" ? "Read again" : active ? "Pause" : "Play"}
+                onClick={() => api.reader({ type: "toggle" })}
+              />
               <IconButton name="player-stop" label="Stop" onClick={() => api.reader({ type: "stop" })} />
             </div>
             <ProgressBar thin value={r.totalMs ? Math.min(100, (r.elapsedMs / r.totalMs) * 100) : 0} label="Reading progress" />

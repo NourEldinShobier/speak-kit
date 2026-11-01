@@ -2,6 +2,7 @@ import { type BrowserWindow, nativeTheme, screen, type BrowserWindowConstructorO
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSecureWindow } from "./secure-window";
+import { floatBackground } from "./window-colors";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -35,22 +36,25 @@ export class FloatWindow {
     let w = this.window;
     if (!w) {
       this.#loaded = false;
-      w = this.#win = createSecureWindow({
-        frame: false,
-        resizable: false,
-        maximizable: false,
-        minimizable: false,
-        fullscreenable: false,
-        skipTaskbar: true,
-        alwaysOnTop: true,
-        show: false,
-        backgroundColor: nativeTheme.shouldUseDarkColors ? "#1E1F20" : "#FFFFFF",
-        ...this.#options,
-      }, (loaded) => {
-        this.#loaded = true;
-        loaded.webContents.send(STATE_EVENT, this.#state());
-        for (const [ch, payload] of this.#pending.splice(0)) loaded.webContents.send(ch, payload);
-      });
+      w = this.#win = createSecureWindow(
+        {
+          frame: false,
+          resizable: false,
+          maximizable: false,
+          minimizable: false,
+          fullscreenable: false,
+          skipTaskbar: true,
+          alwaysOnTop: true,
+          show: false,
+          backgroundColor: floatBackground(nativeTheme.shouldUseDarkColors),
+          ...this.#options,
+        },
+        (loaded) => {
+          this.#loaded = true;
+          loaded.webContents.send(STATE_EVENT, this.#state());
+          for (const [ch, payload] of this.#pending.splice(0)) loaded.webContents.send(ch, payload);
+        },
+      );
       w.on("closed", () => (this.#win = null));
       void w.loadFile(path.join(here, `../renderer/${this.#page}.html`));
       const size = w.getSize();
@@ -91,16 +95,20 @@ export class FloatWindow {
 }
 
 /** Bottom-right corner of the primary display's work area, above the taskbar. */
-export const cornerOf = (margin = 16) => (size: { width: number; height: number }): Rectangle => {
-  const wa = screen.getPrimaryDisplay().workArea;
-  return { ...size, x: wa.x + wa.width - size.width - margin, y: wa.y + wa.height - size.height - margin };
-};
+export const cornerOf =
+  (margin = 16) =>
+  (size: { width: number; height: number }): Rectangle => {
+    const wa = screen.getPrimaryDisplay().workArea;
+    return { ...size, x: wa.x + wa.width - size.width - margin, y: wa.y + wa.height - size.height - margin };
+  };
 
 /** Above (or beside) the tray icon, kept inside the work area of the display that holds it. */
-export const aboveTray = (tray: Rectangle) => (size: { width: number; height: number }): Rectangle => {
-  const wa = screen.getDisplayNearestPoint({ x: tray.x, y: tray.y }).workArea;
-  const x = Math.min(Math.max(wa.x + 8, Math.round(tray.x + tray.width / 2 - size.width / 2)), wa.x + wa.width - size.width - 8);
-  const above = tray.y - size.height - 12;
-  const y = above >= wa.y ? above : Math.min(tray.y + tray.height + 12, wa.y + wa.height - size.height - 8);
-  return { ...size, x, y };
-};
+export const aboveTray =
+  (tray: Rectangle) =>
+  (size: { width: number; height: number }): Rectangle => {
+    const wa = screen.getDisplayNearestPoint({ x: tray.x, y: tray.y }).workArea;
+    const x = Math.min(Math.max(wa.x + 8, Math.round(tray.x + tray.width / 2 - size.width / 2)), wa.x + wa.width - size.width - 8);
+    const above = tray.y - size.height - 12;
+    const y = above >= wa.y ? above : Math.min(tray.y + tray.height + 12, wa.y + wa.height - size.height - 8);
+    return { ...size, x, y };
+  };

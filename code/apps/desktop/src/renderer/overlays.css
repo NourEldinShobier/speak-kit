@@ -1,0 +1,126 @@
+/* ---- palette (CP1): 640 wide, 54 px input row ---- */
+.sk-pal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 120px;
+  background: var(--lm-scrim, rgba(0, 0, 0, 0.45));
+}
+.sk-pal__box {
+  width: 640px;
+  max-width: calc(100% - 32px);
+  max-height: 432px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--stroke-divider);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--lm-shadow-dialog);
+  overflow: hidden;
+}
+.sk-pal__in {
+  height: 54px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--stroke-divider);
+}
+.sk-pal__in input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+}
+.sk-pal__list {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+.sk-pal__list .lm-menu {
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-width: 0;
+}
+.sk-pal__list .lm-menu__item.is-active {
+  background: var(--fill-selected);
+}
+.sk-pal__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+.sk-pal__foot {
+  flex: none;
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--stroke-divider);
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* ---- popover for the bell ---- */
+.sk-activity {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.sk-activity > div {
+  padding: 8px 4px;
+  border-top: 1px solid var(--stroke-divider);
+}
+.sk-activity > div:first-child {
+  border-top: 0;
+}
+.sk-activity b {
+  display: block;
+}
+.sk-activity span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* ---- quit dialog list ---- */
+.sk-quit {
+  border: 1px solid var(--stroke-divider);
+  border-radius: 8px;
+  background: var(--surface-card);
+}
+.sk-quit > div {
+  padding: 10px 12px;
+  border-top: 1px solid var(--stroke-divider);
+}
+.sk-quit > div:first-child {
+  border-top: 0;
+}
+.sk-quit span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-modal-text {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+.sk-area {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font: inherit;
+}

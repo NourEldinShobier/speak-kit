@@ -23,8 +23,7 @@ const outDir = () => {
 };
 const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
-const hook = <T>(l: Launched, fn: string, ...a: unknown[]) =>
-  l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
+const hook = <T>(l: Launched, fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
 const hide = (l: Launched) => l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());
 const settings = async (l: Launched, link: string, heading = link) => {
   await l.page.getByRole("link", { name: "Settings" }).click();
@@ -33,7 +32,7 @@ const settings = async (l: Launched, link: string, heading = link) => {
 };
 const newWindow = (l: Launched, part: string) => l.app.waitForEvent("window", { predicate: (p) => p.url().includes(part), timeout: 15_000 });
 const until = async (f: () => Promise<boolean> | boolean, ms = 15_000) => {
-  for (const end = Date.now() + ms; Date.now() < end; ) {
+  for (const end = Date.now() + ms; Date.now() < end;) {
     if (await f()) return;
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -154,7 +153,10 @@ describe("mini player and tray", () => {
     const p = await panelWin;
     await p.getByTestId("tray-panel").waitFor();
     await p.getByText("Now playing").waitFor();
-    await p.getByText(/One short sentence here\./).first().waitFor();
+    await p
+      .getByText(/One short sentence here\./)
+      .first()
+      .waitFor();
     await p.getByText("Next in queue").waitFor();
     await p.getByRole("button", { name: "Stop" }).click();
     await p.getByText(/Nothing is playing/).waitFor();
@@ -180,9 +182,7 @@ describe("notifications", () => {
     await l.page.getByRole("switch", { name: "Export finished: Sound" }).click();
     await l.page.getByRole("switch", { name: "Reading finished: Toast" }).click();
     await l.page.getByRole("switch", { name: "Do not disturb" }).click();
-    await expect
-      .poll(() => configOf(l))
-      .toMatchObject({ doNotDisturb: true, notifications: { "export-done": { toast: true, bell: true, sound: true }, "reading-finished": { toast: true } } });
+    await expect.poll(() => configOf(l)).toMatchObject({ doNotDisturb: true, notifications: { "export-done": { toast: true, bell: true, sound: true }, "reading-finished": { toast: true } } });
   });
 
   it("the clipboard prompt offers long copied text as a toast; clicking it reads the text", async () => {
@@ -190,9 +190,7 @@ describe("notifications", () => {
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await hide(l);
     await new Promise((r) => setTimeout(r, 1200));
-    await l.app.evaluate(({ clipboard }) =>
-      clipboard.writeText("The quick brown fox jumps over the lazy dog while the sun sets slowly behind the distant hills and everyone goes home."),
-    );
+    await l.app.evaluate(({ clipboard }) => clipboard.writeText("The quick brown fox jumps over the lazy dog while the sun sets slowly behind the distant hills and everyone goes home."));
     await until(async () => (await hook<{ title: string }[]>(l, "toasts")).some((t) => t.title === "Copied text: read it?"), 10_000);
     const mini = newWindow(l, "mini.html");
     await hook(l, "clickToast", 0);

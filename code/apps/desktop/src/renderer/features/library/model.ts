@@ -94,7 +94,11 @@ export function subtitle(d: DocMeta): string {
 
 /** Split text around case-insensitive matches of every query word: [text, isMatch] pieces, for highlighting. */
 export function highlightParts(text: string, query: string): [string, boolean][] {
-  const terms = query.trim().split(/\s+/).filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const terms = query
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   if (!terms.length) return [[text, false]];
   const parts: [string, boolean][] = [];
   let last = 0;

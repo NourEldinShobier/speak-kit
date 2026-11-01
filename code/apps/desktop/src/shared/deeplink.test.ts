@@ -8,8 +8,7 @@ describe("deep links", () => {
     expect(parseDeepLink("speakkit://pair/?token=abc")).toEqual({ kind: "pair" });
   });
   it("rejects other schemes, hosts and credentials", () => {
-    for (const bad of ["https://launch", "speakkit://settings", "speakkit://", "speakkit://u:p@launch", "speakkit://launch:80", "nonsense", ""])
-      expect(parseDeepLink(bad)).toBeNull();
+    for (const bad of ["https://launch", "speakkit://settings", "speakkit://", "speakkit://u:p@launch", "speakkit://launch:80", "nonsense", ""]) expect(parseDeepLink(bad)).toBeNull();
   });
   it("finds the first valid link in a command line", () => {
     expect(findDeepLink(["electron.exe", ".", "--flag", "speakkit://nope", "speakkit://pair"])).toEqual({ kind: "pair" });

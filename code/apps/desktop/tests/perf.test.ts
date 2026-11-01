@@ -15,9 +15,7 @@ interface Proc {
   priv: number;
 }
 const procs = (x: Launched): Promise<Proc[]> =>
-  x.app.evaluate(({ app }) =>
-    app.getAppMetrics().map((m) => ({ type: m.type, ws: m.memory.workingSetSize / 1024, priv: (m.memory.privateBytes ?? 0) / 1024 })),
-  );
+  x.app.evaluate(({ app }) => app.getAppMetrics().map((m) => ({ type: m.type, ws: m.memory.workingSetSize / 1024, priv: (m.memory.privateBytes ?? 0) / 1024 })));
 const sum = (p: Proc[], k: "ws" | "priv") => Math.round(p.reduce((a, b) => a + b[k], 0));
 
 describe("desktop resource budget", () => {

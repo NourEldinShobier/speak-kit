@@ -5,7 +5,34 @@ import { squash, type Parsed } from "../../../shared/library/text";
 
 const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "PRE", "CODE", "SVG", "FIGURE", "NAV", "ASIDE", "FOOTER", "FORM", "BUTTON", "TEMPLATE"]);
 const HEADING = /^H([1-6])$/;
-const BLOCKS = new Set(["P", "DIV", "SECTION", "ARTICLE", "MAIN", "LI", "UL", "OL", "BLOCKQUOTE", "TABLE", "TBODY", "THEAD", "TR", "H1", "H2", "H3", "H4", "H5", "H6", "BODY", "HTML", "BR", "HR", "DL", "DT", "DD"]);
+const BLOCKS = new Set([
+  "P",
+  "DIV",
+  "SECTION",
+  "ARTICLE",
+  "MAIN",
+  "LI",
+  "UL",
+  "OL",
+  "BLOCKQUOTE",
+  "TABLE",
+  "TBODY",
+  "THEAD",
+  "TR",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "BODY",
+  "HTML",
+  "BR",
+  "HR",
+  "DL",
+  "DT",
+  "DD",
+]);
 const LISTS = new Set(["UL", "OL"]);
 
 interface DomNode {
@@ -38,7 +65,14 @@ function domToBlocks(root: DomNode): Block[] {
         if (h) add("heading", c.textContent ?? "", Number(h[1]));
         else if (c.nodeName === "LI") item(c);
         else if (c.nodeName === "BLOCKQUOTE") add("quote", c.textContent ?? "");
-        else if (c.nodeName === "TR") add("paragraph", Array.from(c.childNodes).map((x) => squash(x.textContent ?? "")).filter(Boolean).join(", "));
+        else if (c.nodeName === "TR")
+          add(
+            "paragraph",
+            Array.from(c.childNodes)
+              .map((x) => squash(x.textContent ?? ""))
+              .filter(Boolean)
+              .join(", "),
+          );
         else if (c.nodeName === "P") add("paragraph", c.textContent ?? "");
         else walk(c);
       }
@@ -48,7 +82,13 @@ function domToBlocks(root: DomNode): Block[] {
   // An item with a nested list: its own text first, then the nested items.
   const item = (li: DomNode) => {
     const kids = Array.from(li.childNodes);
-    add("list-item", kids.filter((x) => !LISTS.has(x.nodeName)).map((x) => x.textContent ?? "").join(""));
+    add(
+      "list-item",
+      kids
+        .filter((x) => !LISTS.has(x.nodeName))
+        .map((x) => x.textContent ?? "")
+        .join(""),
+    );
     for (const x of kids) if (LISTS.has(x.nodeName)) walk(x);
   };
   walk(root);

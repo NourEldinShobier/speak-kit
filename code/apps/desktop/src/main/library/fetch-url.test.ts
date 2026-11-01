@@ -3,43 +3,16 @@ import { fetchPage } from "./fetch-url";
 
 const html = (body: string, headers: Record<string, string> = {}) => new Response(body, { headers: { "content-type": "text/html", ...headers } });
 const ARTICLE = `<html><head><title>Hello</title></head><body><article><p>${"Readable words go here. ".repeat(40)}</p></article></body></html>`;
-const publicDns = async () => ["93.184.216.34"];
-const never = (async () => {
-  throw new Error("must not be fetched");
-}) as unknown as typeof fetch;
 
-describe("fetchPage: where it may go", () => {
-  it.each([
-    ["http://127.0.0.1:47615/v1/health", ["127.0.0.1"]],
-    ["http://[::1]/", ["::1"]],
-    ["http://intranet.example/", ["10.1.2.3"]],
-    ["http://nas.example/", ["192.168.1.20"]],
-    ["http://metadata.example/", ["169.254.169.254"]],
-    ["http://mapped.example/", ["::ffff:127.0.0.1"]],
-  ])("refuses %s before any request", async (url, ips) => {
-    await expect(fetchPage(url, never, async () => ips)).rejects.toMatchObject({ reason: "network", message: expect.stringContaining("Only public web addresses") });
-  });
-
-  it("refuses a public page that redirects to a local service", async () => {
-    const seen: string[] = [];
-    const doFetch = (async (u: URL) => {
-      seen.push(String(u));
-      return new Response(null, { status: 302, headers: { location: "http://127.0.0.1:47615/v1/health" } });
-    }) as unknown as typeof fetch;
-    const resolve = async (host: string) => (host === "127.0.0.1" ? ["127.0.0.1"] : ["93.184.216.34"]);
-    await expect(fetchPage("https://example.com/", doFetch, resolve)).rejects.toMatchObject({ reason: "network" });
-    expect(seen).toEqual(["https://example.com/"]);
-  });
-
+describe("fetchPage: redirects", () => {
   it("follows a redirect between public hosts", async () => {
-    const doFetch = (async (u: URL) =>
-      u.host === "a.example" ? new Response(null, { status: 301, headers: { location: "https://b.example/post" } }) : html(ARTICLE)) as unknown as typeof fetch;
-    expect(await fetchPage("https://a.example/", doFetch, publicDns)).toMatchObject({ host: "b.example" });
+    const doFetch = (async (u: URL) => (u.host === "a.example" ? new Response(null, { status: 301, headers: { location: "https://b.example/post" } }) : html(ARTICLE))) as unknown as typeof fetch;
+    expect(await fetchPage("https://a.example/", doFetch)).toMatchObject({ host: "b.example" });
   });
 
   it("stops after five redirects", async () => {
     const doFetch = (async () => new Response(null, { status: 302, headers: { location: "https://loop.example/" } })) as unknown as typeof fetch;
-    await expect(fetchPage("https://loop.example/", doFetch, publicDns)).rejects.toMatchObject({ message: expect.stringContaining("redirected too many times") });
+    await expect(fetchPage("https://loop.example/", doFetch)).rejects.toMatchObject({ message: expect.stringContaining("redirected too many times") });
   });
 });
 
@@ -48,7 +21,7 @@ describe("fetchPage: size", () => {
     let read = false;
     const body = new ReadableStream({ pull: (c) => ((read = true), c.enqueue(new Uint8Array(10)), undefined) }, { highWaterMark: 0 });
     const doFetch = (async () => new Response(body, { headers: { "content-type": "text/html", "content-length": String(9 * 1024 * 1024) } })) as unknown as typeof fetch;
-    await expect(fetchPage("https://big.example/", doFetch, publicDns)).rejects.toMatchObject({ reason: "too-large" });
+    await expect(fetchPage("https://big.example/", doFetch)).rejects.toMatchObject({ reason: "too-large" });
     expect(read).toBe(false);
   });
 
@@ -57,7 +30,7 @@ describe("fetchPage: size", () => {
     const chunk = new Uint8Array(1024 * 1024);
     const body = new ReadableStream({ pull: (c) => ((sent += chunk.length), c.enqueue(chunk)) }, { highWaterMark: 0 });
     const doFetch = (async () => new Response(body, { headers: { "content-type": "text/html" } })) as unknown as typeof fetch;
-    await expect(fetchPage("https://endless.example/", doFetch, publicDns)).rejects.toMatchObject({ reason: "too-large" });
+    await expect(fetchPage("https://endless.example/", doFetch)).rejects.toMatchObject({ reason: "too-large" });
     expect(sent).toBeLessThanOrEqual(10 * 1024 * 1024);
   });
 });

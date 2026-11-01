@@ -3,8 +3,7 @@ import type { ProxyChunk } from "../../shared/library/contract";
 import { createSpeakProxy, MAX_OPEN_REQUESTS } from "./speak-proxy";
 
 const hanging = (() => new Promise<Response>(() => {})) as unknown as typeof fetch;
-const abortable = ((_url: string, init: RequestInit) =>
-  new Promise<Response>((_, reject) => init.signal!.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch;
+const abortable = ((_url: string, init: RequestInit) => new Promise<Response>((_, reject) => init.signal!.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch;
 
 describe("speak proxy limits", () => {
   it("refuses a request beyond the cap instead of opening another upstream stream", async () => {

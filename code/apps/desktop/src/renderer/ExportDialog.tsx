@@ -9,6 +9,8 @@ import { api, formatBytes, cleanError } from "./ui";
 
 export interface ExportOpen {
   text: string;
+  /** File name to suggest; the start of the text when missing. */
+  name?: string;
   /** Reopening a running or finished job from the sidebar pill. */
   jobId?: string;
 }
@@ -17,7 +19,7 @@ export interface ExportOpen {
 export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOpen; onClose(): void }) {
   const prefs = s.config.exportPrefs;
   const [text, setText] = useState(open.text);
-  const [name, setName] = useState(() => titleOf(open.text).replace(/…$/, "").slice(0, 40).trim() || "SpeakKit reading");
+  const [name, setName] = useState(() => open.name || titleOf(open.text).replace(/…$/, "").slice(0, 40).trim() || "SpeakKit reading");
   const [format, setFormat] = useState(prefs.format);
   const [kbps, setKbps] = useState<number>(prefs.mp3Kbps);
   const [voice, setVoice] = useState(s.config.voice);
@@ -29,7 +31,10 @@ export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOp
   const job = s.exports.find((e) => e.id === jobId);
 
   useEffect(() => {
-    api.voices().then((v) => setVoices(v.voices), () => {});
+    api.voices().then(
+      (v) => setVoices(v.voices),
+      () => {},
+    );
   }, []);
 
   const start = async (conflict?: ExportConflict) => {
@@ -80,7 +85,14 @@ export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOp
       </>
     );
   } else if (job?.stage === "error" || job?.stage === "cancelled") {
-    body = job.stage === "error" ? <Banner tone="error" title="The export did not finish">{job.error}</Banner> : <p className="sk-modal-text">The export was cancelled. No file was written.</p>;
+    body =
+      job.stage === "error" ? (
+        <Banner tone="error" title="The export did not finish">
+          {job.error}
+        </Banner>
+      ) : (
+        <p className="sk-modal-text">The export was cancelled. No file was written.</p>
+      );
     footer = (
       <>
         <Button onClick={onClose}>Close</Button>
@@ -115,7 +127,11 @@ export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOp
   } else {
     body = (
       <div className="sk-export">
-        {error && <Banner tone="error" title="Could not start the export">{error}</Banner>}
+        {error && (
+          <Banner tone="error" title="Could not start the export">
+            {error}
+          </Banner>
+        )}
         <label className="sk-field">
           <span>Text</span>
           <textarea className="sk-area" aria-label="Text to export" value={text} onChange={(e) => setText(e.target.value)} rows={5} />
@@ -123,7 +139,15 @@ export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOp
         <div className="sk-field">
           <span>Format</span>
           <div className="sk-row-actions">
-            <Segmented label="Format" value={format} onChange={(v) => setFormat(v as "wav" | "mp3")} items={[{ id: "mp3", label: "MP3" }, { id: "wav", label: "WAV" }]} />
+            <Segmented
+              label="Format"
+              value={format}
+              onChange={(v) => setFormat(v as "wav" | "mp3")}
+              items={[
+                { id: "mp3", label: "MP3" },
+                { id: "wav", label: "WAV" },
+              ]}
+            />
             {format === "mp3" && (
               <Select size="sm" label="MP3 quality" value={String(kbps)} onChange={(v) => setKbps(Number(v))} options={MP3_KBPS.map((k) => ({ value: String(k), label: `${k} kbps` }))} />
             )}
@@ -140,13 +164,17 @@ export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOp
         <div className="sk-field">
           <span>Folder</span>
           <div className="sk-row-actions">
-            <code className="sk-path" title={dir}>{dir}</code>
+            <code className="sk-path" title={dir}>
+              {dir}
+            </code>
             <Button size="sm" iconLeft="folder" onClick={browse}>
               Browse
             </Button>
           </div>
         </div>
-        <p className="sk-modal-text" data-testid="export-estimate">About {formatBytes(bytes)} at {s.config.speed.toFixed(2)}x. The real size is known when it is done.</p>
+        <p className="sk-modal-text" data-testid="export-estimate">
+          About {formatBytes(bytes)} at {s.config.speed.toFixed(2)}x. The real size is known when it is done.
+        </p>
       </div>
     );
     footer = (
@@ -187,7 +215,9 @@ function DoneView({ job }: { job: ExportView }) {
         {job.durationMs ? ` · ${Math.round(job.durationMs / 1000)} s` : ""}
       </p>
       <div className="sk-row-actions">
-        <code className="sk-path" title={job.path}>{job.path}</code>
+        <code className="sk-path" title={job.path}>
+          {job.path}
+        </code>
         <Button
           size="sm"
           iconLeft="copy"

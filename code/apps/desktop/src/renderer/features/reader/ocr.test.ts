@@ -16,13 +16,21 @@ describe("recognizeAll", () => {
     const { e, state } = engine(["First line\nsecond line.\n\nNew paragraph.", "Page two."]);
     const seen: OcrProgress[] = [];
     let t = 0;
-    const blocks = await recognizeAll(e, (p) => seen.push(p), new AbortController().signal, () => (t += 1000));
+    const blocks = await recognizeAll(
+      e,
+      (p) => seen.push(p),
+      new AbortController().signal,
+      () => (t += 1000),
+    );
     expect(blocks).toEqual([
       { kind: "paragraph", text: "First line second line.", page: 1 },
       { kind: "paragraph", text: "New paragraph.", page: 1 },
       { kind: "paragraph", text: "Page two.", page: 2 },
     ]);
-    expect(seen.map((p) => [p.page, p.total])).toEqual([[1, 2], [2, 2]]);
+    expect(seen.map((p) => [p.page, p.total])).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
     expect(seen[1]!.leftMs).toBeGreaterThan(0);
     expect(state.closed).toBe(true);
   });

@@ -1,6 +1,6 @@
 {
   "name": "@speakkit/desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "dist/main/index.js",
@@ -33,6 +33,7 @@
     "react-dom": "^19",
     "tesseract.js": "^7.0.0",
     "tesseract.js-core": "7.0.0",
+    "undici": "7.30.1",
     "valibot": "^1.5.0",
     "wasm-media-encoders": "0.7.0"
   },

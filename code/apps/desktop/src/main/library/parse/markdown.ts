@@ -26,7 +26,13 @@ export function markdownToBlocks(md: string): Block[] {
     else if (t.type === "blockquote") add("quote", inline(t.tokens, t.text));
     else if (t.type === "list")
       for (const item of (t as Tokens.List).items)
-        add("list-item", inline(item.tokens.flatMap((x) => (x.type === "text" && "tokens" in x && x.tokens ? x.tokens : [x])), item.text));
+        add(
+          "list-item",
+          inline(
+            item.tokens.flatMap((x) => (x.type === "text" && "tokens" in x && x.tokens ? x.tokens : [x])),
+            item.text,
+          ),
+        );
   }
   return out;
 }

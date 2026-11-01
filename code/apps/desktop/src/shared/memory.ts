@@ -17,11 +17,7 @@ export function serverOptions(c: Pick<Config, "idleUnload" | "loadAtStart">) {
 }
 
 /** Pushes Settings > Memory to the running server. Battery saver only matters while on battery. */
-export function applyMemory(
-  t: Tunable | null | undefined,
-  c: Pick<Config, "idleUnload" | "batterySaver">,
-  onBattery: boolean,
-): string[] {
+export function applyMemory(t: Tunable | null | undefined, c: Pick<Config, "idleUnload" | "batterySaver">, onBattery: boolean): string[] {
   const missing: string[] = [];
   const call = <K extends keyof Tunable>(k: K, ...a: Parameters<NonNullable<Tunable[K]>>) => {
     const f = t?.[k] as ((...x: unknown[]) => void) | undefined;

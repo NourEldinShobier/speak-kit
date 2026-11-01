@@ -16,10 +16,7 @@ interface EngineView {
 
 /** One place that turns server health into words, used by the title bar pill, Home, Engines, Memory and the tray tooltip. */
 export function engineView(health: Health | null, serverError: string | null): EngineView {
-  if (!health)
-    return serverError
-      ? { key: "error", label: "Error", tone: "red", spinner: false }
-      : { key: "starting", label: "Starting", tone: "neutral", spinner: true };
+  if (!health) return serverError ? { key: "error", label: "Error", tone: "red", spinner: false } : { key: "starting", label: "Starting", tone: "neutral", spinner: true };
   const e = health.engine;
   switch (e.state) {
     case "missing":

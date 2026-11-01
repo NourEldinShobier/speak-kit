@@ -1,17 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Button,
-  IconButton,
-  Icon,
-  Kbd,
-  Modal,
-  NavItem,
-  NavSection,
-  Popover,
-  Select,
-  SidebarNav,
-  StatusPill,
-} from "@speakkit/ui";
+import { Button, IconButton, Icon, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
@@ -39,7 +27,11 @@ export function App() {
     if (!t || t === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", t);
   }, [s?.config.theme]);
-  return <div className="lm" style={{ height: "100%" }}>{!s ? null : s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />}</div>;
+  return (
+    <div className="lm" style={{ height: "100%" }}>
+      {!s ? null : s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />}
+    </div>
+  );
 }
 
 const NAV: { page: Exclude<Page, "settings">; label: string; icon: "home" | "microphone" | "cpu" | "world" }[] = [
@@ -141,15 +133,7 @@ function Shell({ s }: { s: AppState }) {
   return (
     <PreviewCtx.Provider value={player}>
       <div className="sk-app">
-        <TitleBar
-          s={s}
-          canBack={at > 0}
-          canFwd={at < hist.length - 1}
-          onBack={() => setAt(at - 1)}
-          onFwd={() => setAt(at + 1)}
-          onToggleSide={() => setSide(!side)}
-          onSearch={() => setPal(true)}
-        />
+        <TitleBar s={s} canBack={at > 0} canFwd={at < hist.length - 1} onBack={() => setAt(at - 1)} onFwd={() => setAt(at + 1)} onToggleSide={() => setSide(!side)} onSearch={() => setPal(true)} />
         <div className="sk-body">
           <aside className="sk-side" hidden={!side}>
             {inSettings ? (
@@ -182,17 +166,44 @@ function Shell({ s }: { s: AppState }) {
               <SidebarNav label="Main">
                 <Button variant="primary" iconLeft="plus" onClick={() => setReading("")}>
                   <span className="sk-side__label sk-side__grow">New reading</span>
-                  <Kbd small className="sk-side__label">Ctrl N</Kbd>
+                  <Kbd small className="sk-side__label">
+                    Ctrl N
+                  </Kbd>
                 </Button>
                 <div style={{ height: 8 }} />
-                <NavItem icon="home" href="#home" selected={loc.page === "home"} onClick={(e) => { e.preventDefault(); go("home"); }}>
+                <NavItem
+                  icon="home"
+                  href="#home"
+                  selected={loc.page === "home"}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    go("home");
+                  }}
+                >
                   Home
                 </NavItem>
-                <NavItem icon="book" href="#library" selected={loc.page === "library"} onClick={(e) => { e.preventDefault(); go("library"); }}>
+                <NavItem
+                  icon="book"
+                  href="#library"
+                  selected={loc.page === "library"}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    go("library");
+                  }}
+                >
                   Library
                 </NavItem>
                 {NAV.slice(1).map((n) => (
-                  <NavItem key={n.page} icon={n.icon} href={`#${n.page}`} selected={loc.page === n.page} onClick={(e) => { e.preventDefault(); go(n.page); }}>
+                  <NavItem
+                    key={n.page}
+                    icon={n.icon}
+                    href={`#${n.page}`}
+                    selected={loc.page === n.page}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      go(n.page);
+                    }}
+                  >
                     {n.label}
                   </NavItem>
                 ))}
@@ -201,7 +212,15 @@ function Shell({ s }: { s: AppState }) {
                   <div className="sk-side__empty">Readings you start appear here.</div>
                 ) : (
                   recent.map((r) => (
-                    <NavItem key={r} icon="history" href="#recent" onClick={(e) => { e.preventDefault(); setReading(r); }}>
+                    <NavItem
+                      key={r}
+                      icon="history"
+                      href="#recent"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setReading(r);
+                      }}
+                    >
                       {r}
                     </NavItem>
                   ))
@@ -209,7 +228,14 @@ function Shell({ s }: { s: AppState }) {
                 <div className="sk-side__spacer" />
                 <ExportPill s={s} onOpen={(jobId) => setExporting({ text: "", jobId })} />
                 <EngineCard s={s} />
-                <NavItem icon="settings" href="#settings" onClick={(e) => { e.preventDefault(); go("settings", "general"); }}>
+                <NavItem
+                  icon="settings"
+                  href="#settings"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    go("settings", "general");
+                  }}
+                >
                   Settings
                 </NavItem>
               </SidebarNav>
@@ -217,7 +243,7 @@ function Shell({ s }: { s: AppState }) {
           </aside>
           <main className="sk-main">
             {loc.page === "home" && <Home s={s} go={go} />}
-            {loc.page === "library" && <LibraryRoute s={s} />}
+            {loc.page === "library" && <LibraryRoute s={s} onExport={(text, name) => setExporting({ text, name })} />}
             {loc.page === "voices" && <Voices s={s} />}
             {loc.page === "engines" && <Engines s={s} />}
             {loc.page === "browser" && <BrowserPage s={s} />}
@@ -225,7 +251,22 @@ function Shell({ s }: { s: AppState }) {
           </main>
         </div>
         {pal && <Palette onRun={run} onClose={() => setPal(false)} />}
-        {reading !== null && <NewReading s={s} initial={reading} onClose={() => { player.halt(); setReading(null); }} onRead={saveRecent} onExport={(text) => { player.halt(); setReading(null); setExporting({ text }); }} />}
+        {reading !== null && (
+          <NewReading
+            s={s}
+            initial={reading}
+            onClose={() => {
+              player.halt();
+              setReading(null);
+            }}
+            onRead={saveRecent}
+            onExport={(text) => {
+              player.halt();
+              setReading(null);
+              setExporting({ text });
+            }}
+          />
+        )}
         {exporting && <ExportDialog s={s} open={exporting} onClose={() => setExporting(null)} />}
         <QuitDialog s={s} open={quit} playing={!!player.playing} onClose={() => setQuit(false)} />
         <UpdatingCard s={s} />
@@ -238,9 +279,7 @@ function EngineCard({ s }: { s: AppState }) {
   const v = engineView(s.health, s.serverError);
   return (
     <div className="sk-engcard">
-      <b>
-        Kokoro-82M · {v.label}
-      </b>
+      <b>Kokoro-82M · {v.label}</b>
       {v.hint && <span>{v.hint}</span>}
       <span className="sk-engcard__ok">
         <Icon name="lock" size={13} />
@@ -250,15 +289,7 @@ function EngineCard({ s }: { s: AppState }) {
   );
 }
 
-function TitleBar(p: {
-  s: AppState;
-  canBack: boolean;
-  canFwd: boolean;
-  onBack(): void;
-  onFwd(): void;
-  onToggleSide(): void;
-  onSearch(): void;
-}) {
+function TitleBar(p: { s: AppState; canBack: boolean; canFwd: boolean; onBack(): void; onFwd(): void; onToggleSide(): void; onSearch(): void }) {
   const v = engineView(p.s.health, p.s.serverError);
   return (
     <header className="sk-title">
@@ -327,7 +358,10 @@ function NewReading({ s, initial, onClose, onRead, onExport }: { s: AppState; in
   const [voice, setVoice] = useState(s.config.voice);
   const { playing, error, toggle } = usePlayer();
   useEffect(() => {
-    api.voices().then((v) => setVoices(v.voices), () => {});
+    api.voices().then(
+      (v) => setVoices(v.voices),
+      () => {},
+    );
   }, []);
   const on = playing === "reading";
   return (
@@ -338,13 +372,7 @@ function NewReading({ s, initial, onClose, onRead, onExport }: { s: AppState; in
       width={560}
       footer={
         <>
-          <Select
-            size="sm"
-            label="Voice"
-            value={voice}
-            onChange={setVoice}
-            options={voices.length ? voices.map((v) => ({ value: v.id, label: v.name })) : [{ value: voice, label: voice }]}
-          />
+          <Select size="sm" label="Voice" value={voice} onChange={setVoice} options={voices.length ? voices.map((v) => ({ value: v.id, label: v.name })) : [{ value: voice, label: voice }]} />
           <span style={{ flex: 1 }} />
           <Button iconLeft="download" disabled={!text.trim()} onClick={() => onExport(text)}>
             Export audio

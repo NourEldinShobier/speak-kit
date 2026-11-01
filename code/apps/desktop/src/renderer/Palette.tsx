@@ -11,7 +11,10 @@ export function Palette({ onRun, onClose }: { onRun: (c: Command) => void; onClo
   const [at, setAt] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    api.voices().then((v) => setVoices(v.voices), () => {});
+    api.voices().then(
+      (v) => setVoices(v.voices),
+      () => {},
+    );
   }, []);
   const all = useMemo(() => buildCommands(voices), [voices]);
   const shown = useMemo(() => filterCommands(all, q), [all, q]);
@@ -36,11 +39,7 @@ export function Palette({ onRun, onClose }: { onRun: (c: Command) => void; onClo
 
   let lastGroup = "";
   return (
-    <div
-      className="sk-pal"
-      onKeyDown={onKey}
-      onPointerDown={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className="sk-pal" onKeyDown={onKey} onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sk-pal__box" role="dialog" aria-modal="true" aria-label="Command palette">
         <div className="sk-pal__in">
           <Icon name="search" size={18} />

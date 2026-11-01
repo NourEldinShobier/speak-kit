@@ -18,9 +18,7 @@ export const SHORTCUT_LABELS: Record<ShortcutId, { title: string; description: s
 };
 
 const MODIFIERS = ["Ctrl", "Alt", "Shift"] as const;
-const NAMED = new Set([
-  "Space", "Tab", "Backspace", "Delete", "Insert", "Enter", "Up", "Down", "Left", "Right", "Home", "End", "PageUp", "PageDown",
-]);
+const NAMED = new Set(["Space", "Tab", "Backspace", "Delete", "Insert", "Enter", "Up", "Down", "Left", "Right", "Home", "End", "PageUp", "PageDown"]);
 
 const isKey = (k: string) => /^[A-Z0-9]$/.test(k) || /^F([1-9]|1\d|2[0-4])$/.test(k) || NAMED.has(k) || /^[-=,./;'[\]\\`]$/.test(k);
 
@@ -92,9 +90,32 @@ export function suggestAlternative(raw: string, taken: ReadonlySet<string>): str
 }
 
 const CODE_KEY: Record<string, string> = {
-  Space: "Space", Tab: "Tab", Backspace: "Backspace", Delete: "Delete", Insert: "Insert", Enter: "Enter", NumpadEnter: "Enter",
-  ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown",
-  Minus: "-", Equal: "=", Comma: ",", Period: ".", Slash: "/", Semicolon: ";", Quote: "'", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Backquote: "`",
+  Space: "Space",
+  Tab: "Tab",
+  Backspace: "Backspace",
+  Delete: "Delete",
+  Insert: "Insert",
+  Enter: "Enter",
+  NumpadEnter: "Enter",
+  ArrowUp: "Up",
+  ArrowDown: "Down",
+  ArrowLeft: "Left",
+  ArrowRight: "Right",
+  Home: "Home",
+  End: "End",
+  PageUp: "PageUp",
+  PageDown: "PageDown",
+  Minus: "-",
+  Equal: "=",
+  Comma: ",",
+  Period: ".",
+  Slash: "/",
+  Semicolon: ";",
+  Quote: "'",
+  BracketLeft: "[",
+  BracketRight: "]",
+  Backslash: "\\",
+  Backquote: "`",
 };
 
 interface KeyEventLike {
@@ -104,11 +125,7 @@ interface KeyEventLike {
   shiftKey: boolean;
   metaKey: boolean;
 }
-type Recorded =
-  | { kind: "cancel" }
-  | { kind: "waiting" }
-  | { kind: "invalid"; reason: string }
-  | { kind: "accelerator"; accelerator: string };
+type Recorded = { kind: "cancel" } | { kind: "waiting" } | { kind: "invalid"; reason: string } | { kind: "accelerator"; accelerator: string };
 
 /** Turns one keydown into the recorder's next step. Escape alone cancels, a lone modifier keeps waiting. */
 export function recordKey(e: KeyEventLike): Recorded {

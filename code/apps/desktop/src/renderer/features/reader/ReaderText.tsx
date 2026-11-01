@@ -21,11 +21,17 @@ export const ReaderText = memo(function ReaderText({ blocks, onPick }: { blocks:
     <div className="rd-text" onClick={click}>
       {blocks.map((b, i) =>
         b.kind === "heading" ? (
-          <h2 key={i} data-block={i} className={`rd-h rd-h--${Math.min(b.level ?? 2, 3)}`}>{b.text}</h2>
+          <h2 key={i} data-block={i} className={`rd-h rd-h--${Math.min(b.level ?? 2, 3)}`}>
+            {b.text}
+          </h2>
         ) : b.kind === "quote" ? (
-          <blockquote key={i} data-block={i} className="rd-quote">{b.text}</blockquote>
+          <blockquote key={i} data-block={i} className="rd-quote">
+            {b.text}
+          </blockquote>
         ) : (
-          <p key={i} data-block={i} className={b.kind === "list-item" ? "rd-item" : undefined}>{b.text}</p>
+          <p key={i} data-block={i} className={b.kind === "list-item" ? "rd-item" : undefined}>
+            {b.text}
+          </p>
         ),
       )}
     </div>

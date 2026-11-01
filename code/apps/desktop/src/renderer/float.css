@@ -8,7 +8,12 @@ body,
 body {
   background: var(--surface-card);
   color: var(--text-primary);
-  font: 13px/1.4 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font:
+    13px/1.4 Inter,
+    "Segoe UI Variable Text",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   user-select: none;

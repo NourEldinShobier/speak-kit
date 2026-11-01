@@ -21,8 +21,7 @@ let chosen: string[] = [];
 let web: Server;
 let base = "";
 
-const make = () =>
-  createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, resolve: async () => ["93.184.216.34"], now: () => 1000 });
+const make = () => createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, fetch, now: () => 1000 });
 const ok = (r: ImportResult) => {
   if (!r.ok) throw new Error(r.message);
   return r.doc;
@@ -106,6 +105,11 @@ describe("importing", () => {
     expect(doc.title).toContain("The quiet return of local-first software");
   });
 
+  it("refuses a local address when no fetch is injected", async () => {
+    const guarded = await createLibrary({ dir, readClipboard: () => "", reveal: () => {}, chooseFiles: async () => [] });
+    expect(await guarded.importUrl(`${base}/article`)).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("Only public web addresses") });
+  });
+
   it("explains failures in plain words", async () => {
     expect(await lib.importUrl(`${base}/missing`)).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("HTTP 404") });
     expect(await lib.importUrl(`${base}/image`)).toMatchObject({ ok: false, reason: "unsupported" });
@@ -120,6 +124,15 @@ describe("the collection", () => {
     await lib.setProgress(doc.id, { sentence: 3, fraction: 0.4 });
     const again = await make();
     expect((await again.list()).map((d) => [d.title, d.progress.sentence])).toEqual([["Keep", 3]]);
+  });
+
+  it("saves bookmarks on a reading and keeps them across a restart", async () => {
+    const { id } = ok(await lib.importText("One. Two. Three.", "A"));
+    const marks = [{ sentence: 1, label: "Two." }];
+    expect((await lib.setBookmarks(id, marks))?.bookmarks).toEqual(marks);
+    expect((await (await make()).list())[0]?.bookmarks).toEqual(marks);
+    expect((await lib.setBookmarks(id, []))?.bookmarks).toEqual([]);
+    expect(await lib.setBookmarks("missing", marks)).toBeNull();
   });
 
   it("renames, sets and clears a voice, marks finished and unfinished", async () => {
@@ -171,7 +184,13 @@ describe("speak proxy", () => {
       const body: Buffer[] = [];
       req.on("data", (c) => body.push(c));
       req.on("end", () => {
-        seen.push({ url: req.url, auth: req.headers.authorization, replace: req.headers["x-speakkit-replace"] as string | undefined, origin: req.headers.origin, body: Buffer.concat(body).toString() });
+        seen.push({
+          url: req.url,
+          auth: req.headers.authorization,
+          replace: req.headers["x-speakkit-replace"] as string | undefined,
+          origin: req.headers.origin,
+          body: Buffer.concat(body).toString(),
+        });
         res.write("ab");
         setTimeout(() => res.end("cd"), 10);
       });

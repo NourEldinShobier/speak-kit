@@ -9,7 +9,21 @@ const words = (t: string) => t.match(/\S+/g)?.length ?? 0;
 
 const voiceOptions = (voices: Voice[]) => voices.map((v) => ({ value: v.id, label: `${v.name} · ${v.lang === "en-GB" ? "UK" : "US"}` }));
 
-export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdded }: { open: boolean; speed: number; voices: Voice[]; defaultVoice: string; onClose(): void; onAdded(doc: DocMeta, play: boolean): void }) {
+export function PasteDialog({
+  open,
+  speed,
+  voices,
+  defaultVoice,
+  onClose,
+  onAdded,
+}: {
+  open: boolean;
+  speed: number;
+  voices: Voice[];
+  defaultVoice: string;
+  onClose(): void;
+  onAdded(doc: DocMeta, play: boolean): void;
+}) {
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [voice, setVoice] = useState(defaultVoice);
@@ -32,17 +46,25 @@ export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdde
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button disabled={!n} onClick={() => void add(false)}>Add</Button>
-          <Button variant="primary" iconLeft="player-play" disabled={!n} onClick={() => void add(true)}>Add and play</Button>
+          <Button disabled={!n} onClick={() => void add(false)}>
+            Add
+          </Button>
+          <Button variant="primary" iconLeft="player-play" disabled={!n} onClick={() => void add(true)}>
+            Add and play
+          </Button>
         </>
       }
     >
       <div className="lib-form">
         <TextInput label="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Taken from the first line when empty" />
-        <label className="lm-field__label" htmlFor="lib-paste">Text</label>
+        <label className="lm-field__label" htmlFor="lib-paste">
+          Text
+        </label>
         <textarea id="lib-paste" className="lib-textarea" rows={9} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste or type the text to read" autoFocus />
         <div className="lib-form__row">
-          <span className="lib-muted" data-testid="paste-count">{n} words · about {n ? clock(estimateMs(n, speed)) : "0:00"} at {speed}x</span>
+          <span className="lib-muted" data-testid="paste-count">
+            {n} words · about {n ? clock(estimateMs(n, speed)) : "0:00"} at {speed}x
+          </span>
           {voices.length > 0 && <Select label="Voice" size="sm" options={voiceOptions(voices)} value={voice} onChange={setVoice} />}
         </div>
         {error && <Banner tone="error">{error}</Banner>}
@@ -76,7 +98,9 @@ export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: { open: bo
         s.state === "failed" ? (
           <>
             <Button onClick={onClose}>Cancel</Button>
-            <Button variant="primary" onClick={onPasteInstead}>Paste text instead</Button>
+            <Button variant="primary" onClick={onPasteInstead}>
+              Paste text instead
+            </Button>
           </>
         ) : (
           <>
@@ -100,9 +124,21 @@ export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: { open: bo
           autoFocus
         />
         {s.state === "failed" && (
-          <Banner tone="warning" title="That page could not be added" action={<Button size="sm" variant="ghost" onClick={() => setDetails(!details)}>{details ? "Hide details" : "Details"}</Button>}>
+          <Banner
+            tone="warning"
+            title="That page could not be added"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => setDetails(!details)}>
+                {details ? "Hide details" : "Details"}
+              </Button>
+            }
+          >
             Some sites block automatic reading. Copy the article text and paste it instead.
-            {details && <div className="lib-muted" data-testid="url-details">{s.message}</div>}
+            {details && (
+              <div className="lib-muted" data-testid="url-details">
+                {s.message}
+              </div>
+            )}
           </Banner>
         )}
       </div>
@@ -121,7 +157,9 @@ export function RenameDialog({ doc, onClose, onDone }: { doc: DocMeta | null; on
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={!title.trim()} onClick={() => doc && void library.rename(doc.id, title).then(onDone)}>Save</Button>
+          <Button variant="primary" disabled={!title.trim()} onClick={() => doc && void library.rename(doc.id, title).then(onDone)}>
+            Save
+          </Button>
         </>
       }
     >
@@ -142,7 +180,9 @@ export function VoiceDialog({ doc, voices, defaultVoice, onClose, onDone }: { do
       footer={
         <>
           <Button onClick={() => save(null)}>Use the app voice</Button>
-          <Button variant="primary" onClick={() => save(voice)}>Save</Button>
+          <Button variant="primary" onClick={() => save(voice)}>
+            Save
+          </Button>
         </>
       }
     >
@@ -158,7 +198,10 @@ export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null;
     const t = setTimeout(() => document.querySelector<HTMLElement>("[data-default-focus]")?.focus(), 50);
     return () => clearTimeout(t);
   }, [doc]);
-  const copy = doc?.source === "paste" ? "Pasted text has no original file, so this is the only copy. You can undo for a few seconds." : "The original file or page is not touched. Only the reading and its progress are removed from SpeakKit.";
+  const copy =
+    doc?.source === "paste"
+      ? "Pasted text has no original file, so this is the only copy. You can undo for a few seconds."
+      : "The original file or page is not touched. Only the reading and its progress are removed from SpeakKit.";
   return (
     <Modal
       open={!!doc}
@@ -167,8 +210,12 @@ export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null;
       width={440}
       footer={
         <>
-          <Button onClick={onClose} data-default-focus>Cancel</Button>
-          <Button variant="danger" solid onClick={onConfirm}>Delete</Button>
+          <Button onClick={onClose} data-default-focus>
+            Cancel
+          </Button>
+          <Button variant="danger" solid onClick={onConfirm}>
+            Delete
+          </Button>
         </>
       }
     >

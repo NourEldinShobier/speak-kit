@@ -28,7 +28,13 @@ describe("watchPairing", () => {
     const p = emptyPairing();
     let t = 1000;
     let changes = 0;
-    stop = watchPairing(p, () => "secret", () => 47615, () => changes++, () => t);
+    stop = watchPairing(
+      p,
+      () => "secret",
+      () => 47615,
+      () => changes++,
+      () => t,
+    );
     publish({ ...bearer, origin: "chrome-extension://abc" });
     t = 3000;
     publish(bearer);
@@ -40,7 +46,13 @@ describe("watchPairing", () => {
 
   it("does not count a call with the wrong token as a pairing", () => {
     const p = emptyPairing();
-    stop = watchPairing(p, () => "secret", () => 47615, () => {}, () => 1);
+    stop = watchPairing(
+      p,
+      () => "secret",
+      () => 47615,
+      () => {},
+      () => 1,
+    );
     publish({ authorization: "Bearer nope" });
     expect(p).toEqual(emptyPairing());
   });

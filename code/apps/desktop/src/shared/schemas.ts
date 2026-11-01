@@ -14,8 +14,7 @@ export const NOTIFY_EVENTS = ["reading-finished", "export-done", "download-done"
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number];
 export const NOTIFY_CHANNELS = ["toast", "bell", "sound"] as const;
 export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
-const channelsOf = (toast: boolean, bell: boolean, sound: boolean) =>
-  v.fallback(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
+const channelsOf = (toast: boolean, bell: boolean, sound: boolean) => v.fallback(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
 const NotificationsSchema = v.object({
   "reading-finished": channelsOf(false, false, false),
   "export-done": channelsOf(true, true, false),
@@ -27,7 +26,11 @@ export type Notifications = v.InferOutput<typeof NotificationsSchema>;
 
 const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
   v.fallback(
-    v.pipe(v.string(), v.check((a) => checkAccelerator(a) === null), v.transform((a) => normalize(a)!)),
+    v.pipe(
+      v.string(),
+      v.check((a) => checkAccelerator(a) === null),
+      v.transform((a) => normalize(a)!),
+    ),
     DEFAULT_SHORTCUTS[id],
   );
 const ShortcutsSchema = v.object({
@@ -133,11 +136,7 @@ export const ARGS = {
   retryEngine: v.tuple([]),
   downloadModel: v.tuple([]),
   voices: v.tuple([]),
-  preview: v.tuple([
-    v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
-    v.pipe(v.string(), v.minLength(1), v.maxLength(5000)),
-    v.optional(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3))),
-  ]),
+  preview: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64)), v.pipe(v.string(), v.minLength(1), v.maxLength(5000)), v.optional(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)))]),
   copy: v.tuple([v.pipe(v.string(), v.maxLength(10_000))]),
   openExternal: v.tuple([v.picklist(EXTERNAL_LINKS)]),
   openPath: v.tuple([v.picklist(OPEN_PATHS)]),

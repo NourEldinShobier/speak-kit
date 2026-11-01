@@ -59,8 +59,7 @@ describe("tray menu", () => {
     expect(labels(ctx({ reader: reader("paused") }))).not.toContain("Pause");
   });
   it("read actions are disabled while the engine loads, downloads or failed (I7, I8)", () => {
-    for (const s of ["loading", "downloading", "error", "missing"] as const)
-      expect(trayMenuModel(ctx({ health: health(s) }))[0]).toMatchObject({ action: "read-clipboard", enabled: false });
+    for (const s of ["loading", "downloading", "error", "missing"] as const) expect(trayMenuModel(ctx({ health: health(s) }))[0]).toMatchObject({ action: "read-clipboard", enabled: false });
   });
   it("one row changes for asleep, engine error and update ready", () => {
     expect(labels(ctx({ health: health("unloaded") }))).toContain("Load the voice engine now");

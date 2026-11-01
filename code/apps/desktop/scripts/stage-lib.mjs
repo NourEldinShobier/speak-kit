@@ -14,7 +14,7 @@ export function packageOf(specifier) {
 export function importedPackages(source) {
   const found = new Set();
   const re = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)(["'])([^"'\n]+)\1/g;
-  for (let m; (m = re.exec(source)); ) {
+  for (let m; (m = re.exec(source));) {
     const name = packageOf(m[2]);
     if (name) found.add(name);
   }

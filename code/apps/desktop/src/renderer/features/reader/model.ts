@@ -1,6 +1,6 @@
 import { splitSentences } from "@speakkit/player/sentences";
 import type { ReadDoc } from "@speakkit/protocol";
-import type { Block, DocMeta } from "../../../shared/library/contract";
+import type { Block, Bookmark, DocMeta } from "../../../shared/library/contract";
 
 export interface ReaderSentence {
   text: string;
@@ -82,6 +82,15 @@ export function outline(blocks: Block[], isPdf: boolean): OutlineItem[] {
     if (b.kind === "heading") out.push({ label: b.text, block: i, level: b.level ?? 2 });
   });
   return out;
+}
+
+const BOOKMARK_LABEL_CHARS = 60;
+
+/** Adds a bookmark on a sentence, or removes it when it is already there. The list stays in text order. */
+export function toggleBookmark(list: readonly Bookmark[], sentence: number, text: string): Bookmark[] {
+  if (list.some((b) => b.sentence === sentence)) return list.filter((b) => b.sentence !== sentence);
+  const label = text.replace(/\s+/g, " ").trim();
+  return [...list, { sentence, label: label.length > BOOKMARK_LABEL_CHARS ? `${label.slice(0, BOOKMARK_LABEL_CHARS - 1)}…` : label }].sort((a, b) => a.sentence - b.sentence);
 }
 
 export interface Match {

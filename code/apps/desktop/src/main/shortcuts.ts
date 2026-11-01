@@ -1,13 +1,4 @@
-import {
-  checkAccelerator,
-  duplicateIds,
-  normalize,
-  SHORTCUT_IDS,
-  suggestAlternative,
-  type Bindings,
-  type ShortcutConflict,
-  type ShortcutId,
-} from "../shared/shortcuts";
+import { checkAccelerator, duplicateIds, normalize, SHORTCUT_IDS, suggestAlternative, type Bindings, type ShortcutConflict, type ShortcutId } from "../shared/shortcuts";
 
 /** The part of Electron's globalShortcut this module uses. */
 export interface ShortcutApi {

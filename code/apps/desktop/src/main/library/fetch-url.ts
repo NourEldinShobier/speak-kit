@@ -1,30 +1,14 @@
-import { lookup } from "node:dns/promises";
-import { BlockList, isIP } from "node:net";
 import { htmlToParsed } from "./parse/html";
 import { ImportError } from "./parse";
+import { isNonPublicError, publicFetch } from "./public-fetch";
 import { textToBlocks, type Parsed } from "../../shared/library/text";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 5;
 
-// Loopback, private, link-local and other non-public ranges: a typed or redirected address must not reach services on this machine or LAN.
-const NON_PUBLIC = new BlockList();
-for (const [net, bits] of [["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.168.0.0", 16], ["224.0.0.0", 4]] as const) NON_PUBLIC.addSubnet(net, bits, "ipv4");
-for (const [net, bits] of [["::", 128], ["::1", 128], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8]] as const) NON_PUBLIC.addSubnet(net, bits, "ipv6");
-
-export type Resolve = (host: string) => Promise<string[]>;
-const resolveHost: Resolve = async (host) => (await lookup(host, { all: true })).map((a) => a.address);
-
-/** Maps an IPv4-mapped IPv6 address (::ffff:a.b.c.d) to the IPv4 form so it is checked against the IPv4 ranges. */
-const unmap = (ip: string) => /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip)?.[1] ?? ip;
-
-async function assertPublic(url: URL, resolve: Resolve): Promise<void> {
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  const ips = await resolve(host).catch(() => []);
-  const blocked = ips.some((ip) => NON_PUBLIC.check(unmap(ip), isIP(unmap(ip)) === 6 ? "ipv6" : "ipv4"));
-  if (blocked) throw new ImportError("network", `${url.host} is on this computer or your local network. Only public web addresses can be read.`);
-}
+let shared: typeof fetch | undefined;
+const defaultFetch: typeof fetch = (...a) => (shared ??= publicFetch())(...a);
 
 /** Reads the body up to MAX_BYTES; a longer one is cut off instead of being held in memory. */
 async function readCapped(res: Response): Promise<Uint8Array> {
@@ -59,13 +43,12 @@ function parseWebAddress(raw: string): URL {
 }
 
 /** Fetch a page and extract the article (Readability). Failures say what happened in plain words. */
-export async function fetchPage(raw: string, doFetch: typeof fetch = fetch, resolve: Resolve = resolveHost): Promise<Parsed & { host: string }> {
+export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetch): Promise<Parsed & { host: string }> {
   let url = parseWebAddress(raw);
   let res: Response;
   try {
-    // Redirects are followed by hand so that every hop is checked against the non-public ranges.
+    // Redirects are followed by hand so that every hop goes through doFetch, whose default refuses non-public addresses.
     for (let hops = 0; ; hops++) {
-      await assertPublic(url, resolve);
       res = await doFetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: "manual", headers: { Accept: "text/html,text/plain;q=0.9", "User-Agent": "SpeakKit" } });
       const next = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
       if (!next) break;
@@ -74,6 +57,7 @@ export async function fetchPage(raw: string, doFetch: typeof fetch = fetch, reso
     }
   } catch (e) {
     if (e instanceof ImportError) throw e;
+    if (isNonPublicError(e)) throw new ImportError("network", `${url.host} is on this computer or your local network. Only public web addresses can be read.`);
     const timeout = e instanceof Error && e.name === "TimeoutError";
     throw new ImportError("network", timeout ? `${url.host} did not answer in ${TIMEOUT_MS / 1000} seconds.` : `Could not reach ${url.host}. Check the address and your connection.`);
   }

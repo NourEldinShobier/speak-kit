@@ -27,6 +27,14 @@ export interface Progress {
   fraction: number;
 }
 
+export const BookmarkSchema = v.object({
+  /** index of the bookmarked sentence (reader sentence numbering) */
+  sentence: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  /** the start of the sentence, so the list reads without opening the text */
+  label: v.pipe(v.string(), v.maxLength(120)),
+});
+export type Bookmark = v.InferOutput<typeof BookmarkSchema>;
+
 export interface DocMeta {
   id: string;
   title: string;
@@ -44,6 +52,8 @@ export interface DocMeta {
   voice?: string;
   progress: Progress;
   finished: boolean;
+  /** places the reader saved in the outline panel, in text order */
+  bookmarks?: Bookmark[];
   /** a PDF without a text layer: the reader offers local OCR */
   needsOcr?: boolean;
 }
@@ -80,6 +90,7 @@ export const LIBRARY_ARGS = {
   rename: v.tuple([id, title]),
   setVoice: v.tuple([id, v.nullable(id)]),
   setFinished: v.tuple([id, v.boolean()]),
+  setBookmarks: v.tuple([id, v.pipe(v.array(BookmarkSchema), v.maxLength(500))]),
   setProgress: v.tuple([id, v.object({ sentence: v.pipe(v.number(), v.integer(), v.minValue(0)), fraction: v.pipe(v.number(), v.minValue(0), v.maxValue(1)) })]),
   markOpened: v.tuple([id]),
   remove: v.tuple([id]),
@@ -104,6 +115,7 @@ export interface LibraryApi {
   rename(id: string, title: string): Promise<DocMeta | null>;
   setVoice(id: string, voice: string | null): Promise<DocMeta | null>;
   setFinished(id: string, finished: boolean): Promise<DocMeta | null>;
+  setBookmarks(id: string, bookmarks: Bookmark[]): Promise<DocMeta | null>;
   setProgress(id: string, progress: Progress): Promise<DocMeta | null>;
   markOpened(id: string): Promise<DocMeta | null>;
   /** Removes the reading from the library; it stays restorable until the app quits. */
@@ -124,11 +136,7 @@ export const ProxyRequestSchema = v.object({
   replace: v.optional(v.pipe(v.string(), v.maxLength(64))),
 });
 export type ProxyRequest = v.InferOutput<typeof ProxyRequestSchema>;
-export type ProxyChunk =
-  | { id: number; type: "head"; status: number }
-  | { id: number; type: "data"; data: Uint8Array }
-  | { id: number; type: "end" }
-  | { id: number; type: "error"; message: string };
+export type ProxyChunk = { id: number; type: "head"; status: number } | { id: number; type: "data"; data: Uint8Array } | { id: number; type: "end" } | { id: number; type: "error"; message: string };
 
 /** What the preload exposes as window.speakkitLibrary. */
 export interface LibraryBridge extends LibraryApi {

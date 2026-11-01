@@ -35,7 +35,9 @@ export function OcrPanel({ id, pages, onDone }: { id: string; pages: number; onD
           {phase.progress ? `Page ${phase.progress.page} of ${phase.progress.total}${phase.progress.leftMs ? ` · about ${span(phase.progress.leftMs)} left` : ""}` : "Getting ready"}
         </span>
         <ProgressBar value={phase.progress ? ((phase.progress.page - 1) / phase.progress.total) * 100 : undefined} label="Text recognition" />
-        <Button size="sm" onClick={() => abort.current?.abort()}>Cancel</Button>
+        <Button size="sm" onClick={() => abort.current?.abort()}>
+          Cancel
+        </Button>
       </div>
     );
   return (
@@ -43,7 +45,11 @@ export function OcrPanel({ id, pages, onDone }: { id: string; pages: number; onD
       <Banner
         tone={phase.name === "failed" ? "error" : "warning"}
         title={phase.name === "failed" ? "Text recognition stopped" : "This PDF has no text layer"}
-        action={<Button size="sm" variant="primary" onClick={() => setPhase({ name: "consent" })}>{phase.name === "failed" ? "Try again" : "Recognize text"}</Button>}
+        action={
+          <Button size="sm" variant="primary" onClick={() => setPhase({ name: "consent" })}>
+            {phase.name === "failed" ? "Try again" : "Recognize text"}
+          </Button>
+        }
       >
         {phase.name === "failed" ? phase.message : `The ${pages} pages are pictures of text. Reading aloud needs text recognition (OCR), which runs on this computer.`}
       </Banner>
@@ -55,12 +61,15 @@ export function OcrPanel({ id, pages, onDone }: { id: string; pages: number; onD
         footer={
           <>
             <Button onClick={() => setPhase({ name: "offer" })}>Not now</Button>
-            <Button variant="primary" onClick={() => void run()}>Recognize text</Button>
+            <Button variant="primary" onClick={() => void run()}>
+              Recognize text
+            </Button>
           </>
         }
       >
         <p className="rd-muted">
-          SpeakKit will download English language data for text recognition once, from cdn.jsdelivr.net (a few megabytes), and keep it in this app. The pages themselves never leave this computer. Long documents take a while; you can cancel at any time.
+          SpeakKit will download English language data for text recognition once, from cdn.jsdelivr.net (a few megabytes), and keep it in this app. The pages themselves never leave this computer. Long
+          documents take a while; you can cancel at any time.
         </p>
       </Modal>
     </>

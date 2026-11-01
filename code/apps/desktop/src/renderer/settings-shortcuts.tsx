@@ -55,7 +55,17 @@ export function ShortcutsPage({ s }: { s: AppState }) {
         {SHORTCUT_IDS.map((id) => {
           const acc = s.shortcuts.bindings[id];
           const clash = s.shortcuts.conflicts[id];
-          const p = problem?.id === id ? problem : clash ? { id, text: clash.reason === "taken" ? `Another app is using ${clash.accelerator}.` : `${clash.accelerator} is already used by another SpeakKit action.`, accelerator: clash.accelerator, suggestion: clash.suggestion } : null;
+          const p =
+            problem?.id === id
+              ? problem
+              : clash
+                ? {
+                    id,
+                    text: clash.reason === "taken" ? `Another app is using ${clash.accelerator}.` : `${clash.accelerator} is already used by another SpeakKit action.`,
+                    accelerator: clash.accelerator,
+                    suggestion: clash.suggestion,
+                  }
+                : null;
           const on = recording === id;
           return (
             <div key={id} data-shortcut={id}>
@@ -82,7 +92,13 @@ export function ShortcutsPage({ s }: { s: AppState }) {
                   <Banner
                     tone="warning"
                     title={p.text}
-                    action={p.suggestion ? <Button size="sm" onClick={() => apply(id, p.suggestion!)}>Use {p.suggestion}</Button> : undefined}
+                    action={
+                      p.suggestion ? (
+                        <Button size="sm" onClick={() => apply(id, p.suggestion!)}>
+                          Use {p.suggestion}
+                        </Button>
+                      ) : undefined
+                    }
                   >
                     SpeakKit never takes a shortcut another app owns. Pick another combination or use the suggestion.
                   </Banner>
@@ -91,7 +107,15 @@ export function ShortcutsPage({ s }: { s: AppState }) {
             </div>
           );
         })}
-        <SettingRow label="Reset all" description="Back to Ctrl+Alt+S, Space, X and C." control={<Button size="sm" onClick={() => api.resetShortcuts()}>Reset</Button>} />
+        <SettingRow
+          label="Reset all"
+          description="Back to Ctrl+Alt+S, Space, X and C."
+          control={
+            <Button size="sm" onClick={() => api.resetShortcuts()}>
+              Reset
+            </Button>
+          }
+        />
       </SettingsSection>
       <SettingsSection title="In this app">
         <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" />} />

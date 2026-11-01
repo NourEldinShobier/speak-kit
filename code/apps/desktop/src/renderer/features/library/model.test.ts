@@ -83,10 +83,19 @@ describe("rowStatus", () => {
 
 describe("highlightParts", () => {
   it("marks every word of the query, ignoring case", () => {
-    expect(highlightParts("Quiet return of local-first", "local QUIET")).toEqual([["Quiet", true], [" return of ", false], ["local", true], ["-first", false]]);
+    expect(highlightParts("Quiet return of local-first", "local QUIET")).toEqual([
+      ["Quiet", true],
+      [" return of ", false],
+      ["local", true],
+      ["-first", false],
+    ]);
   });
   it("treats regex characters literally and returns the text for an empty query", () => {
-    expect(highlightParts("a (b) c", "(b)")).toEqual([["a ", false], ["(b)", true], [" c", false]]);
+    expect(highlightParts("a (b) c", "(b)")).toEqual([
+      ["a ", false],
+      ["(b)", true],
+      [" c", false],
+    ]);
     expect(highlightParts("plain", " ")).toEqual([["plain", false]]);
   });
 });

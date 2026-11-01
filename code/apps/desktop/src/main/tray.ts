@@ -22,6 +22,7 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
     const w = panel.window;
     if (w?.isVisible()) return panel.close();
     const win = panel.open(aboveTray(tray.getBounds()), true);
+    run.wake(); // the panel is where a read is started from: load the model while it opens
     // Clicking anywhere else dismisses it, like a native flyout; closing frees its renderer.
     win.once("blur", () => panel.close());
   };

@@ -18,7 +18,7 @@ export async function setupLibrary({ dataDir, window, target, allowLocalUrls }: 
     dir: path.join(dataDir, "library"),
     readClipboard: () => clipboard.readText(),
     reveal: (p) => shell.showItemInFolder(p),
-    ...(allowLocalUrls && { resolve: async () => ["93.184.216.34"] }),
+    ...(allowLocalUrls && { fetch }),
     chooseFiles: async () => {
       const win = window();
       const opts = { properties: ["openFile", "multiSelections"] as ("openFile" | "multiSelections")[], filters: [{ name: "Readable files", extensions: [...EXTENSIONS] }] };

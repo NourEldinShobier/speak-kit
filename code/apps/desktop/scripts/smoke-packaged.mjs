@@ -1,5 +1,6 @@
 // Smoke test of the packaged app: starts the exe, waits for /v1/health, speaks one sentence, checks the bundled extension,
 // then asks it to quit (SpeakKit.exe --quit) and checks that it exits, frees the port and leaves no process behind.
+// A second launch must hand over and exit without adding processes.
 //   node scripts/smoke-packaged.mjs [--exe path-to-SpeakKit.exe] [--real]
 // --real uses the real Kokoro engine and the shared model cache (code/.cache/models); otherwise the fake engine runs.
 import { execFileSync, spawn } from "node:child_process";
@@ -54,14 +55,20 @@ const base = `http://127.0.0.1:${port}`;
 try {
   let health = null;
   for (let i = 0; i < 150 && !health && exitCode === null; i++) {
-    health = await fetch(`${base}/v1/health`).then((r) => r.json(), () => null);
+    health = await fetch(`${base}/v1/health`).then(
+      (r) => r.json(),
+      () => null,
+    );
     if (!health) await sleep(200);
   }
   check("serves /v1/health", health?.app === "speakkit", health ? `engine ${health.engine.state}, v${health.version}` : "no answer");
 
   const token = existsSync(path.join(userData, "token")) ? readFileSync(path.join(userData, "token"), "utf8").trim() : "";
   const auth = { Authorization: `Bearer ${token}` };
-  const voices = await fetch(`${base}/v1/voices`, { headers: auth }).then((r) => r.json(), () => null);
+  const voices = await fetch(`${base}/v1/voices`, { headers: auth }).then(
+    (r) => r.json(),
+    () => null,
+  );
   check("lists voices with the token", (voices?.voices?.length ?? 0) > 0, `${voices?.voices?.length ?? 0} voices`);
 
   const t0 = Date.now();
@@ -73,6 +80,16 @@ try {
   const bytes = speak?.ok ? (await speak.arrayBuffer()).byteLength : 0;
   check("speaks a sentence", bytes > (real ? 20_000 : 1_000), `${bytes} bytes in ${Date.now() - t0} ms${real ? " (real engine)" : ""}`);
 
+  // A second launch hands over to the running instance and exits; it must not leave a second process tree.
+  const before = running();
+  const second = spawn(exe, [], { env, stdio: "ignore" });
+  const secondCode = await new Promise((r) => {
+    const t = setTimeout(() => (second.kill(), r("timeout")), 15_000);
+    second.on("exit", (c) => (clearTimeout(t), r(c)));
+  });
+  await sleep(1000);
+  check("second launch exits and adds no processes", secondCode === 0 && running() === before, `exit ${secondCode}, ${before} -> ${running()} processes`);
+
   const resources = path.join(path.dirname(exe), "resources");
   check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
   check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
@@ -82,7 +99,10 @@ try {
   for (let i = 0; i < 75 && exitCode === null; i++) await sleep(200);
   check("exits after --quit", exitCode === 0, `exit code ${exitCode}`);
   await sleep(500);
-  const closed = await fetch(`${base}/v1/health`).then(() => false, () => true);
+  const closed = await fetch(`${base}/v1/health`).then(
+    () => false,
+    () => true,
+  );
   check("frees the port", closed);
   const left = running();
   check("leaves no process behind", left === 0, `${left} left`);

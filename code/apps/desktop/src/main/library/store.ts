@@ -74,7 +74,12 @@ export class LibraryStore {
   }
 
   async source(id: string): Promise<Uint8Array | null> {
-    return this.get(id) ? readFile(this.sourcePath(id)).then((b) => new Uint8Array(b), () => null) : null;
+    return this.get(id)
+      ? readFile(this.sourcePath(id)).then(
+          (b) => new Uint8Array(b),
+          () => null,
+        )
+      : null;
   }
 
   async remove(id: string): Promise<void> {
@@ -112,7 +117,10 @@ export class LibraryStore {
   private async lowerText(id: string): Promise<string> {
     let t = this.text.get(id);
     if (t === undefined) {
-      t = ((await this.content(id))?.blocks ?? []).map((b) => b.text).join("\n").toLowerCase();
+      t = ((await this.content(id))?.blocks ?? [])
+        .map((b) => b.text)
+        .join("\n")
+        .toLowerCase();
       this.text.set(id, t);
     }
     return t;
@@ -129,7 +137,6 @@ export class LibraryStore {
 
   private async gc(): Promise<void> {
     const keep = new Set(this.db.data.docs.map((d) => d.id));
-    for (const f of await readdir(path.join(this.dir, "docs")))
-      if (!keep.has(f.replace(/\.(json|src)$/, ""))) await rm(path.join(this.dir, "docs", f), { force: true });
+    for (const f of await readdir(path.join(this.dir, "docs"))) if (!keep.has(f.replace(/\.(json|src)$/, ""))) await rm(path.join(this.dir, "docs", f), { force: true });
   }
 }

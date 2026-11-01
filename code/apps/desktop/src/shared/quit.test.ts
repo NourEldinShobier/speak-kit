@@ -35,7 +35,10 @@ describe("quitSummary", () => {
   it("mentions model download, model in memory and an update armed for quit", () => {
     const dl = quitSummary(base({ health: { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state: "downloading" } } }), false);
     expect(dl.rows.map((r) => r[0])).toContain("The model download pauses");
-    const ready = quitSummary(base({ health: { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state: "ready" } }, update: { kind: "ready", version: "0.2.0", onQuit: true } }), false);
+    const ready = quitSummary(
+      base({ health: { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state: "ready" } }, update: { kind: "ready", version: "0.2.0", onQuit: true } }),
+      false,
+    );
     expect(ready.rows.map((r) => r[0])).toEqual(expect.arrayContaining(["The voice model leaves memory", "SpeakKit 0.2.0 installs"]));
   });
 });

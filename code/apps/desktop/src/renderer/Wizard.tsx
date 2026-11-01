@@ -8,21 +8,7 @@ const STEPS = ["Welcome", "Voice engine", "Download", "Connect browser", "Done"]
 const MODEL_MB = 177;
 
 /** Setup window (Lumen X9-X14): title bar 32, stepper 52, 720 px column, footer 64 with Back left and the primary action right. */
-function Frame({
-  at,
-  title,
-  sub,
-  foot,
-  children,
-  center,
-}: {
-  at: number;
-  title: string;
-  sub: ReactNode;
-  foot: ReactNode;
-  children?: ReactNode;
-  center?: boolean;
-}) {
+function Frame({ at, title, sub, foot, children, center }: { at: number; title: string; sub: ReactNode; foot: ReactNode; children?: ReactNode; center?: boolean }) {
   return (
     <div className="sk-setup">
       <div className="sk-setup__title">
@@ -124,7 +110,9 @@ export function Wizard({ s }: { s: AppState }) {
         <Hardware />
         <SettingsSection title="Engines">
           <button className="sk-radio is-sel" role="radio" aria-checked="true" aria-label="Kokoro-82M">
-            <span className="sk-tile"><Icon name="cpu" size={18} /></span>
+            <span className="sk-tile">
+              <Icon name="cpu" size={18} />
+            </span>
             <span className="sk-engine__body">
               <b>Kokoro-82M</b>
               <span>Natural English voices, 28 to choose from. About 1 second to the first word.</span>
@@ -133,7 +121,9 @@ export function Wizard({ s }: { s: AppState }) {
             <StatusPill tone="green">Recommended</StatusPill>
           </button>
           <button className="sk-radio" disabled aria-label="Chatterbox, not available yet">
-            <span className="sk-tile"><Icon name="sparkles" size={18} /></span>
+            <span className="sk-tile">
+              <Icon name="sparkles" size={18} />
+            </span>
             <span className="sk-engine__body">
               <b>Chatterbox</b>
               <span>Expressive, with emotion control and voice cloning.</span>
@@ -182,11 +172,17 @@ export function Wizard({ s }: { s: AppState }) {
               description={ready ? `${MODEL_MB} MB, done` : `${Math.round(pct * MODEL_MB)} MB of ${MODEL_MB} MB`}
               control={
                 failed ? (
-                  <StatusPill tone="orange" icon="alert-triangle">Paused</StatusPill>
+                  <StatusPill tone="orange" icon="alert-triangle">
+                    Paused
+                  </StatusPill>
                 ) : ready ? (
-                  <StatusPill tone="green" icon="circle-check">Done</StatusPill>
+                  <StatusPill tone="green" icon="circle-check">
+                    Done
+                  </StatusPill>
                 ) : (
-                  <StatusPill tone="blue" icon="loader-2">{eng?.state === "loading" ? "Loading" : `${Math.round(pct * 100)}%`}</StatusPill>
+                  <StatusPill tone="blue" icon="loader-2">
+                    {eng?.state === "loading" ? "Loading" : `${Math.round(pct * 100)}%`}
+                  </StatusPill>
                 )
               }
             />
@@ -198,7 +194,12 @@ export function Wizard({ s }: { s: AppState }) {
         {failed && (
           <Banner tone="warning" title="Lost the connection to the model server">
             Check your internet connection, then retry. Downloading resumes where it stopped.
-            {detail && <> Details: <code>{detail}</code></>}
+            {detail && (
+              <>
+                {" "}
+                Details: <code>{detail}</code>
+              </>
+            )}
           </Banner>
         )}
         {!failed && !ready && <p style={{ margin: 0, color: "var(--text-secondary)" }}>Continue in the background to set up your browser now. The download finishes on its own.</p>}
@@ -207,7 +208,22 @@ export function Wizard({ s }: { s: AppState }) {
   }
 
   if (step === 3)
-    return <Connect s={s} copied={copied} onCopied={() => setCopied(true)} onBack={() => setStep(2)} onSkip={() => { setSkipped(true); setStep(4); }} onNext={() => { setSkipped(false); setStep(4); }} />;
+    return (
+      <Connect
+        s={s}
+        copied={copied}
+        onCopied={() => setCopied(true)}
+        onBack={() => setStep(2)}
+        onSkip={() => {
+          setSkipped(true);
+          setStep(4);
+        }}
+        onNext={() => {
+          setSkipped(false);
+          setStep(4);
+        }}
+      />
+    );
 
   return <Done s={s} skipped={skipped} onBack={() => setStep(3)} />;
 }
@@ -216,7 +232,10 @@ export function Wizard({ s }: { s: AppState }) {
 function Hardware() {
   const [gpu, setGpu] = useState<{ name: string; vramMb: number } | null | undefined>(undefined);
   useEffect(() => {
-    api.engines().then((l) => setGpu(l.engines.find((e) => e.gpu)?.gpu ?? null), () => setGpu(null));
+    api.engines().then(
+      (l) => setGpu(l.engines.find((e) => e.gpu)?.gpu ?? null),
+      () => setGpu(null),
+    );
   }, []);
   return gpu ? (
     <Banner tone="info" icon="cpu" title={`Found ${gpu.name}, ${Math.round(gpu.vramMb / 1024)} GB`}>
@@ -250,7 +269,17 @@ function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState;
       }
     >
       <SettingsSection title="1. Install the extension" description="Add SpeakKit from the Chrome Web Store. It also installs in Edge and Brave. Then pin it from the puzzle menu.">
-        <SettingRow label="SpeakKit for Chrome" control={<div className="sk-row-actions"><Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button><InstallExtension /></div>} />
+        <SettingRow
+          label="SpeakKit for Chrome"
+          control={
+            <div className="sk-row-actions">
+              <Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>
+                Open Web Store
+              </Button>
+              <InstallExtension />
+            </div>
+          }
+        />
       </SettingsSection>
       <SettingsSection title="2. Pair it with this app" description="Copy the token and paste it in the extension under Options > General > Pairing token.">
         <div className="sk-pad">
@@ -263,7 +292,9 @@ function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState;
           description={`Listening on 127.0.0.1:${s.port || "?"}. If Windows asks about the firewall, choose Private networks or Cancel; SpeakKit only listens on 127.0.0.1.`}
           control={
             connected ? (
-              <StatusPill tone="green" icon="circle-check">Connected</StatusPill>
+              <StatusPill tone="green" icon="circle-check">
+                Connected
+              </StatusPill>
             ) : testStart !== null ? (
               <LoadingLabel>Waiting</LoadingLabel>
             ) : (
@@ -280,7 +311,12 @@ function Done({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack():
   const [voice, setVoice] = useState("");
   const { playing, error, toggle } = usePreview();
   useEffect(() => {
-    api.voices().then((v) => { setVoice(v.default); }, () => {});
+    api.voices().then(
+      (v) => {
+        setVoice(v.default);
+      },
+      () => {},
+    );
   }, [s.health?.engine.state]);
   const text = "Notes, documents and even voices lived on someone else's server, rented back to us by the month.";
   const on = playing === voice && !!voice;
@@ -313,9 +349,20 @@ function Done({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack():
       </SettingsSection>
       {error && <Banner tone="error">{error}</Banner>}
       <SettingsSection title="Handy to know">
-        <SettingRow label="Tray icon" description="SpeakKit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view. Closing the window keeps it running." />
-        <SettingRow label="Launch at login" description="Start SpeakKit when you sign in to Windows." control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />} />
-        <SettingRow label="Start in the tray" description="When it starts at sign-in, stay in the tray instead of opening a window." control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />} />
+        <SettingRow
+          label="Tray icon"
+          description="SpeakKit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view. Closing the window keeps it running."
+        />
+        <SettingRow
+          label="Launch at login"
+          description="Start SpeakKit when you sign in to Windows."
+          control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
+        />
+        <SettingRow
+          label="Start in the tray"
+          description="When it starts at sign-in, stay in the tray instead of opening a window."
+          control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />}
+        />
       </SettingsSection>
     </Frame>
   );

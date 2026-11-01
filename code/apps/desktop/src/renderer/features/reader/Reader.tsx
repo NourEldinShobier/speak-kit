@@ -2,21 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button, Icon, IconButton, Spinner } from "@speakkit/ui";
 import { playbackRateFor } from "@speakkit/player";
 import type { SentenceStart, Voice } from "@speakkit/protocol";
-import type { DocMeta } from "../../../shared/library/contract";
+import type { Bookmark, DocMeta } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
 import { api, useVisible } from "../../ui";
 import { library } from "../library/api";
 import { estimateMs } from "../library/model";
 import { DisplayPopover } from "./DisplayPopover";
 import { OcrPanel } from "./OcrPanel";
-import { FinishedCard, FindBar, OutlinePanel } from "./Panels";
+import { FinishedCard, FindBar, OutlinePanel, VoicePanel } from "./Panels";
 import { PlayerBar } from "./PlayerBar";
 import { ReaderText, type TextClick } from "./ReaderText";
 import { FONT_STACK, useDisplay } from "./display";
-import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toReadDoc, wordAt, type ReaderDoc } from "./model";
+import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toggleBookmark, toReadDoc, wordAt, type ReaderDoc } from "./model";
 import { rangeIn, useHighlights } from "./useHighlights";
 import { useReaderPlayer } from "./usePlayer";
 import "./reader.css";
+import "./player.css";
 
 interface Loaded {
   meta: DocMeta;
@@ -25,13 +26,22 @@ interface Loaded {
 
 const SOURCE_LABEL = { paste: "Pasted text", file: "File", url: "Web page" } as const;
 
-export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; autoplay: boolean; onBack(): void }) {
+interface ReaderProps {
+  s: AppState;
+  id: string;
+  autoplay: boolean;
+  onBack(): void;
+  /** Opens the export dialog with the whole text of this reading. */
+  onExport(text: string, name: string): void;
+}
+
+export function Reader({ s, id, autoplay, onBack, onExport }: ReaderProps) {
   const [loaded, setLoaded] = useState<Loaded | null | "missing">(null);
   const [display, setDisplay] = useDisplay();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [speed, setSpeed] = useState(s.config.speed);
   const [voiceId, setVoiceId] = useState(s.config.voice);
-  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [panel, setPanel] = useState<"outline" | "voice" | null>(null);
   const [find, setFind] = useState<{ open: boolean; query: string; current: number }>({ open: false, query: "", current: 0 });
   const [pick, setPick] = useState<(TextClick & { sentence: number }) | null>(null);
   const [away, setAway] = useState(false);
@@ -61,7 +71,10 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
       if (meta.voice) setVoiceId(meta.voice);
       void library.markOpened(id);
     });
-    void api.voices().then((v) => live && setVoices(v.voices), () => {});
+    void api.voices().then(
+      (v) => live && setVoices(v.voices),
+      () => {},
+    );
     return () => {
       live = false;
     };
@@ -72,6 +85,8 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
   const cfg = useMemo(() => ({ port: s.port, token: s.token, voice: voiceId, speed, pause: "short" as const }), [s.port, s.token, voiceId, speed]);
   const resumeIndex = meta && doc && !meta.finished ? Math.min(meta.progress.sentence, Math.max(0, doc.sentences.length - 1)) : 0;
   const blocked = !!meta?.needsOcr || !doc?.sentences.length;
+  /** The sentence the bookmark button saves: the one being heard, else where reading would start. */
+  const here = active ? st.sentenceIndex : resumeIndex;
 
   const startAt = useCallback(
     (index: number) => {
@@ -237,14 +252,25 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
     if (active) command({ cmd: "seek-sentence", index: sentenceIndex });
     else startAt(sentenceIndex);
   };
-  const jumpTo = (block: number) => {
+  const goTo = (block: number, sentenceIndex: number) => {
     textRoot.current?.querySelector(`[data-block="${block}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
-    const first = doc?.firstSentence[block] ?? -1;
-    if (active && first >= 0) {
+    if (active && sentenceIndex >= 0) {
       following.current = true;
-      command({ cmd: "seek-sentence", index: first });
+      command({ cmd: "seek-sentence", index: sentenceIndex });
     }
   };
+  const jumpTo = (block: number) => goTo(block, doc?.firstSentence[block] ?? -1);
+  const bookmarks: Bookmark[] = meta?.bookmarks ?? [];
+  const saveBookmarks = (next: Bookmark[]) => {
+    setLoaded((l) => (l && l !== "missing" ? { ...l, meta: { ...l.meta, bookmarks: next } } : l));
+    void library.setBookmarks(id, next);
+  };
+  const bookmarkSentence = (index: number) => {
+    const text = doc?.sentences[index]?.text;
+    if (text) saveBookmarks(toggleBookmark(bookmarks, index, text));
+  };
+  const goToBookmark = (index: number) => doc?.sentences[index] && goTo(doc.sentences[index].block, index);
+  const togglePanel = (which: "outline" | "voice") => setPanel((p) => (p === which ? null : which));
   const outlineItems = useMemo(() => (doc && meta ? outline(doc.blocks, meta.format === "pdf") : []), [doc, meta]);
   const refresh = () =>
     library.get(id).then((d) => {
@@ -256,47 +282,136 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
   if (loaded === "missing")
     return (
       <div className="rd rd--empty">
-        <Banner tone="warning" title="This reading is gone" action={<Button size="sm" onClick={onBack}>Back to library</Button>}>It was deleted from the library.</Banner>
+        <Banner
+          tone="warning"
+          title="This reading is gone"
+          action={
+            <Button size="sm" onClick={onBack}>
+              Back to library
+            </Button>
+          }
+        >
+          It was deleted from the library.
+        </Banner>
       </div>
     );
-  if (!meta || !doc) return <div className="rd rd--empty"><Spinner size={20} /></div>;
+  if (!meta || !doc)
+    return (
+      <div className="rd rd--empty">
+        <Spinner size={20} />
+      </div>
+    );
 
   const style = { "--rd-size": `${display.size}px`, "--rd-line": display.line, "--rd-width": `${display.width}px`, "--rd-font": FONT_STACK[display.font] } as React.CSSProperties;
   return (
     <div className="rd" data-theme={display.theme === "app" ? undefined : display.theme} style={style} data-testid="reader" data-status={st.status}>
       <header className="rd-top">
         <IconButton name="arrow-left" label="Back to library" onClick={onBack} />
-        <button type="button" className="rd-crumb" onClick={onBack}>Library</button>
-        <span className="rd-source">{SOURCE_LABEL[meta.source]} · {meta.origin}</span>
+        <button type="button" className="rd-crumb" onClick={onBack}>
+          Library
+        </button>
+        <span className="rd-source">
+          {SOURCE_LABEL[meta.source]} · {meta.origin}
+        </span>
         <span className="rd-spacer" />
         <IconButton name="search" label="Find in text" onClick={() => setFind((f) => ({ ...f, open: true }))} />
         <DisplayPopover d={display} onChange={setDisplay} />
-        <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)} />
+        <IconButton name="bookmark" label="Bookmark this place" aria-pressed={bookmarks.some((b) => b.sentence === here)} disabled={blocked} onClick={() => bookmarkSentence(here)} />
+        <IconButton name="download" label="Export audio" disabled={blocked} onClick={() => onExport(doc.blocks.map((b) => b.text).join("\n\n"), meta.title)} />
+        <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={panel === "outline"} onClick={() => togglePanel("outline")} />
+        <IconButton name="microphone" label="Voice panel" aria-pressed={panel === "voice"} onClick={() => togglePanel("voice")} />
       </header>
-      {find.open && <FindBar query={find.query} count={matches.length} current={find.current} onQuery={(query) => setFind({ open: true, query, current: 0 })} onStep={stepFind} onClose={() => setFind({ open: false, query: "", current: 0 })} />}
+      {find.open && (
+        <FindBar
+          query={find.query}
+          count={matches.length}
+          current={find.current}
+          onQuery={(query) => setFind({ open: true, query, current: 0 })}
+          onStep={stepFind}
+          onClose={() => setFind({ open: false, query: "", current: 0 })}
+        />
+      )}
       <div className="rd-main">
         <div className="rd-scroll" ref={scroller} onWheel={leaveFollow} onPointerDown={leaveFollow} data-testid="reader-scroll">
           <article className="rd-article" ref={textRoot}>
             <h1 className="rd-title">{meta.title}</h1>
-            <p className="rd-meta">{meta.wordCount.toLocaleString()} words{meta.pages ? ` · ${meta.pages} pages` : ""}</p>
+            <p className="rd-meta">
+              {meta.wordCount.toLocaleString()} words{meta.pages ? ` · ${meta.pages} pages` : ""}
+            </p>
             {meta.needsOcr && <OcrPanel id={id} pages={meta.pages ?? 0} onDone={() => void refresh()} />}
-            {st.error && <Banner tone="error" title="Reading stopped" action={<Button size="sm" onClick={toggle}>Try again</Button>}>{st.error.message}</Banner>}
+            {st.error && (
+              <Banner
+                tone="error"
+                title="Reading stopped"
+                action={
+                  <Button size="sm" onClick={toggle}>
+                    Try again
+                  </Button>
+                }
+              >
+                {st.error.message}
+              </Banner>
+            )}
             <ReaderText blocks={doc.blocks} onPick={(c) => setPick({ ...c, sentence: sentenceAt(doc, c.block, c.offset) })} />
           </article>
           {pick && (
             <div className="rd-chip" style={{ left: pick.x, top: pick.y - 44 }} role="toolbar">
-              <Button size="sm" variant="primary" iconLeft="player-play" onClick={() => readFrom(pick.sentence)}>Read from here</Button>
-              <Button size="sm" iconLeft="copy" onClick={() => { void api.copy(doc.sentences[pick.sentence]?.text ?? ""); setPick(null); }}>Copy</Button>
+              <Button size="sm" variant="primary" iconLeft="player-play" onClick={() => readFrom(pick.sentence)}>
+                Read from here
+              </Button>
+              <Button
+                size="sm"
+                iconLeft="bookmark"
+                onClick={() => {
+                  bookmarkSentence(pick.sentence);
+                  setPick(null);
+                }}
+              >
+                Bookmark
+              </Button>
+              <Button
+                size="sm"
+                iconLeft="copy"
+                onClick={() => {
+                  void api.copy(doc.sentences[pick.sentence]?.text ?? "");
+                  setPick(null);
+                }}
+              >
+                Copy
+              </Button>
             </div>
           )}
         </div>
-        {outlineOpen && <OutlinePanel items={outlineItems} current={sentence?.block ?? 0} onPick={jumpTo} onClose={() => setOutlineOpen(false)} />}
+        {panel === "outline" && (
+          <OutlinePanel
+            items={outlineItems}
+            bookmarks={bookmarks}
+            current={sentence?.block ?? 0}
+            onPick={jumpTo}
+            onPickBookmark={goToBookmark}
+            onRemoveBookmark={(i) => saveBookmarks(bookmarks.filter((b) => b.sentence !== i))}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {panel === "voice" && <VoicePanel voices={voices} voiceId={voiceId} speed={speed} onVoice={changeVoice} onSpeed={changeSpeed} onClose={() => setPanel(null)} />}
         {away && st.status === "playing" && (
-          <button type="button" className="rd-back" onClick={() => { following.current = true; setAway(false); scrollToCurrent(); }}>
+          <button
+            type="button"
+            className="rd-back"
+            onClick={() => {
+              following.current = true;
+              setAway(false);
+              scrollToCurrent();
+            }}
+          >
             <Icon name="arrow-down" size={14} /> Back to current
           </button>
         )}
-        {st.status === "preparing" && st.elapsedMs > 0 && <div className="rd-prepare" role="status"><Spinner size={14} /> Preparing next paragraph</div>}
+        {st.status === "preparing" && st.elapsedMs > 0 && (
+          <div className="rd-prepare" role="status">
+            <Spinner size={14} /> Preparing next paragraph
+          </div>
+        )}
         {st.status === "finished" && !dismissedFinish && <FinishedCard title={meta.title} onBack={onBack} onReplay={() => startAt(0)} />}
       </div>
       <PlayerBar
@@ -308,7 +423,7 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
         voiceId={voiceId}
         sleepLeftMs={sleepLeft}
         disabled={blocked}
-        outlineOpen={outlineOpen}
+        panel={panel}
         onToggle={toggle}
         onSkip={(d) => active && command({ cmd: "seek-ms", deltaMs: d })}
         onBlock={(d) => (active ? command({ cmd: d === 1 ? "next-block" : "prev-block" }) : toggle())}
@@ -316,7 +431,7 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
         onSpeed={changeSpeed}
         onVoice={changeVoice}
         onSleep={changeSleep}
-        onOutline={() => setOutlineOpen(!outlineOpen)}
+        onOutline={() => togglePanel("outline")}
       />
     </div>
   );

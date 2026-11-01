@@ -30,9 +30,20 @@ const GAP_MS = 250;
 export async function targetFor(dir: string, rawName: string, ext: "wav" | "mp3"): Promise<ExportTarget> {
   const base = safeFileName(rawName);
   const file = path.join(dir, `${base}.${ext}`);
-  const exists = await stat(file).then(() => true, () => false);
+  const exists = await stat(file).then(
+    () => true,
+    () => false,
+  );
   let alternative = file;
-  for (let n = 2; (await stat(alternative).then(() => true, () => false)); n++) alternative = path.join(dir, `${base} (${n}).${ext}`);
+  for (
+    let n = 2;
+    await stat(alternative).then(
+      () => true,
+      () => false,
+    );
+    n++
+  )
+    alternative = path.join(dir, `${base} (${n}).${ext}`);
   return { path: file, exists, alternative };
 }
 
