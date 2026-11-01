@@ -81,13 +81,9 @@ function spellNumbers(t: string): string {
     .replace(/\b(\d{1,2}):([0-5]\d)\s?([ap])\.?m\b\.?/gi, (_, h, m, ap) =>
       `${toWords(Number(h))} ${m === "00" ? "" : Number(m) < 10 ? `oh ${toWords(Number(m))}` : toWords(Number(m))} ${ap.toLowerCase()} m`.replace(/\s+/g, " "),
     )
-    .replace(/\b(\d{1,2}):([0-5]\d)\b/g, (_, h, m) =>
-      m === "00" ? `${toWords(Number(h))} o'clock` : `${toWords(Number(h))} ${Number(m) < 10 ? "oh " : ""}${toWords(Number(m))}`,
-    )
+    .replace(/\b(\d{1,2}):([0-5]\d)\b/g, (_, h, m) => (m === "00" ? `${toWords(Number(h))} o'clock` : `${toWords(Number(h))} ${Number(m) < 10 ? "oh " : ""}${toWords(Number(m))}`))
     .replace(/\b(\d[\d,]*)(st|nd|rd|th)\b/gi, (_, n) => toWordsOrdinal(Number(num(n))).replace(/,/g, ""))
-    .replace(/(\d[\d,]*)(?:\.(\d+))?\s?%/g, (_, i, f) =>
-      `${f ? `${toWords(Number(num(i)))} point ${[...f].map(Number).map(toWords).join(" ")}` : toWords(Number(num(i)))} percent`,
-    )
+    .replace(/(\d[\d,]*)(?:\.(\d+))?\s?%/g, (_, i, f) => `${f ? `${toWords(Number(num(i)))} point ${[...f].map(Number).map(toWords).join(" ")}` : toWords(Number(num(i)))} percent`)
     .replace(/\b(1[1-9]\d\d|20\d\d)s?\b(?![.,]\d)/g, (m, y) => plural(year(Number(y)), m.endsWith("s")))
     .replace(/(?<![\w.])-(?=\d)/g, "minus ")
     .replace(/\b(\d[\d,]*)\.(\d+)\b/g, (_, i, f) => `${toWords(Number(num(i)))} point ${[...f].map(Number).map(toWords).join(" ")}`)
@@ -102,17 +98,14 @@ export function normalizeText(text: string, { numbers = false }: NormalizeOption
   let t = text
     .replace(/\bhttps?:\/\/([^\s/?#]+)\S*/gi, (_, host: string) => host.replace(/^www\./, "").replace(/\./g, " dot "))
     .replace(/\bwww\.([^\s/?#]+)\S*/gi, (_, host: string) => host.replace(/\./g, " dot "))
-    .replace(/\b([\w.+-]+)@([\w-]+(?:\.[\w-]+)+)\b/g, (_, user: string, host: string) =>
-      `${user.replace(/\./g, " dot ")} at ${host.replace(/\./g, " dot ")}`,
-    )
+    .replace(/\b([\w.+-]+)@([\w-]+(?:\.[\w-]+)+)\b/g, (_, user: string, host: string) => `${user.replace(/\./g, " dot ")} at ${host.replace(/\./g, " dot ")}`)
     .replace(/(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|‍|️)+/gu, "")
     .replace(/\be\.g\.,?/gi, "for example,")
     .replace(/\bi\.e\.,?/gi, "that is,")
     .replace(/\bvs\.?(?=\s)/gi, "versus")
     .replace(/\bapprox\./gi, "approximately")
-    .replace(
-      /([$£€¥])\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(thousand|million|billion|trillion|bn|mm|[kmbt])\b(?![\w/]))?/gi,
-      (_, sym: string, amount: string, scale?: string) => currency(sym, amount, scale, numbers),
+    .replace(/([$£€¥])\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(thousand|million|billion|trillion|bn|mm|[kmbt])\b(?![\w/]))?/gi, (_, sym: string, amount: string, scale?: string) =>
+      currency(sym, amount, scale, numbers),
     )
     .replace(/(\d)\s?(km\/h|[kKmMgG]?[Hh]z|[KMGT]B|km|kg|cm|mm|ml|mg|lbs?|oz|mph|L)\b(?![\w/])/g, (_, n: string, u: string) => {
       const unit = UNITS[u] ?? UNITS[u.replace(/hz$/i, "Hz").replace(/^K/, "k")];

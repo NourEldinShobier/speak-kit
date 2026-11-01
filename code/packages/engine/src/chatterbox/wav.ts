@@ -13,7 +13,7 @@ export function parseWav(buf: Uint8Array): Wav {
   if (buf.length < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new WavError("not a WAV file");
   let fmt: { format: number; channels: number; rate: number; bits: number } | undefined;
   let data: [start: number, end: number] | undefined;
-  for (let o = 12; o + 8 <= buf.length; ) {
+  for (let o = 12; o + 8 <= buf.length;) {
     const size = dv.getUint32(o + 4, true);
     const body = o + 8;
     if (tag(o) === "fmt ") {

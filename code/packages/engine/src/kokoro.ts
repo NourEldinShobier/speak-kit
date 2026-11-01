@@ -45,9 +45,7 @@ const DEFAULT_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
 
 /** transformers.js cache layout: <modelsDir>/<modelId>/onnx/<file>. */
 function modelPresent(o: KokoroOptions): boolean {
-  return existsSync(
-    join(o.modelsDir, o.modelId ?? DEFAULT_MODEL, "onnx", MODEL_FILE[o.dtype ?? "uint8"]),
-  );
+  return existsSync(join(o.modelsDir, o.modelId ?? DEFAULT_MODEL, "onnx", MODEL_FILE[o.dtype ?? "uint8"]));
 }
 
 /** What KokoroEngine needs from a worker thread or a child process. */
@@ -102,10 +100,7 @@ export class KokoroEngine extends LifecycleEngine {
   #o: Resolved;
   #worker?: Channel;
   #next = 1;
-  #jobs = new Map<
-    number,
-    { resolve: (r: Synthesized | null) => void; reject: (e: Error) => void }
-  >();
+  #jobs = new Map<number, { resolve: (r: Synthesized | null) => void; reject: (e: Error) => void }>();
 
   constructor(o: KokoroOptions) {
     super(o, modelPresent(o) ? "unloaded" : "missing");
@@ -132,9 +127,7 @@ export class KokoroEngine extends LifecycleEngine {
 
   protected doLoad(): Promise<void> {
     const o = this.#o;
-    const url =
-      o.workerUrl ??
-      new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url);
+    const url = o.workerUrl ?? new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url);
     const workerData: WorkerInit = {
       modelsDir: o.modelsDir,
       modelId: o.modelId,
@@ -144,10 +137,7 @@ export class KokoroEngine extends LifecycleEngine {
       warmup: o.warmup,
       warmupVoice: DEFAULT_VOICE,
     };
-    const w = (this.#worker = (o.isolation === "thread" ? threadChannel : processChannel)(
-      url,
-      workerData,
-    ));
+    const w = (this.#worker = (o.isolation === "thread" ? threadChannel : processChannel)(url, workerData));
     return new Promise<void>((resolve, reject) => {
       let loaded = false;
       const fail = (message: string) => {
@@ -216,10 +206,7 @@ export class KokoroEngine extends LifecycleEngine {
     });
   }
 
-  protected async doSynthesize(
-    text: string,
-    { voice, speed, signal }: SynthOptions,
-  ): Promise<Synthesized> {
+  protected async doSynthesize(text: string, { voice, speed, signal }: SynthOptions): Promise<Synthesized> {
     if (!KOKORO_VOICES.some((v) => v.id === voice)) throw new Error(`unknown voice "${voice}"`);
     const pieces = splitLong(text, this.#o.maxChunk);
     const parts: Int16Array[] = [];

@@ -21,8 +21,7 @@ const workerInitSchema: v.GenericSchema<unknown, WorkerInit> = v.object({
 // Two hosts: a worker_thread (parentPort) or a child process (IPC, init in env). Same protocol either way.
 const inProcess = parentPort === null;
 const init = v.parse(workerInitSchema, inProcess ? JSON.parse(process.env.SPEAKKIT_WORKER_INIT ?? "null") : workerData);
-const send = (m: FromWorker, transfer: ArrayBuffer[] = []) =>
-  inProcess ? void process.send!(m) : parentPort!.postMessage(m, transfer);
+const send = (m: FromWorker, transfer: ArrayBuffer[] = []) => (inProcess ? void process.send!(m) : parentPort!.postMessage(m, transfer));
 
 import type { KokoroTTS } from "kokoro-js";
 
@@ -70,7 +69,8 @@ async function load(): Promise<void> {
       session_options: {
         intraOpNumThreads: init.threads,
         interOpNumThreads: 1,
-        ...(init.device === "dml" ? { enableMemPattern: false, executionMode: "sequential" } : {}),
+        // Graph optimization costs ~0.35 s of every load and gains nothing measurable on this pre-quantized model (docs/perf.md).
+        ...(init.device === "dml" ? { enableMemPattern: false, executionMode: "sequential" } : { graphOptimizationLevel: "disabled" }),
       },
     }),
     tf.AutoTokenizer.from_pretrained(init.modelId, opts),
@@ -97,9 +97,7 @@ async function run(m: Extract<ToWorker, { type: "synth" }>): Promise<void> {
   try {
     const a = await tts!.generate(m.text, { voice: m.voice, speed: m.speed } as GenerateOptions); // the server validated the voice id
     const pcm = toInt16(a.audio);
-    send({ type: "result", id: m.id, pcm, sampleRate: a.sampling_rate }, [
-      pcm.buffer as ArrayBuffer,
-    ]);
+    send({ type: "result", id: m.id, pcm, sampleRate: a.sampling_rate }, [pcm.buffer as ArrayBuffer]);
   } catch (e) {
     send({ type: "error", id: m.id, message: e instanceof Error ? e.message : String(e) });
   }
@@ -112,10 +110,7 @@ let chain: Promise<void> = load().catch((e) => {
 });
 const onMessage = (m: ToWorker) => {
   if (m.type === "cancel") cancelled.add(m.id);
-  else
-    chain = chain.then(() =>
-      tts ? run(m) : send({ type: "error", id: m.id, message: "engine failed to load" }),
-    );
+  else chain = chain.then(() => (tts ? run(m) : send({ type: "error", id: m.id, message: "engine failed to load" })));
 };
 if (inProcess) {
   process.on("message", onMessage);

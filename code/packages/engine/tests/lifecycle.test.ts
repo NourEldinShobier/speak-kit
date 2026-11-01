@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { EngineNotReadyError, FakeEngine, type FakeEngineOptions } from "../src";
 
-const synth = (e: FakeEngine, text = "hello", signal?: AbortSignal) =>
-  e.synthesize(text, { voice: "af_heart", speed: 1, signal });
+const synth = (e: FakeEngine, text = "hello", signal?: AbortSignal) => e.synthesize(text, { voice: "af_heart", speed: 1, signal });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function until(cond: () => boolean, ms = 2000) {
   const t0 = Date.now();
@@ -29,9 +28,7 @@ describe("lazy load", () => {
     const states: string[] = [];
     e.onStatus((s) => states.push(s.state));
     const all = await Promise.all([synth(e, "a"), synth(e, "b"), synth(e, "c")]);
-    expect(all.map((r) => r.pcm.length)).toEqual(
-      ["a", "b", "c"].map((t) => FakeEngine.sampleCount(t, 1)),
-    );
+    expect(all.map((r) => r.pcm.length)).toEqual(["a", "b", "c"].map((t) => FakeEngine.sampleCount(t, 1)));
     expect(e.loads).toBe(1);
     expect(states).toEqual(["loading", "ready"]);
   });
@@ -95,6 +92,21 @@ describe("idle unload", () => {
     expect(e.unloads).toBe(1);
     await synth(e);
     expect(e.loads).toBe(2);
+    expect(e.status().state).toBe("ready");
+  });
+
+  it("two reads right after an idle unload both succeed and share one reload", async () => {
+    const e = lazy({ idleUnloadMs: 60, loadMs: 40 });
+    await synth(e);
+    await until(() => e.status().state === "unloaded");
+    const first = synth(e, "first read");
+    await sleep(10); // the second click lands while the model is still loading
+    const second = synth(e, "second read");
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.pcm.length).toBe(FakeEngine.sampleCount("first read", 1));
+    expect(b.pcm.length).toBe(FakeEngine.sampleCount("second read", 1));
+    expect(e.loads).toBe(2); // the first load plus a single reload
+    expect(e.unloads).toBe(1);
     expect(e.status().state).toBe("ready");
   });
 

@@ -5,7 +5,10 @@ import { describe, expect, it } from "vite-plus/test";
 import { ClonedVoiceStore, WavError, analyzeClip, encodeWav, parseWav } from "../src";
 import { clip } from "./clip-fixture";
 
-const failed = (wav: Buffer) => analyzeClip(parseWav(wav)).checks.filter((c) => !c.ok).map((c) => c.id);
+const failed = (wav: Buffer) =>
+  analyzeClip(parseWav(wav))
+    .checks.filter((c) => !c.ok)
+    .map((c) => c.id);
 
 describe("analyzeClip", () => {
   it("accepts a clean 8 s clip", () => {

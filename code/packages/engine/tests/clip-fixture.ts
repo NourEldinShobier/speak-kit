@@ -6,7 +6,7 @@ export function clip(seconds: number, rate = 24000, o: { amp?: number; floor?: n
   const pcm = new Int16Array(Math.round(seconds * rate));
   for (let i = 0; i < pcm.length; i++) {
     const t = i / rate;
-    const speaking = (t % 1) < speechShare;
+    const speaking = t % 1 < speechShare;
     const noise = (Math.sin(i * 12.9898) * 43758.5453) % 1;
     pcm[i] = Math.round(((speaking ? amp * Math.sin(2 * Math.PI * 200 * t) : 0) + floor * noise) * 32767);
   }

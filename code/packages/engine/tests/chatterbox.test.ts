@@ -1,17 +1,8 @@
-import { mkdirSync, mkdtempSync, existsSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vite-plus/test";
-import {
-  ChatterboxEngine,
-  EngineNotReadyError,
-  EngineUnavailableError,
-  detectHardware,
-  encodeWav,
-  type ChatterboxOptions,
-  type EngineStatus,
-  type Hardware,
-} from "../src";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { ChatterboxEngine, EngineNotReadyError, EngineUnavailableError, detectHardware, encodeWav, type ChatterboxOptions, type EngineStatus, type Hardware } from "../src";
 
 const GPU = { name: "RTX 4080", vramMb: 12282 };
 const sidecar = { command: process.execPath, args: [join(import.meta.dirname, "fake-sidecar.mjs")] };
@@ -37,6 +28,7 @@ describe("availability", () => {
     ["no GPU", { python: ["python"] }, "unavailable", "no-gpu"],
     ["too little VRAM", { gpu: { name: "Tiny", vramMb: 2048 }, python: ["python"] }, "unavailable", "no-gpu"],
     ["no Python", { gpu: GPU }, "unavailable", "python-missing"],
+    ["uv without system Python", { gpu: GPU, uv: ["uv"] }, "missing", "not-installed"],
     ["GPU and Python, not installed", { gpu: GPU, python: ["python"] }, "missing", "not-installed"],
   ])("%s", (_, hw, state, reason) => {
     const { e } = make(hw);
@@ -68,6 +60,10 @@ describe("hardware detection", () => {
     const hw = await detectHardware(async (cmd, args) => out[[cmd, ...args.filter((a) => a.startsWith("-3"))].join(" ")]);
     expect(hw).toEqual({ gpu: { name: "NVIDIA GeForce RTX 4080 Laptop GPU", vramMb: 12282 }, python: ["py", "-3.12"] });
   });
+  it("finds uv on PATH or as a Python module", async () => {
+    const uvOnly = await detectHardware(async (cmd, args) => (cmd === "python" && args.join(" ") === "-m uv --version" ? "uv 0.11.3 (45da18ac3 2026-04-01)" : undefined));
+    expect(uvOnly).toEqual({ uv: ["python", "-m", "uv"] });
+  });
   it("rejects Python 3.14 and a missing nvidia-smi", async () => {
     expect(await detectHardware(async (cmd) => (cmd === "python" ? "Python 3.14.7" : undefined))).toEqual({});
   });
@@ -76,11 +72,14 @@ describe("hardware detection", () => {
 describe("install and remove", () => {
   it("reports installing progress, then becomes unloaded; remove goes back to missing", async () => {
     const seen: EngineStatus[] = [];
-    const { e, dir } = make({ gpu: GPU, python: ["python"] }, {
-      installer: async (ctx) => {
-        ctx.progress(0.5, "Installing packages");
+    const { e, dir } = make(
+      { gpu: GPU, python: ["python"] },
+      {
+        installer: async (ctx) => {
+          ctx.progress(0.5, "Installing packages");
+        },
       },
-    });
+    );
     e.onStatus((s) => seen.push(s));
     await e.install();
     expect(seen.find((s) => s.state === "installing" && s.progress === 0.5)?.detail).toBe("Installing packages");
@@ -92,13 +91,44 @@ describe("install and remove", () => {
   });
 
   it("a failed install returns to missing with the reason", async () => {
-    const { e } = make({ gpu: GPU, python: ["python"] }, {
-      installer: async () => {
-        throw new Error("pip: no network");
+    const { e } = make(
+      { gpu: GPU, python: ["python"] },
+      {
+        installer: async () => {
+          throw new Error("pip: no network");
+        },
       },
-    });
+    );
     await expect(e.install()).rejects.toThrow("pip: no network");
     expect(e.status()).toEqual({ state: "missing", detail: "pip: no network" });
+  });
+});
+
+describe("installer commands", () => {
+  // A stand-in for uv and pip that appends its arguments to a log file.
+  const recorder = (log: string) => {
+    const script = join(tmpdir(), `rec-${process.pid}-${Math.random().toString(36).slice(2)}.mjs`);
+    writeFileSync(script, `import { appendFileSync } from "node:fs"; appendFileSync(${JSON.stringify(log)}, process.argv.slice(2).join(" ") + "\\n");`);
+    return script;
+  };
+  it("with uv: creates a Python 3.11 venv, then CUDA torch, then chatterbox-tts", async () => {
+    const log = join(mkdtempSync(join(tmpdir(), "cb-log-")), "log");
+    const { e, dir } = make({ gpu: GPU, uv: [process.execPath, recorder(log)] });
+    await e.install();
+    const env = join(dir, "env");
+    const py = join(env, process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+    expect(readFileSync(log, "utf8").trim().split("\n")).toEqual([
+      `venv --python 3.11 ${env}`,
+      `pip install --python ${py} torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124`,
+      `pip install --python ${py} chatterbox-tts setuptools<81`,
+    ]);
+    expect(e.status().state).toBe("unloaded");
+  });
+  it("without uv: creates a venv with the system Python and pip installs the same packages", async () => {
+    const log = join(mkdtempSync(join(tmpdir(), "cb-log-")), "log");
+    const { e } = make({ gpu: GPU, python: [process.execPath, recorder(log)] });
+    await expect(e.install()).rejects.toThrow(); // the recorded venv is never created, so the pip step cannot run
+    expect(readFileSync(log, "utf8").trim()).toMatch(/^-m venv .*env$/);
   });
 });
 
@@ -151,5 +181,18 @@ describe("sidecar", () => {
     const p = e.synthesize("hello", { voice: "chatterbox", speed: 1, signal: ac.signal });
     ac.abort(new Error("stop"));
     await expect(p).rejects.toThrow("stop");
+  });
+
+  it("an abort tells the sidecar to stop generating", async () => {
+    const log = join(mkdtempSync(join(tmpdir(), "cb-ops-")), "ops");
+    const script = `process.stdout.write(JSON.stringify({kind:"ready"})+"\\n");require("readline").createInterface({input:process.stdin}).on("line",l=>require("fs").appendFileSync(${JSON.stringify(log)},l+"\\n"))`;
+    const { e } = make(ready, { sidecar: { command: process.execPath, args: ["-e", script] } }, true);
+    await e.start();
+    const ac = new AbortController();
+    const p = e.synthesize("hello", { voice: "chatterbox", speed: 1, signal: ac.signal }).catch(() => {});
+    await vi.waitFor(() => expect(readFileSync(log, "utf8")).toContain('"op":"synth"'));
+    ac.abort();
+    await p;
+    await vi.waitFor(() => expect(readFileSync(log, "utf8").trim().split("\n").at(-1)).toBe(JSON.stringify({ op: "abort", id: 1 })));
   });
 });

@@ -19,8 +19,10 @@ const MARKER = "installed";
 export interface InstallContext {
   /** Engine directory (`<dataDir>/chatterbox`). */
   dir: string;
-  /** System Python 3.10 to 3.12. */
-  python: string[];
+  /** System Python 3.10 to 3.12, when one exists. */
+  python?: string[];
+  /** uv, which downloads Python 3.11 itself; preferred over `python`. */
+  uv?: string[];
   /** Directory the virtual environment is created in. */
   envDir: string;
   progress(fraction: number, detail?: string): void;
@@ -51,10 +53,9 @@ const Message = v.variant("kind", [
 
 function assess(hw: Hardware, installed: boolean): { state: EngineState; reason?: EngineReason; detail?: string } {
   if (!hw.gpu) return { state: "unavailable", reason: "no-gpu", detail: "Chatterbox needs an NVIDIA GPU." };
-  if (hw.gpu.vramMb < MIN_VRAM_MB)
-    return { state: "unavailable", reason: "no-gpu", detail: `${hw.gpu.name} has ${hw.gpu.vramMb} MB; Chatterbox needs ${MIN_VRAM_MB} MB.` };
+  if (hw.gpu.vramMb < MIN_VRAM_MB) return { state: "unavailable", reason: "no-gpu", detail: `${hw.gpu.name} has ${hw.gpu.vramMb} MB; Chatterbox needs ${MIN_VRAM_MB} MB.` };
   if (installed) return { state: "unloaded" };
-  if (!hw.python) return { state: "unavailable", reason: "python-missing", detail: "Python 3.10 to 3.12 is required." };
+  if (!hw.python && !hw.uv) return { state: "unavailable", reason: "python-missing", detail: "Python 3.10 to 3.12 (or uv) is required." };
   return { state: "missing", reason: "not-installed" };
 }
 
@@ -84,15 +85,34 @@ function runLines(cmd: string, args: string[], onLine: (l: string) => void): Pro
 
 const envPython = (envDir: string) => join(envDir, process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 
-/** Installs chatterbox-tts into a private virtualenv. Progress is approximate: pip does not report a total, so each resolved package counts. */
-async function pipInstall({ python, envDir, progress }: InstallContext): Promise<void> {
-  progress(0.02, "Creating Python environment");
-  await runLines(python[0]!, [...python.slice(1), "-m", "venv", envDir], () => {});
+// chatterbox-tts pins torch 2.6.0, whose Windows and default Linux wheels on PyPI are CPU-only; the CUDA build comes from this index.
+const TORCH = ["torch==2.6.0", "torchaudio==2.6.0"];
+const TORCH_INDEX = "https://download.pytorch.org/whl/cu124";
+// perth (the watermarker chatterbox loads) imports pkg_resources, which setuptools 81 removed.
+const PACKAGES = ["chatterbox-tts", "setuptools<81"];
+
+/** Installs the CUDA torch build and chatterbox-tts into a private virtualenv. Progress is approximate: installers report no total, so each resolved package counts. */
+async function pipInstall({ python, uv, envDir, progress }: InstallContext): Promise<void> {
+  if (!uv && !python) throw new Error("no Python or uv to install with");
+  const py = envPython(envDir);
   let seen = 0;
+  const count = (l: string) => {
+    if (/^(Collecting|Downloading| + )/.test(l)) progress(Math.min(0.95, 0.08 + (++seen / 120) * 0.87), l.trim().slice(0, 80));
+  };
+  progress(0.02, "Creating Python environment");
+  const [bin, ...pre] = uv ?? python!;
+  if (uv) {
+    await runLines(bin!, [...pre, "venv", "--python", "3.11", envDir], () => {});
+    progress(0.08, "Installing packages");
+    await runLines(bin!, [...pre, "pip", "install", "--python", py, ...TORCH, "--index-url", TORCH_INDEX], count);
+    await runLines(bin!, [...pre, "pip", "install", "--python", py, ...PACKAGES], count);
+    return;
+  }
+  await runLines(bin!, [...pre, "-m", "venv", envDir], () => {});
   progress(0.08, "Installing packages");
-  await runLines(envPython(envDir), ["-m", "pip", "install", "--progress-bar", "off", "--disable-pip-version-check", "chatterbox-tts"], (l) => {
-    if (/^(Collecting|Downloading)/.test(l)) progress(Math.min(0.95, 0.08 + (++seen / 120) * 0.87), l.slice(0, 80));
-  });
+  const pip = [py, "-m", "pip", "install", "--progress-bar", "off", "--disable-pip-version-check"];
+  await runLines(pip[0]!, [...pip.slice(1), ...TORCH, "--index-url", TORCH_INDEX], count);
+  await runLines(pip[0]!, [...pip.slice(1), ...PACKAGES], count);
 }
 
 /**
@@ -146,8 +166,7 @@ export class ChatterboxEngine extends LifecycleEngine {
 
   override start(): Promise<void> {
     const s = this.status().state;
-    if (s === "missing" || s === "unavailable" || s === "installing")
-      return Promise.reject(new EngineNotReadyError(s));
+    if (s === "missing" || s === "unavailable" || s === "installing") return Promise.reject(new EngineNotReadyError(s));
     return super.start();
   }
 
@@ -165,7 +184,8 @@ export class ChatterboxEngine extends LifecycleEngine {
     }
     const ctx: InstallContext = {
       dir: this.#o.dir,
-      python: this.#hw.python!,
+      python: this.#hw.python,
+      uv: this.#hw.uv,
       envDir: join(this.#o.dir, "env"),
       progress: (progress, detail) => this.setStatus({ state: "installing", progress, detail }),
     };
@@ -274,9 +294,13 @@ export class ChatterboxEngine extends LifecycleEngine {
     const id = this.#next++;
     return new Promise((resolve, reject) => {
       const onAbort = () => {
-        if (this.#jobs.delete(id)) reject(signal!.reason);
+        if (!this.#jobs.delete(id)) return;
+        p.stdin?.write(JSON.stringify({ op: "abort", id }) + "\n"); // stops generation on the GPU
+        reject(signal!.reason);
       };
-      const done = <T>(f: (x: T) => void) => (x: T) => (signal?.removeEventListener("abort", onAbort), f(x));
+      const done =
+        <T>(f: (x: T) => void) =>
+        (x: T) => (signal?.removeEventListener("abort", onAbort), f(x));
       this.#jobs.set(id, { resolve: done(resolve), reject: done(reject) });
       signal?.addEventListener("abort", onAbort, { once: true });
       const reference = this.clones.has(voice) ? this.clones.path(voice) : null;

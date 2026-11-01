@@ -1,13 +1,6 @@
 import { freemem } from "node:os";
 import type { EngineState, Voice } from "@speakkit/protocol";
-import {
-  EngineNotReadyError,
-  StatusEmitter,
-  type EngineStatus,
-  type SynthOptions,
-  type Synthesized,
-  type TtsEngine,
-} from "./types";
+import { EngineNotReadyError, StatusEmitter, type EngineStatus, type SynthOptions, type Synthesized, type TtsEngine } from "./types";
 
 export interface LifecycleOptions {
   /** Idle window before a ready model is unloaded. 0 = never. Default 5 min. */
@@ -113,8 +106,7 @@ export abstract class LifecycleEngine implements TtsEngine {
     try {
       await this.doLoad();
     } catch (e) {
-      if (!this.#closed)
-        this.#em.set({ state: "error", detail: e instanceof Error ? e.message : String(e) });
+      if (!this.#closed) this.#em.set({ state: "error", detail: e instanceof Error ? e.message : String(e) });
       throw e;
     }
     if (this.#closed) throw new Error("engine closed");
@@ -192,12 +184,7 @@ export abstract class LifecycleEngine implements TtsEngine {
     );
     this.#timer.unref();
     this.#poll = setInterval(() => {
-      if (
-        this.#deadline() !== undefined &&
-        Date.now() - this.#lastActivity >= this.#lowMemGraceMs &&
-        this.#freemem() < this.#lowMemBytes
-      )
-        void this.unload();
+      if (this.#deadline() !== undefined && Date.now() - this.#lastActivity >= this.#lowMemGraceMs && this.#freemem() < this.#lowMemBytes) void this.unload();
     }, this.#checkMs);
     this.#poll.unref();
   }

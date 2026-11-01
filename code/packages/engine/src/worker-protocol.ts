@@ -8,9 +8,7 @@ export interface WorkerInit {
   warmupVoice: string;
 }
 
-export type ToWorker =
-  | { type: "synth"; id: number; text: string; voice: string; speed: number }
-  | { type: "cancel"; id: number };
+export type ToWorker = { type: "synth"; id: number; text: string; voice: string; speed: number } | { type: "cancel"; id: number };
 
 export type FromWorker =
   | {

@@ -20,9 +20,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL)("KokoroEngine (real model)", () => {
     expect(r.pcm.length).toBeGreaterThan(24000);
     expect(r.pcm.some((v) => Math.abs(v) > 1000)).toBe(true);
 
-    const long =
-      Array.from({ length: 12 }, (_, i) => `clause number ${i} goes on a little while`).join(", ") +
-      ".";
+    const long = Array.from({ length: 12 }, (_, i) => `clause number ${i} goes on a little while`).join(", ") + ".";
     expect(long.length).toBeGreaterThan(300);
     const l = await e.synthesize(long, { voice: "bf_emma", speed: 1.5 });
     expect(l.pcm.length).toBeGreaterThan(r.pcm.length * 3);

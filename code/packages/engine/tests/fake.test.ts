@@ -25,16 +25,12 @@ describe("FakeEngine", () => {
     expect(e.active).toBe(0);
     e.latencyMs = 0;
     e.failOn = (t) => t.includes("boom");
-    await expect(e.synthesize("boom", { voice: "af_heart", speed: 1 })).rejects.toThrow(
-      "fake engine failure",
-    );
+    await expect(e.synthesize("boom", { voice: "af_heart", speed: 1 })).rejects.toThrow("fake engine failure");
     await expect(e.synthesize("fine", { voice: "af_heart", speed: 1 })).resolves.toBeDefined();
   });
   it("refuses to synthesize until ready", async () => {
     const e = new FakeEngine({ state: "downloading" });
-    await expect(e.synthesize("x", { voice: "af_heart", speed: 1 })).rejects.toBeInstanceOf(
-      EngineNotReadyError,
-    );
+    await expect(e.synthesize("x", { voice: "af_heart", speed: 1 })).rejects.toBeInstanceOf(EngineNotReadyError);
     await e.start();
     expect(e.status().state).toBe("ready");
   });
