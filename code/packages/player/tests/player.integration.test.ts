@@ -100,12 +100,9 @@ describe("player against a real server with FakeEngine", () => {
     await until(() => player.state().status === "finished");
 
     expect(engine.calls.map((c) => c.text)).toEqual(texts);
-    expect(player.framesReceived).toBe(3);
-    const expectedMs = texts.reduce(
-      (s, t) => s + (FakeEngine.sampleCount(t, 1, 0.01) / 24000) * 1000,
-      0,
-    );
-    expect(player.scheduledMs).toBeCloseTo(expectedMs, 3);
+    expect(player.probe.framesReceived).toBe(3);
+    const expectedMs = texts.reduce((s, t) => s + (FakeEngine.sampleCount(t, 1, 0.01) / 24000) * 1000, 0);
+    expect(player.probe.scheduledMs).toBeCloseTo(expectedMs, 3);
     expect(starts.map((s) => s.index)).toEqual([0, 1, 2]);
     // back to back: each source starts exactly when the previous one ends
     const dur = texts.map((t) => FakeEngine.sampleCount(t, 1, 0.01) / 24000);
@@ -121,10 +118,7 @@ describe("player against a real server with FakeEngine", () => {
 
   it("reports token-rejected for a wrong token", async () => {
     const { player, server } = await setup();
-    player.command(
-      { cmd: "play", doc: doc(["Hi."]) },
-      { port: server.port, token: "wrong", voice: "af_heart", speed: 1, pause: "none" },
-    );
+    player.command({ cmd: "play", doc: doc(["Hi."]) }, { port: server.port, token: "wrong", voice: "af_heart", speed: 1, pause: "none" });
     await until(() => player.state().status === "error");
     expect(player.state().error?.code).toBe("token-rejected");
   });
@@ -133,10 +127,7 @@ describe("player against a real server with FakeEngine", () => {
     const { player, server } = await setup();
     const { port, token } = server;
     await server.close();
-    player.command(
-      { cmd: "play", doc: doc(["Hi."]) },
-      { port, token, voice: "af_heart", speed: 1, pause: "none" },
-    );
+    player.command({ cmd: "play", doc: doc(["Hi."]) }, { port, token, voice: "af_heart", speed: 1, pause: "none" });
     await until(() => player.state().status === "error");
     expect(player.state().error?.code).toBe("app-not-running");
   });
@@ -152,10 +143,10 @@ describe("player against a real server with FakeEngine", () => {
     const { engine, player } = await setup({ secondsPerChar: 0.05, latencyMs: 40 });
     const texts = Array.from({ length: 12 }, (_, i) => `Sentence number ${i} here.`);
     player.command({ cmd: "play", doc: doc(texts) });
-    await until(() => player.framesReceived >= 1);
+    await until(() => player.probe.framesReceived >= 1);
     player.command({ cmd: "seek-sentence", index: 9 });
     await until(() => engine.calls.some((c) => c.text === texts[9]));
-    await until(() => player.state().sentenceIndex === 9 && player.framesReceived >= 1);
+    await until(() => player.state().sentenceIndex === 9 && player.probe.framesReceived >= 1);
     expect(engine.calls.filter((c) => c.text === texts[9])).toHaveLength(1);
     await until(() => engine.active === 0);
     // nothing synthesized past the lookahead of the old stream (sentence 0 + 2 ahead + 1 in flight at most)

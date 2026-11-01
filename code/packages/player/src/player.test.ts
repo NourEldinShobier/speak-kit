@@ -1,9 +1,4 @@
-import {
-  encodeFrame,
-  type PlayerState,
-  type ReadDoc,
-  type SentenceStart,
-} from "@speakkit/protocol";
+import { encodeFrame, type PlayerState, type ReadDoc, type SentenceStart } from "@speakkit/protocol";
 import { describe, expect, it } from "vite-plus/test";
 import type { PlayerConfig } from "./types";
 import { IDLE_CLOSE_MS, Player, type CtxLike, type PlayerDeps, type SourceLike, type StretchNode } from "./player";
@@ -75,13 +70,7 @@ const audioStream = (n: number, extra: Uint8Array[] = []) =>
   new Response(
     new ReadableStream<Uint8Array>({
       start(c) {
-        for (let i = 0; i < n; i++)
-          c.enqueue(
-            encodeFrame(
-              { type: "audio", index: i, sampleRate: 24000, samples: SEC, durationMs: 1000 },
-              new Int16Array(SEC),
-            ),
-          );
+        for (let i = 0; i < n; i++) c.enqueue(encodeFrame({ type: "audio", index: i, sampleRate: 24000, samples: SEC, durationMs: 1000 }, new Int16Array(SEC)));
         for (const e of extra) c.enqueue(e);
         c.enqueue(encodeFrame({ type: "done", count: n }));
         c.close();
@@ -89,12 +78,7 @@ const audioStream = (n: number, extra: Uint8Array[] = []) =>
     }),
   );
 
-function rig(
-  reply: Reply = (call) => audioStream(call.body.sentences.length),
-  config = cfg(),
-  analyser = false,
-  extra: Partial<PlayerDeps> = {},
-) {
+function rig(reply: Reply = (call) => audioStream(call.body.sentences.length), config = cfg(), analyser = false, extra: Partial<PlayerDeps> = {}) {
   const ctx = new MockCtx();
   const calls: Call[] = [];
   const states: PlayerState[] = [];
@@ -184,12 +168,7 @@ describe("start of playback", () => {
   });
 
   it("maps an error frame to its code", async () => {
-    const { player } = rig(
-      () =>
-        new Response(
-          encodeFrame({ type: "error", code: "engine-not-ready", message: "loading" }) as BodyInit,
-        ),
-    );
+    const { player } = rig(() => new Response(encodeFrame({ type: "error", code: "engine-not-ready", message: "loading" }) as BodyInit));
     player.command({ cmd: "play", doc: doc(["One."]) });
     await settle();
     expect(player.state()).toMatchObject({
@@ -228,8 +207,8 @@ describe("gapless scheduling", () => {
     expect(ctx.sources.map((s) => s.startedAt)).toEqual([0.02, 1.02, 2.02, 3.02]);
     await advance(ctx, player, 1.05); // B heard, E read
     expect(ctx.sources.map((s) => s.startedAt)).toEqual([0.02, 1.02, 2.02, 3.02, 4.02]);
-    expect(player.framesReceived).toBe(5);
-    expect(player.scheduledMs).toBe(5000);
+    expect(player.probe.framesReceived).toBe(5);
+    expect(player.probe.scheduledMs).toBe(5000);
   });
 
   it("drops the decoded audio of sentences that have been heard", async () => {
@@ -292,7 +271,7 @@ describe("gapless scheduling", () => {
 
   it("exposes output level through the analyser when requested", async () => {
     const { player } = rig(undefined, undefined, true);
-    expect(player.rms()).toBe(0); // no analyser on the mock context
+    expect(player.probe.rms()).toBe(0); // no analyser on the mock context
   });
 });
 
@@ -421,9 +400,7 @@ describe("queue", () => {
     player.command({ cmd: "queue-add", doc: doc(["B."], { docId: "q2" }) });
     player.command({ cmd: "queue-add", doc: doc(["B."], { docId: "q2" }) }); // duplicate ignored
     expect(player.state().queueLength).toBe(1);
-    expect(player.queueItems()).toEqual([
-      { docId: "q2", tabId: 7, title: "Example", url: "https://example.com/a", sentenceCount: 1, estMs: 133 },
-    ]);
+    expect(player.queueItems()).toEqual([{ docId: "q2", tabId: 7, title: "Example", url: "https://example.com/a", sentenceCount: 1, estMs: 133 }]);
     await advance(ctx, player, 1.5);
     expect(player.state()).toMatchObject({ docId: "q2", queueLength: 0 });
     await settle();
@@ -433,8 +410,7 @@ describe("queue", () => {
   it("queue-play jumps to an entry, queue-remove and queue-clear drop entries", async () => {
     const { player } = rig(() => new Promise<Response>(() => {}));
     player.command({ cmd: "play", doc: doc(["A."], { docId: "p" }) });
-    for (const id of ["a", "b", "c"])
-      player.command({ cmd: "queue-add", doc: doc(["x"], { docId: id }) });
+    for (const id of ["a", "b", "c"]) player.command({ cmd: "queue-add", doc: doc(["x"], { docId: id }) });
     expect(player.state().queueLength).toBe(3);
     player.command({ cmd: "queue-remove", docId: "b" });
     expect(player.queueItems().map((q) => q.docId)).toEqual(["a", "c"]);
@@ -475,14 +451,20 @@ describe("model lifecycle", () => {
 
   it("closes the AudioContext when playback stops and creates a new one for the next play", async () => {
     const contexts: MockCtx[] = [];
-    const { player } = rig(undefined, cfg(), false, { createContext: () => { const c = new MockCtx(); contexts.push(c); return c; } });
+    const { player } = rig(undefined, cfg(), false, {
+      createContext: () => {
+        const c = new MockCtx();
+        contexts.push(c);
+        return c;
+      },
+    });
     player.command({ cmd: "play", doc: doc(["A."]) });
     await settle();
     expect(contexts).toHaveLength(1);
     expect(contexts[0]!.closed).toBe(false);
     player.command({ cmd: "stop" });
     expect(contexts[0]!.closed).toBe(true);
-    expect(player.audioClock().state).toBe("none");
+    expect(player.probe.audioClock().state).toBe("none");
     player.command({ cmd: "play", doc: doc(["B."]) });
     await settle();
     expect(contexts).toHaveLength(2);
@@ -490,7 +472,13 @@ describe("model lifecycle", () => {
 
   it("closes the AudioContext when the document has been read to the end", async () => {
     const contexts: MockCtx[] = [];
-    const { player } = rig(undefined, cfg(), false, { createContext: () => { const c = new MockCtx(); contexts.push(c); return c; } });
+    const { player } = rig(undefined, cfg(), false, {
+      createContext: () => {
+        const c = new MockCtx();
+        contexts.push(c);
+        return c;
+      },
+    });
     player.command({ cmd: "play", doc: doc(["A."]) });
     await settle();
     await advance(contexts[0]!, player, 5);
@@ -539,12 +527,10 @@ describe("model lifecycle", () => {
   it("waits while the model loads instead of failing, then plays", async () => {
     let n = 0;
     const sleeps: number[] = [];
-    const { player, calls, ctx } = rig(
-      (call) => (n++ < 2 ? new Response("loading", { status: 503 }) : audioStream(call.body.sentences.length)),
-      cfg(),
-      false,
-      { engineState: async () => "loading", sleep: async (ms) => void sleeps.push(ms) },
-    );
+    const { player, calls, ctx } = rig((call) => (n++ < 2 ? new Response("loading", { status: 503 }) : audioStream(call.body.sentences.length)), cfg(), false, {
+      engineState: async () => "loading",
+      sleep: async (ms) => void sleeps.push(ms),
+    });
     player.command({ cmd: "play", doc: doc(["A.", "B."]) });
     await settle();
     expect(calls).toHaveLength(3);
@@ -555,12 +541,10 @@ describe("model lifecycle", () => {
 
   it("treats an unloaded model as waking up, not as an error", async () => {
     let n = 0;
-    const { player } = rig(
-      (call) => (n++ < 1 ? new Response("", { status: 503 }) : audioStream(call.body.sentences.length)),
-      cfg(),
-      false,
-      { engineState: async () => "unloaded", sleep: async () => {} },
-    );
+    const { player } = rig((call) => (n++ < 1 ? new Response("", { status: 503 }) : audioStream(call.body.sentences.length)), cfg(), false, {
+      engineState: async () => "unloaded",
+      sleep: async () => {},
+    });
     player.command({ cmd: "play", doc: doc(["A."]) });
     await settle();
     expect(player.state().status).toBe("playing");
@@ -627,7 +611,16 @@ describe("speeds above 2x (pitch-preserving stretch)", () => {
   });
 
   it("falls back to plain playbackRate when the worklet cannot be loaded", async () => {
-    const { player, ctx } = rig(undefined, cfg({ speed: 3 }), false, { stretch: { register: async () => { throw new Error("blocked"); }, create: () => { throw new Error("unreachable"); } } });
+    const { player, ctx } = rig(undefined, cfg({ speed: 3 }), false, {
+      stretch: {
+        register: async () => {
+          throw new Error("blocked");
+        },
+        create: () => {
+          throw new Error("unreachable");
+        },
+      },
+    });
     player.command({ cmd: "play", doc: doc(["A."]) });
     await settle();
     expect(player.state().status).toBe("playing");
