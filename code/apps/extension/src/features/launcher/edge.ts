@@ -21,15 +21,18 @@ export class EdgeLauncher {
   private pillOpen = false;
   private closeTimer = 0;
   private openTimer = 0;
-  private awayOff?: () => void;
+  private awayOff: (() => void) | undefined;
   private tabY: number | null = null;
   private dragged = false;
   private railFill: HTMLElement | null = null;
   private pillTime: HTMLElement | null = null;
   private pillSpeed: HTMLElement | null = null;
   private pillVoice: HTMLElement | null = null;
+  private readonly s: Surface;
 
-  constructor(private s: Surface) {}
+  constructor(s: Surface) {
+    this.s = s;
+  }
 
   private get m() {
     return this.s.model();

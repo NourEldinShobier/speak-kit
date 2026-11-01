@@ -1,7 +1,7 @@
 import { h, icon, iconButton, popoverSurface, segmented, slider, toggle } from "@speakkit/ui/vanilla";
 import type { Extraction } from "./extract";
 import type { Shell } from "../../shared/ui-types";
-import type { ReaderSettings } from "../settings/types";
+import type { ReaderSettings } from "../settings";
 
 export const READER_FONT_STACK: Record<ReaderSettings["font"], string> = {
   sans: 'Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif',
@@ -43,11 +43,14 @@ export class ReaderView {
   private opener = document.activeElement as HTMLElement | null;
   private pageWasInert = document.body.inert;
 
-  constructor(
-    private ex: Extraction,
-    readonly docId: string,
-    private d: ReaderDeps,
-  ) {
+  private readonly ex: Extraction;
+  readonly docId: string;
+  private readonly d: ReaderDeps;
+
+  constructor(ex: Extraction, docId: string, d: ReaderDeps) {
+    this.ex = ex;
+    this.docId = docId;
+    this.d = d;
     this.col = h("article", { class: "sk-reader-col" });
     this.buildContent();
     this.scroller = h("main", { class: "sk-reader-scroll" }, this.col);

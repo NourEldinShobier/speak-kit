@@ -1,7 +1,6 @@
 import { playbackRateFor } from "@speakkit/player/rate";
-import { tokens } from "@speakkit/ui/tokens";
 import { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, type Settings } from "@speakkit/protocol";
-import { DARK_PAGE_SENTENCE, WORD_TEXT } from "./colors";
+import { DARK_PAGE_SENTENCE, DARK_PAGE_WORD, WORD_TEXT } from "./colors";
 
 /** CSS Custom Highlight API wrapper, word timing and scroll helpers. No DOM mutation of the page. */
 
@@ -14,7 +13,7 @@ export interface HlPalette {
   wordText: string;
 }
 const HEX = /^#[0-9a-f]{3,8}$/i;
-export const DARK_PAGE_HL: HlPalette = { sentence: DARK_PAGE_SENTENCE, word: tokens.dark["tag-yellow"], wordText: WORD_TEXT };
+export const DARK_PAGE_HL: HlPalette = { sentence: DARK_PAGE_SENTENCE, word: DARK_PAGE_WORD, wordText: WORD_TEXT };
 
 export function palette(h: Settings["highlight"], darkPage: boolean): HlPalette {
   if (h.matchTheme && darkPage) return DARK_PAGE_HL;
@@ -143,10 +142,13 @@ export class WordClock {
   private running = false;
   private raf = 0;
   private last = -2;
-  constructor(
-    private onWord: (w: WordSpan | null, i: number) => void,
-    private now: () => number = () => performance.now(),
-  ) {}
+  private readonly onWord: (w: WordSpan | null, i: number) => void;
+  private readonly now: () => number;
+
+  constructor(onWord: (w: WordSpan | null, i: number) => void, now: () => number = () => performance.now()) {
+    this.onWord = onWord;
+    this.now = now;
+  }
 
   start(plan: WordSpan[], running: boolean) {
     this.stop();

@@ -24,15 +24,15 @@ export class Dock {
   private dismissed: PlayerStatus | null = null;
   private details = false;
   private m: UiModel;
+  private readonly shell: Shell;
+  private readonly hd: UiHandlers;
   private parts: { text?: HTMLElement; sub?: HTMLElement; speed?: HTMLElement; voice?: HTMLElement; av?: HTMLElement; bar?: { set(): void } } = {};
   private waking = 0;
   private preparingSince = 0;
 
-  constructor(
-    private shell: Shell,
-    private hd: UiHandlers,
-    m: UiModel,
-  ) {
+  constructor(shell: Shell, hd: UiHandlers, m: UiModel) {
+    this.shell = shell;
+    this.hd = hd;
     this.m = m;
   }
 

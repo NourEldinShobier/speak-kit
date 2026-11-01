@@ -19,8 +19,11 @@ export class ParagraphGutter {
   private timer = 0;
   /** Escape hides the button for this paragraph until the pointer or focus moves to another one */
   private dismissed: Element | null = null;
+  private readonly s: Surface;
 
-  constructor(private s: Surface) {}
+  constructor(s: Surface) {
+    this.s = s;
+  }
 
   get target() {
     return this.g?.el ?? null;

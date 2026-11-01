@@ -6,11 +6,13 @@ export class Notices {
   private toastEl: HTMLElement | null = null;
   private toastTimer = 0;
   private backEl: HTMLElement | null = null;
+  private readonly s: Surface;
+  private readonly dockEl: () => HTMLElement | null;
 
-  constructor(
-    private s: Surface,
-    private dockEl: () => HTMLElement | null,
-  ) {}
+  constructor(s: Surface, dockEl: () => HTMLElement | null) {
+    this.s = s;
+    this.dockEl = dockEl;
+  }
 
   toast(message: string, kind: "ok" | "info" | "err" = "ok", action?: { label: string; run: () => void }) {
     this.toastEl?.remove();

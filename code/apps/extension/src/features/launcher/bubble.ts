@@ -5,11 +5,13 @@ import type { Surface } from "./types";
 /** The selection bubble (B1): Listen, voice and speed, copy. */
 export class SelectionBubble {
   private el: HTMLElement | null = null;
+  private readonly s: Surface;
+  private readonly onCopied: () => void;
 
-  constructor(
-    private s: Surface,
-    private onCopied: () => void,
-  ) {}
+  constructor(s: Surface, onCopied: () => void) {
+    this.s = s;
+    this.onCopied = onCopied;
+  }
 
   get visible() {
     return !!this.el;

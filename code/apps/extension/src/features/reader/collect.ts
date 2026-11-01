@@ -1,71 +1,13 @@
 import { hasWord } from "@speakkit/player/sentences";
-import type { ExtractOptions, Piece } from "./types";
+import type { ExtractOptions, Piece, SkipOpts } from "./types";
 
-/** Walks the DOM and gathers the text runs worth reading: one run per block element, each mapped back to its text nodes. */
-const BOUNDARY = new Set([
-  "p",
-  "li",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "blockquote",
-  "figcaption",
-  "figure",
-  "td",
-  "th",
-  "tr",
-  "table",
-  "thead",
-  "tbody",
-  "dd",
-  "dt",
-  "dl",
-  "ul",
-  "ol",
-  "div",
-  "section",
-  "article",
-  "main",
-  "header",
-  "footer",
-  "aside",
-  "nav",
-  "pre",
-  "hr",
-  "details",
-  "summary",
-  "address",
-  "body",
-]);
-const SEMANTIC = new Set(["p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "figcaption", "dd", "dt", "summary"]);
-const NEVER = new Set([
-  "script",
-  "style",
-  "noscript",
-  "template",
-  "svg",
-  "canvas",
-  "iframe",
-  "object",
-  "embed",
-  "video",
-  "audio",
-  "select",
-  "option",
-  "textarea",
-  "input",
-  "button",
-  "dialog",
-  "img",
-  "picture",
-  "map",
-  "head",
-  "math",
-]);
-const CODEISH = new Set(["pre", "code", "kbd", "samp"]);
+const words = (list: string) => new Set(list.split(" "));
+const BOUNDARY = words(
+  "p li h1 h2 h3 h4 h5 h6 blockquote figcaption figure td th tr table thead tbody dd dt dl ul ol div section article main header footer aside nav pre hr details summary address body",
+);
+const SEMANTIC = words("p li h1 h2 h3 h4 h5 h6 blockquote figcaption dd dt summary");
+const NEVER = words("script style noscript template svg canvas iframe object embed video audio select option textarea input button dialog img picture map head math");
+const CODEISH = words("pre code kbd samp");
 const SR_ONLY = /(?:^|\s)(?:sr-only|visually-hidden|screen-reader-text|screenreader|a11y-hidden)(?:\s|$)/;
 const REF_CLASS = /(?:^|\s)(?:reference|mw-ref|footnote-ref|noteref|citation|cite-ref)(?:\s|$)/;
 const CITE_TEXT = /^\s*\[?\s*(?:\d{1,3}(?:\s*[,–-]\s*\d{1,3})*|[a-z]|[*†‡§]+)\s*\]?\s*$/i;
@@ -74,6 +16,44 @@ const CITATION_TOKEN = "\\[(?:\\d{1,3}(?:\\s*[,–-]\\s*\\d{1,3})*|[a-z]|citatio
 const NEEDS_REWRITE = /[[\n\r\t\f\v ]|  |https?:\/\/|www\./;
 const REWRITE = new RegExp(`(\\s{2,}|[^\\S ]+)|(${CITATION_TOKEN})|((?:https?:\\/\\/|www\\.)\\S{20,})`, "gi");
 
+/** The skip switches and whether the run is a selection (selection mode turns the nav, caption, code and citation filters off). */
+interface Gate {
+  sel: boolean;
+  sk: SkipOpts;
+}
+type SkipRule = (e: Element, g: Gate) => boolean;
+
+const isCite = (e: Element) => CITE_TEXT.test(e.textContent ?? "");
+/** Rules for elements that have attributes; any match skips the element. */
+const ATTRIBUTE_RULES: SkipRule[] = [
+  (e) => e.hasAttribute("hidden") || e.getAttribute("aria-hidden") === "true" || e.hasAttribute("inert"),
+  (e) => SR_ONLY.test(e.getAttribute("class") ?? ""),
+  (e, g) => !g.sel && g.sk.citations && REF_CLASS.test(e.getAttribute("class") ?? ""),
+  (e, g) => {
+    const role = !g.sel && g.sk.navigation ? e.getAttribute("role") : null;
+    return !!role && NAVISH_ROLE.has(role);
+  },
+];
+const navigation: SkipRule = (_, g) => !g.sel && g.sk.navigation;
+const pageChrome: SkipRule = (e, g) => navigation(e, g) && !e.closest("article,main,[role=main]");
+/** Rules by tag name; a tag without a rule falls back to the code filter. */
+const TAG_RULES = new Map<string, SkipRule>([
+  ["nav", navigation],
+  ["aside", navigation],
+  ["form", navigation],
+  ["header", pageChrome],
+  ["footer", pageChrome],
+  ["figcaption", (_, g) => !g.sel && g.sk.captions],
+  ["sup", (e, g) => !g.sel && g.sk.citations && isCite(e)],
+  ["a", (e, g) => !g.sel && g.sk.citations && isCitationLink(e)],
+]);
+const isCitationLink = (e: Element) => {
+  const h = e.getAttribute("href");
+  return !!h && h.charCodeAt(0) === 35 /* # */ && /^#(?:cite|fn|ref|footnote|note)/i.test(h) && isCite(e);
+};
+/** Inline elements with only href/title cannot hide themselves: the style flush is skipped for them. */
+const mayHide = (e: Element, tag: string) => BOUNDARY.has(tag) || !!e.getAttribute("class") || e.hasAttribute("style");
+
 interface Run {
   el: Element;
   tag: string;
@@ -81,16 +61,19 @@ interface Run {
   pieces: Piece[];
 }
 
+/** Walks the DOM and gathers the text runs worth reading: one run per block element, each mapped back to its text nodes. */
 export class Collector {
   blocks: Run[] = [];
   private cur: Run | null = null;
   private boundary: Element;
   private sel: boolean;
   private o: ExtractOptions;
+  private gate: Gate;
   constructor(root: Element, o: ExtractOptions) {
     this.boundary = root;
     this.o = o;
     this.sel = !!o.selection;
+    this.gate = { sel: this.sel, sk: o.skip };
   }
 
   run(root: Element) {
@@ -100,41 +83,12 @@ export class Collector {
   }
 
   private skipEl(e: Element, tag: string): boolean {
-    const sk = this.o.skip;
     if (NEVER.has(tag)) return true;
-    if (e.hasAttributes()) {
-      if (e.hasAttribute("hidden") || e.getAttribute("aria-hidden") === "true" || e.hasAttribute("inert")) return true;
-      const cls = e.getAttribute("class");
-      if (cls) {
-        if (SR_ONLY.test(cls)) return true;
-        if (!this.sel && sk.citations && REF_CLASS.test(cls)) return true;
-      }
-      if (!this.sel && sk.navigation) {
-        const role = e.getAttribute("role");
-        if (role && NAVISH_ROLE.has(role)) return true;
-      }
-      // inline elements with only href/title cannot hide themselves: skip the style flush for them
-      if ((cls || BOUNDARY.has(tag) || e.hasAttribute("style")) && !e.checkVisibility({ checkVisibilityCSS: true })) return true;
-    } else if (BOUNDARY.has(tag) && !e.checkVisibility({ checkVisibilityCSS: true })) return true;
-    switch (tag) {
-      case "nav":
-      case "aside":
-      case "form":
-        return !this.sel && sk.navigation;
-      case "header":
-      case "footer":
-        return !this.sel && sk.navigation && !e.closest("article,main,[role=main]");
-      case "figcaption":
-        return !this.sel && sk.captions;
-      case "sup":
-        return !this.sel && sk.citations && CITE_TEXT.test(e.textContent ?? "");
-      case "a": {
-        if (this.sel || !sk.citations) return false;
-        const h = e.getAttribute("href");
-        return !!h && h.charCodeAt(0) === 35 /* # */ && /^#(?:cite|fn|ref|footnote|note)/i.test(h) && CITE_TEXT.test(e.textContent ?? "");
-      }
-    }
-    return !this.sel && sk.code && CODEISH.has(tag);
+    const g = this.gate;
+    if (e.hasAttributes() && ATTRIBUTE_RULES.some((rule) => rule(e, g))) return true;
+    if (mayHide(e, tag) && !e.checkVisibility({ checkVisibilityCSS: true })) return true;
+    const rule = TAG_RULES.get(tag);
+    return rule ? rule(e, g) : !g.sel && g.sk.code && CODEISH.has(tag);
   }
 
   private walk(el: Element) {

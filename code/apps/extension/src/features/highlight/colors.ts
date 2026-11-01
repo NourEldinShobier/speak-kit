@@ -1,5 +1,3 @@
-import { tokens } from "@speakkit/ui/tokens";
-
 export interface Swatch {
   name: string;
   light: string;
@@ -32,8 +30,11 @@ export function paint(list: Swatch[], hex: string, dark: boolean, matchTheme: bo
   return dark && matchTheme && i >= 0 ? list[i]!.dark : hex;
 }
 
-export const PAGE = { light: { bg: tokens.light["surface-editor"], text: tokens.light["text-on-highlight"] }, dark: { bg: tokens.dark["surface-card"], text: tokens.dark["text-primary"] } };
-/** Text on a word highlight stays dark in both themes. */
-export const WORD_TEXT = tokens.dark["text-on-highlight"];
+/**
+ * Text on a word highlight stays dark in both themes, and the word colour on a dark page. Literals, not token reads: the content script
+ * imports this file, and one read of `tokens` would put the whole token table (about 2 KB gzip) into it. colors.test.ts keeps them equal to the tokens.
+ */
+export const WORD_TEXT = "#1e1f20";
+export const DARK_PAGE_WORD = "#f2c04e";
 /** Sentence highlight on a dark page when "Match page theme" is on. */
 export const DARK_PAGE_SENTENCE = "#78621F";

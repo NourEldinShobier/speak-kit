@@ -1,10 +1,14 @@
 import { DEFAULT_WORD_COLOR } from "@speakkit/protocol";
 import { useState } from "react";
 import { Icon, SettingRow, Segmented } from "@speakkit/ui";
+import { tokens } from "@speakkit/ui/tokens";
 import { defaultSettings, type SectionProps, type Settings } from "../settings";
 import { contrast } from "../../shared/format";
 import { Card, PageHead, ToggleRow } from "../../shared/ui";
-import { PAGE, SENTENCE_SWATCHES, WORD_SWATCHES, WORD_TEXT, paint, swatchIndex, type Swatch } from "./colors";
+import { SENTENCE_SWATCHES, WORD_SWATCHES, WORD_TEXT, paint, swatchIndex, type Swatch } from "./colors";
+
+/** The page the preview is drawn on, per theme. */
+const PAGE = { light: { bg: tokens.light["surface-editor"], text: tokens.light["text-on-highlight"] }, dark: { bg: tokens.dark["surface-card"], text: tokens.dark["text-primary"] } };
 
 const HL_MODES: { id: Settings["highlight"]["mode"]; label: string }[] = [
   { id: "sentence+word", label: "Sentence + word" },
