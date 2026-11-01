@@ -1,14 +1,14 @@
 {
   "lint": {
     "code": {
-      "complexity": 20,
+      "max-lines-per-function": 22,
+      "complexity": 19,
       "no-nested-ternary": 43,
-      "max-lines-per-function": 23,
-      "max-params": 15,
       "no-restricted-globals": 15,
-      "max-lines": 4,
-      "max-depth": 1,
+      "max-params": 15,
       "no-sync": 11,
+      "max-depth": 1,
+      "max-lines": 4,
       "exhaustive-deps": 1
     },
     "tests": {

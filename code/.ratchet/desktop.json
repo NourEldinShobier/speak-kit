@@ -3,11 +3,11 @@
     "code": {
       "max-lines-per-function": 34,
       "no-nested-ternary": 36,
-      "complexity": 14,
       "max-params": 14,
+      "complexity": 14,
       "exhaustive-deps": 5,
-      "max-lines": 4,
-      "no-sync": 5
+      "no-sync": 5,
+      "max-lines": 4
     },
     "tests": {
       "no-explicit-any": 5

@@ -3,8 +3,8 @@
     "code": {
       "max-params": 1,
       "max-lines-per-function": 1,
-      "no-nested-ternary": 1,
-      "no-console": 1
+      "no-console": 1,
+      "no-nested-ternary": 1
     },
     "tests": {}
   },
