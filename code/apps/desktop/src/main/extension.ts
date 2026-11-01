@@ -1,15 +1,18 @@
 import { app, shell } from "electron";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 /** Folder with the unpacked extension: bundled in resources when installed, the build output when running from source. */
-function extensionFolder(): string | null {
+async function extensionFolder(): Promise<string | null> {
   const dir = app.isPackaged ? path.join(process.resourcesPath, "extension") : path.resolve(here, "../../../extension/dist");
-  return existsSync(path.join(dir, "manifest.json")) ? dir : null;
+  return access(path.join(dir, "manifest.json")).then(
+    () => dir,
+    () => null,
+  );
 }
 
 /** Browsers to try, in order: Chrome first, then Edge. `start` finds them through the Windows App Paths registry; `open -a` finds them on macOS. */
@@ -40,7 +43,7 @@ const runStart = (exe: string, url: string) =>
  * the browser's extensions page (`open` false skips both, for tests). Returns the folder, or null when this build has none.
  */
 export async function installExtension(open = true): Promise<string | null> {
-  const dir = extensionFolder();
+  const dir = await extensionFolder();
   if (!dir) return null;
   if (open) {
     shell.showItemInFolder(path.join(dir, "manifest.json"));

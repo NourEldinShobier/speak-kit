@@ -19,7 +19,7 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
-import { ServerRuntime } from "./server-lifecycle";
+import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -87,7 +87,7 @@ const runtime: ServerRuntime = new ServerRuntime({
   config,
   dataDir,
   modelsDir,
-  distDir: here,
+  engineWorker: await engineWorkerUrl(here),
   log,
   api: serverApi,
   publish,
@@ -166,7 +166,8 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       dataDir,
       window: () => mainWindow.window,
       target: () => ({ port: state.port, token: state.token }),
-      allowLocalUrls: test.allowLocalUrls, distDir: here,
+      allowLocalUrls: test.allowLocalUrls,
+      distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
     state.onBattery = powerMonitor.isOnBatteryPower();

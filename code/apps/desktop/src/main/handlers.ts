@@ -1,7 +1,6 @@
 import { app, clipboard, nativeTheme, shell } from "electron";
 import { randomBytes } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Activity, Api, AppState, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
@@ -99,7 +98,7 @@ export function createAppHandlers(d: HandlerDeps) {
     },
     regenerateToken: async () => {
       const token = randomBytes(32).toString("hex");
-      writeFileSync(path.join(d.dataDir, "token"), token);
+      await writeFile(path.join(d.dataDir, "token"), token);
       Object.assign(state.pairing, emptyPairing());
       d.addActivity("info", "Pairing token regenerated", "Every paired browser must be paired again.");
       return runtime.restart(token);
@@ -121,7 +120,7 @@ export function createAppHandlers(d: HandlerDeps) {
     },
     openPath: async (which) => {
       const dir = which === "models" ? d.modelsDir : d.logsDir;
-      mkdirSync(dir, { recursive: true });
+      await mkdir(dir, { recursive: true });
       await shell.openPath(dir);
     },
     storage,

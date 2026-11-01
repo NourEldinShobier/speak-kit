@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
@@ -19,8 +19,8 @@ interface RuntimeDeps {
   config: Config;
   dataDir: string;
   modelsDir: string;
-  /** Directory of the bundled main-process files; the engine worker sits in ../worker. */
-  distDir: string;
+  /** The model host: dist/worker/worker.js when built, the engine package's source file in development (see engineWorkerUrl). */
+  engineWorker: URL;
   log: Logger;
   api: ServerApi;
   /** Sends the state to every window. */
@@ -29,6 +29,15 @@ interface RuntimeDeps {
   isVisible(): boolean;
   /** The engine changed state: lets the desktop features announce a finished download or a failure. */
   onEngineState(prev: EngineState | undefined, next: EngineState, detail: string | undefined): void;
+}
+
+/** The engine module is bundled into dist/main: its worker is the built file (packaged) or the source file (development). */
+export async function engineWorkerUrl(distDir: string): Promise<URL> {
+  const built = path.join(distDir, "../worker/worker.js");
+  return access(built).then(
+    () => pathToFileURL(built),
+    () => new URL("./worker.ts", import.meta.resolve("@speakkit/engine")),
+  );
 }
 
 /** The local server and its engines: creation, restart, shutdown, and the health state the UI shows. */
@@ -171,9 +180,6 @@ export class ServerRuntime {
       }
       return e;
     }
-    // The engine module is bundled into dist/main: point its worker at the built file (packaged) or the source file (development).
-    const builtWorker = path.join(this.#d.distDir, "../worker/worker.js");
-    const workerUrl = existsSync(builtWorker) ? pathToFileURL(builtWorker) : new URL("./worker.ts", import.meta.resolve("@speakkit/engine"));
-    return new KokoroEngine({ modelsDir: this.#d.modelsDir, workerUrl });
+    return new KokoroEngine({ modelsDir: this.#d.modelsDir, workerUrl: this.#d.engineWorker });
   }
 }
