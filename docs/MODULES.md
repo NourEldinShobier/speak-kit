@@ -8,7 +8,7 @@ Wire types, frame codec, extension messages, settings schema, shared formatters.
 
 May import: no workspace package. Source files: 9, stylesheets: 0.
 
-Interface: `src/index.ts` has no header yet (refactor plan G13).
+Interface (`src/index.ts` header): Wire contract of Speak Kit: HTTP API types, streaming frame codec, extension messages, settings, engine types and response schemas. Shared by the extension, the desktop app and the server; imports no workspace package. Does not contain behaviour beyond encoding, decoding, validating and formatting; transport and storage live in the consumers. Area: packages/protocol. The exported names are pinned by src/surface.test.ts; a wire change needs an API_VERSION decision first.
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
@@ -44,14 +44,14 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Lumen components (React and vanilla), tokens, icons and logo data.
 
-May import: no workspace package. Source files: 18, stylesheets: 1.
+May import: no workspace package. Source files: 19, stylesheets: 1.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
 | `(src root)` | 7 | yes |
-| `react` | 7 | no |
+| `react` | 8 | no |
 
 ## packages/server
 
