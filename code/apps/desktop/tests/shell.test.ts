@@ -98,6 +98,16 @@ describe("command palette", () => {
 });
 
 describe("settings", () => {
+  it("the Back button's icon is centred in its hover square", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    const back = l.page.locator(".sk-side__head").getByRole("button", { name: "Back" });
+    await back.waitFor();
+    const [b, i] = [await back.boundingBox(), await back.locator("svg").boundingBox()];
+    expect(Math.abs(b!.x + b!.width / 2 - (i!.x + i!.width / 2))).toBeLessThan(0.6);
+    expect(Math.abs(b!.y + b!.height / 2 - (i!.y + i!.height / 2))).toBeLessThan(0.6);
+  });
+
   it("Memory: idle unload, load at startup and battery saver persist to config.json; engine state and RAM are shown", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();

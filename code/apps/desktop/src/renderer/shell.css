@@ -122,6 +122,7 @@ html[data-hidden] *::after {
 .sk-side .lm-btn--icon {
   width: 28px;
   flex: none;
+  justify-content: center;
 }
 .sk-side__head {
   display: flex;
