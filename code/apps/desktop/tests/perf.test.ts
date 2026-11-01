@@ -18,6 +18,19 @@ const procs = (x: Launched): Promise<Proc[]> =>
   x.app.evaluate(({ app }) => app.getAppMetrics().map((m) => ({ type: m.type, ws: m.memory.workingSetSize / 1024, priv: (m.memory.privateBytes ?? 0) / 1024 })));
 const sum = (p: Proc[], k: "ws" | "priv") => Math.round(p.reduce((a, b) => a + b[k], 0));
 
+describe("startup marks", () => {
+  it("main:ready, server:listening and window:shown happen in that order, within 5 s of the process start", async () => {
+    l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    const marks = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { marks(): { name: string; at: number }[] } }).__speakkit.marks());
+    const at = (name: string) => marks.find((m) => m.name === name)?.at ?? NaN;
+    console.log(JSON.stringify(marks));
+    expect(at("main:ready")).toBeLessThanOrEqual(at("server:listening"));
+    expect(at("window:shown")).toBeGreaterThan(at("main:ready"));
+    expect(at("server:listening")).toBeLessThan(5000);
+  }, 60_000);
+});
+
 describe("desktop resource budget", () => {
   it("unloaded model + hidden window: all app processes use under 150 MB of private memory and under 200 MB of working set", async () => {
     l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1", SPEAKKIT_DESTROY_MS: "2000" } });

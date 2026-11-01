@@ -81,6 +81,7 @@ let desktop: ReturnType<typeof setupDesktop> | null = null;
 
 const mainWindow: MainWindow = new MainWindow(config, {
   onVisible: () => {
+    if (!performance.getEntriesByName("window:shown").length) performance.mark("window:shown");
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
@@ -168,6 +169,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   });
 
   app.whenReady().then(async () => {
+    performance.mark("main:ready");
     const menu = appMenuTemplate(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     nativeTheme.themeSource = config.theme;
@@ -245,13 +247,19 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       trusted: (e) => mainWindow.owns(e.sender) || !!desktop?.ownsWindow(e.sender),
     });
     // Test hook: native menus and global key presses cannot be driven from Playwright.
-    if (test.hook) (globalThis as Record<string, unknown>).__speakkit = { metrics, ...desktop.testHook() };
+    if (test.hook)
+      (globalThis as Record<string, unknown>).__speakkit = {
+        metrics,
+        marks: () => performance.getEntriesByType("mark").map((m) => ({ name: m.name, at: Math.round(m.startTime) })),
+        ...desktop.testHook(),
+      };
 
     const boot = findDeepLink(process.argv) ?? launchLink;
     const hidden = config.setupDone && (process.argv.includes("--hidden") || (config.startMinimized && app.getLoginItemSettings().wasOpenedAtLogin));
     mainWindow.create(hidden && !boot);
     booted = true;
     await runtime.start(test.token);
+    performance.mark("server:listening");
     if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "browser" });
     publish();
   });
