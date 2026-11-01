@@ -14,8 +14,8 @@ const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 // p: geometry for one size class. full = 64 px and up, small = 16-48 px (wider seams, bigger hub, bolder wave)
 const SIZES = {
-  full: { gap: 13, amp: 42, period: 400, round: 18, r: 168, ring: 26, waveW: 1.2, waveA: 0.23, waveS: 0.19 },
-  small: { gap: 26, amp: 30, period: 400, round: 24, r: 206, ring: 40, waveW: 1.12, waveA: 0.25, waveS: 0.27 },
+  full: { gap: 13, amp: 42, period: 400, round: 18, r: 214, ring: 26, waveW: 1.2, waveA: 0.23, waveS: 0.19 },
+  small: { gap: 26, amp: 30, period: 400, round: 24, r: 240, ring: 38, waveW: 1.12, waveA: 0.25, waveS: 0.27 },
 };
 
 function geometry(p) {
