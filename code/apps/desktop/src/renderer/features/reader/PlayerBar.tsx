@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Icon, IconButton, Popover, Slider, Spinner } from "@speakkit/ui";
 import type { PlayerState, Voice } from "@speakkit/protocol";
-import { clock } from "../library/model";
+import { clock } from "../library";
 import { SpeedControls, VoiceList } from "./Controls";
 
 const SLEEP_CHOICES = [5, 15, 30, 45, 60];

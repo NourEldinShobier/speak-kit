@@ -1,13 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { ExportView } from "../shared/export";
-import { appState } from "./app-state.fixture";
+import type { ExportView } from "../../../shared/export";
+import { appState } from "../../app-state.fixture";
 
 vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
-import { ExportPill } from "./ExportDialog";
+import { ExportPill } from "./ExportPill";
 
 const job = (over: Partial<ExportView>): ExportView => ({ id: "x1", name: "chapter.mp3", stage: "rendering", progress: 0.25, done: 1, total: 4, ...over });
 

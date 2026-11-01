@@ -1,13 +1,13 @@
 {
   "lint": {
     "code": {
-      "max-lines-per-function": 34,
-      "no-nested-ternary": 36,
+      "max-lines-per-function": 32,
+      "no-nested-ternary": 32,
       "max-params": 14,
-      "complexity": 14,
       "exhaustive-deps": 5,
-      "no-sync": 5,
-      "max-lines": 4
+      "complexity": 12,
+      "max-lines": 3,
+      "no-sync": 5
     },
     "tests": {
       "no-explicit-any": 5
@@ -22,7 +22,7 @@
     "shortInterval": 0,
     "oxlintDisable": 0,
     "swallowingCatch": 10,
-    "physicalCss": 25,
+    "physicalCss": 1,
     "skipped": 0,
     "focused": 0,
     "tsNocheck": 0

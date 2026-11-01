@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { Banner, Button, Modal, ProgressBar } from "@speakkit/ui";
-import { library } from "../library/api";
-import { span } from "../library/model";
+import { library, span } from "../library";
 import { openPdfOcr, recognizeAll, type OcrProgress } from "./ocr";
 
 type Phase = { name: "offer" } | { name: "consent" } | { name: "running"; progress?: OcrProgress } | { name: "failed"; message: string };

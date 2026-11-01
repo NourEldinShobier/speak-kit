@@ -1,24 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, IconButton, Icon, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
-import type { Voice } from "@speakkit/protocol";
+import { useEffect, useReducer, useRef, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
-import { engineView } from "../shared/engine-view";
-import type { Command } from "../shared/palette";
-import { showAccelerator } from "../shared/shortcuts";
-import { api, useAppState, usePreview, useVisible } from "./ui";
-import { BrowserPage, Engines, Home, PreviewCtx, usePlayer, Voices } from "./pages";
-import { Settings, SETTINGS_NAV } from "./settings";
+import { runCommand } from "./commands";
+import { ExportDialog } from "./features/export";
+import { LibraryPage } from "./features/library";
+import { Reader } from "./features/reader";
 import { Palette } from "./Palette";
-import { Wizard } from "./Wizard";
-import { ExportDialog, ExportPill, type ExportOpen } from "./ExportDialog";
 import { QuitDialog } from "./QuitDialog";
-import { UpdatePill, UpdatingCard } from "./UpdateCard";
-import { LibraryRoute } from "./features/library";
-
-interface Loc {
-  page: Page;
-  sub: SettingsSub;
-}
+import { NewReading } from "./NewReading";
+import { Settings } from "./settings";
+import { Sidebar } from "./Sidebar";
+import { TitleBar } from "./TitleBar";
+import { UpdatingCard } from "./UpdateCard";
+import { Wizard } from "./Wizard";
+import { BrowserPage, Engines, Home, PreviewCtx, Voices } from "./pages";
+import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
+import { api, useAppState, usePreview, useVisible } from "./ui";
 
 export function App() {
   const s = useAppState();
@@ -33,17 +29,10 @@ export function App() {
   }, [s?.platform]);
   return (
     <div className="lm" style={{ height: "100%" }}>
-      {!s ? null : s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />}
+      {s && (s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />)}
     </div>
   );
 }
-
-const NAV: { page: Exclude<Page, "settings">; label: string; icon: "home" | "microphone" | "cpu" | "world" }[] = [
-  { page: "home", label: "Home", icon: "home" },
-  { page: "voices", label: "Voices", icon: "microphone" },
-  { page: "engines", label: "Engines", icon: "cpu" },
-  { page: "browser", label: "Browser", icon: "world" },
-];
 
 const RECENT_KEY = "speakkit.recent";
 const loadRecent = (): string[] => {
@@ -54,347 +43,140 @@ const loadRecent = (): string[] => {
     return [];
   }
 };
+const saveRecent = (recent: string[]) => {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  } catch {
+    /* private mode: recent list is just not remembered */
+  }
+};
 
-function Shell({ s }: { s: AppState }) {
-  const player = usePreview(s.config.speed);
-  const [hist, setHist] = useState<Loc[]>([{ page: "home", sub: "general" }]);
-  const [at, setAt] = useState(0);
-  const [side, setSide] = useState(true);
-  const [pal, setPal] = useState(false);
-  const [reading, setReading] = useState<string | null>(null);
-  const [quit, setQuit] = useState(false);
-  const [exporting, setExporting] = useState<ExportOpen | null>(null);
-  const [recent, setRecent] = useState<string[]>(loadRecent);
-  const loc = hist[at]!;
+/** The page for the current location. The library page and the reader share one route: opening a reading swaps the list for the reader. */
+function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; sub: SettingsSub; doc: OpenDoc | null; dispatch: Dispatch<ShellAction> }) {
+  const go = (p: "engines" | "browser") => dispatch({ type: "go", page: p });
+  switch (page) {
+    case "home":
+      return <Home s={s} go={go} />;
+    case "library":
+      return doc ? (
+        <Reader
+          key={doc.id}
+          s={s}
+          id={doc.id}
+          autoplay={doc.autoplay}
+          onBack={() => dispatch({ type: "open-doc", doc: null })}
+          onExport={(text, name) => dispatch({ type: "export", open: { text, name } })}
+        />
+      ) : (
+        <LibraryPage s={s} onOpen={(id, autoplay) => dispatch({ type: "open-doc", doc: { id, autoplay } })} />
+      );
+    case "voices":
+      return <Voices s={s} />;
+    case "engines":
+      return <Engines s={s} />;
+    case "browser":
+      return <BrowserPage s={s} />;
+    case "settings":
+      return <Settings s={s} sub={sub} />;
+    default: {
+      const unreachable: never = page;
+      return unreachable;
+    }
+  }
+}
 
-  const go = useCallback(
-    (page: Page, sub?: SettingsSub) => {
-      const cur = hist[at]!;
-      const next: Loc = { page, sub: sub ?? (page === "settings" ? cur.sub : "general") };
-      if (cur.page === next.page && cur.sub === next.sub) return;
-      setHist([...hist.slice(0, at + 1), next]);
-      setAt(at + 1);
-    },
-    [hist, at],
-  );
-
-  const goRef = useRef(go);
-  goRef.current = go;
-  const haltRef = useRef(player.halt);
-  haltRef.current = player.halt;
+function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
+  const haltRef = useRef(halt);
+  haltRef.current = halt;
   useEffect(
     () =>
       api.onUi((e: UiEvent) => {
-        if (e.type === "nav") goRef.current(e.page, e.sub);
-        else if (e.type === "confirm-quit") setQuit(true);
-        else if (e.type === "export") setExporting({ text: e.text ?? "" });
+        if (e.type === "nav") dispatch({ type: "go", page: e.page, ...(e.sub ? { sub: e.sub } : {}) });
+        else if (e.type === "confirm-quit") dispatch({ type: "quit", open: true });
+        else if (e.type === "export") dispatch({ type: "export", open: { text: e.text ?? "" } });
         else if (e.type === "pause") haltRef.current();
       }),
-    [],
+    [dispatch],
   );
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setPal((p) => !p);
+        dispatch({ type: "toggle-palette" });
       }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, []);
+  }, [dispatch]);
+}
 
-  const run = (c: Command) => {
-    setPal(false);
-    const a = c.action;
-    if (a.type === "nav") go(a.page, a.sub);
-    else if (a.type === "new-reading") setReading("");
-    else if (a.type === "pause") player.halt();
-    else if (a.type === "copy-token") void api.copy(s.token);
-    else if (a.type === "open-logs") void api.openPath("logs");
-    else if (a.type === "read-clipboard") void api.readClipboard();
-    else if (a.type === "toggle-reading") void api.reader({ type: "toggle" });
-    else if (a.type === "export") setExporting({ text: "" });
-    else if (a.type === "check-updates") void api.updateAction("check");
-    else if (a.type === "dnd") void api.patchConfig({ doNotDisturb: !s.config.doNotDisturb });
-    else if (a.type === "install-extension") go("browser");
-    else if (a.type === "load-engine") void api.warmEngine();
-    else void player.toggle(a.voice, `Hello, this is ${c.title.replace("Preview ", "")}.`);
+/** Palette, new reading, export and quit dialogs. */
+function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; dispatch: Dispatch<ShellAction>; player: ReturnType<typeof usePreview> }) {
+  const closeReading = () => {
+    player.halt();
+    dispatch({ type: "close-reading" });
   };
+  return (
+    <>
+      {st.palette && (
+        <Palette onRun={(c) => runCommand(c, { s, dispatch, halt: player.halt, preview: (v, t) => void player.toggle(v, t) })} onClose={() => dispatch({ type: "palette", open: false })} />
+      )}
+      {st.reading !== null && (
+        <NewReading
+          s={s}
+          initial={st.reading}
+          onClose={closeReading}
+          onRead={(text) => dispatch({ type: "remember", text })}
+          onExport={(text) => {
+            closeReading();
+            dispatch({ type: "export", open: { text } });
+          }}
+        />
+      )}
+      {st.exporting && <ExportDialog s={s} open={st.exporting} onClose={() => dispatch({ type: "export", open: null })} />}
+      <QuitDialog s={s} open={st.quit} playing={!!player.playing} onClose={() => dispatch({ type: "quit", open: false })} />
+    </>
+  );
+}
 
-  const saveRecent = (text: string) => {
-    const t = text.trim().replace(/\s+/g, " ").slice(0, 80);
-    if (!t) return;
-    const next = [t, ...recent.filter((r) => r !== t)].slice(0, 5);
-    setRecent(next);
-    try {
-      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-    } catch {
-      /* private mode: recent list is just not remembered */
-    }
-  };
+function Shell({ s }: { s: AppState }) {
+  const player = usePreview(s.config.speed);
+  const [st, dispatch] = useReducer(shellReducer, undefined, () => initShell(loadRecent()));
+  const { page, sub } = currentLoc(st);
+  useShellEvents(dispatch, player.halt);
+  useEffect(() => saveRecent(st.recent), [st.recent]);
 
-  const inSettings = loc.page === "settings";
   return (
     <PreviewCtx.Provider value={player}>
       <div className="sk-app">
-        <TitleBar s={s} canBack={at > 0} canFwd={at < hist.length - 1} onBack={() => setAt(at - 1)} onFwd={() => setAt(at + 1)} onToggleSide={() => setSide(!side)} onSearch={() => setPal(true)} />
+        <TitleBar
+          s={s}
+          canBack={st.at > 0}
+          canFwd={st.at < st.hist.length - 1}
+          onBack={() => dispatch({ type: "back" })}
+          onFwd={() => dispatch({ type: "forward" })}
+          onToggleSide={() => dispatch({ type: "toggle-side" })}
+          onSearch={() => dispatch({ type: "palette", open: true })}
+        />
         <div className="sk-body">
-          <aside className="sk-side" hidden={!side}>
-            {inSettings ? (
-              <SidebarNav label="Settings">
-                <div className="sk-side__head">
-                  <IconButton name="arrow-left" label="Back" size={28} onClick={() => setAt(Math.max(0, at - 1))} />
-                  <span className="sk-side__label">Settings</span>
-                </div>
-                {SETTINGS_NAV.map((g) => (
-                  <div key={g.group} style={{ display: "contents" }}>
-                    <NavSection>{g.group}</NavSection>
-                    {g.items.map((it) => (
-                      <NavItem
-                        key={it.id}
-                        icon={it.icon}
-                        href={`#settings-${it.id}`}
-                        selected={loc.sub === it.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          go("settings", it.id);
-                        }}
-                      >
-                        {it.label}
-                      </NavItem>
-                    ))}
-                  </div>
-                ))}
-              </SidebarNav>
-            ) : (
-              <SidebarNav label="Main">
-                <Button variant="primary" iconLeft="plus" onClick={() => setReading("")}>
-                  <span className="sk-side__label sk-side__grow">New reading</span>
-                  <Kbd small className="sk-side__label">
-                    {showAccelerator("Ctrl+N", s.platform, "app").replace("+", " ")}
-                  </Kbd>
-                </Button>
-                <div style={{ height: 8 }} />
-                <NavItem
-                  icon="home"
-                  href="#home"
-                  selected={loc.page === "home"}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go("home");
-                  }}
-                >
-                  Home
-                </NavItem>
-                <NavItem
-                  icon="book"
-                  href="#library"
-                  selected={loc.page === "library"}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go("library");
-                  }}
-                >
-                  Library
-                </NavItem>
-                {NAV.slice(1).map((n) => (
-                  <NavItem
-                    key={n.page}
-                    icon={n.icon}
-                    href={`#${n.page}`}
-                    selected={loc.page === n.page}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      go(n.page);
-                    }}
-                  >
-                    {n.label}
-                  </NavItem>
-                ))}
-                <NavSection>Recent</NavSection>
-                {recent.length === 0 ? (
-                  <div className="sk-side__empty">Readings you start appear here.</div>
-                ) : (
-                  recent.map((r) => (
-                    <NavItem
-                      key={r}
-                      icon="history"
-                      href="#recent"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setReading(r);
-                      }}
-                    >
-                      {r}
-                    </NavItem>
-                  ))
-                )}
-                <div className="sk-side__spacer" />
-                <ExportPill s={s} onOpen={(jobId) => setExporting({ text: "", jobId })} />
-                <EngineCard s={s} />
-                <NavItem
-                  icon="settings"
-                  href="#settings"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go("settings", "general");
-                  }}
-                >
-                  Settings
-                </NavItem>
-              </SidebarNav>
-            )}
-          </aside>
+          <Sidebar
+            s={s}
+            hidden={!st.side}
+            page={page}
+            sub={sub}
+            recent={st.recent}
+            go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
+            onBack={() => dispatch({ type: "back" })}
+            onNewReading={(text) => dispatch({ type: "open-reading", text })}
+            onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
+          />
           <main className="sk-main">
-            {loc.page === "home" && <Home s={s} go={go} />}
-            {loc.page === "library" && <LibraryRoute s={s} onExport={(text, name) => setExporting({ text, name })} />}
-            {loc.page === "voices" && <Voices s={s} />}
-            {loc.page === "engines" && <Engines s={s} />}
-            {loc.page === "browser" && <BrowserPage s={s} />}
-            {inSettings && <Settings s={s} sub={loc.sub} />}
+            <PageView s={s} page={page} sub={sub} doc={st.doc} dispatch={dispatch} />
           </main>
         </div>
-        {pal && <Palette onRun={run} onClose={() => setPal(false)} />}
-        {reading !== null && (
-          <NewReading
-            s={s}
-            initial={reading}
-            onClose={() => {
-              player.halt();
-              setReading(null);
-            }}
-            onRead={saveRecent}
-            onExport={(text) => {
-              player.halt();
-              setReading(null);
-              setExporting({ text });
-            }}
-          />
-        )}
-        {exporting && <ExportDialog s={s} open={exporting} onClose={() => setExporting(null)} />}
-        <QuitDialog s={s} open={quit} playing={!!player.playing} onClose={() => setQuit(false)} />
+        <Overlays s={s} st={st} dispatch={dispatch} player={player} />
         <UpdatingCard s={s} />
       </div>
     </PreviewCtx.Provider>
-  );
-}
-
-function EngineCard({ s }: { s: AppState }) {
-  const v = engineView(s.health, s.serverError);
-  return (
-    <div className="sk-engcard">
-      <b>Kokoro-82M · {v.label}</b>
-      {v.hint && <span>{v.hint}</span>}
-      <span className="sk-engcard__ok">
-        <Icon name="lock" size={13} />
-        100% on this device
-      </span>
-    </div>
-  );
-}
-
-function TitleBar(p: { s: AppState; canBack: boolean; canFwd: boolean; onBack(): void; onFwd(): void; onToggleSide(): void; onSearch(): void }) {
-  const v = engineView(p.s.health, p.s.serverError);
-  return (
-    <header className="sk-title">
-      <div className="sk-title__l">
-        <IconButton name="layout-sidebar" label="Toggle sidebar" size={28} onClick={p.onToggleSide} />
-        <IconButton name="chevron-left" label="Back" size={28} disabled={!p.canBack} onClick={p.onBack} />
-        <IconButton name="chevron-right" label="Forward" size={28} disabled={!p.canFwd} onClick={p.onFwd} />
-      </div>
-      <button className="sk-search" onClick={p.onSearch} aria-label="Search readings, voices and commands">
-        <Icon name="search" size={16} />
-        <span>Search readings, voices and commands</span>
-        <Kbd small>{showAccelerator("Ctrl+K", p.s.platform, "app").replace("+", " ")}</Kbd>
-      </button>
-      <div className="sk-title__r">
-        <StatusPill data-testid="engine-pill" tone={v.tone} icon={v.spinner ? "loader-2" : v.key === "unloaded" ? "moon" : undefined}>
-          {v.label}
-          {v.hint ? ` · ${v.hint}` : ""}
-        </StatusPill>
-        <UpdatePill s={p.s} />
-        <Bell s={p.s} />
-      </div>
-    </header>
-  );
-}
-
-function Bell({ s }: { s: AppState }) {
-  const [seen, setSeen] = useState(0);
-  const newest = s.activity[0]?.id ?? 0;
-  return (
-    <span className="sk-bell">
-      <Popover
-        title="Notifications"
-        side="bottom"
-        align="end"
-        width={340}
-        onOpenChange={(o) => o && setSeen(newest)}
-        trigger={(t) => <IconButton name="bell" label="Notifications" size={28} {...t} />}
-      >
-        {s.activity.length === 0 ? (
-          <span style={{ color: "var(--text-tertiary)" }}>All caught up.</span>
-        ) : (
-          <div className="sk-activity">
-            {s.activity.map((a) => (
-              <div key={a.id}>
-                <b>{a.title}</b>
-                <span>
-                  {a.body} {new Date(a.atMs).toLocaleTimeString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Popover>
-      {newest > seen && <i className="sk-bell__dot" />}
-    </span>
-  );
-}
-
-function NewReading({ s, initial, onClose, onRead, onExport }: { s: AppState; initial: string; onClose(): void; onRead(text: string): void; onExport(text: string): void }) {
-  const [text, setText] = useState(initial);
-  const [voices, setVoices] = useState<Voice[]>([]);
-  const [voice, setVoice] = useState(s.config.voice);
-  const { playing, error, toggle } = usePlayer();
-  useEffect(() => {
-    api.voices().then(
-      (v) => setVoices(v.voices),
-      () => {},
-    );
-  }, []);
-  const on = playing === "reading";
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="New reading"
-      width={560}
-      footer={
-        <>
-          <Select size="sm" label="Voice" value={voice} onChange={setVoice} options={voices.length ? voices.map((v) => ({ value: v.id, label: v.name })) : [{ value: voice, label: voice }]} />
-          <span style={{ flex: 1 }} />
-          <Button iconLeft="download" disabled={!text.trim()} onClick={() => onExport(text)}>
-            Export audio
-          </Button>
-          <Button onClick={onClose}>Close</Button>
-          <Button
-            variant="primary"
-            iconLeft={on ? "player-stop" : "player-play"}
-            disabled={!text.trim()}
-            onClick={() => {
-              onRead(text);
-              void toggle(voice, text.trim().slice(0, 5000), "reading");
-            }}
-          >
-            {on ? "Stop" : "Read"}
-          </Button>
-        </>
-      }
-    >
-      <p className="sk-modal-text">Paste or type text. It is read on this computer; nothing is uploaded.</p>
-      <textarea className="sk-area" aria-label="Text to read" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste text here" />
-      {error && <p style={{ color: "var(--tag-red)", margin: "8px 0 0" }}>{error}</p>}
-    </Modal>
   );
 }
