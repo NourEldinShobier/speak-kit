@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Browser, type Page } from "@playwright/test";
+import { build } from "vite-plus";
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 import { serveDir } from "../scripts/serve.ts";
 
@@ -12,8 +12,7 @@ let close: () => void;
 const dark = (spec: string) => `[data-panel="dark"] [data-spec="${spec}"]`;
 
 beforeAll(async () => {
-  const r = spawnSync("pnpm", ["exec", "vp", "build", "--config", "vite.config.ts"], { cwd: root, shell: true, stdio: "ignore" });
-  expect(r.status).toBe(0);
+  await build({ configFile: resolve(root, "vite.config.ts"), logLevel: "silent" });
   const s = await serveDir(resolve(root, "out/gallery"));
   close = () => s.server.close();
   browser = await chromium.launch();

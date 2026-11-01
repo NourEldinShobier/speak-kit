@@ -3,13 +3,13 @@
  * Lumen reference PNGs in docs/lumen-components. Writes ref | mine | diff images and report.json to out/compare.
  *   pnpm exec vp run compare   (or: node scripts/compare.ts [--only <text>] [--theme dark|light] [--no-build])
  */
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import { build } from "vite-plus";
 import { serveDir } from "./serve.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,12 +21,7 @@ const only = args.includes("--only") ? opt("--only") : undefined;
 const themes = args.includes("--theme") ? [opt("--theme") as string] : ["dark", "light"];
 
 if (!args.includes("--no-build")) {
-  const r = spawnSync("pnpm", ["exec", "vp", "build", "--config", "vite.config.ts"], {
-    cwd: root,
-    shell: true,
-    stdio: "ignore",
-  });
-  if (r.status !== 0) throw new Error("gallery build failed");
+  await build({ configFile: resolve(root, "vite.config.ts"), logLevel: "silent" });
 }
 mkdirSync(OUT, { recursive: true });
 
