@@ -8,10 +8,14 @@ import { test, expect, begin, DIST } from "../support/ext";
 import { startReal } from "../support/real-server";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const VP = resolve(here, "../../node_modules/vite-plus/bin/vp");
 const RESULTS = resolve(here, "../perf-results.jsonl");
 // Measured on the shared dev machine: cold 1.76 to 1.94 s, warm 0.28 to 0.40 s (docs/perf.md); the limits leave room for its +-30% noise.
 const COLD_LIMIT = 3000;
 const WARM_LIMIT = 1000;
+// Longest main-thread task under 4x CPU throttle. Measured on the shared dev machine: popup open 52 to 214 ms (script evaluation of the popup bundle), extraction 0 ms (no task over 50 ms).
+const THROTTLED_POPUP_TASK_LIMIT = 300;
+const THROTTLED_EXTRACT_TASK_LIMIT = 100;
 const record = (name: string, value: number, unit: string, limit: string) => appendFileSync(RESULTS, JSON.stringify({ name, value: Math.round(value * 10) / 10, unit, limit }) + "\n");
 
 test.describe("performance budgets (fake engine unless noted)", () => {
@@ -72,10 +76,32 @@ test.describe("performance budgets (fake engine unless noted)", () => {
     expect(m.maxGap).toBeLessThan(120);
   });
 
+  test("extraction of 5,000 paragraphs under 4x CPU throttle: no task over 100 ms", async ({ ext, app }) => {
+    await ext.pair(app);
+    const page = await ext.open("/big");
+    await page.evaluate(() => {
+      const w = window as unknown as { __long: number[] };
+      w.__long = [];
+      new PerformanceObserver((l) => l.getEntries().forEach((e) => w.__long.push(e.duration))).observe({ type: "longtask" });
+    });
+    await (await ext.ctx.newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    const tabId = await ext.tabId(page);
+    const sentences = await ext.sw.evaluate(async (id) => {
+      const r = (await chrome.tabs.sendMessage(id, { t: "extract", mode: "page" })) as { doc?: { sentences: unknown[] } };
+      return r.doc?.sentences.length ?? 0;
+    }, tabId);
+    expect(sentences).toBe(10_001);
+    await page.waitForTimeout(500);
+    const long = await page.evaluate(() => (window as unknown as { __long: number[] }).__long);
+    const worst = Math.max(0, ...long);
+    record("extract 5,000 paragraphs, longest main-thread task under 4x CPU throttle", worst, "ms", `< ${THROTTLED_EXTRACT_TASK_LIMIT}`);
+    expect(worst).toBeLessThan(THROTTLED_EXTRACT_TASK_LIMIT);
+  });
+
   test("content script: production bundle size and injection cost", async ({ ext }) => {
     const out = mkdtempSync(join(tmpdir(), "sk-prod-"));
     try {
-      execFileSync("pnpm", ["exec", "vp", "build", "--outDir", out], { cwd: resolve(here, "../../apps/extension"), stdio: "pipe", shell: true, env: { ...process.env, SPEAKKIT_TEST: "0" } });
+      execFileSync(process.execPath, [VP, "build", "--outDir", out], { cwd: resolve(here, "../../apps/extension"), stdio: "pipe", env: { ...process.env, SPEAKKIT_TEST: "0" } });
       const buf = readFileSync(join(out, "content.js"));
       const gz = gzipSync(buf).length;
       record("content.js production size", buf.length / 1024, "KB", "< 120");
@@ -116,6 +142,26 @@ test.describe("performance budgets (fake engine unless noted)", () => {
     times.sort((a, b) => a - b);
     record("popup open to Listen button (median of 3, includes tab creation)", times[1]!, "ms", "< 700");
     expect(times[1]!).toBeLessThan(700);
+  });
+
+  test("popup open under 4x CPU throttle: no task over 300 ms", async ({ ext, app }) => {
+    await ext.pair(app);
+    const page = await ext.open("/article");
+    const tabId = await ext.tabId(page);
+    const p = await ext.ctx.newPage();
+    await p.addInitScript(() => {
+      const w = window as unknown as { __long: number[] };
+      w.__long = [];
+      new PerformanceObserver((l) => l.getEntries().forEach((e) => w.__long.push(e.duration))).observe({ type: "longtask", buffered: true });
+    });
+    await (await ext.ctx.newCDPSession(p)).send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await p.goto(ext.url("popup", `?tab=${tabId}`));
+    await p.getByRole("button", { name: "Listen to this page" }).waitFor();
+    await p.waitForTimeout(500); // long tasks are reported a little after they end
+    const long = await p.evaluate(() => (window as unknown as { __long: number[] }).__long);
+    const worst = Math.max(0, ...long);
+    record("popup open, longest main-thread task under 4x CPU throttle", worst, "ms", `< ${THROTTLED_POPUP_TASK_LIMIT}`);
+    expect(worst).toBeLessThan(THROTTLED_POPUP_TASK_LIMIT);
   });
 
   test("offscreen memory over an accelerated 10 minute read (600 paragraph jumps)", async ({ ext, app }) => {

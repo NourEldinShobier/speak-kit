@@ -1,4 +1,4 @@
-// Builds the extension with the test hooks (SPEAKKIT_TEST=1) and runs Playwright. `--full` includes @slow tests (real model, desktop).
+// Builds the extension with the test hooks (SPEAKKIT_TEST=1) and runs Playwright. `--full` includes @slow tests (real model, desktop). `--phase=perf` runs only the perf phase (scripts/release-check.mjs).
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const code = join(here, "..");
 const args = process.argv.slice(2);
 const full = args.includes("--full");
-const rest = args.filter((a) => a !== "--full" && a !== "--no-build");
+const only = args.find((a) => a.startsWith("--phase="))?.slice("--phase=".length);
+const rest = args.filter((a) => a !== "--full" && a !== "--no-build" && !a.startsWith("--phase="));
 const env = { ...process.env, E2E_FULL: full ? "1" : "0" };
 
 const sh = (cmd, a, opts) => spawnSync(cmd, a, { stdio: "inherit", shell: process.platform === "win32", ...opts });
@@ -22,6 +23,6 @@ if (!args.includes("--no-build")) {
 }
 const pw = join(here, "node_modules/@playwright/test/cli.js");
 const run = (phase, extra = []) => spawnSync(process.execPath, [pw, "test", ...rest, ...extra], { stdio: "inherit", cwd: here, env: { ...env, E2E_PHASE: phase } });
-const main = run("main");
-const perf = rest.length || process.env.E2E_SKIP_PERF ? { status: 0 } : run("perf", ["--workers=1"]);
+const main = only === "perf" ? { status: 0 } : run("main");
+const perf = only === "main" || (only !== "perf" && (rest.length || process.env.E2E_SKIP_PERF)) ? { status: 0 } : run("perf", ["--workers=1"]);
 process.exit(main.status || perf.status || 0);
