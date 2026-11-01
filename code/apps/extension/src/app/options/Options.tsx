@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Icon, Logo, NavItem, Select, SidebarNav, type IconName } from "@speakkit/ui";
 import { ConnectionCard, useHealth } from "../../features/connection";
 import { AppearsCard } from "../../features/launcher";
-import { useSettings, useToken } from "../../features/settings";
+import { useSettings, useToken, type Settings } from "../../features/settings";
+import type { HealthResult } from "../../shared/client";
 import { PageHead } from "../../shared/ui";
 
 // Everything but General loads on demand, as one chunk: the page opens on General and most visits never leave it (size budget in scripts/budget.mjs).
@@ -23,13 +24,9 @@ const sectionFromHash = (h: string) => {
   return ids.includes(x) ? x : "general";
 };
 
-export function OptionsApp() {
+/** The section named by the URL hash; follows hash changes and sets the tab title. */
+function useSection(): string {
   const [sec, setSec] = useState(() => sectionFromHash(location.hash));
-  const { settings, saved, update, ready } = useSettings();
-  const { token, set: setToken } = useToken();
-  const { result: health, refresh } = useHealth(5000);
-  const version = typeof chrome !== "undefined" && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : "dev";
-
   useEffect(() => {
     const on = () => setSec(sectionFromHash(location.hash));
     addEventListener("hashchange", on);
@@ -38,15 +35,70 @@ export function OptionsApp() {
   useEffect(() => {
     document.title = `${NAV.find((n) => n[0] === sec)![1]} · Speak Kit`;
   }, [sec]);
+  return sec;
+}
 
-  const common = { s: settings, upd: update, saved };
+const Brand = () => (
+  <div className="op-logo">
+    <Logo size={26} />
+    <span>Speak Kit</span>
+  </div>
+);
+
+function OptionsNav({ sec }: { sec: string }) {
+  const version = typeof chrome !== "undefined" && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : "dev";
+  return (
+    <SidebarNav label="Settings sections" className="op-nav">
+      <Brand />
+      {NAV.map(([id, label, icon]) => (
+        <NavItem key={id} href={`#${id}`} icon={icon} selected={sec === id}>
+          {label}
+        </NavItem>
+      ))}
+      <div className="sk-grow" />
+      <div className="op-autosave">
+        <Icon name="circle-check" size={14} />
+        Changes save automatically
+      </div>
+      <div className="op-ver">Speak Kit extension {version}</div>
+    </SidebarNav>
+  );
+}
+
+interface GeneralProps {
+  settings: Settings;
+  update: (fn: (s: Settings) => Settings) => void;
+  saved: boolean;
+  health: HealthResult | null;
+  refresh: () => Promise<HealthResult>;
+  token: string;
+  setToken: (t: string) => void;
+}
+
+function General({ settings, update, saved, health, refresh, token, setToken }: GeneralProps) {
+  return (
+    <>
+      <PageHead title="General" desc="How the extension talks to the Speak Kit desktop app and where it shows up." />
+      <ConnectionCard s={settings} upd={update} health={health} refresh={refresh} token={token} setToken={setToken} />
+      <AppearsCard s={settings} upd={update} />
+      {saved && (
+        <span className="sk-sr" role="status">
+          Saved
+        </span>
+      )}
+    </>
+  );
+}
+
+export function OptionsApp() {
+  const sec = useSection();
+  const { settings, saved, update, ready } = useSettings();
+  const { token, set: setToken } = useToken();
+  const { result: health, refresh } = useHealth(5000);
   return (
     <div className="lm op">
       <div className="op-top">
-        <div className="op-logo">
-          <Logo size={26} />
-          <span>Speak Kit</span>
-        </div>
+        <Brand />
         <Select
           label="Section"
           value={sec}
@@ -56,39 +108,13 @@ export function OptionsApp() {
           options={NAV.map(([id, label]) => ({ value: id, label }))}
         />
       </div>
-      <SidebarNav label="Settings sections" className="op-nav">
-        <div className="op-logo">
-          <Logo size={26} />
-          <span>Speak Kit</span>
-        </div>
-        {NAV.map(([id, label, icon]) => (
-          <NavItem key={id} href={`#${id}`} icon={icon} selected={sec === id}>
-            {label}
-          </NavItem>
-        ))}
-        <div className="sk-grow" />
-        <div className="op-autosave">
-          <Icon name="circle-check" size={14} />
-          Changes save automatically
-        </div>
-        <div className="op-ver">Speak Kit extension {version}</div>
-      </SidebarNav>
+      <OptionsNav sec={sec} />
       <main className="op-main" id="main" data-section={sec} aria-busy={!ready}>
-        {sec === "general" && (
-          <>
-            <PageHead title="General" desc="How the extension talks to the Speak Kit desktop app and where it shows up." />
-            <ConnectionCard s={settings} upd={update} health={health} refresh={refresh} token={token} setToken={setToken} />
-            <AppearsCard s={settings} upd={update} />
-            {saved && (
-              <span className="sk-sr" role="status">
-                Saved
-              </span>
-            )}
-          </>
-        )}
-        {sec !== "general" && (
+        {sec === "general" ? (
+          <General settings={settings} update={update} saved={saved} health={health} refresh={refresh} token={token} setToken={setToken} />
+        ) : (
           <Suspense fallback={null}>
-            <Sections id={sec} {...common} />
+            <Sections id={sec} s={settings} upd={update} saved={saved} />
           </Suspense>
         )}
       </main>

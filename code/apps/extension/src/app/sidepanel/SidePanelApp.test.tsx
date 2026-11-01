@@ -39,7 +39,7 @@ function stubChrome() {
     runtime: {
       sendMessage: async (m: Record<string, unknown>) => {
         sent.push(m);
-        return m.t === "get-state" ? playing : m.t === "get-queue" ? snapshot : { ok: true };
+        return ({ "get-state": playing, "get-queue": snapshot } as Record<string, unknown>)[String(m.t)] ?? { ok: true };
       },
       onMessage: {
         addListener: (f: (m: unknown) => void) => listeners.push(f),
@@ -132,7 +132,7 @@ describe("SidePanelApp", () => {
     const idle = { status: "idle", sentenceIndex: 0, sentenceCount: 0, elapsedMs: 0, totalMs: 0, speed: 1.2, voice: "af_heart", queueLength: 0 };
     (globalThis as { chrome: { runtime: { sendMessage: (m: Record<string, unknown>) => Promise<unknown> } } }).chrome.runtime.sendMessage = async (m) => {
       sent.push(m);
-      return m.t === "get-state" ? idle : m.t === "get-queue" ? { items: [], outline: [], autoPlay: true } : { ok: true };
+      return ({ "get-state": idle, "get-queue": { items: [], outline: [], autoPlay: true } } as Record<string, unknown>)[String(m.t)] ?? { ok: true };
     };
     const m = await mount(<SidePanelApp />);
     await flush();
