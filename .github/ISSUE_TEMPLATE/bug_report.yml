@@ -1,0 +1,64 @@
+name: Bug report
+description: Something in Speak Kit does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Press ...
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Where does it happen
+      options: [Chrome extension, Desktop app, Both, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Speak Kit version
+      description: Settings, About in the desktop app.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 23H2
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      description: Only for extension bugs.
+      placeholder: Chrome 131
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Voice engine
+      options: [Kokoro, Chatterbox, Not sure]
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      description: Only for Chatterbox or performance problems.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Remove anything private first. Never paste your pairing token.
