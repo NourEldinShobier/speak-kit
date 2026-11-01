@@ -67,36 +67,49 @@ export function classifyProbeError(message: string): { kind: "file"; url: string
   return undefined;
 }
 
+/** Connection failures, whether the health check or the player reported them. */
+const CONNECTION_VIEW: Partial<Record<string, PopupView>> = { "app-not-running": "offline", "token-rejected": "token", "version-mismatch": "version" };
+
+const LIVE = ["preparing", "playing", "paused", "finished"] as const;
+type LiveStatus = (typeof LIVE)[number];
+const liveStatus = (p: PlayerState | null): LiveStatus | undefined => LIVE.find((s) => s === p?.status);
+
+function connectionView(i: PopupInputs, code: string | undefined): PopupView | undefined {
+  const h = i.health;
+  if (!i.hasToken) return h?.ok ? "token" : "install";
+  if (h && !h.ok) return CONNECTION_VIEW[h.error] ?? "offline";
+  return code ? CONNECTION_VIEW[code] : undefined;
+}
+
+const isPreparing = (i: PopupInputs) => i.player?.status === "preparing" || (!!i.starting && (!i.player || i.player.status === "idle"));
+const engineState = (i: PopupInputs) => (i.health?.ok ? i.health.health.engine.state : "ready");
+const isWarming = (engine: string, preparing: boolean) => engine === "loading" || engine === "downloading" || (engine === "unloaded" && preparing);
+
+function playbackView(i: PopupInputs, code: string | undefined): PopupView | undefined {
+  const engine = engineState(i);
+  const live = liveStatus(i.player);
+  const preparing = isPreparing(i);
+  if (isWarming(engine, preparing) && (!live || preparing)) return "loading-model";
+  if (preparing) return "preparing";
+  if (live) return live;
+  return engine === "missing" || engine === "error" || code === "engine-not-ready" ? "engine-missing" : undefined;
+}
+
+function pageView(i: PopupInputs, code: string | undefined): PopupView {
+  if (isPdfUrl(i.tabUrl)) return "pdf";
+  if (code === "page-unreadable" || isUnreadableUrl(i.tabUrl)) return "unreadable";
+  if (code === "file-access" || (i.tabUrl?.startsWith("file:") && !i.fileAccess)) return "fileurl";
+  return i.selection ? "selection" : "idle";
+}
+
 /**
  * One state function for the whole popup. Priority: connection problems (offline, token, version), active playback, engine
  * start-up, page problems (PDF, restricted page, file access), then idle / selection. The engine state "unloaded" is a normal resting state
  * (Wakes on play): it never produces an error view, and while a play request waits for it the popup shows loading-model.
  */
 export function deriveView(i: PopupInputs): PopupView {
-  const h = i.health;
-  const p = i.player;
-  const code = p?.status === "error" ? p.error?.code : undefined;
-
-  if (!i.hasToken) return h && h.ok ? "token" : "install";
-  if (h && !h.ok) return h.error === "token-rejected" ? "token" : h.error === "version-mismatch" ? "version" : "offline";
-  if (code === "app-not-running") return "offline";
-  if (code === "token-rejected") return "token";
-  if (code === "version-mismatch") return "version";
-
-  const engine = h && h.ok ? h.health.engine.state : "ready";
-  const playing = p && (p.status === "preparing" || p.status === "playing" || p.status === "paused" || p.status === "finished");
-  const preparing = p?.status === "preparing" || (!!i.starting && (!p || p.status === "idle"));
-  if (engine === "loading" || engine === "downloading" || (engine === "unloaded" && preparing)) {
-    if (!playing || preparing) return "loading-model";
-  }
-  if (preparing) return "preparing";
-  if (playing) return p.status as "preparing" | "playing" | "paused" | "finished";
-  if (engine === "missing" || engine === "error" || code === "engine-not-ready") return "engine-missing";
-
-  if (isPdfUrl(i.tabUrl)) return "pdf";
-  if (code === "page-unreadable" || isUnreadableUrl(i.tabUrl)) return "unreadable";
-  if (code === "file-access" || (i.tabUrl?.startsWith("file:") && !i.fileAccess)) return "fileurl";
-  return i.selection ? "selection" : "idle";
+  const code = i.player?.status === "error" ? i.player.error?.code : undefined;
+  return connectionView(i, code) ?? playbackView(i, code) ?? pageView(i, code);
 }
 
 type Tone = "ok" | "warn" | "err" | "neutral";
