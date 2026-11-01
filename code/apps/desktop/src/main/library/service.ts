@@ -3,7 +3,8 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { MAX_FILE_BYTES, type Block, type DocMeta, type Format, type ImportResult, type LibraryApi, type Progress, type Source } from "../../shared/library/contract";
 import { fetchPage } from "./fetch-url";
-import { ImportError, parseFile } from "./parse";
+import { ImportError } from "./parse";
+import { runParseJob, type ParseFn } from "./parse/job";
 import { textToBlocks, titleFromBlocks, wordCount, type Parsed } from "../../shared/library/text";
 import { LibraryStore } from "./store";
 
@@ -16,6 +17,8 @@ interface LibraryDeps {
   chooseFiles(): Promise<string[]>;
   reveal(filePath: string): void;
   now?: () => number;
+  /** Parses files and pages; the app passes one that runs in a worker thread. */
+  parse?: ParseFn;
   /** The library index could not be read and was set aside at this path; the library starts empty. */
   onRecovered?(file: string): void;
 }
@@ -29,6 +32,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
   const store = await LibraryStore.open(deps.dir);
   if (store.recovered) deps.onRecovered?.(store.recovered);
   const now = deps.now ?? Date.now;
+  const parse = deps.parse ?? runParseJob;
 
   async function add(parsed: Parsed, info: { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string }, original?: Uint8Array): Promise<ImportResult> {
     const meta: DocMeta = {
@@ -53,7 +57,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
   async function importBytes(name: string, bytes: Uint8Array, filePath?: string): Promise<ImportResult> {
     try {
       if (bytes.length > MAX_FILE_BYTES) throw new ImportError("too-large", `${name} is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
-      const { format, parsed } = await parseFile(name, bytes);
+      const { format, parsed } = await parse({ type: "file", name, bytes });
       const title = parsed.title || path.basename(name, path.extname(name));
       return await add({ ...parsed, title }, { source: "file", format, origin: path.basename(name), ...(filePath ? { path: filePath } : {}) }, bytes);
     } catch (e) {
@@ -93,7 +97,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       ),
     importUrl: async (url) => {
       try {
-        const page = await fetchPage(url, deps.fetch);
+        const page = await fetchPage(url, deps.fetch, parse);
         return await add(page, { source: "url", format: "url", origin: page.host });
       } catch (e) {
         return failure(e);

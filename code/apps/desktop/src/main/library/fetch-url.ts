@@ -1,5 +1,5 @@
-import { htmlToParsed } from "./parse/html";
 import { ImportError } from "./parse";
+import { runParseJob, type ParseFn } from "./parse/job";
 import { isNonPublicError, publicFetch } from "./public-fetch";
 import { textToBlocks, type Parsed } from "../../shared/library/text";
 
@@ -43,7 +43,7 @@ function parseWebAddress(raw: string): URL {
 }
 
 /** Fetch a page and extract the article (Readability). Failures say what happened in plain words. */
-export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetch): Promise<Parsed & { host: string }> {
+export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetch, parse: ParseFn = runParseJob): Promise<Parsed & { host: string }> {
   let url = parseWebAddress(raw);
   let res: Response;
   try {
@@ -65,7 +65,7 @@ export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetc
   const type = res.headers.get("content-type") ?? "";
   if (!/html|text\/plain/i.test(type)) throw new ImportError("unsupported", `${url.host} is not a web page (${type || "unknown type"}). Download the file and add it instead.`);
   const text = new TextDecoder().decode(await readCapped(res));
-  const parsed = /html/i.test(type) ? htmlToParsed(text, { readable: true, url: url.href }) : { title: "", blocks: textToBlocks(text) };
+  const parsed = /html/i.test(type) ? (await parse({ type: "page", html: text, url: url.href })).parsed : { title: "", blocks: textToBlocks(text) };
   if (!parsed.blocks.length) throw new ImportError("empty", `No readable text was found on ${url.host}.`);
   return { ...parsed, host: url.host.replace(/^www\./, "") };
 }

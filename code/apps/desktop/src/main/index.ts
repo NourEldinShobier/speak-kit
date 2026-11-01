@@ -166,7 +166,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       dataDir,
       window: () => mainWindow.window,
       target: () => ({ port: state.port, token: state.token }),
-      allowLocalUrls: test.allowLocalUrls,
+      allowLocalUrls: test.allowLocalUrls, distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
     state.onBattery = powerMonitor.isOnBatteryPower();
