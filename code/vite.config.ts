@@ -4,6 +4,10 @@ const boundary = (group: string[], message: string) => ({ "no-restricted-imports
 
 // Playwright specs in e2e/ run with `pnpm run e2e`, not under vitest.
 export default defineConfig({
+  // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
+  fmt: { printWidth: 200, ignorePatterns: ["**/fixtures/**", "**/spec/*.json", "pnpm-lock.yaml", "packages/ui/src/icon-data.ts", "packages/ui/src/tokens.ts"] },
+  // Extension code reads this build flag; the extension package defines it for its own tests, the root run needs it too.
+  define: { __TEST__: "false" },
   test: { exclude: ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**"] },
   lint: {
     overrides: [

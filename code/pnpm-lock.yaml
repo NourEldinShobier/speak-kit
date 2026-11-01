@@ -241,6 +241,9 @@ importers:
       tesseract.js-core:
         specifier: 7.0.0
         version: 7.0.0
+      undici:
+        specifier: 7.30.1
+        version: 7.30.1
       valibot:
         specifier: ^1.5.0
         version: 1.5.0(typescript@7.0.2)
@@ -297,6 +300,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: latest
         version: 6.1.2(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+      linkedom:
+        specifier: 0.18.14
+        version: 0.18.14
 
   e2e:
     dependencies:
@@ -387,6 +393,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.3.0(@types/react@19.3.0)
+      linkedom:
+        specifier: 0.18.14
+        version: 0.18.14
       pixelmatch:
         specifier: latest
         version: 8.0.0
@@ -7578,8 +7587,7 @@ snapshots:
 
   undici@6.29.1: {}
 
-  undici@7.30.1:
-    optional: true
+  undici@7.30.1: {}
 
   universalify@0.1.2: {}
 
