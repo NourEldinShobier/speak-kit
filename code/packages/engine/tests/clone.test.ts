@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
@@ -49,16 +49,46 @@ describe("parseWav", () => {
 });
 
 describe("ClonedVoiceStore", () => {
-  it("persists, lists and removes voices", () => {
+  it("persists, lists and deletes voices", async () => {
     const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
     const s = new ClonedVoiceStore(dir);
-    const v = s.add({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [], gender: "female" });
+    const v = await s.create({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [], gender: "female" });
     expect(v.id).toMatch(/^cb_[0-9a-f]{8}$/);
     const again = new ClonedVoiceStore(dir);
     expect(again.list().map((x) => x.name)).toEqual(["Maya"]);
     expect(again.voices()[0]).toMatchObject({ id: v.id, name: "Maya", cloned: true, lang: "en-US" });
-    expect(again.remove(v.id)).toBe(true);
-    expect(again.remove(v.id)).toBe(false);
+    expect(await again.delete(v.id)).toBe(true);
+    expect(await again.delete(v.id)).toBe(false);
+    expect(new ClonedVoiceStore(dir).list()).toEqual([]);
+  });
+
+  it("keeps every voice when adds overlap", async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    const s = new ClonedVoiceStore(dir);
+    await Promise.all(["A", "B", "C"].map((name) => s.create({ name, wav: clip(6), durationMs: 6000, checks: [] })));
+    expect(
+      new ClonedVoiceStore(dir)
+        .list()
+        .map((x) => x.name)
+        .sort(),
+    ).toEqual(["A", "B", "C"]);
+  });
+
+  it("a failed index write leaves no voice and no clip behind", async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    mkdirSync(join(dir, "index.json"), { recursive: true }); // renaming the index over a directory fails
+    const s = new ClonedVoiceStore(dir);
+    await expect(s.create({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [] })).rejects.toThrow();
+    expect(s.list()).toEqual([]);
+    expect(readdirSync(dir).filter((f) => f.endsWith(".wav"))).toEqual([]);
+  });
+
+  it("the deprecated synchronous add and remove still work", () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    const s = new ClonedVoiceStore(dir);
+    const v = s.add({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [] });
+    expect(new ClonedVoiceStore(dir).list().map((x) => x.id)).toEqual([v.id]);
+    expect(s.remove(v.id)).toBe(true);
     expect(new ClonedVoiceStore(dir).list()).toEqual([]);
   });
 });
