@@ -98,6 +98,18 @@ describe("command palette", () => {
 });
 
 describe("settings", () => {
+  it("app text is not selectable; the reader text and inputs are", async () => {
+    const l = await start({ config: DONE });
+    const sel = (css: string) => l.page.locator(css).first().evaluate((e) => getComputedStyle(e).userSelect);
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    expect(await sel("h1")).toBe("none");
+    expect(await sel(".sk-side")).toBe("none");
+    expect(await sel(".sk-search")).toBe("none");
+    await l.page.evaluate(() => document.body.insertAdjacentHTML("beforeend", '<input id="t"><div class="rd-text">x</div>'));
+    expect(await sel("#t")).toBe("text");
+    expect(await sel(".rd-text")).toBe("text");
+  });
+
   it("the Back button's icon is centred in its hover square", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();

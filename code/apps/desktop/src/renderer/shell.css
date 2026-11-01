@@ -16,6 +16,21 @@ body {
     sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  /* An app, not a page: labels, buttons and headings are not selectable. Content people copy opts back in below. */
+  user-select: none;
+  cursor: default;
+}
+input,
+textarea,
+[contenteditable="true"],
+.rd-text,
+.sk-mono,
+.sk-token__box,
+.sk-selectable,
+code,
+[data-testid="url-details"] {
+  user-select: text;
+  cursor: auto;
 }
 html[data-hidden] *,
 html[data-hidden] *::before,
