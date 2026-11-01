@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { launchEnv } from "./system/launch-env";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,7 +34,9 @@ export async function openExtensionsPage(run: (exe: string, url: string) => Prom
 const runStart = (exe: string, url: string) =>
   new Promise<number>((resolve) => {
     const p =
-      process.platform === "darwin" ? spawn("open", ["-a", MAC_APPS[exe] ?? exe, url], { stdio: "ignore" }) : spawn("cmd.exe", ["/c", "start", "", exe, url], { windowsHide: true, stdio: "ignore" });
+      process.platform === "darwin"
+        ? spawn("open", ["-a", MAC_APPS[exe] ?? exe, url], { stdio: "ignore", env: launchEnv() })
+        : spawn("cmd.exe", ["/c", "start", "", exe, url], { windowsHide: true, stdio: "ignore", env: launchEnv() });
     p.on("error", () => resolve(1));
     p.on("exit", (code) => resolve(code ?? 1));
   });

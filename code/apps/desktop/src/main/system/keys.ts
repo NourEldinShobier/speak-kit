@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { launchEnv } from "./launch-env";
 
 const VK_SHIFT = 0x10;
 const VK_CONTROL = 0x11;
@@ -14,7 +15,7 @@ const KEYUP = 2;
 export async function sendCopyKeys(): Promise<void> {
   if (process.platform === "darwin") {
     return new Promise((resolve, reject) =>
-      execFile("osascript", ["-e", 'tell application "System Events" to keystroke "c" using command down'], { timeout: 3000 }, (err) => (err ? reject(err) : resolve())),
+      execFile("osascript", ["-e", 'tell application "System Events" to keystroke "c" using command down'], { timeout: 3000, env: launchEnv() }, (err) => (err ? reject(err) : resolve())),
     );
   }
   if (process.platform !== "win32") throw new Error("Reading the selection is only available on Windows and macOS.");
