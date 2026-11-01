@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "note": "Every file in e2e/tests is in exactly one group (scripts/release-check.test.mjs checks it). Run from code/. Spec arguments after run.mjs are Playwright file filters; --full also builds the desktop app and includes the @slow tests.",
+  "groups": {
+    "extension": {
+      "description": "Chromium with the built test extension against the in-process server and the fake engine; includes hostile.spec.ts, which needs no browser.",
+      "tier": "ci",
+      "command": "pnpm run e2e",
+      "needs": ["chromium"],
+      "shardable": true,
+      "specs": [
+        "a11y.spec.ts",
+        "content.spec.ts",
+        "hostile.spec.ts",
+        "keyboard.spec.ts",
+        "lifecycle.spec.ts",
+        "modes.spec.ts",
+        "native.spec.ts",
+        "options.spec.ts",
+        "pairing.spec.ts",
+        "playback.spec.ts",
+        "popup.spec.ts",
+        "system.spec.ts",
+        "ui.spec.ts"
+      ]
+    },
+    "desktop": {
+      "description": "Electron app (@slow tests): shell, library and reader against the built desktop app.",
+      "tier": "ci",
+      "command": "node e2e/run.mjs --full desktop.spec.ts library.spec.ts reader.spec.ts",
+      "needs": ["chromium", "electron", "desktop build"],
+      "shardable": false,
+      "specs": ["desktop.spec.ts", "library.spec.ts", "reader.spec.ts"]
+    },
+    "slow": {
+      "description": "Real Kokoro model from code/.cache/models; not run on hosted runners.",
+      "tier": "dev",
+      "command": "node e2e/run.mjs --full full.spec.ts",
+      "needs": ["chromium", "kokoro model cache"],
+      "shardable": false,
+      "specs": ["full.spec.ts"]
+    },
+    "perf": {
+      "description": "Absolute budgets on a quiet machine, one worker; includes the real-model lifecycle test. Run through the release gate, which writes docs/perf-runs/<version>.json.",
+      "tier": "dev",
+      "command": "pnpm run release:check",
+      "needs": ["chromium", "kokoro model cache", "quiet machine"],
+      "shardable": false,
+      "specs": ["perf.spec.ts"]
+    }
+  }
+}
