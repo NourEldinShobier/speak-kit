@@ -128,3 +128,10 @@ These direct dependencies were in `package.json` files without a row here (refac
 | @types/chrome | `chrome.*` types for the extension (`latest` today; WP-1 pins it) |
 | @types/pngjs | types for `pngjs` used in the visual and screenshot tests |
 | radix-ui | accessible primitives underneath `@speakkit/ui` (Lumen components): dialog, popover, select, tooltip and similar; keyboard and focus behaviour is not re-implemented |
+
+## Repository hygiene (public-kit)
+| Choice | Why |
+|---|---|
+| `pnpm licenses list --prod --json` (built into pnpm) | Source of `THIRD_PARTY_NOTICES.md`, rendered by `tools/third-party-notices.mjs` (`--check` fails when the file is stale). Considered `license-checker-rseidelsohn`, `license-report` and `generate-license-file`: each adds a dependency to report what pnpm already reads from its own store, with the SPDX grouping and pnpm layout handled correctly. No new package. |
+| Contributor Covenant 2.1 text | `CODE_OF_CONDUCT.md`, copied from contributor-covenant.org; only the contact line is changed. |
+| Dependabot (`.github/dependabot.yml`) | npm in `code/` (weekly, minor and patch grouped) and GitHub Actions. |
