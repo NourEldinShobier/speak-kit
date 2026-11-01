@@ -11,10 +11,46 @@ interface VoicePopoverOptions {
   alive(el: HTMLElement): boolean;
 }
 
+type ListState = "loading" | "ready" | "empty";
+
+const NONE_TEXT: Record<ListState, string> = {
+  loading: "Loading voices from the app...",
+  empty: "Voices appear when Speak Kit is running.",
+  ready: "No voices match.",
+};
+
+/** One voice: the option and the preview button are siblings, because an option must not contain another control. */
+function voiceRow(v: VoiceInfo, sel: boolean, on: { pick: () => void; preview: (id: string) => void }): HTMLElement {
+  const opt = h(
+    "button",
+    { type: "button", class: "sk-vopt", "aria-current": sel ? "true" : undefined },
+    avatar(v.name, 28, sel ? "accent" : "purple"),
+    h("div", { class: "sk-vname" }, h("b", null, v.name), h("span", null, `${v.desc} · Quality ${v.quality}`)),
+    sel && icon("check", 16, "sk-vcheck"),
+  );
+  const row = h(
+    "div",
+    { class: `sk-vrow${sel ? " is-selected" : ""}`, role: "listitem", "data-voice": v.id },
+    opt,
+    iconButton({
+      name: "player-play",
+      label: `Preview ${v.name}`,
+      size: 28,
+      data: { sk: "voice-preview" },
+      onClick: (e) => {
+        e.stopPropagation();
+        on.preview(v.id);
+      },
+    }),
+  );
+  row.addEventListener("click", on.pick);
+  return row;
+}
+
 /** Voice popover (B16): search and a list of the voices the app offers. Nothing is bundled; the list is empty until the app answers. */
 export function voicePopover(o: VoicePopoverOptions): HTMLElement {
   let list: VoiceInfo[] = [];
-  let state: "loading" | "ready" | "empty" = "loading";
+  let state: ListState = "loading";
   const count = h("small", { class: "sk-pop-count" }, "Loading...");
   const input = h("input", { class: "lm-input__field", placeholder: "Search voices", "aria-label": "Search voices", type: "search" });
   const search = h("label", { class: "lm-input lm-input--sm" }, icon("search", 16, "lm-input__icon"), input);
@@ -24,56 +60,28 @@ export function voicePopover(o: VoicePopoverOptions): HTMLElement {
     const q = input.value.trim().toLowerCase();
     for (const v of list) {
       if (q && !`${v.name} ${v.desc}`.toLowerCase().includes(q)) continue;
-      const sel = v.id === o.current();
-      const opt = h(
-        "button",
-        { type: "button", class: "sk-vopt", "aria-current": sel ? "true" : undefined },
-        avatar(v.name, 28, sel ? "accent" : "purple"),
-        h("div", { class: "sk-vname" }, h("b", null, v.name), h("span", null, `${v.desc} · Quality ${v.quality}`)),
-        sel && icon("check", 16, "sk-vcheck"),
-      );
-      // the option and the preview button are siblings: an option must not contain another control
-      const row = h(
-        "div",
-        { class: `sk-vrow${sel ? " is-selected" : ""}`, role: "listitem", "data-voice": v.id },
-        opt,
-        iconButton({
-          name: "player-play",
-          label: `Preview ${v.name}`,
-          size: 28,
-          data: { sk: "voice-preview" },
-          onClick: (e) => {
-            e.stopPropagation();
-            o.onPreview(v.id);
+      rows.append(
+        voiceRow(v, v.id === o.current(), {
+          preview: (id) => o.onPreview(id),
+          pick: () => {
+            o.onPick(v);
+            draw();
           },
         }),
       );
-      const pick = () => {
-        o.onPick(v);
-        draw();
-      };
-      row.addEventListener("click", pick);
-      rows.append(row);
     }
-    if (!rows.childElementCount)
-      rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when Speak Kit is running." : "No voices match."));
+    if (!rows.childElementCount) rows.append(h("div", { class: "sk-vnone" }, NONE_TEXT[state]));
   };
   input.addEventListener("input", draw);
   const pop = popoverSurface("Voice", count, search, rows);
   pop.classList.add("sk-pop-voice");
   draw();
-  void o
-    .voices()
-    .then((vs) => {
-      state = vs.length ? "ready" : "empty";
-      if (vs.length) list = vs;
-      count.textContent = vs.length ? `${vs.length} voices` : "";
-      if (o.alive(pop)) draw();
-    })
-    .catch(() => {
-      state = "empty";
-      count.textContent = "";
-      if (o.alive(pop)) draw();
-    });
+  const settle = (voices: VoiceInfo[]) => {
+    state = voices.length ? "ready" : "empty";
+    if (voices.length) list = voices;
+    count.textContent = voices.length ? `${voices.length} voices` : "";
+    if (o.alive(pop)) draw();
+  };
+  void o.voices().then(settle, () => settle([]));
   return pop;
 }

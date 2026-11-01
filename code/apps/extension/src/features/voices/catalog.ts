@@ -12,7 +12,13 @@ export const langLabel = (l: Voice["lang"]) => (l === "en-US" ? "US English" : "
 export const qualityLabel = (x: Pick<Voice, "id" | "quality">) => SUB[x.id] ?? x.quality;
 export const toInfo = (v: Voice): VoiceInfo => ({ id: v.id, name: v.name, desc: langLabel(v.lang), quality: qualityLabel(v), gender: v.gender, lang: v.lang });
 
-export function filterVoices(list: Voice[], q: string, accent: AccentFilter = "any", gender: GenderFilter = "any"): Voice[] {
+interface VoiceQuery {
+  q: string;
+  accent?: AccentFilter;
+  gender?: GenderFilter;
+}
+
+export function filterVoices(list: Voice[], { q, accent = "any", gender = "any" }: VoiceQuery): Voice[] {
   const s = q.trim().toLowerCase();
   return list.filter(
     (x) =>
