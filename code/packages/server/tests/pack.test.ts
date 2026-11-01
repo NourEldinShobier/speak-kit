@@ -10,7 +10,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const dist = join(root, "dist");
 
 beforeAll(() => {
-  const r = spawnSync("pnpm", ["exec", "vp", "pack"], { cwd: root, shell: true, encoding: "utf8" });
+  // vp's own entry run by this node: no shell, and the same on Windows, where pnpm is a .cmd shim.
+  const vp = join(root, "../../node_modules/vite-plus/bin/vp");
+  const r = spawnSync(process.execPath, [vp, "pack"], { cwd: root, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`vp pack failed:\n${r.stdout}\n${r.stderr}`);
 }, 120_000);
 
