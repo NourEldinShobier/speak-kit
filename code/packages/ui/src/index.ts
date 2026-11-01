@@ -1,4 +1,6 @@
 export { Icon, Spinner, cx } from "./react/shared";
+export { ErrorBoundary } from "./react/error-boundary";
+export type { ErrorBoundaryProps } from "./react/error-boundary";
 export type { IconProps } from "./react/shared";
 export * from "./react/controls";
 export * from "./react/display";
