@@ -16,6 +16,8 @@ interface LibraryDeps {
   chooseFiles(): Promise<string[]>;
   reveal(filePath: string): void;
   now?: () => number;
+  /** The library index could not be read and was set aside at this path; the library starts empty. */
+  onRecovered?(file: string): void;
 }
 
 const failure = (e: unknown, name?: string): ImportResult => {
@@ -25,6 +27,7 @@ const failure = (e: unknown, name?: string): ImportResult => {
 
 export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
   const store = await LibraryStore.open(deps.dir);
+  if (store.recovered) deps.onRecovered?.(store.recovered);
   const now = deps.now ?? Date.now;
 
   async function add(parsed: Parsed, info: { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string }, original?: Uint8Array): Promise<ImportResult> {

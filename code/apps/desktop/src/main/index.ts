@@ -1,5 +1,5 @@
 import { app, ipcMain, Menu, nativeTheme, powerMonitor } from "electron";
-import { mkdirSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { channel, METHODS, type Activity, type AppState, type Method } from "../shared/ipc";
@@ -33,12 +33,12 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 const dataDir = app.getPath("userData");
-mkdirSync(dataDir, { recursive: true });
+await mkdir(dataDir, { recursive: true });
 const log = initLog(dataDir);
 const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? path.join(dataDir, "models");
 const logsDir = path.join(dataDir, "logs");
 
-const store = openConfig(dataDir);
+const store = await openConfig(dataDir);
 const config = store.config;
 
 const state: AppState = {
@@ -66,6 +66,10 @@ let nextActivityId = 1;
 const addActivity = (kind: Activity["kind"], title: string, body: string) => {
   state.activity = [{ id: nextActivityId++, atMs: Date.now(), kind, title, body }, ...state.activity].slice(0, 20);
 };
+
+const unreadable = (what: string, file: string) =>
+  addActivity("error", `${what} could not be read`, `Speak Kit started from defaults. The old file is kept as ${path.basename(file)} in ${path.dirname(file)}.`);
+if (store.recovered) unreadable("Settings", store.recovered);
 
 const sinks = new Set<(s: AppState) => void>();
 const serverApi = new ServerApi(
@@ -158,7 +162,13 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     const menu = appMenuTemplate(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     nativeTheme.themeSource = config.theme;
-    await setupLibrary({ dataDir, window: () => mainWindow.window, target: () => ({ port: state.port, token: state.token }), allowLocalUrls: test.allowLocalUrls });
+    await setupLibrary({
+      dataDir,
+      window: () => mainWindow.window,
+      target: () => ({ port: state.port, token: state.token }),
+      allowLocalUrls: test.allowLocalUrls,
+      onRecovered: (f) => unreadable("The library", f),
+    });
     state.onBattery = powerMonitor.isOnBatteryPower();
     const onPower = (battery: boolean) => {
       state.onBattery = battery;

@@ -1,14 +1,19 @@
 import Store from "electron-store";
+import path from "node:path";
 import { parseConfig, type Config } from "../shared/schemas";
+import { setAsideIfCorrupt } from "./set-aside";
 
 interface ConfigStore {
   config: Config;
   save(): void;
   path: string;
+  /** Where an unreadable config.json was moved to (the app then started from defaults), else null. */
+  recovered: string | null;
 }
 
-/** userData/config.json through electron-store (atomic writes), validated with valibot. SPEAKKIT_PORT overrides the stored port for this run. */
-export function openConfig(cwd: string): ConfigStore {
+/** userData/config.json through electron-store (atomic writes), validated with valibot; a file that is not JSON is set aside as config.json.bad. SPEAKKIT_PORT overrides the stored port for this run. */
+export async function openConfig(cwd: string): Promise<ConfigStore> {
+  const recovered = await setAsideIfCorrupt(path.join(cwd, "config.json"));
   const store = new Store<Record<string, unknown>>({ name: "config", cwd, clearInvalidConfig: false });
   const config = parseConfig(store.store);
   const envPort = Number(process.env.SPEAKKIT_PORT);
@@ -16,6 +21,7 @@ export function openConfig(cwd: string): ConfigStore {
   return {
     config,
     path: store.path,
+    recovered,
     save: () => {
       const keep = envPort ? { ...config, preferredPort: parseConfig(store.store).preferredPort } : config;
       store.set(keep as Record<string, unknown>);

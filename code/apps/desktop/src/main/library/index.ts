@@ -10,12 +10,14 @@ interface LibrarySetup {
   target(): { port: number; token: string };
   /** Tests only: pages on this machine may be read (the e2e web server is on loopback). */
   allowLocalUrls?: boolean;
+  onRecovered(file: string): void;
 }
 
 /** Opens the library under userData/library and registers its IPC and the speak proxy. */
-export async function setupLibrary({ dataDir, window, target, allowLocalUrls }: LibrarySetup): Promise<void> {
+export async function setupLibrary({ dataDir, window, target, allowLocalUrls, onRecovered }: LibrarySetup): Promise<void> {
   const library = await createLibrary({
     dir: path.join(dataDir, "library"),
+    onRecovered,
     readClipboard: () => clipboard.readText(),
     reveal: (p) => shell.showItemInFolder(p),
     ...(allowLocalUrls && { fetch }),

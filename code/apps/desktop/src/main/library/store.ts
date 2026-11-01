@@ -2,6 +2,7 @@ import { mkdir, readdir, rm, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
+import { setAsideIfCorrupt } from "../set-aside";
 import type { Block, DocContent, DocMeta, SearchHit } from "../../shared/library/contract";
 
 interface Index {
@@ -23,14 +24,17 @@ export class LibraryStore {
   private constructor(
     private dir: string,
     private db: Low<Index>,
+    /** Where an unreadable library.json was moved to (the library then starts empty), else null. */
+    readonly recovered: string | null,
   ) {}
 
   static async open(dir: string): Promise<LibraryStore> {
     await mkdir(path.join(dir, "docs"), { recursive: true });
+    const recovered = await setAsideIfCorrupt(path.join(dir, "library.json"));
     const db = new Low<Index>(new JSONFile<Index>(path.join(dir, "library.json")), { docs: [] });
     await db.read();
     db.data.docs ??= [];
-    const store = new LibraryStore(dir, db);
+    const store = new LibraryStore(dir, db, recovered);
     await store.gc();
     return store;
   }

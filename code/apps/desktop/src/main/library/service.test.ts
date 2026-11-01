@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -115,6 +115,20 @@ describe("importing", () => {
     expect(await lib.importUrl(`${base}/image`)).toMatchObject({ ok: false, reason: "unsupported" });
     expect(await lib.importUrl("ftp://example.com/x")).toMatchObject({ ok: false, message: "Only http and https addresses can be read." });
     expect(await lib.importUrl("http://127.0.0.1:1/")).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("Could not reach") });
+  });
+});
+
+describe("a corrupt index", () => {
+  it("is set aside as library.json.bad and the library starts empty, with one notice", async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "library.json"), '{"docs": [{"id": ');
+    const recovered: string[] = [];
+    const again = await createLibrary({ dir, readClipboard: () => "", reveal: () => {}, chooseFiles: async () => [], onRecovered: (f) => recovered.push(f) });
+    expect(await again.list()).toEqual([]);
+    expect(recovered).toEqual([path.join(dir, "library.json.bad")]);
+    expect(readFileSync(path.join(dir, "library.json.bad"), "utf8")).toBe('{"docs": [{"id": ');
+    ok(await again.importText("Still works.", "After"));
+    expect(await again.list()).toHaveLength(1);
   });
 });
 
