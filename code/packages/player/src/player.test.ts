@@ -1,7 +1,9 @@
 import { encodeFrame, type PlayerState, type ReadDoc, type SentenceStart } from "@speakkit/protocol";
 import { describe, expect, it } from "vite-plus/test";
 import type { PlayerConfig } from "./types";
-import { IDLE_CLOSE_MS, Player, type CtxLike, type PlayerDeps, type SourceLike, type StretchNode } from "./player";
+import type { CtxLike, PlayerDeps, SourceLike, StretchNode } from "./deps";
+import { IDLE_CLOSE_MS } from "./lifecycle";
+import { Player } from "./player";
 
 class MockSource implements SourceLike {
   buffer = null;
@@ -311,7 +313,8 @@ describe("transport", () => {
     player.command({ cmd: "stop" });
     expect(calls[0]!.signal.aborted).toBe(true);
     expect(ctx.sources.every((s) => s.stopped)).toBe(true);
-    expect(player.state()).toMatchObject({ status: "idle", sentenceCount: 0, docId: undefined });
+    expect(player.state()).toMatchObject({ status: "idle", sentenceCount: 0 });
+    expect(player.state().docId).toBeUndefined();
   });
 
   it("seek-sentence aborts and re-requests from the target sentence", async () => {
@@ -636,5 +639,63 @@ describe("speeds above 2x (pitch-preserving stretch)", () => {
     player.command({ cmd: "set-speed", speed: 2.6 });
     await settle();
     expect(st.registered).toHaveLength(1);
+  });
+});
+
+describe("dispose", () => {
+  // Counts the timers the player started and has not cleared yet.
+  const timerLedger = () => {
+    const live = new Set<number>();
+    let next = 0;
+    const add = () => {
+      live.add(++next);
+      return next;
+    };
+    return {
+      live,
+      deps: {
+        setInterval: add,
+        clearInterval: (id: unknown) => void live.delete(id as number),
+        setTimeout: add,
+        clearTimeout: (id: unknown) => void live.delete(id as number),
+        hold: () => {},
+      },
+    };
+  };
+
+  it("leaves no timer, request or audio context behind while paused with a model hold", async () => {
+    const t = timerLedger();
+    const { player, ctx, calls } = rig(undefined, cfg(), false, t.deps);
+    player.command({ cmd: "play", doc: doc(["A.", "B."]) });
+    await settle();
+    player.command({ cmd: "pause" });
+    expect(t.live.size).toBe(2); // the tick timer and the hold refresh
+    player.dispose();
+    expect(t.live.size).toBe(0);
+    expect(calls.every((c) => c.signal.aborted)).toBe(true);
+    expect(ctx.closed).toBe(true);
+    expect(ctx.sources.every((s) => s.stopped)).toBe(true);
+    expect(player.state().status).toBe("idle");
+  });
+
+  it("cancels the idle timer armed by stop", async () => {
+    const t = timerLedger();
+    const { player } = rig(undefined, cfg(), false, t.deps);
+    player.command({ cmd: "play", doc: doc(["A."]) });
+    await settle();
+    player.command({ cmd: "stop" });
+    expect(t.live.size).toBe(1);
+    player.dispose();
+    expect(t.live.size).toBe(0);
+  });
+
+  it("aborts a stream that is still being read", async () => {
+    const t = timerLedger();
+    const { player, calls } = rig(() => new Response(new ReadableStream<Uint8Array>({ start() {} })), cfg(), false, t.deps);
+    player.command({ cmd: "play", doc: doc(["A.", "B."]) });
+    await settle();
+    player.dispose();
+    expect(calls[0]!.signal.aborted).toBe(true);
+    expect(t.live.size).toBe(0);
   });
 });

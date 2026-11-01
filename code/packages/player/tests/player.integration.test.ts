@@ -5,7 +5,8 @@ import type { PlayerState, ReadDoc, SentenceStart } from "@speakkit/protocol";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { FakeEngine, type FakeEngineOptions } from "../../engine/src/fake";
 import { createServer, type SpeakKitServer } from "../../server/src/index";
-import { Player, type CtxLike, type SourceLike } from "../src/player";
+import type { CtxLike, SourceLike } from "../src/deps";
+import { Player } from "../src/player";
 
 // Web Audio stand-in whose clock is the wall clock, so the player runs unmodified against a real server.
 class ClockCtx implements CtxLike {
@@ -55,7 +56,7 @@ async function setup(engineOpts: FakeEngineOptions = { secondsPerChar: 0.01 }, t
     engine,
     dataDir: mkdtempSync(join(tmpdir(), "speakkit-ext-")),
     port: 0,
-    token,
+    ...(token !== undefined && { token }),
   });
   await server.listen();
   running.push(server);
