@@ -14,15 +14,15 @@ describe("native window colors", () => {
   it("are the Lumen surface and text tokens for each theme", () => {
     expect([appBackground(true), appBackground(false)]).toEqual(["#191a1b", "#f3f3f6"]);
     expect([floatBackground(true), floatBackground(false)]).toEqual(["#1e1f20", "#fafafd"]);
-    expect([titleBarSymbol(true), titleBarSymbol(false)]).toEqual(["#bfbfbf", "#3b3b3b"]);
+    expect([titleBarSymbol(true), titleBarSymbol(false)]).toEqual(["#e6e6e6", "#202020"]);
   });
 
   it("match the custom properties in lumen.css", () => {
     expect(token('[data-theme="dark"]', "surface-window")).toBe(appBackground(true));
     expect(token('[data-theme="dark"]', "surface-card")).toBe(floatBackground(true));
-    expect(token('[data-theme="dark"]', "text-secondary")).toBe(titleBarSymbol(true));
+    expect(token('[data-theme="dark"]', "text-primary")).toBe(titleBarSymbol(true));
     expect(token('[data-theme="light"]', "surface-window")).toBe(appBackground(false));
     expect(token('[data-theme="light"]', "surface-card")).toBe(floatBackground(false));
-    expect(token('[data-theme="light"]', "text-secondary")).toBe(titleBarSymbol(false));
+    expect(token('[data-theme="light"]', "text-primary")).toBe(titleBarSymbol(false));
   });
 });
