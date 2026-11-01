@@ -14,6 +14,7 @@
         "src/main/index.ts",
         "src/preload/index.ts",
         "src/main/export/mp3-worker.ts",
+        "src/main/library/parse/worker.ts",
         "src/renderer/*.html",
         "src/renderer/*.tsx",
         "scripts/*.mjs",

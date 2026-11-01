@@ -18,74 +18,75 @@ Interface (`src/index.ts` header): Wire contract of Speak Kit: HTTP API types, s
 
 TtsEngine interface, Kokoro (child process), Chatterbox (Python sidecar), fake engine, text normalization.
 
-May import: `packages/protocol`. Source files: 16, stylesheets: 0.
+May import: `packages/protocol`. Source files: 22, stylesheets: 0.
 
-Interface: `src/index.ts` has no header yet (refactor plan G13).
+Interface (`src/index.ts` header): @speakkit/engine: text-to-speech engines behind one interface. Does: Kokoro (in a child process or worker thread), Chatterbox (Python sidecar, voice cloning), a deterministic fake, the shared model lifecycle (lazy load, idle unload, crash-loop guard), text normalization and WAV helpers. Does not: serve HTTP, play audio or know about the wire protocol beyond the types in @speakkit/protocol. Area: engines.
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `(src root)` | 9 | yes |
-| `chatterbox` | 5 | no |
+| `(src root)` | 13 | yes |
+| `chatterbox` | 7 | no |
 | `text` | 1 | no |
 
 ## packages/player
 
 Gapless streaming playback core, queue, sentence splitting; shared by the extension and the desktop reader.
 
-May import: `packages/protocol`. Source files: 17, stylesheets: 0.
+May import: `packages/protocol`. Source files: 20, stylesheets: 0.
 
-Interface: `src/index.ts` has no header yet (refactor plan G13).
+Interface (`src/index.ts` header): Gapless streaming playback shared by the extension's offscreen document and the desktop reader. It requests speech from the local server, schedules it on an AudioContext and reports state and sentence starts. It does not draw UI, pick voices or start the server. @area player
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `(src root)` | 17 | yes |
+| `(src root)` | 20 | yes |
 
 ## packages/ui
 
 Lumen components (React and vanilla), tokens, icons and logo data.
 
-May import: no workspace package. Source files: 19, stylesheets: 1.
+May import: no workspace package. Source files: 25, stylesheets: 1.
 
-Interface: `src/index.ts` has no header yet (refactor plan G13).
+Interface (`src/index.ts` header): @speakkit/ui: the Lumen components for React (buttons, inputs, menus, overlays, navigation, settings rows), the icon set and ErrorBoundary. Styles are in lumen.css, the vanilla builders in ./vanilla. It holds no app state and does no I/O. Area: shared UI kit.
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
 | `(src root)` | 7 | yes |
 | `react` | 8 | no |
+| `vanilla` | 4 | no |
 
 ## packages/server
 
 Loopback HTTP server, token and Origin checks, /v1/* routes, standalone CLI.
 
-May import: `packages/protocol`, `packages/engine`. Source files: 20, stylesheets: 0.
+May import: `packages/protocol`, `packages/engine`. Source files: 21, stylesheets: 0.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `(src root)` | 11 | yes |
+| `(src root)` | 12 | yes |
 | `routes` | 5 | no |
 
 ## apps/extension
 
 Chrome MV3 extension: content script, popup, options, side panel, service worker, offscreen player.
 
-May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 88, stylesheets: 5.
+May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 100, stylesheets: 5.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
 | `app/background` | 9 | yes |
-| `app/content` | 7 | yes |
-| `app/offscreen` | 1 | no |
+| `app/content` | 14 | yes |
+| `app/offscreen` | 2 | no |
 | `app/options` | 3 | no |
 | `app/popup` | 4 | no |
 | `app/sidepanel` | 2 | no |
 | `features/connection` | 9 | yes |
 | `features/highlight` | 4 | yes |
-| `features/launcher` | 8 | yes |
-| `features/player` | 5 | yes |
+| `features/launcher` | 10 | yes |
+| `features/player` | 6 | yes |
 | `features/queue` | 3 | yes |
 | `features/reader` | 7 | yes |
 | `features/settings` | 10 | yes |
@@ -96,15 +97,15 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Electron app: main process, preload, renderer (library, reader, settings), shared contracts.
 
-May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 110, stylesheets: 9.
+May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 117, stylesheets: 9.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `main` | 27 | yes |
+| `main` | 29 | yes |
 | `main/export` | 5 | no |
-| `main/library` | 14 | yes |
+| `main/library` | 19 | yes |
 | `main/reader` | 2 | no |
 | `main/system` | 4 | no |
 | `preload` | 1 | yes |
