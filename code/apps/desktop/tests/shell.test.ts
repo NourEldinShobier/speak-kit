@@ -100,7 +100,11 @@ describe("command palette", () => {
 describe("settings", () => {
   it("app text is not selectable; the reader text and inputs are", async () => {
     const l = await start({ config: DONE });
-    const sel = (css: string) => l.page.locator(css).first().evaluate((e) => getComputedStyle(e).userSelect);
+    const sel = (css: string) =>
+      l.page
+        .locator(css)
+        .first()
+        .evaluate((e) => getComputedStyle(e).userSelect);
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     expect(await sel("h1")).toBe("none");
     expect(await sel(".sk-side")).toBe("none");
