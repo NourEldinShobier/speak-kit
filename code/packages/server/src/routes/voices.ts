@@ -8,7 +8,7 @@ export const voiceIds = (engines: EngineRegistry) => new Set(engines.active.voic
 
 const UNUSABLE = new Set(["missing", "unavailable", "installing"]);
 
-function cloneVoice(engines: EngineRegistry, body: ReturnType<typeof parseClone>) {
+async function cloneVoice(engines: EngineRegistry, body: ReturnType<typeof parseClone>) {
   const cloner = engines.cloner();
   const st = cloner?.status();
   if (!cloner?.clones || !st || UNUSABLE.has(st.state)) throw new EngineUnavailableError("Install Chatterbox to clone voices", cloner?.info?.().reason ?? "not-installed");
@@ -21,7 +21,7 @@ function cloneVoice(engines: EngineRegistry, body: ReturnType<typeof parseClone>
     throw e;
   }
   if (!report.ok) throw new HttpError(422, "clip-rejected", report.checks.find((c) => !c.ok)!.message).with({ extra: { checks: report.checks } });
-  return cloner.clones.add({ name: body.name, wav: bytes, durationMs: report.durationMs, checks: report.checks, ...(body.gender && { gender: body.gender }) });
+  return cloner.clones.create({ name: body.name, wav: bytes, durationMs: report.durationMs, checks: report.checks, ...(body.gender && { gender: body.gender }) });
 }
 
 /** Voice cloning (Chatterbox only). */
@@ -34,7 +34,7 @@ export const voiceRoutes: Route[] = [
       json(
         res,
         201,
-        cloneVoice(
+        await cloneVoice(
           engines,
           validated(() => parseClone(raw)),
         ),
@@ -45,8 +45,8 @@ export const voiceRoutes: Route[] = [
   {
     method: "DELETE",
     path: /^\/v1\/voices\/(cb_[0-9a-f]{8})$/,
-    handle: ({ res, params }, { engines }) => {
-      if (!engines.cloner()?.clones?.remove(params[0]!)) throw new HttpError(404, "not-found", "no such cloned voice");
+    handle: async ({ res, params }, { engines }) => {
+      if (!(await engines.cloner()?.clones?.delete(params[0]!))) throw new HttpError(404, "not-found", "no such cloned voice");
       noContent(res);
     },
   },

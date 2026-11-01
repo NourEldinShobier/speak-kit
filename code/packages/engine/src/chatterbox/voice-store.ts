@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as v from "valibot";
@@ -85,33 +85,6 @@ export class ClonedVoiceStore {
       return true;
     });
   }
-
-  /* oxlint-disable node/no-sync -- deprecated synchronous forms, kept until the server calls create() and delete() */
-  /** @deprecated Blocks the event loop while it writes the clip; use `create`. */
-  add(o: { name: string; wav: Uint8Array; durationMs: number; checks: CloneCheck[]; gender?: "female" | "male" }): ClonedVoice {
-    const id = `cb_${randomBytes(4).toString("hex")}`;
-    mkdirSync(this.#dir, { recursive: true });
-    writeFileSync(this.path(id), o.wav);
-    const e: Entry = { id, name: o.name, durationMs: o.durationMs, createdAt: Date.now(), gender: o.gender ?? "female", checks: o.checks };
-    this.#index.push(e);
-    const file = join(this.#dir, "index.json");
-    writeFileSync(file + ".tmp", JSON.stringify(this.#index));
-    renameSync(file + ".tmp", file);
-    return { id, name: e.name, durationMs: e.durationMs, createdAt: e.createdAt, checks: e.checks };
-  }
-
-  /** @deprecated Blocks the event loop; use `delete`. */
-  remove(id: string): boolean {
-    const i = this.#index.findIndex((e) => e.id === id);
-    if (i < 0) return false;
-    this.#index.splice(i, 1);
-    rmSync(this.path(id), { force: true });
-    const file = join(this.#dir, "index.json");
-    writeFileSync(file + ".tmp", JSON.stringify(this.#index));
-    renameSync(file + ".tmp", file);
-    return true;
-  }
-  /* oxlint-enable node/no-sync */
 
   list(): ClonedVoice[] {
     return this.#index.map(({ id, name, durationMs, createdAt, checks }) => ({ id, name, durationMs, createdAt, checks }));

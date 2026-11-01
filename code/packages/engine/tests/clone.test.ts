@@ -82,13 +82,4 @@ describe("ClonedVoiceStore", () => {
     expect(s.list()).toEqual([]);
     expect(readdirSync(dir).filter((f) => f.endsWith(".wav"))).toEqual([]);
   });
-
-  it("the deprecated synchronous add and remove still work", () => {
-    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
-    const s = new ClonedVoiceStore(dir);
-    const v = s.add({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [] });
-    expect(new ClonedVoiceStore(dir).list().map((x) => x.id)).toEqual([v.id]);
-    expect(s.remove(v.id)).toBe(true);
-    expect(new ClonedVoiceStore(dir).list()).toEqual([]);
-  });
 });

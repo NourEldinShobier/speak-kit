@@ -32,7 +32,7 @@ class BrokenVoices extends FakeEngine {
   }
 }
 class Cloner extends FakeEngine {
-  readonly clones = { add: () => Promise.reject(new Error("unused")), list: () => [], remove: () => false } as never;
+  readonly clones = { create: () => Promise.reject(new Error("unused")), list: () => [], delete: () => Promise.resolve(false) } as never;
 }
 
 const json = { "Content-Type": "application/json" };
