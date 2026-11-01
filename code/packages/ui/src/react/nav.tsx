@@ -71,15 +71,7 @@ export function Segmented({ items, value, onChange, label, variant = "settings",
   );
 }
 
-export function SidebarNav({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: ReactNode;
-}) {
+export function SidebarNav({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
   return (
     <nav aria-label={label} className={cx("lm-nav", className)}>
       {children}
@@ -96,11 +88,7 @@ export interface NavItemProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
 /** 32px nav item with an 18px icon. Renders an <a>; selected sets aria-current="page". */
 export function NavItem({ icon, selected, badge, className, children, ...rest }: NavItemProps) {
   return (
-    <a
-      aria-current={selected ? "page" : undefined}
-      className={cx("lm-nav__item", className)}
-      {...rest}
-    >
+    <a aria-current={selected ? "page" : undefined} className={cx("lm-nav__item", className)} {...rest}>
       {icon ? <Icon name={icon} size={18} /> : null}
       <span className="lm-nav__label">{children}</span>
       {badge !== undefined ? <Badge>{badge}</Badge> : null}
@@ -128,15 +116,9 @@ export function Stepper({ steps, current, className }: StepperProps) {
   return (
     <ol className={cx("lm-stepper", className)}>
       {steps.map((s, i) => (
-        <li
-          key={s}
-          aria-current={i === current ? "step" : undefined}
-          style={{ display: "contents" }}
-        >
+        <li key={s} aria-current={i === current ? "step" : undefined} style={{ display: "contents" }}>
           <span className={cx("lm-step", i === current && "is-active", i < current && "is-done")}>
-            <span className="lm-step__marker">
-              {i < current ? <Icon name="check" size={12} /> : i + 1}
-            </span>
+            <span className="lm-step__marker">{i < current ? <Icon name="check" size={12} /> : i + 1}</span>
             {s}
           </span>
           {i < steps.length - 1 ? <span className="lm-step__line" /> : null}

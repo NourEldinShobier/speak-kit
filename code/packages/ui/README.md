@@ -12,10 +12,14 @@ React:
 import "@speakkit/ui/lumen.css";
 import { Button, Toggle, Select, SettingsSection, SettingRow } from "@speakkit/ui";
 
-<div className="lm" data-theme="dark"> {/* "lm" is required; data-theme optional (default: prefers-color-scheme) */}
-  <Button variant="primary" iconLeft="arrow-narrow-up">Send</Button>
+<div className="lm" data-theme="dark">
+  {" "}
+  {/* "lm" is required; data-theme optional (default: prefers-color-scheme) */}
+  <Button variant="primary" iconLeft="arrow-narrow-up">
+    Send
+  </Button>
   <Toggle aria-label="Highlight words" defaultChecked onChange={(on) => {}} />
-</div>
+</div>;
 ```
 
 Vanilla (content script, Shadow DOM):
@@ -45,33 +49,33 @@ States are real CSS (`:hover`, `:active`, `:focus-visible`, `:disabled`, `[aria-
 
 ## Components
 
-| Component | Lumen source (node) |
-|---|---|
+| Component                                                                                               | Lumen source (node)                                                                            |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Button` primary / secondary / ghost / danger (+ `solid` destructive, `sm` 28, `lg` 34, loading, icons) | Web "Button" groups #18244, #18293, #18352, #18396; destructive solid from modal-dialog #16730 |
-| `IconButton` 32 / 28 / 24, `round` 36 | Icon button #18425; composer buttons #18697 |
-| `ToggleButton` | #18468 |
-| `TextInput` (icon, hint, error, `sm` 32) | Text input #18499; popover fields #11887 |
-| `Toggle` (role=switch; screen 32x18, `board` 40x20) | board #18545; screens #12382 / #12431 |
-| `Checkbox`, `Radio` | #18545 (#18561, #18564, #18569, #18574, #18577) |
-| `StatusPill` | #18611 |
-| `Citation`, `Chip`, `Badge` | #18582; chip #5039; badge #3760 |
-| `Kbd`, `Avatar`, `Favicon` | #18967 |
-| `Menu`, `MenuItem`, `MenuSeparator`, `MenuGroupLabel` | Menu item #18793; context menu #9434, #16456; select menu #17184 |
-| `Tabs` (underline) | #18850 |
-| `Segmented` (`pill`, `settings`) | #18850 |
-| `Toast`, `Banner` | #18895; banners #8957, #16234, #33289 |
-| `Tooltip`, `TooltipSurface` | #18895 (tooltip #18938) |
-| `Spinner`, `Skeleton`, `ProgressBar`, `LoadingLabel`, `StreamingCaret` | Loading #18943; progress #3668, #10083 |
-| `Slider` | not in the file (tokens only) |
-| `Select` (trigger + menu) | #12018, #17132, menu #17184 |
-| `SettingRow`, `SettingsSection` | settings page #12358, #12359, #12389 |
-| `ListRow` | #5879 |
-| `Modal`, `Dialog` | #16730, #19299, #11243 |
-| `Popover`, `PopoverSurface` | #11887 |
-| `SidebarNav`, `NavItem`, `NavSection` | app shell #3703 to #3785; settings nav #12096 |
-| `EmptyState` | #15910 to #15958 |
-| `Stepper` | #3211 |
-| `Composer`, `SourceCard` | #18697, #18654 |
+| `IconButton` 32 / 28 / 24, `round` 36                                                                   | Icon button #18425; composer buttons #18697                                                    |
+| `ToggleButton`                                                                                          | #18468                                                                                         |
+| `TextInput` (icon, hint, error, `sm` 32)                                                                | Text input #18499; popover fields #11887                                                       |
+| `Toggle` (role=switch; screen 32x18, `board` 40x20)                                                     | board #18545; screens #12382 / #12431                                                          |
+| `Checkbox`, `Radio`                                                                                     | #18545 (#18561, #18564, #18569, #18574, #18577)                                                |
+| `StatusPill`                                                                                            | #18611                                                                                         |
+| `Citation`, `Chip`, `Badge`                                                                             | #18582; chip #5039; badge #3760                                                                |
+| `Kbd`, `Avatar`, `Favicon`                                                                              | #18967                                                                                         |
+| `Menu`, `MenuItem`, `MenuSeparator`, `MenuGroupLabel`                                                   | Menu item #18793; context menu #9434, #16456; select menu #17184                               |
+| `Tabs` (underline)                                                                                      | #18850                                                                                         |
+| `Segmented` (`pill`, `settings`)                                                                        | #18850                                                                                         |
+| `Toast`, `Banner`                                                                                       | #18895; banners #8957, #16234, #33289                                                          |
+| `Tooltip`, `TooltipSurface`                                                                             | #18895 (tooltip #18938)                                                                        |
+| `Spinner`, `Skeleton`, `ProgressBar`, `LoadingLabel`, `StreamingCaret`                                  | Loading #18943; progress #3668, #10083                                                         |
+| `Slider`                                                                                                | not in the file (tokens only)                                                                  |
+| `Select` (trigger + menu)                                                                               | #12018, #17132, menu #17184                                                                    |
+| `SettingRow`, `SettingsSection`                                                                         | settings page #12358, #12359, #12389                                                           |
+| `ListRow`                                                                                               | #5879                                                                                          |
+| `Modal`, `Dialog`                                                                                       | #16730, #19299, #11243                                                                         |
+| `Popover`, `PopoverSurface`                                                                             | #11887                                                                                         |
+| `SidebarNav`, `NavItem`, `NavSection`                                                                   | app shell #3703 to #3785; settings nav #12096                                                  |
+| `EmptyState`                                                                                            | #15910 to #15958                                                                               |
+| `Stepper`                                                                                               | #3211                                                                                          |
+| `Composer`, `SourceCard`                                                                                | #18697, #18654                                                                                 |
 
 Vanilla builders (`src/vanilla.ts`): `h`, `icon`, `button`, `iconButton`, `toggle`, `pill`, `kbd`, `tooltip`. A test asserts they produce the same DOM as the React components.
 

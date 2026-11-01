@@ -1,8 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ICON_DATA, iconAttrs, type IconName } from "../icons";
 
-export const cx = (...parts: (string | false | null | undefined)[]) =>
-  parts.filter(Boolean).join(" ");
+export const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(" ");
 
 export interface IconProps {
   name: IconName;
@@ -15,14 +14,7 @@ export interface IconProps {
 export function Icon({ name, size = 16, className }: IconProps): ReactNode {
   const a = iconAttrs(name, size);
   return (
-    <svg
-      className={cx(a.class, className)}
-      style={{ "--s": size } as CSSProperties}
-      viewBox={a.viewBox}
-      aria-hidden="true"
-      focusable="false"
-      dangerouslySetInnerHTML={{ __html: ICON_DATA[name] }}
-    />
+    <svg className={cx(a.class, className)} style={{ "--s": size } as CSSProperties} viewBox={a.viewBox} aria-hidden="true" focusable="false" dangerouslySetInnerHTML={{ __html: ICON_DATA[name] }} />
   );
 }
 

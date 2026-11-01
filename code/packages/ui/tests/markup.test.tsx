@@ -24,7 +24,11 @@ describe("Button", () => {
   });
 
   test("loading swaps the leading icon for a spinning loader-2 and marks aria-busy", () => {
-    const m = html(<Button iconLeft="share" loading>Share</Button>);
+    const m = html(
+      <Button iconLeft="share" loading>
+        Share
+      </Button>,
+    );
     expect(m).toContain('aria-busy="true"');
     expect(m).toContain("lm-icon--loader-2");
     expect(m).toContain("lm-spin");
@@ -32,7 +36,13 @@ describe("Button", () => {
   });
 
   test("loading without an icon adds the spinner before the label", () => {
-    expect(html(<Button variant="danger" loading>Delete</Button>)).toMatch(/<svg[^>]*loader-2[^>]*>.*<\/svg>Delete/);
+    expect(
+      html(
+        <Button variant="danger" loading>
+          Delete
+        </Button>,
+      ),
+    ).toMatch(/<svg[^>]*loader-2[^>]*>.*<\/svg>Delete/);
   });
 
   test("defaults to type=button", () => {
@@ -71,10 +81,19 @@ describe("Checkbox / StatusPill / Select", () => {
     expect(m).toContain("lm-icon--minus");
   });
   test("status pill tone class and spinner for loader-2", () => {
-    expect(html(<StatusPill tone="blue" icon="loader-2">Indexing</StatusPill>)).toMatch(/lm-pill lm-pill--blue.*lm-spin/);
+    expect(
+      html(
+        <StatusPill tone="blue" icon="loader-2">
+          Indexing
+        </StatusPill>,
+      ),
+    ).toMatch(/lm-pill lm-pill--blue.*lm-spin/);
   });
   test("select (Radix) exposes a combobox trigger named by the label and shows the current option", () => {
-    const opts = [{ value: "a", label: "A" }, { value: "b", label: "B" }];
+    const opts = [
+      { value: "a", label: "A" },
+      { value: "b", label: "B" },
+    ];
     const closed = html(<Select label="L" options={opts} defaultValue="b" />);
     expect(closed).toContain('role="combobox"');
     expect(closed).toContain('aria-label="L"');

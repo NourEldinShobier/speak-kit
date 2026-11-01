@@ -27,12 +27,15 @@
   --accent-button: #0078d4;
   --accent-subtle: rgba(0, 120, 212, 0.4);
   --text-on-accent: #ffffff;
+  --text-on-highlight: #1e1f20;
   --tag-blue: #4a9eff;
   --tag-green: #4cc38a;
   --tag-orange: #f5a524;
   --tag-red: #f2555a;
   --tag-purple: #a77bf3;
   --tag-yellow: #f2c04e;
+  --lm-ink-sm: rgba(0, 0, 0, 0.3);
+  --lm-ink-md: rgba(0, 0, 0, 0.35);
 }
 [data-theme="light"] {
   color-scheme: light;
@@ -52,12 +55,15 @@
   --accent-button: #0069cc;
   --accent-subtle: rgba(0, 105, 204, 0.122);
   --text-on-accent: #ffffff;
+  --text-on-highlight: #1e1f20;
   --tag-blue: #0a6ed1;
   --tag-green: #1a7f4b;
   --tag-orange: #b35c00;
   --tag-red: #c62828;
   --tag-purple: #7a4cd9;
   --tag-yellow: #b8860b;
+  --lm-ink-sm: rgba(0, 0, 0, 0.06);
+  --lm-ink-md: rgba(0, 0, 0, 0.07);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]),
@@ -79,19 +85,23 @@
     --accent-button: #0069cc;
     --accent-subtle: rgba(0, 105, 204, 0.122);
     --text-on-accent: #ffffff;
+    --text-on-highlight: #1e1f20;
     --tag-blue: #0a6ed1;
     --tag-green: #1a7f4b;
     --tag-orange: #b35c00;
     --tag-red: #c62828;
     --tag-purple: #7a4cd9;
     --tag-yellow: #b8860b;
+    --lm-ink-sm: rgba(0, 0, 0, 0.06);
+    --lm-ink-md: rgba(0, 0, 0, 0.07);
   }
 }
 
 .lm {
-  /* shadows are plain black in both themes (Lumen) */
-  --lm-shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --lm-shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.45);
+  /* Floating surfaces keep their 1px stroke (--stroke-control) and add only a short, soft shadow (the Lockix scale): menus lift 1px, popovers and toasts 2px/6px, dialogs 4px/12px. */
+  --lm-shadow-menu: 0 1px 2px var(--lm-ink-sm);
+  --lm-shadow-overlay: 0 2px 6px var(--lm-ink-sm);
+  --lm-shadow-dialog: 0 4px 12px var(--lm-ink-md);
   --lm-shadow-window: 0 18px 50px rgba(0, 0, 0, 0.5);
   /* motion: instant 83ms (hover), fast 167ms decelerate (press, menus), normal 250ms, slow 333ms, exit 120ms */
   --lm-ease: cubic-bezier(0, 0, 0, 1);
@@ -123,6 +133,18 @@
   box-sizing: border-box;
 }
 
+/* Reader "paper" theme: a warm sheet that stays the same in both Lumen themes. */
+:root,
+:host {
+  --paper-bg: #f4ecd8;
+  --paper-fg: #2b2a28;
+  --paper-muted: #6b6557;
+  --paper-block: #ece1c4;
+  --paper-sentence: #e3d09b;
+  --paper-word: #f0b95a;
+  --paper-line: #d9cfb4;
+}
+
 /* ---------- icons ---------- */
 /* Icon boxes are centred by their flex parent; the stroke stays 1.5px on screen at every size
    (viewBox 24, so stroke-width = 36 / size in viewBox units). Never inline-baseline: display:block. */
@@ -137,6 +159,17 @@
   stroke-width: calc(36 / var(--s));
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+/* Transport glyphs are solid shapes with softly rounded corners (the stroke rounds the joins). */
+.lm-icon--player-play,
+.lm-icon--player-pause,
+.lm-icon--player-stop {
+  fill: currentColor;
+  stroke-width: calc(54 / var(--s));
+}
+/* The pause bars are lines (see gen-icons.mjs), so their width is the stroke. */
+.lm-icon--player-pause {
+  stroke-width: calc(66 / var(--s));
 }
 .lm-spin {
   animation: lm-spin 800ms linear infinite;
@@ -211,7 +244,11 @@
   border-radius: 8px;
   background: transparent;
   color: var(--text-secondary);
-  font: 500 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
@@ -342,15 +379,27 @@
   gap: 8px;
 }
 .lm-field__label {
-  font: 500 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-secondary);
 }
 .lm-field__error {
-  font: 400 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--tag-red);
 }
 .lm-field__hint {
-  font: 400 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-tertiary);
 }
 .lm-input {
@@ -392,7 +441,11 @@
   outline: 0;
   background: transparent;
   color: var(--text-primary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-input__field::placeholder {
   color: var(--text-tertiary);
@@ -456,7 +509,11 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
   cursor: pointer;
 }
@@ -519,15 +576,31 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--tone) 16%, transparent);
   color: var(--tone);
-  font: 500 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
 }
-.lm-pill--green { --tone: var(--tag-green); }
-.lm-pill--blue { --tone: var(--tag-blue); }
-.lm-pill--orange { --tone: var(--tag-orange); }
-.lm-pill--red { --tone: var(--tag-red); }
-.lm-pill--purple { --tone: var(--tag-purple); }
-.lm-pill--yellow { --tone: var(--tag-yellow); }
+.lm-pill--green {
+  --tone: var(--tag-green);
+}
+.lm-pill--blue {
+  --tone: var(--tag-blue);
+}
+.lm-pill--orange {
+  --tone: var(--tag-orange);
+}
+.lm-pill--red {
+  --tone: var(--tag-red);
+}
+.lm-pill--purple {
+  --tone: var(--tag-purple);
+}
+.lm-pill--yellow {
+  --tone: var(--tag-yellow);
+}
 .lm-pill--neutral {
   --tone: var(--text-secondary);
   background: var(--fill-selected);
@@ -545,7 +618,11 @@
   border-radius: 999px;
   background: var(--fill-selected);
   color: var(--text-secondary);
-  font: 500 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
@@ -580,7 +657,11 @@
   border: 1px solid var(--stroke-control);
   border-radius: 999px;
   color: var(--text-secondary);
-  font: 400 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
 }
 .lm-badge {
@@ -591,7 +672,11 @@
   border-radius: 999px;
   background: var(--accent-subtle);
   color: var(--text-primary);
-  font: 500 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 
 /* ---------- kbd, avatar, favicon ---------- */
@@ -603,8 +688,17 @@
   border: 1px solid var(--stroke-control);
   border-radius: 4px;
   color: var(--text-tertiary);
-  font: 400 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
+}
+/* a key chip on a primary button sits on the accent fill, so it follows the button's on-accent text */
+.lm-btn--primary .lm-kbd {
+  color: var(--text-on-accent);
+  border-color: color-mix(in srgb, var(--text-on-accent) 45%, transparent);
 }
 .lm-kbd--sm {
   height: 16px;
@@ -640,12 +734,24 @@
   --tone: var(--tag-green);
   font-size: calc(var(--s) * 0.58px);
 }
-.lm-tone-blue { --tone: var(--tag-blue); }
-.lm-tone-green { --tone: var(--tag-green); }
-.lm-tone-orange { --tone: var(--tag-orange); }
-.lm-tone-red { --tone: var(--tag-red); }
-.lm-tone-purple { --tone: var(--tag-purple); }
-.lm-tone-yellow { --tone: var(--tag-yellow); }
+.lm-tone-blue {
+  --tone: var(--tag-blue);
+}
+.lm-tone-green {
+  --tone: var(--tag-green);
+}
+.lm-tone-orange {
+  --tone: var(--tag-orange);
+}
+.lm-tone-red {
+  --tone: var(--tag-red);
+}
+.lm-tone-purple {
+  --tone: var(--tag-purple);
+}
+.lm-tone-yellow {
+  --tone: var(--tag-yellow);
+}
 
 /* ---------- menu ---------- */
 .lm-menu {
@@ -674,7 +780,11 @@
   border-radius: 6px;
   background: transparent;
   color: var(--text-primary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   text-align: left;
   cursor: pointer;
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
@@ -747,7 +857,11 @@
 .lm-menu__group {
   padding: 6px 10px 2px;
   color: var(--text-tertiary);
-  font: 600 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 
 /* ---------- tabs (underline) ---------- */
@@ -766,7 +880,11 @@
   border: 0;
   background: transparent;
   color: var(--text-tertiary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--lm-dur-instant) var(--lm-ease);
@@ -815,7 +933,11 @@
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
-  font: 500 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -853,7 +975,11 @@
   border-radius: 8px;
   background: var(--surface-input);
   color: var(--text-primary);
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   cursor: pointer;
   transition: border-color var(--lm-dur-instant) var(--lm-ease);
 }
@@ -899,7 +1025,11 @@
   background: var(--surface-raised);
   color: var(--text-primary);
   box-shadow: var(--lm-shadow-overlay);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-toast .lm-icon {
   color: var(--text-secondary);
@@ -917,9 +1047,15 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--tone) 12%, transparent);
   color: var(--text-primary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
-.lm-banner--warning { --tone: var(--tag-orange); }
+.lm-banner--warning {
+  --tone: var(--tag-orange);
+}
 .lm-banner--error {
   --tone: var(--tag-red);
   gap: 12px;
@@ -963,7 +1099,11 @@
   border-radius: 6px;
   background: var(--surface-raised);
   color: var(--text-primary);
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   white-space: nowrap;
 }
 .lm-tip > .lm-tooltip {
@@ -1010,7 +1150,11 @@
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-progress {
   --p: 0;
@@ -1094,7 +1238,9 @@
   height: 14px;
   border-radius: 999px;
   background: var(--text-on-accent);
-  box-shadow: 0 0 0 1px var(--stroke-control), 0 1px 3px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 1px var(--stroke-control),
+    0 1px 3px rgba(0, 0, 0, 0.35);
 }
 .lm-slider__thumb:focus-visible {
   outline: var(--lm-ring) solid var(--accent-default);
@@ -1114,12 +1260,20 @@
 }
 .lm-section__title {
   margin: 0;
-  font: 600 15px/18px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 15px/18px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
 }
 .lm-section__desc {
   margin: 0;
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-tertiary);
 }
 .lm-card {
@@ -1146,11 +1300,19 @@
   min-width: 0;
 }
 .lm-row__label {
-  font: 500 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
 }
 .lm-row__desc {
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-tertiary);
 }
 .lm-row__control {
@@ -1192,12 +1354,20 @@ button.lm-listrow {
   min-width: 0;
 }
 .lm-listrow__title {
-  font: 500 14px/17px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
 }
 .lm-listrow__sub,
 .lm-listrow__meta {
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-tertiary);
 }
 
@@ -1228,7 +1398,7 @@ button.lm-listrow {
   border-radius: 14px;
   background: var(--surface-raised);
   color: var(--text-primary);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--lm-shadow-dialog);
   animation: lm-pop var(--lm-dur-normal) var(--lm-ease);
 }
 .lm-dialog__head {
@@ -1239,11 +1409,19 @@ button.lm-listrow {
 }
 .lm-dialog__title {
   margin: 0;
-  font: 600 16px/19px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 16px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-dialog__body {
   color: var(--text-secondary);
-  font: 400 13px/19px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-dialog__foot {
   display: flex;
@@ -1261,11 +1439,19 @@ button.lm-listrow {
   background: var(--surface-raised);
   color: var(--text-primary);
   box-shadow: var(--lm-shadow-overlay);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-popover__title {
   margin: 0;
-  font: 600 14px/17px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-pop {
   position: relative;
@@ -1300,7 +1486,11 @@ button.lm-listrow {
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
-  font: 400 13px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -1326,7 +1516,11 @@ button.lm-listrow {
   justify-content: space-between;
   padding: 16px 10px 6px;
   color: var(--text-tertiary);
-  font: 600 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-nav__item--thread {
   height: 30px;
@@ -1357,13 +1551,21 @@ button.lm-listrow {
 }
 .lm-empty__title {
   margin: 0;
-  font: 600 16px/19px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 16px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
 }
 .lm-empty__body {
   max-width: 440px;
   margin: 0;
-  font: 400 13px/19px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 13px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-secondary);
 }
 .lm-empty__actions {
@@ -1383,7 +1585,11 @@ button.lm-listrow {
   align-items: center;
   gap: 8px;
   color: var(--text-tertiary);
-  font: 400 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-step__marker {
   display: flex;
@@ -1393,7 +1599,11 @@ button.lm-listrow {
   height: 20px;
   border: 1px solid var(--stroke-control);
   border-radius: 999px;
-  font: 600 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    600 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-tertiary);
 }
 .lm-step.is-active {
@@ -1435,7 +1645,11 @@ button.lm-listrow {
   outline: 0;
   background: transparent;
   color: var(--text-primary);
-  font: 400 14px/17px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-composer__field::placeholder {
   color: var(--text-tertiary);
@@ -1478,7 +1692,11 @@ button.lm-listrow {
   opacity: 0.5;
 }
 .lm-source__title {
-  font: 500 12px/16px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    500 12px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
   color: var(--text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1490,7 +1708,11 @@ button.lm-listrow {
   align-items: center;
   gap: 6px;
   color: var(--text-tertiary);
-  font: 400 11px/13px Inter, "Inter Variable", system-ui, sans-serif;
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .lm-source__meta .lm-spacer {
   flex: 1;

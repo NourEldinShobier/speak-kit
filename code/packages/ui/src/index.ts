@@ -2,6 +2,7 @@ export { Icon, Spinner, cx } from "./react/shared";
 export type { IconProps } from "./react/shared";
 export * from "./react/controls";
 export * from "./react/display";
+export * from "./react/menu";
 export * from "./react/overlay";
 export * from "./react/nav";
 export * from "./react/settings";

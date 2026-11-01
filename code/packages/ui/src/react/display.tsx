@@ -1,10 +1,5 @@
 import { Tooltip as RTooltip } from "radix-ui";
-import {
-  type CSSProperties,
-  type HTMLAttributes,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from "react";
 import type { IconName } from "../icons";
 import { Button } from "./controls";
 import { cx, Icon, Spinner } from "./shared";
@@ -38,24 +33,14 @@ export interface CitationProps extends Omit<HTMLAttributes<HTMLButtonElement>, "
 
 export function Citation({ label, count, active, file, removed, className, ...rest }: CitationProps) {
   return (
-    <button
-      type="button"
-      aria-pressed={active ?? false}
-      className={cx("lm-citation", file && "lm-citation--file", removed && "is-removed", className)}
-      {...rest}
-    >
+    <button type="button" aria-pressed={active ?? false} className={cx("lm-citation", file && "lm-citation--file", removed && "is-removed", className)} {...rest}>
       {label}
       {count ? <span className="lm-citation__count">{count}</span> : null}
     </button>
   );
 }
 
-export function Chip({
-  icon,
-  className,
-  children,
-  ...rest
-}: HTMLAttributes<HTMLSpanElement> & { icon?: IconName }) {
+export function Chip({ icon, className, children, ...rest }: HTMLAttributes<HTMLSpanElement> & { icon?: IconName }) {
   return (
     <span className={cx("lm-chip", className)} {...rest}>
       {icon ? <Icon name={icon} size={12} /> : null}
@@ -72,12 +57,7 @@ export function Badge({ className, children, ...rest }: HTMLAttributes<HTMLSpanE
   );
 }
 
-export function Kbd({
-  small,
-  className,
-  children,
-  ...rest
-}: HTMLAttributes<HTMLElement> & { small?: boolean }) {
+export function Kbd({ small, className, children, ...rest }: HTMLAttributes<HTMLElement> & { small?: boolean }) {
   return (
     <kbd className={cx("lm-kbd", small && "lm-kbd--sm", className)} {...rest}>
       {children}
@@ -108,26 +88,13 @@ export function Avatar({ name, size = 32, tone = "purple", className, ...rest }:
 export function Favicon({ name, size = 14, tone = "green", className, ...rest }: AvatarProps) {
   if (tone === "accent") tone = "blue";
   return (
-    <span
-      className={cx("lm-favicon", `lm-tone-${tone}`, className)}
-      style={{ "--s": size } as CSSProperties}
-      aria-hidden="true"
-      {...rest}
-    >
+    <span className={cx("lm-favicon", `lm-tone-${tone}`, className)} style={{ "--s": size } as CSSProperties} aria-hidden="true" {...rest}>
       {name.slice(0, 1)}
     </span>
   );
 }
 
-export function Skeleton({
-  lines = [300, 276, 180],
-  shimmer,
-  className,
-}: {
-  lines?: number[];
-  shimmer?: boolean;
-  className?: string;
-}) {
+export function Skeleton({ lines = [300, 276, 180], shimmer, className }: { lines?: number[]; shimmer?: boolean; className?: string }) {
   return (
     <div className={cx("lm-skeleton", shimmer && "is-shimmer", className)} aria-hidden="true">
       {lines.map((w, i) => (
@@ -234,10 +201,7 @@ const BANNER_ICON = { info: "info-circle", warning: "alert-triangle", error: "al
 
 export function Banner({ tone = "info", icon, title, children, action, className }: BannerProps) {
   return (
-    <div
-      role={tone === "info" ? "status" : "alert"}
-      className={cx("lm-banner", tone !== "info" && `lm-banner--${tone}`, className)}
-    >
+    <div role={tone === "info" ? "status" : "alert"} className={cx("lm-banner", tone !== "info" && `lm-banner--${tone}`, className)}>
       <Icon name={icon ?? BANNER_ICON[tone]} />
       <div className="lm-banner__body">
         {title ? <div className="lm-banner__title">{title}</div> : null}
@@ -249,17 +213,7 @@ export function Banner({ tone = "info", icon, title, children, action, className
 }
 
 /** Static tooltip surface (also used inside <Tooltip>). */
-export function TooltipSurface({
-  id,
-  text,
-  shortcut,
-  className,
-}: {
-  id?: string;
-  text: string;
-  shortcut?: string;
-  className?: string;
-}) {
+export function TooltipSurface({ id, text, shortcut, className }: { id?: string; text: string; shortcut?: string; className?: string }) {
   return (
     <span role="tooltip" id={id} className={cx("lm-tooltip", className)}>
       {text}

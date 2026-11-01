@@ -10,13 +10,12 @@ const req = createRequire(join(here, "x.js"));
 const reactIcons = dirname(realpathSync(req.resolve("@tabler/icons-react")));
 const marker = join("@tabler", "icons-react");
 const base = reactIcons.slice(0, reactIcons.indexOf(marker) + marker.length);
-const nodes = JSON.parse(
-  readFileSync(join(dirname(base), "icons", "tabler-nodes-outline.json"), "utf8"),
-);
+const nodes = JSON.parse(readFileSync(join(dirname(base), "icons", "tabler-nodes-outline.json"), "utf8"));
 
-const NAMES = `alert-circle alert-triangle adjustments arrow-forward arrow-left arrow-narrow-up arrow-right arrow-up bell bolt bookmark brand-chrome check chevron-down chevron-left chevron-right chevron-up circle-check clipboard command copy corner-down-left cpu device-desktop dots dots-vertical download external-link eye eye-off file-text folder headphones history home info-circle keyboard language layout-sidebar layout-sidebar-right link list-search loader-2 lock mail microphone microphone-off minus moon pencil player-pause player-play player-skip-back player-skip-forward player-stop plus refresh search selector settings share shield-check sparkles sun telescope trash upload user user-off volume volume-3 wallet wand world x file-import book book-2 rewind-backward-10 rewind-forward-10 power lock-off scan typography text-size list list-details arrow-down palette arrows-horizontal highlight zzz`.split(
-  /\s+/,
-);
+const NAMES =
+  `alert-circle alert-triangle adjustments arrow-forward arrow-left arrow-narrow-up arrow-right arrow-up bell bolt bookmark brand-chrome check chevron-down chevron-left chevron-right chevron-up circle-check clipboard command copy corner-down-left cpu device-desktop dots dots-vertical download external-link eye eye-off file-text folder headphones history home info-circle keyboard language layout-sidebar layout-sidebar-right link list-search loader-2 lock mail microphone microphone-off minus moon pencil player-pause player-play player-skip-back player-skip-forward player-stop plus refresh search selector settings share shield-check sparkles sun telescope trash upload user user-off volume volume-3 wallet wand world x file-import book book-2 rewind-backward-10 rewind-forward-10 power lock-off scan typography text-size list list-details arrow-down palette arrows-horizontal highlight zzz`.split(
+    /\s+/,
+  );
 
 const attrs = (a) =>
   Object.entries(a)
@@ -33,6 +32,9 @@ for (const name of NAMES) {
     .map(([tag, a]) => `<${tag} ${attrs(a)}/>`)
     .join("");
 }
+
+// Tabler pause bars are 4 units wide; with the solid fill and rounded stroke they read heavy. Slimmer bars (2 units).
+out["player-pause"] = '<path d="M8.5 5.5v13"/><path d="M15.5 5.5v13"/>';
 
 const body = Object.entries(out)
   .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},`)

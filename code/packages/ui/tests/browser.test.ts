@@ -79,6 +79,45 @@ describe("Button states (real CSS)", () => {
     await page.mouse.move(0, 0);
   });
 
+  test("play, pause and stop glyphs are filled with the current colour and keep round joins", async () => {
+    const styles = await page.evaluate(() =>
+      ["player-play", "player-pause", "player-stop"].map((n) => {
+        const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        s.setAttribute("class", `lm-icon lm-icon--${n}`);
+        s.style.color = "rgb(255, 255, 255)";
+        document.querySelector('[data-panel="dark"]')!.prepend(s);
+        const c = getComputedStyle(s);
+        const r = [c.fill, c.strokeLinejoin];
+        s.remove();
+        return r;
+      }),
+    );
+    expect(styles).toEqual(Array(3).fill(["rgb(255, 255, 255)", "round"]));
+  });
+
+  test("floating-surface shadows are the short Lockix scale, softer in light than in dark", async () => {
+    const read = (panel: string) =>
+      page.evaluate((p) => {
+        const c = getComputedStyle(document.querySelector(`[data-panel="${p}"]`)!);
+        return ["--lm-shadow-menu", "--lm-shadow-overlay", "--lm-shadow-dialog"].map((v) => c.getPropertyValue(v).trim());
+      }, panel);
+    expect(await read("dark")).toEqual(["0 1px 2px #0000004d", "0 2px 6px #0000004d", "0 4px 12px #00000059"]);
+    expect(await read("light")).toEqual(["0 1px 2px #0000000f", "0 2px 6px #0000000f", "0 4px 12px #00000012"]);
+  });
+
+  test("a key chip inside a primary button is white, not the grey tertiary text", async () => {
+    const color = await page.evaluate(() => {
+      const b = document.createElement("button");
+      b.className = "lm-btn lm-btn--primary";
+      b.innerHTML = '<span class="lm-kbd lm-kbd--sm">Ctrl N</span>';
+      document.querySelector('[data-panel="dark"]')!.prepend(b);
+      const c = getComputedStyle(b.querySelector(".lm-kbd")!).color;
+      b.remove();
+      return c;
+    });
+    expect(color).toBe("rgb(255, 255, 255)");
+  });
+
   test("primary icon button (play/pause) keeps a light icon and the primary fill on rest and hover", async () => {
     await page.evaluate(() => {
       const b = document.createElement("button");
@@ -188,12 +227,14 @@ describe("Select (Radix)", () => {
   });
 });
 
-describe("Tabs, Modal, parity", () => {
+describe("Tabs, Modal", () => {
   test("Tabs: ArrowRight selects the next tab and moves focus (roving tabindex)", async () => {
     const tabs = page.locator(`${dark("tabs-underline-default")} [role=tab]`);
     await tabs.nth(0).focus();
     await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "tab" && document.activeElement.getAttribute("aria-selected") === "true" && document.activeElement.previousElementSibling !== null);
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute("role") === "tab" && document.activeElement.getAttribute("aria-selected") === "true" && document.activeElement.previousElementSibling !== null,
+    );
     expect(await tabs.evaluateAll((els) => els.map((e) => e.getAttribute("aria-selected")))).toEqual(["false", "true", "false"]);
     expect(await tabs.nth(1).evaluate((e) => e === document.activeElement)).toBe(true);
     expect(await tabs.evaluateAll((els) => els.map((e) => e.getAttribute("tabindex")))).toEqual(["-1", "0", "-1"]);
@@ -202,7 +243,7 @@ describe("Tabs, Modal, parity", () => {
   test("Modal: focus moves in, Tab is trapped, Escape closes and focus returns", async () => {
     const opener = page.locator(`${dark("modal-live")} > button, ${dark("modal-live")} button`).first();
     await opener.click();
-    const dlg = page.locator('.lm-scrim [role=dialog]');
+    const dlg = page.locator(".lm-scrim [role=dialog]");
     await dlg.waitFor();
     expect(await dlg.evaluate((d) => d.contains(document.activeElement))).toBe(true);
     for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
@@ -213,17 +254,11 @@ describe("Tabs, Modal, parity", () => {
     expect(await opener.evaluate((e) => e === document.activeElement)).toBe(true);
   });
 
-  test("vanilla builders emit the same markup as the React components", async () => {
-    const rows = await page.evaluate(() => window.__parity());
-    expect(rows.length).toBeGreaterThan(8);
-    for (const r of rows) expect({ name: r.name, html: r.vanilla }).toEqual({ name: r.name, html: r.react });
-  });
-
   test("icons keep a 1.5px on-screen stroke at every size", async () => {
     const w = await page.evaluate(() => {
       const out: Record<string, string> = {};
-      for (const svg of document.querySelectorAll('.lm-icon')) {
-        const s = getComputedStyle(svg).getPropertyValue('--s').trim();
+      for (const svg of document.querySelectorAll(".lm-icon")) {
+        const s = getComputedStyle(svg).getPropertyValue("--s").trim();
         out[s] = getComputedStyle(svg).strokeWidth;
       }
       return out;

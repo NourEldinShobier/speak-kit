@@ -1,7 +1,7 @@
 html,
 body {
   margin: 0;
-  background: #0d0d0e;
+  background: var(--surface-editor);
   font-family: Inter, system-ui, sans-serif;
 }
 .g-head {
@@ -15,7 +15,9 @@ body {
 }
 .g-head h1 {
   margin: 0;
-  font: 600 15px/18px Inter, system-ui;
+  font:
+    600 15px/18px Inter,
+    system-ui;
 }
 .g-modes {
   display: flex;
@@ -28,7 +30,9 @@ body {
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
-  font: 500 12px Inter, system-ui;
+  font:
+    500 12px Inter,
+    system-ui;
   cursor: pointer;
 }
 .g-modes button[aria-pressed="true"] {
@@ -42,14 +46,18 @@ body {
 }
 .g-title {
   margin: 0 0 24px;
-  font: 600 24px/29px Inter, system-ui;
+  font:
+    600 24px/29px Inter,
+    system-ui;
 }
 .g-group {
   margin-bottom: 36px;
 }
 .g-group > h3 {
   margin: 0 0 14px;
-  font: 600 11px/13px Inter, system-ui;
+  font:
+    600 11px/13px Inter,
+    system-ui;
   color: var(--text-tertiary);
 }
 .g-row {
@@ -67,7 +75,9 @@ body {
 }
 .g-cell figcaption {
   margin-top: 8px;
-  font: 400 10px/12px Inter, system-ui;
+  font:
+    400 10px/12px Inter,
+    system-ui;
   color: var(--text-tertiary);
 }
 .g-inline {
@@ -80,5 +90,7 @@ body {
   justify-content: space-between;
   height: 20px;
   color: var(--text-primary);
-  font: 400 13px/16px Inter, system-ui;
+  font:
+    400 13px/16px Inter,
+    system-ui;
 }

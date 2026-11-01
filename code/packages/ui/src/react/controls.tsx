@@ -1,12 +1,5 @@
 import { Slider as RSlider, Switch as RSwitch } from "radix-ui";
-import {
-  useEffect,
-  useId,
-  useRef,
-  type ButtonHTMLAttributes,
-  type InputHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import type { IconName } from "../icons";
 import { cx, Icon } from "./shared";
 
@@ -24,32 +17,12 @@ export interface ButtonProps extends BtnAttrs {
   children?: ReactNode;
 }
 
-export function Button({
-  variant = "secondary",
-  size = "md",
-  solid,
-  iconLeft,
-  iconRight,
-  loading,
-  disabled,
-  className,
-  children,
-  type = "button",
-  ...rest
-}: ButtonProps) {
+export function Button({ variant = "secondary", size = "md", solid, iconLeft, iconRight, loading, disabled, className, children, type = "button", ...rest }: ButtonProps) {
   const lead = loading ? "loader-2" : iconLeft;
   return (
     <button
       type={type}
-      className={cx(
-        "lm-btn",
-        `lm-btn--${variant}`,
-        solid && "lm-btn--danger-solid",
-        size === "sm" && "lm-btn--sm",
-        size === "lg" && "lm-btn--lg",
-        loading && "is-loading",
-        className,
-      )}
+      className={cx("lm-btn", `lm-btn--${variant}`, solid && "lm-btn--danger-solid", size === "sm" && "lm-btn--sm", size === "lg" && "lm-btn--lg", loading && "is-loading", className)}
       disabled={disabled}
       aria-busy={loading ? "true" : undefined}
       {...rest}
@@ -71,36 +44,16 @@ export interface IconButtonProps extends BtnAttrs {
   loading?: boolean;
 }
 
-export function IconButton({
-  name,
-  label,
-  size = 32,
-  round,
-  loading,
-  className,
-  type = "button",
-  ...rest
-}: IconButtonProps) {
+export function IconButton({ name, label, size = 32, round, loading, className, type = "button", ...rest }: IconButtonProps) {
   return (
     <button
       type={type}
       aria-label={label}
       aria-busy={loading ? "true" : undefined}
-      className={cx(
-        "lm-btn lm-btn--icon",
-        size === 28 && "lm-btn--sm",
-        size === 24 && "lm-btn--xs",
-        round && "lm-btn--round",
-        loading && "is-loading",
-        className,
-      )}
+      className={cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", round && "lm-btn--round", loading && "is-loading", className)}
       {...rest}
     >
-      <Icon
-        name={loading ? "loader-2" : name}
-        size={size === 24 ? 14 : 16}
-        className={loading ? "lm-spin" : undefined}
-      />
+      <Icon name={loading ? "loader-2" : name} size={size === 24 ? 14 : 16} className={loading ? "lm-spin" : undefined} />
     </button>
   );
 }
@@ -112,21 +65,9 @@ export interface ToggleButtonProps extends BtnAttrs {
 }
 
 /** Same geometry as ghost; on = fill/selected, radius 8 (never a pill). */
-export function ToggleButton({
-  pressed,
-  iconLeft,
-  className,
-  children,
-  type = "button",
-  ...rest
-}: ToggleButtonProps) {
+export function ToggleButton({ pressed, iconLeft, className, children, type = "button", ...rest }: ToggleButtonProps) {
   return (
-    <button
-      type={type}
-      aria-pressed={pressed}
-      className={cx("lm-btn lm-btn--toggle", className)}
-      {...rest}
-    >
+    <button type={type} aria-pressed={pressed} className={cx("lm-btn lm-btn--toggle", className)} {...rest}>
       {iconLeft ? <Icon name={iconLeft} /> : null}
       {children}
     </button>
@@ -144,19 +85,7 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   frameClassName?: string;
 }
 
-export function TextInput({
-  icon,
-  size = "md",
-  label,
-  error,
-  hint,
-  frameClassName,
-  className,
-  style,
-  disabled,
-  id,
-  ...rest
-}: TextInputProps) {
+export function TextInput({ icon, size = "md", label, error, hint, frameClassName, className, style, disabled, id, ...rest }: TextInputProps) {
   const auto = useId();
   const fid = id ?? auto;
   const msg = error ?? hint;
@@ -167,18 +96,9 @@ export function TextInput({
           {label}
         </label>
       ) : null}
-      <div
-        className={cx("lm-input", size === "sm" && "lm-input--sm", error && "is-error", disabled && "is-disabled", frameClassName)}
-      >
+      <div className={cx("lm-input", size === "sm" && "lm-input--sm", error && "is-error", disabled && "is-disabled", frameClassName)}>
         {icon ? <Icon name={icon} className="lm-input__icon" /> : null}
-        <input
-          id={fid}
-          className="lm-input__field"
-          disabled={disabled}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={msg ? `${fid}-msg` : undefined}
-          {...rest}
-        />
+        <input id={fid} className="lm-input__field" disabled={disabled} aria-invalid={error ? true : undefined} aria-describedby={msg ? `${fid}-msg` : undefined} {...rest} />
       </div>
       {msg ? (
         <div id={`${fid}-msg`} className={error ? "lm-field__error" : "lm-field__hint"}>
@@ -218,14 +138,7 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   boxClassName?: string;
 }
 
-export function Checkbox({
-  label,
-  indeterminate,
-  className,
-  disabled,
-  boxClassName,
-  ...rest
-}: CheckboxProps) {
+export function Checkbox({ label, indeterminate, className, disabled, boxClassName, ...rest }: CheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = !!indeterminate;
@@ -274,19 +187,7 @@ export interface SliderProps {
 }
 
 /** Radix Slider under tokens (Lumen has no slider): 4px track, accent range, 14px white thumb. */
-export function Slider({
-  min = 0,
-  max = 100,
-  step = 1,
-  value,
-  defaultValue = 0,
-  onChange,
-  onCommit,
-  className,
-  "aria-label": label,
-  "aria-labelledby": labelledBy,
-  ...rest
-}: SliderProps) {
+export function Slider({ min = 0, max = 100, step = 1, value, defaultValue = 0, onChange, onCommit, className, "aria-label": label, "aria-labelledby": labelledBy, ...rest }: SliderProps) {
   return (
     <RSlider.Root
       className={cx("lm-slider", className)}

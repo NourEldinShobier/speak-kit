@@ -131,29 +131,13 @@ export interface ComposerProps {
 }
 
 /** 420x52 pill: plus, input, mic, send (accent while focused/typing, stop while streaming). */
-export function Composer({
-  value,
-  onChange,
-  placeholder = "Ask a follow-up",
-  streaming,
-  disabled,
-  onSend,
-  onStop,
-  className,
-}: ComposerProps) {
+export function Composer({ value, onChange, placeholder = "Ask a follow-up", streaming, disabled, onSend, onStop, className }: ComposerProps) {
   return (
     <div className={cx("lm-composer", disabled && "is-disabled", className)}>
       <button type="button" className="lm-btn lm-btn--icon lm-btn--round" aria-label="Add" disabled={disabled}>
         <Icon name="plus" />
       </button>
-      <input
-        className="lm-composer__field"
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        aria-label={placeholder}
-        onChange={(e) => onChange?.(e.currentTarget.value)}
-      />
+      <input className="lm-composer__field" value={value} placeholder={placeholder} disabled={disabled} aria-label={placeholder} onChange={(e) => onChange?.(e.currentTarget.value)} />
       <button type="button" className="lm-btn lm-btn--icon lm-btn--round" aria-label="Dictate" disabled={disabled}>
         <Icon name="microphone" />
       </button>

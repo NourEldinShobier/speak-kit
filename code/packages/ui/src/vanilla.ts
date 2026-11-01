@@ -16,21 +16,14 @@ export type Props = Record<string, unknown> & {
 };
 
 /** h("button", { class: "lm-btn", type: "button", on: { click } }, "Label") */
-export function h<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props?: Props | null,
-  ...children: Child[]
-): HTMLElementTagNameMap[K];
+export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Props | null, ...children: Child[]): HTMLElementTagNameMap[K];
 export function h(tag: string, props?: Props | null, ...children: Child[]): Element;
 export function h(tag: string, props?: Props | null, ...children: Child[]): Element {
-  const el = SVG_TAGS.has(tag)
-    ? document.createElementNS(SVG_NS, tag)
-    : document.createElement(tag);
+  const el = SVG_TAGS.has(tag) ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
   for (const [k, v] of Object.entries(props ?? {})) {
     if (v === false || v == null) continue;
     if (k === "on") {
-      for (const [ev, fn] of Object.entries(v as Record<string, EventListener>))
-        el.addEventListener(ev, fn);
+      for (const [ev, fn] of Object.entries(v as Record<string, EventListener>)) el.addEventListener(ev, fn);
     } else el.setAttribute(k, v === true ? "" : String(v));
   }
   append(el, children);
@@ -57,8 +50,7 @@ export function icon(name: IconName, size = 16, extraClass?: string): SVGSVGElem
   svg.setAttribute("focusable", a.focusable);
   for (const m of ICON_DATA[name].matchAll(/<(\w+)([^>]*)\/>/g)) {
     const child = document.createElementNS(SVG_NS, m[1] ?? "path");
-    for (const at of (m[2] ?? "").matchAll(/([\w-]+)="([^"]*)"/g))
-      child.setAttribute(at[1] ?? "", at[2] ?? "");
+    for (const at of (m[2] ?? "").matchAll(/([\w-]+)="([^"]*)"/g)) child.setAttribute(at[1] ?? "", at[2] ?? "");
     svg.append(child);
   }
   return svg;
@@ -84,13 +76,7 @@ export function button(o: ButtonOptions = {}): HTMLButtonElement {
     "button",
     {
       type: "button",
-      class: cx(
-        "lm-btn",
-        `lm-btn--${variant}`,
-        o.size === "sm" && "lm-btn--sm",
-        o.size === "lg" && "lm-btn--lg",
-        o.loading && "is-loading",
-      ),
+      class: cx("lm-btn", `lm-btn--${variant}`, o.size === "sm" && "lm-btn--sm", o.size === "lg" && "lm-btn--lg", o.loading && "is-loading"),
       disabled: o.disabled,
       "aria-busy": o.loading ? "true" : undefined,
       "aria-label": o.ariaLabel,
@@ -121,14 +107,7 @@ export function iconButton(o: IconButtonOptions): HTMLButtonElement {
     "button",
     {
       type: "button",
-      class: cx(
-        "lm-btn lm-btn--icon",
-        size === 28 && "lm-btn--sm",
-        size === 24 && "lm-btn--xs",
-        o.round && "lm-btn--round",
-        o.loading && "is-loading",
-        o.className,
-      ),
+      class: cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", o.round && "lm-btn--round", o.loading && "is-loading", o.className),
       "aria-label": o.label,
       "aria-busy": o.loading ? "true" : undefined,
       disabled: o.disabled,
@@ -177,12 +156,7 @@ export function toggle(o: ToggleOptions = {}): HTMLButtonElement {
 
 export type PillTone = "green" | "blue" | "orange" | "red" | "purple" | "yellow" | "neutral";
 export function pill(text: string, tone: PillTone = "neutral", iconName?: IconName): HTMLSpanElement {
-  return h(
-    "span",
-    { class: `lm-pill lm-pill--${tone}` },
-    iconName && icon(iconName, 12, iconName === "loader-2" ? "lm-spin" : undefined),
-    text,
-  );
+  return h("span", { class: `lm-pill lm-pill--${tone}` }, iconName && icon(iconName, 12, iconName === "loader-2" ? "lm-spin" : undefined), text);
 }
 
 export function kbd(text: string, small = false): HTMLElement {
@@ -194,22 +168,13 @@ let tipId = 0;
 export function tooltip(target: HTMLElement, text: string, shortcut?: string): HTMLSpanElement {
   const id = `lm-tip-${++tipId}`;
   target.setAttribute("aria-describedby", id);
-  return h(
-    "span",
-    { class: "lm-tip" },
-    target,
-    h("span", { role: "tooltip", id, class: "lm-tooltip" }, text, shortcut && kbd(shortcut, true)),
-  );
+  return h("span", { class: "lm-tip" }, target, h("span", { role: "tooltip", id, class: "lm-tooltip" }, text, shortcut && kbd(shortcut, true)));
 }
 
 const LOGO_BARS = [0.28, 0.5, 0.7, 0.42, 0.22];
 /** SpeakKit brand mark (same markup as <Logo>). */
 export function logo(size = 24): HTMLSpanElement {
-  return h(
-    "span",
-    { class: "lm-logo", style: `--s:${size}`, "aria-hidden": "true" },
-    ...LOGO_BARS.map((v) => h("i", { style: `--h:${v}` })),
-  );
+  return h("span", { class: "lm-logo", style: `--s:${size}`, "aria-hidden": "true" }, ...LOGO_BARS.map((v) => h("i", { style: `--h:${v}` })));
 }
 
 /** Initial in a coloured circle (same markup as <Avatar>); tone "accent" uses the brand colour. */
@@ -348,9 +313,7 @@ export function segmented(o: SegmentedOptions): SegmentedHandle {
     set(id);
     o.onChange(id);
   };
-  const btns = o.items.map((it) =>
-    h("button", { type: "button", role: "radio", class: "lm-seg__opt", "data-id": it.id, on: { click: () => choose(it.id) } }, it.label),
-  );
+  const btns = o.items.map((it) => h("button", { type: "button", role: "radio", class: "lm-seg__opt", "data-id": it.id, on: { click: () => choose(it.id) } }, it.label));
   el.append(...btns);
   el.addEventListener("keydown", (e) => {
     const root = el.getRootNode() as Document | ShadowRoot;
