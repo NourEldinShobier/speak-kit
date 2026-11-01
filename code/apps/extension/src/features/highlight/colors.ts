@@ -25,9 +25,9 @@ const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 export const swatchIndex = (list: Swatch[], hex: string) => list.findIndex((s) => eq(s.light, hex));
 
 /** Color to paint for a stored hex on a page of the given darkness. */
-export function paint(list: Swatch[], hex: string, dark: boolean, matchTheme: boolean): string {
+export function paint(list: Swatch[], hex: string, page: { dark: boolean; matchTheme: boolean }): string {
   const i = swatchIndex(list, hex);
-  return dark && matchTheme && i >= 0 ? list[i]!.dark : hex;
+  return page.dark && page.matchTheme && i >= 0 ? list[i]!.dark : hex;
 }
 
 /**

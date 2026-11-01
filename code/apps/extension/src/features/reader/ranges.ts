@@ -17,7 +17,7 @@ function pointAt(b: Block, pos: number, end: boolean): [Text, number] {
 }
 
 /** Range of text offsets [from, to) inside a block. */
-export function blockRange(doc: Document, b: Block, from: number, to: number): Range {
+export function blockRange(doc: Document, b: Block, { from, to }: { from: number; to: number }): Range {
   const r = doc.createRange();
   const [sn, so] = pointAt(b, from, false);
   const [en, eo] = pointAt(b, to, true);
@@ -28,23 +28,28 @@ export function blockRange(doc: Document, b: Block, from: number, to: number): R
 
 export function sentenceRange(doc: Document, ex: Extraction, index: number): Range | null {
   const s = ex.sentences[index];
-  return s ? blockRange(doc, ex.blocks[s.block]!, s.start, s.end) : null;
+  return s ? blockRange(doc, ex.blocks[s.block]!, { from: s.start, to: s.end }) : null;
 }
 
 /** Range of characters [from, to) inside sentence `index` (word highlight). */
-export function wordRange(doc: Document, ex: Extraction, index: number, from: number, to: number): Range | null {
-  const s = ex.sentences[index];
-  return s ? blockRange(doc, ex.blocks[s.block]!, s.start + from, s.start + to) : null;
+export function wordRange(doc: Document, ex: Extraction, at: { index: number; from: number; to: number }): Range | null {
+  const s = ex.sentences[at.index];
+  return s ? blockRange(doc, ex.blocks[s.block]!, { from: s.start + at.from, to: s.start + at.to }) : null;
 }
 
 /** Character offset in the block text for a DOM position, or -1 when the position is outside the block's text. */
 function textOffsetOf(b: Block, node: Node, offset: number): number {
-  for (const p of b.pieces) if (p.node === node && offset >= p.ns && offset <= p.ne) return p.ne - p.ns === p.te - p.ts ? p.ts + (offset - p.ns) : offset <= p.ns ? p.ts : p.te;
+  for (const p of b.pieces) {
+    if (p.node !== node || offset < p.ns || offset > p.ne) continue;
+    if (p.ne - p.ns === p.te - p.ts) return p.ts + (offset - p.ns);
+    return offset <= p.ns ? p.ts : p.te;
+  }
   return -1;
 }
 
 /** Index of the first sentence at or after a DOM position ("read from here"). With `precise`, starts at the sentence containing the point. */
-export function sentenceIndexAt(ex: Extraction, node: Node, offset = 0, precise = false): number {
+export function sentenceIndexAt(ex: Extraction, at: { node: Node; offset?: number; precise?: boolean }): number {
+  const { node, offset = 0, precise = false } = at;
   const bs = ex.blocks;
   let lo = 0;
   let hi = bs.length;

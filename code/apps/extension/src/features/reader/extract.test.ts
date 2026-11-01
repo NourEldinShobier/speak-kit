@@ -64,7 +64,7 @@ describe("article page", () => {
       const out: string[] = [];
       for (const w of ["Notes", "documents", "voices", "month."]) {
         const a = text.indexOf(w);
-        out.push(E.wordRange(document, ex, i, a, a + w.length).toString());
+        out.push(E.wordRange(document, ex, { index: i, from: a, to: a + w.length }).toString());
       }
       return out;
     });
@@ -79,10 +79,10 @@ describe("article page", () => {
       const E = (window as any).SK.extract;
       const ex = E.extract(document, { skip: { navigation: true, citations: true, code: true, urls: true, captions: false } });
       const p2 = document.getElementById("p2")!;
-      const blockStart = E.sentenceIndexAt(ex, p2, 0);
+      const blockStart = E.sentenceIndexAt(ex, { node: p2, offset: 0 });
       const inP2 = p2.firstChild as Text;
       const off = inP2.data.indexOf("Nothing leaves");
-      const precise = E.sentenceIndexAt(ex, inP2, off + 3, true);
+      const precise = E.sentenceIndexAt(ex, { node: inP2, offset: off + 3, precise: true });
       return { blockStart: ex.sentences[blockStart].text as string, precise: ex.sentences[precise].text as string };
     });
     expect(r.blockStart).toBe("The appeal is simple.");

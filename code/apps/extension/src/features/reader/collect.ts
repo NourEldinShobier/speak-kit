@@ -61,6 +61,33 @@ interface Run {
   pieces: Piece[];
 }
 
+/** A text node span: node[ns, ne). */
+interface At {
+  node: Text;
+  ns: number;
+  ne: number;
+}
+
+/** Appends a piece to a run, extending the last one when both map linearly onto the same node and touch. */
+function addPiece(c: Run, p: Piece, linear: boolean) {
+  const last = c.pieces[c.pieces.length - 1];
+  if (last && last.node === p.node && linear && last.ne - last.ns === last.te - last.ts && last.ne === p.ns) {
+    last.ne = p.ne;
+    last.te = p.te;
+  } else c.pieces.push(p);
+}
+
+/** Removes the last character of the run text and of the piece that maps it. */
+function dropLastChar(c: Run) {
+  c.text = c.text.slice(0, -1);
+  const p = c.pieces[c.pieces.length - 1]!;
+  if (p.te - p.ts <= 1) c.pieces.pop();
+  else {
+    p.te--;
+    p.ne--;
+  }
+}
+
 /** Walks the DOM and gathers the text runs worth reading: one run per block element, each mapped back to its text nodes. */
 export class Collector {
   blocks: Run[] = [];
@@ -124,7 +151,7 @@ export class Collector {
   private space() {
     const c = this.cur;
     const lp = c?.pieces[c.pieces.length - 1];
-    if (c && lp && !c.text.endsWith(" ")) this.plain(lp.node, lp.ne, lp.ne, " ", true);
+    if (c && lp && !c.text.endsWith(" ")) this.plain({ node: lp.node, ns: lp.ne, ne: lp.ne }, " ", true);
   }
 
   private open(): Run {
@@ -132,8 +159,10 @@ export class Collector {
   }
 
   /** Append `s` (already normalised) that maps onto node[ns, ne). linear when lengths match. */
-  private plain(node: Text, ns: number, ne: number, s: string, synthetic = false) {
+  private plain(at: At, s: string, synthetic = false) {
     if (!s) return;
+    const { node, ne } = at;
+    let ns = at.ns;
     const c = this.open();
     if (s[0] === " " && (c.text === "" || c.text.endsWith(" "))) {
       if (synthetic) return;
@@ -144,76 +173,67 @@ export class Collector {
     if (c.text === "" && synthetic) return;
     const ts = c.text.length;
     c.text += s;
-    const last = c.pieces[c.pieces.length - 1];
-    const linear = ne - ns === s.length;
-    if (last && last.node === node && linear && last.ne - last.ns === last.te - last.ts && last.ne === ns) {
-      last.ne = ne;
-      last.te = ts + s.length;
-    } else c.pieces.push({ node, ns, ne, ts, te: ts + s.length });
+    addPiece(c, { node, ns, ne, ts, te: ts + s.length }, ne - ns === s.length);
+  }
+
+  /** The part of `node` inside the selection as [from, to), the whole node when nothing is selected, or null when it is outside. */
+  private clip(node: Text): [number, number] | null {
+    const r = this.o.selection;
+    const len = node.data.length;
+    if (!r) return [0, len];
+    // Siblings of the start/end node inside an intersecting element, and the block a triple-click spills into, are outside the range.
+    if (node !== r.startContainer && r.comparePoint(node, 0) > 0) return null;
+    if (node !== r.endContainer && r.comparePoint(node, len) < 0) return null;
+    const a = node === r.startContainer ? r.startOffset : 0;
+    const b = node === r.endContainer ? r.endOffset : len;
+    return b > a ? [a, b] : null;
   }
 
   private text(node: Text) {
-    const r = this.o.selection;
-    let a = 0;
-    let b = node.data.length;
-    if (r) {
-      // Siblings of the start/end node inside an intersecting element, and the block a triple-click spills into, are outside the range.
-      if (node !== r.startContainer && r.comparePoint(node, 0) > 0) return;
-      if (node !== r.endContainer && r.comparePoint(node, node.data.length) < 0) return;
-      if (node === r.startContainer) a = r.startOffset;
-      if (node === r.endContainer) b = r.endOffset;
-      if (b <= a) return;
-    }
+    const span = this.clip(node);
+    if (!span) return;
+    const [a, b] = span;
     const data = a === 0 && b === node.data.length ? node.data : node.data.slice(a, b);
-    if (!NEEDS_REWRITE.test(data)) {
-      this.plain(node, a, b, data);
-      return;
-    }
-    const sk = this.o.skip;
+    if (NEEDS_REWRITE.test(data)) this.rewrite(node, data, a);
+    else this.plain({ node, ns: a, ne: b }, data);
+  }
+
+  /** Whitespace runs become one space, citations go, long URLs become "link"; the text between keeps its offsets. */
+  private rewrite(node: Text, data: string, a: number) {
     let last = 0;
     REWRITE.lastIndex = 0;
     for (let m = REWRITE.exec(data); m; m = REWRITE.exec(data)) {
-      if (m.index > last) this.plain(node, a + last, a + m.index, data.slice(last, m.index));
-      const s = a + m.index;
-      const e = s + m[0].length;
-      if (m[1] !== undefined) this.plain(node, s, e, " ");
-      else if (m[2] !== undefined) {
-        if (sk.citations && !this.sel) {
-          const c = this.cur;
-          const nx = data[m.index + m[0].length];
-          if (c && c.text.endsWith(" ") && (nx === undefined || /[.,;:!?)]/.test(nx))) {
-            c.text = c.text.slice(0, -1);
-            const p = c.pieces[c.pieces.length - 1]!;
-            if (p.te - p.ts <= 1) c.pieces.pop();
-            else {
-              p.te--;
-              p.ne--;
-            }
-          }
-        } else this.plain(node, s, e, m[0]);
-      } else if (m[3] !== undefined) this.plain(node, s, e, sk.urls ? "link" : m[0]);
+      if (m.index > last) this.plain({ node, ns: a + last, ne: a + m.index }, data.slice(last, m.index));
+      this.replacement({ node, ns: a + m.index, ne: a + m.index + m[0].length }, m, data[m.index + m[0].length]);
       last = m.index + m[0].length;
     }
-    if (last < data.length) this.plain(node, a + last, a + data.length, data.slice(last));
+    if (last < data.length) this.plain({ node, ns: a + last, ne: a + data.length }, data.slice(last));
+  }
+
+  /** `next`: the character after the match. */
+  private replacement(at: At, m: RegExpExecArray, next: string | undefined) {
+    if (m[1] !== undefined) this.plain(at, " ");
+    else if (m[2] !== undefined) this.citation(at, m[0], next);
+    else if (m[3] !== undefined) this.plain(at, this.o.skip.urls ? "link" : m[0]);
+  }
+
+  /** A citation is dropped, with the space before it when it ends a clause; in selection mode or with the filter off it stays. */
+  private citation(at: At, token: string, next: string | undefined) {
+    if (this.sel || !this.o.skip.citations) {
+      this.plain(at, token);
+      return;
+    }
+    const c = this.cur;
+    if (c && c.text.endsWith(" ") && (next === undefined || /[.,;:!?)]/.test(next))) dropLastChar(c);
   }
 
   private flush() {
     const c = this.cur;
     this.cur = null;
     if (!c) return;
-    // trim trailing space
-    while (c.text.endsWith(" ")) {
-      c.text = c.text.slice(0, -1);
-      const p = c.pieces[c.pieces.length - 1]!;
-      if (p.te - p.ts <= 1) c.pieces.pop();
-      else {
-        p.te--;
-        p.ne--;
-      }
-    }
+    while (c.text.endsWith(" ")) dropLastChar(c);
     if (!c.text || !hasWord(c.text)) return;
-    const sem = SEMANTIC.has(c.tag);
-    if (!sem) {
+    if (!SEMANTIC.has(c.tag)) {
       const min = c.tag === "td" || c.tag === "th" ? 30 : 40;
       if (c.text.length < min || c.text.indexOf(" ") < 0) return;
     }

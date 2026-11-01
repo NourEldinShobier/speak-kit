@@ -62,8 +62,8 @@ export function HighlightSection({ s, upd, saved }: SectionProps) {
   const [page, setPage] = useState<"light" | "dark">("light");
   const set = (p: Partial<Settings["highlight"]>) => upd((x) => ({ ...x, highlight: { ...x.highlight, ...p } }));
   const dark = page === "dark";
-  const sent = paint(SENTENCE_SWATCHES, H.sentenceColor, dark, H.matchTheme);
-  const word = paint(WORD_SWATCHES, H.wordColor, dark, H.matchTheme);
+  const sent = paint(SENTENCE_SWATCHES, H.sentenceColor, { dark, matchTheme: H.matchTheme });
+  const word = paint(WORD_SWATCHES, H.wordColor, { dark, matchTheme: H.matchTheme });
   const pg = PAGE[page];
   const useSent = H.mode === "sentence" || H.mode === "sentence+word";
   const useWord = H.mode === "word" || H.mode === "sentence+word";
@@ -96,16 +96,22 @@ export function HighlightSection({ s, upd, saved }: SectionProps) {
           Lately that answer has started to wobble.
         </p>
       </Card>
-      <Card title="Style" id="style-h">
-        <SettingRow
-          label="Highlight"
-          description="Sentence gives context; word helps you follow along."
-          control={<Segmented label="Highlight" value={H.mode} onChange={(mode) => set({ mode: mode as Settings["highlight"]["mode"] })} items={HL_MODES} />}
-        />
-        <SwatchRow title="Sentence color" desc="Marks the sentence being read." label="Sentence color" list={SENTENCE_SWATCHES} value={H.sentenceColor} onPick={(c) => set({ sentenceColor: c })} />
-        <SwatchRow title="Word color" desc="Marks the word being spoken." label="Word color" list={WORD_SWATCHES} value={H.wordColor} onPick={(c) => set({ wordColor: c })} />
-        <ToggleRow title="Match page theme" desc="Use dark variants on dark pages." on={H.matchTheme} onChange={(v) => set({ matchTheme: v })} />
-      </Card>
+      <StyleCard H={H} set={set} />
     </>
+  );
+}
+
+function StyleCard({ H, set }: { H: Settings["highlight"]; set(p: Partial<Settings["highlight"]>): void }) {
+  return (
+    <Card title="Style" id="style-h">
+      <SettingRow
+        label="Highlight"
+        description="Sentence gives context; word helps you follow along."
+        control={<Segmented label="Highlight" value={H.mode} onChange={(mode) => set({ mode: mode as Settings["highlight"]["mode"] })} items={HL_MODES} />}
+      />
+      <SwatchRow title="Sentence color" desc="Marks the sentence being read." label="Sentence color" list={SENTENCE_SWATCHES} value={H.sentenceColor} onPick={(c) => set({ sentenceColor: c })} />
+      <SwatchRow title="Word color" desc="Marks the word being spoken." label="Word color" list={WORD_SWATCHES} value={H.wordColor} onPick={(c) => set({ wordColor: c })} />
+      <ToggleRow title="Match page theme" desc="Use dark variants on dark pages." on={H.matchTheme} onChange={(v) => set({ matchTheme: v })} />
+    </Card>
   );
 }

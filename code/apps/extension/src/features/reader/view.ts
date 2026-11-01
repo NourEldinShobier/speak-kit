@@ -23,6 +23,15 @@ export interface ReaderDeps {
 
 const HEADING = /^h([1-6])$/;
 
+const panelRow = (label: string, control: Node, value?: HTMLElement) => h("div", { class: "sk-prow" }, h("span", { class: "sk-plabel" }, label), h("div", { class: "sk-pctl" }, control, value));
+
+/** The reader's element for a page block: headings drop below the title (h2 and lower), quotes stay, everything else is a paragraph. */
+function blockTag(tag: string): string {
+  const m = HEADING.exec(tag);
+  if (m) return `h${Math.max(2, Number(m[1]))}`;
+  return tag === "blockquote" ? "blockquote" : "p";
+}
+
 /**
  * Reader view: the extracted article laid out for reading in the Shadow DOM, with the Lumen reading panel (font, size, width, theme,
  * highlight). It renders the same Extraction that is being read, so sentence indexes line up; highlight marks the current paragraph,
@@ -95,8 +104,7 @@ export class ReaderView {
     this.spans = Array.from({ length: ex.sentences.length });
     let list: HTMLElement | null = null;
     ex.blocks.forEach((b, bi) => {
-      const m = HEADING.exec(b.tag);
-      const tag = m ? `h${Math.max(2, Number(m[1]))}` : b.tag === "blockquote" ? "blockquote" : "p";
+      const tag = blockTag(b.tag);
       const dup = !!title && bi === 0 && b.text.trim() === title.trim(); // the page heading is already the reader title
       const el = h(tag as "p", { class: `sk-reader-block${b.tag === "li" ? " is-li" : ""}${dup ? " is-dup" : ""}`, "data-block": bi });
       let pos = 0;
@@ -211,9 +219,6 @@ export class ReaderView {
 
   private panel(): HTMLElement {
     const r = this.d.settings();
-    const row = (label: string, control: Node, value?: HTMLElement) => h("div", { class: "sk-prow" }, h("span", { class: "sk-plabel" }, label), h("div", { class: "sk-pctl" }, control, value));
-    const sizeVal = h("output", { class: "sk-pval" }, `${r.size}px`);
-    const widthVal = h("output", { class: "sk-pval" }, `${r.width}px`);
     const font = segmented({
       label: "Font",
       value: r.font,
@@ -223,30 +228,6 @@ export class ReaderView {
         { id: "dyslexic", label: "Dyslexic" },
       ],
       onChange: (id) => this.change({ font: id as ReaderSettings["font"] }),
-    });
-    const size = slider({
-      min: 14,
-      max: 28,
-      step: 1,
-      value: r.size,
-      label: "Text size",
-      onInput: (v) => {
-        sizeVal.textContent = `${v}px`;
-        this.preview({ size: v });
-      },
-      onCommit: (v) => this.change({ size: v }),
-    });
-    const width = slider({
-      min: 480,
-      max: 960,
-      step: 20,
-      value: r.width,
-      label: "Page width",
-      onInput: (v) => {
-        widthVal.textContent = `${v}px`;
-        this.preview({ width: v });
-      },
-      onCommit: (v) => this.change({ width: v }),
     });
     const theme = segmented({
       label: "Theme",
@@ -259,9 +240,29 @@ export class ReaderView {
       onChange: (id) => this.change({ theme: id as ReaderSettings["theme"] }),
     });
     const hl = toggle({ checked: r.highlight, label: "Highlight sentence", onChange: (on) => this.change({ highlight: on }) });
-    const pop = popoverSurface("Reading", font.el, row("Size", size.el, sizeVal), row("Width", width.el, widthVal), theme.el, row("Highlight sentence", hl));
+    const size = this.pixelRow({ key: "size", row: "Size", label: "Text size", min: 14, max: 28, step: 1, value: r.size });
+    const width = this.pixelRow({ key: "width", row: "Width", label: "Page width", min: 480, max: 960, step: 20, value: r.width });
+    const pop = popoverSurface("Reading", font.el, size, width, theme.el, panelRow("Highlight sentence", hl));
     pop.classList.add("sk-pop-reading");
     return pop;
+  }
+
+  /** A labelled slider in px whose value is previewed while dragging and saved on release. */
+  private pixelRow(o: { key: "size" | "width"; row: string; label: string; min: number; max: number; step: number; value: number }) {
+    const out = h("output", { class: "sk-pval" }, `${o.value}px`);
+    const sl = slider({
+      min: o.min,
+      max: o.max,
+      step: o.step,
+      value: o.value,
+      label: o.label,
+      onInput: (v) => {
+        out.textContent = `${v}px`;
+        this.preview({ [o.key]: v });
+      },
+      onCommit: (v) => this.change({ [o.key]: v }),
+    });
+    return panelRow(o.row, sl.el, out);
   }
 
   private preview(patch: Partial<ReaderSettings>) {

@@ -10,10 +10,10 @@ export { blockRange, sentenceIndexAt, sentenceRange, wordRange } from "./ranges"
 
 const SEMANTIC_ROOT = "article,main,[role=main]";
 
-/** Dominant-subtree detection: score paragraphs, descend while one child holds >= 70% of the score. */
-export function findMainRoot(doc: Document): Element {
-  const body = doc.body;
-  if (!body) return doc.documentElement;
+const NOT_CONTENT = /^(NAV|ASIDE|FOOTER|HEADER)$/;
+
+/** Every ancestor of a readable paragraph scores the paragraph's weight (list items count less). */
+function scoreParagraphs(doc: Document, body: Element): Map<Element, number> {
   const scores = new Map<Element, number>();
   const ps = body.querySelectorAll("p,pre,blockquote,li");
   for (let i = 0; i < ps.length; i++) {
@@ -25,24 +25,32 @@ export function findMainRoot(doc: Document): Element {
     const s = (tag === "LI" ? 0.4 : 1) * (1 + Math.min(len / 100, 3));
     for (let a: Element | null = p.parentElement; a && a !== doc.documentElement; a = a.parentElement) scores.set(a, (scores.get(a) ?? 0) + s);
   }
-  // nav/aside/footer score is discounted: remove their contribution from ancestors by not descending into them
+  return scores;
+}
+
+/** The child of `cur` that holds at least 70% of `total` (nav, aside, footer and header never count), with its score. */
+function dominantChild(cur: Element, scores: Map<Element, number>, total: number): [Element, number] | null {
+  let best: Element | null = null;
+  let bs = 0;
+  for (let c = cur.firstElementChild; c; c = c.nextElementSibling) {
+    const s = scores.get(c) ?? 0;
+    if (s > bs && !NOT_CONTENT.test(c.tagName)) {
+      bs = s;
+      best = c;
+    }
+  }
+  return best && bs >= total * 0.7 ? [best, bs] : null;
+}
+
+/** Dominant-subtree detection: score paragraphs, descend while one child holds >= 70% of the score. */
+export function findMainRoot(doc: Document): Element {
+  const body = doc.body;
+  if (!body) return doc.documentElement;
+  const scores = scoreParagraphs(doc, body);
   let cur: Element = body;
   let total = scores.get(body) ?? 0;
   if (total === 0) return doc.querySelector(SEMANTIC_ROOT) ?? body;
-  for (;;) {
-    let best: Element | null = null;
-    let bs = 0;
-    for (let c = cur.firstElementChild; c; c = c.nextElementSibling) {
-      const s = scores.get(c) ?? 0;
-      if (s > bs && !/^(NAV|ASIDE|FOOTER|HEADER)$/.test(c.tagName)) {
-        bs = s;
-        best = c;
-      }
-    }
-    if (!best || bs < total * 0.7) break;
-    cur = best;
-    total = bs;
-  }
+  for (let next = dominantChild(cur, scores, total); next; next = dominantChild(cur, scores, total)) [cur, total] = next;
   // a semantic wrapper just above the dominant node usually includes the title and byline
   const wrap = cur.closest(SEMANTIC_ROOT);
   if (wrap && wrap !== cur && wrap !== body && (scores.get(wrap) ?? 0) <= total * 1.6) return wrap;

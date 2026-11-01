@@ -95,6 +95,11 @@ export interface WordSpan {
   /** ms after sentence start */ at: number;
 }
 
+const pauseWeight = (raw: string) => {
+  if (/[,;:]$/.test(raw)) return 2;
+  return /[.!?…]["'”’)]*$/.test(raw) ? 3 : 0;
+};
+
 /** Split a sentence into words and give each a start time proportional to its character weight. */
 export function planWords(text: string, durationMs: number, speed = 1): WordSpan[] {
   const words: { from: number; to: number; w: number }[] = [];
@@ -106,7 +111,7 @@ export function planWords(text: string, durationMs: number, speed = 1): WordSpan
     const core = raw.replace(/[.,;:!?…)"'”’\]]+$/, "");
     if (core) to = m.index + core.length;
     // commas and sentence-internal stops carry a short pause
-    const w = raw.length + (/[,;:]$/.test(raw) ? 2 : /[.!?…]["'”’)]*$/.test(raw) ? 3 : 0);
+    const w = raw.length + pauseWeight(raw);
     words.push({ from: m.index, to, w });
     total += w;
   }
