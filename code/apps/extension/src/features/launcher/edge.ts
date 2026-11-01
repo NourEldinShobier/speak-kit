@@ -1,15 +1,12 @@
-import type { PlayerStatus, Settings } from "@speakkit/protocol";
-import { avatar, h, icon, iconButton, logo, menu, menuItem } from "@speakkit/ui/vanilla";
+import type { Settings } from "@speakkit/protocol";
+import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
-import { speedPopover } from "../player";
-import { voicePopover } from "../voices";
+import { moreMenu, speedVoiceButtons } from "./edge-parts";
+import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
-const ACTIVE: PlayerStatus[] = ["preparing", "playing", "paused"];
-const side = (l: Settings["launcher"]) => (l.side === "left" ? " sk-left" : "");
-const TAB_HEIGHT = 76;
-const MARGIN = 8;
+type Launcher = Settings["launcher"];
 
 /** The edge launcher (B17 to B21): a thin tab at the page edge that opens into a vertical pill with play, progress, skip, speed, voice and stop. */
 export class EdgeLauncher {
@@ -56,13 +53,16 @@ export class EdgeLauncher {
 
   /** Re-place the tab and pill after a window resize. */
   reposition() {
-    if (this.tab) this.tab.style.top = `${this.tabTop(this.s.shell.height)}px`;
+    if (this.tab) this.tab.style.top = `${this.tabTop()}px`;
     if (this.pill) this.pill.style.top = `${this.pillTop(this.pill)}px`;
   }
 
-  private tabTop(vh: number): number {
-    const y = this.tabY ?? this.m.launcher!.y;
-    return Math.min(Math.max(MARGIN, y * vh), Math.max(MARGIN, vh - TAB_HEIGHT - MARGIN));
+  private tabTop(): number {
+    return tabTop(this.tabY ?? this.m.launcher!.y, this.s.shell.height);
+  }
+
+  private pillTop(p: HTMLElement): number {
+    return pillTop(this.tabTop(), this.s.shell.height, p.offsetHeight);
   }
 
   private renderLauncher() {
@@ -83,37 +83,45 @@ export class EdgeLauncher {
     else this.buildTab(l, reading);
   }
 
-  private buildTab(l: Settings["launcher"], reading: boolean) {
-    const { shell, hd } = this.s;
-    const t = h("div", {
-      class: `sk-tab${side(l)}${reading && l.widerWhileReading ? " is-reading" : ""}${!reading && l.idle === "hidden" ? " is-ghost" : ""}`,
-      "data-sk": "launcher-tab",
-      "data-state": this.m.status,
-    });
-    t.style.top = `${this.tabTop(shell.height)}px`;
-    if (reading && l.widerWhileReading) {
-      const rail = h("div", { class: "sk-rail" }, h("i"));
-      this.railFill = rail.firstElementChild as HTMLElement;
-      const pb = h(
-        "button",
-        { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--xs lm-btn--round sk-tpb", "aria-label": this.m.status === "playing" ? "Pause" : "Resume", "data-sk": "launcher-toggle" },
-        icon(this.m.status === "playing" ? "player-pause" : this.m.status === "preparing" ? "loader-2" : "player-play", 11, this.m.status === "preparing" ? "lm-spin" : undefined),
-      );
-      pb.addEventListener("click", (e) => {
-        e.stopPropagation();
-        hd.toggle();
-      });
-      t.append(rail, pb);
-    } else {
+  // ------------------------------------------------------------ tab
+
+  private buildTab(l: Launcher, reading: boolean) {
+    const t = h("div", { class: tabClass(l, reading), "data-sk": "launcher-tab", "data-state": this.m.status });
+    t.style.top = `${this.tabTop()}px`;
+    if (reading && l.widerWhileReading) t.append(...this.tabProgress());
+    else {
       this.railFill = null;
       t.append(icon(l.side === "right" ? "chevron-left" : "chevron-right", 10));
     }
     this.drag(t);
-    // hover intent: a short dwell opens the pill (and wakes the model); pressing first (to drag) cancels it
+    this.openOnIntent(t, l);
+    this.s.shell.root.append(t);
+    this.tab = t;
+  }
+
+  /** The widened tab while reading: a progress rail and a pause or resume button. */
+  private tabProgress(): HTMLElement[] {
+    const rail = h("div", { class: "sk-rail" }, h("i"));
+    this.railFill = rail.firstElementChild as HTMLElement;
+    const view = PLAY_VIEW[this.m.status];
+    const pb = h(
+      "button",
+      { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--xs lm-btn--round sk-tpb", "aria-label": view.label, "data-sk": "launcher-toggle" },
+      icon(view.icon, 11, view.icon === "loader-2" ? "lm-spin" : undefined),
+    );
+    pb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.s.hd.toggle();
+    });
+    return [rail, pb];
+  }
+
+  /** Hover intent: a short dwell opens the pill (and wakes the model); pressing first (to drag) cancels it. */
+  private openOnIntent(t: HTMLElement, l: Launcher) {
     t.addEventListener("pointerenter", () => {
       clearTimeout(this.closeTimer);
       clearTimeout(this.openTimer);
-      hd.warm("hover");
+      this.s.hd.warm("hover");
       if (l.openOn === "hover") this.openTimer = window.setTimeout(() => this.setPill(true), 90);
     });
     t.addEventListener("pointerleave", () => clearTimeout(this.openTimer));
@@ -121,8 +129,6 @@ export class EdgeLauncher {
     t.addEventListener("click", () => {
       if (!this.dragged) this.setPill(true);
     });
-    shell.root.append(t);
-    this.tab = t;
   }
 
   /** Drag up/down (tab or pill); the new height is persisted on release. */
@@ -130,7 +136,7 @@ export class EdgeLauncher {
     let start: { y: number; tab: number } | null = null;
     el.addEventListener("pointerdown", (e) => {
       if ((e.target as Element).closest("button") || e.button !== 0) return;
-      start = { y: e.clientY, tab: this.tabTop(this.s.shell.height) };
+      start = { y: e.clientY, tab: this.tabTop() };
       this.dragged = false;
       el.setPointerCapture(e.pointerId);
     });
@@ -155,17 +161,10 @@ export class EdgeLauncher {
     el.addEventListener("pointercancel", end);
   }
 
-  private pillTop(p: HTMLElement) {
-    const H = this.s.shell.height;
-    const playOffset = 10 + 28 + 8 + 32 + 8 + 22; // centre of the big button inside the pill
-    return Math.min(Math.max(MARGIN, this.tabTop(H) + 38 - playOffset), Math.max(MARGIN, H - p.offsetHeight - MARGIN));
-  }
+  // ------------------------------------------------------------ pill
 
-  private buildPill(l: Settings["launcher"], reading: boolean) {
-    const { shell, hd } = this.s;
-    const m = this.m;
-    const p = h("div", { class: `sk-pill${side(l)}`, "data-sk": "launcher-pill", "data-state": m.status });
-    const sep = () => h("div", { class: "sk-sep" });
+  private buildPill(l: Launcher, reading: boolean) {
+    const p = h("div", { class: `sk-pill${sideClass(l)}`, "data-sk": "launcher-pill", "data-state": this.m.status });
     const collapse = iconButton({
       name: l.side === "right" ? "chevron-right" : "chevron-left",
       label: "Collapse",
@@ -173,15 +172,27 @@ export class EdgeLauncher {
       data: { sk: "launcher-collapse" },
       onClick: () => this.setPill(false, true),
     });
+    p.append(collapse, logo(32), this.pillPlay(reading), ...(reading ? this.pillProgress() : this.pillReader()));
+    const { speed, voice, avatar } = speedVoiceButtons(this.s, l);
+    this.pillSpeed = speed;
+    this.pillVoice = avatar;
+    p.append(speed, voice, this.pillLast(l, reading));
+    this.drag(p);
+    this.closeWhenAway(p);
+    p.classList.add("is-out");
+    this.s.shell.root.append(p);
+    p.style.top = `${this.pillTop(p)}px`;
+    requestAnimationFrame(() => p.classList.remove("is-out"));
+    this.pill = p;
+  }
+
+  private pillPlay(reading: boolean): HTMLElement {
+    const { hd } = this.s;
+    const view = PLAY_VIEW[this.m.status];
     const big = h(
       "button",
-      {
-        type: "button",
-        class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-big",
-        "aria-label": reading ? (m.status === "playing" ? "Pause" : "Resume") : "Listen to this page",
-        "data-sk": "launcher-play",
-      },
-      icon(m.status === "preparing" ? "loader-2" : reading && m.status === "playing" ? "player-pause" : "player-play", 18, m.status === "preparing" ? "lm-spin" : undefined),
+      { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-big", "aria-label": view.label, "data-sk": "launcher-play" },
+      icon(view.icon, 18, view.icon === "loader-2" ? "lm-spin" : undefined),
     );
     big.addEventListener("click", () => (reading ? hd.toggle() : hd.listen()));
     big.addEventListener("pointerenter", () => {
@@ -192,60 +203,65 @@ export class EdgeLauncher {
       this.ltip?.remove();
       this.ltip = null;
     });
-    p.append(collapse, logo(32), big);
-    if (reading) {
-      const rail = h("div", { class: "sk-vrail", "data-sk": "launcher-rail" }, h("i"));
-      this.railFill = rail.firstElementChild as HTMLElement;
-      rail.addEventListener("click", (e) => {
-        const r = rail.getBoundingClientRect();
-        hd.seekFrac(Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)));
-      });
-      const time = h("span", { class: "sk-time" });
-      this.pillTime = time;
-      p.append(
-        rail,
-        time,
-        sep(),
-        iconButton({ name: "rewind-backward-10", label: "Back 10 seconds", size: 28, data: { sk: "launcher-back" }, onClick: () => hd.skip(-10000) }),
-        iconButton({ name: "rewind-forward-10", label: "Forward 10 seconds", size: 28, data: { sk: "launcher-fwd" }, onClick: () => hd.skip(10000) }),
-      );
-    } else {
-      this.railFill = null;
-      this.pillTime = null;
-      p.append(
-        sep(),
-        iconButton({
-          name: "book",
-          label: "Reader view",
-          size: 32,
-          data: { sk: "launcher-reader" },
-          onClick: () => {
-            this.setPill(false, true);
-            hd.openReader();
-          },
-        }),
-      );
-    }
-    const sp = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "launcher-speed" }, speedLabel(m.speed));
-    sp.addEventListener("click", () => shell.togglePopover("speed", sp, () => speedPopover({ speed: () => this.m.speed, onSet: (v) => hd.setSpeed(v) }), beside(l.side)));
-    const vc = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--icon sk-vc", "aria-label": "Voice", "data-sk": "launcher-voice" });
-    const av = avatar(m.voiceName, 24, "accent");
-    vc.append(av);
-    vc.addEventListener("click", () =>
-      shell.togglePopover(
-        "voice",
-        vc,
-        () => voicePopover({ voices: () => hd.voices(), current: () => this.m.voice, onPick: (v) => hd.setVoice(v.id), onPreview: (id) => hd.previewVoice(id), alive: (el) => el.isConnected }),
-        beside(l.side),
-      ),
-    );
-    this.pillSpeed = sp;
-    this.pillVoice = av;
-    const last = reading
-      ? iconButton({ name: "player-stop", label: "Stop", size: 32, data: { sk: "launcher-stop" }, onClick: () => hd.stop() })
-      : iconButton({ name: "dots-vertical", label: "More", size: 32, data: { sk: "launcher-more" }, onClick: () => shell.togglePopover("menu", last, () => this.menu(), beside(l.side)) });
-    p.append(sp, vc, last);
-    this.drag(p);
+    return big;
+  }
+
+  private sep = () => h("div", { class: "sk-sep" });
+
+  /** Reading: a seekable rail, the time left and the 10 second skips. */
+  private pillProgress(): HTMLElement[] {
+    const { hd } = this.s;
+    const rail = h("div", { class: "sk-vrail", "data-sk": "launcher-rail" }, h("i"));
+    this.railFill = rail.firstElementChild as HTMLElement;
+    rail.addEventListener("click", (e) => {
+      const r = rail.getBoundingClientRect();
+      hd.seekFrac(Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)));
+    });
+    this.pillTime = h("span", { class: "sk-time" });
+    return [
+      rail,
+      this.pillTime,
+      this.sep(),
+      iconButton({ name: "rewind-backward-10", label: "Back 10 seconds", size: 28, data: { sk: "launcher-back" }, onClick: () => hd.skip(-10000) }),
+      iconButton({ name: "rewind-forward-10", label: "Forward 10 seconds", size: 28, data: { sk: "launcher-fwd" }, onClick: () => hd.skip(10000) }),
+    ];
+  }
+
+  /** Idle: the reader view button. */
+  private pillReader(): HTMLElement[] {
+    this.railFill = null;
+    this.pillTime = null;
+    return [
+      this.sep(),
+      iconButton({
+        name: "book",
+        label: "Reader view",
+        size: 32,
+        data: { sk: "launcher-reader" },
+        onClick: () => {
+          this.setPill(false, true);
+          this.s.hd.openReader();
+        },
+      }),
+    ];
+  }
+
+  /** The last button: stop while reading, else the "More" menu. */
+  private pillLast(l: Launcher, reading: boolean): HTMLElement {
+    const { shell, hd } = this.s;
+    if (reading) return iconButton({ name: "player-stop", label: "Stop", size: 32, data: { sk: "launcher-stop" }, onClick: () => hd.stop() });
+    const more: HTMLElement = iconButton({
+      name: "dots-vertical",
+      label: "More",
+      size: 32,
+      data: { sk: "launcher-more" },
+      onClick: () => shell.togglePopover("menu", more, () => moreMenu(shell, hd), beside(l.side)),
+    });
+    return more;
+  }
+
+  /** The pill closes shortly after the pointer leaves it. */
+  private closeWhenAway(p: HTMLElement) {
     let entered = false;
     p.addEventListener("pointerenter", () => {
       entered = true;
@@ -265,36 +281,6 @@ export class EdgeLauncher {
       document.removeEventListener("pointermove", away, true);
       this.awayOff = undefined;
     };
-    p.classList.add("is-out");
-    shell.root.append(p);
-    p.style.top = `${this.pillTop(p)}px`;
-    requestAnimationFrame(() => p.classList.remove("is-out"));
-    this.pill = p;
-  }
-
-  private menu(): HTMLElement {
-    const { shell, hd } = this.s;
-    const m = menu(
-      menuItem({
-        label: "Settings",
-        icon: "adjustments",
-        onSelect: () => {
-          shell.closePopover();
-          hd.openOptions();
-        },
-      }),
-      menuItem({
-        label: "Hide on this site",
-        icon: "eye-off",
-        onSelect: () => {
-          shell.closePopover();
-          hd.hideOnSite();
-        },
-      }),
-    );
-    m.classList.add("sk-menu");
-    m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-hide-site"][i]!));
-    return m;
   }
 
   private patch() {
@@ -315,11 +301,10 @@ export class EdgeLauncher {
     const hint = h("kbd", { class: "lm-kbd lm-kbd--sm" });
     const t = h("div", { class: "lm-tooltip sk-ltip", "data-sk": "launcher-tooltip" }, label, hint);
     this.ltipPatch = () => {
-      const m = this.m;
-      label.textContent = reading ? (m.status === "paused" ? "Resume" : "Pause") : "Listen to this page";
-      const hintText = reading ? "Space" : m.engineAsleep ? "Wakes on play" : m.estimate() ? clock(m.estimate()) : "";
-      hint.textContent = hintText;
-      hint.hidden = !hintText;
+      const text = tooltipText(this.m, reading);
+      label.textContent = text.label;
+      hint.textContent = text.hint;
+      hint.hidden = !text.hint;
     };
     this.ltipPatch();
     this.s.shell.root.append(t);

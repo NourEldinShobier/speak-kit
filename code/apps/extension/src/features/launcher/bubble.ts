@@ -18,59 +18,65 @@ export class SelectionBubble {
   }
 
   show(r: DOMRect) {
-    const { shell, hd } = this.s;
     if (!this.s.model().showBubble) return;
-    if (!this.el) {
-      const listen = button({
-        variant: "primary",
-        size: "sm",
-        iconLeft: "player-play",
-        label: "Listen",
-        ariaLabel: "Listen to selection",
-        onClick: () => {
-          this.hide();
-          hd.readSelection();
-        },
-      });
-      listen.dataset.sk = "bubble-listen";
-      listen.classList.add("sk-listen");
-      listen.addEventListener("pointerenter", () => hd.warm("selection"));
-      const set = iconButton({
-        name: "adjustments",
-        label: "Voice and speed",
-        size: 28,
-        data: { sk: "bubble-settings" },
-        onClick: () => {
-          if (!this.el) return;
-          shell.togglePopover(
-            "speed",
-            set,
-            () => speedPopover({ speed: () => this.s.model().speed, onSet: (v) => hd.setSpeed(v) }),
-            (el, a, sh) => {
-              el.style.left = `${Math.min(Math.max(8, a.right - el.offsetWidth), sh.width - el.offsetWidth - 8)}px`;
-              el.style.top = `${Math.max(8, a.top - el.offsetHeight - 10)}px`;
-            },
-          );
-        },
-      });
-      const copy = iconButton({
-        name: "copy",
-        label: "Copy selection",
-        size: 28,
-        data: { sk: "bubble-copy" },
-        onClick: () => {
-          hd.copySelection();
-          this.onCopied();
-          this.hide();
-        },
-      });
-      this.el = h("div", { class: "sk-bubble", "data-sk": "bubble" }, tooltip(listen, "Listen to selection", "Ctrl+Shift+S"), set, copy);
-      this.el.addEventListener("mousedown", (e) => e.preventDefault()); // keep the page selection
-      shell.root.append(this.el);
-      // the first sign of intent: have the model ready by the time Listen is pressed
-      hd.warm("selection");
-    }
-    const b = this.el;
+    if (!this.el) this.build();
+    this.place(this.el!, r);
+  }
+
+  private build() {
+    const { shell, hd } = this.s;
+    const listen = button({
+      variant: "primary",
+      size: "sm",
+      iconLeft: "player-play",
+      label: "Listen",
+      ariaLabel: "Listen to selection",
+      onClick: () => {
+        this.hide();
+        hd.readSelection();
+      },
+    });
+    listen.dataset.sk = "bubble-listen";
+    listen.classList.add("sk-listen");
+    listen.addEventListener("pointerenter", () => hd.warm("selection"));
+    const set = iconButton({
+      name: "adjustments",
+      label: "Voice and speed",
+      size: 28,
+      data: { sk: "bubble-settings" },
+      onClick: () => {
+        if (!this.el) return;
+        shell.togglePopover(
+          "speed",
+          set,
+          () => speedPopover({ speed: () => this.s.model().speed, onSet: (v) => hd.setSpeed(v) }),
+          (el, a, sh) => {
+            el.style.left = `${Math.min(Math.max(8, a.right - el.offsetWidth), sh.width - el.offsetWidth - 8)}px`;
+            el.style.top = `${Math.max(8, a.top - el.offsetHeight - 10)}px`;
+          },
+        );
+      },
+    });
+    const copy = iconButton({
+      name: "copy",
+      label: "Copy selection",
+      size: 28,
+      data: { sk: "bubble-copy" },
+      onClick: () => {
+        hd.copySelection();
+        this.onCopied();
+        this.hide();
+      },
+    });
+    this.el = h("div", { class: "sk-bubble", "data-sk": "bubble" }, tooltip(listen, "Listen to selection", "Ctrl+Shift+S"), set, copy);
+    this.el.addEventListener("mousedown", (e) => e.preventDefault()); // keep the page selection
+    shell.root.append(this.el);
+    // the first sign of intent: have the model ready by the time Listen is pressed
+    hd.warm("selection");
+  }
+
+  private place(b: HTMLElement, r: DOMRect) {
+    const { shell } = this.s;
     const bw = b.offsetWidth || 164;
     let top = r.top - 8 - 40;
     if (top < 8) top = Math.min(r.bottom + 8, shell.height - 48);

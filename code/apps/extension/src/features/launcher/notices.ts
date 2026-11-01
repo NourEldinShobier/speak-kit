@@ -1,6 +1,8 @@
 import { button, h, icon } from "@speakkit/ui/vanilla";
 import type { Surface } from "./types";
 
+const TOAST_ICON = { err: "alert-circle", ok: "circle-check", info: "info-circle" } as const;
+
 /** The toast (B13) and the "Back to current" pill (B14). */
 export class Notices {
   private toastEl: HTMLElement | null = null;
@@ -20,7 +22,7 @@ export class Notices {
     const t = h(
       "div",
       { class: `lm-toast sk-toast is-${kind}${this.dockEl() ? " is-up" : ""}`, role: kind === "err" ? "alert" : "status", "data-sk": "toast" },
-      icon(kind === "err" ? "alert-circle" : kind === "ok" ? "circle-check" : "info-circle", 16),
+      icon(TOAST_ICON[kind], 16),
       h("div", { class: "lm-toast__msg" }, message),
     );
     if (action) {

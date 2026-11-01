@@ -51,7 +51,7 @@ const setup = (m = model()) => {
     closePopover: () => {},
     placeHostAfter: (n) => calls.push(`placeHostAfter ${n ? (n as Element).id : "end"}`),
   };
-  launcher = new Launcher(shell, handlers(), m, () => null);
+  launcher = new Launcher({ shell, hd: handlers(), model: m, dockEl: () => null });
   launcher.render(m);
   return m;
 };

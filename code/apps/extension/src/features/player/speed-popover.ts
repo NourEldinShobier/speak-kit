@@ -10,6 +10,9 @@ interface SpeedPopoverOptions {
   onSet(v: number): void;
 }
 
+const presetButton = (v: number, onPick: () => void) =>
+  h("button", { type: "button", class: "lm-btn lm-btn--toggle", "aria-label": `${speedLabel(v)} speed`, "data-sk": `speed-${v}`, on: { click: onPick } }, speedLabel(v));
+
 /** Speed popover (B15): slider 0.5x to 3x, preset buttons, reset. Lumen popover surface, slider and toggle buttons. */
 export function speedPopover(o: SpeedPopoverOptions): HTMLElement {
   const label = h("output", { class: "sk-pop-val", "aria-live": "polite" }, speedLabel(o.speed()));
@@ -26,25 +29,12 @@ export function speedPopover(o: SpeedPopoverOptions): HTMLElement {
       set(v);
     },
   });
-  const presets = SPEED_PRESETS.map((v) => {
-    const b = h(
-      "button",
-      {
-        type: "button",
-        class: "lm-btn lm-btn--toggle",
-        "aria-label": `${speedLabel(v)} speed`,
-        "data-sk": `speed-${v}`,
-        on: {
-          click: () => {
-            sl.set(v);
-            set(v);
-          },
-        },
-      },
-      speedLabel(v),
-    );
-    return b;
-  });
+  const presets = SPEED_PRESETS.map((v) =>
+    presetButton(v, () => {
+      sl.set(v);
+      set(v);
+    }),
+  );
   const mark = () => presets.forEach((b, i) => b.setAttribute("aria-pressed", String(Math.abs(SPEED_PRESETS[i]! - cur) < 0.001)));
   let cur = o.speed();
   const set = (v: number) => {

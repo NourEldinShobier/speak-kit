@@ -4,6 +4,14 @@ import { EdgeLauncher } from "./edge";
 import { ParagraphGutter } from "./gutter";
 import { Notices } from "./notices";
 
+/** What the launcher is built from: the shadow shell, the controller's handlers, the first model, and the dock element (toasts sit above it). */
+export interface LauncherDeps {
+  shell: Shell;
+  hd: UiHandlers;
+  model: UiModel;
+  dockEl: () => HTMLElement | null;
+}
+
 /**
  * The in-page launcher surfaces: the edge tab and pill (B17 to B21), the selection bubble (B1), the paragraph button (B2),
  * the toast (B13) and the "Back to current" pill (B14). Lumen kit buttons, tooltip and menu inside the Shadow DOM.
@@ -15,7 +23,7 @@ export class Launcher {
   private gutter: ParagraphGutter;
   private notices: Notices;
 
-  constructor(shell: Shell, hd: UiHandlers, model: UiModel, dockEl: () => HTMLElement | null) {
+  constructor({ shell, hd, model, dockEl }: LauncherDeps) {
     this.m = model;
     const surface = { shell, hd, model: () => this.m };
     this.edge = new EdgeLauncher(surface);

@@ -2,16 +2,11 @@ import type { PlayerStatus } from "@speakkit/protocol";
 import { avatar, button, h, icon, iconButton, logo, menu, menuItem, progress } from "@speakkit/ui/vanilla";
 import { errorText } from "../connection";
 import { above } from "../../shared/placement";
-import { clock, minutesLeft, speedLabel } from "../../shared/format";
+import { speedLabel } from "../../shared/format";
 import type { Shell, UiHandlers, UiModel } from "../../shared/ui-types";
+import { ACTIVE, dockText, dockVisible, idleSubtitle, TOGGLE, WAKING_AFTER_MS } from "./dock-model";
 import { speedPopover } from "./speed-popover";
 import { voicePopover } from "../voices";
-
-const ACTIVE: PlayerStatus[] = ["preparing", "playing", "paused"];
-const fmtLong = (ms: number) => {
-  const s = Math.round(ms / 1000);
-  return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
-};
 
 /**
  * The floating read-aloud pill (Lumen F5): previous paragraph, a 40 px play/pause, next paragraph, "Paragraph n of N · x min left"
@@ -36,15 +31,8 @@ export class Dock {
     this.m = m;
   }
 
-  /** The dock is shown for errors, for the always-dock site rule, when finished, and while reading if no launcher exists. */
   visible(): boolean {
-    const m = this.m;
-    if (m.status === "error") return !this.dismissed || this.dismissed !== "error";
-    if (this.dismissed === m.status) return false;
-    if (m.alwaysDock) return true;
-    if (!m.showDock) return false;
-    if (m.status === "idle") return false;
-    return !m.launcher || m.status === "finished";
+    return dockVisible(this.m, this.dismissed);
   }
 
   dismiss() {
@@ -134,43 +122,54 @@ export class Dock {
   private build(visible: boolean) {
     this.clear();
     if (!visible) return;
-    const m = this.m;
-    const d = h("div", { class: "sk-dock", "data-sk": "dock", "data-state": m.status, role: "region", "aria-label": "Speak Kit player" });
+    const d = h("div", { class: "sk-dock", "data-sk": "dock", "data-state": this.m.status, role: "region", "aria-label": "Speak Kit player" });
     this.el = d;
-    if (m.status === "error") return this.buildError(d);
-    if (m.status === "idle") {
-      const sub = h("span", { class: "sk-sub" });
-      this.parts.sub = sub;
-      const play = iconButton({ name: "player-play", label: "Read this page", data: { sk: "dock-play" }, className: "lm-btn--primary sk-play", round: true });
-      play.classList.add("lm-btn--primary");
-      play.addEventListener("click", () => this.hd.listen());
-      play.addEventListener("pointerenter", () => this.hd.warm("dock"));
-      d.append(logo(28), h("div", { class: "sk-col" }, h("span", { class: "sk-msg" }, "Read this page"), sub), play, this.moreButton());
-      this.shell.root.append(d);
-      return;
-    }
+    if (this.m.status === "error") return this.buildError(d);
+    if (this.m.status === "idle") this.buildIdle(d);
+    else this.buildReading(d);
+  }
+
+  private buildIdle(d: HTMLElement) {
+    const sub = h("span", { class: "sk-sub" });
+    this.parts.sub = sub;
+    const play = iconButton({ name: "player-play", label: "Read this page", data: { sk: "dock-play" }, className: "lm-btn--primary sk-play", round: true });
+    play.classList.add("lm-btn--primary");
+    play.addEventListener("click", () => this.hd.listen());
+    play.addEventListener("pointerenter", () => this.hd.warm("dock"));
+    d.append(logo(28), h("div", { class: "sk-col" }, h("span", { class: "sk-msg" }, "Read this page"), sub), play, this.moreButton());
+    this.shell.root.append(d);
+  }
+
+  /** The dock while preparing, playing, paused or finished. */
+  private buildReading(d: HTMLElement) {
+    const m = this.m;
+    const view = TOGGLE[m.status as keyof typeof TOGGLE];
     const loading = m.status === "preparing";
     const done = m.status === "finished";
-    const playing = m.status === "playing";
     const prev = iconButton({ name: "player-skip-back", label: "Previous paragraph", size: 28, data: { sk: "dock-prev" }, disabled: loading || done, onClick: () => this.hd.prevBlock() });
     const next = iconButton({ name: "player-skip-forward", label: "Next paragraph", size: 28, data: { sk: "dock-next" }, disabled: loading || done, onClick: () => this.hd.nextBlock() });
     const toggle = h(
       "button",
-      {
-        type: "button",
-        class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-play",
-        "aria-label": done ? "Replay" : playing ? "Pause" : loading ? "Preparing" : "Play",
-        "data-sk": "dock-toggle",
-        disabled: loading,
-      },
-      icon(loading ? "loader-2" : done ? "refresh" : playing ? "player-pause" : "player-play", 18, loading ? "lm-spin" : undefined),
+      { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-play", "aria-label": view.label, "data-sk": "dock-toggle", disabled: loading },
+      icon(view.icon, 18, loading ? "lm-spin" : undefined),
     );
     toggle.addEventListener("click", () => (done ? this.hd.replay() : this.hd.toggle()));
     toggle.addEventListener("pointerenter", () => this.hd.warm("dock"));
     const text = h("span", { class: "sk-dock-text" });
     const bar = this.seekBar(!loading && !done);
     const mid = h("div", { class: "sk-dock-mid" }, text, bar.el);
-    const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "dock-speed" });
+    const speed = this.speedButton();
+    const { voice, av, label } = this.voiceChip();
+    const close = iconButton({ name: "x", label: "Close player", size: 28, data: { sk: "dock-close" }, onClick: () => this.dismiss() });
+    d.append(prev, toggle, next, mid, speed, voice, this.moreButton(), close);
+    this.parts = { text, speed, voice: label, av, bar };
+    this.shell.root.append(d);
+    // "Preparing" is quick when the model is loaded; after a moment it means the model is being woken up.
+    if (loading) this.waking = window.setTimeout(() => this.patch(), WAKING_AFTER_MS);
+  }
+
+  private speedButton() {
+    const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(this.m.speed)}`, "data-sk": "dock-speed" });
     speed.addEventListener("click", () =>
       this.shell.togglePopover(
         "speed",
@@ -179,14 +178,19 @@ export class Dock {
         above(() => this.el),
       ),
     );
-    const av = avatar(m.voiceName, 20, "accent");
-    const vtext = h("span", { class: "sk-voice-txt" });
+    return speed;
+  }
+
+  /** The voice chip: avatar, name and a chevron; `label` is the text that patch() updates. */
+  private voiceChip() {
+    const av = avatar(this.m.voiceName, 20, "accent");
+    const label = h("span", { class: "sk-voice-txt" });
     const voice = h(
       "button",
       { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-voicechip", "data-sk": "dock-voice" },
       h("span", { class: "sk-sr" }, "Voice: "),
       av,
-      vtext,
+      label,
       icon("chevron-down", 12),
     );
     av.setAttribute("aria-hidden", "true");
@@ -198,12 +202,7 @@ export class Dock {
         above(() => this.el),
       ),
     );
-    const close = iconButton({ name: "x", label: "Close player", size: 28, data: { sk: "dock-close" }, onClick: () => this.dismiss() });
-    d.append(prev, toggle, next, mid, speed, voice, this.moreButton(), close);
-    this.parts = { text, speed, voice: vtext, av, bar };
-    this.shell.root.append(d);
-    // "Preparing" is quick when the model is loaded; after a moment it means the model is being woken up.
-    if (loading) this.waking = window.setTimeout(() => this.patch(), 1200);
+    return { voice, av, label };
   }
 
   private voices() {
@@ -221,14 +220,14 @@ export class Dock {
     const et = errorText(m.error?.code, m.error?.message);
     const ic = icon("alert-circle", 18, "sk-err-ic");
     d.append(logo(28), ic, h("span", { class: "sk-msg" }, et.title));
-    const act = (label: string, sk: string, run: () => void, primary = false) => {
-      const b = button({ variant: primary ? "primary" : "secondary", size: "sm", label, onClick: run });
-      b.dataset.sk = sk;
+    const act = (a: { label: string; sk: string; run: () => void; primary?: boolean }) => {
+      const b = button({ variant: a.primary ? "primary" : "secondary", size: "sm", label: a.label, onClick: a.run });
+      b.dataset.sk = a.sk;
       return b;
     };
-    if (et.actions.includes("open-app")) d.append(act("Open app", "dock-open-app", () => this.hd.openApp(), true));
-    if (et.actions.includes("settings")) d.append(act("Settings", "dock-settings", () => this.hd.openOptions(), true));
-    if (et.actions.includes("retry")) d.append(act("Retry", "dock-retry", () => this.hd.retry()));
+    if (et.actions.includes("open-app")) d.append(act({ label: "Open app", sk: "dock-open-app", run: () => this.hd.openApp(), primary: true }));
+    if (et.actions.includes("settings")) d.append(act({ label: "Settings", sk: "dock-settings", run: () => this.hd.openOptions(), primary: true }));
+    if (et.actions.includes("retry")) d.append(act({ label: "Retry", sk: "dock-retry", run: () => this.hd.retry() }));
     d.append(this.moreButton());
     d.classList.add("is-raised");
     this.shell.root.append(d);
@@ -299,22 +298,8 @@ export class Dock {
     const m = this.m;
     if (!this.el) return;
     const p = this.parts;
-    if (p.sub) p.sub.textContent = m.engineAsleep ? "Engine asleep · wakes on play" : m.estimate() ? `${fmtLong(m.estimate())} at ${speedLabel(m.speed)}` : "";
-    if (p.text) {
-      const waking = m.status === "preparing" && performance.now() - this.preparingSince > 1200;
-      p.text.textContent =
-        m.status === "preparing"
-          ? waking
-            ? "Waking the voice engine..."
-            : "Preparing voice..."
-          : m.status === "finished"
-            ? "Done · Read again"
-            : m.paragraph
-              ? `Paragraph ${m.paragraph.n} of ${m.paragraph.of} · ${minutesLeft(Math.max(0, m.totalMs - m.elapsedMs))}`
-              : m.status === "paused"
-                ? `Paused · ${clock(m.elapsedMs)}`
-                : `Reading · ${clock(m.elapsedMs)}`;
-    }
+    if (p.sub) p.sub.textContent = idleSubtitle(m);
+    if (p.text) p.text.textContent = dockText(m, m.status === "preparing" && performance.now() - this.preparingSince > WAKING_AFTER_MS);
     if (p.speed) {
       p.speed.textContent = speedLabel(m.speed);
       p.speed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`);

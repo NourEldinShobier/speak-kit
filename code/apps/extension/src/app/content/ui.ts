@@ -15,7 +15,7 @@ export class Ui {
   constructor(hd: UiHandlers, model: UiModel) {
     this.shell = new ShadowShell([shellCss, LAUNCHER_CSS, DOCK_CSS, READER_CSS]);
     this.dock = new Dock(this.shell, hd, model);
-    this.launcher = new Launcher(this.shell, hd, model, () => this.dock.el);
+    this.launcher = new Launcher({ shell: this.shell, hd, model, dockEl: () => this.dock.el });
     this.shell.setResizeHandler(() => this.launcher.reposition());
     this.render(model);
   }
