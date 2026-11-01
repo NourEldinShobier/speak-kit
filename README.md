@@ -1,14 +1,30 @@
 # Speak Kit
 
-Text to speech that runs on your own computer. Select text in Chrome (or any Windows app), press a key, and a natural voice reads it. Nothing is uploaded: the voice model, Kokoro-82M, runs locally.
+[![CI](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Speak Kit has three parts:
+A private text-to-speech reader. Select text in Chrome, press a key, and a natural voice reads it aloud while the sentence and word being spoken are highlighted. The voice model runs on your computer: no account, no cloud, nothing uploaded.
 
-- **Chrome extension** (Manifest V3): reads selections and pages, highlights the sentence and word being read, has a floating player, a reader view and a side panel queue.
-- **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, and adds what a browser cannot do: global shortcuts, a mini player, clipboard reading, audio export to MP3 or WAV, engine management and updates.
-- **Local server** (`127.0.0.1` only, token protected): turns text into audio with Kokoro. A Chatterbox engine with voice cloning is optional where a GPU is available.
+- **Chrome extension** (Manifest V3): reads selections and whole pages, floating player, reader view, side panel queue.
+- **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, adds global shortcuts, a mini player, clipboard reading, a library for files (PDF, EPUB, DOCX, Markdown, text) and MP3 or WAV export.
+- **Voices**: 28 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) voices out of the box, and optional [Chatterbox](https://github.com/resemble-ai/chatterbox) voice cloning on machines with a GPU.
+
+<p align="center">
+  <img src="docs/screenshots/page-highlight.png" alt="A web page being read aloud with the current sentence and word highlighted, and the floating player at the bottom" width="720">
+</p>
+
+| | |
+|---|---|
+| ![Desktop reader](docs/screenshots/app-reader.png) | ![Voices](docs/screenshots/app-voices.png) |
+| Reader with word highlighting (desktop app) | 28 voices, each with a preview |
+| ![Extension popup](docs/screenshots/popup-playing.png) | ![Shortcuts](docs/screenshots/app-shortcuts.png) |
+| Extension popup | Global shortcuts you can change |
+
+There is also a light theme: [reader in light](docs/screenshots/app-reader-light.png).
 
 ## Install
+
+### Windows
 
 Download from the [latest release](https://github.com/NourEldinShobier/speak-kit/releases/latest):
 
@@ -18,62 +34,98 @@ Download from the [latest release](https://github.com/NourEldinShobier/speak-kit
 | `Speak-Kit-<version>-portable.exe` | Runs from any folder, does not update itself. |
 | `speakkit-extension-<version>.zip` | The extension, for Chrome, Edge or Brave. |
 
-The builds are **not code-signed**, so Windows SmartScreen shows "unknown publisher" the first time. Choose "More info", then "Run anyway".
+The builds are not code-signed, so Windows SmartScreen shows "unknown publisher" the first time. Choose **More info**, then **Run anyway**.
 
-1. Start Speak Kit. The first run downloads the Kokoro model (about 180 MB) and walks through five setup steps.
-2. Install the extension: in the app open **Browser** and press **Install from this app**. It opens `chrome://extensions` and shows the extension folder; turn on Developer mode, choose **Load unpacked**, pick that folder.
-3. Pair: copy the token in the app and paste it in the extension under Options, General, Pairing token.
+Start Speak Kit. The first run downloads the Kokoro model (about 180 MB) and walks through the setup.
 
-Global shortcuts (change them in Settings, Shortcuts):
+### macOS
+
+There is no macOS build yet; the app is built and tested on Windows only. The extension and the local server (`code/packages/server`) run on any system with Node 24. When macOS builds are published they will be unsigned: open the `.dmg`, drag the app to Applications, then right-click it, choose **Open** and confirm once (or run `xattr -dr com.apple.quarantine "/Applications/Speak Kit.app"`).
+
+### The Chrome extension
+
+- **Chrome Web Store**: not listed yet. This section will link it once it is.
+- **Load unpacked** (works now): unzip `speakkit-extension-<version>.zip`, open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and pick the unzipped folder. The desktop app can do this for you: **Browser**, **Install from this app**.
+
+Then pair the extension with the app: copy the token in the app (Browser) and paste it in the extension under Options, General, Pairing token.
+
+## Keyboard shortcuts
+
+Global, work in any app while the desktop app runs (change them in Settings, Shortcuts):
 
 | Keys | Action |
 |---|---|
-| Ctrl+Alt+S | Read the selected text in any app |
+| Ctrl+Alt+S | Read the selected text |
 | Ctrl+Alt+Space | Play or pause |
 | Ctrl+Alt+X | Stop |
 | Ctrl+Alt+C | Read the clipboard |
 
-## Develop
+In the browser the extension suggests these (change them at `chrome://extensions/shortcuts`; on macOS the modifier is Command):
 
-Needs Node 24 and pnpm 12. Everything lives in [`code/`](code); the toolchain is Vite+ (`vp`) and type-checking is tsrs.
-
-```
-cd code
-pnpm install
-pnpm run typecheck                           # tsrs on every project
-pnpm run lint
-pnpm --filter @speakkit/desktop exec vp build
-pnpm run test                                # unit and integration tests (starts the built Electron app)
-pnpm run e2e                                 # Chromium with the extension, fake engine
-pnpm run e2e:full                            # adds the real Kokoro model and the desktop flows
-```
-
-Run the app from source: `pnpm --filter @speakkit/desktop exec vp build`, then `pnpm --filter @speakkit/desktop start`. Build the installer with `pnpm --filter @speakkit/desktop exec node scripts/package.mjs` (output in `code/apps/desktop/release`), then check it with `node scripts/smoke-packaged.mjs` in the same folder.
-
-Continuous integration (`.github/workflows/ci.yml`) runs the same commands on Windows. Pushing a tag such as `v0.2.0` runs `release.yml`, which builds the installer, the portable exe and the extension zip and attaches them to a GitHub release.
-
-## How it fits together
-
-| Path | What |
+| Keys | Action |
 |---|---|
-| `code/packages/protocol` | API types, audio frame codec, extension messages |
-| `code/packages/engine` | `TtsEngine`, Kokoro in a child process, idle unload |
-| `code/packages/server` | Loopback HTTP server and CLI |
-| `code/packages/ui` | The Lumen component kit shared by the extension and the app |
-| `code/apps/extension` | Chrome extension |
-| `code/apps/desktop` | Electron app |
-| `code/e2e` | Playwright suites |
+| Ctrl+Shift+S | Read the selection or the page |
+| Ctrl+Shift+Y | Play or pause |
+| Ctrl+Shift+X | Stop |
 
-Start with [`docs/architecture.md`](docs/architecture.md) (contract, runtime, resource lifecycle), then [`docs/testing.md`](docs/testing.md), [`docs/perf.md`](docs/perf.md) and the stack decisions in [`docs/decisions/0001-stack.md`](docs/decisions/0001-stack.md).
+In the app: Ctrl+K opens search and commands, Ctrl+N starts a new reading.
 
-## Screenshots
+## How it works
 
-Every built screen is captured in dark and light and compared with its design frame. Open [`designs/built/review.html`](designs/built/review.html) to browse them, and [`docs/visual-fidelity.md`](docs/visual-fidelity.md) for the verdict on each. The designs themselves are in [`designs/next/screens`](designs/next/screens) (frame ids such as `A1`, `H5`, `W3`).
+```
+Chrome extension --\                          /-- Kokoro (child process, unloads when idle)
+(page, popup,       \   HTTP + bearer token  /
+ side panel)         >---------------------> Local server
+Desktop app         /    127.0.0.1 only      \
+(tray, shortcuts,  /                           \-- Chatterbox (optional Python sidecar)
+ library, export) -/
+                      <-- audio streamed sentence by sentence
+```
+
+The desktop app starts a server on `127.0.0.1`. The extension and the app send it text; it streams audio back one sentence at a time, so playback starts quickly and the page can highlight the sentence being spoken. The engine loads the model when needed and unloads it after a period of silence to free memory. Details: [`docs/architecture.md`](docs/architecture.md).
 
 ## Privacy
 
-The server listens on `127.0.0.1` only and rejects requests from web pages. Text is synthesized on your computer; the only network traffic is the one-time model download and the update check against GitHub Releases (which you can turn off in Settings, About).
+- Text is synthesized on your computer. The server listens on `127.0.0.1` only, needs a bearer token, and rejects requests from web pages.
+- The extension talks only to that local server. It asks for `storage`, `contextMenus`, `offscreen`, `sidePanel`, `activeTab` and `scripting`, plus access to `127.0.0.1` and `localhost`.
+- The only network traffic is the one-time model download and the update check against GitHub Releases, which you can turn off in Settings, About.
+- No analytics, no accounts. To report a vulnerability see [SECURITY.md](SECURITY.md).
+
+## Build from source
+
+Needs Node 24 (24.11 or newer) and pnpm 12. Everything is in [`code/`](code); the toolchain is Vite+ (`vp`) and the type-checker is tsrs.
+
+```
+git clone https://github.com/NourEldinShobier/speak-kit.git
+cd speak-kit/code
+pnpm install --frozen-lockfile
+pnpm typecheck                                   # tsrs on every project
+pnpm --filter @speakkit/desktop exec vp build    # build the desktop app
+pnpm --filter @speakkit/desktop start            # run it
+pnpm --filter @speakkit/extension exec vp build  # extension in apps/extension/dist
+```
+
+Build the Windows installer with `pnpm --filter @speakkit/desktop exec node scripts/package.mjs` (output in `code/apps/desktop/release`). Test commands per area are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Project layout
+
+| Path | What |
+|---|---|
+| `code/apps/extension` | Chrome extension |
+| `code/apps/desktop` | Electron app |
+| `code/packages/server` | Loopback HTTP server and CLI |
+| `code/packages/engine` | Engine interface, Kokoro in a child process, Chatterbox sidecar |
+| `code/packages/player` | Shared gapless playback |
+| `code/packages/protocol` | API types, audio frame codec, extension messages |
+| `code/packages/ui` | The Lumen component kit shared by the extension and the app |
+| `code/e2e` | Playwright suites |
+| `designs/` | Design source, generator and built screens |
+| `docs/` | [Documentation index](docs/index.md) |
+
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first.
 
 ## License
 
-[MIT](LICENSE). Third-party licenses are listed in the app under Settings, About. The MP3 encoder is LAME (LGPL) compiled to WebAssembly, loaded as a separate module.
+[MIT](LICENSE), Copyright (c) 2026 Nour Eldin Shobier. Third-party software, models, fonts and icons are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Kokoro-82M is Apache-2.0 and Chatterbox is MIT; their weights are downloaded, not bundled.
