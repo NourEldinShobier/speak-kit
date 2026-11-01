@@ -60,6 +60,13 @@ export interface UiHandlers {
 }
 
 export type Placement = (el: HTMLElement, anchor: DOMRect, shell: Shell) => void;
+/** What `Shell.togglePopover` needs: the popover `kind`, the `anchor` it opens from, how to `build` it and where to `place` it. */
+export interface PopoverRequest {
+  kind: string;
+  anchor: HTMLElement;
+  build: () => HTMLElement;
+  place: Placement;
+}
 
 /** The Shadow DOM shell the in-page features draw into (implemented by app/content/shell.ts). */
 export interface Shell {
@@ -71,7 +78,7 @@ export interface Shell {
   /** the open popover, if any */
   readonly popover: { kind: string; el: HTMLElement; anchor: HTMLElement } | null;
   /** open the popover `kind` under/next to `anchor`, or close it when it is already open for that anchor */
-  togglePopover(kind: string, anchor: HTMLElement, build: () => HTMLElement, place: Placement): void;
+  togglePopover(request: PopoverRequest): void;
   closePopover(kind?: string): void;
   /** put the host right after `node` in the page, so it comes next in tab order; null puts it back at the end of the document. Does nothing while focus is inside it. */
   placeHostAfter(node: Node | null): void;

@@ -206,15 +206,15 @@ export class ReaderView {
   // ------------------------------------------------------------ reading panel
 
   private togglePanel() {
-    this.d.shell.togglePopover(
-      "reading",
-      this.settingsBtn,
-      () => this.panel(),
-      (el, a, sh) => {
+    this.d.shell.togglePopover({
+      kind: "reading",
+      anchor: this.settingsBtn,
+      build: () => this.panel(),
+      place: (el, a, sh) => {
         el.style.top = `${a.bottom + 8}px`;
         el.style.left = `${Math.max(8, Math.min(a.right - el.offsetWidth, sh.width - el.offsetWidth - 8))}px`;
       },
-    );
+    });
   }
 
   private panel(): HTMLElement {

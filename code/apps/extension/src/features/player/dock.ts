@@ -77,12 +77,7 @@ export class Dock {
     const b = iconButton({ name: "dots-vertical", label: "More", size: 28, data: { sk: "dock-more" }, className: "sk-dock-more" });
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.shell.togglePopover(
-        "menu",
-        b,
-        () => this.menu(),
-        above(() => this.el),
-      );
+      this.shell.togglePopover({ kind: "menu", anchor: b, build: () => this.menu(), place: above(() => this.el) });
     });
     return b;
   }
@@ -171,12 +166,12 @@ export class Dock {
   private speedButton() {
     const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(this.m.speed)}`, "data-sk": "dock-speed" });
     speed.addEventListener("click", () =>
-      this.shell.togglePopover(
-        "speed",
-        speed,
-        () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }),
-        above(() => this.el),
-      ),
+      this.shell.togglePopover({
+        kind: "speed",
+        anchor: speed,
+        build: () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }),
+        place: above(() => this.el),
+      }),
     );
     return speed;
   }
@@ -194,14 +189,7 @@ export class Dock {
       icon("chevron-down", 12),
     );
     av.setAttribute("aria-hidden", "true");
-    voice.addEventListener("click", () =>
-      this.shell.togglePopover(
-        "voice",
-        voice,
-        () => this.voices(),
-        above(() => this.el),
-      ),
-    );
+    voice.addEventListener("click", () => this.shell.togglePopover({ kind: "voice", anchor: voice, build: () => this.voices(), place: above(() => this.el) }));
     return { voice, av, label };
   }
 

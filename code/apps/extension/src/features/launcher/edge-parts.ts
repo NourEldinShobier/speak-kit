@@ -37,17 +37,19 @@ export function speedVoiceButtons(s: Surface, l: Settings["launcher"]): { speed:
   const { shell, hd } = s;
   const m = s.model();
   const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "launcher-speed" }, speedLabel(m.speed));
-  speed.addEventListener("click", () => shell.togglePopover("speed", speed, () => speedPopover({ speed: () => s.model().speed, onSet: (v) => hd.setSpeed(v) }), beside(l.side)));
+  speed.addEventListener("click", () =>
+    shell.togglePopover({ kind: "speed", anchor: speed, build: () => speedPopover({ speed: () => s.model().speed, onSet: (v) => hd.setSpeed(v) }), place: beside(l.side) }),
+  );
   const voice = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--icon sk-vc", "aria-label": "Voice", "data-sk": "launcher-voice" });
   const av = avatar(m.voiceName, 24, "accent");
   voice.append(av);
   voice.addEventListener("click", () =>
-    shell.togglePopover(
-      "voice",
-      voice,
-      () => voicePopover({ voices: () => hd.voices(), current: () => s.model().voice, onPick: (v) => hd.setVoice(v.id), onPreview: (id) => hd.previewVoice(id), alive: (el) => el.isConnected }),
-      beside(l.side),
-    ),
+    shell.togglePopover({
+      kind: "voice",
+      anchor: voice,
+      build: () => voicePopover({ voices: () => hd.voices(), current: () => s.model().voice, onPick: (v) => hd.setVoice(v.id), onPreview: (id) => hd.previewVoice(id), alive: (el) => el.isConnected }),
+      place: beside(l.side),
+    }),
   );
   return { speed, voice, avatar: av };
 }

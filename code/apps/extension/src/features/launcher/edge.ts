@@ -255,7 +255,7 @@ export class EdgeLauncher {
       label: "More",
       size: 32,
       data: { sk: "launcher-more" },
-      onClick: () => shell.togglePopover("menu", more, () => moreMenu(shell, hd), beside(l.side)),
+      onClick: () => shell.togglePopover({ kind: "menu", anchor: more, build: () => moreMenu(shell, hd), place: beside(l.side) }),
     });
     return more;
   }

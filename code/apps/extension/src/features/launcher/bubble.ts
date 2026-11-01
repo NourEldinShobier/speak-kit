@@ -46,15 +46,15 @@ export class SelectionBubble {
       data: { sk: "bubble-settings" },
       onClick: () => {
         if (!this.el) return;
-        shell.togglePopover(
-          "speed",
-          set,
-          () => speedPopover({ speed: () => this.s.model().speed, onSet: (v) => hd.setSpeed(v) }),
-          (el, a, sh) => {
+        shell.togglePopover({
+          kind: "speed",
+          anchor: set,
+          build: () => speedPopover({ speed: () => this.s.model().speed, onSet: (v) => hd.setSpeed(v) }),
+          place: (el, a, sh) => {
             el.style.left = `${Math.min(Math.max(8, a.right - el.offsetWidth), sh.width - el.offsetWidth - 8)}px`;
             el.style.top = `${Math.max(8, a.top - el.offsetHeight - 10)}px`;
           },
-        );
+        });
       },
     });
     const copy = iconButton({

@@ -1,6 +1,6 @@
 import kitCss from "virtual:lumen-content-css";
 import { h } from "@speakkit/ui/vanilla";
-import type { Placement, Shell } from "../../shared/ui-types";
+import type { PopoverRequest, Shell } from "../../shared/ui-types";
 
 declare const __TEST__: boolean | undefined;
 const OPEN_SHADOW = typeof __TEST__ !== "undefined" && !!__TEST__;
@@ -45,7 +45,7 @@ export class ShadowShell implements Shell {
     this.resizeCb = cb;
   }
 
-  togglePopover(kind: string, anchor: HTMLElement, build: () => HTMLElement, place: Placement) {
+  togglePopover({ kind, anchor, build, place }: PopoverRequest) {
     if (this.popover?.kind === kind && this.popover.anchor === anchor) {
       this.closePopover();
       return;
