@@ -49,6 +49,7 @@ describe("foreignMacArch", () => {
   it("is true only for a native build of the other macOS architecture", () => {
     expect(foreignMacArch("sharp-darwin-x64", "arm64")).toBe(true);
     expect(foreignMacArch("sharp-libvips-darwin-arm64", "x64")).toBe(true);
+    expect(foreignMacArch("koffi-darwin-x64", "arm64")).toBe(true);
     expect(foreignMacArch("darwin_x64", "arm64")).toBe(true);
     expect(foreignMacArch("darwin_arm64", "arm64")).toBe(false);
     for (const d of ["win32_x64", "linux-x64", "sharp-wasm32"]) expect(foreignMacArch(d, "arm64")).toBe(false);
