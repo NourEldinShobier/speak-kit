@@ -56,6 +56,11 @@ export class FloatWindow {
         },
       );
       w.on("closed", () => (this.#win = null));
+      // macOS: a read can start in a full-screen app on another Space; the mini player and the panel must show up there too.
+      if (process.platform === "darwin") {
+        w.setAlwaysOnTop(true, "floating");
+        w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+      }
       void w.loadFile(path.join(here, `../renderer/${this.#page}.html`));
       const size = w.getSize();
       w.setBounds(typeof at === "function" ? at({ width: size[0]!, height: size[1]! }) : at);
