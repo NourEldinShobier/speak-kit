@@ -6,7 +6,11 @@ export class Timeline {
   private known: (number | undefined)[] = [];
   private texts: readonly { text: string }[] = [];
 
-  constructor(private speed: () => number) {}
+  private speed: () => number;
+
+  constructor(speed: () => number) {
+    this.speed = speed;
+  }
 
   reset(sentences: readonly { text: string }[]): void {
     this.texts = sentences;
@@ -31,6 +35,11 @@ export class Timeline {
     let t = 0;
     for (let k = 0; k < i; k++) t += this.durationMs(k);
     return t;
+  }
+
+  /** Position in the document: the start of sentence i plus the time already heard of it (clamped to its duration). */
+  elapsedMs(i: number, heardMs: number): number {
+    return this.startMs(i) + Math.max(0, Math.min(heardMs, this.durationMs(i)));
   }
 
   totalMs(): number {

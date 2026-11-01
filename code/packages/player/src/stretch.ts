@@ -1,6 +1,6 @@
 import { SoundTouchNode } from "@soundtouchjs/audio-worklet";
 import processorUrl from "@soundtouchjs/audio-worklet/processor?url";
-import type { CtxLike, StretchDeps, StretchNode } from "./player";
+import type { CtxLike, StretchDeps, StretchNode } from "./deps";
 
 /**
  * Speeds above 2x: the model speaks at most 2x, the rest is `playbackRate` on the sources. A plain playbackRate change also raises

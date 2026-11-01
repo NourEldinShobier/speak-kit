@@ -1,3 +1,8 @@
+/**
+ * Splits text into sentences with their character spans, for the reader and the highlighter.
+ * It does not fetch, synthesize or play anything.
+ * @area player
+ */
 /** A sentence with its character span in the source text (for highlighting). */
 export interface SentenceSpan {
   text: string;

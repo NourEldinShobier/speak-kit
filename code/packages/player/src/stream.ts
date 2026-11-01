@@ -10,7 +10,7 @@ import type { PlayerConfig } from "./types";
 /** Max sentences per /v1/speak request (server limit is 500; smaller chunks bound work the server does ahead of us). */
 const CHUNK = 40;
 
-interface StreamJob {
+export interface StreamJob {
   doc: ReadDoc;
   cfg: PlayerConfig;
   deps: PlayerDeps;

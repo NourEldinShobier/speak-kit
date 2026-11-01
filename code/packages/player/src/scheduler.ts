@@ -39,7 +39,11 @@ export class Scheduler {
   private lastBlock: number | undefined;
   private waiters: (() => void)[] = [];
 
-  constructor(private output: AudioOutput) {}
+  private output: AudioOutput;
+
+  constructor(output: AudioOutput) {
+    this.output = output;
+  }
 
   /** Schedules one sentence; returns how long it is heard at this speed (ms). */
   schedule(s: Sentence, speed: number, pause: Settings["pauseBetweenParagraphs"]): number {

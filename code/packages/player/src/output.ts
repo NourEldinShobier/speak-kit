@@ -10,10 +10,13 @@ export class AudioOutput {
   private stretchNode: StretchNode | undefined;
   private stretchReady: Promise<void> | undefined;
 
-  constructor(
-    private deps: Pick<PlayerDeps, "createContext" | "stretch">,
-    private wantAnalyser: boolean,
-  ) {}
+  private deps: Pick<PlayerDeps, "createContext" | "stretch">;
+  private wantAnalyser: boolean;
+
+  constructor(deps: Pick<PlayerDeps, "createContext" | "stretch">, wantAnalyser: boolean) {
+    this.deps = deps;
+    this.wantAnalyser = wantAnalyser;
+  }
 
   get current(): CtxLike | undefined {
     return this.ctx;

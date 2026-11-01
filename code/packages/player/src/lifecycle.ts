@@ -5,29 +5,53 @@ const HOLD_REFRESH_MS = 300_000;
 /** The offscreen document is closed this long after playback stopped (nothing else needs it). */
 export const IDLE_CLOSE_MS = 60_000;
 
-/** Keeps the server's model loaded while playback is paused (POST /v1/engine/hold, refreshed before it lapses), and releases it after. */
-export class ModelHold {
-  #holding: unknown;
-  #held = false;
-  #deps: Pick<PlayerDeps, "hold" | "setInterval" | "clearInterval">;
+/** A repeating timer on the injected `setInterval`/`clearInterval`; starting twice keeps the first, stopping twice is harmless. */
+export class RepeatTimer {
+  #id: unknown;
+  #deps: Pick<PlayerDeps, "setInterval" | "clearInterval">;
+  #fire: () => void;
+  #ms: number;
 
-  constructor(deps: Pick<PlayerDeps, "hold" | "setInterval" | "clearInterval">) {
+  constructor(deps: Pick<PlayerDeps, "setInterval" | "clearInterval">, fire: () => void, ms: number) {
     this.#deps = deps;
+    this.#fire = fire;
+    this.#ms = ms;
   }
 
   start(): void {
-    const { hold } = this.#deps;
-    if (!hold) return;
-    hold(HOLD_MS);
-    this.#held = true;
+    if (this.#id !== undefined) return;
     const set = this.#deps.setInterval ?? ((fn, ms) => setInterval(fn, ms));
-    if (this.#holding === undefined) this.#holding = set(() => hold(HOLD_MS), HOLD_REFRESH_MS);
+    this.#id = set(this.#fire, this.#ms);
+  }
+
+  stop(): void {
+    if (this.#id === undefined) return;
+    (this.#deps.clearInterval ?? ((id) => clearInterval(id as number)))(this.#id);
+    this.#id = undefined;
+  }
+}
+
+/** Keeps the server's model loaded while playback is paused (POST /v1/engine/hold, refreshed before it lapses), and releases it after. */
+export class ModelHold {
+  #held = false;
+  #hold: PlayerDeps["hold"];
+  #refresh: RepeatTimer;
+
+  constructor(deps: Pick<PlayerDeps, "hold" | "setInterval" | "clearInterval">) {
+    this.#hold = deps.hold;
+    this.#refresh = new RepeatTimer(deps, () => this.#hold?.(HOLD_MS), HOLD_REFRESH_MS);
+  }
+
+  start(): void {
+    if (!this.#hold) return;
+    this.#hold(HOLD_MS);
+    this.#held = true;
+    this.#refresh.start();
   }
 
   end(): void {
-    if (this.#holding !== undefined) (this.#deps.clearInterval ?? ((id) => clearInterval(id as number)))(this.#holding);
-    this.#holding = undefined;
-    if (this.#held) this.#deps.hold?.(0);
+    this.#refresh.stop();
+    if (this.#held) this.#hold?.(0);
     this.#held = false;
   }
 }
