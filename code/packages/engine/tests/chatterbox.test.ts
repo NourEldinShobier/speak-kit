@@ -51,6 +51,34 @@ describe("availability", () => {
 });
 
 describe("hardware detection", () => {
+  it("resolves nvidia-smi, python and uv to absolute paths once and runs those paths", async () => {
+    const calls: string[] = [];
+    const found: Record<string, string> = { "nvidia-smi": "C:/Windows/System32/nvidia-smi.exe", py: "C:/Windows/py.exe", uv: "C:/tools/uv.exe" };
+    const resolved: string[] = [];
+    const hw = await detectHardware(
+      async (cmd, args) => {
+        calls.push([cmd, ...args].join(" "));
+        if (cmd.endsWith("nvidia-smi.exe")) return "RTX 4080, 12282";
+        if (cmd.endsWith("py.exe") && args[0] === "-3.12") return "Python 3.12.4";
+        if (cmd.endsWith("uv.exe")) return "uv 0.11.3";
+        return undefined;
+      },
+      async (cmd) => (resolved.push(cmd), found[cmd]),
+    );
+    expect(hw).toEqual({ gpu: { name: "RTX 4080", vramMb: 12282 }, python: ["C:/Windows/py.exe", "-3.12"], uv: ["C:/tools/uv.exe"] });
+    expect(calls).toContain("C:/Windows/System32/nvidia-smi.exe --query-gpu=name,memory.total --format=csv,noheader,nounits");
+    expect(calls.some((c) => c.startsWith("nvidia-smi") || c.startsWith("py ") || c.startsWith("uv "))).toBe(false);
+    expect(resolved.filter((c) => c === "py")).toHaveLength(1);
+  });
+  it("skips a command that cannot be resolved", async () => {
+    expect(
+      await detectHardware(
+        async () => "Python 3.12.4",
+        async () => undefined,
+      ),
+    ).toEqual({});
+  });
+
   it("reads nvidia-smi and picks a supported Python", async () => {
     const out: Record<string, string> = {
       "nvidia-smi": "NVIDIA GeForce RTX 4080 Laptop GPU, 12282\n",
@@ -132,6 +160,71 @@ describe("installer commands", () => {
   });
 });
 
+describe("sidecar faults", () => {
+  const ready = { gpu: GPU };
+  const speak = (e: ChatterboxEngine, text: string) => e.synthesize(text, { voice: "chatterbox", speed: 1 });
+
+  it("a sidecar killed mid-synthesis rejects the request, unloads, and the next request reloads", async () => {
+    const { e } = make(ready, {}, true);
+    await e.start();
+    const states: string[] = [];
+    e.onStatus((s) => states.push(s.state));
+    await expect(speak(e, "please be killed")).rejects.toThrow(/chatterbox sidecar exited/);
+    expect(e.status().state).toBe("unloaded");
+    expect(states).toEqual(["unloaded"]);
+    await expect(speak(e, "fine")).resolves.toBeDefined();
+  });
+
+  it("a request with no sign of life for the deadline fails, kills the sidecar and unloads", async () => {
+    const { e } = make(ready, { deadlines: { requestIdleMs: 250 } }, true);
+    await e.start();
+    const t0 = Date.now();
+    await expect(speak(e, "hang forever")).rejects.toThrow("chatterbox sidecar sent nothing for 0.25 s");
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(240);
+    expect(e.status().state).toBe("unloaded");
+    await expect(speak(e, "fine")).resolves.toBeDefined();
+  });
+
+  it("an idle sidecar with no request outstanding is never timed out", async () => {
+    const { e } = make(ready, { deadlines: { requestIdleMs: 100 } }, true);
+    await e.start();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(e.status().state).toBe("ready");
+    await expect(speak(e, "still here")).resolves.toBeDefined();
+  });
+
+  it("a sidecar that goes quiet while loading fails the load with the deadline", async () => {
+    process.env.SPEAKKIT_FAKE_LOAD_MS = "5000";
+    try {
+      const { e } = make(ready, { deadlines: { loadIdleMs: 250 } }, true);
+      await expect(e.start()).rejects.toThrow("chatterbox sidecar sent nothing for 0.25 s");
+      expect(e.status().state).toBe("error");
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_LOAD_MS;
+    }
+  });
+
+  it("stops restarting after three crashes in five minutes; start() is the retry", async () => {
+    const { e } = make(ready, {}, true);
+    for (let i = 0; i < 3; i++) {
+      await expect(speak(e, "now crash")).rejects.toThrow(/exited with code 3/);
+    }
+    expect(e.status().state).toBe("error");
+    expect(e.status().detail).toContain("3 crashes in 5 min");
+    await expect(speak(e, "fine")).rejects.toBeInstanceOf(EngineNotReadyError);
+    await e.start();
+    await expect(speak(e, "fine")).resolves.toBeDefined();
+  });
+
+  it("an installer that prints nothing for the deadline fails and returns to missing", async () => {
+    const hang = join(tmpdir(), `hang-${process.pid}.mjs`);
+    writeFileSync(hang, "setTimeout(() => {}, 60000);");
+    const { e } = make({ gpu: GPU, uv: [process.execPath, hang] }, { deadlines: { installIdleMs: 300 } });
+    await expect(e.install()).rejects.toThrow(/printed nothing for 0.3 s/);
+    expect(e.status().state).toBe("missing");
+  });
+});
+
 describe("sidecar", () => {
   const ready = { gpu: GPU };
   it("loads with download progress, synthesizes and unloads (kills the process)", async () => {
@@ -152,7 +245,7 @@ describe("sidecar", () => {
 
   it("uses the reference clip of a cloned voice and lists it", async () => {
     const { e } = make(ready, {}, true);
-    const v = e.clones.add({ name: "Maya", wav: encodeWav(new Int16Array(10), 24000), durationMs: 6000, checks: [] });
+    const v = await e.clones.create({ name: "Maya", wav: encodeWav(new Int16Array(10), 24000), durationMs: 6000, checks: [] });
     expect(e.voices().map((x) => x.id)).toEqual(["chatterbox", v.id]);
     const r = await e.synthesize("hi", { voice: v.id, speed: 1 });
     expect(r.pcm[0]).toBe(2000);

@@ -48,7 +48,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL_CHATTERBOX)("ChatterboxEngine (real m
 
     // Cloning: the engine's own long output is the reference clip (>= 5 s).
     expect(m.warmAudioMs).toBeGreaterThan(5000);
-    const voice = e.clones.add({ name: "self", wav: encodeWav(warm.pcm, warm.sampleRate), durationMs: m.warmAudioMs, checks: [] });
+    const voice = await e.clones.create({ name: "self", wav: encodeWav(warm.pcm, warm.sampleRate), durationMs: m.warmAudioMs, checks: [] });
     t = performance.now();
     const cloned = await e.synthesize(SENTENCE, { voice: voice.id, speed: 1 });
     m.cloneMs = ms(t);
