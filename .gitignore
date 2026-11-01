@@ -26,3 +26,5 @@ designs/logo/refs/
 designs/logo/renders/
 designs/logo/v2/*.png
 !designs/logo/v2/round2-board.png
+designs/logo/v3/*.png
+!designs/logo/v3/round3-board.png
