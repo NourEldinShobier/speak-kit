@@ -1,0 +1,14 @@
+{
+  "name": "@speakkit/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "vp pack" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@speakkit/protocol": "workspace:*",
+    "kokoro-js": "latest"
+  }
+}

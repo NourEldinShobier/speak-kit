@@ -1,0 +1,1 @@
+{ "name": "@speakkit/e2e", "version": "0.1.0", "private": true, "type": "module", "dependencies": { "@speakkit/protocol": "workspace:*" }, "devDependencies": { "@playwright/test": "latest", "pixelmatch": "latest", "pngjs": "latest", "@types/pngjs": "latest" } }

@@ -1,0 +1,29 @@
+/* Shadow DOM shell: the container and the popover layer. Components come from the Lumen kit stylesheet. */
+:host{all:initial}
+*{box-sizing:border-box}
+.sk{position:absolute;inset:0;pointer-events:none;color:var(--text-primary)}
+.sk>*{pointer-events:auto}
+.sk button{font-family:inherit}
+.sk-grow{flex:1;min-width:0}
+.sk-sep{width:28px;height:1px;background:var(--stroke-divider);flex:none}
+.sk .lm-popover{position:absolute;z-index:3;width:300px;gap:10px;box-shadow:var(--lm-shadow-overlay)}
+.sk .lm-popover.sk-pop-voice{width:320px}
+.sk .lm-menu.sk-menu{position:absolute;z-index:3;min-width:200px}
+.sk-pop-row{display:flex;align-items:center;gap:14px}
+.sk-pop-row .lm-slider{width:100%}
+.sk-pop-val{min-width:52px;text-align:right;font:600 14px/17px Inter,"Inter Variable",system-ui,sans-serif}
+.sk-pop-scale{display:flex;justify-content:space-between;margin-top:2px;color:var(--text-tertiary);font-size:11px}
+.sk-pop-presets{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.sk-pop-presets .lm-btn{padding:0;justify-content:center}
+.sk-pop-foot{display:flex}
+.sk-pop-count{margin-top:-6px;color:var(--text-secondary);font-size:12px}
+.sk-vlist{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow:auto;margin-right:-6px;padding-right:6px;scrollbar-width:thin}
+.sk-vrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px;border-radius:8px;cursor:pointer;flex:none}
+.sk-vrow:hover,.sk-vrow:focus-visible{background:var(--fill-hover);outline:none}
+.sk-vrow.is-selected{background:var(--accent-subtle)}
+.sk-vname{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}
+.sk-vname b{font-weight:600}
+.sk-vname span{color:var(--text-secondary);font-size:12px}
+.sk-vcheck{color:var(--accent-default)}
+.sk-vnone{padding:12px 8px;color:var(--text-tertiary);font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}

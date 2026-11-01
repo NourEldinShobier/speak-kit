@@ -1,0 +1,51 @@
+{
+  "name": "@speakkit/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SpeakKit UI kit: the real Lumen components (React) plus the same markup/CSS for vanilla (Shadow DOM) code.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vanilla": "./src/vanilla.ts",
+    "./lumen.css": "./src/lumen.css",
+    "./icons": "./src/icons.ts",
+    "./spec": "./spec/lumen-spec.json"
+  },
+  "scripts": {
+    "gallery": "vp dev --config vite.config.ts",
+    "build:gallery": "vp build --config vite.config.ts",
+    "compare": "node --experimental-strip-types scripts/compare.ts",
+    "gen:icons": "node scripts/gen-icons.mjs",
+    "test": "vp test run",
+    "typecheck": "tsrs --noEmit -p ."
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@tabler/icons-react": "^3",
+    "@types/pngjs": "latest",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "pixelmatch": "latest",
+    "pngjs": "latest",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "dependencies": {
+    "radix-ui": "^1.8.1"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ]
+}

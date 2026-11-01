@@ -1,0 +1,346 @@
+{
+ "A1-idle": {
+  "verdict": "minor",
+  "reason": "Idle: Listen, From selection, Reader view and the hint line sit 2 to 5 px lower than the design. Header, now-playing row, scrubber, voice row, shortcuts and footer follow the design within about 2 to 4 px (360 px card). Remaining differences: settings glyph is the vertical sliders icon (design: horizontal), Play / pause shortcut shows Ctrl Shift Y (design: P), buttons in error states carry no leading icon."
+ },
+ "A2-selection": {
+  "verdict": "minor",
+  "reason": "Selection quote and Listen to selection button; same drift as A1."
+ },
+ "A3-preparing": {
+  "verdict": "minor",
+  "reason": "Preparing bar and Cancel match; spacing differs by 2 to 4 px."
+ },
+ "A4-playing": {
+  "verdict": "minor",
+  "reason": "Playing: transport (52 px play, 28 px skips) and times within 2 px after the fix; skip glyphs are slightly smaller than the design. Header, now-playing row, scrubber, voice row, shortcuts and footer follow the design within about 2 to 4 px (360 px card). Remaining differences: settings glyph is the vertical sliders icon (design: horizontal), Play / pause shortcut shows Ctrl Shift Y (design: P), buttons in error states carry no leading icon."
+ },
+ "A5-paused": {
+  "verdict": "minor",
+  "reason": "Paused: same as A4."
+ },
+ "A7-speed-picker": {
+  "verdict": "minor",
+  "reason": "Speed picker: presets and slider match in structure (not viewed side by side)."
+ },
+ "A9-app-not-running": {
+  "verdict": "minor",
+  "reason": "Offline: icon tile, title and body match; the two buttons have no leading icons."
+ },
+ "A10-model-loading": {
+  "verdict": "minor",
+  "reason": "Loading bar and wording (not viewed side by side)."
+ },
+ "A13-not-installed": {
+  "verdict": "minor",
+  "reason": "Not installed: same layout as A9 (not viewed side by side)."
+ },
+ "A14-token-rejected": {
+  "verdict": "minor",
+  "reason": "Token rejected: same layout as A9 (not viewed side by side)."
+ },
+ "A15-file-permission": {
+  "verdict": "minor",
+  "reason": "File permission: same layout as A9 (not viewed side by side)."
+ },
+ "A17-engine-waking": {
+  "verdict": "minor",
+  "reason": "Waking: indeterminate bar and wording follow the design (not viewed side by side)."
+ },
+ "A6-voice-picker": {
+  "verdict": "major",
+  "reason": "Voice picker: product has an extra Voice filter chip and a filled accent row for the selected voice, the scrubber row is not compacted, the list shows 5 rows (design 4 with scrollbar)."
+ },
+ "A8-finished": {
+  "verdict": "minor",
+  "reason": "Finished: replay button and Up next card match in structure; the Up next title truncates in the product (design wraps), voice row sits 20 px lower."
+ },
+ "A11-page-unreadable": {
+  "verdict": "minor",
+  "reason": "Cannot read this page: tile has no amber tint and the button has no leading clipboard icon; text and layout match."
+ },
+ "A16-engine-asleep": {
+  "verdict": "major",
+  "reason": "Engine asleep: the design shows an Engine asleep chip and a message block (Voice engine is asleep, memory given back). The product shows a Wakes on play chip and one hint line under the Listen button; that string is asserted by the e2e lifecycle test, so it was left as is."
+ },
+ "B4-pill-idle": {
+  "verdict": "minor",
+  "reason": "Idle pill. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B5-pill-preparing": {
+  "verdict": "minor",
+  "reason": "Preparing pill. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B6-reading-highlight": {
+  "verdict": "minor",
+  "reason": "Reading with highlight: article, sentence and word highlight match. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B7-paused": {
+  "verdict": "minor",
+  "reason": "Paused pill. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B8-finished": {
+  "verdict": "minor",
+  "reason": "Finished pill. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B9-app-offline": {
+  "verdict": "minor",
+  "reason": "Offline error pill. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B23-pill-engine-waking": {
+  "verdict": "minor",
+  "reason": "Waking label appears after 1.2 s of preparing. Pill is the Lumen read-aloud pill: it has two extra buttons next to play (previous and next paragraph, more menu), the voice chip shows an avatar where the design draws a speaker glyph, and the progress label counts the fixture's 4 paragraphs (design: 14)."
+ },
+ "B22-pill-engine-asleep": {
+  "verdict": "major",
+  "reason": "The pill has no engine-asleep state: it shows the plain idle pill (the engine wakes on play), the design shows an asleep label."
+ },
+ "B1-selection-bubble": {
+  "verdict": "minor",
+  "reason": "Bubble sits about 4 px off and shows the shortcut hint in its tooltip; Chrome paints its own selection colour (design: light blue); Listen has an icon gap."
+ },
+ "B2-paragraph-gutter": {
+  "verdict": "minor",
+  "reason": "Gutter play button and paragraph tint match (not viewed side by side)."
+ },
+ "B13-added-to-queue": {
+  "verdict": "minor",
+  "reason": "Toast text and View queue action match; toast sits 6 px higher; selection colour differs."
+ },
+ "B14-back-to-current": {
+  "verdict": "minor",
+  "reason": "Back to current pill matches; the article behind it is the shorter fixture."
+ },
+ "B15-speed-popover": {
+  "verdict": "minor",
+  "reason": "Speed popover above the pill (not viewed side by side)."
+ },
+ "B16-voice-popover": {
+  "verdict": "minor",
+  "reason": "Voice popover: search, rows and preview buttons match; the first row shows the keyboard focus ring."
+ },
+ "B15-more-menu": {
+  "verdict": "minor",
+  "reason": "Product-only state (no design frame): the pill More menu (Settings, Hide on this site, Close)."
+ },
+ "B17-launcher-tab": {
+  "verdict": "minor",
+  "reason": "Edge tab 14 px at the right edge (not viewed side by side)."
+ },
+ "B18-launcher-open": {
+  "verdict": "minor",
+  "reason": "The design frame is superseded by the pill (B4); the product still has the edge launcher."
+ },
+ "B19-launcher-reading": {
+  "verdict": "minor",
+  "reason": "Edge tab while reading; tab position matches."
+ },
+ "B20-launcher-reading-open": {
+  "verdict": "minor",
+  "reason": "The design frame is superseded by the pill (B6); the product still has the expanded launcher."
+ },
+ "B10-reader-paper": {
+  "verdict": "major",
+  "reason": "Reader view: the product has a top bar (close, host, settings) and no kicker or subtitle, the design is an inset card with the pill visible and the reading panel open. The duplicate page title is removed (is-dup) and the pill is now above the reader."
+ },
+ "B12-reader-dark": {
+  "verdict": "major",
+  "reason": "Reader view dark: same structural differences as B10."
+ },
+ "B10-reader-light": {
+  "verdict": "minor",
+  "reason": "Product-only light theme of the reader."
+ },
+ "B24-reader-reading-panel": {
+  "verdict": "major",
+  "reason": "Reading panel: title and highlight label now follow the design (Reading, Highlight sentence); the product uses sliders for size and width and a Paper / Light / Dark segmented control, the design shows value rows (19, Medium, Paper)."
+ },
+ "C1-general-connected": {
+  "verdict": "match",
+  "reason": "Connection card, port and token fields match; version and latency are live values, the token field has reveal and copy buttons."
+ },
+ "C2-general-offline": {
+  "verdict": "match",
+  "reason": "Offline card, alert and buttons within 2 px (not viewed side by side)."
+ },
+ "C3-general-token-rejected": {
+  "verdict": "minor",
+  "reason": "Empty focused token field like the design; the design shows a clipboard icon left of the placeholder."
+ },
+ "C13-pair-this-browser": {
+  "verdict": "minor",
+  "reason": "No token yet and the app unreachable: the product shows the token field with Re-pair, the design adds a Paste button and Test connection."
+ },
+ "C4-voice-speed": {
+  "verdict": "match",
+  "reason": "Voice and speed rows within 2 px (not viewed side by side); the design shows a transient Saved indicator."
+ },
+ "C5-highlighting": {
+  "verdict": "minor",
+  "reason": "Preview padding differs by 4 px; swatches are 50 px apart as in the design."
+ },
+ "C6-shortcuts": {
+  "verdict": "minor",
+  "reason": "The product lists 3 Chrome commands read-only; the design lists 4 with a conflict badge and Reset."
+ },
+ "C7-sites": {
+  "verdict": "match",
+  "reason": "Site rule rows (not viewed side by side); rows are sorted alphabetically in the product."
+ },
+ "C12-edge-launcher": {
+  "verdict": "match",
+  "reason": "Launcher options within 2 px."
+ },
+ "C19-reader-view": {
+  "verdict": "minor",
+  "reason": "Product-only: Reader view options page (font, size, width, theme, highlight) with a live preview."
+ },
+ "C18-narrow": {
+  "verdict": "minor",
+  "reason": "Below 1025 px the nav collapses to a select at the top and padding is 20 px like the design; the design page content is a shorter General (Launcher card), the product keeps its connection and appearance cards."
+ },
+ "C5-highlighting-dark-page-preview": {
+  "verdict": "minor",
+  "reason": "Product-only: the Dark page preview of the highlight options."
+ },
+ "C9-queue-outline": {
+  "verdict": "minor",
+  "reason": "Side panel: now-playing card is tinted like the design, outline row and Up next cards match after the CSS changes; transport icons are 2 px smaller."
+ },
+ "C10-empty-queue": {
+  "verdict": "minor",
+  "reason": "Empty state centred; the design tile is 52 px with a round border, the text is one line shorter."
+ },
+ "C9-app-offline": {
+  "verdict": "minor",
+  "reason": "Product-only: side panel with the app offline."
+ },
+ "W1-welcome": {
+  "verdict": "major",
+  "reason": "Welcome: product hero (Read anything out loud, three cards) against the design's left-aligned list. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W2-voice-engine": {
+  "verdict": "major",
+  "reason": "Voice engine: Kokoro selected, Chatterbox locked; no hardware detection banner. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W3-download": {
+  "verdict": "major",
+  "reason": "Download: one model row with progress; the design lists model, voices and runtime rows. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W3b-download-failed": {
+  "verdict": "major",
+  "reason": "Download failed: error banner with details and Retry; the design shows a paused download. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W4-connect-browser": {
+  "verdict": "major",
+  "reason": "Connect browser: three numbered steps with reveal, copy and test; the design shows the pairing code flow. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W5-done": {
+  "verdict": "major",
+  "reason": "Done: sample player and settings rows. Setup window follows the earlier D-series layout (hero welcome, card steps) while the restructured W-series shows a left-aligned column with a stepper; step names, buttons and flow are the same."
+ },
+ "W4-connect-browser-token": {
+  "verdict": "major",
+  "reason": "Product-only: token revealed and copied."
+ },
+ "W5-done-skipped": {
+  "verdict": "major",
+  "reason": "Product-only: finished with the browser step skipped."
+ },
+ "L1-home": {
+  "verdict": "known",
+  "reason": "Home: the design is a library home (greeting, composer, reading now, continue list), the product Home shows server, engine, pairing token and extension install (Library is v1.1). Title bar, search, sidebar, New reading button and engine card match."
+ },
+ "L2-palette": {
+  "verdict": "minor",
+  "reason": "Command palette: 640 px, grouped rows, footer hints; groups and items differ (design lists readings)."
+ },
+ "L3-palette-filtered": {
+  "verdict": "minor",
+  "reason": "Filtered palette; same as L2."
+ },
+ "L4-narrow-rail": {
+  "verdict": "minor",
+  "reason": "60 px rail below 1025 px (not viewed side by side)."
+ },
+ "L1-new-reading": {
+  "verdict": "minor",
+  "reason": "Product-only: New reading dialog."
+ },
+ "L1-notifications": {
+  "verdict": "minor",
+  "reason": "Product-only: notifications popover."
+ },
+ "L1-sidebar-collapsed": {
+  "verdict": "minor",
+  "reason": "Product-only: sidebar hidden."
+ },
+ "G1-voices": {
+  "verdict": "known",
+  "reason": "Voices: the design adds Your voices, voice cloning, Grid / List and a grades legend (cloning is v1.1); the product has search, filters and quality-graded cards."
+ },
+ "G8-engines": {
+  "verdict": "known",
+  "reason": "Engines: the design shows a hardware banner, model sizes and a Chatterbox download; the product lists Kokoro and a locked Chatterbox."
+ },
+ "O2-engines-unloaded": {
+  "verdict": "major",
+  "reason": "Unloaded: the product shows the unloaded pill and card text; the design adds a Load now button and memory stats."
+ },
+ "O3-engines-loading": {
+  "verdict": "minor",
+  "reason": "Loading state card (not viewed side by side)."
+ },
+ "G10-engines-error": {
+  "verdict": "minor",
+  "reason": "Product-only: engine error on the Engines page."
+ },
+ "H4-browser-page": {
+  "verdict": "minor",
+  "reason": "Product-only: Browser page."
+ },
+ "H1-general": {
+  "verdict": "known",
+  "reason": "General: the design groups Startup, Interface language, Privacy and prompts (clipboard, crash reports, updates); the product has launch at login, start minimized, language, theme and notifications."
+ },
+ "H2-voice-playback": {
+  "verdict": "minor",
+  "reason": "Voice and playback rows (not viewed side by side)."
+ },
+ "H4-browser-integration": {
+  "verdict": "minor",
+  "reason": "Port, token and pairing status; the design lists paired browsers."
+ },
+ "H12-memory": {
+  "verdict": "minor",
+  "reason": "Memory: idle unload choices, load at startup, battery saver and live RAM match the design; the design adds CPU threads and GPU fallback rows."
+ },
+ "H13-memory-unloaded": {
+  "verdict": "minor",
+  "reason": "Memory with the engine unloaded (not viewed side by side)."
+ },
+ "H6-storage": {
+  "verdict": "minor",
+  "reason": "Storage: models folder and size bar (not viewed side by side)."
+ },
+ "H8-about": {
+  "verdict": "minor",
+  "reason": "About: versions and licenses (not viewed side by side)."
+ },
+ "K11-quit-confirmation": {
+  "verdict": "minor",
+  "reason": "Quit dialog: the product lists what stops (server, model); the design lists reading and exports (exports are v1.1)."
+ },
+ "K2-port-in-use": {
+  "verdict": "minor",
+  "reason": "The app picks another port and shows a warning banner on Home; the design shows a blocking error card."
+ },
+ "K1-engine-error": {
+  "verdict": "minor",
+  "reason": "Engine error: banner with Retry on Home (not viewed side by side)."
+ },
+ "H13-home-engine-unloaded": {
+  "verdict": "minor",
+  "reason": "Product-only: Home with the engine unloaded."
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@speakkit/engine": [
+        "../packages/engine/src/index.ts"
+      ],
+      "@speakkit/server": [
+        "../packages/server/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "*.ts",
+    "tests",
+    "support"
+  ]
+}

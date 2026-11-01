@@ -1,0 +1,20 @@
+{
+  "name": "speakkit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "e2e": "node e2e/run.mjs",
+    "e2e:full": "node e2e/run.mjs --full"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsrs": "0.20.1-ts7.1.0-beta",
+    "typescript": "^7.0.2",
+    "vite-plus": "^1.4.0"
+  }
+}

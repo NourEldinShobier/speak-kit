@@ -1,0 +1,240 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fork, type ChildProcess } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
+import { DEFAULT_VOICE, SAMPLE_RATE, type Voice } from "@speakkit/protocol";
+import { splitLong } from "./split";
+import { KOKORO_VOICES } from "./voices";
+import { LifecycleEngine, type LifecycleOptions } from "./lifecycle";
+import type { SynthOptions, Synthesized } from "./types";
+import type { FromWorker, ToWorker, WorkerInit } from "./worker-protocol";
+
+export interface KokoroOptions extends LifecycleOptions {
+  /** Model cache root (transformers.js layout: <dir>/<modelId>/...). */
+  modelsDir: string;
+  modelId?: string;
+  dtype?: WorkerInit["dtype"];
+  device?: "cpu" | "dml";
+  /** onnxruntime intra-op threads. */
+  threads?: number;
+  /** Run one dummy synthesis while loading so the first real request is fast. Default true. */
+  warmup?: boolean;
+  /** Override the worker entry (needed when this module is bundled). */
+  workerUrl?: URL | string;
+  /**
+   * Where the model runs. "process" (default): a child process, so unloading returns all memory to the OS.
+   * "thread": a worker_thread; terminating one leaks about 2.5 MB of native memory per load/unload cycle (measured, see docs/perf.md).
+   */
+  isolation?: "process" | "thread";
+  /** Max chars per model call; longer sentences are split at clause boundaries. Default 300. */
+  maxChunk?: number;
+}
+
+const GAP_SAMPLES = Math.round(SAMPLE_RATE * 0.08);
+
+const MODEL_FILE: Record<WorkerInit["dtype"], string> = {
+  fp32: "model.onnx",
+  fp16: "model_fp16.onnx",
+  q8: "model_quantized.onnx",
+  uint8: "model_uint8.onnx",
+  q4: "model_q4.onnx",
+  q4f16: "model_q4f16.onnx",
+};
+const DEFAULT_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
+
+/** transformers.js cache layout: <modelsDir>/<modelId>/onnx/<file>. */
+function modelPresent(o: KokoroOptions): boolean {
+  return existsSync(
+    join(o.modelsDir, o.modelId ?? DEFAULT_MODEL, "onnx", MODEL_FILE[o.dtype ?? "uint8"]),
+  );
+}
+
+/** What KokoroEngine needs from a worker thread or a child process. */
+interface Channel {
+  post(m: ToWorker): void;
+  on(ev: "message", cb: (m: FromWorker) => void): void;
+  on(ev: "error", cb: (e: Error) => void): void;
+  on(ev: "exit", cb: (code: number | null) => void): void;
+  terminate(): Promise<void>;
+  pid?: number;
+}
+function threadChannel(url: URL | string, workerData: WorkerInit): Channel {
+  const w = new Worker(url, { workerData });
+  return {
+    post: (m) => w.postMessage(m),
+    on: (ev: string, cb: (x: never) => void) => void w.on(ev, cb as never),
+    terminate: async () => void (await w.terminate()),
+  };
+}
+function processChannel(url: URL | string, init: WorkerInit): Channel {
+  const file = typeof url === "string" && !url.startsWith("file:") ? url : fileURLToPath(url);
+  const c: ChildProcess = fork(file, [], {
+    serialization: "advanced",
+    execArgv: [],
+    stdio: ["ignore", "ignore", "inherit", "ipc"],
+    env: { ...process.env, SPEAKKIT_WORKER_INIT: JSON.stringify(init) },
+  });
+  return {
+    pid: c.pid,
+    post: (m) => void c.send(m),
+    on: (ev: string, cb: (x: never) => void) => void c.on(ev, cb as never),
+    terminate: () =>
+      new Promise((resolve) => {
+        if (c.exitCode !== null || c.signalCode !== null) return resolve();
+        c.once("exit", () => resolve());
+        c.kill();
+      }),
+  };
+}
+
+type Resolved = Required<Omit<KokoroOptions, "workerUrl" | "isolation" | keyof LifecycleOptions>> & {
+  workerUrl?: URL | string;
+  isolation: "process" | "thread";
+};
+
+/**
+ * Kokoro-82M through onnxruntime-node, running in a worker thread so the caller's event loop never blocks.
+ * Lazy: the worker (and the model in RAM) exists only between a load and an unload; see LifecycleEngine.
+ * Unloading terminates the worker thread, which returns onnxruntime's memory to the OS.
+ */
+export class KokoroEngine extends LifecycleEngine {
+  #o: Resolved;
+  #worker?: Channel;
+  #next = 1;
+  #jobs = new Map<
+    number,
+    { resolve: (r: Synthesized | null) => void; reject: (e: Error) => void }
+  >();
+
+  constructor(o: KokoroOptions) {
+    super(o, modelPresent(o) ? "unloaded" : "missing");
+    this.#o = {
+      modelId: DEFAULT_MODEL,
+      dtype: "uint8",
+      device: "cpu",
+      threads: 6,
+      warmup: true,
+      maxChunk: 300,
+      isolation: "process",
+      ...Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)),
+    } as Resolved;
+  }
+
+  voices(): Voice[] {
+    return KOKORO_VOICES;
+  }
+
+  /** Process id of the model host when isolation is "process" and a model is loaded (for memory measurements). */
+  get workerPid(): number | undefined {
+    return this.#worker?.pid;
+  }
+
+  protected doLoad(): Promise<void> {
+    const o = this.#o;
+    const url =
+      o.workerUrl ??
+      new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url);
+    const workerData: WorkerInit = {
+      modelsDir: o.modelsDir,
+      modelId: o.modelId,
+      dtype: o.dtype,
+      device: o.device,
+      threads: o.threads,
+      warmup: o.warmup,
+      warmupVoice: DEFAULT_VOICE,
+    };
+    const w = (this.#worker = (o.isolation === "thread" ? threadChannel : processChannel)(
+      url,
+      workerData,
+    ));
+    return new Promise<void>((resolve, reject) => {
+      let loaded = false;
+      const fail = (message: string) => {
+        const err = new Error(message);
+        for (const j of this.#jobs.values()) j.reject(err);
+        this.#jobs.clear();
+        if (this.#worker === w) this.#worker = undefined;
+        void w.terminate();
+        if (loaded) this.markUnloaded(message);
+        else reject(err);
+      };
+      w.on("message", (m: FromWorker) => {
+        if (m.type === "status") {
+          if (m.state === "ready") {
+            loaded = true;
+            resolve();
+          } else this.report({ state: m.state, progress: m.progress, detail: m.detail });
+        } else if (m.type === "fatal") {
+          fail(m.message);
+        } else {
+          const j = this.#jobs.get(m.id);
+          if (!j) return;
+          this.#jobs.delete(m.id);
+          if (m.type === "error") j.reject(new Error(m.message));
+          else j.resolve(m.cancelled ? null : { pcm: m.pcm!, sampleRate: m.sampleRate! });
+        }
+      });
+      w.on("error", (e: Error) => fail(e.message));
+      w.on("exit", (code) => {
+        if (this.#worker === w && code !== 0) fail(`worker exited with code ${code}`);
+        else if (!loaded) reject(new Error("worker terminated"));
+      });
+    });
+  }
+
+  protected async doUnload(): Promise<void> {
+    const w = this.#worker;
+    this.#worker = undefined;
+    for (const j of this.#jobs.values()) j.reject(new Error("engine unloaded"));
+    this.#jobs.clear();
+    if (w) await w.terminate();
+  }
+
+  #job(text: string, voice: string, speed: number, signal?: AbortSignal): Promise<Synthesized> {
+    const w = this.#worker!;
+    const id = this.#next++;
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        if (!this.#jobs.delete(id)) return;
+        w.post({ type: "cancel", id });
+        reject(signal!.reason);
+      };
+      this.#jobs.set(id, {
+        resolve: (r) => {
+          signal?.removeEventListener("abort", onAbort);
+          if (r) resolve(r);
+          else reject(signal?.reason ?? new Error("cancelled"));
+        },
+        reject: (e) => {
+          signal?.removeEventListener("abort", onAbort);
+          reject(e);
+        },
+      });
+      signal?.addEventListener("abort", onAbort, { once: true });
+      w.post({ type: "synth", id, text, voice, speed });
+    });
+  }
+
+  protected async doSynthesize(
+    text: string,
+    { voice, speed, signal }: SynthOptions,
+  ): Promise<Synthesized> {
+    if (!KOKORO_VOICES.some((v) => v.id === voice)) throw new Error(`unknown voice "${voice}"`);
+    const pieces = splitLong(text, this.#o.maxChunk);
+    const parts: Int16Array[] = [];
+    for (const p of pieces) {
+      signal?.throwIfAborted();
+      if (parts.length) parts.push(new Int16Array(GAP_SAMPLES));
+      parts.push((await this.#job(p, voice, speed, signal)).pcm);
+    }
+    if (parts.length === 1) return { pcm: parts[0]!, sampleRate: SAMPLE_RATE };
+    const pcm = new Int16Array(parts.reduce((n, a) => n + a.length, 0));
+    let at = 0;
+    for (const a of parts) {
+      pcm.set(a, at);
+      at += a.length;
+    }
+    return { pcm, sampleRate: SAMPLE_RATE };
+  }
+}

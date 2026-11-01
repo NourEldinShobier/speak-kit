@@ -1,0 +1,425 @@
+import { Dialog as RDialog, DropdownMenu as RMenu, Popover as RPopover, Select as RSelect } from "radix-ui";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import type { IconName } from "../icons";
+import { IconButton } from "./controls";
+import { cx, Icon } from "./shared";
+
+/*
+ * Behaviour (focus, keyboard, dismissal, positioning) comes from Radix primitives; the markup keeps the Lumen
+ * classes, so the look is the contract in lumen.css. Floating content renders inline (no portal) so it inherits
+ * the `.lm` theme variables, which also works inside a shadow root or a popup.
+ */
+
+/* ---------------- Menu (static surface) ---------------- */
+
+export interface MenuProps extends HTMLAttributes<HTMLDivElement> {
+  /** 32px items with 12px shortcuts (context menus), instead of 30px. */
+  large?: boolean;
+  /** Overlay shadow (0 16 48) instead of the menu shadow (0 8 24). */
+  overlay?: boolean;
+}
+
+const ITEM = '[role="menuitem"]:not([aria-disabled="true"])';
+
+/** role=menu surface with roving focus (Arrow Up/Down, Home, End) for always-open menus; use DropdownMenu for a trigger. */
+export function Menu({ large, overlay, className, onKeyDown, children, ...rest }: MenuProps) {
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown?.(e);
+    if (e.defaultPrevented) return;
+    const items = [...e.currentTarget.querySelectorAll<HTMLElement>(ITEM)];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    let n = -1;
+    if (e.key === "ArrowDown") n = (i + 1) % items.length;
+    else if (e.key === "ArrowUp") n = (i - 1 + items.length) % items.length;
+    else if (e.key === "Home") n = 0;
+    else if (e.key === "End") n = items.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    items[n]?.focus();
+  };
+  return (
+    <div
+      role="menu"
+      className={cx("lm-menu", large && "lm-menu--lg", overlay && "lm-menu--overlay", className)}
+      onKeyDown={onKey}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}
+
+export interface MenuItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onSelect"> {
+  icon?: IconName;
+  shortcut?: string;
+  /** Shows the trailing check (current choice). */
+  selected?: boolean;
+  destructive?: boolean;
+  disabled?: boolean;
+  onSelect?: () => void;
+}
+
+export function MenuItem({
+  icon,
+  shortcut,
+  selected,
+  destructive,
+  disabled,
+  onSelect,
+  className,
+  onClick,
+  children,
+  ...rest
+}: MenuItemProps) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      aria-disabled={disabled ? "true" : undefined}
+      className={cx("lm-menu__item", destructive && "is-destructive", className)}
+      onClick={(e) => {
+        if (disabled) return;
+        onClick?.(e);
+        onSelect?.();
+      }}
+      {...rest}
+    >
+      {icon ? <Icon name={icon} /> : null}
+      <span className="lm-menu__label">{children}</span>
+      {shortcut ? <span className="lm-menu__shortcut">{shortcut}</span> : null}
+      {selected ? <Icon name="check" size={14} className="lm-menu__check" /> : null}
+    </button>
+  );
+}
+
+export const MenuSeparator = () => <div role="separator" className="lm-menu__sep" />;
+export const MenuGroupLabel = ({ children }: { children: ReactNode }) => (
+  <div className="lm-menu__group">{children}</div>
+);
+
+/* ---------------- DropdownMenu (Radix) ---------------- */
+
+export interface DropdownMenuProps {
+  /** The element that opens the menu (a Button, IconButton ...); it receives the trigger props. */
+  trigger: ReactElement;
+  children: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+  large?: boolean;
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  className?: string;
+}
+
+/** Trigger + menu. Arrow keys, Home/End, type-ahead, Escape (focus returns to the trigger) and outside click come from Radix. */
+export function DropdownMenu({
+  trigger,
+  children,
+  side = "bottom",
+  align = "end",
+  large,
+  className,
+  ...root
+}: DropdownMenuProps) {
+  return (
+    <RMenu.Root {...root}>
+      <RMenu.Trigger asChild>{trigger}</RMenu.Trigger>
+      <RMenu.Content
+        side={side}
+        align={align}
+        sideOffset={6}
+        collisionPadding={8}
+        className={cx("lm-menu lm-menu--overlay lm-menu--floating", large && "lm-menu--lg", className)}
+      >
+        {children}
+      </RMenu.Content>
+    </RMenu.Root>
+  );
+}
+
+export interface DropdownMenuItemProps {
+  icon?: IconName;
+  shortcut?: string;
+  selected?: boolean;
+  destructive?: boolean;
+  disabled?: boolean;
+  onSelect?: () => void;
+  className?: string;
+  children?: ReactNode;
+}
+
+export function DropdownMenuItem({
+  icon,
+  shortcut,
+  selected,
+  destructive,
+  disabled,
+  onSelect,
+  className,
+  children,
+}: DropdownMenuItemProps) {
+  return (
+    <RMenu.Item
+      disabled={disabled}
+      onSelect={() => onSelect?.()}
+      className={cx("lm-menu__item", destructive && "is-destructive", className)}
+    >
+      {icon ? <Icon name={icon} /> : null}
+      <span className="lm-menu__label">{children}</span>
+      {shortcut ? <span className="lm-menu__shortcut">{shortcut}</span> : null}
+      {selected ? <Icon name="check" size={14} className="lm-menu__check" /> : null}
+    </RMenu.Item>
+  );
+}
+
+export const DropdownMenuSeparator = () => <RMenu.Separator className="lm-menu__sep" />;
+export const DropdownMenuLabel = ({ children }: { children: ReactNode }) => (
+  <RMenu.Label className="lm-menu__group">{children}</RMenu.Label>
+);
+
+/* ---------------- Select (Radix) ---------------- */
+
+export interface SelectOption {
+  value: string;
+  label: string;
+  icon?: IconName;
+}
+
+export interface SelectProps {
+  options: SelectOption[];
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  /** Accessible name (required when there is no visible label). */
+  label: string;
+  size?: "md" | "sm";
+  disabled?: boolean;
+  /** Start open (gallery, tests). */
+  defaultOpen?: boolean;
+  className?: string;
+  triggerClassName?: string;
+  /** Custom trigger content instead of the selected label (for example an avatar plus a name). */
+  renderValue?: (option: SelectOption | undefined) => ReactNode;
+  id?: string;
+}
+
+/**
+ * Dropdown: 32px trigger + the standard Menu surface, on Radix Select (listbox popup, Arrow keys, Home/End,
+ * type-ahead, Enter/Space select, Escape closes and returns focus, outside click).
+ */
+export function Select({
+  options,
+  value,
+  defaultValue,
+  onChange,
+  label,
+  size = "md",
+  disabled,
+  defaultOpen = false,
+  className,
+  triggerClassName,
+  renderValue,
+  id,
+}: SelectProps) {
+  const [inner, setInner] = useState(defaultValue ?? options[0]?.value ?? "");
+  const cur = value ?? inner;
+  const selected = options.find((o) => o.value === cur);
+  return (
+    <RSelect.Root
+      value={cur}
+      onValueChange={(v) => {
+        setInner(v);
+        onChange?.(v);
+      }}
+      disabled={disabled}
+      defaultOpen={defaultOpen}
+    >
+      <div className={cx("lm-select", size === "sm" && "lm-select--sm", disabled && "is-disabled", className)}>
+        <RSelect.Trigger id={id} className={cx("lm-select__trigger", triggerClassName)} aria-label={label}>
+          <span className="lm-select__value">
+            <RSelect.Value>{renderValue ? renderValue(selected) : selected?.label}</RSelect.Value>
+          </span>
+          <RSelect.Icon asChild>
+            <Icon name="chevron-down" size={14} />
+          </RSelect.Icon>
+        </RSelect.Trigger>
+        <RSelect.Content
+          position="popper"
+          sideOffset={4}
+          collisionPadding={8}
+          className="lm-menu lm-menu--overlay lm-select__menu"
+        >
+          <RSelect.Viewport>
+            {options.map((o) => (
+              <RSelect.Item key={o.value} value={o.value} className="lm-menu__item">
+                {o.icon ? <Icon name={o.icon} /> : null}
+                <RSelect.ItemText>{o.label}</RSelect.ItemText>
+                <RSelect.ItemIndicator className="lm-menu__check">
+                  <Icon name="check" size={14} />
+                </RSelect.ItemIndicator>
+              </RSelect.Item>
+            ))}
+          </RSelect.Viewport>
+        </RSelect.Content>
+      </div>
+    </RSelect.Root>
+  );
+}
+
+/* ---------------- Popover (Radix) ---------------- */
+
+export function PopoverSurface({
+  title,
+  className,
+  children,
+  ...rest
+}: { title?: string } & Omit<HTMLAttributes<HTMLDivElement>, "title">) {
+  return (
+    <div className={cx("lm-popover", className)} {...rest}>
+      {title ? <h3 className="lm-popover__title">{title}</h3> : null}
+      {children}
+    </div>
+  );
+}
+
+export interface PopoverProps {
+  trigger: (p: {
+    onClick: () => void;
+    "aria-expanded": boolean;
+    "aria-haspopup": "dialog";
+  }) => ReactElement;
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+  /** Width of the surface in px (default 320). */
+  width?: number;
+  className?: string;
+  /** Hide the heading (the title stays as the accessible name). */
+  hideTitle?: boolean;
+}
+
+/** Click-to-open panel next to the trigger on Radix Popover: Escape and outside click close it, focus returns to the trigger. */
+export function Popover({
+  trigger,
+  title,
+  children,
+  defaultOpen = false,
+  open,
+  onOpenChange,
+  side = "bottom",
+  align = "start",
+  width,
+  className,
+  hideTitle,
+}: PopoverProps) {
+  const [inner, setInner] = useState(defaultOpen);
+  const isOpen = open ?? inner;
+  return (
+    <RPopover.Root
+      open={isOpen}
+      onOpenChange={(o) => {
+        setInner(o);
+        onOpenChange?.(o);
+      }}
+    >
+      <RPopover.Trigger asChild>
+        {trigger({ onClick: () => {}, "aria-expanded": isOpen, "aria-haspopup": "dialog" })}
+      </RPopover.Trigger>
+      <RPopover.Content asChild side={side} align={align} sideOffset={6} collisionPadding={8}>
+        <PopoverSurface
+          aria-label={title}
+          title={hideTitle ? undefined : title}
+          className={cx("lm-popover--floating", className)}
+          style={width ? { width } : undefined}
+        >
+          {children}
+        </PopoverSurface>
+      </RPopover.Content>
+    </RPopover.Root>
+  );
+}
+
+/* ---------------- Modal (Radix Dialog) ---------------- */
+
+export interface DialogProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+  title: string;
+  footer?: ReactNode;
+  width?: number;
+  onClose?: () => void;
+  titleId?: string;
+}
+
+/** The dialog surface (no scrim, no focus handling); Modal adds those. */
+export function Dialog({ title, footer, width, onClose, titleId, children, className, style, ...rest }: DialogProps) {
+  return (
+    <div
+      className={cx("lm-dialog", className)}
+      style={{ width, ...style }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      {...rest}
+    >
+      <div className="lm-dialog__head">
+        <h2 id={titleId} className="lm-dialog__title">
+          {title}
+        </h2>
+        {onClose ? <IconButton name="x" label="Close" size={28} onClick={onClose} /> : null}
+      </div>
+      <div className="lm-dialog__body">{children}</div>
+      {footer ? <div className="lm-dialog__foot">{footer}</div> : null}
+    </div>
+  );
+}
+
+export interface ModalProps extends Omit<DialogProps, "titleId" | "onClose"> {
+  open: boolean;
+  onClose: () => void;
+}
+
+/** Scrim + dialog on Radix Dialog: focus moves in, Tab is trapped, Escape and scrim click close, focus returns to the opener. */
+export function Modal({ open, onClose, title, footer, width, children, className, style }: ModalProps) {
+  // Radix returns focus only to a Dialog.Trigger; this modal is opened from state, so remember the opener.
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (open) opener.current = document.activeElement as HTMLElement | null;
+  }, [open]);
+  return (
+    <RDialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
+      <RDialog.Overlay className="lm-scrim">
+        <RDialog.Content
+          aria-describedby={undefined}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            opener.current?.focus?.();
+          }}
+          className={cx("lm-dialog", className)}
+          style={{ width, ...style }}
+        >
+          <div className="lm-dialog__head">
+            <RDialog.Title className="lm-dialog__title">{title}</RDialog.Title>
+            <RDialog.Close asChild>
+              <IconButton name="x" label="Close" size={28} />
+            </RDialog.Close>
+          </div>
+          <div className="lm-dialog__body">{children}</div>
+          {footer ? <div className="lm-dialog__foot">{footer}</div> : null}
+        </RDialog.Content>
+      </RDialog.Overlay>
+    </RDialog.Root>
+  );
+}

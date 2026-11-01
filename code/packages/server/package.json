@@ -1,0 +1,21 @@
+{
+  "name": "@speakkit/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "start": "node --import ./register.mjs src/cli.ts",
+    "test": "vp test",
+    "test:real": "node scripts/test-real.mjs",
+    "bench": "node --import ./register.mjs bench/bench.ts"
+  },
+  "dependencies": {
+    "@speakkit/engine": "workspace:*",
+    "@speakkit/protocol": "workspace:*",
+    "valibot": "^1.5.0"
+  }
+}

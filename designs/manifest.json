@@ -1,0 +1,1328 @@
+{
+ "groups": {
+  "A": {
+   "name": "Chrome extension: toolbar popup",
+   "blurb": "The popup opened from the toolbar icon. Controls the current page and shows the link to the desktop app."
+  },
+  "B": {
+   "name": "Chrome extension: on-page reading",
+   "blurb": "Selection bubble, paragraph play gutter, floating dock, read-along highlight, context menu and errors, drawn on a real article page."
+  },
+  "C": {
+   "name": "Chrome extension: options and side panel",
+   "blurb": "Extension settings page (connection, voice, highlight look, shortcuts, site rules) and the queue side panel."
+  },
+  "D": {
+   "name": "Desktop app: first-run setup",
+   "blurb": "Welcome, engine choice with hardware check, model download, extension pairing, test voice."
+  },
+  "E": {
+   "name": "Desktop app: library",
+   "blurb": "Home with saved readings, adding content (paste, URL, file, drag and drop), search."
+  },
+  "F": {
+   "name": "Desktop app: reader",
+   "blurb": "Text and PDF reading with read-along highlight, player bar, outline, display settings, sleep timer and finish states."
+  },
+  "G": {
+   "name": "Voices and engines",
+   "blurb": "Kokoro voice library, Chatterbox voice cloning, engine manager, hardware warnings."
+  },
+  "H": {
+   "name": "Desktop app: settings",
+   "blurb": "General, playback, pronunciation, browser integration, shortcuts, storage, appearance, about and updates."
+  },
+  "I": {
+   "name": "Tray, mini player and global shortcuts",
+   "blurb": "Always-available surfaces outside the main window."
+  },
+  "J": {
+   "name": "Export audio",
+   "blurb": "Save a reading as MP3 or WAV."
+  },
+  "K": {
+   "name": "System states and errors",
+   "blurb": "Crashes, resource problems, permission and update dialogs."
+  }
+ },
+ "screens": [
+  {
+   "id": "A1",
+   "group": "A",
+   "title": "Popup · idle on an article",
+   "note": "Nothing playing yet. One big action, selection (disabled until text is selected) and reader view.",
+   "w": 520,
+   "h": 504,
+   "dark": false
+  },
+  {
+   "id": "A2",
+   "group": "A",
+   "title": "Popup · selection ready",
+   "note": "Text is selected on the page; the popup offers to read only that, with a real time estimate.",
+   "w": 520,
+   "h": 511,
+   "dark": false
+  },
+  {
+   "id": "A3",
+   "group": "A",
+   "title": "Popup · preparing audio",
+   "note": "First sentence is being synthesized. Indeterminate bar, skip buttons disabled, Cancel available.",
+   "w": 520,
+   "h": 510,
+   "dark": false
+  },
+  {
+   "id": "A4",
+   "group": "A",
+   "title": "Popup · playing",
+   "note": "Scrubber with time left, 10 s skips, previous/next paragraph.",
+   "w": 520,
+   "h": 476,
+   "dark": false
+  },
+  {
+   "id": "A5",
+   "group": "A",
+   "title": "Popup · paused",
+   "note": "Same layout, play button instead of pause.",
+   "w": 520,
+   "h": 476,
+   "dark": false
+  },
+  {
+   "id": "A6",
+   "group": "A",
+   "title": "Popup · voice picker",
+   "note": "Searchable voice list with language and accent filters; every row has a preview button.",
+   "w": 520,
+   "h": 675,
+   "dark": false
+  },
+  {
+   "id": "A7",
+   "group": "A",
+   "title": "Popup · speed picker",
+   "note": "Slider with live value plus presets across the 0.5x to 3x range.",
+   "w": 520,
+   "h": 538,
+   "dark": false
+  },
+  {
+   "id": "A8",
+   "group": "A",
+   "title": "Popup · finished",
+   "note": "End of page; main button becomes replay and the next queued item is offered.",
+   "w": 520,
+   "h": 606,
+   "dark": false
+  },
+  {
+   "id": "A9",
+   "group": "A",
+   "title": "Popup · app not running",
+   "note": "The desktop app is closed. Launch it, or download it.",
+   "w": 520,
+   "h": 474,
+   "dark": false
+  },
+  {
+   "id": "A10",
+   "group": "A",
+   "title": "Popup · model loading",
+   "note": "App is up but the voice engine is still starting. Skips disabled, Cancel available.",
+   "w": 520,
+   "h": 526,
+   "dark": false
+  },
+  {
+   "id": "A11",
+   "group": "A",
+   "title": "Popup · page not readable",
+   "note": "Chrome internal pages and the Web Store block extensions.",
+   "w": 520,
+   "h": 415,
+   "dark": false
+  },
+  {
+   "id": "A12",
+   "group": "A",
+   "title": "Popup · playing (dark)",
+   "note": "Dark theme follows the browser.",
+   "w": 520,
+   "h": 476,
+   "dark": true
+  },
+  {
+   "id": "A13",
+   "group": "A",
+   "title": "Popup · app not installed",
+   "note": "First run: the app is not on this computer yet, so Download is the primary action.",
+   "w": 520,
+   "h": 444,
+   "dark": false
+  },
+  {
+   "id": "A14",
+   "group": "A",
+   "title": "Popup · pairing token rejected",
+   "note": "App and browser no longer share a token; paste a new one in the extension options.",
+   "w": 520,
+   "h": 463,
+   "dark": false
+  },
+  {
+   "id": "A15",
+   "group": "A",
+   "title": "Popup · local file needs permission",
+   "note": "file:// pages need “Allow access to file URLs” in the extension settings.",
+   "w": 520,
+   "h": 463,
+   "dark": false
+  },
+  {
+   "id": "B1",
+   "group": "B",
+   "title": "Page · selection bubble",
+   "note": "Selecting text pops a bubble 8 px above the selection: Listen (with its shortcut on hover), voice and speed, copy.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B2",
+   "group": "B",
+   "title": "Page · paragraph play gutter",
+   "note": "Hovering a paragraph tints it and shows a play button in the margin: read from here.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B3",
+   "group": "B",
+   "title": "Page · context menu",
+   "note": "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B4",
+   "group": "B",
+   "title": "Page · dock idle",
+   "note": "Floating dock appears at the bottom after the first use (can be hidden per site).",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B5",
+   "group": "B",
+   "title": "Page · dock preparing",
+   "note": "Spinner while the first chunk is synthesized.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B6",
+   "group": "B",
+   "title": "Page · reading with highlight",
+   "note": "Sentence background plus a stronger current-word marker; auto-scroll follows.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B7",
+   "group": "B",
+   "title": "Page · paused",
+   "note": "Highlight stays on the last spoken sentence; dock shows elapsed and total time.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B8",
+   "group": "B",
+   "title": "Page · finished",
+   "note": "Dock confirms the end and offers replay.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B9",
+   "group": "B",
+   "title": "Page · app offline error",
+   "note": "One surface only: the dock explains the problem and offers Open app and Retry; technical detail sits behind Details.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B10",
+   "group": "B",
+   "title": "Page · reader view reading",
+   "note": "Distraction-free reader overlay with larger type and the same highlight. Close keeps playback running in the dock.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B11",
+   "group": "B",
+   "title": "Page · reading (dark)",
+   "note": "Dark page and dark highlight palette.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "B12",
+   "group": "B",
+   "title": "Page · reader view (dark)",
+   "note": "Reader view in dark mode.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "B13",
+   "group": "B",
+   "title": "Page · added to queue",
+   "note": "Confirmation toast after Add to queue, with a link to the side panel.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B14",
+   "group": "B",
+   "title": "Page · back to current",
+   "note": "The reader scrolled away from the spoken sentence; a pill jumps back to it.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B15",
+   "group": "B",
+   "title": "Page · dock speed popover",
+   "note": "Speed popover opened from the dock pill; right edges aligned, slider shows the live value.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B16",
+   "group": "B",
+   "title": "Page · dock voice popover",
+   "note": "Voice popover opened from the dock voice chip, with search and a preview button on every row.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B17",
+   "group": "B",
+   "title": "Page · edge launcher, hidden",
+   "note": "Resting state: only a 14 px tab is visible at the right edge of the page, so it never covers content. Position is draggable up and down.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B18",
+   "group": "B",
+   "title": "Page · edge launcher, hover",
+   "note": "Hovering the tab opens a vertical pill, like Speechify: logo, a big play button (tooltip shows the length), reader view, speed, voice, more.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B19",
+   "group": "B",
+   "title": "Page · edge launcher, reading",
+   "note": "While reading, the tab stays peeking out wider with a pause button and a thin progress line. Click to pause or resume without opening it.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B20",
+   "group": "B",
+   "title": "Page · edge launcher, reading expanded",
+   "note": "Hover while reading: the pill stacks pause, a vertical progress rail with time left, 10 s skips, speed, voice and stop. Moving away hides it after 1.5 s.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "B21",
+   "group": "B",
+   "title": "Page · edge launcher (dark)",
+   "note": "Same vertical pill on a dark page.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "C1",
+   "group": "C",
+   "title": "Options · General (connected)",
+   "note": "Connection status with response time, port, pairing token and where the extension shows UI.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C2",
+   "group": "C",
+   "title": "Options · General (app not running)",
+   "note": "Same layout as connected; only the status card changes. Primary action launches the app, the error code sits behind Details.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C3",
+   "group": "C",
+   "title": "Options · General (token rejected)",
+   "note": "Pairing token mismatch: paste a new token into the focused field, with Re-pair as the fallback.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C4",
+   "group": "C",
+   "title": "Options · Voice and speed",
+   "note": "Engine cards with radio and install action, default voice, speed slider with live value, paragraph pause, preview.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C5",
+   "group": "C",
+   "title": "Options · Highlighting",
+   "note": "Preview with light/dark switch and contrast readout, named color swatches with a custom option.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C6",
+   "group": "C",
+   "title": "Options · Shortcuts",
+   "note": "Browser-wide Chrome shortcuts (edited in Chrome) and in-page keys, with Not set and conflict states.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C7",
+   "group": "C",
+   "title": "Options · Sites and filters",
+   "note": "Skip rules and per-site rules; each rule is a dropdown (Always show dock, Hide controls, Never read).",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C8",
+   "group": "C",
+   "title": "Options · Highlighting (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "C9",
+   "group": "C",
+   "title": "Side panel · queue and outline",
+   "note": "Chrome side panel: now playing with transport, paragraph outline, up-next queue with Play now, Remove and Clear all.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C10",
+   "group": "C",
+   "title": "Side panel · empty queue",
+   "note": "Empty state explains how to add pages; the page reflows beside the panel.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "C11",
+   "group": "C",
+   "title": "Side panel · queue (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "C12",
+   "group": "C",
+   "title": "Options · Edge launcher",
+   "note": "Turn the edge launcher on or off, choose its side, how it hides, when it opens and how long it stays open.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D1",
+   "group": "D",
+   "title": "Welcome",
+   "note": "First launch. One promise: local, private, fast.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D2",
+   "group": "D",
+   "title": "Choose engine (GPU found)",
+   "note": "Hardware verdict line; selectable engine cards, the button follows the selection.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D3",
+   "group": "D",
+   "title": "Choose engine (no GPU)",
+   "note": "Chatterbox is locked with the reason and a link instead of failing later.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D4",
+   "group": "D",
+   "title": "Downloading models",
+   "note": "Per-file progress, speed and ETA, the next step dimmed, can continue in the background.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D5",
+   "group": "D",
+   "title": "Download paused",
+   "note": "Resumable. Retry, choose a file you downloaded yourself, auto-retry and proxy options.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D6",
+   "group": "D",
+   "title": "Connect your browser",
+   "note": "Install, pin, then paste the pairing token. Continue stays disabled until the extension pairs.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D7",
+   "group": "D",
+   "title": "Ready: hear a sample",
+   "note": "Pairing confirmed. Press play to hear the voice; tips for the shortcut, tray and startup.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "D8",
+   "group": "D",
+   "title": "Welcome (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "D9",
+   "group": "D",
+   "title": "Ready: extension skipped",
+   "note": "Setup finished without pairing; the extension can be connected later in Settings > Browser integration.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E1",
+   "group": "E",
+   "title": "Library · empty",
+   "note": "First run with no content: one primary action (Choose file), quieter ways to paste or use a web address.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E2",
+   "group": "E",
+   "title": "Library · with readings",
+   "note": "Continue-listening hero (not repeated in the list), filters, sort, rows with progress and time left.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E3",
+   "group": "E",
+   "title": "Add · paste text",
+   "note": "Dialog with optional title, live word count, estimated time, voice; Add or Add and play.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E4",
+   "group": "E",
+   "title": "Add · web address fetching",
+   "note": "Field is read-only while fetching; the found title confirms what will be added.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E5",
+   "group": "E",
+   "title": "Add · web address failed",
+   "note": "Reason in plain words, details behind a line; Paste text instead is the way forward.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E6",
+   "group": "E",
+   "title": "Library · dragging a file",
+   "note": "The whole content area becomes the drop target.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E7",
+   "group": "E",
+   "title": "Library · search results",
+   "note": "Matches highlighted in title, source or text, result count and a clear button.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E8",
+   "group": "E",
+   "title": "Library · no search results",
+   "note": "Clear search is the primary action; Add text is secondary.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E9",
+   "group": "E",
+   "title": "Library · row menu",
+   "note": "Anchored to the row's trigger: play, rename, export, pin, voice, finished, folder, delete.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E10",
+   "group": "E",
+   "title": "Library · delete confirmation",
+   "note": "Imported file: the original is untouched. Cancel has default focus.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E11",
+   "group": "E",
+   "title": "Library · with readings (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "E12",
+   "group": "E",
+   "title": "Library · deleted toast",
+   "note": "After deleting, a toast offers Undo.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E13",
+   "group": "E",
+   "title": "Library · added toast",
+   "note": "Success toast after adding; the new reading is at the top.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E14",
+   "group": "E",
+   "title": "Library · dragging several files",
+   "note": "Drop target lists each accepted file.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E15",
+   "group": "E",
+   "title": "Library · unsupported file",
+   "note": "Red drop target names the file type and lists the supported ones.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "E16",
+   "group": "E",
+   "title": "Library · delete pasted text",
+   "note": "Pasted text has no original, so the copy says it is the only copy.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F1",
+   "group": "F",
+   "title": "Reader · playing",
+   "note": "Article with sentence and word highlight; the player bar shows 2:27 of 6:48 at 1.2x.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F2",
+   "group": "F",
+   "title": "Reader · paused",
+   "note": "Same screen paused.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F3",
+   "group": "F",
+   "title": "Reader · preparing next paragraph",
+   "note": "Short toast when synthesis falls behind; Pause stays available.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F4",
+   "group": "F",
+   "title": "Reader · finished",
+   "note": "Completion card over a scrim: marks the reading finished, plays the next item or replays.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F5",
+   "group": "F",
+   "title": "Reader · read from here",
+   "note": "Click a word: a chip above it offers Read from here and Copy.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F6",
+   "group": "F",
+   "title": "Reader · outline and bookmarks",
+   "note": "Right panel with headings and saved bookmarks.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F7",
+   "group": "F",
+   "title": "Reader · display settings",
+   "note": "Anchored to the Aa button: theme, text size and line spacing with values, font, toggles.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F8",
+   "group": "F",
+   "title": "Reader · sleep timer",
+   "note": "Anchored to the timer in the player bar; shows the 29:12 countdown.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F9",
+   "group": "F",
+   "title": "Reader · speed and voice",
+   "note": "Popover from the speed pill: slider with value, presets, voice and engine.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F10",
+   "group": "F",
+   "title": "PDF reader · playing",
+   "note": "Player bar shows the PDF's own title, page and duration.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F11",
+   "group": "F",
+   "title": "PDF reader · scanned page",
+   "note": "Page 9 has no text layer: offer local OCR; the player is disabled until it finishes.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F12",
+   "group": "F",
+   "title": "Reader · playing (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "F13",
+   "group": "F",
+   "title": "PDF reader · recognizing text",
+   "note": "Local OCR progress: page 4 of 15, time left, cancel.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F14",
+   "group": "F",
+   "title": "Reader · voice panel",
+   "note": "Docked right panel: current voice, recent voices, speed slider, advanced.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F15",
+   "group": "F",
+   "title": "Reader · back to current",
+   "note": "After scrolling away from the spoken sentence, a pill jumps back.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "F16",
+   "group": "F",
+   "title": "Reader · search in text",
+   "note": "Find bar with result count and previous/next; matches highlighted.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G1",
+   "group": "G",
+   "title": "Voices · library",
+   "note": "After Chatterbox is installed: Your voices on top, Kokoro voices as cards with accent, grade and preview (playing state shown), grade legend open.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G2",
+   "group": "G",
+   "title": "Voices · detail drawer",
+   "note": "Scrim under the drawer, previous/next voice, editable try-it sentence. Heart is already the default, so the button is disabled.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G3",
+   "group": "G",
+   "title": "Clone · choose reference",
+   "note": "Upload or record. Continue stays disabled until a clip is added and the consent box is ticked.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G4",
+   "group": "G",
+   "title": "Clone · recording",
+   "note": "Stop button, 0:08 / 0:30 timer with the 0:10 minimum tick, live input meter. Continue is disabled while recording.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G5",
+   "group": "G",
+   "title": "Clone · analyzing",
+   "note": "Three visible steps including GPU warm-up, with percentage and time left.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G6",
+   "group": "G",
+   "title": "Clone · name and test",
+   "note": "Name the voice, hear a test sentence, tune exaggeration (0.50 neutral).",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G7",
+   "group": "G",
+   "title": "Clone · bad reference",
+   "note": "Per-criterion clip check: length and noise fail, single speaker passes. Next actions are choose another file or record.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G8",
+   "group": "G",
+   "title": "Engines · overview",
+   "note": "Before install: Kokoro ready, Chatterbox with GPU and disk fit checks and a 2.4 GB download.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G9",
+   "group": "G",
+   "title": "Engines · Chatterbox warming up",
+   "note": "GPU load progress after install, inside the card padding, with percentage.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G10",
+   "group": "G",
+   "title": "Engines · out of GPU memory",
+   "note": "Live GPU chip, top VRAM users, three ways forward. Raw CUDA text stays behind Details.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G11",
+   "group": "G",
+   "title": "Chatterbox · voice style",
+   "note": "Opened from Style on a cloned voice card. Sliders show values; scope is Maya (you).",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G12",
+   "group": "G",
+   "title": "Voices · library (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "G13",
+   "group": "G",
+   "title": "Voices · list view",
+   "note": "Dense rows: play, name, accent, gender, grade, style, favorite. Scales to all 28 voices.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G14",
+   "group": "G",
+   "title": "Voices · cloning unavailable",
+   "note": "Chatterbox not installed: Clone is disabled with the reason, a requirements check and a link to Engines. Cloned voices are dimmed.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G15",
+   "group": "G",
+   "title": "Clone · review take",
+   "note": "After stopping: play back, re-record or use the take. All three clip checks pass.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "G16",
+   "group": "G",
+   "title": "Engines · Chatterbox ready",
+   "note": "Installed card with the overflow menu: Test, Reveal in folder, Voice style, Uninstall.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H1",
+   "group": "H",
+   "title": "Settings · General",
+   "note": "Startup, tray, language, privacy and the clipboard prompt switch.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H2",
+   "group": "H",
+   "title": "Settings · Playback",
+   "note": "Speed slider with value (0.5× to 3×), pauses and text clean-up rules.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H3",
+   "group": "H",
+   "title": "Settings · Pronunciation",
+   "note": "Custom dictionary with respelling help, per-entry preview and delete with Undo.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H4",
+   "group": "H",
+   "title": "Settings · Browser integration",
+   "note": "Server status, port with Apply and re-pair, token, destructive actions with confirm text.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H5",
+   "group": "H",
+   "title": "Settings · Shortcuts",
+   "note": "Global Ctrl+Alt shortcuts, inline conflict on one row, in-app keys, Reset all.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H6",
+   "group": "H",
+   "title": "Settings · Storage and models",
+   "note": "Usage adds up to 1.6 GB, segmented bar with legend, Clear asks first.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H7",
+   "group": "H",
+   "title": "Settings · Appearance",
+   "note": "Theme, named highlight colors with a live preview.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H8",
+   "group": "H",
+   "title": "Settings · About",
+   "note": "Version, update result, links and one row per open-source library.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H9",
+   "group": "H",
+   "title": "Settings · Update available",
+   "note": "Update card with restart warning and Remind me later; dot on the About item.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "H10",
+   "group": "H",
+   "title": "Settings · Browser integration (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "H11",
+   "group": "H",
+   "title": "Settings · Shortcuts (recording a key)",
+   "note": "Capture state: Press new keys, Esc to cancel.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I1",
+   "group": "I",
+   "title": "Tray menu · playing",
+   "note": "Windows 11 tray flyout, 12 px above the taskbar and aligned to the right edge: mini controls, Ctrl+Alt shortcuts, voice submenu, engine status.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I2",
+   "group": "I",
+   "title": "Tray menu · idle",
+   "note": "Same flyout when nothing is playing.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I3",
+   "group": "I",
+   "title": "Mini player · always on top",
+   "note": "Draggable header, time left, pin state with tooltip, previous/next and −10 / +10, overflow menu for the sleep timer. The document text stays visible.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I4",
+   "group": "I",
+   "title": "Global shortcut toast",
+   "note": "Ctrl+Alt+S reads the selected text in any app. The toast offers pause and Stop; Esc is not captured.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I5",
+   "group": "I",
+   "title": "Clipboard prompt",
+   "note": "Optional prompt after copying long text. Skips password-manager copies. Turn off lives in the … menu, with an 8 s countdown.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I6",
+   "group": "I",
+   "title": "Tray menu · playing (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "I7",
+   "group": "I",
+   "title": "Tray menu · engine loading",
+   "note": "Read actions are disabled while Kokoro loads; status shows the wait.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I8",
+   "group": "I",
+   "title": "Tray menu · engine error",
+   "note": "Engine stopped: red status, Restart engine, read actions disabled.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "I9",
+   "group": "I",
+   "title": "Mini player · states",
+   "note": "Paused, preparing the voice, and finished (replay).",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J1",
+   "group": "J",
+   "title": "Export · options",
+   "note": "Format, MP3 quality, voice and speed, file name, folder with Browse, size estimate.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J2",
+   "group": "J",
+   "title": "Export · rendering",
+   "note": "Progress per sentence. Run in background is primary; Cancel export is destructive. No header X.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J3",
+   "group": "J",
+   "title": "Export · done",
+   "note": "Full-width preview with time, path with Copy, Open file and Show in folder.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J4",
+   "group": "J",
+   "title": "Export · options (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "J5",
+   "group": "J",
+   "title": "Export · file exists",
+   "note": "Replace, Keep both, or Choose another name.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J6",
+   "group": "J",
+   "title": "Export · in background",
+   "note": "Sidebar progress pill and the library row show the running export.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "J7",
+   "group": "J",
+   "title": "Export · complete toast",
+   "note": "Non-blocking toast with Show in folder.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K1",
+   "group": "K",
+   "title": "Error · engine crashed",
+   "note": "Over the reader with the player visible. Sidebar shows Restarting…; Details holds the exit code.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K2",
+   "group": "K",
+   "title": "Error · port in use",
+   "note": "Over Settings > Browser integration. Sidebar shows Extension link blocked; port number lives in Details.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K3",
+   "group": "K",
+   "title": "Error · low disk space",
+   "note": "Over Engines at the Chatterbox download card, with a hard-drive icon.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K4",
+   "group": "K",
+   "title": "Error · model checksum failed",
+   "note": "Over the library. Repair is the primary action; checksum sits behind Details; Open Engines because Chatterbox isn't installed.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K5",
+   "group": "K",
+   "title": "Notice · extension out of date",
+   "note": "Non-blocking banner under the title bar; no dialog.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K6",
+   "group": "K",
+   "title": "Permission · microphone blocked",
+   "note": "Over the clone screen after Record now. Upload a file is the alternative.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K7",
+   "group": "K",
+   "title": "Notice · already running",
+   "note": "No dialog: the existing window is restored and a toast says why.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K8",
+   "group": "K",
+   "title": "Notice · offline",
+   "note": "Status chip in the header plus a toast; nothing blocks the app.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  },
+  {
+   "id": "K9",
+   "group": "K",
+   "title": "Error · engine crashed (dark)",
+   "note": "Dark theme variant.",
+   "w": 1280,
+   "h": 800,
+   "dark": true
+  },
+  {
+   "id": "K10",
+   "group": "K",
+   "title": "Error · repairing model",
+   "note": "Repair progress with size and time left; can run in the background.",
+   "w": 1280,
+   "h": 800,
+   "dark": false
+  }
+ ]
+}

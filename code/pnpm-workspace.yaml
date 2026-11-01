@@ -1,0 +1,10 @@
+packages:
+  - packages/*
+  - apps/*
+  - e2e
+allowBuilds:
+  electron: true
+  esbuild: true
+  onnxruntime-node: true
+  protobufjs: true
+  sharp: true

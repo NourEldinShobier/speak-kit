@@ -1,0 +1,32 @@
+{
+  "name": "@speakkit/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "vp build",
+    "start": "electron .",
+    "test": "vp test run",
+    "typecheck": "tsrs --noEmit -p ."
+  },
+  "dependencies": {
+    "@speakkit/engine": "workspace:*",
+    "@speakkit/protocol": "workspace:*",
+    "@speakkit/server": "workspace:*",
+    "@speakkit/ui": "workspace:*",
+    "@tabler/icons-react": "^3",
+    "electron-log": "^5.4.4",
+    "electron-store": "^12.0.0",
+    "radix-ui": "^1.8.1",
+    "react": "^19",
+    "react-dom": "^19",
+    "valibot": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "latest",
+    "electron": "latest"
+  }
+}

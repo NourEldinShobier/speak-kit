@@ -1,0 +1,17 @@
+node_modules/
+.cache/
+dist/
+dist-*/
+out/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+drive/
+releases/**/extension/
+releases/**/*.zip
+code/e2e/visual/out/
+code/e2e/results-*.json
+code/e2e/perf-results.jsonl
+code/apps/extension/test-results/
+designs/build/
