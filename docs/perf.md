@@ -1,5 +1,7 @@
 # Engine performance (Kokoro-82M through the HTTP server)
 
+The budget table (feature, budget, guard in code, test name, tier) is in `docs/performance-contract.md`. This page holds the measurements and their history.
+
 Machine: Intel i9-13950HX (24 cores / 32 threads), RTX 4080 Laptop, Windows 11, Node 24.22, onnxruntime-node 1.21.0, kokoro-js 1.2.1.
 Harness: `code/packages/server/bench/bench.ts` (`pnpm run bench` in `packages/server`; env `SPEAKKIT_THREADS`, `SPEAKKIT_DTYPE`, `SPEAKKIT_DEVICE`, `SPEAKKIT_WARMUP`). It starts the real `KokoroEngine` behind `createServer` and measures over real HTTP with `fetch`.
 

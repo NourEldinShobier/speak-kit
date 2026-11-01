@@ -115,3 +115,16 @@ Express/Hono (a loopback API with four routes needs `node:http`), a CSS-in-JS li
 | One sentence splitter, in `@speakkit/player/sentences` | The extension's extractor had its own copy (batched, more abbreviations, conjunction cuts); it moved into the player package and the extension and the desktop reader share it. |
 | Formatter: oxfmt through `vp fmt` (already part of Vite+) | No new package. The config under `fmt` in `code/vite.config.ts` uses `printWidth: 200`, the width that left the fewest files changed against the existing hand-written code (160 changed 318 of 503 files, 200 changed 294, before line endings were normalized). Ignored: test fixtures (byte-exact inputs) and the generated `icon-data.ts` and `tokens.ts` (oxfmt rewrote escaped quotes in `icon-data.ts` into invalid code; the generators own their output). Line endings: `.gitattributes` sets `* text=auto eol=lf` and the tree was converted once (185 files were CRLF). |
 | `@resvg/resvg-js` 2.6.2, devDependency of `apps/extension` and `apps/desktop` | Rasterises the Voice hub logo SVGs (`packages/ui/assets/logo`, from `packages/ui/scripts/gen-logo.mjs`) into the extension icons, the desktop app and tray icons and the installer .ico. Prebuilt native binary, no browser needed. Rejected: playwright (screenshots a page, slow start), sharp (libvips for one job), the old hand-drawn pixel code. |
+
+## Type packages, language and toolchain (named 2026-11-01 for the dependency check)
+These direct dependencies were in `package.json` files without a row here (refactor plan G19). Versions are the lockfile's; `check-deps.mjs` (work package 1) fails when a direct dependency is missing from this file or an ADR.
+
+| Package | Why |
+|---|---|
+| typescript | the language service types and the `tsc` fallback and nightly drift check (ADR 0012); tsrs is the blocking gate |
+| vite-plus | the toolchain (`vp`: dev, build, test, lint, format); see "Built in" above |
+| @types/node | Node 24 types for the server, engine and desktop main |
+| @types/react, @types/react-dom | React types for the popup, options, side panel and desktop renderer |
+| @types/chrome | `chrome.*` types for the extension (`latest` today; WP-1 pins it) |
+| @types/pngjs | types for `pngjs` used in the visual and screenshot tests |
+| radix-ui | accessible primitives underneath `@speakkit/ui` (Lumen components): dialog, popover, select, tooltip and similar; keyboard and focus behaviour is not re-implemented |

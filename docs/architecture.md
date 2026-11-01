@@ -1,5 +1,7 @@
 # SpeakKit architecture (v1, extension-first)
 
+Applies to: v0.3.0, header added 2026-11-01. Sections written before that date are marked with their own date. Decided: everything outside "Open". Open: see the last section. Estimates are marked [est.]. Decisions: `docs/decisions/`. Vocabulary: `docs/glossary.md`. Sources are listed at the end.
+
 Contract source of truth: `code/packages/protocol/src` (types, frame codec, settings). Change it only with a note in this file.
 Design source of truth: `designs/screens/<ID>.png` + `designs/manifest.json` (ID, title, note) + tokens in `designs/gen/kit.ts` (LIGHT/DARK, blue accent #2457F5, Tabler icons).
 Priority: the Chrome extension must be fully working with the local server. The desktop app is a thin companion in v1 (library and reader screens D-F are v1.1).
@@ -104,3 +106,46 @@ Implemented in `packages/engine/src/lifecycle.ts` (`LifecycleEngine`, base class
 - `code/packages/player` holds the playback core (`Player`, `soundTouchStretch`, `splitSentences`, `PlayerConfig`, `QueueItem`). The extension offscreen document (`apps/extension/src/app/offscreen/main.ts`) and the desktop reader (`apps/desktop/src/renderer/features/reader`) both construct it; only the `PlayerDeps` differ (extension: chrome messaging and `fetch`; desktop: a `fetch` that goes through the main-process speak proxy). `/v1/speak` re-requests send `X-SpeakKit-Replace: tab-<tabId>` (desktop: `tab-0`).
 - Library data: `<userData>/library/library.json` (index, lowdb) and `docs/<id>.json` (blocks) plus `docs/<id>.src` (original bytes, only for PDFs that need OCR). Contract and channels: `apps/desktop/src/main/library/contract.ts` (`window.speakkitLibrary`, validated with valibot in main). Import parsers are pure functions in `main/library/parse/` (text, markdown, html with Readability, pdf with layout, docx, epub); a document is a list of `Block`s (heading, paragraph, quote, list item, optional PDF page).
 - Reader: blocks are split into sentences (`buildDoc`), the player reads sentences, highlights use the CSS Custom Highlight API (`sk-sentence`, `sk-word`, `sk-find`); the word is estimated inside the sentence by character weight (no word timings from Kokoro). Progress is saved at most every 3 s and on pause, finish and leave. OCR (pdf.js render + tesseract.js) runs in the renderer only after consent and is lazy loaded.
+
+## Process table (added 2026-11-01)
+Every process and thread the product starts. A new process type needs an ADR and a row here (rule A11). The packaged-app smoke test and a grep check over `new Worker`, `fork(`, `spawn(`, `new BrowserWindow` and `new Tray` compare against this table (work package 11). Memory budgets are the asserted ones from `docs/performance-contract.md`; blank means no budget yet.
+
+| Process | Count | Runtime | Owns | Starts and stops | Memory budget |
+|---|---|---|---|---|---|
+| Electron main | 1 | Electron (Node 24) | loopback server, IPC, state publication, library, export jobs, updater, tray, shortcuts, library import parsing (to move to a worker, refactor plan G01) | App start; quits on Quit or last explicit exit | private bytes < 150 MB and working set < 200 MB for the whole app, unloaded model, window hidden |
+| Main window renderer | 0 or 1 | Chromium, sandboxed | desktop UI, library, reader, player | Created on show; destroyed 30 s after hide (`SPEAKKIT_DESTROY_MS`) | included above |
+| Mini window renderer | 0 or 1 | Chromium, sandboxed | float player (`backgroundThrottling: false` on purpose) | Created when the mini player shows | included above |
+| Panel window renderer | 0 or 1 | Chromium, sandboxed | tray panel | Created on demand | included above |
+| GPU and network services | 0 (in the main process) | in-process by flag (`in-process-gpu`, `NetworkServiceInProcess2`) | rendering, requests | with main | included above |
+| Kokoro model host | 0 or 1 | Node child process (`child_process.fork`, the `RunAsNode` fuse stays on, ADR 0004) or a worker thread | onnxruntime session for Kokoro-82M | Lazy on first speak or `warm`; unloaded after the idle window or on engine switch | server process tree: unloaded + 40 MB after idle unload [est. baseline 90 MB, 677 MB ready, measured in `perf.md`] |
+| Chatterbox sidecar | 0 or 1 | Python (private virtualenv), JSON lines on stdin and stdout | Chatterbox model, voice cloning | Only while the model is loaded; killed on idle unload and on switching to Kokoro | none yet |
+| Chatterbox installer | 0 or 1 | uv or pip child processes | virtualenv and package install | Only while the user runs Install; killed on cancel | none |
+| MP3 worker | 0 or 1 | `worker_threads` | MP3 encoding (wasm LAME) | Per export; ends with the job | none |
+| Extension service worker | 1 per browser profile | MV3 service worker | router, settings, queue state (mirrored to `chrome.storage.session`), menus, commands | Started by Chrome; suspends when idle | none |
+| Offscreen document | 0 or 1 | Chromium offscreen page | the shared player: fetch stream, frame decoding, Web Audio | Created on first read; closes 60 s after stop | JS heap growth < 25 MB over 600 paragraph jumps |
+| Content script | 1 per tab it is injected into | MV3 content script | page extraction, highlight, in-page UI (Shadow DOM) | Injected at document idle or on demand | `content.js` < 16 KB gzip |
+| Popup, options, side panel | 0 to 1 each | extension pages | extension UI | Opened by the user | bundle budgets in `apps/extension/scripts/sizes.mjs` |
+| Standalone server | 0 or 1 | Node (`packages/server` CLI) | the same server without Electron | By the user or the e2e runner | none |
+
+## Error model (added 2026-11-01)
+Five rules, from Ostio rules R1 to R13:
+1. **Typed at the boundary.** A function that can fail for a reason the caller can act on returns or throws a typed error with a `code`. Free text is a diagnostic, never the thing a program branches on.
+2. **One closed list on the wire.** HTTP errors carry one of the `ERROR_CODES` in `packages/protocol/src/api.ts`; clients map the code to user text (the extension's `ERROR_TEXT`). Server `message` fields are for logs and developers.
+3. **User-actionable conditions have their own code.** Examples: `app-not-running`, `token-rejected`, `engine-not-ready`, `page-unreadable`, `file-access`, `busy`, `clip-rejected`. A new situation that needs a different user action gets a new code, not a reused one.
+4. **Cancellation is not an error.** An aborted request or stream ends with `AbortError`, which nothing logs or shows.
+5. **Ignoring an error needs a reason.** A `catch` that does nothing carries a one-line comment saying why ignoring is right; otherwise it handles the error in a typed way or rethrows. The ratchet counts swallowing catches (31 in non-test code on 2026-11-01) and may only go down.
+
+The current list (13 codes): `app-not-running`, `token-rejected`, `engine-not-ready`, `page-unreadable`, `file-access`, `synthesis-failed`, `version-mismatch`, `invalid-request`, `forbidden`, `busy` (HTTP 429), `engine-unavailable` (409), `clip-rejected` (422), `not-found`.
+
+When a code is added, update in the same change: `ERROR_CODES` in `packages/protocol/src/api.ts`; the server route that produces it and a server test that triggers it; the extension's `ERROR_TEXT`; any popup state that depends on it (`docs/testing.md` state list); this list. Known gap: some desktop paths still send English text over IPC (`e.message`); work package 14 changes them to `{ code, args }`.
+
+## Open (2026-11-01)
+- Move library import parsing off the Electron main thread (G01, work package 11).
+- Event-loop delay budget and startup marks (G02, G06).
+- Replace `child_process.fork` of the model host with `utilityProcess.fork` so `RunAsNode` can go off (ADR 0004).
+- Desktop errors as `{ code, args }` (G42, work package 14).
+
+## Sources
+- `docs/engineering/refactor-plan.md` (gap analysis G01 to G66), `docs/engineering/ostio-practices.md` (rule ids).
+- `docs/decisions/0001-stack.md` and ADRs 0002 to 0012.
+- `code/packages/protocol/src/api.ts`, `apps/desktop/electron-builder.yml`, `docs/perf.md`, `docs/testing.md`.
