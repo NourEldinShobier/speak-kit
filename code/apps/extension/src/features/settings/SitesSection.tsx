@@ -65,7 +65,7 @@ export function SitesSection({ s, upd, saved }: SectionProps) {
     <>
       <PageHead
         title="Sites and filters"
-        desc="Choose where SpeakKit appears and what it skips when it reads."
+        desc="Choose where Speak Kit appears and what it skips when it reads."
         saved={saved}
         onReset={() => upd((x) => ({ ...x, skip: defaultSettings().skip, sites: {}, siteDefault: "ask" }))}
       />
@@ -159,7 +159,7 @@ export function SitesSection({ s, upd, saved }: SectionProps) {
       <Card
         title="Sites not in the list"
         id="default-h"
-        desc="Ask each time shows the controls but reads nothing until you press play. Never read keeps SpeakKit off every site you did not add above."
+        desc="Ask each time shows the controls but reads nothing until you press play. Never read keeps Speak Kit off every site you did not add above."
       >
         <SettingRow
           label="Default for other sites"

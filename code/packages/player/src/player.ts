@@ -346,7 +346,7 @@ export class Player {
     this.output.close();
     this.idleTimer.arm();
     if (e instanceof StreamError) this.error = { code: e.code, message: e.message };
-    else if (e instanceof TypeError) this.error = { code: "app-not-running", message: "SpeakKit could not reach the app. Is it running?" };
+    else if (e instanceof TypeError) this.error = { code: "app-not-running", message: "Speak Kit could not reach the app. Is it running?" };
     else this.error = { code: "synthesis-failed", message: e instanceof Error ? e.message : "Speech synthesis failed." };
     this.emit();
   }

@@ -54,14 +54,14 @@ const button = (root: Element, name: string) => [...root.querySelectorAll("butto
 
 describe("problem screens", () => {
   const cases: [PopupModel["view"], string, string, string][] = [
-    ["install", "Install SpeakKit to start listening", "Download SpeakKit for Windows", "download"],
-    ["offline", "SpeakKit isn't running", "Open SpeakKit", "openApp"],
-    ["token", "Pair SpeakKit with this browser again", "Paste new token", "pasteToken"],
-    ["version", "SpeakKit needs an update", "Download the latest app", "download"],
+    ["install", "Install Speak Kit to start listening", "Download Speak Kit for Windows", "download"],
+    ["offline", "Speak Kit isn't running", "Open Speak Kit", "openApp"],
+    ["token", "Pair Speak Kit with this browser again", "Paste new token", "pasteToken"],
+    ["version", "Speak Kit needs an update", "Download the latest app", "download"],
     ["pdf", "Chrome's PDF viewer can't be read", "Paste text in the app", "openApp"],
     ["unreadable", "Can't read this page", "Paste text in the app", "openApp"],
     ["fileurl", "Allow access to file URLs", "Open extension settings", "extSettings"],
-    ["engine-missing", "The voice engine isn't ready", "Open SpeakKit", "openApp"],
+    ["engine-missing", "The voice engine isn't ready", "Open Speak Kit", "openApp"],
   ];
   test.each(cases)("%s shows its message and a primary action", async (view, title, label, action) => {
     const { a, fn } = actions();
@@ -90,9 +90,9 @@ describe("problem screens", () => {
     const { a } = actions();
     const m = await mount(<PopupScreen m={model({ view: "offline", launch: "starting" })} a={a} />);
     expect(button(m.root, "Starting...")).not.toBeNull();
-    expect(text(m.root.querySelector(".pp-launch"))).toBe("Starting SpeakKit...");
+    expect(text(m.root.querySelector(".pp-launch"))).toBe("Starting Speak Kit...");
     await m.rerender(<PopupScreen m={model({ view: "offline", launch: "failed" })} a={a} />);
-    expect(text(m.root.querySelector(".pp-launch"))).toBe("SpeakKit did not start. Open it from the Start menu, or download it first.");
+    expect(text(m.root.querySelector(".pp-launch"))).toBe("Speak Kit did not start. Open it from the Start menu, or download it first.");
     await m.unmount();
   });
 

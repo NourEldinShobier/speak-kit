@@ -14,12 +14,12 @@ interface HealthDeps {
 const down = (): ConnResult<never> => ({
   ok: false,
   code: "app-not-running",
-  message: "SpeakKit could not reach the app. Is it running?",
+  message: "Speak Kit could not reach the app. Is it running?",
 });
 const rejected = (): ConnResult<never> => ({
   ok: false,
   code: "token-rejected",
-  message: "The SpeakKit app rejected the pairing token.",
+  message: "The Speak Kit app rejected the pairing token.",
 });
 
 export function createHealthClient(deps: HealthDeps) {
@@ -42,7 +42,7 @@ export function createHealthClient(deps: HealthDeps) {
         return {
           ok: false,
           code: "version-mismatch",
-          message: "The SpeakKit app and extension versions do not match. Update both.",
+          message: "The Speak Kit app and extension versions do not match. Update both.",
         };
       return { ok: true, value: h };
     } catch {

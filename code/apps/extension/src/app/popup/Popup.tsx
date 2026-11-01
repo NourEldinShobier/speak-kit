@@ -62,7 +62,7 @@ const Header = ({ view, engine, onOptions }: { view: PopupView; engine?: EngineS
     <header className="pp-head">
       <div className="pp-brand">
         <Logo size={24} />
-        <span>SpeakKit</span>
+        <span>Speak Kit</span>
       </div>
       <StatusPill tone={TONE[b.tone]}>{b.label}</StatusPill>
       <IconButton name="adjustments" label="Open settings" onClick={onOptions} />
@@ -256,11 +256,11 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
   const launchNote =
     m.launch === "starting" ? (
       <p className="pp-launch" role="status">
-        Starting SpeakKit...
+        Starting Speak Kit...
       </p>
     ) : m.launch === "failed" ? (
       <p className="pp-launch" role="status">
-        SpeakKit did not start. Open it from the Start menu, or download it first.
+        Speak Kit did not start. Open it from the Start menu, or download it first.
       </p>
     ) : null;
   switch (view) {
@@ -268,9 +268,9 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = (
         <Msg
           icon="download"
-          title="Install SpeakKit to start listening"
-          body="SpeakKit reads pages aloud with a voice that runs on this computer. Nothing you read is uploaded."
-          primary={{ label: "Download SpeakKit for Windows", onClick: a.download }}
+          title="Install Speak Kit to start listening"
+          body="Speak Kit reads pages aloud with a voice that runs on this computer. Nothing you read is uploaded."
+          primary={{ label: "Download Speak Kit for Windows", onClick: a.download }}
           secondary={{ label: "I already installed it", onClick: a.recheck }}
         />
       );
@@ -280,9 +280,9 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = (
         <Msg
           icon="power"
-          title="SpeakKit isn't running"
-          body="The extension reads with the SpeakKit desktop app on this computer. Open the app and this popup connects by itself."
-          primary={{ label: m.launch === "starting" ? "Starting..." : "Open SpeakKit", onClick: a.openApp }}
+          title="Speak Kit isn't running"
+          body="The extension reads with the Speak Kit desktop app on this computer. Open the app and this popup connects by itself."
+          primary={{ label: m.launch === "starting" ? "Starting..." : "Open Speak Kit", onClick: a.openApp }}
           secondary={{ label: "Download the app", onClick: a.download }}
           note={launchNote}
         />
@@ -293,10 +293,10 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = (
         <Msg
           icon="link"
-          title="Pair SpeakKit with this browser again"
+          title="Pair Speak Kit with this browser again"
           body="The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them."
           primary={{ label: "Paste new token", onClick: a.pasteToken }}
-          secondary={{ label: "Open SpeakKit", onClick: a.openApp }}
+          secondary={{ label: "Open Speak Kit", onClick: a.openApp }}
           note={launchNote}
         />
       );
@@ -306,7 +306,7 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = (
         <Msg
           icon="refresh"
-          title="SpeakKit needs an update"
+          title="Speak Kit needs an update"
           body="The app and this extension no longer speak the same version of the protocol. Install the latest release of both; your settings are kept."
           primary={{ label: "Download the latest app", onClick: a.download }}
           secondary={{ label: "Check again", onClick: a.recheck }}
@@ -353,8 +353,8 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
         <Msg
           icon="alert-triangle"
           title="The voice engine isn't ready"
-          body="SpeakKit is running but the Kokoro voice model isn't installed or failed to start. Open the app to download or repair it."
-          primary={{ label: "Open SpeakKit", onClick: a.openApp }}
+          body="Speak Kit is running but the Kokoro voice model isn't installed or failed to start. Open the app to download or repair it."
+          primary={{ label: "Open Speak Kit", onClick: a.openApp }}
           secondary={{ label: "Check again", onClick: a.recheck }}
           note={launchNote}
         />

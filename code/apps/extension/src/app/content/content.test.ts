@@ -430,7 +430,7 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     const doc = await startPage(page);
     await deliver(page, { t: "state", state: st({ docId: doc.docId, status: "error", error: { code: "app-not-running", message: "connect ECONNREFUSED 127.0.0.1:47615" } }) });
     await page.waitForSelector("[data-sk=dock]");
-    expect(await page.locator("[data-sk=dock]").innerText()).toContain("SpeakKit isn't running");
+    expect(await page.locator("[data-sk=dock]").innerText()).toContain("Speak Kit isn't running");
     await page.click("[data-sk=dock-open-app]");
     expect((await sent(page)).at(-1)).toEqual({ t: "open-app" });
     await page.click("[data-sk=dock-details]");

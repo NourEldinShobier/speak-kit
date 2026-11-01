@@ -32,14 +32,14 @@ export function QueuePanel({ state, queue, a }: { state: PlayerState | null; que
       <header className="sp-head">
         <div className="sp-brand">
           <Logo size={24} />
-          <span>SpeakKit queue</span>
+          <span>Speak Kit queue</span>
         </div>
         <IconButton name="x" label="Close panel" onClick={a.close} />
       </header>
       {empty ? (
         <section className="sp-empty">
           <EmptyState icon="list" title="Nothing queued" primary={{ label: "Add this page", onClick: a.addPage }}>
-            Line up several articles. Add this page now, or right-click a page or selection and choose SpeakKit, then Add to queue.
+            Line up several articles. Add this page now, or right-click a page or selection and choose Speak Kit, then Add to queue.
           </EmptyState>
         </section>
       ) : (

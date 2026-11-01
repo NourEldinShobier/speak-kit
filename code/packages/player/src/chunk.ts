@@ -28,7 +28,7 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
     voice: r.cfg.voice,
     speed: r.cfg.speed,
   };
-  if (!r.cfg.token) throw new StreamError("token-rejected", "No pairing token is set. Pair SpeakKit in the extension options.");
+  if (!r.cfg.token) throw new StreamError("token-rejected", "No pairing token is set. Pair Speak Kit in the extension options.");
   const res = await r.fetch(`http://127.0.0.1:${r.cfg.port}/v1/speak`, {
     method: "POST",
     headers: {

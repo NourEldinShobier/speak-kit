@@ -89,14 +89,14 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
   const portBad = portDraft !== null && !validPort(Number(portDraft));
 
   const ok = st === "ok" && health?.ok ? health : null;
-  const title = ok ? `Connected to SpeakKit ${ok.health.version}` : st === "token" ? "Pairing token rejected" : st === "offline" ? "SpeakKit isn't running" : "Checking connection";
+  const title = ok ? `Connected to Speak Kit ${ok.health.version}` : st === "token" ? "Pairing token rejected" : st === "offline" ? "Speak Kit isn't running" : "Checking connection";
   const sub = ok
     ? `${engineText(ok.health.engine.state, ok.health.engine.progress)} · answered in ${ok.ms} ms`
     : st === "token"
       ? "This browser's token doesn't match the app."
       : st === "offline"
         ? "Nothing is answering on this computer."
-        : "Looking for SpeakKit on this computer.";
+        : "Looking for Speak Kit on this computer.";
   // rejected token: an empty, focused field waiting for the new one (C3)
   const tokenValue = draft ?? (rejected ? "" : reveal ? token : maskToken(token));
   useEffect(() => {
@@ -128,7 +128,7 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
                 Download app
               </Button>
               <Button variant="primary" iconLeft="external-link" loading={launching} onClick={launch}>
-                Open SpeakKit
+                Open Speak Kit
               </Button>
             </>
           )}
@@ -153,8 +153,8 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
         <div className="op-alert" role="alert">
           <Banner tone="warning" icon="alert-triangle">
             {st === "offline"
-              ? "Open SpeakKit and this page reconnects by itself. If it doesn't, download the app first."
-              : "SpeakKit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch."}
+              ? "Open Speak Kit and this page reconnects by itself. If it doesn't, download the app first."
+              : "Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch."}
           </Banner>
           <button type="button" className="sk-link" aria-expanded={details} onClick={() => setDetails((d) => !d)}>
             Details
@@ -214,7 +214,7 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
                 </span>
               )}
             </div>
-            {rejected && <div className="lm-field__error">Token rejected. Copy a new one from SpeakKit &gt; Settings &gt; Browser integration.</div>}
+            {rejected && <div className="lm-field__error">Token rejected. Copy a new one from Speak Kit &gt; Settings &gt; Browser integration.</div>}
           </div>
         </div>
       </div>

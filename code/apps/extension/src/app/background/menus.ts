@@ -21,7 +21,7 @@ export async function rebuildMenus(): Promise<void> {
   await chrome.contextMenus.removeAll();
   menuLog.length = 0;
   if (!built) return;
-  addMenu({ id: MENU.parent, title: "SpeakKit", contexts: ["all"] });
+  addMenu({ id: MENU.parent, title: "Speak Kit", contexts: ["all"] });
   addMenu({ id: MENU.selection, parentId: MENU.parent, title: "Read selection", contexts: ["selection"] });
   addMenu({ id: MENU.here, parentId: MENU.parent, title: "Read from here", contexts: ["all"] });
   addMenu({ id: MENU.queue, parentId: MENU.parent, title: "Add to queue", contexts: ["all"] });

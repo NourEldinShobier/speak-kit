@@ -67,7 +67,7 @@ export function HighlightSection({ s, upd, saved }: SectionProps) {
   const wordStyle = useWord ? { background: word, color: WORD_TEXT } : undefined;
   return (
     <>
-      <PageHead title="Highlighting" desc="How the sentence and the current word are marked while SpeakKit reads." saved={saved} onReset={() => set(defaultSettings().highlight)} />
+      <PageHead title="Highlighting" desc="How the sentence and the current word are marked while Speak Kit reads." saved={saved} onReset={() => set(defaultSettings().highlight)} />
       <Card id="prev-h">
         <div className="op-prev-h">
           <h2 id="prev-h">Preview</h2>

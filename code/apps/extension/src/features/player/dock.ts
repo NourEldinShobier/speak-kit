@@ -135,7 +135,7 @@ export class Dock {
     this.clear();
     if (!visible) return;
     const m = this.m;
-    const d = h("div", { class: "sk-dock", "data-sk": "dock", "data-state": m.status, role: "region", "aria-label": "SpeakKit player" });
+    const d = h("div", { class: "sk-dock", "data-sk": "dock", "data-state": m.status, role: "region", "aria-label": "Speak Kit player" });
     this.el = d;
     if (m.status === "error") return this.buildError(d);
     if (m.status === "idle") {

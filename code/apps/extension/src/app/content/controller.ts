@@ -318,7 +318,7 @@ class Controller {
   private play(mode: "page" | "selection" | "from-here", el?: Element) {
     const r = this.build(mode, el);
     if ("error" in r) {
-      this.ensureUi().toast("SpeakKit can't read this page", "err");
+      this.ensureUi().toast("Speak Kit can't read this page", "err");
       return;
     }
     this.lastDoc = r;
@@ -334,7 +334,7 @@ class Controller {
     if (!id || !this.docs.has(id) || this.docs.get(id)!.doc.source === "selection") {
       const r = this.build("page");
       if ("error" in r) {
-        this.ensureUi().toast("SpeakKit can't read this page", "err");
+        this.ensureUi().toast("Speak Kit can't read this page", "err");
         return;
       }
       this.lastDoc = r;

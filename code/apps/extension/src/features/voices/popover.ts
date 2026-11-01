@@ -56,7 +56,7 @@ export function voicePopover(o: VoicePopoverOptions): HTMLElement {
       rows.append(row);
     }
     if (!rows.childElementCount)
-      rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when SpeakKit is running." : "No voices match."));
+      rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when Speak Kit is running." : "No voices match."));
   };
   input.addEventListener("input", draw);
   const pop = popoverSurface("Voice", count, search, rows);

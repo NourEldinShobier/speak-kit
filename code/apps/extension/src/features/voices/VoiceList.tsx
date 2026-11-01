@@ -80,7 +80,7 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
         ) : null}
         {state.status === "error" ? (
           <li className="sk-voices__none" role="presentation">
-            Voices appear when SpeakKit is running.
+            Voices appear when Speak Kit is running.
           </li>
         ) : null}
         {state.status === "ready" && list.length === 0 ? (
