@@ -6,6 +6,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 
 // Gallery (every component and state, dark and light). `vp build` writes static files to out/gallery.
 export default defineConfig({
+  lint: { ignorePatterns: ["gallery/**"] },
   root: resolve(root, "gallery"),
   base: "./",
   build: { outDir: resolve(root, "out/gallery"), emptyOutDir: true },

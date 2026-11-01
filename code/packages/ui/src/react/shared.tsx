@@ -7,7 +7,7 @@ export interface IconProps {
   name: IconName;
   /** px; the stroke stays 1.5px on screen at any size. */
   size?: number;
-  className?: string;
+  className?: string | undefined;
 }
 
 /** Tabler outline icon. Same markup as vanilla icon(): display:block, centred by the flex parent. */

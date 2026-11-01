@@ -4,7 +4,7 @@ import { Button, Icon } from "../src/index";
 /* ---------- layout helpers ---------- */
 type Bleed = { ring?: boolean; shadow?: [number, number] };
 
-export function Cell({ id, label, bleed, children }: { id: string; label?: string; bleed?: Bleed; children: ReactNode }) {
+export function Cell({ id, label, bleed, children }: { id: string; label?: string; bleed?: Bleed | undefined; children: ReactNode }) {
   return (
     <figure className="g-cell">
       <div className="g-box" data-spec={id} data-ring={bleed?.ring ? "1" : undefined} data-shadow={bleed?.shadow ? bleed.shadow.join(" ") : undefined}>
@@ -41,7 +41,7 @@ export function ButtonStates({ name, variant, label, icon }: { name: string; var
     <Group title={`Button · ${variant}`}>
       {STATES.map((s) => (
         <Cell key={s} id={`button-${name}-${s}`} bleed={s === "focus" ? RING : undefined}>
-          <Button variant={variant} iconLeft={icon} {...FORCED[s]}>
+          <Button variant={variant} {...(icon ? { iconLeft: icon } : {})} {...FORCED[s]}>
             {label}
           </Button>
         </Cell>

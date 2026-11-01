@@ -79,7 +79,7 @@ export function Select({ options, value, defaultValue, onChange, label, size = "
 
 /* ---------------- Popover (Radix) ---------------- */
 
-export function PopoverSurface({ title, className, children, ...rest }: { title?: string } & Omit<HTMLAttributes<HTMLDivElement>, "title">) {
+export function PopoverSurface({ title, className, children, ...rest }: { title?: string | undefined } & Omit<HTMLAttributes<HTMLDivElement>, "title">) {
   return (
     <div className={cx("lm-popover", className)} {...rest}>
       {title ? <h3 className="lm-popover__title">{title}</h3> : null}
