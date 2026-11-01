@@ -25,19 +25,19 @@
     "typecheck": "tsrs --noEmit -p ."
   },
   "dependencies": {
-    "radix-ui": "^1.8.1"
+    "radix-ui": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@tabler/icons-react": "^3",
-    "@types/pngjs": "latest",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "linkedom": "0.18.14",
-    "pixelmatch": "latest",
-    "pngjs": "latest",
-    "react": "^19",
-    "react-dom": "^19"
+    "@playwright/test": "catalog:",
+    "@tabler/icons-react": "catalog:",
+    "@types/pngjs": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "linkedom": "catalog:",
+    "pixelmatch": "catalog:",
+    "pngjs": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "peerDependencies": {
     "react": "^19",

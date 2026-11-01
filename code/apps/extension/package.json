@@ -14,16 +14,16 @@
     "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
     "@speakkit/ui": "workspace:*",
-    "react": "^19",
-    "react-dom": "^19",
-    "valibot": "^1.5.0"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "valibot": "catalog:"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "2.6.2",
-    "@types/chrome": "latest",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "latest",
-    "linkedom": "0.18.14"
+    "@resvg/resvg-js": "catalog:",
+    "@types/chrome": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "linkedom": "catalog:"
   }
 }

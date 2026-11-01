@@ -16,6 +16,6 @@
   "dependencies": {
     "@speakkit/engine": "workspace:*",
     "@speakkit/protocol": "workspace:*",
-    "valibot": "^1.5.0"
+    "valibot": "catalog:"
   }
 }

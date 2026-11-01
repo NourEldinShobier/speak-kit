@@ -11,13 +11,14 @@
     "test": "vp test run",
     "e2e": "node e2e/run.mjs",
     "e2e:full": "node e2e/run.mjs --full",
-    "knip": "pnpm dlx knip@5.88.1 --no-progress"
+    "knip": "node scripts/check-knip.mjs"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
-    "tsrs": "0.20.1-ts7.1.0-beta",
-    "typescript": "^7.0.2",
-    "vite-plus": "^1.4.0"
+    "@types/node": "catalog:",
+    "fast-check": "catalog:",
+    "tsrs": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
   },
   "engines": {
     "node": ">=24.11.0"

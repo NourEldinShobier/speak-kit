@@ -14,7 +14,7 @@
     "typecheck": "tsrs --noEmit -p ."
   },
   "dependencies": {
-    "@soundtouchjs/audio-worklet": "^2.1.1",
+    "@soundtouchjs/audio-worklet": "catalog:",
     "@speakkit/protocol": "workspace:*"
   }
 }

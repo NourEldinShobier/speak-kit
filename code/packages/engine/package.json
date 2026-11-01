@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "@speakkit/protocol": "workspace:*",
-    "kokoro-js": "latest",
-    "number-to-words": "^1.2.5",
-    "valibot": "^1.5.0"
+    "kokoro-js": "catalog:",
+    "number-to-words": "catalog:",
+    "valibot": "catalog:"
   },
   "devDependencies": {
-    "@types/number-to-words": "^1.2.3"
+    "@types/number-to-words": "catalog:"
   }
 }
