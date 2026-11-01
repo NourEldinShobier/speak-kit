@@ -1,13 +1,14 @@
 // Builds the SpeakKit design file in Lumen's structure: pages > numbered sections (1140 px, white) > frames 1440x900 (x=100,y=140, 100 px gaps).
 // bun main.ts [id ...]   (ids restrict the build; OUT / PNG env override the staging folder designs/next)
 import { $ } from "bun";
+import { homedir } from "os";
 import { writeFileSync, mkdirSync, readdirSync, renameSync, existsSync, readFileSync } from "fs";
 import { B } from "./lib";
 import { LIGHT, DARK } from "./kit";
 import { S } from "./types";
 import { PAGES, FD } from "./plan";
 
-const FC = "C:/Users/USER/AppData/Local/Programs/FigCraft/figcraft-cli.exe";
+const FC = process.env.FIGCRAFT_CLI ?? `${homedir()}/AppData/Local/Programs/FigCraft/figcraft-cli.exe`;
 const ROOT = "D:/workspaces/speak-it/designs/next";
 const OUT = process.env.OUT ?? ROOT + "/speakkit.figcraft";
 const PNG = process.env.PNG ?? ROOT + "/screens";

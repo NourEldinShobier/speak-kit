@@ -1,9 +1,10 @@
 import { $ } from "bun";
+import { homedir } from "os";
 import { writeFileSync, mkdirSync, readFileSync } from "fs";
 import { B, ICONS, TABLER_NAME } from "./lib";
 import tablerBounds from "./tabler-bounds.json";
 
-const FC = "C:/Users/USER/AppData/Local/Programs/FigCraft/figcraft-cli.exe";
+const FC = process.env.FIGCRAFT_CLI ?? `${homedir()}/AppData/Local/Programs/FigCraft/figcraft-cli.exe`;
 const D = "D:/workspaces/speak-it/designs/next/build/probe-icons";
 mkdirSync(D, { recursive: true });
 const b = new B();

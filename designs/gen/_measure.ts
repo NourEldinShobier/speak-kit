@@ -1,11 +1,12 @@
 // Pixel check of icon-vs-text alignment in the kit components. bun _measure.ts && python _measure.py
 import { $ } from "bun";
+import { homedir } from "os";
 import { writeFileSync, mkdirSync } from "fs";
 import { B } from "./lib";
 import * as K from "./kit";
 import { LIGHT } from "./kit";
 
-const FC = "C:/Users/USER/AppData/Local/Programs/FigCraft/figcraft-cli.exe";
+const FC = process.env.FIGCRAFT_CLI ?? `${homedir()}/AppData/Local/Programs/FigCraft/figcraft-cli.exe`;
 const D = "D:/workspaces/speak-it/designs/next/build/measure";
 mkdirSync(D, { recursive: true });
 // dark fg on white, so ink = dark pixels; "inv" cells draw white-on-colour and are measured on bright pixels

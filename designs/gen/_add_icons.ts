@@ -1,7 +1,8 @@
 // Adds Tabler outline icons to tabler.json + tabler-bounds.json (bounds measured by FigCraft). Usage: bun _add_icons.ts
 import { $ } from "bun";
+import { homedir } from "os";
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
-const FC = "C:/Users/USER/AppData/Local/Programs/FigCraft/figcraft-cli.exe";
+const FC = process.env.FIGCRAFT_CLI ?? `${homedir()}/AppData/Local/Programs/FigCraft/figcraft-cli.exe`;
 const SRC = "D:/workspaces/speak-it/code/node_modules/.pnpm/@tabler+icons@3.50.0/node_modules/@tabler/icons/icons/outline";
 const names = ["arrow-back-up", "sparkles", "bell", "bell-off", "settings", "battery-2", "battery-charging", "device-desktop", "shield-check", "brand-chrome", "plug-connected", "cloud-off", "zzz", "key", "command", "browser", "app-window", "clipboard-text", "file-export", "sun", "sun-moon", "palette", "text-size", "ruler-2", "inbox", "folder-open", "world-www", "alert-octagon", "circle-x", "rocket", "bulb", "arrows-maximize", "tag", "layout-sidebar", "player-track-next", "player-track-prev", "message-circle", "refresh-dot", "box", "wand", "dots-circle-horizontal", "point", "check"];
 const t = JSON.parse(readFileSync("tabler.json", "utf8"));
