@@ -9,3 +9,5 @@
 - Generic microphones, speech bubbles and clip-art heads (most Pinterest "text to speech" results) look dated.
 
 **Round 1 (drive/logos/generated/speakkit-logos-v1.png):** four concepts on app-icon tiles: 1 K-Wave (K built from equalizer bars), 2 Page Voice (text lines turning into a wave), 3 S-Ribbon (S as a continuous wave ribbon), 4 Highlight Spark (reading highlight with play glyph and sound arcs, the product's yellow highlight as the single accent).
+
+**Round 2 (drive/logos/generated/speakkit-logos-v2.png), after the user's references** (sparkle on black squircle, layered pastel cards, bubble in a window, gradient ribbon loop, flat blob icons): one soft hero shape per icon, no lines or bars. 1 Listening Bloom (glassy bubble-ripple blob), 2 Pages Fading Into Voice (layered cards dissolving), 3 Window of Sound (glossy bubble in a blue window on white), 4 One Ribbon (tube ribbon forming a K).
