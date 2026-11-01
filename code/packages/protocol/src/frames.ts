@@ -15,6 +15,7 @@ export interface Frame {
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+/** Serialises one frame; `pcm` is required for "audio" frames and ignored otherwise. */
 export function encodeFrame(header: FrameHeader, pcm?: Int16Array): Uint8Array {
   const h = enc.encode(JSON.stringify(header));
   const body = pcm ? new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength) : new Uint8Array(0);
@@ -46,13 +47,14 @@ export class FrameDecoder {
         const copy = this.buf.slice(4 + hl, 4 + hl + bytes); // copy: alignment-safe
         pcm = new Int16Array(copy.buffer, 0, header.samples);
       }
-      frames.push({ header, pcm });
+      frames.push(pcm ? { header, pcm } : { header });
       this.buf = this.buf.subarray(4 + hl + bytes);
     }
     return frames;
   }
 }
 
+/** Converts float samples in [-1, 1] to little-endian int16 PCM, clamping out-of-range values. */
 export function floatToInt16(f: Float32Array): Int16Array {
   const o = new Int16Array(f.length);
   for (let i = 0; i < f.length; i++) {

@@ -6,6 +6,7 @@ import type { EngineList, ExportJob } from "./engines";
 const engineState = v.picklist(["missing", "downloading", "installing", "unavailable", "unloaded", "loading", "ready", "error"] satisfies EngineState[]);
 const engineId = v.picklist(["kokoro", "chatterbox"]);
 
+/** Shape of GET /v1/health. */
 export const healthSchema: v.GenericSchema<unknown, Health> = v.object({
   app: v.literal("speakkit"),
   version: v.string(),
@@ -17,12 +18,13 @@ export const healthSchema: v.GenericSchema<unknown, Health> = v.object({
   engine: v.object({
     id: engineId,
     state: engineState,
-    progress: v.optional(v.number()),
-    detail: v.optional(v.string()),
-    idleUnloadAtMs: v.optional(v.number()),
+    progress: v.exactOptional(v.number()),
+    detail: v.exactOptional(v.string()),
+    idleUnloadAtMs: v.exactOptional(v.number()),
   }),
 });
 
+/** Shape of GET /v1/voices. */
 export const voiceListSchema: v.GenericSchema<unknown, VoiceList> = v.object({
   voices: v.array(
     v.object({
@@ -31,13 +33,14 @@ export const voiceListSchema: v.GenericSchema<unknown, VoiceList> = v.object({
       lang: v.picklist(["en-US", "en-GB"]),
       gender: v.picklist(["female", "male"]),
       quality: v.picklist(["A", "B", "C", "D"]),
-      traits: v.optional(v.string()),
-      cloned: v.optional(v.literal(true)),
+      traits: v.exactOptional(v.string()),
+      cloned: v.exactOptional(v.literal(true)),
     }),
   ),
   default: v.string(),
 });
 
+/** Shape of the engine list returned by the /v1/engines routes. */
 export const engineListSchema: v.GenericSchema<unknown, EngineList> = v.object({
   active: engineId,
   engines: v.array(
@@ -45,25 +48,27 @@ export const engineListSchema: v.GenericSchema<unknown, EngineList> = v.object({
       id: engineId,
       name: v.string(),
       state: engineState,
-      progress: v.optional(v.number()),
-      detail: v.optional(v.string()),
-      reason: v.optional(v.picklist(["no-gpu", "python-missing", "not-installed"])),
+      progress: v.exactOptional(v.number()),
+      detail: v.exactOptional(v.string()),
+      reason: v.exactOptional(v.picklist(["no-gpu", "python-missing", "not-installed"])),
       optional: v.boolean(),
       cloning: v.boolean(),
-      gpu: v.optional(v.object({ name: v.string(), vramMb: v.number() })),
+      gpu: v.exactOptional(v.object({ name: v.string(), vramMb: v.number() })),
     }),
   ),
 });
 
+/** Shape of an export job (POST /v1/export, GET /v1/export/<id>). */
 export const exportJobSchema: v.GenericSchema<unknown, ExportJob> = v.object({
   id: v.string(),
   state: v.picklist(["running", "done", "cancelled", "error"]),
   done: v.number(),
   total: v.number(),
   durationMs: v.number(),
-  error: v.optional(v.string()),
+  error: v.exactOptional(v.string()),
 });
 
+/** Shape of every JSON error body: { error: { code, message } }. */
 export const errorBodySchema = v.object({ error: v.object({ code: v.string(), message: v.string() }) });
 
 const parser =
@@ -72,5 +77,7 @@ const parser =
     const r = v.safeParse(schema, x);
     return r.success ? r.output : undefined;
   };
+/** Returns the parsed answer of GET /v1/health, or undefined when it does not match. */
 export const parseHealth = parser(healthSchema);
+/** Returns the parsed answer of GET /v1/voices, or undefined when it does not match. */
 export const parseVoiceList = parser(voiceListSchema);

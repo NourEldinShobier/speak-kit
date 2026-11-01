@@ -65,7 +65,11 @@ export interface HoldRequest {
   ms: number;
 }
 
-const ERROR_CODES = [
+/**
+ * Every error code in the API. Adding a code means updating, in the same change: this list, `ERROR_TEXT` in apps/extension/src/shared,
+ * the HTTP status mapping and a test that produces it in packages/server, and the golden list in src/error-codes.test.ts.
+ */
+export const ERROR_CODES = [
   "app-not-running",
   "token-rejected",
   "engine-not-ready",

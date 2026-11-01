@@ -23,6 +23,7 @@ export const SETTINGS_KEY = "speakkit.settings";
 export const DEFAULT_SENTENCE_COLOR = "#FFF1C2";
 export const DEFAULT_WORD_COLOR = "#FFD24D";
 
+/** A fresh copy of the settings a new install starts with. */
 export const defaultSettings = (): Settings => ({
   port: DEFAULT_PORT,
   launcher: { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 1500, widerWhileReading: true, y: 0.42 },
