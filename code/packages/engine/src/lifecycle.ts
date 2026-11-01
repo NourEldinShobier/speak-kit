@@ -16,9 +16,14 @@ export interface LifecycleOptions {
   /** Injectable for tests. */
   freemem?: () => number;
   onBattery?: boolean;
+  /** Crashes of a loaded model inside the window after which automatic restarts stop. Default 3. */
+  crashLimit?: number;
+  /** Window for the crash count. Default 5 min. */
+  crashWindowMs?: number;
 }
 
 export const DEFAULT_IDLE_MS = 5 * 60_000;
+export const DEFAULT_CRASH_WINDOW_MS = 5 * 60_000;
 const MAX_TIMER = 2 ** 31 - 1;
 
 function raceAbort<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -37,8 +42,8 @@ function raceAbort<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
  */
 export abstract class LifecycleEngine implements TtsEngine {
   #em: StatusEmitter;
-  #loading?: Promise<void>;
-  #unloading?: Promise<void>;
+  #loading: Promise<void> | undefined;
+  #unloading: Promise<void> | undefined;
   #streams = 0;
   #inflight = 0;
   #lastActivity = Date.now();
@@ -50,9 +55,13 @@ export abstract class LifecycleEngine implements TtsEngine {
   #lowMemGraceMs: number;
   #checkMs: number;
   #freemem: () => number;
-  #timer?: ReturnType<typeof setTimeout>;
-  #poll?: ReturnType<typeof setInterval>;
+  #timer: ReturnType<typeof setTimeout> | undefined;
+  #poll: ReturnType<typeof setInterval> | undefined;
   #closed = false;
+  #crashLimit: number;
+  #crashWindowMs: number;
+  #crashes: number[] = [];
+  #tripped = false;
 
   constructor(o: LifecycleOptions = {}, initial: EngineState = "unloaded") {
     this.#idleMs = o.idleUnloadMs ?? DEFAULT_IDLE_MS;
@@ -62,6 +71,8 @@ export abstract class LifecycleEngine implements TtsEngine {
     this.#lowMemGraceMs = o.lowMemGraceMs ?? 30_000;
     this.#checkMs = o.checkIntervalMs ?? 15_000;
     this.#freemem = o.freemem ?? freemem;
+    this.#crashLimit = o.crashLimit ?? 3;
+    this.#crashWindowMs = o.crashWindowMs ?? DEFAULT_CRASH_WINDOW_MS;
     this.#em = new StatusEmitter({ state: initial });
     if (initial === "ready") this.#reschedule();
   }
@@ -87,13 +98,27 @@ export abstract class LifecycleEngine implements TtsEngine {
     this.#em.set(s);
     this.#reschedule();
   }
-  /** For subclasses: the loaded model vanished (worker crash). The next request reloads it. */
+  /**
+   * For subclasses: the loaded model vanished (worker crash). The next request reloads it, unless this was the
+   * crashLimit-th crash inside the window: then the engine goes to "error" and only an explicit start() revives it.
+   */
   protected markUnloaded(detail?: string): void {
-    if (this.#em.status.state === "ready") this.setStatus({ state: "unloaded", detail });
+    if (this.#em.status.state !== "ready") return;
+    const now = Date.now();
+    this.#crashes = [...this.#crashes.filter((t) => now - t < this.#crashWindowMs), now];
+    if (this.#crashes.length < this.#crashLimit) return this.setStatus({ state: "unloaded", ...(detail !== undefined && { detail }) });
+    this.#tripped = true;
+    const minutes = Math.round(this.#crashWindowMs / 60_000);
+    this.setStatus({ state: "error", detail: `${detail ?? "engine crashed"} (${this.#crashes.length} crashes in ${minutes} min; not restarting automatically)` });
   }
 
+  /** Loads the model. Called by a user retry it also clears a tripped crash-loop guard; requests and warm() never do. */
   start(): Promise<void> {
     if (this.#em.status.state === "ready") return Promise.resolve();
+    if (this.#tripped) {
+      this.#tripped = false;
+      this.#crashes = [];
+    }
     return (this.#loading ??= this.#load().finally(() => {
       this.#loading = undefined;
     }));
@@ -118,7 +143,7 @@ export abstract class LifecycleEngine implements TtsEngine {
   warm(): void {
     const st = this.#em.status.state;
     if (st === "ready") return this.#touch();
-    if (st === "unloaded" || st === "error") this.start().catch(() => {});
+    if (st === "unloaded" || (st === "error" && !this.#tripped)) this.start().catch(() => {});
   }
 
   hold(ms: number): void {

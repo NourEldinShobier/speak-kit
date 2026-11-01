@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { EngineNotReadyError, FakeEngine, type FakeEngineOptions } from "../src";
+import { EngineNotReadyError, FakeEngine, LifecycleEngine, type FakeEngineOptions } from "../src";
 
-const synth = (e: FakeEngine, text = "hello", signal?: AbortSignal) => e.synthesize(text, { voice: "af_heart", speed: 1, signal });
+const synth = (e: FakeEngine, text = "hello", signal?: AbortSignal) => e.synthesize(text, { voice: "af_heart", speed: 1, ...(signal && { signal }) });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function until(cond: () => boolean, ms = 2000) {
   const t0 = Date.now();
@@ -258,5 +258,63 @@ describe("close", () => {
     await synth(e);
     await e.close();
     expect(e.unloads).toBe(1);
+  });
+});
+
+describe("crash-loop guard", () => {
+  // A model that can be made to vanish, like a worker or sidecar that died.
+  class Crashy extends LifecycleEngine {
+    loads = 0;
+    protected async doLoad() {
+      this.loads++;
+    }
+    protected async doUnload() {}
+    protected async doSynthesize() {
+      return { pcm: new Int16Array(1), sampleRate: 24000 };
+    }
+    voices() {
+      return [];
+    }
+    crash() {
+      this.markUnloaded("worker died");
+    }
+  }
+  const run = async (e: Crashy) => {
+    await e.synthesize("x", { voice: "v", speed: 1 });
+    e.crash();
+  };
+
+  it("restarts after the first two crashes and stops at the third", async () => {
+    const e = new Crashy({ idleUnloadMs: 0 });
+    await run(e);
+    expect(e.status().state).toBe("unloaded");
+    await run(e);
+    expect(e.status().state).toBe("unloaded");
+    await run(e);
+    expect(e.status()).toEqual({ state: "error", detail: "worker died (3 crashes in 5 min; not restarting automatically)" });
+    expect(e.loads).toBe(3);
+  });
+
+  it("does not restart on a request or warm() once tripped, and an explicit start() resets the guard", async () => {
+    const e = new Crashy({ idleUnloadMs: 0 });
+    await run(e);
+    await run(e);
+    await run(e);
+    await expect(e.synthesize("x", { voice: "v", speed: 1 })).rejects.toBeInstanceOf(EngineNotReadyError);
+    e.warm();
+    expect(e.loads).toBe(3);
+    await e.start();
+    expect(e.status().state).toBe("ready");
+    e.crash();
+    expect(e.status().state).toBe("unloaded"); // the count began again
+  });
+
+  it("forgets crashes older than the window", async () => {
+    const e = new Crashy({ idleUnloadMs: 0, crashWindowMs: 40 });
+    await run(e);
+    await run(e);
+    await sleep(60);
+    await run(e);
+    expect(e.status().state).toBe("unloaded");
   });
 });

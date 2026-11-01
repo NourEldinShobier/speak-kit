@@ -6,6 +6,7 @@ import { Worker } from "node:worker_threads";
 import { DEFAULT_VOICE, SAMPLE_RATE, type Voice } from "@speakkit/protocol";
 import { splitLong } from "./split";
 import { KOKORO_VOICES } from "./voices";
+import { childEnv } from "./child-env";
 import { LifecycleEngine, type LifecycleOptions } from "./lifecycle";
 import type { SynthOptions, Synthesized } from "./types";
 import type { FromWorker, ToWorker, WorkerInit } from "./worker-protocol";
@@ -45,6 +46,7 @@ const DEFAULT_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
 
 /** transformers.js cache layout: <modelsDir>/<modelId>/onnx/<file>. */
 function modelPresent(o: KokoroOptions): boolean {
+  // oxlint-disable-next-line node/no-sync -- startup: decides the initial engine state once, in the constructor
   return existsSync(join(o.modelsDir, o.modelId ?? DEFAULT_MODEL, "onnx", MODEL_FILE[o.dtype ?? "uint8"]));
 }
 
@@ -55,7 +57,7 @@ interface Channel {
   on(ev: "error", cb: (e: Error) => void): void;
   on(ev: "exit", cb: (code: number | null) => void): void;
   terminate(): Promise<void>;
-  pid?: number;
+  pid?: number | undefined;
 }
 function threadChannel(url: URL | string, workerData: WorkerInit): Channel {
   const w = new Worker(url, { workerData });
@@ -71,7 +73,7 @@ function processChannel(url: URL | string, init: WorkerInit): Channel {
     serialization: "advanced",
     execArgv: [],
     stdio: ["ignore", "ignore", "inherit", "ipc"],
-    env: { ...process.env, SPEAKKIT_WORKER_INIT: JSON.stringify(init) },
+    env: childEnv({ SPEAKKIT_WORKER_INIT: JSON.stringify(init) }),
   });
   return {
     pid: c.pid,
@@ -98,7 +100,7 @@ type Resolved = Required<Omit<KokoroOptions, "workerUrl" | "isolation" | keyof L
  */
 export class KokoroEngine extends LifecycleEngine {
   #o: Resolved;
-  #worker?: Channel;
+  #worker: Channel | undefined;
   #next = 1;
   #jobs = new Map<number, { resolve: (r: Synthesized | null) => void; reject: (e: Error) => void }>();
 
@@ -125,7 +127,7 @@ export class KokoroEngine extends LifecycleEngine {
     return this.#worker?.pid;
   }
 
-  protected doLoad(): Promise<void> {
+  #channel(): Channel {
     const o = this.#o;
     const url = o.workerUrl ?? new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url);
     const workerData: WorkerInit = {
@@ -137,7 +139,20 @@ export class KokoroEngine extends LifecycleEngine {
       warmup: o.warmup,
       warmupVoice: DEFAULT_VOICE,
     };
-    const w = (this.#worker = (o.isolation === "thread" ? threadChannel : processChannel)(url, workerData));
+    return (o.isolation === "thread" ? threadChannel : processChannel)(url, workerData);
+  }
+
+  /** Hands a finished synthesis (result or error message) to the job waiting for it. */
+  #settle(m: Extract<FromWorker, { type: "result" | "error" }>): void {
+    const j = this.#jobs.get(m.id);
+    if (!j) return;
+    this.#jobs.delete(m.id);
+    if (m.type === "error") j.reject(new Error(m.message));
+    else j.resolve(m.cancelled ? null : { pcm: m.pcm!, sampleRate: m.sampleRate! });
+  }
+
+  protected doLoad(): Promise<void> {
+    const w = (this.#worker = this.#channel());
     return new Promise<void>((resolve, reject) => {
       let loaded = false;
       const fail = (message: string) => {
@@ -150,20 +165,11 @@ export class KokoroEngine extends LifecycleEngine {
         else reject(err);
       };
       w.on("message", (m: FromWorker) => {
-        if (m.type === "status") {
-          if (m.state === "ready") {
-            loaded = true;
-            resolve();
-          } else this.report({ state: m.state, progress: m.progress, detail: m.detail });
-        } else if (m.type === "fatal") {
-          fail(m.message);
-        } else {
-          const j = this.#jobs.get(m.id);
-          if (!j) return;
-          this.#jobs.delete(m.id);
-          if (m.type === "error") j.reject(new Error(m.message));
-          else j.resolve(m.cancelled ? null : { pcm: m.pcm!, sampleRate: m.sampleRate! });
-        }
+        if (m.type === "fatal") return fail(m.message);
+        if (m.type !== "status") return this.#settle(m);
+        if (m.state !== "ready") return this.report({ state: m.state, ...(m.progress !== undefined && { progress: m.progress }), ...(m.detail !== undefined && { detail: m.detail }) });
+        loaded = true;
+        resolve();
       });
       w.on("error", (e: Error) => fail(e.message));
       w.on("exit", (code) => {
@@ -181,7 +187,7 @@ export class KokoroEngine extends LifecycleEngine {
     if (w) await w.terminate();
   }
 
-  #job(text: string, voice: string, speed: number, signal?: AbortSignal): Promise<Synthesized> {
+  #job(text: string, { voice, speed, signal }: SynthOptions): Promise<Synthesized> {
     const w = this.#worker!;
     const id = this.#next++;
     return new Promise((resolve, reject) => {
@@ -206,14 +212,15 @@ export class KokoroEngine extends LifecycleEngine {
     });
   }
 
-  protected async doSynthesize(text: string, { voice, speed, signal }: SynthOptions): Promise<Synthesized> {
+  protected async doSynthesize(text: string, opts: SynthOptions): Promise<Synthesized> {
+    const { voice, signal } = opts;
     if (!KOKORO_VOICES.some((v) => v.id === voice)) throw new Error(`unknown voice "${voice}"`);
     const pieces = splitLong(text, this.#o.maxChunk);
     const parts: Int16Array[] = [];
     for (const p of pieces) {
       signal?.throwIfAborted();
       if (parts.length) parts.push(new Int16Array(GAP_SAMPLES));
-      parts.push((await this.#job(p, voice, speed, signal)).pcm);
+      parts.push((await this.#job(p, opts)).pcm);
     }
     if (parts.length === 1) return { pcm: parts[0]!, sampleRate: SAMPLE_RATE };
     const pcm = new Int16Array(parts.reduce((n, a) => n + a.length, 0));
