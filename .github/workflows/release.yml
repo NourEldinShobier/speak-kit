@@ -87,7 +87,14 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ "$GITHUB_REF_TYPE" = tag ]; then v="${GITHUB_REF_NAME#v}"; else v="$INPUT_VERSION"; fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            # The files in the release carry the tag's version; the sources must say the same (the extension manifest is what Chrome shows).
+            for f in package.json apps/desktop/package.json apps/extension/package.json apps/extension/manifest.json; do
+              got=$(node -p "require('./$f').version")
+              [ "$got" = "$v" ] || { echo "::error::$f says $got, the tag says $v: bump the versions, commit, and tag again"; exit 1; }
+            done
+          else v="$INPUT_VERSION"; fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       # Builds the engine worker, the extension and the app, stages a plain app folder and runs electron-builder
