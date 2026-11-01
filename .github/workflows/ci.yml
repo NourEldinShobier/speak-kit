@@ -65,10 +65,12 @@ jobs:
         run: pnpm run test
 
       # No real model: the fake engine. The timing budgets (perf phase) are measured on a quiet machine, not on shared runners.
+      # The runner has 2 vCPUs: three parallel browsers starve the specs with short idle windows and 8 s polls, so run one at a time.
       - name: End-to-end tests
         run: pnpm run e2e
         env:
           E2E_SKIP_PERF: "1"
+          E2E_WORKERS: "1"
 
       - name: Keep test results
         if: failure()
