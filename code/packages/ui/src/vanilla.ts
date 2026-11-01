@@ -3,6 +3,7 @@
  * (Shadow DOM). Styles: inject lumen.css into the shadow root and put class "lm" on the container.
  * Icons are built with createElementNS (no innerHTML), so Trusted Types pages are fine.
  */
+import { LOGO_COLORS, logoVariant } from "./logo";
 import { ICON_DATA, iconAttrs, type IconName } from "./icons";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -171,10 +172,15 @@ export function tooltip(target: HTMLElement, text: string, shortcut?: string): H
   return h("span", { class: "lm-tip" }, target, h("span", { role: "tooltip", id, class: "lm-tooltip" }, text, shortcut && kbd(shortcut, true)));
 }
 
-const LOGO_BARS = [0.28, 0.5, 0.7, 0.42, 0.22];
 /** SpeakKit brand mark (same markup as <Logo>). */
 export function logo(size = 24): HTMLSpanElement {
-  return h("span", { class: "lm-logo", style: `--s:${size}`, "aria-hidden": "true" }, ...LOGO_BARS.map((v) => h("i", { style: `--h:${v}` })));
+  const v = logoVariant(size);
+  const svg = h("svg", { viewBox: "0 0 512 512", focusable: "false" }, ...v.pieces.map((p, i) => h("path", { d: p, fill: LOGO_COLORS.pieces[i] })));
+  svg.append(
+    h("path", { d: v.hub, fill: LOGO_COLORS.hub }),
+    h("path", { d: v.wave, fill: "none", stroke: LOGO_COLORS.wave, "stroke-width": v.waveWidth, "stroke-linecap": "round", "stroke-linejoin": "round" }),
+  );
+  return h("span", { class: "lm-logo", style: `--s:${size}`, "aria-hidden": "true" }, svg);
 }
 
 /** Initial in a coloured circle (same markup as <Avatar>); tone "accent" uses the brand colour. */

@@ -43,8 +43,14 @@ describe("custom properties", () => {
   });
 });
 
-/** Files allowed to carry hex colours: the token table itself, and the highlight swatches painted on host pages that have no Lumen tokens. */
-const HEX_ALLOWED = new Set(["packages/ui/src/lumen.css", "packages/ui/src/tokens.ts", "apps/extension/src/features/highlight/colors.ts", "apps/extension/src/testing/fixtures.ts"]);
+/** Files allowed to carry hex colours: the token table itself, the logo colours (fixed brand art, not themed), and the highlight swatches painted on host pages that have no Lumen tokens. */
+const HEX_ALLOWED = new Set([
+  "packages/ui/src/lumen.css",
+  "packages/ui/src/tokens.ts",
+  "packages/ui/src/logo-data.ts",
+  "apps/extension/src/features/highlight/colors.ts",
+  "apps/extension/src/testing/fixtures.ts",
+]);
 
 describe("hard-coded colours", () => {
   test("components, styles and gallery use tokens, not hex values", () => {

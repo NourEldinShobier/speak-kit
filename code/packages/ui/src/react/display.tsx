@@ -1,6 +1,7 @@
 import { Tooltip as RTooltip } from "radix-ui";
 import { type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from "react";
 import type { IconName } from "../icons";
+import { LOGO_COLORS, logoVariant } from "../logo";
 import { Button } from "./controls";
 import { cx, Icon, Spinner } from "./shared";
 
@@ -140,15 +141,18 @@ export function ProgressBar({ value, thin, label, className, style }: ProgressBa
   );
 }
 
-const LOGO_BARS = [0.28, 0.5, 0.7, 0.42, 0.22];
-
-/** SpeakKit brand mark: five bars on the accent tile. `size` is the tile size in px. */
+/** SpeakKit brand mark, the Voice hub. `size` is the mark size in px. */
 export function Logo({ size = 24, className }: { size?: number; className?: string }) {
+  const v = logoVariant(size);
   return (
     <span className={cx("lm-logo", className)} style={{ "--s": size } as CSSProperties} aria-hidden="true">
-      {LOGO_BARS.map((h, i) => (
-        <i key={i} style={{ "--h": h } as CSSProperties} />
-      ))}
+      <svg viewBox="0 0 512 512" focusable="false">
+        {v.pieces.map((p, i) => (
+          <path key={i} d={p} fill={LOGO_COLORS.pieces[i]} />
+        ))}
+        <path d={v.hub} fill={LOGO_COLORS.hub} />
+        <path d={v.wave} fill="none" stroke={LOGO_COLORS.wave} strokeWidth={v.waveWidth} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </span>
   );
 }
