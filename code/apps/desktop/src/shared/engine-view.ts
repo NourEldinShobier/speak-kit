@@ -1,7 +1,8 @@
 import type { Health } from "@speakkit/protocol";
 
 export type PillTone = "green" | "blue" | "orange" | "red" | "neutral";
-export type TrayState = "normal" | "working" | "asleep" | "error";
+/** normal (ready), working (download, load, reading, export), asleep (unloaded), error, paused (reading paused), attention (an update waits for you). */
+export type TrayState = "normal" | "working" | "asleep" | "error" | "paused" | "attention";
 
 export interface EngineView {
   key: "starting" | "missing" | "downloading" | "unloaded" | "loading" | "ready" | "error";
@@ -23,6 +24,10 @@ export function engineView(health: Health | null, serverError: string | null): E
   switch (e.state) {
     case "missing":
       return { key: "missing", label: "Not downloaded", tone: "orange", spinner: false };
+    case "installing":
+      return { key: "downloading", label: "Installing", tone: "blue", spinner: true };
+    case "unavailable":
+      return { key: "error", label: "Unavailable", tone: "orange", spinner: false };
     case "downloading":
       return {
         key: "downloading",
@@ -42,16 +47,19 @@ export function engineView(health: Health | null, serverError: string | null): E
 }
 
 /** Tray icon variant: normal (ready), working (download or load), asleep (unloaded or not downloaded), error. */
+/** Tray variant from the engine alone; shared/tray.ts adds reading, exports and updates. */
 export function trayState(health: Health | null, serverError: string | null): TrayState {
   if (serverError) return "error";
   switch (health?.engine.state) {
     case "error":
       return "error";
     case "downloading":
+    case "installing":
     case "loading":
       return "working";
     case "unloaded":
     case "missing":
+    case "unavailable":
       return "asleep";
     case "ready":
       return "normal";

@@ -608,5 +608,5 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   void stopIfPlayingTab(tabId);
 });
 chrome.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status === "loading" && info.url) void stopIfPlayingTab(tabId);
+  if (info.status === "loading") void stopIfPlayingTab(tabId); // also on reload, which carries no url
 });

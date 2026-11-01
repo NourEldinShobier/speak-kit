@@ -5,30 +5,13 @@ import type {
   PlayerState,
   ReadDoc,
   SentenceStart,
-  Settings,
   VoiceList,
 } from "@speakkit/protocol";
+import type { PlayerConfig, QueueItem } from "@speakkit/player";
+
+export type { PlayerConfig, QueueItem };
 
 /** Messages between the service worker and the offscreen player, plus extra worker requests beyond protocol/messages.ts. */
-
-/** Everything the player needs to talk to the server. The offscreen document has no chrome.storage, so the worker passes it along. */
-export interface PlayerConfig {
-  port: number;
-  token: string;
-  voice: string;
-  speed: number;
-  pause: Settings["pauseBetweenParagraphs"];
-}
-
-export interface QueueItem {
-  docId: string;
-  tabId: number;
-  title: string;
-  url: string;
-  sentenceCount: number;
-  /** estimated reading time at the current speed */
-  estMs: number;
-}
 
 export type ToOffscreen =
   | { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig }

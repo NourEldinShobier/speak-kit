@@ -1,9 +1,13 @@
-import type { Health, VoiceList } from "@speakkit/protocol";
+import type { EngineId, EngineList, Health, VoiceList } from "@speakkit/protocol";
 import type { Config, ConfigPatch } from "./schemas";
+import type { ExportOptions, ExportTarget, ExportView } from "./export";
+import type { ReaderCommand, ReaderState } from "./reader";
+import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
+import type { UpdateAction, UpdateState } from "./updates";
 
 export type { Config, ConfigPatch } from "./schemas";
-export const PAGES = ["home", "voices", "engines", "browser", "settings"] as const;
-export const SETTINGS_SUBS = ["general", "voice", "memory", "browser", "storage", "about"] as const;
+export const PAGES = ["home", "library", "voices", "engines", "browser", "settings"] as const;
+export const SETTINGS_SUBS = ["general", "voice", "shortcuts", "notifications", "memory", "browser", "storage", "about"] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
@@ -11,7 +15,7 @@ export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 export interface Activity {
   id: number;
   atMs: number;
-  kind: "download" | "error" | "pair" | "info";
+  kind: "download" | "error" | "pair" | "info" | "export" | "update" | "reading";
   title: string;
   body: string;
 }
@@ -38,6 +42,14 @@ export interface AppState {
   onBattery: boolean;
   pairing: Pairing;
   activity: Activity[];
+  reader: ReaderState;
+  shortcuts: { bindings: Bindings; conflicts: Partial<Record<ShortcutId, ShortcutConflict>> };
+  update: UpdateState;
+  exports: ExportView[];
+  /** Folder the export dialog starts in. */
+  exportDir: string;
+  /** False when running from source: no installer, no updates, no bundled extension. */
+  packaged: boolean;
 }
 
 export interface PreviewAudio {
@@ -61,6 +73,8 @@ export interface Metrics {
   otherMb: number;
 }
 
+export type ShortcutResult = { ok: true } | { ok: false; error: string; conflict?: ShortcutConflict };
+
 export type ExternalLink = "webstore";
 export type OpenPath = "models" | "logs";
 
@@ -68,7 +82,11 @@ export type OpenPath = "models" | "logs";
 export type UiEvent =
   | { type: "nav"; page: Page; sub?: SettingsSub }
   | { type: "confirm-quit" }
-  | { type: "pause" };
+  | { type: "pause" }
+  | { type: "export"; text?: string }
+  /** To the mini player, which owns the audio output. */
+  | { type: "chunk"; epoch: number; index: number; audio: PreviewAudio }
+  | { type: "player"; op: "pause" | "resume" | "flush" };
 
 /** The only surface the renderer gets (window.speakkit). Every call is an ipcMain.handle on `speakkit:<name>`, validated with ARGS in schemas.ts. */
 export interface Api {
@@ -90,6 +108,30 @@ export interface Api {
   hideWindow(): Promise<void>;
   /** Really quits (after the renderer's confirmation dialog). */
   quit(): Promise<void>;
+  setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
+  resetShortcuts(): Promise<AppState>;
+  /** Controls the current reading (mini player, tray panel, palette). */
+  reader(cmd: ReaderCommand): Promise<void>;
+  /** Reads whatever text is on the clipboard now; false when there is none. */
+  readClipboard(): Promise<boolean>;
+  /** The mini player reports what its audio output is doing. */
+  readerStarted(epoch: number, index: number): Promise<void>;
+  readerDone(epoch: number, index: number): Promise<void>;
+  /** Loads the voice engine now (Memory: Load now). */
+  warmEngine(): Promise<void>;
+  engines(): Promise<EngineList>;
+  selectEngine(id: EngineId): Promise<EngineList>;
+  installEngine(id: EngineId): Promise<EngineList>;
+  removeEngine(id: EngineId): Promise<EngineList>;
+  updateAction(action: UpdateAction): Promise<AppState>;
+  exportCheck(dir: string, name: string, format: "wav" | "mp3"): Promise<ExportTarget>;
+  exportStart(options: ExportOptions): Promise<ExportView>;
+  exportCancel(id: string): Promise<void>;
+  /** Opens the folder of a finished export, or the file itself. Only paths of exports from this session are accepted. */
+  exportReveal(path: string, open: boolean): Promise<void>;
+  pickFolder(current: string): Promise<string | null>;
+  /** Reveals the bundled extension folder and opens the browser extensions page. Returns the folder, or null when not packaged. */
+  installExtension(): Promise<string | null>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -111,6 +153,24 @@ export const METHODS = [
   "metrics",
   "hideWindow",
   "quit",
+  "setShortcut",
+  "resetShortcuts",
+  "reader",
+  "readClipboard",
+  "readerStarted",
+  "readerDone",
+  "warmEngine",
+  "engines",
+  "selectEngine",
+  "installEngine",
+  "removeEngine",
+  "updateAction",
+  "exportCheck",
+  "exportStart",
+  "exportCancel",
+  "exportReveal",
+  "pickFolder",
+  "installExtension",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

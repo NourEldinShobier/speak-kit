@@ -4,7 +4,10 @@ packages:
   - e2e
 allowBuilds:
   electron: true
+  electron-winstaller: false
   esbuild: true
+  koffi: true
   onnxruntime-node: true
   protobufjs: true
   sharp: true
+  tesseract.js: false

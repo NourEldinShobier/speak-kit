@@ -5,6 +5,7 @@
 .sk>*{pointer-events:auto}
 .sk button{font-family:inherit}
 .sk-grow{flex:1;min-width:0}
+.sk-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .sk-sep{width:28px;height:1px;background:var(--stroke-divider);flex:none}
 .sk .lm-popover{position:absolute;z-index:3;width:300px;gap:10px;box-shadow:var(--lm-shadow-overlay)}
 .sk .lm-popover.sk-pop-voice{width:320px}
@@ -19,7 +20,9 @@
 .sk-pop-count{margin-top:-6px;color:var(--text-secondary);font-size:12px}
 .sk-vlist{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow:auto;margin-right:-6px;padding-right:6px;scrollbar-width:thin}
 .sk-vrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px;border-radius:8px;cursor:pointer;flex:none}
-.sk-vrow:hover,.sk-vrow:focus-visible{background:var(--fill-hover);outline:none}
+.sk-vrow:hover,.sk-vrow:has(.sk-vopt:focus-visible){background:var(--fill-hover)}
+.sk-vopt{display:flex;flex:1;align-items:center;gap:10px;align-self:stretch;min-width:0}
+.sk-vopt:focus-visible{outline:2px solid var(--accent-default);outline-offset:-2px;border-radius:8px}
 .sk-vrow.is-selected{background:var(--accent-subtle)}
 .sk-vname{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}
 .sk-vname b{font-weight:600}
@@ -27,3 +30,4 @@
 .sk-vcheck{color:var(--accent-default)}
 .sk-vnone{padding:12px 8px;color:var(--text-tertiary);font-size:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+@media (forced-colors:active){.sk-vopt:focus-visible,.sk-vrow.is-selected{outline:2px solid Highlight;outline-offset:-2px}.sk-tint{outline:1px dashed CanvasText}}

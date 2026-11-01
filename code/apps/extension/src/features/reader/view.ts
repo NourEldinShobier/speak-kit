@@ -39,6 +39,9 @@ export class ReaderView {
   private lastWord = -1;
   private lastUserScroll = 0;
   private settingsBtn: HTMLElement;
+  /** what had focus before the reader opened, and whether the page was already inert: both are put back on close */
+  private opener = document.activeElement as HTMLElement | null;
+  private pageWasInert = document.body.inert;
 
   constructor(private ex: Extraction, readonly docId: string, private d: ReaderDeps) {
     this.col = h("article", { class: "sk-reader-col" });
@@ -50,11 +53,13 @@ export class ReaderView {
     this.settingsBtn = iconButton({ name: "typography", label: "Reading settings", data: { sk: "reader-settings" }, onClick: () => this.togglePanel() });
     this.settingsBtn.setAttribute("aria-haspopup", "dialog");
     const bar = h("header", { class: "sk-reader-bar" }, close, h("div", { class: "sk-reader-src" }, icon("book", 16), h("span", null, d.host || "Reader view")), this.settingsBtn);
-    this.el = h("div", { class: "sk-reader", "data-sk": "reader", role: "dialog", "aria-label": "Reader view" }, bar, this.scroller);
+    this.el = h("div", { class: "sk-reader", "data-sk": "reader", role: "dialog", "aria-modal": "true", "aria-label": "Reader view" }, bar, this.scroller);
     this.apply();
     d.shell.root.append(this.el);
     this.el.addEventListener("keydown", (e) => { if (e.key === "Escape" && !d.shell.popover) { e.stopPropagation(); d.onClose(); } });
     this.scroller.tabIndex = -1;
+    // The reader is modal: the page behind it (the host sits outside body) leaves the tab order and the accessibility tree.
+    document.body.inert = true;
     this.scroller.focus({ preventScroll: true });
   }
 
@@ -205,5 +210,7 @@ export class ReaderView {
   close() {
     this.d.shell.closePopover("reading");
     this.el.remove();
+    document.body.inert = this.pageWasInert;
+    if (this.opener?.isConnected) this.opener.focus({ preventScroll: true });
   }
 }

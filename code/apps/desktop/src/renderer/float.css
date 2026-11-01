@@ -1,0 +1,133 @@
+/* Small always-on-top windows: the mini player and the tray panel. Components come from @speakkit/ui; this only places them. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: 13px/1.4 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.sk-caps {
+  margin: 0 0 6px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---- mini player: draggable header, progress, controls ---- */
+.mini {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  height: 100%;
+  border: 1px solid var(--stroke-divider);
+  box-sizing: border-box;
+  background: var(--surface-card);
+}
+.mini__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 8px 12px;
+  -webkit-app-region: drag;
+}
+.mini__nodrag,
+.mini__ctl {
+  -webkit-app-region: no-drag;
+}
+.mini__title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.mini__title b,
+.mini__title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini__title span,
+.mini__left {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.mini__ctl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mini[data-status="error"] .mini__title span {
+  color: var(--tag-red);
+}
+
+/* ---- tray panel ---- */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--stroke-divider);
+}
+.panel__head,
+.panel__row,
+.panel__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel__sec {
+  display: flex;
+  flex-direction: column;
+}
+.panel__now {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+.panel__txt {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.panel__txt b,
+.panel__next,
+.panel__exp span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel__txt span,
+.panel__sub,
+.panel__empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.panel__empty,
+.panel__next {
+  margin: 0;
+}
+.panel__exp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.panel__foot {
+  margin-top: auto;
+}
+.panel__foot .lm-btn {
+  flex: 1;
+}

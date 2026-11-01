@@ -13,7 +13,7 @@ const env = { ...process.env, E2E_FULL: full ? "1" : "0" };
 const sh = (cmd, a, opts) => spawnSync(cmd, a, { stdio: "inherit", shell: process.platform === "win32", ...opts });
 
 if (!args.includes("--no-build")) {
-  const b = sh("pnpm", ["exec", "vp", "build", "--outDir", "dist-e2e"], { cwd: join(code, "apps/extension"), env: { ...env, SPEAKKIT_TEST: "1" } });
+  const b = sh("pnpm", ["exec", "vp", "build", "--outDir", process.env.E2E_DIST ?? "dist-e2e"], { cwd: join(code, "apps/extension"), env: { ...env, SPEAKKIT_TEST: "1" } });
   if (b.status) process.exit(b.status);
   if (full) {
     const d = sh("pnpm", ["exec", "vp", "build"], { cwd: join(code, "apps/desktop"), env });

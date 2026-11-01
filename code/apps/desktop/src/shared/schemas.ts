@@ -1,12 +1,54 @@
 import * as v from "valibot";
 import { DEFAULT_PORT, DEFAULT_VOICE } from "@speakkit/protocol";
+import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
 export const IDLE_CHOICES = ["1", "5", "15", "never"] as const;
 export type IdleChoice = (typeof IDLE_CHOICES)[number];
 
-const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 const bool = (d: boolean) => v.fallback(v.boolean(), d);
+
+/** Events in Settings > Notifications; each can show a Windows toast, a line in the bell, and play a sound. */
+export const NOTIFY_EVENTS = ["reading-finished", "export-done", "download-done", "engine-error", "update-ready"] as const;
+export type NotifyEvent = (typeof NOTIFY_EVENTS)[number];
+export const NOTIFY_CHANNELS = ["toast", "bell", "sound"] as const;
+export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
+const channelsOf = (toast: boolean, bell: boolean, sound: boolean) =>
+  v.fallback(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
+const NotificationsSchema = v.object({
+  "reading-finished": channelsOf(false, false, false),
+  "export-done": channelsOf(true, true, false),
+  "download-done": channelsOf(true, true, false),
+  "engine-error": channelsOf(true, true, true),
+  "update-ready": channelsOf(true, true, false),
+});
+export type Notifications = v.InferOutput<typeof NotificationsSchema>;
+
+const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
+  v.fallback(
+    v.pipe(v.string(), v.check((a) => checkAccelerator(a) === null), v.transform((a) => normalize(a)!)),
+    DEFAULT_SHORTCUTS[id],
+  );
+const ShortcutsSchema = v.object({
+  "read-selection": accelerator("read-selection"),
+  "play-pause": accelerator("play-pause"),
+  stop: accelerator("stop"),
+  "read-clipboard": accelerator("read-clipboard"),
+});
+
+export const EXPORT_FORMATS = ["wav", "mp3"] as const;
+export const MP3_KBPS = [128, 192, 256] as const;
+const ExportPrefsSchema = v.fallback(
+  v.object({
+    format: v.fallback(v.picklist(EXPORT_FORMATS), "mp3"),
+    mp3Kbps: v.fallback(v.picklist(MP3_KBPS), 192),
+    folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
+  }),
+  { format: "mp3", mp3Kbps: 192, folder: "" },
+);
+export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
+
+const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
 export const ConfigSchema = v.object({
@@ -19,8 +61,14 @@ export const ConfigSchema = v.object({
   idleUnload: v.fallback(v.picklist(IDLE_CHOICES), "5"),
   loadAtStart: bool(false),
   batterySaver: bool(true),
-  notifyDownload: bool(true),
-  notifyError: bool(true),
+  notifications: v.fallback(NotificationsSchema, v.parse(NotificationsSchema, {})),
+  doNotDisturb: bool(false),
+  clipboardPrompt: bool(false),
+  autoUpdate: bool(true),
+  /** Epoch ms before which the update card stays hidden ("Remind me later"). */
+  updateRemindAtMs: v.fallback(v.pipe(v.number(), v.minValue(0)), 0),
+  shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
+  exportPrefs: ExportPrefsSchema,
   voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64)), DEFAULT_VOICE),
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
 });
@@ -40,8 +88,12 @@ export const ConfigPatchSchema = v.partial(
     idleUnload: v.picklist(IDLE_CHOICES),
     loadAtStart: v.boolean(),
     batterySaver: v.boolean(),
-    notifyDownload: v.boolean(),
-    notifyError: v.boolean(),
+    notifications: NotificationsSchema,
+    doNotDisturb: v.boolean(),
+    clipboardPrompt: v.boolean(),
+    autoUpdate: v.boolean(),
+    updateRemindAtMs: v.pipe(v.number(), v.minValue(0)),
+    exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
   }),

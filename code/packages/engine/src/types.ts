@@ -1,4 +1,5 @@
-import type { EngineState, Voice } from "@speakkit/protocol";
+import type { EngineReason, EngineState, Voice } from "@speakkit/protocol";
+import type { ClonedVoiceStore } from "./chatterbox/voice-store";
 
 export interface EngineStatus {
   state: EngineState;
@@ -44,6 +45,29 @@ export interface TtsEngine {
   idleUnloadAtMs?(): number | undefined;
   /** Unload now unless busy; returns whether it unloaded. */
   unload?(): Promise<boolean>;
+  /** Wait for streams and a load in progress to finish, then unload. Used when another engine is selected. */
+  release?(): Promise<void>;
+
+  // Optional engines (Chatterbox).
+  /** Why the engine cannot be used, and the detected GPU. */
+  info?(): { reason?: EngineReason; gpu?: { name: string; vramMb: number } };
+  /** Set the engine up ("installing" then "downloading" states). Resolves when installed. */
+  install?(): Promise<void>;
+  /** Remove an installed engine and its downloads. */
+  remove?(): Promise<void>;
+  /** Cloned reference clips, when the engine can clone voices. */
+  readonly clones?: ClonedVoiceStore;
+  /** Engine does not read digits itself (kokoro's phonemizer does), so text normalization spells numbers out. */
+  readonly needsNumberWords?: boolean;
+}
+
+export class EngineUnavailableError extends Error {
+  reason?: EngineReason;
+  constructor(message: string, reason?: EngineReason) {
+    super(message);
+    this.name = "EngineUnavailableError";
+    this.reason = reason;
+  }
 }
 
 export class EngineNotReadyError extends Error {

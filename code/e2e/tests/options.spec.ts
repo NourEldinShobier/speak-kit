@@ -5,6 +5,7 @@ const SECTIONS: [string, string][] = [
   ["launcher", "Edge launcher"],
   ["voice", "Voice and speed"],
   ["highlight", "Highlighting"],
+  ["reader", "Reader view"],
   ["shortcuts", "Shortcuts"],
   ["sites", "Sites and filters"],
 ];

@@ -50,30 +50,28 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
         {list.map((v: Voice) => {
           const sel = v.id === selected;
           return (
-            <li
-              key={v.id}
-              role="option"
-              aria-selected={sel}
-              data-voice={v.id}
-              tabIndex={0}
-              className={sel ? "sk-voice is-selected" : "sk-voice"}
-              onClick={() => onSelect(v.id)}
-              onKeyDown={(e) => {
-                if (e.target !== e.currentTarget) return;
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(v.id);
-                }
-              }}
-            >
-              <Avatar name={v.name} size={28} tone={sel ? "accent" : "purple"} aria-hidden />
-              <span className="sk-voice__text">
-                <b>{v.name}</b>
-                <span>
-                  {langLabel(v.lang)} · Quality {qualityLabel(v)}
+            <li key={v.id} role="presentation" data-voice={v.id} className={sel ? "sk-voice is-selected" : "sk-voice"} onClick={() => onSelect(v.id)}>
+              <div
+                role="option"
+                aria-selected={sel}
+                tabIndex={0}
+                className="sk-voice__opt"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(v.id);
+                  }
+                }}
+              >
+                <Avatar name={v.name} size={28} tone={sel ? "accent" : "purple"} aria-hidden />
+                <span className="sk-voice__text">
+                  <b>{v.name}</b>
+                  <span>
+                    {langLabel(v.lang)} · Quality {qualityLabel(v)}
+                  </span>
                 </span>
-              </span>
-              {sel ? <Icon name="check" size={16} className="sk-voice__check" /> : null}
+                {sel ? <Icon name="check" size={16} className="sk-voice__check" /> : null}
+              </div>
               <IconButton
                 name="player-play"
                 label={`Preview ${v.name}`}

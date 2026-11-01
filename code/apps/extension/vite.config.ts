@@ -76,6 +76,8 @@ export default defineConfig({
     minify: !test,
     sourcemap: test,
     rollupOptions: {
+      // Radix ships "use client" directives that a client-only build does not need; one warning per package drowned the real output.
+      onwarn: (w, next) => { if (w.code !== "MODULE_LEVEL_DIRECTIVE") next(w); },
       input: {
         background: resolve(root, "src/app/background/index.ts"),
         popup: resolve(root, "popup.html"),

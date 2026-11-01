@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Icon, Logo, NavItem, Select, SidebarNav, type IconName } from "@speakkit/ui";
 import { ConnectionCard, useHealth } from "../../features/connection";
-import { HighlightSection } from "../../features/highlight";
-import { AppearsCard, LauncherSection } from "../../features/launcher";
-import { ReaderSection } from "../../features/reader";
-import { ShortcutsSection, SitesSection, useSettings, useToken } from "../../features/settings";
-import { VoiceSection } from "../../features/voices";
+import { AppearsCard } from "../../features/launcher";
+import { useSettings, useToken } from "../../features/settings";
 import { PageHead } from "../../shared/ui";
+
+// Everything but General loads on demand, as one chunk: the page opens on General and most visits never leave it (size budget in scripts/budget.mjs).
+const Sections = lazy(() => import("./Sections"));
 
 export const NAV: [id: string, label: string, icon: IconName][] = [
   ["general", "General", "adjustments"],
@@ -64,12 +64,7 @@ export function OptionsApp() {
             {saved && <span className="sk-sr" role="status">Saved</span>}
           </>
         )}
-        {sec === "launcher" && <LauncherSection {...common} />}
-        {sec === "voice" && <VoiceSection {...common} />}
-        {sec === "highlight" && <HighlightSection {...common} />}
-        {sec === "reader" && <ReaderSection {...common} />}
-        {sec === "shortcuts" && <ShortcutsSection />}
-        {sec === "sites" && <SitesSection {...common} />}
+        {sec !== "general" && <Suspense fallback={null}><Sections id={sec} {...common} /></Suspense>}
       </main>
     </div>
   );

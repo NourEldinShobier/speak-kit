@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { DEFAULT_PORT } from "@speakkit/protocol";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import { parseEnv } from "./config";
+import { createChatterbox } from "./chatterbox";
 import { createServer } from "./server";
 
 let env;
@@ -50,8 +51,15 @@ if ((env.SPEAKKIT_ENGINE ?? "kokoro") === "fake") {
   });
 }
 
+// Optional engine; the hardware probe takes well under a second. Off for the fake engine and with SPEAKKIT_CHATTERBOX=off.
+const chatterbox =
+  (env.SPEAKKIT_ENGINE ?? "kokoro") === "kokoro" && env.SPEAKKIT_CHATTERBOX !== "off"
+    ? await createChatterbox(dataDir, { sidecarScript: env.SPEAKKIT_CHATTERBOX_SCRIPT })
+    : undefined;
+
 const server = createServer({
   engine,
+  chatterbox,
   dataDir,
   port: env.SPEAKKIT_PORT ?? DEFAULT_PORT,
   version,
@@ -71,7 +79,7 @@ if (engine.status().state === "missing")
 
 const stop = async () => {
   await server.close();
-  await engine.close();
+  await Promise.all([engine.close(), chatterbox?.close()]);
   process.exit(0);
 };
 process.on("SIGINT", stop);

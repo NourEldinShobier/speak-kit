@@ -21,6 +21,7 @@ import { BrowserPage, Engines, Home, PreviewCtx, usePlayer, Voices } from "./pag
 import { Settings, SETTINGS_NAV } from "./settings";
 import { Palette } from "./Palette";
 import { Wizard } from "./Wizard";
+import { LibraryRoute } from "./features/library";
 
 interface Loc {
   page: Page;
@@ -175,7 +176,7 @@ function Shell({ s }: { s: AppState }) {
                 <NavItem icon="home" href="#home" selected={loc.page === "home"} onClick={(e) => { e.preventDefault(); go("home"); }}>
                   Home
                 </NavItem>
-                <NavItem icon="bookmark" aria-disabled="true" tabIndex={-1} badge="v1.1">
+                <NavItem icon="book" href="#library" selected={loc.page === "library"} onClick={(e) => { e.preventDefault(); go("library"); }}>
                   Library
                 </NavItem>
                 {NAV.slice(1).map((n) => (
@@ -203,6 +204,7 @@ function Shell({ s }: { s: AppState }) {
           </aside>
           <main className="sk-main">
             {loc.page === "home" && <Home s={s} go={go} />}
+            {loc.page === "library" && <LibraryRoute s={s} />}
             {loc.page === "voices" && <Voices s={s} />}
             {loc.page === "engines" && <Engines s={s} />}
             {loc.page === "browser" && <BrowserPage s={s} />}

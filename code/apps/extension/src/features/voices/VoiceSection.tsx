@@ -24,12 +24,12 @@ export function VoiceSection({ s, upd, saved }: SectionProps) {
     <>
       <PageHead title="Voice and speed" desc="Defaults for every page. You can still change them from the popup." saved={saved} onReset={reset} />
       <Card title="Engine" id="engine-h">
-        <div className="op-engines" role="radiogroup" aria-label="Engine">
-          <div className="op-engine on" role="radio" aria-checked="true" tabIndex={0}>
+        <div className="op-engines" role="group" aria-label="Engine">
+          <div className="op-engine on" aria-current="true">
             <div className="op-engine-h"><b>Kokoro-82M</b><StatusPill tone="green">Installed</StatusPill></div>
             <p>Fast, runs on any computer. {voices.length ? `${voices.length} voices.` : "Voices from the app."} The model loads when you press play and is released when idle.</p>
           </div>
-          <div className="op-engine" role="radio" aria-checked="false" aria-disabled="true">
+          <div className="op-engine">
             <div className="op-engine-h"><b>Chatterbox</b><StatusPill>Not installed</StatusPill></div>
             <p>Expressive voices and voice cloning. Needs an NVIDIA GPU.</p>
             <Button size="sm" iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>Install in the app</Button>

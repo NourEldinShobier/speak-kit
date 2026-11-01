@@ -90,7 +90,8 @@ function VoiceSpeedRow({ m, speedOpen, onVoice, onSpeed }: { m: PopupModel; spee
   const list = m.voices.voices;
   return (
     <div className="pp-vs">
-      <Button className="pp-voicebtn" aria-label={`Voice: ${voiceLine(list, m.voice)}`} onClick={onVoice}>
+      <Button className="pp-voicebtn" onClick={onVoice}>
+        <span className="sk-sr">Voice: </span>
         <Avatar name={voiceName(list, m.voice)} size={20} tone="accent" aria-hidden />
         <span className="sk-grow">{voiceLine(list, m.voice)}</span>
         <Icon name="chevron-down" size={14} />
@@ -166,6 +167,15 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = <Msg icon="link" title="Pair SpeakKit with this browser again" body="The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them."
         primary={{ label: "Paste new token", onClick: a.pasteToken }} secondary={{ label: "Open SpeakKit", onClick: a.openApp }} note={launchNote} />;
       foot = <Foot right="Extension options" onRight={a.options} />;
+      break;
+    case "version":
+      body = <Msg icon="refresh" title="SpeakKit needs an update" body="The app and this extension no longer speak the same version of the protocol. Install the latest release of both; your settings are kept."
+        primary={{ label: "Download the latest app", onClick: a.download }} secondary={{ label: "Check again", onClick: a.recheck }} />;
+      foot = <Foot right="Troubleshooting" onRight={a.help} />;
+      break;
+    case "pdf":
+      body = <Msg icon="file-text" title="Chrome's PDF viewer can't be read" body="Extensions cannot reach text inside the PDF viewer. Select the text you want, copy it, and paste it into the app."
+        primary={{ label: "Paste text in the app", onClick: a.openApp }} note={launchNote} />;
       break;
     case "unreadable":
       body = <Msg icon="lock-off" title="Can't read this page" body="Chrome blocks extensions on its own pages (chrome://, the Web Store). Open a normal website or paste text into the app."

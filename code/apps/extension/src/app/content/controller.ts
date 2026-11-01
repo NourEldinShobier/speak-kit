@@ -33,6 +33,8 @@ class Controller {
   private clock = new WordClock((w, i) => this.onWord(w, i));
   private docs = new Map<string, Doc>();
   private state: PlayerState | null = null;
+  /** The paragraph play buttons only appear once the user has started reading on this page load. */
+  private engaged = false;
   private current: { docId: string; index: number; range: Range | null } | null = null;
   private dark = false;
   private root: { el: Element; t: number } | null = null;
@@ -55,6 +57,7 @@ class Controller {
     document.addEventListener("keyup", this.onKeyUp, true);
     document.addEventListener("selectionchange", this.onSelChange);
     document.addEventListener("pointermove", this.onMove, { passive: true });
+    document.addEventListener("focusin", this.onFocusIn);
     document.addEventListener("contextmenu", this.onContext, true);
     document.addEventListener("keydown", this.onKey, true);
     document.documentElement.addEventListener("pointerleave", () => this.ui?.scheduleGutterHide());
@@ -112,6 +115,14 @@ class Controller {
     return n > 0 ? { n, of: d.blocks.length } : undefined;
   }
 
+  private readingBlock(): Element | undefined {
+    const st = this.state;
+    if (!st || (st.status !== "playing" && st.status !== "paused" && st.status !== "preparing")) return undefined;
+    const d = this.docs.get(st.docId ?? "");
+    const block = d?.doc.sentences[st.sentenceIndex]?.block;
+    return block === undefined ? undefined : d?.ex.blocks[block]?.el;
+  }
+
   private model(): UiModel {
     const s = this.settings;
     const rule = this.rule();
@@ -121,10 +132,10 @@ class Controller {
       status: st?.status ?? "idle",
       elapsedMs: st?.elapsedMs ?? 0, totalMs: st?.totalMs ?? 0,
       speed: st?.speed ?? s.speed, voice: st?.voice ?? s.voice, voiceName: this.voiceName(st?.voice ?? s.voice),
-      error: st?.error, estimate: this.estimate, paragraph: this.paragraph(), dark: this.dark,
+      error: st?.error, estimate: this.estimate, paragraph: this.paragraph(), readingBlock: this.readingBlock(), dark: this.dark,
       showDock: s.show.dock && !off, alwaysDock: rule === "always-dock",
       launcher: s.launcher.enabled && !off ? s.launcher : null,
-      showBubble: s.show.bubble && !off, showGutter: s.show.gutter && !off,
+      showBubble: s.show.bubble && !off, showGutter: s.show.gutter && !off && this.engaged,
       readerOpen: !!this.reader,
     };
   }
@@ -288,6 +299,7 @@ class Controller {
   private onState(st: PlayerState) {
     if (this.rule() === "never-read") return;
     this.state = st;
+    if (st.status !== "idle") this.engaged = true;
     this.dark = isDarkPage();
     this.applyStyle();
     const d = st.docId ? this.docs.get(st.docId) : undefined;
@@ -397,17 +409,21 @@ class Controller {
   }
 
   private onMove = (e: PointerEvent) => {
-    if (e.pointerType === "touch" || !this.settings.show.gutter || this.reader) return;
-    const ui = this.ui;
-    if (!ui) { if (!this.model().showGutter) return; this.ensureUi(); }
+    if (e.pointerType !== "touch") this.pointGutterAt(e.target);
+  };
+  /** Keyboard users reach the paragraph gutter the same way: focus inside a paragraph (a link in it) shows its button. */
+  private onFocusIn = (e: FocusEvent) => this.pointGutterAt(e.target);
+
+  private pointGutterAt(target: EventTarget | null) {
+    if (!this.settings.show.gutter || this.reader) return;
+    if (!this.ui) { if (!this.model().showGutter) return; this.ensureUi(); }
     const u = this.ui!;
-    if (e.target === u.host) { u.cancelGutterHide(); return; }
-    const t = e.target as Element | null;
-    const el = t?.closest?.(BLOCK_SEL);
+    if (target === u.host) { u.cancelGutterHide(); return; }
+    const el = (target as Element | null)?.closest?.(BLOCK_SEL);
     if (!el || !this.mainRoot().contains(el) || (el.textContent?.length ?? 0) < 20 || editable(el)) { u.scheduleGutterHide(); return; }
     u.cancelGutterHide();
     if (u.gutterTarget !== el) u.showGutter(el);
-  };
+  }
 
   private onContext = (e: MouseEvent) => {
     const r = (document as Document & { caretRangeFromPoint?: (x: number, y: number) => Range | null }).caretRangeFromPoint?.(e.clientX, e.clientY);

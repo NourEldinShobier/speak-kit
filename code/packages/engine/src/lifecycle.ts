@@ -212,6 +212,12 @@ export abstract class LifecycleEngine implements TtsEngine {
     return true;
   }
 
+  async release(): Promise<void> {
+    await this.#loading?.catch(() => {});
+    for (let i = 0; this.#busy() && i < 400; i++) await new Promise((r) => setTimeout(r, 25));
+    await this.unload();
+  }
+
   async #ensureReady(signal?: AbortSignal): Promise<void> {
     const st = this.#em.status.state;
     if (st === "ready") return;

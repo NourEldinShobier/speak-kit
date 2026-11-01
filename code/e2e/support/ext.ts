@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { startApp, startFixture, type App, type AppOptions, type Fixture } from "./servers";
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const DIST = resolve(here, "../../apps/extension/dist-e2e");
+/** E2E_DIST names another build folder, so parallel runs (and other agents) do not overwrite each other's build. */
+export const DIST = resolve(here, "../../apps/extension", process.env.E2E_DIST ?? "dist-e2e");
 
 /** Minimal CDP client for the offscreen document, which Playwright does not expose as a Page. */
 class Cdp {

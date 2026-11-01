@@ -48,6 +48,9 @@ const EnvSchema = v.partial(
     SPEAKKIT_TOKEN: v.pipe(v.string(), v.minLength(1)),
     SPEAKKIT_LOAD_AT_START: envBool,
     SPEAKKIT_ENGINE: v.picklist(["kokoro", "fake"]),
+    SPEAKKIT_CHATTERBOX: v.picklist(["auto", "off"]),
+    /** Path of chatterbox_sidecar.py when the package layout does not keep it next to the engine (packed app). */
+    SPEAKKIT_CHATTERBOX_SCRIPT: v.string(),
     SPEAKKIT_DTYPE: v.picklist(["fp32", "fp16", "q8", "uint8", "q4", "q4f16"]),
     SPEAKKIT_DEVICE: v.picklist(["cpu", "dml"]),
     SPEAKKIT_ISOLATION: v.picklist(["process", "thread"]),
@@ -114,25 +117,70 @@ function firstMessage(issues: v.BaseIssue<unknown>[]): string {
   }
 }
 
+const sentences = v.pipe(
+  v.array(
+    v.pipe(
+      v.string(),
+      v.check((s) => s.trim() !== ""),
+      v.maxLength(MAX_SENTENCE_CHARS),
+    ),
+  ),
+  v.minLength(1),
+  v.maxLength(MAX_SENTENCES),
+);
+const voice = (voices: Set<string>) =>
+  v.pipe(
+    v.string(),
+    v.check((s) => voices.has(s)),
+  );
+
 export function speakSchema(voices: Set<string>) {
   return v.object({
-    sentences: v.pipe(
-      v.array(
-        v.pipe(
-          v.string(),
-          v.check((s) => s.trim() !== ""),
-          v.maxLength(MAX_SENTENCE_CHARS),
-        ),
-      ),
-      v.minLength(1),
-      v.maxLength(MAX_SENTENCES),
-    ),
-    voice: v.pipe(
-      v.string(),
-      v.check((s) => voices.has(s)),
-    ),
+    sentences,
+    voice: voice(voices),
     speed: v.pipe(v.number(), v.finite(), v.minValue(MIN_SPEED), v.maxValue(MAX_SPEED)),
   });
+}
+
+/** A WAV holds one sample rate and cannot be played faster in the player afterwards, so speed stops at the model maximum. */
+export const EXPORT_MAX_SPEED = 2;
+export const MAX_GAP_MS = 5000;
+export function exportSchema(voices: Set<string>) {
+  return v.object({
+    sentences,
+    voice: voice(voices),
+    speed: v.pipe(v.number(), v.finite(), v.minValue(MIN_SPEED), v.maxValue(EXPORT_MAX_SPEED)),
+    gapMs: v.optional(int(0, MAX_GAP_MS), 150),
+  });
+}
+
+const engineSchema = v.object({ id: v.picklist(["kokoro", "chatterbox"]) });
+export const MAX_CLIP_BODY = 40 * 1024 * 1024;
+const cloneSchema = v.object({
+  name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
+  consent: v.literal(true, "consent must be true: the speaker has to agree to being cloned"),
+  audio: v.pipe(v.string(), v.minLength(1)),
+  gender: v.optional(v.picklist(["female", "male"])),
+});
+
+/** Bodies of the newer endpoints: the message names the failing field. */
+function parseNamed<S extends v.GenericSchema>(schema: S, body: unknown): v.InferOutput<S> {
+  const r = v.safeParse(schema, body, { abortEarly: true });
+  if (r.success) return r.output;
+  const i = r.issues[0]!;
+  throw new RequestError(`${v.getDotPath(i) ?? "body"}: ${i.message}`);
+}
+export const parseEngineId = (body: unknown) => parseNamed(engineSchema, body).id;
+export const parseClone = (body: unknown) => parseNamed(cloneSchema, body);
+export const parseExport = (voices: Set<string>, body: unknown) => parseNamed(exportSchema(voices), body);
+
+const REPLACE_ID = /^[\w.:-]{1,64}$/;
+/** `X-SpeakKit-Replace`: `1` replaces every earlier stream of the token, anything else is a stream-group id (one per tab). */
+export function parseReplace(header: string | string[] | undefined): { all: true } | { group: string } | undefined {
+  if (header === undefined) return undefined;
+  if (header === "1") return { all: true };
+  if (typeof header === "string" && REPLACE_ID.test(header)) return { group: header };
+  throw new RequestError("X-SpeakKit-Replace must be 1 or an id of 1 to 64 letters, digits, . _ : -");
 }
 
 const holdSchema = v.object({ ms: int(0, MAX_HOLD_MS) });

@@ -43,6 +43,7 @@ import { openConfig } from "./config";
 import { initLog } from "./log";
 import { emptyPairing, watchPairing } from "./pairing";
 import { noticeFor, type NoticeKind } from "./notify-rules";
+import { setupLibrary } from "./library";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const TITLE = "SpeakKit";
@@ -582,6 +583,7 @@ if (!app.requestSingleInstanceLock()) {
     Menu.setApplicationMenu(null);
     nativeTheme.themeSource = config.theme;
     registerIpc();
+    await setupLibrary({ dataDir, window: () => win, target: () => ({ port: state.port, token: state.token }) });
     state.onBattery = powerMonitor.isOnBatteryPower();
     const onPower = (battery: boolean) => {
       state.onBattery = battery;

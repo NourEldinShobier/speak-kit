@@ -57,15 +57,18 @@ export class ShadowShell implements Shell {
     anchor.classList.add("is-open");
     this.popover = { kind, el, anchor };
     place(el, anchor.getBoundingClientRect(), this);
-    (el.querySelector("input") as HTMLElement | null)?.focus({ preventScroll: true });
+    // keyboard users land inside the popover; Escape or a second press brings focus back to the anchor
+    el.querySelector<HTMLElement>("input,button,[tabindex]")?.focus({ preventScroll: true });
   }
 
   closePopover(kind?: string) {
     const p = this.popover;
     if (!p || (kind && p.kind !== kind)) return;
+    const hadFocus = p.el.contains((this.root.getRootNode() as ShadowRoot).activeElement);
     p.el.remove();
     p.anchor.classList.remove("is-open");
     this.popover = null;
+    if (hadFocus && p.anchor.isConnected) p.anchor.focus({ preventScroll: true });
   }
 
   destroy() {

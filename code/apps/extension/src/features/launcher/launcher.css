@@ -3,6 +3,8 @@
 .sk-listen{border-radius:16px;height:32px}
 .sk-tint{position:absolute;border-radius:8px;background:color-mix(in srgb,var(--accent-default) 8%,transparent);pointer-events:none!important}
 .sk .sk-gbtn{position:absolute;width:32px;height:32px;box-shadow:var(--lm-shadow-menu)}
+.sk .sk-gbtn.is-reading{background:var(--accent-subtle);color:var(--accent-default);box-shadow:var(--lm-shadow-menu),inset 0 0 0 1px var(--accent-default);cursor:default}
+.sk-tint.is-reading{background:color-mix(in srgb,var(--accent-default) 14%,transparent)}
 .sk-gtip{position:absolute;pointer-events:none}
 .sk-tab{position:absolute;right:0;width:14px;height:76px;border-radius:14px 0 0 14px;background:var(--surface-raised);border:1px solid var(--stroke-control);border-right:0;box-shadow:var(--lm-shadow-menu);display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);cursor:pointer;touch-action:none;transition:width var(--lm-dur-fast) var(--lm-ease),opacity var(--lm-dur-fast) var(--lm-ease)}
 .sk-tab.sk-left{right:auto;left:0;border-radius:0 14px 14px 0;border:1px solid var(--stroke-control);border-left:0}

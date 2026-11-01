@@ -134,11 +134,12 @@ export class Dock {
     const text = h("span", { class: "sk-dock-text" });
     const bar = this.seekBar(!loading && !done);
     const mid = h("div", { class: "sk-dock-mid" }, text, bar.el);
-    const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": "Speed", "data-sk": "dock-speed" });
+    const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "dock-speed" });
     speed.addEventListener("click", () => this.shell.togglePopover("speed", speed, () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }), above(() => this.el)));
     const av = avatar(m.voiceName, 20, "accent");
     const vtext = h("span", { class: "sk-voice-txt" });
-    const voice = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-voicechip", "aria-label": "Voice", "data-sk": "dock-voice" }, av, vtext, icon("chevron-down", 12));
+    const voice = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-voicechip", "data-sk": "dock-voice" }, h("span", { class: "sk-sr" }, "Voice: "), av, vtext, icon("chevron-down", 12));
+    av.setAttribute("aria-hidden", "true");
     voice.addEventListener("click", () => this.shell.togglePopover("voice", voice, () => this.voices(), above(() => this.el)));
     const close = iconButton({ name: "x", label: "Close player", size: 28, data: { sk: "dock-close" }, onClick: () => this.dismiss() });
     d.append(prev, toggle, next, mid, speed, voice, this.moreButton(), close);
@@ -218,7 +219,7 @@ export class Dock {
         : m.paragraph ? `Paragraph ${m.paragraph.n} of ${m.paragraph.of} · ${minutesLeft(Math.max(0, m.totalMs - m.elapsedMs))}`
         : m.status === "paused" ? `Paused · ${clock(m.elapsedMs)}` : `Reading · ${clock(m.elapsedMs)}`;
     }
-    if (p.speed) p.speed.textContent = speedLabel(m.speed);
+    if (p.speed) { p.speed.textContent = speedLabel(m.speed); p.speed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`); }
     if (p.voice) p.voice.textContent = `${m.voiceName || "Voice"} · on device`;
     if (p.av) p.av.textContent = (m.voiceName || "V").slice(0, 1).toUpperCase();
     p.bar?.set();

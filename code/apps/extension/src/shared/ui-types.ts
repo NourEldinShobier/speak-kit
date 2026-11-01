@@ -14,6 +14,8 @@ export interface UiModel {
   estimate(): number;
   /** "Paragraph n of N" of the sentence being read (undefined until the document is known) */
   paragraph?: { n: number; of: number };
+  /** the block element being read while a reading is active; its gutter button then says "Reading this paragraph" */
+  readingBlock?: Element;
   dark: boolean;
   /** settings.show.dock and no hide-controls rule */
   showDock: boolean;

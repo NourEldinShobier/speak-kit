@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PlayerState, ReadDoc, SentenceStart } from "@speakkit/protocol";
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { FakeEngine, type FakeEngineOptions } from "../../../../../packages/engine/src/fake";
-import { createServer, type SpeakKitServer } from "../../../../../packages/server/src/index";
-import { Player, type CtxLike, type SourceLike } from "./player";
+import { FakeEngine, type FakeEngineOptions } from "../../engine/src/fake";
+import { createServer, type SpeakKitServer } from "../../server/src/index";
+import { Player, type CtxLike, type SourceLike } from "../src/player";
 
 // Web Audio stand-in whose clock is the wall clock, so the player runs unmodified against a real server.
 class ClockCtx implements CtxLike {

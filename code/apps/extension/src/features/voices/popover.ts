@@ -25,17 +25,23 @@ export function voicePopover(o: VoicePopoverOptions): HTMLElement {
     for (const v of list) {
       if (q && !`${v.name} ${v.desc}`.toLowerCase().includes(q)) continue;
       const sel = v.id === o.current();
-      const row = h(
+      const opt = h(
         "div",
-        { class: `sk-vrow${sel ? " is-selected" : ""}`, role: "option", "aria-selected": String(sel), "data-voice": v.id, tabindex: 0 },
+        { class: "sk-vopt", role: "option", "aria-selected": String(sel), tabindex: 0 },
         avatar(v.name, 28, sel ? "accent" : "purple"),
         h("div", { class: "sk-vname" }, h("b", null, v.name), h("span", null, `${v.desc} · Quality ${v.quality}`)),
         sel && icon("check", 16, "sk-vcheck"),
+      );
+      // the option and the preview button are siblings: an option must not contain another control
+      const row = h(
+        "div",
+        { class: `sk-vrow${sel ? " is-selected" : ""}`, role: "presentation", "data-voice": v.id },
+        opt,
         iconButton({ name: "player-play", label: `Preview ${v.name}`, size: 28, data: { sk: "voice-preview" }, onClick: (e) => { e.stopPropagation(); o.onPreview(v.id); } }),
       );
       const pick = () => { o.onPick(v); draw(); };
       row.addEventListener("click", pick);
-      row.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === row) { e.preventDefault(); pick(); } });
+      opt.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
       rows.append(row);
     }
     if (!rows.childElementCount) rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when SpeakKit is running." : "No voices match."));

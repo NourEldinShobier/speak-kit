@@ -11,22 +11,36 @@
     "typecheck": "tsrs --noEmit -p ."
   },
   "dependencies": {
+    "@lingo-reader/epub-parser": "^0.4.6",
+    "@mozilla/readability": "^0.6.0",
     "@speakkit/engine": "workspace:*",
+    "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
     "@speakkit/server": "workspace:*",
     "@speakkit/ui": "workspace:*",
     "@tabler/icons-react": "^3",
     "electron-log": "^5.4.4",
     "electron-store": "^12.0.0",
+    "electron-updater": "6.8.11",
+    "koffi": "3.3.6",
+    "linkedom": "^0.18.14",
+    "lowdb": "^7.0.1",
+    "mammoth": "^1.13.0",
+    "marked": "^18.1.2",
+    "pdfjs-dist": "^6.4.299",
     "radix-ui": "^1.8.1",
     "react": "^19",
     "react-dom": "^19",
-    "valibot": "^1.5.0"
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "7.0.0",
+    "valibot": "^1.5.0",
+    "wasm-media-encoders": "0.7.0"
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "latest",
-    "electron": "latest"
+    "electron": "latest",
+    "electron-builder": "26.18.0"
   }
 }

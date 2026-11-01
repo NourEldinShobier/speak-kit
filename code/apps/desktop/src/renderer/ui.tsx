@@ -18,6 +18,14 @@ export function useAppState(): AppState | null {
   return s;
 }
 
+/** Applies the chosen theme to the document (system leaves it to prefers-color-scheme). */
+export function useTheme(theme: "system" | "light" | "dark" | undefined) {
+  useEffect(() => {
+    if (!theme || theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+}
+
 /** True while the window is shown. Hidden means: no polling, animations paused (main stops its health timer too). */
 export function useVisible(): boolean {
   const [vis, setVis] = useState(!document.hidden);

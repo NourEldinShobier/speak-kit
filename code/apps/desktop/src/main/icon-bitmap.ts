@@ -3,7 +3,7 @@ import type { TrayState } from "../shared/engine-view";
 type RGB = [number, number, number];
 const BLUE: RGB = [0x24, 0x57, 0xf5];
 const GREY: RGB = [0x7a, 0x7d, 0x85];
-const BADGE: Partial<Record<TrayState, RGB>> = { working: [0x4a, 0x9e, 0xff], error: [0xf2, 0x55, 0x5a] };
+const BADGE: Partial<Record<TrayState, RGB>> = { working: [0x4a, 0x9e, 0xff], error: [0xf2, 0x55, 0x5a], paused: [0x9a, 0xa0, 0xab], attention: [0xf5, 0x9e, 0x0b] };
 
 /** BGRA bitmap of the SpeakKit mark (rounded square, five bars). Tray variants: asleep is grey, working and error add a corner dot. */
 export function logoBitmap(size: number, state: TrayState = "normal"): Buffer {

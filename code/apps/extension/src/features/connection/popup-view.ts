@@ -3,7 +3,7 @@ import type { HealthResult } from "../../shared/client";
 import { engineBadge } from "./errors";
 
 export type PopupView =
-  | "install" | "offline" | "token" | "unreadable" | "fileurl" | "engine-missing"
+  | "install" | "offline" | "token" | "version" | "unreadable" | "pdf" | "fileurl" | "engine-missing"
   | "loading-model" | "preparing" | "playing" | "paused" | "finished" | "idle" | "selection";
 
 export interface PopupInputs {
@@ -29,6 +29,16 @@ export function isUnreadableUrl(url?: string): boolean {
   return false;
 }
 
+/** Chrome's PDF viewer is an extension frame: no content script or script injection reaches it. Known limit: a PDF served without a .pdf path is not recognised. */
+export function isPdfUrl(url?: string): boolean {
+  if (!url) return false;
+  try {
+    return /\.pdf$/i.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Chrome hides the URL of a file:// tab from an extension that has no access to it, and executeScript fails with an error
  * that names the URL. Returns the file URL when the error is that one, "restricted" for chrome:// style pages.
@@ -41,8 +51,8 @@ export function classifyProbeError(message: string): { kind: "file"; url: string
 }
 
 /**
- * One state function for the whole popup. Priority: connection problems, active playback, engine
- * start-up, page problems, then idle / selection. The engine state "unloaded" is a normal resting state
+ * One state function for the whole popup. Priority: connection problems (offline, token, version), active playback, engine
+ * start-up, page problems (PDF, restricted page, file access), then idle / selection. The engine state "unloaded" is a normal resting state
  * (Wakes on play): it never produces an error view, and while a play request waits for it the popup shows loading-model.
  */
 export function deriveView(i: PopupInputs): PopupView {
@@ -51,9 +61,10 @@ export function deriveView(i: PopupInputs): PopupView {
   const code = p?.status === "error" ? p.error?.code : undefined;
 
   if (!i.hasToken) return h && h.ok ? "token" : "install";
-  if (h && !h.ok) return h.error === "token-rejected" ? "token" : "offline";
+  if (h && !h.ok) return h.error === "token-rejected" ? "token" : h.error === "version-mismatch" ? "version" : "offline";
   if (code === "app-not-running") return "offline";
   if (code === "token-rejected") return "token";
+  if (code === "version-mismatch") return "version";
 
   const engine = h && h.ok ? h.health.engine.state : "ready";
   const playing = p && (p.status === "preparing" || p.status === "playing" || p.status === "paused" || p.status === "finished");
@@ -63,6 +74,7 @@ export function deriveView(i: PopupInputs): PopupView {
   if (playing) return p.status as "preparing" | "playing" | "paused" | "finished";
   if (engine === "missing" || engine === "error" || code === "engine-not-ready") return "engine-missing";
 
+  if (isPdfUrl(i.tabUrl)) return "pdf";
   if (code === "page-unreadable" || isUnreadableUrl(i.tabUrl)) return "unreadable";
   if (code === "file-access" || (i.tabUrl?.startsWith("file:") && !i.fileAccess)) return "fileurl";
   return i.selection ? "selection" : "idle";
@@ -74,6 +86,7 @@ export function headerBadge(view: PopupView, engine?: Parameters<typeof engineBa
     case "install": return { tone: "neutral", label: "Not set up" };
     case "offline": return { tone: "err", label: "App offline" };
     case "token": return { tone: "warn", label: "Not paired" };
+    case "version": return { tone: "warn", label: "Update needed" };
     case "loading-model": return { tone: "warn", label: engine === "unloaded" ? "Waking up" : "Loading model" };
     case "engine-missing": return { tone: "warn", label: "No voice engine" };
     default: return engineBadge(engine);

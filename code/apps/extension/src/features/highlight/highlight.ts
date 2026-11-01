@@ -18,6 +18,14 @@ export function palette(h: Settings["highlight"], darkPage: boolean): HlPalette 
   };
 }
 
+/**
+ * The ::highlight rules. Highlights cannot pad or change weight, so the box never moves the text. Colour is not the only cue
+ * (WCAG 1.4.1): the sentence carries a 1px underline and the spoken word a 2px one.
+ */
+export function highlightCss(p: HlPalette): string {
+  return `::highlight(${SENTENCE_HL}){background-color:${p.sentence};color:inherit;text-decoration:underline 1px}::highlight(${WORD_HL}){background-color:${p.word};color:${p.wordText};text-decoration:underline 2px}`;
+}
+
 export class Highlighter {
   private sheet: CSSStyleSheet | null = null;
   private sent: Highlight | null = null;
@@ -38,7 +46,7 @@ export class Highlighter {
   style(mode: Settings["highlight"]["mode"], p: HlPalette) {
     this.ensure();
     this.mode = mode;
-    this.sheet?.replaceSync(`::highlight(${SENTENCE_HL}){background-color:${p.sentence};color:inherit}::highlight(${WORD_HL}){background-color:${p.word};color:${p.wordText}}`);
+    this.sheet?.replaceSync(highlightCss(p));
   }
 
   get wantsWords() { return this.mode === "sentence+word" || this.mode === "word"; }

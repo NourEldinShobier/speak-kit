@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { deriveView, useHealth } from "../../features/connection";
+import { deriveView, useHealth, type PopupView } from "../../features/connection";
 import { extensionSettingsUrl, LINKS, openUrl } from "../../shared/links";
 import { usePlayerState } from "../../features/player";
 import { useQueue } from "../../features/queue";
@@ -26,7 +26,9 @@ export function PopupApp() {
   // The popup opening is the earliest hint that the user may press play: load the model now.
   useEffect(() => warm("popup"), []);
 
-  const view = deriveView({
+  // Test builds can pin a state that needs no player data (file:// permission cannot be reached from a Playwright tab).
+  const pinned = __TEST__ ? (new URLSearchParams(location.search).get("view") as PopupView | null) : null;
+  const view = pinned ?? deriveView({
     hasToken: !!token,
     health,
     player,

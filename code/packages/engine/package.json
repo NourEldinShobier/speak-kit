@@ -3,12 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "build": "vp pack" },
+  "scripts": {
+    "build": "vp pack"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
     "@speakkit/protocol": "workspace:*",
-    "kokoro-js": "latest"
+    "kokoro-js": "latest",
+    "number-to-words": "^1.2.5",
+    "valibot": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/number-to-words": "^1.2.3"
   }
 }

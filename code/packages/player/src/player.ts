@@ -12,7 +12,7 @@ import {
   type SentenceStart,
   type SpeakRequest,
 } from "@speakkit/protocol";
-import type { PlayerConfig, QueueItem } from "../../shared/internal";
+import type { PlayerConfig, QueueItem } from "./types";
 
 /** Sentences decoded and scheduled beyond the one being heard; reading the stream pauses above this (TCP backpressure). Played buffers are dropped at once. */
 export const LOOKAHEAD = 3;
@@ -631,7 +631,7 @@ export class Player {
         Authorization: `Bearer ${this.cfg.token}`,
         "Content-Type": "application/json",
         // The earlier stream (seek, speed or voice change) was cut: tell the app to drop it instead of finishing work nobody hears.
-        ...(replace ? { "X-SpeakKit-Replace": "1" } : null),
+        ...(replace ? { "X-SpeakKit-Replace": `tab-${d.tabId}` } : null),
       },
       body: JSON.stringify(body),
       signal,

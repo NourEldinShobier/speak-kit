@@ -17,7 +17,7 @@ const side = (l: Settings["launcher"]) => (l.side === "left" ? " sk-left" : "");
 export class Launcher {
   private m: UiModel;
   private bubble: HTMLElement | null = null;
-  private gutter: { tint: HTMLElement; btn: HTMLElement; tip: HTMLElement; el: Element } | null = null;
+  private gutter: { tint: HTMLElement; btn: HTMLElement; tip: HTMLElement; el: Element; reading: boolean } | null = null;
   private gutterTimer = 0;
   private tab: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
@@ -53,6 +53,11 @@ export class Launcher {
     this.m = m;
     if (!m.showBubble) this.hideBubble();
     if (!m.showGutter) this.showGutter(null);
+    else if (this.gutter && this.gutter.reading !== this.isReadingBlock(this.gutter.el)) {
+      const el = this.gutter.el;
+      this.showGutter(null);
+      this.showGutter(el);
+    }
     this.renderLauncher();
     this.patch();
   }
@@ -120,14 +125,27 @@ export class Launcher {
       return;
     }
     this.showGutter(null);
-    const tint = h("div", { class: "sk-tint" });
-    const b = iconButton({ name: "player-play", label: "Read from here", data: { sk: "gutter-play" }, round: true, className: "lm-btn--primary sk-gbtn", onClick: () => { const t = this.gutter?.el; this.showGutter(null); if (t) this.hd.readFromHere(t); } });
-    b.addEventListener("pointerenter", () => { clearTimeout(this.gutterTimer); this.hd.warm("hover"); });
+    const reading = this.isReadingBlock(el);
+    const label = reading ? "Reading this paragraph" : "Read from here";
+    const tint = h("div", { class: `sk-tint${reading ? " is-reading" : ""}` });
+    const b = iconButton({
+      name: reading ? "volume" : "player-play", label, data: { sk: "gutter-play", state: reading ? "reading" : "idle" }, round: true,
+      className: `lm-btn--primary sk-gbtn${reading ? " is-reading" : ""}`,
+      onClick: () => { const t = this.gutter?.el; if (reading || !t) return; this.showGutter(null); this.hd.readFromHere(t); },
+    });
+    // stays focusable so a screen reader announces the state; it does nothing because this paragraph is already being read
+    if (reading) b.setAttribute("aria-disabled", "true");
+    b.addEventListener("pointerenter", () => { clearTimeout(this.gutterTimer); if (!reading) this.hd.warm("hover"); });
     b.addEventListener("pointerleave", () => this.scheduleGutterHide());
-    const tip = h("div", { class: "lm-tooltip sk-gtip" }, "Read from here");
+    b.addEventListener("focus", () => clearTimeout(this.gutterTimer));
+    b.addEventListener("keydown", (e) => { if (e.key === "Escape") { this.showGutter(null); e.stopPropagation(); } });
+    const tip = h("div", { class: "lm-tooltip sk-gtip", "aria-hidden": "true" }, label);
     this.shell.root.append(tint, b, tip);
-    this.gutter = { tint, btn: b, tip, el };
+    this.gutter = { tint, btn: b, tip, el, reading };
     this.placeGutter();
+  }
+  private isReadingBlock(el: Element) {
+    return !!this.m.readingBlock && this.reading && this.m.readingBlock === el;
   }
   scheduleGutterHide() {
     clearTimeout(this.gutterTimer);
@@ -282,7 +300,7 @@ export class Launcher {
       this.pillTime = null;
       p.append(sep(), iconButton({ name: "book", label: "Reader view", size: 32, data: { sk: "launcher-reader" }, onClick: () => { this.setPill(false, true); this.hd.openReader(); } }));
     }
-    const sp = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": "Speed", "data-sk": "launcher-speed" }, speedLabel(m.speed));
+    const sp = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "launcher-speed" }, speedLabel(m.speed));
     sp.addEventListener("click", () => this.shell.togglePopover("speed", sp, () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }), beside(l.side)));
     const vc = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--icon sk-vc", "aria-label": "Voice", "data-sk": "launcher-voice" });
     const av = avatar(m.voiceName, 24, "accent");
@@ -333,7 +351,7 @@ export class Launcher {
       this.railFill.style.height = `${this.frac() * 100}%`;
     }
     if (this.pillTime) this.pillTime.textContent = clock(Math.max(0, m.totalMs - m.elapsedMs));
-    if (this.pillSpeed) this.pillSpeed.textContent = speedLabel(m.speed);
+    if (this.pillSpeed) { this.pillSpeed.textContent = speedLabel(m.speed); this.pillSpeed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`); }
     if (this.pillVoice) this.pillVoice.textContent = (m.voiceName || "?").slice(0, 1).toUpperCase();
     this.ltipPatch?.();
   }

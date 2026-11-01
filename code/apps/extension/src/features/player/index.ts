@@ -1,5 +1,4 @@
-export * from "./player";
-export { soundTouchStretch } from "./stretch";
+export * from "@speakkit/player";
 export { usePlayerState } from "./hooks";
 export { Scrubber, Transport, type TransportActions, type TransportStatus } from "./Transport";
 export { speedPopover, SPEED_PRESETS, type SpeedPopoverOptions } from "./speed-popover";

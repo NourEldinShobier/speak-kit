@@ -15,6 +15,7 @@ const routes: Record<string, () => string> = {
   "/select": pages.selectPage,
   "/big": () => pages.bigPage(5000),
   "/blank": pages.blank,
+  "/paper.pdf": pages.shortPage,
 };
 
 export interface Fixture {

@@ -48,16 +48,34 @@ test.describe("selection bubble", () => {
 });
 
 test.describe("paragraph gutter", () => {
-  test("hover a paragraph -> play button -> reads from there", async ({ ext, app }) => {
+  test("no play buttons are shown on a fresh page, only after reading was started", async ({ ext, app }) => {
     await ext.pair(app);
     const page = await ext.open("/article");
     await page.locator("#p5").hover();
-    await expect(sk(page, "gutter-play")).toBeVisible({ timeout: 5000 });
-    await sk(page, "gutter-play").click();
+    await page.waitForTimeout(500);
+    await expect(sk(page, "gutter-play")).toHaveCount(0);
+    await ext.cmd("read-selection", page);
     await ext.waitState("playing");
+    await page.locator("#p7").hover();
+    await expect(sk(page, "gutter-play")).toBeVisible({ timeout: 5000 });
+    await page.reload();
+    await ext.waitState("idle");
+    await page.locator("#p5").hover();
+    await page.waitForTimeout(500);
+    await expect(sk(page, "gutter-play")).toHaveCount(0);
+  });
+
+  test("hover a paragraph after reading started -> play button -> reads from there", async ({ ext, app }) => {
+    await ext.pair(app);
+    const page = await ext.open("/article");
+    await ext.cmd("read-selection", page);
+    await ext.waitState("playing");
+    await page.locator("#p5").hover();
+    await expect(sk(page, "gutter-play")).toBeVisible({ timeout: 5000 });
+    app.engine.calls.length = 0;
+    await sk(page, "gutter-play").click();
     await expect.poll(() => app.engine.calls.length).toBeGreaterThan(0);
     expect(app.engine.calls[0]!.text).toBe("P5S1 the quiet harbor wakes before the first ferry leaves the dock.");
-    expect(callsText(app).some((t) => t.startsWith("P4S"))).toBe(false);
   });
 
   test("the gutter button is off when the setting is off", async ({ ext, app }) => {
