@@ -8,7 +8,7 @@ export async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
   return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 }
 
-interface TabInfo {
+export interface TabInfo {
   id?: number;
   url?: string;
   title?: string;
@@ -26,6 +26,37 @@ const fileAccess = () =>
     }
   });
 
+interface Probe {
+  url?: string;
+  selection: string;
+  chars: number;
+}
+
+/** Runs in the page: the selection and the amount of readable text. */
+const readPage = () => ({
+  sel: String(getSelection() ?? ""),
+  chars: ((document.querySelector("article, main, [role=main]") as HTMLElement | null) ?? document.body).innerText.length,
+});
+
+function urlAfterFailedProbe(url: string | undefined, e: unknown): string | undefined {
+  const c = classifyProbeError(e instanceof Error ? e.message : String(e));
+  if (c?.kind === "file") return c.url;
+  return c?.kind === "restricted" && !url ? "chrome://restricted" : url;
+}
+
+/** Reads the selection and text size of a tab. A tab the extension cannot script hides or names its URL in the error (classifyProbeError). */
+async function probeTab(tab: chrome.tabs.Tab | undefined): Promise<Probe> {
+  const probe: Probe = { url: tab?.url, selection: "", chars: 0 };
+  if (tab?.id === undefined) return probe;
+  try {
+    const r = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readPage });
+    const o = r[0]?.result as { sel: string; chars: number } | undefined;
+    return { ...probe, selection: (o?.sel ?? "").trim(), chars: o?.chars ?? 0 };
+  } catch (e) {
+    return { ...probe, url: urlAfterFailedProbe(probe.url, e) };
+  }
+}
+
 /**
  * Reads the active tab: URL, title, current selection and the amount of readable text. The probe doubles as the file:// check:
  * a file tab the extension may not access hides its URL, and the probe's error names it (classifyProbeError).
@@ -38,30 +69,12 @@ export function useTab(): TabInfo {
     (async () => {
       const tab = await activeTab();
       if (!live) return;
-      let url = tab?.url;
-      let selection = "";
-      let chars = 0;
-      if (tab?.id !== undefined) {
-        try {
-          const r = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => ({
-              sel: String(getSelection() ?? ""),
-              chars: ((document.querySelector("article, main, [role=main]") as HTMLElement | null) ?? document.body).innerText.length,
-            }),
-          });
-          const o = r[0]?.result as { sel: string; chars: number } | undefined;
-          selection = o?.sel ?? "";
-          chars = o?.chars ?? 0;
-        } catch (e) {
-          const c = classifyProbeError(e instanceof Error ? e.message : String(e));
-          if (c?.kind === "file") url = c.url;
-          else if (c?.kind === "restricted" && !url) url = "chrome://restricted";
-        }
-      }
+      const probe = await probeTab(tab);
       const fa = await fileAccess();
-      if (live) setT({ id: tab?.id, url, title: tab?.title, selection: selection.trim(), chars, fileAccess: fa });
-    })().catch(() => {});
+      if (live) setT({ id: tab?.id, title: tab?.title, fileAccess: fa, ...probe });
+    })().catch(() => {
+      /* no readable tab (closed while the popup opened): the empty state stays */
+    });
     return () => {
       live = false;
     };

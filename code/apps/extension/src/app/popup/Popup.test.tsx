@@ -1,7 +1,8 @@
 import type { PlayerState } from "@speakkit/protocol";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { byLabel, click, installDom, mount, text } from "../../testing/dom";
-import { PopupScreen, type PopupActions, type PopupModel } from "./Popup";
+import { PopupScreen } from "./Popup";
+import type { PopupActions, PopupModel } from "./types";
 
 beforeEach(installDom);
 
