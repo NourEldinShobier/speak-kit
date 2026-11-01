@@ -1,15 +1,15 @@
 {
  "counts": {
-  "shots": 140,
-  "cards": 70,
+  "shots": 210,
+  "cards": 105,
   "frames": 207,
-  "missing": 134
+  "missing": 100
  },
  "perGroup": [
   {
    "group": "Extension popup",
-   "screens": 16,
-   "images": 32
+   "screens": 18,
+   "images": 36
   },
   {
    "group": "On-page reading",
@@ -23,8 +23,8 @@
   },
   {
    "group": "Options",
-   "screens": 12,
-   "images": 24
+   "screens": 14,
+   "images": 28
   },
   {
    "group": "Side panel (queue)",
@@ -42,24 +42,34 @@
    "images": 14
   },
   {
+   "group": "Desktop library",
+   "screens": 5,
+   "images": 10
+  },
+  {
+   "group": "Desktop reader and export",
+   "screens": 6,
+   "images": 12
+  },
+  {
    "group": "Voices and engines",
-   "screens": 1,
-   "images": 2
+   "screens": 6,
+   "images": 12
   },
   {
    "group": "Desktop settings",
-   "screens": 0,
-   "images": 0
+   "screens": 9,
+   "images": 18
   },
   {
    "group": "Tray, notifications and system states",
-   "screens": 0,
-   "images": 0
+   "screens": 3,
+   "images": 6
   },
   {
    "group": "Errors and edge states",
-   "screens": 0,
-   "images": 0
+   "screens": 3,
+   "images": 6
   }
  ],
  "missing": [
@@ -109,16 +119,6 @@
    "reason": "The Open SpeakKit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it."
   },
   {
-   "id": "C15",
-   "title": "Options · Per-site permissions (Chrome extension)",
-   "reason": "Per-site permissions are not built: the content script is declared for all http, https and file pages and the only host permissions are localhost, so there is no permission request or card."
-  },
-  {
-   "id": "C16",
-   "title": "Options · Shortcut conflict (Chrome extension)",
-   "reason": "Shortcut conflict badge needs Chrome's own chrome://extensions/shortcuts state; the options Shortcuts page lists the commands only."
-  },
-  {
    "id": "C17",
    "title": "Breakpoint rules (Chrome extension)",
    "reason": "Rule card (breakpoint rules), not a screen. The collapsed layout it describes is captured as C18."
@@ -131,157 +131,107 @@
   {
    "id": "W2b",
    "title": "Setup 2 · Voice engine (no GPU) (Desktop app)",
-   "reason": "The app has no hardware detection; the voice engine step always shows one layout (W2), so the no-GPU variant cannot be produced."
-  },
-  {
-   "id": "E1",
-   "title": "Library · empty (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "E2",
-   "title": "Library · with readings (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented: the wizard shows the detected GPU or says none was found. The harness machine has a GPU, so the no-GPU state is not reachable without hardware detection being faked."
   },
   {
    "id": "E3",
    "title": "Add · paste text (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E4",
    "title": "Add · web address fetching (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E5",
    "title": "Add · web address failed (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "E7",
-   "title": "Library · search results (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "E8",
-   "title": "Library · no search results (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E6",
    "title": "Library · dragging a file (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E14",
    "title": "Library · dragging several files (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E15",
    "title": "Library · unsupported file (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E9",
    "title": "Library · row menu (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "E10",
-   "title": "Library · delete confirmation (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E16",
    "title": "Library · delete pasted text (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E12",
    "title": "Library · deleted toast (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "E13",
    "title": "Library · added toast (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "F1",
-   "title": "Reader · playing (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "F2",
-   "title": "Reader · paused (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F3",
    "title": "Reader · preparing next paragraph (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F4",
    "title": "Reader · finished (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F5",
    "title": "Reader · read from here (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "F6",
-   "title": "Reader · outline and bookmarks (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F7",
    "title": "Reader · display settings (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F8",
    "title": "Reader · sleep timer (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "F9",
-   "title": "Reader · speed and voice (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "F14",
-   "title": "Reader · voice panel (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F15",
    "title": "Reader · back to current (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F16",
    "title": "Reader · search in text (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F10",
    "title": "PDF reader · playing (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F11",
    "title": "PDF reader · scanned page (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "F13",
    "title": "PDF reader · recognizing text (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G2",
@@ -294,74 +244,54 @@
    "reason": "List/grid view toggle for voices is not built (one list layout)."
   },
   {
-   "id": "G8",
-   "title": "Engines · overview (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
    "id": "G9",
    "title": "Engines · Chatterbox warming up (Desktop app)",
-   "reason": "Chatterbox engine is not available yet (locked card), so warming, out-of-memory and ready states cannot occur. The Kokoro states are captured as O2 and O3."
-  },
-  {
-   "id": "G10",
-   "title": "Engines · out of GPU memory (Desktop app)",
-   "reason": "Chatterbox engine is not available yet; the product's engine error is captured as G10 / engines-error (no matching design in the Kokoro-only app)."
+   "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
   },
   {
    "id": "G16",
    "title": "Engines · Chatterbox ready (Desktop app)",
-   "reason": "Chatterbox engine is not available yet (locked card)."
+   "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
   },
   {
    "id": "G3",
    "title": "Clone · choose reference (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G4",
    "title": "Clone · recording (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G5",
    "title": "Clone · analyzing (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G6",
    "title": "Clone · name and test (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G7",
    "title": "Clone · bad reference (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G15",
    "title": "Clone · review take (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G11",
    "title": "Chatterbox · voice style (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "G14",
    "title": "Voices · cloning unavailable (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "H1",
-   "title": "Settings · General (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H2",
-   "title": "Settings · Playback (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "H3",
@@ -374,44 +304,14 @@
    "reason": "Settings search is not built; the title bar search opens the command palette (L2, L3)."
   },
   {
-   "id": "H4",
-   "title": "Settings · Browser integration (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H5",
-   "title": "Settings · Shortcuts (Desktop app)",
-   "reason": "The desktop app has no global shortcuts (Read clipboard is v1.1); extension shortcuts are on the options page (C6)."
-  },
-  {
    "id": "H11",
    "title": "Settings · Shortcuts (recording a key) (Desktop app)",
-   "reason": "No shortcut recording: the desktop app has no global shortcuts."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. The recording state needs a key press driven inside the app window."
   },
   {
    "id": "H16",
    "title": "Settings · Shortcuts (conflict) (Desktop app)",
-   "reason": "No shortcut recording: the desktop app has no global shortcuts."
-  },
-  {
-   "id": "H12",
-   "title": "Settings · Memory and performance (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H13",
-   "title": "Settings · Memory (engine unloaded) (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H6",
-   "title": "Settings · Storage and models (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H14",
-   "title": "Settings · Notifications (Desktop app)",
-   "reason": "Notification toggles are rows inside Settings > General in the product (H1)."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. The conflict state needs a rejected key combination driven inside the app window."
   },
   {
    "id": "H15",
@@ -424,24 +324,19 @@
    "reason": "Appearance (theme, language) is part of Settings > General in the product (H1)."
   },
   {
-   "id": "H8",
-   "title": "Settings · About (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
    "id": "H9",
    "title": "Settings · Update available (Desktop app)",
-   "reason": "Update checks are not built (no update channel in v1)."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
   },
   {
    "id": "H18",
    "title": "Update ready · pill and popover (Desktop app)",
-   "reason": "Update pill and popover are not built (no update channel in v1)."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
   },
   {
    "id": "H19",
    "title": "Updating (Desktop app)",
-   "reason": "Updating state is not built (no update channel in v1)."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
   },
   {
    "id": "O1",
@@ -449,39 +344,19 @@
    "reason": "Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."
   },
   {
-   "id": "O2",
-   "title": "Engines · unloaded (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "O3",
-   "title": "Engines · loading (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "I10",
-   "title": "Tray menu and left-click panel (Desktop app)",
-   "reason": "Native tray menu and left-click panel: the tray menu is an Electron native menu and cannot be screenshotted; items are asserted through the test hook (trayItems) in the e2e suite."
-  },
-  {
    "id": "I11",
    "title": "Tray icon states (Desktop app)",
    "reason": "Tray icon states are drawn into the operating system tray and are not part of any window."
   },
   {
-   "id": "I3",
-   "title": "Mini player · always on top (Desktop app)",
-   "reason": "Mini player is not built (v1 has no always-on-top window)."
-  },
-  {
    "id": "I9",
    "title": "Mini player · states (Desktop app)",
-   "reason": "Mini player is not built (v1 has no always-on-top window)."
+   "reason": "The mini player states other than reading are not captured; the sleep-timer overflow menu is not built."
   },
   {
    "id": "I13",
    "title": "Mini player storyboard (Desktop app)",
-   "reason": "Mini player is not built (v1 has no always-on-top window)."
+   "reason": "Out of scope: the mini player closes itself 6 s after finishing, it does not shrink to a dot."
   },
   {
    "id": "I1",
@@ -511,62 +386,42 @@
   {
    "id": "I4",
    "title": "Global shortcut toast (Desktop app)",
-   "reason": "Global shortcut toast: no global shortcuts in v1."
+   "reason": "Implemented (main/toasts.ts); the shortcut toast is an OS notification and cannot be screenshotted."
   },
   {
    "id": "I5",
    "title": "Clipboard prompt (Desktop app)",
-   "reason": "Clipboard prompt: Read clipboard is v1.1 (the tray item is disabled)."
-  },
-  {
-   "id": "J1",
-   "title": "Export · options (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented (main/system/clipboard-watch.ts); the prompt is an OS notification and cannot be screenshotted."
   },
   {
    "id": "J2",
    "title": "Export · rendering (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "J3",
    "title": "Export · done (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "J5",
    "title": "Export · file exists (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "J6",
    "title": "Export · in background (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "J7",
    "title": "Export · complete toast (Desktop app)",
-   "reason": "Planned for v1.1 and not built in v1."
-  },
-  {
-   "id": "K11",
-   "title": "Quit confirmation (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "K1",
-   "title": "Error · engine crashed (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "K10",
    "title": "Error · repairing model (Desktop app)",
    "reason": "Model repair screen is not built."
-  },
-  {
-   "id": "K2",
-   "title": "Error · port in use (Desktop app)",
-   "reason": "Not built in v1, so there is no product state to capture."
   },
   {
    "id": "K3",
@@ -591,7 +446,7 @@
   {
    "id": "K7",
    "title": "Notice · already running (Desktop app)",
-   "reason": "Already-running notice is not built: a second launch focuses the running window."
+   "reason": "A second launch focuses the running window (single-instance lock, checked by scripts/smoke-packaged.mjs); no screen is drawn for it."
   },
   {
    "id": "K8",
@@ -609,24 +464,9 @@
    "reason": "Board of empty states (2320 px wide), not a product screen."
   },
   {
-   "id": "H1-L",
-   "title": "Settings · General (Desktop app)",
-   "reason": "Light twin of H1: Not built in v1, so there is no product state to capture."
-  },
-  {
-   "id": "H12-L",
-   "title": "Settings · Memory and performance (Desktop app)",
-   "reason": "Light twin of H12: Not built in v1, so there is no product state to capture."
-  },
-  {
    "id": "I10-L",
    "title": "Tray menu and left-click panel (Desktop app)",
-   "reason": "Light twin of I10: Native tray menu and left-click panel: the tray menu is an Electron native menu and cannot be screenshotted; items are asserted through the test hook (trayItems) in the e2e suite."
-  },
-  {
-   "id": "K1-L",
-   "title": "Error · engine crashed (Desktop app)",
-   "reason": "Light twin of K1: Not built in v1, so there is no product state to capture."
+   "reason": "Light twin of I10: the product capture has no matching light run"
   },
   {
    "id": "O1-L",

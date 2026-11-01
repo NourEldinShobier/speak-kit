@@ -101,7 +101,7 @@ const tokens = (b: B, t: T, root: Ref) => {
   const ty = K.card(b, t, r2, { w: "fill", pad: 16, gap: 8 }); X.caps(b, t, ty, "TYPE · INTER");
   [[22, "SemiBold", "Page title 22"], [20, "SemiBold", "Setup title 20"], [16, "SemiBold", "Dialog title 16"], [13, "Medium", "Body and rows 13"], [12, "Regular", "Secondary and descriptions 12"], [11, "SemiBold", "CAPS LABELS 11"]].forEach(([s, w, l]) => b.text(ty, l as string, { size: s as number, weight: w as string, c: t.text }));
   const ra = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, ra, "RADIUS"); const rr = b.row(ra, { gap: 10 }); [4, 6, 8, 10, 12, 14, 999].forEach((v) => { const q = b.col(rr, { gap: 4, align: "center" }); b.frame(q, { w: 40, h: 40, r: v, stroke: t.text2, sw: 1, sa: "inside" }); b.text(q, v === 999 ? "pill" : String(v), { size: 11, c: t.text3 }); });
-  const el = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, el, "ELEVATION"); const er = b.row(el, { gap: 18 }); (["md", "lg", "xl"] as const).forEach((s, i) => { const q = b.col(er, { gap: 6, align: "center" }); b.frame(q, { w: 70, h: 50, r: 10, fill: t.raised, shadow: s }); b.text(q, ["menu", "overlay", "window"][i], { size: 11, c: t.text3 }); });
+  const el = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, el, "ELEVATION"); const er = b.row(el, { gap: 18 }); (["md", "lg", "dlg", "xl"] as const).forEach((s, i) => { const q = b.col(er, { gap: 6, align: "center" }); b.frame(q, { w: 70, h: 50, r: 10, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: s }); b.text(q, ["menu 0 1 2", "popover 0 2 6", "dialog 0 4 12", "window"][i], { size: 11, c: t.text3 }); });
 };
 const iconSet = (b: B, t: T, root: Ref) => {
   const names = Object.keys(ICONS);

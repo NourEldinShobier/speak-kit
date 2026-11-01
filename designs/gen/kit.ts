@@ -157,9 +157,10 @@ export const tabs = (b: B, t: T, p: Ref | undefined, items: string[], active: nu
   return f;
 };
 // ---------- keyboard key: 19 px high, pad 2/6, r4, 1 px stroke/control, no fill, Inter 11 text/tertiary, 4 px between keys ----------
-export const kbd = (b: B, t: T, p: Ref | undefined, keys: string[]) => {
+// onAccent (key chip inside a primary button): text-on-accent colour and a 45% white border.
+export const kbd = (b: B, t: T, p: Ref | undefined, keys: string[], onAccent = false) => {
   const f = b.row(p, { gap: 4 });
-  keys.forEach((k) => { const c = b.row(f, { h: 19, pad: [0, 6], r: 4, stroke: t.control, sw: 1, sa: "inside", justify: "center" }); b.text(c, k, { size: 11, c: t.text3 }); });
+  keys.forEach((k) => { const c = b.row(f, { h: 19, pad: [0, 6], r: 4, stroke: onAccent ? "#FFFFFF73" : t.control, sw: 1, sa: "inside", justify: "center" }); b.text(c, k, { size: 11, c: onAccent ? t.accentText : t.text3 }); });
   return f;
 };
 export const divider = (b: B, t: T, p: Ref | undefined, vertical = false) => b.rect(p, vertical ? { w: 1, h: "fill", fill: t.border } : { w: "fill", h: 1, fill: t.border });
@@ -236,12 +237,12 @@ export const popover = (b: B, t: T, p: Ref | undefined, o: O = {}) => b.col(p, {
 /** dialog: r14, pad 20, gap 14, fill surface/raised, 1 px stroke/control, overlay shadow. Lumen draws no scrim; pass scrim to dim the window like the screens do. */
 export const modal = (b: B, t: T, win: Ref, w: number, h: number | "hug", W = 1280, H = 800, scrim = false) => {
   if (scrim) b.rect(win, { abs: true, x: 0, y: 0, w: W, h: H, fill: t.overlay });
-  return b.col(win, { abs: true, x: Math.round((W - w) / 2), y: 0, w, h: h === "hug" ? "hug" : h, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", gap: 14, pad: 20 } as any);
+  return b.col(win, { abs: true, x: Math.round((W - w) / 2), y: 0, w, h: h === "hug" ? "hug" : h, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", gap: 14, pad: 20 } as any);
 };
 
 /** dialog shell used by the screens: r14, fill surface/raised, 1 px stroke/control, overlay shadow; head and foot carry the 20 px padding. */
 export const dialogBox = (b: B, t: T, win: Ref, w: number, y: number, o: O = {}, W = 1280) =>
-  b.col(win, { abs: true, x: Math.round((W - w) / 2), y, w, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", gap: 0, clip: true, ...o } as any);
+  b.col(win, { abs: true, x: Math.round((W - w) / 2), y, w, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", gap: 0, clip: true, ...o } as any);
 /** dialog header: Inter SemiBold 16 title, optional 13/19 text/secondary body line, 28 px close button. */
 export const dialogHead = (b: B, t: T, d: Ref, title: string, sub?: string, close = true) => {
   const h = b.row(d, { w: "fill", pad: [20, 20, 12, 20], gap: 12, justify: "spaceBetween", align: "start" });
@@ -317,7 +318,7 @@ export const desktopWindow = (b: B, t: T, root: Ref, o: { title?: string; nav?: 
       });
     } else {
       const nw = b.row(sb, { w: "fill", h: 36, pad: [0, 12], gap: 6, r: 8, fill: t.accent, justify: "center" });
-      b.icon(nw, "plus", 16, "#FFFFFF"); b.text(nw, "New reading", { size: 13, weight: "Medium", c: "#FFFFFF", w: "fill" }); b.text(nw, "Ctrl N", { size: 11, c: "#FFFFFFB3" });
+      b.icon(nw, "plus", 16, "#FFFFFF"); b.text(nw, "New reading", { size: 13, weight: "Medium", c: "#FFFFFF", w: "fill" }); kbd(b, t, nw, ["Ctrl N"], true);
       b.frame(sb, { w: 1, h: 8 });
       const items: [string, string, string][] = [["home", "Home", "home"], ["library", "Library", "book"], ["voices", "Voices", "mic"], ["engines", "Engines", "cpu"]];
       items.forEach(([k, label, ic]) => navItem(b, t, sb, label, ic, { selected: k === nav }));
@@ -410,7 +411,7 @@ export const article = (b: B, t: T, p: Ref, o: { w?: number; hl?: { para: number
   ARTICLE.paras.forEach((tx, i) => {
     const wrap = b.frame(a, { layout: "horizontal", w, h: "hug", gap: 0, align: "start", clip: false, fill: hover === i ? t.accent + "12" : "none", r: 8 });
     if (hover === i) {
-      const g = b.frame(wrap, { abs: true, x: -48, y: 2, w: 32, h: 32, r: 16, fill: t.accent, layout: "horizontal", align: "center", justify: "center", shadow: "md" });
+      const g = b.frame(wrap, { abs: true, x: -48, y: 2, w: 32, h: 32, r: 16, fill: t.accent, layout: "horizontal", align: "center", justify: "center", shadow: "lg" });
       b.icon(g, "play", 16, t.accentText);
       tooltip(b, { ...t, raised: "#1E1F20", text: "#FFFFFF", control: "#FFFFFF14" }, wrap, "Read from here", undefined, { abs: true, x: -48, y: 40 });
     }
@@ -426,7 +427,7 @@ export const article = (b: B, t: T, p: Ref, o: { w?: number; hl?: { para: number
   return col;
 };
 
-// Read-aloud pill (Lumen F5, id 46082): 649x52, r999, fill surface/raised dark #252627, 1 px #FFFFFF14, shadow 0 16 48 .45.
+// Read-aloud pill (Lumen F5, id 46082): 649x52, r999, fill surface/raised dark #252627, 1 px #FFFFFF14, shadow 0 2 6 (6% light / 30% dark).
 // previous (34) | play/pause 40 accent | next (34) | text 220 (11 px #BFBFBF over a 4 px track) | speed pill 54x30 | voice pill 151x30 | close 30. Always dark, on light and dark pages.
 export type DockState = "idle" | "playing" | "paused" | "loading" | "error" | "done" | "unloaded" | "waking";
 export const PILL = { fill: "#252627", line: "#FFFFFF14", text: "#E6E6E6", dim: "#BFBFBF" };

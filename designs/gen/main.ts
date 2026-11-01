@@ -65,7 +65,7 @@ PAGES.forEach((pg, pi) => {
       const wrap = b.frame(sref, { name, x, y: 140, w: fw, h: fh, fill: dark ? "#0F1011" : "#DEDFE3", clip: true });
       const ox = narrow ? 120 : Math.round((fw - s.w) / 2); const oy = narrow ? Math.max(40, Math.round((fh - s.h) / 2)) : Math.round((fh - s.h) / 2);
       const root = b.frame(wrap, { name: `${fd.id} screen`, x: ox, y: oy, w: s.w, h: s.h, fill: t.bg, clip: true, r: 12 });
-      s.build(b, t, root);
+      b.dark = dark; s.build(b, t, root);
       if (narrow) {
         const rc = b.col(wrap, { x: ox + s.w + 64, y: oy, w: 420, pad: 16, gap: 8, r: 12, fill: t.surface, stroke: t.border, sw: 1, sa: "inside" });
         b.text(rc, `${fd.id} rules`, { size: 11, weight: "SemiBold", c: t.text3, ls: 0.5 });

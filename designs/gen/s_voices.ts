@@ -229,7 +229,7 @@ export const enginesScreen = (b: B, t: T, win: Ref, main: Ref, st: "engines" | "
 
 export const styleModal = (b: B, t: T, win: Ref) => {
   dim(b, t, win);
-  const d = b.col(win, { abs: true, x: 420, y: 130, w: 440, gap: 0, r: 16, fill: t.surface, stroke: t.border, sw: 1, shadow: "lg", clip: true } as any);
+  const d = b.col(win, { abs: true, x: 420, y: 130, w: 440, gap: 0, r: 16, fill: t.surface, stroke: t.border, sw: 1, shadow: "dlg", clip: true } as any);
   const h = b.row(d, { w: "fill", pad: [18, 22, 4, 22], justify: "spaceBetween" }); b.text(h, "Voice style", { size: 17, weight: "Bold", c: t.text }); K.iconBtn(b, t, h, "x", { size: 30 });
   const sc = b.row(d, { w: "fill", pad: [0, 22, 6, 22], gap: 6 }); b.icon(sc, "mic", 14, t.text3); b.text(sc, "Applies to Maya (you) only", { size: 12.5, c: t.text2 });
   const bd = b.col(d, { w: "fill", pad: [6, 22, 14, 22], gap: 14 });

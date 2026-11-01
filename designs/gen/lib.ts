@@ -8,13 +8,13 @@ export type O = {
   shadow?: string; [k: string]: any;
 };
 const KEYMAP: Record<string, string> = { sw: "strokeWeight", sa: "strokeAlign", r: "cornerRadius", pad: "padding", align: "crossAlign", justify: "mainAlign" };
-// Lumen elevation (plain black, same in light and dark): menu 0 8 24 .35, overlay 0 16 48 .45, window 0 18 50 .5. sm is not from Lumen (selected segment lift).
-const SHADOWS: Record<string, any[]> = {
+// Lumen elevation (lumen.css, Lockix scale; black ink 6%/30% sm, 7%/35% md; light/dark): md = menu 0 1 2, lg = popover/dock/toast/pill/launcher 0 2 6, dlg = dialog and command palette 0 4 12, xl = window 0 18 50 .5. sm is not from Lumen (selected segment lift).
+const sh = (dark: boolean, y: number, r: number, md = false) => [{ type: "dropShadow", color: dark ? (md ? "#00000059" : "#0000004D") : md ? "#00000012" : "#0000000F", offset: [0, y], radius: r }];
+const SHADOWS = (dark: boolean): Record<string, any[]> => ({
   sm: [{ type: "dropShadow", color: "#00000014", offset: [0, 1], radius: 3 }],
-  md: [{ type: "dropShadow", color: "#00000059", offset: [0, 8], radius: 24 }],
-  lg: [{ type: "dropShadow", color: "#00000073", offset: [0, 16], radius: 48 }],
+  md: sh(dark, 1, 2), lg: sh(dark, 2, 6), dlg: sh(dark, 4, 12, true),
   xl: [{ type: "dropShadow", color: "#00000080", offset: [0, 18], radius: 50 }],
-};
+});
 // Lumen radii are 4, 5, 6, 8, 10, 12, 14, 999: snap the stray ones the screens used.
 const RSNAP: Record<number, number> = { 7: 8, 9: 8, 11: 10, 13: 12 };
 
@@ -40,10 +40,12 @@ export const TABLER_NAME: Record<string, string> = {
   message: "message-circle", box: "box", wand: "wand", point: "point",
 };
 export const ICONS: Record<string, string> = Object.fromEntries(Object.entries(TABLER_NAME).map(([k, v]) => [k, (tabler as Record<string, string>)[v]]));
-const FILLED = new Set<string>(); // Lumen uses the Tabler outline set only
+// Transport glyphs are solid (lumen.css .lm-icon--player-*): fill = stroke = current colour, round joins; stroke on screen 2.25 px (play, stop) and 2.75 px (pause bars). Skip/back/forward stay outline.
+const SOLID: Record<string, number> = { play: 2.25, stop: 2.25, pause: 2.75 };
 
 export class B {
   cmds: any[] = [];
+  dark = true; // theme of the frame being built (main.ts sets it); picks shadow opacity
   n = 0;
   add(command: string, params: any, as?: string): Ref {
     const a = as ?? `r${this.n++}`;
@@ -60,7 +62,7 @@ export class B {
       else if (k === "crossAlign") { const m = ({ start: "min", end: "max" } as any)[v as string] ?? v; if (m !== "stretch") props[k] = m; }
       else if (k === "mainAlign") props[k] = ({ start: "min", end: "max" } as any)[v as string] ?? v;
       else if (k === "cornerRadius" && typeof v === "number" && RSNAP[v] !== undefined) props[k] = RSNAP[v];
-      else if (k === "shadow") props.effects = SHADOWS[v as string];
+      else if (k === "shadow") props.effects = SHADOWS(this.dark)[v as string];
       else if (k === "w") { if (v === "fill" || v === "hug") props.sizingH = v; else { top.width = v; if (!isText) props.sizingH = "fixed"; } }
       else if (k === "h") { if (v === "fill" || v === "hug") props.sizingV = v; else { top.height = v; if (!isText) props.sizingV = "fixed"; } }
       else props[k] = v;
@@ -99,7 +101,7 @@ export class B {
     const d = ICONS[name]; if (!d) throw new Error("missing icon " + name);
     size = Math.round(size / 2) * 2; // Lumen icon boxes are 12, 14, 16, 18, 20, 24 px
     // Lumen: every icon keeps a 1.5 px stroke on screen at every size (geometry scales, stroke does not).
-    const props = FILLED.has(name) ? { fill: color, stroke: "none" } : { fill: "none", stroke: color, strokeWeight: o.sw ?? 1.5, strokeCap: "round", strokeJoin: "round" };
+    const props = name in SOLID ? { fill: color, stroke: color, strokeWeight: SOLID[name], strokeCap: "round", strokeJoin: "round" } : { fill: "none", stroke: color, strokeWeight: o.sw ?? 1.5, strokeCap: "round", strokeJoin: "round" };
     // Tabler paths live in a 24x24 box. node.create places a path at (x,y) PLUS the path's own origin offset (x0,y0), unscaled,
     // while width/height scale the geometry. So to land the bbox at k*x0 we pass k*x0 - x0.
     const [x0, y0, w0, h0] = (tablerBounds as Record<string, number[]>)[TABLER_NAME[name]];

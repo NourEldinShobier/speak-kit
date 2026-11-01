@@ -343,7 +343,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
       const pc = b.col(mid, { w: "fill", h: "fill", align: "center", pad: [24, 0], fill: t.surface2, clip: true });
       if (scan) {
         const pg = b.frame(pc, { w: 560, h: 690, fill: "#F2EEE6", r: 4, shadow: "md", clip: true }); for (let k = 0; k < 24; k++) b.rect(pg, { x: 70, y: 70 + k * 22, w: 360 + ((k * 37) % 100), h: 9, r: 3, fill: "#BDB6AA" });
-        const ov = b.col(win, { abs: true, x: 500, y: 250, w: 420, pad: 24, gap: 12, r: 16, fill: t.surface, stroke: t.border, sw: 1, shadow: "lg" } as any);
+        const ov = b.col(win, { abs: true, x: 500, y: 250, w: 420, pad: 24, gap: 12, r: 16, fill: t.surface, stroke: t.border, sw: 1, shadow: "dlg" } as any);
         if (st === "pdf-scan") {
           const ic = b.frame(ov, { w: 44, h: 44, r: 22, fill: t.warnSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "scan", 22, t.warn);
           b.text(ov, "Page 9 is a scanned image", { size: 17, weight: "Bold", c: t.text }); b.text(ov, "There's no text layer to read. Recognize the text (OCR) on this computer to listen to it. Nothing is uploaded.", { size: 13, c: t.text2, w: "fill", lh: 19 });
@@ -395,7 +395,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
     if (st === "buffering") { const w = centered(b, win, 0, BAR - 60, W); K.toast(b, t, w, "Preparing next paragraph…", "neutral", { icon: "loader" }); }
     if (st === "away") { const w = centered(b, win, 0, BAR - 56, W, 40); const pl = b.row(w, { h: 40, pad: [0, 16], gap: 8, r: 20, fill: t.accent, shadow: "lg" }); b.icon(pl, "up", 16, t.accentText); b.text(pl, "Back to current", { size: 13.5, weight: "SemiBold", c: t.accentText }); }
     if (st === "done") {
-      dim(b, t, win); const c = K.card(b, t, win, { abs: true, x: 380, y: 230, w: 520, pad: 28, gap: 12, align: "center", shadow: "lg" } as any);
+      dim(b, t, win); const c = K.card(b, t, win, { abs: true, x: 380, y: 230, w: 520, pad: 28, gap: 12, align: "center", shadow: "dlg" } as any);
       const ic = b.frame(c, { w: 56, h: 56, r: 28, fill: t.okSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "check", 26, t.ok);
       b.text(c, "Finished reading", { size: 20, weight: "Bold", c: t.text }); b.text(c, "6 min 48 s at 1.2x · 1,290 words", { size: 13, c: t.text2 });
       const mf = b.row(c, { gap: 6 }); b.icon(mf, "circleCheck", 15, t.ok); b.text(mf, "Marked as finished in your library", { size: 13, weight: "Medium", c: t.ok });

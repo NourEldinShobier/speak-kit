@@ -282,7 +282,7 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
       K.article(b, t, c, { hl: o.hl, selection: o.selection });
       if (o.hover) {
         b.rect(c, { x: 281, y: 422, w: 720, h: 120, r: 8, fill: t.accent + "14" });
-        const g = b.frame(c, { x: 233, y: 424, w: 32, h: 32, r: 16, fill: t.accent, layout: "horizontal", align: "center", justify: "center", shadow: "md" }); b.icon(g, "play", 16, t.accentText);
+        const g = b.frame(c, { x: 233, y: 424, w: 32, h: 32, r: 16, fill: t.accent, layout: "horizontal", align: "center", justify: "center", shadow: "lg" }); b.icon(g, "play", 16, t.accentText);
         K.tooltip(b, DT(t), c, "Read from here", undefined, { x: 105, y: 427 });
       }
     }
@@ -335,7 +335,7 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
       const bg = dark ? "#252627" : "#1E1F20"; const wc = "#FFFFFF"; const dim = "#BFBFBF";
       if (o.edge === "tab" || o.edge === "reading") {
         const w = reading ? 44 : 14;
-        const tab = b.frame(c, { x: 1280 - w, y: 300, w, h: 76, r: [14, 0, 0, 14], fill: bg, shadow: "md", layout: "horizontal", align: "center", justify: "center", ...(dark ? { stroke: "#2A2B2C", sw: 1 } : {}) });
+        const tab = b.frame(c, { x: 1280 - w, y: 300, w, h: 76, r: [14, 0, 0, 14], fill: bg, shadow: "lg", layout: "horizontal", align: "center", justify: "center", ...(dark ? { stroke: "#2A2B2C", sw: 1 } : {}) });
         if (reading) {
           const pb = b.frame(tab, { w: 26, h: 26, r: 13, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 12, t.accentText);
           b.rect(c, { x: 1280 - w + 5, y: 312, w: 3, h: 52, r: 2, fill: "#FFFFFF33" }); b.rect(c, { x: 1280 - w + 5, y: 345, w: 3, h: 19, r: 2, fill: t.accent });
@@ -364,7 +364,7 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
 const HL = { para: 0, sent: 1, word: 6 };
 export const Bs: S[] = [
   page("B1", "Page · selection bubble", "Selecting text pops a bubble 8 px above the selection: Listen (with its shortcut on hover), voice and speed, copy.", { selection: true, bubble: true }),
-  page("B2", "Page · paragraph play gutter", "Hovering a paragraph tints it and shows a play button in the margin: read from here.", { hover: true }),
+  page("B2", "Page · paragraph play gutter, after reading started", "The paragraph play button appears only after reading has started on this page load; on a fresh page the margin is empty. Hovering a paragraph then tints it and shows read from here.", { hover: true, hl: HL, dock: "playing" }),
   page("B3", "Page · context menu", "Native Chrome menu: SpeakKit submenu with read selection, read from here and add to queue.", { selection: true, ctx: true }),
   page("B4", "Page · pill idle", "The read-aloud pill appears at the bottom after the first use (can be hidden per site).", { dock: "idle" }),
   page("B5", "Page · pill preparing", "Spinner while the first chunk is synthesized.", { dock: "loading" }),
@@ -378,7 +378,7 @@ export const Bs: S[] = [
   page("B13", "Page · added to queue", "Confirmation toast after Add to queue, with a link to the side panel.", { selection: true, toast: "Added to queue · 2 items" }),
   page("B15", "Page · speed popover", "Speed popover opened from the pill; right edges aligned, slider shows the live value.", { hl: HL, dock: "playing", pop: "speed" }),
   page("B16", "Page · voice popover", "Voice popover opened from the voice button in the pill, with search and a preview button on every row.", { hl: HL, dock: "playing", pop: "voice" }),
-  page("B17", "Page · edge launcher, hidden", "Resting state: only a 14 px tab is visible at the right edge of the page, so it never covers content. Position is draggable up and down.", { edge: "tab" }),
+  page("B17", "Page · edge launcher, hidden", "Resting state: only a 14 px tab is visible at the right edge of the page, so it never covers content, and no paragraph play button shows on a fresh page. Position is draggable up and down.", { edge: "tab" }),
   page("B18", "Page · edge launcher, hover", "Hovering the tab opens a vertical pill, like Speechify: logo, a big play button (tooltip shows the length), reader view, speed, voice, more.", { edge: "open" }),
   page("B19", "Page · edge launcher, reading", "While reading, the tab stays peeking out wider with a pause button and a thin progress line. Click to pause or resume without opening it.", { edge: "reading", hl: HL }),
   page("B20", "Page · edge launcher, reading expanded", "Hover while reading: the pill stacks pause, a vertical progress rail with time left, 10 s skips, speed, voice and stop. Moving away hides it after 1.5 s.", { edge: "readingOpen", hl: HL }),

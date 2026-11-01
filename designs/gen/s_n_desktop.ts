@@ -39,7 +39,7 @@ export const homeContent = (b: B, t: T, main: Ref, colW = 880, narrow = false) =
 // ---------------- command palette (Lumen CP1) ----------------
 const palette = (b: B, t: T, win: Ref, query: string, groups: { label: string; rows: { ic: string; l: string; d?: string; k?: string; sel?: boolean }[] }[]) => {
   b.rect(win, { abs: true, x: 0, y: 0, w: 1280, h: 800, fill: t.overlay });
-  const p = b.col(win, { abs: true, x: 320, y: 120, w: 640, h: 432, r: 10, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", clip: true, gap: 0 });
+  const p = b.col(win, { abs: true, x: 320, y: 120, w: 640, h: 432, r: 10, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", clip: true, gap: 0 });
   const ir = b.row(p, { w: "fill", h: 54, pad: [0, 16], gap: 12 });
   b.icon(ir, "search", 16, t.text3); b.text(ir, query || "Search readings, voices and commands", { size: 16, c: query ? t.text : t.text3, w: "fill" });
   const esc = b.row(ir, { h: 19, pad: [0, 6], r: 4, stroke: t.control, sw: 1, sa: "inside" }); b.text(esc, "Esc", { size: 11, c: t.text3 });

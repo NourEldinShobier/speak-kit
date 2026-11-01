@@ -74,7 +74,7 @@ const upd = (b: B, t: T, root: Ref) => {
 };
 const updating = (b: B, t: T, root: Ref) => {
   const { win, main } = K.desktopWindow(b, t, root, { nav: "home", update: true }); homeContent(b, t, main); dim(b, t, win);
-  const c = b.col(win, { abs: true, x: 440, y: 290, w: 400, pad: 24, gap: 14, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", align: "center" });
+  const c = b.col(win, { abs: true, x: 440, y: 290, w: 400, pad: 24, gap: 14, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", align: "center" });
   K.logo(b, t, c, 44, { r: 12 }); b.text(c, "Updating SpeakKit…", { size: 16, weight: "SemiBold", c: t.text }); K.progress(b, t, c, 0.4, { w: 352 });
   b.text(c, "SpeakKit will reopen where you left off. Your readings and settings stay as they are.", { size: 12, c: t.text2, w: "fill", ta: "center", lh: 17 });
 };
@@ -175,7 +175,7 @@ const mini = (b: B, t: T, root: Ref) => {
 // ---------------- quit, edge states, empty states ----------------
 const quit = (b: B, t: T, root: Ref) => {
   const { win, main } = K.desktopWindow(b, t, root, { nav: "home" }); homeContent(b, t, main); dim(b, t, win);
-  const d = b.col(win, { abs: true, x: 400, y: 220, w: 480, pad: 24, gap: 16, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "lg" });
+  const d = b.col(win, { abs: true, x: 400, y: 220, w: 480, pad: 24, gap: 16, r: 14, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg" });
   const h = b.row(d, { w: "fill", gap: 12, align: "center" }); const tile = b.frame(h, { w: 36, h: 36, r: 8, fill: tint(t.warn, 0.16), layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, "alert", 18, t.warn); b.text(h, "Quit SpeakKit?", { size: 16, weight: "SemiBold", c: t.text });
   b.text(d, "1 reading is playing and 2 exports are rendering.", { size: 13, c: t.text2 });
   const l = b.col(d, { w: "fill", pad: [0, 14], r: 8, fill: t.surface, stroke: t.border, sw: 1, sa: "inside" });

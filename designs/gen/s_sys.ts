@@ -14,7 +14,7 @@ const ring = (b: B, t: T, p: Ref, f: (r: Ref) => void) => { const r = b.row(p, {
 const closeX = (b: B, t: T, dl: Ref, w: number) => { const f = b.frame(dl, { abs: true, x: w - 48, y: 16, w: 28, h: 28, r: 8, layout: "horizontal", align: "center", justify: "center" } as any); b.icon(f, "x", 14, t.text2); };
 const dHead = K.dialogHead;
 const dFoot = (b: B, t: T, d: Ref, left: string | undefined, fn: (r: Ref) => void) => K.dialogFoot(b, t, d, left, fn);
-const modalBox = (b: B, t: T, win: Ref, w: number) => { dim(b, t, win); const c = center(b, win); return b.col(c, { w, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "lg", gap: 0, clip: true }); };
+const modalBox = (b: B, t: T, win: Ref, w: number) => { dim(b, t, win); const c = center(b, win); return b.col(c, { w, fill: t.raised, r: 14, stroke: t.control, sw: 1, sa: "inside", shadow: "dlg", gap: 0, clip: true }); };
 
 // ---------- backdrops: library list, reader ----------
 const ITEMS: [string, string, string, number, string][] = [
@@ -52,7 +52,7 @@ const ANCH_R = 1268, ANCH_B = 740;
 const scene = (b: B, t: T, root: Ref, trayActive = false) => {
   const dk = t.mode === "dark";
   b.rect(root, { x: 0, y: 0, w: W, h: H, fills: [{ type: "linearGradient", stops: dk ? ["#1F2A44", "#3B2A4A"] : ["#BFD7F2", "#F2D8E4"], from: [0, 0], to: [1, 1] }] });
-  const w = b.col(root, { x: 120, y: 50, w: 900, h: 640, r: 10, fill: t.surface, shadow: "lg", clip: true, gap: 0 });
+  const w = b.col(root, { x: 120, y: 50, w: 900, h: 640, r: 10, fill: t.surface, shadow: "dlg", clip: true, gap: 0 });
   const tb = b.row(w, { w: "fill", h: 38, pad: [0, 12], fill: dk ? "#2B2927" : "#EBEBEE" }); b.text(tb, "Quarterly report.docx - Word", { size: 12, c: t.text2 });
   const c = b.col(w, { w: "fill", pad: [30, 48], gap: 12 }); b.text(c, "Q4 planning summary", { size: 26, weight: "Bold", c: t.text }); b.text(c, K.ARTICLE.paras[0], { size: 15, lh: 24, c: t.text2, w: "fill" }); b.text(c, K.ARTICLE.paras[1], { size: 15, lh: 24, c: t.text2, w: "fill" }); b.text(c, K.ARTICLE.paras[2], { size: 15, lh: 24, c: t.text2, w: "fill" });
   const bar = b.frame(root, { x: 0, y: H - 48, w: W, h: 48, fill: dk ? "#202020" : "#F3F3F3", stroke: dk ? "#333333" : "#DCDCDC", sw: 1 });
