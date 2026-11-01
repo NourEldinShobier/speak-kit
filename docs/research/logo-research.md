@@ -19,3 +19,5 @@
 **Round 5 (speakkit-logos-v5-six.png).** Same pipeline as round 4, with the v4 sheet passed as a reference and mark 6 (page block) banned: 1 Swell Duo, 2 Twin Lobes, 3 Loop K, 4 Echo Drop, 5 Pulse Silhouette, 6 Aurora Wave.
 
 **Round 6 (speakkit-logos-v6-six.png), creative concepts with a visual idea each:** 1 Quote (two glossy lobes forming a quotation mark), 2 Caret Voice (text cursor swelling into a voice pulse), 3 Wren (singing songbird), 4 Folded Voice (origami paper turning into a wave), 5 Listening Spiral (ear/scroll coil with a yellow core), 6 Play Drop (liquid play button with a ripple ring).
+
+**Round 7 (speakkit-logos-v7-six.png), creative inside the wave and wave+K territory:** 1 Twisted Wave (Mobius ribbon), 2 Wave Orb (liquid wave inside a glass orb), 3 Ripple Print (white rings with a wave crest), 4 K Pulse (white K whose stem is a voice pulse), 5 K Crest (tube K from one wave ribbon), 6 K Tile (K cut from a gradient tile over a wave).
