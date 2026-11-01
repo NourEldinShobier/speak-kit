@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="c03-grad" gradientUnits="userSpaceOnUse" x1="147.00" y1="0" x2="877.00" y2="0"><stop offset="0" stop-color="#7FE5C4"/><stop offset="0.27" stop-color="#4DE6E0"/><stop offset="0.52" stop-color="#4A9EFF"/><stop offset="0.76" stop-color="#0078D4"/><stop offset="1" stop-color="#6B3BFF"/></linearGradient>
+<linearGradient id="c03-under" gradientUnits="userSpaceOnUse" x1="193.48" y1="0" x2="375.86" y2="0"><stop offset="0.000" stop-color="#73e5cb" stop-opacity="1.00"/><stop offset="0.125" stop-color="#5ec7b9" stop-opacity="0.87"/><stop offset="0.250" stop-color="#49a7a3" stop-opacity="0.74"/><stop offset="0.375" stop-color="#3a9093" stop-opacity="0.64"/><stop offset="0.500" stop-color="#34878f" stop-opacity="0.60"/><stop offset="0.625" stop-color="#349097" stop-opacity="0.64"/><stop offset="0.750" stop-color="#3aa7ac" stop-opacity="0.74"/><stop offset="0.875" stop-color="#43c5c9" stop-opacity="0.87"/><stop offset="1.000" stop-color="#4cd9e5" stop-opacity="1.00"/></linearGradient>
+</defs>
+<g fill="none" stroke-width="68" stroke-linejoin="round">
+<path d="M192.36 583.02C203.07 602.92 221.41 616.09 247.61 616.09C294.75 616.09 321.93 593.21 347.54 553.63C363.11 529.57 369.29 500.08 376.88 474.60" stroke="url(#c03-under)" stroke-linecap="butt"/>
+<path d="M305.90 670.21C310.95 619.74 314.23 587.71 314.23 536.98C314.23 494.95 297.97 449.55 255.94 449.55C208.89 449.55 181.00 485.77 181.00 532.82C181.00 552.30 185.13 570.59 193.48 585.04" stroke="url(#c03-grad)" stroke-linecap="butt"/>
+<path d="M375.86 478.10C385.72 444.06 397.19 416.24 434.97 416.24C491.90 416.24 518.12 459.86 526.56 516.16C535.34 574.68 546.50 632.74 605.67 632.74C672.07 632.74 674.92 577.66 684.77 512.00C698.65 419.50 670.35 303.83 763.88 303.83C819.17 303.83 836.61 356.83 838.82 412.08C843.50 529.07 842.98 603.08 842.98 720.17" stroke="url(#c03-grad)" stroke-linecap="butt"/>
+<circle cx="305.90" cy="670.21" r="34" fill="#57e6db" stroke="none"/>
+<circle cx="842.98" cy="720.17" r="34" fill="#5647f7" stroke="none"/>
+</g>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="c01-grad" gradientUnits="userSpaceOnUse" x1="204" y1="354" x2="834" y2="584"><stop offset="0" stop-color="#6B3BFF"/><stop offset="0.3" stop-color="#5A3BFF"/><stop offset="0.58" stop-color="#1E3CFF"/><stop offset="0.78" stop-color="#1E3CFF"/><stop offset="0.93" stop-color="#3FE0FF"/><stop offset="1" stop-color="#3FE0FF"/></linearGradient></defs>
+<path d="M190,584 C221.69,588.45 222.01,610.63 258,610 C309.99,609.09 331.34,538.85 352,500 C392.37,424.07 374,318 458,318 C532,318 565.12,364.17 570,434 C573.91,489.86 566,590 566,640 C566,676.45 595.55,706 632,706 C668.45,706 698,676.45 698,640 C698,582 714.13,549.77 768,546 C805.91,543.35 804.46,535.21 834,530" fill="none" stroke="url(#c01-grad)" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="795.76" cy="449.25" r="20" fill="#F2C04E"/>
+</svg>

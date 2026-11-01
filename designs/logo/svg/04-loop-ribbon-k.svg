@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="c04-grad" gradientUnits="userSpaceOnUse" x1="236" y1="214" x2="800" y2="826">
+<stop offset="0" stop-color="#7FE5C4"/><stop offset="0.3" stop-color="#4A9EFF"/><stop offset="0.62" stop-color="#0078D4"/><stop offset="1" stop-color="#6B3BFF"/>
+</linearGradient>
+<linearGradient id="c04-under" gradientUnits="userSpaceOnUse" x1="620" y1="420" x2="460" y2="580">
+<stop offset="0" stop-color="#0B0C0E" stop-opacity="0"/><stop offset="0.5" stop-color="#0B0C0E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B0C0E" stop-opacity="0"/>
+</linearGradient>
+</defs>
+<g transform="translate(2.11 -1.94)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="84">
+<path d="M244 218V806" stroke="url(#c04-grad)"/>
+<path d="M752 226C691.5 347 640.55 421.5 540 512C485.2 561.32 483.35 648.66 410 656C352.93 661.71 330 585.36 330 528C330 468.35 358.77 390.89 418 398C481 405.56 492.84 469.55 540 512C583.94 551.55 606.06 582.45 650 622C688.48 656.63 713.05 680.64 738 726C755.22 757.31 772.44 776.45 776 812" stroke="url(#c04-grad)"/>
+<path d="M644.83 401.81C615.71 438.8 582.23 473.99 540 512C518.08 531.73 504.63 557.54 491.69 581.88" stroke="url(#c04-under)" stroke-linecap="butt"/>
+<path d="M418 398C481 405.56 492.84 469.55 540 512C583.94 551.55 606.06 582.45 650 622C688.48 656.63 713.05 680.64 738 726C755.22 757.31 772.44 776.45 776 812" stroke="url(#c04-grad)"/>
+</g>
+</svg>

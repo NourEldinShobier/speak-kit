@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="c01-grad" gradientUnits="userSpaceOnUse" x1="310.5" y1="0" x2="743.4" y2="0">
+<stop offset="0" stop-color="#6B3BFF"/><stop offset="0.38" stop-color="#4A3BFF"/><stop offset="0.52" stop-color="#2D3BFF"/><stop offset="0.7" stop-color="#1460FF"/><stop offset="0.82" stop-color="#1460FF"/><stop offset="1" stop-color="#3FE0FF"/></linearGradient></defs>
+<path d="M310.5,534.1 C332.6,540.6 353.4,543.2 374.2,538 C413.2,527.6 431.4,371.6 480.8,371.6 C525,371.6 509.4,400.2 509.4,441.8 L512,579.6 C514.6,626.4 530.2,652.4 558.8,652.4 C587.4,652.4 603,629 605.6,592.6 C610.8,538 631.6,496.4 678.4,496.4 C700.5,496.4 722.6,493.8 743.4,493.8" fill="none" stroke="url(#c01-grad)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="727.8" cy="421" r="21" fill="#F2C04E"/>
+</svg>

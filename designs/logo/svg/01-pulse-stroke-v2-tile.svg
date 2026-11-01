@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="c01-grad" gradientUnits="userSpaceOnUse" x1="314.88" y1="410.88" x2="718.08" y2="558.08"><stop offset="0" stop-color="#6B3BFF"/><stop offset="0.3" stop-color="#5A3BFF"/><stop offset="0.58" stop-color="#1E3CFF"/><stop offset="0.78" stop-color="#1E3CFF"/><stop offset="0.93" stop-color="#3FE0FF"/><stop offset="1" stop-color="#3FE0FF"/></linearGradient></defs>
+<rect width="1024" height="1024" rx="232" fill="#0B0C0E"/>
+<path d="M305.92,558.08 C326.2,560.93 326.4,575.12 349.44,574.72 C382.71,574.14 396.38,529.18 409.6,504.32 C435.44,455.72 423.68,387.84 477.44,387.84 C524.8,387.84 545.99,417.39 549.12,462.08 C551.62,497.83 546.56,561.92 546.56,593.92 C546.56,617.25 565.47,636.16 588.8,636.16 C612.13,636.16 631.04,617.25 631.04,593.92 C631.04,556.8 641.36,536.17 675.84,533.76 C700.1,532.06 699.17,526.85 718.08,523.52" fill="none" stroke="url(#c01-grad)" stroke-width="51.2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="693.61" cy="471.84" r="12.8" fill="#F2C04E"/>
+</svg>

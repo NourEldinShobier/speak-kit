@@ -1,0 +1,122 @@
+[
+ {
+  "slug": "01-pulse-stroke",
+  "cardId": "1:6",
+  "title": "01 · Pulse stroke  (r03)",
+  "idea": "A single 76 px round-capped violet-to-cyan stroke traces r03's pulse: flat lead-in, tall asymmetric crest, deep narrow trough, and a raised tail."
+ },
+ {
+  "slug": "02-k-pulse-stroke",
+  "cardId": "1:7",
+  "title": "02 · K pulse stroke  (r03)",
+  "idea": "A vertical stem plus one continuous 76px round-capped wave that crests at the upper right, folds into a tight 46px-radius U-turn on the stem, and troughs to the lower right."
+ },
+ {
+  "slug": "03-loop-ribbon-s",
+  "cardId": "1:8",
+  "title": "03 · Loop ribbon s  (r05)",
+  "idea": "A single 68-wide round-capped ribbon with a small lower-left loop, two rising crests and a long descending right leg, one self-crossing with the covered pass drawn darker and translucent, and a horizontal mint to aqua to sky to azure to violet gradient."
+ },
+ {
+  "slug": "04-loop-ribbon-k",
+  "cardId": "1:9",
+  "title": "04 · Loop ribbon k  (r05)",
+  "idea": "A free-standing cursive k made of 84 px round-capped r05-style ribbon: a straight stem, plus one ribbon that swoops from the upper right, loops against the stem and crosses itself, then leaves as a gently waving leg."
+ },
+ {
+  "slug": "05-liquid-pulse",
+  "cardId": "1:10",
+  "title": "05 · Liquid pulse  (r06)",
+  "idea": "A single white filled liquid pulse, five forward-leaning teardrop peaks rising to the fourth and falling, pinched necks, rounded drips below the baseline, soft-pointed lead-in and tail, with a butter-yellow dot beside the tallest peak as the word being read."
+ },
+ {
+  "slug": "06-bone-wave",
+  "cardId": "1:11",
+  "title": "06 · Bone wave  (r07)",
+  "idea": "One plump white dog-bone blob slanted -8 degrees on an ink tile, with four soft corner lobes (two on each end, separated by shallow dimples), a top edge with two crests and a pinched waist, and a bottom edge that mirrors it, so it reads as a single spoken wave segment like r07."
+ },
+ {
+  "slug": "07-liquid-k",
+  "cardId": "1:12",
+  "title": "07 · Liquid k  (r06 r07)",
+  "idea": "A bold white K built as a smooth-unioned sound-pulse stem (swelling about 1.6x with concave flanks) plus drop-tapered arm and leg that fuse through a rounded fillet, with a butter-yellow dot as the word being read, echoing the r06 and r07 liquid white forms."
+ },
+ {
+  "slug": "08-sparkle-voice",
+  "cardId": "1:13",
+  "title": "08 · Sparkle voice  (r01 r04)",
+  "idea": "A concave four-point sparkle (r01) whose right tip pokes into the first of three decreasing ellipse bars (r04), cut with a hairline gap, all in one mint-white-lilac-sky gradient, so the sparkle reads as a voice emitting sound."
+ },
+ {
+  "slug": "09-sparkle-bars-white",
+  "cardId": "1:14",
+  "title": "09 · Sparkle bars white  (r04)",
+  "idea": "A white four-point sparkle plus three descending lens bars, with the sparkle cut at the first bar by a hairline gap and a pointed notch, on a blue squircle with a soft diagonal fold."
+ },
+ {
+  "slug": "10-sparkle-wave",
+  "cardId": "1:15",
+  "title": "10 · Sparkle wave  (r01)",
+  "idea": "A four-point iridescent sparkle in r01's style with straight needle verticals and horizontal arms bent by an odd sine (left dips into a trough, right rises into a crest), so the star reads as a sound wave passing through it, like a speech waveform in a sparkle."
+ },
+ {
+  "slug": "11-wave-prism",
+  "cardId": "1:16",
+  "title": "11 · Wave prism  (r09)",
+  "idea": "r09's soft white pyramid on a dark tile, with the gradient facet's right edge turned into a smooth S-wave so sound flows down the object."
+ },
+ {
+  "slug": "12-kit-cube-wave",
+  "cardId": "1:17",
+  "title": "12 · Kit cube wave  (r11)",
+  "idea": "An r11-style white rounded-hexagon cube outline whose glossy aqua-to-violet top face is a tilted sound-wave lid, with upper and lower edges forming in-phase S-waves and a soft white highlight across its upper half."
+ },
+ {
+  "slug": "13-iso-wave-modules",
+  "cardId": "1:18",
+  "title": "13 · Iso wave modules  (r08)",
+  "idea": "Five shared-wall isometric prisms with heights 0.8/1.8/3/1.8/0.8 form a sound-wave envelope out of kit pieces, in r08's monoline hex-module style, and the tallest module's top face is the yellow word being read."
+ },
+ {
+  "slug": "14-hex-wave-cut",
+  "cardId": "1:19",
+  "title": "14 · Hex wave cut  (r11 r08)",
+  "idea": "A solid rounded pointy-top hexagon (kit module) in an azure to sky to aqua gradient, with a smooth sine band cut out as negative space that runs left to right and opens through the right edge, with a butter-yellow dot on the second crest as the word being read."
+ },
+ {
+  "slug": "15-window-wave",
+  "cardId": "1:20",
+  "title": "15 · Window wave  (r10)",
+  "idea": "A white tile holds a dark superellipse window containing a plump white sound-swell lens with a tall crest and a smaller second crest, lit by a blue glow rising from the window floor, as in r10's bubble-in-window."
+ },
+ {
+  "slug": "16-window-k",
+  "cardId": "1:21",
+  "title": "16 · Window k  (r10)",
+  "idea": "A plump white liquid K (pulse-swelling stem, tapered round-ended arm and leg) glowing inside r10's dark superellipse window on a white tile, with a blue glow rising from the window bottom, tying K for SpeakKit to the r10 bubble-in-window construction."
+ },
+ {
+  "slug": "17-scallop-kit",
+  "cardId": "1:22",
+  "title": "17 · Scallop kit  (r02)",
+  "idea": "A white r02-style app tile holding four flat wavy kit modules (yellow 8-point star, blue 10-scallop disc carrying a white sine voice stroke, lilac 10-petal flower, mint 5-lobe clover), all generated mathematically so scallops are even and symmetric."
+ },
+ {
+  "slug": "18-jelly-wave",
+  "cardId": "1:23",
+  "title": "18 · Jelly wave  (r02)",
+  "idea": "A plump translucent azure jelly sine ribbon with one tall and one small crest sits on r02's very light jelly tile, with a soft highlight band, darker lower shade and a contact shadow, so the voice-wave reads as the same soft clay material as r02's jelly letters."
+ },
+ {
+  "slug": "19-k-crest-tile",
+  "cardId": "1:24",
+  "title": "19 · K crest tile  (r03)",
+  "idea": "A white monoline K on a violet-blue-cyan tile, where the arm and leg are one wave stroke (crest, rounded turn kissing the stem, trough), carrying r03's pulse stroke into the letter."
+ },
+ {
+  "slug": "20-echo-k",
+  "cardId": "1:25",
+  "title": "20 · Echo k  (r03 r05)",
+  "idea": "A K made of three parallel monoline echoes (stem plus a wavy arm/leg curve, each offset exactly 52 px along the curve normal) with the r03 violet-blue-cyan gradient lightening outward, so the K reads as a vibrating sound ripple."
+ }
+]

@@ -20,3 +20,9 @@ designs/build/
 
 # desktop packaging output
 code/apps/desktop/release/
+
+# logo work: third-party reference images and generated review sheets stay local
+designs/logo/refs/
+designs/logo/renders/
+designs/logo/v2/*.png
+!designs/logo/v2/round2-board.png
