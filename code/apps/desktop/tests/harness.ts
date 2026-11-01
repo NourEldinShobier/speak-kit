@@ -14,7 +14,8 @@ const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwrig
 const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
 
 // The root `vp test run` does not read this package's vite config: say here what starting a whole Electron app (and what follows) needs.
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+// The e2e specs import this file too, outside vitest.
+if (process.env.VITEST) vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 // Test files run in parallel workers. Each worker gets its own block of ports, below the Windows dynamic range (49152 and up): a port taken
 // by another file's app makes the app move to the next one, and the test would talk to that other server.
