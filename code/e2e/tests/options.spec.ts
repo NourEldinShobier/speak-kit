@@ -18,7 +18,11 @@ test.describe("options page", () => {
       await expect(opt.getByRole("heading", { level: 1, name: title })).toBeVisible();
     }
     await opt.goto(ext.url("options"));
-    await opt.getByRole("link", { name: "Shortcuts" }).or(opt.getByRole("button", { name: "Shortcuts" })).first().click();
+    await opt
+      .getByRole("link", { name: "Shortcuts" })
+      .or(opt.getByRole("button", { name: "Shortcuts" }))
+      .first()
+      .click();
     await expect(opt.getByRole("heading", { level: 1, name: "Shortcuts" })).toBeVisible();
     await expect(opt.getByText("Play / pause")).toBeVisible();
   });
@@ -37,5 +41,52 @@ test.describe("options page", () => {
     await opt.goto(ext.url("options") + "#launcher");
     await opt.getByRole("radio", { name: /Left/ }).first().click();
     await expect.poll(async () => (await ext.settings()).launcher?.side).toBe("left");
+  });
+
+  test("site permissions: add a site, change the default for other sites, remove the site", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.goto(ext.url("options") + "#sites");
+    await opt.getByLabel("Site", { exact: true }).fill("https://Reader.Example.com/essay");
+    await opt.getByRole("button", { name: "Add", exact: true }).click();
+    await expect.poll(async () => (await ext.settings()).sites).toEqual({ "reader.example.com": "always-dock" });
+    await expect(opt.getByRole("list", { name: "Site rules" }).getByText("reader.example.com")).toBeVisible();
+    await opt.getByRole("combobox", { name: "Default for other sites" }).click();
+    await opt.getByRole("option", { name: "Never read" }).click();
+    await expect.poll(async () => (await ext.settings()).siteDefault).toBe("never-read");
+    await opt.reload();
+    await expect(opt.getByRole("combobox", { name: "Default for other sites" })).toContainText("Never read");
+    await opt.getByRole("button", { name: "Remove rule for reader.example.com" }).click();
+    await expect.poll(async () => (await ext.settings()).sites).toEqual({});
+  });
+
+  test("a default of Never read keeps the controls off a page without a rule", async ({ ext, app }) => {
+    await ext.pair(app);
+    await ext.setSettings({ siteDefault: "never-read" });
+    const page = await ext.open("/article");
+    await page.mouse.move(5, 5);
+    await page.waitForTimeout(800);
+    await expect(page.locator('[data-sk="launcher-tab"]')).toHaveCount(0);
+    await ext.setSettings({ siteDefault: "ask", sites: {} });
+    await expect(page.locator('[data-sk="launcher-tab"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test("shortcuts: Chrome's assigned keys show no warning", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.goto(ext.url("options") + "#shortcuts");
+    await expect(opt.getByTestId("chrome-commands").getByText("Play / pause")).toBeVisible();
+    await expect(opt.getByRole("alert")).toHaveCount(0);
+  });
+
+  test("shortcuts: a command Chrome left unassigned gets a Not assigned badge and a banner (C16)", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.addInitScript(() => {
+      const real = chrome.commands.getAll.bind(chrome.commands);
+      chrome.commands.getAll = async () => (await real()).map((c: { name?: string }) => (c.name === "read-selection" ? { ...c, shortcut: "" } : c));
+    });
+    await opt.goto(ext.url("options") + "#shortcuts");
+    const row = opt.locator('[data-command="read-selection"]');
+    await expect(row.getByText("Not assigned")).toBeVisible();
+    await expect(opt.locator('[data-command="play-pause"]').getByText("Not assigned")).toHaveCount(0);
+    await expect(opt.getByRole("alert").getByText("A shortcut is not assigned")).toBeVisible();
   });
 });

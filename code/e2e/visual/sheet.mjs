@@ -6,14 +6,24 @@ const W = +cw;
 const read = (p) => (existsSync(p) ? PNG.sync.read(readFileSync(p)) : null);
 const scale = (p) => {
   const f = Math.min(1, W / p.width);
-  const w = Math.max(1, Math.round(p.width * f)), h = Math.max(1, Math.round(p.height * f));
+  const w = Math.max(1, Math.round(p.width * f)),
+    h = Math.max(1, Math.round(p.height * f));
   const o = new PNG({ width: w, height: h });
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const x0 = Math.floor(x / f), x1 = Math.max(x0 + 1, Math.floor((x + 1) / f)), y0 = Math.floor(y / f), y1 = Math.max(y0 + 1, Math.floor((y + 1) / f));
-    const s = [0, 0, 0, 0]; let c = 0;
-    for (let yy = y0; yy < Math.min(p.height, y1); yy++) for (let xx = x0; xx < Math.min(p.width, x1); xx++) { for (let k = 0; k < 4; k++) s[k] += p.data[(yy * p.width + xx) * 4 + k]; c++; }
-    for (let k = 0; k < 4; k++) o.data[(y * w + x) * 4 + k] = Math.round(s[k] / Math.max(1, c));
-  }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.floor(x / f),
+        x1 = Math.max(x0 + 1, Math.floor((x + 1) / f)),
+        y0 = Math.floor(y / f),
+        y1 = Math.max(y0 + 1, Math.floor((y + 1) / f));
+      const s = [0, 0, 0, 0];
+      let c = 0;
+      for (let yy = y0; yy < Math.min(p.height, y1); yy++)
+        for (let xx = x0; xx < Math.min(p.width, x1); xx++) {
+          for (let k = 0; k < 4; k++) s[k] += p.data[(yy * p.width + xx) * 4 + k];
+          c++;
+        }
+      for (let k = 0; k < 4; k++) o.data[(y * w + x) * 4 + k] = Math.round(s[k] / Math.max(1, c));
+    }
   return o;
 };
 const rows = keys.map((k) => ({ d: read(`out/design/${k}.png`), b: read(`out/built/${k}.png`) })).map((r) => ({ d: r.d && scale(r.d), b: r.b && scale(r.b) }));

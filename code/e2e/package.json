@@ -1,1 +1,16 @@
-{"name":"@speakkit/e2e","version":"0.1.0","private":true,"type":"module","dependencies":{"@speakkit/protocol":"workspace:*"},"devDependencies":{"@axe-core/playwright":"^4.14.0","@playwright/test":"latest","@types/pngjs":"latest","pixelmatch":"latest","pngjs":"latest"}}
+{
+  "name": "@speakkit/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@speakkit/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "latest",
+    "@types/pngjs": "latest",
+    "pixelmatch": "latest",
+    "pngjs": "latest"
+  }
+}

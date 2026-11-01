@@ -208,7 +208,12 @@ test.describe("settings apply live", () => {
     await opt.getByRole("radio", { name: "Sky" }).click();
     await expect.poll(css).toMatch(/rgb\(221, 239, 255\)|#ddefff/i);
     await opt.getByRole("radio", { name: "Off" }).click();
-    await expect.poll(async () => { const h = await highlights(page); return h.sentence + h.word; }).toBe("");
+    await expect
+      .poll(async () => {
+        const h = await highlights(page);
+        return h.sentence + h.word;
+      })
+      .toBe("");
   });
 
   test("dark page gets the dark palette", async ({ ext, app }) => {
@@ -275,25 +280,25 @@ test.describe("two tabs", () => {
 
 test.describe("server failures during playback", () => {
   test.describe("with a slow engine", () => {
-  test.use({ appOptions: { latencyMs: 700 } });
-  test("restart mid-playback surfaces an error, then reading works again", async ({ ext, app }) => {
-    ext.allowed.push(/ERR_CONNECTION|ERR_CONNECTION_REFUSED|ERR_EMPTY_RESPONSE|Failed to fetch|network error|offscreen exception|ERR_INCOMPLETE/i);
-    const { page, popup } = await begin(ext, app);
-    await ext.setSettings({ launcher: { enabled: false } });
-    await popup.getByRole("button", { name: "Listen to this page" }).click();
-    await ext.waitState("playing");
-    await app.stop();
-    // The player had a little audio buffered; once that and the stream are gone it reports the failure.
-    await expect.poll(async () => (await ext.bg<{ status: string }>({ t: "get-state" })).status, { timeout: 30_000 }).toBe("error");
-    const st = await ext.bg<{ error: { code: string } }>({ t: "get-state" });
-    expect(["app-not-running", "synthesis-failed"]).toContain(st.error.code);
-    await expect(sk(page, "dock")).toHaveAttribute("data-state", "error");
-    await app.start();
-    await expect(sk(page, "dock-retry")).toBeVisible();
-    await sk(page, "dock-retry").click();
-    await ext.waitState("playing", 20_000);
-    expect(await ext.peakRms(1000)).toBeGreaterThan(0.02);
-  });
+    test.use({ appOptions: { latencyMs: 700 } });
+    test("restart mid-playback surfaces an error, then reading works again", async ({ ext, app }) => {
+      ext.allowed.push(/ERR_CONNECTION|ERR_CONNECTION_REFUSED|ERR_EMPTY_RESPONSE|Failed to fetch|network error|offscreen exception|ERR_INCOMPLETE/i);
+      const { page, popup } = await begin(ext, app);
+      await ext.setSettings({ launcher: { enabled: false } });
+      await popup.getByRole("button", { name: "Listen to this page" }).click();
+      await ext.waitState("playing");
+      await app.stop();
+      // The player had a little audio buffered; once that and the stream are gone it reports the failure.
+      await expect.poll(async () => (await ext.bg<{ status: string }>({ t: "get-state" })).status, { timeout: 30_000 }).toBe("error");
+      const st = await ext.bg<{ error: { code: string } }>({ t: "get-state" });
+      expect(["app-not-running", "synthesis-failed"]).toContain(st.error.code);
+      await expect(sk(page, "dock")).toHaveAttribute("data-state", "error");
+      await app.start();
+      await expect(sk(page, "dock-retry")).toBeVisible();
+      await sk(page, "dock-retry").click();
+      await ext.waitState("playing", 20_000);
+      expect(await ext.peakRms(1000)).toBeGreaterThan(0.02);
+    });
   });
 
   test("the app comes back with a different token: reading reports token-rejected", async ({ ext, app }) => {

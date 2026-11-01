@@ -29,7 +29,8 @@ export async function openLibrary(opts: { userData?: string; env?: Record<string
 export const importBytes = (d: Launched, name: string, bytes: number[]) =>
   d.page.evaluate(([n, b]) => window.speakkitLibrary.importBytes(n as string, new Uint8Array(b as number[])), [name, bytes] as const);
 
-export const importText = (d: Launched, text: string, title?: string) => d.page.evaluate(([t, ti]) => window.speakkitLibrary.importText(t as string, (ti as string | undefined) ?? undefined), [text, title] as const);
+export const importText = (d: Launched, text: string, title?: string) =>
+  d.page.evaluate(([t, ti]) => window.speakkitLibrary.importText(t as string, (ti as string | undefined) ?? undefined), [text, title] as const);
 
 /** A tiny web server that serves the article fixture. */
 export async function serveArticle(): Promise<{ url: string; close(): void }> {

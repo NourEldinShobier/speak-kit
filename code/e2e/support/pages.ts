@@ -1,9 +1,7 @@
 /** HTML for the fixture web server. Sentences carry a marker (P3S2) so tests can tell exactly what was sent to the speech server. */
 
-export const sentence = (p: number, s: number) =>
-  `P${p}S${s} the quiet harbor wakes before the first ferry leaves the dock.`;
-const para = (p: number, n = 3) =>
-  Array.from({ length: n }, (_, i) => sentence(p, i + 1)).join(" ");
+export const sentence = (p: number, s: number) => `P${p}S${s} the quiet harbor wakes before the first ferry leaves the dock.`;
+const para = (p: number, n = 3) => Array.from({ length: n }, (_, i) => sentence(p, i + 1)).join(" ");
 
 const shell = (title: string, body: string, css = "") => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${title}</title>
@@ -36,26 +34,15 @@ ${ps.slice(5).join("\n")}
   );
 }
 
-export const shortPage = () =>
-  shell(
-    "Short Page",
-    `<main><h1>Short</h1><p id="p1">${sentence(1, 1)} ${sentence(1, 2)}</p><p id="p2">${sentence(2, 1)}</p></main>`,
-  );
+export const shortPage = () => shell("Short Page", `<main><h1>Short</h1><p id="p1">${sentence(1, 1)} ${sentence(1, 2)}</p><p id="p2">${sentence(2, 1)}</p></main>`);
 
 /** Paragraphs far apart so scrolling by hand moves the reading position out of view. */
 export function tallPage(paragraphs = 40): string {
-  return shell(
-    "Tall Page",
-    `<main><article><h1>Tall</h1>${Array.from({ length: paragraphs }, (_, i) => `<p id="p${i + 1}" style="margin:0 0 120px">${para(i + 1)}</p>`).join("")}</article></main>`,
-  );
+  return shell("Tall Page", `<main><article><h1>Tall</h1>${Array.from({ length: paragraphs }, (_, i) => `<p id="p${i + 1}" style="margin:0 0 120px">${para(i + 1)}</p>`).join("")}</article></main>`);
 }
 
 export const darkPage = () =>
-  shell(
-    "Dark Page",
-    `<main><article><h1>After Dark</h1>${[1, 2, 3].map((p) => `<p id="p${p}">${para(p)}</p>`).join("")}</article></main>`,
-    "body{background:#111418;color:#e8eaed}",
-  );
+  shell("Dark Page", `<main><article><h1>After Dark</h1>${[1, 2, 3].map((p) => `<p id="p${p}">${para(p)}</p>`).join("")}</article></main>`, "body{background:#111418;color:#e8eaed}");
 
 export const listsPage = () =>
   shell(

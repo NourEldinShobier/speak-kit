@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect, begin } from "../support/ext";
+import { startApp } from "../support/servers";
 
 const sk = (page: Page, name: string) => page.locator(`[data-sk="${name}"]`);
 const callsText = (app: { engine: { calls: { text: string }[] } }) => app.engine.calls.map((c) => c.text);
@@ -15,7 +16,10 @@ test.describe("selection bubble", () => {
     await expect(sk(page, "bubble")).toHaveCount(0);
     await expect.poll(() => app.engine.calls.length).toBeGreaterThanOrEqual(3);
     const t = callsText(app);
-    expect(t.every((x) => x.startsWith("P2S")), JSON.stringify(t)).toBe(true);
+    expect(
+      t.every((x) => x.startsWith("P2S")),
+      JSON.stringify(t),
+    ).toBe(true);
     expect((await ext.state()).sentenceCount).toBe(3);
   });
 
@@ -101,7 +105,15 @@ test.describe("edge launcher", () => {
     await sk(page, "launcher-play").click();
     await ext.waitState("playing");
     // The pill collapses after its close delay once the pointer is away from it.
-    await expect.poll(async () => { await page.mouse.move(300 + Math.random() * 40, 300); return sk(page, "launcher-tab").count(); }, { timeout: 8000, message: await page.evaluate(() => document.querySelector("speakkit-ui")?.shadowRoot?.innerHTML.slice(0, 600) ?? "no host") }).toBe(1);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.move(300 + Math.random() * 40, 300);
+          return sk(page, "launcher-tab").count();
+        },
+        { timeout: 8000, message: await page.evaluate(() => document.querySelector("speakkit-ui")?.shadowRoot?.innerHTML.slice(0, 600) ?? "no host") },
+      )
+      .toBe(1);
     await expect(sk(page, "launcher-tab")).toHaveClass(/reading/, { timeout: 6000 });
     expect((await sk(page, "launcher-tab").boundingBox())!.width).toBeGreaterThan(w0 + 15);
     // The wide reading tab has its own play/pause button.
@@ -128,7 +140,9 @@ test.describe("edge launcher", () => {
     await expect.poll(async () => (await ext.settings()).launcher.y).toBeLessThan(y0 - 0.1);
     // A reload keeps the saved position.
     await page.reload();
-    const b3 = await sk(page, "launcher-tab").boundingBox({ timeout: 8000 } as never).catch(() => null);
+    const b3 = await sk(page, "launcher-tab")
+      .boundingBox({ timeout: 8000 } as never)
+      .catch(() => null);
     await expect(sk(page, "launcher-tab")).toBeVisible({ timeout: 8000 });
     const again = (await sk(page, "launcher-tab").boundingBox())!;
     expect(Math.abs(again.y - b2.y)).toBeLessThan(8);
@@ -285,5 +299,40 @@ test.describe("back to current", () => {
     for (let i = 0; i < 4; i++) await popup.getByRole("button", { name: "Next paragraph" }).click();
     await expect(sk(page, "back-to-current")).toBeVisible({ timeout: 8000 });
     expect(await page.evaluate(() => scrollY)).toBeLessThan(50);
+  });
+});
+
+test.describe("engine asleep (B22)", () => {
+  test("the idle dock says the engine is asleep and wakes on play; after play it reads normally", async ({ ext }) => {
+    const app = await startApp({ state: "unloaded", loadMs: 800 });
+    app.engine.warm = () => {}; // stay asleep until a play request
+    try {
+      await ext.pair(app);
+      await ext.setSettings({ launcher: { enabled: false }, sites: { localhost: "always-dock" } });
+      const page = await ext.open("/article");
+      await expect(sk(page, "dock").locator(".sk-sub")).toHaveText("Engine asleep · wakes on play", { timeout: 10_000 });
+      await sk(page, "dock-play").click();
+      await ext.waitState("playing", 20_000);
+      await expect(sk(page, "dock")).toHaveAttribute("data-state", "playing");
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("the edge pill's tooltip says Wakes on play for an unloaded engine", async ({ ext }) => {
+    const app = await startApp({ state: "unloaded", loadMs: 800 });
+    app.engine.warm = () => {};
+    try {
+      await ext.pair(app);
+      const page = await ext.open("/article");
+      await page.mouse.move(1270, 300);
+      const tab = sk(page, "launcher-tab");
+      await expect(tab).toBeVisible({ timeout: 10_000 });
+      await tab.click();
+      await sk(page, "launcher-play").hover();
+      await expect(sk(page, "launcher-tooltip")).toContainText("Wakes on play", { timeout: 10_000 });
+    } finally {
+      await app.stop();
+    }
   });
 });

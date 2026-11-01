@@ -13,7 +13,13 @@ export async function axeViolations(page: Page, include?: string): Promise<strin
     const d = n.any[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined;
     return d?.contrastRatio ? ` [${d.fgColor} on ${d.bgColor} = ${d.contrastRatio}]` : ` [${n.html.slice(0, 140)}]`;
   };
-  return r.violations.map((v) => `${v.id} (${v.impact}): ${v.help} -> ${v.nodes.slice(0, 3).map((n) => n.target.join(" ") + why(n)).join(" | ")}`);
+  return r.violations.map(
+    (v) =>
+      `${v.id} (${v.impact}): ${v.help} -> ${v.nodes
+        .slice(0, 3)
+        .map((n) => n.target.join(" ") + why(n))
+        .join(" | ")}`,
+  );
 }
 
 /**
@@ -27,7 +33,8 @@ export function layoutIssues(page: Page, scope = "body"): Promise<string[]> {
     const de = document.documentElement;
     if (sel === "body" && de.scrollWidth > de.clientWidth + 1) issues.push(`page scrolls horizontally (${de.scrollWidth} > ${de.clientWidth})`);
     const vw = de.clientWidth;
-    const name = (el: Element) => `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${typeof el.className === "string" && el.className ? "." + el.className.split(" ")[0] : ""}${el.getAttribute("data-sk") ? `[data-sk=${el.getAttribute("data-sk")}]` : ""}`;
+    const name = (el: Element) =>
+      `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${typeof el.className === "string" && el.className ? "." + el.className.split(" ")[0] : ""}${el.getAttribute("data-sk") ? `[data-sk=${el.getAttribute("data-sk")}]` : ""}`;
     const roots: ParentNode[] = [];
     const collect = (root: ParentNode) => {
       roots.push(root);
@@ -49,11 +56,13 @@ export function layoutIssues(page: Page, scope = "body"): Promise<string[]> {
         if (p && cs.position !== "absolute" && cs.position !== "fixed") {
           const pr = p.getBoundingClientRect();
           const pcs = getComputedStyle(p);
-          if (pcs.display !== "contents" && parseFloat(cs.marginRight) >= 0 && r.right > pr.right + 1 && pcs.overflowX === "visible" && pr.width > 0) issues.push(`${where} is wider than its container ${name(p)} (${Math.round(r.right - pr.right)} px past the right edge)`);
+          if (pcs.display !== "contents" && parseFloat(cs.marginRight) >= 0 && r.right > pr.right + 1 && pcs.overflowX === "visible" && pr.width > 0)
+            issues.push(`${where} is wider than its container ${name(p)} (${Math.round(r.right - pr.right)} px past the right edge)`);
         }
         const clips = (cs.overflowX === "hidden" || cs.overflowX === "clip") && !(el instanceof HTMLInputElement); // an input scrolls its own text
         if (clips && el.scrollWidth > el.clientWidth + 1 && cs.textOverflow !== "ellipsis") issues.push(`${where} cuts off content (${el.scrollWidth} > ${el.clientWidth}) without an ellipsis`);
-        if (clips && cs.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1 && !el.title && !el.getAttribute("aria-label") && !el.querySelector("[title]")) issues.push(`${where} is truncated with an ellipsis and has no title with the full text`);
+        if (clips && cs.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1 && !el.title && !el.getAttribute("aria-label") && !el.querySelector("[title]"))
+          issues.push(`${where} is truncated with an ellipsis and has no title with the full text`);
       }
     return issues;
   }, scope);

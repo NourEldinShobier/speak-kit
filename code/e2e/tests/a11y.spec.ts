@@ -143,7 +143,10 @@ test.describe("options and side panel", () => {
 
   test("options at 200% zoom and 320 px reflow", async ({ ext, app }) => {
     const opt = await ext.pair(app);
-    for (const [w, h, label] of [[640, 360, "200% zoom of 1280x720"], [320, 640, "320 px reflow"]] as const) {
+    for (const [w, h, label] of [
+      [640, 360, "200% zoom of 1280x720"],
+      [320, 640, "320 px reflow"],
+    ] as const) {
       await opt.setViewportSize({ width: w, height: h });
       for (const id of ["general", "launcher", "voice", "highlight", "reader", "shortcuts", "sites"]) {
         await opt.goto(ext.url("options") + `#${id}`);
@@ -239,7 +242,10 @@ test.describe("in-page UI", () => {
     await ext.setSettings({ launcher: { enabled: false } });
     await ext.bg({ t: "read-tab", tabId: await ext.tabId(page), mode: "page" });
     await ext.waitState("playing");
-    for (const [w, h] of [[640, 400], [360, 640]] as const) {
+    for (const [w, h] of [
+      [640, 400],
+      [360, 640],
+    ] as const) {
       await page.setViewportSize({ width: w, height: h });
       await page.waitForTimeout(200);
       expect(await layoutIssues(page, "speakkit-ui"), `dock at ${w}x${h}`).toEqual([]);

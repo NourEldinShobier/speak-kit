@@ -40,7 +40,10 @@
   "C3": ["minor drift", "Empty focused token field like the design; the design shows a clipboard icon left of the placeholder."],
   "C4": ["minor drift", "The design shows a transient Saved indicator that the harness does not trigger."],
   "C5": ["minor drift", "Preview padding 4 px different; swatch spacing fixed to 50 px."],
-  "C6": ["known difference", "Design lists a 4th Chrome command (Read page from the top, Conflict badge) and enabled key editing plus Reset to defaults; the product has 3 commands and read-only in-page keys."],
+  "C6": [
+    "known difference",
+    "Design lists a 4th Chrome command (Read page from the top, Conflict badge) and enabled key editing plus Reset to defaults; the product has 3 commands and read-only in-page keys."
+  ],
   "C7": ["minor drift", "Rows sorted alphabetically in the product; the design keeps insertion order."],
   "C8": ["minor drift", "Dark theme; preview switch set to Dark page."],
   "C9": ["minor drift", "Within 3 px after spacing fixes."],

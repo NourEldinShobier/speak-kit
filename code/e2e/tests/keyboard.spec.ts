@@ -38,14 +38,7 @@ test.describe("popup, keyboard only", () => {
     const { popup } = await begin(ext, app, "/article");
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "idle");
     const stops = await tabThrough(popup, 6);
-    expect(stops.map((s) => s.name)).toEqual([
-      "Open settings",
-      "Listen to this page",
-      "Reader view",
-      expect.stringMatching(/^Voice: /),
-      expect.stringMatching(/^Speed /),
-      "Open app",
-    ]);
+    expect(stops.map((s) => s.name)).toEqual(["Open settings", "Listen to this page", "Reader view", expect.stringMatching(/^Voice: /), expect.stringMatching(/^Speed /), "Open app"]);
     for (const s of stops) expect(s.outline || s.shadow, `${s.name} shows focus`).toBe(true);
     await popup.getByRole("button", { name: "Listen to this page" }).focus();
     await popup.keyboard.press("Enter");
@@ -169,10 +162,17 @@ test.describe("paragraph gutter button", () => {
     });
     // the first focus loads the page script (which then misses it), so focus again until the gutter shows
     await expect
-      .poll(async () => {
-        await page.evaluate(() => { const a = document.getElementById("lk")!; a.blur(); a.focus(); });
-        return sk(page, "gutter-play").count();
-      }, { timeout: 10_000 })
+      .poll(
+        async () => {
+          await page.evaluate(() => {
+            const a = document.getElementById("lk")!;
+            a.blur();
+            a.focus();
+          });
+          return sk(page, "gutter-play").count();
+        },
+        { timeout: 10_000 },
+      )
       .toBe(1);
     await sk(page, "gutter-play").focus();
     const f = await focused(page);
@@ -185,7 +185,16 @@ test.describe("paragraph gutter button", () => {
     await ext.setSettings({ launcher: { enabled: false } });
     const page = await ext.open("/article");
     await engage(ext, page);
-    await expect.poll(async () => { await page.mouse.move(5, 5); await page.locator("#p3").hover(); return sk(page, "gutter-play").count(); }, { timeout: 10_000 }).toBe(1); // the first pointer move loads the page script
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.move(5, 5);
+          await page.locator("#p3").hover();
+          return sk(page, "gutter-play").count();
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(1); // the first pointer move loads the page script
     await sk(page, "gutter-play").click();
     await ext.waitState("playing");
     await page.mouse.move(5, 5);
@@ -204,5 +213,67 @@ test.describe("paragraph gutter button", () => {
     await page.locator("#p7").hover();
     await expect(btn).toHaveAttribute("data-state", "idle", { timeout: 5000 });
     await expect(btn).toHaveAttribute("aria-label", "Read from here");
+  });
+
+  test("the button is next in tab order after the focused link and Escape dismisses it, returning focus to the link", async ({ ext, app }) => {
+    await ext.pair(app);
+    await ext.setSettings({ launcher: { enabled: false } });
+    const page = await ext.open("/article");
+    await engage(ext, page);
+    await page.evaluate(() => {
+      const a = document.createElement("a");
+      a.id = "lk";
+      a.href = "#top";
+      a.textContent = "a link inside the paragraph";
+      document.querySelector("#p5")!.append(" ", a);
+    });
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => {
+            const a = document.getElementById("lk")!;
+            a.blur();
+            a.focus();
+          });
+          return sk(page, "gutter-play").count();
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(1);
+    expect(await page.evaluate(() => document.getElementById("lk")!.nextElementSibling?.localName), "the host sits right after the link").toBe("speakkit-ui");
+    await page.keyboard.press("Tab");
+    expect((await focused(page))?.sk, "one Tab from the link reaches the button").toBe("gutter-play");
+    await page.keyboard.press("Escape");
+    await expect(sk(page, "gutter-play")).toHaveCount(0);
+    expect((await focused(page))?.id, "focus is back on the link").toBe("lk");
+    expect(await page.evaluate(() => document.documentElement.lastElementChild?.localName), "the host is back at the end of the page").toBe("speakkit-ui");
+    expect((await ext.state()).status, "Escape closed the button, it did not stop anything").toBe("idle");
+  });
+
+  test("Escape dismisses a hover button without moving the pointer, and the next Escape stops the reading", async ({ ext, app }) => {
+    await ext.pair(app);
+    await ext.setSettings({ launcher: { enabled: false } });
+    const page = await ext.open("/article");
+    await engage(ext, page);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.move(5, 5);
+          await page.locator("#p3").hover();
+          return sk(page, "gutter-play").count();
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(1);
+    await sk(page, "gutter-play").click();
+    await ext.waitState("playing");
+    await page.mouse.move(5, 5);
+    await page.locator("#p7").hover();
+    await expect(sk(page, "gutter-play")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(sk(page, "gutter-play")).toHaveCount(0);
+    expect((await ext.state()).status, "the first Escape only closes the button").toBe("playing");
+    await page.keyboard.press("Escape");
+    await ext.waitState("idle");
   });
 });

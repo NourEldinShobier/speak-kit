@@ -5,11 +5,14 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { test, expect, begin, DIST } from "../support/ext";
+import { startReal } from "../support/real-server";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const RESULTS = resolve(here, "../perf-results.jsonl");
-const record = (name: string, value: number, unit: string, limit: string) =>
-  appendFileSync(RESULTS, JSON.stringify({ name, value: Math.round(value * 10) / 10, unit, limit }) + "\n");
+// Measured on the shared dev machine: cold 1.76 to 1.94 s, warm 0.28 to 0.40 s (docs/perf.md); the limits leave room for its +-30% noise.
+const COLD_LIMIT = 3000;
+const WARM_LIMIT = 1000;
+const record = (name: string, value: number, unit: string, limit: string) => appendFileSync(RESULTS, JSON.stringify({ name, value: Math.round(value * 10) / 10, unit, limit }) + "\n");
 
 test.describe("performance budgets (fake engine unless noted)", () => {
   test("Listen click to first scheduled audio, pipeline overhead", async ({ ext, app }) => {
@@ -21,7 +24,7 @@ test.describe("performance budgets (fake engine unless noted)", () => {
     for (;;) {
       try {
         const h = await ext.hook();
-          if (h.state.status === "playing" && h.frames >= 1) {
+        if (h.state.status === "playing" && h.frames >= 1) {
           ms = Date.now() - t0;
           break;
         }
@@ -146,5 +149,42 @@ test.describe("performance budgets (fake engine unless noted)", () => {
     record("simulated read wall time", (Date.now() - t0) / 1000, "s", "informational");
     expect(st.sentenceIndex).toBeGreaterThan(600);
     expect(after - before).toBeLessThan(25);
+  });
+});
+
+test.describe("model lifecycle budgets (real Kokoro)", () => {
+  test("unloaded to first audio on a click without any earlier warm-up, and the warm path", async ({ ext }) => {
+    test.setTimeout(240_000);
+    const real = await startReal({ warm: false });
+    try {
+      await ext.pair(real);
+      const page = await ext.open("/short");
+      const tabId = await ext.tabId(page);
+      // The same request the Listen button sends, with nothing having woken the model before it.
+      const firstAudioMs = async () => {
+        const t0 = Date.now();
+        await ext.bg({ t: "read-tab", tabId, mode: "page" });
+        for (;;) {
+          try {
+            const h = await ext.hook();
+            if (h.state.status === "playing" && h.frames >= 1) return Date.now() - t0;
+          } catch {
+            /* offscreen document not up yet */
+          }
+          if (Date.now() - t0 > 40_000) throw new Error("no audio scheduled");
+          await new Promise((r) => setTimeout(r, 15));
+        }
+      };
+      const cold = await firstAudioMs();
+      await ext.cmd("stop");
+      await new Promise((r) => setTimeout(r, 2500)); // the model cannot be interrupted: let the sentence in flight finish
+      const warm = await firstAudioMs();
+      record("lifecycle: unloaded, click Listen to first audio, real Kokoro", cold, "ms", "< 3000");
+      record("lifecycle: ready, click Listen to first audio, real Kokoro", warm, "ms", "< 1000");
+      expect(cold, "model host spawn + session + warm-up + first sentence").toBeLessThan(COLD_LIMIT);
+      expect(warm).toBeLessThan(WARM_LIMIT);
+    } finally {
+      await real.stop();
+    }
   });
 });

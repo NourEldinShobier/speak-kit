@@ -1,67 +1,25 @@
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { appendFileSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, begin } from "../support/ext";
+import { startReal } from "../support/real-server";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const code = resolve(here, "../..");
 const record = (name: string, value: number, unit: string, limit: string) =>
   appendFileSync(resolve(here, "../perf-results.jsonl"), JSON.stringify({ name, value: Math.round(value * 10) / 10, unit, limit }) + "\n");
 
-/** The real standalone server (packages/server CLI) with the real Kokoro model from the shared cache. */
-async function startReal(o: { warm?: boolean; env?: Record<string, string> } = {}): Promise<{ port: number; token: string; pid: number; stop(): Promise<void> }> {
-  const child: ChildProcess = spawn(process.execPath, ["--import", "./register.mjs", "src/cli.ts"], {
-    cwd: join(code, "packages/server"),
-    env: {
-      ...process.env,
-      SPEAKKIT_PORT: "0",
-      SPEAKKIT_ENGINE: "kokoro",
-      SPEAKKIT_DATA_DIR: mkdtempSync(join(tmpdir(), "speakkit-real-")),
-      SPEAKKIT_MODELS_DIR: join(code, ".cache/models"),
-      ...o.env,
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const line = await new Promise<string>((res, rej) => {
-    let buf = "";
-    child.stdout!.on("data", (d) => {
-      buf += d;
-      if (buf.includes("\n")) res(buf.split("\n")[0]!);
-    });
-    child.once("exit", (c) => rej(new Error(`server exited ${c}`)));
-    setTimeout(() => rej(new Error("server did not start")), 30_000);
-  });
-  const { port, token } = JSON.parse(line) as { port: number; token: string };
-  if (o.warm === false) return { port, token, pid: child.pid!, stop: stopper(child) };
-  // The server loads the model lazily: ask for it, then wait until it is ready.
-  await fetch(`http://127.0.0.1:${port}/v1/engine/warm`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-  const deadline = Date.now() + 90_000;
-  for (;;) {
-    const h = (await (await fetch(`http://127.0.0.1:${port}/v1/health`)).json()) as { engine: { state: string } };
-    if (h.engine.state === "ready") break;
-    if (h.engine.state === "error" || Date.now() > deadline) throw new Error(`engine state ${h.engine.state}`);
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  return { port, token, pid: child.pid!, stop: stopper(child) };
-}
-
-const stopper = (child: ChildProcess) => () =>
-  new Promise<void>((r) => {
-    child.once("exit", () => r());
-    child.kill();
-    setTimeout(r, 3000);
-  });
-
 /** Working set (MB) of a process and all its descendants (the model runs in a child process of the server). */
 function treeRssMb(pid: number): number {
-  const out = execFileSync("powershell", ["-NoProfile", "-Command", "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize | ConvertTo-Json -Compress"], { encoding: "utf8" });
+  const out = execFileSync("powershell", ["-NoProfile", "-Command", "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize | ConvertTo-Json -Compress"], {
+    encoding: "utf8",
+  });
   const all = JSON.parse(out) as { ProcessId: number; ParentProcessId: number; WorkingSetSize: number }[];
   const ids = new Set([pid]);
-  for (let grew = true; grew; ) {
+  for (let grew = true; grew;) {
     grew = false;
-    for (const p of all) if (ids.has(p.ParentProcessId) && !ids.has(p.ProcessId)) {
+    for (const p of all)
+      if (ids.has(p.ParentProcessId) && !ids.has(p.ProcessId)) {
         ids.add(p.ProcessId);
         grew = true;
       }
@@ -76,7 +34,11 @@ test.describe("full path with the real Kokoro model @slow", () => {
       // Baseline: the same sentence straight at the server, no browser involved.
       const direct = async () => {
         const t = Date.now();
-        const r = await fetch(`http://127.0.0.1:${real.port}/v1/speak`, { method: "POST", headers: { Authorization: `Bearer ${real.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ sentences: ["P2S1 the quiet harbor wakes before the first ferry leaves the dock."], voice: "af_heart", speed: 1.2 }) });
+        const r = await fetch(`http://127.0.0.1:${real.port}/v1/speak`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${real.token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ sentences: ["P2S1 the quiet harbor wakes before the first ferry leaves the dock."], voice: "af_heart", speed: 1.2 }),
+        });
         const rd = r.body!.getReader();
         await rd.read();
         const ms = Date.now() - t;
@@ -104,22 +66,22 @@ test.describe("full path with the real Kokoro model @slow", () => {
         getSelection()!.addRange(r);
       });
       const firstAudio = async () => {
-      const t0 = Date.now();
-      await ext.cmd("read-selection", page);
-      let ms = -1;
-      while (Date.now() - t0 < 20_000) {
-        try {
-          const h = await ext.hook();
-          if (h.state.status === "playing" && h.frames >= 1) {
-            ms = Date.now() - t0;
-            break;
+        const t0 = Date.now();
+        await ext.cmd("read-selection", page);
+        let ms = -1;
+        while (Date.now() - t0 < 20_000) {
+          try {
+            const h = await ext.hook();
+            if (h.state.status === "playing" && h.frames >= 1) {
+              ms = Date.now() - t0;
+              break;
+            }
+          } catch {
+            /* offscreen not ready */
           }
-        } catch {
-          /* offscreen not ready */
+          await new Promise((r) => setTimeout(r, 20));
         }
-        await new Promise((r) => setTimeout(r, 20));
-      }
-      return ms;
+        return ms;
       };
       // Best of three: the machine is shared, one slow sample says little about the pipeline.
       let ms = await firstAudio();
@@ -135,7 +97,7 @@ test.describe("full path with the real Kokoro model @slow", () => {
       // The extension adds about 400 ms (fake-engine pipeline budget is 600 ms) on top of the server, more on a busy machine.
       expect(ms).toBeLessThan(Math.max(1500, serverOnly + 900));
       expect(await ext.peakRms(4000)).toBeGreaterThan(0.005);
-      await expect.poll(async () => (await page.evaluate(() => [...(CSS.highlights.get("speakkit-sentence") ?? [])].length))).toBeGreaterThan(0);
+      await expect.poll(async () => await page.evaluate(() => [...(CSS.highlights.get("speakkit-sentence") ?? [])].length)).toBeGreaterThan(0);
       await ext.waitState("finished", 30_000);
       // Informational: starting again right after a stop queues behind the sentence the model was still working on.
       await ext.cmd("stop");

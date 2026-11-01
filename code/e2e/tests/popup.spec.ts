@@ -55,7 +55,6 @@ test.describe("popup states", () => {
     await expect.poll(async () => (await ext.bg<{ status: string; error?: { code: string } }>({ t: "get-state" })).error?.code).toBe("page-unreadable");
   });
 
-
   test("selection on the page -> selection state -> reads only the selection", async ({ ext, app }) => {
     await ext.pair(app);
     const page = await ext.open("/select");

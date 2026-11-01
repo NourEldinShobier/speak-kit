@@ -89,6 +89,36 @@ test.describe("model lifecycle: unloaded", () => {
     }
   });
 
+  test("Waking up shows within 100 ms of the click, audio follows the load, and no error shows on the way", async ({ ext }) => {
+    const app = await startApp({ state: "unloaded", loadMs: 1500 });
+    app.engine.warm = () => {}; // asleep until the play request
+    try {
+      await ext.setSettings({ launcher: { enabled: false } });
+      await ext.pair(app);
+      const page = await ext.open("/article");
+      const popup = await ext.popup(page);
+      await expect(popup.getByText("The voice wakes when you press play")).toBeVisible();
+      await popup.evaluate(() => {
+        const w = window as unknown as { __wake: { click: number; waking: number; errors: number } };
+        w.__wake = { click: 0, waking: 0, errors: 0 };
+        document.addEventListener("click", () => (w.__wake.click ||= performance.now()), { capture: true });
+        new MutationObserver(() => {
+          if (!w.__wake.waking && document.querySelector(".pp-head")?.textContent?.includes("Waking up")) w.__wake.waking = performance.now();
+          if (document.querySelector("[role=alert], .pp[data-view=error]")) w.__wake.errors++;
+        }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+      });
+      await listen(popup);
+      await ext.waitState("playing", 20_000);
+      const w = await popup.evaluate(() => (window as unknown as { __wake: { click: number; waking: number; errors: number } }).__wake);
+      expect(w.waking, "the Waking up state appeared").toBeGreaterThan(0);
+      expect(w.waking - w.click).toBeLessThan(100);
+      expect(w.errors).toBe(0);
+      expect(app.engine.loads).toBe(1);
+    } finally {
+      await app.stop();
+    }
+  });
+
   test("the engine unloads when idle, health says so, and the next play reloads it without an error", async ({ ext }) => {
     const app = await startApp({ idleUnloadMs: 1500 });
     try {

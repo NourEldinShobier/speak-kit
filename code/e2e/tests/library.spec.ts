@@ -20,6 +20,9 @@ test.describe("desktop library @slow", () => {
       await expect(d.page.getByTestId("doc-row")).toContainText("Weekly update from the team.");
       await expect(d.page.getByRole("status").filter({ hasText: "Added" })).toBeVisible();
       await expect(d.page.getByText("1 reading")).toBeVisible();
+      // the New badge is a small pill, not a bar across the status column
+      const badge = d.page.getByTestId("doc-row").getByText("New", { exact: true });
+      expect((await badge.boundingBox())!.width).toBeLessThan(60);
     } finally {
       await d.cleanup();
     }
@@ -28,9 +31,12 @@ test.describe("desktop library @slow", () => {
   test("files from the dialog and from a drop, with format badges, and an unsupported file explains itself", async () => {
     const d = await openLibrary();
     try {
-      await d.app.evaluate(({ dialog }, files) => {
-        dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: files })) as typeof dialog.showOpenDialog;
-      }, [fixturePath("notes.md"), fixturePath("sample.docx"), fixturePath("sample.epub")]);
+      await d.app.evaluate(
+        ({ dialog }, files) => {
+          dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: files })) as typeof dialog.showOpenDialog;
+        },
+        [fixturePath("notes.md"), fixturePath("sample.docx"), fixturePath("sample.epub")],
+      );
       await d.page.getByRole("button", { name: "Add", exact: true }).click();
       await d.page.getByRole("menuitem", { name: "Choose files" }).click();
       await expect(d.page.getByTestId("doc-row")).toHaveCount(3);
@@ -53,7 +59,10 @@ test.describe("desktop library @slow", () => {
       await expect(d.page.getByTestId("drop-overlay")).toBeHidden();
       await expect(d.page.getByTestId("doc-row").filter({ hasText: "Report" })).toContainText("PDF");
       await expect(d.page.getByTestId("doc-row").filter({ hasText: "Report" })).toContainText("3 pages");
-      const banner = d.page.getByRole("status").filter({ hasText: "could not be added" }).or(d.page.getByRole("alert").filter({ hasText: "could not be added" }));
+      const banner = d.page
+        .getByRole("status")
+        .filter({ hasText: "could not be added" })
+        .or(d.page.getByRole("alert").filter({ hasText: "could not be added" }));
       await expect(banner).toContainText("movie.mp4");
       await expect(banner).toContainText("Supported: TXT, MD, HTML, PDF, DOCX, EPUB");
     } finally {

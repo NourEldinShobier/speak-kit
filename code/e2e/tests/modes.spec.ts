@@ -61,7 +61,12 @@ test.describe("forced colours (Windows high contrast)", () => {
     await popup.keyboard.press("Tab");
     await popup.keyboard.press("Tab");
     await popup.locator(".sk-voice__opt").first().focus();
-    expect(await popup.evaluate(() => { const cs = getComputedStyle(document.activeElement!); return cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0; })).toBe(true);
+    expect(
+      await popup.evaluate(() => {
+        const cs = getComputedStyle(document.activeElement!);
+        return cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0;
+      }),
+    ).toBe(true);
   });
 
   test("the reading highlight keeps an underline, which forced colours cannot remove", async ({ ext, app }) => {

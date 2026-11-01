@@ -26,10 +26,8 @@ test.describe("popup playback", () => {
     await ext.waitState("playing");
     await expect.poll(() => app.engine.calls.length).toBeGreaterThan(30);
     const all = app.engine.calls.map((c) => c.text).join("\n");
-    for (const bad of ["HOMENAV", "ADTEXT", "FOOTERTEXT", "CODEBLOCK", "[1]", "[2]", "example.com/a/very"])
-      expect(all, bad).not.toContain(bad);
-    for (const good of ["The Long Harbor", "P1S1", "P10S3", "LIST one", "LIST two", "QUOTE the sea"])
-      expect(all, good).toContain(good);
+    for (const bad of ["HOMENAV", "ADTEXT", "FOOTERTEXT", "CODEBLOCK", "[1]", "[2]", "example.com/a/very"]) expect(all, bad).not.toContain(bad);
+    for (const good of ["The Long Harbor", "P1S1", "P10S3", "LIST one", "LIST two", "QUOTE the sea"]) expect(all, good).toContain(good);
     expect(all).toMatch(/Read more at link/);
   });
 
@@ -158,9 +156,7 @@ test.describe("popup playback", () => {
     await ext.waitState("playing");
     for (let i = 0; i < 3; i++) await popup.getByRole("button", { name: "Next paragraph" }).click();
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(100);
-    await expect
-      .poll(() => page.evaluate(() => ([...(CSS.highlights.get("speakkit-sentence") ?? [])][0] as Range | undefined)?.getBoundingClientRect().top ?? -1))
-      .toBeGreaterThan(-1);
+    await expect.poll(() => page.evaluate(() => ([...(CSS.highlights.get("speakkit-sentence") ?? [])][0] as Range | undefined)?.getBoundingClientRect().top ?? -1)).toBeGreaterThan(-1);
   });
 });
 
@@ -187,7 +183,8 @@ test.describe("preparing state", () => {
     await popup.getByRole("button", { name: "Listen to this page" }).click();
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "preparing", { timeout: 3000 });
     await expect(popup.getByRole("progressbar")).toBeVisible();
-    expect((await ext.bgState()).status).toBe("preparing");
+    // the popup shows preparing at once; the worker reports it when the offscreen player starts
+    await expect.poll(async () => (await ext.bgState()).status).toBe("preparing");
     await ext.waitState("playing", 10_000);
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "playing");
   });

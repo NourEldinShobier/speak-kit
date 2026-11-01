@@ -31,8 +31,7 @@ class Cdp {
         error?: { message: string };
       };
       if (m.id !== undefined) c.pending.get(m.id)?.(m);
-      else if (m.method === "Runtime.exceptionThrown")
-        errors.push(`offscreen exception: ${JSON.stringify((m.params as { exceptionDetails?: { text?: string } }).exceptionDetails?.text)}`);
+      else if (m.method === "Runtime.exceptionThrown") errors.push(`offscreen exception: ${JSON.stringify((m.params as { exceptionDetails?: { text?: string } }).exceptionDetails?.text)}`);
       else if (m.method === "Runtime.consoleAPICalled" && (m.params as { type?: string }).type === "error")
         errors.push(`offscreen console.error: ${JSON.stringify(((m.params as { args?: { value?: unknown; description?: string }[] }).args ?? []).map((a) => a.value ?? a.description))}`);
     };
@@ -131,11 +130,14 @@ export class Ext {
     const port = opt.locator("#port");
     await port.fill(String(app.port));
     await port.press("Enter");
-    await expect.poll(async () => (await this.settings()).port, { timeout: 5000 }).toBe(app.port).catch(async () => {
-      await port.fill(String(app.port));
-      await port.press("Tab");
-      await expect.poll(async () => (await this.settings()).port, { timeout: 8000 }).toBe(app.port);
-    });
+    await expect
+      .poll(async () => (await this.settings()).port, { timeout: 5000 })
+      .toBe(app.port)
+      .catch(async () => {
+        await port.fill(String(app.port));
+        await port.press("Tab");
+        await expect.poll(async () => (await this.settings()).port, { timeout: 8000 }).toBe(app.port);
+      });
     const tok = opt.locator("#token");
     await tok.click();
     await tok.fill(app.token);
@@ -150,8 +152,7 @@ export class Ext {
       const cur = ((await chrome.storage.sync.get(KEY))[KEY] ?? {}) as Record<string, unknown>;
       const merge = (a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> => {
         const o = { ...a };
-        for (const [k, v] of Object.entries(b))
-          o[k] = v && typeof v === "object" && !Array.isArray(v) ? merge((a[k] as Record<string, unknown>) ?? {}, v as Record<string, unknown>) : v;
+        for (const [k, v] of Object.entries(b)) o[k] = v && typeof v === "object" && !Array.isArray(v) ? merge((a[k] as Record<string, unknown>) ?? {}, v as Record<string, unknown>) : v;
         return o;
       };
       await chrome.storage.sync.set({ [KEY]: merge(cur, p) });
@@ -205,7 +206,7 @@ export class Ext {
       if (t) {
         const c = await Cdp.open(t.webSocketDebuggerUrl, this.errors);
         // The target is listed before main.ts has run.
-        if (await c.eval<boolean>("typeof window.__speakkit !== \"undefined\"").catch(() => false)) return (this.cdp = c);
+        if (await c.eval<boolean>('typeof window.__speakkit !== "undefined"').catch(() => false)) return (this.cdp = c);
         c.close();
       }
       if (Date.now() > deadline) throw new Error("no offscreen document");
@@ -221,7 +222,9 @@ export class Ext {
     return (await this.offscreenCdp()).eval<T>(expr);
   }
   async hook(): Promise<Hook> {
-    return this.off<Hook>(`(()=>{const h=window.__speakkit;return {state:h.state,frames:h.framesReceived,scheduledMs:h.scheduledMs,rms:h.rms(),ctxState:h.ctxState??'',ctxTime:h.ctxTime??0,rate:h.rate??1}})()`);
+    return this.off<Hook>(
+      `(()=>{const h=window.__speakkit;return {state:h.state,frames:h.framesReceived,scheduledMs:h.scheduledMs,rms:h.rms(),ctxState:h.ctxState??'',ctxTime:h.ctxTime??0,rate:h.rate??1}})()`,
+    );
   }
   /** Player state as the service worker last published it; works when no offscreen document exists. */
   bgState() {
@@ -273,13 +276,7 @@ export const test = base.extend<Fx, Wx>({
       channel: "chromium",
       headless: !headed,
       viewport: { width: 1100, height: 800 },
-      args: [
-        `--disable-extensions-except=${DIST}`,
-        `--load-extension=${DIST}`,
-        "--autoplay-policy=no-user-gesture-required",
-        "--remote-debugging-port=0",
-        "--no-first-run",
-      ],
+      args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`, "--autoplay-policy=no-user-gesture-required", "--remote-debugging-port=0", "--no-first-run"],
     });
     const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker"));
     const id = new URL(sw.url()).host;

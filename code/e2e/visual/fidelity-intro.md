@@ -9,6 +9,7 @@ Definitions: match = within about 2 px and the same tokens; minor drift = 2 to 4
 How the verdicts were made: the Diff % column is pixelmatch over the whole crop. It is only a rough guide: dark pages are mostly background, so a screen whose layout is far off still scores 3 to 8 %, while text-only screens never go below about 2 % because Figma and Chromium rasterise Inter differently. The verdict and reason are my reading of the side-by-side image (`out/sbs`, contact sheets from `sheet.mjs`). Reasons that end with "not viewed side by side" were set from the pixel metric and the known component list only. Light captures reuse the verdict of the dark capture of the same state.
 
 How the states are forced
+
 - Popup, options and side panel run as real extension pages with a thin wrapper around `chrome.runtime.sendMessage`, `chrome.tabs.query` and `chrome.scripting` that answers get-state, get-health, get-queue and the active tab (exact times, queue items, engine states and error states). Engine asleep and waking come from `engine.state = "unloaded"` in the mocked health answer.
 - Page screens use the real content script on a fixture article and forge the background broadcasts (`state`, `sentence-start`, `toast`, `reader`) through the service worker. Reader view is opened with the `reader` message and its settings are seeded (Serif, 19, paper / light / dark).
 - Options screens use the real server (C2 and C13 point at a closed port, C3 stores a wrong token).

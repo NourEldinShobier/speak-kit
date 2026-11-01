@@ -47,12 +47,14 @@ test.describe("keyboard shortcuts as Chrome has them registered", () => {
 
 test.describe("context menu as registered with Chrome", () => {
   test("SpeakKit parent with Read selection, Read from here and Add to queue", async ({ ext }) => {
-    await expect.poll(() => ext.sw.evaluate(() => (globalThis as any).__speakkit.menuDefs())).toEqual([
-      { id: "speakkit", title: "SpeakKit", contexts: ["all"] },
-      { id: "speakkit-read-selection", parentId: "speakkit", title: "Read selection", contexts: ["selection"] },
-      { id: "speakkit-read-from-here", parentId: "speakkit", title: "Read from here", contexts: ["all"] },
-      { id: "speakkit-add-queue", parentId: "speakkit", title: "Add to queue", contexts: ["all"] },
-    ]);
+    await expect
+      .poll(() => ext.sw.evaluate(() => (globalThis as any).__speakkit.menuDefs()))
+      .toEqual([
+        { id: "speakkit", title: "SpeakKit", contexts: ["all"] },
+        { id: "speakkit-read-selection", parentId: "speakkit", title: "Read selection", contexts: ["selection"] },
+        { id: "speakkit-read-from-here", parentId: "speakkit", title: "Read from here", contexts: ["all"] },
+        { id: "speakkit-add-queue", parentId: "speakkit", title: "Add to queue", contexts: ["all"] },
+      ]);
   });
 
   test("turning the context menu off removes every entry, turning it on brings them back", async ({ ext }) => {

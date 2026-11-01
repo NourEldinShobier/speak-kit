@@ -134,8 +134,7 @@ export const tabIdOf = (ext: Ext, urlPrefix: string): Promise<number> =>
   }, urlPrefix);
 
 /** Forge a background broadcast to the content script of a tab (the real content script reacts to it). */
-export const send = (ext: Ext, tabId: number, msg: unknown) =>
-  ext.sw.evaluate(([id, m]) => chrome.tabs.sendMessage(id as number, m).catch(() => {}), [tabId, msg] as const);
+export const send = (ext: Ext, tabId: number, msg: unknown) => ext.sw.evaluate(([id, m]) => chrome.tabs.sendMessage(id as number, m).catch(() => {}), [tabId, msg] as const);
 
 export const playerState = (p: Partial<PlayerState> = {}): PlayerState => ({
   status: "idle",

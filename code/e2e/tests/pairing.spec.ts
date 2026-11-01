@@ -59,6 +59,6 @@ test.describe("pairing and connection", () => {
     const opt = await ext.ctx.newPage();
     await opt.goto(ext.url("options"));
     await opt.locator("#port").fill("80");
-        await expect(opt.getByText("Use a port between 1024 and 65535.")).toBeVisible();
+    await expect(opt.getByText("Use a port between 1024 and 65535.")).toBeVisible();
   });
 });

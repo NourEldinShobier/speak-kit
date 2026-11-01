@@ -4,11 +4,16 @@ import { afterAll, beforeAll, describe, it } from "vite-plus/test";
 import { compare, designFile, type Result } from "./compare";
 import { pageScenarios } from "./pages";
 import { desktopScenarios } from "./desktop";
+import { appScenarios } from "./desktop-app";
 import { optionsScenarios, panelScenarios, popupScenarios, builtName, cur, type Ctx, type Scenario } from "./scenarios";
 import { OUT, launchExt, startEnv, type Ext, type Env } from "./support";
 
 // ONLY=A1,B6 limits ids; GROUP=popup,page limits by group prefix; THEME=dark|light limits themes; STATE=slug filters states.
-const list = (v?: string) => v?.split(",").map((s) => s.trim()).filter(Boolean);
+const list = (v?: string) =>
+  v
+    ?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 const only = list(process.env.ONLY);
 const groups = list(process.env.GROUP)?.map((g) => g.toLowerCase());
 const states = list(process.env.STATE);
@@ -38,7 +43,7 @@ afterAll(async () => {
   writeFileSync(file, JSON.stringify(merged, null, 1));
 });
 
-const all: Scenario[] = [...popupScenarios, ...pageScenarios, ...optionsScenarios, ...panelScenarios, ...desktopScenarios];
+const all: Scenario[] = [...popupScenarios, ...pageScenarios, ...optionsScenarios, ...panelScenarios, ...desktopScenarios, ...appScenarios];
 
 describe("visual capture", () => {
   for (const s of all) {
