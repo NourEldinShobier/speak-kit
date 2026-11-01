@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
@@ -8,6 +8,16 @@ import { contentAssets, listSources } from "./build/lumen-subset";
 const root = dirname(fileURLToPath(import.meta.url));
 const test = process.env.SPEAKKIT_TEST === "1";
 const define = { __TEST__: JSON.stringify(test) };
+
+/** The shipped manifest. Test builds add localhost: e2e fixture pages are served from it, and the popup reads a tab's URL only with host access to the tab. */
+function writeManifest(outDir: string) {
+  const from = resolve(root, "manifest.json");
+  const to = resolve(outDir, "manifest.json");
+  if (!test) return copyFileSync(from, to);
+  const manifest = JSON.parse(readFileSync(from, "utf8"));
+  manifest.host_permissions.push("http://localhost/*");
+  writeFileSync(to, JSON.stringify(manifest, null, 2));
+}
 
 /** Copies manifest.json and builds the content script as one classic (IIFE) file; MV3 content scripts cannot be modules. */
 function extensionPlugin(): Plugin {
@@ -19,7 +29,7 @@ function extensionPlugin(): Plugin {
     },
     async closeBundle() {
       mkdirSync(outDir, { recursive: true });
-      copyFileSync(resolve(root, "manifest.json"), resolve(outDir, "manifest.json"));
+      writeManifest(outDir);
       const common = {
         configFile: false as const,
         root,
