@@ -11,7 +11,7 @@ import { Settings } from "./settings";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
-import { Wizard } from "./Wizard";
+import { Wizard } from "./features/wizard";
 import { BrowserPage, Engines, Home, PreviewCtx, Voices } from "./pages";
 import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
 import { api, useAppState, usePreview, useVisible } from "./ui";
