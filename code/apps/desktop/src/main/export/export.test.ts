@@ -167,6 +167,18 @@ describe("ExportJobs", () => {
     expect(j.views[0]!.error).toBe("engine-not-ready");
   });
 
+  it("a write error ends in an error view, frees the server's copy and leaves no partial file", async () => {
+    const dir = tmp();
+    writeFileSync(path.join(dir, "blocked"), "a file where the export folder should be");
+    const { server, calls } = fakeServer();
+    const { j } = jobs(server);
+    await j.start(opts(path.join(dir, "blocked", "exports")));
+    await until(() => j.views[0]!.stage === "error");
+    expect(j.views[0]!.error).toMatch(/ENOTDIR|EEXIST|not a directory/i);
+    await until(() => calls.includes("delete srv1"));
+    expect(readdirSync(dir)).toEqual(["blocked"]);
+  });
+
   it("text with nothing to say is rejected before any request", async () => {
     const { j } = jobs(fakeServer().server);
     await expect(j.start(opts(tmp(), { text: " ... " }))).rejects.toThrow("There is no text to export.");
