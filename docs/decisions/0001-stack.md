@@ -1,6 +1,8 @@
 # 0001 — Stack
 
-Date: 2026-11-01 · Status: accepted
+Date: 2026-11-01 · Status: accepted · Label: [D] · Review by: 2026-12-27
+
+This record predates the numbered ADR process and keeps its per-area sections. New decisions are `NNNN-slug.md` files written from `TEMPLATE.md`; each package choice is added here as a row and names the ADR when one exists. Intake notes for new tools use `INTAKE-TEMPLATE.md`. Labels used in this repo: [D] decided, [S] spike-reversible with a numeric exit test, [Q] user question, [est.] estimate.
 
 ## Rule
 Use what the platform and Vite+ already provide. Add a package only when nothing built-in covers it, and record why here.
