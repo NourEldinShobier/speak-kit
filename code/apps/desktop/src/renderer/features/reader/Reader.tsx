@@ -1,29 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Banner, Button, Icon, IconButton, Spinner } from "@speakkit/ui";
-import { playbackRateFor } from "@speakkit/player";
-import type { SentenceStart, Voice } from "@speakkit/protocol";
-import type { Bookmark, DocMeta } from "../../../shared/library/contract";
+import { useReducer } from "react";
+import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
+import type { DocMeta } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
-import { api, useVisible } from "../../ui";
-import { estimateMs, library } from "../library";
-import { DisplayPopover } from "./DisplayPopover";
-import { OcrPanel } from "./OcrPanel";
+import { estimateMs } from "../library";
 import { FinishedCard, FindBar, OutlinePanel, VoicePanel } from "./Panels";
 import { PlayerBar } from "./PlayerBar";
-import { ReaderText, type TextClick } from "./ReaderText";
+import { BackToCurrent, PickChip, PreparingNote, ReaderArticle, ReaderLoading, ReaderMissing, ReaderTop } from "./ReaderParts";
 import { FONT_STACK, useDisplay } from "./display";
-import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toggleBookmark, toReadDoc, wordAt, type ReaderDoc } from "./model";
-import { rangeIn, useHighlights } from "./useHighlights";
+import type { ReaderDoc } from "./model";
+import { initReader, readerReducer, type ReaderAction, type ReaderUi } from "./state";
+import { useHighlights } from "./useHighlights";
 import { useReaderPlayer } from "./usePlayer";
+import { useFollowScroll, useProgressSaving, useReaderKeys, useReaderLoad, useSleepTimer, useWordTick } from "./useReaderEffects";
+import { sentenceClockHandler, useReaderControl, useReaderRefs } from "./useReaderControl";
+import { useReaderNav } from "./useReaderNav";
 import "./reader.css";
 import "./player.css";
-
-interface Loaded {
-  meta: DocMeta;
-  doc: ReaderDoc;
-}
-
-const SOURCE_LABEL = { paste: "Pasted text", file: "File", url: "Web page" } as const;
 
 interface ReaderProps {
   s: AppState;
@@ -34,406 +26,134 @@ interface ReaderProps {
   onExport(text: string, name: string): void;
 }
 
-export function Reader({ s, id, autoplay, onBack, onExport }: ReaderProps) {
-  const [loaded, setLoaded] = useState<Loaded | null | "missing">(null);
+interface ReadyProps extends ReaderProps {
+  meta: DocMeta;
+  doc: ReaderDoc;
+  ui: ReaderUi;
+  dispatch(a: ReaderAction): void;
+}
+
+export function Reader(props: ReaderProps) {
+  const [ui, dispatch] = useReducer(readerReducer, undefined, () => initReader(props.s.config.speed, props.s.config.voice));
+  useReaderLoad(props.id, dispatch);
+  if (ui.load.kind === "missing") return <ReaderMissing onBack={props.onBack} />;
+  if (ui.load.kind === "loading") return <ReaderLoading />;
+  return <ReaderReady {...props} meta={ui.load.meta} doc={ui.load.doc} ui={ui} dispatch={dispatch} />;
+}
+
+function ReaderReady({ s, id, autoplay, onBack, onExport, meta, doc, ui, dispatch }: ReadyProps) {
   const [display, setDisplay] = useDisplay();
-  const [voices, setVoices] = useState<Voice[]>([]);
-  const [speed, setSpeed] = useState(s.config.speed);
-  const [voiceId, setVoiceId] = useState(s.config.voice);
-  const [panel, setPanel] = useState<"outline" | "voice" | null>(null);
-  const [find, setFind] = useState<{ open: boolean; query: string; current: number }>({ open: false, query: "", current: 0 });
-  const [pick, setPick] = useState<(TextClick & { sentence: number }) | null>(null);
-  const [away, setAway] = useState(false);
-  const [dismissedFinish, setDismissedFinish] = useState(false);
-  const [sleepLeft, setSleepLeft] = useState(0);
-  const [word, setWord] = useState<ReturnType<typeof wordAt>>();
+  const refs = useReaderRefs();
+  const { state: st, play, command } = useReaderPlayer(sentenceClockHandler(refs.clock));
+  const ctl = useReaderControl({ s, autoplay, meta, doc, ui, st, refs, dispatch, play, command });
+  const nav = useReaderNav({ meta, doc, ui, st, refs, active: ctl.active, dispatch, command, startAt: ctl.startAt });
 
-  const scroller = useRef<HTMLDivElement>(null);
-  const textRoot = useRef<HTMLDivElement>(null);
-  const clock = useRef(new SentenceClock());
-  const sleep = useRef(new SleepTimer());
-  const following = useRef(true);
-  const saver = useRef<ProgressSaver>(undefined);
-
-  const onSentence = useCallback((start: SentenceStart) => clock.current.start(performance.now(), start.durationMs / playbackRateFor(start.speed)), []);
-  const { state: st, play, command } = useReaderPlayer(onSentence);
-  const active = st.status === "playing" || st.status === "paused" || st.status === "preparing";
-
-  // ---- load ----
-  useEffect(() => {
-    let live = true;
-    void library.get(id).then((d) => {
-      if (!live) return;
-      if (!d) return setLoaded("missing");
-      const { blocks, ...meta } = d;
-      setLoaded({ meta, doc: buildDoc(blocks) });
-      if (meta.voice) setVoiceId(meta.voice);
-      void library.markOpened(id);
-    });
-    void api.voices().then(
-      (v) => live && setVoices(v.voices),
-      () => {},
-    );
-    return () => {
-      live = false;
-    };
-  }, [id]);
-
-  const meta = loaded && loaded !== "missing" ? loaded.meta : undefined;
-  const doc = loaded && loaded !== "missing" ? loaded.doc : undefined;
-  const cfg = useMemo(() => ({ port: s.port, token: s.token, voice: voiceId, speed, pause: "short" as const }), [s.port, s.token, voiceId, speed]);
-  const resumeIndex = meta && doc && !meta.finished ? Math.min(meta.progress.sentence, Math.max(0, doc.sentences.length - 1)) : 0;
-  const blocked = !!meta?.needsOcr || !doc?.sentences.length;
-  /** The sentence the bookmark button saves: the one being heard, else where reading would start. */
-  const here = active ? st.sentenceIndex : resumeIndex;
-
-  const startAt = useCallback(
-    (index: number) => {
-      if (!meta || !doc || !doc.sentences.length) return;
-      setDismissedFinish(false);
-      following.current = true;
-      setAway(false);
-      play(toReadDoc(doc, meta, index), cfg);
-    },
-    [meta, doc, cfg, play],
-  );
-
-  const started = useRef(false);
-  useEffect(() => {
-    if (autoplay && !started.current && meta && doc && !blocked) {
-      started.current = true;
-      startAt(resumeIndex);
-    }
-  }, [autoplay, meta, doc, blocked, resumeIndex, startAt]);
-
-  // ---- progress ----
-  useEffect(() => {
-    saver.current = new ProgressSaver((p) => void library.setProgress(id, p), Date.now);
-    return () => saver.current?.flush();
-  }, [id]);
-  useEffect(() => {
-    if (!doc || !active) return;
-    saver.current?.update({ sentence: st.sentenceIndex, fraction: fractionAt(doc, st.sentenceIndex) });
-    if (st.status === "paused") saver.current?.flush();
-  }, [doc, active, st.sentenceIndex, st.status]);
-  useEffect(() => {
-    if (st.status !== "finished") return;
-    saver.current?.update({ sentence: 0, fraction: 1 }); // replaces a pending mid-reading save
-    saver.current?.flush();
-  }, [st.status]);
-
-  // ---- highlight, word estimate, follow ----
-  const sentence = doc && active ? doc.sentences[st.sentenceIndex] : undefined;
-  const matches = useMemo(() => (doc && find.open ? findMatches(doc.blocks, find.query) : []), [doc, find.open, find.query]);
-  useHighlights(textRoot, { sentence, word, matches, current: find.current });
-
-  useEffect(() => {
-    const c = clock.current;
-    if (st.status === "paused") c.pause(performance.now());
-    else if (st.status === "playing") c.resume(performance.now());
-    else if (st.status !== "preparing") c.stop();
-  }, [st.status]);
-  useEffect(() => {
-    if (st.status !== "playing" || !sentence) return setWord(undefined);
-    let raf = 0;
-    const tick = () => {
-      const w = wordAt(sentence.text, clock.current.fraction(performance.now()));
-      setWord((cur) => (cur && w && cur.start === w.start ? cur : w));
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [st.status, sentence]);
-
-  const scrollToCurrent = useCallback(() => {
-    const sc = scroller.current;
-    const root = textRoot.current;
-    if (!sc || !root || !sentence) return;
-    const rect = rangeIn(root, sentence.block, sentence.start, sentence.end)?.getBoundingClientRect();
-    const box = sc.getBoundingClientRect();
-    if (rect) sc.scrollTo({ top: sc.scrollTop + rect.top - box.top - box.height * 0.35, behavior: "smooth" });
-  }, [sentence]);
-  useEffect(() => {
-    if (!sentence) return;
-    const sc = scroller.current;
-    const root = textRoot.current;
-    if (!sc || !root || !following.current || !display.follow) return;
-    const rect = rangeIn(root, sentence.block, sentence.start, sentence.end)?.getBoundingClientRect();
-    const box = sc.getBoundingClientRect();
-    if (rect && (rect.top < box.top + 40 || rect.bottom > box.bottom - 40)) scrollToCurrent();
-  }, [sentence, display.follow, scrollToCurrent]);
-  const leaveFollow = () => {
-    if (following.current && st.status === "playing") {
-      following.current = false;
-      setAway(true);
-    }
-  };
-
-  // ---- sleep timer ----
-  // One timeout fires the pause at the expiry time; the countdown display ticks once a second only while the window is visible.
-  const visible = useVisible();
-  const timerOn = sleepLeft > 0;
-  useEffect(() => {
-    if (!timerOn) return;
-    const t = setTimeout(() => {
-      sleep.current.cancel();
-      command({ cmd: "pause" });
-      setSleepLeft(0);
-    }, sleep.current.remainingMs(Date.now()));
-    return () => clearTimeout(t);
-  }, [timerOn, command]);
-  useEffect(() => {
-    if (!timerOn || !visible) return;
-    const t = setInterval(() => setSleepLeft(Math.max(1, sleep.current.remainingMs(Date.now()))), 1000);
-    return () => clearInterval(t);
-  }, [timerOn, visible]);
-
-  // ---- keyboard ----
-  const toggle = useCallback(() => {
-    if (blocked) return;
-    if (st.status === "idle" || st.status === "finished" || st.status === "error") startAt(st.status === "idle" ? resumeIndex : st.status === "error" ? st.sentenceIndex : 0);
-    else command({ cmd: "toggle" });
-  }, [blocked, st.status, st.sentenceIndex, resumeIndex, startAt, command]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const typing = (e.target as HTMLElement).closest("input, textarea, [role=dialog], [role=slider]");
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        setFind((f) => ({ ...f, open: true }));
-      } else if (e.key === "Escape" && find.open) setFind({ open: false, query: "", current: 0 });
-      else if (!typing && e.key === " ") {
-        e.preventDefault();
-        toggle();
-      } else if (!typing && active && e.key === "ArrowRight") command({ cmd: "seek-ms", deltaMs: 10_000 });
-      else if (!typing && active && e.key === "ArrowLeft") command({ cmd: "seek-ms", deltaMs: -10_000 });
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [toggle, active, find.open, command]);
-
-  // ---- actions ----
-  const stepFind = (dir: 1 | -1) => {
-    if (!matches.length) return;
-    const current = (find.current + dir + matches.length) % matches.length;
-    setFind({ ...find, current });
-    const m = matches[current]!;
-    textRoot.current?.querySelector(`[data-block="${m.block}"]`)?.scrollIntoView({ block: "center" });
-  };
-  const seekFraction = (f: number) => {
-    if (!doc) return;
-    if (!active) {
-      const i = doc.sentences.findIndex((_, k) => fractionAt(doc, k) >= f);
-      return startAt(i < 0 ? doc.sentences.length - 1 : i);
-    }
-    command({ cmd: "seek-ms", deltaMs: f * (st.totalMs || 1) - st.elapsedMs });
-  };
-  const changeSpeed = (v: number) => {
-    setSpeed(v);
-    command({ cmd: "set-speed", speed: v });
-    void api.patchConfig({ speed: v });
-  };
-  const changeVoice = (v: string) => {
-    setVoiceId(v);
-    command({ cmd: "set-voice", voice: v });
-    void library.setVoice(id, v);
-  };
-  const changeSleep = (min: number | null) => {
-    if (min === null) {
-      sleep.current.cancel();
-      setSleepLeft(0);
-    } else {
-      sleep.current.start(min, Date.now());
-      setSleepLeft(min * 60_000);
-    }
-  };
-  const readFrom = (sentenceIndex: number) => {
-    setPick(null);
-    if (active) command({ cmd: "seek-sentence", index: sentenceIndex });
-    else startAt(sentenceIndex);
-  };
-  const goTo = (block: number, sentenceIndex: number) => {
-    textRoot.current?.querySelector(`[data-block="${block}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" });
-    if (active && sentenceIndex >= 0) {
-      following.current = true;
-      command({ cmd: "seek-sentence", index: sentenceIndex });
-    }
-  };
-  const jumpTo = (block: number) => goTo(block, doc?.firstSentence[block] ?? -1);
-  const bookmarks: Bookmark[] = meta?.bookmarks ?? [];
-  const saveBookmarks = (next: Bookmark[]) => {
-    setLoaded((l) => (l && l !== "missing" ? { ...l, meta: { ...l.meta, bookmarks: next } } : l));
-    void library.setBookmarks(id, next);
-  };
-  const bookmarkSentence = (index: number) => {
-    const text = doc?.sentences[index]?.text;
-    if (text) saveBookmarks(toggleBookmark(bookmarks, index, text));
-  };
-  const goToBookmark = (index: number) => doc?.sentences[index] && goTo(doc.sentences[index].block, index);
-  const togglePanel = (which: "outline" | "voice") => setPanel((p) => (p === which ? null : which));
-  const outlineItems = useMemo(() => (doc && meta ? outline(doc.blocks, meta.format === "pdf") : []), [doc, meta]);
-  const refresh = () =>
-    library.get(id).then((d) => {
-      if (!d) return;
-      const { blocks, ...m } = d;
-      setLoaded({ meta: m, doc: buildDoc(blocks) });
-    });
-
-  if (loaded === "missing")
-    return (
-      <div className="rd rd--empty">
-        <Banner
-          tone="warning"
-          title="This reading is gone"
-          action={
-            <Button size="sm" onClick={onBack}>
-              Back to library
-            </Button>
-          }
-        >
-          It was deleted from the library.
-        </Banner>
-      </div>
-    );
-  if (!meta || !doc)
-    return (
-      <div className="rd rd--empty">
-        <Spinner size={20} />
-      </div>
-    );
+  useProgressSaving({ id, doc, st, saver: refs.saver });
+  useHighlights(refs.textRoot, { sentence: nav.sentence, word: ui.word, matches: nav.matches, current: ui.find.current });
+  useWordTick({ status: st.status, sentence: nav.sentence, clock: refs.clock, dispatch });
+  useFollowScroll({ sentence: nav.sentence, follow: display.follow, following: refs.following, scroller: refs.scroller, textRoot: refs.textRoot, scrollToCurrent: nav.scrollToCurrent });
+  useSleepTimer({ sleepLeft: ui.sleepLeft, sleep: refs.sleep, command, dispatch });
+  useReaderKeys({ active: ctl.active, findOpen: ui.find.open, toggle: ctl.toggle, command, dispatch });
 
   const style = { "--rd-size": `${display.size}px`, "--rd-line": display.line, "--rd-width": `${display.width}px`, "--rd-font": FONT_STACK[display.font] } as React.CSSProperties;
   return (
     <div className="rd" data-theme={display.theme === "app" ? undefined : display.theme} style={style} data-testid="reader" data-status={st.status}>
-      <header className="rd-top">
-        <IconButton name="arrow-left" label="Back to library" onClick={onBack} />
-        <button type="button" className="rd-crumb" onClick={onBack}>
-          Library
-        </button>
-        <span className="rd-source">
-          {SOURCE_LABEL[meta.source]} · {meta.origin}
-        </span>
-        <span className="rd-spacer" />
-        <IconButton name="search" label="Find in text" onClick={() => setFind((f) => ({ ...f, open: true }))} />
-        <DisplayPopover d={display} onChange={setDisplay} />
-        <IconButton name="bookmark" label="Bookmark this place" aria-pressed={bookmarks.some((b) => b.sentence === here)} disabled={blocked} onClick={() => bookmarkSentence(here)} />
-        <IconButton name="download" label="Export audio" disabled={blocked} onClick={() => onExport(doc.blocks.map((b) => b.text).join("\n\n"), meta.title)} />
-        <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={panel === "outline"} onClick={() => togglePanel("outline")} />
-        <IconButton name="microphone" label="Voice panel" aria-pressed={panel === "voice"} onClick={() => togglePanel("voice")} />
-      </header>
-      {find.open && (
+      <ReaderTop
+        meta={meta}
+        display={display}
+        onDisplay={setDisplay}
+        panel={ui.panel}
+        bookmarked={nav.bookmarks.some((b) => b.sentence === ctl.here)}
+        blocked={ctl.blocked}
+        dispatch={dispatch}
+        onBack={onBack}
+        onBookmark={() => nav.bookmarkSentence(ctl.here)}
+        onExport={() => onExport(doc.blocks.map((b) => b.text).join("\n\n"), meta.title)}
+      />
+      {ui.find.open && (
         <FindBar
-          query={find.query}
-          count={matches.length}
-          current={find.current}
-          onQuery={(query) => setFind({ open: true, query, current: 0 })}
-          onStep={stepFind}
-          onClose={() => setFind({ open: false, query: "", current: 0 })}
+          query={ui.find.query}
+          count={nav.matches.length}
+          current={ui.find.current}
+          onQuery={(query) => dispatch({ type: "find-query", query })}
+          onStep={nav.stepFind}
+          onClose={() => dispatch({ type: "find-close" })}
         />
       )}
-      <div className="rd-main">
-        <div className="rd-scroll" ref={scroller} onWheel={leaveFollow} onPointerDown={leaveFollow} data-testid="reader-scroll">
-          <article className="rd-article" ref={textRoot}>
-            <h1 className="rd-title" dir="auto">
-              {meta.title}
-            </h1>
-            <p className="rd-meta">
-              {meta.wordCount.toLocaleString()} words{meta.pages ? ` · ${meta.pages} pages` : ""}
-            </p>
-            {meta.needsOcr && <OcrPanel id={id} pages={meta.pages ?? 0} onDone={() => void refresh()} />}
-            {st.error && (
-              <Banner
-                tone="error"
-                title="Reading stopped"
-                action={
-                  <Button size="sm" onClick={toggle}>
-                    Try again
-                  </Button>
-                }
-              >
-                {st.error.message}
-              </Banner>
-            )}
-            <ReaderText blocks={doc.blocks} onPick={(c) => setPick({ ...c, sentence: sentenceAt(doc, c.block, c.offset) })} />
-          </article>
-          {pick && (
-            <div className="rd-chip" style={{ left: pick.x, top: pick.y - 44 }} role="toolbar">
-              <Button size="sm" variant="primary" iconLeft="player-play" onClick={() => readFrom(pick.sentence)}>
-                Read from here
-              </Button>
-              <Button
-                size="sm"
-                iconLeft="bookmark"
-                onClick={() => {
-                  bookmarkSentence(pick.sentence);
-                  setPick(null);
-                }}
-              >
-                Bookmark
-              </Button>
-              <Button
-                size="sm"
-                iconLeft="copy"
-                onClick={() => {
-                  void api.copy(doc.sentences[pick.sentence]?.text ?? "");
-                  setPick(null);
-                }}
-              >
-                Copy
-              </Button>
-            </div>
-          )}
-        </div>
-        {panel === "outline" && (
-          <OutlinePanel
-            items={outlineItems}
-            bookmarks={bookmarks}
-            current={sentence?.block ?? 0}
-            onPick={jumpTo}
-            onPickBookmark={goToBookmark}
-            onRemoveBookmark={(i) => saveBookmarks(bookmarks.filter((b) => b.sentence !== i))}
-            onClose={() => setPanel(null)}
-          />
-        )}
-        {panel === "voice" && <VoicePanel voices={voices} voiceId={voiceId} speed={speed} onVoice={changeVoice} onSpeed={changeSpeed} onClose={() => setPanel(null)} />}
-        {away && st.status === "playing" && (
-          <button
-            type="button"
-            className="rd-back"
-            onClick={() => {
-              following.current = true;
-              setAway(false);
-              scrollToCurrent();
-            }}
-          >
-            <Icon name="arrow-down" size={14} /> Back to current
-          </button>
-        )}
-        {st.status === "preparing" && st.elapsedMs > 0 && (
-          <div className="rd-prepare" role="status">
-            <Spinner size={14} /> Preparing next paragraph
-          </div>
-        )}
-        {st.status === "finished" && !dismissedFinish && <FinishedCard title={meta.title} onBack={onBack} onReplay={() => startAt(0)} />}
+      <ReaderMain props={{ s, meta, doc, ui, st, ctl, nav, refs, dispatch, onBack }} />
+      <ReaderBar props={{ meta, ui, st, ctl, command, dispatch }} />
+    </div>
+  );
+}
+
+interface BarProps {
+  props: Pick<ReadyProps, "meta" | "ui" | "dispatch"> & { st: PlayerState; ctl: ReturnType<typeof useReaderControl>; command(c: PlayerCommand): void };
+}
+
+/** The bottom player bar wired to the controls. */
+function ReaderBar({ props: { meta, ui, st, ctl, command, dispatch } }: BarProps) {
+  return (
+    <PlayerBar
+      title={meta.title}
+      state={st}
+      estimatedTotalMs={estimateMs(meta.wordCount, ui.speed)}
+      speed={ui.speed}
+      voices={ui.voices}
+      voiceId={ui.voiceId}
+      sleepLeftMs={ui.sleepLeft}
+      disabled={ctl.blocked}
+      panel={ui.panel}
+      onToggle={ctl.toggle}
+      onSkip={(d) => ctl.active && command({ cmd: "seek-ms", deltaMs: d })}
+      onBlock={(d) => (ctl.active ? command({ cmd: d === 1 ? "next-block" : "prev-block" }) : ctl.toggle())}
+      onSeek={ctl.seekFraction}
+      onSpeed={ctl.changeSpeed}
+      onVoice={ctl.changeVoice}
+      onSleep={ctl.changeSleep}
+      onOutline={() => dispatch({ type: "toggle-panel", panel: "outline" })}
+    />
+  );
+}
+
+interface MainProps {
+  props: Pick<ReadyProps, "s" | "meta" | "doc" | "ui" | "dispatch" | "onBack"> & {
+    st: ReturnType<typeof useReaderPlayer>["state"];
+    ctl: ReturnType<typeof useReaderControl>;
+    nav: ReturnType<typeof useReaderNav>;
+    refs: ReturnType<typeof useReaderRefs>;
+  };
+}
+
+/** The scrolling text with its floating pieces, the side panels and the finished card. */
+function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBack } }: MainProps) {
+  const { pick } = ui;
+  const bookmarkPick = (sentence: number) => {
+    nav.bookmarkSentence(sentence);
+    dispatch({ type: "pick", pick: null });
+  };
+  return (
+    <div className="rd-main">
+      <div className="rd-scroll" ref={refs.scroller} onWheel={nav.leaveFollow} onPointerDown={nav.leaveFollow} data-testid="reader-scroll">
+        <ReaderArticle meta={meta} doc={doc} error={st.error} textRef={refs.textRoot} dispatch={dispatch} onRetry={ctl.toggle} onOcrDone={() => void nav.reload()} />
+        {pick && <PickChip pick={pick} onRead={() => nav.readFrom(pick.sentence)} onBookmark={() => bookmarkPick(pick.sentence)} onCopy={() => nav.copySentence(pick.sentence)} />}
       </div>
-      <PlayerBar
-        title={meta.title}
-        state={st}
-        estimatedTotalMs={estimateMs(meta.wordCount, speed)}
-        speed={speed}
-        voices={voices}
-        voiceId={voiceId}
-        sleepLeftMs={sleepLeft}
-        disabled={blocked}
-        panel={panel}
-        onToggle={toggle}
-        onSkip={(d) => active && command({ cmd: "seek-ms", deltaMs: d })}
-        onBlock={(d) => (active ? command({ cmd: d === 1 ? "next-block" : "prev-block" }) : toggle())}
-        onSeek={seekFraction}
-        onSpeed={changeSpeed}
-        onVoice={changeVoice}
-        onSleep={changeSleep}
-        onOutline={() => togglePanel("outline")}
-      />
+      {ui.panel === "outline" && (
+        <OutlinePanel
+          items={nav.outlineItems}
+          bookmarks={nav.bookmarks}
+          current={nav.sentence?.block ?? 0}
+          onPick={nav.jumpTo}
+          onPickBookmark={nav.goToBookmark}
+          onRemoveBookmark={(i) => nav.saveBookmarks(nav.bookmarks.filter((b) => b.sentence !== i))}
+          onClose={() => dispatch({ type: "close-panel" })}
+        />
+      )}
+      {ui.panel === "voice" && (
+        <VoicePanel voices={ui.voices} voiceId={ui.voiceId} speed={ui.speed} onVoice={ctl.changeVoice} onSpeed={ctl.changeSpeed} onClose={() => dispatch({ type: "close-panel" })} />
+      )}
+      {ui.away && st.status === "playing" && <BackToCurrent onClick={nav.followAgain} />}
+      {st.status === "preparing" && st.elapsedMs > 0 && <PreparingNote />}
+      {st.status === "finished" && !ui.dismissedFinish && <FinishedCard title={meta.title} onBack={onBack} onReplay={() => ctl.startAt(0)} />}
     </div>
   );
 }
