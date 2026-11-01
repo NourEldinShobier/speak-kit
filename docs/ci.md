@@ -21,7 +21,7 @@ A `plan` step turns them into run flags. **Everything runs** (`full`) on a tag, 
 |---|---|---|---|
 | `static` | ubuntu | always | `typecheck` (tsrs), `lint`, `fmt:check`, `knip`, `gen-docs.mjs --check`, `pnpm run gates` (deps, CSS, network, integrity, ratchet) |
 | `unit` | ubuntu | `ext`, `shared`, `e2e` or full | `vp test run --exclude "apps/desktop/**" --changed <base>` |
-| `e2e-extension` | ubuntu x2 shards, windows | `ext`, `shared`, `e2e` or full | Playwright specs in `code/e2e/tests` with the fake engine, no perf phase; the two OS-dependent specs (see below) run on Windows only |
+| `e2e-extension` | ubuntu, 2 shards | `ext`, `shared`, `e2e` or full | Playwright specs in `code/e2e/tests` with the fake engine, no perf phase |
 | `desktop` | windows | `desktop`, `shared` or full | builds desktop and extension, runs the desktop package's tests (Electron) |
 | `ci-ok` | ubuntu | always | fails when any needed job failed or was cancelled; skipped jobs pass |
 
@@ -55,9 +55,9 @@ Tags `v*`, the nightly schedule, a manual dispatch, and any change to the lockfi
 
 The runner has 2 vCPUs. Windows minutes cost double and macOS ten times on a private repository, so only the `desktop` job (Electron) uses Windows; everything else is ubuntu. pnpm's store is cached through `setup-node`, the Playwright browser through `actions/cache` keyed by the lockfile.
 
-### OS-dependent specs
+### Fonts on the runner
 
-`options at 200% zoom and 320 px reflow` (a11y.spec.ts) measures layout with the OS fonts, and `restart mid-playback surfaces an error` (system.spec.ts) depends on how the closed socket of the stopped server reaches the player. Both failed on every attempt on ubuntu; the `windows` entry of the e2e matrix runs them, and the ubuntu shards skip them with `--grep-invert`. The patterns sit in the `matrix.include` list of `ci.yml`.
+The extension pages ask for Inter first and bundle no web font, so layout checks depend on the installed fonts. The e2e job installs `fonts-inter` (apt) so the 320 px reflow checks measure the intended font and not the runner's wider fallback.
 
 ## Add a spec group
 

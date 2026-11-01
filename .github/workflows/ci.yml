@@ -180,28 +180,22 @@ jobs:
       - name: Unit and integration tests
         run: pnpm exec vp test run --exclude "apps/desktop/**" ${{ steps.select.outputs.args }}
 
-  # Two specs depend on the OS (fonts decide the 320 px reflow check; how the closed socket of a stopped server reaches the player), so
-  # they run on Windows only and the Linux shards skip them. Everything else runs on ubuntu.
   e2e-extension:
     needs: changes
     if: needs.changes.outputs.ext == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { name: linux 1/2, os: ubuntu-latest, shard: "--shard=1/2", filter: "--grep-invert", pattern: "@slow|options at 200% zoom and 320 px reflow|restart mid-playback surfaces an error" }
-          - { name: linux 2/2, os: ubuntu-latest, shard: "--shard=2/2", filter: "--grep-invert", pattern: "@slow|options at 200% zoom and 320 px reflow|restart mid-playback surfaces an error" }
-          - { name: windows, os: windows-latest, shard: "", filter: "--grep", pattern: "options at 200% zoom and 320 px reflow|restart mid-playback surfaces an error" }
-    name: e2e-extension (${{ matrix.name }})
+        shard: [1/2, 2/2]
+    name: e2e-extension (${{ matrix.shard }})
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright
     defaults:
       run:
         working-directory: code
-        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -221,13 +215,15 @@ jobs:
         working-directory: code/e2e
         run: |
           pnpm exec playwright install chromium
-          if [ "$RUNNER_OS" = Linux ]; then pnpm exec playwright install-deps chromium; fi
+          pnpm exec playwright install-deps chromium
+      # The pages ask for Inter first; without it the runner falls back to a wider font and the 320 px reflow check overflows.
+      - name: Install the Inter font
+        run: sudo apt-get install -y --no-install-recommends fonts-inter
       # The fake engine, no real model. The perf phase (absolute timing budgets) belongs on a quiet machine. The runner has 2 vCPUs:
       # one browser at a time, and a retry for the specs with short idle windows.
       - name: End-to-end tests (extension)
-        run: node e2e/run.mjs ${{ matrix.shard }} ${{ matrix.filter }} "$PATTERN"
+        run: node e2e/run.mjs --shard=${{ matrix.shard }}
         env:
-          PATTERN: ${{ matrix.pattern }}
           E2E_SKIP_PERF: "1"
           E2E_WORKERS: "1"
           E2E_RETRIES: "2"
