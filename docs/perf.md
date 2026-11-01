@@ -148,6 +148,10 @@ What kokoro-js already does was measured by running its own pre-processing and p
 - Chatterbox ignores `speed` below 2 (the model has no speed control); the player's `playbackRate` only covers speeds above 2.
 - Real-model regression run (`SPEAKKIT_REAL=1`, engine and server suites): all pass, 72 and 83 tests.
 
+## Verification, v0.3.0 (2026-11-01)
+
+Measured by `pnpm e2e:full` on this machine (real Kokoro, perf phase, one worker, nothing else running): click Listen with the model unloaded to first audio 1469 ms (budget < 3000 ms); with the model ready 434 ms (budget < 1000 ms). Installer smoke: silent install 39 s; installed app answers /v1/health and speaks a first sentence in the fake-engine smoke; see testing.md. The other budgets in `e2e/perf-results.jsonl` passed in the same run.
+
 ## Integration check, v0.2.0 (2026-11-01)
 
 After the refactors of this release (server split into routes, desktop main split into window/runtime/handlers, service worker split, shared wire schemas) the budgets were measured again with `pnpm e2e:full` (perf phase, one worker, real Kokoro where noted) and the extension size report. Windows 11, the same shared machine, so expect roughly 10 to 30 % noise.

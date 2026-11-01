@@ -15,6 +15,7 @@ Types: `feat fix docs style refactor perf test build ci chore revert`. Scope = f
 ## Before pushing
 
 ```bash
+pnpm run fmt              # format (vp fmt); CI runs fmt:check
 pnpm exec vp check        # format, lint, types
 pnpm exec vp test run     # unit + integration + component
 pnpm run e2e              # Playwright fast set (fake engine)

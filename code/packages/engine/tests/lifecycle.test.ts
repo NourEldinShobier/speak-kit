@@ -171,10 +171,11 @@ describe("idle unload", () => {
   });
 
   it("each synthesis restarts the window", async () => {
-    const e = lazy({ idleUnloadMs: 100 });
+    // Four gaps of 100 ms add up to more than the 300 ms window, so only a restart per synthesis keeps the model loaded; 3x margin for a loaded machine.
+    const e = lazy({ idleUnloadMs: 300 });
     for (let i = 0; i < 4; i++) {
       await synth(e);
-      await sleep(50);
+      await sleep(100);
     }
     expect(e.status().state).toBe("ready");
     expect(e.loads).toBe(1);

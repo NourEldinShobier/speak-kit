@@ -9,9 +9,11 @@ From `code/`:
 | `pnpm exec vp test run` | Unit and integration tests of every package (vitest through Vite+). `e2e/` is excluded by `code/vite.config.ts`. |
 | `pnpm run typecheck` | `node scripts/typecheck.mjs`: tsrs on every project (what CI runs). One project: `pnpm exec tsrs --noEmit -p <dir>`. |
 | `pnpm run lint` / `pnpm run knip` | Lint (oxlint through Vite+; also enforces the module boundaries: the desktop renderer never imports `main/`, extension `app/` imports other features only through their `index.ts`) and unused files, exports and dependencies (knip, `code/knip.json`). Both run in CI. |
+| `pnpm run fmt` / `pnpm run fmt:check` | Formatter (oxfmt through `vp fmt`, configured under `fmt` in `code/vite.config.ts`: 200 columns, the existing hand-written style; fixtures and the generated `icon-data.ts` and `tokens.ts` are ignored). `fmt:check` runs in CI. Line endings are LF everywhere (`.gitattributes`: `* text=auto eol=lf`; `.cmd` and `.bat` stay CRLF). |
 | `pnpm exec tsrs --noEmit -p <dir>` | Type check (`packages/*`, `apps/extension`, `apps/desktop`, `e2e/tsconfig.check.json`). |
 | `pnpm run e2e` | Builds the extension with test hooks into `apps/extension/dist-e2e` (`SPEAKKIT_TEST=1`, own folder so a normal `dist` build cannot overwrite it), runs the fast Playwright suite, then the performance budgets alone (1 worker). |
 | `pnpm run e2e:full` | Same plus the `@slow` tests: real Kokoro model through the real server CLI, and the Electron desktop app. Also builds the desktop app. |
+| `node apps/desktop/scripts/smoke-installer.mjs` | Silent-installs `release/SpeakKit-Setup-<version>.exe` into a temp folder with an isolated user-data folder and port, runs `smoke-packaged.mjs` on the installed exe (health, voices, one sentence, bundled extension and worker, a second launch that must exit without adding processes, `--quit`, port freed), runs the uninstaller silently and checks the folder is gone. `smoke-packaged.mjs --exe <portable exe>` does the same for the portable build (set `SMOKE_WAIT_S=120`: the first start unpacks 170 MB). |
 | `node e2e/run.mjs tests/popup.spec.ts -g "offline"` | Any Playwright args after the script; skips the perf phase. `--no-build` reuses `dist-e2e`. |
 | `E2E_HEADED=1` | Show the browser. Default is Chromium's new headless mode (`channel: "chromium"`, supports extensions). |
 
@@ -50,14 +52,21 @@ Files in `code/e2e/tests`:
 
 ## Last result
 
-v0.2.0 integration run (2026-11-01, Windows 11, this machine):
+v0.3.0 verification run (2026-11-01, Windows 11, this machine):
 
-- Unit and integration (`pnpm exec vp test run` from `code/`): 71 files passed, 5 skipped; 598 tests passed, 21 skipped, 0 failed. The skipped ones are opt-in: real Kokoro (`SPEAKKIT_REAL=1`), real Chatterbox (`SPEAKKIT_REAL_CHATTERBOX=1`, needs an NVIDIA GPU and uv or Python 3.10 to 3.12; passed 2026-11-01, see perf.md) and the screenshot generators. By package: protocol 11, ui 28, player 51, engine 73, server 82, extension 112 (+17 skipped), desktop 241.
-- `pnpm e2e:full`: 140 passed in the main phase (real Kokoro and Electron included), 5 passed in the perf phase, 0 failed.
-- `pnpm run typecheck`: 8 of 8 projects clean (tsrs). `vp lint`: 0 warnings, 0 errors. `knip`: clean.
+- Unit and integration (`pnpm exec vp test run` from `code/`, root config): 99 files passed, 4 skipped; 792 tests passed, 4 skipped, 0 failed. The skipped ones are opt-in: real Kokoro (`SPEAKKIT_REAL=1`), real Chatterbox (`SPEAKKIT_REAL_CHATTERBOX=1`) and the screenshot generators.
+- `pnpm e2e:full` (real Kokoro, Electron): 149 passed in the main phase, 6 in the perf phase, 0 failed.
+- `pnpm run typecheck`: 8 of 8 projects clean (tsrs). `vp lint`: exit 0, no findings. `fmt:check` and `knip`: clean.
+- Installer: `smoke-installer.mjs` on `SpeakKit-Setup-0.3.0.exe` passed (silent install 39 s, health v0.3.0, 28 voices, single instance, `--quit` exit 0, silent uninstall removed the folder). `smoke-packaged.mjs` on `SpeakKit-0.3.0-portable.exe` passed with the same checks except the bundled-file ones (the portable build unpacks to a temp folder).
+- Not run: the installer on a second machine or a clean Windows profile, a real auto-update from a published release, Chatterbox through the installed app, SmartScreen behaviour of the unsigned build.
+- Flakes found and fixed in this pass: the root `vp test run` lacked the `__TEST__` define the extension package sets for itself (side panel test threw a ReferenceError only from the root); `engine/tests/lifecycle.test.ts > each synthesis restarts the window` used a 100 ms window with 50 ms gaps and failed once under a parallel run (now 300 ms and 100 ms); the visual harness looked for an `aria-label` on the dock voice chip that is named by its hidden "Voice:" text (B16 failed and left its page open, which broke the reader captures after it). One desktop test, `system.test.ts > the tray panel shows the reading ...`, failed once in a parallel run after a build, then passed in the next three full runs and in isolation; the panel hides on blur, so another Electron window taking focus can close it.
+
+Earlier, v0.2.0 integration run (same machine):
+
+- 598 unit tests passed; `pnpm e2e:full` 140 passed plus 5 perf checks; typecheck, lint and knip clean.
 - One flake seen once in a full parallel run: `content.test.ts > bubble settings button opens the speed popover` timed out at 5 s while every package's tests ran at once; it passed in three isolated runs. It drives a real Chromium and waits on a selector.
 
-What the integration pass found:
+What the v0.2.0 integration pass found:
 
 - The real-Kokoro e2e tests failed after a refactor of `packages/engine/src/worker.ts`: the worker runs as raw TypeScript under node, so a value import of `./worker-protocol` (no extension) crashed it at start. The schema moved into the worker file; `tests/worker-init.test.ts` now spawns the worker the same way and checks the error message.
 - The extension's health schema rejected the `installing` and `unavailable` engine states. One schema in `@speakkit/protocol`, tested in `schemas.test.ts`.
@@ -81,7 +90,7 @@ New tests in this pass: `fetch-url.test.ts` (private addresses, redirects, size 
 - The deep link is faked in the browser (no OS protocol handler is registered in the test profile). The desktop side is real: a second launch with `speakkit://launch` or `speakkit://pair` focuses the first instance. Registering the protocol with Windows (`setAsDefaultProtocolClient`) is skipped under `SPEAKKIT_USER_DATA`.
 - The desktop e2e uses the fake engine; only `full.spec.ts` uses real Kokoro, through the standalone server CLI, not through the Electron app (child-process model host under Electron is not tested). Tray icon pixels, toasts and launch at login are not driven; tray state mapping and the Quit dialog are covered in `apps/desktop/tests/shell.test.ts`.
 - "Launch at login" in the desktop app and installers are not tested.
-- Not covered by unit tests: the desktop `config`, `engines`, `export/service`, `reader/service`, `tray` and `system/keys` modules (the Electron specs exercise them). The extension popup (`PopupScreen`), side panel (`SidePanelApp`, `QueuePanel`), options Sites and Shortcuts sections and the in-page launcher (edge tab and pill, bubble, paragraph button, toast) have component tests under linkedom (`apps/extension/src/testing/dom.tsx`; no layout, focus rings or pointer capture, which stay in `content.test.ts` and Playwright). The `ui` package compares the vanilla builders with the React components in `tests/parity.test.tsx` (markup and classes of button, icon button, toggle, pill, kbd, logo, avatar, menu item, progress bar, tooltip); the slider, segmented control, menu and popover surface twins are not compared. `packages/player` is covered through `Player` and by direct tests of the timeline, queue and sentence splitter.
+- The desktop `config`, `engines`, `export/service`, `reader/service`, `tray` and `system/keys` modules have unit tests (electron mocked where needed) next to the Electron specs. The extension popup (`PopupScreen`), side panel (`SidePanelApp`, `QueuePanel`), options Sites and Shortcuts sections and the in-page launcher (edge tab and pill, bubble, paragraph button, toast) have component tests under linkedom (`apps/extension/src/testing/dom.tsx`; no layout, focus rings or pointer capture, which stay in `content.test.ts` and Playwright). The `ui` package compares the vanilla builders with the React components in `tests/parity.test.tsx` (markup and classes of button, icon button, toggle, pill, kbd, logo, avatar, menu item, progress bar, tooltip); the slider, segmented control, menu and popover surface twins are not compared. `packages/player` is covered through `Player` and by direct tests of the timeline, queue and sentence splitter.
 - Visual fidelity against `designs/next/screens` belongs to the visual harness (`code/e2e/visual`, see visual-fidelity.md): it captures every state in dark and light from the built product, diffs it against the designs and builds `designs/built/review.html`.
 
 ## Desktop system integration (desktop-system)

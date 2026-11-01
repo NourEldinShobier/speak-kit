@@ -82,6 +82,8 @@ Electron main starts the same `createServer` in-process (engine in its worker th
 `app/background/index.ts` registers listeners. `router.ts` handles the inbound messages (parsed with `shared/schemas.ts`; the known types come from the schema), `player.ts` (commands to the offscreen player), `offscreen.ts`, `reading.ts` (extract and start a read), `connection.ts` (health cache, app launch), `menus.ts`, `commands.ts`, `state.ts`. The worker is suspended when idle: player state, the last document, the queue and the auto-play choice are mirrored to `chrome.storage.session` and read back on demand.
 
 ## Testing
+
+Formatting is one tool for the whole repo: oxfmt through `vp fmt` (config under `fmt` in `code/vite.config.ts`), LF line endings enforced by `.gitattributes`, checked in CI. Release builds are verified by `apps/desktop/scripts/smoke-installer.mjs` (silent install, single-instance launch, quit, silent uninstall) and `smoke-packaged.mjs` (see testing.md).
 - Unit/integration with `vp test` next to the code. Server tests run on FakeEngine; one opt-in real-model test (`SPEAKKIT_REAL=1`).
 - E2E (Playwright, `e2e/`): Chromium persistent context with `--load-extension=apps/extension/dist`, local fixture web server, real server process (fake engine for fast suites, real Kokoro for the full-path suite). Desktop via `_electron.launch`.
 - How to run everything, coverage and known gaps: `docs/testing.md` (`pnpm run e2e`, `pnpm run e2e:full` from `code/`).
