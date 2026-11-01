@@ -112,6 +112,9 @@
   --lm-dur-normal: 250ms;
   --lm-dur-slow: 333ms;
   --lm-dur-exit: 120ms;
+  /* looping animations: one cycle of the spinner, and of shimmer, indeterminate bar and caret blink */
+  --lm-dur-spin: 800ms;
+  --lm-dur-shimmer: 1200ms;
   /* focus ring: 2px accent. The board header says 2px offset, the drawn nodes have none. Drawn
      components (buttons, pills) use --lm-ring-offset-drawn, the rest --lm-ring-offset. */
   --lm-ring: 2px;
@@ -167,12 +170,12 @@
   fill: currentColor;
   stroke-width: calc(54 / var(--s));
 }
-/* The pause bars are lines (see gen-icons.mjs), so their width is the stroke. */
+/* The pause bars are narrow, so they take a heavier stroke than play and stop. */
 .lm-icon--player-pause {
   stroke-width: calc(66 / var(--s));
 }
 .lm-spin {
-  animation: lm-spin 800ms linear infinite;
+  animation: lm-spin var(--lm-dur-spin) linear infinite;
 }
 @keyframes lm-spin {
   to {
@@ -785,7 +788,7 @@
     "Inter Variable",
     system-ui,
     sans-serif;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
 }
@@ -992,7 +995,7 @@
 }
 .lm-select__value {
   flex: 1;
-  text-align: left;
+  text-align: start;
 }
 .lm-select__trigger .lm-icon {
   color: var(--text-secondary);
@@ -1135,7 +1138,7 @@
 }
 .lm-skeleton.is-shimmer .lm-skeleton__line {
   background: linear-gradient(90deg, var(--fill-hover) 25%, var(--fill-selected) 50%, var(--fill-hover) 75%) 0 0 / 200% 100%;
-  animation: lm-shimmer 1200ms linear infinite;
+  animation: lm-shimmer var(--lm-dur-shimmer) linear infinite;
 }
 @keyframes lm-shimmer {
   to {
@@ -1177,7 +1180,7 @@
 }
 .lm-progress.is-indeterminate .lm-progress__bar {
   width: 40%;
-  animation: lm-indeterminate 1200ms var(--lm-ease-slow) infinite;
+  animation: lm-indeterminate var(--lm-dur-shimmer) var(--lm-ease-slow) infinite;
 }
 @keyframes lm-indeterminate {
   from {
@@ -1191,10 +1194,10 @@
   display: inline-block;
   width: 2px;
   height: 1.2em;
-  margin-left: 1px;
+  margin-inline-start: 1px;
   vertical-align: text-bottom;
   background: var(--accent-default);
-  animation: lm-blink 1200ms steps(1) infinite;
+  animation: lm-blink var(--lm-dur-shimmer) steps(1) infinite;
 }
 @keyframes lm-blink {
   50% {
@@ -1328,7 +1331,7 @@
   padding: 12px;
   border-top: 1px solid var(--stroke-divider);
   color: var(--text-tertiary);
-  text-align: left;
+  text-align: start;
   background: transparent;
   width: 100%;
   font: inherit;
@@ -1338,9 +1341,9 @@
 }
 button.lm-listrow {
   appearance: none;
-  border-right: 0;
+  border-inline-end: 0;
   border-bottom: 0;
-  border-left: 0;
+  border-inline-start: 0;
   cursor: pointer;
 }
 .lm-listrow:is(:hover, .is-hover) {
@@ -1461,7 +1464,7 @@ button.lm-listrow {
   position: absolute;
   z-index: 30;
   top: calc(100% + 6px);
-  left: 0;
+  inset-inline-start: 0;
   animation: lm-pop var(--lm-dur-fast) var(--lm-ease);
 }
 
@@ -1491,7 +1494,7 @@ button.lm-listrow {
     "Inter Variable",
     system-ui,
     sans-serif;
-  text-align: left;
+  text-align: start;
   text-decoration: none;
   cursor: pointer;
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
@@ -1749,5 +1752,22 @@ button.lm-listrow {
   .lm-caret,
   .lm-progress.is-indeterminate .lm-progress__bar {
     animation: none !important;
+  }
+}
+
+/* ---------- more contrast: strokes and tertiary text take the strong colours ---------- */
+@media (prefers-contrast: more) {
+  .lm {
+    --stroke-control: var(--text-secondary);
+    --stroke-divider: var(--text-secondary);
+    --text-tertiary: var(--text-secondary);
+  }
+}
+
+/* ---------- reduced transparency: no blurred backdrops ---------- */
+@media (prefers-reduced-transparency: reduce) {
+  .lm,
+  .lm * {
+    backdrop-filter: none !important;
   }
 }
