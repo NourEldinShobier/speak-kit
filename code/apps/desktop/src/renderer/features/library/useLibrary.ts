@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import type { DocMeta, SearchHit } from "../../../shared/library/contract";
 import { library } from "./api";
 
+/** The readings (null until the first load) and when they were loaded, which "Today" labels are relative to. */
 export function useDocs() {
-  const [docs, setDocs] = useState<DocMeta[] | null>(null);
-  const refresh = useCallback(async () => setDocs(await library.list()), []);
+  const [state, setState] = useState<{ docs: DocMeta[] | null; now: number }>({ docs: null, now: Date.now() });
+  const refresh = useCallback(async () => setState({ docs: await library.list(), now: Date.now() }), []);
   useEffect(() => {
     void refresh();
   }, [refresh]);
-  return { docs, refresh };
+  return { docs: state.docs, now: state.now, refresh };
 }
 
 const SEARCH_DELAY_MS = 150;
