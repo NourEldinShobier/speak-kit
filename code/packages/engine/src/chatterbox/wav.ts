@@ -6,13 +6,17 @@ export interface Wav {
   samples: Float32Array;
 }
 
-/** Parses RIFF/WAVE with PCM 8/16/24/32-bit or float32/64 data, any channel count (mixed down to mono). */
-export function parseWav(buf: Uint8Array): Wav {
-  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+interface Fmt {
+  format: number;
+  channels: number;
+  rate: number;
+  bits: number;
+}
+
+/** The fmt and data chunks of a RIFF/WAVE file: data as [start, end) byte offsets. */
+function findChunks(buf: Uint8Array, dv: DataView): { fmt?: Fmt; data?: [start: number, end: number] } {
   const tag = (o: number) => String.fromCharCode(...buf.subarray(o, o + 4));
-  if (buf.length < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new WavError("not a WAV file");
-  let fmt: { format: number; channels: number; rate: number; bits: number } | undefined;
-  let data: [start: number, end: number] | undefined;
+  let fmt: Fmt | undefined;
   for (let o = 12; o + 8 <= buf.length;) {
     const size = dv.getUint32(o + 4, true);
     const body = o + 8;
@@ -21,11 +25,19 @@ export function parseWav(buf: Uint8Array): Wav {
       if (format === 0xfffe && size >= 26) format = dv.getUint16(body + 24, true); // WAVE_FORMAT_EXTENSIBLE
       fmt = { format, channels: dv.getUint16(body + 2, true), rate: dv.getUint32(body + 4, true), bits: dv.getUint16(body + 14, true) };
     } else if (tag(o) === "data") {
-      data = [body, Math.min(buf.length, body + size)];
-      break;
+      return { ...(fmt && { fmt }), data: [body, Math.min(buf.length, body + size)] };
     }
     o = body + size + (size & 1);
   }
+  return { ...(fmt && { fmt }) };
+}
+
+/** Parses RIFF/WAVE with PCM 8/16/24/32-bit or float32/64 data, any channel count (mixed down to mono). */
+export function parseWav(buf: Uint8Array): Wav {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const tag = (o: number) => String.fromCharCode(...buf.subarray(o, o + 4));
+  if (buf.length < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new WavError("not a WAV file");
+  const { fmt, data } = findChunks(buf, dv);
   if (!fmt || !data) throw new WavError("WAV file has no audio data");
   const { format, channels, rate, bits } = fmt;
   if (channels < 1 || (format !== 1 && format !== 3)) throw new WavError("unsupported WAV encoding (use PCM or float)");

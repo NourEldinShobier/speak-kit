@@ -16,6 +16,12 @@ const MIN_SNR_DB = 15;
 const db = (rms: number) => 20 * Math.log10(Math.max(rms, 1e-9));
 const sec = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
+function lengthMessage(durationMs: number): string {
+  if (durationMs < CLONE_MIN_MS) return `Clip is ${sec(durationMs)}; at least ${sec(CLONE_MIN_MS)} is needed.`;
+  if (durationMs > CLONE_MAX_MS) return `Clip is ${sec(durationMs)}; at most ${sec(CLONE_MAX_MS)} is allowed.`;
+  return `Clip is ${sec(durationMs)}.`;
+}
+
 /**
  * Quality checks for a reference clip (designs G7, G15). Heuristics on the signal only:
  * length, sample rate, overall level, share of silence, and a noise estimate (loud frames against the quietest 10%).
@@ -42,12 +48,7 @@ export function analyzeClip({ sampleRate, samples }: Wav): ClipReport {
     {
       id: "length",
       ok: durationMs >= CLONE_MIN_MS && durationMs <= CLONE_MAX_MS,
-      message:
-        durationMs < CLONE_MIN_MS
-          ? `Clip is ${sec(durationMs)}; at least ${sec(CLONE_MIN_MS)} is needed.`
-          : durationMs > CLONE_MAX_MS
-            ? `Clip is ${sec(durationMs)}; at most ${sec(CLONE_MAX_MS)} is allowed.`
-            : `Clip is ${sec(durationMs)}.`,
+      message: lengthMessage(durationMs),
     },
     {
       id: "sample-rate",

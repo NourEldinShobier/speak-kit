@@ -62,7 +62,7 @@ export interface TtsEngine {
 }
 
 export class EngineUnavailableError extends Error {
-  reason?: EngineReason;
+  reason?: EngineReason | undefined;
   constructor(message: string, reason?: EngineReason) {
     super(message);
     this.name = "EngineUnavailableError";

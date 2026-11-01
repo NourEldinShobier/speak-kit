@@ -74,8 +74,8 @@ export class FakeEngine extends LifecycleEngine {
   }
 
   /** Samples produced for `text` at `speed`. */
-  static sampleCount(text: string, speed: number, secondsPerChar = 0.06, rate = SAMPLE_RATE): number {
-    return Math.max(1, Math.round((text.length * secondsPerChar * rate) / speed));
+  static sampleCount(text: string, speed: number, secondsPerChar = 0.06): number {
+    return Math.max(1, Math.round((text.length * secondsPerChar * SAMPLE_RATE) / speed));
   }
 
   protected async doSynthesize(text: string, { voice, speed, signal }: SynthOptions): Promise<Synthesized> {
