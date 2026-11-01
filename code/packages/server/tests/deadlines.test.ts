@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
+import { FrameDecoder } from "@speakkit/protocol";
 import { StalledEngine, readFrames, speakBody, start, type Ctx } from "./harness";
 
 let ctx: Ctx | undefined;
@@ -43,6 +44,30 @@ describe("stream idle deadline", () => {
     const speak = () => fetch(`${ctx!.base}/v1/speak`, { method: "POST", headers: { ...ctx!.auth, "Content-Type": "application/json" }, body: speakBody(["a", "b", "c"]) }).then(readFrames);
     const [a, b] = await Promise.all([speak(), speak()]);
     for (const frames of [a, b]) expect(frames.map((f) => f.frame.header.type)).toEqual(["audio", "audio", "audio", "done"]);
+  });
+});
+
+describe("a paused read", () => {
+  it("is not a stall: the client stops reading for many idle windows and the stream still completes", async () => {
+    ctx = await start({ secondsPerChar: 0.06 }, undefined, { streamIdleMs: 100 });
+    const sentences = Array.from({ length: 40 }, () => "x".repeat(400)); // about 1.1 MB of audio each, far more than the socket buffers hold
+    const res = await fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: speakBody(sentences) });
+    const reader = res.body!.getReader();
+    const dec = new FrameDecoder();
+    const types: string[] = [];
+    const pull = async () => {
+      const { done, value } = await reader.read();
+      if (done) return false;
+      for (const f of dec.push(value)) types.push(f.header.type);
+      return true;
+    };
+    await pull();
+    await new Promise((r) => setTimeout(r, 600)); // six idle windows with nothing read
+    expect(ctx.engine.calls.length).toBeLessThan(sentences.length); // the server was held back by the full socket, not finished
+    while (await pull());
+    expect(types.filter((t) => t === "audio")).toHaveLength(sentences.length);
+    expect(types.at(-1)).toBe("done");
+    expect(types).not.toContain("error");
   });
 });
 
