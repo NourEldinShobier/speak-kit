@@ -49,7 +49,9 @@ export function PlayerBar(p: BarProps) {
           <Icon name="headphones" size={20} />
         </span>
         <div>
-          <div className="rd-bar__title">{p.title}</div>
+          <div className="rd-bar__title" dir="auto">
+            {p.title}
+          </div>
           <div className="rd-bar__sub">{voice ? `${voice.name} · Kokoro` : "Kokoro"}</div>
         </div>
       </div>

@@ -33,6 +33,14 @@ export async function recognizeAll(engine: OcrEngine, onProgress: (p: OcrProgres
 }
 
 const SCALE = 2;
+/** A scanned page with a huge media box would allocate a canvas of gigabytes; 16 megapixels is about A3 at 200 dpi. */
+const MAX_PIXELS = 16_000_000;
+
+/** The render scale for a page of `width` x `height` points: the normal scale, lowered until the canvas fits MAX_PIXELS. */
+export function ocrScale(width: number, height: number): number {
+  const area = width * height;
+  return area > 0 ? Math.min(SCALE, Math.sqrt(MAX_PIXELS / area)) : SCALE;
+}
 
 /** pdf.js renders each page to a canvas, tesseract.js reads it. Both are loaded here, on first use, and never before the person agreed. */
 export async function openPdfOcr(bytes: Uint8Array, lang = "eng"): Promise<OcrEngine> {
@@ -51,7 +59,8 @@ export async function openPdfOcr(bytes: Uint8Array, lang = "eng"): Promise<OcrEn
     pageCount: doc.numPages,
     async recognize(n) {
       const page = await doc.getPage(n);
-      const viewport = page.getViewport({ scale: SCALE });
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: ocrScale(base.width, base.height) });
       const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
       await page.render({ canvas: canvas as unknown as HTMLCanvasElement, viewport }).promise;
       page.cleanup();

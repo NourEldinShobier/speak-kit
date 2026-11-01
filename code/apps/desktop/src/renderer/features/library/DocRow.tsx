@@ -36,7 +36,7 @@ export function DocRow({ doc, speed, now, query, hit, actions }: { doc: DocMeta;
       <button type="button" className="lib-row__main" onClick={actions.onOpen} aria-label={`Open ${doc.title}`}>
         <span className="lib-row__tile">{badge ? <b>{badge}</b> : <Icon name={doc.source === "url" ? "world" : "clipboard"} size={20} />}</span>
         <span className="lib-row__text">
-          <span className="lib-row__title">
+          <span className="lib-row__title" dir="auto">
             <Marked text={doc.title} query={query} />
           </span>
           <span className="lib-row__sub">{hit?.snippet ? <Marked text={hit.snippet} query={query} /> : <Marked text={subtitle(doc)} query={query} />}</span>

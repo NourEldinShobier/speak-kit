@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Banner, Button, Kbd, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
-import { recordKey, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../shared/shortcuts";
+import { recordKey, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../shared/shortcuts";
 import { api, Page } from "./ui";
 
-export const Keys = ({ accelerator }: { accelerator: string }) => (
+export const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
   <span className="sk-keys">
-    {accelerator.split("+").map((k) => (
-      <Kbd key={k}>{k}</Kbd>
-    ))}
+    {showAccelerator(accelerator, platform, scope)
+      .split("+")
+      .map((k) => (
+        <Kbd key={k}>{k}</Kbd>
+      ))}
   </span>
 );
 
@@ -79,7 +81,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
                         Press new keys <Kbd small>Esc</Kbd> to cancel
                       </span>
                     ) : (
-                      <Keys accelerator={acc} />
+                      <Keys accelerator={acc} platform={s.platform} scope="global" />
                     )}
                     <Button size="sm" aria-label={`Change ${SHORTCUT_LABELS[id].title} shortcut`} onClick={() => (on ? setRecording(null) : (setProblem(null), setRecording(id)))}>
                       {on ? "Cancel" : "Change"}
@@ -118,8 +120,8 @@ export function ShortcutsPage({ s }: { s: AppState }) {
         />
       </SettingsSection>
       <SettingsSection title="In this app">
-        <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" />} />
-        <SettingRow label="New reading" control={<Keys accelerator="Ctrl+N" />} />
+        <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" platform={s.platform} scope="app" />} />
+        <SettingRow label="New reading" control={<Keys accelerator="Ctrl+N" platform={s.platform} scope="app" />} />
       </SettingsSection>
     </Page>
   );

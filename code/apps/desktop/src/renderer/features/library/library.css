@@ -154,7 +154,7 @@
 .lib-row {
   display: flex;
   align-items: center;
-  padding-right: 12px;
+  padding-inline-end: 12px;
   border-top: 1px solid var(--stroke-divider);
 }
 .lib-row:first-child {
@@ -215,11 +215,11 @@
   font-size: 12px;
 }
 .lib-row__len {
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .lib-row__day {
-  text-align: right;
+  text-align: end;
   color: var(--text-secondary);
 }
 .lib-badge--ok {
@@ -258,6 +258,7 @@
 }
 .lib-toast {
   position: fixed;
+  /* physical: centred with translateX, mirrored only by the transform */
   left: 50%;
   bottom: 24px;
   z-index: 20;

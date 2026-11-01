@@ -46,6 +46,19 @@ export function normalize(raw: string): string | null {
   return p ? [...p.mods, p.key].join("+") : null;
 }
 
+/**
+ * How an accelerator reads on this platform. On macOS Alt is Option; Ctrl is Cmd only for keys the app handles itself ("app"),
+ * because a global Electron accelerator "Ctrl" is the Control key.
+ */
+export function showAccelerator(accelerator: string, platform: string, scope: "app" | "global"): string {
+  if (platform !== "darwin") return accelerator;
+  const names: Record<string, string> = { Alt: "Option", ...(scope === "app" ? { Ctrl: "Cmd" } : {}) };
+  return accelerator
+    .split("+")
+    .map((k) => names[k] ?? k)
+    .join("+");
+}
+
 // Combinations Windows or every app already owns; registering them would break the system.
 const RESERVED = new Set(["Alt+F4", "Alt+Tab", "Alt+Space", "Ctrl+Alt+Delete", "Ctrl+Alt+Tab", "Ctrl+Shift+Escape"]);
 

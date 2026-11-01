@@ -1,3 +1,4 @@
+import { compareNames } from "@speakkit/protocol";
 import type { DocMeta } from "../../../shared/library/contract";
 
 /** Speech at speed 1 reads about this many words a minute (15 characters a second, the player's estimate). */
@@ -57,7 +58,7 @@ export function sortDocs(docs: DocMeta[], sort: SortId): DocMeta[] {
   const by: Record<SortId, (a: DocMeta, b: DocMeta) => number> = {
     played: (a, b) => lastTouched(b) - lastTouched(a),
     added: (a, b) => b.addedAt - a.addedAt,
-    title: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }),
+    title: (a, b) => compareNames(a.title, b.title),
     length: (a, b) => b.wordCount - a.wordCount,
   };
   return [...docs].sort(by[sort]);

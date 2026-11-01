@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Banner, Button, DropdownMenu, DropdownMenuItem, EmptyState, Icon, ProgressBar, Select, TextInput, Toast } from "@speakkit/ui";
-import type { Voice } from "@speakkit/protocol";
+import { plural, type Voice } from "@speakkit/protocol";
 import { MAX_FILE_BYTES, type DocMeta, type ImportResult } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
 import { api } from "../../ui";
@@ -132,7 +132,7 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
       <header className="lib-head">
         <div>
           <h1>Library</h1>
-          <p>{docs === null ? " " : `${all.length} ${all.length === 1 ? "reading" : "readings"}${all.length ? ` · ${span(total)} of audio` : ""}`}</p>
+          <p>{docs === null ? " " : `${plural(all.length, "reading", "readings")}${all.length ? ` · ${span(total)} of audio` : ""}`}</p>
         </div>
         <div className="lib-head__actions">
           <TextInput
@@ -186,7 +186,7 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
               </span>
               <div className="lib-resume__text">
                 <span className="sk-caps">Continue listening</span>
-                <strong>{resume.title}</strong>
+                <strong dir="auto">{resume.title}</strong>
                 <span>
                   {resume.origin} · {clock(estimateMs(resume.wordCount, speed) * resume.progress.fraction)} of {clock(estimateMs(resume.wordCount, speed))}
                 </span>
@@ -209,7 +209,7 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
           </div>
           {hits && (
             <div className="lib-count" role="status">
-              {visible.length} {visible.length === 1 ? "result" : "results"}{" "}
+              {plural(visible.length, "result", "results")}{" "}
               <Button size="sm" variant="ghost" onClick={() => setQuery("")}>
                 Clear
               </Button>

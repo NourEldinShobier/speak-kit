@@ -4,6 +4,7 @@ import type { Voice } from "@speakkit/protocol";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import type { Command } from "../shared/palette";
+import { showAccelerator } from "../shared/shortcuts";
 import { api, useAppState, usePreview, useVisible } from "./ui";
 import { BrowserPage, Engines, Home, PreviewCtx, usePlayer, Voices } from "./pages";
 import { Settings, SETTINGS_NAV } from "./settings";
@@ -27,6 +28,9 @@ export function App() {
     if (!t || t === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", t);
   }, [s?.config.theme]);
+  useEffect(() => {
+    if (s?.platform) document.documentElement.dataset.platform = s.platform;
+  }, [s?.platform]);
   return (
     <div className="lm" style={{ height: "100%" }}>
       {!s ? null : s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />}
@@ -167,7 +171,7 @@ function Shell({ s }: { s: AppState }) {
                 <Button variant="primary" iconLeft="plus" onClick={() => setReading("")}>
                   <span className="sk-side__label sk-side__grow">New reading</span>
                   <Kbd small className="sk-side__label">
-                    Ctrl N
+                    {showAccelerator("Ctrl+N", s.platform, "app").replace("+", " ")}
                   </Kbd>
                 </Button>
                 <div style={{ height: 8 }} />
@@ -301,7 +305,7 @@ function TitleBar(p: { s: AppState; canBack: boolean; canFwd: boolean; onBack():
       <button className="sk-search" onClick={p.onSearch} aria-label="Search readings, voices and commands">
         <Icon name="search" size={16} />
         <span>Search readings, voices and commands</span>
-        <Kbd small>Ctrl K</Kbd>
+        <Kbd small>{showAccelerator("Ctrl+K", p.s.platform, "app").replace("+", " ")}</Kbd>
       </button>
       <div className="sk-title__r">
         <StatusPill data-testid="engine-pill" tone={v.tone} icon={v.spinner ? "loader-2" : v.key === "unloaded" ? "moon" : undefined}>

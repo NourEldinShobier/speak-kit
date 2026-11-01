@@ -62,6 +62,10 @@ html[data-hidden] *::after {
 .sk-title .lm-pill {
   -webkit-app-region: no-drag;
 }
+/* macOS: the traffic lights sit at the start of the bar (about 78 px); the same inset on the other side keeps the search box centred. */
+html[data-platform="darwin"] .sk-title {
+  padding-inline: 78px;
+}
 .sk-title__l,
 .sk-title__r {
   display: flex;
@@ -73,6 +77,7 @@ html[data-hidden] *::after {
   justify-content: flex-end;
   gap: 8px;
   /* room for the native caption buttons, so the search box stays centred in the window */
+  /* physical: the native window controls sit at the right edge in every language */
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
 .sk-search {
@@ -88,7 +93,7 @@ html[data-hidden] *::after {
   color: var(--text-tertiary);
   font: inherit;
   cursor: text;
-  text-align: left;
+  text-align: start;
 }
 .sk-search:hover {
   background: var(--fill-hover);
@@ -105,7 +110,7 @@ html[data-hidden] *::after {
 .sk-bell__dot {
   position: absolute;
   top: 6px;
-  right: 6px;
+  inset-inline-end: 6px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -160,7 +165,7 @@ html[data-hidden] *::after {
 }
 .sk-side__grow {
   flex: 1;
-  text-align: left;
+  text-align: start;
 }
 .sk-engcard {
   display: flex;
@@ -205,7 +210,7 @@ html[data-hidden] *::after {
   overflow: auto;
 }
 .sk-side[hidden] + .sk-main {
-  margin-left: 8px;
+  margin-inline-start: 8px;
 }
 @media (max-width: 1024px) {
   .sk-side {

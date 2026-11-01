@@ -96,18 +96,18 @@
   font-size: 1.1em;
 }
 .rd-quote {
-  padding-left: 1em;
-  border-left: 3px solid var(--stroke-control);
+  padding-inline-start: 1em;
+  border-inline-start: 3px solid var(--stroke-control);
   color: var(--text-secondary);
 }
 .rd-item {
-  padding-left: 1.2em;
+  padding-inline-start: 1.2em;
   position: relative;
 }
 .rd-item::before {
   content: "•";
   position: absolute;
-  left: 0.3em;
+  inset-inline-start: 0.3em;
 }
 .rd-text ::selection {
   background: var(--accent-subtle);
@@ -151,6 +151,7 @@
 }
 .rd-back {
   position: absolute;
+  /* physical: centred with translateX, mirrored only by the transform */
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
@@ -184,7 +185,7 @@
   flex: none;
   overflow: auto;
   padding: 12px;
-  border-left: 1px solid var(--stroke-divider);
+  border-inline-start: 1px solid var(--stroke-divider);
   background: var(--surface-card);
 }
 .rd-outline__head {
@@ -216,7 +217,7 @@
 }
 .rd-outline__item[data-level="3"],
 .rd-outline__item[data-level="4"] {
-  padding-left: 20px;
+  padding-inline-start: 20px;
 }
 .rd-outline__item:hover {
   background: var(--fill-hover);

@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { PROXY_PATHS, type LibraryMethod } from "./channels";
 
-export * from "./channels";
+export { LIBRARY_METHODS, libraryChannel, PROXY_CANCEL, PROXY_CHUNK, PROXY_OPEN, PROXY_PATHS, type LibraryMethod } from "./channels";
 
 /** The library's wire contract: shared by main (handlers), preload (channels) and renderer (types). No Electron imports here. */
 

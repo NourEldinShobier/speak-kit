@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { checkAccelerator, DEFAULT_SHORTCUTS, duplicateIds, normalize, recordKey, suggestAlternative } from "./shortcuts";
+import { checkAccelerator, DEFAULT_SHORTCUTS, duplicateIds, normalize, recordKey, showAccelerator, suggestAlternative } from "./shortcuts";
 
 const key = (code: string, mods: Partial<{ ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean }> = {}) =>
   recordKey({ code, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, ...mods });
@@ -39,6 +39,17 @@ describe("conflicts", () => {
     expect(suggestAlternative("Ctrl+Alt+S", new Set(["Ctrl+Alt+S"]))).toBe("Ctrl+Alt+Shift+S");
     expect(suggestAlternative("Ctrl+Alt+S", new Set(["Ctrl+Alt+S", "Ctrl+Alt+Shift+S"]))).toBe("Ctrl+Alt+Q");
     expect(suggestAlternative("junk", new Set())).toBeNull();
+  });
+});
+
+describe("showAccelerator", () => {
+  it.each([
+    ["Ctrl+K", "win32", "app", "Ctrl+K"],
+    ["Ctrl+K", "darwin", "app", "Cmd+K"],
+    ["Ctrl+Alt+S", "darwin", "global", "Ctrl+Option+S"],
+    ["Ctrl+Alt+S", "linux", "global", "Ctrl+Alt+S"],
+  ])("%s on %s (%s) reads %s", (accelerator, platform, scope, expected) => {
+    expect(showAccelerator(accelerator, platform, scope as "app" | "global")).toBe(expected);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { Health } from "@speakkit/protocol";
+import { plural, type Health } from "@speakkit/protocol";
 import { trayState as engineTrayState, trayTooltip, type TrayState } from "./engine-view";
 import type { ReaderState } from "./reader";
 import type { Bindings } from "./shortcuts";
@@ -29,7 +29,7 @@ export function trayTooltipFor(c: TrayContext): string {
   const r = c.reader;
   if (r.status === "playing" || r.status === "preparing") return `Speak Kit - Reading ${r.index + 1} of ${r.total}: ${r.title}`;
   if (r.status === "paused") return `Speak Kit - Paused: ${r.title}`;
-  if (c.exportsRunning) return `Speak Kit - Exporting ${c.exportsRunning === 1 ? "1 file" : `${c.exportsRunning} files`}`;
+  if (c.exportsRunning) return `Speak Kit - Exporting ${plural(c.exportsRunning, "file", "files")}`;
   if (c.update.kind === "ready") return `Speak Kit - Update ${c.update.version} ready`;
   return trayTooltip(c.health, c.serverError);
 }

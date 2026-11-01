@@ -75,7 +75,7 @@
   font-variant-numeric: tabular-nums;
 }
 .rd-bar__scrub span:last-child {
-  text-align: right;
+  text-align: end;
 }
 .rd-bar__right {
   display: flex;

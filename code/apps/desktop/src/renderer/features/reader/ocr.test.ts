@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { recognizeAll, type OcrEngine, type OcrProgress } from "./ocr";
+import { ocrScale, recognizeAll, type OcrEngine, type OcrProgress } from "./ocr";
 
 const engine = (pages: string[]) => {
   const state = { closed: false, asked: [] as number[] };
@@ -42,5 +42,15 @@ describe("recognizeAll", () => {
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
     expect(state.asked).toEqual([1, 2]);
     expect(state.closed).toBe(true);
+  });
+});
+
+describe("ocrScale", () => {
+  it.each([
+    [612, 792, 2],
+    [5000, 5000, 0.8],
+    [0, 0, 2],
+  ])("a %i x %i page renders at scale %d", (w, h, scale) => {
+    expect(ocrScale(w, h)).toBeCloseTo(scale, 5);
   });
 });

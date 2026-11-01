@@ -109,7 +109,7 @@ code,
 }
 .sk-steps {
   margin: 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -243,5 +243,5 @@ code,
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  margin-right: 8px;
+  margin-inline-end: 8px;
 }

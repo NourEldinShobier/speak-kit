@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { IconButton, Logo, ProgressBar } from "@speakkit/ui";
+import { ErrorBoundary, IconButton, Logo, ProgressBar } from "@speakkit/ui";
 import "@speakkit/ui/lumen.css";
 import "./float.css";
 import { clock, statusLine } from "../shared/reader";
@@ -31,7 +31,9 @@ function Mini() {
       <header className="mini__head">
         <Logo size={18} />
         <div className="mini__title">
-          <b title={r.title}>{r.title || "Speak Kit"}</b>
+          <b title={r.title} dir="auto">
+            {r.title || "Speak Kit"}
+          </b>
           <span data-testid="mini-status">{statusLine(r)}</span>
         </div>
         <span className="mini__left" data-testid="mini-left">
@@ -58,4 +60,8 @@ function Mini() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<Mini />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <Mini />
+  </ErrorBoundary>,
+);

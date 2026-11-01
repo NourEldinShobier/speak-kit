@@ -334,7 +334,9 @@ export function Reader({ s, id, autoplay, onBack, onExport }: ReaderProps) {
       <div className="rd-main">
         <div className="rd-scroll" ref={scroller} onWheel={leaveFollow} onPointerDown={leaveFollow} data-testid="reader-scroll">
           <article className="rd-article" ref={textRoot}>
-            <h1 className="rd-title">{meta.title}</h1>
+            <h1 className="rd-title" dir="auto">
+              {meta.title}
+            </h1>
             <p className="rd-meta">
               {meta.wordCount.toLocaleString()} words{meta.pages ? ` · ${meta.pages} pages` : ""}
             </p>

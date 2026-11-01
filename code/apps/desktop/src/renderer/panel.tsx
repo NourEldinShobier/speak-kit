@@ -1,9 +1,10 @@
 import { createRoot } from "react-dom/client";
-import { Button, Logo, IconButton, ProgressBar, StatusPill } from "@speakkit/ui";
+import { Button, ErrorBoundary, Logo, IconButton, ProgressBar, StatusPill } from "@speakkit/ui";
 import "@speakkit/ui/lumen.css";
 import "./float.css";
 import { engineView } from "../shared/engine-view";
 import { exportRunning } from "../shared/export";
+import { showAccelerator } from "../shared/shortcuts";
 import { clock, statusLine } from "../shared/reader";
 import { api, useAppState, useTheme } from "./ui";
 
@@ -34,7 +35,9 @@ function Panel() {
           <div className="panel__now" data-status={r.status}>
             <div className="panel__row">
               <div className="panel__txt">
-                <b title={r.title}>{r.title}</b>
+                <b title={r.title} dir="auto">
+                  {r.title}
+                </b>
                 <span data-testid="panel-status">{statusLine(r)}</span>
               </div>
               <IconButton
@@ -48,13 +51,15 @@ function Panel() {
             <span className="panel__sub">{clock(Math.max(0, r.totalMs - r.elapsedMs))} left</span>
           </div>
         ) : (
-          <p className="panel__empty">Nothing is playing. Select text in any app and press {s.shortcuts.bindings["read-selection"]}.</p>
+          <p className="panel__empty">Nothing is playing. Select text in any app and press {showAccelerator(s.shortcuts.bindings["read-selection"], s.platform, "global")}.</p>
         )}
       </section>
       {r.next && (
         <section className="panel__sec" aria-label="Next in queue">
           <p className="sk-caps">Next in queue</p>
-          <p className="panel__next">{r.next}</p>
+          <p className="panel__next" dir="auto">
+            {r.next}
+          </p>
         </section>
       )}
       {running.length > 0 && (
@@ -80,4 +85,8 @@ function Panel() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<Panel />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <Panel />
+  </ErrorBoundary>,
+);
