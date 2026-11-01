@@ -53,8 +53,9 @@ export class MainWindow {
     return this.window?.webContents === c;
   }
 
+  /** A hidden or minimized window is skipped; it is sent the state when it shows again. */
   sendState(state: AppState): void {
-    this.window?.webContents.send(STATE_EVENT, state);
+    if (this.isVisible()) this.window?.webContents.send(STATE_EVENT, state);
   }
 
   sendUi(e: UiEvent): void {

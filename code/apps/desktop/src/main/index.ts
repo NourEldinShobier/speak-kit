@@ -12,6 +12,7 @@ import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
 import { openConfig } from "./config";
 import { setupDesktop } from "./desktop";
+import { frameBatch } from "./frame-batch";
 import { createAppHandlers, metrics } from "./handlers";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
@@ -79,7 +80,10 @@ const serverApi = new ServerApi(
 let desktop: ReturnType<typeof setupDesktop> | null = null;
 
 const mainWindow: MainWindow = new MainWindow(config, {
-  onVisible: () => void runtime.refreshHealth(),
+  onVisible: () => {
+    void runtime.refreshHealth();
+    publish(); // a hidden window is not sent state; it catches up when it shows
+  },
   onHidden: () => runtime.stopPolling(),
 });
 const runtime: ServerRuntime = new ServerRuntime({
@@ -95,10 +99,15 @@ const runtime: ServerRuntime = new ServerRuntime({
   onEngineState: (prev, next, detail) => desktop?.onEngineState(prev, next, detail),
 });
 
-function publish(): AppState {
+/** Many features publish in a burst (an engine event, an export tick, a settings change): the windows get one send per frame. */
+const sendState = frameBatch(() => {
   state.launchAtLogin = app.getLoginItemSettings().openAtLogin;
   mainWindow.sendState(state);
   for (const sink of sinks) sink(state);
+});
+
+function publish(): AppState {
+  sendState();
   return state;
 }
 
