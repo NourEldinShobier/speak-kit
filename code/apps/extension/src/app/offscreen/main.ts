@@ -2,6 +2,7 @@ import { DEFAULT_PORT, DEFAULT_VOICE, SAMPLE_RATE, parseHealth } from "@speakkit
 import { createEngineClient } from "../../features/connection";
 import { IDLE_CLOSE_MS, Player, soundTouchStretch } from "@speakkit/player";
 import type { FromOffscreen, ToOffscreen } from "../../shared/internal";
+import { withDeadline } from "./deadline";
 
 const testHook = __TEST__ || safeStorage("speakkit.test") !== null;
 const fastIdle = __TEST__ ? Number(safeStorage("speakkit.idleclose")) || 0 : 0;
@@ -15,19 +16,20 @@ function safeStorage(key: string) {
 }
 
 const post = (m: FromOffscreen) => {
-  chrome.runtime.sendMessage(m).catch(() => {});
+  chrome.runtime.sendMessage(m).catch(() => {}); // the worker is asleep or restarting; it reads the state again on wake
 };
 
 let cfg = { port: DEFAULT_PORT, token: "" };
-const engine = createEngineClient({ fetch: (i, init) => fetch(i, init), port: async () => cfg.port, token: async () => cfg.token });
+const timedFetch = withDeadline((i, init) => fetch(i, init));
+const engine = createEngineClient({ fetch: timedFetch, port: async () => cfg.port, token: async () => cfg.token });
 
 const player = new Player(
   {
     // AudioContext is created on the first play, suspended while paused and closed when playback stops (see Player).
     createContext: () => new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: "playback" }) as never,
-    fetch: (input, init) => fetch(input, init),
+    fetch: timedFetch,
     emitState: (state) => post({ from: "offscreen", kind: "state", state }),
-    emitSentence: (start, tabId) => post({ from: "offscreen", kind: "sentence-start", start, tabId }),
+    emitSentence: (start, tabId) => post({ from: "offscreen", kind: "sentence-start", start, ...(tabId === undefined ? {} : { tabId }) }),
     emitQueue: (queue) => post({ from: "offscreen", kind: "queue", queue }),
     stretch: soundTouchStretch(),
     // Tests can shorten the 60 s idle close (localStorage speakkit.idleclose, in ms).
