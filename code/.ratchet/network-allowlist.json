@@ -1,0 +1,18 @@
+{
+  "files": {
+    "apps/desktop/src/main/library/public-fetch.ts": "URL import: fetches the page the user typed, public addresses only (undici with a lookup that refuses private ranges)",
+    "apps/desktop/src/main/server-api.ts": "desktop main talks to its own loopback server on 127.0.0.1",
+    "apps/desktop/src/main/updates-service.ts": "electron-updater checks GitHub Releases for a new version",
+    "apps/extension/src/app/background/connection.ts": "extension talks to the desktop app on 127.0.0.1",
+    "apps/extension/src/app/offscreen/main.ts": "offscreen document streams speech from 127.0.0.1",
+    "apps/extension/src/features/connection/health.ts": "health and pairing calls to 127.0.0.1",
+    "apps/extension/src/features/connection/lifecycle.ts": "engine lifecycle calls to 127.0.0.1",
+    "packages/engine/src/worker.ts": "kokoro-js downloads the model files from Hugging Face on first use",
+    "packages/player/src/chunk.ts": "player requests speech chunks from 127.0.0.1"
+  },
+  "hosts": {
+    "chromewebstore.google.com": "link opened in the user's browser to install the extension",
+    "download.pytorch.org": "package index used when the user installs the Chatterbox engine",
+    "speakkit.app": "links to the product site opened in the user's browser"
+  }
+}

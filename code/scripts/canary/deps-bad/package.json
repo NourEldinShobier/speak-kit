@@ -1,0 +1,1 @@
+{ "name": "canary", "private": true, "scripts": { "knip": "pnpm dlx knip" }, "devDependencies": { "left-pad": "^1.3.0", "unlisted-tool": "catalog:" } }

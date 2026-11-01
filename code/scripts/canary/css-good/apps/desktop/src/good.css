@@ -1,0 +1,3 @@
+.panel { margin-inline-start: 8px; text-align: end; }
+/* physical: the tray arrow always points at the screen edge */
+.arrow { left: 0; }
