@@ -261,7 +261,7 @@ export const dialogFoot = (b: B, t: T, d: Ref, left: string | undefined, fn: (r:
 };
 
 // ---------- window / browser shells ----------
-// Desktop shell (Lumen X15/X16): title bar 40 px (logo only, no name; sidebar toggle, back/forward, centered search 420x30 with Ctrl K chip, status pill, bell, window buttons),
+// Desktop shell (Lumen X15/X16): title bar 40 px (no logo or name; sidebar toggle, back/forward, centered search 420x30 with Ctrl K chip, status pill, bell, window buttons),
 // sidebar 248 px on the window surface (New reading, nav 32 px, RECENT, engine card, Settings), content = inset card (8 px, r10, surface/editor, 1 px divider).
 export const SETTINGS_NAV: [string, string, string, string][] = [
   ["general", "General", "grid", "GENERAL"], ["playback", "Playback", "play", ""], ["pron", "Pronunciation", "type", ""],
@@ -272,7 +272,7 @@ export const SETTINGS_NAV: [string, string, string, string][] = [
 export type Pill = { label: string; tone?: "ok" | "warn" | "err" | "info" | "neutral"; spinner?: boolean; icon?: string };
 const titleBar = (b: B, t: T, win: Ref, w: number, o: { search: string; pill?: Pill; sidebarToggle?: boolean; bell?: boolean | "dot"; update?: boolean }) => {
   const tb = b.row(win, { w: "fill", h: 40, pad: [0, 0, 0, 12], gap: 6, justify: "spaceBetween", fill: t.bg });
-  const l = b.row(tb, { gap: 8 }); logo(b, t, l, 18);
+  const l = b.row(tb, { gap: 8 });
   if (o.sidebarToggle !== false) { iconBtn(b, t, l, "sidebar", { size: 28, c: t.text3 }); iconBtn(b, t, l, "arrowLeft", { size: 28, c: t.text3 }); iconBtn(b, t, l, "arrowRight", { size: 28, c: t.text3 }); }
   const sf = b.row(tb, { abs: true, x: Math.round((w - 420) / 2), y: 5, w: 420, h: 30, pad: [0, 10], gap: 8, r: 6, fill: t.input, stroke: t.control, sw: 1, sa: "inside" });
   b.icon(sf, "search", 14, t.text3); b.text(sf, o.search, { size: 12, c: t.text3, w: "fill" });

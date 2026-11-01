@@ -60,11 +60,6 @@ html[data-hidden] *::after {
   /* room for the native caption buttons, so the search box stays centred in the window */
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
-.sk-brand {
-  display: flex;
-  align-items: center;
-  margin-right: 8px;
-}
 .sk-search {
   height: 30px;
   width: 420px;

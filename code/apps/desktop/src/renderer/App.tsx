@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, IconButton, Icon, Logo, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
+import { Button, IconButton, Icon, Kbd, Modal, NavItem, NavSection, Popover, Select, SidebarNav, StatusPill } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
@@ -294,9 +294,6 @@ function TitleBar(p: { s: AppState; canBack: boolean; canFwd: boolean; onBack():
   return (
     <header className="sk-title">
       <div className="sk-title__l">
-        <span className="sk-brand">
-          <Logo size={20} />
-        </span>
         <IconButton name="layout-sidebar" label="Toggle sidebar" size={28} onClick={p.onToggleSide} />
         <IconButton name="chevron-left" label="Back" size={28} disabled={!p.canBack} onClick={p.onBack} />
         <IconButton name="chevron-right" label="Forward" size={28} disabled={!p.canFwd} onClick={p.onFwd} />
