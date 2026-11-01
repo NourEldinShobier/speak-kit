@@ -1,5 +1,7 @@
 import type { PlayerState, PlayerStatus } from "@speakkit/protocol";
 
+/** Statuses in which something is being read (the page shows the highlight and scroll tracking). */
+export const ACTIVE: readonly string[] = ["preparing", "playing", "paused"] satisfies PlayerStatus[];
 const STATUSES: readonly string[] = ["idle", "preparing", "playing", "paused", "finished", "error"] satisfies PlayerStatus[];
 
 /**

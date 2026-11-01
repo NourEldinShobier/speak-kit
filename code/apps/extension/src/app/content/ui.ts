@@ -11,10 +11,8 @@ export class Ui {
   readonly shell: ShadowShell;
   private launcher: Launcher;
   private dock: Dock;
-  private m: UiModel;
 
   constructor(hd: UiHandlers, model: UiModel) {
-    this.m = model;
     this.shell = new ShadowShell([shellCss, LAUNCHER_CSS, DOCK_CSS, READER_CSS]);
     this.dock = new Dock(this.shell, hd, model);
     this.launcher = new Launcher(this.shell, hd, model, () => this.dock.el);
@@ -36,7 +34,6 @@ export class Ui {
   }
 
   render(m: UiModel) {
-    this.m = m;
     this.shell.host.dataset.skStatus = m.status;
     this.shell.setTheme(m.dark);
     this.dock.render(m);
