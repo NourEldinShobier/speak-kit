@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -44,16 +45,24 @@ jobs:
       - name: Unused files, exports and dependencies (knip)
         run: pnpm run knip
 
-      # The desktop tests start the built Electron app.
+      # The desktop tests start the built Electron app, and its "Install the extension" action needs the built extension.
       - name: Build the desktop app
         run: pnpm --filter @speakkit/desktop exec vp build
 
-      - name: Unit and integration tests
-        run: pnpm run test
+      - name: Build the extension
+        run: pnpm --filter @speakkit/extension exec vp build
 
+      # Electron downloads its binary on the first require; do it once here, not from parallel test workers.
+      - name: Download the Electron binary
+        run: pnpm --filter @speakkit/desktop exec node -e "require('electron')"
+
+      # Unit tests drive real Chromium too (packages/ui, the extension's content script); every package uses this Playwright version.
       - name: Install the test browser
         working-directory: code/e2e
         run: pnpm exec playwright install chromium
+
+      - name: Unit and integration tests
+        run: pnpm run test
 
       # No real model: the fake engine. The timing budgets (perf phase) are measured on a quiet machine, not on shared runners.
       - name: End-to-end tests
