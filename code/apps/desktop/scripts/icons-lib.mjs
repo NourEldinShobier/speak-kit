@@ -24,3 +24,24 @@ export function logoPng(size, state = "normal") {
 }
 
 export const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
+
+/** The logo inside a 1024 px canvas with the 100 px margin macOS app icons have (the Dock does not mask icons). */
+export function macIconPng() {
+  const inner = svgOf("logo").replace('width="1024" height="1024"', 'x="100" y="100" width="824" height="824"');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${inner}</svg>`;
+  return new Resvg(svg, { fitTo: { mode: "width", value: 1024 } }).render().asPng();
+}
+
+/** Menu-bar template image: the logo tile in black with the white wave cut out; macOS tints it for light, dark and highlighted bars. */
+export function trayTemplatePng(size, opacity = 1) {
+  const svg = svgOf("logo-small");
+  const wave = svg.match(/<path [^>]*stroke="#FFFFFF"[^>]*\/>/)[0];
+  const cut = wave.replace('stroke="#FFFFFF"', 'stroke="#000"');
+  const tile = svg.replace(wave, "").replace(/fill="#[0-9A-Fa-f]{6}"/g, 'fill="#000"');
+  const mask = `<mask id="cut"><rect width="1024" height="1024" fill="#fff"/>${cut}</mask><g mask="url(#cut)" opacity="${opacity}">`;
+  const out = tile.replace(/(<svg [^>]*>)/, `$1${mask}`).replace("</svg>", "</g></svg>");
+  return new Resvg(out, { fitTo: { mode: "width", value: size } }).render().asPng();
+}
+
+/** Menu-bar image at 2x for `state`: a template for normal and asleep, the coloured logo with its dot for the others. */
+export const trayMacPng = (state) => (state === "normal" ? trayTemplatePng(36) : state === "asleep" ? trayTemplatePng(36, 0.45) : logoPng(36, state));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { icoFromPngs, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, icoFromPngs, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -42,5 +42,15 @@ describe("icoFromPngs", () => {
     expect([ico[6], ico[7], ico.readUInt32LE(14), ico.readUInt32LE(18)]).toEqual([16, 16, 4, 38]);
     expect([ico[22], ico[23], ico.readUInt32LE(30), ico.readUInt32LE(34)]).toEqual([0, 0, 6, 42]);
     expect(ico.subarray(38).toString()).toBe("aaaabbbbbb");
+  });
+});
+
+describe("foreignMacArch", () => {
+  it("is true only for a native build of the other macOS architecture", () => {
+    expect(foreignMacArch("sharp-darwin-x64", "arm64")).toBe(true);
+    expect(foreignMacArch("sharp-libvips-darwin-arm64", "x64")).toBe(true);
+    expect(foreignMacArch("darwin_x64", "arm64")).toBe(true);
+    expect(foreignMacArch("darwin_arm64", "arm64")).toBe(false);
+    for (const d of ["win32_x64", "linux-x64", "sharp-wasm32"]) expect(foreignMacArch(d, "arm64")).toBe(false);
   });
 });

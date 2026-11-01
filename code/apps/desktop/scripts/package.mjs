@@ -1,12 +1,14 @@
-// Builds the Windows installer and the portable exe into apps/desktop/release.
-//   node scripts/package.mjs [--version 0.3.0] [--dir]   (--dir: unpacked app only, for smoke tests)
+// Builds the installers into apps/desktop/release: on Windows the NSIS installer and the portable exe, on a Mac a dmg and a zip
+// for arm64 and for x64.
+//   node scripts/package.mjs [--platform win|mac] [--version 0.3.0] [--dir]   (--dir: unpacked app only, for smoke tests)
 // Steps: build engine worker, extension and desktop; stage a plain app folder with a real node_modules (pnpm's symlinks do not
-// survive packaging); run electron-builder. Code signing is not set up: the installer is unsigned.
+// survive packaging); run electron-builder. Code signing is not set up: the Windows installer is unsigned and the macOS app only
+// carries an ad-hoc signature (scripts/after-pack.cjs).
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ICO_SIZES, logoPng } from "./icons-lib.mjs";
+import { ICO_SIZES, logoPng, macIconPng } from "./icons-lib.mjs";
 import { icoFromPngs, importedPackages } from "./stage-lib.mjs";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -34,6 +36,9 @@ function installedVersion(name, from) {
 
 const pkg = json(path.join(desktop, "package.json"));
 const version = value("--version") ?? pkg.version;
+const platform = value("--platform") ?? "win";
+if (!["win", "mac"].includes(platform)) throw new Error(`--platform must be win or mac, not ${platform}`);
+const mac = platform === "mac";
 
 // 1. builds
 console.log("== build engine worker, extension, desktop");
@@ -87,39 +92,58 @@ console.log(
 );
 run("npm", ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel=error"], stage);
 
-// Drop binaries for other platforms (onnxruntime ships all of them; koffi too).
+// One app folder serves both macOS architectures, but npm only installs the optional native packages (sharp) of this machine's
+// architecture: fetch the other one's into a scratch folder and copy in the packages that are missing.
+if (mac) {
+  const other = path.join(desktop, "dist-app-other");
+  rmSync(other, { recursive: true, force: true });
+  mkdirSync(other);
+  cpSync(path.join(stage, "package.json"), path.join(other, "package.json"));
+  const cpu = process.arch === "arm64" ? "x64" : "arm64";
+  run("npm", ["install", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=error", "--os=darwin", `--cpu=${cpu}`], other);
+  const modules = (d) => path.join(d, "node_modules");
+  for (const name of readdirSync(modules(other))) {
+    const names = name.startsWith("@") ? readdirSync(path.join(modules(other), name)).map((n) => `${name}/${n}`) : [name];
+    for (const n of names) if (!existsSync(path.join(modules(stage), n))) cpSync(path.join(modules(other), n), path.join(modules(stage), n), { recursive: true });
+  }
+  rmSync(other, { recursive: true, force: true });
+}
+
+// Drop binaries for other platforms (onnxruntime ships all of them; koffi too). macOS keeps both architectures here;
+// scripts/after-pack.cjs drops the one a given app does not run on.
 const rm = (p) => rmSync(p, { recursive: true, force: true });
 const ort = path.join(stage, "node_modules/onnxruntime-node/bin/napi-v3");
+const keepOs = mac ? "darwin" : "win32";
 if (existsSync(ort)) {
-  for (const os of readdirSync(ort)) if (os !== "win32") rm(path.join(ort, os));
-  if (existsSync(path.join(ort, "win32"))) for (const arch of readdirSync(path.join(ort, "win32"))) if (arch !== "x64") rm(path.join(ort, "win32", arch));
+  for (const os of readdirSync(ort)) if (os !== keepOs) rm(path.join(ort, os));
+  if (!mac && existsSync(path.join(ort, "win32"))) for (const arch of readdirSync(path.join(ort, "win32"))) if (arch !== "x64") rm(path.join(ort, "win32", arch));
 }
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
-if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (d !== "win32_x64") rm(path.join(koffiBuild, d));
+if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ? d.startsWith("darwin_") : d === "win32_x64")) rm(path.join(koffiBuild, d));
 
-// 3. installer icon, rasterised from the logo SVGs
+// 3. installer icon, rasterised from the logo SVGs (electron-builder turns the 1024 px PNG into the macOS .icns)
 mkdirSync(res, { recursive: true });
-writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) => ({ size, png: logoPng(size) }))));
+if (mac) writeFileSync(path.join(res, "icon.png"), macIconPng());
+else writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) => ({ size, png: logoPng(size) }))));
 
 // 4. electron-builder
 console.log("== electron-builder");
 const electronDir = path.dirname(realpathSync(path.join(desktop, "node_modules/electron/package.json")));
 const electronVersion = json(path.join(electronDir, "package.json")).version;
-const targets = flag("--dir") ? ["--dir"] : ["nsis", "portable"];
+const targets = flag("--dir") ? ["--dir"] : mac ? ["dmg", "zip"] : ["nsis", "portable"];
 run(
   "pnpm",
   [
     "exec",
     "electron-builder",
-    "--win",
-    ...targets,
-    "--x64",
+    ...(mac ? ["--mac", ...targets, "--arm64", "--x64"] : ["--win", ...targets, "--x64"]),
     "--publish",
     "never",
     "--config",
     "electron-builder.yml",
     `-c.electronVersion=${electronVersion}`,
-    `-c.electronDist=${path.join(electronDir, "dist")}`,
+    // Windows reuses the installed Electron; the macOS build needs one per architecture and lets electron-builder download them.
+    ...(mac ? [] : [`-c.electronDist=${path.join(electronDir, "dist")}`]),
     `-c.extraMetadata.version=${version}`,
   ],
   desktop,

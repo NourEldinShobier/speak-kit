@@ -38,3 +38,9 @@ export function icoFromPngs(images) {
   });
   return Buffer.concat([head, ...images.map((m) => m.png)]);
 }
+
+/** Is this directory name a native build for the other macOS architecture ("sharp-darwin-x64" or "darwin_x64" while packaging arm64)? */
+export function foreignMacArch(name, arch) {
+  const m = /darwin[-_](arm64|x64)$/.exec(name);
+  return !!m && m[1] !== arch;
+}

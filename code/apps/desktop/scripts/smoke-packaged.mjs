@@ -1,7 +1,7 @@
-// Smoke test of the packaged app: starts the exe, waits for /v1/health, speaks one sentence, checks the bundled extension,
-// then asks it to quit (Speak Kit.exe --quit) and checks that it exits, frees the port and leaves no process behind.
+// Smoke test of the packaged app (Windows exe or macOS .app of this machine's architecture): starts it, waits for /v1/health, speaks one sentence, checks the bundled extension,
+// then asks it to quit (Speak Kit --quit) and checks that it exits, frees the port and leaves no process behind.
 // SMOKE_WAIT_S raises the start-up and second-launch waits (the portable exe unpacks 170 MB first). A second launch must hand over and exit without adding processes.
-//   node scripts/smoke-packaged.mjs [--exe path-to-Speak Kit.exe] [--real]
+//   node scripts/smoke-packaged.mjs [--exe path-to-Speak Kit.exe or Speak Kit.app/Contents/MacOS/Speak Kit] [--real]
 // --real uses the real Kokoro engine and the shared model cache (code/.cache/models); otherwise the fake engine runs.
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
-const exe = path.resolve(args.includes("--exe") ? args[args.indexOf("--exe") + 1] : path.join(desktop, "release/win-unpacked/Speak Kit.exe"));
+const mac = process.platform === "darwin";
+const unpacked = mac ? `release/${process.arch === "arm64" ? "mac-arm64" : "mac"}/Speak Kit.app/Contents/MacOS/Speak Kit` : "release/win-unpacked/Speak Kit.exe";
+const exe = path.resolve(args.includes("--exe") ? args[args.indexOf("--exe") + 1] : path.join(desktop, unpacked));
 const real = args.includes("--real");
 if (!existsSync(exe)) throw new Error(`no such file: ${exe}`);
 
@@ -30,10 +32,17 @@ const freePort = () =>
       s.close(() => resolve(port));
     });
   });
+// Processes started from this executable (the app, its engine process; Electron's helper processes have their own executables).
 const running = () =>
-  Number(
-    execFileSync("powershell", ["-NoProfile", "-Command", `@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${exe.replace(/'/g, "''")}' }).Count`], { encoding: "utf8" }).trim(),
-  );
+  mac
+    ? execFileSync("ps", ["-axo", "comm="], { encoding: "utf8" })
+        .split("\n")
+        .filter((l) => l.trim() === exe).length
+    : Number(
+        execFileSync("powershell", ["-NoProfile", "-Command", `@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${exe.replace(/'/g, "''")}' }).Count`], {
+          encoding: "utf8",
+        }).trim(),
+      );
 
 const userData = mkdtempSync(path.join(tmpdir(), "speakkit-smoke-"));
 writeFileSync(path.join(userData, "config.json"), JSON.stringify({ setupDone: true }));
@@ -92,7 +101,7 @@ try {
 
   // The portable exe unpacks itself into a temp folder at every start, so its own folder has no resources.
   if (!/portable/i.test(path.basename(exe))) {
-    const resources = path.join(path.dirname(exe), "resources");
+    const resources = mac ? path.join(path.dirname(exe), "../Resources") : path.join(path.dirname(exe), "resources");
     check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
     check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
   }
