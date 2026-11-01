@@ -147,8 +147,8 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 | L2 | Command palette | dark | minor drift | 1.75 | Command palette: 640 px, grouped rows, footer hints; groups and items differ (design lists readings). |
 | L3 | Command palette (filtered) | dark | minor drift | 1.68 | Filtered palette; same as L2. |
 | L4 | Narrow window (rail) | dark | minor drift | 3.12 | 60 px rail below 1025 px (not viewed side by side). |
-| L1 | Home | dark | known difference | 2.79 | Home: the design is a library home (greeting, composer, reading now, continue list), the product Home shows server, engine, pairing token and extension install (Library is v1.1). Title bar, search, sidebar, New reading button and engine card match. |
-| L1 | Home | light | known difference | 2.49 | Home: the design is a library home (greeting, composer, reading now, continue list), the product Home shows server, engine, pairing token and extension install (Library is v1.1). Title bar, search, sidebar, New reading button and engine card match. |
+| L1 | Home | dark | known difference | 2.78 | Home: the design is a library home (greeting, composer, reading now, continue list), the product Home shows server, engine, pairing token and extension install (Library is v1.1). Title bar, search, sidebar, New reading button and engine card match. |
+| L1 | Home | light | known difference | 2.48 | Home: the design is a library home (greeting, composer, reading now, continue list), the product Home shows server, engine, pairing token and extension install (Library is v1.1). Title bar, search, sidebar, New reading button and engine card match. |
 | E1 | Library · empty | dark | match | 2.67 |  |
 | E2 | Library · with readings | dark | drift | 12.42 |  |
 | E7 | Library · search results | dark | match | 2.54 |  |
@@ -175,7 +175,7 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 | H6 | Settings · Storage | dark | minor drift | 3.24 | Storage: models folder and size bar (not viewed side by side). |
 | H5 | Settings · Shortcuts | dark | match | 2.25 |  |
 | H14 | Settings · Notifications | dark | match | 2.71 |  |
-| H8 | Settings · About | dark | minor drift | 2.85 | About: versions and licenses (not viewed side by side). |
+| H8 | Settings · About | dark | minor drift | 2.84 | About: versions and licenses (not viewed side by side). |
 | K11 | Quit confirmation | dark | minor drift | 2.39 | Quit dialog: the product lists what stops (server, model); the design lists reading and exports (exports are v1.1). |
 | K2 | Notice · port in use (the app falls back to another port) | dark | minor drift | 3.1 | The app picks another port and shows a warning banner on Home; the design shows a blocking error card. |
 | K1 | Error · engine could not start (home) | dark | minor drift | 3.58 | Engine error: banner with Retry on Home (not viewed side by side). |

@@ -261,7 +261,7 @@ export const dialogFoot = (b: B, t: T, d: Ref, left: string | undefined, fn: (r:
 };
 
 // ---------- window / browser shells ----------
-// Desktop shell (Lumen X15/X16): title bar 40 px (logo + name, sidebar toggle, back/forward, centered search 420x30 with Ctrl K chip, status pill, bell, window buttons),
+// Desktop shell (Lumen X15/X16): title bar 40 px (logo only, no name; sidebar toggle, back/forward, centered search 420x30 with Ctrl K chip, status pill, bell, window buttons),
 // sidebar 248 px on the window surface (New reading, nav 32 px, RECENT, engine card, Settings), content = inset card (8 px, r10, surface/editor, 1 px divider).
 export const SETTINGS_NAV: [string, string, string, string][] = [
   ["general", "General", "grid", "GENERAL"], ["playback", "Playback", "play", ""], ["pron", "Pronunciation", "type", ""],
@@ -270,9 +270,9 @@ export const SETTINGS_NAV: [string, string, string, string][] = [
   ["notify", "Notifications", "bell", "APP"], ["appearance", "Appearance", "palette", ""], ["startup", "Startup and tray", "power", ""], ["about", "About and updates", "info", ""],
 ];
 export type Pill = { label: string; tone?: "ok" | "warn" | "err" | "info" | "neutral"; spinner?: boolean; icon?: string };
-const titleBar = (b: B, t: T, win: Ref, w: number, o: { title: string; search: string; pill?: Pill; sidebarToggle?: boolean; bell?: boolean | "dot"; update?: boolean }) => {
+const titleBar = (b: B, t: T, win: Ref, w: number, o: { search: string; pill?: Pill; sidebarToggle?: boolean; bell?: boolean | "dot"; update?: boolean }) => {
   const tb = b.row(win, { w: "fill", h: 40, pad: [0, 0, 0, 12], gap: 6, justify: "spaceBetween", fill: t.bg });
-  const l = b.row(tb, { gap: 8 }); logo(b, t, l, 18); b.text(l, o.title, { size: 12, weight: "SemiBold", c: t.text });
+  const l = b.row(tb, { gap: 8 }); logo(b, t, l, 18);
   if (o.sidebarToggle !== false) { iconBtn(b, t, l, "sidebar", { size: 28, c: t.text3 }); iconBtn(b, t, l, "arrowLeft", { size: 28, c: t.text3 }); iconBtn(b, t, l, "arrowRight", { size: 28, c: t.text3 }); }
   const sf = b.row(tb, { abs: true, x: Math.round((w - 420) / 2), y: 5, w: 420, h: 30, pad: [0, 10], gap: 8, r: 6, fill: t.input, stroke: t.control, sw: 1, sa: "inside" });
   b.icon(sf, "search", 14, t.text3); b.text(sf, o.search, { size: 12, c: t.text3, w: "fill" });
@@ -291,11 +291,11 @@ const titleBar = (b: B, t: T, win: Ref, w: number, o: { title: string; search: s
   wbtn((c) => b.icon(c, "x", 12, t.text2));
   return tb;
 };
-export const desktopWindow = (b: B, t: T, root: Ref, o: { title?: string; nav?: "home" | "library" | "voices" | "engines" | "settings" | "none"; w?: number; h?: number; status?: { label: string; sub: string; tone: "ok" | "warn" | "err" | "neutral" }; pill?: Pill | false; search?: string; update?: boolean; settingsKey?: string; settingsDot?: string; inset?: boolean; bell?: boolean | "dot"; rail?: boolean } = {}) => {
-  const { title = "Speak Kit", nav = "library", w = 1280, h = 800 } = o;
+export const desktopWindow = (b: B, t: T, root: Ref, o: { nav?: "home" | "library" | "voices" | "engines" | "settings" | "none"; w?: number; h?: number; status?: { label: string; sub: string; tone: "ok" | "warn" | "err" | "neutral" }; pill?: Pill | false; search?: string; update?: boolean; settingsKey?: string; settingsDot?: string; inset?: boolean; bell?: boolean | "dot"; rail?: boolean } = {}) => {
+  const { nav = "library", w = 1280, h = 800 } = o;
   const win = b.col(root, { x: 0, y: 0, w, h, fill: t.bg, gap: 0, clip: true, r: 12, stroke: t.border, sw: 1, sa: "inside" });
   const isSet = nav === "settings";
-  titleBar(b, t, win, w, { title, search: o.search ?? (isSet ? "Search settings" : "Search readings, voices and commands"), pill: o.pill === false ? undefined : o.pill ?? (o.status ? { label: o.status.label.split(" · ")[1] ?? o.status.label, tone: o.status.tone } : { label: "Kokoro ready", tone: "ok" }), update: o.update, bell: o.bell });
+  titleBar(b, t, win, w, { search: o.search ?? (isSet ? "Search settings" : "Search readings, voices and commands"), pill: o.pill === false ? undefined : o.pill ?? (o.status ? { label: o.status.label.split(" · ")[1] ?? o.status.label, tone: o.status.tone } : { label: "Kokoro ready", tone: "ok" }), update: o.update, bell: o.bell });
   b.rect(win, { w: "fill", h: 1, fill: t.bg });
   const body = b.row(win, { w: "fill", h: "fill", gap: 0, align: "stretch", pad: [0, 8, 8, 0] });
   if (nav !== "none" && o.rail) {
