@@ -26,6 +26,8 @@ async function open() {
     suspend = async () => {};
     close = async () => void (this.closed = true);
   }
+  const pageListeners: Record<string, () => void> = {};
+  vi.stubGlobal("addEventListener", (type: string, fn: () => void) => void (pageListeners[type] = fn));
   vi.stubGlobal("AudioContext", Ctx);
   vi.stubGlobal("chrome", {
     runtime: {
@@ -49,7 +51,7 @@ async function open() {
   await import("./main");
   const cfg = { port: 47615, token: "tok", voice: "af_heart", speed: 1, pause: "none" as const };
   const send = (command: object) => listener({ to: "offscreen", command, cfg }, {}, () => {});
-  return { sent, send, contexts };
+  return { sent, send, contexts, pageListeners };
 }
 
 afterEach(() => {
@@ -70,5 +72,17 @@ describe("offscreen document lifecycle", () => {
     expect(vi.getTimerCount()).toBe(0);
     expect(contexts.length).toBeGreaterThan(0);
     expect(contexts.every((c) => c.closed)).toBe(true);
+  });
+
+  it("releases the audio context and the timers when the document closes in the middle of playback", async () => {
+    vi.useFakeTimers();
+    const { send, contexts, pageListeners } = await open();
+    send({ cmd: "play", doc: { docId: "d", tabId: 1, url: "", title: "t", sentences: [{ text: "Hello there.", block: 0 }], startIndex: 0, source: "page" } });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(contexts.some((c) => !c.closed)).toBe(true);
+    pageListeners.pagehide?.();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(contexts.every((c) => c.closed)).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

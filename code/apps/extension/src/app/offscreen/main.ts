@@ -50,6 +50,9 @@ const player = new Player(
   testHook,
 );
 
+// The document is closing (the worker closed it, or the browser did): release the audio context, the timers and the model hold.
+addEventListener("pagehide", () => player.dispose());
+
 chrome.runtime.onMessage.addListener((msg: ToOffscreen, _sender, sendResponse) => {
   if (!msg || msg.to !== "offscreen") return false;
   if ("autoPlay" in msg) {
