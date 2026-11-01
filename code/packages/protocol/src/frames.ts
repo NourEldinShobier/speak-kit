@@ -7,7 +7,10 @@ export type FrameHeader =
   | { type: "done"; count: number }
   | { type: "error"; code: "engine-not-ready" | "synthesis-failed"; message: string };
 
-export interface Frame { header: FrameHeader; pcm?: Int16Array }
+export interface Frame {
+  header: FrameHeader;
+  pcm?: Int16Array;
+}
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -52,6 +55,9 @@ export class FrameDecoder {
 
 export function floatToInt16(f: Float32Array): Int16Array {
   const o = new Int16Array(f.length);
-  for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i]!)); o[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
+  for (let i = 0; i < f.length; i++) {
+    const s = Math.max(-1, Math.min(1, f[i]!));
+    o[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
   return o;
 }

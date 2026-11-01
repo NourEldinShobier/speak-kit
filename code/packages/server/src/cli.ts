@@ -17,9 +17,7 @@ try {
   console.error((e as Error).message);
   process.exit(1);
 }
-const dataDir =
-  env.SPEAKKIT_DATA_DIR ??
-  join(process.env.APPDATA ?? join(homedir(), ".config"), "SpeakKit");
+const dataDir = env.SPEAKKIT_DATA_DIR ?? join(process.env.APPDATA ?? join(homedir(), ".config"), "SpeakKit");
 const { version } = v.parse(v.object({ version: v.string() }), JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")));
 
 let engine: TtsEngine;
@@ -49,10 +47,7 @@ if ((env.SPEAKKIT_ENGINE ?? "kokoro") === "fake") {
 }
 
 // Optional engine; the hardware probe takes well under a second. Off for the fake engine and with SPEAKKIT_CHATTERBOX=off.
-const chatterbox =
-  (env.SPEAKKIT_ENGINE ?? "kokoro") === "kokoro" && env.SPEAKKIT_CHATTERBOX !== "off"
-    ? await createChatterbox(dataDir, { sidecarScript: env.SPEAKKIT_CHATTERBOX_SCRIPT })
-    : undefined;
+const chatterbox = (env.SPEAKKIT_ENGINE ?? "kokoro") === "kokoro" && env.SPEAKKIT_CHATTERBOX !== "off" ? await createChatterbox(dataDir, { sidecarScript: env.SPEAKKIT_CHATTERBOX_SCRIPT }) : undefined;
 
 const server = createServer({
   engine,
@@ -71,8 +66,7 @@ try {
 console.log(JSON.stringify({ port: server.port, token: server.token }));
 
 // Lazy by default: only a missing model is fetched at boot (createServer handles loadAtStart).
-if (engine.status().state === "missing")
-  engine.start().catch((e) => console.error(`engine failed: ${(e as Error).message}`));
+if (engine.status().state === "missing") engine.start().catch((e) => console.error(`engine failed: ${(e as Error).message}`));
 
 const stop = async () => {
   await server.close();

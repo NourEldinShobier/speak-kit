@@ -28,10 +28,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL)("server with the real Kokoro engine"
       const h1 = (await (await fetch(`${base}/v1/health`)).json()) as { engine: { state: string } };
       expect(h1.engine.state).toBe("ready");
 
-      const sentences = [
-        "The quick brown fox jumps over the lazy dog.",
-        "Speech comes back as one frame per sentence.",
-      ];
+      const sentences = ["The quick brown fox jumps over the lazy dog.", "Speech comes back as one frame per sentence."];
       const t0 = performance.now();
       const frames = await readFrames(
         await fetch(`${base}/v1/speak`, {

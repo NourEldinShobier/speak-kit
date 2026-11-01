@@ -22,9 +22,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL)("real model lifecycle", () => {
     await server.listen();
     const base = `http://127.0.0.1:${server.port}`;
     const headers = { Authorization: `Bearer ${server.token}`, "Content-Type": "application/json" };
-    const health = async () =>
-      ((await (await fetch(`${base}/v1/health`)).json()) as { engine: { state: string } }).engine
-        .state;
+    const health = async () => ((await (await fetch(`${base}/v1/health`)).json()) as { engine: { state: string } }).engine.state;
     const speak = (text: string) =>
       fetch(`${base}/v1/speak`, {
         method: "POST",

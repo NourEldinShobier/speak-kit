@@ -60,8 +60,7 @@ describe("packed server (dist)", () => {
       });
       const dec = new FrameDecoder();
       const types: string[] = [];
-      for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>)
-        for (const f of dec.push(chunk)) types.push(f.header.type);
+      for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) for (const f of dec.push(chunk)) types.push(f.header.type);
       expect(types).toEqual(["audio", "done"]);
       const h2 = (await (await fetch(`${base}/v1/health`)).json()) as {
         engine: { state: string; idleUnloadAtMs?: number };

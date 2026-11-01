@@ -14,11 +14,7 @@ export interface Ctx {
   auth: Record<string, string>;
 }
 
-export async function start(
-  opts: FakeEngineOptions = {},
-  token?: string,
-  serverOpts: Partial<ServerOptions> = {},
-): Promise<Ctx> {
+export async function start(opts: FakeEngineOptions = {}, token?: string, serverOpts: Partial<ServerOptions> = {}): Promise<Ctx> {
   const engine = new FakeEngine(opts);
   const server = createServer({
     engine,
@@ -51,22 +47,18 @@ export function raw(
   body: string;
 }> {
   return new Promise((resolve, reject) => {
-    const req = request(
-      { host: "127.0.0.1", port: c.server.port, method, path, headers },
-      (res) => {
-        let b = "";
-        res.setEncoding("utf8");
-        res.on("data", (d) => (b += d));
-        res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body: b }));
-      },
-    );
+    const req = request({ host: "127.0.0.1", port: c.server.port, method, path, headers }, (res) => {
+      let b = "";
+      res.setEncoding("utf8");
+      res.on("data", (d) => (b += d));
+      res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body: b }));
+    });
     req.on("error", reject);
     req.end(body);
   });
 }
 
-export const speakBody = (sentences: string[], extra: object = {}) =>
-  JSON.stringify({ sentences, voice: "af_heart", speed: 1, ...extra });
+export const speakBody = (sentences: string[], extra: object = {}) => JSON.stringify({ sentences, voice: "af_heart", speed: 1, ...extra });
 
 /** Read a /v1/speak stream to the end, with arrival time of each frame. */
 export async function readFrames(res: Response): Promise<{ frame: Frame; at: number }[]> {

@@ -20,8 +20,13 @@ export interface EngineInfo {
   /** Detected hardware, for the "fit checks" on the engines screen. */
   gpu?: { name: string; vramMb: number };
 }
-export interface EngineList { active: EngineId; engines: EngineInfo[] }
-export interface SelectEngineRequest { id: EngineId }
+export interface EngineList {
+  active: EngineId;
+  engines: EngineInfo[];
+}
+export interface SelectEngineRequest {
+  id: EngineId;
+}
 
 /** Body of POST /v1/voices/clone. `audio` is a base64 WAV file (PCM 16/24/32-bit or float32, mono or stereo). */
 export interface CloneVoiceRequest {
@@ -32,14 +37,29 @@ export interface CloneVoiceRequest {
   audio: string;
 }
 export type CloneCheckId = "length" | "sample-rate" | "loudness" | "silence" | "noise";
-export interface CloneCheck { id: CloneCheckId; ok: boolean; message: string }
-export interface ClonedVoice { id: string; name: string; durationMs: number; createdAt: number; checks: CloneCheck[] }
+export interface CloneCheck {
+  id: CloneCheckId;
+  ok: boolean;
+  message: string;
+}
+export interface ClonedVoice {
+  id: string;
+  name: string;
+  durationMs: number;
+  createdAt: number;
+  checks: CloneCheck[];
+}
 export const CLONE_MIN_MS = 5_000;
 export const CLONE_MAX_MS = 30_000;
 export const CLONE_MIN_RATE = 16_000;
 
 /** Body of POST /v1/export. Same limits as SpeakRequest; `gapMs` of silence goes between sentences. */
-export interface ExportRequest { sentences: string[]; voice: string; speed: number; gapMs?: number }
+export interface ExportRequest {
+  sentences: string[];
+  voice: string;
+  speed: number;
+  gapMs?: number;
+}
 export type ExportState = "running" | "done" | "cancelled" | "error";
 export interface ExportJob {
   id: string;

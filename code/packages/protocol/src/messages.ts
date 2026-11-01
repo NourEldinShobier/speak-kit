@@ -2,7 +2,10 @@ import type { ErrorCode } from "./api";
 
 /** ---- Extension-internal messaging (chrome.runtime) ---- */
 
-export interface ReadSentence { text: string; block: number }
+export interface ReadSentence {
+  text: string;
+  block: number;
+}
 /** What a content script hands to the player. Ranges stay in the page; only text crosses the boundary. */
 export interface ReadDoc {
   docId: string;
@@ -35,7 +38,12 @@ export interface PlayerState {
 }
 
 /** Fired by the player when a sentence starts being heard; the content script derives word timing from it. */
-export interface SentenceStart { docId: string; index: number; durationMs: number; speed: number }
+export interface SentenceStart {
+  docId: string;
+  index: number;
+  durationMs: number;
+  speed: number;
+}
 
 export type PlayerCommand =
   | { cmd: "play"; doc: ReadDoc }
@@ -55,10 +63,7 @@ export type PlayerCommand =
   | { cmd: "queue-clear" };
 
 /** content script / popup / side panel -> background */
-export type ContentToBg =
-  | { t: "player"; command: PlayerCommand }
-  | { t: "get-state" }
-  | { t: "open-options" };
+export type ContentToBg = { t: "player"; command: PlayerCommand } | { t: "get-state" } | { t: "open-options" };
 /** background -> content script */
 export type BgToContent =
   | { t: "state"; state: PlayerState }

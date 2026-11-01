@@ -83,8 +83,7 @@ export class EngineRegistry {
   async select(id: EngineId): Promise<void> {
     const next = this.get(id);
     const st = next.status();
-    if (UNUSABLE.has(st.state))
-      throw new EngineUnavailableError(st.detail ?? `${NAMES[id]} is ${st.state}`, next.info?.().reason);
+    if (UNUSABLE.has(st.state)) throw new EngineUnavailableError(st.detail ?? `${NAMES[id]} is ${st.state}`, next.info?.().reason);
     const prev = this.active;
     this.#active = id;
     mkdirSync(join(this.#file, ".."), { recursive: true });

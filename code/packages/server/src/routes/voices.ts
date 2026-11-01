@@ -11,8 +11,7 @@ const UNUSABLE = new Set(["missing", "unavailable", "installing"]);
 function cloneVoice(engines: EngineRegistry, body: ReturnType<typeof parseClone>) {
   const cloner = engines.cloner();
   const st = cloner?.status();
-  if (!cloner?.clones || !st || UNUSABLE.has(st.state))
-    throw new EngineUnavailableError("Install Chatterbox to clone voices", cloner?.info?.().reason ?? "not-installed");
+  if (!cloner?.clones || !st || UNUSABLE.has(st.state)) throw new EngineUnavailableError("Install Chatterbox to clone voices", cloner?.info?.().reason ?? "not-installed");
   const bytes = Buffer.from(body.audio, "base64");
   let report;
   try {
@@ -32,7 +31,14 @@ export const voiceRoutes: Route[] = [
     path: "/v1/voices/clone",
     handle: async ({ req, res }, { engines }) => {
       const raw = await readBody(req, MAX_CLIP_BODY);
-      json(res, 201, cloneVoice(engines, validated(() => parseClone(raw))));
+      json(
+        res,
+        201,
+        cloneVoice(
+          engines,
+          validated(() => parseClone(raw)),
+        ),
+      );
     },
   },
   { method: "GET", path: "/v1/voices/cloned", handle: ({ res }, { engines }) => json(res, 200, { voices: engines.cloner()?.clones?.list() ?? [] }) },

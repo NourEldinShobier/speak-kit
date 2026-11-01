@@ -18,10 +18,8 @@ async function until(cond: () => boolean, ms = 3000) {
   }
 }
 const json = { "Content-Type": "application/json" };
-const post = (c: Ctx, path: string, body = "", headers: Record<string, string> = {}) =>
-  fetch(`${c.base}${path}`, { method: "POST", headers: { ...c.auth, ...headers }, body: body || undefined });
-const speak = (c: Ctx, sentences: string[], headers: Record<string, string> = {}, extra = {}) =>
-  post(c, "/v1/speak", speakBody(sentences, extra), { ...json, ...headers });
+const post = (c: Ctx, path: string, body = "", headers: Record<string, string> = {}) => fetch(`${c.base}${path}`, { method: "POST", headers: { ...c.auth, ...headers }, body: body || undefined });
+const speak = (c: Ctx, sentences: string[], headers: Record<string, string> = {}, extra = {}) => post(c, "/v1/speak", speakBody(sentences, extra), { ...json, ...headers });
 const health = async (c: Ctx) => ((await (await fetch(`${c.base}/v1/health`)).json()) as Health).engine;
 
 describe("lazy engine over HTTP", () => {
@@ -53,9 +51,7 @@ describe("lazy engine over HTTP", () => {
   it("a missing model answers with an engine-not-ready error frame", async () => {
     ctx = await start({ state: "missing" });
     const frames = await readFrames(await speak(ctx, ["x"]));
-    expect(frames.map((f) => f.frame.header)).toEqual([
-      { type: "error", code: "engine-not-ready", message: "engine is missing" },
-    ]);
+    expect(frames.map((f) => f.frame.header)).toEqual([{ type: "error", code: "engine-not-ready", message: "engine is missing" }]);
   });
 });
 
@@ -73,6 +69,20 @@ describe("idle unload through the server", () => {
     expect(h2.idleUnloadAtMs).toBeUndefined();
     await readFrames(await speak(ctx, ["again"]));
     expect(ctx.engine.loads).toBe(2);
+  });
+
+  it("two quick reads after an idle unload both stream audio and the model reloads once", async () => {
+    ctx = await start({ state: "unloaded", loadMs: 80 }, undefined, { idleUnloadMs: 100 });
+    await readFrames(await speak(ctx, ["hi"]));
+    await until(() => ctx!.engine.status().state === "unloaded");
+    const first = speak(ctx, ["one"]);
+    await sleep(20);
+    const second = speak(ctx, ["two"]);
+    for (const r of await Promise.all([first, second])) {
+      expect((await readFrames(r)).map((f) => f.frame.header.type)).toEqual(["audio", "done"]);
+    }
+    expect(ctx.engine.loads).toBe(2);
+    expect(ctx.engine.unloads).toBe(1);
   });
 
   it("env SPEAKKIT_IDLE_MS sets the window", async () => {
@@ -263,18 +273,10 @@ describe("validation messages", () => {
     expect(await bad("{")).toEqual(err("body is not valid JSON"));
     expect(await bad(s({ sentences: [] }))).toEqual(err("sentences must be an array of 1..500 strings"));
     expect(await bad(s({ sentences: "x" }))).toEqual(err("sentences must be an array of 1..500 strings"));
-    expect(await bad(s({ sentences: Array(501).fill("x") }))).toEqual(
-      err("sentences must be an array of 1..500 strings"),
-    );
-    expect(await bad(s({ sentences: ["ok", "  "] }))).toEqual(
-      err("sentences[1] must be a non-empty string of at most 2000 characters"),
-    );
-    expect(await bad(s({ sentences: ["ok", 5] }))).toEqual(
-      err("sentences[1] must be a non-empty string of at most 2000 characters"),
-    );
-    expect(await bad(s({ sentences: ["x".repeat(2001)] }))).toEqual(
-      err("sentences[0] must be a non-empty string of at most 2000 characters"),
-    );
+    expect(await bad(s({ sentences: Array(501).fill("x") }))).toEqual(err("sentences must be an array of 1..500 strings"));
+    expect(await bad(s({ sentences: ["ok", "  "] }))).toEqual(err("sentences[1] must be a non-empty string of at most 2000 characters"));
+    expect(await bad(s({ sentences: ["ok", 5] }))).toEqual(err("sentences[1] must be a non-empty string of at most 2000 characters"));
+    expect(await bad(s({ sentences: ["x".repeat(2001)] }))).toEqual(err("sentences[0] must be a non-empty string of at most 2000 characters"));
     expect(await bad(s({ voice: "nobody" }))).toEqual(err("unknown voice"));
     expect(await bad(s({ speed: 0.4 }))).toEqual(err("speed must be a number between 0.5 and 3"));
     expect(await bad(s({ speed: "1" }))).toEqual(err("speed must be a number between 0.5 and 3"));

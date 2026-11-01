@@ -98,8 +98,7 @@ export function guardRequest(req: IncomingMessage, res: ServerResponse, o: Guard
   const origin = req.headers.origin;
   if (origin !== undefined) {
     if (!origin.startsWith(EXTENSION_ORIGIN)) throw new HttpError(403, "forbidden", "origin not allowed");
-    if (o.allowedExtensions && !o.allowedExtensions.includes(origin.slice(EXTENSION_ORIGIN.length)))
-      throw new HttpError(403, "forbidden", "this extension is not paired");
+    if (o.allowedExtensions && !o.allowedExtensions.includes(origin.slice(EXTENSION_ORIGIN.length))) throw new HttpError(403, "forbidden", "this extension is not paired");
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }

@@ -22,12 +22,7 @@ export const speakRoutes: Route[] = [
   },
 ];
 
-async function speak(
-  res: ServerResponse,
-  { engines, queue }: Services,
-  body: ReturnType<typeof parseSpeak>,
-  replace: ReturnType<typeof parseReplace>,
-): Promise<void> {
+async function speak(res: ServerResponse, { engines, queue }: Services, body: ReturnType<typeof parseSpeak>, replace: ReturnType<typeof parseReplace>): Promise<void> {
   if (replace) queue.replace(replace);
   else if (queue.full) {
     res.setHeader("Retry-After", "1");

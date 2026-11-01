@@ -80,17 +80,7 @@ describe("auth, Origin and Host", () => {
       ["GET", "/v1/voices"],
       ["POST", "/v1/speak"],
     ] as const) {
-      expect(
-        (
-          await raw(
-            ctx,
-            m,
-            p,
-            { Host: `127.0.0.1:${ctx.server.port}` },
-            m === "POST" ? speakBody(["x"]) : undefined,
-          )
-        ).status,
-      ).toBe(401);
+      expect((await raw(ctx, m, p, { Host: `127.0.0.1:${ctx.server.port}` }, m === "POST" ? speakBody(["x"]) : undefined)).status).toBe(401);
       expect(
         (
           await raw(ctx, m, p, {
@@ -113,13 +103,8 @@ describe("auth, Origin and Host", () => {
       expect(r.status).toBe(403);
       expect(r.headers["access-control-allow-origin"]).toBeUndefined();
     }
-    expect(
-      (await raw(ctx, "GET", "/v1/health", { Host: host, Origin: "https://evil.example" })).status,
-    ).toBe(403);
-    expect(
-      (await raw(ctx, "OPTIONS", "/v1/speak", { Host: host, Origin: "https://evil.example" }))
-        .status,
-    ).toBe(403);
+    expect((await raw(ctx, "GET", "/v1/health", { Host: host, Origin: "https://evil.example" })).status).toBe(403);
+    expect((await raw(ctx, "OPTIONS", "/v1/speak", { Host: host, Origin: "https://evil.example" })).status).toBe(403);
   });
 
   it("accepts chrome-extension origins with CORS headers and answers preflight", async () => {
@@ -137,9 +122,7 @@ describe("auth, Origin and Host", () => {
     });
     expect(pre.status).toBe(204);
     expect(pre.headers["access-control-allow-origin"]).toBe(origin);
-    expect(String(pre.headers["access-control-allow-headers"]).toLowerCase()).toContain(
-      "authorization",
-    );
+    expect(String(pre.headers["access-control-allow-headers"]).toLowerCase()).toContain("authorization");
     expect(String(pre.headers["access-control-allow-methods"])).toContain("POST");
   });
 
@@ -155,13 +138,7 @@ describe("auth, Origin and Host", () => {
   it("rejects foreign Host headers (DNS rebinding) and accepts localhost", async () => {
     ctx = await start();
     const p = ctx.server.port;
-    for (const host of [
-      "evil.example",
-      `evil.example:${p}`,
-      "127.0.0.1",
-      `127.0.0.1:${p + 1}`,
-      `[::1]:${p}`,
-    ]) {
+    for (const host of ["evil.example", `evil.example:${p}`, "127.0.0.1", `127.0.0.1:${p + 1}`, `[::1]:${p}`]) {
       expect((await raw(ctx, "GET", "/v1/health", { Host: host })).status).toBe(403);
     }
     expect((await raw(ctx, "GET", "/v1/health", { Host: `localhost:${p}` })).status).toBe(200);
@@ -257,9 +234,7 @@ describe("invalid bodies", () => {
     const ok = await readFrames(await post(ctx, speakBody(["x"], { speed: 0.5 })));
     expect(ok.at(-1)!.frame.header.type).toBe("done");
     expect((await post(ctx, speakBody(["x".repeat(2000)], { speed: 3 }))).status).toBe(200);
-    const many = await readFrames(
-      await post(ctx, speakBody(Array.from({ length: 500 }, () => "a"))),
-    );
+    const many = await readFrames(await post(ctx, speakBody(Array.from({ length: 500 }, () => "a"))));
     expect(many.at(-1)!.frame.header).toEqual({ type: "done", count: 500 });
   });
 
@@ -282,12 +257,8 @@ describe("health states", () => {
       engine: { id: "kokoro", state: "downloading", progress: 0.42 },
     });
 
-    const frames = (await readFrames(await post(ctx, speakBody(["hi"])))).map(
-      (f) => f.frame.header,
-    );
-    expect(frames).toEqual([
-      { type: "error", code: "engine-not-ready", message: "engine is downloading" },
-    ]);
+    const frames = (await readFrames(await post(ctx, speakBody(["hi"])))).map((f) => f.frame.header);
+    expect(frames).toEqual([{ type: "error", code: "engine-not-ready", message: "engine is downloading" }]);
 
     ctx.engine.setStatus({ state: "loading" });
     h = await (await fetch(`${ctx.base}/v1/health`)).json();
@@ -304,9 +275,7 @@ describe("health states", () => {
 
   it("sends an error frame when synthesis fails mid-stream, after earlier frames", async () => {
     ctx = await start({ failOn: (t) => t === "bad" });
-    const frames = (await readFrames(await post(ctx, speakBody(["good", "bad", "never"])))).map(
-      (f) => f.frame.header,
-    );
+    const frames = (await readFrames(await post(ctx, speakBody(["good", "bad", "never"])))).map((f) => f.frame.header);
     expect(frames.map((h) => h.type)).toEqual(["audio", "error"]);
     expect(frames[1]).toMatchObject({
       type: "error",

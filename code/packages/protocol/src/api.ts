@@ -47,7 +47,10 @@ export interface Voice {
   /** Present on voices the user cloned from a reference clip (Chatterbox). */
   cloned?: true;
 }
-export interface VoiceList { voices: Voice[]; default: string }
+export interface VoiceList {
+  voices: Voice[];
+  default: string;
+}
 
 export interface SpeakRequest {
   /** Sentences to read, in order. Each becomes one audio frame. */
@@ -58,7 +61,9 @@ export interface SpeakRequest {
 }
 
 /** Body of POST /v1/engine/hold. 0 to 3 600 000. The extension sends 600000 on pause and 0 on resume. */
-export interface HoldRequest { ms: number }
+export interface HoldRequest {
+  ms: number;
+}
 
 const ERROR_CODES = [
   "app-not-running",

@@ -28,8 +28,7 @@ function chatterbox(hw: Hardware, installed = true, installer?: () => Promise<vo
   toClose.push(e);
   return e;
 }
-const startWith = (cb: ChatterboxEngine, opts: ConstructorParameters<typeof FakeEngine>[0] = {}) =>
-  start(opts, undefined, { chatterbox: cb });
+const startWith = (cb: ChatterboxEngine, opts: ConstructorParameters<typeof FakeEngine>[0] = {}) => start(opts, undefined, { chatterbox: cb });
 
 const call = (c: Ctx, method: string, path: string, body?: unknown) =>
   fetch(`${c.base}${path}`, {
@@ -53,7 +52,10 @@ describe("GET /v1/engines", () => {
     ctx = await startWith(chatterbox({ python: ["python"] }, false));
     const l = await list(await call(ctx, "GET", "/v1/engines"));
     expect(l.engines[1]).toMatchObject({ id: "chatterbox", state: "unavailable", reason: "no-gpu", optional: true, cloning: true });
-    for (const [method, path, body] of [["POST", "/v1/engines/select", { id: "chatterbox" }], ["POST", "/v1/engines/chatterbox/install"]] as const) {
+    for (const [method, path, body] of [
+      ["POST", "/v1/engines/select", { id: "chatterbox" }],
+      ["POST", "/v1/engines/chatterbox/install"],
+    ] as const) {
       const r = await call(ctx, method, path, body);
       expect(r.status).toBe(409);
       expect(((await r.json()) as { error: { code: string } }).error.code).toBe("engine-unavailable");
@@ -85,7 +87,11 @@ describe("install, select, remove", () => {
     const voices = (await (await call(ctx, "GET", "/v1/voices")).json()) as VoiceList;
     expect(voices).toMatchObject({ default: "chatterbox", voices: [{ id: "chatterbox" }] });
 
-    const r = await fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: JSON.stringify({ sentences: ["hello"], voice: "chatterbox", speed: 1 }) });
+    const r = await fetch(`${ctx.base}/v1/speak`, {
+      method: "POST",
+      headers: { ...ctx.auth, "Content-Type": "application/json" },
+      body: JSON.stringify({ sentences: ["hello"], voice: "chatterbox", speed: 1 }),
+    });
     const frames = await readFrames(r);
     expect(frames.map((f) => f.frame.header.type)).toEqual(["audio", "done"]);
     expect(cb.status().state).toBe("ready");
@@ -148,7 +154,11 @@ describe("voice cloning", () => {
     const voices = (await (await call(ctx, "GET", "/v1/voices")).json()) as VoiceList;
     expect(voices.voices.map((v) => v.id)).toEqual(["chatterbox", voice.id]);
     expect(voices.voices[1]).toMatchObject({ cloned: true });
-    const s = await fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }) });
+    const s = await fetch(`${ctx.base}/v1/speak`, {
+      method: "POST",
+      headers: { ...ctx.auth, "Content-Type": "application/json" },
+      body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }),
+    });
     expect((await readFrames(s)).map((f) => f.frame.header.type)).toEqual(["audio", "done"]);
 
     expect((await call(ctx, "DELETE", `/v1/voices/${voice.id}`)).status).toBe(204);
@@ -262,7 +272,11 @@ describe("text normalization before synthesis", () => {
   it("a sentence with nothing readable becomes silence, keeping the frame index", async () => {
     ctx = await start();
     const frames = await readFrames(await call(ctx, "POST", "/v1/speak", { sentences: ["😀🎉", "Hello."], voice: "af_heart", speed: 1 }));
-    expect(frames.map((f) => f.frame.header)).toMatchObject([{ type: "audio", index: 0, durationMs: 100 }, { type: "audio", index: 1 }, { type: "done", count: 2 }]);
+    expect(frames.map((f) => f.frame.header)).toMatchObject([
+      { type: "audio", index: 0, durationMs: 100 },
+      { type: "audio", index: 1 },
+      { type: "done", count: 2 },
+    ]);
     expect(ctx.engine.calls.map((c) => c.text)).toEqual(["Hello."]);
   });
 });

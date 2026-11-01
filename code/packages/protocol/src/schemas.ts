@@ -10,7 +10,10 @@ export const healthSchema: v.GenericSchema<unknown, Health> = v.object({
   app: v.literal("speakkit"),
   version: v.string(),
   // Any number parses so a client can report a version mismatch instead of "app not running".
-  apiVersion: v.pipe(v.number(), v.transform((n) => n as Health["apiVersion"])),
+  apiVersion: v.pipe(
+    v.number(),
+    v.transform((n) => n as Health["apiVersion"]),
+  ),
   engine: v.object({
     id: engineId,
     state: engineState,
@@ -63,9 +66,11 @@ export const exportJobSchema: v.GenericSchema<unknown, ExportJob> = v.object({
 
 export const errorBodySchema = v.object({ error: v.object({ code: v.string(), message: v.string() }) });
 
-const parser = <T>(schema: v.GenericSchema<unknown, T>) => (x: unknown): T | undefined => {
-  const r = v.safeParse(schema, x);
-  return r.success ? r.output : undefined;
-};
+const parser =
+  <T>(schema: v.GenericSchema<unknown, T>) =>
+  (x: unknown): T | undefined => {
+    const r = v.safeParse(schema, x);
+    return r.success ? r.output : undefined;
+  };
 export const parseHealth = parser(healthSchema);
 export const parseVoiceList = parser(voiceListSchema);

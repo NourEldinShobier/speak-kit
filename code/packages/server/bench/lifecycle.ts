@@ -20,7 +20,7 @@ function childMb(): number {
   const kb = /"([\d.,]+) K"\s*$/m.exec(r.stdout)?.[1];
   return kb ? Number(kb.replace(/[.,]/g, "")) / 1024 : 0;
 }
-const mb = () => Math.round(((process.memoryUsage().rss / 1048576) + childMb()) * 10) / 10;
+const mb = () => Math.round((process.memoryUsage().rss / 1048576 + childMb()) * 10) / 10;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const gc = () => (globalThis as { gc?: () => void }).gc?.();
 const settle = async () => (gc(), await sleep(1500), gc(), mb());
@@ -51,8 +51,7 @@ async function firstFrameMs(): Promise<number> {
   });
   const dec = new FrameDecoder();
   let first = -1;
-  for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>)
-    for (const f of dec.push(chunk)) if (first < 0 && f.header.type === "audio") first = performance.now() - t0;
+  for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) for (const f of dec.push(chunk)) if (first < 0 && f.header.type === "audio") first = performance.now() - t0;
   return Math.round(first);
 }
 async function waitReady() {
@@ -91,7 +90,7 @@ for (const delay of [1000, 300, 0]) {
   await sleep(delay);
   const tf = await firstFrameMs();
   out[`warmedThenClick_${delay}ms_ttfaMs`] = tf;
-  out[`warmedThenClick_${delay}ms_totalFromWarmMs`] = Math.round(performance.now() - tw - 0) ;
+  out[`warmedThenClick_${delay}ms_totalFromWarmMs`] = Math.round(performance.now() - tw - 0);
   await engine.unload();
 }
 

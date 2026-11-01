@@ -1,6 +1,8 @@
 import { DEFAULT_PORT, DEFAULT_VOICE } from "./constants";
 
 export type SiteRule = "always-dock" | "hide-controls" | "never-read";
+/** What a site without a rule gets: the normal controls ("ask": nothing is read until the user presses play) or no reading at all. */
+export type SiteDefault = "ask" | "never-read";
 export interface Settings {
   port: number;
   launcher: { enabled: boolean; side: "left" | "right"; idle: "peek" | "hidden" | "open"; openOn: "hover" | "click"; closeDelayMs: number; widerWhileReading: boolean; y: number };
@@ -11,6 +13,7 @@ export interface Settings {
   highlight: { mode: "sentence+word" | "sentence" | "word" | "off"; sentenceColor: string; wordColor: string; matchTheme: boolean };
   skip: { navigation: boolean; citations: boolean; code: boolean; urls: boolean; captions: boolean };
   sites: Record<string, SiteRule>;
+  siteDefault: SiteDefault;
 }
 /** The pairing token lives in chrome.storage.local under TOKEN_KEY, never in sync storage. */
 export const TOKEN_KEY = "speakkit.token";
@@ -30,4 +33,5 @@ export const defaultSettings = (): Settings => ({
   highlight: { mode: "sentence+word", sentenceColor: DEFAULT_SENTENCE_COLOR, wordColor: DEFAULT_WORD_COLOR, matchTheme: true },
   skip: { navigation: true, citations: true, code: true, urls: true, captions: false },
   sites: {},
+  siteDefault: "ask",
 });
