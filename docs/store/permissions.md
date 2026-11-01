@@ -22,7 +22,7 @@ Source of truth: `code/apps/extension/manifest.json` (version 0.3.0). Each text 
 ### `scripting`
 > Used with activeTab to run the extension's own packaged script (content.js) in the current tab on demand, and to read the current text selection when the popup opens. The extension injects only files bundled in its package; it never injects remote or user-supplied code.
 
-### Host permissions: `http://127.0.0.1/*`, `http://localhost/*`
+### Host permission: `http://127.0.0.1/*`
 > The extension sends the text to be spoken to, and receives audio from, the Speak Kit desktop app that runs on the user's own computer and listens only on 127.0.0.1. This is the only network destination the extension contacts. Requests carry a pairing token the user copied from the app; the app rejects other origins.
 
 ### Content script on `http://*/*`, `https://*/*`, `file:///*`
@@ -85,15 +85,14 @@ Ordered by how likely they are to cause a rejection or a long review.
 
    c. **Keep as is.** Works, but expect a longer review and a likely follow-up question. Drop only `file:///*` from `content_scripts` and `web_accessible_resources`: local files need the user to switch on "Allow access to file URLs" in Chrome anyway, and (a) or (b) cover them when allowed.
 
-2. **`http://localhost/*` host permission.** The source only contacts `http://127.0.0.1:<port>` (`grep localhost` in `src/` finds no use). Remove it; one fewer line to justify. Match patterns ignore the port, so `http://127.0.0.1/*` already covers every port.
 
-3. **`file:///*` in `content_scripts` and `web_accessible_resources`.** See item 1c.
+2. **`file:///*` in `content_scripts` and `web_accessible_resources`.** See item 1c.
 
-4. **`activeTab` next to the content script.** Needed today because the content script's match patterns do not give `scripting.executeScript` access; it stays under every option above.
+3. **`activeTab` next to the content script.** Needed today because the content script's match patterns do not give `scripting.executeScript` access; it stays under every option above.
 
 Other points checked and fine: no `tabs`, `history`, `webRequest`, `cookies`, `downloads` or `<all_urls>` is requested; there is no `content_security_policy` override; `minimum_chrome_version` 116 covers `sidePanel` (114) and `offscreen` (109).
 
-Manifest changes this implies (not made here, outside this work package's ownership): remove `http://localhost/*`; for (b) add `optional_host_permissions`, remove `content_scripts`, register scripts from the background and request the permission from the options page; add the matching tests in `apps/extension`.
+Manifest changes this implies (not made here): for (b) add `optional_host_permissions`, remove `content_scripts`, register scripts from the background and request the permission from the options page; add the matching tests in `apps/extension`.
 
 ## Other findings for the manifest owner
 

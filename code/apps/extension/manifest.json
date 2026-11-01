@@ -16,7 +16,7 @@
   "options_ui": { "page": "options.html", "open_in_tab": true },
   "side_panel": { "default_path": "sidepanel.html" },
   "permissions": ["storage", "contextMenus", "offscreen", "sidePanel", "activeTab", "scripting"],
-  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "host_permissions": ["http://127.0.0.1/*"],
   "commands": {
     "read-selection": { "suggested_key": { "default": "Ctrl+Shift+S", "mac": "Command+Shift+S" }, "description": "Read selection or page" },
     "play-pause": { "suggested_key": { "default": "Ctrl+Shift+Y", "mac": "Command+Shift+Y" }, "description": "Play / pause" },
