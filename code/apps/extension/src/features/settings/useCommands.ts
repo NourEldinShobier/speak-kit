@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getCommands, type ManifestCommands } from "./browser";
 
 export const CMD_LABEL: Record<string, string> = {
   "read-selection": "Read selection",
@@ -14,10 +15,7 @@ export const splitShortcut = (sc?: string) => (sc ? sc.split(/\s*\+\s*/).filter(
  * unassigned when the user removes it. The API does not say which, so this reports every unassigned command that has a suggested key.
  * Page-level conflicts (a web app that handles the key itself) are invisible to extensions.
  */
-export function unassignedSuggestions(
-  commands: readonly Pick<chrome.commands.Command, "name" | "shortcut">[],
-  manifest: Record<string, { suggested_key?: { default?: string } }> | undefined,
-): Record<string, string> {
+export function unassignedSuggestions(commands: readonly Pick<chrome.commands.Command, "name" | "shortcut">[], manifest: ManifestCommands | undefined): Record<string, string> {
   const out: Record<string, string> = {};
   for (const c of commands) {
     const key = c.name ? manifest?.[c.name]?.suggested_key?.default : undefined;
@@ -31,16 +29,7 @@ export function useCommands(): chrome.commands.Command[] | null {
   const [cmds, setCmds] = useState<chrome.commands.Command[] | null>(null);
   useEffect(() => {
     let live = true;
-    const load = () => {
-      try {
-        chrome.commands?.getAll().then(
-          (c) => live && setCmds(c),
-          () => live && setCmds([]),
-        );
-      } catch {
-        if (live) setCmds([]);
-      }
-    };
+    const load = () => void getCommands().then((c) => live && setCmds(c));
     load();
     const onVis = () => {
       if (!document.hidden) load();

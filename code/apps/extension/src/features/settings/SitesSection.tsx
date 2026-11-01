@@ -1,7 +1,8 @@
 import { useState } from "react";
-import type { SiteDefault, SiteRule } from "@speakkit/protocol";
+import { compareNames, plural, type SiteDefault, type SiteRule } from "@speakkit/protocol";
 import { Button, Icon, IconButton, Select, SettingRow, TextInput } from "@speakkit/ui";
 import { Card, PageHead, ToggleGrid } from "../../shared/ui";
+import { recentWebTabs } from "./browser";
 import { defaultSettings, type SectionProps, type Settings } from "./types";
 
 /** "https://www.News.Example.com/a?b" -> "www.news.example.com"; null when it is not a host name. */
@@ -27,15 +28,39 @@ const DEFAULTS: { value: SiteDefault; label: string }[] = [
 const DOT: Record<SiteRule, string> = { "always-dock": "var(--tag-green)", "hide-controls": "var(--text-tertiary)", "never-read": "var(--tag-red)" };
 const ruleLabel = (r: SiteRule) => RULES.find((x) => x.value === r)!.label;
 
-/** C7 Sites and filters. */
-export function SitesSection({ s, upd, saved }: SectionProps) {
+type Upd = SectionProps["upd"];
+
+const SKIP_ITEMS: { key: keyof Settings["skip"]; title: string }[] = [
+  { key: "navigation", title: "Navigation, menus and footers" },
+  { key: "citations", title: "Footnote numbers and citations [12]" },
+  { key: "code", title: "Code blocks" },
+  { key: "urls", title: "Long URLs (say “link” instead)" },
+  { key: "captions", title: "Image captions" },
+];
+
+function SkipCard({ s, upd }: Pick<SectionProps, "s" | "upd">) {
+  const setSkip = (k: keyof Settings["skip"], v: boolean) => upd((x) => ({ ...x, skip: { ...x.skip, [k]: v } }));
+  return (
+    <Card title="What to skip" id="skip-h">
+      <ToggleGrid items={SKIP_ITEMS.map(({ key, title }) => ({ title, on: s.skip[key], onChange: (v) => setSkip(key, v) }))} />
+    </Card>
+  );
+}
+
+/** The host of the most recently used web tab, or null when no tab is readable. */
+async function currentSite(): Promise<string | null> {
+  const t = (await recentWebTabs())[0];
+  try {
+    return t?.url ? normalizeHost(new URL(t.url).hostname) : null;
+  } catch {
+    return null;
+  }
+}
+
+function RuleAdder({ upd }: { upd: Upd }) {
   const [host, setHost] = useState("");
   const [rule, setRule] = useState<SiteRule>("always-dock");
-  const [q, setQ] = useState("");
   const [err, setErr] = useState("");
-  const setSkip = (k: keyof Settings["skip"], v: boolean) => upd((x) => ({ ...x, skip: { ...x.skip, [k]: v } }));
-  const entries = Object.entries(s.sites);
-  const shown = entries.filter(([h]) => h.includes(q.trim().toLowerCase())).sort(([a], [b]) => a.localeCompare(b));
   const add = () => {
     const h = normalizeHost(host);
     if (!h) {
@@ -47,20 +72,102 @@ export function SitesSection({ s, upd, saved }: SectionProps) {
     upd((x) => ({ ...x, sites: { ...x.sites, [h]: rule } }));
   };
   const useTab = async () => {
-    try {
-      const tabs = await chrome.tabs.query({});
-      const t = tabs.filter((x) => /^https?:/.test(x.url ?? "")).sort((a, b) => ((b as { lastAccessed?: number }).lastAccessed ?? 0) - ((a as { lastAccessed?: number }).lastAccessed ?? 0))[0];
-      const h = t?.url ? normalizeHost(new URL(t.url).hostname) : null;
-      if (h) {
-        setHost(h);
-        setErr("");
-        return;
-      }
-    } catch {
-      /* no tabs permission */
-    }
-    setErr("Couldn't read another tab's address. Type the site instead.");
+    const h = await currentSite();
+    if (h) setHost(h);
+    setErr(h ? "" : "Couldn't read another tab's address. Type the site instead.");
   };
+  return (
+    <>
+      <div className="op-add">
+        <TextInput
+          icon="world"
+          aria-label="Site"
+          placeholder="Add a site, e.g. news.example.com"
+          value={host}
+          onChange={(e) => setHost(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Select label="Rule for new site" options={RULES} value={rule} onChange={(v) => setRule(v as SiteRule)} />
+        <Button variant="primary" iconLeft="plus" onClick={add}>
+          Add
+        </Button>
+        <Button variant="ghost" onClick={useTab}>
+          Use this tab's site
+        </Button>
+      </div>
+      {err && (
+        <p className="op-err" role="alert">
+          <Icon name="alert-triangle" size={13} />
+          {err}
+        </p>
+      )}
+    </>
+  );
+}
+
+function RuleRow({ host, rule, upd }: { host: string; rule: SiteRule; upd: Upd }) {
+  return (
+    <li>
+      <Icon name="world" size={16} />
+      <div className="sk-grow">
+        <div>{host}</div>
+        {rule === "never-read" && <small>Nothing on this site is sent to the voice engine.</small>}
+      </div>
+      <Select
+        size="sm"
+        label={`Rule for ${host}`}
+        options={RULES}
+        value={rule}
+        onChange={(v) => upd((x) => ({ ...x, sites: { ...x.sites, [host]: v as SiteRule } }))}
+        renderValue={() => (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i style={{ width: 8, height: 8, borderRadius: 999, background: DOT[rule] }} />
+            {ruleLabel(rule)}
+          </span>
+        )}
+      />
+      <IconButton
+        name="trash"
+        label={`Remove rule for ${host}`}
+        onClick={() =>
+          upd((x) => {
+            const { [host]: _, ...rest } = x.sites;
+            return { ...x, sites: rest };
+          })
+        }
+      />
+    </li>
+  );
+}
+
+function RulesCard({ s, upd }: Pick<SectionProps, "s" | "upd">) {
+  const [q, setQ] = useState("");
+  const entries = Object.entries(s.sites);
+  const shown = entries.filter(([h]) => h.includes(q.trim().toLowerCase())).sort(([a], [b]) => compareNames(a, b));
+  return (
+    <section className="lm-card op-card" aria-labelledby="rules-h">
+      <div className="op-card-top">
+        <div>
+          <h2 id="rules-h">Site permissions</h2>
+          <p className="op-card-d">Applies to the site and its subdomains.</p>
+        </div>
+        {entries.length > 0 && (
+          <TextInput size="sm" icon="search" aria-label="Search rules" placeholder={`Search ${plural(entries.length, "rule", "rules")}`} value={q} onChange={(e) => setQ(e.target.value)} />
+        )}
+      </div>
+      <RuleAdder upd={upd} />
+      <ul className="op-rules" aria-label="Site rules">
+        {shown.map(([h, r]) => (
+          <RuleRow key={h} host={h} rule={r} upd={upd} />
+        ))}
+        {entries.length === 0 && <li className="empty">No site rules yet. Sites you add here override the defaults above.</li>}
+      </ul>
+    </section>
+  );
+}
+
+/** C7 Sites and filters. */
+export function SitesSection({ s, upd, saved }: SectionProps) {
   return (
     <>
       <PageHead
@@ -69,93 +176,8 @@ export function SitesSection({ s, upd, saved }: SectionProps) {
         saved={saved}
         onReset={() => upd((x) => ({ ...x, skip: defaultSettings().skip, sites: {}, siteDefault: "ask" }))}
       />
-      <Card title="What to skip" id="skip-h">
-        <ToggleGrid
-          items={[
-            { title: "Navigation, menus and footers", on: s.skip.navigation, onChange: (v) => setSkip("navigation", v) },
-            { title: "Footnote numbers and citations [12]", on: s.skip.citations, onChange: (v) => setSkip("citations", v) },
-            { title: "Code blocks", on: s.skip.code, onChange: (v) => setSkip("code", v) },
-            { title: "Long URLs (say “link” instead)", on: s.skip.urls, onChange: (v) => setSkip("urls", v) },
-            { title: "Image captions", on: s.skip.captions, onChange: (v) => setSkip("captions", v) },
-          ]}
-        />
-      </Card>
-      <section className="lm-card op-card" aria-labelledby="rules-h">
-        <div className="op-card-top">
-          <div>
-            <h2 id="rules-h">Site permissions</h2>
-            <p className="op-card-d">Applies to the site and its subdomains.</p>
-          </div>
-          {entries.length > 0 && (
-            <TextInput
-              size="sm"
-              icon="search"
-              aria-label="Search rules"
-              placeholder={`Search ${entries.length} rule${entries.length === 1 ? "" : "s"}`}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          )}
-        </div>
-        <div className="op-add">
-          <TextInput
-            icon="world"
-            aria-label="Site"
-            placeholder="Add a site, e.g. news.example.com"
-            value={host}
-            onChange={(e) => setHost(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && add()}
-          />
-          <Select label="Rule for new site" options={RULES} value={rule} onChange={(v) => setRule(v as SiteRule)} />
-          <Button variant="primary" iconLeft="plus" onClick={add}>
-            Add
-          </Button>
-          <Button variant="ghost" onClick={useTab}>
-            Use this tab's site
-          </Button>
-        </div>
-        {err && (
-          <p className="op-err" role="alert">
-            <Icon name="alert-triangle" size={13} />
-            {err}
-          </p>
-        )}
-        <ul className="op-rules" aria-label="Site rules">
-          {shown.map(([h, r]) => (
-            <li key={h}>
-              <Icon name="world" size={16} />
-              <div className="sk-grow">
-                <div>{h}</div>
-                {r === "never-read" && <small>Nothing on this site is sent to the voice engine.</small>}
-              </div>
-              <Select
-                size="sm"
-                label={`Rule for ${h}`}
-                options={RULES}
-                value={r}
-                onChange={(v) => upd((x) => ({ ...x, sites: { ...x.sites, [h]: v as SiteRule } }))}
-                renderValue={() => (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    <i style={{ width: 8, height: 8, borderRadius: 999, background: DOT[r] }} />
-                    {ruleLabel(r)}
-                  </span>
-                )}
-              />
-              <IconButton
-                name="trash"
-                label={`Remove rule for ${h}`}
-                onClick={() =>
-                  upd((x) => {
-                    const { [h]: _, ...rest } = x.sites;
-                    return { ...x, sites: rest };
-                  })
-                }
-              />
-            </li>
-          ))}
-          {entries.length === 0 && <li className="empty">No site rules yet. Sites you add here override the defaults above.</li>}
-        </ul>
-      </section>
+      <SkipCard s={s} upd={upd} />
+      <RulesCard s={s} upd={upd} />
       <Card
         title="Sites not in the list"
         id="default-h"

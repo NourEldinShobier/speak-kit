@@ -12,15 +12,10 @@ interface SettingsApi {
   reset: (fn: (d: Settings, s: Settings) => Settings) => void;
 }
 
-/** Settings from chrome.storage.sync with live updates. Writes are applied locally at once and saved after 200 ms of quiet. */
-export function useSettings(): SettingsApi {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [ready, setReady] = useState(false);
+/** Writes `cur` to storage 200 ms after the last call; `saved` is true once the write landed. */
+function useDebouncedSave(cur: { current: Settings }) {
   const [saved, setSaved] = useState(false);
-  const cur = useRef(settings);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  /** changes made before the stored settings arrived; they are applied on top of them */
-  const early = useRef<((s: Settings) => Settings)[] | null>([]);
   const save = useCallback(() => {
     setSaved(false);
     clearTimeout(timer.current);
@@ -32,7 +27,19 @@ export function useSettings(): SettingsApi {
         ),
       200,
     );
-  }, []);
+  }, [cur]);
+  const cancel = useCallback(() => clearTimeout(timer.current), []);
+  return { save, saved, cancel };
+}
+
+/** Settings from chrome.storage.sync with live updates. Writes are applied locally at once and saved after 200 ms of quiet. */
+export function useSettings(): SettingsApi {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [ready, setReady] = useState(false);
+  const cur = useRef(settings);
+  const { save, saved, cancel } = useDebouncedSave(cur);
+  /** changes made before the stored settings arrived; they are applied on top of them */
+  const early = useRef<((s: Settings) => Settings)[] | null>([]);
   useEffect(() => {
     let live = true;
     readSettings().then((stored) => {
@@ -53,9 +60,9 @@ export function useSettings(): SettingsApi {
     return () => {
       live = false;
       off();
-      clearTimeout(timer.current);
+      cancel();
     };
-  }, []);
+  }, [save, cancel]);
   const update = useCallback(
     (fn: (s: Settings) => Settings) => {
       const next = fn(cur.current);

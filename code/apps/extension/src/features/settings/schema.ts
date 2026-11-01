@@ -8,7 +8,7 @@ import { defaultSettings, type ReaderSettings, type Settings } from "./types";
  */
 const d = defaultSettings();
 
-const clamped = (min: number, max: number, fallback: number, round = false) =>
+const clamped = ([min, max]: readonly [number, number], fallback: number, round = false) =>
   v.fallback(
     v.pipe(
       v.number(),
@@ -42,8 +42,8 @@ const READER_LIMITS = { size: [14, 28], width: [480, 960] } as const;
 const readerSchema = group(
   {
     font: pick(READER_FONTS, d.reader.font),
-    size: clamped(READER_LIMITS.size[0], READER_LIMITS.size[1], d.reader.size, true),
-    width: clamped(READER_LIMITS.width[0], READER_LIMITS.width[1], d.reader.width, true),
+    size: clamped(READER_LIMITS.size, d.reader.size, true),
+    width: clamped(READER_LIMITS.width, d.reader.width, true),
     theme: pick(READER_THEMES, d.reader.theme),
     highlight: flag(d.reader.highlight),
   },
@@ -52,16 +52,16 @@ const readerSchema = group(
 
 const settingsSchema = v.fallback(
   v.object({
-    port: clamped(1, 65535, d.port, true),
+    port: clamped([1, 65535], d.port, true),
     launcher: group(
       {
         enabled: flag(d.launcher.enabled),
         side: pick(["left", "right"], d.launcher.side),
         idle: pick(["peek", "hidden", "open"], d.launcher.idle),
         openOn: pick(["hover", "click"], d.launcher.openOn),
-        closeDelayMs: clamped(0, 10000, d.launcher.closeDelayMs),
+        closeDelayMs: clamped([0, 10000], d.launcher.closeDelayMs),
         widerWhileReading: flag(d.launcher.widerWhileReading),
-        y: clamped(0, 1, d.launcher.y),
+        y: clamped([0, 1], d.launcher.y),
       },
       d.launcher,
     ),
@@ -76,7 +76,7 @@ const settingsSchema = v.fallback(
       d.show,
     ),
     voice: text(d.voice),
-    speed: clamped(0.5, 3, d.speed),
+    speed: clamped([0.5, 3], d.speed),
     pauseBetweenParagraphs: pick(["none", "short", "long"], d.pauseBetweenParagraphs),
     highlight: group(
       {
