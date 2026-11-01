@@ -1,4 +1,4 @@
-// Wordmark and lockups for the final SpeakKit logo. The wordmark is "SpeakKit" in Inter Semi Bold
+// Wordmark and lockups for the final SpeakKit logo. The wordmark is "Speak Kit" in Inter Semi Bold
 // (variable font, wght 600, opsz 32, tracking -2 %), outlined to paths so the files need no font.
 // Usage: node lockups.mjs [path/to/Inter-Variable.ttf]   (default: the per-user Windows font folder)
 import { readFileSync, writeFileSync } from "node:fs";
@@ -12,9 +12,9 @@ const DIR = new URL("./svg/logo/", import.meta.url);
 const INK = "#14161B", WHITE = "#FFFFFF";
 const f1 = (v) => (Math.round(v * 100) / 100).toString();
 
-// "SpeakKit" at `size` px with its baseline at y = 0 and left edge at x = 0
+// "Speak Kit" at `size` px with its baseline at y = 0 and left edge at x = 0
 function word(size, color) {
-  const s = size / font.unitsPerEm, track = -0.02 * size, run = font.layout("SpeakKit");
+  const s = size / font.unitsPerEm, track = -0.02 * size, run = font.layout("Speak Kit");
   let x = 0;
   const d = run.glyphs.map((g, i) => {
     const p = g.path.scale(s, -s).translate(x + run.positions[i].xOffset * s, 0).toSVG();

@@ -13,12 +13,12 @@ const tile = (x, y) => { const u = Math.abs(x - 512) / R, v = Math.abs(y - 512) 
 const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
 // p: geometry for one size class. full = 64 px and up, small = 16-48 px (wider seams, bigger hub, bolder wave)
-const SIZES = {
+export const SIZES = {
   full: { gap: 13, amp: 42, period: 400, round: 18, r: 214, ring: 26, waveW: 1.2, waveA: 0.23, waveS: 0.19 },
   small: { gap: 26, amp: 30, period: 400, round: 24, r: 240, ring: 38, waveW: 1.12, waveA: 0.25, waveS: 0.27 },
 };
 
-function geometry(p) {
+export function geometry(p) {
   const sx = (y) => 512 + p.amp * Math.sin((TAU * (y - 112)) / p.period), sy = (x) => 512 - p.amp * Math.sin((TAU * (x - 112)) / p.period);
   const hole = (x, y) => -(Math.hypot(x - 512, y - 512) - (p.r + p.ring));
   const quad = (a, b) => (x, y) => K.smax(K.smax(K.smax(tile(x, y), a * (x - sx(y)) + p.gap, p.round), b * (y - sy(x)) + p.gap, p.round), hole(x, y), 16);
@@ -34,7 +34,7 @@ function geometry(p) {
 }
 
 const shadow = `<filter id="hub-sh" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#06070A" flood-opacity="0.28"/></filter>`;
-function colour(g, { withShadow = true } = {}) {
+export function colour(g, { withShadow = true } = {}) {
   const fills = [COLORS.sky, COLORS.yellow, COLORS.violet, COLORS.deep];
   return K.svg(withShadow ? shadow : "", [
     ...g.pieces.map((d, i) => `<path d="${d}" fill="${fills[i]}"/>`),
@@ -42,7 +42,7 @@ function colour(g, { withShadow = true } = {}) {
     `<path d="${g.waveStroke}" fill="none" stroke="${COLORS.wave}" stroke-width="${f1(g.sw)}" stroke-linecap="round" stroke-linejoin="round"/>`,
   ].join("\n"));
 }
-const mono = (g, c) => K.svg("", [...g.pieces, g.hubKnock].map((d) => `<path d="${d}" fill="${c}" fill-rule="evenodd"/>`).join("\n"));
+export const mono = (g, c) => K.svg("", [...g.pieces, g.hubKnock].map((d) => `<path d="${d}" fill="${c}" fill-rule="evenodd"/>`).join("\n"));
 
 export function build() {
   const full = geometry(SIZES.full), small = geometry(SIZES.small);
@@ -58,4 +58,4 @@ export function build() {
   for (const [n, s] of Object.entries(files)) writeFileSync(new URL(`${n}.svg`, OUT), s);
   return Object.keys(files);
 }
-console.log("written", build().join(", "));
+if (process.argv[1]?.split(/[\\/]/).slice(-2).join("/") === "final/logo.mjs") console.log("written", build().join(", "));
