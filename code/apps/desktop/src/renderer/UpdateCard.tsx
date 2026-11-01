@@ -1,6 +1,7 @@
 import { Banner, Button, LoadingLabel, Popover, ProgressBar, StatusPill } from "@speakkit/ui";
+import { useState } from "react";
 import type { AppState } from "../shared/ipc";
-import type { UpdateAction } from "../shared/updates";
+import { updateBlockers, updateErrorText, type UpdateAction } from "../shared/updates";
 import { api } from "./ui";
 
 const act = (a: UpdateAction) => () => void api.updateAction(a);
@@ -8,9 +9,10 @@ const act = (a: UpdateAction) => () => void api.updateAction(a);
 /** The update flow in one place (Settings > About, H9, and the title bar popover, H18). Nothing here installs without a click. */
 export function UpdateCard({ s }: { s: AppState }) {
   const u = s.update;
+  const [confirm, setConfirm] = useState(false);
   switch (u.kind) {
     case "unsupported":
-      return <p className="sk-modal-text">Updates are delivered to the installed app. This copy runs from a folder, so it does not update itself.</p>;
+      return <p className="sk-modal-text">Updates are delivered to the installed app. This copy runs from a folder, so it does not update itself. The Windows installer keeps itself up to date.</p>;
     case "idle":
       return (
         <div className="sk-row-actions" data-testid="update-idle">
@@ -45,7 +47,31 @@ export function UpdateCard({ s }: { s: AppState }) {
           <ProgressBar value={u.percent} label="Update download" />
         </div>
       );
-    case "ready":
+    case "ready": {
+      const b = updateBlockers(s);
+      const busy = b.reading || b.exports > 0;
+      if (confirm && busy && !u.onQuit)
+        return (
+          <div data-testid="update-confirm">
+            <Banner
+              tone="warning"
+              title={`Restart to install ${u.version}?`}
+              action={
+                <div className="sk-row-actions">
+                  <Button size="sm" onClick={() => setConfirm(false)}>
+                    Keep working
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={act("install-now-anyway")}>
+                    Restart anyway
+                  </Button>
+                </div>
+              }
+            >
+              {[b.reading && "The reading in progress stops", b.exports > 0 && (b.exports === 1 ? "The export is cancelled" : "The exports are cancelled")].filter(Boolean).join(" and ")}. Choose
+              Install when I quit to let it finish first.
+            </Banner>
+          </div>
+        );
       return (
         <div data-testid="update-ready">
           <Banner
@@ -59,7 +85,7 @@ export function UpdateCard({ s }: { s: AppState }) {
                     Install when I quit
                   </Button>
                 )}
-                <Button size="sm" variant="primary" onClick={act("install-now")}>
+                <Button size="sm" variant="primary" onClick={busy ? () => setConfirm(true) : act("install-now")}>
                   Restart now
                 </Button>
               </div>
@@ -74,39 +100,67 @@ export function UpdateCard({ s }: { s: AppState }) {
           )}
         </div>
       );
+    }
+    case "manual":
+      return (
+        <div data-testid="update-manual">
+          <Banner
+            tone="info"
+            title={`Speak Kit ${u.version} is available`}
+            action={
+              <div className="sk-row-actions">
+                <Button size="sm" onClick={act("open-release")}>
+                  Release notes
+                </Button>
+                <Button size="sm" variant="primary" onClick={act("open-release")}>
+                  Download
+                </Button>
+              </div>
+            }
+          >
+            This copy cannot replace itself. Download the new version from the release page and open it to update.
+          </Banner>
+          <Button size="sm" variant="ghost" onClick={act("remind-later")}>
+            Remind me later
+          </Button>
+        </div>
+      );
     case "restarting":
       return <LoadingLabel>Restarting to install {u.version}</LoadingLabel>;
-    case "error":
+    case "error": {
+      const t = updateErrorText(u.reason, u.phase, u.message);
       return (
         <Banner
           tone="error"
-          title="Could not check for updates"
+          title={t.title}
           action={
             <Button size="sm" onClick={act("check")}>
               Try again
             </Button>
           }
         >
-          {u.message}
+          {t.body}
         </Banner>
       );
+    }
   }
 }
 
 /** Green pill in the title bar once an update is downloaded (H18); opens the same card in a popover. */
 export function UpdatePill({ s }: { s: AppState }) {
   // "Remind me later" hides the pill for a day; Settings > About and the tray still show the update.
-  if (s.update.kind !== "ready" || Date.now() < s.config.updateRemindAtMs) return null;
+  const u = s.update;
+  if ((u.kind !== "ready" && u.kind !== "manual") || Date.now() < s.config.updateRemindAtMs) return null;
   return (
     <Popover
-      title="Update ready"
+      title={u.kind === "ready" ? "Update ready" : "Update available"}
       side="bottom"
       align="end"
       width={380}
       trigger={(t) => (
         <button type="button" className="sk-pillbtn" data-testid="update-pill" {...t}>
           <StatusPill tone="green" icon="circle-check">
-            Update ready · {s.update.kind === "ready" ? s.update.version : ""}
+            {u.kind === "ready" ? "Update ready" : "Update available"} · {u.version}
           </StatusPill>
         </button>
       )}

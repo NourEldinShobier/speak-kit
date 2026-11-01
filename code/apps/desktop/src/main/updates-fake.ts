@@ -20,3 +20,6 @@ export function fakeUpdater(version: string, onInstall: () => void): UpdaterLike
   u.quitAndInstall = onInstall;
   return u;
 }
+
+/** Stand-in for the GitHub latest-release lookup of the manual (macOS) flow, used with SPEAKKIT_UPDATE_MANUAL=<version> (tests). */
+export const fakeRelease = (version: string) => async () => ({ version, url: `https://github.com/NourEldinShobier/speak-kit/releases/tag/v${version}` });

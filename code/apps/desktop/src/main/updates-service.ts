@@ -1,9 +1,10 @@
-import { app } from "electron";
+import { app, shell } from "electron";
 import type { Ctx } from "./context";
 import type { Api } from "../shared/ipc";
-import type { UpdateState } from "../shared/updates";
+import { workRunning, type UpdateState } from "../shared/updates";
 import type { ToastCenter } from "./toasts";
-import { Updates, type UpdaterLike } from "./updates";
+import { feedOverride, githubLatestRelease, isReleaseUrl, updateMode, Updates, type UpdaterLike } from "./updates";
+import { fakeRelease } from "./updates-fake";
 
 /** First check this long after startup, then once a day while the app runs. */
 const FIRST_CHECK_MS = 30_000;
@@ -12,19 +13,35 @@ const DAILY_MS = 24 * 60 * 60_000;
 type UpdateHandlers = Pick<Api, "updateAction">;
 
 /**
- * electron-updater against GitHub Releases (the publish target is in electron-builder.yml). Only an installed build updates; a
- * portable build or a source checkout reports "unsupported". Nothing is installed without the user.
+ * electron-updater against GitHub Releases (the publish target is in electron-builder.yml). Only an installed Windows build
+ * updates itself; macOS only announces a newer release; a portable build or a source checkout reports "unsupported". Nothing is
+ * installed without the user. SPEAKKIT_UPDATE_URL swaps the feed for a generic one (docs/auto-update.md, the local update test).
  */
 export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => void, beforeInstall: () => void, fake?: () => UpdaterLike) {
-  // The portable build sets PORTABLE_EXECUTABLE_FILE and cannot replace itself.
-  const supported = !!fake || (app.isPackaged && !process.env.PORTABLE_EXECUTABLE_FILE && !process.env.SPEAKKIT_USER_DATA);
+  const env = process.env;
+  const feedUrl = feedOverride(env.SPEAKKIT_UPDATE_URL);
+  if (env.SPEAKKIT_UPDATE_URL && !feedUrl) ctx.log.warn("SPEAKKIT_UPDATE_URL is not an http(s) address; using the GitHub feed");
+  const manualFake = __TEST_CODE__ && !app.isPackaged ? env.SPEAKKIT_UPDATE_MANUAL || undefined : undefined;
+  const mode = updateMode({
+    platform: process.platform,
+    packaged: app.isPackaged,
+    portable: !!env.PORTABLE_EXECUTABLE_FILE,
+    isolated: !!env.SPEAKKIT_USER_DATA,
+    feedUrl,
+    fake: !!fake,
+    forceManual: !!manualFake,
+  });
   const updates = new Updates({
-    supported,
+    mode,
+    currentVersion: app.getVersion(),
     load: async () => {
       if (fake) return fake();
       const mod = (await import("electron-updater")) as unknown as { autoUpdater?: UpdaterLike; default?: { autoUpdater: UpdaterLike } };
-      return (mod.autoUpdater ?? mod.default!.autoUpdater) as UpdaterLike;
+      const u = (mod.autoUpdater ?? mod.default!.autoUpdater) as UpdaterLike;
+      if (feedUrl) u.setFeedURL?.({ provider: "generic", url: feedUrl });
+      return u;
     },
+    latestRelease: manualFake ? fakeRelease(manualFake) : () => githubLatestRelease(fetch),
     onState: (s) => setState(s),
     onReady: (version) => {
       ctx.addActivity("update", "Update ready", `Speak Kit ${version} is downloaded. Restart when it suits you.`);
@@ -40,6 +57,11 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
       });
     },
     now: Date.now,
+    busy: () => workRunning(ctx.state),
+    onBusy: () => {
+      ctx.showWindow();
+      ctx.sendUi({ type: "nav", page: "settings", sub: "about" });
+    },
     beforeInstall,
   });
 
@@ -51,7 +73,7 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
   ctx.state.update = updates.state;
 
   const timers: NodeJS.Timeout[] = [];
-  if (supported && ctx.config.autoUpdate) {
+  if (mode !== "unsupported" && ctx.config.autoUpdate) {
     const first = setTimeout(() => {
       void updates.checkAndDownload();
       timers.push(setInterval(() => ctx.config.autoUpdate && void updates.checkAndDownload(), DAILY_MS).unref());
@@ -72,6 +94,9 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
         case "install-now":
           await updates.installNow();
           break;
+        case "install-now-anyway":
+          await updates.installNow(true);
+          break;
         case "install-on-quit":
           await updates.installOnQuit();
           break;
@@ -79,6 +104,11 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
           ctx.config.updateRemindAtMs = Date.now() + DAILY_MS;
           ctx.saveConfig();
           break;
+        case "open-release": {
+          const s = updates.state;
+          if (s.kind === "manual" && isReleaseUrl(s.url)) void shell.openExternal(s.url);
+          break;
+        }
       }
       return ctx.publish();
     },

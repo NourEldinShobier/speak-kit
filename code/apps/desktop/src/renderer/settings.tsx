@@ -338,7 +338,14 @@ function About({ s }: { s: AppState }) {
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
-      <SettingsSection title="Updates" description="Updates come from GitHub Releases. They download in the background and are never installed without you.">
+      <SettingsSection
+        title="Updates"
+        description={
+          s.platform === "darwin"
+            ? "Speak Kit looks for new versions on GitHub Releases. On macOS you download and install them yourself."
+            : "Updates come from GitHub Releases. They download in the background and are never installed without you."
+        }
+      >
         <div className="sk-pad" data-testid="update-section">
           <UpdateCard s={s} />
         </div>
