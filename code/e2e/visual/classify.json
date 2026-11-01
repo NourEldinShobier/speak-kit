@@ -56,7 +56,7 @@
   "D4": ["known difference", "One combined progress row; no per-file rows, speed or ETA."],
   "D5": ["known difference", "No per-file rows, Choose file, auto-retry or proxy options."],
   "D6": ["minor drift", "Continue enabled after Copy, not after the extension pairs."],
-  "D7": ["known difference", "No pairing signal (shows server status), no global shortcut row, Startup defaults to Off, button reads Open SpeakKit."],
+  "D7": ["known difference", "No pairing signal (shows server status), no global shortcut row, Startup defaults to Off, button reads Open Speak Kit."],
   "D8": ["match", "Dark welcome matches."],
   "D9": ["minor drift", "Skipped variant renders; wording follows the product."],
   "G1": ["known difference", "Closest built screen (Voices): the v1 app has no Your voices, cards, grades legend or detail drawer."],

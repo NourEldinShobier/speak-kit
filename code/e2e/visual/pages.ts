@@ -175,7 +175,7 @@ export const pageScenarios: Scenario[] = [
   S("B9", "app-offline", G, "Page · app offline error", async (c) => {
     const p = await openPage(c, { settings: dockOnly });
     const { docId } = await armDoc(p);
-    await state(p, docId, "error", { error: { code: "app-not-running", message: "SpeakKit isn't running" } });
+    await state(p, docId, "error", { error: { code: "app-not-running", message: "Speak Kit isn't running" } });
     await sleep(500);
     return shot(p);
   }),

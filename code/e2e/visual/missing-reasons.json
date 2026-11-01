@@ -1,11 +1,11 @@
 {
   "fallback": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet.",
   "byId": {
-    "B3": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are SpeakKit > Read selection, Read from here, Add to queue (asserted in the e2e suite).",
+    "B3": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are Speak Kit > Read selection, Read from here, Add to queue (asserted in the e2e suite).",
     "B21": "Superseded by B4; the pill replaced the edge launcher expanded state. Dark launcher is covered by B17-B20.",
     "W0": "First-launch splash frame of the design: the product opens straight on the Welcome step (W1), there is no separate splash window.",
     "W2b": "Implemented: the wizard shows the detected GPU or says none was found. The harness machine has a GPU, so the no-GPU state is not reachable without hardware detection being faked.",
-    "C14": "The Open SpeakKit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it.",
+    "C14": "The Open Speak Kit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it.",
     "C17": "Rule card (breakpoint rules), not a screen. The collapsed layout it describes is captured as C18.",
     "G2": "Voice detail drawer is not built; the Voices page lists voices with a preview button only.",
     "G13": "List/grid view toggle for voices is not built (one list layout).",

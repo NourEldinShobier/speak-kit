@@ -50,7 +50,7 @@ test.describe("context menu as registered with Chrome", () => {
     await expect
       .poll(() => ext.sw.evaluate(() => (globalThis as any).__speakkit.menuDefs()))
       .toEqual([
-        { id: "speakkit", title: "SpeakKit", contexts: ["all"] },
+        { id: "speakkit", title: "Speak Kit", contexts: ["all"] },
         { id: "speakkit-read-selection", parentId: "speakkit", title: "Read selection", contexts: ["selection"] },
         { id: "speakkit-read-from-here", parentId: "speakkit", title: "Read from here", contexts: ["all"] },
         { id: "speakkit-add-queue", parentId: "speakkit", title: "Add to queue", contexts: ["all"] },
@@ -62,7 +62,7 @@ test.describe("context menu as registered with Chrome", () => {
     await ext.setSettings({ show: { contextMenu: false } });
     await expect.poll(() => ext.menuTitles()).toEqual([]);
     await ext.setSettings({ show: { contextMenu: true } });
-    await expect.poll(() => ext.menuTitles()).toEqual(["SpeakKit", "Read selection", "Read from here", "Add to queue"]);
+    await expect.poll(() => ext.menuTitles()).toEqual(["Speak Kit", "Read selection", "Read from here", "Add to queue"]);
   });
 
   test("each entry's click handler does what its title says", async ({ ext, app }) => {
@@ -78,7 +78,7 @@ test.describe("context menu as registered with Chrome", () => {
   });
 });
 
-test.describe("Open SpeakKit and the app not running", () => {
+test.describe("Open Speak Kit and the app not running", () => {
   test("the launch link is speakkit://launch; the helper tab is closed again once the app answers", async ({ ext, app }) => {
     ext.allowed.push(/ERR_CONNECTION_REFUSED|Failed to fetch/);
     await ext.pair(app);
@@ -105,10 +105,10 @@ test.describe("Open SpeakKit and the app not running", () => {
     await fakeProtocolHandler(ext);
     await app.stop();
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "offline", { timeout: 10_000 });
-    await popup.getByRole("button", { name: "Open SpeakKit" }).click();
-    await expect(popup.getByRole("status")).toContainText("Starting SpeakKit", { timeout: 5000 });
-    await expect(popup.getByRole("status")).toContainText("SpeakKit did not start", { timeout: 20_000 });
-    await expect(popup.getByRole("button", { name: "Open SpeakKit" })).toBeEnabled();
+    await popup.getByRole("button", { name: "Open Speak Kit" }).click();
+    await expect(popup.getByRole("status")).toContainText("Starting Speak Kit", { timeout: 5000 });
+    await expect(popup.getByRole("status")).toContainText("Speak Kit did not start", { timeout: 20_000 });
+    await expect(popup.getByRole("button", { name: "Open Speak Kit" })).toBeEnabled();
     await app.start();
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "idle", { timeout: 15_000 });
   });

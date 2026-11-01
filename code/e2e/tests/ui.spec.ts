@@ -245,7 +245,7 @@ test.describe("speeds above 2x (SoundTouch)", () => {
 });
 
 test.describe("deep link", () => {
-  test("Open SpeakKit opens speakkit://launch; once the app answers the popup recovers", async ({ ext, app }) => {
+  test("Open Speak Kit opens speakkit://launch; once the app answers the popup recovers", async ({ ext, app }) => {
     ext.allowed.push(/ERR_CONNECTION_REFUSED|Failed to fetch/);
     const { popup } = await begin(ext, app);
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "idle");
@@ -258,7 +258,7 @@ test.describe("deep link", () => {
     await app.stop();
     await popup.reload();
     await expect(popup.locator(".pp")).toHaveAttribute("data-view", "offline", { timeout: 10_000 });
-    await popup.getByRole("button", { name: "Open SpeakKit" }).click();
+    await popup.getByRole("button", { name: "Open Speak Kit" }).click();
     // The fake protocol handler: when Chrome is sent to speakkit://launch, the "OS" starts the app.
     await expect.poll(() => ext.sw.evaluate(() => (globalThis as unknown as { __created: string[] }).__created), { timeout: 8000 }).toContain("speakkit://launch");
     await app.start();

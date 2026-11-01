@@ -142,7 +142,7 @@ export class Ext {
     await tok.click();
     await tok.fill(app.token);
     await tok.press("Enter");
-    if (expectOk) await expect(opt.getByRole("status").first()).toContainText("Connected to SpeakKit", { timeout: 10_000 });
+    if (expectOk) await expect(opt.getByRole("status").first()).toContainText("Connected to Speak Kit", { timeout: 10_000 });
     return opt;
   }
 

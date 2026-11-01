@@ -52,7 +52,7 @@ test.describe("keyboard commands (driven through the service worker's onCommand 
 
 test.describe("context menu (entries read back from the worker; clicks go through its onClicked handler)", () => {
   test("registers the SpeakKit entries and removes them live when the setting is off", async ({ ext }) => {
-    await expect.poll(() => ext.menuTitles()).toEqual(["SpeakKit", "Read selection", "Read from here", "Add to queue"]);
+    await expect.poll(() => ext.menuTitles()).toEqual(["Speak Kit", "Read selection", "Read from here", "Add to queue"]);
     await ext.setSettings({ show: { contextMenu: false } });
     await expect.poll(() => ext.menuTitles()).toEqual([]);
     await ext.setSettings({ show: { contextMenu: true } });

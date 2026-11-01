@@ -32,7 +32,7 @@ test.describe("pairing and connection", () => {
     await app.stop();
     await opt.getByRole("button", { name: "Test connection" }).click();
     await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "offline", { timeout: 10_000 });
-    await expect(opt.getByText("SpeakKit isn't running")).toBeVisible();
+    await expect(opt.getByText("Speak Kit isn't running")).toBeVisible();
     await app.start();
     // The page polls every 3 s by itself.
     await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "ok", { timeout: 15_000 });
