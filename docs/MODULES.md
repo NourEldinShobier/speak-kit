@@ -71,7 +71,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Chrome MV3 extension: content script, popup, options, side panel, service worker, offscreen player.
 
-May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 100, stylesheets: 5.
+May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 109, stylesheets: 5.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
@@ -81,7 +81,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 | `app/content` | 14 | yes |
 | `app/offscreen` | 2 | no |
 | `app/options` | 3 | no |
-| `app/popup` | 4 | no |
+| `app/popup` | 12 | no |
 | `app/sidepanel` | 2 | no |
 | `features/connection` | 9 | yes |
 | `features/highlight` | 4 | yes |
@@ -89,7 +89,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 | `features/player` | 6 | yes |
 | `features/queue` | 3 | yes |
 | `features/reader` | 7 | yes |
-| `features/settings` | 10 | yes |
+| `features/settings` | 11 | yes |
 | `features/voices` | 6 | yes |
 | `shared` | 8 | no |
 
@@ -97,20 +97,20 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Electron app: main process, preload, renderer (library, reader, settings), shared contracts.
 
-May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 117, stylesheets: 9.
+May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 153, stylesheets: 9.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `main` | 29 | yes |
+| `main` | 35 | yes |
 | `main/export` | 5 | no |
 | `main/library` | 19 | yes |
 | `main/reader` | 2 | no |
-| `main/system` | 4 | no |
+| `main/system` | 5 | no |
 | `preload` | 1 | yes |
-| `renderer` | 16 | no |
-| `renderer/features` | 22 | yes |
+| `renderer` | 19 | no |
+| `renderer/features` | 48 | yes |
 | `shared` | 13 | no |
 | `shared/library` | 4 | no |
 
