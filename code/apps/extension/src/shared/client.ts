@@ -44,7 +44,7 @@ export const getHealth = async (force = false): Promise<HealthResult> => (await 
 export const getQueue = () => send<QueueSnapshot>({ t: "get-queue" });
 export const openOptions = () => send({ t: "open-options" });
 /** Previews go through the player so the UI never touches the server. */
-export const previewVoice = (voice: string, text: string, speed?: number) => send({ t: "preview", voice, text, speed });
+export const previewVoice = (voice: string, text: string, speed?: number) => send({ t: "preview", voice, text, ...(speed === undefined ? {} : { speed }) });
 
 let lastWarm = -Infinity;
 /** Ask the app to load the model ahead of the click. Debounced here (2 s) and again in the worker (5 s). */

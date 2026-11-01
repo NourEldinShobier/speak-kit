@@ -43,5 +43,5 @@ export async function closeOffscreenIfIdle(): Promise<void> {
   const s = await getState();
   if (s.status !== "idle" && s.status !== "finished" && s.status !== "error") return;
   if ((await getQueue()).length) return;
-  if (await hasOffscreen()) await chrome.offscreen.closeDocument().catch(() => {});
+  if (await hasOffscreen()) await chrome.offscreen.closeDocument().catch(() => {}); // already closed by someone else
 }

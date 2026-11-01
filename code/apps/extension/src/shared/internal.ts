@@ -18,24 +18,24 @@ export type ConnResult<T> = { ok: true; value: T } | { ok: false; code: ErrorCod
 
 /** Extra requests answered by the service worker (contract additions, see the final report). */
 export type ExtraToBg =
-  | { t: "get-health"; force?: boolean } // reply ConnResult<Health>, cached 3 s
-  | { t: "auth-check"; port?: number; token?: string } // reply ConnResult<true>; defaults to the stored port/token
+  | { t: "get-health"; force?: boolean | undefined } // reply ConnResult<Health>, cached 3 s
+  | { t: "auth-check"; port?: number | undefined; token?: string | undefined } // reply ConnResult<true>; defaults to the stored port/token
   | { t: "get-voices" } // reply ConnResult<VoiceList>
   | { t: "get-queue" } // reply QueueItem[]
-  | { t: "read"; mode: "page" | "selection" | "from-here"; tabId?: number; queue?: boolean } // reply { ok: boolean }
-  | { t: "open-sidepanel"; windowId?: number }
+  | { t: "read"; mode: "page" | "selection" | "from-here"; tabId?: number | undefined; queue?: boolean | undefined } // reply { ok: boolean }
+  | { t: "open-sidepanel"; windowId?: number | undefined }
   /** sent by the popup and side panel */
-  | { t: "read-tab"; tabId?: number; mode: "page" | "selection"; queue?: boolean }
+  | { t: "read-tab"; tabId?: number | undefined; mode: "page" | "selection"; queue?: boolean | undefined }
   | { t: "set-auto-play"; on: boolean }
-  | { t: "preview"; voice: string; speed?: number; text: string }
+  | { t: "preview"; voice: string; speed?: number | undefined; text: string }
   /** sent by the content script dock */
   | { t: "preview-voice"; voice: string }
   | { t: "open-app" }
   | { t: "launch-app" } // reply { ok, via } : opens the speakkit:// deep link (see features/connection/launch.ts)
   /** load the model ahead of the click; the worker debounces and ignores failures */
-  | { t: "warm"; reason?: "popup" | "hover" | "selection" | "dock" | "options" }
+  | { t: "warm"; reason?: "popup" | "hover" | "selection" | "dock" | "options" | undefined }
   /** open or close the reader view of a tab (default: the active tab) */
-  | { t: "reader"; tabId?: number; open: boolean };
+  | { t: "reader"; tabId?: number | undefined; open: boolean };
 
 export interface VoiceInfo {
   id: string;

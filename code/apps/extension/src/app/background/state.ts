@@ -18,10 +18,11 @@ const session = {
     try {
       return (await chrome.storage.session.get(key))[key] as T | undefined;
     } catch {
-      return undefined; // session storage unavailable
+      return undefined; // session storage unavailable: callers fall back to the idle default
     }
   },
   set(key: string, value: unknown): void {
+    // Losing the mirror only costs the state after a worker restart; the in-memory value is still right.
     chrome.storage.session.set({ [key]: value }).catch(() => {});
   },
 };
@@ -84,10 +85,10 @@ export const lastDoc = () => session.get<ReadDoc>(SESSION_DOC);
 export const rememberDoc = (doc: ReadDoc) => session.set(SESSION_DOC, doc);
 
 export const sendToPages = (m: BgToContent | ExtraBroadcast) => {
-  chrome.runtime.sendMessage(m).catch(() => {});
+  chrome.runtime.sendMessage(m).catch(() => {}); // no extension page is open to receive it
 };
 export const sendToTab = (tabId: number | undefined, m: BgToContent) => {
-  if (tabId !== undefined) chrome.tabs.sendMessage(tabId, m).catch(() => {});
+  if (tabId !== undefined) chrome.tabs.sendMessage(tabId, m).catch(() => {}); // the tab closed or has no content script
 };
 
 function badge(state: PlayerState) {
@@ -107,7 +108,9 @@ export function publishState(state: PlayerState) {
   sendToTab(state.tabId, { t: "state", state });
 }
 
+const optionalTab = (tabId: number | undefined) => (tabId === undefined ? {} : { tabId });
+
 export async function reportError(code: ErrorCode, tabId?: number) {
   const base = await getState();
-  publishState({ ...base, status: "error", tabId: tabId ?? base.tabId, error: { code, message: ERROR_TEXT[code] } });
+  publishState({ ...base, status: "error", ...optionalTab(tabId ?? base.tabId), error: { code, message: ERROR_TEXT[code] } });
 }

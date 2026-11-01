@@ -21,79 +21,76 @@ async function queueSnapshot() {
   return { items: await getQueue(), outline, autoPlay: await getAutoPlay() };
 }
 
+const OK = { ok: true } as const;
 const tabOf = async (explicit: number | undefined, sender: chrome.runtime.MessageSender) => explicit ?? sender.tab?.id ?? (await activeTabId());
 
-export async function route(msg: Inbound, sender: chrome.runtime.MessageSender): Promise<unknown> {
-  switch (msg.t) {
-    case "player":
-      await runPlayerCommand(msg.command, sender.tab?.id);
-      return { ok: true };
-    case "get-state":
-      return getState();
-    case "open-options":
-      await chrome.runtime.openOptionsPage();
-      return { ok: true };
-    case "get-health":
-      return getHealthResult(msg.force);
-    case "auth-check":
-      return health.authCheck(msg.port, msg.token);
-    case "get-voices": {
-      // The content script reads { voices }, extension pages read ConnResult.
-      const r = await health.voices();
-      if (!r.ok) return r;
-      return { ...r, voices: r.value.voices.map(toInfo) };
-    }
-    case "get-queue":
-      return queueSnapshot();
-    case "read-tab": {
-      const tabId = msg.tabId ?? (await activeTabId());
-      return { ok: tabId !== undefined && (await startRead(tabId, msg.mode, { queue: msg.queue })) };
-    }
-    case "set-auto-play":
-      setAutoPlay(msg.on);
-      await sendOffscreenIfOpen({ to: "offscreen", autoPlay: msg.on });
-      return { ok: true };
-    case "preview":
-    case "preview-voice": {
-      const voice = msg.voice;
-      const speed = msg.t === "preview" ? msg.speed : undefined;
-      const text = msg.t === "preview" && msg.text ? msg.text : PREVIEW_TEXT;
-      await runPlayerCommand(
-        {
-          cmd: "play",
-          doc: {
-            docId: `preview-${voice}-${Date.now()}`,
-            tabId: sender.tab?.id ?? -1,
-            url: "",
-            title: "Voice preview",
-            sentences: [{ text, block: 0 }],
-            startIndex: 0,
-            source: "selection",
-          },
-        },
-        undefined,
-        { voice, ...(speed ? { speed } : {}) },
-      );
-      return { ok: true };
-    }
-    case "open-app":
-    case "launch-app":
-      return startApp();
-    case "warm":
-      void engine.warm();
-      return { ok: true };
-    case "reader": {
-      const tabId = await tabOf(msg.tabId, sender);
-      return { ok: tabId !== undefined && (await toggleReader(tabId, msg.open)) };
-    }
-    case "read": {
-      const tabId = await tabOf(msg.tabId, sender);
-      return { ok: tabId !== undefined && (await startRead(tabId, msg.mode, { queue: msg.queue })) };
-    }
-    case "open-sidepanel": {
-      const windowId = msg.windowId ?? sender.tab?.windowId ?? (await chrome.windows.getCurrent()).id;
-      if (windowId !== undefined) await chrome.sidePanel.open({ windowId });
-      return { ok: true };
-    }
-  }
+type Sender = chrome.runtime.MessageSender;
+type Handler<T extends Inbound["t"]> = (msg: Extract<Inbound, { t: T }>, sender: Sender) => unknown;
+
+async function preview(msg: Extract<Inbound, { t: "preview" | "preview-voice" }>, sender: Sender) {
+  const speed = msg.t === "preview" ? msg.speed : undefined;
+  const text = msg.t === "preview" && msg.text ? msg.text : PREVIEW_TEXT;
+  const doc = {
+    docId: `preview-${msg.voice}-${Date.now()}`,
+    tabId: sender.tab?.id ?? -1,
+    url: "",
+    title: "Voice preview",
+    sentences: [{ text, block: 0 }],
+    startIndex: 0,
+    source: "selection" as const,
+  };
+  await runPlayerCommand({ cmd: "play", doc }, undefined, { voice: msg.voice, ...(speed ? { speed } : {}) });
+  return OK;
+}
+
+const readIn = async (tabId: number | undefined, mode: "page" | "selection" | "from-here", queue: boolean | undefined) => ({
+  ok: tabId !== undefined && (await startRead(tabId, mode, queue === undefined ? {} : { queue })),
+});
+
+const handlers: { [T in Inbound["t"]]: Handler<T> } = {
+  player: async (msg, sender) => {
+    await runPlayerCommand(msg.command, sender.tab?.id);
+    return OK;
+  },
+  "get-state": () => getState(),
+  "open-options": async () => {
+    await chrome.runtime.openOptionsPage();
+    return OK;
+  },
+  "get-health": (msg) => getHealthResult(msg.force),
+  "auth-check": (msg) => health.authCheck(msg.port, msg.token),
+  "get-voices": async () => {
+    // The content script reads { voices }, extension pages read ConnResult.
+    const r = await health.voices();
+    return r.ok ? { ...r, voices: r.value.voices.map(toInfo) } : r;
+  },
+  "get-queue": () => queueSnapshot(),
+  "read-tab": async (msg) => readIn(msg.tabId ?? (await activeTabId()), msg.mode, msg.queue),
+  read: async (msg, sender) => readIn(await tabOf(msg.tabId, sender), msg.mode, msg.queue),
+  "set-auto-play": async (msg) => {
+    setAutoPlay(msg.on);
+    await sendOffscreenIfOpen({ to: "offscreen", autoPlay: msg.on });
+    return OK;
+  },
+  preview,
+  "preview-voice": preview,
+  "open-app": () => startApp(),
+  "launch-app": () => startApp(),
+  warm: () => {
+    void engine.warm();
+    return OK;
+  },
+  reader: async (msg, sender) => {
+    const tabId = await tabOf(msg.tabId, sender);
+    return { ok: tabId !== undefined && (await toggleReader(tabId, msg.open)) };
+  },
+  "open-sidepanel": async (msg, sender) => {
+    const windowId = msg.windowId ?? sender.tab?.windowId ?? (await chrome.windows.getCurrent()).id;
+    if (windowId !== undefined) await chrome.sidePanel.open({ windowId });
+    return OK;
+  },
+};
+
+export async function route(msg: Inbound, sender: Sender): Promise<unknown> {
+  return (handlers[msg.t] as Handler<typeof msg.t>)(msg, sender);
 }
