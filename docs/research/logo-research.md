@@ -21,3 +21,5 @@
 **Round 6 (speakkit-logos-v6-six.png), creative concepts with a visual idea each:** 1 Quote (two glossy lobes forming a quotation mark), 2 Caret Voice (text cursor swelling into a voice pulse), 3 Wren (singing songbird), 4 Folded Voice (origami paper turning into a wave), 5 Listening Spiral (ear/scroll coil with a yellow core), 6 Play Drop (liquid play button with a ripple ring).
 
 **Round 7 (speakkit-logos-v7-six.png), creative inside the wave and wave+K territory:** 1 Twisted Wave (Mobius ribbon), 2 Wave Orb (liquid wave inside a glass orb), 3 Ripple Print (white rings with a wave crest), 4 K Pulse (white K whose stem is a voice pulse), 5 K Crest (tube K from one wave ribbon), 6 K Tile (K cut from a gradient tile over a wave).
+
+**Round 8 (speakkit-logos-v8-six.png), v4 style only:** v4 as the main reference (marks 1-5 loved, mark 6 rejected), less glossy than v5/v7: 1 Swell II, 2 Monolith K, 3 Two Voices II, 4 Ribbon K II, 5 Pulse II (with highlight dot), 6 Gradient Monolith.
