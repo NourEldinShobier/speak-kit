@@ -59,6 +59,6 @@ export const tokens = {
 
 /** The few tokens native code (Electron window backgrounds, title bar overlay) needs. */
 export const nativeTokens = {
-  dark: { surfaceWindow: "#191a1b", surfaceCard: "#1e1f20", textSecondary: "#bfbfbf" },
-  light: { surfaceWindow: "#f3f3f6", surfaceCard: "#fafafd", textSecondary: "#3b3b3b" },
+  dark: { surfaceWindow: "#191a1b", surfaceCard: "#1e1f20", textPrimary: "#e6e6e6" },
+  light: { surfaceWindow: "#f3f3f6", surfaceCard: "#fafafd", textPrimary: "#202020" },
 } as const;

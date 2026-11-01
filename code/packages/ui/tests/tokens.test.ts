@@ -29,7 +29,7 @@ describe("tokens module", () => {
   });
 
   test("native tokens are picked from the same table", () => {
-    expect(nativeTokens.light).toEqual({ surfaceWindow: tokens.light["surface-window"], surfaceCard: tokens.light["surface-card"], textSecondary: tokens.light["text-secondary"] });
+    expect(nativeTokens.light).toEqual({ surfaceWindow: tokens.light["surface-window"], surfaceCard: tokens.light["surface-card"], textPrimary: tokens.light["text-primary"] });
   });
 });
 
