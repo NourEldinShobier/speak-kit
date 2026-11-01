@@ -14,12 +14,13 @@ Figma: https://www.figma.com/design/laNgdWcGxc1QjZeGnQ74pz, page "Final · Speak
 | `speakkit-logo-small-mono-ink.svg` / `-small-mono-white.svg` | One colour, small sizes |
 | `speakkit-lockup-horizontal-{ink,white}.svg` | Mark + wordmark side by side |
 | `speakkit-lockup-stacked-{ink,white}.svg` | Mark over wordmark |
-| `speakkit-wordmark-{ink,white}.svg` | "SpeakKit" in Inter Semi Bold, tracking -2 %, outlined |
+| `speakkit-wordmark-{ink,white}.svg` | "Speak Kit" in Inter Semi Bold, tracking -2 %, outlined |
 
 ## Colours
 Hub `#2F6BFF` · sky `#2EC5FF` · read-word yellow `#FFC23D` · violet `#7B61FF` · deep blue `#1F3FD1` · ink `#14161B`.
 
 ## Rules
+- One line weight: the seams and the ring round the hub are exactly as thick as the wave.
 - Small version at 48 px and below, full version above.
 - Clear space: a quarter of the mark's width on every side.
 - Don't recolour, rotate or rearrange the pieces; the only effect is the hub shadow.
