@@ -3,7 +3,7 @@ name: Release
 # Push a tag such as v0.2.0 to build the Windows installer and portable exe, the macOS dmg and zip files (arm64 and x64) and the
 # extension zip, and attach them (with the update metadata electron-updater reads) to a GitHub release. Nothing is code-signed.
 # Run it by hand (Actions > Release > Run workflow) with dry_run on to build everything and keep the files as workflow artifacts
-# without creating a release. docs/releasing.md has the whole procedure.
+# without creating a release. A tag push also needs docs/perf-runs/<version>.json (pnpm run release:check). docs/releasing.md has the whole procedure.
 on:
   push:
     tags: ["v*"]
@@ -32,6 +32,15 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      # A tag needs docs/perf-runs/<version>.json from "pnpm run release:check" (the perf phase runs on the dev machine, not here)
+      # for a commit in the tagged history; no build starts without it.
+      - uses: actions/checkout@v4
+        if: github.ref_type == 'tag'
+        with:
+          fetch-depth: 0
+      - name: Require the perf run for this version
+        if: github.ref_type == 'tag'
+        run: node code/scripts/release-check.mjs --verify "${GITHUB_REF_NAME#v}"
       - id: m
         env:
           PLATFORMS: ${{ inputs.platforms || 'both' }}
