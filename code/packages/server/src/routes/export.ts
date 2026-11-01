@@ -13,7 +13,7 @@ export const exportRoutes: Route[] = [
     handle: async ({ req, res }, { engines, exporter }) => {
       const raw = await readBody(req);
       const input = validated(() => parseExport(voiceIds(engines), raw));
-      json(res, 202, exporter.create(engines.active, input));
+      json(res, 202, await exporter.create(engines.active, input));
     },
   },
   {
@@ -36,11 +36,11 @@ export const exportRoutes: Route[] = [
   {
     method: "GET",
     path: new RegExp(`^/v1/export/${ID}/audio$`),
-    handle: ({ res, params }, { exporter }) => {
+    handle: async ({ res, params }, { exporter }) => {
       const job = exporter.get(params[0]!);
       if (!job) throw new HttpError(404, "not-found", "no such export");
       if (job.state !== "done") throw new HttpError(409, "busy", `export is ${job.state}`);
-      const { stream, length } = exporter.audio(job);
+      const { stream, length } = await exporter.audio(job);
       res.writeHead(200, { "Content-Type": "audio/wav", "Content-Length": length, "Cache-Control": "no-store" });
       res.on("close", () => stream.destroy());
       stream.pipe(res);

@@ -15,13 +15,13 @@ export interface Ctx {
 }
 
 export async function start(opts: FakeEngineOptions = {}, token?: string, serverOpts: Partial<ServerOptions> = {}): Promise<Ctx> {
-  const engine = new FakeEngine(opts);
+  const engine = (serverOpts.engine as FakeEngine | undefined) ?? new FakeEngine(opts);
   const server = createServer({
     engine,
     dataDir: mkdtempSync(join(tmpdir(), "speakkit-")),
     port: 0,
     version: "9.9.9",
-    token,
+    ...(token && { token }),
     ...serverOpts,
   });
   await server.listen();
@@ -32,6 +32,20 @@ export async function start(opts: FakeEngineOptions = {}, token?: string, server
     token: server.token,
     auth: { Authorization: `Bearer ${server.token}` },
   };
+}
+
+/** Engine whose synthesis ignores aborts and never ends until `open()` is called: a stalled model. */
+export class StalledEngine extends FakeEngine {
+  #gate: Promise<void>;
+  open!: () => void;
+  constructor(o: FakeEngineOptions = {}) {
+    super(o);
+    this.#gate = new Promise((r) => (this.open = r));
+  }
+  protected override async doSynthesize(): Promise<never> {
+    await this.#gate;
+    throw new Error("stalled engine released");
+  }
 }
 
 /** Raw request, so tests can set Host and Origin freely. */

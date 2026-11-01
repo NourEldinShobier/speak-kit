@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { createReadStream, mkdirSync, rmSync, statSync } from "node:fs";
-import { open, rm } from "node:fs/promises";
+import { createReadStream, rmSync } from "node:fs";
+import { mkdir, open, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import type { FileHandle } from "node:fs/promises";
 import type { Readable } from "node:stream";
 import { SAMPLE_RATE, type ExportJob } from "@speakkit/protocol";
 import { wavHeader, type SynthOptions, type Synthesized, type TtsEngine } from "@speakkit/engine";
@@ -27,6 +28,8 @@ interface ExportDeps {
   acquireSlot(ac: AbortController): Promise<() => void>;
   /** Normalizes the sentence and synthesizes it (silence when nothing readable is left). */
   render(engine: TtsEngine, sentence: string, opts: SynthOptions): Promise<Synthesized>;
+  /** Opens the output file; tests inject a failing one. Default `fs/promises` open. */
+  open?: typeof open;
 }
 
 export class ExportFullError extends Error {}
@@ -43,13 +46,13 @@ export class ExportManager {
   constructor(dir: string, deps: ExportDeps) {
     this.#dir = dir;
     this.#deps = deps;
+    // oxlint-disable-next-line node/no-sync -- startup, before the server listens
     rmSync(dir, { recursive: true, force: true }); // leftovers of a previous run
   }
 
-  create(engine: TtsEngine, input: ExportInput): ExportJob {
-    this.#sweep();
+  async create(engine: TtsEngine, input: ExportInput): Promise<ExportJob> {
+    await this.#sweep();
     if (this.#jobs.size >= MAX_JOBS) throw new ExportFullError(`at most ${MAX_JOBS} exports at once; delete finished ones`);
-    mkdirSync(this.#dir, { recursive: true });
     const id = randomBytes(8).toString("hex");
     const job = { id, state: "running", done: 0, total: input.sentences.length, durationMs: 0, ac: new AbortController(), file: join(this.#dir, `${id}.wav`) } as Job;
     job.settled = this.#run(job, engine, input);
@@ -66,8 +69,8 @@ export class ExportManager {
   }
 
   /** Streams a finished WAV. */
-  audio(job: Job): { stream: Readable; length: number } {
-    return { stream: createReadStream(job.file), length: statSync(job.file).size };
+  async audio(job: Job): Promise<{ stream: Readable; length: number }> {
+    return { stream: createReadStream(job.file), length: (await stat(job.file)).size };
   }
 
   async cancel(id: string): Promise<boolean> {
@@ -88,43 +91,27 @@ export class ExportManager {
   async close(): Promise<void> {
     this.abortAll();
     await Promise.all([...this.#jobs.values()].map((j) => j.settled));
-    rmSync(this.#dir, { recursive: true, force: true });
+    await rm(this.#dir, { recursive: true, force: true });
   }
 
-  #sweep(): void {
+  async #sweep(): Promise<void> {
     const now = Date.now();
-    for (const [id, j] of this.#jobs)
-      if (j.finishedAt && now - j.finishedAt > KEEP_MS) {
-        this.#jobs.delete(id);
-        rmSync(j.file, { force: true });
-      }
+    const expired = [...this.#jobs].filter(([, j]) => j.finishedAt && now - j.finishedAt > KEEP_MS);
+    for (const [id] of expired) this.#jobs.delete(id);
+    await Promise.all(expired.map(([, j]) => rm(j.file, { force: true })));
   }
 
   async #run(job: Job, engine: TtsEngine, input: ExportInput): Promise<void> {
     const { signal } = job.ac;
     let release: (() => void) | undefined;
     let endStream: (() => void) | undefined;
-    const fh = await open(job.file, "w");
+    let fh: FileHandle | undefined;
     try {
+      await mkdir(this.#dir, { recursive: true });
+      fh = await (this.#deps.open ?? open)(job.file, "w");
       release = await this.#deps.acquireSlot(job.ac);
       endStream = engine.beginStream?.();
-      await fh.write(wavHeader(SAMPLE_RATE, 0));
-      let bytes = 0;
-      let rate = 0;
-      for (const [i, sentence] of input.sentences.entries()) {
-        signal.throwIfAborted();
-        const r = await this.#deps.render(engine, sentence, { voice: input.voice, speed: input.speed, signal });
-        if (rate && r.sampleRate !== rate) throw new Error("engine changed sample rate during an export");
-        rate = r.sampleRate;
-        const gap = i < input.sentences.length - 1 ? new Int16Array(Math.round((rate * input.gapMs) / 1000)) : new Int16Array(0);
-        for (const part of [r.pcm, gap]) {
-          await fh.write(new Uint8Array(part.buffer, part.byteOffset, part.byteLength));
-          bytes += part.byteLength;
-        }
-        job.done = i + 1;
-        job.durationMs = Math.round((bytes / 2 / rate) * 1000);
-      }
-      await fh.write(wavHeader(rate || SAMPLE_RATE, bytes), 0, 44, 0);
+      await this.#render(job, { engine, input }, fh);
       job.state = "done";
     } catch (e) {
       job.state = signal.aborted ? "cancelled" : "error";
@@ -132,8 +119,29 @@ export class ExportManager {
     } finally {
       endStream?.();
       release?.();
-      await fh.close();
+      await fh?.close();
       job.finishedAt = Date.now();
     }
+  }
+
+  async #render(job: Job, { engine, input }: { engine: TtsEngine; input: ExportInput }, fh: FileHandle): Promise<void> {
+    const { signal } = job.ac;
+    await fh.write(wavHeader(SAMPLE_RATE, 0));
+    let bytes = 0;
+    let rate = 0;
+    for (const [i, sentence] of input.sentences.entries()) {
+      signal.throwIfAborted();
+      const r = await this.#deps.render(engine, sentence, { voice: input.voice, speed: input.speed, signal });
+      if (rate && r.sampleRate !== rate) throw new Error("engine changed sample rate during an export");
+      rate = r.sampleRate;
+      const gap = new Int16Array(i < input.sentences.length - 1 ? Math.round((rate * input.gapMs) / 1000) : 0);
+      for (const part of [r.pcm, gap]) {
+        await fh.write(new Uint8Array(part.buffer, part.byteOffset, part.byteLength));
+        bytes += part.byteLength;
+      }
+      job.done = i + 1;
+      job.durationMs = Math.round((bytes / 2 / rate) * 1000);
+    }
+    await fh.write(wavHeader(rate || SAMPLE_RATE, bytes), 0, 44, 0);
   }
 }

@@ -4,10 +4,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AddressInfo, Socket } from "node:net";
 import type { TtsEngine } from "@speakkit/engine";
-import { DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, parseEnv, parseOptions } from "./config";
+import { DEFAULT_CONTROL_DEADLINE_MS, DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, DEFAULT_STREAM_IDLE_MS, parseEnv, parseOptions } from "./config";
 import { EngineRegistry } from "./engines";
 import { ExportManager } from "./export";
-import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker } from "./http";
+import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDeadline, type GuardOptions } from "./http";
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
 import { engineRoutes } from "./routes/engines";
@@ -37,6 +37,10 @@ export interface ServerOptions {
   maxStreams?: number;
   /** Streams waiting FIFO for a slot before new ones get HTTP 429 (env SPEAKKIT_MAX_QUEUE). Default 8. */
   maxQueue?: number;
+  /** Control routes answer within this many ms or fail with 504. Default 8000. */
+  controlDeadlineMs?: number;
+  /** A speak stream that produces no frame for this many ms ends with a synthesis-failed frame. Default 30000. */
+  streamIdleMs?: number;
   /** Only these extension ids may call (the part after chrome-extension://). Default: any extension that has the token. */
   allowedExtensions?: string[];
 }
@@ -53,74 +57,102 @@ export interface SpeakKitServer {
   setOnBattery(onBattery: boolean): void;
 }
 
+/** Startup only: runs before the server listens, so the synchronous file calls cannot delay a request. */
 export function loadToken(dataDir: string, override?: string): string {
   const given = override ?? parseEnv().SPEAKKIT_TOKEN;
   if (given) return given;
   const file = join(dataDir, "token");
+  // oxlint-disable-next-line node/no-sync -- startup
   if (existsSync(file)) {
+    // oxlint-disable-next-line node/no-sync -- startup
     const t = readFileSync(file, "utf8").trim();
     if (t) return t;
   }
   const t = randomBytes(32).toString("hex");
+  // oxlint-disable-next-line node/no-sync -- startup
   mkdirSync(dataDir, { recursive: true });
+  // oxlint-disable-next-line node/no-sync -- startup
   writeFileSync(file, t + "\n", { mode: 0o600 });
   return t;
 }
 
 const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...voiceRoutes, ...exportRoutes];
 
-/** Wires the pieces: the guard (Host, Origin, token), the route table, the stream queue and the engines. */
-export function createServer(opts: ServerOptions): SpeakKitServer {
-  const { engine: kokoro, dataDir, host = "127.0.0.1", version = "0.0.0" } = opts;
-  const env = parseEnv();
-  const plain = parseOptions({
-    port: opts.port,
-    idleUnloadMs: opts.idleUnloadMs,
-    maxStreams: opts.maxStreams,
-    maxQueue: opts.maxQueue,
-    token: opts.token,
-    loadAtStart: opts.loadAtStart,
-  });
-  const loadAtStart = plain.loadAtStart ?? env.SPEAKKIT_LOAD_AT_START ?? false;
-  const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
-  let boundPort = plain.port ?? 47615;
-  const sockets = new Set<Socket>();
+type PlainOptions = ReturnType<typeof parseOptions>;
+type Env = ReturnType<typeof parseEnv>;
 
+/** The engines, the stream queue and the exporter, with the limits from options, then env, then defaults. */
+function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Services {
   const queue = new StreamQueue(plain.maxStreams ?? env.SPEAKKIT_MAX_STREAMS ?? DEFAULT_MAX_STREAMS, plain.maxQueue ?? env.SPEAKKIT_MAX_QUEUE ?? DEFAULT_MAX_QUEUE);
-  const exporter = new ExportManager(join(dataDir, "exports"), { acquireSlot: (ac) => queue.slot(ac), render });
-  const engines = new EngineRegistry({ kokoro, ...(opts.chatterbox && { chatterbox: opts.chatterbox }) }, dataDir, () => {
+  const exporter = new ExportManager(join(opts.dataDir, "exports"), { acquireSlot: (ac) => queue.slot(ac), render });
+  const engines = new EngineRegistry({ kokoro: opts.engine, ...(opts.chatterbox && { chatterbox: opts.chatterbox }) }, opts.dataDir, () => {
     queue.abortAll(REPLACED);
     exporter.abortAll();
   });
+  const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
+  const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
+  return { engines, exporter, queue, version: opts.version ?? "0.0.0", deadlines };
+}
 
-  const token = loadToken(dataDir, plain.token);
-  const authorized = tokenChecker(token);
-  const services: Services = { engines, exporter, queue, version };
-  const allowedExtensions = opts.allowedExtensions ?? env.SPEAKKIT_EXTENSION_IDS;
-
-  async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const origin = guardRequest(req, res, { port: () => boundPort, allowedExtensions });
+/** Guard, route, authorize, then run the handler; control routes under their deadline, the speak stream under none. */
+function requestHandler(services: Services, authorized: (req: IncomingMessage) => boolean, guard: GuardOptions) {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const origin = guardRequest(req, res, guard);
     const method = req.method ?? "GET";
     if (method === "OPTIONS") return preflight(res, origin);
     const { route, params } = resolveRoute(ROUTES, method, new URL(req.url ?? "/", "http://x").pathname);
     if (route.auth !== false && !authorized(req)) throw new HttpError(401, "token-rejected", "missing or wrong token");
-    await route.handle({ req, res, params }, services);
-  }
+    const done = route.handle({ req, res, params }, services);
+    await (route.stream ? done : withDeadline(done, services.deadlines.controlMs));
+  };
+}
 
-  const server: Server = httpServer((req, res) => {
-    handle(req, res).catch((e) => {
-      if (res.headersSent) return void res.destroy();
-      const h = toHttp(e);
-      for (const [k, v] of Object.entries(h.headers ?? {})) res.setHeader(k, v);
-      json(res, h.status, { error: { code: h.code, message: h.message, ...h.extra } });
-    });
+function sendError(res: ServerResponse, e: unknown): void {
+  if (res.headersSent) return void res.destroy();
+  const h = toHttp(e);
+  for (const [k, v] of Object.entries(h.headers ?? {})) res.setHeader(k, v);
+  json(res, h.status, { error: { code: h.code, message: h.message, ...h.extra } });
+}
+
+/** The node server for `handle`; every connection is kept in `sockets` so close() can drop it. */
+function httpServerTracking(handle: ReturnType<typeof requestHandler>, sockets: Set<Socket>): Server {
+  const server = httpServer((req, res) => {
+    handle(req, res).catch((e) => sendError(res, e));
   });
   server.on("connection", (s) => {
     s.setNoDelay(true);
     sockets.add(s);
     s.on("close", () => sockets.delete(s));
   });
+  return server;
+}
+
+/** Wires the pieces: the guard (Host, Origin, token), the route table, the stream queue and the engines. */
+export function createServer(opts: ServerOptions): SpeakKitServer {
+  const { dataDir, host = "127.0.0.1" } = opts;
+  const env = parseEnv();
+  const plain = parseOptions({
+    port: opts.port,
+    idleUnloadMs: opts.idleUnloadMs,
+    maxStreams: opts.maxStreams,
+    maxQueue: opts.maxQueue,
+    controlDeadlineMs: opts.controlDeadlineMs,
+    streamIdleMs: opts.streamIdleMs,
+    token: opts.token,
+    loadAtStart: opts.loadAtStart,
+  });
+  const loadAtStart = plain.loadAtStart ?? env.SPEAKKIT_LOAD_AT_START ?? false;
+  let boundPort = plain.port ?? 47615;
+  const sockets = new Set<Socket>();
+
+  const services = createServices(opts, plain, env);
+  const { engines, exporter, queue } = services;
+  const token = loadToken(dataDir, plain.token);
+  const allowedExtensions = opts.allowedExtensions ?? env.SPEAKKIT_EXTENSION_IDS;
+  const handle = requestHandler(services, tokenChecker(token), { port: () => boundPort, ...(allowedExtensions && { allowedExtensions }) });
+
+  const server = httpServerTracking(handle, sockets);
 
   return {
     get port() {

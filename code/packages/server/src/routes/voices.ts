@@ -20,8 +20,8 @@ function cloneVoice(engines: EngineRegistry, body: ReturnType<typeof parseClone>
     if (e instanceof WavError) throw new HttpError(422, "clip-rejected", e.message);
     throw e;
   }
-  if (!report.ok) throw new HttpError(422, "clip-rejected", report.checks.find((c) => !c.ok)!.message, { checks: report.checks });
-  return cloner.clones.add({ name: body.name, wav: bytes, durationMs: report.durationMs, checks: report.checks, gender: body.gender });
+  if (!report.ok) throw new HttpError(422, "clip-rejected", report.checks.find((c) => !c.ok)!.message).with({ extra: { checks: report.checks } });
+  return cloner.clones.add({ name: body.name, wav: bytes, durationMs: report.durationMs, checks: report.checks, ...(body.gender && { gender: body.gender }) });
 }
 
 /** Voice cloning (Chatterbox only). */

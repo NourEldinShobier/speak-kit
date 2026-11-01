@@ -10,6 +10,7 @@ export interface Services {
   exporter: ExportManager;
   queue: StreamQueue;
   version: string;
+  deadlines: { controlMs: number; streamIdleMs: number };
 }
 
 export interface Exchange {
@@ -24,6 +25,8 @@ export interface Route {
   path: string | RegExp;
   /** Everything but /v1/health needs the bearer token. Default true. */
   auth?: boolean;
+  /** A long-lived response stream: exempt from the control deadline (it has its own idle deadline). */
+  stream?: true;
   handle(x: Exchange, s: Services): Promise<void> | void;
 }
 
@@ -42,6 +45,6 @@ export function resolveRoute(routes: readonly Route[], method: string, path: str
     if (route.method === method) return { route, params };
     allowed.push(route.method);
   }
-  if (allowed.length) throw new HttpError(405, "method-not-allowed", `use ${allowed.join(" or ")}`, undefined, { Allow: allowed.join(", ") });
+  if (allowed.length) throw new HttpError(405, "method-not-allowed", `use ${allowed.join(" or ")}`).with({ headers: { Allow: allowed.join(", ") } });
   throw new HttpError(404, "not-found", "no such endpoint");
 }

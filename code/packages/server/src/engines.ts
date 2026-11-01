@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync } from "node:fs";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as v from "valibot";
 import type { EngineId, EngineInfo, EngineList } from "@speakkit/protocol";
@@ -26,13 +27,37 @@ export class EngineRegistry {
     this.#engines = engines;
     this.#onSwitch = onSwitch;
     this.#file = join(dataDir, "engine.json");
+    this.#active = this.#restore();
+  }
+
+  /** Reads the saved choice at startup. A file that is not valid is moved to `engine.json.bad` and the default applies. */
+  #restore(): EngineId {
+    let text: string;
     try {
-      const r = v.safeParse(Persisted, JSON.parse(readFileSync(this.#file, "utf8")));
-      // A saved choice that cannot run now (GPU gone, uninstalled) falls back to Kokoro without forgetting it.
-      if (r.success && this.#usable(r.output.active)) this.#active = r.output.active;
+      // oxlint-disable-next-line node/no-sync -- startup, before the server listens
+      text = readFileSync(this.#file, "utf8");
     } catch {
-      // no saved choice yet
+      return "kokoro"; // no saved choice yet
     }
+    let saved: v.SafeParseResult<typeof Persisted> | undefined;
+    try {
+      saved = v.safeParse(Persisted, JSON.parse(text));
+    } catch {
+      // not JSON
+    }
+    if (!saved?.success) return this.#quarantine();
+    // A saved choice that cannot run now (GPU gone, uninstalled) falls back to Kokoro without forgetting it.
+    return this.#usable(saved.output.active) ? saved.output.active : "kokoro";
+  }
+
+  #quarantine(): EngineId {
+    try {
+      // oxlint-disable-next-line node/no-sync -- startup, before the server listens
+      renameSync(this.#file, this.#file + ".bad");
+    } catch {
+      // the file vanished or cannot be moved; the default still applies
+    }
+    return "kokoro";
   }
 
   get activeId(): EngineId {
@@ -86,9 +111,9 @@ export class EngineRegistry {
     if (UNUSABLE.has(st.state)) throw new EngineUnavailableError(st.detail ?? `${NAMES[id]} is ${st.state}`, next.info?.().reason);
     const prev = this.active;
     this.#active = id;
-    mkdirSync(join(this.#file, ".."), { recursive: true });
-    writeFileSync(this.#file + ".tmp", JSON.stringify({ active: id }));
-    renameSync(this.#file + ".tmp", this.#file);
+    await mkdir(join(this.#file, ".."), { recursive: true });
+    await writeFile(this.#file + ".tmp", JSON.stringify({ active: id }));
+    await rename(this.#file + ".tmp", this.#file);
     if (prev !== next) {
       this.#onSwitch();
       await prev.release?.();

@@ -1,11 +1,11 @@
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import type { ClonedVoice, EngineList, ExportJob, Health, VoiceList } from "@speakkit/protocol";
 import { ChatterboxEngine, FakeEngine, type Hardware } from "@speakkit/engine";
 import { clip } from "../../engine/tests/clip-fixture";
-import { readFrames, speakBody, start, type Ctx } from "./helpers";
+import { readFrames, speakBody, start, type Ctx } from "./harness";
 
 const sidecar = { command: process.execPath, args: [join(import.meta.dirname, "../../engine/tests/fake-sidecar.mjs")] };
 const GPU = { name: "RTX 4080", vramMb: 12282 };
@@ -24,7 +24,7 @@ function chatterbox(hw: Hardware, installed = true, installer?: () => Promise<vo
     mkdirSync(join(root, "chatterbox"));
     writeFileSync(join(root, "chatterbox", "installed"), "x");
   }
-  const e = new ChatterboxEngine({ dir: join(root, "chatterbox"), voicesDir: join(root, "voices"), sidecar, idleUnloadMs: 0, installer }, hw);
+  const e = new ChatterboxEngine({ dir: join(root, "chatterbox"), voicesDir: join(root, "voices"), sidecar, idleUnloadMs: 0, ...(installer && { installer }) }, hw);
   toClose.push(e);
   return e;
 }
@@ -34,7 +34,7 @@ const call = (c: Ctx, method: string, path: string, body?: unknown) =>
   fetch(`${c.base}${path}`, {
     method,
     headers: { ...c.auth, "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? null : JSON.stringify(body),
   });
 const list = async (r: Response) => (await r.json()) as EngineList;
 const health = async (c: Ctx) => ((await (await fetch(`${c.base}/v1/health`)).json()) as Health).engine;
@@ -278,5 +278,39 @@ describe("text normalization before synthesis", () => {
       { type: "done", count: 2 },
     ]);
     expect(ctx.engine.calls.map((c) => c.text)).toEqual(["Hello."]);
+  });
+});
+
+describe("engine.json that cannot be read", () => {
+  const dataDir = (content?: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "speakkit-engine-json-"));
+    if (content !== undefined) writeFileSync(join(dir, "engine.json"), content);
+    return dir;
+  };
+
+  it.each([
+    ["is not JSON", "{not json"],
+    ["has the wrong shape", '{"active":"piper"}'],
+    ["is empty", ""],
+  ])("a file that %s is moved to engine.json.bad and Kokoro stays active", async (_, content) => {
+    const dir = dataDir(content);
+    ctx = await start({}, undefined, { dataDir: dir });
+    expect((await list(await call(ctx, "GET", "/v1/engines"))).active).toBe("kokoro");
+    expect(readFileSync(join(dir, "engine.json.bad"), "utf8")).toBe(content);
+    expect(existsSync(join(dir, "engine.json"))).toBe(false);
+  });
+
+  it("a missing file leaves no .bad file", async () => {
+    const dir = dataDir();
+    ctx = await start({}, undefined, { dataDir: dir });
+    expect(existsSync(join(dir, "engine.json.bad"))).toBe(false);
+  });
+
+  it("selecting an engine afterwards writes a fresh engine.json", async () => {
+    const dir = dataDir("{not json");
+    ctx = await start({}, undefined, { dataDir: dir, chatterbox: chatterbox({ gpu: GPU }) });
+    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
+    expect(JSON.parse(readFileSync(join(dir, "engine.json"), "utf8"))).toEqual({ active: "chatterbox" });
+    expect(readFileSync(join(dir, "engine.json.bad"), "utf8")).toBe("{not json");
   });
 });

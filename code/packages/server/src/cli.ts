@@ -8,6 +8,7 @@ import { DEFAULT_PORT } from "@speakkit/protocol";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import { parseEnv } from "./config";
 import { createChatterbox } from "./chatterbox";
+import { present } from "./present";
 import { createServer } from "./server";
 
 let env;
@@ -27,7 +28,7 @@ if ((env.SPEAKKIT_ENGINE ?? "kokoro") === "fake") {
   const fake = new FakeEngine({
     latencyMs: env.SPEAKKIT_FAKE_LATENCY_MS ?? 0,
     loadMs: env.SPEAKKIT_FAKE_LOAD_MS ?? 0,
-    state,
+    ...(state && { state }),
     failOn: failOn ? (t) => t.includes(failOn) : false,
   });
   // Stay in a pinned error-ish state; "unloaded" and "ready" are normal lifecycle states.
@@ -38,20 +39,23 @@ if ((env.SPEAKKIT_ENGINE ?? "kokoro") === "fake") {
   const w = env.SPEAKKIT_WORKER_URL;
   engine = new KokoroEngine({
     modelsDir: env.SPEAKKIT_MODELS_DIR ?? join(dataDir, "models"),
-    threads: env.SPEAKKIT_THREADS,
-    dtype: env.SPEAKKIT_DTYPE,
-    device: env.SPEAKKIT_DEVICE,
-    isolation: env.SPEAKKIT_ISOLATION,
-    workerUrl: w ? (/^[a-z]+:\/\//i.test(w) ? w : pathToFileURL(w)) : undefined,
+    ...present({
+      threads: env.SPEAKKIT_THREADS,
+      dtype: env.SPEAKKIT_DTYPE,
+      device: env.SPEAKKIT_DEVICE,
+      isolation: env.SPEAKKIT_ISOLATION,
+      workerUrl: w && (/^[a-z]+:\/\//i.test(w) ? w : pathToFileURL(w)),
+    }),
   });
 }
 
 // Optional engine; the hardware probe takes well under a second. Off for the fake engine and with SPEAKKIT_CHATTERBOX=off.
-const chatterbox = (env.SPEAKKIT_ENGINE ?? "kokoro") === "kokoro" && env.SPEAKKIT_CHATTERBOX !== "off" ? await createChatterbox(dataDir, { sidecarScript: env.SPEAKKIT_CHATTERBOX_SCRIPT }) : undefined;
+const chatterbox =
+  (env.SPEAKKIT_ENGINE ?? "kokoro") === "kokoro" && env.SPEAKKIT_CHATTERBOX !== "off" ? await createChatterbox(dataDir, present({ sidecarScript: env.SPEAKKIT_CHATTERBOX_SCRIPT })) : undefined;
 
 const server = createServer({
   engine,
-  chatterbox,
+  ...(chatterbox && { chatterbox }),
   dataDir,
   port: env.SPEAKKIT_PORT ?? DEFAULT_PORT,
   version,

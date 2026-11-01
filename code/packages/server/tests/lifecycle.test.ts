@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import type { Health } from "@speakkit/protocol";
-import { raw, readFrames, speakBody, start, type Ctx } from "./helpers";
+import { raw, readFrames, speakBody, start, type Ctx } from "./harness";
 
 let ctx: Ctx | undefined;
 afterEach(async () => {
@@ -18,7 +18,7 @@ async function until(cond: () => boolean, ms = 3000) {
   }
 }
 const json = { "Content-Type": "application/json" };
-const post = (c: Ctx, path: string, body = "", headers: Record<string, string> = {}) => fetch(`${c.base}${path}`, { method: "POST", headers: { ...c.auth, ...headers }, body: body || undefined });
+const post = (c: Ctx, path: string, body = "", headers: Record<string, string> = {}) => fetch(`${c.base}${path}`, { method: "POST", headers: { ...c.auth, ...headers }, body: body || null });
 const speak = (c: Ctx, sentences: string[], headers: Record<string, string> = {}, extra = {}) => post(c, "/v1/speak", speakBody(sentences, extra), { ...json, ...headers });
 const health = async (c: Ctx) => ((await (await fetch(`${c.base}/v1/health`)).json()) as Health).engine;
 

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { FrameDecoder, FRAMES_CONTENT_TYPE } from "@speakkit/protocol";
 import { FakeEngine } from "@speakkit/engine";
 import { createServer } from "../src";
-import { raw, readFrames, speakBody, start, type Ctx } from "./helpers";
+import { raw, readFrames, speakBody, start, type Ctx } from "./harness";
 
 let ctx: Ctx | undefined;
 afterEach(async () => {

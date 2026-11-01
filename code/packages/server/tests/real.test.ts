@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { KokoroEngine } from "@speakkit/engine";
 import { createServer } from "../src";
-import { readFrames } from "./helpers";
+import { readFrames } from "./harness";
 
 // Opt-in: SPEAKKIT_REAL=1. Downloads the model into SPEAKKIT_MODELS_DIR on the first run.
 const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? "D:/workspaces/speak-it/code/.cache/models";

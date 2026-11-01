@@ -6,6 +6,11 @@ const MAX_SENTENCE_CHARS = 2000;
 const MAX_HOLD_MS = 3_600_000;
 export const DEFAULT_MAX_STREAMS = 2;
 export const DEFAULT_MAX_QUEUE = 8;
+/** Control routes (everything but the speak stream) answer within this or fail with 504. */
+export const DEFAULT_CONTROL_DEADLINE_MS = 8_000;
+/** A speak stream ends with synthesis-failed after this long without a frame. */
+export const DEFAULT_STREAM_IDLE_MS = 30_000;
+const MAX_DEADLINE_MS = 3_600_000;
 
 const int = (min: number, max: number) => v.pipe(v.number(), v.integer(), v.minValue(min), v.maxValue(max));
 /** An env var holding a non-negative integer in range. */
@@ -24,6 +29,8 @@ const OptionsSchema = v.partial(
     idleUnloadMs: int(0, IDLE_MAX),
     maxStreams: int(1, 64),
     maxQueue: int(0, 1024),
+    controlDeadlineMs: int(1, MAX_DEADLINE_MS),
+    streamIdleMs: int(1, MAX_DEADLINE_MS),
     token: v.pipe(v.string(), v.minLength(1)),
     loadAtStart: v.boolean(),
   }),

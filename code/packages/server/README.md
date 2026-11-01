@@ -45,6 +45,9 @@ pnpm start
 - Everything except `GET /v1/health` needs `Authorization: Bearer <token>`; wrong or missing gives `401 {"error":{"code":"token-rejected",...}}`.
 - `POST /v1/speak` validation failures give `400 {"error":{"code":"invalid-request","message":...}}` (bad JSON, sentences not 1..500 non-blank strings of at most 2000 chars, unknown voice, speed outside 0.5..3). Bodies over 2 MB give `413`.
 - A valid request always answers `200` with the frame stream. When the engine is not ready the stream is a single `error` frame with code `engine-not-ready`; a failure mid-stream ends with an `error` frame (`synthesis-failed`) after the audio frames already sent. Closing the connection cancels the remaining synthesis.
+- Deadlines (options `controlDeadlineMs`, `streamIdleMs`): every route except `/v1/speak` answers within 8 s or fails with `504 {"error":{"code":"internal",...}}`. A speak stream that produces no frame for 30 s ends with a `synthesis-failed` frame; a model that is still loading or downloading does not count, and neither does time spent waiting for a slot.
+- Slots: at most `maxStreams` (default 2) syntheses run at once. Exports use the background lane and never take the last slot, so a long export cannot delay a read; a read may use every slot. With one slot, exports use it.
+- A corrupt or invalid `engine.json` is moved to `engine.json.bad` and Kokoro stays selected.
 - The model speed is `min(speed, 2)`; the player applies the rest as `playbackRate`.
 
 ## Embedding

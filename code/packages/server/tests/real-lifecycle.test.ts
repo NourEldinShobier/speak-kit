@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { KokoroEngine } from "@speakkit/engine";
 import { createServer } from "../src";
-import { readFrames } from "./helpers";
+import { readFrames } from "./harness";
 
 // Opt-in: SPEAKKIT_REAL=1. Numbers for docs/perf.md come from bench/lifecycle.ts.
 const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? "D:/workspaces/speak-it/code/.cache/models";

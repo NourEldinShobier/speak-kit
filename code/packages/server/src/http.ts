@@ -12,15 +12,18 @@ export class HttpError extends Error {
   status: number;
   code: ErrorCode | "method-not-allowed" | "internal";
   /** Extra fields of the error body (clip checks). */
-  extra?: object;
+  extra?: object | undefined;
   /** Response headers to send with the error (Allow on a 405, Retry-After on a 429). */
-  headers?: Record<string, string>;
-  constructor(status: number, code: HttpError["code"], message: string, extra?: object, headers?: Record<string, string>) {
+  headers?: Record<string, string> | undefined;
+  constructor(status: number, code: HttpError["code"], message: string) {
     super(message);
     this.status = status;
     this.code = code;
-    this.extra = extra;
-    this.headers = headers;
+  }
+
+  /** Adds the extra body fields and response headers. */
+  with(more: { extra?: object; headers?: Record<string, string> }): this {
+    return Object.assign(this, more);
   }
 }
 
@@ -44,6 +47,19 @@ export async function readBody(req: IncomingMessage, max = MAX_BODY): Promise<un
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw new HttpError(400, "invalid-request", "body is not valid JSON");
+  }
+}
+
+/** Fails with 504 when `work` takes longer than `ms`. The abandoned work keeps running; its result is dropped. */
+export async function withDeadline<T>(work: Promise<T> | T, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new HttpError(504, "internal", `no answer within ${ms / 1000} s`)), ms);
+  });
+  try {
+    return await Promise.race([work, late]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -81,7 +97,7 @@ export function tokenChecker(token: string): (req: IncomingMessage) => boolean {
 
 const EXTENSION_ORIGIN = "chrome-extension://";
 
-interface GuardOptions {
+export interface GuardOptions {
   port(): number;
   /** Extension ids allowed to call; undefined allows every extension (the bearer token is then the only gate). */
   allowedExtensions?: readonly string[];

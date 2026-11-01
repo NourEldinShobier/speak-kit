@@ -1,72 +1,107 @@
 import type { ServerResponse } from "node:http";
 import { FRAMES_CONTENT_TYPE, encodeFrame, type FrameHeader } from "@speakkit/protocol";
-import { EngineNotReadyError } from "@speakkit/engine";
+import { EngineNotReadyError, type TtsEngine } from "@speakkit/engine";
 import { parseReplace, parseSpeak, speakSchema } from "../config";
 import { HttpError, readBody, validated } from "../http";
 import { render } from "../render";
 import type { Route, Services } from "../router";
-import type { Stream } from "../stream-queue";
+import type { Stream, StreamQueue } from "../stream-queue";
 import { voiceIds } from "./voices";
+
+type Body = ReturnType<typeof parseSpeak>;
+type Replace = ReturnType<typeof parseReplace>;
 
 /** POST /v1/speak: synthesizes the sentences in order and streams one frame each (see protocol/frames.ts). */
 export const speakRoutes: Route[] = [
   {
     method: "POST",
     path: "/v1/speak",
+    stream: true,
     handle: async ({ req, res }, s) => {
       const replace = validated(() => parseReplace(req.headers["x-speakkit-replace"]));
       const raw = await readBody(req);
       const body = validated(() => parseSpeak(speakSchema(voiceIds(s.engines)), raw));
-      await speak(res, s, body, replace);
+      await speak(res, s, { body, replace });
     },
   },
 ];
 
-async function speak(res: ServerResponse, { engines, queue }: Services, body: ReturnType<typeof parseSpeak>, replace: ReturnType<typeof parseReplace>): Promise<void> {
+/** Registers the stream with the queue (replacing earlier ones, or refusing with 429) and ties it to the connection. */
+function open(res: ServerResponse, queue: StreamQueue, replace: Replace): Stream {
   if (replace) queue.replace(replace);
   else if (queue.full) {
     res.setHeader("Retry-After", "1");
     throw new HttpError(429, "busy", `at most ${queue.maxStreams} streams and ${queue.maxQueue} queued`);
   }
-  const stream: Stream = { ac: new AbortController(), group: replace && "group" in replace ? replace.group : undefined };
-  const ac = stream.ac;
+  const stream: Stream = { ac: new AbortController(), ...(replace && "group" in replace && { group: replace.group }) };
   queue.streams.add(stream);
   res.on("close", () => {
     queue.streams.delete(stream);
-    if (!res.writableFinished) ac.abort();
+    if (!res.writableFinished) stream.ac.abort();
     stream.dequeue?.();
   });
-  const head = () => {
-    res.writeHead(200, { "Content-Type": FRAMES_CONTENT_TYPE, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
-    res.flushHeaders();
+  return stream;
+}
+
+function writeHead(res: ServerResponse): void {
+  res.writeHead(200, { "Content-Type": FRAMES_CONTENT_TYPE, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+  res.flushHeaders();
+}
+
+/** One write per frame; node flushes it to the socket immediately (TCP_NODELAY is set). Waits for drain when the client reads slowly. */
+function frameSender(res: ServerResponse): (h: FrameHeader, pcm?: Int16Array) => Promise<void> {
+  return async (h, pcm) => {
+    if (res.destroyed || res.write(encodeFrame(h, pcm))) return;
+    await new Promise<void>((r) => {
+      const done = () => (res.off("drain", done), res.off("close", done), r());
+      res.on("drain", done);
+      res.on("close", done);
+    });
   };
+}
+
+/** Renders one sentence; gives up when no audio arrives within `idleMs`. A model that is still loading or downloading does not count as stalled. */
+async function renderWithin(engine: TtsEngine, sentence: string, o: { voice: string; speed: number; signal: AbortSignal; idleMs: number }) {
+  const { idleMs, ...synth } = o;
+  const stall = new AbortController();
+  const stalled = new Promise<never>((_, reject) => stall.signal.addEventListener("abort", () => reject(stall.signal.reason), { once: true }));
+  let timer: NodeJS.Timeout | undefined;
+  const arm = () => {
+    timer = setTimeout(() => {
+      const { state } = engine.status();
+      if (state === "loading" || state === "downloading") arm();
+      else stall.abort(new Error(`no audio for ${idleMs / 1000} s`));
+    }, idleMs);
+  };
+  arm();
+  try {
+    return await Promise.race([render(engine, sentence, { ...synth, signal: AbortSignal.any([synth.signal, stall.signal]) }), stalled]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function speak(res: ServerResponse, { engines, queue, deadlines }: Services, { body, replace }: { body: Body; replace: Replace }): Promise<void> {
+  const stream = open(res, queue, replace);
+  const ac = stream.ac;
   const engine = engines.active;
   engine.warm?.(); // start loading while we may still be queued
 
+  let release: () => void;
   try {
-    await queue.acquire(stream);
+    release = await queue.acquire(stream);
   } catch {
     // Replaced or disconnected while queued: end the stream without frames.
-    if (!res.destroyed && !res.headersSent) head();
+    if (!res.destroyed && !res.headersSent) writeHead(res);
     return void res.end();
   }
   const endStream = engine.beginStream?.();
-  head();
-
-  const send = async (h: FrameHeader, pcm?: Int16Array) => {
-    if (res.destroyed) return;
-    // One write per frame; node flushes it to the socket immediately (TCP_NODELAY is set).
-    if (!res.write(encodeFrame(h, pcm)))
-      await new Promise<void>((r) => {
-        const done = () => (res.off("drain", done), res.off("close", done), r());
-        res.on("drain", done);
-        res.on("close", done);
-      });
-  };
+  writeHead(res);
+  const send = frameSender(res);
   try {
     const speed = Math.min(body.speed, 2);
-    for (let i = 0; i < body.sentences.length; i++) {
-      const { pcm, sampleRate } = await render(engine, body.sentences[i]!, { voice: body.voice, speed, signal: ac.signal });
+    for (const [i, sentence] of body.sentences.entries()) {
+      const { pcm, sampleRate } = await renderWithin(engine, sentence, { voice: body.voice, speed, signal: ac.signal, idleMs: deadlines.streamIdleMs });
       if (ac.signal.aborted) return;
       await send({ type: "audio", index: i, sampleRate, samples: pcm.length, durationMs: Math.round((pcm.length / sampleRate) * 1000) }, pcm);
     }
@@ -77,7 +112,7 @@ async function speak(res: ServerResponse, { engines, queue }: Services, body: Re
     await send({ type: "error", code: notReady ? "engine-not-ready" : "synthesis-failed", message: e instanceof Error ? e.message : String(e) });
   } finally {
     endStream?.();
-    queue.release();
+    release();
     if (!res.writableEnded) res.end(); // replaced streams end here, without a done frame
   }
 }
