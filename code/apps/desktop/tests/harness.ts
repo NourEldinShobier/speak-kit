@@ -1,8 +1,10 @@
 import { createRequire } from "node:module";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { vi } from "vite-plus/test";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const appDir = path.resolve(here, "..");
@@ -11,8 +13,18 @@ const e2eRequire = createRequire(path.resolve(appDir, "../../e2e/package.json"))
 const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwright/test");
 const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
 
-let nextPort = 48100 + Math.floor(Math.random() * 400);
-export const freePort = () => nextPort++;
+// The root `vp test run` does not read this package's vite config: say here what starting a whole Electron app (and what follows) needs.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
+// Test files run in parallel workers. Each worker gets its own block of ports, below the Windows dynamic range (49152 and up): a port taken
+// by another file's app makes the app move to the next one, and the test would talk to that other server.
+const PORTS_PER_WORKER = 30;
+const portBase = 48100 + Number(process.env.VITEST_POOL_ID ?? 0) * PORTS_PER_WORKER;
+let portsGiven = 0;
+export const freePort = () => portBase + (portsGiven++ % PORTS_PER_WORKER);
+
+/** Windows can keep a file open for a moment after its process is gone (antivirus, a child process): retry EPERM/EBUSY. A directory left in temp is harmless. */
+export const removeDir = (dir: string) => rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
 
 export interface Launched {
   app: import("@playwright/test").ElectronApplication;
@@ -37,6 +49,12 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
   });
   const app = await _electron.launch({ executablePath: electronPath, args: [appDir, ...(opts.args ?? [])], env });
   const page = await app.firstWindow();
+  // The app window opens at 1280x800 unless the screen's work area is smaller (a hosted runner is 1024x768): it is then clamped to the screen
+  // and the sidebar falls into its 60 px rail. Resizing after it opened is not clamped. The setup window is not resizable and fits any screen.
+  await app.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows()[0]!;
+    if (w.isResizable()) w.setContentSize(1280, 800);
+  });
   return {
     app,
     page,
@@ -44,7 +62,7 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
     port,
     cleanup: async () => {
       await app.close().catch(() => {});
-      if (!opts.userData) rmSync(userData, { recursive: true, force: true });
+      if (!opts.userData) await removeDir(userData);
     },
   };
 }

@@ -117,8 +117,7 @@ describe("desktop app", () => {
 
     // Same userData -> same single-instance lock: the second process quits and the first shows its window.
     const second = await launch({ userData: first.userData, port: first.port }).catch(() => null);
-    await new Promise((r) => setTimeout(r, 1500));
-    expect(await visible()).toBe(true);
+    await expect.poll(visible, { timeout: 15_000 }).toBe(true);
     await second?.cleanup();
   });
 

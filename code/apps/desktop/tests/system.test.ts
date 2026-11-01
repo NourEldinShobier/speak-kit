@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { launch, type Launched } from "./harness";
+import { launch, removeDir, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const tmpDirs: string[] = [];
@@ -13,7 +13,7 @@ const start = async (o: Parameters<typeof launch>[0] = {}) => {
 };
 afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
-  tmpDirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true }));
+  await Promise.all(tmpDirs.splice(0).map(removeDir));
 });
 
 const outDir = () => {
