@@ -1,86 +1,277 @@
 name: CI
 
-# Same commands as a local checkout (docs/testing.md): type-check, lint, unit tests, end-to-end tests with the fake engine.
+# Selective pipeline, explained in docs/ci.md. `changes` decides what to run; every job is gated by a job-level `if:` (never `paths:`
+# on the workflow, which leaves required checks pending). `ci-ok` is the only job meant to be a required check.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
+  schedule:
+    - cron: "47 2 * * *"
   workflow_dispatch:
 
+# Pull requests cancel their own superseded runs. A push to main never does: its unit selection starts at the previous push,
+# so a cancelled run would leave the commits it covered untested.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
-  check:
-    runs-on: windows-latest
-    timeout-minutes: 45
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.plan.outputs.full }}
+      unit: ${{ steps.plan.outputs.unit }}
+      ext: ${{ steps.plan.outputs.ext }}
+      desktop: ${{ steps.plan.outputs.desktop }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ext:
+              - "code/apps/extension/**"
+            desktop:
+              - "code/apps/desktop/**"
+            e2e:
+              - "code/e2e/**"
+            shared:
+              - "code/packages/**"
+              - "code/scripts/**"
+              - "code/tools/**"
+              - "code/.ratchet/**"
+            config:
+              - "code/package.json"
+              - "code/pnpm-lock.yaml"
+              - "code/pnpm-workspace.yaml"
+              - "code/vite.config.ts"
+              - "code/knip.json"
+              - "code/tsconfig*.json"
+              - ".github/workflows/ci.yml"
+            docs:
+              - "docs/**"
+              - "**/*.md"
+      # Everything runs on a tag, the nightly schedule, a manual run, and when the lockfile, the CI files or a shared root config changed.
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          EXT: ${{ steps.filter.outputs.ext }}
+          DESKTOP: ${{ steps.filter.outputs.desktop }}
+          E2E: ${{ steps.filter.outputs.e2e }}
+          SHARED: ${{ steps.filter.outputs.shared }}
+          CONFIG: ${{ steps.filter.outputs.config }}
+        run: |
+          full=false
+          if [ "$EVENT" != pull_request ] && { [ "$EVENT" != push ] || [[ "$REF" == refs/tags/* ]]; }; then full=true; fi
+          [ "$CONFIG" = true ] && full=true
+          any() { for v in "$@"; do [ "$v" = true ] && return 0; done; return 1; }
+          flag() { if [ "$full" = true ] || any "$@"; then echo true; else echo false; fi; }
+          {
+            echo "full=$full"
+            echo "unit=$(flag "$EXT" "$SHARED" "$E2E")"
+            echo "ext=$(flag "$EXT" "$SHARED" "$E2E")"
+            echo "desktop=$(flag "$DESKTOP" "$SHARED")"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  static:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     defaults:
       run:
         working-directory: code
     steps:
+      # The baseline-growth gate reads origin/main, so the history is fetched.
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: code/package.json
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: code/pnpm-lock.yaml
-
       - run: pnpm install --frozen-lockfile
-
       - name: Type-check (tsrs)
         run: pnpm run typecheck
-
       - name: Lint
         run: pnpm run lint
-
       - name: Formatting (oxfmt)
         run: pnpm run fmt:check
-
       - name: Unused files, exports and dependencies (knip)
         run: pnpm run knip
+      - name: Generated docs are current
+        run: node scripts/gen-docs.mjs --check
+      - name: Gates (dependencies, CSS, network, integrity, ratchet)
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main || true
+          pnpm run gates
 
-      # The desktop tests start the built Electron app, and its "Install the extension" action needs the built extension.
-      - name: Build the desktop app
-        run: pnpm --filter @speakkit/desktop exec vp build
-
-      - name: Build the extension
-        run: pnpm --filter @speakkit/extension exec vp build
-
-      # Electron downloads its binary on the first require; do it once here, not from parallel test workers.
-      - name: Download the Electron binary
-        run: pnpm --filter @speakkit/desktop exec node -e "require('electron')"
-
-      # Unit tests drive real Chromium too (packages/ui, the extension's content script); every package uses this Playwright version.
+  unit:
+    needs: changes
+    if: needs.changes.outputs.unit == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: code/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Packages/ui and the extension's content script run in real Chromium.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('code/pnpm-lock.yaml') }}
       - name: Install the test browser
         working-directory: code/e2e
-        run: pnpm exec playwright install chromium
-
+        run: |
+          pnpm exec playwright install chromium
+          pnpm exec playwright install-deps chromium
+      # Only the tests that depend on the changed files, against the previous push (pull request: the base branch). A full run when there
+      # is no usable base (first push, tag, schedule, manual run, unreachable commit) or `changes` says everything runs.
+      - name: Select tests
+        id: select
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base=""
+          [ "$EVENT" = push ] && base="$BEFORE"
+          [ "$EVENT" = pull_request ] && base="$PR_BASE"
+          args=""
+          if [ "$FULL" != true ] && [ -n "$base" ] && ! [[ "$base" =~ ^0+$ ]] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            args="--changed $base --passWithNoTests"
+          fi
+          echo "args=$args" | tee -a "$GITHUB_OUTPUT"
+      # The desktop app's tests need Electron on Windows; the `desktop` job runs them.
       - name: Unit and integration tests
-        run: pnpm run test
+        run: pnpm exec vp test run --exclude "apps/desktop/**" ${{ steps.select.outputs.args }}
 
-      # No real model: the fake engine. The timing budgets (perf phase) are measured on a quiet machine, not on shared runners.
-      # The runner has 2 vCPUs: three parallel browsers starve the specs with short idle windows and 8 s polls, so run one at a time.
-      - name: End-to-end tests
-        run: pnpm run e2e
+  e2e-extension:
+    needs: changes
+    if: needs.changes.outputs.ext == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/2, 2/2]
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: code/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('code/pnpm-lock.yaml') }}
+      - name: Install the test browser
+        working-directory: code/e2e
+        run: |
+          pnpm exec playwright install chromium
+          pnpm exec playwright install-deps chromium
+      # The fake engine, no real model. The perf phase (absolute timing budgets) belongs on a quiet machine. The runner has 2 vCPUs:
+      # one browser at a time, and a retry for the specs with short idle windows.
+      - name: End-to-end tests (extension)
+        run: pnpm run e2e --shard=${{ matrix.shard }}
         env:
           E2E_SKIP_PERF: "1"
           E2E_WORKERS: "1"
           E2E_RETRIES: "2"
           E2E_TIME_SCALE: "4"
-
       - name: Keep test results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: e2e-results-${{ strategy.job-index }}
           path: |
             code/e2e/test-results
             code/e2e/results-*.json
-            code/apps/desktop/test-results
           if-no-files-found: ignore
+
+  desktop:
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: code/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # The desktop tests start the built Electron app, and its "Install the extension" action needs the built extension.
+      - name: Build the desktop app
+        run: pnpm --filter @speakkit/desktop exec vp build
+      - name: Build the extension
+        run: pnpm --filter @speakkit/extension exec vp build
+      # Electron downloads its binary on the first require; do it once here, not from parallel test workers.
+      - name: Download the Electron binary
+        run: pnpm --filter @speakkit/desktop exec node -e "require('electron')"
+      - name: Desktop tests
+        run: pnpm --filter @speakkit/desktop exec vp test run
+      - name: Keep test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-results
+          path: code/apps/desktop/test-results
+          if-no-files-found: ignore
+
+  ci-ok:
+    needs: [changes, static, unit, e2e-extension, desktop]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every needed job passed or was skipped on purpose
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq '"(failure|cancelled)"'; then exit 1; fi
