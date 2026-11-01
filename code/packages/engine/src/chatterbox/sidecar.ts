@@ -7,9 +7,9 @@ import type { Synthesized } from "../types";
 import { Watchdog } from "../watchdog";
 
 /** Silence (no message or stderr line) after which a loading sidecar is declared stalled. */
-export const LOAD_IDLE_MS = 120_000;
+const LOAD_IDLE_MS = 120_000;
 /** Silence after which a sidecar with a synthesis request outstanding is declared stalled. */
-export const REQUEST_IDLE_MS = 60_000;
+const REQUEST_IDLE_MS = 60_000;
 
 const Message = v.variant("kind", [
   v.object({ kind: v.literal("progress"), phase: v.picklist(["downloading", "loading"]), progress: v.optional(v.number()), detail: v.optional(v.string()) }),
@@ -20,7 +20,7 @@ const Message = v.variant("kind", [
 ]);
 type Message = v.InferOutput<typeof Message>;
 
-export interface SidecarOptions {
+interface SidecarOptions {
   command: string;
   args: string[];
   /** Hugging Face cache directory handed to the sidecar. */

@@ -7,7 +7,7 @@ import { killTree } from "../process-tree";
 import { Watchdog } from "../watchdog";
 
 /** Seconds of installer silence (no output line) after which the install is declared stalled. */
-export const INSTALL_IDLE_MS = 120_000;
+const INSTALL_IDLE_MS = 120_000;
 
 export interface InstallContext {
   /** Engine directory (`<dataDir>/chatterbox`). */

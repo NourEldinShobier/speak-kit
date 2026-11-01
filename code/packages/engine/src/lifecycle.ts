@@ -23,7 +23,7 @@ export interface LifecycleOptions {
 }
 
 export const DEFAULT_IDLE_MS = 5 * 60_000;
-export const DEFAULT_CRASH_WINDOW_MS = 5 * 60_000;
+const DEFAULT_CRASH_WINDOW_MS = 5 * 60_000;
 const MAX_TIMER = 2 ** 31 - 1;
 
 function raceAbort<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {

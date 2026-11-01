@@ -6,7 +6,7 @@
       "no-nested-ternary": 43,
       "no-restricted-globals": 15,
       "max-params": 15,
-      "no-sync": 11,
+      "no-sync": 9,
       "max-depth": 1,
       "max-lines": 4,
       "exhaustive-deps": 1

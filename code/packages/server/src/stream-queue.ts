@@ -3,7 +3,7 @@ import type { Replace } from "./config";
 export const REPLACED = new Error("replaced by a newer request");
 
 /** Interactive reads (speak streams) may use every slot; background work (exports) leaves one slot free for them. */
-export type Lane = "interactive" | "background";
+type Lane = "interactive" | "background";
 
 export interface Stream {
   ac: AbortController;
