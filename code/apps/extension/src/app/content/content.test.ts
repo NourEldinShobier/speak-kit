@@ -4,8 +4,12 @@ import { ARTICLE_PAGE } from "../../testing/fixtures";
 import { launch, type Session } from "../../testing/harness";
 
 let s: Session;
-beforeAll(async () => { s = await launch(); }, 90000);
-afterAll(async () => { await s?.close(); });
+beforeAll(async () => {
+  s = await launch();
+}, 90000);
+afterAll(async () => {
+  await s?.close();
+});
 
 const KEY = "speakkit.settings";
 const base = (over: any = {}) => ({ launcher: { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 }, ...over });
@@ -20,7 +24,11 @@ const deliver = (page: any, msg: any) => page.evaluate((m: any) => (window as an
 const sent = (page: any): Promise<any[]> => page.evaluate(() => (window as any).__sent);
 const lastPlay = async (page: any) => (await sent(page)).filter((m) => m.t === "player" && m.command.cmd === "play").at(-1)?.command.doc;
 const box = async (page: any, sel: string) => (await page.locator(sel).first().boundingBox())!;
-const hlText = (page: any, name: string) => page.evaluate((n: string) => { const h = (CSS as any).highlights.get(n); return h ? [...h].map((r: Range) => r.toString()) : []; }, name);
+const hlText = (page: any, name: string) =>
+  page.evaluate((n: string) => {
+    const h = (CSS as any).highlights.get(n);
+    return h ? [...h].map((r: Range) => r.toString()) : [];
+  }, name);
 /** Start reading from the launcher/bubble so the doc is known to the content script, then report the doc. */
 const startPage = async (page: any) => {
   await deliver(page, { t: "extract", mode: "page" }).then(() => {});
@@ -37,11 +45,27 @@ describe("extraction requests", () => {
     expect(r.doc.startIndex).toBe(0);
     expect(r.doc.url).toBe("http://sk.test/page");
     expect(typeof r.doc.docId).toBe("string");
-    await page.evaluate(() => { const t = document.getElementById("p3")!.firstChild as Text; const g = getSelection()!; g.removeAllRanges(); const r = document.createRange(); r.setStart(t, 0); r.setEnd(t, 26); g.addRange(r); });
+    await page.evaluate(() => {
+      const t = document.getElementById("p3")!.firstChild as Text;
+      const g = getSelection()!;
+      g.removeAllRanges();
+      const r = document.createRange();
+      r.setStart(t, 0);
+      r.setEnd(t, 26);
+      g.addRange(r);
+    });
     const sel = await deliver(page, { t: "extract", mode: "selection" });
     expect(sel.doc.source).toBe("selection");
     expect(sel.doc.sentences.map((x: any) => x.text)).toEqual(["None of this is nostalgia."]);
-    await page.evaluate(() => { const g = getSelection()!; g.removeAllRanges(); const t = document.getElementById("p2")!.firstChild as Text; const r = document.createRange(); r.setStart(t, t.data.indexOf("Nothing leaves")); r.collapse(true); g.addRange(r); });
+    await page.evaluate(() => {
+      const g = getSelection()!;
+      g.removeAllRanges();
+      const t = document.getElementById("p2")!.firstChild as Text;
+      const r = document.createRange();
+      r.setStart(t, t.data.indexOf("Nothing leaves"));
+      r.collapse(true);
+      g.addRange(r);
+    });
     const fh = await deliver(page, { t: "extract", mode: "from-here" });
     expect(fh.doc.source).toBe("from-here");
     expect(fh.doc.sentences[fh.doc.startIndex].text).toBe("Nothing leaves the device, so there is nothing to leak.");
@@ -232,7 +256,9 @@ describe("highlight and read-along", () => {
     let page = await open(base({ highlight: { sentenceColor: "#C8F0D0", wordColor: "#33AA55", matchTheme: true } }));
     await page.waitForSelector("[data-sk=launcher-tab]");
     expect(await css(page)).toMatch(/speakkit-sentence\)\s*\{[^}]*rgb\(200, 240, 208\)/);
-    await page.evaluate((k: string) => { (window as any).__store[k].highlight.sentenceColor = "#112233"; }, KEY);
+    await page.evaluate((k: string) => {
+      (window as any).__store[k].highlight.sentenceColor = "#112233";
+    }, KEY);
     await deliver(page, { t: "settings-changed" });
     await page.waitForFunction(() => document.adoptedStyleSheets.some((sh) => [...sh.cssRules].some((r) => r.cssText.includes("rgb(17, 34, 51)"))));
     await page.context().close();
@@ -251,11 +277,32 @@ describe("highlight and read-along", () => {
     const last = doc.sentences.length - 1;
     await deliver(page, { t: "state", state: st({ docId: doc.docId, sentenceIndex: last }) });
     await page.waitForFunction(() => scrollY > 200, undefined, { timeout: 4000 });
-    await page.waitForFunction(() => new Promise((r) => { const a = scrollY; setTimeout(() => r(scrollY === a), 200); }), undefined, { timeout: 5000 });
+    await page.waitForFunction(
+      () =>
+        new Promise((r) => {
+          const a = scrollY;
+          setTimeout(() => r(scrollY === a), 200);
+        }),
+      undefined,
+      { timeout: 5000 },
+    );
     await deliver(page, { t: "state", state: st({ docId: doc.docId, sentenceIndex: 1 }) });
-    await page.waitForFunction(() => { const r = document.getElementById("p1")!.getBoundingClientRect(); return r.top > 0 && r.top < 200; }, undefined, { timeout: 4000 });
+    await page.waitForFunction(
+      () => {
+        const r = document.getElementById("p1")!.getBoundingClientRect();
+        return r.top > 0 && r.top < 200;
+      },
+      undefined,
+      { timeout: 4000 },
+    );
     // the user scrolls to the bottom: sentence 1 is out of view -> pill
-    await page.waitForFunction(() => new Promise((r) => { const a = scrollY; setTimeout(() => r(scrollY === a), 250); }));
+    await page.waitForFunction(
+      () =>
+        new Promise((r) => {
+          const a = scrollY;
+          setTimeout(() => r(scrollY === a), 250);
+        }),
+    );
     await page.mouse.move(500, 200);
     await page.mouse.wheel(0, 3000);
     await page.waitForSelector("[data-sk=back-to-current]");
@@ -268,7 +315,14 @@ describe("highlight and read-along", () => {
     await page.waitForTimeout(500);
     expect(await page.evaluate(() => scrollY)).toBeGreaterThan(300);
     await page.click("[data-sk=back-to-current]");
-    await page.waitForFunction(() => { const r = document.getElementById("p1")!.getBoundingClientRect(); return r.top > 0 && r.top < 300; }, undefined, { timeout: 4000 });
+    await page.waitForFunction(
+      () => {
+        const r = document.getElementById("p1")!.getBoundingClientRect();
+        return r.top > 0 && r.top < 300;
+      },
+      undefined,
+      { timeout: 4000 },
+    );
     await page.waitForSelector("[data-sk=back-to-current]", { state: "detached" });
     await page.context().close();
   });
@@ -298,6 +352,20 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     expect(txt).toMatch(/\d+ min \d+ s at 1\.2x|\d+ s at 1\.2x/);
     await page.click("[data-sk=dock-play]");
     expect((await lastPlay(page)).source).toBe("page");
+    await page.context().close();
+  });
+
+  test("idle dock says the engine is asleep and wakes on play only when the app reports it unloaded (B22)", async () => {
+    const health = (state: string) => ({ ok: true, ms: 3, health: { engine: { id: "kokoro", state } } });
+    let page = await open(dockSettings({ sites: { "sk.test": "always-dock" } }), { health: health("unloaded") });
+    await page.waitForSelector("[data-sk=dock]");
+    await page.waitForFunction(() => document.querySelector("speakkit-ui")!.shadowRoot!.textContent!.includes("Engine asleep"));
+    expect(await page.locator("[data-sk=dock] .sk-sub").innerText()).toBe("Engine asleep · wakes on play");
+    await page.context().close();
+    page = await open(dockSettings({ sites: { "sk.test": "always-dock" } }), { health: health("ready") });
+    await page.waitForSelector("[data-sk=dock]");
+    await page.waitForTimeout(300);
+    expect(await page.locator("[data-sk=dock] .sk-sub").innerText()).toMatch(/at 1\.2x/);
     await page.context().close();
   });
 
@@ -396,7 +464,10 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     await page.click("[data-sk=speed-1\\.5]");
     await page.click("[data-sk=speed-reset]");
     const cmds = (await sent(page)).filter((m) => m.t === "player").map((m) => m.command);
-    expect(cmds.slice(-2)).toEqual([{ cmd: "set-speed", speed: 1.5 }, { cmd: "set-speed", speed: 1 }]);
+    expect(cmds.slice(-2)).toEqual([
+      { cmd: "set-speed", speed: 1.5 },
+      { cmd: "set-speed", speed: 1 },
+    ]);
     // the slider is a Radix-style slider: keys move it by 0.05 and commit
     await page.focus("[data-sk=popover-speed] [role=slider]");
     await page.keyboard.press("End");
@@ -412,11 +483,13 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     const page = await open(dockSettings());
     const doc = await startPage(page);
     await deliver(page, { t: "state", state: st({ docId: doc.docId }) });
-    await page.evaluate(() => { (window as any).__voices = [
-      { id: "af_heart", name: "Heart", desc: "US English", quality: "A" },
-      { id: "af_bella", name: "Bella", desc: "US English", quality: "A-" },
-      { id: "bf_emma", name: "Emma", desc: "UK English", quality: "B-" },
-    ]; });
+    await page.evaluate(() => {
+      (window as any).__voices = [
+        { id: "af_heart", name: "Heart", desc: "US English", quality: "A" },
+        { id: "af_bella", name: "Bella", desc: "US English", quality: "A-" },
+        { id: "bf_emma", name: "Emma", desc: "UK English", quality: "B-" },
+      ];
+    });
     await page.click("[data-sk=dock-voice]");
     await page.waitForSelector("[data-sk=popover-voice]");
     await page.waitForSelector("[data-sk=popover-voice] .sk-vrow");
@@ -483,8 +556,11 @@ describe("selection bubble (B1)", () => {
     const page = await open();
     await page.evaluate(() => {
       const t = document.getElementById("p2")!.firstChild as Text;
-      const r = document.createRange(); r.setStart(t, 0); r.setEnd(t, 20);
-      getSelection()!.removeAllRanges(); getSelection()!.addRange(r);
+      const r = document.createRange();
+      r.setStart(t, 0);
+      r.setEnd(t, 20);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
       document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
     });
     await page.waitForSelector("[data-sk=bubble]");
@@ -499,7 +575,9 @@ describe("selection bubble (B1)", () => {
     const page = await open(base({ show: { bubble: false } }));
     await page.evaluate(() => {
       const t = document.getElementById("p2")!.firstChild as Text;
-      const r = document.createRange(); r.setStart(t, 0); r.setEnd(t, 20);
+      const r = document.createRange();
+      r.setStart(t, 0);
+      r.setEnd(t, 20);
       getSelection()!.addRange(r);
       document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
     });
@@ -571,6 +649,44 @@ describe("paragraph gutter (B2)", () => {
     await page.context().close();
   });
 
+  test("Escape hides the button without moving the pointer, and it stays hidden until another paragraph is entered", async () => {
+    const page = await open();
+    await engage(page);
+    await page.hover("#p2");
+    await page.waitForSelector("[data-sk=gutter-play]");
+    await page.keyboard.press("Escape");
+    expect(await page.locator("[data-sk=gutter-play]").count()).toBe(0);
+    const b = await box(page, "#p2");
+    await page.mouse.move(b.x + 5, b.y + 8);
+    await page.waitForTimeout(300);
+    expect(await page.locator("[data-sk=gutter-play]").count()).toBe(0);
+    await page.hover("#p3");
+    await page.waitForSelector("[data-sk=gutter-play]");
+    await page.context().close();
+  });
+
+  test("a paragraph reached by keyboard gets its button next in tab order, and Escape returns focus to the link", async () => {
+    const page = await open();
+    await engage(page);
+    await page.evaluate(() => {
+      const a = document.createElement("a");
+      a.id = "lk";
+      a.href = "#top";
+      a.textContent = "a link in the paragraph";
+      document.getElementById("p2")!.append(" ", a);
+      a.focus();
+    });
+    await page.waitForSelector("[data-sk=gutter-play]");
+    expect(await page.evaluate(() => document.getElementById("lk")!.nextElementSibling?.localName)).toBe("speakkit-ui");
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => document.querySelector("speakkit-ui")!.shadowRoot!.activeElement?.getAttribute("data-sk"))).toBe("gutter-play");
+    await page.keyboard.press("Escape");
+    expect(await page.locator("[data-sk=gutter-play]").count()).toBe(0);
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe("lk");
+    expect(await page.evaluate(() => document.documentElement.lastElementChild?.localName)).toBe("speakkit-ui");
+    await page.context().close();
+  });
+
   test("show.gutter off never shows it", async () => {
     const page = await open(base({ show: { gutter: false } }));
     await page.hover("#p2");
@@ -583,7 +699,11 @@ describe("paragraph gutter (B2)", () => {
 describe("in-page keys, toast", () => {
   test("arrows, space and escape control reading; nothing is hijacked when idle or typing", async () => {
     const page = await open();
-    await page.evaluate(() => { const i = document.createElement("input"); i.id = "q"; document.body.append(i); });
+    await page.evaluate(() => {
+      const i = document.createElement("input");
+      i.id = "q";
+      document.body.append(i);
+    });
     await page.keyboard.press("ArrowRight");
     expect((await sent(page)).filter((m) => m.t === "player")).toEqual([]);
     const doc = await startPage(page);

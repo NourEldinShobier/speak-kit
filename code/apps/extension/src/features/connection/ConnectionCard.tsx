@@ -92,8 +92,11 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
   const title = ok ? `Connected to SpeakKit ${ok.health.version}` : st === "token" ? "Pairing token rejected" : st === "offline" ? "SpeakKit isn't running" : "Checking connection";
   const sub = ok
     ? `${engineText(ok.health.engine.state, ok.health.engine.progress)} · answered in ${ok.ms} ms`
-    : st === "token" ? "This browser's token doesn't match the app."
-    : st === "offline" ? "Nothing is answering on this computer." : "Looking for SpeakKit on this computer.";
+    : st === "token"
+      ? "This browser's token doesn't match the app."
+      : st === "offline"
+        ? "Nothing is answering on this computer."
+        : "Looking for SpeakKit on this computer.";
   // rejected token: an empty, focused field waiting for the new one (C3)
   const tokenValue = draft ?? (rejected ? "" : reveal ? token : maskToken(token));
   useEffect(() => {
@@ -109,25 +112,41 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
             <Icon name={ok ? "check" : st === "checking" ? "loader-2" : "x"} size={20} className={st === "checking" ? "lm-spin" : undefined} />
           </span>
           <div>
-            <div className="op-conn-t" role="status">{title}</div>
+            <div className="op-conn-t" role="status">
+              {title}
+            </div>
             <div className="op-conn-s">{sub}</div>
           </div>
         </div>
         <div className="op-conn-r">
-          <Button variant={ok ? "secondary" : "ghost"} iconLeft="refresh" onClick={test} disabled={busy}>{busy ? "Testing…" : "Test connection"}</Button>
+          <Button variant={ok ? "secondary" : "ghost"} iconLeft="refresh" onClick={test} disabled={busy}>
+            {busy ? "Testing…" : "Test connection"}
+          </Button>
           {st === "offline" && (
             <>
-              <Button iconLeft="download" onClick={() => openUrl(LINKS.download)}>Download app</Button>
-              <Button variant="primary" iconLeft="external-link" loading={launching} onClick={launch}>Open SpeakKit</Button>
+              <Button iconLeft="download" onClick={() => openUrl(LINKS.download)}>
+                Download app
+              </Button>
+              <Button variant="primary" iconLeft="external-link" loading={launching} onClick={launch}>
+                Open SpeakKit
+              </Button>
             </>
           )}
           {st === "token" && (
             <>
-              <Button iconLeft="link" onClick={repair}>Re-pair</Button>
-              <Button variant="primary" iconLeft="clipboard" onClick={paste}>Paste new token</Button>
+              <Button iconLeft="link" onClick={repair}>
+                Re-pair
+              </Button>
+              <Button variant="primary" iconLeft="clipboard" onClick={paste}>
+                Paste new token
+              </Button>
             </>
           )}
-          {st === "ok" && <Button iconLeft="link" onClick={repair}>Re-pair</Button>}
+          {st === "ok" && (
+            <Button iconLeft="link" onClick={repair}>
+              Re-pair
+            </Button>
+          )}
         </div>
       </div>
       {(st === "offline" || st === "token") && (
@@ -138,14 +157,22 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
               : "SpeakKit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch."}
           </Banner>
           <button type="button" className="sk-link" aria-expanded={details} onClick={() => setDetails((d) => !d)}>
-            Details<Icon name={details ? "chevron-up" : "chevron-down"} size={13} />
+            Details
+            <Icon name={details ? "chevron-up" : "chevron-down"} size={13} />
           </button>
-          {details && <code>{st === "offline" ? "app-not-running" : "token-rejected"} · 127.0.0.1:{s.port}{!health?.ok && health?.detail ? ` · ${health.detail}` : ""}</code>}
+          {details && (
+            <code>
+              {st === "offline" ? "app-not-running" : "token-rejected"} · 127.0.0.1:{s.port}
+              {!health?.ok && health?.detail ? ` · ${health.detail}` : ""}
+            </code>
+          )}
         </div>
       )}
       <div className="op-two">
         <div className="op-field">
-          <label className="lm-field__label" htmlFor="port">Port</label>
+          <label className="lm-field__label" htmlFor="port">
+            Port
+          </label>
           <p>Must match the desktop app. Loopback only; nothing leaves your computer.</p>
           <TextInput
             id="port"
@@ -158,7 +185,9 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
           />
         </div>
         <div className="op-field">
-          <label className="lm-field__label" htmlFor="token">Pairing token</label>
+          <label className="lm-field__label" htmlFor="token">
+            Pairing token
+          </label>
           <p>Sent with every request so other websites can't use your voice engine.</p>
           <div className="lm-field">
             <div className={`lm-input ${rejected ? "is-error" : ""}`}>
@@ -171,7 +200,9 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
                 placeholder="Paste the new token here"
                 aria-invalid={rejected}
                 value={tokenValue}
-                onFocus={(e) => { if (!reveal && draft === null && token) e.currentTarget.select(); }}
+                onFocus={(e) => {
+                  if (!reveal && draft === null && token) e.currentTarget.select();
+                }}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={commitToken}
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}

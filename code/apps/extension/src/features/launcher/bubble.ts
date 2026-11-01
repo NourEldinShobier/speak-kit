@@ -1,0 +1,85 @@
+import { button, h, iconButton, tooltip } from "@speakkit/ui/vanilla";
+import { speedPopover } from "../player";
+import type { Surface } from "./types";
+
+/** The selection bubble (B1): Listen, voice and speed, copy. */
+export class SelectionBubble {
+  private el: HTMLElement | null = null;
+
+  constructor(
+    private s: Surface,
+    private onCopied: () => void,
+  ) {}
+
+  get visible() {
+    return !!this.el;
+  }
+
+  show(r: DOMRect) {
+    const { shell, hd } = this.s;
+    if (!this.s.model().showBubble) return;
+    if (!this.el) {
+      const listen = button({
+        variant: "primary",
+        size: "sm",
+        iconLeft: "player-play",
+        label: "Listen",
+        ariaLabel: "Listen to selection",
+        onClick: () => {
+          this.hide();
+          hd.readSelection();
+        },
+      });
+      listen.dataset.sk = "bubble-listen";
+      listen.classList.add("sk-listen");
+      listen.addEventListener("pointerenter", () => hd.warm("selection"));
+      const set = iconButton({
+        name: "adjustments",
+        label: "Voice and speed",
+        size: 28,
+        data: { sk: "bubble-settings" },
+        onClick: () => {
+          if (!this.el) return;
+          shell.togglePopover(
+            "speed",
+            set,
+            () => speedPopover({ speed: () => this.s.model().speed, onSet: (v) => hd.setSpeed(v) }),
+            (el, a, sh) => {
+              el.style.left = `${Math.min(Math.max(8, a.right - el.offsetWidth), sh.width - el.offsetWidth - 8)}px`;
+              el.style.top = `${Math.max(8, a.top - el.offsetHeight - 10)}px`;
+            },
+          );
+        },
+      });
+      const copy = iconButton({
+        name: "copy",
+        label: "Copy selection",
+        size: 28,
+        data: { sk: "bubble-copy" },
+        onClick: () => {
+          hd.copySelection();
+          this.onCopied();
+          this.hide();
+        },
+      });
+      this.el = h("div", { class: "sk-bubble", "data-sk": "bubble" }, tooltip(listen, "Listen to selection", "Ctrl+Shift+S"), set, copy);
+      this.el.addEventListener("mousedown", (e) => e.preventDefault()); // keep the page selection
+      shell.root.append(this.el);
+      // the first sign of intent: have the model ready by the time Listen is pressed
+      hd.warm("selection");
+    }
+    const b = this.el;
+    const bw = b.offsetWidth || 164;
+    let top = r.top - 8 - 40;
+    if (top < 8) top = Math.min(r.bottom + 8, shell.height - 48);
+    b.style.top = `${top}px`;
+    b.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - bw / 2), shell.width - bw - 8)}px`;
+  }
+
+  hide() {
+    if (!this.el) return;
+    this.s.shell.closePopover("speed");
+    this.el.remove();
+    this.el = null;
+  }
+}

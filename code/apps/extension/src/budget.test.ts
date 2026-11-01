@@ -13,7 +13,12 @@ let sizes: Record<string, number> = {};
 
 beforeAll(() => {
   dist = mkdtempSync(join(tmpdir(), "speakkit-budget-"));
-  const b = spawnSync("pnpm", ["exec", "vp", "build", "--outDir", dist], { cwd: root, shell: process.platform === "win32", encoding: "utf8", env: { ...process.env, NODE_ENV: "production", SPEAKKIT_TEST: "0", VITEST: "" } });
+  const b = spawnSync("pnpm", ["exec", "vp", "build", "--outDir", dist], {
+    cwd: root,
+    shell: process.platform === "win32",
+    encoding: "utf8",
+    env: { ...process.env, NODE_ENV: "production", SPEAKKIT_TEST: "0", VITEST: "" },
+  });
   if (b.status) throw new Error(`production build failed:\n${b.stdout}\n${b.stderr}`);
   sizes = measure(dist);
 }, 180_000);

@@ -15,7 +15,8 @@ describe("highlightCss", () => {
 
   it("uses the dark-page palette when the page is dark and matching is on", () => {
     const h = { mode: "sentence+word", sentenceColor: "#FFF1C2", wordColor: "#FFD24D", matchTheme: true } as const;
-    expect(palette(h, true)).toEqual(DARK_PAGE_HL);
+    expect(palette(h, true)).toEqual({ sentence: "#78621F", word: "#f2c04e", wordText: "#1e1f20" });
+    expect(DARK_PAGE_HL.word).toBe("#f2c04e");
     expect(palette(h, false).word).toBe("#FFD24D");
   });
 });

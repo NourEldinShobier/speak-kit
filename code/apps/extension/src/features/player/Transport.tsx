@@ -49,13 +49,7 @@ export function Transport({ status, a }: { status: TransportStatus; a: Transport
     <div className="pp-transport">
       <IconButton name="player-skip-back" label="Previous paragraph" size={28} disabled={busy} onClick={() => a.block(-1)} />
       <IconButton name="rewind-backward-10" label="Back 10 seconds" disabled={busy} onClick={() => a.seekMs(-10000)} />
-      <Button
-        variant="primary"
-        className="sk-primary-round"
-        aria-label={label}
-        disabled={busy}
-        onClick={() => (status === "finished" ? a.replay() : a.toggle())}
-      >
+      <Button variant="primary" className="sk-primary-round" aria-label={label} disabled={busy} onClick={() => (status === "finished" ? a.replay() : a.toggle())}>
         <Icon name={busy ? "loader-2" : status === "playing" ? "player-pause" : status === "finished" ? "refresh" : "player-play"} size={20} className={busy ? "lm-spin" : undefined} />
       </Button>
       <IconButton name="rewind-forward-10" label="Forward 10 seconds" disabled={busy} onClick={() => a.seekMs(10000)} />

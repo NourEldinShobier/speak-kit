@@ -15,12 +15,15 @@ export type Deferred<T> = T & { readonly ready: Promise<T> };
 export function defer<T extends object>(load: Promise<T>, latestOnly: string[] = []): Deferred<T> {
   let real: T | undefined;
   const queue: { key: string; run: (r: T) => void }[] = [];
-  void load.then((r) => {
-    real = r;
-    for (const q of queue.splice(0)) q.run(r);
-  }, () => {
-    queue.length = 0;
-  });
+  void load.then(
+    (r) => {
+      real = r;
+      for (const q of queue.splice(0)) q.run(r);
+    },
+    () => {
+      queue.length = 0;
+    },
+  );
   return new Proxy({} as Deferred<T>, {
     get(_, key: string) {
       if (key === "ready") return load;

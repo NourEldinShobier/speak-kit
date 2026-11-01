@@ -26,13 +26,21 @@ export function VoiceSection({ s, upd, saved }: SectionProps) {
       <Card title="Engine" id="engine-h">
         <div className="op-engines" role="group" aria-label="Engine">
           <div className="op-engine on" aria-current="true">
-            <div className="op-engine-h"><b>Kokoro-82M</b><StatusPill tone="green">Installed</StatusPill></div>
+            <div className="op-engine-h">
+              <b>Kokoro-82M</b>
+              <StatusPill tone="green">Installed</StatusPill>
+            </div>
             <p>Fast, runs on any computer. {voices.length ? `${voices.length} voices.` : "Voices from the app."} The model loads when you press play and is released when idle.</p>
           </div>
           <div className="op-engine">
-            <div className="op-engine-h"><b>Chatterbox</b><StatusPill>Not installed</StatusPill></div>
+            <div className="op-engine-h">
+              <b>Chatterbox</b>
+              <StatusPill>Not installed</StatusPill>
+            </div>
             <p>Expressive voices and voice cloning. Needs an NVIDIA GPU.</p>
-            <Button size="sm" iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>Install in the app</Button>
+            <Button size="sm" iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>
+              Install in the app
+            </Button>
           </div>
         </div>
       </Card>
@@ -69,15 +77,34 @@ export function VoiceSection({ s, upd, saved }: SectionProps) {
           label="Pause between paragraphs"
           description={`${s.pauseBetweenParagraphs.charAt(0).toUpperCase()}${s.pauseBetweenParagraphs.slice(1)}${pause ? `, ${pause} s` : ""}`}
           control={
-            <Segmented label="Pause between paragraphs" value={s.pauseBetweenParagraphs} onChange={(p) => upd((x) => ({ ...x, pauseBetweenParagraphs: p as "none" | "short" | "long" }))}
-              items={[{ id: "none", label: "None" }, { id: "short", label: "Short" }, { id: "long", label: "Long" }]} />
+            <Segmented
+              label="Pause between paragraphs"
+              value={s.pauseBetweenParagraphs}
+              onChange={(p) => upd((x) => ({ ...x, pauseBetweenParagraphs: p as "none" | "short" | "long" }))}
+              items={[
+                { id: "none", label: "None" },
+                { id: "short", label: "Short" },
+                { id: "long", label: "Long" },
+              ]}
+            />
           }
         />
       </Card>
       <Card title="Preview" id="preview-h">
         <div className="op-preview">
           <TextInput aria-label="Sample text" value={text} onChange={(e) => setText(e.target.value)} />
-          <Button variant="primary" iconLeft="player-play" disabled={!text.trim() || pv} onClick={async () => { setPv(true); await previewVoice(s.voice, text.trim(), s.speed); setTimeout(() => setPv(false), 600); }}>Play sample</Button>
+          <Button
+            variant="primary"
+            iconLeft="player-play"
+            disabled={!text.trim() || pv}
+            onClick={async () => {
+              setPv(true);
+              await previewVoice(s.voice, text.trim(), s.speed);
+              setTimeout(() => setPv(false), 600);
+            }}
+          >
+            Play sample
+          </Button>
         </div>
       </Card>
     </>

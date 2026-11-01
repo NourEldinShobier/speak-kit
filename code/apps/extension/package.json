@@ -1,1 +1,25 @@
-{"name":"@speakkit/extension","version":"0.2.0","private":true,"type":"module","sideEffects":["**/*.css","./src/app/**"],"dependencies":{"@speakkit/player":"workspace:*","@speakkit/protocol":"workspace:*","@speakkit/ui":"workspace:*","react":"^19","react-dom":"^19","valibot":"^1.5.0"},"devDependencies":{"@types/chrome":"latest","@types/react":"^19","@types/react-dom":"^19","@vitejs/plugin-react":"latest"}}
+{
+  "name": "@speakkit/extension",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "./src/app/**"
+  ],
+  "dependencies": {
+    "@speakkit/player": "workspace:*",
+    "@speakkit/protocol": "workspace:*",
+    "@speakkit/ui": "workspace:*",
+    "react": "^19",
+    "react-dom": "^19",
+    "valibot": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "latest",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "latest",
+    "linkedom": "0.18.14"
+  }
+}

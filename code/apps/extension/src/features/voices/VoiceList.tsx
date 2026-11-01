@@ -73,9 +73,21 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
             </li>
           );
         })}
-        {state.status === "loading" ? <li className="sk-voices__none" role="presentation">Loading voices from the app...</li> : null}
-        {state.status === "error" ? <li className="sk-voices__none" role="presentation">Voices appear when SpeakKit is running.</li> : null}
-        {state.status === "ready" && list.length === 0 ? <li className="sk-voices__none" role="presentation">No voices match.</li> : null}
+        {state.status === "loading" ? (
+          <li className="sk-voices__none" role="presentation">
+            Loading voices from the app...
+          </li>
+        ) : null}
+        {state.status === "error" ? (
+          <li className="sk-voices__none" role="presentation">
+            Voices appear when SpeakKit is running.
+          </li>
+        ) : null}
+        {state.status === "ready" && list.length === 0 ? (
+          <li className="sk-voices__none" role="presentation">
+            No voices match.
+          </li>
+        ) : null}
       </ul>
     </section>
   );

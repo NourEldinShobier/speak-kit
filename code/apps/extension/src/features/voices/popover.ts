@@ -37,23 +37,43 @@ export function voicePopover(o: VoicePopoverOptions): HTMLElement {
         "div",
         { class: `sk-vrow${sel ? " is-selected" : ""}`, role: "listitem", "data-voice": v.id },
         opt,
-        iconButton({ name: "player-play", label: `Preview ${v.name}`, size: 28, data: { sk: "voice-preview" }, onClick: (e) => { e.stopPropagation(); o.onPreview(v.id); } }),
+        iconButton({
+          name: "player-play",
+          label: `Preview ${v.name}`,
+          size: 28,
+          data: { sk: "voice-preview" },
+          onClick: (e) => {
+            e.stopPropagation();
+            o.onPreview(v.id);
+          },
+        }),
       );
-      const pick = () => { o.onPick(v); draw(); };
+      const pick = () => {
+        o.onPick(v);
+        draw();
+      };
       row.addEventListener("click", pick);
       rows.append(row);
     }
-    if (!rows.childElementCount) rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when SpeakKit is running." : "No voices match."));
+    if (!rows.childElementCount)
+      rows.append(h("div", { class: "sk-vnone" }, state === "loading" ? "Loading voices from the app..." : state === "empty" ? "Voices appear when SpeakKit is running." : "No voices match."));
   };
   input.addEventListener("input", draw);
   const pop = popoverSurface("Voice", count, search, rows);
   pop.classList.add("sk-pop-voice");
   draw();
-  void o.voices().then((vs) => {
-    state = vs.length ? "ready" : "empty";
-    if (vs.length) list = vs;
-    count.textContent = vs.length ? `${vs.length} voices` : "";
-    if (o.alive(pop)) draw();
-  }).catch(() => { state = "empty"; count.textContent = ""; if (o.alive(pop)) draw(); });
+  void o
+    .voices()
+    .then((vs) => {
+      state = vs.length ? "ready" : "empty";
+      if (vs.length) list = vs;
+      count.textContent = vs.length ? `${vs.length} voices` : "";
+      if (o.alive(pop)) draw();
+    })
+    .catch(() => {
+      state = "empty";
+      count.textContent = "";
+      if (o.alive(pop)) draw();
+    });
   return pop;
 }

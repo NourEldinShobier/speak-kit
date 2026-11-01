@@ -43,16 +43,34 @@ export function OptionsApp() {
   return (
     <div className="lm op">
       <div className="op-top">
-        <div className="op-logo"><Logo size={26} /><span>SpeakKit</span></div>
-        <Select label="Section" value={sec} onChange={(v) => { location.hash = v; }} options={NAV.map(([id, label]) => ({ value: id, label }))} />
+        <div className="op-logo">
+          <Logo size={26} />
+          <span>SpeakKit</span>
+        </div>
+        <Select
+          label="Section"
+          value={sec}
+          onChange={(v) => {
+            location.hash = v;
+          }}
+          options={NAV.map(([id, label]) => ({ value: id, label }))}
+        />
       </div>
       <SidebarNav label="Settings sections" className="op-nav">
-        <div className="op-logo"><Logo size={26} /><span>SpeakKit</span></div>
+        <div className="op-logo">
+          <Logo size={26} />
+          <span>SpeakKit</span>
+        </div>
         {NAV.map(([id, label, icon]) => (
-          <NavItem key={id} href={`#${id}`} icon={icon} selected={sec === id}>{label}</NavItem>
+          <NavItem key={id} href={`#${id}`} icon={icon} selected={sec === id}>
+            {label}
+          </NavItem>
         ))}
         <div className="sk-grow" />
-        <div className="op-autosave"><Icon name="circle-check" size={14} />Changes save automatically</div>
+        <div className="op-autosave">
+          <Icon name="circle-check" size={14} />
+          Changes save automatically
+        </div>
         <div className="op-ver">SpeakKit extension {version}</div>
       </SidebarNav>
       <main className="op-main" id="main" data-section={sec} aria-busy={!ready}>
@@ -61,10 +79,18 @@ export function OptionsApp() {
             <PageHead title="General" desc="How the extension talks to the SpeakKit desktop app and where it shows up." />
             <ConnectionCard s={settings} upd={update} health={health} refresh={refresh} token={token} setToken={setToken} />
             <AppearsCard s={settings} upd={update} />
-            {saved && <span className="sk-sr" role="status">Saved</span>}
+            {saved && (
+              <span className="sk-sr" role="status">
+                Saved
+              </span>
+            )}
           </>
         )}
-        {sec !== "general" && <Suspense fallback={null}><Sections id={sec} {...common} /></Suspense>}
+        {sec !== "general" && (
+          <Suspense fallback={null}>
+            <Sections id={sec} {...common} />
+          </Suspense>
+        )}
       </main>
     </div>
   );

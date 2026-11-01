@@ -1,20 +1,27 @@
+import { playbackRateFor } from "@speakkit/player/rate";
+import { tokens } from "@speakkit/ui/tokens";
 import { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, type Settings } from "@speakkit/protocol";
+import { DARK_PAGE_SENTENCE, WORD_TEXT } from "./colors";
 
 /** CSS Custom Highlight API wrapper, word timing and scroll helpers. No DOM mutation of the page. */
 
 export const SENTENCE_HL = "speakkit-sentence";
 export const WORD_HL = "speakkit-word";
 
-export interface HlPalette { sentence: string; word: string; wordText: string }
+export interface HlPalette {
+  sentence: string;
+  word: string;
+  wordText: string;
+}
 const HEX = /^#[0-9a-f]{3,8}$/i;
-export const DARK_PAGE_HL: HlPalette = { sentence: "#78621F", word: "#F2C04E", wordText: "#1E1F20" };
+export const DARK_PAGE_HL: HlPalette = { sentence: DARK_PAGE_SENTENCE, word: tokens.dark["tag-yellow"], wordText: WORD_TEXT };
 
 export function palette(h: Settings["highlight"], darkPage: boolean): HlPalette {
   if (h.matchTheme && darkPage) return DARK_PAGE_HL;
   return {
     sentence: HEX.test(h.sentenceColor) ? h.sentenceColor : DEFAULT_SENTENCE_COLOR,
     word: HEX.test(h.wordColor) ? h.wordColor : DEFAULT_WORD_COLOR,
-    wordText: "#1E1F20",
+    wordText: WORD_TEXT,
   };
 }
 
@@ -49,8 +56,12 @@ export class Highlighter {
     this.sheet?.replaceSync(highlightCss(p));
   }
 
-  get wantsWords() { return this.mode === "sentence+word" || this.mode === "word"; }
-  get wantsSentence() { return this.mode === "sentence+word" || this.mode === "sentence"; }
+  get wantsWords() {
+    return this.mode === "sentence+word" || this.mode === "word";
+  }
+  get wantsSentence() {
+    return this.mode === "sentence+word" || this.mode === "sentence";
+  }
 
   sentence(r: Range | null) {
     this.ensure();
@@ -62,10 +73,16 @@ export class Highlighter {
     this.word?.clear();
     if (r && this.wantsWords) this.word?.add(r);
   }
-  clear() { this.sent?.clear(); this.word?.clear(); }
+  clear() {
+    this.sent?.clear();
+    this.word?.clear();
+  }
   dispose() {
     this.clear();
-    if (typeof CSS !== "undefined" && CSS.highlights) { CSS.highlights.delete(SENTENCE_HL); CSS.highlights.delete(WORD_HL); }
+    if (typeof CSS !== "undefined" && CSS.highlights) {
+      CSS.highlights.delete(SENTENCE_HL);
+      CSS.highlights.delete(WORD_HL);
+    }
     if (this.sheet) document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== this.sheet);
     this.sheet = this.sent = this.word = null;
   }
@@ -73,10 +90,11 @@ export class Highlighter {
 
 // ---------------------------------------------------------------- word timing
 
-export interface WordSpan { from: number; to: number; /** ms after sentence start */ at: number }
-
-/** Playback rate the player applies on top of the model speed (speeds above 2x). */
-export const playbackRateFor = (speed: number) => Math.max(1, speed / 2);
+export interface WordSpan {
+  from: number;
+  to: number;
+  /** ms after sentence start */ at: number;
+}
 
 /** Split a sentence into words and give each a start time proportional to its character weight. */
 export function planWords(text: string, durationMs: number, speed = 1): WordSpan[] {
@@ -95,7 +113,11 @@ export function planWords(text: string, durationMs: number, speed = 1): WordSpan
   }
   const dur = durationMs / playbackRateFor(speed);
   let acc = 0;
-  return words.map((x) => { const s = { from: x.from, to: x.to, at: total ? (acc / total) * dur : 0 }; acc += x.w; return s; });
+  return words.map((x) => {
+    const s = { from: x.from, to: x.to, at: total ? (acc / total) * dur : 0 };
+    acc += x.w;
+    return s;
+  });
 }
 
 /** Index of the word being spoken at `t` ms (last word whose start has passed). */
@@ -105,7 +127,10 @@ export function wordIndexAt(plan: WordSpan[], t: number): number {
   let ans = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (plan[mid]!.at <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+    if (plan[mid]!.at <= t) {
+      ans = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
   }
   return ans;
 }
@@ -118,16 +143,22 @@ export class WordClock {
   private running = false;
   private raf = 0;
   private last = -2;
-  constructor(private onWord: (w: WordSpan | null, i: number) => void, private now: () => number = () => performance.now()) {}
+  constructor(
+    private onWord: (w: WordSpan | null, i: number) => void,
+    private now: () => number = () => performance.now(),
+  ) {}
 
   start(plan: WordSpan[], running: boolean) {
     this.stop();
     this.plan = plan;
     this.offset = 0;
     this.last = -2;
-    if (running) this.resume(); else this.tick();
+    if (running) this.resume();
+    else this.tick();
   }
-  elapsed() { return this.running ? this.offset + (this.now() - this.t0) : this.offset; }
+  elapsed() {
+    return this.running ? this.offset + (this.now() - this.t0) : this.offset;
+  }
   resume() {
     if (this.running || !this.plan.length) return;
     this.running = true;
@@ -144,7 +175,10 @@ export class WordClock {
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.plan = [];
-    if (this.last !== -2) { this.last = -2; this.onWord(null, -1); }
+    if (this.last !== -2) {
+      this.last = -2;
+      this.onWord(null, -1);
+    }
   }
   private loop = () => {
     if (!this.running) return;
@@ -153,7 +187,10 @@ export class WordClock {
   };
   tick() {
     const i = wordIndexAt(this.plan, this.elapsed());
-    if (i !== this.last) { this.last = i; this.onWord(i >= 0 ? this.plan[i]! : null, i); }
+    if (i !== this.last) {
+      this.last = i;
+      this.onWord(i >= 0 ? this.plan[i]! : null, i);
+    }
   }
 }
 
@@ -162,7 +199,10 @@ export class WordClock {
 const rgba = (s: string): [number, number, number, number] | null => {
   const m = /rgba?\(([^)]+)\)/.exec(s);
   if (!m) return null;
-  const p = m[1]!.split(/[ ,/]+/).filter(Boolean).map(Number);
+  const p = m[1]!
+    .split(/[ ,/]+/)
+    .filter(Boolean)
+    .map(Number);
   return p.length >= 3 ? [p[0]!, p[1]!, p[2]!, p[3] ?? 1] : null;
 };
 
@@ -172,7 +212,10 @@ export function isDarkPage(doc: Document = document): boolean {
     if (!el) continue;
     const c = rgba(getComputedStyle(el).backgroundColor);
     if (c && c[3] > 0.1) {
-      const lin = (v: number) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+      const lin = (v: number) => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      };
       return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]) < 0.18;
     }
   }

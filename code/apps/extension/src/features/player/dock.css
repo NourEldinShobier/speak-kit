@@ -1,20 +1,128 @@
 /* The read-aloud pill (Lumen F5). */
-.sk-dock{position:absolute;z-index:2;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 10px 6px 12px;border-radius:28px;background:var(--surface-raised);border:1px solid var(--stroke-control);box-shadow:var(--lm-shadow-overlay);white-space:nowrap;max-width:calc(100% - 24px);animation:lm-pop var(--lm-dur-normal) var(--lm-ease)}
-.sk-dock.is-raised{bottom:36px}
-.sk .sk-play{width:40px;height:40px}
-.sk-dock-mid{display:flex;flex-direction:column;gap:6px;width:220px;min-width:0}
-.sk-dock-text{overflow:hidden;text-overflow:ellipsis;font:500 12px/15px Inter,"Inter Variable",system-ui,sans-serif;color:var(--text-primary)}
-.sk-seek{position:relative;padding:5px 0;margin:-5px 0}
-.sk-seek.is-seekable{cursor:pointer;touch-action:none}
-.sk-seek .lm-progress{width:100%}
-.sk-dock .sk-speed{min-width:44px;justify-content:center}
-.sk-voicechip{gap:6px;padding:0 8px 0 4px}
-.sk-voice-txt{max-width:140px;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary)}
-.sk-col{display:flex;flex-direction:column;gap:2px}
-.sk-msg{font:600 13px/16px Inter,"Inter Variable",system-ui,sans-serif}
-.sk-sub{color:var(--text-secondary);font-size:12px}
-.sk-err-ic{color:var(--tag-red)}
-.sk-details{position:absolute;left:50%;bottom:4px;transform:translateX(-50%)}
-.sk-dtext{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);max-width:min(520px,calc(100% - 32px));padding:10px 14px;border-radius:12px;background:var(--surface-card);border:1px solid var(--stroke-control);box-shadow:var(--lm-shadow-menu);font-size:12px;line-height:1.45;color:var(--text-secondary);word-break:break-word}
+.sk-dock {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 10px 6px 12px;
+  border-radius: 28px;
+  background: var(--surface-raised);
+  border: 1px solid var(--stroke-control);
+  box-shadow: var(--lm-shadow-overlay);
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  animation: lm-pop var(--lm-dur-normal) var(--lm-ease);
+}
+.sk-dock.is-raised {
+  bottom: 36px;
+}
+.sk .sk-play {
+  width: 40px;
+  height: 40px;
+}
+.sk-dock-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 220px;
+  min-width: 0;
+}
+.sk-dock-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font:
+    500 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+}
+.sk-seek {
+  position: relative;
+  padding: 5px 0;
+  margin: -5px 0;
+}
+.sk-seek.is-seekable {
+  cursor: pointer;
+  touch-action: none;
+}
+.sk-seek .lm-progress {
+  width: 100%;
+}
+.sk-dock .sk-speed {
+  min-width: 44px;
+  justify-content: center;
+}
+.sk-voicechip {
+  gap: 6px;
+  padding: 0 8px 0 4px;
+}
+.sk-voice-txt {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+.sk-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sk-msg {
+  font:
+    600 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.sk-sub {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-err-ic {
+  color: var(--tag-red);
+}
+.sk-details {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+}
+.sk-dtext {
+  position: absolute;
+  left: 50%;
+  bottom: 100px;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100% - 32px));
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--stroke-control);
+  box-shadow: var(--lm-shadow-menu);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
 /* Narrow viewports (200% zoom of a laptop screen, phones): the progress row goes on top and the controls wrap below it instead of running off the screen. */
-@media (max-width:680px){.sk-dock{flex-wrap:wrap;justify-content:center;width:calc(100% - 24px);border-radius:20px}.sk-dock-mid{order:-1;flex:1 1 100%;width:100%}.sk-voice-txt{max-width:72px}}
+@media (max-width: 680px) {
+  .sk-dock {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: calc(100% - 24px);
+    border-radius: 20px;
+  }
+  .sk-dock-mid {
+    order: -1;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .sk-voice-txt {
+    max-width: 72px;
+  }
+}

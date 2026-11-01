@@ -28,7 +28,11 @@ export class Dock {
   private waking = 0;
   private preparingSince = 0;
 
-  constructor(private shell: Shell, private hd: UiHandlers, m: UiModel) {
+  constructor(
+    private shell: Shell,
+    private hd: UiHandlers,
+    m: UiModel,
+  ) {
     this.m = m;
   }
 
@@ -85,16 +89,42 @@ export class Dock {
     const b = iconButton({ name: "dots-vertical", label: "More", size: 28, data: { sk: "dock-more" }, className: "sk-dock-more" });
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.shell.togglePopover("menu", b, () => this.menu(), above(() => this.el));
+      this.shell.togglePopover(
+        "menu",
+        b,
+        () => this.menu(),
+        above(() => this.el),
+      );
     });
     return b;
   }
 
   private menu(): HTMLElement {
     const m = menu(
-      menuItem({ label: "Settings", icon: "adjustments", onSelect: () => { this.shell.closePopover(); this.hd.openOptions(); } }),
-      menuItem({ label: "Close", icon: "x", onSelect: () => { this.shell.closePopover(); this.dismiss(); } }),
-      menuItem({ label: "Hide on this site", icon: "eye-off", onSelect: () => { this.shell.closePopover(); this.hd.hideOnSite(); } }),
+      menuItem({
+        label: "Settings",
+        icon: "adjustments",
+        onSelect: () => {
+          this.shell.closePopover();
+          this.hd.openOptions();
+        },
+      }),
+      menuItem({
+        label: "Close",
+        icon: "x",
+        onSelect: () => {
+          this.shell.closePopover();
+          this.dismiss();
+        },
+      }),
+      menuItem({
+        label: "Hide on this site",
+        icon: "eye-off",
+        onSelect: () => {
+          this.shell.closePopover();
+          this.hd.hideOnSite();
+        },
+      }),
     );
     m.classList.add("sk-menu");
     m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-close", "menu-hide-site"][i]!));
@@ -126,7 +156,13 @@ export class Dock {
     const next = iconButton({ name: "player-skip-forward", label: "Next paragraph", size: 28, data: { sk: "dock-next" }, disabled: loading || done, onClick: () => this.hd.nextBlock() });
     const toggle = h(
       "button",
-      { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-play", "aria-label": done ? "Replay" : playing ? "Pause" : loading ? "Preparing" : "Play", "data-sk": "dock-toggle", disabled: loading },
+      {
+        type: "button",
+        class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--round sk-play",
+        "aria-label": done ? "Replay" : playing ? "Pause" : loading ? "Preparing" : "Play",
+        "data-sk": "dock-toggle",
+        disabled: loading,
+      },
       icon(loading ? "loader-2" : done ? "refresh" : playing ? "player-pause" : "player-play", 18, loading ? "lm-spin" : undefined),
     );
     toggle.addEventListener("click", () => (done ? this.hd.replay() : this.hd.toggle()));
@@ -135,12 +171,33 @@ export class Dock {
     const bar = this.seekBar(!loading && !done);
     const mid = h("div", { class: "sk-dock-mid" }, text, bar.el);
     const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "dock-speed" });
-    speed.addEventListener("click", () => this.shell.togglePopover("speed", speed, () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }), above(() => this.el)));
+    speed.addEventListener("click", () =>
+      this.shell.togglePopover(
+        "speed",
+        speed,
+        () => speedPopover({ speed: () => this.m.speed, onSet: (v) => this.hd.setSpeed(v) }),
+        above(() => this.el),
+      ),
+    );
     const av = avatar(m.voiceName, 20, "accent");
     const vtext = h("span", { class: "sk-voice-txt" });
-    const voice = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-voicechip", "data-sk": "dock-voice" }, h("span", { class: "sk-sr" }, "Voice: "), av, vtext, icon("chevron-down", 12));
+    const voice = h(
+      "button",
+      { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-voicechip", "data-sk": "dock-voice" },
+      h("span", { class: "sk-sr" }, "Voice: "),
+      av,
+      vtext,
+      icon("chevron-down", 12),
+    );
     av.setAttribute("aria-hidden", "true");
-    voice.addEventListener("click", () => this.shell.togglePopover("voice", voice, () => this.voices(), above(() => this.el)));
+    voice.addEventListener("click", () =>
+      this.shell.togglePopover(
+        "voice",
+        voice,
+        () => this.voices(),
+        above(() => this.el),
+      ),
+    );
     const close = iconButton({ name: "x", label: "Close player", size: 28, data: { sk: "dock-close" }, onClick: () => this.dismiss() });
     d.append(prev, toggle, next, mid, speed, voice, this.moreButton(), close);
     this.parts = { text, speed, voice: vtext, av, bar };
@@ -175,7 +232,17 @@ export class Dock {
     d.append(this.moreButton());
     d.classList.add("is-raised");
     this.shell.root.append(d);
-    const det = button({ variant: "ghost", size: "sm", label: "Details", iconRight: this.details ? "chevron-up" : "chevron-down", onClick: () => { this.details = !this.details; this.key = ""; this.render(this.m); } });
+    const det = button({
+      variant: "ghost",
+      size: "sm",
+      label: "Details",
+      iconRight: this.details ? "chevron-up" : "chevron-down",
+      onClick: () => {
+        this.details = !this.details;
+        this.key = "";
+        this.render(this.m);
+      },
+    });
     det.classList.add("sk-details");
     det.dataset.sk = "dock-details";
     this.shell.root.append(det);
@@ -194,13 +261,35 @@ export class Dock {
     let drag: number | null = null;
     const frac = () => (this.m.totalMs > 0 ? Math.min(1, Math.max(0, this.m.elapsedMs / this.m.totalMs)) : 0);
     const set = () => pr.set((drag ?? (this.m.status === "finished" ? 1 : frac())) * 100);
-    const at = (e: PointerEvent) => { const r = el.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
+    const at = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    };
     if (enabled) {
       el.classList.add("is-seekable");
-      el.addEventListener("pointerdown", (e) => { drag = at(e); el.setPointerCapture(e.pointerId); set(); });
-      el.addEventListener("pointermove", (e) => { if (drag !== null) { drag = at(e); set(); } });
-      el.addEventListener("pointerup", (e) => { if (drag !== null) { const f = at(e); drag = null; this.hd.seekFrac(f); set(); } });
-      el.addEventListener("pointercancel", () => { drag = null; set(); });
+      el.addEventListener("pointerdown", (e) => {
+        drag = at(e);
+        el.setPointerCapture(e.pointerId);
+        set();
+      });
+      el.addEventListener("pointermove", (e) => {
+        if (drag !== null) {
+          drag = at(e);
+          set();
+        }
+      });
+      el.addEventListener("pointerup", (e) => {
+        if (drag !== null) {
+          const f = at(e);
+          drag = null;
+          this.hd.seekFrac(f);
+          set();
+        }
+      });
+      el.addEventListener("pointercancel", () => {
+        drag = null;
+        set();
+      });
     }
     return { el, set };
   }
@@ -210,16 +299,26 @@ export class Dock {
     const m = this.m;
     if (!this.el) return;
     const p = this.parts;
-    if (p.sub) p.sub.textContent = m.estimate() ? `${fmtLong(m.estimate())} at ${speedLabel(m.speed)}` : "";
+    if (p.sub) p.sub.textContent = m.engineAsleep ? "Engine asleep · wakes on play" : m.estimate() ? `${fmtLong(m.estimate())} at ${speedLabel(m.speed)}` : "";
     if (p.text) {
       const waking = m.status === "preparing" && performance.now() - this.preparingSince > 1200;
       p.text.textContent =
-        m.status === "preparing" ? (waking ? "Waking the voice engine..." : "Preparing voice...")
-        : m.status === "finished" ? "Done · Read again"
-        : m.paragraph ? `Paragraph ${m.paragraph.n} of ${m.paragraph.of} · ${minutesLeft(Math.max(0, m.totalMs - m.elapsedMs))}`
-        : m.status === "paused" ? `Paused · ${clock(m.elapsedMs)}` : `Reading · ${clock(m.elapsedMs)}`;
+        m.status === "preparing"
+          ? waking
+            ? "Waking the voice engine..."
+            : "Preparing voice..."
+          : m.status === "finished"
+            ? "Done · Read again"
+            : m.paragraph
+              ? `Paragraph ${m.paragraph.n} of ${m.paragraph.of} · ${minutesLeft(Math.max(0, m.totalMs - m.elapsedMs))}`
+              : m.status === "paused"
+                ? `Paused · ${clock(m.elapsedMs)}`
+                : `Reading · ${clock(m.elapsedMs)}`;
     }
-    if (p.speed) { p.speed.textContent = speedLabel(m.speed); p.speed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`); }
+    if (p.speed) {
+      p.speed.textContent = speedLabel(m.speed);
+      p.speed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`);
+    }
     if (p.voice) p.voice.textContent = p.voice.title = `${m.voiceName || "Voice"} · on device`;
     if (p.av) p.av.textContent = (m.voiceName || "V").slice(0, 1).toUpperCase();
     p.bar?.set();

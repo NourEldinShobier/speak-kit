@@ -77,7 +77,9 @@ export default defineConfig({
     sourcemap: test,
     rollupOptions: {
       // Radix ships "use client" directives that a client-only build does not need; one warning per package drowned the real output.
-      onwarn: (w, next) => { if (w.code !== "MODULE_LEVEL_DIRECTIVE") next(w); },
+      onwarn: (w, next) => {
+        if (w.code !== "MODULE_LEVEL_DIRECTIVE") next(w);
+      },
       input: {
         background: resolve(root, "src/app/background/index.ts"),
         popup: resolve(root, "popup.html"),
@@ -86,13 +88,12 @@ export default defineConfig({
         offscreen: resolve(root, "offscreen.html"),
       },
       output: {
-        entryFileNames: (c) =>
-          c.name === "background" ? "background.js" : "assets/[name]-[hash].js",
+        entryFileNames: (c) => (c.name === "background" ? "background.js" : "assets/[name]-[hash].js"),
       },
     },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
     environment: "node",
     testTimeout: 20000,
   },

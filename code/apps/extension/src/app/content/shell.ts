@@ -71,6 +71,12 @@ export class ShadowShell implements Shell {
     if (hadFocus && p.anchor.isConnected) p.anchor.focus({ preventScroll: true });
   }
 
+  placeHostAfter(node: Node | null) {
+    if (document.activeElement === this.host) return; // moving it would drop focus
+    if (node) node.parentNode?.insertBefore(this.host, node.nextSibling);
+    else if (this.host.parentNode !== document.documentElement || this.host.nextSibling) document.documentElement.append(this.host);
+  }
+
   destroy() {
     document.removeEventListener("pointerdown", this.onDown, true);
     document.removeEventListener("keydown", this.onKey, true);

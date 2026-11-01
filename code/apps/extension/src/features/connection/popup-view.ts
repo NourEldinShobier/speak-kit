@@ -3,8 +3,21 @@ import type { HealthResult } from "../../shared/client";
 import { engineBadge } from "./errors";
 
 export type PopupView =
-  | "install" | "offline" | "token" | "version" | "unreadable" | "pdf" | "fileurl" | "engine-missing"
-  | "loading-model" | "preparing" | "playing" | "paused" | "finished" | "idle" | "selection";
+  | "install"
+  | "offline"
+  | "token"
+  | "version"
+  | "unreadable"
+  | "pdf"
+  | "fileurl"
+  | "engine-missing"
+  | "loading-model"
+  | "preparing"
+  | "playing"
+  | "paused"
+  | "finished"
+  | "idle"
+  | "selection";
 
 export interface PopupInputs {
   hasToken: boolean;
@@ -14,6 +27,8 @@ export interface PopupInputs {
   /** "Allow access to file URLs" is on */
   fileAccess: boolean;
   selection: string;
+  /** The Listen button was just pressed and the service worker has not reported yet (extraction takes ~150 ms). */
+  starting?: boolean;
 }
 
 /** Pages extensions cannot script. */
@@ -25,7 +40,9 @@ function isUnreadableUrl(url?: string): boolean {
     if (u.hostname === "chromewebstore.google.com") return true;
     if (u.hostname === "chrome.google.com" && u.pathname.startsWith("/webstore")) return true;
     if (u.hostname === "microsoftedge.microsoft.com" && u.pathname.startsWith("/addons")) return true;
-  } catch { /* not a URL */ }
+  } catch {
+    /* not a URL */
+  }
   return false;
 }
 
@@ -68,9 +85,11 @@ export function deriveView(i: PopupInputs): PopupView {
 
   const engine = h && h.ok ? h.health.engine.state : "ready";
   const playing = p && (p.status === "preparing" || p.status === "playing" || p.status === "paused" || p.status === "finished");
-  if (engine === "loading" || engine === "downloading" || (engine === "unloaded" && p?.status === "preparing")) {
-    if (!playing || p?.status === "preparing") return "loading-model";
+  const preparing = p?.status === "preparing" || (!!i.starting && (!p || p.status === "idle"));
+  if (engine === "loading" || engine === "downloading" || (engine === "unloaded" && preparing)) {
+    if (!playing || preparing) return "loading-model";
   }
+  if (preparing) return "preparing";
   if (playing) return p.status as "preparing" | "playing" | "paused" | "finished";
   if (engine === "missing" || engine === "error" || code === "engine-not-ready") return "engine-missing";
 
@@ -83,12 +102,19 @@ export function deriveView(i: PopupInputs): PopupView {
 type Tone = "ok" | "warn" | "err" | "neutral";
 export function headerBadge(view: PopupView, engine?: Parameters<typeof engineBadge>[0]): { tone: Tone; label: string } {
   switch (view) {
-    case "install": return { tone: "neutral", label: "Not set up" };
-    case "offline": return { tone: "err", label: "App offline" };
-    case "token": return { tone: "warn", label: "Not paired" };
-    case "version": return { tone: "warn", label: "Update needed" };
-    case "loading-model": return { tone: "warn", label: engine === "unloaded" ? "Waking up" : "Loading model" };
-    case "engine-missing": return { tone: "warn", label: "No voice engine" };
-    default: return engineBadge(engine);
+    case "install":
+      return { tone: "neutral", label: "Not set up" };
+    case "offline":
+      return { tone: "err", label: "App offline" };
+    case "token":
+      return { tone: "warn", label: "Not paired" };
+    case "version":
+      return { tone: "warn", label: "Update needed" };
+    case "loading-model":
+      return { tone: "warn", label: engine === "unloaded" ? "Waking up" : "Loading model" };
+    case "engine-missing":
+      return { tone: "warn", label: "No voice engine" };
+    default:
+      return engineBadge(engine);
   }
 }

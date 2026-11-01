@@ -10,7 +10,32 @@ const health = (state: "ready" | "unloaded" | "missing" = "ready"): HealthResult
 });
 const idle: PlayerState = { status: "idle", sentenceIndex: 0, sentenceCount: 0, elapsedMs: 0, totalMs: 0, speed: 1, voice: "af_heart", queueLength: 0 };
 const input = (over: Partial<PopupInputs> = {}): PopupInputs => ({
-  hasToken: true, health: health(), player: idle, tabUrl: "https://example.com/post", fileAccess: true, selection: "", ...over,
+  hasToken: true,
+  health: health(),
+  player: idle,
+  tabUrl: "https://example.com/post",
+  fileAccess: true,
+  selection: "",
+  ...over,
+});
+
+describe("deriveView right after the Listen click", () => {
+  it("shows the waking state at once for a sleeping model, before the service worker reports preparing", () => {
+    expect(deriveView(input({ health: health("unloaded"), starting: true }))).toBe("loading-model");
+  });
+
+  it("shows preparing at once for a loaded model", () => {
+    expect(deriveView(input({ starting: true }))).toBe("preparing");
+  });
+
+  it("leaves the real playback state and errors in charge once the player has reported", () => {
+    expect(deriveView(input({ starting: true, player: { ...idle, status: "playing" } }))).toBe("playing");
+    expect(deriveView(input({ starting: true, player: { ...idle, status: "error", error: { code: "page-unreadable", message: "x" } } }))).toBe("unreadable");
+  });
+
+  it("does not hide a connection problem", () => {
+    expect(deriveView(input({ starting: true, health: { ok: false, error: "app-not-running" } }))).toBe("offline");
+  });
 });
 
 describe("deriveView", () => {

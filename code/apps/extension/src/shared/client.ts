@@ -6,13 +6,24 @@ import type { ExtraToBg } from "./internal";
  * The wire format is `{ t, ...payload }` (protocol ContentToBg plus ExtraToBg). @webext-core/messaging was evaluated and
  * not adopted: see docs/decisions/0001-stack.md.
  */
-export type HealthResult =
-  | { ok: true; health: Health; ms: number }
-  | { ok: false; error: Extract<ErrorCode, "app-not-running" | "token-rejected" | "version-mismatch">; detail?: string };
+export type HealthResult = { ok: true; health: Health; ms: number } | { ok: false; error: Extract<ErrorCode, "app-not-running" | "token-rejected" | "version-mismatch">; detail?: string };
 
-export interface QueueItem { docId: string; title: string; url: string; sentenceCount: number; estMs: number }
-export interface OutlineItem { index: number; text: string }
-export interface QueueSnapshot { items: QueueItem[]; outline: OutlineItem[]; autoPlay: boolean }
+export interface QueueItem {
+  docId: string;
+  title: string;
+  url: string;
+  sentenceCount: number;
+  estMs: number;
+}
+export interface OutlineItem {
+  index: number;
+  text: string;
+}
+export interface QueueSnapshot {
+  items: QueueItem[];
+  outline: OutlineItem[];
+  autoPlay: boolean;
+}
 
 type UiMessage = ContentToBg | ExtraToBg;
 
@@ -29,8 +40,7 @@ export async function send<T = unknown>(msg: UiMessage): Promise<T | undefined> 
 
 export const command = (c: PlayerCommand) => send({ t: "player", command: c });
 export const getState = () => send<PlayerState>({ t: "get-state" });
-export const getHealth = async (force = false): Promise<HealthResult> =>
-  (await send<HealthResult>({ t: "get-health", force })) ?? { ok: false, error: "app-not-running" };
+export const getHealth = async (force = false): Promise<HealthResult> => (await send<HealthResult>({ t: "get-health", force })) ?? { ok: false, error: "app-not-running" };
 export const getQueue = () => send<QueueSnapshot>({ t: "get-queue" });
 export const openOptions = () => send({ t: "open-options" });
 /** Previews go through the player so the UI never touches the server. */
@@ -43,7 +53,6 @@ export function warm(reason: "popup" | "hover" | "selection" | "dock" | "options
   lastWarm = now;
   void send({ t: "warm", reason });
 }
-
 
 /** Subscribe to player-state broadcasts. Returns an unsubscribe function. */
 export function onPlayerState(cb: (s: PlayerState) => void): () => void {

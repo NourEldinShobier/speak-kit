@@ -1,4 +1,10 @@
-export interface Swatch { name: string; light: string; dark: string }
+import { tokens } from "@speakkit/ui/tokens";
+
+export interface Swatch {
+  name: string;
+  light: string;
+  dark: string;
+}
 
 /** Sentence and word swatches; `dark` is used on dark pages when "Match page theme" is on. */
 export const SENTENCE_SWATCHES: Swatch[] = [
@@ -26,6 +32,8 @@ export function paint(list: Swatch[], hex: string, dark: boolean, matchTheme: bo
   return dark && matchTheme && i >= 0 ? list[i]!.dark : hex;
 }
 
-export const PAGE = { light: { bg: "#FFFFFF", text: "#1E1F20" }, dark: { bg: "#1E1F20", text: "#E6E6E6" } };
-/** Text on a word highlight stays dark; the design uses #1E1F20 in both themes. */
-export const WORD_TEXT = "#1E1F20";
+export const PAGE = { light: { bg: tokens.light["surface-editor"], text: tokens.light["text-on-highlight"] }, dark: { bg: tokens.dark["surface-card"], text: tokens.dark["text-primary"] } };
+/** Text on a word highlight stays dark in both themes. */
+export const WORD_TEXT = tokens.dark["text-on-highlight"];
+/** Sentence highlight on a dark page when "Match page theme" is on. */
+export const DARK_PAGE_SENTENCE = "#78621F";

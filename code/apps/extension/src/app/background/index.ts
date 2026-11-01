@@ -38,8 +38,7 @@ if (__TEST__)
       command: (name: string, tabId?: number) => onCommand(name, tabId ? ({ id: tabId } as chrome.tabs.Tab) : undefined),
       menus: () => menuLog.map((m) => m.title ?? ""),
       menuDefs: () => structuredClone(menuLog),
-      menu: (id: string, tabId: number, selectionText?: string) =>
-        onMenuClick({ menuItemId: id, selectionText } as chrome.contextMenus.OnClickData, { id: tabId } as chrome.tabs.Tab),
+      menu: (id: string, tabId: number, selectionText?: string) => onMenuClick({ menuItemId: id, selectionText } as chrome.contextMenus.OnClickData, { id: tabId } as chrome.tabs.Tab),
     },
   });
 

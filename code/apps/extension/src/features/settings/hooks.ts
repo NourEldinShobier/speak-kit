@@ -19,14 +19,31 @@ export function useSettings(): SettingsApi {
   const [saved, setSaved] = useState(false);
   const cur = useRef(settings);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** changes made before the stored settings arrived; they are applied on top of them */
+  const early = useRef<((s: Settings) => Settings)[] | null>([]);
+  const save = useCallback(() => {
+    setSaved(false);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(
+      () =>
+        writeSettings(cur.current).then(
+          () => setSaved(true),
+          () => {},
+        ),
+      200,
+    );
+  }, []);
   useEffect(() => {
     let live = true;
-    readSettings().then((s) => {
-      if (live) {
-        cur.current = s;
-        setSettings(s);
-        setReady(true);
-      }
+    readSettings().then((stored) => {
+      if (!live) return;
+      const changes = early.current ?? [];
+      early.current = null;
+      const s = changes.reduce((acc, fn) => fn(acc), stored);
+      cur.current = s;
+      setSettings(s);
+      setReady(true);
+      if (changes.length) save();
     });
     const off = watchKey("sync", SETTINGS_KEY, (v) => {
       const s = parseSettings(v);
@@ -39,14 +56,16 @@ export function useSettings(): SettingsApi {
       clearTimeout(timer.current);
     };
   }, []);
-  const update = useCallback((fn: (s: Settings) => Settings) => {
-    const next = fn(cur.current);
-    cur.current = next;
-    setSettings(next);
-    setSaved(false);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => writeSettings(cur.current).then(() => setSaved(true), () => {}), 200);
-  }, []);
+  const update = useCallback(
+    (fn: (s: Settings) => Settings) => {
+      const next = fn(cur.current);
+      cur.current = next;
+      setSettings(next);
+      if (early.current) early.current.push(fn);
+      else save();
+    },
+    [save],
+  );
   const reset = useCallback((fn: (d: Settings, s: Settings) => Settings) => update((s) => fn(defaultSettings(), s)), [update]);
   return { settings, ready, saved, update, reset };
 }

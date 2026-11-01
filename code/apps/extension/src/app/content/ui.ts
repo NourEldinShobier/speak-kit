@@ -58,8 +58,11 @@ export class Ui {
   hideBubble() {
     this.launcher.hideBubble();
   }
-  showGutter(el: Element | null) {
-    this.launcher.showGutter(el);
+  showGutter(el: Element | null, via?: HTMLElement) {
+    this.launcher.showGutter(el, via);
+  }
+  dismissGutter() {
+    return this.launcher.dismissGutter();
   }
   scheduleGutterHide() {
     this.launcher.scheduleGutterHide();

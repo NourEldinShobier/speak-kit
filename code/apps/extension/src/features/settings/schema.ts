@@ -20,8 +20,7 @@ const clamped = (min: number, max: number, fallback: number, round = false) =>
 const flag = (fallback: boolean) => v.fallback(v.boolean(), fallback);
 const pick = <const T extends readonly [string, ...string[]]>(all: T, fallback: T[number]) => v.fallback(v.picklist(all), fallback);
 const text = (fallback: string) => v.fallback(v.pipe(v.string(), v.minLength(1)), fallback);
-const group = <E extends v.ObjectEntries>(entries: E, fallback: v.InferOutput<v.ObjectSchema<E, undefined>>) =>
-  v.fallback(v.object(entries), fallback);
+const group = <E extends v.ObjectEntries>(entries: E, fallback: v.InferOutput<v.ObjectSchema<E, undefined>>) => v.fallback(v.object(entries), fallback);
 
 const SITE_RULES = ["always-dock", "hide-controls", "never-read"] as const;
 const sites = v.fallback(
@@ -100,6 +99,7 @@ const settingsSchema = v.fallback(
     ),
     reader: readerSchema,
     sites,
+    siteDefault: pick(["ask", "never-read"], d.siteDefault),
   }),
   d,
 );

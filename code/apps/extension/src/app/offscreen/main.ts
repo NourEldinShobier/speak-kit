@@ -1,6 +1,6 @@
 import { DEFAULT_PORT, DEFAULT_VOICE, SAMPLE_RATE, parseHealth } from "@speakkit/protocol";
 import { createEngineClient } from "../../features/connection";
-import { IDLE_CLOSE_MS, Player, soundTouchStretch } from "../../features/player";
+import { IDLE_CLOSE_MS, Player, soundTouchStretch } from "@speakkit/player";
 import type { FromOffscreen, ToOffscreen } from "../../shared/internal";
 
 const testHook = __TEST__ || safeStorage("speakkit.test") !== null;
@@ -70,27 +70,27 @@ if (testHook) {
         return player.state();
       },
       get framesReceived() {
-        return player.framesReceived;
+        return player.probe.framesReceived;
       },
       get scheduledMs() {
-        return player.scheduledMs;
+        return player.probe.scheduledMs;
       },
-      rms: () => player.rms(),
-      wave: () => player.waveform(),
+      rms: () => player.probe.rms(),
+      wave: () => player.probe.waveform(),
       get maxLateMs() {
-        return player.maxLateMs;
+        return player.probe.maxLateMs;
       },
       get retainedBytes() {
-        return player.retainedBytes();
+        return player.probe.retainedBytes();
       },
       get rate() {
-        return player.lastRate;
+        return player.probe.lastRate;
       },
       get ctxTime() {
-        return player.audioClock().time;
+        return player.probe.audioClock().time;
       },
       get ctxState() {
-        return player.audioClock().state;
+        return player.probe.audioClock().state;
       },
     },
   });

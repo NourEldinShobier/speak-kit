@@ -17,9 +17,7 @@ export const engine = createEngineClient({
 });
 
 // The UI wants HealthResult ({ ok, health, ms } | { ok: false, error }); /v1/health needs no token, so the token is checked separately.
-type HealthResult =
-  | { ok: true; health: Health; ms: number }
-  | { ok: false; error: "app-not-running" | "token-rejected" | "version-mismatch"; detail?: string };
+type HealthResult = { ok: true; health: Health; ms: number } | { ok: false; error: "app-not-running" | "token-rejected" | "version-mismatch"; detail?: string };
 
 let cached: { at: number; port: number; token: string; value: HealthResult } | undefined;
 

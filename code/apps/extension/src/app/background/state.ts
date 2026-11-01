@@ -1,4 +1,5 @@
 import type { BgToContent, ErrorCode, PlayerState, ReadDoc } from "@speakkit/protocol";
+import { tokens } from "@speakkit/ui/tokens";
 import { ERROR_TEXT } from "../../features/connection";
 import { loadSettings } from "../../features/settings";
 import type { ExtraBroadcast, QueueItem } from "../../shared/internal";
@@ -25,9 +26,9 @@ const session = {
   },
 };
 
-// Badge colours: the Lumen accent and error tokens (lumen.css). A badge cannot read CSS variables.
-const ACCENT = "#0069CC";
-const ERR = "#D92D20";
+// A badge cannot read CSS variables, so its colours come from the generated Lumen token table.
+const ACCENT = tokens.light["accent-default"];
+const ERR = tokens.light["tag-red"];
 
 const idleState = async (): Promise<PlayerState> => {
   const s = await loadSettings();
@@ -39,17 +40,41 @@ let lastState: PlayerState | undefined;
 let queue: QueueItem[] | undefined;
 let autoPlay: boolean | undefined;
 
-export async function getState(): Promise<PlayerState> {
-  return (lastState ??= (await session.get<PlayerState>(SESSION_STATE)) ?? (await idleState()));
+/** Reads storage once. Whatever was set while the read was in flight is newer than what it returned, so the first writer wins. */
+async function cached<T>(current: () => T | undefined, set: (v: T) => void, read: () => Promise<T>): Promise<T> {
+  const have = current();
+  if (have !== undefined) return have;
+  const stored = await read();
+  const now = current();
+  if (now !== undefined) return now;
+  set(stored);
+  return stored;
 }
 
-export const getQueue = async (): Promise<QueueItem[]> => (queue ??= (await session.get<QueueItem[]>(SESSION_QUEUE)) ?? []);
+export const getState = (): Promise<PlayerState> =>
+  cached(
+    () => lastState,
+    (v) => (lastState = v),
+    async () => (await session.get<PlayerState>(SESSION_STATE)) ?? (await idleState()),
+  );
+
+export const getQueue = (): Promise<QueueItem[]> =>
+  cached(
+    () => queue,
+    (v) => (queue = v),
+    async () => (await session.get<QueueItem[]>(SESSION_QUEUE)) ?? [],
+  );
 export function setQueue(q: QueueItem[]): void {
   queue = q;
   session.set(SESSION_QUEUE, q);
 }
 
-export const getAutoPlay = async (): Promise<boolean> => (autoPlay ??= (await session.get<boolean>(SESSION_AUTOPLAY)) ?? true);
+export const getAutoPlay = (): Promise<boolean> =>
+  cached(
+    () => autoPlay,
+    (v) => (autoPlay = v),
+    async () => (await session.get<boolean>(SESSION_AUTOPLAY)) ?? true,
+  );
 export function setAutoPlay(on: boolean): void {
   autoPlay = on;
   session.set(SESSION_AUTOPLAY, on);

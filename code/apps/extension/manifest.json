@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SpeakKit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Natural local text-to-speech for any web page. Audio is generated on your computer.",
   "minimum_chrome_version": "116",
   "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
@@ -11,12 +11,8 @@
     "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
   },
   "background": { "service_worker": "background.js", "type": "module" },
-  "content_scripts": [
-    { "matches": ["http://*/*", "https://*/*", "file:///*"], "js": ["content.js"], "run_at": "document_idle" }
-  ],
-  "web_accessible_resources": [
-    { "resources": ["content-ui.js"], "matches": ["http://*/*", "https://*/*", "file:///*"], "use_dynamic_url": true }
-  ],
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*", "file:///*"], "js": ["content.js"], "run_at": "document_idle" }],
+  "web_accessible_resources": [{ "resources": ["content-ui.js"], "matches": ["http://*/*", "https://*/*", "file:///*"], "use_dynamic_url": true }],
   "options_ui": { "page": "options.html", "open_in_tab": true },
   "side_panel": { "default_path": "sidepanel.html" },
   "permissions": ["storage", "contextMenus", "offscreen", "sidePanel", "activeTab", "scripting"],

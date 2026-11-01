@@ -1,77 +1,31 @@
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
-import { splitMany, splitSentences } from "./extract";
 import { ARTICLE_PAGE, bigPage, MESSY_PAGE } from "../../testing/fixtures";
 import { launch, type Session } from "../../testing/harness";
 
-const texts = (s: { text: string }[]) => s.map((x) => x.text);
-
-describe("splitSentences (pure)", () => {
-  test("merges abbreviations and initials with the next sentence", () => {
-    const t = "Dr. Smith met Prof. Lee at 5 p.m. in Washington, D.C. on Jan. 5. They agreed, e.g. on the budget. J. R. Tolkien wrote it. Then they left.";
-    expect(texts(splitSentences(t))).toEqual([
-      "Dr. Smith met Prof. Lee at 5 p.m. in Washington, D.C. on Jan. 5.",
-      "They agreed, e.g. on the budget.",
-      "J. R. Tolkien wrote it.",
-      "Then they left.",
-    ]);
-  });
-
-  test("keeps question and exclamation marks, quotes and ellipses attached", () => {
-    expect(texts(splitSentences('Is it ready? Yes! "Of course," she said. Wait... then go.'))).toEqual(["Is it ready?", "Yes!", '"Of course," she said.', "Wait... then go."]);
-  });
-
-  test("offsets point at the trimmed sentence inside the original text", () => {
-    const t = "First one.   Second one.";
-    for (const s of splitSentences(t)) expect(t.slice(s.start, s.end)).toBe(s.text);
-  });
-
-  test("caps long sentences at clause boundaries, never inside a word, without losing words", () => {
-    const long = "Alpha beta gamma delta epsilon, ".repeat(20).trim() + " and the end comes here.";
-    const parts = splitSentences(long);
-    expect(parts.length).toBeGreaterThan(1);
-    for (const p of parts) expect(p.text.length).toBeLessThanOrEqual(300);
-    expect(parts.map((p) => p.text).join(" ").replace(/\s+/g, " ")).toBe(long.replace(/\s+/g, " "));
-  });
-
-  test("a long text without any clause punctuation is cut at a space", () => {
-    const long = "word ".repeat(200).trim() + ".";
-    const parts = splitSentences(long);
-    for (const p of parts) {
-      expect(p.text.length).toBeLessThanOrEqual(300);
-      expect(p.text.startsWith("word")).toBe(true);
-    }
-  });
-
-  test("drops pieces without letters or digits, merges stray punctuation into the sentence before it", () => {
-    expect(texts(splitSentences("* * *"))).toEqual([]);
-    expect(texts(splitSentences("Hello there. ... Another one."))).toEqual(["Hello there. ...", "Another one."]);
-  });
-
-  test("batch splitting equals one-by-one splitting", () => {
-    const blocks = ["One. Two.", "Single sentence without a stop", "Dr. A went home. Then he slept.", ""];
-    expect(splitMany(blocks)).toEqual(blocks.map((b) => splitSentences(b)));
-  });
-});
-
 let s: Session;
-beforeAll(async () => { s = await launch(); }, 90000);
-afterAll(async () => { await s?.close(); });
+beforeAll(async () => {
+  s = await launch();
+}, 90000);
+afterAll(async () => {
+  await s?.close();
+});
 
 const SKIP = { navigation: true, citations: true, code: true, urls: true, captions: false };
 /** Run extract() in the page and return plain data. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const run = (page: any, skip = SKIP) => page.evaluate((skip: typeof SKIP) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const E = (window as any).SK.extract;
-  const ex = E.extract(document, { skip });
-  return {
-    root: ex.root.localName + (ex.root.id ? "#" + ex.root.id : ""),
-    title: ex.title,
+const run = (page: any, skip = SKIP) =>
+  page.evaluate((skip: typeof SKIP) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sentences: ex.sentences.map((x: any) => x.text) as string[],
-    ranges: ex.sentences.map((_: unknown, i: number) => E.sentenceRange(document, ex, i)?.toString()) as string[],
-  };
-}, skip);
+    const E = (window as any).SK.extract;
+    const ex = E.extract(document, { skip });
+    return {
+      root: ex.root.localName + (ex.root.id ? "#" + ex.root.id : ""),
+      title: ex.title,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sentences: ex.sentences.map((x: any) => x.text) as string[],
+      ranges: ex.sentences.map((_: unknown, i: number) => E.sentenceRange(document, ex, i)?.toString()) as string[],
+    };
+  }, skip);
 
 describe("article page", () => {
   test("reads the title and every paragraph in order, nothing from nav, aside, footer or aria-hidden ads", async () => {
@@ -228,7 +182,9 @@ describe("messy page", () => {
     const at = (t: string) => r.ranges[r.sentences.indexOf(t)];
     expect(at("The study found a 12% rise.")).toBe("The study found a 12% rise.");
     expect(at("Others disagree and more still.")).toBe("Others disagree[2,3] and more[4–6] still.");
-    expect(at("Visit link for details, or link today.")).toBe("Visit https://example.com/a/very/long/path/that/goes/on/and/on?query=1 for details, or www.example.org/another/long/address/here today.");
+    expect(at("Visit link for details, or link today.")).toBe(
+      "Visit https://example.com/a/very/long/path/that/goes/on/and/on?query=1 for details, or www.example.org/another/long/address/here today.",
+    );
     expect(at("Visible text stays in one paragraph.")).toContain("stays in   one   paragraph.");
     await page.context().close();
   });

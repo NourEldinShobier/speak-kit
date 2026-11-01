@@ -43,12 +43,28 @@ export class ReaderView {
   private opener = document.activeElement as HTMLElement | null;
   private pageWasInert = document.body.inert;
 
-  constructor(private ex: Extraction, readonly docId: string, private d: ReaderDeps) {
+  constructor(
+    private ex: Extraction,
+    readonly docId: string,
+    private d: ReaderDeps,
+  ) {
     this.col = h("article", { class: "sk-reader-col" });
     this.buildContent();
     this.scroller = h("main", { class: "sk-reader-scroll" }, this.col);
-    this.scroller.addEventListener("wheel", () => { this.lastUserScroll = performance.now(); }, { passive: true });
-    this.scroller.addEventListener("touchmove", () => { this.lastUserScroll = performance.now(); }, { passive: true });
+    this.scroller.addEventListener(
+      "wheel",
+      () => {
+        this.lastUserScroll = performance.now();
+      },
+      { passive: true },
+    );
+    this.scroller.addEventListener(
+      "touchmove",
+      () => {
+        this.lastUserScroll = performance.now();
+      },
+      { passive: true },
+    );
     const close = iconButton({ name: "x", label: "Close reader", data: { sk: "reader-close" }, onClick: () => d.onClose() });
     this.settingsBtn = iconButton({ name: "typography", label: "Reading settings", data: { sk: "reader-settings" }, onClick: () => this.togglePanel() });
     this.settingsBtn.setAttribute("aria-haspopup", "dialog");
@@ -56,7 +72,12 @@ export class ReaderView {
     this.el = h("div", { class: "sk-reader", "data-sk": "reader", role: "dialog", "aria-modal": "true", "aria-label": "Reader view" }, bar, this.scroller);
     this.apply();
     d.shell.root.append(this.el);
-    this.el.addEventListener("keydown", (e) => { if (e.key === "Escape" && !d.shell.popover) { e.stopPropagation(); d.onClose(); } });
+    this.el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !d.shell.popover) {
+        e.stopPropagation();
+        d.onClose();
+      }
+    });
     this.scroller.tabIndex = 0; // a scrollable region must be reachable by keyboard
     // The reader is modal: the page behind it (the host sits outside body) leaves the tab order and the accessibility tree.
     document.body.inert = true;
@@ -174,10 +195,15 @@ export class ReaderView {
   // ------------------------------------------------------------ reading panel
 
   private togglePanel() {
-    this.d.shell.togglePopover("reading", this.settingsBtn, () => this.panel(), (el, a, sh) => {
-      el.style.top = `${a.bottom + 8}px`;
-      el.style.left = `${Math.max(8, Math.min(a.right - el.offsetWidth, sh.width - el.offsetWidth - 8))}px`;
-    });
+    this.d.shell.togglePopover(
+      "reading",
+      this.settingsBtn,
+      () => this.panel(),
+      (el, a, sh) => {
+        el.style.top = `${a.bottom + 8}px`;
+        el.style.left = `${Math.max(8, Math.min(a.right - el.offsetWidth, sh.width - el.offsetWidth - 8))}px`;
+      },
+    );
   }
 
   private panel(): HTMLElement {
@@ -185,10 +211,50 @@ export class ReaderView {
     const row = (label: string, control: Node, value?: HTMLElement) => h("div", { class: "sk-prow" }, h("span", { class: "sk-plabel" }, label), h("div", { class: "sk-pctl" }, control, value));
     const sizeVal = h("output", { class: "sk-pval" }, `${r.size}px`);
     const widthVal = h("output", { class: "sk-pval" }, `${r.width}px`);
-    const font = segmented({ label: "Font", value: r.font, items: [{ id: "sans", label: "Sans" }, { id: "serif", label: "Serif" }, { id: "dyslexic", label: "Dyslexic" }], onChange: (id) => this.change({ font: id as ReaderSettings["font"] }) });
-    const size = slider({ min: 14, max: 28, step: 1, value: r.size, label: "Text size", onInput: (v) => { sizeVal.textContent = `${v}px`; this.preview({ size: v }); }, onCommit: (v) => this.change({ size: v }) });
-    const width = slider({ min: 480, max: 960, step: 20, value: r.width, label: "Page width", onInput: (v) => { widthVal.textContent = `${v}px`; this.preview({ width: v }); }, onCommit: (v) => this.change({ width: v }) });
-    const theme = segmented({ label: "Theme", value: r.theme, items: [{ id: "paper", label: "Paper" }, { id: "light", label: "Light" }, { id: "dark", label: "Dark" }], onChange: (id) => this.change({ theme: id as ReaderSettings["theme"] }) });
+    const font = segmented({
+      label: "Font",
+      value: r.font,
+      items: [
+        { id: "sans", label: "Sans" },
+        { id: "serif", label: "Serif" },
+        { id: "dyslexic", label: "Dyslexic" },
+      ],
+      onChange: (id) => this.change({ font: id as ReaderSettings["font"] }),
+    });
+    const size = slider({
+      min: 14,
+      max: 28,
+      step: 1,
+      value: r.size,
+      label: "Text size",
+      onInput: (v) => {
+        sizeVal.textContent = `${v}px`;
+        this.preview({ size: v });
+      },
+      onCommit: (v) => this.change({ size: v }),
+    });
+    const width = slider({
+      min: 480,
+      max: 960,
+      step: 20,
+      value: r.width,
+      label: "Page width",
+      onInput: (v) => {
+        widthVal.textContent = `${v}px`;
+        this.preview({ width: v });
+      },
+      onCommit: (v) => this.change({ width: v }),
+    });
+    const theme = segmented({
+      label: "Theme",
+      value: r.theme,
+      items: [
+        { id: "paper", label: "Paper" },
+        { id: "light", label: "Light" },
+        { id: "dark", label: "Dark" },
+      ],
+      onChange: (id) => this.change({ theme: id as ReaderSettings["theme"] }),
+    });
     const hl = toggle({ checked: r.highlight, label: "Highlight sentence", onChange: (on) => this.change({ highlight: on }) });
     const pop = popoverSurface("Reading", font.el, row("Size", size.el, sizeVal), row("Width", width.el, widthVal), theme.el, row("Highlight sentence", hl));
     pop.classList.add("sk-pop-reading");

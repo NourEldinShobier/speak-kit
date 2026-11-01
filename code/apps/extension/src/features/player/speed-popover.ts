@@ -14,12 +14,35 @@ interface SpeedPopoverOptions {
 export function speedPopover(o: SpeedPopoverOptions): HTMLElement {
   const label = h("output", { class: "sk-pop-val", "aria-live": "polite" }, speedLabel(o.speed()));
   const sl = slider({
-    min: 0.5, max: 3, step: 0.05, value: o.speed(), label: "Speed",
-    onInput: (v) => { label.textContent = speedLabel(v); },
-    onCommit: (v) => { set(v); },
+    min: 0.5,
+    max: 3,
+    step: 0.05,
+    value: o.speed(),
+    label: "Speed",
+    onInput: (v) => {
+      label.textContent = speedLabel(v);
+    },
+    onCommit: (v) => {
+      set(v);
+    },
   });
   const presets = SPEED_PRESETS.map((v) => {
-    const b = h("button", { type: "button", class: "lm-btn lm-btn--toggle", "aria-label": `${speedLabel(v)} speed`, "data-sk": `speed-${v}`, on: { click: () => { sl.set(v); set(v); } } }, speedLabel(v));
+    const b = h(
+      "button",
+      {
+        type: "button",
+        class: "lm-btn lm-btn--toggle",
+        "aria-label": `${speedLabel(v)} speed`,
+        "data-sk": `speed-${v}`,
+        on: {
+          click: () => {
+            sl.set(v);
+            set(v);
+          },
+        },
+      },
+      speedLabel(v),
+    );
     return b;
   });
   const mark = () => presets.forEach((b, i) => b.setAttribute("aria-pressed", String(Math.abs(SPEED_PRESETS[i]! - cur) < 0.001)));
@@ -31,7 +54,16 @@ export function speedPopover(o: SpeedPopoverOptions): HTMLElement {
     mark();
   };
   mark();
-  const reset = button({ variant: "ghost", size: "sm", iconLeft: "refresh", label: "Reset to 1x", onClick: () => { sl.set(1); set(1); } });
+  const reset = button({
+    variant: "ghost",
+    size: "sm",
+    iconLeft: "refresh",
+    label: "Reset to 1x",
+    onClick: () => {
+      sl.set(1);
+      set(1);
+    },
+  });
   reset.dataset.sk = "speed-reset";
   return popoverSurface(
     "Speed",

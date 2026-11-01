@@ -1,22 +1,11 @@
 import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { defaultSettings } from "./types";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
-import {
-  getToken,
-  invalidateSettings,
-  loadSettings,
-  mergeSettings,
-  normalizeSettings,
-  saveSettings,
-  siteRule,
-} from "./store";
+import { getToken, invalidateSettings, loadSettings, mergeSettings, normalizeSettings, saveSettings } from "./store";
 
 function stubChrome(sync: Record<string, unknown>, local: Record<string, unknown> = {}) {
   const area = (data: Record<string, unknown>) => ({
-    get: async (keys: string | string[]) =>
-      Object.fromEntries(
-        (Array.isArray(keys) ? keys : [keys]).filter((k) => k in data).map((k) => [k, data[k]]),
-      ),
+    get: async (keys: string | string[]) => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter((k) => k in data).map((k) => [k, data[k]])),
     set: async (o: Record<string, unknown>) => {
       Object.assign(data, o);
     },
@@ -93,23 +82,5 @@ describe("storage round trip", () => {
     expect(await getToken()).toBe("abc");
     stubChrome({}, {});
     expect(await getToken()).toBe("");
-  });
-});
-
-describe("siteRule", () => {
-  const s = normalizeSettings({
-    sites: { "example.com": "never-read", "docs.foo.org": "always-dock" },
-  });
-  it("matches the host and its parent domains, ignoring www", () => {
-    expect(siteRule(s, "https://example.com/a")).toBe("never-read");
-    expect(siteRule(s, "https://www.example.com/a")).toBe("never-read");
-    expect(siteRule(s, "https://blog.example.com/a")).toBe("never-read");
-    expect(siteRule(s, "https://docs.foo.org/")).toBe("always-dock");
-  });
-  it("does not match siblings, parents of a subdomain rule or bad urls", () => {
-    expect(siteRule(s, "https://foo.org/")).toBeUndefined();
-    expect(siteRule(s, "https://notexample.com/")).toBeUndefined();
-    expect(siteRule(s, "not a url")).toBeUndefined();
-    expect(siteRule(s, undefined)).toBeUndefined();
   });
 });

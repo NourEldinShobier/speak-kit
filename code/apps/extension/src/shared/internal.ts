@@ -1,19 +1,11 @@
-import type {
-  ErrorCode,
-  PlayerCommand,
-  PlayerState,
-  SentenceStart,
-} from "@speakkit/protocol";
+import type { ErrorCode, PlayerCommand, PlayerState, SentenceStart } from "@speakkit/protocol";
 import type { PlayerConfig, QueueItem } from "@speakkit/player";
 
 export type { PlayerConfig, QueueItem };
 
 /** Messages between the service worker and the offscreen player, plus extra worker requests beyond protocol/messages.ts. */
 
-export type ToOffscreen =
-  | { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig }
-  | { to: "offscreen"; query: "queue" }
-  | { to: "offscreen"; autoPlay: boolean };
+export type ToOffscreen = { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig } | { to: "offscreen"; query: "queue" } | { to: "offscreen"; autoPlay: boolean };
 
 export type FromOffscreen =
   | { from: "offscreen"; kind: "state"; state: PlayerState }
@@ -22,9 +14,7 @@ export type FromOffscreen =
   /** playback has been stopped for 60 s and nothing is queued: the worker may close the document */
   | { from: "offscreen"; kind: "idle" };
 
-export type ConnResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; code: ErrorCode; message: string };
+export type ConnResult<T> = { ok: true; value: T } | { ok: false; code: ErrorCode; message: string };
 
 /** Extra requests answered by the service worker (contract additions, see the final report). */
 export type ExtraToBg =
@@ -59,4 +49,3 @@ export interface VoiceInfo {
 
 /** Broadcast by the worker to extension pages (in addition to BgToContent state / sentence-start). */
 export type ExtraBroadcast = { t: "queue"; queue: QueueItem[] };
-

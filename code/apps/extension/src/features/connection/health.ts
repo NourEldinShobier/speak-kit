@@ -54,8 +54,7 @@ export function createHealthClient(deps: HealthDeps) {
     /** Health of the app on the configured port, cached for 3 s; concurrent callers share one request. */
     async health(force = false): Promise<ConnResult<Health>> {
       const port = await deps.port();
-      if (!force && cached && cached.port === port && deps.now() - cached.at < HEALTH_TTL_MS)
-        return cached.value;
+      if (!force && cached && cached.port === port && deps.now() - cached.at < HEALTH_TTL_MS) return cached.value;
       if (inflight && !force) return inflight;
       const p = fetchHealth(port).then((value) => {
         cached = { at: deps.now(), port, value };
@@ -73,11 +72,7 @@ export function createHealthClient(deps: HealthDeps) {
     /** Token check used by the pairing UI; defaults to the stored port and token. */
     async authCheck(port?: number, token?: string): Promise<ConnResult<true>> {
       try {
-        const res = await get(
-          "/v1/auth/check",
-          port ?? (await deps.port()),
-          token ?? (await deps.token()),
-        );
+        const res = await get("/v1/auth/check", port ?? (await deps.port()), token ?? (await deps.token()));
         if (res.status === 204 || res.ok) return { ok: true, value: true };
         if (res.status === 401 || res.status === 403) return rejected();
         return down();

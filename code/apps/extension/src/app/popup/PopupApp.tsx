@@ -22,20 +22,30 @@ export function PopupApp() {
   const queue = useQueue(player);
   const cmds = useCommands();
   const [launch, setLaunch] = useState<PopupModel["launch"]>("idle");
+  const [starting, setStarting] = useState(false);
 
   // The popup opening is the earliest hint that the user may press play: load the model now.
   useEffect(() => warm("popup"), []);
+  // Between the click and the first player-state broadcast (page extraction) the popup already shows "Waking up" / "Preparing".
+  useEffect(() => {
+    if (!starting) return;
+    const t = setTimeout(() => setStarting(false), 1500);
+    return () => clearTimeout(t);
+  }, [starting]);
 
   // Test builds can pin a state that needs no player data (file:// permission cannot be reached from a Playwright tab).
   const pinned = __TEST__ ? (new URLSearchParams(location.search).get("view") as PopupView | null) : null;
-  const view = pinned ?? deriveView({
-    hasToken: !!token,
-    health,
-    player,
-    tabUrl: tab.url ?? (tab.id !== undefined ? "about:restricted" : undefined),
-    fileAccess: tab.fileAccess,
-    selection: tab.selection,
-  });
+  const view =
+    pinned ??
+    deriveView({
+      hasToken: !!token,
+      health,
+      player,
+      tabUrl: tab.url ?? (tab.id !== undefined ? "about:restricted" : undefined),
+      fileAccess: tab.fileAccess,
+      selection: tab.selection,
+      starting,
+    });
   const active = player && player.status !== "idle";
   const engine = health && health.ok ? health.health.engine : undefined;
   const voices = useVoices(!!health && health.ok);
@@ -52,7 +62,7 @@ export function PopupApp() {
     next: queue?.items[0],
     queued: queue?.items.length ?? player?.queueLength ?? 0,
     engine: engine?.state,
-    engineProgress: engine?.state === "downloading" ? engine.progress ?? 0 : undefined,
+    engineProgress: engine?.state === "downloading" ? (engine.progress ?? 0) : undefined,
     voices,
     shortcuts: Object.fromEntries((cmds ?? []).map((c) => [c.name ?? "", c.shortcut || undefined])),
     launch,
@@ -62,11 +72,26 @@ export function PopupApp() {
     const elapsed = () => player?.elapsedMs ?? 0;
     return {
       // The tab may still be loading when the button is clicked right after the popup opens.
-      listenPage: async () => { const id = tab.id ?? (await activeTab())?.id; if (id !== undefined) void send({ t: "read-tab", tabId: id, mode: "page" }); },
-      listenSelection: async () => { const id = tab.id ?? (await activeTab())?.id; if (id !== undefined) void send({ t: "read-tab", tabId: id, mode: "selection" }); },
+      listenPage: async () => {
+        const id = tab.id ?? (await activeTab())?.id;
+        if (id !== undefined) {
+          setStarting(true);
+          void send({ t: "read-tab", tabId: id, mode: "page" });
+        }
+      },
+      listenSelection: async () => {
+        const id = tab.id ?? (await activeTab())?.id;
+        if (id !== undefined) {
+          setStarting(true);
+          void send({ t: "read-tab", tabId: id, mode: "selection" });
+        }
+      },
       readerView: async () => {
         const id = tab.id ?? (await activeTab())?.id;
-        if (id !== undefined) { await send({ t: "reader", tabId: id, open: true }); if (!__TEST__) window.close(); }
+        if (id !== undefined) {
+          await send({ t: "reader", tabId: id, open: true });
+          if (!__TEST__) window.close();
+        }
       },
       toggle: () => void command({ cmd: "toggle" }),
       stop: () => void command({ cmd: "stop" }),
@@ -74,10 +99,19 @@ export function PopupApp() {
       seekMs: (d) => void command({ cmd: "seek-ms", deltaMs: d }),
       seekTo: (ms) => void command({ cmd: "seek-ms", deltaMs: ms - elapsed() }),
       block: (d) => void command({ cmd: d > 0 ? "next-block" : "prev-block" }),
-      setVoice: (id) => { update((s) => ({ ...s, voice: id })); void command({ cmd: "set-voice", voice: id }); },
-      setSpeed: (v) => { update((s) => ({ ...s, speed: v })); void command({ cmd: "set-speed", speed: v }); },
+      setVoice: (id) => {
+        update((s) => ({ ...s, voice: id }));
+        void command({ cmd: "set-voice", voice: id });
+      },
+      setSpeed: (v) => {
+        update((s) => ({ ...s, speed: v }));
+        void command({ cmd: "set-speed", speed: v });
+      },
       preview: (id) => void previewVoice(id, SAMPLE, settings.speed),
-      playNext: () => { const n = queue?.items[0]; if (n) void command({ cmd: "queue-play", docId: n.docId }); },
+      playNext: () => {
+        const n = queue?.items[0];
+        if (n) void command({ cmd: "queue-play", docId: n.docId });
+      },
       openApp: async () => {
         setLaunch("starting");
         const r = await send<{ ok: boolean }>({ t: "launch-app" });
@@ -89,8 +123,14 @@ export function PopupApp() {
       pasteToken: async () => {
         try {
           const t = (await navigator.clipboard.readText()).trim();
-          if (t.length >= 8 && !/\s/.test(t)) { setToken(t); await refresh(); return; }
-        } catch { /* clipboard permission denied */ }
+          if (t.length >= 8 && !/\s/.test(t)) {
+            setToken(t);
+            await refresh();
+            return;
+          }
+        } catch {
+          /* clipboard permission denied */
+        }
         void openOptions();
       },
       options: () => void openOptions(),

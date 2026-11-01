@@ -1,4 +1,3 @@
-export * from "@speakkit/player";
 export { usePlayerState } from "./hooks";
 export { Scrubber, Transport } from "./Transport";
 export { speedPopover } from "./speed-popover";

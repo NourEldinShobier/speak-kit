@@ -9,12 +9,19 @@ type Common = Parameters<typeof LauncherSection>[0];
 /** Every options section except General, in one lazily loaded chunk. */
 export default function Sections({ id, ...common }: Common & { id: string }) {
   switch (id) {
-    case "launcher": return <LauncherSection {...common} />;
-    case "voice": return <VoiceSection {...common} />;
-    case "highlight": return <HighlightSection {...common} />;
-    case "reader": return <ReaderSection {...common} />;
-    case "shortcuts": return <ShortcutsSection />;
-    case "sites": return <SitesSection {...common} />;
-    default: return null;
+    case "launcher":
+      return <LauncherSection {...common} />;
+    case "voice":
+      return <VoiceSection {...common} />;
+    case "highlight":
+      return <HighlightSection {...common} />;
+    case "reader":
+      return <ReaderSection {...common} />;
+    case "shortcuts":
+      return <ShortcutsSection />;
+    case "sites":
+      return <SitesSection {...common} />;
+    default:
+      return null;
   }
 }

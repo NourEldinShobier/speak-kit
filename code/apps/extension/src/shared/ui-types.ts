@@ -17,6 +17,8 @@ export interface UiModel {
   /** the block element being read while a reading is active; its gutter button then says "Reading this paragraph" */
   readingBlock?: Element;
   dark: boolean;
+  /** the voice engine is unloaded (B22): idle surfaces say it wakes on play */
+  engineAsleep: boolean;
   /** settings.show.dock and no hide-controls rule */
   showDock: boolean;
   alwaysDock: boolean;
@@ -71,5 +73,6 @@ export interface Shell {
   /** open the popover `kind` under/next to `anchor`, or close it when it is already open for that anchor */
   togglePopover(kind: string, anchor: HTMLElement, build: () => HTMLElement, place: Placement): void;
   closePopover(kind?: string): void;
+  /** put the host right after `node` in the page, so it comes next in tab order; null puts it back at the end of the document. Does nothing while focus is inside it. */
+  placeHostAfter(node: Node | null): void;
 }
-

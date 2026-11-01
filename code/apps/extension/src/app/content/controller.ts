@@ -1,11 +1,9 @@
 /// <reference types="chrome" />
-import {
-  SETTINGS_KEY,
-  type BgToContent, type ContentToBg, type ExtractReply, type PlayerCommand, type PlayerState, type ReadDoc, type SentenceStart, type SiteRule,
-} from "@speakkit/protocol";
+import { SETTINGS_KEY, type BgToContent, type ContentToBg, type ExtractReply, type PlayerCommand, type PlayerState, type ReadDoc, type SentenceStart, type SiteRule } from "@speakkit/protocol";
 import { Highlighter, isDarkPage, isInView, keepInView, palette, planWords, WordClock } from "../../features/highlight";
 import { extract, findMainRoot, sentenceIndexAt, sentenceRange, wordRange, type Extraction, type ReaderView } from "../../features/reader";
-import { defaultSettings, withDefaults, type ReaderSettings, type Settings } from "../../features/settings";
+import { defaultSettings, siteRule, withDefaults, type ReaderSettings, type Settings } from "../../features/settings";
+import type { HealthResult } from "../../shared/client";
 import type { ExtraToBg, VoiceInfo } from "../../shared/internal";
 import type { UiHandlers, UiModel } from "../../shared/ui-types";
 import { defer, loadUi, type Deferred } from "./lazy";
@@ -16,7 +14,8 @@ import type { Ui } from "./ui";
 
 const BLOCK_SEL = "p,li,blockquote,h1,h2,h3,h4,h5,h6,dd,figcaption";
 const ACTIVE = ["preparing", "playing", "paused"];
-const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+const LAUNCHER_EDGE_PX = 80;
+const uid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 const editable = (t: EventTarget | null) => {
   const e = t as HTMLElement | null;
   return !!e && (e.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(e.tagName) || e.getAttribute?.("role") === "button");
@@ -25,7 +24,11 @@ const editable = (t: EventTarget | null) => {
 /** Stored settings over the defaults. Validation (valibot) happens in the service worker and the extension pages, not in the page. */
 const mergeSettings = (stored: Partial<Settings> | undefined): Settings => withDefaults(stored);
 
-interface Doc { ex: Extraction; doc: ReadDoc; blocks: number[] }
+interface Doc {
+  ex: Extraction;
+  doc: ReadDoc;
+  blocks: number[];
+}
 
 class Controller {
   settings: Settings = defaultSettings();
@@ -85,7 +88,9 @@ class Controller {
     try {
       const r = await chrome.storage.sync.get(SETTINGS_KEY);
       this.settings = mergeSettings(r[SETTINGS_KEY] as Partial<Settings> | undefined);
-    } catch { this.settings = defaultSettings(); }
+    } catch {
+      this.settings = defaultSettings();
+    }
   }
   private async saveSettings(mut: (s: Settings) => void) {
     try {
@@ -94,7 +99,9 @@ class Controller {
       mut(s);
       await chrome.storage.sync.set({ [SETTINGS_KEY]: s });
       this.settings = s;
-    } catch { /* extension reloaded: nothing to save to */ }
+    } catch {
+      /* extension reloaded: nothing to save to */
+    }
   }
 
   /** Removes every listener the controller added (the page is going away or the extension was reloaded). */
@@ -103,12 +110,20 @@ class Controller {
     chrome.storage.onChanged.removeListener(this.onStorage);
   }
 
-  get host() { return location.hostname.replace(/^www\./, ""); }
-  rule(): SiteRule | undefined { return this.settings.sites[this.host] ?? this.settings.sites[location.hostname]; }
+  get host() {
+    return location.hostname.replace(/^www\./, "");
+  }
+  rule(): SiteRule | undefined {
+    return siteRule(this.settings, location.href);
+  }
 
-  private applyStyle() { this.hl.style(this.settings.highlight.mode, palette(this.settings.highlight, this.dark)); }
+  private applyStyle() {
+    this.hl.style(this.settings.highlight.mode, palette(this.settings.highlight, this.dark));
+  }
 
-  private voiceName(id: string) { return this.voices.find((v) => v.id === id)?.name ?? id.replace(/^[a-z]{2}_/, "").replace(/^./, (c) => c.toUpperCase()); }
+  private voiceName(id: string) {
+    return this.voices.find((v) => v.id === id)?.name ?? id.replace(/^[a-z]{2}_/, "").replace(/^./, (c) => c.toUpperCase());
+  }
 
   private estimate = () => {
     const now = performance.now();
@@ -146,17 +161,29 @@ class Controller {
     const st = rule === "never-read" ? null : this.state;
     return {
       status: st?.status ?? "idle",
-      elapsedMs: st?.elapsedMs ?? 0, totalMs: st?.totalMs ?? 0,
-      speed: st?.speed ?? s.speed, voice: st?.voice ?? s.voice, voiceName: this.voiceName(st?.voice ?? s.voice),
-      error: st?.error, estimate: this.estimate, paragraph: this.paragraph(), readingBlock: this.readingBlock(), dark: this.dark,
-      showDock: s.show.dock && !off, alwaysDock: rule === "always-dock",
+      elapsedMs: st?.elapsedMs ?? 0,
+      totalMs: st?.totalMs ?? 0,
+      speed: st?.speed ?? s.speed,
+      voice: st?.voice ?? s.voice,
+      voiceName: this.voiceName(st?.voice ?? s.voice),
+      error: st?.error,
+      estimate: this.estimate,
+      paragraph: this.paragraph(),
+      readingBlock: this.readingBlock(),
+      dark: this.dark,
+      engineAsleep: this.engineAsleep && (st?.status ?? "idle") === "idle",
+      showDock: s.show.dock && !off,
+      alwaysDock: rule === "always-dock",
       launcher: s.launcher.enabled && !off ? s.launcher : null,
-      showBubble: s.show.bubble && !off, showGutter: s.show.gutter && !off && this.engaged,
+      showBubble: s.show.bubble && !off,
+      showGutter: s.show.gutter && !off && this.engaged,
       readerOpen: !!this.reader,
     };
   }
 
-  private wantsUi(m: UiModel) { return !!m.launcher || m.alwaysDock || m.showBubble || m.showGutter || (m.showDock && m.status !== "idle") || m.status === "error"; }
+  private wantsUi(m: UiModel) {
+    return !!m.launcher || m.alwaysDock || m.showBubble || m.showGutter || (m.showDock && m.status !== "idle") || m.status === "error";
+  }
 
   /** Create the UI on demand and push the current model. */
   private refresh() {
@@ -167,30 +194,58 @@ class Controller {
     } else this.ui.render(m);
     this.syncScrollListeners();
   }
-  private ensureUi() { if (!this.ui) this.ui = this.makeUi(this.model()); return this.ui; }
+  private ensureUi() {
+    if (!this.ui) this.ui = this.makeUi(this.model());
+    return this.ui;
+  }
   /** The UI lives in content-ui.js (loaded now, on first need); the returned handle queues calls until it has arrived. */
   private makeUi(m: UiModel): Deferred<Ui> {
+    if (m.alwaysDock) this.checkEngine();
     return defer(loadUi(chrome.runtime.getURL("content-ui.js"), this.handlers, m), ["render"]);
   }
 
   // ------------------------------------------------------------ bg messaging
 
   private post(msg: ContentToBg | ExtraToBg, cb?: (r: unknown) => void) {
-    try { void chrome.runtime.sendMessage(msg).then(cb, () => {}); } catch { /* extension context invalidated */ }
+    try {
+      void chrome.runtime.sendMessage(msg).then(cb, () => {});
+    } catch {
+      /* extension context invalidated */
+    }
   }
-  private cmd(command: PlayerCommand) { this.post({ t: "player", command }); }
+  private cmd(command: PlayerCommand) {
+    this.post({ t: "player", command });
+  }
 
   onMessage(msg: BgToContent) {
     switch (msg.t) {
-      case "state": this.onState(msg.state); break;
-      case "sentence-start": this.onSentenceStart(msg.start); break;
-      case "settings-changed": void this.loadSettings().then(() => { this.dark = isDarkPage(); this.applyStyle(); this.refresh(); this.reader?.apply(); }); break;
+      case "state":
+        this.onState(msg.state);
+        break;
+      case "sentence-start":
+        this.onSentenceStart(msg.start);
+        break;
+      case "settings-changed":
+        void this.loadSettings().then(() => {
+          this.dark = isDarkPage();
+          this.applyStyle();
+          this.refresh();
+          this.reader?.apply();
+        });
+        break;
       case "toast": {
         const act = msg.action;
-        this.ensureUi().toast(msg.message, msg.kind ?? "ok", act ? { label: msg.actionLabel ?? "View queue", run: () => (act === "open-sidepanel" ? this.post({ t: "open-sidepanel" }) : this.post({ t: "open-options" })) } : undefined);
+        this.ensureUi().toast(
+          msg.message,
+          msg.kind ?? "ok",
+          act ? { label: msg.actionLabel ?? "View queue", run: () => (act === "open-sidepanel" ? this.post({ t: "open-sidepanel" }) : this.post({ t: "open-options" })) } : undefined,
+        );
         break;
       }
-      case "reader": if (msg.open) this.openReader(); else this.closeReader(); break;
+      case "reader":
+        if (msg.open) this.openReader();
+        else this.closeReader();
+        break;
     }
   }
 
@@ -228,7 +283,11 @@ class Controller {
     const sel = mode === "selection" ? this.currentSelection() : undefined;
     const effective = mode === "selection" && !sel ? "page" : mode;
     let ex: Extraction;
-    try { ex = extract(document, { skip: this.settings.skip, selection: sel }); } catch { return { error: "page-unreadable" }; }
+    try {
+      ex = extract(document, { skip: this.settings.skip, selection: sel });
+    } catch {
+      return { error: "page-unreadable" };
+    }
     if (!ex.sentences.length) return { error: "page-unreadable" };
     let startIndex = 0;
     if (effective === "from-here") {
@@ -237,10 +296,13 @@ class Controller {
       this.ctx = null;
     }
     const doc: ReadDoc = {
-      docId: uid(), tabId: -1, // the service worker fills tabId from sender.tab.id
-      url: location.href, title: ex.title,
+      docId: uid(),
+      tabId: -1, // the service worker fills tabId from sender.tab.id
+      url: location.href,
+      title: ex.title,
       sentences: ex.sentences.map((s) => ({ text: s.text, block: s.block })),
-      startIndex, source: effective === "selection" ? "selection" : effective === "from-here" ? "from-here" : "page",
+      startIndex,
+      source: effective === "selection" ? "selection" : effective === "from-here" ? "from-here" : "page",
     };
     this.docs.set(doc.docId, { ex, doc, blocks: [...new Set(doc.sentences.map((s) => s.block))].sort((a, b) => a - b) });
     while (this.docs.size > 4) this.docs.delete(this.docs.keys().next().value!);
@@ -255,7 +317,10 @@ class Controller {
 
   private play(mode: "page" | "selection" | "from-here", el?: Element) {
     const r = this.build(mode, el);
-    if ("error" in r) { this.ensureUi().toast("SpeakKit can't read this page", "err"); return; }
+    if ("error" in r) {
+      this.ensureUi().toast("SpeakKit can't read this page", "err");
+      return;
+    }
     this.lastDoc = r;
     this.cmd({ cmd: "play", doc: r });
   }
@@ -268,7 +333,10 @@ class Controller {
     let id = this.state && ACTIVE.includes(this.state.status) ? this.state.docId : undefined;
     if (!id || !this.docs.has(id) || this.docs.get(id)!.doc.source === "selection") {
       const r = this.build("page");
-      if ("error" in r) { this.ensureUi().toast("SpeakKit can't read this page", "err"); return; }
+      if ("error" in r) {
+        this.ensureUi().toast("SpeakKit can't read this page", "err");
+        return;
+      }
       this.lastDoc = r;
       id = r.docId;
     }
@@ -278,14 +346,20 @@ class Controller {
     ui.showGutter(null);
     this.readerDoc = id;
     const docId = id;
-    this.reader = defer<ReaderView>(ui.ready.then((u) => u.openReader(d.ex, docId, {
-      settings: () => this.settings.reader,
-      save: (p) => this.saveReader(p),
-      onClose: () => this.closeReader(),
-      onPlayFrom: (i) => this.playFrom(docId, i),
-      host: this.host,
-    })));
-    if (this.current?.docId === id) { this.reader.highlightSentence(this.current.index); }
+    this.reader = defer<ReaderView>(
+      ui.ready.then((u) =>
+        u.openReader(d.ex, docId, {
+          settings: () => this.settings.reader,
+          save: (p) => this.saveReader(p),
+          onClose: () => this.closeReader(),
+          onPlayFrom: (i) => this.playFrom(docId, i),
+          host: this.host,
+        }),
+      ),
+    );
+    if (this.current?.docId === id) {
+      this.reader.highlightSentence(this.current.index);
+    }
     this.refresh();
   }
 
@@ -299,7 +373,9 @@ class Controller {
 
   private saveReader(p: Partial<ReaderSettings>) {
     this.settings = { ...this.settings, reader: { ...this.settings.reader, ...p } };
-    void this.saveSettings((s) => { s.reader = { ...s.reader, ...p }; });
+    void this.saveSettings((s) => {
+      s.reader = { ...s.reader, ...p };
+    });
   }
 
   /** Read from sentence `i` of the reader's document: seek when it is the one playing, else start it there. */
@@ -307,7 +383,10 @@ class Controller {
     const d = this.docs.get(docId);
     if (!d) return;
     if (this.state && ACTIVE.includes(this.state.status) && this.state.docId === docId) this.cmd({ cmd: "seek-sentence", index: i });
-    else { this.lastDoc = { ...d.doc, startIndex: i }; this.cmd({ cmd: "play", doc: this.lastDoc }); }
+    else {
+      this.lastDoc = { ...d.doc, startIndex: i };
+      this.cmd({ cmd: "play", doc: this.lastDoc });
+    }
   }
 
   // ------------------------------------------------------------ player state -> highlight
@@ -320,10 +399,15 @@ class Controller {
     this.applyStyle();
     const d = st.docId ? this.docs.get(st.docId) : undefined;
     if (st.status === "idle" || st.status === "finished" || st.status === "error") {
-      this.clock.stop(); this.hl.clear(); this.current = null; this.ui?.showBack(false); this.reader?.clearHighlight();
+      this.clock.stop();
+      this.hl.clear();
+      this.current = null;
+      this.ui?.showBack(false);
+      this.reader?.clearHighlight();
     } else if (d) {
       if (!this.current || this.current.docId !== st.docId || this.current.index !== st.sentenceIndex) this.showSentence(st.docId!, st.sentenceIndex);
-      if (st.status === "playing") this.clock.resume(); else this.clock.pause();
+      if (st.status === "playing") this.clock.resume();
+      else this.clock.pause();
     }
     if (st.status === "playing" || st.status === "preparing") this.lastDoc = d?.doc ?? this.lastDoc;
     this.refresh();
@@ -348,7 +432,9 @@ class Controller {
       this.reader.highlightSentence(index);
     } else {
       this.hl.sentence(range);
-      if (range && this.settings.show.autoScroll && !this.userScrolled) { if (keepInView(range)) this.autoUntil = performance.now() + 1200; }
+      if (range && this.settings.show.autoScroll && !this.userScrolled) {
+        if (keepInView(range)) this.autoUntil = performance.now() + 1200;
+      }
       this.checkBack();
     }
   }
@@ -356,15 +442,27 @@ class Controller {
   private onWord(w: { from: number; to: number } | null, i = -1) {
     const c = this.current;
     const d = c && this.docs.get(c.docId);
-    if (!c || !d || !w) { this.hl.words(null); return; }
-    if (this.reader && this.readerDoc === c.docId) { this.reader.highlightWord(i); return; }
+    if (!c || !d || !w) {
+      this.hl.words(null);
+      return;
+    }
+    if (this.reader && this.readerDoc === c.docId) {
+      this.reader.highlightWord(i);
+      return;
+    }
     this.hl.words(wordRange(document, d.ex, c.index, w.from, w.to));
   }
 
   // ------------------------------------------------------------ scroll tracking and back pill
 
   private lastInput = -Infinity;
-  private onUserScroll = () => { if (this.reading) { this.userScrolled = true; this.lastInput = performance.now(); this.scheduleCheck(); } };
+  private onUserScroll = () => {
+    if (this.reading) {
+      this.userScrolled = true;
+      this.lastInput = performance.now();
+      this.scheduleCheck();
+    }
+  };
   private onScroll = () => {
     if (!this.reading) return;
     const now = performance.now();
@@ -373,7 +471,9 @@ class Controller {
     this.ui?.placeGutter();
     if (this.ui?.bubbleVisible) this.ui.hideBubble();
   };
-  private get reading() { return !!this.state && ACTIVE.includes(this.state.status); }
+  private get reading() {
+    return !!this.state && ACTIVE.includes(this.state.status);
+  }
   /** Scroll, wheel and touch listeners exist only while something is being read: an idle page costs nothing. */
   private syncScrollListeners() {
     const want = this.reading;
@@ -383,36 +483,66 @@ class Controller {
     document[op]("scroll", this.onScroll, { capture: true, passive: true });
     document[op]("wheel", this.onUserScroll, { passive: true });
     document[op]("touchmove", this.onUserScroll, { passive: true });
-    if (!want) { cancelAnimationFrame(this.raf); this.raf = 0; this.userScrolled = false; }
+    if (!want) {
+      cancelAnimationFrame(this.raf);
+      this.raf = 0;
+      this.userScrolled = false;
+    }
   }
-  private scheduleCheck() { if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.checkBack(); }); }
+  private scheduleCheck() {
+    if (!this.raf)
+      this.raf = requestAnimationFrame(() => {
+        this.raf = 0;
+        this.checkBack();
+      });
+  }
   private checkBack() {
     const r = this.current?.range;
-    if (!r || !this.reading || this.reader) { this.ui?.showBack(false); return; }
+    if (!r || !this.reading || this.reader) {
+      this.ui?.showBack(false);
+      return;
+    }
     const visible = isInView(r);
-    if (visible) { if (this.userScrolled && this.settings.show.autoScroll && performance.now() - this.lastInput > 1000) this.userScrolled = false; this.ui?.showBack(false); return; }
+    if (visible) {
+      if (this.userScrolled && this.settings.show.autoScroll && performance.now() - this.lastInput > 1000) this.userScrolled = false;
+      this.ui?.showBack(false);
+      return;
+    }
     if (this.userScrolled || !this.settings.show.autoScroll) this.ensureUi().showBack(true, (r.getClientRects()[0]?.top ?? 0) > innerHeight);
   }
   private backToCurrent() {
     const r = this.current?.range;
     this.userScrolled = false;
     this.ui?.showBack(false);
-    if (r) { this.autoUntil = performance.now() + 1200; keepInView(r, true); }
+    if (r) {
+      this.autoUntil = performance.now() + 1200;
+      keepInView(r, true);
+    }
   }
 
   // ------------------------------------------------------------ page events
 
   private inUi = (e: Event) => !!this.ui && e.composedPath().includes(this.ui.host);
 
-  private onPointerUp = (e: PointerEvent) => { if (!this.inUi(e)) setTimeout(() => this.checkSelection(), 10); };
-  private onKeyUp = (e: KeyboardEvent) => { if (e.shiftKey || e.key === "a") setTimeout(() => this.checkSelection(), 10); };
-  private onSelChange = () => { const s = getSelection(); if (s?.isCollapsed) this.ui?.hideBubble(); };
+  private onPointerUp = (e: PointerEvent) => {
+    if (!this.inUi(e)) setTimeout(() => this.checkSelection(), 10);
+  };
+  private onKeyUp = (e: KeyboardEvent) => {
+    if (e.shiftKey || e.key === "a") setTimeout(() => this.checkSelection(), 10);
+  };
+  private onSelChange = () => {
+    const s = getSelection();
+    if (s?.isCollapsed) this.ui?.hideBubble();
+  };
 
   private checkSelection() {
     const m = this.model();
     if (!m.showBubble || this.reader) return;
     const r = this.currentSelection();
-    if (!r) { this.ui?.hideBubble(); return; }
+    if (!r) {
+      this.ui?.hideBubble();
+      return;
+    }
     const a = document.activeElement;
     if (a && ((a as HTMLElement).isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName))) return;
     const text = r.toString();
@@ -425,20 +555,41 @@ class Controller {
   }
 
   private onMove = (e: PointerEvent) => {
-    if (e.pointerType !== "touch") this.pointGutterAt(e.target);
+    if (e.pointerType === "touch") return;
+    this.warmNearLauncher(e);
+    this.pointGutterAt(e.target);
   };
+  /** The pointer heading for the launcher tab: start loading the model about a second before the click can happen. */
+  private warmNearLauncher(e: PointerEvent) {
+    const l = this.settings.launcher;
+    if (!l.enabled) return;
+    const edge = l.side === "right" ? innerWidth - e.clientX : e.clientX;
+    if (edge > LAUNCHER_EDGE_PX || Math.abs(e.clientY / innerHeight - l.y) > 0.2) return;
+    const rule = this.rule();
+    if (rule !== "hide-controls" && rule !== "never-read") this.warm("hover");
+  }
   /** Keyboard users reach the paragraph gutter the same way: focus inside a paragraph (a link in it) shows its button. */
-  private onFocusIn = (e: FocusEvent) => this.pointGutterAt(e.target);
+  private onFocusIn = (e: FocusEvent) => this.pointGutterAt(e.target, e.target instanceof HTMLElement ? e.target : undefined);
 
-  private pointGutterAt(target: EventTarget | null) {
+  /** `via`: the focused element when this comes from keyboard focus; the button is then placed next to it in tab order. */
+  private pointGutterAt(target: EventTarget | null, via?: HTMLElement) {
     if (!this.settings.show.gutter || this.reader) return;
-    if (!this.ui) { if (!this.model().showGutter) return; this.ensureUi(); }
+    if (!this.ui) {
+      if (!this.model().showGutter) return;
+      this.ensureUi();
+    }
     const u = this.ui!;
-    if (target === u.host) { u.cancelGutterHide(); return; }
+    if (target === u.host) {
+      u.cancelGutterHide();
+      return;
+    }
     const el = (target as Element | null)?.closest?.(BLOCK_SEL);
-    if (!el || !this.mainRoot().contains(el) || (el.textContent?.length ?? 0) < 20 || editable(el)) { u.scheduleGutterHide(); return; }
+    if (!el || !this.mainRoot().contains(el) || (el.textContent?.length ?? 0) < 20 || editable(el)) {
+      u.scheduleGutterHide();
+      return;
+    }
     u.cancelGutterHide();
-    if (u.gutterTarget !== el) u.showGutter(el);
+    if (via || u.gutterTarget !== el) u.showGutter(el, via);
   }
 
   private onContext = (e: MouseEvent) => {
@@ -450,7 +601,18 @@ class Controller {
 
   private onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === "Escape" && this.reader && !this.ui?.hasPopover) { e.preventDefault(); e.stopPropagation(); this.closeReader(); return; }
+    if (e.key === "Escape" && this.reader && !this.ui?.hasPopover) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.closeReader();
+      return;
+    }
+    // Escape closes the paragraph button first (it was opened by hover or focus and must be dismissible), then stops the reading
+    if (e.key === "Escape" && !this.ui?.hasPopover && this.ui?.dismissGutter()) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     if (!this.reading) return;
     const t = e.composedPath()[0] ?? e.target;
     if (editable(t) && e.key !== "Escape") return;
@@ -458,14 +620,42 @@ class Controller {
     // keys that belong to a kit control (slider, list) are not reading shortcuts
     if (t instanceof HTMLElement && t.closest("[role=slider],[role=listbox],[role=menu]") && this.ui && e.composedPath().includes(this.ui.host)) return;
     const st = this.state!;
-    const stop = () => { e.preventDefault(); e.stopPropagation(); };
+    const stop = () => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
     switch (e.key) {
-      case "ArrowRight": stop(); this.cmd({ cmd: "next-block" }); break;
-      case "ArrowLeft": stop(); this.cmd({ cmd: "prev-block" }); break;
-      case "ArrowUp": stop(); this.setSpeed(Math.min(3, Math.round((st.speed + 0.1) * 20) / 20)); break;
-      case "ArrowDown": stop(); this.setSpeed(Math.max(0.5, Math.round((st.speed - 0.1) * 20) / 20)); break;
-      case " ": if (!editable(t)) { stop(); this.cmd({ cmd: "toggle" }); } break;
-      case "Escape": if (this.ui?.hasPopover) { this.ui.closePop(); stop(); } else { stop(); this.cmd({ cmd: "stop" }); } break;
+      case "ArrowRight":
+        stop();
+        this.cmd({ cmd: "next-block" });
+        break;
+      case "ArrowLeft":
+        stop();
+        this.cmd({ cmd: "prev-block" });
+        break;
+      case "ArrowUp":
+        stop();
+        this.setSpeed(Math.min(3, Math.round((st.speed + 0.1) * 20) / 20));
+        break;
+      case "ArrowDown":
+        stop();
+        this.setSpeed(Math.max(0.5, Math.round((st.speed - 0.1) * 20) / 20));
+        break;
+      case " ":
+        if (!editable(t)) {
+          stop();
+          this.cmd({ cmd: "toggle" });
+        }
+        break;
+      case "Escape":
+        if (this.ui?.hasPopover) {
+          this.ui.closePop();
+          stop();
+        } else {
+          stop();
+          this.cmd({ cmd: "stop" });
+        }
+        break;
     }
   };
 
@@ -480,42 +670,93 @@ class Controller {
   private handlers: UiHandlers = {
     listen: () => this.play("page"),
     readSelection: () => this.play("selection"),
-    copySelection: () => { const t = getSelection()?.toString() ?? ""; if (t) void navigator.clipboard?.writeText(t).catch(() => {}); },
+    copySelection: () => {
+      const t = getSelection()?.toString() ?? "";
+      if (t) void navigator.clipboard?.writeText(t).catch(() => {});
+    },
     readFromHere: (el) => this.play("from-here", el),
     toggle: () => this.cmd({ cmd: "toggle" }),
     stop: () => this.cmd({ cmd: "stop" }),
     skip: (ms) => this.cmd({ cmd: "seek-ms", deltaMs: ms }),
-    seekFrac: (f) => { const st = this.state; if (st && st.totalMs > 0) this.cmd({ cmd: "seek-ms", deltaMs: f * st.totalMs - st.elapsedMs }); },
+    seekFrac: (f) => {
+      const st = this.state;
+      if (st && st.totalMs > 0) this.cmd({ cmd: "seek-ms", deltaMs: f * st.totalMs - st.elapsedMs });
+    },
     nextBlock: () => this.cmd({ cmd: "next-block" }),
     prevBlock: () => this.cmd({ cmd: "prev-block" }),
     setSpeed: (n) => this.setSpeed(n),
-    setVoice: (id) => { this.cmd({ cmd: "set-voice", voice: id }); if (this.state) this.state = { ...this.state, voice: id }; this.settings = { ...this.settings, voice: id }; this.refresh(); },
+    setVoice: (id) => {
+      this.cmd({ cmd: "set-voice", voice: id });
+      if (this.state) this.state = { ...this.state, voice: id };
+      this.settings = { ...this.settings, voice: id };
+      this.refresh();
+    },
     previewVoice: (id) => this.post({ t: "preview-voice", voice: id }),
-    voices: () => new Promise<VoiceInfo[]>((res) => {
-      if (this.voices.length) { res(this.voices); return; }
-      this.post({ t: "get-voices" }, (r) => { const v = (r as { voices?: VoiceInfo[] } | undefined)?.voices; if (Array.isArray(v) && v.length) this.voices = v; this.refresh(); res(this.voices); });
-      setTimeout(() => res(this.voices), 1500);
-    }),
-    retry: () => { const d = this.lastDoc; if (d) this.cmd({ cmd: "play", doc: d }); else this.play("page"); },
+    voices: () =>
+      new Promise<VoiceInfo[]>((res) => {
+        if (this.voices.length) {
+          res(this.voices);
+          return;
+        }
+        this.post({ t: "get-voices" }, (r) => {
+          const v = (r as { voices?: VoiceInfo[] } | undefined)?.voices;
+          if (Array.isArray(v) && v.length) this.voices = v;
+          this.refresh();
+          res(this.voices);
+        });
+        setTimeout(() => res(this.voices), 1500);
+      }),
+    retry: () => {
+      const d = this.lastDoc;
+      if (d) this.cmd({ cmd: "play", doc: d });
+      else this.play("page");
+    },
     openApp: () => this.post({ t: "open-app" }),
     openOptions: () => this.post({ t: "open-options" }),
     openSidepanel: () => this.post({ t: "open-sidepanel" }),
-    replay: () => { const id = this.state?.docId; const d = (id && this.docs.get(id)?.doc) || this.lastDoc; if (d) this.cmd({ cmd: "play", doc: { ...d, startIndex: 0 } }); else this.play("page"); },
+    replay: () => {
+      const id = this.state?.docId;
+      const d = (id && this.docs.get(id)?.doc) || this.lastDoc;
+      if (d) this.cmd({ cmd: "play", doc: { ...d, startIndex: 0 } });
+      else this.play("page");
+    },
     hideOnSite: () => {
-      void this.saveSettings((s) => { s.sites[this.host] = "hide-controls"; }).then(() => {
+      void this.saveSettings((s) => {
+        s.sites[this.host] = "hide-controls";
+      }).then(() => {
         this.refresh();
         this.ui?.toast("Controls hidden on this site", "info", { label: "Settings", run: () => this.post({ t: "open-options" }) });
       });
     },
-    moveLauncher: (y) => void this.saveSettings((s) => { s.launcher.y = Math.round(y * 1000) / 1000; }),
+    moveLauncher: (y) =>
+      void this.saveSettings((s) => {
+        s.launcher.y = Math.round(y * 1000) / 1000;
+      }),
     backToCurrent: () => this.backToCurrent(),
     warm: (reason) => this.warm(reason),
     openReader: () => this.openReader(),
   };
 
+  private engineAsleep = false;
+  private lastEngineCheck = -Infinity;
+  /** B22: ask the worker (it caches health for 3 s) whether the model is unloaded, at most every 5 s, so idle surfaces can say "wakes on play". */
+  private checkEngine() {
+    const now = performance.now();
+    if (now - this.lastEngineCheck < 5000) return;
+    this.lastEngineCheck = now;
+    this.post({ t: "get-health" }, (r) => {
+      const h = r as HealthResult | undefined;
+      const asleep = !!h?.ok && h.health.engine.state === "unloaded";
+      if (asleep === this.engineAsleep) return;
+      this.engineAsleep = asleep;
+      this.refresh();
+    });
+  }
+
   private lastWarm = -Infinity;
   /** Load the model ahead of the click; hover and selection events are noisy, so at most one request per 3 s leaves the page. */
   private warm(reason: "hover" | "selection" | "dock") {
+    this.checkEngine();
     const now = performance.now();
     if (now - this.lastWarm < 3000) return;
     this.lastWarm = now;
@@ -524,4 +765,9 @@ class Controller {
 }
 
 let instance: Promise<Controller> | null = null;
-export const boot = (): Promise<Controller> => (instance ??= (async () => { const c = new Controller(); await c.init(); return c; })());
+export const boot = (): Promise<Controller> =>
+  (instance ??= (async () => {
+    const c = new Controller();
+    await c.init();
+    return c;
+  })());

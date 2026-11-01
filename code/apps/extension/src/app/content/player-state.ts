@@ -9,7 +9,13 @@ const STATUSES: readonly string[] = ["idle", "preparing", "playing", "paused", "
 export function asPlayerState(x: unknown): PlayerState | undefined {
   const s = x as Partial<Record<keyof PlayerState, unknown>> | null;
   const ok =
-    typeof s === "object" && s !== null && typeof s.status === "string" && STATUSES.includes(s.status) &&
-    typeof s.sentenceIndex === "number" && typeof s.sentenceCount === "number" && typeof s.elapsedMs === "number" && typeof s.totalMs === "number";
+    typeof s === "object" &&
+    s !== null &&
+    typeof s.status === "string" &&
+    STATUSES.includes(s.status) &&
+    typeof s.sentenceIndex === "number" &&
+    typeof s.sentenceCount === "number" &&
+    typeof s.elapsedMs === "number" &&
+    typeof s.totalMs === "number";
   return ok ? (x as PlayerState) : undefined;
 }

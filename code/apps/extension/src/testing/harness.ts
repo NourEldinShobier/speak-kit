@@ -17,7 +17,11 @@ const pw: Pw = e2eRequire("@playwright/test");
 const buildOne = async (entry: string, format: "iife" | "es", name: string) => {
   const outDir = mkdtempSync(join(tmpdir(), "speakkit-content-"));
   await build({
-    configFile: false, root: extRoot, publicDir: false, logLevel: "silent", plugins: [contentAssets(() => listSources(resolve(extRoot, "src")))],
+    configFile: false,
+    root: extRoot,
+    publicDir: false,
+    logLevel: "silent",
+    plugins: [contentAssets(() => listSources(resolve(extRoot, "src")))],
     define: { __TEST__: "true" },
     build: { outDir, emptyOutDir: true, minify: false, target: "chrome116", lib: { entry, formats: [format], name: "SKBundle", fileName: () => name } },
   });
@@ -26,13 +30,11 @@ const buildOne = async (entry: string, format: "iife" | "es", name: string) => {
 
 let bundle: Promise<{ content: string; ui: string }> | null = null;
 /** JS source of the content script (plus `window.SK = { extract, hl }` for direct API tests) and of the lazily loaded UI module. */
-const contentBundle = () => (bundle ??= (async () => {
-  const [content, ui] = await Promise.all([
-    buildOne(resolve(here, "entry.ts"), "iife", "bundle.js"),
-    buildOne(resolve(extRoot, "src/app/content/ui-entry.ts"), "es", "ui.js"),
-  ]);
-  return { content, ui };
-})());
+const contentBundle = () =>
+  (bundle ??= (async () => {
+    const [content, ui] = await Promise.all([buildOne(resolve(here, "entry.ts"), "iife", "bundle.js"), buildOne(resolve(extRoot, "src/app/content/ui-entry.ts"), "es", "ui.js")]);
+    return { content, ui };
+  })());
 
 /** Installed before the bundle: records messages sent to the service worker and lets tests deliver messages to the page. */
 const CHROME_STUB = `
@@ -41,10 +43,11 @@ const CHROME_STUB = `
   window.__sent = [];
   window.__listeners = [];
   window.__voices = undefined;
+  window.__health = undefined;
   window.chrome = {
     runtime: {
       getURL: (p) => "http://sk.test/__" + p,
-      sendMessage: (m) => { window.__sent.push(JSON.parse(JSON.stringify(m))); return Promise.resolve(m.t === "get-voices" ? { voices: window.__voices } : undefined); },
+      sendMessage: (m) => { window.__sent.push(JSON.parse(JSON.stringify(m))); return Promise.resolve(m.t === "get-voices" ? { voices: window.__voices } : m.t === "get-health" ? window.__health : undefined); },
       onMessage: { addListener: (f) => window.__listeners.push(f) },
     },
     storage: {
@@ -60,7 +63,11 @@ const CHROME_STUB = `
 })();
 `;
 
-export interface Session { browser: Pw; close(): Promise<void>; page(html: string, opts?: { settings?: unknown; viewport?: { width: number; height: number }; colorScheme?: "dark" | "light"; bundle?: boolean }): Promise<Pw> }
+export interface Session {
+  browser: Pw;
+  close(): Promise<void>;
+  page(html: string, opts?: { settings?: unknown; viewport?: { width: number; height: number }; colorScheme?: "dark" | "light"; bundle?: boolean; health?: unknown }): Promise<Pw>;
+}
 
 export async function launch(): Promise<Session> {
   const { content: js, ui: uiJs } = await contentBundle();
@@ -71,13 +78,16 @@ export async function launch(): Promise<Session> {
     async page(html, opts = {}) {
       const ctx = await browser.newContext({ viewport: opts.viewport ?? { width: 1280, height: 720 }, colorScheme: opts.colorScheme ?? "light", deviceScaleFactor: 1 });
       const page = await ctx.newPage();
-      page.on("pageerror", (e: Error) => { throw e; });
+      page.on("pageerror", (e: Error) => {
+        throw e;
+      });
       await page.addInitScript(CHROME_STUB);
-      if (opts.settings !== undefined) await page.addInitScript(`window.__initialSettings = ${JSON.stringify(opts.settings)}; (() => { const k = "speakkit.settings"; window.__store[k] = window.__initialSettings; })();`);
+      if (opts.health !== undefined) await page.addInitScript(`window.__health = ${JSON.stringify(opts.health)};`);
+      if (opts.settings !== undefined)
+        await page.addInitScript(`window.__initialSettings = ${JSON.stringify(opts.settings)}; (() => { const k = "speakkit.settings"; window.__store[k] = window.__initialSettings; })();`);
       await page.route("http://sk.test/**", (r: { request(): { url(): string }; fulfill(o: unknown): Promise<void> }) =>
-        r.request().url().endsWith("/__content-ui.js")
-          ? r.fulfill({ contentType: "text/javascript; charset=utf-8", body: uiJs })
-          : r.fulfill({ contentType: "text/html; charset=utf-8", body: html }));
+        r.request().url().endsWith("/__content-ui.js") ? r.fulfill({ contentType: "text/javascript; charset=utf-8", body: uiJs }) : r.fulfill({ contentType: "text/html; charset=utf-8", body: html }),
+      );
       await page.goto("http://sk.test/page");
       if (opts.bundle !== false) await page.addScriptTag({ content: js });
       return page;

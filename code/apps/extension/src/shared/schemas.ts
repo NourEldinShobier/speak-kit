@@ -16,10 +16,7 @@ const readDocSchema = v.object({
   tabId: v.number(),
   url: v.pipe(v.string(), v.maxLength(4000)),
   title: v.pipe(v.string(), v.maxLength(1000)),
-  sentences: v.pipe(
-    v.array(v.object({ text: v.pipe(v.string(), v.maxLength(5000)), block: int() })),
-    v.maxLength(100_000),
-  ),
+  sentences: v.pipe(v.array(v.object({ text: v.pipe(v.string(), v.maxLength(5000)), block: int() })), v.maxLength(100_000)),
   startIndex: int(),
   source: v.picklist(["page", "selection", "from-here"]),
 });

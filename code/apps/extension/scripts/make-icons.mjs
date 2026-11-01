@@ -54,17 +54,7 @@ function render(size) {
           a++;
           for (let i = 0; i < heights.length; i++) {
             const h = size * heights[i];
-            if (
-              sdRound(
-                x,
-                y,
-                x0 + i * (bw + gap) + bw / 2,
-                size / 2,
-                bw / 2,
-                h / 2,
-                Math.min(size * 0.04, bw / 2),
-              ) <= 0
-            ) {
+            if (sdRound(x, y, x0 + i * (bw + gap) + bw / 2, size / 2, bw / 2, h / 2, Math.min(size * 0.04, bw / 2)) <= 0) {
               bar++;
               break;
             }
@@ -84,12 +74,7 @@ function render(size) {
   ihdr.writeUInt32BE(size, 4);
   ihdr[8] = 8;
   ihdr[9] = 6;
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", deflateSync(raw)),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 }
 
 for (const s of [16, 32, 48, 128]) writeFileSync(join(out, `${s}.png`), render(s));

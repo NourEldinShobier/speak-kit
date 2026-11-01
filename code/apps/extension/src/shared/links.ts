@@ -10,5 +10,9 @@ export const LINKS = {
 export const extensionSettingsUrl = () => `chrome://extensions/?id=${typeof chrome !== "undefined" ? chrome.runtime.id : ""}`;
 
 export async function openUrl(url: string): Promise<void> {
-  try { await chrome.tabs.create({ url }); } catch { /* blocked scheme */ }
+  try {
+    await chrome.tabs.create({ url });
+  } catch {
+    /* blocked scheme */
+  }
 }

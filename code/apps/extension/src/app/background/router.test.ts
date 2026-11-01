@@ -32,7 +32,25 @@ describe("service worker router", () => {
   it("answers exactly the message types the inbound schema defines", async () => {
     const { KNOWN_TYPES } = await wake();
     expect([...KNOWN_TYPES].sort()).toEqual(
-      ["auth-check", "get-health", "get-queue", "get-state", "get-voices", "launch-app", "open-app", "open-options", "open-sidepanel", "player", "preview", "preview-voice", "read", "read-tab", "reader", "set-auto-play", "warm"].sort(),
+      [
+        "auth-check",
+        "get-health",
+        "get-queue",
+        "get-state",
+        "get-voices",
+        "launch-app",
+        "open-app",
+        "open-options",
+        "open-sidepanel",
+        "player",
+        "preview",
+        "preview-voice",
+        "read",
+        "read-tab",
+        "reader",
+        "set-auto-play",
+        "warm",
+      ].sort(),
     );
   });
 
@@ -59,5 +77,44 @@ describe("service worker router", () => {
     const { route } = await wake();
     expect(await route({ t: "player", command: { cmd: "pause" } }, sender)).toEqual({ ok: true });
     expect(env.sent).toEqual([]);
+  });
+
+  it("a state published while the first get-state still reads storage is not overwritten by the stale stored one", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const area = (globalThis as unknown as { chrome: { storage: { session: { get(k: string): Promise<unknown> } } } }).chrome.storage.session;
+    const read = area.get.bind(area);
+    area.get = async (k) => {
+      const stale = await read(k); // storage as it was when the read began
+      await gate;
+      return stale;
+    };
+    const { route } = await wake();
+    const { publishState } = await import("./state");
+    const first = route({ t: "get-state" }, sender);
+    publishState({ status: "preparing", sentenceIndex: 0, sentenceCount: 3, elapsedMs: 0, totalMs: 0, speed: 1.2, voice: "af_heart", queueLength: 0 });
+    release();
+    await first;
+    expect(await route({ t: "get-state" }, sender)).toMatchObject({ status: "preparing" });
+  });
+
+  it("a queue set while the first get-queue still reads storage is not overwritten either", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const area = (globalThis as unknown as { chrome: { storage: { session: { get(k: string): Promise<unknown> } } } }).chrome.storage.session;
+    const read = area.get.bind(area);
+    area.get = async (k) => {
+      const stale = await read(k); // storage as it was when the read began
+      await gate;
+      return stale;
+    };
+    await wake();
+    const { getQueue, setQueue } = await import("./state");
+    const item = { docId: "d1", tabId: 2, title: "Article", url: "https://a.example/", sentenceCount: 4, estMs: 1000 };
+    const first = getQueue();
+    setQueue([item]);
+    release();
+    await first;
+    expect(await getQueue()).toEqual([item]);
   });
 });

@@ -61,7 +61,8 @@ export const MESSY_PAGE = `<!doctype html><html lang="en"><head><title>Messy</ti
 
 /** Generated page: n paragraphs of ~3 sentences each inside one article, with some inline markup. */
 export const bigPage = (n: number) => {
-  const para = (i: number) => `<p>Paragraph ${i} starts here and it has a <a href="#x${i}">link</a> inside. The second sentence of paragraph ${i} is a little longer than the first one, with <em>emphasis</em> added. Dr. Jones disagreed, e.g. on point ${i}, and so the third sentence ends the block.</p>`;
+  const para = (i: number) =>
+    `<p>Paragraph ${i} starts here and it has a <a href="#x${i}">link</a> inside. The second sentence of paragraph ${i} is a little longer than the first one, with <em>emphasis</em> added. Dr. Jones disagreed, e.g. on point ${i}, and so the third sentence ends the block.</p>`;
   let body = "";
   for (let i = 0; i < n; i++) body += para(i);
   return `<!doctype html><html lang="en"><head><title>Big</title></head><body><nav><a href="/">Home</a></nav><main><article><h1>Big page</h1>${body}</article></main><footer><p>Footer text of the big page, not spoken.</p></footer></body></html>`;
