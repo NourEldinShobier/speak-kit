@@ -130,6 +130,8 @@ else writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) 
 console.log("== electron-builder");
 const electronDir = path.dirname(realpathSync(path.join(desktop, "node_modules/electron/package.json")));
 const electronVersion = json(path.join(electronDir, "package.json")).version;
+// pnpm does not always run electron's download step (CI, fresh worktrees); the Windows build reuses that download.
+if (!mac && !existsSync(path.join(electronDir, "dist"))) run("node", ["install.js"], electronDir);
 const targets = flag("--dir") ? ["--dir"] : mac ? ["dmg", "zip"] : ["nsis", "portable"];
 run(
   "pnpm",
