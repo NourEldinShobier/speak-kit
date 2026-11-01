@@ -17,3 +17,5 @@
 **Round 4 (speakkit-logos-v4-six.png).** Six fluid single-form marks from five references (white blob, aqua-violet mesh wave, mint-orange ribbon, green two-lobed waveform, white zig-zag pulse), made with the thinking pipeline (gpt-5.5 high reasoning, then gpt-image-2.5-sunburst at quality max, 3072x2048): 1 Liquid Swell, 2 Monolith, 3 Two Voices, 4 Ribbon K, 5 Liquid Pulse, 6 Page Wave.
 
 **Round 5 (speakkit-logos-v5-six.png).** Same pipeline as round 4, with the v4 sheet passed as a reference and mark 6 (page block) banned: 1 Swell Duo, 2 Twin Lobes, 3 Loop K, 4 Echo Drop, 5 Pulse Silhouette, 6 Aurora Wave.
+
+**Round 6 (speakkit-logos-v6-six.png), creative concepts with a visual idea each:** 1 Quote (two glossy lobes forming a quotation mark), 2 Caret Voice (text cursor swelling into a voice pulse), 3 Wren (singing songbird), 4 Folded Voice (origami paper turning into a wave), 5 Listening Spiral (ear/scroll coil with a yellow core), 6 Play Drop (liquid play button with a ripple ring).
