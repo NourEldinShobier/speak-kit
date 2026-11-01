@@ -78,7 +78,7 @@ export class Docs {
     let startIndex = 0;
     if (effective === "from-here") {
       const a = this.anchor(el);
-      if (a) startIndex = sentenceIndexAt(ex, a.node, a.offset, a.precise);
+      if (a) startIndex = sentenceIndexAt(ex, a);
       this.point = null;
     }
     const doc: ReadDoc = {

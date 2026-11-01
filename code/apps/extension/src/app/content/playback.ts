@@ -116,19 +116,28 @@ export class Playback {
     c.state = st;
     this.restyle();
     const d = st.docId ? c.docs.get(st.docId) : undefined;
-    if (st.status === "idle" || st.status === "finished" || st.status === "error") {
-      this.clock.stop();
-      this.hl.clear();
-      c.current = null;
-      c.ui?.showBack(false);
-      c.reader?.clearHighlight();
-    } else if (d) {
-      if (!c.current || c.current.docId !== st.docId || c.current.index !== st.sentenceIndex) this.showSentence(st.docId!, st.sentenceIndex);
-      if (st.status === "playing") this.clock.resume();
-      else this.clock.pause();
-    }
+    if (st.status === "idle" || st.status === "finished" || st.status === "error") this.stopHighlight();
+    else if (d) this.followState(st);
     if (st.status === "playing" || st.status === "preparing") c.lastDoc = d?.doc ?? c.lastDoc;
     c.refresh();
+  }
+
+  /** Nothing is being read: clear the marks and the back pill. */
+  private stopHighlight() {
+    const c = this.c;
+    this.clock.stop();
+    this.hl.clear();
+    c.current = null;
+    c.ui?.showBack(false);
+    c.reader?.clearHighlight();
+  }
+
+  /** Something is being read: show the sentence when it changed, run the word clock only while playing. */
+  private followState(st: PlayerState) {
+    const cur = this.c.current;
+    if (!cur || cur.docId !== st.docId || cur.index !== st.sentenceIndex) this.showSentence(st.docId!, st.sentenceIndex);
+    if (st.status === "playing") this.clock.resume();
+    else this.clock.pause();
   }
 
   onSentenceStart(s: SentenceStart) {
@@ -170,6 +179,6 @@ export class Playback {
       return;
     }
     if (this.inReader(cur.docId)) c.reader!.highlightWord(i);
-    else this.hl.words(wordRange(document, d.ex, cur.index, w.from, w.to));
+    else this.hl.words(wordRange(document, d.ex, { index: cur.index, from: w.from, to: w.to }));
   }
 }

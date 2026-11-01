@@ -62,7 +62,7 @@
 }
 .sk-pop-val {
   min-width: 52px;
-  text-align: right;
+  text-align: end;
   font:
     600 14px/17px Inter,
     "Inter Variable",
@@ -99,8 +99,8 @@
   gap: 2px;
   max-height: 200px;
   overflow: auto;
-  margin-right: -6px;
-  padding-right: 6px;
+  margin-inline-end: -6px;
+  padding-inline-end: 6px;
   scrollbar-width: thin;
 }
 .sk-vrow {
@@ -123,7 +123,7 @@
   background: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   display: flex;
   flex: 1;

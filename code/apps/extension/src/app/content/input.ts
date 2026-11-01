@@ -113,13 +113,20 @@ export class PageInput {
       u.cancelGutterHide();
       return;
     }
-    const el = (target as Element | null)?.closest?.(BLOCK_SEL);
-    if (!el || !this.docs.mainRoot().contains(el) || (el.textContent?.length ?? 0) < MIN_PARAGRAPH_CHARS || editable(el)) {
+    const el = this.paragraphAt(target);
+    if (!el) {
       u.scheduleGutterHide();
       return;
     }
     u.cancelGutterHide();
     if (via || u.gutterTarget !== el) u.showGutter(el, via);
+  }
+
+  /** The paragraph the target is in, when it is a readable block of the main content (not a field or button). */
+  private paragraphAt(target: EventTarget | null): Element | null {
+    const el = (target as Element | null)?.closest?.(BLOCK_SEL);
+    if (!el || !this.docs.mainRoot().contains(el)) return null;
+    return (el.textContent?.length ?? 0) < MIN_PARAGRAPH_CHARS || editable(el) ? null : el;
   }
 
   /** Escape closes the reader, then the paragraph button, before it can stop the reading. Returns whether it closed something. */
