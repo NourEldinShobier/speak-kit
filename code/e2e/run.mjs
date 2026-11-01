@@ -23,5 +23,5 @@ if (!args.includes("--no-build")) {
 const pw = join(here, "node_modules/@playwright/test/cli.js");
 const run = (phase, extra = []) => spawnSync(process.execPath, [pw, "test", ...rest, ...extra], { stdio: "inherit", cwd: here, env: { ...env, E2E_PHASE: phase } });
 const main = run("main");
-const perf = rest.length ? { status: 0 } : run("perf", ["--workers=1"]);
+const perf = rest.length || process.env.E2E_SKIP_PERF ? { status: 0 } : run("perf", ["--workers=1"]);
 process.exit(main.status || perf.status || 0);

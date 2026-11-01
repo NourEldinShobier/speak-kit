@@ -16,6 +16,10 @@ export interface Settings {
 export const TOKEN_KEY = "speakkit.token";
 export const SETTINGS_KEY = "speakkit.settings";
 
+/** Highlight colours used when the user has not picked any (light page). */
+export const DEFAULT_SENTENCE_COLOR = "#FFF1C2";
+export const DEFAULT_WORD_COLOR = "#FFD24D";
+
 export const defaultSettings = (): Settings => ({
   port: DEFAULT_PORT,
   launcher: { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 1500, widerWhileReading: true, y: 0.42 },
@@ -23,7 +27,7 @@ export const defaultSettings = (): Settings => ({
   voice: DEFAULT_VOICE,
   speed: 1.2,
   pauseBetweenParagraphs: "short",
-  highlight: { mode: "sentence+word", sentenceColor: "#FFF1C2", wordColor: "#FFD24D", matchTheme: true },
+  highlight: { mode: "sentence+word", sentenceColor: DEFAULT_SENTENCE_COLOR, wordColor: DEFAULT_WORD_COLOR, matchTheme: true },
   skip: { navigation: true, citations: true, code: true, urls: true, captions: false },
   sites: {},
 });

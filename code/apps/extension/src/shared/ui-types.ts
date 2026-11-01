@@ -73,7 +73,3 @@ export interface Shell {
   closePopover(kind?: string): void;
 }
 
-export interface DockActions {
-  /** Close button / More > Close: dismisses the dock for the current status and stops reading */
-  dismiss(): void;
-}

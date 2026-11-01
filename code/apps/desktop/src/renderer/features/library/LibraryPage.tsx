@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Banner, Button, DropdownMenu, DropdownMenuItem, EmptyState, Icon, ProgressBar, Select, TextInput, Toast } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
-import { MAX_FILE_BYTES, type DocMeta, type ImportResult } from "../../../main/library/contract";
+import { MAX_FILE_BYTES, type DocMeta, type ImportResult } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
 import { api } from "../../ui";
 import { DeleteDialog, PasteDialog, RenameDialog, UrlDialog, VoiceDialog } from "./AddDialogs";
@@ -175,7 +175,8 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
                   query={query}
                   hit={hits?.get(d.id)}
                   actions={{
-                    onOpen: () => open(d),
+                    onOpen: () => open(d, false),
+                    onPlay: () => open(d),
                     onRename: () => setDialog({ kind: "rename", doc: d }),
                     onVoice: () => setDialog({ kind: "voice", doc: d }),
                     onFinished: () => void library.setFinished(d.id, !d.finished).then(refresh),

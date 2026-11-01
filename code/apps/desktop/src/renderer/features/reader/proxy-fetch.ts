@@ -1,4 +1,4 @@
-import { PROXY_PATHS, type LibraryBridge, type ProxyRequest } from "../../../main/library/contract";
+import { PROXY_PATHS, type LibraryBridge, type ProxyRequest } from "../../../shared/library/contract";
 
 type Bridge = Pick<LibraryBridge, "proxyOpen" | "proxyCancel" | "onProxyChunk">;
 type Path = (typeof PROXY_PATHS)[number];

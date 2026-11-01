@@ -112,7 +112,6 @@ function Board({ theme }: { theme: string }) {
   const [tab, setTab] = useState("answer");
   const [seg, setSeg] = useState("search");
   const [seg2, setSeg2] = useState("comfortable");
-  const [on, setOn] = useState(true);
   const [typed, setTyped] = useState("");
   const [modal, setModal] = useState(false);
   const langOptions = [{ value: "en", label: "English" }, { value: "de", label: "Deutsch" }];

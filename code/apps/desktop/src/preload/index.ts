@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { libraryBridge } from "../main/library/preload-api";
+import { libraryBridge } from "../shared/library/preload-api";
 import { channel, METHODS, STATE_EVENT, UI_EVENT, type Api, type AppState, type UiEvent } from "../shared/ipc";
 
 const api = Object.fromEntries(

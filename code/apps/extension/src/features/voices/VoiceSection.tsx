@@ -7,7 +7,7 @@ import { Card, PageHead } from "../../shared/ui";
 import { langLabel, qualityLabel, voiceName } from "./catalog";
 import { useVoices } from "./hooks";
 
-export const PAUSES = { none: 0, short: 0.4, long: 0.8 } as const;
+const PAUSES = { none: 0, short: 0.4, long: 0.8 } as const;
 
 /** C4 Voice and speed. The voice list comes from the app. */
 export function VoiceSection({ s, upd, saved }: SectionProps) {

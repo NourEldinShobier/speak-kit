@@ -10,8 +10,13 @@ playwright-report/
 drive/
 releases/**/extension/
 releases/**/*.zip
+releases/**/*.exe
+releases/**/*.blockmap
 code/e2e/visual/out/
 code/e2e/results-*.json
 code/e2e/perf-results.jsonl
 code/apps/extension/test-results/
 designs/build/
+
+# desktop packaging output
+code/apps/desktop/release/

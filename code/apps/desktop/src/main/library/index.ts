@@ -1,21 +1,24 @@
 import path from "node:path";
 import { clipboard, dialog, ipcMain, shell, type BrowserWindow } from "electron";
-import { EXTENSIONS } from "./contract";
+import { EXTENSIONS } from "../../shared/library/contract";
 import { registerLibraryIpc } from "./ipc";
 import { createLibrary } from "./service";
 
-export interface LibrarySetup {
+interface LibrarySetup {
   dataDir: string;
   window(): BrowserWindow | null;
   target(): { port: number; token: string };
+  /** Tests only: pages on this machine may be read (the e2e web server is on loopback). */
+  allowLocalUrls?: boolean;
 }
 
 /** Opens the library under userData/library and registers its IPC and the speak proxy. */
-export async function setupLibrary({ dataDir, window, target }: LibrarySetup): Promise<void> {
+export async function setupLibrary({ dataDir, window, target, allowLocalUrls }: LibrarySetup): Promise<void> {
   const library = await createLibrary({
     dir: path.join(dataDir, "library"),
     readClipboard: () => clipboard.readText(),
     reveal: (p) => shell.showItemInFolder(p),
+    ...(allowLocalUrls && { resolve: async () => ["93.184.216.34"] }),
     chooseFiles: async () => {
       const win = window();
       const opts = { properties: ["openFile", "multiSelections"] as ("openFile" | "multiSelections")[], filters: [{ name: "Readable files", extensions: [...EXTENSIONS] }] };

@@ -185,7 +185,7 @@ export function playAudio(a: PreviewAudio, onEnd: () => void): () => void {
   };
 }
 
-const cleanError = (e: unknown) =>
+export const cleanError = (e: unknown) =>
   e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : String(e);
 
 /** Preview player: at most one reading plays at a time; returns the playing key. */

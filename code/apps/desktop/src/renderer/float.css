@@ -13,6 +13,18 @@ body {
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
+.sk-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--accent-default);
+}
+.sk-logo i {
+  display: block;
+  border-radius: 1px;
+  background: var(--text-on-accent);
+}
 .sk-caps {
   margin: 0 0 6px;
   color: var(--text-tertiary);
@@ -24,6 +36,7 @@ body {
 /* ---- mini player: draggable header, progress, controls ---- */
 .mini {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   height: 100%;
   border: 1px solid var(--stroke-divider);

@@ -7,7 +7,7 @@ import { defaultSettings, type SectionProps, type Settings } from "./types";
 import { CMD_LABEL, CMD_ORDER, splitShortcut, useCommands } from "./useCommands";
 
 /** "https://www.News.Example.com/a?b" -> "www.news.example.com"; null when it is not a host name. */
-export function normalizeHost(input: string): string | null {
+function normalizeHost(input: string): string | null {
   let s = input.trim().toLowerCase();
   if (!s) return null;
   s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/[/?#].*$/, "").replace(/:\d+$/, "");

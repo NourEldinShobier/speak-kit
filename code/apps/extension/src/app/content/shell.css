@@ -21,7 +21,7 @@
 .sk-vlist{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow:auto;margin-right:-6px;padding-right:6px;scrollbar-width:thin}
 .sk-vrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 8px;border-radius:8px;cursor:pointer;flex:none}
 .sk-vrow:hover,.sk-vrow:has(.sk-vopt:focus-visible){background:var(--fill-hover)}
-.sk-vopt{display:flex;flex:1;align-items:center;gap:10px;align-self:stretch;min-width:0}
+.sk-vopt{padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;display:flex;flex:1;align-items:center;gap:10px;align-self:stretch;min-width:0}
 .sk-vopt:focus-visible{outline:2px solid var(--accent-default);outline-offset:-2px;border-radius:8px}
 .sk-vrow.is-selected{background:var(--accent-subtle)}
 .sk-vname{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}

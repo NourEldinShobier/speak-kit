@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import type { ImportResult, LibraryApi } from "./contract";
+import type { ImportResult, LibraryApi } from "../../shared/library/contract";
 import { createLibrary } from "./service";
 import { createSpeakProxy } from "./speak-proxy";
-import type { ProxyChunk } from "./contract";
+import type { ProxyChunk } from "../../shared/library/contract";
 
 const fixtureDir = fileURLToPath(new URL("./fixtures/", import.meta.url));
 const fixture = (n: string) => new Uint8Array(readFileSync(path.join(fixtureDir, n)));
@@ -22,7 +22,7 @@ let web: Server;
 let base = "";
 
 const make = () =>
-  createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, now: () => 1000 });
+  createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, resolve: async () => ["93.184.216.34"], now: () => 1000 });
 const ok = (r: ImportResult) => {
   if (!r.ok) throw new Error(r.message);
   return r.doc;

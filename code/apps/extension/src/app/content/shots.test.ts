@@ -21,7 +21,7 @@ const dark = (html: string) => html.replace("background:#fff", "background:#1716
 const run = (name: string, fn: (open: (o?: any, html?: string) => Promise<any>, ctx: { deliver: (p: any, m: any) => Promise<any> }) => Promise<any>) =>
   test.skipIf(!OUT)(name, async () => {
     const open = async (o: any = {}, html = ARTICLE_PAGE) => {
-      const page = await s.page(html, { settings: { launcher: { ...L, ...(o.launcher ?? {}) }, ...(o.rest ?? {}) }, viewport: { width: 1280, height: 720 } });
+      const page = await s.page(html, { settings: { launcher: { ...L, ...o.launcher }, ...o.rest }, viewport: { width: 1280, height: 720 } });
       page.setDefaultTimeout(5000);
       return page;
     };

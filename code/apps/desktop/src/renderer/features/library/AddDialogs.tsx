@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Banner, Button, Modal, Select, TextInput } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
-import type { DocMeta, ImportResult } from "../../../main/library/contract";
+import type { DocMeta, ImportResult } from "../../../shared/library/contract";
 import { library } from "./api";
 import { clock, estimateMs } from "./model";
 
 const words = (t: string) => t.match(/\S+/g)?.length ?? 0;
 
-export const voiceOptions = (voices: Voice[]) => voices.map((v) => ({ value: v.id, label: `${v.name} · ${v.lang === "en-GB" ? "UK" : "US"}` }));
+const voiceOptions = (voices: Voice[]) => voices.map((v) => ({ value: v.id, label: `${v.name} · ${v.lang === "en-GB" ? "UK" : "US"}` }));
 
 export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdded }: { open: boolean; speed: number; voices: Voice[]; defaultVoice: string; onClose(): void; onAdded(doc: DocMeta, play: boolean): void }) {
   const [text, setText] = useState("");
@@ -152,6 +152,12 @@ export function VoiceDialog({ doc, voices, defaultVoice, onClose, onDone }: { do
 }
 
 export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null; onClose(): void; onConfirm(): void }) {
+  // The dialog focuses its first control (the close button) on open; Cancel is the safe default (E10).
+  useEffect(() => {
+    if (!doc) return;
+    const t = setTimeout(() => document.querySelector<HTMLElement>("[data-default-focus]")?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [doc]);
   const copy = doc?.source === "paste" ? "Pasted text has no original file, so this is the only copy. You can undo for a few seconds." : "The original file or page is not touched. Only the reading and its progress are removed from SpeakKit.";
   return (
     <Modal
@@ -161,7 +167,7 @@ export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null;
       width={440}
       footer={
         <>
-          <Button onClick={onClose} autoFocus>Cancel</Button>
+          <Button onClick={onClose} data-default-focus>Cancel</Button>
           <Button variant="danger" solid onClick={onConfirm}>Delete</Button>
         </>
       }

@@ -6,9 +6,20 @@ import { engineView } from "../shared/engine-view";
 import { IDLE_CHOICES, type IdleChoice } from "../shared/schemas";
 import { api, formatBytes, Page, TokenField, useVisible } from "./ui";
 import { EngineBadge } from "./pages";
+import { ShortcutsPage } from "./settings-shortcuts";
+import { NotificationsPage } from "./settings-notifications";
+import { UpdateCard } from "./UpdateCard";
 
 export const SETTINGS_NAV: { group: string; items: { id: SettingsSub; label: string; icon: IconName }[] }[] = [
-  { group: "General", items: [{ id: "general", label: "General", icon: "settings" }, { id: "voice", label: "Voice and playback", icon: "volume" }] },
+  {
+    group: "General",
+    items: [
+      { id: "general", label: "General", icon: "settings" },
+      { id: "voice", label: "Voice and playback", icon: "volume" },
+      { id: "shortcuts", label: "Shortcuts", icon: "keyboard" },
+      { id: "notifications", label: "Notifications", icon: "bell" },
+    ],
+  },
   { group: "Device", items: [{ id: "memory", label: "Memory", icon: "cpu" }, { id: "storage", label: "Storage", icon: "folder" }] },
   { group: "App", items: [{ id: "browser", label: "Browser integration", icon: "world" }, { id: "about", label: "About", icon: "info-circle" }] },
 ];
@@ -30,9 +41,15 @@ function General({ s }: { s: AppState }) {
           control={<Segmented label="Theme" value={c.theme} onChange={(v) => api.patchConfig({ theme: v as "system" | "light" | "dark" })} items={[{ id: "system", label: "System" }, { id: "light", label: "Light" }, { id: "dark", label: "Dark" }]} />}
         />
       </SettingsSection>
-      <SettingsSection title="Notifications" description="Native notifications have no buttons; clicking one opens SpeakKit.">
-        <SettingRow label="Model download finished" control={<Toggle aria-label="Notify when the model download finishes" checked={c.notifyDownload} onChange={(v) => api.patchConfig({ notifyDownload: v })} />} />
-        <SettingRow label="Engine errors" control={<Toggle aria-label="Notify on engine errors" checked={c.notifyError} onChange={(v) => api.patchConfig({ notifyError: v })} />} />
+      <SettingsSection title="Tray">
+        <SettingRow label="Closing the window" description="Keeps SpeakKit in the tray so the extension and the shortcuts keep working. Quit from the tray menu." control={<span>Keeps running</span>} />
+      </SettingsSection>
+      <SettingsSection title="Privacy">
+        <SettingRow
+          label="Offer to read long text I copy"
+          description="Shows a Windows notification after you copy a few sentences. Copies from password managers are skipped. The text never leaves this computer."
+          control={<Toggle aria-label="Clipboard prompt" checked={c.clipboardPrompt} onChange={(v) => api.patchConfig({ clipboardPrompt: v })} />}
+        />
       </SettingsSection>
     </Page>
   );
@@ -87,7 +104,16 @@ function Memory({ s }: { s: AppState }) {
   return (
     <Page title="Memory" lead="The voice model uses several hundred MB while loaded. SpeakKit loads it when you play and unloads it when idle.">
       <SettingsSection title="Right now">
-        <SettingRow label="Voice engine" description={v.key === "ready" && at ? `Unloads at ${new Date(at).toLocaleTimeString()} if idle` : v.hint ?? "Kokoro-82M"} control={<span data-testid="memory-engine"><EngineBadge s={s} /></span>} />
+        <SettingRow
+          label="Voice engine"
+          description={v.key === "ready" && at ? `Unloads at ${new Date(at).toLocaleTimeString()} if idle` : v.key === "unloaded" ? "0 MB in memory. Wakes on play." : v.hint ?? "Kokoro-82M"}
+          control={
+            <div className="sk-row-actions">
+              <span data-testid="memory-engine"><EngineBadge s={s} /></span>
+              {v.key === "unloaded" && <Button size="sm" onClick={() => api.warmEngine()}>Load now</Button>}
+            </div>
+          }
+        />
         <SettingRow label="Memory in use" description="All SpeakKit processes, this window included." control={<span data-testid="memory-rss">{m ? `${Math.round(m.totalMb)} MB` : "..."}</span>} />
       </SettingsSection>
       <SettingsSection title="Unloading">
@@ -178,6 +204,9 @@ function Storage() {
 }
 
 const LICENSES: [string, string][] = [
+  ["wasm-media-encoders (MP3 export, built on LAME)", "MIT, LAME is LGPL-2.1"],
+  ["electron-updater", "MIT"],
+  ["koffi (reading the selection)", "MIT"],
   ["Kokoro-82M (model)", "Apache-2.0"],
   ["onnxruntime-node", "MIT"],
   ["Electron", "MIT"],
@@ -196,6 +225,16 @@ function About({ s }: { s: AppState }) {
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
+      <SettingsSection title="Updates" description="Updates come from GitHub Releases. They download in the background and are never installed without you.">
+        <div className="sk-pad" data-testid="update-section">
+          <UpdateCard s={s} />
+        </div>
+        <SettingRow
+          label="Check automatically"
+          description="Once a day while SpeakKit runs."
+          control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => api.patchConfig({ autoUpdate: v })} />}
+        />
+      </SettingsSection>
       <SettingsSection title="Open source licenses">
         {LICENSES.map(([k, l]) => (
           <SettingRow key={k} label={k} control={<span>{l}</span>} />
@@ -210,6 +249,10 @@ export function Settings({ s, sub }: { s: AppState; sub: SettingsSub }) {
   switch (sub) {
     case "voice":
       return <VoicePage s={s} />;
+    case "shortcuts":
+      return <ShortcutsPage s={s} />;
+    case "notifications":
+      return <NotificationsPage s={s} />;
     case "memory":
       return <Memory s={s} />;
     case "browser":

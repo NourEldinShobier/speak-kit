@@ -27,6 +27,13 @@ describe("command palette", () => {
   it("ranks a title that starts with the word first", () => {
     expect(titles("pause")[0]).toBe("Pause");
   });
+  it("offers the system actions: read clipboard, export, updates, Do not disturb, install the extension", () => {
+    expect(filterCommands(buildCommands(), "clipboard")[0]!.action).toEqual({ type: "read-clipboard" });
+    expect(filterCommands(buildCommands(), "mp3")[0]!.action).toEqual({ type: "export" });
+    expect(filterCommands(buildCommands(), "disturb")[0]!.action).toEqual({ type: "dnd" });
+    expect(filterCommands(buildCommands(), "chrome")[0]!.action).toEqual({ type: "install-extension" });
+    expect(filterCommands(buildCommands(), "hotkey")[0]!.action).toEqual({ type: "nav", page: "settings", sub: "shortcuts" });
+  });
   it("maps pages to nav actions", () => {
     const c = filterCommands(buildCommands(), "browser integration")[0]!;
     expect(c.action).toEqual({ type: "nav", page: "settings", sub: "browser" });

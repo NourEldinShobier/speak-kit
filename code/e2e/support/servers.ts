@@ -64,7 +64,7 @@ const emit = http.Server.prototype.emit;
 http.Server.prototype.emit = function (this: Server, ev: string, ...a: unknown[]) {
   if (ev === "request") {
     const req = a[0] as import("node:http").IncomingMessage;
-    hits.push({ port: req.socket.localPort ?? 0, method: req.method ?? "", path: (req.url ?? "").split("?")[0]!, replace: req.headers["x-speakkit-replace"] === "1", at: Date.now() });
+    hits.push({ port: req.socket.localPort ?? 0, method: req.method ?? "", path: (req.url ?? "").split("?")[0]!, replace: !!req.headers["x-speakkit-replace"] && req.headers["x-speakkit-replace"] !== "0", at: Date.now() });
   }
   return (emit as (...x: unknown[]) => boolean).call(this, ev, ...a);
 } as typeof emit;

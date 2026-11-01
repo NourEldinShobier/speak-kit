@@ -4,16 +4,30 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
+import * as v from "valibot";
 import type { FromWorker, ToWorker, WorkerInit } from "./worker-protocol";
+
+/** Parsed in the worker: a missing or malformed start-up config fails with a readable message, not a crash. */
+const workerInitSchema: v.GenericSchema<unknown, WorkerInit> = v.object({
+  modelsDir: v.string(),
+  modelId: v.string(),
+  dtype: v.picklist(["fp32", "fp16", "q8", "uint8", "q4", "q4f16"]),
+  device: v.picklist(["cpu", "dml"]),
+  threads: v.number(),
+  warmup: v.boolean(),
+  warmupVoice: v.string(),
+});
 
 // Two hosts: a worker_thread (parentPort) or a child process (IPC, init in env). Same protocol either way.
 const inProcess = parentPort === null;
-const init = (inProcess ? JSON.parse(process.env.SPEAKKIT_WORKER_INIT!) : workerData) as WorkerInit;
+const init = v.parse(workerInitSchema, inProcess ? JSON.parse(process.env.SPEAKKIT_WORKER_INIT ?? "null") : workerData);
 const send = (m: FromWorker, transfer: ArrayBuffer[] = []) =>
   inProcess ? void process.send!(m) : parentPort!.postMessage(m, transfer);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let tts: any;
+import type { KokoroTTS } from "kokoro-js";
+
+type GenerateOptions = NonNullable<Parameters<KokoroTTS["generate"]>[1]>;
+let tts: KokoroTTS | undefined;
 const cancelled = new Set<number>();
 
 async function load(): Promise<void> {
@@ -62,7 +76,7 @@ async function load(): Promise<void> {
     tf.AutoTokenizer.from_pretrained(init.modelId, opts),
   ]);
   tts = new KokoroTTS(model, tokenizer);
-  if (init.warmup) await tts.generate("Hello there.", { voice: init.warmupVoice, speed: 1 });
+  if (init.warmup) await tts.generate("Hello there.", { voice: init.warmupVoice, speed: 1 } as GenerateOptions);
   // The model file is read into a JS buffer first; collect it so idle RSS drops.
   setFlagsFromString("--expose-gc");
   (runInNewContext("gc") as () => void)();
@@ -81,7 +95,7 @@ function toInt16(f: Float32Array): Int16Array {
 async function run(m: Extract<ToWorker, { type: "synth" }>): Promise<void> {
   if (cancelled.delete(m.id)) return send({ type: "result", id: m.id, cancelled: true });
   try {
-    const a = await tts.generate(m.text, { voice: m.voice, speed: m.speed });
+    const a = await tts!.generate(m.text, { voice: m.voice, speed: m.speed } as GenerateOptions); // the server validated the voice id
     const pcm = toInt16(a.audio);
     send({ type: "result", id: m.id, pcm, sampleRate: a.sampling_rate }, [
       pcm.buffer as ArrayBuffer,

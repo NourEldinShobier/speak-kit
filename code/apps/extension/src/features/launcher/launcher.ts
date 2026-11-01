@@ -138,7 +138,6 @@ export class Launcher {
     b.addEventListener("pointerenter", () => { clearTimeout(this.gutterTimer); if (!reading) this.hd.warm("hover"); });
     b.addEventListener("pointerleave", () => this.scheduleGutterHide());
     b.addEventListener("focus", () => clearTimeout(this.gutterTimer));
-    b.addEventListener("keydown", (e) => { if (e.key === "Escape") { this.showGutter(null); e.stopPropagation(); } });
     const tip = h("div", { class: "lm-tooltip sk-gtip", "aria-hidden": "true" }, label);
     this.shell.root.append(tint, b, tip);
     this.gutter = { tint, btn: b, tip, el, reading };

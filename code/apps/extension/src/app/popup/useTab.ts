@@ -8,7 +8,7 @@ export async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
   return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 }
 
-export interface TabInfo {
+interface TabInfo {
   id?: number;
   url?: string;
   title?: string;

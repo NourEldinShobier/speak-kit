@@ -1,12 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react";
-import type { PlayerState, Voice } from "@speakkit/protocol";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { PlayerState } from "@speakkit/protocol";
 import {
   Avatar, Button, EmptyState, Icon, IconButton, Kbd, Logo, ProgressBar, Slider, StatusPill, ToggleButton,
   type IconName,
 } from "@speakkit/ui";
 import { headerBadge, type PopupView } from "../../features/connection";
 import { Scrubber, Transport } from "../../features/player";
-import { splitShortcut } from "../../features/settings/useCommands";
+import { splitShortcut } from "../../features/settings";
 import { VoiceList, voiceLine, voiceName, type VoicesState } from "../../features/voices";
 import { clampSpeed, clock, estimateMs, hostOf, minutes, speedLabel, timeLeft } from "../../shared/format";
 import type { QueueItem } from "../../shared/client";
@@ -96,7 +96,7 @@ function VoiceSpeedRow({ m, speedOpen, onVoice, onSpeed }: { m: PopupModel; spee
         <span className="sk-grow">{voiceLine(list, m.voice)}</span>
         <Icon name="chevron-down" size={14} />
       </Button>
-      <Button aria-expanded={speedOpen} aria-label={`Speed ${speedLabel(m.speed)}`} onClick={onSpeed}>{speedLabel(m.speed)}</Button>
+      <Button className="pp-speedbtn" aria-expanded={speedOpen} aria-label={`Speed ${speedLabel(m.speed)}`} onClick={onSpeed}>{speedLabel(m.speed)}</Button>
     </div>
   );
 }
@@ -144,6 +144,26 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
   const p = m.player;
   const home = view === "idle" || view === "selection" || view === "preparing" || view === "loading-model" || view === "playing" || view === "paused" || view === "finished";
   useEffect(() => { if (!home) { setVoiceOpen(false); setSpeedOpen(false); } }, [home]);
+  // Closing the voice picker or speed panel with Escape puts keyboard focus back on the button that opened it.
+  const refocus = useRef<".pp-voicebtn" | ".pp-speedbtn" | null>(null);
+  useEffect(() => {
+    if (!refocus.current || voiceOpen || speedOpen) return;
+    document.querySelector<HTMLElement>(refocus.current)?.focus();
+    refocus.current = null;
+  }, [voiceOpen, speedOpen]);
+  // On the document, not the screen: opening the picker unmounts the button that had focus, and keys then go to body.
+  useEffect(() => {
+    if (!voiceOpen && !speedOpen) return;
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      refocus.current = voiceOpen ? ".pp-voicebtn" : ".pp-speedbtn";
+      setVoiceOpen(false);
+      setSpeedOpen(false);
+    };
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [voiceOpen, speedOpen]);
 
   let body: ReactNode;
   let foot: ReactNode = <Foot onRight={a.openApp} />;
@@ -205,7 +225,7 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
       body = voiceOpen ? (
         <>
           <NowCard title={view === "selection" ? "Selected text" : m.title} sub={sub} />
-          <VoicePanel m={m} a={a} onDone={() => setVoiceOpen(false)} />
+          <VoicePanel m={m} a={a} onDone={() => { refocus.current = ".pp-voicebtn"; setVoiceOpen(false); }} />
         </>
       ) : (
         <>
@@ -261,4 +281,3 @@ export function PopupScreen({ m, a }: { m: PopupModel; a: PopupActions }) {
   );
 }
 
-export type { Voice };

@@ -509,9 +509,16 @@ describe("selection bubble (B1)", () => {
   });
 });
 
+/** The paragraph buttons only show on a page where a reading has been started: pretend one ran and ended. */
+const engage = async (page: any) => {
+  await deliver(page, { t: "state", state: st({ status: "paused", docId: "none" }) });
+  await deliver(page, { t: "state", state: st({ status: "idle", docId: "none" }) });
+};
+
 describe("paragraph gutter (B2)", () => {
   test("hover tints the paragraph and shows a 32 px play button 48 px to its left; click reads from that paragraph", async () => {
     const page = await open();
+    await engage(page);
     await page.hover("#p2");
     await page.waitForSelector("[data-sk=gutter-play]");
     const p = await box(page, "#p2");
@@ -533,6 +540,7 @@ describe("paragraph gutter (B2)", () => {
 
   test("hovering the nav, aside or footer shows no gutter; leaving hides it", async () => {
     const page = await open();
+    await engage(page);
     await page.hover("aside p");
     await page.waitForTimeout(300);
     expect(await page.locator("[data-sk=gutter-play]").count()).toBe(0);
@@ -540,6 +548,26 @@ describe("paragraph gutter (B2)", () => {
     await page.waitForSelector("[data-sk=gutter-play]");
     await page.mouse.move(1200, 600);
     await page.waitForSelector("[data-sk=gutter-play]", { state: "detached" });
+    await page.context().close();
+  });
+
+  test("on the paragraph being read the button says so, is aria-disabled and ignores clicks; another paragraph gets the normal button", async () => {
+    const page = await open();
+    const doc = await startPage(page);
+    const second = doc.sentences.findIndex((x: any) => x.text === "The appeal is simple.");
+    await deliver(page, { t: "state", state: st({ docId: doc.docId, sentenceIndex: second, status: "playing" }) });
+    await page.hover("#p2");
+    const btn = page.locator("[data-sk=gutter-play]");
+    await btn.waitFor();
+    expect(await btn.getAttribute("data-state")).toBe("reading");
+    expect(await btn.getAttribute("aria-label")).toBe("Reading this paragraph");
+    expect(await btn.getAttribute("aria-disabled")).toBe("true");
+    const before = (await sent(page)).filter((m) => m.t === "player" && m.command.cmd === "play").length;
+    await btn.click({ force: true });
+    expect((await sent(page)).filter((m) => m.t === "player" && m.command.cmd === "play").length).toBe(before);
+    await page.hover("#p3");
+    await page.waitForFunction(() => document.querySelector("speakkit-ui")!.shadowRoot!.querySelector("[data-sk=gutter-play]")!.getAttribute("data-state") === "idle");
+    expect(await btn.getAttribute("aria-label")).toBe("Read from here");
     await page.context().close();
   });
 

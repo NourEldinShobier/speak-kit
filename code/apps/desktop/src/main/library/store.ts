@@ -2,7 +2,7 @@ import { mkdir, readdir, rm, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
-import type { Block, DocContent, DocMeta, SearchHit } from "./contract";
+import type { Block, DocContent, DocMeta, SearchHit } from "../../shared/library/contract";
 
 interface Index {
   docs: DocMeta[];

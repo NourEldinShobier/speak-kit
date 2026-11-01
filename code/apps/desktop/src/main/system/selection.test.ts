@@ -5,9 +5,9 @@ function fakeClipboard(initial: string) {
   let text = initial;
   const calls: string[] = [];
   const clip: ClipboardIO = {
-    text: () => text,
-    snapshot: () => text,
-    restore: (s) => {
+    text: async () => text,
+    snapshot: async () => text,
+    restore: async (s) => {
       text = s as string;
       calls.push("restore");
     },
@@ -22,7 +22,7 @@ function fakeClipboard(initial: string) {
 describe("captureSelection", () => {
   it("clears the clipboard, presses copy, returns the selection and puts the old clipboard back", async () => {
     const c = fakeClipboard("old copy");
-    const out = await captureSelection({ clip: c.clip, copy: async () => c.set("selected words"), sleep: async () => {} });
+    const out = await captureSelection({ clip: c.clip, copy: async () => void c.set("selected words"), sleep: async () => {} });
     expect(out).toBe("selected words");
     expect(c.calls).toEqual(["clear", "restore"]);
     expect(c.get()).toBe("old copy");

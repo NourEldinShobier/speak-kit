@@ -17,31 +17,31 @@ describe("ClipboardWatcher", () => {
     let text = "already here, not copied now " + PROSE;
     let priv = false;
     const prompts: string[] = [];
-    const w = new ClipboardWatcher({ text: () => text, isPrivate: () => priv, onCopy: (t) => prompts.push(t) });
+    const w = new ClipboardWatcher({ text: async () => text, isPrivate: async () => priv, onCopy: (t) => prompts.push(t) });
     return { w, prompts, set: (t: string) => (text = t), setPrivate: (p: boolean) => (priv = p) };
   }
 
-  it("prompts for a new long copy once, not for what was already on the clipboard", () => {
+  it("prompts for a new long copy once, not for what was already on the clipboard", async () => {
     const s = setup();
     s.w.start();
-    s.w.tick();
+    await s.w.tick();
     expect(s.prompts).toEqual([]);
     s.set(PROSE);
-    s.w.tick();
-    s.w.tick();
+    await s.w.tick();
+    await s.w.tick();
     expect(s.prompts).toEqual([PROSE]);
     s.w.stop();
   });
 
-  it("skips password-manager copies and short copies", () => {
+  it("skips password-manager copies and short copies", async () => {
     const s = setup();
     s.w.start();
     s.setPrivate(true);
     s.set(PROSE + " from a vault");
-    s.w.tick();
+    await s.w.tick();
     s.setPrivate(false);
     s.set("tiny");
-    s.w.tick();
+    await s.w.tick();
     expect(s.prompts).toEqual([]);
     s.w.stop();
     expect(s.w.running).toBe(false);

@@ -4,7 +4,7 @@ import { estimateMs, IDLE_READER, splitSentences, titleOf, type ReaderCommand, t
 /** Sentences synthesized ahead of the one playing. */
 const AHEAD = 3;
 
-export interface ReaderDeps {
+interface ReaderDeps {
   /** One sentence to PCM through the local server. Must reject when the signal aborts. */
   synth(text: string, voice: string, speed: number, signal: AbortSignal): Promise<PreviewAudio>;
   voice(): string;
@@ -48,7 +48,7 @@ export class ReaderController {
 
   get state(): ReaderState {
     const total = this.#sentences.length;
-    if (!total) return IDLE_READER;
+    if (!total) return this.#error ? { ...IDLE_READER, status: "error", title: "SpeakKit", error: this.#error } : IDLE_READER;
     const status = this.#error ? "error" : this.#finished ? "finished" : this.#paused ? "paused" : this.#playing >= 0 ? "playing" : "preparing";
     const index = Math.max(0, this.#playing);
     let before = 0;
@@ -74,7 +74,7 @@ export class ReaderController {
   /** Starts a new reading, replacing any current one. Returns false when the text has nothing to say. */
   start(text: string, source: ReaderSource): boolean {
     const sentences = splitSentences(text);
-    this.#reset();
+    this.#reset(false); // the next state replaces the old one without a flash of idle
     if (!sentences.length) {
       this.#d.emit(IDLE_READER);
       return false;
@@ -87,6 +87,13 @@ export class ReaderController {
     this.#speed = this.#d.speed();
     this.#begin(0);
     return true;
+  }
+
+  /** Shows an error without a reading (nothing selected, empty clipboard). Stop or the next start clears it. */
+  fail(message: string): void {
+    this.#reset(false);
+    this.#error = message;
+    this.#d.emit(this.state);
   }
 
   command(c: ReaderCommand): void {
@@ -144,7 +151,7 @@ export class ReaderController {
     this.#d.emit(this.state);
   }
 
-  #reset() {
+  #reset(announce = true) {
     this.#epoch++;
     this.#abort?.abort();
     this.#abort = null;
@@ -157,7 +164,7 @@ export class ReaderController {
     this.#error = null;
     this.#playing = -1;
     this.#cursor = 0;
-    this.#d.emit(IDLE_READER);
+    if (announce) this.#d.emit(IDLE_READER);
   }
 
   /** (Re)start playback at a sentence: drops queued audio, keeps the paused flag. */

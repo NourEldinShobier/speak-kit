@@ -1,7 +1,7 @@
 import type { EngineState } from "@speakkit/protocol";
 import type { NotifyEvent } from "../shared/schemas";
 
-export interface Notice {
+interface Notice {
   event: NotifyEvent;
   /** Identifies the task the toast is about, so repeats of the same task are throttled together. */
   taskKey: string;

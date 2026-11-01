@@ -1,7 +1,7 @@
-import type { DocMeta } from "../../../main/library/contract";
+import type { DocMeta } from "../../../shared/library/contract";
 
 /** Speech at speed 1 reads about this many words a minute (15 characters a second, the player's estimate). */
-export const WORDS_PER_MINUTE = 150;
+const WORDS_PER_MINUTE = 150;
 
 export const FILTERS = [
   { id: "all", label: "All" },
@@ -22,14 +22,7 @@ export type SortId = (typeof SORTS)[number]["id"];
 
 export const estimateMs = (words: number, speed: number) => (words / (WORDS_PER_MINUTE * speed)) * 60_000;
 
-/** 2:27, 1:12:09 */
-export function clock(ms: number): string {
-  const s = Math.max(0, Math.round(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const ss = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
-}
+export { clock } from "@speakkit/protocol";
 
 /** 2h 15m, 37 min, under 1 min */
 export function span(ms: number): string {
@@ -52,7 +45,7 @@ export function dayLabel(ts: number, now: number): string {
   return diff < 7 ? DAYS[d.getDay()]! : `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-export const lastTouched = (d: DocMeta) => d.openedAt ?? d.addedAt;
+const lastTouched = (d: DocMeta) => d.openedAt ?? d.addedAt;
 
 export function filterDocs(docs: DocMeta[], filter: FilterId): DocMeta[] {
   if (filter === "all") return docs;
@@ -78,7 +71,7 @@ export function continueDoc(docs: DocMeta[]): DocMeta | undefined {
   )[0];
 }
 
-export interface RowStatus {
+interface RowStatus {
   kind: "finished" | "new" | "progress";
   percent: number;
   /** "12% · 37 min left" */

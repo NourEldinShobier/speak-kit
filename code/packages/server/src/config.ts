@@ -1,9 +1,9 @@
 import * as v from "valibot";
 import { MAX_SPEED, MIN_SPEED } from "@speakkit/protocol";
 
-export const MAX_SENTENCES = 500;
-export const MAX_SENTENCE_CHARS = 2000;
-export const MAX_HOLD_MS = 3_600_000;
+const MAX_SENTENCES = 500;
+const MAX_SENTENCE_CHARS = 2000;
+const MAX_HOLD_MS = 3_600_000;
 export const DEFAULT_MAX_STREAMS = 2;
 export const DEFAULT_MAX_QUEUE = 8;
 
@@ -36,7 +36,7 @@ const OptionsSchema = v.partial(
     loadAtStart: v.boolean(),
   }),
 );
-export type PlainOptions = v.InferOutput<typeof OptionsSchema>;
+type PlainOptions = v.InferOutput<typeof OptionsSchema>;
 
 /** Environment read by the server and the CLI. Empty values count as unset. */
 const EnvSchema = v.partial(
@@ -46,6 +46,8 @@ const EnvSchema = v.partial(
     SPEAKKIT_MAX_STREAMS: envInt(1, 64),
     SPEAKKIT_MAX_QUEUE: envInt(0, 1024),
     SPEAKKIT_TOKEN: v.pipe(v.string(), v.minLength(1)),
+    /** Comma-separated extension ids allowed to call; unset allows any extension that has the token. */
+    SPEAKKIT_EXTENSION_IDS: v.pipe(v.string(), v.transform((s) => s.split(",").map((x) => x.trim()).filter(Boolean))),
     SPEAKKIT_LOAD_AT_START: envBool,
     SPEAKKIT_ENGINE: v.picklist(["kokoro", "fake"]),
     SPEAKKIT_CHATTERBOX: v.picklist(["auto", "off"]),
@@ -71,7 +73,7 @@ const EnvSchema = v.partial(
     SPEAKKIT_WORKER_URL: v.string(),
   }),
 );
-export type Env = v.InferOutput<typeof EnvSchema>;
+type Env = v.InferOutput<typeof EnvSchema>;
 
 const describe = (issues: [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]]) =>
   issues
@@ -143,9 +145,9 @@ export function speakSchema(voices: Set<string>) {
 }
 
 /** A WAV holds one sample rate and cannot be played faster in the player afterwards, so speed stops at the model maximum. */
-export const EXPORT_MAX_SPEED = 2;
-export const MAX_GAP_MS = 5000;
-export function exportSchema(voices: Set<string>) {
+const EXPORT_MAX_SPEED = 2;
+const MAX_GAP_MS = 5000;
+function exportSchema(voices: Set<string>) {
   return v.object({
     sentences,
     voice: voice(voices),
@@ -176,7 +178,8 @@ export const parseExport = (voices: Set<string>, body: unknown) => parseNamed(ex
 
 const REPLACE_ID = /^[\w.:-]{1,64}$/;
 /** `X-SpeakKit-Replace`: `1` replaces every earlier stream of the token, anything else is a stream-group id (one per tab). */
-export function parseReplace(header: string | string[] | undefined): { all: true } | { group: string } | undefined {
+export type Replace = { all: true } | { group: string };
+export function parseReplace(header: string | string[] | undefined): Replace | undefined {
   if (header === undefined) return undefined;
   if (header === "1") return { all: true };
   if (typeof header === "string" && REPLACE_ID.test(header)) return { group: header };

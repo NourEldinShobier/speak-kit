@@ -48,7 +48,7 @@ export type TrayAction =
   | "restart-update"
   | "quit";
 
-export type TrayItem =
+type TrayItem =
   | { type: "separator" }
   | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
 

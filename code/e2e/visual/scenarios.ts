@@ -110,6 +110,8 @@ export const popupScenarios: Scenario[] = [
   S("A13", "not-installed", P, "Popup · app not installed", (c) => popupShot(c, { health: { ok: false, error: "app-not-running" }, tab: READER_TAB, state: playerState() }, { token: null })),
   S("A14", "token-rejected", P, "Popup · pairing token rejected", (c) => popupShot(c, { health: { ok: false, error: "token-rejected" }, tab: READER_TAB, state: playerState() })),
   S("A15", "file-permission", P, "Popup · local file needs permission", (c) => popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, url: "file:///C:/Users/maya/essay.html", title: "essay.html" }, fileAccess: false, state: playerState() })),
+  S("A18", "version-mismatch", P, "Popup · app and extension versions differ (K5)", (c) => popupShot(c, { health: { ok: false, error: "version-mismatch" }, tab: READER_TAB, state: playerState() }), { design: false }),
+  S("A19", "pdf", P, "Popup · PDF viewer", (c) => popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, url: "https://reader.example.com/files/attention.pdf", title: "attention.pdf" }, state: playerState() }), { design: false }),
   S("A16", "engine-asleep", P, "Popup · engine asleep", (c) => popupShot(c, { health: engineHealth("unloaded"), tab: READER_TAB, state: playerState() })),
   S("A17", "engine-waking", P, "Popup · waking the engine", (c) => popupShot(c, { health: engineHealth("unloaded"), tab: READER_TAB, state: playing("preparing", { elapsedMs: 0 }) })),
 ];

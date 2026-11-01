@@ -15,8 +15,8 @@ export interface ShortcutApi {
   unregister(accelerator: string): void;
 }
 
-export type Conflicts = Partial<Record<ShortcutId, ShortcutConflict>>;
-export type SetResult = { ok: true; conflicts: Conflicts } | { ok: false; error: string; conflict?: ShortcutConflict };
+type Conflicts = Partial<Record<ShortcutId, ShortcutConflict>>;
+type SetResult = { ok: true; conflicts: Conflicts } | { ok: false; error: string; conflict?: ShortcutConflict };
 
 /** Holding the keys repeats the shortcut; actions closer together than this are one press. */
 const REPEAT_GAP_MS = 400;

@@ -7,10 +7,10 @@ export interface UpdaterLike {
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
-  on(event: string, listener: (...args: never[]) => void): unknown;
+  on(event: string, listener: (payload: unknown) => void): unknown;
 }
 
-export interface UpdatesDeps {
+interface UpdatesDeps {
   /** False on builds that cannot update (development, portable): the state stays "unsupported". */
   supported: boolean;
   /** Loads electron-updater. */

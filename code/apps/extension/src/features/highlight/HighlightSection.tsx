@@ -1,3 +1,4 @@
+import { DEFAULT_WORD_COLOR } from "@speakkit/protocol";
 import { useState } from "react";
 import { Icon, SettingRow, Segmented } from "@speakkit/ui";
 import { defaultSettings, type SectionProps, type Settings } from "../settings";
@@ -27,7 +28,7 @@ function SwatchRow({ title, desc, list, value, onPick, label }: { title: string;
           ))}
           <label className={`op-sw ${idx < 0 ? "sel" : ""}`}>
             <span className="ring"><span className="dot custom" style={idx < 0 ? { background: value } : undefined}><Icon name={idx < 0 ? "check" : "plus"} size={14} /></span></span><span>Custom</span>
-            <input type="color" className="sk-sr" aria-label={`Custom ${label.toLowerCase()}`} value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#ffd24d"} onChange={(e) => onPick(e.target.value.toUpperCase())} />
+            <input type="color" className="sk-sr" aria-label={`Custom ${label.toLowerCase()}`} value={/^#[0-9a-f]{6}$/i.test(value) ? value : DEFAULT_WORD_COLOR.toLowerCase()} onChange={(e) => onPick(e.target.value.toUpperCase())} />
           </label>
         </div>
       }

@@ -1,5 +1,5 @@
 /** Copies shorter than this are not worth a prompt. */
-export const MIN_PROMPT_CHARS = 100;
+const MIN_PROMPT_CHARS = 100;
 
 /** True for text worth offering to read: long enough, prose rather than a secret or a one-word token. */
 export function worthPrompting(text: string): boolean {
@@ -8,10 +8,10 @@ export function worthPrompting(text: string): boolean {
   return /\s/.test(t) && (t.match(/\p{L}{2,}/gu)?.length ?? 0) >= 12;
 }
 
-export interface WatchDeps {
-  text(): string;
+interface WatchDeps {
+  text(): Promise<string>;
   /** The copy came from a password manager. */
-  isPrivate(): boolean;
+  isPrivate(): Promise<boolean>;
   onCopy(text: string): void;
   intervalMs?: number;
 }
@@ -32,18 +32,18 @@ export class ClipboardWatcher {
   }
   start() {
     if (this.#timer) return;
-    this.#last = this.#d.text(); // what is already there was not copied just now
-    this.#timer = setInterval(() => this.tick(), this.#d.intervalMs ?? 1000);
+    void this.#d.text().then((t) => (this.#last ||= t)); // what is already there was not copied just now
+    this.#timer = setInterval(() => void this.tick(), this.#d.intervalMs ?? 1000);
     this.#timer.unref();
   }
   stop() {
     clearInterval(this.#timer);
     this.#timer = undefined;
   }
-  tick() {
-    const text = this.#d.text();
+  async tick() {
+    const text = await this.#d.text();
     if (text === this.#last) return;
     this.#last = text;
-    if (worthPrompting(text) && !this.#d.isPrivate()) this.#d.onCopy(text);
+    if (worthPrompting(text) && !(await this.#d.isPrivate())) this.#d.onCopy(text);
   }
 }

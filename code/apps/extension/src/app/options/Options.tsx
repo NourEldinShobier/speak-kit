@@ -8,7 +8,7 @@ import { PageHead } from "../../shared/ui";
 // Everything but General loads on demand, as one chunk: the page opens on General and most visits never leave it (size budget in scripts/budget.mjs).
 const Sections = lazy(() => import("./Sections"));
 
-export const NAV: [id: string, label: string, icon: IconName][] = [
+const NAV: [id: string, label: string, icon: IconName][] = [
   ["general", "General", "adjustments"],
   ["launcher", "Edge launcher", "layout-sidebar-right"],
   ["voice", "Voice and speed", "microphone"],
@@ -18,7 +18,7 @@ export const NAV: [id: string, label: string, icon: IconName][] = [
   ["sites", "Sites and filters", "world"],
 ];
 const ids = NAV.map((n) => n[0]);
-export const sectionFromHash = (h: string) => {
+const sectionFromHash = (h: string) => {
   const x = h.replace(/^#\/?/, "");
   return ids.includes(x) ? x : "general";
 };

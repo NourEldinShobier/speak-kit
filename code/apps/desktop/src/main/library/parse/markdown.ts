@@ -1,6 +1,6 @@
 import { marked, type Token, type Tokens } from "marked";
-import type { Block } from "../contract";
-import { squash } from "./text";
+import type { Block } from "../../../shared/library/contract";
+import { squash } from "../../../shared/library/text";
 
 const inline = (tokens: Token[] | undefined, fallback: string): string => {
   if (!tokens) return fallback;

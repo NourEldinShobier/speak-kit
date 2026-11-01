@@ -8,6 +8,7 @@
 .sk-reader[data-rtheme=paper] .sk-reader-bar .lm-btn{color:var(--rd-fg)}
 .sk-reader-src{display:flex;align-items:center;gap:8px;color:var(--rd-muted);font:500 13px/16px Inter,system-ui,sans-serif}
 .sk-reader-scroll{flex:1;overflow:auto;padding:40px 24px 160px;outline:none}
+.sk-reader-scroll:focus-visible{outline:2px solid var(--accent-default);outline-offset:-2px}
 .sk-reader-col{width:100%;max-width:var(--rd-width);margin:0 auto;font:400 var(--rd-size)/1.7 var(--rd-font)}
 .sk-reader[data-rfont=dyslexic] .sk-reader-col{line-height:1.95;letter-spacing:.04em;word-spacing:.12em}
 .sk-reader-title{margin:0 0 28px;font-weight:700;font-size:1.75em;line-height:1.25}

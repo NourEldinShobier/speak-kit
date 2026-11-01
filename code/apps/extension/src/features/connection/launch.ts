@@ -1,6 +1,6 @@
 import { LINKS } from "../../shared/links";
 
-export interface LaunchDeps {
+interface LaunchDeps {
   /** open the deep link in a tab; resolves to the tab id */
   openTab(url: string): Promise<number | undefined>;
   closeTab(id: number): Promise<void>;
@@ -9,7 +9,7 @@ export interface LaunchDeps {
   sleep(ms: number): Promise<void>;
 }
 
-export type LaunchResult =
+type LaunchResult =
   | { ok: true; via: "running" | "protocol" }
   /** the protocol handler did not bring the app up in time; the UI then shows the install / start instructions */
   | { ok: false; via: "none"; reason: "not-installed-or-slow" };

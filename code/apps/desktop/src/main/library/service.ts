@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { MAX_FILE_BYTES, type Block, type DocMeta, type Format, type ImportResult, type LibraryApi, type Progress, type Source } from "./contract";
-import { fetchPage } from "./fetch-url";
+import { MAX_FILE_BYTES, type Block, type DocMeta, type Format, type ImportResult, type LibraryApi, type Progress, type Source } from "../../shared/library/contract";
+import { fetchPage, type Resolve } from "./fetch-url";
 import { ImportError, parseFile } from "./parse";
-import { textToBlocks, titleFromBlocks, wordCount, type Parsed } from "./parse/text";
+import { textToBlocks, titleFromBlocks, wordCount, type Parsed } from "../../shared/library/text";
 import { LibraryStore } from "./store";
 
-export interface LibraryDeps {
+interface LibraryDeps {
   dir: string;
   fetch?: typeof fetch;
+  /** DNS lookup used to refuse private addresses; replaced in tests. */
+  resolve?: Resolve;
   readClipboard(): Promise<string> | string;
   /** system open dialog: absolute paths of the chosen files (empty when cancelled) */
   chooseFiles(): Promise<string[]>;
@@ -93,7 +95,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       ),
     importUrl: async (url) => {
       try {
-        const page = await fetchPage(url, deps.fetch);
+        const page = await fetchPage(url, deps.fetch, deps.resolve);
         return await add(page, { source: "url", format: "url", origin: page.host });
       } catch (e) {
         return failure(e);

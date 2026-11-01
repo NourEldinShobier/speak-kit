@@ -6,7 +6,7 @@ import { playerState, seed, send, sleep, tabIdOf } from "./support";
 type Patch = (s: Settings) => Settings;
 const noLauncher: Patch = (s) => ({ ...s, launcher: { ...s.launcher, enabled: false } });
 const dockOnly: Patch = (s) => ({ ...noLauncher(s), sites: { "127.0.0.1": "always-dock" } });
-const reader = (theme: "paper" | "light" | "dark", p: Patch = dockOnly): Patch => (s) => { const x = p(s) as any; return { ...x, reader: { ...(x.reader ?? {}), theme, font: "serif", size: 19, width: 680 } }; };
+const reader = (theme: "paper" | "light" | "dark", p: Patch = dockOnly): Patch => (s) => { const x = p(s) as any; return { ...x, reader: { ...x.reader, theme, font: "serif", size: 19, width: 680 } }; };
 
 export interface PageCtx { page: Page; tab: number; c: Ctx }
 

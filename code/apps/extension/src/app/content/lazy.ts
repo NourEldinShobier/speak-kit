@@ -7,11 +7,12 @@ import type { Ui } from "./ui";
  * `defer` gives the controller a synchronous handle: calls made before the file arrives are queued (`render` keeps only the latest),
  * and plain property reads return an inert value.
  */
-export type UiUrl = () => string;
-
 const GETTERS = new Set(["host", "hasPopover", "bubbleVisible", "gutterTarget", "shell"]);
 
-export function defer<T extends object>(load: Promise<T>, latestOnly: string[] = []): T {
+/** The handle plus the promise of the real object. */
+export type Deferred<T> = T & { readonly ready: Promise<T> };
+
+export function defer<T extends object>(load: Promise<T>, latestOnly: string[] = []): Deferred<T> {
   let real: T | undefined;
   const queue: { key: string; run: (r: T) => void }[] = [];
   void load.then((r) => {
@@ -20,7 +21,7 @@ export function defer<T extends object>(load: Promise<T>, latestOnly: string[] =
   }, () => {
     queue.length = 0;
   });
-  return new Proxy({} as T, {
+  return new Proxy({} as Deferred<T>, {
     get(_, key: string) {
       if (key === "ready") return load;
       if (real) {

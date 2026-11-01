@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { DocMeta, SearchHit } from "../../../main/library/contract";
+import type { DocMeta, SearchHit } from "../../../shared/library/contract";
 import { library } from "./api";
 
 export function useDocs() {

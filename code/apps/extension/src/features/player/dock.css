@@ -16,3 +16,5 @@
 .sk-err-ic{color:var(--tag-red)}
 .sk-details{position:absolute;left:50%;bottom:4px;transform:translateX(-50%)}
 .sk-dtext{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);max-width:min(520px,calc(100% - 32px));padding:10px 14px;border-radius:12px;background:var(--surface-card);border:1px solid var(--stroke-control);box-shadow:var(--lm-shadow-menu);font-size:12px;line-height:1.45;color:var(--text-secondary);word-break:break-word}
+/* Narrow viewports (200% zoom of a laptop screen, phones): the progress row goes on top and the controls wrap below it instead of running off the screen. */
+@media (max-width:680px){.sk-dock{flex-wrap:wrap;justify-content:center;width:calc(100% - 24px);border-radius:20px}.sk-dock-mid{order:-1;flex:1 1 100%;width:100%}.sk-voice-txt{max-width:72px}}

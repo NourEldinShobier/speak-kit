@@ -1,7 +1,7 @@
 export * from "@speakkit/player";
 export { usePlayerState } from "./hooks";
-export { Scrubber, Transport, type TransportActions, type TransportStatus } from "./Transport";
-export { speedPopover, SPEED_PRESETS, type SpeedPopoverOptions } from "./speed-popover";
+export { Scrubber, Transport } from "./Transport";
+export { speedPopover } from "./speed-popover";
 import css from "./dock.css?inline";
 
 export { Dock } from "./dock";

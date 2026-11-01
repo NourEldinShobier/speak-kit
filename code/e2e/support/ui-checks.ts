@@ -11,7 +11,7 @@ export async function axeViolations(page: Page, include?: string): Promise<strin
   const r = await b.analyze();
   const why = (n: (typeof r.violations)[number]["nodes"][number]) => {
     const d = n.any[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | undefined;
-    return d?.contrastRatio ? ` [${d.fgColor} on ${d.bgColor} = ${d.contrastRatio}]` : "";
+    return d?.contrastRatio ? ` [${d.fgColor} on ${d.bgColor} = ${d.contrastRatio}]` : ` [${n.html.slice(0, 140)}]`;
   };
   return r.violations.map((v) => `${v.id} (${v.impact}): ${v.help} -> ${v.nodes.slice(0, 3).map((n) => n.target.join(" ") + why(n)).join(" | ")}`);
 }
@@ -19,7 +19,7 @@ export async function axeViolations(page: Page, include?: string): Promise<strin
 /**
  * Layout problems of what is on screen, including open shadow roots: the page scrolls sideways, an element sticks out of its container
  * or the viewport, or text is cut off without an ellipsis. Elements that are invisible, absolutely positioned on purpose
- * (popover anchors) or visually hidden (1 px) are skipped.
+ * (popover anchors), visually hidden (1 px) or pulled out on purpose with a negative margin (hover bleed) are skipped.
  */
 export function layoutIssues(page: Page, scope = "body"): Promise<string[]> {
   return page.evaluate((sel) => {
@@ -49,9 +49,9 @@ export function layoutIssues(page: Page, scope = "body"): Promise<string[]> {
         if (p && cs.position !== "absolute" && cs.position !== "fixed") {
           const pr = p.getBoundingClientRect();
           const pcs = getComputedStyle(p);
-          if (pcs.display !== "contents" && r.right > pr.right + 1 && pcs.overflowX === "visible" && pr.width > 0) issues.push(`${where} is wider than its container ${name(p)} (${Math.round(r.right - pr.right)} px past the right edge)`);
+          if (pcs.display !== "contents" && parseFloat(cs.marginRight) >= 0 && r.right > pr.right + 1 && pcs.overflowX === "visible" && pr.width > 0) issues.push(`${where} is wider than its container ${name(p)} (${Math.round(r.right - pr.right)} px past the right edge)`);
         }
-        const clips = cs.overflowX === "hidden" || cs.overflowX === "clip";
+        const clips = (cs.overflowX === "hidden" || cs.overflowX === "clip") && !(el instanceof HTMLInputElement); // an input scrolls its own text
         if (clips && el.scrollWidth > el.clientWidth + 1 && cs.textOverflow !== "ellipsis") issues.push(`${where} cuts off content (${el.scrollWidth} > ${el.clientWidth}) without an ellipsis`);
         if (clips && cs.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1 && !el.title && !el.getAttribute("aria-label") && !el.querySelector("[title]")) issues.push(`${where} is truncated with an ellipsis and has no title with the full text`);
       }

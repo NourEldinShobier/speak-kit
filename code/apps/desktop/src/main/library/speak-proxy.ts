@@ -1,10 +1,13 @@
-import type { ProxyChunk, ProxyRequest } from "./contract";
+import type { ProxyChunk, ProxyRequest } from "../../shared/library/contract";
 
-export interface ProxyDeps {
+interface ProxyDeps {
   /** where the local server listens now, and the token to present */
   target(): { port: number; token: string };
   fetch?: typeof fetch;
 }
+
+/** Streams relayed at once. The reader uses one or two; a cap keeps a buggy or hostile renderer from opening unbounded upstream streams. */
+export const MAX_OPEN_REQUESTS = 8;
 
 /**
  * Relays the reader's requests to the local server. The renderer's origin is file://, which the server rejects by design
@@ -14,6 +17,7 @@ export function createSpeakProxy({ target, fetch: doFetch = fetch }: ProxyDeps) 
   const running = new Map<number, AbortController>();
 
   async function open(req: ProxyRequest, send: (chunk: ProxyChunk) => void): Promise<void> {
+    if (running.size >= MAX_OPEN_REQUESTS) return send({ id: req.id, type: "error", message: "Too many requests at once." });
     const abort = new AbortController();
     running.set(req.id, abort);
     const { port, token } = target();
@@ -48,5 +52,7 @@ export function createSpeakProxy({ target, fetch: doFetch = fetch }: ProxyDeps) 
   return {
     open,
     cancel: (id: number) => running.get(id)?.abort(),
+    /** The window that asked is gone. */
+    cancelAll: () => running.forEach((a) => a.abort()),
   };
 }

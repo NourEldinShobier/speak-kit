@@ -1,11 +1,10 @@
-import { API_VERSION, type Health, type VoiceList } from "@speakkit/protocol";
+import { API_VERSION, parseHealth, parseVoiceList, type Health, type VoiceList } from "@speakkit/protocol";
 import type { ConnResult } from "../../shared/internal";
-import { parseHealth, parseVoiceList } from "./schemas";
 
-export const HEALTH_TTL_MS = 3000;
+const HEALTH_TTL_MS = 3000;
 const TIMEOUT_MS = 2500;
 
-export interface HealthDeps {
+interface HealthDeps {
   fetch: typeof fetch;
   now: () => number;
   port: () => Promise<number>;

@@ -1,0 +1,70 @@
+name: CI
+
+# Same commands as a local checkout (docs/testing.md): type-check, lint, unit tests, end-to-end tests with the fake engine.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: code/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type-check (tsrs)
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Unused files, exports and dependencies (knip)
+        run: pnpm run knip
+
+      # The desktop tests start the built Electron app.
+      - name: Build the desktop app
+        run: pnpm --filter @speakkit/desktop exec vp build
+
+      - name: Unit and integration tests
+        run: pnpm run test
+
+      - name: Install the test browser
+        working-directory: code/e2e
+        run: pnpm exec playwright install chromium
+
+      # No real model: the fake engine. The timing budgets (perf phase) are measured on a quiet machine, not on shared runners.
+      - name: End-to-end tests
+        run: pnpm run e2e
+        env:
+          E2E_SKIP_PERF: "1"
+
+      - name: Keep test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            code/e2e/test-results
+            code/e2e/results-*.json
+            code/apps/desktop/test-results
+          if-no-files-found: ignore

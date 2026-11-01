@@ -1,5 +1,6 @@
 import type { IpcRenderer } from "electron";
-import { LIBRARY_METHODS, libraryChannel, PROXY_CANCEL, PROXY_CHUNK, PROXY_OPEN, type LibraryBridge, type ProxyChunk } from "./contract";
+import { LIBRARY_METHODS, libraryChannel, PROXY_CANCEL, PROXY_CHUNK, PROXY_OPEN } from "./channels";
+import type { LibraryBridge, ProxyChunk } from "./contract";
 
 export function libraryBridge(ipc: IpcRenderer): LibraryBridge {
   const methods = Object.fromEntries(LIBRARY_METHODS.map((m) => [m, (...args: unknown[]) => ipc.invoke(libraryChannel(m), ...args)]));

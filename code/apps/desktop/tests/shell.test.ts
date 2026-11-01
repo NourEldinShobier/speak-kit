@@ -32,10 +32,10 @@ describe("Lumen shell", () => {
     expect(main.y + main.height).toBe(inner[1]! - 8);
     // 1 CSS px, rendered as one device pixel (0.67 css px at 150% display scaling).
     expect(await l.page.locator(".sk-main").evaluate((e) => Math.round(parseFloat(getComputedStyle(e).borderTopWidth) * devicePixelRatio))).toBe(1);
-    // Sidebar: New reading, Home, Voices, Library (later, disabled), Engines, Browser, Settings, Recent.
+    // Sidebar: New reading, Home, Library, Voices, Engines, Browser, Settings, Recent.
     const nav = l.page.getByRole("navigation", { name: "Main" });
     for (const n of ["Home", "Voices", "Engines", "Browser", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
-    expect(await nav.getByText("Library").locator("xpath=ancestor::a").getAttribute("aria-disabled")).toBe("true");
+    expect(await nav.getByRole("link", { name: "Library" }).count()).toBe(1);
     expect(await nav.getByText("Recent").count()).toBe(1);
     // Status pill and bell live in the title bar.
     expect(await l.page.getByTestId("engine-pill").textContent()).toBe("Ready");
@@ -148,8 +148,9 @@ describe("settings", () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("link", { name: "Engines" }).click();
     await l.page.getByRole("heading", { name: "Engines", level: 1 }).waitFor();
-    expect(await l.page.locator("[data-engine=kokoro]").textContent()).toContain("Unloaded · Wakes on play");
-    expect(await l.page.locator("[data-engine=chatterbox]").textContent()).toContain("Not available yet");
+    const kokoro = await l.page.locator("[data-engine=kokoro]").textContent();
+    expect(kokoro).toContain("Unloaded");
+    expect(kokoro).toContain("Not in memory (0 MB)");
     expect(await l.page.getByTestId("engine-pill").textContent()).toBe("Unloaded · Wakes on play");
   });
 });
@@ -162,13 +163,15 @@ describe("tray and lifecycle", () => {
       l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     expect(items.filter((i) => i.type !== "separator").map((i) => i.label)).toEqual([
-      "Read clipboard (coming later)",
+      "Read clipboard",
       "Open SpeakKit",
-      "Pause",
+      "Load the voice engine now",
+      "Do not disturb",
       "Settings",
+      "Check for updates",
       "Quit SpeakKit",
     ]);
-    expect(items[0]!.enabled).toBe(false);
+    expect(items[0]!.enabled).toBe(true);
     expect(await hook<string>("trayState")).toMatch(/^asleep\|SpeakKit - Unloaded \(wakes on play\)$/);
 
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());

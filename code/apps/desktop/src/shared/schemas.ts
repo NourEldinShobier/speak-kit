@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import { DEFAULT_PORT, DEFAULT_VOICE } from "@speakkit/protocol";
+import { UPDATE_ACTIONS } from "./updates";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
@@ -36,7 +37,7 @@ const ShortcutsSchema = v.object({
   "read-clipboard": accelerator("read-clipboard"),
 });
 
-export const EXPORT_FORMATS = ["wav", "mp3"] as const;
+const EXPORT_FORMATS = ["wav", "mp3"] as const;
 export const MP3_KBPS = [128, 192, 256] as const;
 const ExportPrefsSchema = v.fallback(
   v.object({
@@ -100,8 +101,27 @@ export const ConfigPatchSchema = v.partial(
 );
 export type ConfigPatch = v.InferOutput<typeof ConfigPatchSchema>;
 
-export const EXTERNAL_LINKS = ["webstore"] as const;
-export const OPEN_PATHS = ["models", "logs"] as const;
+const ShortcutIdSchema = v.picklist(SHORTCUT_IDS);
+const ReaderCommandSchema = v.variant("type", [
+  v.object({ type: v.picklist(["toggle", "pause", "resume", "stop", "replay", "open-app"]) }),
+  v.object({ type: v.literal("step"), by: v.picklist([-1, 1]) }),
+  v.object({ type: v.literal("skip"), ms: v.picklist([-10_000, 10_000]) }),
+  v.object({ type: v.literal("keep-on-top"), on: v.boolean() }),
+]);
+const EngineIdSchema = v.picklist(["kokoro", "chatterbox"]);
+const ExportOptionsSchema = v.object({
+  text: v.pipe(v.string(), v.minLength(1), v.maxLength(200_000)),
+  voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
+  speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
+  format: v.picklist(EXPORT_FORMATS),
+  mp3Kbps: v.picklist(MP3_KBPS),
+  dir: v.pipe(v.string(), v.maxLength(1024)),
+  name: v.pipe(v.string(), v.minLength(1), v.maxLength(120)),
+  conflict: v.optional(v.picklist(["replace", "keep-both"])),
+});
+
+const EXTERNAL_LINKS = ["webstore"] as const;
+const OPEN_PATHS = ["models", "logs"] as const;
 
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
 export const ARGS = {
@@ -125,4 +145,22 @@ export const ARGS = {
   metrics: v.tuple([]),
   hideWindow: v.tuple([]),
   quit: v.tuple([]),
+  setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),
+  resetShortcuts: v.tuple([]),
+  reader: v.tuple([ReaderCommandSchema]),
+  readClipboard: v.tuple([]),
+  readerStarted: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
+  readerDone: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
+  warmEngine: v.tuple([]),
+  engines: v.tuple([]),
+  selectEngine: v.tuple([EngineIdSchema]),
+  installEngine: v.tuple([EngineIdSchema]),
+  removeEngine: v.tuple([EngineIdSchema]),
+  updateAction: v.tuple([v.picklist(UPDATE_ACTIONS)]),
+  exportCheck: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.pipe(v.string(), v.maxLength(120)), v.picklist(EXPORT_FORMATS)]),
+  exportStart: v.tuple([ExportOptionsSchema]),
+  exportCancel: v.tuple([v.pipe(v.string(), v.maxLength(64))]),
+  exportReveal: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.boolean()]),
+  pickFolder: v.tuple([v.pipe(v.string(), v.maxLength(1024))]),
+  installExtension: v.tuple([]),
 } as const;

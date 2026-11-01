@@ -2,13 +2,16 @@ import dc from "node:diagnostics_channel";
 import type { IncomingMessage } from "node:http";
 import type { Pairing } from "../shared/ipc";
 
+/** Requests the app makes to its own server carry this header, so they never count as a browser pairing. */
+export const APP_CLIENT_HEADER = "x-speakkit-app";
+
 /**
  * Is this request a call from a paired client? Valid bearer token on our port. Works on node's own `http.server.request.start`
  * channel, so the server package needs no hook. Returns the Origin (the extension id) or "" when absent.
  */
 export function authedCall(req: Pick<IncomingMessage, "headers" | "socket">, token: string, port: number): { origin: string } | null {
   if (!token || !port || req.socket?.localPort !== port) return null;
-  if (req.headers.authorization !== `Bearer ${token}`) return null;
+  if (req.headers.authorization !== `Bearer ${token}` || req.headers[APP_CLIENT_HEADER]) return null;
   const o = req.headers.origin;
   return { origin: typeof o === "string" ? o : "" };
 }

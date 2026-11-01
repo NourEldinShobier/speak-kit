@@ -1,5 +1,5 @@
-import { DEFAULT_PORT, DEFAULT_VOICE, SAMPLE_RATE } from "@speakkit/protocol";
-import { createEngineClient, parseHealth } from "../../features/connection";
+import { DEFAULT_PORT, DEFAULT_VOICE, SAMPLE_RATE, parseHealth } from "@speakkit/protocol";
+import { createEngineClient } from "../../features/connection";
 import { IDLE_CLOSE_MS, Player, soundTouchStretch } from "../../features/player";
 import type { FromOffscreen, ToOffscreen } from "../../shared/internal";
 

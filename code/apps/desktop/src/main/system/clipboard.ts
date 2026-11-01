@@ -1,30 +1,26 @@
-import { clipboard } from "electron";
+import { clipboard, type ClipboardItem } from "electron";
 import type { ClipboardIO } from "./selection";
 
-interface Snap {
-  text: string;
-  html: string;
-  rtf: string;
-  image: Electron.NativeImage;
-}
-
-/** The real clipboard. Text, HTML, RTF and an image are restored; other formats are lost (rare for a selection copy). */
+/** The real clipboard. Electron 45's clipboard is promise based and hands back every format, so a snapshot restores everything. */
 export const electronClipboard: ClipboardIO = {
   text: () => clipboard.readText(),
-  snapshot: (): Snap => ({ text: clipboard.readText(), html: clipboard.readHTML(), rtf: clipboard.readRTF(), image: clipboard.readImage() }),
-  restore: (s) => {
-    const { text, html, rtf, image } = s as Snap;
-    if (!image.isEmpty()) clipboard.write({ image, text, html, rtf });
-    else if (text || html || rtf) clipboard.write({ text, html, rtf });
+  snapshot: () => clipboard.read(),
+  restore: async (items) => {
+    const list = items as ClipboardItem[];
+    if (list.length) await clipboard.write(list);
     else clipboard.clear();
   },
   clear: () => clipboard.clear(),
 };
 
-/** Password managers mark their copies with these formats so clipboard tools skip them. */
-export const copyIsPrivate = (): boolean => {
+/** Password managers tag their copies with this format so clipboard tools skip them. */
+const EXCLUDE_FORMAT = 'electron application/osclipboard;format="ExcludeClipboardContentFromMonitorProcessing"';
+
+export const copyIsPrivate = async (): Promise<boolean> => {
   if (process.platform !== "win32") return false;
-  if (clipboard.readBuffer("ExcludeClipboardContentFromMonitorProcessing").length > 0) return true;
-  const hist = clipboard.readBuffer("CanIncludeInClipboardHistory");
-  return hist.length >= 4 && hist.readUInt32LE(0) === 0;
+  try {
+    return await clipboard.has(EXCLUDE_FORMAT);
+  } catch {
+    return false;
+  }
 };

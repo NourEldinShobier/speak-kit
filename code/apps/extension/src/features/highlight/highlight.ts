@@ -1,4 +1,4 @@
-import type { Settings } from "@speakkit/protocol";
+import { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, type Settings } from "@speakkit/protocol";
 
 /** CSS Custom Highlight API wrapper, word timing and scroll helpers. No DOM mutation of the page. */
 
@@ -12,8 +12,8 @@ export const DARK_PAGE_HL: HlPalette = { sentence: "#78621F", word: "#F2C04E", w
 export function palette(h: Settings["highlight"], darkPage: boolean): HlPalette {
   if (h.matchTheme && darkPage) return DARK_PAGE_HL;
   return {
-    sentence: HEX.test(h.sentenceColor) ? h.sentenceColor : "#FFF1C2",
-    word: HEX.test(h.wordColor) ? h.wordColor : "#FFD24D",
+    sentence: HEX.test(h.sentenceColor) ? h.sentenceColor : DEFAULT_SENTENCE_COLOR,
+    word: HEX.test(h.wordColor) ? h.wordColor : DEFAULT_WORD_COLOR,
     wordText: "#1E1F20",
   };
 }

@@ -11,10 +11,5 @@ export type UpdateState =
 
 export const UPDATE_UNSUPPORTED: UpdateState = { kind: "unsupported" };
 
-export type UpdateAction = "check" | "download" | "install-now" | "install-on-quit" | "remind-later";
-export const UPDATE_ACTIONS: readonly UpdateAction[] = ["check", "download", "install-now", "install-on-quit", "remind-later"];
-
-/** The update is downloaded and waiting for the user: shows the green pill. */
-export const updateReady = (u: UpdateState) => u.kind === "ready";
-/** Something the user should know about: a dot on the About item and a line in the bell. */
-export const updateNeedsAttention = (u: UpdateState) => u.kind === "available" || u.kind === "downloading" || u.kind === "ready";
+export const UPDATE_ACTIONS = ["check", "download", "install-now", "install-on-quit", "remind-later"] as const;
+export type UpdateAction = (typeof UPDATE_ACTIONS)[number];

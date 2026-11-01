@@ -31,13 +31,13 @@ export function useHealth(pollMs = 3000): { result: HealthResult | null; refresh
   return { result, refresh };
 }
 
-export type ConnState = "checking" | "ok" | "offline" | "token";
+type ConnState = "checking" | "ok" | "offline" | "token";
 export function connState(h: HealthResult | null): ConnState {
   if (!h) return "checking";
   if (h.ok) return "ok";
   return h.error === "token-rejected" ? "token" : "offline";
 }
 
-export const PORT_MIN = 1024;
-export const PORT_MAX = 65535;
+const PORT_MIN = 1024;
+const PORT_MAX = 65535;
 export const validPort = (n: number) => Number.isInteger(n) && n >= PORT_MIN && n <= PORT_MAX;

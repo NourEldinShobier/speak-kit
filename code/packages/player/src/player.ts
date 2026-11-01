@@ -1,18 +1,19 @@
 import {
-  FrameDecoder,
   MAX_SPEED,
   MIN_SPEED,
-  type EngineState,
-  type ErrorCode,
-  type Frame,
   type PlayerCommand,
   type PlayerState,
   type PlayerStatus,
   type ReadDoc,
-  type SentenceStart,
-  type SpeakRequest,
 } from "@speakkit/protocol";
+import { readChunk } from "./chunk";
+import type { CtxLike, PlayerDeps, SourceLike, StretchNode } from "./deps";
+import { StreamError, mapHttpError } from "./errors";
+import { IDLE_CLOSE_MS, IdleTimer, ModelHold } from "./lifecycle";
 import type { PlayerConfig, QueueItem } from "./types";
+
+export { mapHttpError, IDLE_CLOSE_MS };
+export type { BufferLike, CtxLike, PlayerDeps, SourceLike, StretchDeps, StretchNode } from "./deps";
 
 /** Sentences decoded and scheduled beyond the one being heard; reading the stream pauses above this (TCP backpressure). Played buffers are dropped at once. */
 export const LOOKAHEAD = 3;
@@ -22,74 +23,9 @@ export const CHUNK = 40;
 export const CHARS_PER_SEC = 15;
 const PAUSE_SECONDS = { none: 0, short: 0.35, long: 0.8 } as const;
 const START_DELAY = 0.02;
-/** The offscreen document is closed this long after playback stopped (nothing else needs it). */
-export const IDLE_CLOSE_MS = 60_000;
 /** While the model loads, a play request waits (1 s polls, at most this many) instead of failing. */
 export const LOAD_WAIT_TRIES = 90;
-const HOLD_MS = 600_000;
-const HOLD_REFRESH_MS = 300_000;
 const ELAPSED_EMIT_MS = 500;
-const MAX_SENTENCE_CHARS = 2000;
-
-// Minimal Web Audio surface so the logic can run against a mock in tests.
-export interface BufferLike {
-  getChannelData(ch: number): Float32Array;
-}
-export interface SourceLike {
-  buffer: BufferLike | null;
-  playbackRate: { value: number };
-  connect(node: unknown): unknown;
-  disconnect?(): void;
-  start(when: number): void;
-  stop(): void;
-}
-export interface CtxLike {
-  readonly currentTime: number;
-  readonly destination: unknown;
-  createBuffer(channels: number, length: number, sampleRate: number): BufferLike;
-  createBufferSource(): SourceLike;
-  createAnalyser?(): unknown;
-  resume(): Promise<void>;
-  suspend(): Promise<void>;
-  close?(): Promise<void>;
-}
-
-/** Pitch-preserving time stretch for speeds above 2x (SoundTouch in an AudioWorklet). */
-export interface StretchNode {
-  /** the real AudioNode that sources connect to (AudioNode.connect rejects wrapper objects) */
-  readonly input: unknown;
-  connect(node: unknown): unknown;
-  disconnect(): void;
-  /** the playbackRate the sources feed it with; the node corrects the pitch back */
-  setRate(rate: number): void;
-}
-export interface StretchDeps {
-  /** load the worklet module on this context (called once per context, awaited before the first stretched buffer) */
-  register(ctx: CtxLike): Promise<void>;
-  create(ctx: CtxLike): StretchNode;
-}
-
-export interface PlayerDeps {
-  createContext(): CtxLike;
-  fetch: typeof fetch;
-  emitState(state: PlayerState): void;
-  emitSentence(start: SentenceStart, tabId: number | undefined): void;
-  emitQueue?(queue: QueueItem[]): void;
-  /** override to drive ticks manually in tests */
-  setInterval?: (fn: () => void, ms: number) => unknown;
-  clearInterval?: (id: unknown) => void;
-  now?: () => number;
-  stretch?: StretchDeps;
-  /** POST /v1/engine/hold: keep the model while paused (ms), 0 to release */
-  hold?: (ms: number) => void;
-  /** health engine state, to tell "loading" (wait) from "missing" (fail) */
-  engineState?: () => Promise<EngineState | undefined>;
-  sleep?: (ms: number) => Promise<void>;
-  /** playback has been stopped for IDLE_CLOSE_MS and nothing is queued: the host may close the document */
-  onIdle?: () => void;
-  setTimeout?: (fn: () => void, ms: number) => unknown;
-  clearTimeout?: (id: unknown) => void;
-}
 
 interface Item {
   index: number;
@@ -101,16 +37,6 @@ interface Item {
 
 export const playbackRateFor = (speed: number) => Math.max(1, speed / 2);
 const clampSpeed = (s: number) => Math.min(MAX_SPEED, Math.max(MIN_SPEED, s));
-
-export function mapHttpError(status: number): { code: ErrorCode; message: string } {
-  if (status === 401 || status === 403)
-    return { code: "token-rejected", message: "The SpeakKit app rejected the pairing token." };
-  if (status === 503 || status === 425)
-    return { code: "engine-not-ready", message: "The voice engine is not ready yet." };
-  if (status === 429) return { code: "busy", message: "SpeakKit is busy reading something else." };
-  if (status === 400) return { code: "invalid-request", message: "The SpeakKit app could not understand the request." };
-  return { code: "synthesis-failed", message: `The SpeakKit app answered with HTTP ${status}.` };
-}
 
 export class Player {
   cfg: PlayerConfig;
@@ -151,9 +77,8 @@ export class Player {
   private stretchNode: StretchNode | undefined;
   private stretchReady: Promise<void> | undefined;
   private replaceNext = false;
-  private holding: unknown;
-  private held = false;
-  private idleTimer: unknown;
+  private hold: ModelHold;
+  private idleTimer: IdleTimer;
 
   constructor(
     private deps: PlayerDeps,
@@ -161,6 +86,13 @@ export class Player {
     private wantAnalyser = false,
   ) {
     this.cfg = { ...cfg };
+    this.hold = new ModelHold(deps);
+    this.idleTimer = new IdleTimer(deps, () => {
+      if (this.status === "idle" || this.status === "finished" || this.status === "error") {
+        if (this.queue.length === 0) this.deps.onIdle?.();
+        else this.idleTimer.arm();
+      }
+    });
   }
 
   // ---- public ----
@@ -376,7 +308,7 @@ export class Player {
 
   private begin(doc: ReadDoc, from: number) {
     this.halt();
-    this.cancelIdle();
+    this.idleTimer.cancel();
     this.doc = doc;
     this.known = Array.from({ length: doc.sentences.length }, () => undefined);
     this.idx = Math.max(0, Math.min(from, doc.sentences.length - 1));
@@ -415,14 +347,14 @@ export class Player {
     if (this.status !== "playing" && this.status !== "preparing") return;
     this.status = "paused";
     this.ctx?.suspend().catch(() => {});
-    this.startHold();
+    this.hold.start();
     this.emit();
   }
 
   private resume() {
     if (this.status !== "paused") return;
     this.status = this.anyScheduled ? "playing" : "preparing";
-    this.endHold();
+    this.hold.end();
     this.ctx?.resume().catch(() => {}); // closed while resuming (stop): nothing to do
     this.emit();
   }
@@ -441,10 +373,10 @@ export class Player {
     this.error = undefined;
     this.status = "idle";
     this.clearTimer();
-    this.endHold();
+    this.hold.end();
     this.closeCtx();
     this.emit();
-    this.armIdle();
+    this.idleTimer.arm();
   }
 
   private seekSentence(i: number) {
@@ -613,64 +545,18 @@ export class Player {
     }
   }
 
-  private async requestChunk(gen: number, idxs: number[], signal: AbortSignal, replace = false) {
-    const d = this.doc!;
-    const body: SpeakRequest = {
-      sentences: idxs.map((i) => d.sentences[i]!.text.slice(0, MAX_SENTENCE_CHARS)),
-      voice: this.cfg.voice,
-      speed: this.cfg.speed,
-    };
-    if (!this.cfg.token)
-      throw new StreamError(
-        "token-rejected",
-        "No pairing token is set. Pair SpeakKit in the extension options.",
-      );
-    const res = await this.deps.fetch(`http://127.0.0.1:${this.cfg.port}/v1/speak`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.cfg.token}`,
-        "Content-Type": "application/json",
-        // The earlier stream (seek, speed or voice change) was cut: tell the app to drop it instead of finishing work nobody hears.
-        ...(replace ? { "X-SpeakKit-Replace": `tab-${d.tabId}` } : null),
-      },
-      body: JSON.stringify(body),
+  private requestChunk(gen: number, idxs: number[], signal: AbortSignal, replace = false) {
+    return readChunk({
+      fetch: this.deps.fetch,
+      cfg: this.cfg,
+      doc: this.doc!,
+      idxs,
       signal,
+      replace,
+      current: () => gen === this.gen,
+      room: () => this.room(gen),
+      onAudio: (index, pcm, sampleRate, durationMs) => this.schedule(index, pcm, sampleRate, durationMs),
     });
-    if (gen !== this.gen) return;
-    if (!res.ok || !res.body) {
-      const e = mapHttpError(res.status);
-      throw new StreamError(e.code, e.message);
-    }
-    const reader = res.body.getReader();
-    const decoder = new FrameDecoder();
-    try {
-      for (;;) {
-        await this.room(gen);
-        if (gen !== this.gen) return;
-        const { done, value } = await reader.read();
-        if (gen !== this.gen) return;
-        if (done) break;
-        // One read can carry many frames; wait for room before each so the lookahead limit holds.
-        for (const f of decoder.push(value)) {
-          await this.room(gen);
-          if (gen !== this.gen) return;
-          if (this.handleFrame(gen, f, idxs)) return;
-        }
-      }
-    } finally {
-      void reader.cancel().catch(() => {});
-    }
-  }
-
-  /** Returns true when the chunk is complete. */
-  private handleFrame(gen: number, f: Frame, idxs: number[]): boolean {
-    const h = f.header;
-    if (h.type === "done") return true;
-    if (h.type === "error") throw new StreamError(h.code, h.message);
-    const index = idxs[h.index];
-    if (index === undefined || !f.pcm || gen !== this.gen) return false;
-    this.schedule(index, f.pcm, h.sampleRate, h.durationMs);
-    return false;
   }
 
   private schedule(index: number, pcm: Int16Array, sampleRate: number, durationMs: number) {
@@ -728,9 +614,9 @@ export class Player {
     this.stopSources();
     this.status = "error";
     this.clearTimer();
-    this.endHold();
+    this.hold.end();
     this.closeCtx();
-    this.armIdle();
+    this.idleTimer.arm();
     if (e instanceof StreamError) this.error = { code: e.code, message: e.message };
     else if (e instanceof TypeError)
       this.error = {
@@ -748,7 +634,7 @@ export class Player {
   private finish() {
     this.stopSources();
     this.clearTimer();
-    this.endHold();
+    this.hold.end();
     this.status = "finished";
     const next = this.autoPlay ? this.queue.shift() : undefined;
     if (!next) this.closeCtx();
@@ -756,7 +642,7 @@ export class Player {
     if (next) {
       this.emitQueue();
       this.begin(next, next.startIndex);
-    } else this.armIdle();
+    } else this.idleTimer.arm();
   }
 
   /** Abort network + audio without touching document state. */
@@ -800,39 +686,6 @@ export class Player {
     it.src.buffer = null;
   }
 
-  // ---- model hold and idle shutdown ----
-
-  private startHold() {
-    if (!this.deps.hold) return;
-    this.deps.hold(HOLD_MS);
-    this.held = true;
-    const set = this.deps.setInterval ?? ((fn, ms) => setInterval(fn, ms));
-    if (this.holding === undefined) this.holding = set(() => this.deps.hold?.(HOLD_MS), HOLD_REFRESH_MS);
-  }
-  private endHold() {
-    if (this.holding !== undefined) (this.deps.clearInterval ?? ((id) => clearInterval(id as number)))(this.holding);
-    this.holding = undefined;
-    if (this.held) this.deps.hold?.(0);
-    this.held = false;
-  }
-
-  private armIdle() {
-    this.cancelIdle();
-    const set = this.deps.setTimeout ?? ((fn, ms) => setTimeout(fn, ms));
-    this.idleTimer = set(() => {
-      this.idleTimer = undefined;
-      if (this.status === "idle" || this.status === "finished" || this.status === "error") {
-        if (this.queue.length === 0) this.deps.onIdle?.();
-        else this.armIdle();
-      }
-    }, IDLE_CLOSE_MS);
-  }
-  private cancelIdle() {
-    if (this.idleTimer === undefined) return;
-    (this.deps.clearTimeout ?? ((id) => clearTimeout(id as number)))(this.idleTimer);
-    this.idleTimer = undefined;
-  }
-
   // ---- plumbing ----
 
   private ensureTimer() {
@@ -854,14 +707,5 @@ export class Player {
 
   private emitQueue() {
     this.deps.emitQueue?.(this.queueItems());
-  }
-}
-
-class StreamError extends Error {
-  constructor(
-    public code: ErrorCode,
-    message: string,
-  ) {
-    super(message);
   }
 }

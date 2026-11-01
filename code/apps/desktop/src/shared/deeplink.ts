@@ -24,7 +24,7 @@ export function findDeepLink(argv: readonly string[]): DeepLink | null {
   return null;
 }
 
-export interface DeepLinkActions {
+interface DeepLinkActions {
   showWindow(): void;
   navigate(page: "browser"): void;
   /** Make sure the loopback server is running (no-op when it is). */

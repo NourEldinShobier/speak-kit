@@ -4,7 +4,7 @@ export type PillTone = "green" | "blue" | "orange" | "red" | "neutral";
 /** normal (ready), working (download, load, reading, export), asleep (unloaded), error, paused (reading paused), attention (an update waits for you). */
 export type TrayState = "normal" | "working" | "asleep" | "error" | "paused" | "attention";
 
-export interface EngineView {
+interface EngineView {
   key: "starting" | "missing" | "downloading" | "unloaded" | "loading" | "ready" | "error";
   /** Short label for the status pill and lists. */
   label: string;

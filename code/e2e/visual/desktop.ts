@@ -87,7 +87,7 @@ export const desktopScenarios: Scenario[] = [
   home("H8", "about", ST, "Settings · About", { drive: settings("About") }),
 
   // system
-  home("K11", "quit-confirmation", SY, "Quit confirmation", { drive: async (p, { app }) => { await app.evaluate(() => { const t = (globalThis as any).__speakkit; const q = t.trayItems().find((i: any) => /^Quit/.test(i.label)); t.clickTray(q.label); }); await p.getByRole("dialog").waitFor({ timeout: 5000 }); } }),
+  home("K11", "quit-confirmation", SY, "Quit confirmation", { drive: async (p, { app }) => { await app.evaluate(() => { const t = (globalThis as any).__speakkit; const q = t.trayItems().find((i: any) => i.label.startsWith('Quit')); t.clickTray(q.label); }); await p.getByRole("dialog").waitFor({ timeout: 5000 }); } }),
 
   // errors and edge states
   S("K2", "port-in-use", E, "Notice · port in use (the app falls back to another port)", async (c) => {

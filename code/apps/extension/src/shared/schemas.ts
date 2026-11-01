@@ -11,7 +11,7 @@ const int = (min = 0, max = 1_000_000) => v.pipe(v.number(), v.integer(), v.minV
 const speed = v.pipe(v.number(), v.finite(), v.minValue(0.5), v.maxValue(3));
 const id = v.pipe(v.string(), v.minLength(1), v.maxLength(200));
 
-export const readDocSchema = v.object({
+const readDocSchema = v.object({
   docId: id,
   tabId: v.number(),
   url: v.pipe(v.string(), v.maxLength(4000)),
@@ -24,7 +24,7 @@ export const readDocSchema = v.object({
   source: v.picklist(["page", "selection", "from-here"]),
 });
 
-export const playerCommandSchema = v.variant("cmd", [
+const playerCommandSchema = v.variant("cmd", [
   v.object({ cmd: v.literal("play"), doc: readDocSchema }),
   v.object({ cmd: v.literal("pause") }),
   v.object({ cmd: v.literal("resume") }),
@@ -70,5 +70,5 @@ export type Inbound = ContentToBg | ExtraToBg;
 /** Returns the parsed message, or undefined when it is not a valid request. */
 export function parseInbound(msg: unknown): Inbound | undefined {
   const r = v.safeParse(inboundSchema, msg);
-  return r.success ? (r.output as unknown as Inbound) : undefined;
+  return r.success ? r.output : undefined; // a schema that drifts from Inbound fails to compile here
 }

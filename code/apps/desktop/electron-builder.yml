@@ -1,0 +1,61 @@
+# Windows installer (NSIS) and portable exe. Run through scripts/package.mjs, which stages a plain app folder in dist-app first.
+appId: app.speakkit.desktop
+productName: SpeakKit
+copyright: MIT License
+directories:
+  app: dist-app
+  output: release
+  buildResources: dist-app-res
+
+# No asar: the engine worker runs as its own Node process and loads kokoro-js, onnxruntime and koffi from disk, so the files
+# stay unpacked next to the app (resources/app). Start-up cost is a few hundred more file reads.
+asar: false
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+
+files:
+  - "**/*"
+  - "!**/*.map"
+  - "!**/{test,tests,__tests__,docs,examples}/**"
+  - "!**/node_modules/**/*.md"
+  - "!**/node_modules/.bin"
+
+extraResources:
+  # The Chrome extension, unpacked, for "Load unpacked" (Settings > Browser > Install the extension).
+  - from: ../extension/dist-pack
+    to: extension
+    filter: ["**/*", "!**/*.map"]
+
+protocols:
+  - name: SpeakKit
+    schemes: [speakkit]
+
+win:
+  target:
+    - { target: nsis, arch: [x64] }
+    - { target: portable, arch: [x64] }
+  icon: dist-app-res/icon.ico
+  # Not signed: no certificate yet. Windows SmartScreen shows "unknown publisher" until one is bought.
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SpeakKit
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  artifactName: SpeakKit-Setup-${version}.${ext}
+
+portable:
+  artifactName: SpeakKit-${version}-portable.${ext}
+
+# electron-updater reads this; releases come from GitHub (release.yml uploads the installer and latest.yml).
+publish:
+  provider: github
+  owner: NourEldinShobier
+  repo: speakkit
+  releaseType: release

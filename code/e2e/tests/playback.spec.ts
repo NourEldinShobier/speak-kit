@@ -111,7 +111,7 @@ test.describe("popup playback", () => {
     await ext.waitState("playing");
     await popup.getByRole("button", { name: /^Voice:/ }).click();
     await popup.getByRole("searchbox").fill("Emma");
-    await popup.getByRole("option", { name: /Emma/ }).click();
+    await popup.getByRole("button", { name: /^Emma/ }).click();
     await expect.poll(() => app.engine.calls.at(-1)!.voice).toBe("bf_emma");
     expect((await ext.state()).voice).toBe("bf_emma");
     expect((await ext.settings()).voice).toBe("bf_emma");

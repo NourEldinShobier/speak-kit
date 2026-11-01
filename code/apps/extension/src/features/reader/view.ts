@@ -57,7 +57,7 @@ export class ReaderView {
     this.apply();
     d.shell.root.append(this.el);
     this.el.addEventListener("keydown", (e) => { if (e.key === "Escape" && !d.shell.popover) { e.stopPropagation(); d.onClose(); } });
-    this.scroller.tabIndex = -1;
+    this.scroller.tabIndex = 0; // a scrollable region must be reachable by keyboard
     // The reader is modal: the page behind it (the host sits outside body) leaves the tab order and the accessibility tree.
     document.body.inert = true;
     this.scroller.focus({ preventScroll: true });
@@ -68,7 +68,7 @@ export class ReaderView {
     const title = ex.title || "";
     if (title) this.col.append(h("h1", { class: "sk-reader-title" }, title));
     this.blocks = [];
-    this.spans = new Array(ex.sentences.length);
+    this.spans = Array.from({ length: ex.sentences.length });
     let list: HTMLElement | null = null;
     ex.blocks.forEach((b, bi) => {
       const m = HEADING.exec(b.tag);

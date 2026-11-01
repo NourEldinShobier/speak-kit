@@ -1,5 +1,5 @@
 /** "ok": content scripts can run. "file": file:// page, needs the "Allow access to file URLs" switch. "unreadable": the browser never lets extensions in. */
-export type UrlClass = "ok" | "file" | "unreadable";
+type UrlClass = "ok" | "file" | "unreadable";
 
 export function classifyUrl(url: string | undefined): UrlClass {
   if (!url) return "unreadable";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { DocMeta } from "../../../main/library/contract";
+import type { DocMeta } from "../../../shared/library/contract";
 import { clock, continueDoc, dayLabel, estimateMs, filterDocs, highlightParts, rowStatus, sortDocs, span, subtitle } from "./model";
 
 const doc = (o: Partial<DocMeta>): DocMeta => ({

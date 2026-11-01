@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Block } from "../../../main/library/contract";
+import type { Block } from "../../../shared/library/contract";
 import { buildDoc, findMatches, fractionAt, outline, ProgressSaver, SentenceClock, sentenceAt, SleepTimer, toReadDoc, wordAt } from "./model";
 
 const blocks: Block[] = [

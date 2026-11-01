@@ -26,7 +26,7 @@ const buildOne = async (entry: string, format: "iife" | "es", name: string) => {
 
 let bundle: Promise<{ content: string; ui: string }> | null = null;
 /** JS source of the content script (plus `window.SK = { extract, hl }` for direct API tests) and of the lazily loaded UI module. */
-export const contentBundle = () => (bundle ??= (async () => {
+const contentBundle = () => (bundle ??= (async () => {
   const [content, ui] = await Promise.all([
     buildOne(resolve(here, "entry.ts"), "iife", "bundle.js"),
     buildOne(resolve(extRoot, "src/app/content/ui-entry.ts"), "es", "ui.js"),
@@ -35,7 +35,7 @@ export const contentBundle = () => (bundle ??= (async () => {
 })());
 
 /** Installed before the bundle: records messages sent to the service worker and lets tests deliver messages to the page. */
-export const CHROME_STUB = `
+const CHROME_STUB = `
 (() => {
   const store = {};
   window.__sent = [];

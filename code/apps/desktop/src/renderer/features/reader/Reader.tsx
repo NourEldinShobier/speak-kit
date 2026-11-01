@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button, Icon, IconButton, Spinner } from "@speakkit/ui";
 import { playbackRateFor } from "@speakkit/player";
 import type { SentenceStart, Voice } from "@speakkit/protocol";
-import type { DocMeta } from "../../../main/library/contract";
+import type { DocMeta } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
-import { api } from "../../ui";
+import { api, useVisible } from "../../ui";
 import { library } from "../library/api";
 import { estimateMs } from "../library/model";
 import { DisplayPopover } from "./DisplayPopover";
@@ -103,8 +103,10 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
     if (st.status === "paused") saver.current?.flush();
   }, [doc, active, st.sentenceIndex, st.status]);
   useEffect(() => {
-    if (st.status === "finished") void library.setProgress(id, { sentence: 0, fraction: 1 });
-  }, [st.status, id]);
+    if (st.status !== "finished") return;
+    saver.current?.update({ sentence: 0, fraction: 1 }); // replaces a pending mid-reading save
+    saver.current?.flush();
+  }, [st.status]);
 
   // ---- highlight, word estimate, follow ----
   const sentence = doc && active ? doc.sentences[st.sentenceIndex] : undefined;
@@ -154,16 +156,23 @@ export function Reader({ s, id, autoplay, onBack }: { s: AppState; id: string; a
   };
 
   // ---- sleep timer ----
+  // One timeout fires the pause at the expiry time; the countdown display ticks once a second only while the window is visible.
+  const visible = useVisible();
+  const timerOn = sleepLeft > 0;
   useEffect(() => {
-    if (sleepLeft <= 0) return;
-    const t = setInterval(() => {
-      if (sleep.current.expired(Date.now())) {
-        command({ cmd: "pause" });
-        setSleepLeft(0);
-      } else setSleepLeft(sleep.current.remainingMs(Date.now()));
-    }, 1000);
+    if (!timerOn) return;
+    const t = setTimeout(() => {
+      sleep.current.cancel();
+      command({ cmd: "pause" });
+      setSleepLeft(0);
+    }, sleep.current.remainingMs(Date.now()));
+    return () => clearTimeout(t);
+  }, [timerOn, command]);
+  useEffect(() => {
+    if (!timerOn || !visible) return;
+    const t = setInterval(() => setSleepLeft(Math.max(1, sleep.current.remainingMs(Date.now()))), 1000);
     return () => clearInterval(t);
-  }, [sleepLeft > 0, command]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timerOn, visible]);
 
   // ---- keyboard ----
   const toggle = useCallback(() => {

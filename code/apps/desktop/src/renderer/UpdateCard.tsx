@@ -1,0 +1,103 @@
+import { Banner, Button, LoadingLabel, Popover, ProgressBar, StatusPill } from "@speakkit/ui";
+import type { AppState } from "../shared/ipc";
+import type { UpdateAction } from "../shared/updates";
+import { api } from "./ui";
+
+const act = (a: UpdateAction) => () => void api.updateAction(a);
+
+/** The update flow in one place (Settings > About, H9, and the title bar popover, H18). Nothing here installs without a click. */
+export function UpdateCard({ s }: { s: AppState }) {
+  const u = s.update;
+  switch (u.kind) {
+    case "unsupported":
+      return <p className="sk-modal-text">Updates are delivered to the installed app. This copy runs from a folder, so it does not update itself.</p>;
+    case "idle":
+      return (
+        <div className="sk-row-actions" data-testid="update-idle">
+          <span>{u.checkedAtMs ? "SpeakKit is up to date." : "SpeakKit checks for updates in the background."}</span>
+          <Button size="sm" onClick={act("check")}>Check for updates</Button>
+        </div>
+      );
+    case "checking":
+      return <LoadingLabel>Checking for updates</LoadingLabel>;
+    case "available":
+      return (
+        <Banner tone="info" title={`SpeakKit ${u.version} is available`} action={<Button size="sm" variant="primary" onClick={act("download")}>Download</Button>}>
+          It downloads in the background. Nothing is installed until you say so.
+        </Banner>
+      );
+    case "downloading":
+      return (
+        <div data-testid="update-downloading">
+          <p className="sk-modal-text">Downloading {u.version}, {u.percent}%</p>
+          <ProgressBar value={u.percent} label="Update download" />
+        </div>
+      );
+    case "ready":
+      return (
+        <div data-testid="update-ready">
+          <Banner
+            tone="info"
+            icon="circle-check"
+            title={`SpeakKit ${u.version} is ready`}
+            action={
+              <div className="sk-row-actions">
+                {!u.onQuit && <Button size="sm" onClick={act("install-on-quit")}>Install when I quit</Button>}
+                <Button size="sm" variant="primary" onClick={act("install-now")}>Restart now</Button>
+              </div>
+            }
+          >
+            {u.onQuit ? "It installs when you quit SpeakKit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
+          </Banner>
+          {!u.onQuit && (
+            <Button size="sm" variant="ghost" onClick={act("remind-later")}>
+              Remind me later
+            </Button>
+          )}
+        </div>
+      );
+    case "restarting":
+      return <LoadingLabel>Restarting to install {u.version}</LoadingLabel>;
+    case "error":
+      return (
+        <Banner tone="error" title="Could not check for updates" action={<Button size="sm" onClick={act("check")}>Try again</Button>}>
+          {u.message}
+        </Banner>
+      );
+  }
+}
+
+/** Green pill in the title bar once an update is downloaded (H18); opens the same card in a popover. */
+export function UpdatePill({ s }: { s: AppState }) {
+  // "Remind me later" hides the pill for a day; Settings > About and the tray still show the update.
+  if (s.update.kind !== "ready" || Date.now() < s.config.updateRemindAtMs) return null;
+  return (
+    <Popover
+      title="Update ready"
+      side="bottom"
+      align="end"
+      width={380}
+      trigger={(t) => (
+        <button type="button" className="sk-pillbtn" data-testid="update-pill" {...t}>
+          <StatusPill tone="green" icon="circle-check">
+            Update ready · {s.update.kind === "ready" ? s.update.version : ""}
+          </StatusPill>
+        </button>
+      )}
+    >
+      <UpdateCard s={s} />
+    </Popover>
+  );
+}
+
+/** Small card while the update installs (H19). */
+export function UpdatingCard({ s }: { s: AppState }) {
+  if (s.update.kind !== "restarting") return null;
+  return (
+    <div className="sk-updating" role="status" data-testid="updating-card">
+      <b>Updating to {s.update.version}</b>
+      <span>SpeakKit will reopen where you left off.</span>
+      <ProgressBar thin label="Installing the update" />
+    </div>
+  );
+}

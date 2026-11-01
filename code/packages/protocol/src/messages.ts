@@ -64,6 +64,9 @@ export type BgToContent =
   | { t: "state"; state: PlayerState }
   | { t: "sentence-start"; start: SentenceStart }
   | { t: "extract"; mode: "page" | "selection" | "from-here" } // reply: ExtractReply
-  | { t: "settings-changed" };
+  | { t: "settings-changed" }
+  | { t: "toast"; message: string; kind?: "ok" | "info" | "err"; action?: "open-sidepanel" | "open-options"; actionLabel?: string }
+  /** open or close the reader view */
+  | { t: "reader"; open: boolean };
 
 export type ExtractReply = { doc: ReadDoc } | { error: ErrorCode };

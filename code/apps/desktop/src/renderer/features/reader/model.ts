@@ -1,6 +1,6 @@
 import { splitSentences } from "@speakkit/player/sentences";
 import type { ReadDoc } from "@speakkit/protocol";
-import type { Block, DocMeta } from "../../../main/library/contract";
+import type { Block, DocMeta } from "../../../shared/library/contract";
 
 export interface ReaderSentence {
   text: string;
@@ -108,7 +108,7 @@ export interface WordSpan {
   end: number;
 }
 
-export function wordSpans(text: string): WordSpan[] {
+function wordSpans(text: string): WordSpan[] {
   return [...text.matchAll(/\S+/g)].map((m) => ({ start: m.index, end: m.index + m[0].length }));
 }
 
@@ -184,7 +184,7 @@ export class SleepTimer {
 
 // ---- saving progress ----
 
-export interface Saved {
+interface Saved {
   sentence: number;
   fraction: number;
 }

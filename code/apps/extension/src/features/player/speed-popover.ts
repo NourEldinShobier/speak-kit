@@ -1,9 +1,9 @@
 import { button, h, popoverSurface, slider } from "@speakkit/ui/vanilla";
 import { speedLabel } from "../../shared/format";
 
-export const SPEED_PRESETS = [0.5, 1, 1.2, 1.5, 2, 3];
+const SPEED_PRESETS = [0.5, 1, 1.2, 1.5, 2, 3];
 
-export interface SpeedPopoverOptions {
+interface SpeedPopoverOptions {
   /** current speed, read when a preset is marked */
   speed(): number;
   /** user chose a speed (slider release, preset, reset) */

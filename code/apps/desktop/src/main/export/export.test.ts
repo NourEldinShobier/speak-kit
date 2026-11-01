@@ -6,7 +6,7 @@ import type { ExportJob, ExportRequest } from "@speakkit/protocol";
 import type { ExportOptions, ExportView } from "../../shared/export";
 import { ExportJobs, targetFor, type ExportServer } from "./jobs";
 import { encodeMp3 } from "./mp3";
-import { parseWav } from "./wav";
+import { parseWav } from "@speakkit/engine";
 
 /** A 16-bit mono PCM WAV of a 440 Hz tone. */
 function wavBytes(seconds: number, sampleRate = 24000): Uint8Array {
@@ -35,16 +35,6 @@ const tmp = () => {
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
-
-describe("wav", () => {
-  it("reads rate, channels and samples", () => {
-    const w = parseWav(wavBytes(1));
-    expect([w.sampleRate, w.channels, w.pcm.length, w.pcm[1]]).toEqual([24000, 1, 24000, Math.round(Math.sin((2 * Math.PI * 440) / 24000) * 12000)]);
-  });
-  it("rejects other data with a readable message", () => {
-    expect(() => parseWav(new Uint8Array(100))).toThrow("The server did not return a WAV file.");
-  });
-});
 
 describe("mp3", () => {
   it("encodes one second at 192 kbps to about 24 kB with an MPEG frame header", async () => {
@@ -96,7 +86,7 @@ function jobs(server: ExportServer, mp3?: (kbps: number) => void) {
     mp3: async (wav, kbps, onProgress) => {
       mp3?.(kbps);
       onProgress(1);
-      return new Uint8Array([0xff, 0xfb, wav.pcm.length & 0xff]);
+      return new Uint8Array([0xff, 0xfb, wav.samples.length & 0xff]);
     },
     onChange: (v) => changes.push(v.map((x) => ({ ...x }))),
     onDone: (v) => done.push({ ...v }),
@@ -166,7 +156,7 @@ describe("ExportJobs", () => {
     await until(() => j.views[0]!.stage === "cancelled");
     expect(readdirSync(dir)).toEqual([]);
     expect(calls).toContain("delete srv1");
-    expect(j.runningCount).toBe(0);
+    expect(j.views.filter((v) => v.stage === "rendering").length).toBe(0);
   });
 
   it("a server failure becomes an error view with the server's message", async () => {

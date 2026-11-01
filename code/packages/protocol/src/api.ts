@@ -60,20 +60,22 @@ export interface SpeakRequest {
 /** Body of POST /v1/engine/hold. 0 to 3 600 000. The extension sends 600000 on pause and 0 on resume. */
 export interface HoldRequest { ms: number }
 
-export type ErrorCode =
-  | "app-not-running"
-  | "token-rejected"
-  | "engine-not-ready"
-  | "page-unreadable"
-  | "file-access"
-  | "synthesis-failed"
-  | "version-mismatch"
-  | "invalid-request"
-  | "forbidden"
+const ERROR_CODES = [
+  "app-not-running",
+  "token-rejected",
+  "engine-not-ready",
+  "page-unreadable",
+  "file-access",
+  "synthesis-failed",
+  "version-mismatch",
+  "invalid-request",
+  "forbidden",
   /** HTTP 429: too many concurrent /v1/speak streams. */
-  | "busy"
+  "busy",
   /** HTTP 409: the engine cannot run here or is not installed. */
-  | "engine-unavailable"
+  "engine-unavailable",
   /** HTTP 422: the reference clip failed its quality checks, or consent is missing. */
-  | "clip-rejected"
-  | "not-found";
+  "clip-rejected",
+  "not-found",
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];

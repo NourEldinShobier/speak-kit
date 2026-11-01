@@ -1,6 +1,6 @@
-import type { Block } from "../contract";
+import type { Block } from "../../../shared/library/contract";
 import { bodyHeight, pageBlocks, stripRunning, type PdfItem } from "./pdf-layout";
-import type { Parsed } from "./text";
+import type { Parsed } from "../../../shared/library/text";
 
 /** Fewer characters per page than this on average: the PDF is scans without a text layer. */
 const MIN_CHARS_PER_PAGE = 25;

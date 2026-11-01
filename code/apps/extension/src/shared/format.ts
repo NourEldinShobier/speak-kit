@@ -1,10 +1,6 @@
-/** m:ss (h:mm:ss from one hour), clamped at 0. */
-export function clock(ms: number): string {
-  const s = Math.max(0, Math.round(ms / 1000));
-  return s >= 3600
-    ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
-    : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
+import { clock } from "@speakkit/protocol";
+
+export { clock };
 export const timeLeft = (elapsedMs: number, totalMs: number) => `${clock(totalMs - elapsedMs)} left`;
 export const speedLabel = (v: number) => `${Number(v.toFixed(2))}x`;
 export const clampSpeed = (v: number) => Math.min(3, Math.max(0.5, Math.round(v * 10) / 10));

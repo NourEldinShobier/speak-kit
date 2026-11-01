@@ -4,7 +4,7 @@ import { parseSettings } from "./schema";
 import { readSettings, readToken, watchKey, writeSettings, writeToken } from "./storage";
 import { defaultSettings, type Settings } from "./types";
 
-export interface SettingsApi {
+interface SettingsApi {
   settings: Settings;
   ready: boolean;
   saved: boolean;

@@ -1,5 +1,5 @@
 import { memo, type MouseEvent } from "react";
-import type { Block } from "../../../main/library/contract";
+import type { Block } from "../../../shared/library/contract";
 
 export interface TextClick {
   block: number;

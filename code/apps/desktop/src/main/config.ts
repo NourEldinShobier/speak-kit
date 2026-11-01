@@ -1,7 +1,7 @@
 import Store from "electron-store";
 import { parseConfig, type Config } from "../shared/schemas";
 
-export interface ConfigStore {
+interface ConfigStore {
   config: Config;
   save(): void;
   path: string;

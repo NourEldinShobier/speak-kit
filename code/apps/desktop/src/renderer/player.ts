@@ -1,6 +1,6 @@
 import type { PreviewAudio } from "../shared/ipc";
 
-export interface PlayerEvents {
+interface PlayerEvents {
   started(epoch: number, index: number): void;
   done(epoch: number, index: number): void;
 }

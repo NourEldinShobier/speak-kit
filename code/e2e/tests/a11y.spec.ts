@@ -11,7 +11,8 @@ const sk = (page: Page, name: string) => page.locator(`[data-sk="${name}"]`);
 async function audit(page: Page, label: string, opts: { include?: string; scope?: string } = {}) {
   for (const colorScheme of THEMES) {
     await page.emulateMedia({ colorScheme });
-    await page.waitForTimeout(120);
+    // axe reads colours mid-transition otherwise (the theme switch animates the text colour)
+    await page.waitForFunction(() => !document.getAnimations().some((a) => a instanceof CSSTransition && a.playState === "running"));
     expect(await axeViolations(page, opts.include), `axe: ${label} (${colorScheme})`).toEqual([]);
     expect(await layoutIssues(page, opts.scope), `layout: ${label} (${colorScheme})`).toEqual([]);
   }
@@ -226,8 +227,7 @@ test.describe("in-page UI", () => {
       await ext.waitState("paused");
       expect(await axeViolations(page, "speakkit-ui"), "axe: dock paused").toEqual([]);
 
-      const popup = await ext.popup(page);
-      await popup.getByRole("button", { name: "Reader view" }).click();
+      await ext.bg({ t: "reader", tabId: await ext.tabId(page), open: true });
       await expect(sk(page, "reader")).toBeVisible();
       expect(await axeViolations(page, "speakkit-ui"), "axe: reader view").toEqual([]);
       expect(await layoutIssues(page, "speakkit-ui"), "layout: reader view").toEqual([]);

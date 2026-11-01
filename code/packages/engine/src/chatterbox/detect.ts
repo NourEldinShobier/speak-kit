@@ -5,7 +5,7 @@ export interface Hardware {
   /** Command (and leading args) of a Python that chatterbox-tts supports. */
   python?: string[];
 }
-export type Run = (cmd: string, args: string[]) => Promise<string | undefined>;
+type Run = (cmd: string, args: string[]) => Promise<string | undefined>;
 
 /** chatterbox-tts needs Python 3.10 to 3.12 and an NVIDIA GPU with about 4 GB. */
 export const MIN_VRAM_MB = 4096;
@@ -21,12 +21,12 @@ const PYTHONS = [
 ];
 
 /** Stdout of the command, or undefined when it cannot run or exits non-zero. */
-export const run: Run = (cmd, args) =>
+const run: Run = (cmd, args) =>
   new Promise((resolve) => {
     execFile(cmd, args, { timeout: 8000, windowsHide: true }, (err, stdout) => resolve(err ? undefined : String(stdout)));
   });
 
-export async function findPython(exec: Run = run): Promise<string[] | undefined> {
+async function findPython(exec: Run = run): Promise<string[] | undefined> {
   const found = await Promise.all(
     PYTHONS.map(async ([cmd, ...pre]) => {
       const m = /Python 3\.(\d+)/.exec((await exec(cmd!, [...pre, "--version"])) ?? "");

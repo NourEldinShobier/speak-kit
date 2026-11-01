@@ -63,7 +63,7 @@ class Cdp {
   }
 }
 
-export interface Hook {
+interface Hook {
   state: import("@speakkit/protocol").PlayerState;
   frames: number;
   scheduledMs: number;
@@ -250,6 +250,8 @@ type Wx = { fx: Fixture };
 
 export const test = base.extend<Fx, Wx>({
   fx: [
+    // Playwright requires the destructuring pattern, even when no fixture is used.
+    // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
       const f = await startFixture();
       await use(f);

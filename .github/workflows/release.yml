@@ -1,0 +1,58 @@
+name: Release
+
+# Push a tag such as v0.2.0 to build the Windows installer, the portable exe and the extension zip, and attach them (with the
+# update metadata electron-updater reads) to a GitHub release. The installer is not code-signed.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: code/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Version from the tag
+        id: v
+        shell: pwsh
+        run: echo "version=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+
+      # Builds the engine worker, the extension and the app, stages a plain app folder and runs electron-builder (NSIS + portable).
+      - name: Package
+        run: pnpm --filter @speakkit/desktop exec node scripts/package.mjs --version ${{ steps.v.outputs.version }}
+
+      - name: Smoke test the packaged app
+        run: pnpm --filter @speakkit/desktop exec node scripts/smoke-packaged.mjs
+
+      - name: Extension zip
+        shell: pwsh
+        run: Compress-Archive -Path apps/extension/dist-pack/* -DestinationPath apps/desktop/release/speakkit-extension-${{ steps.v.outputs.version }}.zip
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            code/apps/desktop/release/SpeakKit-Setup-*.exe
+            code/apps/desktop/release/SpeakKit-Setup-*.exe.blockmap
+            code/apps/desktop/release/SpeakKit-*-portable.exe
+            code/apps/desktop/release/latest.yml
+            code/apps/desktop/release/speakkit-extension-*.zip
+          generate_release_notes: true

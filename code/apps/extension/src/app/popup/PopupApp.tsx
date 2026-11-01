@@ -4,7 +4,7 @@ import { extensionSettingsUrl, LINKS, openUrl } from "../../shared/links";
 import { usePlayerState } from "../../features/player";
 import { useQueue } from "../../features/queue";
 import { useSettings, useToken } from "../../features/settings";
-import { useCommands } from "../../features/settings/useCommands";
+import { useCommands } from "../../features/settings";
 import { useVoices } from "../../features/voices";
 import { command, openOptions, previewVoice, send, warm } from "../../shared/client";
 import { hostOf } from "../../shared/format";

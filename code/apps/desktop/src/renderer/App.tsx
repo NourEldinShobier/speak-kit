@@ -21,6 +21,9 @@ import { BrowserPage, Engines, Home, PreviewCtx, usePlayer, Voices } from "./pag
 import { Settings, SETTINGS_NAV } from "./settings";
 import { Palette } from "./Palette";
 import { Wizard } from "./Wizard";
+import { ExportDialog, ExportPill, type ExportOpen } from "./ExportDialog";
+import { QuitDialog } from "./QuitDialog";
+import { UpdatePill, UpdatingCard } from "./UpdateCard";
 import { LibraryRoute } from "./features/library";
 
 interface Loc {
@@ -64,6 +67,7 @@ function Shell({ s }: { s: AppState }) {
   const [pal, setPal] = useState(false);
   const [reading, setReading] = useState<string | null>(null);
   const [quit, setQuit] = useState(false);
+  const [exporting, setExporting] = useState<ExportOpen | null>(null);
   const [recent, setRecent] = useState<string[]>(loadRecent);
   const loc = hist[at]!;
 
@@ -87,7 +91,8 @@ function Shell({ s }: { s: AppState }) {
       api.onUi((e: UiEvent) => {
         if (e.type === "nav") goRef.current(e.page, e.sub);
         else if (e.type === "confirm-quit") setQuit(true);
-        else haltRef.current();
+        else if (e.type === "export") setExporting({ text: e.text ?? "" });
+        else if (e.type === "pause") haltRef.current();
       }),
     [],
   );
@@ -110,6 +115,13 @@ function Shell({ s }: { s: AppState }) {
     else if (a.type === "pause") player.halt();
     else if (a.type === "copy-token") void api.copy(s.token);
     else if (a.type === "open-logs") void api.openPath("logs");
+    else if (a.type === "read-clipboard") void api.readClipboard();
+    else if (a.type === "toggle-reading") void api.reader({ type: "toggle" });
+    else if (a.type === "export") setExporting({ text: "" });
+    else if (a.type === "check-updates") void api.updateAction("check");
+    else if (a.type === "dnd") void api.patchConfig({ doNotDisturb: !s.config.doNotDisturb });
+    else if (a.type === "install-extension") go("browser");
+    else if (a.type === "load-engine") void api.warmEngine();
     else void player.toggle(a.voice, `Hello, this is ${c.title.replace("Preview ", "")}.`);
   };
 
@@ -195,6 +207,7 @@ function Shell({ s }: { s: AppState }) {
                   ))
                 )}
                 <div className="sk-side__spacer" />
+                <ExportPill s={s} onOpen={(jobId) => setExporting({ text: "", jobId })} />
                 <EngineCard s={s} />
                 <NavItem icon="settings" href="#settings" onClick={(e) => { e.preventDefault(); go("settings", "general"); }}>
                   Settings
@@ -212,8 +225,10 @@ function Shell({ s }: { s: AppState }) {
           </main>
         </div>
         {pal && <Palette onRun={run} onClose={() => setPal(false)} />}
-        {reading !== null && <NewReading s={s} initial={reading} onClose={() => { player.halt(); setReading(null); }} onRead={saveRecent} />}
+        {reading !== null && <NewReading s={s} initial={reading} onClose={() => { player.halt(); setReading(null); }} onRead={saveRecent} onExport={(text) => { player.halt(); setReading(null); setExporting({ text }); }} />}
+        {exporting && <ExportDialog s={s} open={exporting} onClose={() => setExporting(null)} />}
         <QuitDialog s={s} open={quit} playing={!!player.playing} onClose={() => setQuit(false)} />
+        <UpdatingCard s={s} />
       </div>
     </PreviewCtx.Provider>
   );
@@ -266,6 +281,7 @@ function TitleBar(p: {
           {v.label}
           {v.hint ? ` · ${v.hint}` : ""}
         </StatusPill>
+        <UpdatePill s={p.s} />
         <Bell s={p.s} />
       </div>
     </header>
@@ -305,7 +321,7 @@ function Bell({ s }: { s: AppState }) {
   );
 }
 
-function NewReading({ s, initial, onClose, onRead }: { s: AppState; initial: string; onClose(): void; onRead(text: string): void }) {
+function NewReading({ s, initial, onClose, onRead, onExport }: { s: AppState; initial: string; onClose(): void; onRead(text: string): void; onExport(text: string): void }) {
   const [text, setText] = useState(initial);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voice, setVoice] = useState(s.config.voice);
@@ -330,6 +346,9 @@ function NewReading({ s, initial, onClose, onRead }: { s: AppState; initial: str
             options={voices.length ? voices.map((v) => ({ value: v.id, label: v.name })) : [{ value: voice, label: voice }]}
           />
           <span style={{ flex: 1 }} />
+          <Button iconLeft="download" disabled={!text.trim()} onClick={() => onExport(text)}>
+            Export audio
+          </Button>
           <Button onClick={onClose}>Close</Button>
           <Button
             variant="primary"
@@ -348,43 +367,6 @@ function NewReading({ s, initial, onClose, onRead }: { s: AppState; initial: str
       <p className="sk-modal-text">Paste or type text. It is read on this computer; nothing is uploaded.</p>
       <textarea className="sk-area" aria-label="Text to read" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste text here" />
       {error && <p style={{ color: "var(--tag-red)", margin: "8px 0 0" }}>{error}</p>}
-    </Modal>
-  );
-}
-
-function QuitDialog({ s, open, playing, onClose }: { s: AppState; open: boolean; playing: boolean; onClose(): void }) {
-  const st = s.health?.engine.state;
-  const rows: [string, string][] = [
-    [`Local server on 127.0.0.1:${s.port || "-"} stops`, "The browser extension cannot read until SpeakKit starts again."],
-  ];
-  if (playing) rows.push(["The reading in progress stops", "Start it again from the app or the extension."]);
-  if (st === "downloading") rows.push(["The model download pauses", "It resumes the next time SpeakKit opens."]);
-  if (st === "ready" || st === "loading") rows.push(["The voice model leaves memory", "It loads again on the next play."]);
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Quit SpeakKit?"
-      width={480}
-      footer={
-        <>
-          <Button onClick={onClose}>Keep running in tray</Button>
-          <span style={{ flex: 1 }} />
-          <Button variant="danger" solid onClick={() => api.quit()}>
-            Quit
-          </Button>
-        </>
-      }
-    >
-      <p className="sk-modal-text">Closing the window keeps SpeakKit in the tray. Quitting stops:</p>
-      <div className="sk-quit" data-testid="quit-list">
-        {rows.map(([a, b]) => (
-          <div key={a}>
-            {a}
-            <span>{b}</span>
-          </div>
-        ))}
-      </div>
     </Modal>
   );
 }

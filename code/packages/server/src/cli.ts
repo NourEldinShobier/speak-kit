@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import * as v from "valibot";
 import { DEFAULT_PORT } from "@speakkit/protocol";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import { parseEnv } from "./config";
@@ -19,11 +20,7 @@ try {
 const dataDir =
   env.SPEAKKIT_DATA_DIR ??
   join(process.env.APPDATA ?? join(homedir(), ".config"), "SpeakKit");
-const version = (
-  JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
-    version: string;
-  }
-).version;
+const { version } = v.parse(v.object({ version: v.string() }), JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")));
 
 let engine: TtsEngine;
 if ((env.SPEAKKIT_ENGINE ?? "kokoro") === "fake") {

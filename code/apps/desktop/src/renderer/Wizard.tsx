@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { InstallExtension } from "./pages";
 import { Banner, Button, Icon, LoadingLabel, ProgressBar, SettingRow, SettingsSection, Stepper, StatusPill, Toggle, type IconName } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { api, Logo, TokenField, usePreview } from "./ui";
@@ -120,9 +121,7 @@ export function Wizard({ s }: { s: AppState }) {
           </Foot>
         }
       >
-        <Banner tone="info" icon="cpu">
-          Kokoro runs on the CPU, so any PC works. No GPU is needed.
-        </Banner>
+        <Hardware />
         <SettingsSection title="Engines">
           <button className="sk-radio is-sel" role="radio" aria-checked="true" aria-label="Kokoro-82M">
             <span className="sk-tile"><Icon name="cpu" size={18} /></span>
@@ -213,6 +212,23 @@ export function Wizard({ s }: { s: AppState }) {
   return <Done s={s} skipped={skipped} onBack={() => setStep(3)} />;
 }
 
+/** Detected hardware in words (W2, W2b): the engines list carries the GPU probe of the server. */
+function Hardware() {
+  const [gpu, setGpu] = useState<{ name: string; vramMb: number } | null | undefined>(undefined);
+  useEffect(() => {
+    api.engines().then((l) => setGpu(l.engines.find((e) => e.gpu)?.gpu ?? null), () => setGpu(null));
+  }, []);
+  return gpu ? (
+    <Banner tone="info" icon="cpu" title={`Found ${gpu.name}, ${Math.round(gpu.vramMb / 1024)} GB`}>
+      Kokoro runs on the CPU and needs no GPU. Your graphics card can run Chatterbox later (Engines).
+    </Banner>
+  ) : (
+    <Banner tone="info" icon="cpu" title={gpu === null ? "No supported graphics card found" : "Checking this computer"}>
+      Kokoro runs on the CPU, so any PC works. About one second to the first word.
+    </Banner>
+  );
+}
+
 function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState; copied: boolean; onCopied(): void; onBack(): void; onSkip(): void; onNext(): void }) {
   const [testStart, setTestStart] = useState<number | null>(null);
   const connected = testStart !== null && (s.pairing.lastSeenMs ?? 0) >= testStart;
@@ -234,7 +250,7 @@ function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState;
       }
     >
       <SettingsSection title="1. Install the extension" description="Add SpeakKit from the Chrome Web Store. It also installs in Edge and Brave. Then pin it from the puzzle menu.">
-        <SettingRow label="SpeakKit for Chrome" control={<Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button>} />
+        <SettingRow label="SpeakKit for Chrome" control={<div className="sk-row-actions"><Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button><InstallExtension /></div>} />
       </SettingsSection>
       <SettingsSection title="2. Pair it with this app" description="Copy the token and paste it in the extension under Options > General > Pairing token.">
         <div className="sk-pad">
@@ -299,6 +315,7 @@ function Done({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack():
       <SettingsSection title="Handy to know">
         <SettingRow label="Tray icon" description="SpeakKit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view. Closing the window keeps it running." />
         <SettingRow label="Launch at login" description="Start SpeakKit when you sign in to Windows." control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />} />
+        <SettingRow label="Start in the tray" description="When it starts at sign-in, stay in the tray instead of opening a window." control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />} />
       </SettingsSection>
     </Frame>
   );

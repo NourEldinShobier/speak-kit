@@ -1,4 +1,4 @@
-import type { Block } from "../contract";
+import type { Block } from "./contract";
 
 export interface Parsed {
   title: string;

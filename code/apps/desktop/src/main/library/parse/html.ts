@@ -1,7 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
-import type { Block } from "../contract";
-import { squash, type Parsed } from "./text";
+import type { Block } from "../../../shared/library/contract";
+import { squash, type Parsed } from "../../../shared/library/text";
 
 const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "PRE", "CODE", "SVG", "FIGURE", "NAV", "ASIDE", "FOOTER", "FORM", "BUTTON", "TEMPLATE"]);
 const HEADING = /^H([1-6])$/;
@@ -16,7 +16,7 @@ interface DomNode {
 }
 
 /** Walk an HTML tree into blocks. Inline runs between block elements become paragraphs. */
-export function domToBlocks(root: DomNode): Block[] {
+function domToBlocks(root: DomNode): Block[] {
   const out: Block[] = [];
   const add = (kind: Block["kind"], text: string, level?: number) => {
     const t = squash(text);
@@ -55,7 +55,7 @@ export function domToBlocks(root: DomNode): Block[] {
   return out;
 }
 
-export interface HtmlOptions {
+interface HtmlOptions {
   /** Run Readability first (web pages and saved pages). Off for DOCX and EPUB, which are already clean. */
   readable: boolean;
   url?: string;

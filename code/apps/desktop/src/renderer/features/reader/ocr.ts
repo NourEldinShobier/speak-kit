@@ -1,5 +1,5 @@
-import type { Block } from "../../../main/library/contract";
-import { textToBlocks } from "../../../main/library/parse/text";
+import type { Block } from "../../../shared/library/contract";
+import { textToBlocks } from "../../../shared/library/text";
 
 export interface OcrEngine {
   pageCount: number;

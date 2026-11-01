@@ -1,5 +1,5 @@
-import type { Block } from "../contract";
-import { squash } from "./text";
+import type { Block } from "../../../shared/library/contract";
+import { squash } from "../../../shared/library/text";
 
 /** One text run from pdf.js: position in page units, origin bottom-left. */
 export interface PdfItem {
@@ -24,7 +24,7 @@ const median = (xs: number[]) => {
 };
 
 /** Group runs into lines (same baseline, left to right), top of the page first. */
-export function toLines(items: PdfItem[]): Line[] {
+function toLines(items: PdfItem[]): Line[] {
   const runs = items.filter((i) => i.str.trim()).sort((a, b) => b.y - a.y || a.x - b.x);
   const lines: { y: number; h: number; runs: PdfItem[] }[] = [];
   for (const r of runs) {

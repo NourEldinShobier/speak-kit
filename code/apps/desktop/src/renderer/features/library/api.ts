@@ -1,4 +1,4 @@
-import type { LibraryBridge } from "../../../main/library/contract";
+import type { LibraryBridge } from "../../../shared/library/contract";
 
 declare global {
   interface Window {

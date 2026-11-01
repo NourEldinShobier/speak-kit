@@ -1,15 +1,19 @@
 {
   "name": "speakkit",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "packageManager": "pnpm@12.4.1",
   "engines": {
     "node": ">=24.11.0"
   },
   "scripts": {
+    "typecheck": "node scripts/typecheck.mjs",
+    "lint": "vp lint",
+    "test": "vp test run",
     "e2e": "node e2e/run.mjs",
-    "e2e:full": "node e2e/run.mjs --full"
+    "e2e:full": "node e2e/run.mjs --full",
+    "knip": "pnpm dlx knip@5.88.1 --no-progress"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

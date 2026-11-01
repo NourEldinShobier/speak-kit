@@ -23,7 +23,7 @@ const text = (fallback: string) => v.fallback(v.pipe(v.string(), v.minLength(1))
 const group = <E extends v.ObjectEntries>(entries: E, fallback: v.InferOutput<v.ObjectSchema<E, undefined>>) =>
   v.fallback(v.object(entries), fallback);
 
-export const SITE_RULES = ["always-dock", "hide-controls", "never-read"] as const;
+const SITE_RULES = ["always-dock", "hide-controls", "never-read"] as const;
 const sites = v.fallback(
   v.pipe(
     v.record(v.string(), v.unknown()),
@@ -36,11 +36,11 @@ const sites = v.fallback(
   {},
 );
 
-export const READER_FONTS = ["sans", "serif", "dyslexic"] as const;
-export const READER_THEMES = ["paper", "light", "dark"] as const;
-export const READER_LIMITS = { size: [14, 28], width: [480, 960] } as const;
+const READER_FONTS = ["sans", "serif", "dyslexic"] as const;
+const READER_THEMES = ["paper", "light", "dark"] as const;
+const READER_LIMITS = { size: [14, 28], width: [480, 960] } as const;
 
-export const readerSchema = group(
+const readerSchema = group(
   {
     font: pick(READER_FONTS, d.reader.font),
     size: clamped(READER_LIMITS.size[0], READER_LIMITS.size[1], d.reader.size, true),
@@ -51,7 +51,7 @@ export const readerSchema = group(
   d.reader satisfies ReaderSettings,
 );
 
-export const settingsSchema = v.fallback(
+const settingsSchema = v.fallback(
   v.object({
     port: clamped(1, 65535, d.port, true),
     launcher: group(

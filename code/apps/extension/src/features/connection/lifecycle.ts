@@ -3,12 +3,9 @@
  * loaded: it asks the app to warm it ahead of the click and to hold it while playback is paused. Both calls are
  * best-effort; a failure (app not running, older app without the endpoint) is ignored.
  */
-export const WARM_DEBOUNCE_MS = 5000;
-export const HOLD_REFRESH_MS = 60_000;
-/** Sent on pause (the app keeps the model for at least this long); 0 on resume gives the decision back to the idle timer. */
-export const HOLD_MS = 600_000;
+const WARM_DEBOUNCE_MS = 5000;
 
-export interface EngineClientDeps {
+interface EngineClientDeps {
   fetch: typeof fetch;
   port: () => Promise<number>;
   token: () => Promise<string>;
@@ -51,4 +48,3 @@ export function createEngineClient(deps: EngineClientDeps) {
   };
 }
 
-export type EngineClient = ReturnType<typeof createEngineClient>;

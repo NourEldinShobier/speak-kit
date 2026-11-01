@@ -10,6 +10,7 @@ describe("pairing detection", () => {
     expect(authedCall(req({ authorization: "Bearer abc", origin: "chrome-extension://xyz" }), "abc", 5000)).toEqual({ origin: "chrome-extension://xyz" });
     expect(authedCall(req({ authorization: "Bearer abc" }), "abc", 5000)).toEqual({ origin: "" });
     expect(authedCall(req({ authorization: "Bearer old" }), "abc", 5000)).toBeNull();
+    expect(authedCall(req({ authorization: "Bearer abc", "x-speakkit-app": "1" }), "abc", 5000)).toBeNull(); // the app's own calls
     expect(authedCall(req({}), "abc", 5000)).toBeNull();
     expect(authedCall(req({ authorization: "Bearer abc" }, 6000), "abc", 5000)).toBeNull();
     expect(authedCall(req({ authorization: "Bearer " }), "", 5000)).toBeNull();

@@ -28,4 +28,4 @@ export function voiceLine(list: Voice[], id: string): string {
   return v ? `${v.name} · ${langLabel(v.lang)}` : prettyId(id);
 }
 export const voiceName = (list: Voice[], id: string) => list.find((x) => x.id === id)?.name ?? prettyId(id).split(" · ")[0]!;
-export const prettyId = (id: string) => id.replace(/^[a-z]{2}_/, "").replace(/^./, (c) => c.toUpperCase());
+const prettyId = (id: string) => id.replace(/^[a-z]{2}_/, "").replace(/^./, (c) => c.toUpperCase());

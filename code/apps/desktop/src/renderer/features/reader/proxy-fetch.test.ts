@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ProxyChunk, ProxyRequest } from "../../../main/library/contract";
+import type { ProxyChunk, ProxyRequest } from "../../../shared/library/contract";
 import { createProxyFetch } from "./proxy-fetch";
 
 function fakeBridge() {

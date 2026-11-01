@@ -1,13 +1,13 @@
 /** The clipboard operations selection capture needs, so the sequence can be tested without a real clipboard. */
 export interface ClipboardIO {
-  text(): string;
+  text(): Promise<string>;
   /** Everything on the clipboard right now, to put back afterwards. */
-  snapshot(): unknown;
-  restore(snapshot: unknown): void;
-  clear(): void;
+  snapshot(): Promise<unknown>;
+  restore(snapshot: unknown): Promise<void>;
+  clear(): void | Promise<void>;
 }
 
-export interface CaptureDeps {
+interface CaptureDeps {
   clip: ClipboardIO;
   /** Presses Ctrl+C in the focused app. */
   copy(): Promise<void>;
@@ -21,17 +21,17 @@ export interface CaptureDeps {
  * Returns "" when nothing was selected or the app did not answer in time.
  */
 export async function captureSelection({ clip, copy, sleep, timeoutMs = 600 }: CaptureDeps): Promise<string> {
-  const before = clip.snapshot();
-  clip.clear();
+  const before = await clip.snapshot();
+  await clip.clear();
   try {
     await copy();
     for (let waited = 0; waited < timeoutMs; waited += 25) {
-      const t = clip.text();
+      const t = await clip.text();
       if (t) return t;
       await sleep(25);
     }
     return "";
   } finally {
-    clip.restore(before);
+    await clip.restore(before);
   }
 }

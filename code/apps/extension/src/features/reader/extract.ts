@@ -135,7 +135,7 @@ const REF_CLASS = /(?:^|\s)(?:reference|mw-ref|footnote-ref|noteref|citation|cit
 const CITE_TEXT = /^\s*\[?\s*(?:\d{1,3}(?:\s*[,–-]\s*\d{1,3})*|[a-z]|[*†‡§]+)\s*\]?\s*$/i;
 const NAVISH_ROLE = new Set(["navigation", "complementary", "banner", "contentinfo", "search", "form", "dialog", "alertdialog", "menu", "menubar", "toolbar", "tablist"]);
 const CITATION_TOKEN = "\\[(?:\\d{1,3}(?:\\s*[,–-]\\s*\\d{1,3})*|[a-z]|citation needed|note \\d{1,2})\\]";
-const NEEDS_REWRITE = /[\[\n\r\t\f\v ]|  |https?:\/\/|www\./;
+const NEEDS_REWRITE = /[[\n\r\t\f\v ]|  |https?:\/\/|www\./;
 const REWRITE = new RegExp(`(\\s{2,}|[^\\S ]+)|(${CITATION_TOKEN})|((?:https?:\\/\\/|www\\.)\\S{20,})`, "gi");
 
 interface Run { el: Element; tag: string; text: string; pieces: Piece[] }

@@ -3,7 +3,7 @@ import type { PlayerState } from "@speakkit/protocol";
 import { Icon, IconButton, Slider, Button } from "@speakkit/ui";
 import { clock, timeLeft } from "../../shared/format";
 
-export interface TransportActions {
+interface TransportActions {
   toggle(): void;
   replay(): void;
   seekMs(delta: number): void;
@@ -39,7 +39,7 @@ export function Scrubber({ p, finished, a }: { p: PlayerState; finished: boolean
   );
 }
 
-export type TransportStatus = "playing" | "paused" | "finished" | "busy";
+type TransportStatus = "playing" | "paused" | "finished" | "busy";
 
 /** previous paragraph, back 10 s, play/pause (40 px round), forward 10 s, next paragraph. */
 export function Transport({ status, a }: { status: TransportStatus; a: TransportActions }) {

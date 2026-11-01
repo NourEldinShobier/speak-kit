@@ -149,6 +149,8 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 
 ## Not captured
 
+Status of every frame below (implemented, or out of scope with a reason): [scope.md](scope.md). Several of these screens exist now (library, reader, export, tray panel, mini player, engines, system settings) but the visual harness was not extended to capture them.
+
 | ID | Design screen | Reason |
 |---|---|---|
 | R1 | Feature map (Research & feature map) | Research board: documentation of the feature map, flows and Lumen patterns, not a product screen. |

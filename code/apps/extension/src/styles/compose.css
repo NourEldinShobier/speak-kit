@@ -44,6 +44,11 @@ body {
   font: 500 12px/15px Inter, "Inter Variable", system-ui, sans-serif;
   cursor: pointer;
 }
+.sk-link:focus-visible {
+  outline: 2px solid var(--accent-default);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .sk-link:hover {
   text-decoration: underline;
 }
@@ -355,6 +360,13 @@ body {
 }
 /* the option and the preview button are siblings: an option must not contain another control */
 .sk-voice__opt {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   flex: 1;
   align-items: center;
@@ -627,7 +639,8 @@ body {
   padding: 14px;
 }
 .op-preview .lm-field {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .op-prev-h {
   display: flex;
@@ -717,7 +730,7 @@ body {
   padding: 14px;
 }
 .op-add .lm-field {
-  flex: 1;
+  flex: 1 1 160px;
 }
 .op-rules {
   margin: 0;
@@ -991,5 +1004,58 @@ body {
 
 /* Tinted status pills: the tone colour alone is under 4.5:1 on its own tint in the light theme; blend a little text colour in. */
 .lm-pill {
-  color: color-mix(in srgb, var(--tone) 65%, var(--text-primary));
+  color: color-mix(in srgb, var(--tone) 45%, var(--text-primary));
+}
+
+/* Settings rows put the control under the text on a narrow screen (400% zoom): nothing runs past the card. */
+@media (max-width: 560px) {
+  .op .lm-row {
+    flex-wrap: wrap;
+  }
+  .op .lm-row__control {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .op-engines,
+  .op-grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .op-keyrow,
+  .op-add {
+    flex-wrap: wrap;
+  }
+  .op-add > *,
+  .op .lm-field,
+  .op .lm-input {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .op-prev-h {
+    flex-wrap: wrap;
+  }
+  .op .lm-seg {
+    max-width: 100%;
+  }
+  .op .lm-seg__opt {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+  .op-preview {
+    flex-wrap: wrap;
+  }
+  .op-preview > * {
+    min-width: 0;
+  }
+  .op-slider {
+    width: 100%;
+  }
+  .op-slider .lm-slider,
+  .op-slider.wide .lm-slider {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
 }

@@ -143,6 +143,15 @@ describe("auth, Origin and Host", () => {
     expect(String(pre.headers["access-control-allow-methods"])).toContain("POST");
   });
 
+  it("pins the allowed extensions when asked: another extension id is refused even with the token", async () => {
+    ctx = await start({}, undefined, { allowedExtensions: ["abcdefghijklmnop"] });
+    const host = `127.0.0.1:${ctx.server.port}`;
+    const call = (origin: string) => raw(ctx!, "GET", "/v1/voices", { Host: host, Origin: origin, ...ctx!.auth });
+    expect((await call("chrome-extension://abcdefghijklmnop")).status).toBe(200);
+    expect((await call("chrome-extension://zzzzzzzzzzzzzzzz")).status).toBe(403);
+    expect((await raw(ctx, "GET", "/v1/voices", { Host: host, ...ctx.auth })).status).toBe(200);
+  });
+
   it("rejects foreign Host headers (DNS rebinding) and accepts localhost", async () => {
     ctx = await start();
     const p = ctx.server.port;

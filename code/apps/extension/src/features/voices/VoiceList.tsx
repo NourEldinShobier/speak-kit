@@ -16,14 +16,14 @@ const GENDERS = [
 ];
 const LANGS = [{ value: "en", label: "Language: English" }];
 
-export interface VoiceListProps {
+interface VoiceListProps {
   state: VoicesState;
   selected: string;
   onSelect(id: string): void;
   onPreview(id: string): void;
 }
 
-/** Searchable, filterable voice picker (popup A6 and the in-page voice popover share this look). Rows are options of a listbox. */
+/** Searchable, filterable voice picker (popup A6 and the in-page voice popover share this look). Each row is a button that picks the voice plus a preview button. */
 export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListProps) {
   const [q, setQ] = useState("");
   const [accent, setAccent] = useState<AccentFilter>("any");
@@ -46,23 +46,12 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
         <Select size="sm" label="Accent" options={ACCENTS} value={accent} onChange={(v) => setAccent(v as AccentFilter)} />
         <Select size="sm" label="Gender" options={GENDERS} value={gender} onChange={(v) => setGender(v as GenderFilter)} />
       </div>
-      <ul className="sk-voices__list" role="listbox" aria-label="Voices" aria-busy={state.status === "loading"}>
+      <ul className="sk-voices__list" aria-label="Voices" aria-busy={state.status === "loading"}>
         {list.map((v: Voice) => {
           const sel = v.id === selected;
           return (
-            <li key={v.id} role="presentation" data-voice={v.id} className={sel ? "sk-voice is-selected" : "sk-voice"} onClick={() => onSelect(v.id)}>
-              <div
-                role="option"
-                aria-selected={sel}
-                tabIndex={0}
-                className="sk-voice__opt"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelect(v.id);
-                  }
-                }}
-              >
+            <li key={v.id} data-voice={v.id} className={sel ? "sk-voice is-selected" : "sk-voice"}>
+              <button type="button" aria-current={sel ? "true" : undefined} className="sk-voice__opt" onClick={() => onSelect(v.id)}>
                 <Avatar name={v.name} size={28} tone={sel ? "accent" : "purple"} aria-hidden />
                 <span className="sk-voice__text">
                   <b>{v.name}</b>
@@ -71,7 +60,7 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
                   </span>
                 </span>
                 {sel ? <Icon name="check" size={16} className="sk-voice__check" /> : null}
-              </div>
+              </button>
               <IconButton
                 name="player-play"
                 label={`Preview ${v.name}`}

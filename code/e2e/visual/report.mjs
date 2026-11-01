@@ -1,6 +1,6 @@
 // Builds designs/built (shots, design crops, review.html, coverage.json) and docs/visual-fidelity.md from out/results.json.
 // usage: node report.mjs   (after `pnpm exec vp test run`)
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

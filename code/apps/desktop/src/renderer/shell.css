@@ -712,3 +712,131 @@ code,
 .sk-error {
   padding: 32px;
 }
+
+/* ---- system integration: shortcuts, notifications, updates, export ---- */
+.sk-keys {
+  display: inline-flex;
+  gap: 4px;
+}
+.sk-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-default);
+  border-radius: 8px;
+  color: var(--accent-default);
+  white-space: nowrap;
+}
+.sk-notify {
+  width: 100%;
+  border-collapse: collapse;
+}
+.sk-notify th,
+.sk-notify td {
+  padding: 10px 16px;
+  text-align: center;
+  border-top: 1px solid var(--stroke-divider);
+}
+.sk-notify thead th {
+  border-top: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sk-notify th:first-child {
+  text-align: left;
+  font-weight: 400;
+}
+.sk-notify td > * {
+  margin: 0 auto;
+}
+.sk-pillbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.sk-updating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 280px;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke-divider);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--lm-shadow-overlay);
+}
+.sk-updating span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-exportpill {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sk-exportpill__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--stroke-divider);
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sk-exportpill__row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.sk-export {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sk-field {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.sk-field > span:first-child {
+  color: var(--text-secondary);
+}
+.sk-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+.sk-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke-divider);
+  border-radius: 10px;
+  background: var(--surface-card);
+}
+.sk-active {
+  color: var(--tag-green);
+  font-weight: 400;
+}

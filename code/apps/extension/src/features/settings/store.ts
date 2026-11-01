@@ -2,10 +2,10 @@ import { SETTINGS_KEY, TOKEN_KEY, type SiteRule } from "@speakkit/protocol";
 import { parseSettings } from "./schema";
 import type { Settings } from "./types";
 
-export const SETTINGS_VERSION_KEY = "speakkit.settingsVersion";
-export const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION_KEY = "speakkit.settingsVersion";
+const SETTINGS_VERSION = 1;
 
-export type DeepPartial<T> = {
+type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
 };
 
@@ -15,7 +15,7 @@ const isObj = (x: unknown): x is Record<string, unknown> =>
 /** Migrations by stored version: each upgrades raw data from version n to n+1. Version 1 is the first schema. */
 const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {};
 
-export function migrateSettings(raw: unknown, from: number): unknown {
+function migrateSettings(raw: unknown, from: number): unknown {
   let cur = raw;
   for (let v = from; v < SETTINGS_VERSION; v++)
     if (isObj(cur) && MIGRATIONS[v]) cur = MIGRATIONS[v]!(cur);

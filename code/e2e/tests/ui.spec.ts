@@ -24,7 +24,10 @@ const dominantHz = (w: number[]) => {
       im += w[i]! * Math.sin(k * i);
     }
     const p = re * re + im * im;
-    if (p > bestP) (bestP = p), (best = f);
+    if (p > bestP) {
+      bestP = p;
+      best = f;
+    }
   }
   return bestP > 1e-3 ? best : 0;
 };

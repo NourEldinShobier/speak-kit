@@ -1,4 +1,4 @@
-import type { ContentToBg, ErrorCode, Health, PlayerCommand, PlayerState, ReadDoc } from "@speakkit/protocol";
+import type { ContentToBg, ErrorCode, Health, PlayerCommand, PlayerState } from "@speakkit/protocol";
 import type { ExtraToBg } from "./internal";
 
 /**
@@ -14,7 +14,7 @@ export interface QueueItem { docId: string; title: string; url: string; sentence
 export interface OutlineItem { index: number; text: string }
 export interface QueueSnapshot { items: QueueItem[]; outline: OutlineItem[]; autoPlay: boolean }
 
-export type UiMessage = ContentToBg | ExtraToBg;
+type UiMessage = ContentToBg | ExtraToBg;
 
 const hasChrome = () => typeof chrome !== "undefined" && !!chrome.runtime?.sendMessage;
 
@@ -44,7 +44,6 @@ export function warm(reason: "popup" | "hover" | "selection" | "dock" | "options
   void send({ t: "warm", reason });
 }
 
-export type { ReadDoc };
 
 /** Subscribe to player-state broadcasts. Returns an unsubscribe function. */
 export function onPlayerState(cb: (s: PlayerState) => void): () => void {

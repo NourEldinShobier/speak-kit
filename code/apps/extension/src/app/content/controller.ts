@@ -6,9 +6,10 @@ import {
 import { Highlighter, isDarkPage, isInView, keepInView, palette, planWords, WordClock } from "../../features/highlight";
 import { extract, findMainRoot, sentenceIndexAt, sentenceRange, wordRange, type Extraction, type ReaderView } from "../../features/reader";
 import { defaultSettings, withDefaults, type ReaderSettings, type Settings } from "../../features/settings";
-import type { ExtraBgToContent, ExtraToBg, VoiceInfo } from "../../shared/internal";
+import type { ExtraToBg, VoiceInfo } from "../../shared/internal";
 import type { UiHandlers, UiModel } from "../../shared/ui-types";
-import { defer, loadUi } from "./lazy";
+import { defer, loadUi, type Deferred } from "./lazy";
+import { asPlayerState } from "./player-state";
 import type { Ui } from "./ui";
 
 /** The lazy half of the content script: settings, extraction, highlight and the Shadow DOM UI. Loaded by index.ts. */
@@ -22,13 +23,13 @@ const editable = (t: EventTarget | null) => {
 };
 
 /** Stored settings over the defaults. Validation (valibot) happens in the service worker and the extension pages, not in the page. */
-export const mergeSettings = (stored: Partial<Settings> | undefined): Settings => withDefaults(stored);
+const mergeSettings = (stored: Partial<Settings> | undefined): Settings => withDefaults(stored);
 
 interface Doc { ex: Extraction; doc: ReadDoc; blocks: number[] }
 
 class Controller {
   settings: Settings = defaultSettings();
-  private ui: Ui | null = null;
+  private ui: Deferred<Ui> | null = null;
   private hl = new Highlighter();
   private clock = new WordClock((w, i) => this.onWord(w, i));
   private docs = new Map<string, Doc>();
@@ -50,23 +51,32 @@ class Controller {
   private readerDoc: string | null = null;
   private scrollOn = false;
 
+  private readonly ac = new AbortController();
+  private readonly onStorage = (ch: Record<string, chrome.storage.StorageChange>, area: string) => {
+    if (area === "sync" && ch[SETTINGS_KEY]) void this.loadSettings().then(() => this.refresh());
+  };
+
   async init() {
     await this.loadSettings();
-    chrome.storage.onChanged.addListener((ch, area) => { if (area === "sync" && ch[SETTINGS_KEY]) void this.loadSettings().then(() => this.refresh()); });
-    document.addEventListener("pointerup", this.onPointerUp, true);
-    document.addEventListener("keyup", this.onKeyUp, true);
-    document.addEventListener("selectionchange", this.onSelChange);
-    document.addEventListener("pointermove", this.onMove, { passive: true });
-    document.addEventListener("focusin", this.onFocusIn);
-    document.addEventListener("contextmenu", this.onContext, true);
-    document.addEventListener("keydown", this.onKey, true);
-    document.documentElement.addEventListener("pointerleave", () => this.ui?.scheduleGutterHide());
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.refresh());
+    const { signal } = this.ac;
+    chrome.storage.onChanged.addListener(this.onStorage);
+    document.addEventListener("pointerup", this.onPointerUp, { capture: true, signal });
+    document.addEventListener("keyup", this.onKeyUp, { capture: true, signal });
+    document.addEventListener("selectionchange", this.onSelChange, { signal });
+    document.addEventListener("pointermove", this.onMove, { passive: true, signal });
+    document.addEventListener("focusin", this.onFocusIn, { signal });
+    document.addEventListener("contextmenu", this.onContext, { capture: true, signal });
+    document.addEventListener("keydown", this.onKey, { capture: true, signal });
+    document.documentElement.addEventListener("pointerleave", () => this.ui?.scheduleGutterHide(), { signal });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.refresh(), { signal });
     this.dark = isDarkPage();
     this.applyStyle();
     this.refresh();
     // pick up a reading that is already running (page reloaded or UI enabled mid-reading)
-    this.post({ t: "get-state" }, (r) => { const s = (r as { state?: PlayerState } | PlayerState | undefined); const st = s && "state" in s ? s.state : (s as PlayerState | undefined); if (st && typeof st === "object" && "status" in st && !this.state) this.onState(st); });
+    this.post({ t: "get-state" }, (r) => {
+      const st = asPlayerState(r);
+      if (st && !this.state) this.onState(st);
+    });
   }
 
   // ------------------------------------------------------------ settings and model
@@ -85,6 +95,12 @@ class Controller {
       await chrome.storage.sync.set({ [SETTINGS_KEY]: s });
       this.settings = s;
     } catch { /* extension reloaded: nothing to save to */ }
+  }
+
+  /** Removes every listener the controller added (the page is going away or the extension was reloaded). */
+  dispose() {
+    this.ac.abort();
+    chrome.storage.onChanged.removeListener(this.onStorage);
   }
 
   get host() { return location.hostname.replace(/^www\./, ""); }
@@ -153,7 +169,7 @@ class Controller {
   }
   private ensureUi() { if (!this.ui) this.ui = this.makeUi(this.model()); return this.ui; }
   /** The UI lives in content-ui.js (loaded now, on first need); the returned handle queues calls until it has arrived. */
-  private makeUi(m: UiModel): Ui {
+  private makeUi(m: UiModel): Deferred<Ui> {
     return defer(loadUi(chrome.runtime.getURL("content-ui.js"), this.handlers, m), ["render"]);
   }
 
@@ -164,7 +180,7 @@ class Controller {
   }
   private cmd(command: PlayerCommand) { this.post({ t: "player", command }); }
 
-  onMessage(msg: BgToContent | ExtraBgToContent) {
+  onMessage(msg: BgToContent) {
     switch (msg.t) {
       case "state": this.onState(msg.state); break;
       case "sentence-start": this.onSentenceStart(msg.start); break;
@@ -262,7 +278,7 @@ class Controller {
     ui.showGutter(null);
     this.readerDoc = id;
     const docId = id;
-    this.reader = defer((ui as unknown as { ready: Promise<Ui> }).ready.then((u) => u.openReader(d.ex, docId, {
+    this.reader = defer<ReaderView>(ui.ready.then((u) => u.openReader(d.ex, docId, {
       settings: () => this.settings.reader,
       save: (p) => this.saveReader(p),
       onClose: () => this.closeReader(),
@@ -509,4 +525,3 @@ class Controller {
 
 let instance: Promise<Controller> | null = null;
 export const boot = (): Promise<Controller> => (instance ??= (async () => { const c = new Controller(); await c.init(); return c; })());
-export type { Controller };

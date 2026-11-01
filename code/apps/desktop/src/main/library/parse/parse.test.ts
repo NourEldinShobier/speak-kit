@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vite-plus/test";
 import { ImportError, parseFile } from ".";
 import { pageBlocks, stripRunning, type PdfItem } from "./pdf-layout";
-import { textToBlocks, wordCount } from "./text";
+import { textToBlocks, wordCount } from "../../../shared/library/text";
 
 const fixture = (name: string) => new Uint8Array(readFileSync(fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))));
 const texts = (blocks: { text: string }[]) => blocks.map((b) => b.text);
@@ -27,6 +27,7 @@ describe("text", () => {
 describe("markdown", () => {
   it("keeps headings, paragraphs, items and quotes as plain text and drops code", async () => {
     const { parsed } = await parseFile("notes.md", fixture("notes.md"));
+    expect(parsed.title).toBe("Meeting notes");
     expect(parsed.blocks).toEqual([
       { kind: "heading", text: "Meeting notes", level: 1 },
       { kind: "paragraph", text: "We agreed on three things:" },

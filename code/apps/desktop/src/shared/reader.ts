@@ -34,10 +34,10 @@ export type ReaderCommand =
   | { type: "open-app" };
 
 /** Speaking speed for time estimates when a sentence has no audio yet (characters per second at 1x). */
-export const CHARS_PER_SECOND = 15;
+const CHARS_PER_SECOND = 15;
 export const estimateMs = (text: string, speed: number) => Math.round((text.length / CHARS_PER_SECOND / speed) * 1000);
 
-export const MAX_READ_CHARS = 100_000;
+const MAX_READ_CHARS = 100_000;
 const MAX_SENTENCE = 400;
 
 /** Sentences of a text, each short enough for the server (it takes 2000 characters; long ones break at commas or spaces). */
@@ -63,11 +63,7 @@ export const titleOf = (text: string) => {
   return t.length > 60 ? `${t.slice(0, 59).trimEnd()}…` : t;
 };
 
-/** "1:05" style clock. */
-export const clock = (ms: number) => {
-  const s = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-};
+export { clock } from "@speakkit/protocol";
 
 /** One line under the title in the mini player and the tray panel. */
 export const statusLine = (r: ReaderState): string => {

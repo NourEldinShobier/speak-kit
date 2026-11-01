@@ -5,7 +5,6 @@ import {
   Banner,
   Button,
   EmptyState,
-  Icon,
   Segmented,
   SettingRow,
   SettingsSection,
@@ -204,45 +203,40 @@ export function Voices({ s }: { s: AppState }) {
   );
 }
 
-export function Engines({ s }: { s: AppState }) {
-  const v = engineView(s.health, s.serverError);
-  const e = s.health?.engine;
+export { EnginesPage as Engines } from "./EnginesPage";
+
+/** "Install the extension": reveals the bundled extension folder and opens the browser's extensions page, then shows the three steps. */
+export function InstallExtension() {
+  const [folder, setFolder] = useState<string | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
   return (
-    <Page title="Engines" lead="One heavy engine sits in memory at a time, and only while you need it.">
-      <div>
-        <p className="sk-caps">Installed</p>
-        <div className="lm-card" data-testid="engines">
-          <div className="sk-engine" data-engine="kokoro">
-            <span className="sk-tile"><Icon name="cpu" size={18} /></span>
-            <div className="sk-engine__body">
-              <b>Kokoro-82M</b>
-              <span>Natural English voices, runs on the CPU, about one second to the first word.</span>
-              {e?.state === "unloaded" && <span>Not in memory. It loads when you press play.</span>}
-              {e?.state === "downloading" && <span>Downloading, {Math.round((e.progress ?? 0) * 100)}%</span>}
-              {e?.state === "error" && <span>{e.detail}</span>}
-            </div>
-            <div className="sk-row-actions">
-              <EngineBadge s={s} />
-              {v.key === "missing" && <Button size="sm" onClick={() => api.downloadModel()}>Download</Button>}
-              {v.key === "error" && <Button size="sm" onClick={() => api.retryEngine()}>Retry</Button>}
-            </div>
-          </div>
+    <>
+      <Button
+        iconLeft="folder"
+        loading={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            setFolder(await api.installExtension());
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Install from this app
+      </Button>
+      {folder === null && <Banner tone="info">This copy has no bundled extension. Use the Chrome Web Store link.</Banner>}
+      {folder && (
+        <div className="sk-guide" data-testid="install-guide">
+          <b>Almost there</b>
+          <ol className="sk-steps">
+            <li>In the extensions page that just opened, turn on <b>Developer mode</b> (top right).</li>
+            <li>Choose <b>Load unpacked</b>.</li>
+            <li>Pick this folder, which is open in Explorer: <code>{folder}</code> <Button size="sm" iconLeft="copy" onClick={() => api.copy(folder)}>Copy path</Button></li>
+          </ol>
         </div>
-      </div>
-      <div>
-        <p className="sk-caps">Coming later</p>
-        <div className="lm-card">
-          <div className="sk-engine" data-engine="chatterbox" style={{ opacity: 0.7 }}>
-            <span className="sk-tile"><Icon name="sparkles" size={18} /></span>
-            <div className="sk-engine__body">
-              <b>Chatterbox</b>
-              <span>Expressive voices with emotion control and voice cloning. Needs a GPU and about 2.4 GB.</span>
-            </div>
-            <StatusPill>Not available yet</StatusPill>
-          </div>
-        </div>
-      </div>
-    </Page>
+      )}
+    </>
   );
 }
 
@@ -266,6 +260,7 @@ export function BrowserPage({ s }: { s: AppState }) {
         <TokenField token={s.token} regenerate confirmRegenerate />
         <div className="sk-row-actions">
           <Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>Open Web Store</Button>
+          <InstallExtension />
         </div>
       </div>
       <div>

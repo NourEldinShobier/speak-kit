@@ -11,7 +11,7 @@ import { EngineNotReadyError, EngineUnavailableError, type SynthOptions, type Sy
 import { detectHardware, MIN_VRAM_MB, type Hardware } from "./detect";
 import { ClonedVoiceStore } from "./voice-store";
 
-export const CHATTERBOX_VOICE = "chatterbox";
+const CHATTERBOX_VOICE = "chatterbox";
 const DEFAULT_VOICE: Voice = { id: CHATTERBOX_VOICE, name: "Chatterbox", lang: "en-US", gender: "female", quality: "A" };
 const GAP_SAMPLES = Math.round(SAMPLE_RATE * 0.08);
 const MARKER = "installed";
@@ -82,7 +82,7 @@ function runLines(cmd: string, args: string[], onLine: (l: string) => void): Pro
   });
 }
 
-export const envPython = (envDir: string) => join(envDir, process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+const envPython = (envDir: string) => join(envDir, process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 
 /** Installs chatterbox-tts into a private virtualenv. Progress is approximate: pip does not report a total, so each resolved package counts. */
 async function pipInstall({ python, envDir, progress }: InstallContext): Promise<void> {

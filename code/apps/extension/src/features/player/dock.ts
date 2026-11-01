@@ -220,7 +220,7 @@ export class Dock {
         : m.status === "paused" ? `Paused · ${clock(m.elapsedMs)}` : `Reading · ${clock(m.elapsedMs)}`;
     }
     if (p.speed) { p.speed.textContent = speedLabel(m.speed); p.speed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`); }
-    if (p.voice) p.voice.textContent = `${m.voiceName || "Voice"} · on device`;
+    if (p.voice) p.voice.textContent = p.voice.title = `${m.voiceName || "Voice"} · on device`;
     if (p.av) p.av.textContent = (m.voiceName || "V").slice(0, 1).toUpperCase();
     p.bar?.set();
   }

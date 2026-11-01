@@ -16,13 +16,13 @@ interface Job extends ExportJob {
   settled: Promise<void>;
 }
 
-export interface ExportInput {
+interface ExportInput {
   sentences: string[];
   voice: string;
   speed: number;
   gapMs: number;
 }
-export interface ExportDeps {
+interface ExportDeps {
   /** Waits for a synthesis slot; resolves to its release function, rejects with the signal's reason if aborted while queued. */
   acquireSlot(ac: AbortController): Promise<() => void>;
   /** Normalizes the sentence and synthesizes it (silence when nothing readable is left). */

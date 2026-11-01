@@ -1,11 +1,11 @@
 import path from "node:path";
-import { EXTENSIONS, type Format, type ImportFailure } from "../contract";
+import { EXTENSIONS, type Format, type ImportFailure } from "../../../shared/library/contract";
 import { docxToParsed } from "./docx";
 import { epubToParsed } from "./epub";
 import { htmlToParsed } from "./html";
 import { markdownToBlocks } from "./markdown";
 import { pdfToParsed } from "./pdf";
-import { textToBlocks, type Parsed } from "./text";
+import { textToBlocks, type Parsed } from "../../../shared/library/text";
 
 export class ImportError extends Error {
   constructor(
@@ -27,9 +27,9 @@ const FORMAT_OF: Record<(typeof EXTENSIONS)[number], Format> = {
   epub: "epub",
 };
 
-export const SUPPORTED = "TXT, MD, HTML, PDF, DOCX, EPUB";
+const SUPPORTED = "TXT, MD, HTML, PDF, DOCX, EPUB";
 
-export function formatOf(name: string): Format | undefined {
+function formatOf(name: string): Format | undefined {
   const ext = path.extname(name).slice(1).toLowerCase();
   return FORMAT_OF[ext as keyof typeof FORMAT_OF];
 }
@@ -43,7 +43,10 @@ export async function parseFile(name: string, bytes: Uint8Array): Promise<{ form
   let parsed: Parsed;
   try {
     if (format === "text") parsed = { title: "", blocks: textToBlocks(decode(bytes)) };
-    else if (format === "markdown") parsed = { title: "", blocks: markdownToBlocks(decode(bytes)) };
+    else if (format === "markdown") {
+      const blocks = markdownToBlocks(decode(bytes));
+      parsed = { title: blocks.find((b) => b.kind === "heading")?.text ?? "", blocks };
+    }
     else if (format === "html") parsed = htmlToParsed(decode(bytes), { readable: true });
     else if (format === "pdf") parsed = await pdfToParsed(bytes);
     else if (format === "docx") parsed = await docxToParsed(bytes);

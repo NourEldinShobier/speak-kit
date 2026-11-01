@@ -117,6 +117,24 @@ describe("ReaderController", () => {
     expect(c.state.status).toBe("idle");
   });
 
+  it("fail shows a message without a reading, and stop clears it", () => {
+    const { c } = setup();
+    c.fail("No text selected.");
+    expect(c.state).toMatchObject({ status: "error", error: "No text selected.", total: 0 });
+    c.command({ type: "stop" });
+    expect(c.state.status).toBe("idle");
+  });
+
+  it("starting a new reading while one plays never announces idle, so the mini player does not flash", async () => {
+    const { c, states } = setup();
+    c.start(TEXT, "selection");
+    await flush();
+    const before = states.length;
+    c.start("Another text to read.", "clipboard");
+    expect(states.slice(before).map((s) => s.status)).toEqual(["preparing"]);
+    expect(c.state).toMatchObject({ source: "clipboard", total: 1 });
+  });
+
   it("text without letters starts nothing", () => {
     const { c } = setup();
     expect(c.start("  ... --- ", "clipboard")).toBe(false);

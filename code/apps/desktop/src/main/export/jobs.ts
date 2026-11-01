@@ -3,7 +3,7 @@ import path from "node:path";
 import type { ExportJob, ExportRequest } from "@speakkit/protocol";
 import { safeFileName, type ExportOptions, type ExportTarget, type ExportView } from "../../shared/export";
 import { splitSentences } from "../../shared/reader";
-import { parseWav, type Wav } from "./wav";
+import { parseWav, type Wav } from "@speakkit/engine";
 
 /** The export routes of the server, as ExportJobs uses them. */
 export interface ExportServer {
@@ -49,9 +49,6 @@ export class ExportJobs {
 
   get views(): readonly ExportView[] {
     return this.#views;
-  }
-  get runningCount() {
-    return this.#views.filter((v) => v.stage === "rendering" || v.stage === "encoding" || v.stage === "saving").length;
   }
 
   /** Starts a job and returns its view at once; the work continues in the background. */

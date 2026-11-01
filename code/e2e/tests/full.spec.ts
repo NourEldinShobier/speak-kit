@@ -61,7 +61,10 @@ function treeRssMb(pid: number): number {
   const ids = new Set([pid]);
   for (let grew = true; grew; ) {
     grew = false;
-    for (const p of all) if (ids.has(p.ParentProcessId) && !ids.has(p.ProcessId)) (ids.add(p.ProcessId), (grew = true));
+    for (const p of all) if (ids.has(p.ParentProcessId) && !ids.has(p.ProcessId)) {
+        ids.add(p.ProcessId);
+        grew = true;
+      }
   }
   return all.filter((p) => ids.has(p.ProcessId)).reduce((a, p) => a + p.WorkingSetSize, 0) / 1024 / 1024;
 }
@@ -149,7 +152,7 @@ test.describe("full path with the real Kokoro model @slow", () => {
       const { popup } = await begin(ext, real, "/short");
       await popup.getByRole("button", { name: /^Voice:/ }).click();
       await popup.getByRole("searchbox").fill("Emma");
-      await popup.getByRole("option", { name: /Emma/ }).click();
+      await popup.getByRole("button", { name: /^Emma/ }).click();
       await popup.getByRole("button", { name: "Done" }).click();
       await ext.setSettings({ speed: 3 });
       await popup.getByRole("button", { name: "Listen to this page" }).click();

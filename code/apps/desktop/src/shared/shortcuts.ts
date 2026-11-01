@@ -30,7 +30,7 @@ const keyName = (part: string): string | null => {
 };
 
 /** Splits "ctrl+alt+s" into canonical modifiers and key, or null when it is not an accelerator this app accepts. */
-export function parseAccelerator(raw: string): { mods: (typeof MODIFIERS)[number][]; key: string } | null {
+function parseAccelerator(raw: string): { mods: (typeof MODIFIERS)[number][]; key: string } | null {
   const mods = new Set<(typeof MODIFIERS)[number]>();
   let key: string | null = null;
   for (const part of raw.split("+").map((p) => p.trim())) {
@@ -97,14 +97,14 @@ const CODE_KEY: Record<string, string> = {
   Minus: "-", Equal: "=", Comma: ",", Period: ".", Slash: "/", Semicolon: ";", Quote: "'", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Backquote: "`",
 };
 
-export interface KeyEventLike {
+interface KeyEventLike {
   code: string;
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
   metaKey: boolean;
 }
-export type Recorded =
+type Recorded =
   | { kind: "cancel" }
   | { kind: "waiting" }
   | { kind: "invalid"; reason: string }

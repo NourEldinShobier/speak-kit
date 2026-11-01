@@ -147,3 +147,26 @@ What kokoro-js already does was measured by running its own pre-processing and p
 - Real Chatterbox could not be run here: the machine has an RTX 4080 Laptop GPU (12 GB) but only Python 3.14 and 3.13 (Store), and chatterbox-tts supports 3.10 to 3.12, so the engine reports `unavailable` / `python-missing`. The sidecar script and the install path are therefore only tested against a fake sidecar (`packages/engine/tests/fake-sidecar.mjs`); `SPEAKKIT_REAL_CHATTERBOX=1` runs `tests/real-chatterbox.test.ts` on a machine with Python 3.10 to 3.12. No load time, real-time factor or VRAM numbers exist yet.
 - Chatterbox ignores `speed` below 2 (the model has no speed control); the player's `playbackRate` only covers speeds above 2.
 - Real-model regression run (`SPEAKKIT_REAL=1`, engine and server suites): all pass, 72 and 83 tests.
+
+## Integration check, v0.2.0 (2026-11-01)
+
+After the refactors of this release (server split into routes, desktop main split into window/runtime/handlers, service worker split, shared wire schemas) the budgets were measured again with `pnpm e2e:full` (perf phase, one worker, real Kokoro where noted) and the extension size report. Windows 11, the same shared machine, so expect roughly 10 to 30 % noise.
+
+| What | Budget | Result |
+|---|---|---|
+| First audio after the popup warmed the model, real Kokoro | < 1500 ms | 623 ms (599 ms in the first run of the day) |
+| First audio from an unloaded model, real Kokoro | informational | 1813 ms (2114 ms in the first run) |
+| Server memory, model unloaded / ready / after idle unload | after unload < unloaded + 40 MB | 91.6 / 676.8 / 88.1 MB |
+| Click to first scheduled audio, fake engine (pipeline overhead) | < 600 ms | 216 ms |
+| `content.js` (in-page script), production | gzip < 16 KB (test budget 40) | 30.8 KB raw, 11.6 KB gzip (11.5 before this release) |
+| `content.js` injection via `executeScript` | < 80 ms | 1.6 ms |
+| Extraction of 5,000 paragraphs: longest main-thread stall | < 50 ms | 21.3 ms |
+| Popup open to Listen button | < 700 ms | 41 ms |
+| Offscreen JS heap growth over 600 paragraph jumps | < 25 MB | 0.3 MB (6.6 MB after the run) |
+| Bundles (gzip, budget test in `apps/extension/src/budget.test.ts`) | | popup 119.3 of 120 KB, options 118.0 of 120, side panel 90.3 of 100, offscreen 9.2 of 14, background 5.2 of 8, content-ui 22.0 of 30, soundtouch worklet 16.4 of 20 |
+| Desktop: unloaded model, hidden window | < 150 MB private, < 200 MB working set | passes (`apps/desktop/tests/perf.test.ts`) |
+| Packaged app (`smoke-packaged --real`) | | health up, one real sentence in 1.8 s, `--quit` exits 0 and frees the port |
+
+Idle unload and the 50-cycle memory table above were not re-run with the bench script; the e2e figures (88.1 MB after unload against 91.6 MB before the first load) show the same behaviour. The bench numbers in "Model lifecycle" are from before this release.
+
+One decision driven by this check: the content script validates the worker's `get-state` answer with a 15-line hand-written guard (`app/content/player-state.ts`) instead of a valibot schema. The schema version added 1.9 KB gzip (11.5 to 13.4 KB) to the script that is injected into every page.

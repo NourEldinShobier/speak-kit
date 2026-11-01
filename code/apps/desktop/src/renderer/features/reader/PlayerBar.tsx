@@ -3,10 +3,10 @@ import { Icon, IconButton, Popover, Slider, Spinner } from "@speakkit/ui";
 import { MAX_SPEED, MIN_SPEED, type PlayerState, type Voice } from "@speakkit/protocol";
 import { clock } from "../library/model";
 
-export const SPEED_PRESETS = [0.8, 1, 1.2, 1.5, 2, 3];
-export const SLEEP_CHOICES = [5, 15, 30, 45, 60];
+const SPEED_PRESETS = [0.8, 1, 1.2, 1.5, 2, 3];
+const SLEEP_CHOICES = [5, 15, 30, 45, 60];
 
-export interface BarProps {
+interface BarProps {
   title: string;
   state: PlayerState;
   /** shown until the player knows the real length */

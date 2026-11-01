@@ -1,11 +1,8 @@
 import type {
   ErrorCode,
-  Health,
   PlayerCommand,
   PlayerState,
-  ReadDoc,
   SentenceStart,
-  VoiceList,
 } from "@speakkit/protocol";
 import type { PlayerConfig, QueueItem } from "@speakkit/player";
 
@@ -38,7 +35,7 @@ export type ExtraToBg =
   | { t: "read"; mode: "page" | "selection" | "from-here"; tabId?: number; queue?: boolean } // reply { ok: boolean }
   | { t: "open-sidepanel"; windowId?: number }
   /** sent by the popup and side panel */
-  | { t: "read-tab"; tabId: number; mode: "page" | "selection"; queue?: boolean }
+  | { t: "read-tab"; tabId?: number; mode: "page" | "selection"; queue?: boolean }
   | { t: "set-auto-play"; on: boolean }
   | { t: "preview"; voice: string; speed?: number; text: string }
   /** sent by the content script dock */
@@ -49,11 +46,6 @@ export type ExtraToBg =
   | { t: "warm"; reason?: "popup" | "hover" | "selection" | "dock" | "options" }
   /** open or close the reader view of a tab (default: the active tab) */
   | { t: "reader"; tabId?: number; open: boolean };
-
-/** Extra pushes from the worker to a content script (besides protocol BgToContent). */
-export type ExtraBgToContent =
-  | { t: "toast"; message: string; kind?: "ok" | "info" | "err"; action?: "open-sidepanel" | "open-options"; actionLabel?: string }
-  | { t: "reader"; open: boolean };
 
 export interface VoiceInfo {
   id: string;
@@ -68,4 +60,3 @@ export interface VoiceInfo {
 /** Broadcast by the worker to extension pages (in addition to BgToContent state / sentence-start). */
 export type ExtraBroadcast = { t: "queue"; queue: QueueItem[] };
 
-export type { ErrorCode, Health, ReadDoc, VoiceList };

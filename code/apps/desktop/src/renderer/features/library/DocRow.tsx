@@ -1,8 +1,8 @@
 import { Badge, DropdownMenu, DropdownMenuItem, DropdownMenuSeparator, Icon, IconButton, ProgressBar } from "@speakkit/ui";
-import type { DocMeta, SearchHit } from "../../../main/library/contract";
+import type { DocMeta, SearchHit } from "../../../shared/library/contract";
 import { clock, dayLabel, estimateMs, FORMAT_BADGE, highlightParts, rowStatus, subtitle } from "./model";
 
-export function Marked({ text, query }: { text: string; query: string }) {
+function Marked({ text, query }: { text: string; query: string }) {
   return (
     <>
       {highlightParts(text, query).map(([t, hit], i) => (hit ? <mark key={i} className="lib-mark">{t}</mark> : t))}
@@ -10,8 +10,9 @@ export function Marked({ text, query }: { text: string; query: string }) {
   );
 }
 
-export interface RowActions {
+interface RowActions {
   onOpen(): void;
+  onPlay(): void;
   onRename(): void;
   onVoice(): void;
   onFinished(): void;
@@ -46,7 +47,7 @@ export function DocRow({ doc, speed, now, query, hit, actions }: { doc: DocMeta;
         <span className="lib-row__day">{dayLabel(doc.openedAt ?? doc.addedAt, now)}</span>
       </button>
       <DropdownMenu trigger={<IconButton name="dots" label={`More for ${doc.title}`} size={28} />}>
-        <DropdownMenuItem icon="player-play" onSelect={actions.onOpen}>Play</DropdownMenuItem>
+        <DropdownMenuItem icon="player-play" onSelect={actions.onPlay}>Play</DropdownMenuItem>
         <DropdownMenuItem icon="pencil" onSelect={actions.onRename}>Rename</DropdownMenuItem>
         <DropdownMenuItem icon="microphone" onSelect={actions.onVoice}>Change voice</DropdownMenuItem>
         <DropdownMenuItem icon="circle-check" onSelect={actions.onFinished}>{doc.finished ? "Mark as unfinished" : "Mark as finished"}</DropdownMenuItem>

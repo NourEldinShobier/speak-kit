@@ -17,7 +17,7 @@ export interface PopupInputs {
 }
 
 /** Pages extensions cannot script. */
-export function isUnreadableUrl(url?: string): boolean {
+function isUnreadableUrl(url?: string): boolean {
   if (!url) return false;
   if (/^(chrome|edge|brave|about|chrome-extension|chrome-search|devtools|view-source):/i.test(url)) return true;
   try {
@@ -80,7 +80,7 @@ export function deriveView(i: PopupInputs): PopupView {
   return i.selection ? "selection" : "idle";
 }
 
-export type Tone = "ok" | "warn" | "err" | "neutral";
+type Tone = "ok" | "warn" | "err" | "neutral";
 export function headerBadge(view: PopupView, engine?: Parameters<typeof engineBadge>[0]): { tone: Tone; label: string } {
   switch (view) {
     case "install": return { tone: "neutral", label: "Not set up" };

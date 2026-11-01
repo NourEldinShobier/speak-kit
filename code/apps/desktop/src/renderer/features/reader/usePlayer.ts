@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Player, soundTouchStretch, type PlayerConfig } from "@speakkit/player";
-import { SAMPLE_RATE, type EngineState, type Health, type PlayerCommand, type PlayerState, type ReadDoc, type SentenceStart } from "@speakkit/protocol";
+import { SAMPLE_RATE, parseHealth, type EngineState, type PlayerCommand, type PlayerState, type ReadDoc, type SentenceStart } from "@speakkit/protocol";
 import { createProxyFetch } from "./proxy-fetch";
 
 const IDLE: PlayerState = { status: "idle", sentenceIndex: 0, sentenceCount: 0, elapsedMs: 0, totalMs: 0, speed: 1, voice: "", queueLength: 0 };
 
-export interface ReaderPlayer {
+interface ReaderPlayer {
   state: PlayerState;
   play(doc: ReadDoc, cfg: PlayerConfig): void;
   command(cmd: PlayerCommand): void;
@@ -35,7 +35,7 @@ export function useReaderPlayer(onSentence: (s: SentenceStart) => void): ReaderP
           hold: (ms) => void send("/v1/engine/hold", { method: "POST", body: JSON.stringify({ ms }) }).catch(() => {}),
           engineState: async (): Promise<EngineState | undefined> => {
             try {
-              return ((await (await send("/v1/health")).json()) as Health).engine.state;
+              return parseHealth(await (await send("/v1/health")).json())?.engine.state;
             } catch {
               return undefined;
             }
