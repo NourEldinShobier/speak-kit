@@ -15,6 +15,7 @@ Generator: `designs/gen` (`bun main.ts [id...]` builds everything in about 4 min
 ## Structure (Lumen)
 
 Pages: `Research & feature map` (3 sections), `Chrome extension` (14), `Desktop app` (22), `Foundations & components` (4), `Motion` (2).
+Frame name rule: the text after the dash is the behaviour rule (first sentence of the screen note). Page frames never show the paragraph play gutter on a fresh page; B2 is the 'after reading started' state (pill playing, hover on a paragraph) and B17 shows only the 14 px edge tab.
 Section frame: `N · Title — coverage`, 1140 px tall, white fill, 10% outline, numbered per page. Frames: `<ID> · Title — behavior rule`, 1440x900 at x=100, y=140, 100 px gaps; boards wider (2400 and 2160 px). Popup and in-page states sit inside the Chrome frame; narrow screens (popups, 760 px options) carry a rules card to the right of the screen.
 Every flow is drawn dark first; light twins are suffixed `-L` and built by the same builder with light tokens (3 to 9 per surface).
 Page background `#F5F5F5` as in Lumen.
@@ -23,7 +24,7 @@ Page background `#F5F5F5` as in Lumen.
 
 - Desktop shell (`kit.desktopWindow`): Lumen X15. Title bar 40 px with logo, sidebar toggle, back and forward, centered search 420x30 with `Ctrl K` chip, status pill (engine state), bell, window buttons; 248 px sidebar (New reading with `Ctrl N`, Home, Library, Voices, Engines, RECENT list, engine card, Settings); content on an inset card (8 px, r10, editor surface). A 60 px `rail` variant exists for narrow windows. All E, F, G, J, K frames use it.
 - Settings (H): Lumen SD1. Title-bar field says `Search settings`, 248 px settings nav with group labels GENERAL, ENGINE, BROWSER, APP, 760 px column, rows 13/12 px.
-- Read-aloud pill (`kit.dock`): Lumen F5 (id 46082) measured by layer data: 649x52, r999, `#252627`, 1 px `#FFFFFF14`, shadow 0 16 48 .45; previous 34, play 40 `#0078D4`, next 34, text 220 (`Paragraph 2 of 14 · 9 min left` 11 px over a 4 px bar), speed pill 54x30, voice pill `Heart · on device` with chevron, close 30. States: idle, preparing, reading, paused, done, error, engine unloaded, engine waking.
+- Read-aloud pill (`kit.dock`): Lumen F5 (id 46082) measured by layer data: 649x52, r999, `#252627`, 1 px `#FFFFFF14`, shadow 0 2 6 (6% light, 30% dark; Lockix scale, see design-system.md); previous 34, play 40 `#0078D4`, next 34, text 220 (`Paragraph 2 of 14 · 9 min left` 11 px over a 4 px bar), speed pill 54x30, voice pill `Heart · on device` with chevron, close 30. States: idle, preparing, reading, paused, done, error, engine unloaded, engine waking.
 - Reading popover (`kit.readingPopover`): F5 "Reader options" 236 px: Sans / Serif / Dyslexic, Size, Width, Theme, and `Highlight sentence` (replaces Lumen's `Summary at top`).
 - Reader view (B10, B12): F5 geometry: dark chrome, paper card inset 8 px (r12, `#F7F3EA`), 680 px column, 34/42 title, 19/32 body, current sentence band with word marker, popover top right, address-bar reader icon highlighted. Body font is Georgia (Source Serif 4, used by Lumen, is not installed here).
 - Edge launcher: the vertical expanded pill is superseded by the read-aloud pill; the 14 px tab (B17) and reading tab (B19) stay.
@@ -69,3 +70,7 @@ Page background `#F5F5F5` as in Lumen.
 - The frame names are ASCII-safe: colons become commas.
 - Boards (R, Q, MO, O1, K12, E17) are drawn in a 1440x900 wrapper with small type; they are readable at 2x but denser than Lumen's boards.
 - Frames are not linked as prototypes and nothing is componentized: the file is generated, not hand-edited. Run the generator to change it.
+
+## Update 2026-11-01
+
+- Solid transport glyphs (thin pause bars), on-accent key chip in primary buttons (`Ctrl N` in the sidebar), Lockix elevation (menu 0 1 2, popover and pill 0 2 6, dialog and palette 0 4 12; old 0 8 24 and 0 16 48 removed), gutter play button only after reading has started (B2 now shows the pill playing). All 207 frames, the .figcraft file, manifest, contact sheets and review.html rebuilt. Rules are in `design-system.md`.

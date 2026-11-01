@@ -144,7 +144,7 @@ What kokoro-js already does was measured by running its own pre-processing and p
 
 - Hardware probe at server start (`nvidia-smi` plus eight Python version probes in parallel): 166 ms on this machine, added to CLI boot only when the Chatterbox engine is enabled (`SPEAKKIT_CHATTERBOX=off` skips it).
 - Idle cost: with Chatterbox not loaded there is no process and no memory; the sidecar is spawned on the first request to it and killed on idle unload or when Kokoro is selected. Selecting an engine does not load it.
-- Real Chatterbox could not be run here: the machine has an RTX 4080 Laptop GPU (12 GB) but only Python 3.14 and 3.13 (Store), and chatterbox-tts supports 3.10 to 3.12, so the engine reports `unavailable` / `python-missing`. The sidecar script and the install path are therefore only tested against a fake sidecar (`packages/engine/tests/fake-sidecar.mjs`); `SPEAKKIT_REAL_CHATTERBOX=1` runs `tests/real-chatterbox.test.ts` on a machine with Python 3.10 to 3.12. No load time, real-time factor or VRAM numbers exist yet.
+- Real Chatterbox, measured 2026-11-01 on the RTX 4080 Laptop GPU (12 GB, about 3.3 GB already used by other programs), Python 3.11 fetched by uv, torch 2.6.0+cu124, chatterbox-tts 0.1.7 (`SPEAKKIT_REAL_CHATTERBOX=1`, `tests/real-chatterbox.test.ts`, one run): **install** about 5 to 6 min with uv (CUDA torch is the largest download, about 2.5 GB) plus 3.0 GB of weights on first load; **load** (spawn, import, weights to GPU, one warm-up sentence so CUDA kernels are compiled before `ready`) 38.8 s on the second run; without the warm-up the first sentence took 25 s longer. **VRAM**: 3343 MB used before load, 6706 MB loaded (+3.36 GB), 3256 MB after `unload()`, so the process exit returns all of it. **First audio** (one 52-character sentence, 2.4 s of speech, after load) 4.7 s. **Real-time factor** 1.91 on a 2-sentence 6.7 s paragraph (12.7 s to synthesize), i.e. slower than real time; the sidecar returns each 250-character piece whole, so first-audio latency is the whole first piece. Cloning from a 6.7 s reference: the reference is analysed once and reused, 7.1 s for the 52-character sentence (includes the one-time analysis). **Abort**: the sidecar stops between sampled tokens; a one-word request after an abort 0.3 s into a long one took 2.4 s instead of queueing behind about 12 s of generation. The numbers are one run on a shared, laptop-class GPU; RTX 50-series needs a newer torch than chatterbox-tts 0.1.7 pins (2.6.0) and was not tried.
 - Chatterbox ignores `speed` below 2 (the model has no speed control); the player's `playbackRate` only covers speeds above 2.
 - Real-model regression run (`SPEAKKIT_REAL=1`, engine and server suites): all pass, 72 and 83 tests.
 
@@ -170,3 +170,53 @@ After the refactors of this release (server split into routes, desktop main spli
 Idle unload and the 50-cycle memory table above were not re-run with the bench script; the e2e figures (88.1 MB after unload against 91.6 MB before the first load) show the same behaviour. The bench numbers in "Model lifecycle" are from before this release.
 
 One decision driven by this check: the content script validates the worker's `get-state` answer with a 15-line hand-written guard (`app/content/player-state.ts`) instead of a valibot schema. The schema version added 1.9 KB gzip (11.5 to 13.4 KB) to the script that is injected into every page.
+
+
+## Cold start: where the time goes and what was cut (2026-11-01)
+
+Profile script: `code/packages/engine/bench/coldstart.mjs` (`node bench/coldstart.mjs` in `packages/engine`; env `SPEAKKIT_GRAPH`, `SPEAKKIT_SESSION` (extra session options as JSON), `SPEAKKIT_THREADS`, `SPEAKKIT_RUNS`, `SPEAKKIT_OVERLAP`). Same shared machine, so +-30%; the comparisons below were run interleaved.
+
+Phases of an unloaded model reaching its first audio (uint8, cpu, 6 threads), before the change:
+
+| Phase | Time |
+|---|---|
+| Spawn the model host (`node` start) | ~70 ms |
+| Import kokoro-js + transformers.js (loads onnxruntime-node) | 110 to 140 ms |
+| Tokenizer (parallel with the model) | 16 to 20 ms |
+| Read `model_uint8.onnx` (177 MB) | 50 to 55 ms |
+| Create the onnxruntime session (graph optimization level `all`, the default) | 880 to 1030 ms |
+| Warm-up inference ("Hello there.") | 350 to 470 ms |
+| The first real sentence itself | the same as any warm sentence (~0.9 s for 12 words) |
+
+The session creation is the biggest block. Tried, interleaved, on session creation (and, where noted, on inference):
+
+| Option | Session creation | Inference | Decision |
+|---|---|---|---|
+| `graphOptimizationLevel: "all"` (default) | 880 to 1030 ms | baseline | before |
+| `extended` / `basic` | 830 to 960 / 790 to 920 ms | same | no |
+| **`disabled`** | **600 to 650 ms** | same within noise (0 to 3 % slower over 9 runs) | **adopted** (cpu only) |
+| `disabled` + `session.disable_prepacking` | 410 to 520 ms | 5 to 8 % slower on every sentence | rejected: saves 0.15 s once, costs 0.06 s per sentence |
+| Pre-optimized model file (`optimizedModelFilePath`) loaded with `disabled` | 570 to 595 ms | same | rejected: no better than `disabled` on the original file, and the saved file is machine specific |
+| `enableMemPattern: false`, `intra_op.allow_spinning=0`, 2 threads | no change | no change or slower | no |
+| Run the warm-up concurrently with the session (tokenize and phonemize while the session builds) | no change in total | | rejected: the warm-up cost is its inference, not its preparation |
+| Skip the warm-up when a request is already waiting | | first real sentence +0.4 s | rejected: moves the same cost |
+| `NODE_COMPILE_CACHE` for the host's imports | imports -20 ms | | rejected: not worth the cache directory |
+
+Result through `KokoroEngine.start()` (spawn to ready, including the warm-up), 5 interleaved rounds: **1.51 to 1.61 s with `all`, 1.17 to 1.26 s with `disabled`** (-0.33 s, -22 %). In the browser (`perf.spec.ts`, real Kokoro, a Listen request with nothing having woken the model): **1.76 to 1.94 s from unloaded, 0.28 to 0.40 s when ready** (5 runs; the earlier integration check measured 1.81 and 2.11 s for the cold path). What remains is ~1.2 s of load (spawn, imports, session, warm-up) plus the first sentence, which no option above shortens measurably; the other lever is to start loading earlier.
+
+Warm triggers (each calls `POST /v1/engine/warm`, idempotent and debounced; never on page load):
+
+| Trigger | Where |
+|---|---|
+| Popup open | `PopupApp` |
+| Keyboard commands `read-selection` and `play-pause` (not `stop`) | `app/background/commands.ts` |
+| Pointer within 80 px of the launcher edge and 20 % of the page height of the launcher | `Controller.warmNearLauncher` |
+| Pointer entering the launcher, the gutter button, the Listen button or the selection bubble; the selection bubble appearing | launcher (unchanged) |
+| Desktop tray left click (opens the panel) | `apps/desktop/src/main/tray.ts` |
+| Desktop start with "load at start" (also what a login start does) | `server-lifecycle.ts` (unchanged) |
+
+The saving from a warm trigger equals its lead time up to the load time (table in "Model lifecycle"), so the edge-approach trigger helps when the pointer takes about a second to reach the tab.
+
+UI during the wait: the popup used to show "Waking up" about 175 ms after the click, because it waited for the service worker to extract the page and broadcast `preparing`. It now switches to `loading-model` / `preparing` in the click handler (`starting` input of `deriveView`, cleared when the player reports or after 1.5 s), measured at under 100 ms in `lifecycle.spec.ts`, with no error element at any point. The dock keeps "Preparing voice..." and says "Waking the voice engine..." after 1.2 s.
+
+Budgets (`perf.spec.ts`, real Kokoro, one worker): unloaded to first audio < 3000 ms, ready to first audio < 1000 ms (the second request is made 2.5 s after the first stop, because a sentence in flight cannot be interrupted). Tests for two quick reads after an idle unload (one reload, both succeed): `packages/engine/tests/lifecycle.test.ts`, `packages/server/tests/lifecycle.test.ts`.

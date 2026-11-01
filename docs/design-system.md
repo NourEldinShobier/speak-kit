@@ -31,5 +31,12 @@ Soft status fills (`--ok-soft` etc.) are the tag color mixed 12% (light) / 16% (
 - Floating surfaces and dock use the raised surface (#252627 dark) with a 1 px divider border; toast: card surface, 8 radius, action button on the right.
 
 ## Where it lives in code
-- `code/apps/extension/src/ui/tokens.css` (React UIs), `src/content/ui/css.ts` (Shadow DOM overlay), `code/apps/desktop/src/renderer/styles.css`.
+- Colours are defined once, in the token blocks of `code/packages/ui/src/lumen.css` (plus `--text-on-highlight` for text on the word highlight and the `--paper-*` set of the reader's paper theme). `code/packages/ui/src/tokens.ts` is generated from it (`pnpm --filter @speakkit/ui gen:tokens`) for code that cannot read CSS variables (the toolbar badge, the highlight colours on host pages, Electron window colours). `packages/ui/tests/tokens.test.ts` fails on a stale module, on a `var(--x)` with no definition and on a hex colour anywhere but `lumen.css`, `tokens.ts` and the highlight swatches (`features/highlight/colors.ts`, colours users pick and that are painted on pages without Lumen).
+- Components: `code/packages/ui` (React and vanilla twins, compared in `tests/parity.test.tsx`); the extension composes them in `code/apps/extension/src/styles/compose.css` and each feature's own css.
 - Designs: `designs/gen/kit.ts` (LIGHT/DARK) regenerated into `designs/screens/*.png` and `designs/review.html`.
+
+## UI rules added 2026-11-01 (match `code/packages/ui/src/lumen.css`)
+- Transport glyphs (play, pause, stop) are solid: fill and stroke are the current colour, round joins, stroke 2.25 px (play, stop) and 2.75 px (pause) on screen. Pause is two thin rounded bars (lines x 8.5 and 15.5, y 5.5 to 18.5 in a 24 box), not Tabler's rectangles. Skip, back and forward stay outline. Play and pause on primary (blue) buttons are white.
+- A key chip (Kbd, for example `Ctrl N`) inside a primary button uses text-on-accent (white) and a 45% white border instead of text-tertiary and stroke-control.
+- Elevation (Lockix scale): floating surfaces keep their 1 px stroke-control plus a short shadow. Menu `0 1 2`, popover, pill, dock, toast, tooltip and launcher `0 2 6` (both 6% light, 30% dark), dialog and command palette `0 4 12` (7% light, 35% dark), app window `0 18 50 .5`. The old `0 8 24` and `0 16 48` shadows are removed. Shadows are Figma effects (drop shadow), not baked into fills.
+- The paragraph play button (gutter) is not shown on a fresh page. It appears only after reading has started on that page load. The edge launcher tab at the right edge is always shown.
