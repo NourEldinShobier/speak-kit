@@ -166,19 +166,19 @@ describe("tray and lifecycle", () => {
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     expect(items.filter((i) => i.type !== "separator").map((i) => i.label)).toEqual([
       "Read clipboard",
-      "Open SpeakKit",
+      "Open Speak Kit",
       "Load the voice engine now",
       "Do not disturb",
       "Settings",
       "Check for updates",
-      "Quit SpeakKit",
+      "Quit Speak Kit",
     ]);
     expect(items[0]!.enabled).toBe(true);
-    expect(await hook<string>("trayState")).toMatch(/^asleep\|SpeakKit - Unloaded \(wakes on play\)$/);
+    expect(await hook<string>("trayState")).toMatch(/^asleep\|Speak Kit - Unloaded \(wakes on play\)$/);
 
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());
-    await hook("clickTray", "Quit SpeakKit");
-    await l.page.getByRole("dialog", { name: "Quit SpeakKit?" }).waitFor();
+    await hook("clickTray", "Quit Speak Kit");
+    await l.page.getByRole("dialog", { name: "Quit Speak Kit?" }).waitFor();
     expect(await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isVisible())).toBe(true);
     expect(await l.page.getByTestId("quit-list").textContent()).toContain(`127.0.0.1:${l.port}`);
     await l.page.getByRole("button", { name: "Keep running in tray" }).click();
@@ -186,7 +186,7 @@ describe("tray and lifecycle", () => {
     // Settings from the tray navigates.
     await hook("clickTray", "Settings");
     await l.page.getByRole("heading", { name: "General", level: 1 }).waitFor();
-    await hook("clickTray", "Quit SpeakKit");
+    await hook("clickTray", "Quit Speak Kit");
     const proc = l.app.process();
     await l.page.getByRole("button", { name: "Quit", exact: true }).click();
     await new Promise<void>((r) => (proc.exitCode !== null ? r() : proc.once("exit", () => r())));

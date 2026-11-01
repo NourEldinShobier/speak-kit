@@ -8,7 +8,7 @@ import { createSecureWindow } from "./secure-window";
 import { appBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const TITLE = "SpeakKit";
+const TITLE = "Speak Kit";
 /** Window hidden this long (ms): destroy it. 0 disables. */
 const HIDE_DESTROY_MS = Number(process.env.SPEAKKIT_DESTROY_MS ?? 30_000);
 

@@ -58,7 +58,7 @@ export function safeFileName(raw: string): string {
     .replace(/[. ]+$/, "")
     .slice(0, 80)
     .trim();
-  return /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(n) ? `${n} reading` : n || "SpeakKit reading";
+  return /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(n) ? `${n} reading` : n || "Speak Kit reading";
 }
 
 /** File size before rendering, from the text: 16-bit mono WAV at 24 kHz or the MP3 bitrate. */

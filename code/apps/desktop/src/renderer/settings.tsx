@@ -45,7 +45,7 @@ function General({ s }: { s: AppState }) {
       <SettingsSection title="Startup">
         <SettingRow
           label="Launch at login"
-          description="Start SpeakKit when you sign in so the extension is ready."
+          description="Start Speak Kit when you sign in so the extension is ready."
           control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
         />
         <SettingRow
@@ -88,7 +88,7 @@ function General({ s }: { s: AppState }) {
       <SettingsSection title="Tray">
         <SettingRow
           label="Closing the window"
-          description="Keeps SpeakKit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
+          description="Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
           control={<span>Keeps running</span>}
         />
       </SettingsSection>
@@ -157,7 +157,7 @@ function Memory({ s }: { s: AppState }) {
   const v = engineView(s.health, s.serverError);
   const at = s.health?.engine.idleUnloadAtMs;
   return (
-    <Page title="Memory" lead="The voice model uses several hundred MB while loaded. SpeakKit loads it when you play and unloads it when idle.">
+    <Page title="Memory" lead="The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when idle.">
       <SettingsSection title="Right now">
         <SettingRow
           label="Voice engine"
@@ -175,7 +175,7 @@ function Memory({ s }: { s: AppState }) {
             </div>
           }
         />
-        <SettingRow label="Memory in use" description="All SpeakKit processes, this window included." control={<span data-testid="memory-rss">{m ? `${Math.round(m.totalMb)} MB` : "..."}</span>} />
+        <SettingRow label="Memory in use" description="All Speak Kit processes, this window included." control={<span data-testid="memory-rss">{m ? `${Math.round(m.totalMb)} MB` : "..."}</span>} />
       </SettingsSection>
       <SettingsSection title="Unloading">
         <SettingRow
@@ -192,7 +192,7 @@ function Memory({ s }: { s: AppState }) {
         />
         <SettingRow
           label="Load at startup"
-          description="Keep the model ready as soon as SpeakKit starts. Uses memory all day."
+          description="Keep the model ready as soon as Speak Kit starts. Uses memory all day."
           control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => api.patchConfig({ loadAtStart: x })} />}
         />
         <SettingRow
@@ -332,9 +332,9 @@ const LICENSES: [string, string][] = [
 
 function About({ s }: { s: AppState }) {
   return (
-    <Page title="About" lead="SpeakKit reads text out loud on your own computer.">
+    <Page title="About" lead="Speak Kit reads text out loud on your own computer.">
       <SettingsSection title="Versions">
-        <SettingRow label="SpeakKit" control={<span data-testid="about-version">{s.version}</span>} />
+        <SettingRow label="Speak Kit" control={<span data-testid="about-version">{s.version}</span>} />
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
@@ -344,7 +344,7 @@ function About({ s }: { s: AppState }) {
         </div>
         <SettingRow
           label="Check automatically"
-          description="Once a day while SpeakKit runs."
+          description="Once a day while Speak Kit runs."
           control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => api.patchConfig({ autoUpdate: v })} />}
         />
       </SettingsSection>

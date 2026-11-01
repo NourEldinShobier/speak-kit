@@ -50,9 +50,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            code/apps/desktop/release/SpeakKit-Setup-*.exe
-            code/apps/desktop/release/SpeakKit-Setup-*.exe.blockmap
-            code/apps/desktop/release/SpeakKit-*-portable.exe
+            code/apps/desktop/release/Speak-Kit-Setup-*.exe
+            code/apps/desktop/release/Speak-Kit-Setup-*.exe.blockmap
+            code/apps/desktop/release/Speak-Kit-*-portable.exe
             code/apps/desktop/release/latest.yml
             code/apps/desktop/release/speakkit-extension-*.zip
           generate_release_notes: true

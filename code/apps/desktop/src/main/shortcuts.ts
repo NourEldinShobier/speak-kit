@@ -56,7 +56,7 @@ export class ShortcutRegistry {
     const others = SHORTCUT_IDS.filter((o) => o !== id && normalize(current[o]) === accelerator);
     if (others.length) {
       const taken = new Set(Object.values(next).map((a) => normalize(a) ?? a));
-      return { ok: false, error: "Another SpeakKit action already uses it.", conflict: { accelerator, reason: "duplicate", suggestion: suggestAlternative(accelerator, taken) } };
+      return { ok: false, error: "Another Speak Kit action already uses it.", conflict: { accelerator, reason: "duplicate", suggestion: suggestAlternative(accelerator, taken) } };
     }
     const conflicts = this.apply(next);
     const mine = conflicts[id];

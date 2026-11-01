@@ -27,12 +27,12 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
     },
     onState: (s) => setState(s),
     onReady: (version) => {
-      ctx.addActivity("update", "Update ready", `SpeakKit ${version} is downloaded. Restart when it suits you.`);
+      ctx.addActivity("update", "Update ready", `Speak Kit ${version} is downloaded. Restart when it suits you.`);
       toasts.notify({
         event: "update-ready",
         taskKey: version,
         title: "Update ready",
-        body: `SpeakKit ${version} is ready to install. Click to choose when.`,
+        body: `Speak Kit ${version} is ready to install. Click to choose when.`,
         onClick: () => {
           ctx.showWindow();
           ctx.sendUi({ type: "nav", page: "settings", sub: "about" });

@@ -76,11 +76,11 @@ describe("ShortcutRegistry", () => {
     expect(t.live.has("Ctrl+Alt+X")).toBe(true);
   });
 
-  it("set() refuses invalid keys and a combination SpeakKit already uses", () => {
+  it("set() refuses invalid keys and a combination Speak Kit already uses", () => {
     const t = setup();
     t.reg.apply(DEFAULT_SHORTCUTS);
     expect(t.reg.set(DEFAULT_SHORTCUTS, "stop", "Alt+F4")).toEqual({ ok: false, error: "Windows uses that combination." });
     const dup = t.reg.set(DEFAULT_SHORTCUTS, "stop", "Ctrl+Alt+S");
-    expect(dup).toMatchObject({ ok: false, error: "Another SpeakKit action already uses it.", conflict: { reason: "duplicate", suggestion: "Ctrl+Alt+Shift+S" } });
+    expect(dup).toMatchObject({ ok: false, error: "Another Speak Kit action already uses it.", conflict: { reason: "duplicate", suggestion: "Ctrl+Alt+Shift+S" } });
   });
 });

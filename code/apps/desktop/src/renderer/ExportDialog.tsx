@@ -19,7 +19,7 @@ export interface ExportOpen {
 export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOpen; onClose(): void }) {
   const prefs = s.config.exportPrefs;
   const [text, setText] = useState(open.text);
-  const [name, setName] = useState(() => open.name || titleOf(open.text).replace(/…$/, "").slice(0, 40).trim() || "SpeakKit reading");
+  const [name, setName] = useState(() => open.name || titleOf(open.text).replace(/…$/, "").slice(0, 40).trim() || "Speak Kit reading");
   const [format, setFormat] = useState(prefs.format);
   const [kbps, setKbps] = useState<number>(prefs.mp3Kbps);
   const [voice, setVoice] = useState(s.config.voice);

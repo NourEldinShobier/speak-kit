@@ -21,7 +21,7 @@ export const appState = (over: Partial<AppState> = {}): AppState => ({
   shortcuts: { bindings: parseConfig({}).shortcuts, conflicts: {} },
   update: UPDATE_UNSUPPORTED,
   exports: [],
-  exportDir: "C:/Users/test/Music/SpeakKit",
+  exportDir: "C:/Users/test/Music/Speak Kit",
   packaged: false,
   ...over,
 });

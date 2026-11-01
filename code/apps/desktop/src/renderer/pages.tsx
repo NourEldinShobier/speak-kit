@@ -25,7 +25,7 @@ export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") =>
   const v = engineView(s.health, s.serverError);
   const running = !!s.port && !!s.health;
   return (
-    <Page title="Home" lead="SpeakKit runs a private voice server on this computer. Your browser extension talks to it.">
+    <Page title="Home" lead="Speak Kit runs a private voice server on this computer. Your browser extension talks to it.">
       {s.serverError && (
         <Banner
           tone="error"
@@ -41,7 +41,7 @@ export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") =>
       )}
       {s.portFallback && (
         <Banner tone="warning" title={`Port ${s.config.preferredPort} is in use`}>
-          SpeakKit is using {s.port} instead. Enter {s.port} in the extension options under Port.
+          Speak Kit is using {s.port} instead. Enter {s.port} in the extension options under Port.
         </Banner>
       )}
       <div className="sk-grid2">
@@ -91,9 +91,9 @@ export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") =>
           <TokenField token={s.token} regenerate />
         </div>
       </SettingsSection>
-      <SettingsSection title="Install the extension" description="Add SpeakKit from the Chrome Web Store (also Edge and Brave). Then pin it to the toolbar.">
+      <SettingsSection title="Install the extension" description="Add Speak Kit from the Chrome Web Store (also Edge and Brave). Then pin it to the toolbar.">
         <SettingRow
-          label="SpeakKit for Chrome"
+          label="Speak Kit for Chrome"
           description={s.pairing.lastSeenMs ? "Connected" : "Not connected yet"}
           control={
             <div className="sk-row-actions">
@@ -265,7 +265,7 @@ export function BrowserPage({ s }: { s: AppState }) {
         <h3>Pair your browser</h3>
         <ol className="sk-steps">
           <li>
-            <b>Install</b> SpeakKit from the Chrome Web Store, then pin it from the puzzle menu.
+            <b>Install</b> Speak Kit from the Chrome Web Store, then pin it from the puzzle menu.
           </li>
           <li>
             <b>Copy</b> the token below.

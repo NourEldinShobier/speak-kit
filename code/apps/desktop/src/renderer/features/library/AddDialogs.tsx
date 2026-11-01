@@ -201,7 +201,7 @@ export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null;
   const copy =
     doc?.source === "paste"
       ? "Pasted text has no original file, so this is the only copy. You can undo for a few seconds."
-      : "The original file or page is not touched. Only the reading and its progress are removed from SpeakKit.";
+      : "The original file or page is not touched. Only the reading and its progress are removed from Speak Kit.";
   return (
     <Modal
       open={!!doc}

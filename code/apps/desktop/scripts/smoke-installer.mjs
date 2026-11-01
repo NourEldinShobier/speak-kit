@@ -1,6 +1,6 @@
 // Installs the NSIS installer silently into a temp folder, runs smoke-packaged.mjs against the installed exe (health, speech, bundled files,
 // single instance, quit), runs the uninstaller silently and checks that the folder is gone. Everything runs with an isolated user-data folder and port.
-//   node scripts/smoke-installer.mjs [--installer release/SpeakKit-Setup-<version>.exe]
+//   node scripts/smoke-installer.mjs [--installer release/Speak-Kit-Setup-<version>.exe]
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,7 +12,7 @@ const args = process.argv.slice(2);
 const installer = path.resolve(
   args.includes("--installer")
     ? args[args.indexOf("--installer") + 1]
-    : path.join(desktop, "release", readdirSync(path.join(desktop, "release")).find((f) => /^SpeakKit-Setup-.*\.exe$/.test(f)) ?? ""),
+    : path.join(desktop, "release", readdirSync(path.join(desktop, "release")).find((f) => /^Speak-Kit-Setup-.*\.exe$/.test(f)) ?? ""),
 );
 if (!existsSync(installer)) throw new Error(`no such file: ${installer}`);
 
@@ -31,7 +31,7 @@ const env = { ...process.env, SPEAKKIT_USER_DATA: userData, SPEAKKIT_PORT: Strin
 delete env.ELECTRON_RUN_AS_NODE;
 mkdirSync(userData, { recursive: true });
 writeFileSync(path.join(userData, "config.json"), JSON.stringify({ setupDone: true }));
-const exe = path.join(dir, "SpeakKit.exe");
+const exe = path.join(dir, "Speak Kit.exe");
 const running = () =>
   Number(
     execFileSync("powershell", ["-NoProfile", "-Command", `@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${exe.replace(/'/g, "''")}' }).Count`], { encoding: "utf8" }).trim(),
@@ -43,7 +43,7 @@ try {
   const code = await run(installer, ["/S", `/D=${dir}`], env);
   check("silent install exits 0", code === 0, `exit ${code} in ${Date.now() - t0} ms`);
   check("installs the app", existsSync(exe) && existsSync(path.join(dir, "resources/extension/manifest.json")), dir);
-  const uninstaller = path.join(dir, "Uninstall SpeakKit.exe");
+  const uninstaller = path.join(dir, "Uninstall Speak Kit.exe");
   check("writes an uninstaller", existsSync(uninstaller));
 
   // Stop whatever the installer started before the smoke test starts its own instance.

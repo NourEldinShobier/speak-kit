@@ -11,7 +11,7 @@ describe("safeFileName", () => {
     expect(safeFileName("  ends with dots...  ")).toBe("ends with dots");
   });
   it("never returns an empty or reserved name", () => {
-    expect(safeFileName("???")).toBe("SpeakKit reading");
+    expect(safeFileName("???")).toBe("Speak Kit reading");
     expect(safeFileName("CON")).toBe("CON reading");
     expect(safeFileName("x".repeat(200))).toHaveLength(80);
   });

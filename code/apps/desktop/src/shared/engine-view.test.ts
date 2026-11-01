@@ -28,7 +28,7 @@ describe("engine state to words and tray icon", () => {
     for (const [health, err, want] of m) expect(trayState(health, err)).toBe(want);
   });
   it("tooltip names the state and the wake hint", () => {
-    expect(trayTooltip(h("unloaded"), null)).toBe("SpeakKit - Unloaded (wakes on play)");
-    expect(trayTooltip(h("ready"), null)).toBe("SpeakKit - Ready");
+    expect(trayTooltip(h("unloaded"), null)).toBe("Speak Kit - Unloaded (wakes on play)");
+    expect(trayTooltip(h("ready"), null)).toBe("Speak Kit - Ready");
   });
 });

@@ -67,5 +67,5 @@ export function trayState(health: Health | null, serverError: string | null): Tr
 
 export function trayTooltip(health: Health | null, serverError: string | null): string {
   const v = engineView(health, serverError);
-  return `SpeakKit - ${v.label}${v.hint ? ` (${v.hint.toLowerCase()})` : ""}`;
+  return `Speak Kit - ${v.label}${v.hint ? ` (${v.hint.toLowerCase()})` : ""}`;
 }

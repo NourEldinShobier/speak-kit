@@ -65,10 +65,10 @@ writeFileSync(
   JSON.stringify(
     {
       name: "speakkit",
-      productName: "SpeakKit",
+      productName: "Speak Kit",
       version,
       description: "Text to speech on your own computer",
-      author: "SpeakKit",
+      author: "Speak Kit",
       license: "MIT",
       type: "module",
       main: "dist/main/index.js",

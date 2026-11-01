@@ -40,17 +40,17 @@ describe("tray icon state", () => {
 
 describe("tray tooltip", () => {
   it("names what is happening, most specific first", () => {
-    expect(trayTooltipFor(ctx({ reader: reader("playing") }))).toBe("SpeakKit - Reading 3 of 9: Chapter one");
-    expect(trayTooltipFor(ctx({ reader: reader("paused") }))).toBe("SpeakKit - Paused: Chapter one");
-    expect(trayTooltipFor(ctx({ exportsRunning: 2 }))).toBe("SpeakKit - Exporting 2 files");
-    expect(trayTooltipFor(ctx({ update: { kind: "ready", version: "0.2.0", onQuit: false } }))).toBe("SpeakKit - Update 0.2.0 ready");
-    expect(trayTooltipFor(ctx({ health: health("unloaded") }))).toBe("SpeakKit - Unloaded (wakes on play)");
+    expect(trayTooltipFor(ctx({ reader: reader("playing") }))).toBe("Speak Kit - Reading 3 of 9: Chapter one");
+    expect(trayTooltipFor(ctx({ reader: reader("paused") }))).toBe("Speak Kit - Paused: Chapter one");
+    expect(trayTooltipFor(ctx({ exportsRunning: 2 }))).toBe("Speak Kit - Exporting 2 files");
+    expect(trayTooltipFor(ctx({ update: { kind: "ready", version: "0.2.0", onQuit: false } }))).toBe("Speak Kit - Update 0.2.0 ready");
+    expect(trayTooltipFor(ctx({ health: health("unloaded") }))).toBe("Speak Kit - Unloaded (wakes on play)");
   });
 });
 
 describe("tray menu", () => {
   it("idle: short menu with the shortcut hint on Read clipboard", () => {
-    expect(labels(ctx())).toEqual(["Read clipboard", "Open SpeakKit", "Do not disturb", "Settings", "Check for updates", "Quit SpeakKit"]);
+    expect(labels(ctx())).toEqual(["Read clipboard", "Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
     expect(trayMenuModel(ctx())[0]).toMatchObject({ action: "read-clipboard", enabled: true, hint: "Ctrl+Alt+C" });
   });
   it("reading and paused swap in Pause or Resume and Stop", () => {

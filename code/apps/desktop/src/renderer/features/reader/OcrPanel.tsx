@@ -68,8 +68,8 @@ export function OcrPanel({ id, pages, onDone }: { id: string; pages: number; onD
         }
       >
         <p className="rd-muted">
-          SpeakKit will download English language data for text recognition once, from cdn.jsdelivr.net (a few megabytes), and keep it in this app. The pages themselves never leave this computer. Long
-          documents take a while; you can cancel at any time.
+          Speak Kit will download English language data for text recognition once, from cdn.jsdelivr.net (a few megabytes), and keep it in this app. The pages themselves never leave this computer.
+          Long documents take a while; you can cancel at any time.
         </p>
       </Modal>
     </>

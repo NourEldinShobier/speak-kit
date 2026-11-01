@@ -1,7 +1,7 @@
 // Smoke test of the packaged app: starts the exe, waits for /v1/health, speaks one sentence, checks the bundled extension,
-// then asks it to quit (SpeakKit.exe --quit) and checks that it exits, frees the port and leaves no process behind.
+// then asks it to quit (Speak Kit.exe --quit) and checks that it exits, frees the port and leaves no process behind.
 // SMOKE_WAIT_S raises the start-up and second-launch waits (the portable exe unpacks 170 MB first). A second launch must hand over and exit without adding processes.
-//   node scripts/smoke-packaged.mjs [--exe path-to-SpeakKit.exe] [--real]
+//   node scripts/smoke-packaged.mjs [--exe path-to-Speak Kit.exe] [--real]
 // --real uses the real Kokoro engine and the shared model cache (code/.cache/models); otherwise the fake engine runs.
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
-const exe = path.resolve(args.includes("--exe") ? args[args.indexOf("--exe") + 1] : path.join(desktop, "release/win-unpacked/SpeakKit.exe"));
+const exe = path.resolve(args.includes("--exe") ? args[args.indexOf("--exe") + 1] : path.join(desktop, "release/win-unpacked/Speak Kit.exe"));
 const real = args.includes("--real");
 if (!existsSync(exe)) throw new Error(`no such file: ${exe}`);
 

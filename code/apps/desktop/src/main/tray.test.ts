@@ -107,10 +107,10 @@ describe("tray wiring", () => {
   it("starts with the icon, tooltip and menu of the current state", () => {
     const t = setup();
     expect(t.fake.image).toBe("icon:normal");
-    expect(t.fake.tip).toMatch(/^SpeakKit - Ready/);
+    expect(t.fake.tip).toMatch(/^Speak Kit - Ready/);
     expect(t.tray.summary()).toBe(`normal|${t.fake.tip}`);
     expect(t.tray.summary().startsWith("normal|")).toBe(true);
-    expect(labels(t)).toEqual(["Read clipboard", "Open SpeakKit", "Do not disturb", "Settings", "Check for updates", "Quit SpeakKit"]);
+    expect(labels(t)).toEqual(["Read clipboard", "Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
 
   it("turns menu rows into native items: accelerators that do not register, a checkbox for Do not disturb, disabled rows", () => {
@@ -123,7 +123,7 @@ describe("tray wiring", () => {
   it("clicking an item runs the handler of its action", () => {
     const t = setup();
     (t.fake.menu!.items.find((i) => i.label === "Settings")!.click as () => void)();
-    (t.fake.menu!.items.find((i) => i.label === "Quit SpeakKit")!.click as () => void)();
+    (t.fake.menu!.items.find((i) => i.label === "Quit Speak Kit")!.click as () => void)();
     expect(t.run.settings).toHaveBeenCalledTimes(1);
     expect(t.run.quit).toHaveBeenCalledTimes(1);
     expect(t.run.open).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe("tray wiring", () => {
     t.set(base({ reader: reading("playing") }));
     t.tray.refresh();
     expect(t.fake.image).toBe("icon:working");
-    expect(t.fake.tip).toBe("SpeakKit - Reading 3 of 10: Chapter 1");
+    expect(t.fake.tip).toBe("Speak Kit - Reading 3 of 10: Chapter 1");
     expect(labels(t)).toContain("Pause");
     t.set(base({ reader: reading("paused") }));
     t.tray.refresh();
@@ -161,7 +161,7 @@ describe("tray wiring", () => {
 
   it("exposes the native items for tests", () => {
     const t = setup();
-    expect(t.tray.items().map((i) => i.label)).toContain("Quit SpeakKit");
+    expect(t.tray.items().map((i) => i.label)).toContain("Quit Speak Kit");
   });
 });
 

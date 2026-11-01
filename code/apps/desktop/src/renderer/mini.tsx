@@ -31,7 +31,7 @@ function Mini() {
       <header className="mini__head">
         <Logo size={18} />
         <div className="mini__title">
-          <b title={r.title}>{r.title || "SpeakKit"}</b>
+          <b title={r.title}>{r.title || "Speak Kit"}</b>
           <span data-testid="mini-status">{statusLine(r)}</span>
         </div>
         <span className="mini__left" data-testid="mini-left">

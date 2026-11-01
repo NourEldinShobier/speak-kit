@@ -19,8 +19,8 @@ const SETUP_DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
 describe("desktop app", () => {
   it("first run: wizard, title, health at the port, token reveal and copy, quit", async () => {
     const { app, page, port, userData } = await start();
-    expect(await page.title()).toBe("SpeakKit");
-    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe("SpeakKit");
+    expect(await page.title()).toBe("Speak Kit");
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe("Speak Kit");
 
     await page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
     await page.getByRole("button", { name: /Get started/ }).click();
@@ -57,7 +57,7 @@ describe("desktop app", () => {
 
     await cont.click();
     await page.getByRole("heading", { name: "You're all set" }).waitFor();
-    await page.getByRole("button", { name: /Open SpeakKit/ }).click();
+    await page.getByRole("button", { name: /Open Speak Kit/ }).click();
     await page.getByRole("heading", { name: "Home" }).waitFor();
     expect(await page.getByTestId("server-address").textContent()).toBe(`127.0.0.1:${port}`);
     expect(await page.getByTestId("server-status").textContent()).toContain("Running");

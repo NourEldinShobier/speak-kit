@@ -61,7 +61,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
               : clash
                 ? {
                     id,
-                    text: clash.reason === "taken" ? `Another app is using ${clash.accelerator}.` : `${clash.accelerator} is already used by another SpeakKit action.`,
+                    text: clash.reason === "taken" ? `Another app is using ${clash.accelerator}.` : `${clash.accelerator} is already used by another Speak Kit action.`,
                     accelerator: clash.accelerator,
                     suggestion: clash.suggestion,
                   }
@@ -100,7 +100,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
                       ) : undefined
                     }
                   >
-                    SpeakKit never takes a shortcut another app owns. Pick another combination or use the suggestion.
+                    Speak Kit never takes a shortcut another app owns. Pick another combination or use the suggestion.
                   </Banner>
                 </div>
               )}

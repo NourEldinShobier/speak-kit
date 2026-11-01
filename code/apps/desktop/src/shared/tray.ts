@@ -27,10 +27,10 @@ export function trayIconState(c: TrayContext): TrayState {
 
 export function trayTooltipFor(c: TrayContext): string {
   const r = c.reader;
-  if (r.status === "playing" || r.status === "preparing") return `SpeakKit - Reading ${r.index + 1} of ${r.total}: ${r.title}`;
-  if (r.status === "paused") return `SpeakKit - Paused: ${r.title}`;
-  if (c.exportsRunning) return `SpeakKit - Exporting ${c.exportsRunning === 1 ? "1 file" : `${c.exportsRunning} files`}`;
-  if (c.update.kind === "ready") return `SpeakKit - Update ${c.update.version} ready`;
+  if (r.status === "playing" || r.status === "preparing") return `Speak Kit - Reading ${r.index + 1} of ${r.total}: ${r.title}`;
+  if (r.status === "paused") return `Speak Kit - Paused: ${r.title}`;
+  if (c.exportsRunning) return `Speak Kit - Exporting ${c.exportsRunning === 1 ? "1 file" : `${c.exportsRunning} files`}`;
+  if (c.update.kind === "ready") return `Speak Kit - Update ${c.update.version} ready`;
   return trayTooltip(c.health, c.serverError);
 }
 
@@ -46,7 +46,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const sep: TrayItem = { type: "separator" };
   const reading = c.reader.status === "playing" || c.reader.status === "preparing";
   const paused = c.reader.status === "paused";
-  const rows: TrayItem[] = [item("read-clipboard", "Read clipboard", { enabled: !busy, hint: c.shortcuts["read-clipboard"] }), sep, item("open", "Open SpeakKit")];
+  const rows: TrayItem[] = [item("read-clipboard", "Read clipboard", { enabled: !busy, hint: c.shortcuts["read-clipboard"] }), sep, item("open", "Open Speak Kit")];
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));
@@ -54,6 +54,6 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   rows.push(sep, item("dnd", "Do not disturb", { checked: c.doNotDisturb }), item("settings", "Settings"));
   if (c.update.kind === "ready") rows.push(item("restart-update", `Restart to update to ${c.update.version}`));
   else rows.push(item("check-updates", c.update.kind === "checking" ? "Checking for updates..." : "Check for updates", { enabled: c.update.kind !== "checking" && c.update.kind !== "unsupported" }));
-  rows.push(sep, item("quit", "Quit SpeakKit"));
+  rows.push(sep, item("quit", "Quit Speak Kit"));
   return rows;
 }

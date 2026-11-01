@@ -48,7 +48,7 @@ export class ReaderController {
 
   get state(): ReaderState {
     const total = this.#sentences.length;
-    if (!total) return this.#error ? { ...IDLE_READER, status: "error", title: "SpeakKit", error: this.#error } : IDLE_READER;
+    if (!total) return this.#error ? { ...IDLE_READER, status: "error", title: "Speak Kit", error: this.#error } : IDLE_READER;
     const status = this.#error ? "error" : this.#finished ? "finished" : this.#paused ? "paused" : this.#playing >= 0 ? "playing" : "preparing";
     const index = Math.max(0, this.#playing);
     let before = 0;

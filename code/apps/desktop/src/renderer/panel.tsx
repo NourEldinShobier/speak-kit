@@ -21,12 +21,12 @@ function Panel() {
     <div className="lm panel" data-testid="tray-panel">
       <header className="panel__head">
         <Logo size={18} />
-        <b>SpeakKit</b>
+        <b>Speak Kit</b>
         <StatusPill tone={v.tone} icon={v.spinner ? "loader-2" : undefined}>
           {v.label}
         </StatusPill>
         <span style={{ flex: 1 }} />
-        <IconButton name="settings" label="Open SpeakKit" size={28} onClick={() => api.reader({ type: "open-app" })} />
+        <IconButton name="settings" label="Open Speak Kit" size={28} onClick={() => api.reader({ type: "open-app" })} />
       </header>
       <section className="panel__sec" aria-label="Now playing">
         <p className="sk-caps">Now playing</p>
@@ -73,7 +73,7 @@ function Panel() {
           Read clipboard
         </Button>
         <Button variant="primary" onClick={() => api.reader({ type: "open-app" })}>
-          Open SpeakKit
+          Open Speak Kit
         </Button>
       </footer>
     </div>

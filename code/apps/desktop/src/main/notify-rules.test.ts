@@ -14,7 +14,7 @@ describe("engine notices", () => {
   });
   it("a download that fails is an engine error, once per transition", () => {
     expect(noticeFor("downloading", "error", "connection reset")?.event).toBe("engine-error");
-    expect(noticeFor("loading", "error", "worker exited")?.body).toBe("worker exited Click to open SpeakKit.");
+    expect(noticeFor("loading", "error", "worker exited")?.body).toBe("worker exited Click to open Speak Kit.");
     expect(noticeFor("error", "error", "again")).toBeNull();
   });
 });

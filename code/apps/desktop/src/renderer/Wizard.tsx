@@ -13,7 +13,7 @@ function Frame({ at, title, sub, foot, children, center }: { at: number; title: 
     <div className="sk-setup">
       <div className="sk-setup__title">
         <Logo size={16} />
-        Set up SpeakKit
+        Set up Speak Kit
       </div>
       <div className="sk-setup__stepper">
         <Stepper steps={STEPS} current={at} />
@@ -148,8 +148,8 @@ export function Wizard({ s }: { s: AppState }) {
           failed
             ? `The download stopped at ${Math.round(pct * 100)}%. Everything downloaded so far is kept.`
             : ready
-              ? "Everything is on this computer. SpeakKit works fully offline."
-              : "One time only. After this, SpeakKit works fully offline."
+              ? "Everything is on this computer. Speak Kit works fully offline."
+              : "One time only. After this, Speak Kit works fully offline."
         }
         foot={
           <Foot back={<Back label="Cancel" onClick={() => setStep(1)} />}>
@@ -268,9 +268,9 @@ function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState;
         </Foot>
       }
     >
-      <SettingsSection title="1. Install the extension" description="Add SpeakKit from the Chrome Web Store. It also installs in Edge and Brave. Then pin it from the puzzle menu.">
+      <SettingsSection title="1. Install the extension" description="Add Speak Kit from the Chrome Web Store. It also installs in Edge and Brave. Then pin it from the puzzle menu.">
         <SettingRow
-          label="SpeakKit for Chrome"
+          label="Speak Kit for Chrome"
           control={
             <div className="sk-row-actions">
               <Button iconLeft="external-link" onClick={() => api.openExternal("webstore")}>
@@ -289,7 +289,7 @@ function Connect({ s, copied, onCopied, onBack, onSkip, onNext }: { s: AppState;
       <SettingsSection title="3. Test the connection">
         <SettingRow
           label={connected ? "Connected" : testStart !== null ? "Waiting for the extension's first call" : "Check that the extension reaches this app"}
-          description={`Listening on 127.0.0.1:${s.port || "?"}. If Windows asks about the firewall, choose Private networks or Cancel; SpeakKit only listens on 127.0.0.1.`}
+          description={`Listening on 127.0.0.1:${s.port || "?"}. If Windows asks about the firewall, choose Private networks or Cancel; Speak Kit only listens on 127.0.0.1.`}
           control={
             connected ? (
               <StatusPill tone="green" icon="circle-check">
@@ -328,7 +328,7 @@ function Done({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack():
       foot={
         <Foot back={<Back onClick={onBack} />}>
           <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => api.patchConfig({ setupDone: true, setupSkipped: skipped })}>
-            Open SpeakKit
+            Open Speak Kit
           </Button>
         </Foot>
       }
@@ -351,11 +351,11 @@ function Done({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack():
       <SettingsSection title="Handy to know">
         <SettingRow
           label="Tray icon"
-          description="SpeakKit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view. Closing the window keeps it running."
+          description="Speak Kit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view. Closing the window keeps it running."
         />
         <SettingRow
           label="Launch at login"
-          description="Start SpeakKit when you sign in to Windows."
+          description="Start Speak Kit when you sign in to Windows."
           control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
         />
         <SettingRow

@@ -10,7 +10,7 @@ export function QuitDialog({ s, open, playing, onClose }: { s: AppState; open: b
     <Modal
       open={open}
       onClose={onClose}
-      title="Quit SpeakKit?"
+      title="Quit Speak Kit?"
       width={480}
       footer={
         <>

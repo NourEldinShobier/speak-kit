@@ -14,7 +14,7 @@ export function UpdateCard({ s }: { s: AppState }) {
     case "idle":
       return (
         <div className="sk-row-actions" data-testid="update-idle">
-          <span>{u.checkedAtMs ? "SpeakKit is up to date." : "SpeakKit checks for updates in the background."}</span>
+          <span>{u.checkedAtMs ? "Speak Kit is up to date." : "Speak Kit checks for updates in the background."}</span>
           <Button size="sm" onClick={act("check")}>
             Check for updates
           </Button>
@@ -26,7 +26,7 @@ export function UpdateCard({ s }: { s: AppState }) {
       return (
         <Banner
           tone="info"
-          title={`SpeakKit ${u.version} is available`}
+          title={`Speak Kit ${u.version} is available`}
           action={
             <Button size="sm" variant="primary" onClick={act("download")}>
               Download
@@ -51,7 +51,7 @@ export function UpdateCard({ s }: { s: AppState }) {
           <Banner
             tone="info"
             icon="circle-check"
-            title={`SpeakKit ${u.version} is ready`}
+            title={`Speak Kit ${u.version} is ready`}
             action={
               <div className="sk-row-actions">
                 {!u.onQuit && (
@@ -65,7 +65,7 @@ export function UpdateCard({ s }: { s: AppState }) {
               </div>
             }
           >
-            {u.onQuit ? "It installs when you quit SpeakKit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
+            {u.onQuit ? "It installs when you quit Speak Kit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
           </Banner>
           {!u.onQuit && (
             <Button size="sm" variant="ghost" onClick={act("remind-later")}>
@@ -122,7 +122,7 @@ export function UpdatingCard({ s }: { s: AppState }) {
   return (
     <div className="sk-updating" role="status" data-testid="updating-card">
       <b>Updating to {s.update.version}</b>
-      <span>SpeakKit will reopen where you left off.</span>
+      <span>Speak Kit will reopen where you left off.</span>
       <ProgressBar thin label="Installing the update" />
     </div>
   );

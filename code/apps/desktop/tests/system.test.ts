@@ -124,13 +124,13 @@ describe("mini player and tray", () => {
     const m = await mini;
     await m.getByTestId("mini").waitFor();
     await until(async () => (await m.getByTestId("mini").getAttribute("data-status")) === "playing");
-    expect(await hook<string>(l, "trayState")).toMatch(/^working\|SpeakKit - Reading \d of 3: One short sentence here\./);
+    expect(await hook<string>(l, "trayState")).toMatch(/^working\|Speak Kit - Reading \d of 3: One short sentence here\./);
     const labels = async () => (await hook<{ label: string }[]>(l, "trayItems")).map((i) => i.label);
     expect(await labels()).toEqual(expect.arrayContaining(["Pause", "Stop"]));
 
     await m.getByRole("button", { name: "Pause" }).click();
     await until(async () => (await m.getByTestId("mini").getAttribute("data-status")) === "paused");
-    expect(await hook<string>(l, "trayState")).toMatch(/^paused\|SpeakKit - Paused:/);
+    expect(await hook<string>(l, "trayState")).toMatch(/^paused\|Speak Kit - Paused:/);
     expect(await labels()).toContain("Resume");
     await m.getByRole("button", { name: "Play" }).click();
     await until(async () => (await m.getByTestId("mini").getAttribute("data-status")) === "playing");
@@ -291,8 +291,8 @@ describe("export audio", () => {
     await l.page.getByRole("button", { name: "Export", exact: true }).click();
     await l.page.getByTestId("export-progress").waitFor();
     await l.page.getByRole("button", { name: "Run in background" }).click();
-    await hook(l, "clickTray", "Quit SpeakKit");
-    const list = l.page.getByRole("dialog", { name: "Quit SpeakKit?" });
+    await hook(l, "clickTray", "Quit Speak Kit");
+    const list = l.page.getByRole("dialog", { name: "Quit Speak Kit?" });
     await list.getByText("1 export is rendering. Quitting stops:").waitFor();
     await list.getByText("The export is cancelled").waitFor();
   }, 60_000);
@@ -306,17 +306,17 @@ describe("updates (electron-updater is replaced by a fake that reports a new ver
     await settings(l, "About");
     await l.page.getByRole("button", { name: "Check for updates" }).click();
     await l.page.getByTestId("update-ready").waitFor();
-    await l.page.getByText("SpeakKit 0.2.0 is ready").waitFor();
+    await l.page.getByText("Speak Kit 0.2.0 is ready").waitFor();
     expect(await hook<number>(l, "installs")).toBe(0);
 
     await l.page.getByTestId("update-pill").click();
     await l.page.getByRole("dialog").getByRole("button", { name: "Install when I quit" }).click();
-    await l.page.getByText("It installs when you quit SpeakKit.").first().waitFor();
+    await l.page.getByText("It installs when you quit Speak Kit.").first().waitFor();
     expect(await hook<number>(l, "installs")).toBe(0);
 
     await l.page.getByRole("button", { name: "Restart now" }).first().click();
     await l.page.getByTestId("updating-card").waitFor();
-    await l.page.getByText("SpeakKit will reopen where you left off.").waitFor();
+    await l.page.getByText("Speak Kit will reopen where you left off.").waitFor();
     await until(async () => (await hook<number>(l, "installs")) === 1);
   }, 60_000);
 
@@ -361,7 +361,7 @@ describe("palette, engines and the extension", () => {
 });
 
 describe("shutdown", () => {
-  it("SpeakKit.exe --quit asks the running instance to exit and the port closes", async () => {
+  it("Speak Kit.exe --quit asks the running instance to exit and the port closes", async () => {
     const first = await start({ config: DONE });
     await first.page.getByRole("heading", { name: "Home" }).waitFor();
     const proc = first.app.process();

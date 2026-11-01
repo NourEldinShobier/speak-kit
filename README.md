@@ -1,8 +1,8 @@
-# SpeakKit
+# Speak Kit
 
 Text to speech that runs on your own computer. Select text in Chrome (or any Windows app), press a key, and a natural voice reads it. Nothing is uploaded: the voice model, Kokoro-82M, runs locally.
 
-SpeakKit has three parts:
+Speak Kit has three parts:
 
 - **Chrome extension** (Manifest V3): reads selections and pages, highlights the sentence and word being read, has a floating player, a reader view and a side panel queue.
 - **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, and adds what a browser cannot do: global shortcuts, a mini player, clipboard reading, audio export to MP3 or WAV, engine management and updates.
@@ -10,17 +10,17 @@ SpeakKit has three parts:
 
 ## Install
 
-Download from the [latest release](https://github.com/NourEldinShobier/speakkit/releases/latest):
+Download from the [latest release](https://github.com/NourEldinShobier/speak-kit/releases/latest):
 
 | File | What it is |
 |---|---|
-| `SpeakKit-Setup-<version>.exe` | Installer. Start menu entry, optional start at sign-in, updates through GitHub Releases. |
-| `SpeakKit-<version>-portable.exe` | Runs from any folder, does not update itself. |
+| `Speak-Kit-Setup-<version>.exe` | Installer. Start menu entry, optional start at sign-in, updates through GitHub Releases. |
+| `Speak-Kit-<version>-portable.exe` | Runs from any folder, does not update itself. |
 | `speakkit-extension-<version>.zip` | The extension, for Chrome, Edge or Brave. |
 
 The builds are **not code-signed**, so Windows SmartScreen shows "unknown publisher" the first time. Choose "More info", then "Run anyway".
 
-1. Start SpeakKit. The first run downloads the Kokoro model (about 180 MB) and walks through five setup steps.
+1. Start Speak Kit. The first run downloads the Kokoro model (about 180 MB) and walks through five setup steps.
 2. Install the extension: in the app open **Browser** and press **Install from this app**. It opens `chrome://extensions` and shows the extension folder; turn on Developer mode, choose **Load unpacked**, pick that folder.
 3. Pair: copy the token in the app and paste it in the extension under Options, General, Pairing token.
 

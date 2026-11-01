@@ -17,7 +17,7 @@ const job = (stage: "rendering" | "done") => ({ id: "x", name: "a.mp3", stage, p
 describe("quitSummary", () => {
   it("idle: the tray reminder and only the server stops", () => {
     const q = quitSummary(base(), false);
-    expect(q.lead).toBe("Closing the window keeps SpeakKit in the tray. Quitting stops:");
+    expect(q.lead).toBe("Closing the window keeps Speak Kit in the tray. Quitting stops:");
     expect(q.rows.map((r) => r[0])).toEqual(["Local server on 127.0.0.1:47615 stops"]);
   });
 
@@ -39,6 +39,6 @@ describe("quitSummary", () => {
       base({ health: { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state: "ready" } }, update: { kind: "ready", version: "0.2.0", onQuit: true } }),
       false,
     );
-    expect(ready.rows.map((r) => r[0])).toEqual(expect.arrayContaining(["The voice model leaves memory", "SpeakKit 0.2.0 installs"]));
+    expect(ready.rows.map((r) => r[0])).toEqual(expect.arrayContaining(["The voice model leaves memory", "Speak Kit 0.2.0 installs"]));
   });
 });

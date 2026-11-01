@@ -1,6 +1,6 @@
 # Windows installer (NSIS) and portable exe. Run through scripts/package.mjs, which stages a plain app folder in dist-app first.
 appId: app.speakkit.desktop
-productName: SpeakKit
+productName: Speak Kit
 copyright: MIT License
 directories:
   app: dist-app
@@ -28,7 +28,7 @@ extraResources:
     filter: ["**/*", "!**/*.map"]
 
 protocols:
-  - name: SpeakKit
+  - name: Speak Kit
     schemes: [speakkit]
 
 win:
@@ -45,17 +45,17 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: SpeakKit
+  shortcutName: Speak Kit
   runAfterFinish: true
   deleteAppDataOnUninstall: false
-  artifactName: SpeakKit-Setup-${version}.${ext}
+  artifactName: Speak-Kit-Setup-${version}.${ext}
 
 portable:
-  artifactName: SpeakKit-${version}-portable.${ext}
+  artifactName: Speak-Kit-${version}-portable.${ext}
 
 # electron-updater reads this; releases come from GitHub (release.yml uploads the installer and latest.yml).
 publish:
   provider: github
   owner: NourEldinShobier
-  repo: speakkit
+  repo: speak-kit
   releaseType: release

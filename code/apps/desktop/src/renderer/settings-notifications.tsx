@@ -21,7 +21,7 @@ export function NotificationsPage({ s }: { s: AppState }) {
       <SettingsSection title="Do not disturb">
         <SettingRow
           label="Do not disturb"
-          description="No toasts or sounds from SpeakKit. The bell still keeps a line for each event."
+          description="No toasts or sounds from Speak Kit. The bell still keeps a line for each event."
           control={<Toggle aria-label="Do not disturb" checked={c.doNotDisturb} onChange={(v) => api.patchConfig({ doNotDisturb: v })} />}
         />
       </SettingsSection>

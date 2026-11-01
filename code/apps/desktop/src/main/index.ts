@@ -57,7 +57,7 @@ const state: AppState = {
   shortcuts: { bindings: { ...DEFAULT_SHORTCUTS }, conflicts: {} },
   update: UPDATE_UNSUPPORTED,
   exports: [],
-  exportDir: config.exportPrefs.folder || path.join(app.getPath("music"), "SpeakKit"),
+  exportDir: config.exportPrefs.folder || path.join(app.getPath("music"), "Speak Kit"),
   packaged: app.isPackaged,
 };
 
@@ -118,7 +118,7 @@ function onDeepLink(link: DeepLink) {
 }
 
 // ---- boot ----
-// `SpeakKit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
+// `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
 const QUIT_FLAG = "--quit";
 if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   app.quit();
