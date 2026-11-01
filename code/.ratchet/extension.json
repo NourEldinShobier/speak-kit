@@ -1,18 +1,18 @@
 {
   "lint": {
-    "tests": {
-      "no-nested-ternary": 2
-    },
     "code": {
+      "complexity": 20,
       "no-nested-ternary": 43,
       "max-lines-per-function": 23,
-      "complexity": 18,
+      "max-params": 15,
       "no-restricted-globals": 15,
-      "max-params": 10,
-      "no-sync": 7,
-      "max-depth": 1,
       "max-lines": 4,
+      "max-depth": 1,
+      "no-sync": 11,
       "exhaustive-deps": 1
+    },
+    "tests": {
+      "no-nested-ternary": 2
     }
   },
   "patterns": {

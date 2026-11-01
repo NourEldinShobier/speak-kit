@@ -11,8 +11,10 @@
     "packages/player/src/chunk.ts": "player requests speech chunks from 127.0.0.1"
   },
   "hosts": {
+    "api.github.com": "update check reads the latest release (electron-updater feed and the manual check)",
     "chromewebstore.google.com": "link opened in the user's browser to install the extension",
     "download.pytorch.org": "package index used when the user installs the Chatterbox engine",
+    "github.com": "release page opened in the user's browser",
     "speakkit.app": "links to the product site opened in the user's browser"
   }
 }

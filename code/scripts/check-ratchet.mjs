@@ -4,7 +4,7 @@
 //   node scripts/check-ratchet.mjs --write [scope ...]   rewrite baselines, refusing to raise any number
 // Test hooks: --root <dir> (tree to scan) and --lint-json <file> (diagnostics instead of running vp lint).
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { countPhysical } from "./check-css.mjs";
 import { countIntegrity } from "./check-integrity.mjs";
@@ -83,14 +83,16 @@ if (runsAsMain(import.meta.url)) {
   const integrity = countIntegrity(root);
   const problems = [];
   for (const s of wanted) {
-    const actual = { lint: lint[s] ?? { code: {}, tests: {} }, patterns: { ...(patterns[s] ?? {}), physicalCss: css[s] ?? 0, ...(integrity[s] ?? {}) } };
+    const actual = { lint: lint[s] ?? { code: {}, tests: {} }, patterns: { ...patterns[s], physicalCss: css[s] ?? 0, ...integrity[s] } };
     actual.lint.code ??= {};
     actual.lint.tests ??= {};
     const base = readBaseline(root, s);
     const was = { lint: flatten(base.lint), patterns: flatten(base.patterns) };
     const now = { lint: flatten(actual.lint), patterns: flatten(actual.patterns) };
     if (write) {
-      const raised = Object.entries({ ...now.lint, ...now.patterns }).filter(([k, v]) => v > (was.lint[k] ?? was.patterns[k] ?? Infinity)).map(([k, v]) => `${s} ${k}: ${v} > baseline`);
+      const raised = Object.entries({ ...now.lint, ...now.patterns })
+        .filter(([k, v]) => v > (was.lint[k] ?? was.patterns[k] ?? Infinity))
+        .map(([k, v]) => `${s} ${k}: ${v} > baseline`);
       if (raised.length) problems.push(...raised);
       else {
         mkdirSync(path.dirname(baselinePath(root, s)), { recursive: true });

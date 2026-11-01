@@ -16,6 +16,7 @@ Use what the platform and Vite+ already provide. Add a package only when nothing
 | Highlighting without DOM changes | CSS Custom Highlight API |
 | Gapless playback | Web Audio (`AudioContext`) in an offscreen document |
 | Type checking | tsrs (Rust port of TypeScript 7), `tsc` as fallback |
+| Property tests | fast-check (dev dependency, MIT), see ADR 0003 |
 
 ## Packages and why
 | Package | Why |
@@ -135,3 +136,15 @@ These direct dependencies were in `package.json` files without a row here (refac
 | `pnpm licenses list --prod --json` (built into pnpm) | Source of `THIRD_PARTY_NOTICES.md`, rendered by `tools/third-party-notices.mjs` (`--check` fails when the file is stale). Considered `license-checker-rseidelsohn`, `license-report` and `generate-license-file`: each adds a dependency to report what pnpm already reads from its own store, with the SPDX grouping and pnpm layout handled correctly. No new package. |
 | Contributor Covenant 2.1 text | `CODE_OF_CONDUCT.md`, copied from contributor-covenant.org; only the contact line is changed. |
 | Dependabot (`.github/dependabot.yml`) | npm in `code/` (weekly, minor and patch grouped) and GitHub Actions. |
+
+## Gates, ratchets and dependency policy (wp1-gates)
+
+| Choice | Why |
+|---|---|
+| pnpm catalog in `code/pnpm-workspace.yaml`, `catalog:` in every `package.json` | One place for exact pins; `scripts/check-deps.mjs` fails on a range, on a dependency missing from the catalog and on a dependency no decision record names. |
+| `minimumReleaseAge: 10080` (7 days, in minutes) | Supply-chain delay; versions younger than a week when the lockfile was first pinned (2026-11-01) are listed in `minimumReleaseAgeExclude` and each entry is deleted once its version is a week old. |
+| `fast-check` 4.10.2, root devDependency | Property tests; the first one covers the ratchet comparison (`scripts/canary/checks.test.mjs`). ADR 0003. |
+| `knip` 5.88.1 as a pinned dev dependency of `tools/knip`, with `typescript` 6.0.3 there | Replaces `pnpm dlx knip@5.88.1`. Knip 5 needs the TypeScript JS API, which TypeScript 7 does not ship, so it lives in its own workspace package with TypeScript 6; the other packages stay on 7. Run through `scripts/check-knip.mjs`. |
+| `typescript` 7.0.2 (root), `vite-plus` 1.4.0, `@types/node`, `@types/react`, `@types/react-dom`, `@types/chrome`, `@types/pngjs`, `radix-ui` | Already in use; named here so that `check-deps.mjs` finds every direct dependency in a decision record. `radix-ui` is the primitive layer under the Lumen components in `@speakkit/ui`. |
+| Lint limits and import boundaries in `code/vite.config.ts` | Oxlint rules only, no extra linter. Rules that still have violations are warnings counted by `scripts/check-ratchet.mjs` against `.ratchet/<package>.json`; WP-15 turns them into errors. |
+| Own scripts `check-ratchet`, `check-css`, `check-network`, `check-integrity` | Small greps over the tree; each has a known-bad fixture in `scripts/canary/` that the unit test requires to fail. No stylelint (ADR 0003). |

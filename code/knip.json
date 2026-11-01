@@ -2,25 +2,12 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
-      "entry": [
-        "scripts/*.mjs",
-        "scripts/canary/*.test.mjs",
-        "vite.config.ts"
-      ],
-      "ignore": [
-        "scripts/canary/*/**"
-      ]
+      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vite.config.ts"],
+      "ignore": ["scripts/canary/*/**"]
     },
     "e2e": {
-      "entry": [
-        "run.mjs",
-        "tests/**/*.spec.ts",
-        "visual/*.{ts,mjs}",
-        "**/*.test.{ts,tsx}"
-      ],
-      "project": [
-        "**/*.{ts,mjs}"
-      ]
+      "entry": ["run.mjs", "tests/**/*.spec.ts", "visual/*.{ts,mjs}", "**/*.test.{ts,tsx}"],
+      "project": ["**/*.{ts,mjs}"]
     },
     "apps/desktop": {
       "entry": [
@@ -34,10 +21,7 @@
         "vite.config.ts",
         "**/*.test.{ts,tsx}"
       ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "scripts/*.mjs"
-      ]
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "apps/extension": {
       "entry": [
@@ -50,54 +34,24 @@
         "**/*.test.{ts,tsx}",
         "src/app/content/ui-entry.ts"
       ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "scripts/*.mjs"
-      ]
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "packages/server": {
-      "entry": [
-        "bench/*.ts",
-        "scripts/*.mjs",
-        "**/*.test.{ts,tsx}",
-        "vite.config.ts"
-      ]
+      "entry": ["bench/*.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}", "vite.config.ts"]
     },
     "packages/engine": {
-      "entry": [
-        "src/worker.ts",
-        "sidecar/*",
-        "tests/*.mjs",
-        "bench/*.mjs",
-        "**/*.test.{ts,tsx}",
-        "vite.config.ts"
-      ]
+      "entry": ["src/worker.ts", "sidecar/*", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}", "vite.config.ts"]
     },
     "packages/ui": {
-      "entry": [
-        "gallery/main.tsx",
-        "scripts/*",
-        "vite.config.ts",
-        "**/*.test.{ts,tsx}"
-      ]
+      "entry": ["gallery/main.tsx", "scripts/*", "vite.config.ts", "**/*.test.{ts,tsx}"]
     },
     "packages/player": {
-      "entry": [
-        "**/*.test.{ts,tsx}"
-      ]
+      "entry": ["**/*.test.{ts,tsx}"]
     },
     "packages/protocol": {
-      "entry": [
-        "**/*.test.{ts,tsx}"
-      ]
+      "entry": ["**/*.test.{ts,tsx}"]
     },
     "tools/knip": {}
   },
-  "ignoreDependencies": [
-    "electron-builder",
-    "@tabler/icons-react",
-    "@playwright/test",
-    "@speakkit/engine",
-    "@speakkit/server"
-  ]
+  "ignoreDependencies": ["electron-builder", "@tabler/icons-react", "@playwright/test", "@speakkit/engine", "@speakkit/server"]
 }

@@ -1,9 +1,8 @@
 {
   "lint": {
     "code": {
-      "max-lines": 1,
-      "complexity": 2,
-      "max-params": 3
+      "max-params": 3,
+      "complexity": 1
     },
     "tests": {}
   },

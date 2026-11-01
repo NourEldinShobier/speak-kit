@@ -40,7 +40,8 @@ describe("check-deps", () => {
   it("fails on a range, an unlisted tool, an unpinned run and a missing release age", () => {
     const r = run("check-deps.mjs", "deps-bad");
     expect(r.status).toBe(1);
-    for (const text of ['left-pad "^1.3.0" is not an exact version', 'catalog unlisted-tool: "^2.0.0"', "minimumReleaseAge", "pnpm dlx knip", "left-pad is not named in docs/decisions"]) expect(r.out).toContain(text);
+    for (const text of ['left-pad "^1.3.0" is not an exact version', 'catalog unlisted-tool: "^2.0.0"', "minimumReleaseAge", "pnpm dlx knip", "left-pad is not named in docs/decisions"])
+      expect(r.out).toContain(text);
   });
   it("passes on a pinned catalog entry that an ADR names", () => {
     expect(run("check-deps.mjs", "deps-good").status).toBe(0);

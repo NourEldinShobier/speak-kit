@@ -79,7 +79,10 @@ export default defineConfig({
       { files: ["apps/extension/src/features/settings/browser.ts"], rules: { "no-restricted-globals": "off" } },
       // Playwright fixtures call a function named use(); it is not a React hook.
       { files: ["e2e/**"], rules: { "react/rules-of-hooks": "off" } },
-      { files: tests, rules: { "no-restricted-imports": "off", "no-restricted-globals": "off", "node/no-sync": "off", "no-console": "off", "max-lines-per-function": "off", "max-lines": "off", "max-params": "off" } },
+      {
+        files: tests,
+        rules: { "no-restricted-imports": "off", "no-restricted-globals": "off", "node/no-sync": "off", "no-console": "off", "max-lines-per-function": "off", "max-lines": "off", "max-params": "off" },
+      },
       { files: tooling, rules: { "node/no-sync": "off", "no-console": "off", "no-restricted-imports": "off" } },
     ],
   },

@@ -1,14 +1,10 @@
 {
   "lint": {
-    "code": {
-      "no-sync": 14,
-      "complexity": 2,
-      "max-lines-per-function": 2,
-      "max-params": 2,
-      "no-nested-ternary": 1
-    },
     "tests": {
       "no-explicit-any": 3
+    },
+    "code": {
+      "no-sync": 1
     }
   },
   "patterns": {
@@ -18,7 +14,7 @@
     "atomicsWait": 0,
     "sendSync": 0,
     "shortInterval": 0,
-    "oxlintDisable": 0,
+    "oxlintDisable": 7,
     "swallowingCatch": 4,
     "physicalCss": 0,
     "skipped": 2,

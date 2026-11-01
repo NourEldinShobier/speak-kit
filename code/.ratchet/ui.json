@@ -1,9 +1,10 @@
 {
   "lint": {
     "code": {
-      "max-lines": 1,
+      "max-params": 1,
       "max-lines-per-function": 1,
-      "no-nested-ternary": 7
+      "no-nested-ternary": 1,
+      "no-console": 1
     },
     "tests": {}
   },
@@ -16,7 +17,7 @@
     "shortInterval": 0,
     "oxlintDisable": 0,
     "swallowingCatch": 0,
-    "physicalCss": 9,
+    "physicalCss": 1,
     "skipped": 0,
     "focused": 0,
     "tsNocheck": 0

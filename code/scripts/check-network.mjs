@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { isRuntime, parseArgs, readJson, rel, report, walk } from "./check-lib.mjs";
 
-const call = /\bfetch\s*\(|\bundiciFetch\s*\(|\bhttps?\.(?:request|get)\s*\(|\bnet\.(?:connect|fetch)\s*\(|\bnew WebSocket\s*\(|\bnew EventSource\s*\(|from ["'](?:undici|electron-updater|kokoro-js)["']|import\(["'](?:electron-updater|kokoro-js)["']\)/;
+const call =
+  /\bfetch\s*\(|\bundiciFetch\s*\(|\bhttps?\.(?:request|get)\s*\(|\bnet\.(?:connect|fetch)\s*\(|\bnew WebSocket\s*\(|\bnew EventSource\s*\(|from ["'](?:undici|electron-updater|kokoro-js)["']|import\(["'](?:electron-updater|kokoro-js)["']\)/;
 const hostRe = /https?:\/\/([a-z0-9][a-z0-9.-]*\.[a-z]{2,})/gi;
 const ignoredHosts = /^(?:www\.w3\.org|example\.com|(?:www\.)?news\.example\.com)$/i;
 

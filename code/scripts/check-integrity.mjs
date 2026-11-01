@@ -100,10 +100,17 @@ if (runsAsMain(import.meta.url)) {
     const actual = readBudgets(root);
     const old = existsSync(tablePath) ? readJson(tablePath) : {};
     const raised = Object.keys(actual).filter((k) => actual[k] > (old[k] ?? Infinity));
-    if (raised.length) report("check-integrity --write-budgets", raised.map((k) => `budget ${k} would rise to ${actual[k]}`));
+    if (raised.length)
+      report(
+        "check-integrity --write-budgets",
+        raised.map((k) => `budget ${k} would rise to ${actual[k]}`),
+      );
     mkdirSync(path.dirname(tablePath), { recursive: true });
-    writeFileSync(tablePath, `${JSON.stringify(actual, null, 2)}
-`);
+    writeFileSync(
+      tablePath,
+      `${JSON.stringify(actual, null, 2)}
+`,
+    );
     process.exit(0);
   }
   if (existsSync(tablePath)) {

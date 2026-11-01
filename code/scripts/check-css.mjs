@@ -4,7 +4,8 @@
 import { readFileSync } from "node:fs";
 import { compareCounts, isSource, isTestFile, parseArgs, readBaseline, rel, report, runsAsMain, scopeOf, scopes, walk } from "./check-lib.mjs";
 
-const cssProp = /(?:^|[\s;{])(?:(?:margin|padding|border)-(?:left|right)(?:-[a-z]+)?|border-(?:top|bottom)-(?:left|right)-radius|left|right|float|clear)\s*:|(?:text-align|float|clear)\s*:\s*(?:left|right)\b/;
+const cssProp =
+  /(?:^|[\s;{])(?:(?:margin|padding|border)-(?:left|right)(?:-[a-z]+)?|border-(?:top|bottom)-(?:left|right)-radius|left|right|float|clear)\s*:|(?:text-align|float|clear)\s*:\s*(?:left|right)\b/;
 const tsProp = /\b(?:margin|padding|border)(?:Left|Right)\w*\s*:|\bborder(?:Top|Bottom)(?:Left|Right)Radius\s*:|\b(?:textAlign|float|clear)\s*:\s*["'](?:left|right)["']/;
 const marker = /physical:\s*\S/;
 

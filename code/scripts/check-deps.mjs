@@ -29,24 +29,34 @@ for (const [name, spec] of Object.entries(catalog)) if (!exact.test(spec)) probl
 
 const rootPkg = readJson(path.join(root, "package.json"));
 if (!rootPkg.packageManager) problems.push("package.json: packageManager is not pinned");
-for (const [name, cmd] of Object.entries(rootPkg.scripts ?? {})) if (/\bdlx\b|\bnpx\b/.test(cmd)) problems.push(`package.json script ${name}: runs an unpinned tool (${cmd}); add it as a dev dependency`);
+for (const [name, cmd] of Object.entries(rootPkg.scripts ?? {}))
+  if (/\bdlx\b|\bnpx\b/.test(cmd)) problems.push(`package.json script ${name}: runs an unpinned tool (${cmd}); add it as a dev dependency`);
 
 const adrDir = existsSync(path.join(root, "docs/decisions")) ? path.join(root, "docs/decisions") : path.join(root, "..", "docs", "decisions");
-const adr = existsSync(adrDir) ? readdirSync(adrDir).filter((f) => f.endsWith(".md")).map((f) => readFileSync(path.join(adrDir, f), "utf8")).join("\n") : "";
-const named = (name) => new RegExp(`(?<![\w@/.-])${name.replace(/[.*+?^${}()|[\]\/]/g, "\$&")}(?![\w-])`).test(adr);
+const adr = existsSync(adrDir)
+  ? readdirSync(adrDir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => readFileSync(path.join(adrDir, f), "utf8"))
+      .join("\n")
+  : "";
+// Whole tokens only: "react" is not found inside "react-dom".
+const tokens = new Set((adr.match(/@?\w[\w./-]*/g) ?? []).map((t) => t.replace(/[./-]+$/, "")));
 
 const direct = new Set();
+function checkSpec(file, name, spec) {
+  if (spec.startsWith("workspace:")) return;
+  if (spec === "catalog:") {
+    if (!(name in catalog)) problems.push(`${file}: ${name} uses catalog: but is not in the catalog`);
+  } else if (!exact.test(spec)) {
+    problems.push(`${file}: ${name} "${spec}" is not an exact version; use the catalog`);
+  }
+  direct.add(name);
+}
 for (const m of manifests) {
   const pkg = readJson(path.join(root, m));
   for (const k of ["dependencies", "devDependencies", "optionalDependencies"]) {
-    for (const [name, spec] of Object.entries(pkg[k] ?? {})) {
-      if (spec.startsWith("workspace:")) continue;
-      if (spec === "catalog:") {
-        if (!(name in catalog)) problems.push(`${m}: ${name} uses catalog: but is not in the catalog`);
-      } else if (!exact.test(spec)) problems.push(`${m}: ${name} "${spec}" is not an exact version; use the catalog`);
-      direct.add(name);
-    }
+    for (const [name, spec] of Object.entries(pkg[k] ?? {})) checkSpec(m, name, spec);
   }
 }
-for (const name of [...direct].sort()) if (!named(name)) problems.push(`${name} is not named in docs/decisions/*.md`);
+for (const name of [...direct].sort()) if (!tokens.has(name)) problems.push(`${name} is not named in docs/decisions/*.md`);
 report("check-deps", problems);
