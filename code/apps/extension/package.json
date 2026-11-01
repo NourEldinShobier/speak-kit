@@ -7,6 +7,9 @@
     "**/*.css",
     "./src/app/**"
   ],
+  "scripts": {
+    "pack:store": "node scripts/pack-store.mjs"
+  },
   "dependencies": {
     "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
