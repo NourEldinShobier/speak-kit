@@ -125,7 +125,7 @@ export function modulesDoc(root, files) {
     const areas = new Map();
     for (const f of own) {
       const a = areaOf(f);
-      if (a) areas.set(a, { n: (areas.get(a)?.n ?? 0) + 1, index: (areas.get(a)?.index ?? false) || /\/index\.ts$/.test(f) });
+      if (a) areas.set(a, { n: (areas.get(a)?.n ?? 0) + 1, index: (areas.get(a)?.index ?? false) || f.endsWith("/index.ts") });
     }
     if (areas.size) {
       lines.push("| Area under `src/` | Files | `index.ts` |", "|---|---|---|");
