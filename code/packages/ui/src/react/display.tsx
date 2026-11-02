@@ -16,7 +16,7 @@ export interface StatusPillProps extends HTMLAttributes<HTMLSpanElement> {
 export function StatusPill({ tone = "neutral", icon, className, children, ...rest }: StatusPillProps) {
   return (
     <span className={cx("lm-pill", `lm-pill--${tone}`, className)} {...rest}>
-      {icon === "loader-2" ? <Spinner size={12} /> : icon ? <Icon name={icon} size={12} /> : null}
+      {icon && (icon === "loader-2" ? <Spinner size={12} /> : <Icon name={icon} size={12} />)}
       {children}
     </span>
   );
