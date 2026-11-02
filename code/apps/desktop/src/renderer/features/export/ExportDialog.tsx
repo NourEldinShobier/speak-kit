@@ -24,7 +24,7 @@ async function startExport({ s, st, dispatch }: { s: AppState; st: ExportState; 
       mp3Kbps: form.kbps as (typeof MP3_KBPS)[number],
       dir: form.dir,
       name: form.name,
-      ...(target.exists ? { conflict } : {}),
+      ...(target.exists && conflict ? { conflict } : {}),
     });
     dispatch({ type: "started", jobId: v.id });
   } catch (e) {

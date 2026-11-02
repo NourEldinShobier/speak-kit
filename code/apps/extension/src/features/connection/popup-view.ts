@@ -23,7 +23,7 @@ export interface PopupInputs {
   hasToken: boolean;
   health: HealthResult | null;
   player: PlayerState | null;
-  tabUrl?: string;
+  tabUrl?: string | undefined;
   /** "Allow access to file URLs" is on */
   fileAccess: boolean;
   selection: string;

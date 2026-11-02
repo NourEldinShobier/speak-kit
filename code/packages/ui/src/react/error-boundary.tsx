@@ -11,17 +11,17 @@ export interface ErrorBoundaryProps {
 
 /** Root-level fallback: a "Something went wrong" panel with a Reload button instead of a blank window. */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     (this.props.onError ?? ((e, i) => console.error(e, i.componentStack)))(error, info);
   }
 
-  render() {
+  override render() {
     if (!this.state.failed) return this.props.children;
     return (
       <EmptyState icon="alert-triangle" title="Something went wrong" primary={{ label: "Reload", onClick: this.props.onReload ?? (() => window.location.reload()) }}>

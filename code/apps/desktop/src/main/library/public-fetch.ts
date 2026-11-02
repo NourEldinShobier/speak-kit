@@ -32,8 +32,10 @@ const unmap = (ip: string) => /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip)?.[1] ?? 
 const isNonPublic = (ip: string) => NON_PUBLIC.check(unmap(ip), isIP(unmap(ip)) === 6 ? "ipv6" : "ipv4");
 
 class NonPublicAddressError extends Error {
-  constructor(readonly host: string) {
+  readonly host: string;
+  constructor(host: string) {
     super(`${host} is not a public address`);
+    this.host = host;
   }
 }
 

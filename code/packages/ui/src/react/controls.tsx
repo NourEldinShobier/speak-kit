@@ -79,7 +79,7 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   /** md = 36px, sm = 32px (popovers). */
   size?: "md" | "sm";
   label?: string;
-  error?: string;
+  error?: string | undefined;
   hint?: string;
   /** Class on the 36px frame (use is-hover / is-focus to force a state). */
   frameClassName?: string;

@@ -18,13 +18,13 @@ import { APP_CLIENT_HEADER } from "./pairing";
 
 /** The server answered, but not with success: carries the code and message of its error body. */
 export class ServerError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
+  readonly status: number;
+  readonly code: string;
+  constructor(status: number, code: string, message: string) {
     super(message);
     this.name = "ServerError";
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -37,12 +37,12 @@ export class ServerApi {
     this.#token = token;
   }
 
-  async #call(method: string, path: string, { body, signal }: { body?: unknown; signal?: AbortSignal } = {}): Promise<Response> {
+  async #call(method: string, path: string, { body, signal }: { body?: unknown; signal?: AbortSignal | undefined } = {}): Promise<Response> {
     const res = await fetch(`${this.#base()}${path}`, {
       method,
       headers: { Authorization: `Bearer ${this.#token()}`, [APP_CLIENT_HEADER]: "1", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(signal ? { signal } : {}),
     });
     if (res.ok) return res;
     const parsed = v.safeParse(errorBodySchema, await res.json().catch(() => null));

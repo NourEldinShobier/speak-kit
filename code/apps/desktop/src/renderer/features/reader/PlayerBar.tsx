@@ -69,7 +69,7 @@ function SleepPopover({ leftMs, onSleep }: { leftMs: number; onSleep(minutes: nu
   );
 }
 
-function NowTile({ title, voiceName }: { title: string; voiceName?: string }) {
+function NowTile({ title, voiceName }: { title: string; voiceName?: string | undefined }) {
   return (
     <div className="rd-bar__now">
       <span className="rd-bar__tile">

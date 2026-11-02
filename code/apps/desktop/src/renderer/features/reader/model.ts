@@ -207,11 +207,14 @@ interface Saved {
 export class ProgressSaver {
   private last = 0;
   private pending: Saved | undefined;
-  constructor(
-    private save: (p: Saved) => void,
-    private now: () => number,
-    private intervalMs = 3000,
-  ) {}
+  private save: (p: Saved) => void;
+  private now: () => number;
+  private intervalMs: number;
+  constructor(save: (p: Saved) => void, now: () => number, intervalMs = 3000) {
+    this.save = save;
+    this.now = now;
+    this.intervalMs = intervalMs;
+  }
   update(p: Saved) {
     this.pending = p;
     if (this.now() - this.last >= this.intervalMs) this.flush();

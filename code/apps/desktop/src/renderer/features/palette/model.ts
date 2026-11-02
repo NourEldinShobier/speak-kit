@@ -4,7 +4,7 @@ import type { Page, SettingsSub } from "../../../shared/ipc";
 
 export type PaletteGroup = "Actions" | "Pages" | "Settings" | "Voices";
 export type PaletteAction =
-  | { type: "nav"; page: Page; sub?: SettingsSub }
+  | { type: "nav"; page: Page; sub?: SettingsSub | undefined }
   | { type: "new-reading" }
   | { type: "pause" }
   | { type: "read-clipboard" }
@@ -28,7 +28,7 @@ export interface Command {
   action: PaletteAction;
 }
 
-type NavRow = [id: string, group: PaletteGroup, title: string, icon: IconName, page: Page, sub?: SettingsSub, keywords?: string];
+type NavRow = [id: string, group: PaletteGroup, title: string, icon: IconName, page: Page, sub?: SettingsSub | undefined, keywords?: string];
 
 const NAV_ROWS: NavRow[] = [
   ["p-home", "Pages", "Home", "home", "home"],

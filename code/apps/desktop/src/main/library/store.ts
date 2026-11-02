@@ -21,12 +21,16 @@ export class LibraryStore {
   private trash = new Map<string, DocMeta>();
   private text = new Map<string, string>();
 
-  private constructor(
-    private dir: string,
-    private db: Low<Index>,
-    /** Where an unreadable library.json was moved to (the library then starts empty), else null. */
-    readonly recovered: string | null,
-  ) {}
+  private dir: string;
+  private db: Low<Index>;
+  /** Where an unreadable library.json was moved to (the library then starts empty), else null. */
+  readonly recovered: string | null;
+
+  private constructor(dir: string, db: Low<Index>, recovered: string | null) {
+    this.dir = dir;
+    this.db = db;
+    this.recovered = recovered;
+  }
 
   static async open(dir: string): Promise<LibraryStore> {
     await mkdir(path.join(dir, "docs"), { recursive: true });
@@ -70,11 +74,16 @@ export class LibraryStore {
     return doc;
   }
 
-  async replaceBlocks(id: string, blocks: Block[], patch: Partial<DocMeta>): Promise<DocMeta | null> {
-    if (!this.get(id)) return null;
+  /** Replaces the text of a document (recognized text after OCR): the word count follows and the needs-OCR mark is cleared. */
+  async replaceBlocks(id: string, blocks: Block[], wordCount: number): Promise<DocMeta | null> {
+    const doc = this.get(id);
+    if (!doc) return null;
     await this.body(id).write({ blocks });
     this.text.delete(id);
-    return this.update(id, patch);
+    doc.wordCount = wordCount;
+    delete doc.needsOcr;
+    await this.save();
+    return doc;
   }
 
   async source(id: string): Promise<Uint8Array | null> {

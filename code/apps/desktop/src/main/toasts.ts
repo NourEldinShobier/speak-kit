@@ -12,7 +12,7 @@ interface ToastRequest {
   taskKey?: string;
   title: string;
   body: string;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }
 
 /** shown: a toast appeared. bell-only: recorded in the bell, no toast (muted, Do Not Disturb or the user is looking). throttled and off: nothing happened. */
@@ -22,7 +22,7 @@ interface ToastDeps {
   prefs(): { notifications: Notifications; doNotDisturb: boolean };
   /** True while the main window is visible and focused; a toast would only repeat what is on screen. */
   looking(): boolean;
-  show(t: { title: string; body: string; silent: boolean; onClick?: () => void }): void;
+  show(t: { title: string; body: string; silent: boolean; onClick?: (() => void) | undefined }): void;
   bell(event: NotifyEvent | "clipboard", title: string, body: string): void;
   now(): number;
 }

@@ -9,9 +9,9 @@ import { activeTab } from "./useTab";
 const SAMPLE = "This is how this voice sounds when it reads to you.";
 
 interface Deps {
-  tabId?: number;
+  tabId?: number | undefined;
   elapsedMs: number;
-  next?: QueueItem;
+  next?: QueueItem | undefined;
   speed: number;
   update: (fn: (s: Settings) => Settings) => void;
   refresh: () => Promise<unknown>;

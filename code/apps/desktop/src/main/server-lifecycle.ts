@@ -173,7 +173,7 @@ export class ServerRuntime {
     if (process.env.SPEAKKIT_ENGINE === "fake") {
       // Test hook: the first engine starts in the given state (e.g. error); a retry gets a healthy one.
       const forced = this.#firstEngine ? (process.env.SPEAKKIT_FAKE_STATE as "downloading" | "error" | "unloaded" | undefined) : undefined;
-      const e = new FakeEngine({ latencyMs: Number(process.env.SPEAKKIT_FAKE_LATENCY_MS ?? 0), state: forced });
+      const e = new FakeEngine({ latencyMs: Number(process.env.SPEAKKIT_FAKE_LATENCY_MS ?? 0), ...(forced ? { state: forced } : {}) });
       if (forced === "downloading" || forced === "error") {
         e.setStatus({ state: forced, progress: 0.62, detail: "huggingface.co, connection reset (ECONNRESET)" });
         e.start = async () => {};

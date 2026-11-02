@@ -45,7 +45,7 @@ export function Menu({ large, overlay, className, onKeyDown, children, ...rest }
 
 export interface MenuItemProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onSelect"> {
   icon?: IconName;
-  shortcut?: string;
+  shortcut?: string | undefined;
   /** Shows the trailing check (current choice). */
   selected?: boolean;
   destructive?: boolean;

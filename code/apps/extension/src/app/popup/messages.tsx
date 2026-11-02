@@ -7,7 +7,7 @@ import type { PopupActions, PopupModel } from "./types";
 type MessageView = "install" | "offline" | "token" | "version" | "pdf" | "unreadable" | "fileurl" | "engine-missing";
 
 interface Footer {
-  left?: string;
+  left?: string | undefined;
   right: string;
   onRight: () => void;
 }

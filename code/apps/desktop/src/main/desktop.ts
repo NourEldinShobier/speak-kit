@@ -27,7 +27,7 @@ interface DesktopOptions {
   /** The test hook (SPEAKKIT_TEST): shortcuts and toasts are simulated instead of touching the OS. */
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
-  fakeUpdate?: string;
+  fakeUpdate?: string | undefined;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({

@@ -9,7 +9,7 @@ export type Tone = "green" | "blue" | "orange" | "red" | "purple" | "yellow";
 
 export interface StatusPillProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone | "neutral";
-  icon?: IconName;
+  icon?: IconName | undefined;
 }
 
 /** 17px status pill. Indexing uses icon="loader-2" (spins). */
@@ -58,7 +58,7 @@ export function Badge({ className, children, ...rest }: HTMLAttributes<HTMLSpanE
   );
 }
 
-export function Kbd({ small, className, children, ...rest }: HTMLAttributes<HTMLElement> & { small?: boolean }) {
+export function Kbd({ small, className, children, ...rest }: HTMLAttributes<HTMLElement> & { small?: boolean | undefined }) {
   return (
     <kbd className={cx("lm-kbd", small && "lm-kbd--sm", className)} {...rest}>
       {children}
@@ -117,7 +117,7 @@ export function LoadingLabel({ children }: { children: ReactNode }) {
 
 export interface ProgressBarProps {
   /** 0-100; omit for indeterminate. */
-  value?: number;
+  value?: number | undefined;
   thin?: boolean;
   label?: string;
   className?: string;
@@ -174,7 +174,7 @@ export interface ToastProps {
   icon?: IconName;
   children: ReactNode;
   /** Outline action button (28px), e.g. Undo. */
-  action?: { label: string; onClick?: () => void };
+  action?: { label: string; onClick?: () => void } | undefined;
   className?: string;
 }
 

@@ -13,10 +13,10 @@ export interface PopupModel {
   selection: string;
   /** characters of readable text on the page, for the time estimate */
   chars: number;
-  next?: QueueItem;
+  next?: QueueItem | undefined;
   queued: number;
-  engine?: EngineState;
-  engineProgress?: number;
+  engine?: EngineState | undefined;
+  engineProgress?: number | undefined;
   voices: VoicesState;
   /** keyboard commands as Chrome has them assigned: name to shortcut */
   shortcuts: Record<string, string | undefined>;

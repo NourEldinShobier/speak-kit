@@ -77,7 +77,7 @@ function RowMenuItems({ doc, actions }: { doc: DocMeta; actions: RowActions }) {
   );
 }
 
-export function DocRow({ doc, speed, now, query, hit, actions }: { doc: DocMeta; speed: number; now: number; query: string; hit?: SearchHit; actions: RowActions }) {
+export function DocRow({ doc, speed, now, query, hit, actions }: { doc: DocMeta; speed: number; now: number; query: string; hit?: SearchHit | undefined; actions: RowActions }) {
   const status = rowStatus(doc, speed);
   const badge = FORMAT_BADGE[doc.format];
   return (

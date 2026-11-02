@@ -15,7 +15,7 @@ export type EnginesAction =
   | { type: "list"; list: EngineList }
   | { type: "list-failed"; message: string }
   | { type: "busy"; key: string | null }
-  | { type: "action-done"; list?: EngineList }
+  | { type: "action-done"; list?: EngineList | undefined }
   | { type: "action-failed"; message: string }
   | { type: "ask-remove"; engine: EngineInfo }
   | { type: "cancel-remove" };

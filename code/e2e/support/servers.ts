@@ -102,7 +102,7 @@ export async function startApp(o: AppOptions = {}): Promise<App> {
   const engine = new FakeEngine({ secondsPerChar: 0.03, ...o });
   const token = o.token ?? "e2e-token-" + Math.random().toString(16).slice(2).padEnd(24, "0");
   const dataDir = mkdtempSync(join(tmpdir(), "speakkit-e2e-"));
-  const limits = { maxStreams: o.maxStreams, maxQueue: o.maxQueue };
+  const limits = { ...(o.maxStreams !== undefined ? { maxStreams: o.maxStreams } : {}), ...(o.maxQueue !== undefined ? { maxQueue: o.maxQueue } : {}) };
   const holds: number[] = [];
   const hold = engine.hold?.bind(engine);
   engine.hold = (ms: number) => (holds.push(ms), hold?.(ms));

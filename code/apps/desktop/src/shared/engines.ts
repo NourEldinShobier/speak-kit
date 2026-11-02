@@ -57,5 +57,18 @@ export function describeEngine(e: EngineInfo, active: boolean): EngineRow {
 export function listFromHealth(h: Health | null): EngineList | null {
   if (!h) return null;
   const { id, state, progress, detail } = h.engine;
-  return { active: id, engines: [{ id, name: id === "kokoro" ? "Kokoro-82M" : "Chatterbox", state, progress, detail, optional: id !== "kokoro", cloning: id === "chatterbox" }] };
+  return {
+    active: id,
+    engines: [
+      {
+        id,
+        name: id === "kokoro" ? "Kokoro-82M" : "Chatterbox",
+        state,
+        ...(progress !== undefined ? { progress } : {}),
+        ...(detail !== undefined ? { detail } : {}),
+        optional: id !== "kokoro",
+        cloning: id === "chatterbox",
+      },
+    ],
+  };
 }

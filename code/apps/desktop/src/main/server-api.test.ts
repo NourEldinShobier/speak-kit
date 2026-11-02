@@ -8,7 +8,7 @@ afterEach(() => servers.splice(0).forEach((s) => s.close()));
 
 /** A stand-in for the local server: records requests, answers by route. */
 async function stub(handler: (req: http.IncomingMessage, body: string, res: http.ServerResponse) => void) {
-  const seen: { method: string; url: string; auth?: string; body: string }[] = [];
+  const seen: { method: string; url: string; auth?: string | undefined; body: string }[] = [];
   const server = http.createServer((req, res) => {
     let body = "";
     req.on("data", (c) => (body += c));

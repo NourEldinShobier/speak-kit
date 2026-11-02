@@ -26,7 +26,7 @@ export function SettingRow({ label, description, control, className, ...rest }: 
 
 export interface SettingsSectionProps {
   title: string;
-  description?: string;
+  description?: string | undefined;
   children: ReactNode;
   className?: string;
 }
@@ -70,7 +70,7 @@ export interface EmptyStateProps {
   title: string;
   children?: ReactNode;
   primary?: { label: string; onClick?: () => void };
-  secondary?: { label: string; onClick?: () => void };
+  secondary?: { label: string; onClick?: () => void } | undefined;
   className?: string;
 }
 

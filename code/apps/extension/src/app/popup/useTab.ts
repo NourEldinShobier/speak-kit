@@ -9,9 +9,9 @@ export async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
 }
 
 export interface TabInfo {
-  id?: number;
-  url?: string;
-  title?: string;
+  id?: number | undefined;
+  url?: string | undefined;
+  title?: string | undefined;
   selection: string;
   chars: number;
   fileAccess: boolean;
@@ -27,7 +27,7 @@ const fileAccess = () =>
   });
 
 interface Probe {
-  url?: string;
+  url?: string | undefined;
   selection: string;
   chars: number;
 }

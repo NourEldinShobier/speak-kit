@@ -4,11 +4,11 @@ import { plural } from "@speakkit/protocol";
 import { library, span } from "../library";
 import { openPdfOcr, recognizeAll, type OcrProgress } from "./ocr";
 
-type Phase = { name: "offer" } | { name: "consent" } | { name: "running"; progress?: OcrProgress } | { name: "failed"; message: string };
+type Phase = { name: "offer" } | { name: "consent" } | { name: "running"; progress?: OcrProgress | undefined } | { name: "failed"; message: string };
 
 const progressLine = (p: OcrProgress) => `Page ${p.page} of ${p.total}${p.leftMs ? ` · about ${span(p.leftMs)} left` : ""}`;
 
-function Running({ progress, onCancel }: { progress?: OcrProgress; onCancel(): void }) {
+function Running({ progress, onCancel }: { progress?: OcrProgress | undefined; onCancel(): void }) {
   return (
     <div className="rd-ocr" role="status" aria-label="Recognizing text">
       <b>Recognizing text</b>

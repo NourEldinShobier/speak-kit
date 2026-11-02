@@ -23,7 +23,7 @@ export function createEngineClient(deps: EngineClientDeps) {
       const res = await deps.fetch(`http://127.0.0.1:${await deps.port()}${path}`, {
         method: "POST",
         headers: body === undefined ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(2500),
       });
       return res.ok;

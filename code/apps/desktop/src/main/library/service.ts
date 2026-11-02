@@ -129,6 +129,6 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       if (p) deps.reveal(p);
     },
     source: (id) => store.source(id),
-    replaceBlocks: (id, blocks: Block[]) => store.replaceBlocks(id, blocks, { wordCount: wordCount(blocks), needsOcr: undefined }),
+    replaceBlocks: (id, blocks: Block[]) => store.replaceBlocks(id, blocks, wordCount(blocks)),
   };
 }

@@ -24,7 +24,7 @@ function setup(mode: UpdateMode = "auto", o: { latest?: () => Promise<{ version:
     mode,
     currentVersion: "0.3.1",
     load: async () => u,
-    latestRelease: o.latest,
+    ...(o.latest ? { latestRelease: o.latest } : {}),
     onState: (s) => states.push(s),
     onReady: (v) => ready.push(v),
     now: () => 42,

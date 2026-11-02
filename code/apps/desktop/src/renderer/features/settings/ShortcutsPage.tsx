@@ -18,7 +18,7 @@ interface Problem {
   id: ShortcutId;
   text: string;
   accelerator?: string;
-  suggestion?: string | null;
+  suggestion?: string | null | undefined;
 }
 
 type Conflict = AppState["shortcuts"]["conflicts"][ShortcutId];

@@ -16,7 +16,7 @@ const doc = (over: Partial<DocMeta> = {}): DocMeta => ({
   finished: false,
   ...over,
 });
-const row = (d: DocMeta, query = "", hit?: { id: string; snippet?: string }) =>
+const row = (d: DocMeta, query = "", hit?: { id: string; snippet?: string } | undefined) =>
   renderToStaticMarkup(
     <DocRow doc={d} speed={1} now={NOW} query={query} hit={hit} actions={{ onOpen() {}, onPlay() {}, onRename() {}, onVoice() {}, onFinished() {}, onReveal() {}, onDelete() {} }} />,
   );

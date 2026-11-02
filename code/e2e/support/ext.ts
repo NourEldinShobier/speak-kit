@@ -78,13 +78,18 @@ export class Ext {
   allowed: RegExp[] = [];
   private cdp?: Cdp;
   private helper?: Page;
-  constructor(
-    readonly ctx: BrowserContext,
-    readonly id: string,
-    readonly sw: Worker,
-    readonly dir: string,
-    readonly fx: Fixture,
-  ) {}
+  readonly ctx: BrowserContext;
+  readonly id: string;
+  readonly sw: Worker;
+  readonly dir: string;
+  readonly fx: Fixture;
+  constructor(ctx: BrowserContext, id: string, sw: Worker, dir: string, fx: Fixture) {
+    this.ctx = ctx;
+    this.id = id;
+    this.sw = sw;
+    this.dir = dir;
+    this.fx = fx;
+  }
 
   url(page: "popup" | "options" | "sidepanel", query = "") {
     return `chrome-extension://${this.id}/${page}.html${query}`;
@@ -216,7 +221,7 @@ export class Ext {
   /** The offscreen document was closed (Chrome does it on its own after a while); forget the connection. */
   resetCdp() {
     this.cdp?.close();
-    this.cdp = undefined;
+    delete this.cdp;
   }
   async off<T>(expr: string): Promise<T> {
     return (await this.offscreenCdp()).eval<T>(expr);

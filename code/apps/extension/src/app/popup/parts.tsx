@@ -5,7 +5,7 @@ import { headerBadge, type PopupView } from "../../features/connection";
 
 const TONE = { ok: "green", warn: "orange", err: "red", neutral: "neutral" } as const;
 
-export const Header = ({ view, engine, onOptions }: { view: PopupView; engine?: EngineState; onOptions: () => void }) => {
+export const Header = ({ view, engine, onOptions }: { view: PopupView; engine?: EngineState | undefined; onOptions: () => void }) => {
   const b = headerBadge(view, engine);
   return (
     <header className="pp-head">
@@ -19,7 +19,7 @@ export const Header = ({ view, engine, onOptions }: { view: PopupView; engine?: 
   );
 };
 
-export const Foot = ({ left = "Runs on this computer", right = "Open app", onRight }: { left?: string; right?: string; onRight: () => void }) => (
+export const Foot = ({ left = "Runs on this computer", right = "Open app", onRight }: { left?: string | undefined; right?: string; onRight: () => void }) => (
   <footer className="pp-foot">
     <span className="pp-foot-l">
       <Icon name="lock" size={13} />
@@ -37,7 +37,7 @@ export interface MsgProps {
   title: string;
   body: string;
   primary: { label: string; onClick: () => void };
-  secondary?: { label: string; onClick: () => void };
+  secondary?: { label: string; onClick: () => void } | undefined;
   note?: ReactNode;
 }
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-const images = vi.hoisted(() => [] as { scaleFactor?: number; template: boolean }[]);
+const images = vi.hoisted(() => [] as { scaleFactor?: number | undefined; template: boolean }[]);
 vi.mock("electron", () => ({
   nativeImage: {
     createFromBuffer: (_b: Buffer, o?: { scaleFactor?: number }) => {

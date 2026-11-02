@@ -28,7 +28,7 @@ const makeGet =
   (deps: HealthDeps): Get =>
   async (path, port, token) =>
     deps.fetch(`http://127.0.0.1:${port}${path}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
@@ -45,7 +45,7 @@ async function fetchHealth(get: Get, port: number): Promise<ConnResult<Health>> 
   }
 }
 
-async function checkAuth(get: Get, deps: HealthDeps, override: { port?: number; token?: string }): Promise<ConnResult<true>> {
+async function checkAuth(get: Get, deps: HealthDeps, override: { port?: number | undefined; token?: string | undefined }): Promise<ConnResult<true>> {
   try {
     const res = await get("/v1/auth/check", override.port ?? (await deps.port()), override.token ?? (await deps.token()));
     if (res.status === 204 || res.ok) return { ok: true, value: true };

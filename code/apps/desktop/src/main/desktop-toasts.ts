@@ -19,7 +19,7 @@ export interface ShownToast {
   title: string;
   body: string;
   silent: boolean;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }
 
 /** The one path every native notification takes. With the test hook the toasts are recorded in `shown` as well, and SPEAKKIT_QUIET_NOTIFY keeps them off screen. */

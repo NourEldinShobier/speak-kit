@@ -45,10 +45,11 @@ const mocks = vi.hoisted(() => {
     closed = 0;
     blur: (() => void) | undefined;
     window = { isVisible: () => this.visible };
-    constructor(
-      public page: string,
-      public options: unknown,
-    ) {
+    page: string;
+    options: unknown;
+    constructor(page: string, options: unknown) {
+      this.page = page;
+      this.options = options;
       state.panels.push(this);
     }
     open() {
