@@ -1,0 +1,142 @@
+{
+  "version": "0.4.0",
+  "commit": "2e4a51088a391e2a40e90f7eeb3523f626e9663e",
+  "dirty": false,
+  "complete": true,
+  "passed": true,
+  "date": "2026-11-02T03:44:52.523Z",
+  "machine": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 32,
+    "node": "v24.22.1"
+  },
+  "tests": [
+    {
+      "title": "performance budgets (fake engine unless noted) > Listen click to first scheduled audio, pipeline overhead",
+      "status": "passed",
+      "ms": 12152
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > extraction of 5,000 paragraphs does not block the main thread past 50 ms",
+      "status": "passed",
+      "ms": 1823
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > extraction of 5,000 paragraphs under 4x CPU throttle: no task over 100 ms",
+      "status": "passed",
+      "ms": 2601
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > content script: production bundle size and injection cost",
+      "status": "passed",
+      "ms": 1574
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > popup open to interactive",
+      "status": "passed",
+      "ms": 2277
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > popup open under 4x CPU throttle: no task over 300 ms",
+      "status": "passed",
+      "ms": 2149
+    },
+    {
+      "title": "performance budgets (fake engine unless noted) > offscreen memory over an accelerated 10 minute read (600 paragraph jumps)",
+      "status": "passed",
+      "ms": 26615
+    },
+    {
+      "title": "model lifecycle budgets (real Kokoro) > unloaded to first audio on a click without any earlier warm-up, and the warm path",
+      "status": "passed",
+      "ms": 6939
+    }
+  ],
+  "measurements": [
+    {
+      "name": "click-to-first-audio (fake engine, includes polling)",
+      "value": 207,
+      "unit": "ms",
+      "limit": "< 600"
+    },
+    {
+      "name": "extract 5,000 paragraphs, message round trip incl. serialization",
+      "value": 64,
+      "unit": "ms",
+      "limit": "informational"
+    },
+    {
+      "name": "extract 5,000 paragraphs, longest main-thread stall seen by the page",
+      "value": 44.7,
+      "unit": "ms",
+      "limit": "< 50 (budget), < 120 (test)"
+    },
+    {
+      "name": "extract 5,000 paragraphs, longest main-thread task under 4x CPU throttle",
+      "value": 0,
+      "unit": "ms",
+      "limit": "< 100"
+    },
+    {
+      "name": "content.js production size",
+      "value": 33.3,
+      "unit": "KB",
+      "limit": "< 120"
+    },
+    {
+      "name": "content.js production gzip",
+      "value": 12.9,
+      "unit": "KB",
+      "limit": "< 40"
+    },
+    {
+      "name": "content.js injection via executeScript (median of 5, test build)",
+      "value": 2.2,
+      "unit": "ms",
+      "limit": "< 80"
+    },
+    {
+      "name": "popup open to Listen button (median of 3, includes tab creation)",
+      "value": 65,
+      "unit": "ms",
+      "limit": "< 700"
+    },
+    {
+      "name": "popup open, longest main-thread task under 4x CPU throttle",
+      "value": 0,
+      "unit": "ms",
+      "limit": "< 300"
+    },
+    {
+      "name": "offscreen JS heap growth over 600 paragraph jumps",
+      "value": 0.3,
+      "unit": "MB",
+      "limit": "< 25"
+    },
+    {
+      "name": "offscreen JS heap after the run",
+      "value": 6.7,
+      "unit": "MB",
+      "limit": "informational"
+    },
+    {
+      "name": "simulated read wall time",
+      "value": 22.9,
+      "unit": "s",
+      "limit": "informational"
+    },
+    {
+      "name": "lifecycle: unloaded, click Listen to first audio, real Kokoro",
+      "value": 1861,
+      "unit": "ms",
+      "limit": "< 3000"
+    },
+    {
+      "name": "lifecycle: ready, click Listen to first audio, real Kokoro",
+      "value": 389,
+      "unit": "ms",
+      "limit": "< 1000"
+    }
+  ]
+}
