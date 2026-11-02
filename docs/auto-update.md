@@ -61,7 +61,7 @@ Source checkout with a fake updater (used by `tests/system.test.ts`): `SPEAKKIT_
 
 ```
 cd code/apps/desktop
-node scripts/update-e2e/run.mjs            # or: SPEAKKIT_UPDATE_E2E=1 pnpm exec vp test run tests/update-e2e.test.ts
+node scripts/update-e2e/run.mjs
 ```
 
 It builds two installers with `scripts/package.mjs --version 0.3.1` and `--version 0.3.2` (reused from `release/update-e2e/` on later runs; `--rebuild` forces new builds; `--old` / `--new` change the numbers; `--only quit|restart` runs one scenario), serves the newer one with `latest.yml` from a local static server, and then for each of the two scenarios:

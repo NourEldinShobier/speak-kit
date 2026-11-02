@@ -128,6 +128,11 @@ export class Updates {
     this.#set({ kind: "error", message, reason: classifyUpdateError(message), phase: this.#state.kind === "downloading" ? "download" : "check" });
   }
 
+  /** The updater both emits "error" and rejects: report the rejection only when the event did not already. */
+  #rejected(e: unknown) {
+    if (this.#state.kind !== "error") this.#fail(e instanceof Error ? e.message : String(e));
+  }
+
   async #updater(): Promise<UpdaterLike | null> {
     if (this.#d.mode !== "auto") return null;
     if (this.#u) return this.#u;
@@ -157,7 +162,7 @@ export class Updates {
     const u = await this.#updater();
     if (!u) return;
     this.#set({ kind: "checking" });
-    await u.checkForUpdates().catch(() => {}); // failures arrive through the "error" event
+    await u.checkForUpdates().catch((e: unknown) => this.#rejected(e));
   }
 
   async #checkManual() {
@@ -180,7 +185,7 @@ export class Updates {
     const u = await this.#updater();
     if (!u || this.#state.kind !== "available") return;
     this.#set({ kind: "downloading", version: this.#version, percent: 0 });
-    await u.downloadUpdate().catch(() => {});
+    await u.downloadUpdate().catch((e: unknown) => this.#rejected(e));
   }
 
   /**

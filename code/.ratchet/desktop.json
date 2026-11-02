@@ -1,11 +1,10 @@
 {
   "lint": {
     "code": {
-      "max-lines-per-function": 8,
-      "no-nested-ternary": 2,
       "max-params": 11,
-      "exhaustive-deps": 0,
-      "complexity": 7
+      "complexity": 7,
+      "max-lines-per-function": 8,
+      "no-nested-ternary": 2
     },
     "tests": {
       "no-explicit-any": 5
@@ -19,7 +18,7 @@
     "sendSync": 0,
     "shortInterval": 0,
     "oxlintDisable": 0,
-    "swallowingCatch": 10,
+    "swallowingCatch": 8,
     "physicalCss": 1,
     "skipped": 0,
     "focused": 0,

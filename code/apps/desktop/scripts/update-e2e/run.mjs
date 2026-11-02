@@ -25,6 +25,8 @@ const NEW = opt("--new", "0.3.2");
 const only = opt("--only", "");
 const { chromium } = createRequire(path.resolve(desktop, "../../e2e/package.json"))("@playwright/test");
 
+/** Teardown and quit-time calls reject when the app or browser is already gone, which is the expected end; the reason is logged, not hidden. */
+const ignored = (e) => console.log(`  (ignored: ${e instanceof Error ? e.message : e})`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const failures = [];
 const check = (name, ok, detail = "") => {
@@ -182,9 +184,9 @@ async function installOnQuit(site, run) {
   const { name, dir, exe, env, health, installedVersion } = site;
   await run.page.evaluate(() => window.speakkit.updateAction("install-on-quit"));
   check(`${name}: Install when I quit is armed and nothing installed yet`, (await run.update()).onQuit === true && installedVersion() === OLD);
-  await run.browser.close().catch(() => {});
+  await run.browser.close().catch(ignored);
   await site.quit();
-  await exited(run.app).catch(() => {});
+  await exited(run.app).catch(ignored);
   await until(`the installer to put ${NEW} in place`, () => installedVersion() === NEW, 180_000);
   await until("the update installer to finish", () => !updaterRunning(), 120_000);
   await sleep(1500);
@@ -196,7 +198,7 @@ async function installOnQuit(site, run) {
 
 async function restartNow(site, run) {
   const { name, dir, installedVersion } = site;
-  void run.page.evaluate(() => window.speakkit.updateAction("install-now")).catch(() => {});
+  void run.page.evaluate(() => window.speakkit.updateAction("install-now")).catch(ignored);
   await until("the installer to replace the files", () => installedVersion() === NEW, 180_000);
   await until("the update installer to finish", () => !updaterRunning(), 180_000);
   // The installer relaunches the app through the Windows shell, which does not pass the SPEAKKIT_* variables of this run on: the
@@ -204,12 +206,12 @@ async function restartNow(site, run) {
   const h1 = await until(`the restarted app to report ${NEW}`, () => healthOfProcessesIn(dir), 120_000);
   check(`${name}: Restart now left the app running ${NEW} (health)`, h1.version === NEW, `v${h1.version}`);
   check(`${name}: the restarted app is the installed one`, installedVersion() === NEW && countIn(dir) > 0);
-  await run.browser.close().catch(() => {});
+  await run.browser.close().catch(ignored);
 }
 
 async function uninstall(site) {
   const { name, dir, env } = site;
-  await site.quit().catch(() => {});
+  await site.quit().catch(ignored);
   for (let i = 0; i < 240 && updaterRunning(); i++) await sleep(500);
   if (countIn(dir) > 0) killIn(dir);
   const uninstaller = path.join(dir, "Uninstall Speak Kit.exe");

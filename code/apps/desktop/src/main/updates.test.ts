@@ -72,6 +72,15 @@ describe("Updates", () => {
     expect(t.up.state).toEqual({ kind: "idle", checkedAtMs: 42 });
   });
 
+  it("a check that rejects without an error event still ends in the error state", async () => {
+    const t = setup();
+    t.u.checkForUpdates = async () => {
+      throw new Error("net::ERR_INTERNET_DISCONNECTED");
+    };
+    await t.up.check();
+    expect(t.up.state).toEqual({ kind: "error", message: "net::ERR_INTERNET_DISCONNECTED", reason: "offline", phase: "check" });
+  });
+
   it("an updater error is shown, and the next check can run again", async () => {
     const t = setup();
     await t.up.check();
