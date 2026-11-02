@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import { PROXY_PATHS, type LibraryMethod } from "./channels";
+import type { DesktopError } from "../errors";
 
 export { LIBRARY_METHODS, libraryChannel, PROXY_CANCEL, PROXY_CHUNK, PROXY_OPEN, PROXY_PATHS } from "./channels";
 
@@ -69,7 +70,7 @@ export interface SearchHit {
 }
 
 export type ImportFailure = "unsupported" | "empty" | "unreadable" | "network" | "too-large";
-export type ImportResult = { ok: true; doc: DocMeta } | { ok: false; reason: ImportFailure; message: string; name?: string };
+export type ImportResult = { ok: true; doc: DocMeta } | { ok: false; reason: ImportFailure; error: DesktopError; name?: string };
 
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const MAX_PASTE_CHARS = 2_000_000;
@@ -136,7 +137,11 @@ export const ProxyRequestSchema = v.object({
   replace: v.optional(v.pipe(v.string(), v.maxLength(64))),
 });
 export type ProxyRequest = v.InferOutput<typeof ProxyRequestSchema>;
-export type ProxyChunk = { id: number; type: "head"; status: number } | { id: number; type: "data"; data: Uint8Array } | { id: number; type: "end" } | { id: number; type: "error"; message: string };
+export type ProxyChunk =
+  | { id: number; type: "head"; status: number }
+  | { id: number; type: "data"; data: Uint8Array }
+  | { id: number; type: "end" }
+  | { id: number; type: "error"; error: DesktopError };
 
 /** What the preload exposes as window.speakkitLibrary. */
 export interface LibraryBridge extends LibraryApi {

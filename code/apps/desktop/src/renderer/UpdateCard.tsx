@@ -1,7 +1,8 @@
 import { Banner, Button, LoadingLabel, Popover, ProgressBar, StatusPill } from "@speakkit/ui";
 import { useState } from "react";
 import type { AppState } from "../shared/ipc";
-import { updateBlockers, updateErrorText, type UpdateAction } from "../shared/updates";
+import { updateBlockers, type UpdateAction } from "../shared/updates";
+import { updateErrorText } from "./error-text";
 import { api } from "./ui";
 
 const act = (a: UpdateAction) => () => void api.updateAction(a);
@@ -128,7 +129,7 @@ export function UpdateCard({ s }: { s: AppState }) {
     case "restarting":
       return <LoadingLabel>Restarting to install {u.version}</LoadingLabel>;
     case "error": {
-      const t = updateErrorText(u.reason, u.phase, u.message);
+      const t = updateErrorText(u.error, u.phase);
       return (
         <Banner
           tone="error"

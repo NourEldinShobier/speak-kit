@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, Modal } from "@speakkit/ui";
 import type { AppState, PreviewAudio } from "../shared/ipc";
+import { toDesktopError } from "../shared/errors";
+import { errorText } from "./error-text";
 
 declare global {
   interface Window {
@@ -179,7 +181,8 @@ export function playAudio(a: PreviewAudio, onEnd: () => void): () => void {
   };
 }
 
-export const cleanError = (e: unknown) => (e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : String(e));
+/** The sentence for anything a call to main threw. */
+export const cleanError = (e: unknown) => errorText(toDesktopError(e));
 
 /** Preview player: at most one reading plays at a time; returns the playing key. */
 export function usePreview(speed = 1) {

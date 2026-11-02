@@ -59,7 +59,7 @@ describe("sendCopyKeys", () => {
 
   it("refuses on other platforms", async () => {
     const k = await press("linux");
-    await expect(k.run()).rejects.toThrow("only available on Windows");
+    await expect(k.run()).rejects.toMatchObject({ error: { code: "selection-unsupported" } });
     expect(k.calls).toEqual([]);
   });
 });

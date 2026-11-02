@@ -1,4 +1,5 @@
 import type { Health } from "@speakkit/protocol";
+import type { DesktopError } from "./errors";
 
 export type PillTone = "green" | "blue" | "orange" | "red" | "neutral";
 /** normal (ready), working (download, load, reading, export), asleep (unloaded), error, paused (reading paused), attention (an update waits for you). */
@@ -15,7 +16,7 @@ interface EngineView {
 }
 
 /** One place that turns server health into words, used by the title bar pill, Home, Engines, Memory and the tray tooltip. */
-export function engineView(health: Health | null, serverError: string | null): EngineView {
+export function engineView(health: Health | null, serverError: DesktopError | null): EngineView {
   if (!health) return serverError ? { key: "error", label: "Error", tone: "red", spinner: false } : { key: "starting", label: "Starting", tone: "neutral", spinner: true };
   const e = health.engine;
   switch (e.state) {
@@ -45,7 +46,7 @@ export function engineView(health: Health | null, serverError: string | null): E
 
 /** Tray icon variant: normal (ready), working (download or load), asleep (unloaded or not downloaded), error. */
 /** Tray variant from the engine alone; shared/tray.ts adds reading, exports and updates. */
-export function trayState(health: Health | null, serverError: string | null): TrayState {
+export function trayState(health: Health | null, serverError: DesktopError | null): TrayState {
   if (serverError) return "error";
   switch (health?.engine.state) {
     case "error":
@@ -65,7 +66,7 @@ export function trayState(health: Health | null, serverError: string | null): Tr
   }
 }
 
-export function trayTooltip(health: Health | null, serverError: string | null): string {
+export function trayTooltip(health: Health | null, serverError: DesktopError | null): string {
   const v = engineView(health, serverError);
   return `Speak Kit - ${v.label}${v.hint ? ` (${v.hint.toLowerCase()})` : ""}`;
 }

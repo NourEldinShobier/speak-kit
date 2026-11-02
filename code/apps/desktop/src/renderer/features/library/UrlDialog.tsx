@@ -1,6 +1,7 @@
 import { useReducer } from "react";
 import { Banner, Button, Modal, TextInput } from "@speakkit/ui";
 import type { DocMeta } from "../../../shared/library/contract";
+import { errorText } from "../../error-text";
 import { library } from "./api";
 import { initUrl, urlReducer } from "./add-model";
 
@@ -38,7 +39,7 @@ export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: UrlProps) 
   const go = async () => {
     dispatch({ type: "fetch" });
     const r = await library.importUrl(st.url);
-    if (!r.ok) return dispatch({ type: "failed", message: r.message });
+    if (!r.ok) return dispatch({ type: "failed", message: errorText(r.error) });
     dispatch({ type: "added" });
     onAdded(r.doc);
   };

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
 import { DOT_CLASS, engineDetail, engineView, trayState, trayTooltip } from "./engine-view";
+import type { DesktopError } from "./errors";
+
+const BUSY: DesktopError = { code: "unexpected", args: { detail: "EADDRINUSE" } };
 
 const h = (state: EngineState, extra: object = {}): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state, ...extra } });
 
@@ -12,17 +15,17 @@ describe("engine state to words and tray icon", () => {
     expect(engineView(h("downloading", { progress: 0.424 }), null).label).toBe("Download 42%");
     expect(engineView(h("missing"), null).tone).toBe("orange");
     expect(engineView(null, null).label).toBe("Starting");
-    expect(engineView(null, "EADDRINUSE").label).toBe("Error");
+    expect(engineView(null, BUSY).label).toBe("Error");
   });
   it("tray icon variants", () => {
-    const m: [Health | null, string | null, string][] = [
+    const m: [Health | null, DesktopError | null, string][] = [
       [h("ready"), null, "normal"],
       [h("loading"), null, "working"],
       [h("downloading"), null, "working"],
       [h("unloaded"), null, "asleep"],
       [h("missing"), null, "asleep"],
       [h("error"), null, "error"],
-      [h("ready"), "port busy", "error"],
+      [h("ready"), BUSY, "error"],
       [null, null, "working"],
     ];
     for (const [health, err, want] of m) expect(trayState(health, err)).toBe(want);

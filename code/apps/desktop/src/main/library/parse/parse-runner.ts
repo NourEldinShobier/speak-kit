@@ -1,4 +1,5 @@
 import { Worker } from "node:worker_threads";
+import { toDesktopError, type DesktopError } from "../../../shared/errors";
 import type { ImportFailure } from "../../../shared/library/contract";
 import { ImportError } from "./import-error";
 import type { ParseFn, ParseResult } from "./job";
@@ -17,10 +18,10 @@ export const parseInWorker =
         void worker.terminate();
         fn();
       };
-      const timer = setTimeout(() => finish(() => reject(new ImportError("unreadable", "Reading this took too long, so it was stopped."))), timeoutMs);
-      worker.once("message", (m: { result?: ParseResult; failure?: { reason: ImportFailure; message: string } }) =>
-        finish(() => (m.result ? resolve(m.result) : reject(new ImportError(m.failure?.reason ?? "unreadable", m.failure?.message ?? "This could not be read.")))),
+      const timer = setTimeout(() => finish(() => reject(new ImportError("unreadable", { code: "parse-timeout" }))), timeoutMs);
+      worker.once("message", (m: { result?: ParseResult; failure?: { reason: ImportFailure; error: DesktopError } }) =>
+        finish(() => (m.result ? resolve(m.result) : reject(new ImportError(m.failure?.reason ?? "unreadable", m.failure?.error ?? { code: "could-not-read" })))),
       );
-      worker.once("error", (e: Error) => finish(() => reject(new ImportError("unreadable", e.message))));
-      worker.once("exit", (code) => finish(() => reject(new ImportError("unreadable", `The reader stopped unexpectedly (${code}).`))));
+      worker.once("error", (e: Error) => finish(() => reject(new ImportError("unreadable", toDesktopError(e)))));
+      worker.once("exit", (code) => finish(() => reject(new ImportError("unreadable", { code: "parser-exited", args: { exitCode: code } }))));
     });

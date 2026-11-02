@@ -63,7 +63,7 @@ describe("publicFetch", () => {
     const doFetch = publicFetch(async () => answers[calls++]!);
     await expect(fetchPage(`http://rebind.test:${port}/`, doFetch)).rejects.toMatchObject({
       reason: "network",
-      message: "rebind.test:" + port + " is on this computer or your local network. Only public web addresses can be read.",
+      error: { code: "local-address", args: { host: "rebind.test:" + port } },
     });
     expect(hits).toBe(0);
     expect(calls).toBe(1);
@@ -76,7 +76,7 @@ describe("publicFetch", () => {
         url,
         publicFetch(async () => ((resolved = true), [])),
       ),
-    ).rejects.toMatchObject({ reason: "network", message: expect.stringContaining("Only public web addresses") });
+    ).rejects.toMatchObject({ reason: "network", error: { code: "local-address" } });
     expect(resolved).toBe(false);
   });
 
@@ -88,7 +88,7 @@ describe("publicFetch", () => {
       seen.push(u.host);
       return u.hostname === "public.test" ? Promise.resolve(new Response(null, { status: 302, headers: { location: `http://127.0.0.1:${port}/` } })) : guarded(u, init);
     }) as unknown as typeof fetch;
-    await expect(fetchPage("http://public.test/", doFetch)).rejects.toMatchObject({ reason: "network", message: expect.stringContaining("Only public web addresses") });
+    await expect(fetchPage("http://public.test/", doFetch)).rejects.toMatchObject({ reason: "network", error: { code: "local-address" } });
     expect(seen).toEqual(["public.test", `127.0.0.1:${port}`]);
     expect(hits).toBe(0);
   });

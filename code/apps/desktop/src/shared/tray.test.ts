@@ -25,7 +25,7 @@ describe("tray icon state", () => {
       [{ health: health("unloaded") }, "asleep"],
       [{ health: health("loading") }, "working"],
       [{ health: health("error") }, "error"],
-      [{ serverError: "EADDRINUSE" }, "error"],
+      [{ serverError: { code: "unexpected", args: { detail: "EADDRINUSE" } } }, "error"],
       [{ reader: reader("playing") }, "working"],
       [{ reader: reader("preparing") }, "working"],
       [{ reader: reader("paused") }, "paused"],

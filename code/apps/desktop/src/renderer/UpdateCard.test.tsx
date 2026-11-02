@@ -30,14 +30,14 @@ describe("UpdateCard", () => {
     ["checksum", "download", "Could not download the update", "did not match its checksum"],
     ["interrupted", "download", "Could not download the update", "connection dropped"],
   ] as const)("a %s failure during %s", (reason, phase, title, body) => {
-    const html = card({ kind: "error", message: "raw", reason, phase });
+    const html = card({ kind: "error", error: { code: `update-${reason}` }, phase });
     expect(html).toContain(title);
     expect(html).toContain(body);
     expect(html).toContain("Try again");
   });
 
   it("an unknown failure shows the raw message", () => {
-    expect(card({ kind: "error", message: "disk full", reason: "other", phase: "download" })).toContain("disk full");
+    expect(card({ kind: "error", error: { code: "update-failed", args: { detail: "disk full" } }, phase: "download" })).toContain("disk full");
   });
 
   it("ready offers both install choices", () => {

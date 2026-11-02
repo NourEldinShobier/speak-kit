@@ -5,7 +5,8 @@ import "./float.css";
 import { engineView } from "../shared/engine-view";
 import { exportRunning } from "../shared/export";
 import { showAccelerator } from "../shared/shortcuts";
-import { clock, statusLine } from "../shared/reader";
+import { clock } from "../shared/reader";
+import { statusLine } from "./status-line";
 import type { AppState } from "../shared/ipc";
 import { api, playButton, useAppState, useTheme } from "./ui";
 

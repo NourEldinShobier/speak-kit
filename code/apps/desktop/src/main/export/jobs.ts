@@ -2,6 +2,7 @@ import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExportJob, ExportRequest } from "@speakkit/protocol";
 import { safeFileName, type ExportOptions, type ExportTarget, type ExportView } from "../../shared/export";
+import { DesktopFault, toDesktopError } from "../../shared/errors";
 import { splitSentences } from "../../shared/reader";
 import { parseWav, type Wav } from "@speakkit/engine";
 
@@ -65,10 +66,10 @@ export class ExportJobs {
   /** Starts a job and returns its view at once; the work continues in the background. */
   async start(o: ExportOptions): Promise<ExportView> {
     const sentences = splitSentences(o.text);
-    if (!sentences.length) throw new Error("There is no text to export.");
+    if (!sentences.length) throw new DesktopFault({ code: "nothing-to-export" });
     const ext = o.format;
     const target = await targetFor(o.dir, o.name, ext);
-    if (target.exists && !o.conflict) throw new Error("A file with that name already exists.");
+    if (target.exists && !o.conflict) throw new DesktopFault({ code: "file-exists" });
     const file = o.conflict === "keep-both" ? target.alternative : target.path;
     const view: ExportView = { id: `x${this.#next++}`, name: path.basename(file), stage: "rendering", progress: 0, done: 0, total: sentences.length };
     const ac = new AbortController();
@@ -104,7 +105,7 @@ export class ExportJobs {
       if (signal.aborted) throw new DOMException("cancelled", "AbortError");
       job = await this.#d.server.exportStatus(job.id);
     }
-    if (job.state === "error") throw new Error(job.error ?? "The server could not render the audio.");
+    if (job.state === "error") throw new DesktopFault({ code: "render-failed", args: { detail: job.error ?? null } });
     if (job.state === "cancelled") throw new DOMException("cancelled", "AbortError");
     return job;
   }
@@ -129,7 +130,7 @@ export class ExportJobs {
     } catch (e) {
       await rm(part, { force: true });
       if (signal.aborted || (e instanceof DOMException && e.name === "AbortError")) this.#patch(view, { stage: "cancelled" });
-      else this.#patch(view, { stage: "error", error: e instanceof Error ? e.message : String(e) });
+      else this.#patch(view, { stage: "error", error: toDesktopError(e) });
     } finally {
       this.#aborts.delete(view.id);
       if (serverId) await this.#d.server.cancelExport(serverId).catch(() => {}); // frees the server's copy

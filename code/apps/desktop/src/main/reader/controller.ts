@@ -1,4 +1,5 @@
 import type { PreviewAudio } from "../../shared/ipc";
+import { toDesktopError, type DesktopError } from "../../shared/errors";
 import { estimateMs, IDLE_READER, splitSentences, titleOf, type ReaderCommand, type ReaderSource, type ReaderState } from "../../shared/reader";
 
 /** Sentences synthesized ahead of the one playing. */
@@ -39,7 +40,7 @@ export class ReaderController {
   #playing = -1; // sentence the player reported as started
   #paused = false;
   #finished = false;
-  #error: string | null = null;
+  #error: DesktopError | null = null;
   #pumpEpoch = -1;
 
   constructor(deps: ReaderDeps) {
@@ -97,9 +98,9 @@ export class ReaderController {
   }
 
   /** Shows an error without a reading (nothing selected, empty clipboard). Stop or the next start clears it. */
-  fail(message: string): void {
+  fail(error: DesktopError): void {
     this.#reset(false);
-    this.#error = message;
+    this.#error = error;
     this.#d.emit(this.state);
   }
 
@@ -219,7 +220,7 @@ export class ReaderController {
       }
     } catch (e) {
       if (epoch !== this.#epoch) return;
-      this.#error = e instanceof Error ? e.message : String(e);
+      this.#error = toDesktopError(e);
       this.#d.player.flush();
       this.#d.emit(this.state);
     } finally {

@@ -1,4 +1,5 @@
 import type { EngineId, EngineList, Health, VoiceList } from "@speakkit/protocol";
+import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
 import type { ReaderCommand, ReaderState } from "./reader";
@@ -36,7 +37,7 @@ export interface AppState {
   portFallback: boolean;
   token: string;
   health: Health | null;
-  serverError: string | null;
+  serverError: DesktopError | null;
   config: Config;
   launchAtLogin: boolean;
   onBattery: boolean;
@@ -73,7 +74,7 @@ export interface Metrics {
   otherMb: number;
 }
 
-export type ShortcutResult = { ok: true } | { ok: false; error: string; conflict?: ShortcutConflict };
+export type ShortcutResult = { ok: true } | { ok: false; error: DesktopError; conflict?: ShortcutConflict };
 
 export type ExternalLink = "webstore";
 export type OpenPath = "models" | "logs";

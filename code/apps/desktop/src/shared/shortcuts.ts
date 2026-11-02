@@ -1,3 +1,5 @@
+import type { DesktopError } from "./errors";
+
 /** Global shortcuts: ids, defaults and the pure rules (validation, conflicts, recording). Registration with the OS lives in main/shortcuts.ts. */
 export const SHORTCUT_IDS = ["read-selection", "play-pause", "stop", "read-clipboard"] as const;
 export type ShortcutId = (typeof SHORTCUT_IDS)[number];
@@ -63,13 +65,13 @@ export function showAccelerator(accelerator: string, platform: string, scope: "a
 const RESERVED = new Set(["Alt+F4", "Alt+Tab", "Alt+Space", "Ctrl+Alt+Delete", "Ctrl+Alt+Tab", "Ctrl+Shift+Escape"]);
 
 /** Why this accelerator cannot be a global shortcut, or null when it can. */
-export function checkAccelerator(raw: string): string | null {
+export function checkAccelerator(raw: string): DesktopError | null {
   const p = parseAccelerator(raw);
-  if (!p) return "That is not a valid key combination.";
-  if (!p.mods.includes("Ctrl") && !p.mods.includes("Alt")) return "Use Ctrl or Alt together with another key.";
+  if (!p) return { code: "shortcut-invalid" };
+  if (!p.mods.includes("Ctrl") && !p.mods.includes("Alt")) return { code: "shortcut-needs-modifier" };
   const fKey = /^F\d+$/.test(p.key);
-  if (p.mods.length < 2 && !fKey) return "Use at least two modifier keys, such as Ctrl+Alt, so normal typing is not blocked.";
-  if (RESERVED.has([...p.mods, p.key].join("+"))) return "Windows uses that combination.";
+  if (p.mods.length < 2 && !fKey) return { code: "shortcut-needs-two" };
+  if (RESERVED.has([...p.mods, p.key].join("+"))) return { code: "shortcut-reserved" };
   return null;
 }
 
@@ -138,7 +140,7 @@ interface KeyEventLike {
   shiftKey: boolean;
   metaKey: boolean;
 }
-type Recorded = { kind: "cancel" } | { kind: "waiting" } | { kind: "invalid"; reason: string } | { kind: "accelerator"; accelerator: string };
+type Recorded = { kind: "cancel" } | { kind: "waiting" } | { kind: "invalid"; reason: DesktopError } | { kind: "accelerator"; accelerator: string };
 
 function keyOfCode(code: string): string | undefined {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
@@ -152,8 +154,8 @@ export function recordKey(e: KeyEventLike, platform: string): Recorded {
   if (e.code === "Escape" && !hasMod) return { kind: "cancel" };
   if (/^(Control|Alt|Shift|Meta|OS)(Left|Right)$/.test(e.code)) return { kind: "waiting" };
   const key = keyOfCode(e.code);
-  if (!key) return { kind: "invalid", reason: "That key cannot be used." };
-  if (e.metaKey) return { kind: "invalid", reason: platform === "darwin" ? "The Command key is reserved for macOS." : "The Windows key is reserved for Windows." };
+  if (!key) return { kind: "invalid", reason: { code: "shortcut-bad-key" } };
+  if (e.metaKey) return { kind: "invalid", reason: { code: "shortcut-meta-key", args: { platform } } };
   const accelerator = normalize([e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", key].filter(Boolean).join("+"))!;
   const reason = checkAccelerator(accelerator);
   return reason ? { kind: "invalid", reason } : { kind: "accelerator", accelerator };

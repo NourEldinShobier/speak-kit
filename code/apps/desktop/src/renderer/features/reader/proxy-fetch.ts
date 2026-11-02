@@ -1,4 +1,6 @@
 import { PROXY_PATHS, type LibraryBridge, type ProxyRequest } from "../../../shared/library/contract";
+import { toDesktopError } from "../../../shared/errors";
+import { errorText } from "../../error-text";
 
 type Bridge = Pick<LibraryBridge, "proxyOpen" | "proxyCancel" | "onProxyChunk">;
 type Path = (typeof PROXY_PATHS)[number];
@@ -82,7 +84,7 @@ function track({ bridge, pending, req, signal, resolve, reject }: Call): void {
       else reject(new TypeError(message)); // the player reads a TypeError as "app not running"
     },
   });
-  bridge.proxyOpen(req).catch((e) => pending.get(req.id)?.fail(e instanceof Error ? e.message : String(e)));
+  bridge.proxyOpen(req).catch((e) => pending.get(req.id)?.fail(errorText(toDesktopError(e))));
 }
 
 /**
@@ -102,7 +104,7 @@ export function createProxyFetch(bridge: Bridge): typeof fetch {
       if (c.type === "head") p.head(c.status);
       else if (c.type === "data") p.data(c.data);
       else if (c.type === "end") p.end();
-      else p.fail(c.message);
+      else p.fail(errorText(c.error));
     });
   };
 

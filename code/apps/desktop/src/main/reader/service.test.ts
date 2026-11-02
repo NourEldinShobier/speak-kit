@@ -85,7 +85,7 @@ describe("createReading", () => {
   it("text with nothing to say fails with a message instead of opening the player silently", () => {
     const t = setup();
     expect(t.reading.readText("   ", "text")).toBe(false);
-    expect(t.ctx.state.reader).toMatchObject({ status: "error", error: "There is no text to read." });
+    expect(t.ctx.state.reader).toMatchObject({ status: "error", error: { code: "nothing-to-read" } });
   });
 
   it("stop closes the mini player", async () => {
@@ -122,7 +122,7 @@ describe("createReading", () => {
     expect(t.ctx.state.reader).toMatchObject({ source: "clipboard", title: "From the clipboard." });
     mocks.readText.mockResolvedValueOnce("  ");
     expect(await t.reading.readClipboard()).toBe(false);
-    expect(t.ctx.state.reader).toMatchObject({ status: "error", error: "The clipboard has no text." });
+    expect(t.ctx.state.reader).toMatchObject({ status: "error", error: { code: "empty-clipboard" } });
   });
 
   it("readSelection reads what the capture found", async () => {
@@ -136,10 +136,10 @@ describe("createReading", () => {
     const t = setup();
     mocks.capture.mockResolvedValueOnce("");
     await t.reading.readSelection();
-    expect(t.ctx.state.reader.error).toBe("No text is selected. Select some text, then try again.");
+    expect(t.ctx.state.reader.error).toEqual({ code: "no-selection" });
     mocks.capture.mockRejectedValueOnce(new Error("Reading the selection is only available on Windows."));
     await t.reading.readSelection();
-    expect(t.ctx.state.reader.error).toBe("Reading the selection is only available on Windows.");
+    expect(t.ctx.state.reader.error).toEqual({ code: "unexpected", args: { detail: "Reading the selection is only available on Windows." } });
     expect(t.ctx.log.warn).toHaveBeenCalledWith("reading the selection failed", "Reading the selection is only available on Windows.");
   });
 

@@ -11,7 +11,7 @@ describe("speak proxy limits", () => {
     for (let id = 1; id <= MAX_OPEN_REQUESTS; id++) void proxy.open({ id, path: "/v1/speak", method: "POST", body: "{}" }, () => {});
     const chunks: ProxyChunk[] = [];
     await proxy.open({ id: 99, path: "/v1/speak", method: "POST", body: "{}" }, (c) => chunks.push(c));
-    expect(chunks).toEqual([{ id: 99, type: "error", message: "Too many requests at once." }]);
+    expect(chunks).toEqual([{ id: 99, type: "error", error: { code: "too-many-requests" } }]);
   });
 
   it("cancelAll aborts every running request and frees the slots", async () => {

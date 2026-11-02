@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type DragEvent } from "react";
 import { MAX_FILE_BYTES, type DocMeta, type ImportResult } from "../../../shared/library/contract";
 import { library } from "./api";
+import { errorText } from "../../error-text";
 import type { LibraryAction } from "./page-model";
 
 const TOAST_MS = 6000;
@@ -23,7 +24,7 @@ function useToast(dispatch: Dispatch<LibraryAction>) {
 }
 
 const addedText = (doc: DocMeta) => (doc.needsOcr ? `Added "${doc.title}". It has no text layer: open it to run text recognition.` : `Added "${doc.title}".`);
-const failureText = (r: Extract<ImportResult, { ok: false }>) => (r.name ? `${r.name}: ${r.message}` : r.message);
+const failureText = (r: Extract<ImportResult, { ok: false }>) => (r.name ? `${r.name}: ${errorText(r.error)}` : errorText(r.error));
 
 function dragProps(dispatch: Dispatch<LibraryAction>, addFiles: (files: File[]) => Promise<void>) {
   return {
@@ -54,7 +55,7 @@ function importer({ dispatch, refresh, say }: Pick<Deps, "dispatch" | "refresh">
     finish(
       await Promise.all(
         files.map(async (f): Promise<ImportResult> => {
-          if (f.size > MAX_FILE_BYTES) return { ok: false, reason: "too-large", name: f.name, message: "The file is larger than 100 MB." };
+          if (f.size > MAX_FILE_BYTES) return { ok: false, reason: "too-large", name: f.name, error: { code: "dropped-file-too-large", args: { mb: MAX_FILE_BYTES / 1024 / 1024 } } };
           return library.importBytes(f.name, new Uint8Array(await f.arrayBuffer()));
         }),
       ),

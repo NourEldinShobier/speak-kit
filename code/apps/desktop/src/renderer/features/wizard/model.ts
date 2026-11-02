@@ -1,4 +1,5 @@
 import type { AppState } from "../../../shared/ipc";
+import { errorText } from "../../error-text";
 
 export const STEPS = ["Welcome", "Voice engine", "Download", "Connect browser", "Done"] as const;
 export const MODEL_MB = 177;
@@ -50,7 +51,7 @@ export function downloadView(s: AppState): DownloadView {
   let phase: DownloadPhase = "downloading";
   if (failed) phase = "failed";
   else if (ready) phase = "ready";
-  return { phase, pct, detail: s.serverError ?? eng?.detail ?? "" };
+  return { phase, pct, detail: s.serverError ? errorText(s.serverError) : (eng?.detail ?? "") };
 }
 
 export const DOWNLOAD_TITLES: Record<DownloadPhase, string> = { failed: "Download paused", ready: "Kokoro-82M is ready", downloading: "Downloading Kokoro-82M" };

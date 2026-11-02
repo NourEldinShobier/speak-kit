@@ -3,7 +3,8 @@ import { createRoot } from "react-dom/client";
 import { ErrorBoundary, IconButton, Logo, ProgressBar } from "@speakkit/ui";
 import "@speakkit/ui/lumen.css";
 import "./float.css";
-import { clock, statusLine } from "../shared/reader";
+import { clock } from "../shared/reader";
+import { statusLine } from "./status-line";
 import { ChunkPlayer, type AudioLike } from "./player";
 import { api, playButton, useAppState, useTheme } from "./ui";
 

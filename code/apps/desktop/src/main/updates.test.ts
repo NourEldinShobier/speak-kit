@@ -78,14 +78,14 @@ describe("Updates", () => {
       throw new Error("net::ERR_INTERNET_DISCONNECTED");
     };
     await t.up.check();
-    expect(t.up.state).toEqual({ kind: "error", message: "net::ERR_INTERNET_DISCONNECTED", reason: "offline", phase: "check" });
+    expect(t.up.state).toEqual({ kind: "error", error: { code: "update-offline" }, phase: "check" });
   });
 
   it("an updater error is shown, and the next check can run again", async () => {
     const t = setup();
     await t.up.check();
     t.u.emit("error", new Error("net::ERR_INTERNET_DISCONNECTED"));
-    expect(t.up.state).toEqual({ kind: "error", message: "net::ERR_INTERNET_DISCONNECTED", reason: "offline", phase: "check" });
+    expect(t.up.state).toEqual({ kind: "error", error: { code: "update-offline" }, phase: "check" });
     await t.up.check();
     expect(t.u.calls).toEqual(["check", "check"]);
   });
@@ -134,25 +134,25 @@ describe("failure paths", () => {
 
   it("offline during a check is an offline error and the next check runs", async () => {
     const t = await failing("net::ERR_INTERNET_DISCONNECTED", "check");
-    expect(t.up.state).toMatchObject({ kind: "error", reason: "offline", phase: "check" });
+    expect(t.up.state).toMatchObject({ kind: "error", error: { code: "update-offline" }, phase: "check" });
     await t.up.check();
     expect(t.up.state).toEqual({ kind: "checking" });
   });
 
   it("a 404 for latest.yml is reported as not found", async () => {
     const t = await failing("Cannot find latest.yml in the latest release artifacts (https://x/latest.yml): HttpError: 404", "check");
-    expect(t.up.state).toMatchObject({ kind: "error", reason: "not-found", phase: "check" });
+    expect(t.up.state).toMatchObject({ kind: "error", error: { code: "update-not-found" }, phase: "check" });
   });
 
   it("a checksum mismatch during the download is reported, and nothing becomes ready", async () => {
     const t = await failing("sha512 checksum mismatch, expected abc, got def", "download");
-    expect(t.up.state).toMatchObject({ kind: "error", reason: "checksum", phase: "download" });
+    expect(t.up.state).toMatchObject({ kind: "error", error: { code: "update-checksum" }, phase: "download" });
     expect(t.ready).toEqual([]);
   });
 
   it("an interrupted download can be run again: the retry fetches and ends ready", async () => {
     const t = await failing("read ECONNRESET", "download");
-    expect(t.up.state).toMatchObject({ kind: "error", reason: "interrupted", phase: "download" });
+    expect(t.up.state).toMatchObject({ kind: "error", error: { code: "update-interrupted" }, phase: "download" });
     await t.up.check();
     t.u.emit("update-available", { version: "0.3.2" });
     await t.up.download();
@@ -203,10 +203,10 @@ describe("manual mode (macOS)", () => {
     expect(t.up.state).toEqual({ kind: "idle", checkedAtMs: 42 });
   });
 
-  it("a failed lookup is an error that names its reason", async () => {
+  it("a failed lookup is an error that names its code", async () => {
     const t = setup("manual", { latest: () => Promise.reject(new Error("GitHub answered 404 for the latest release")) });
     await t.up.check();
-    expect(t.up.state).toMatchObject({ kind: "error", reason: "not-found", phase: "check" });
+    expect(t.up.state).toMatchObject({ kind: "error", error: { code: "update-not-found" }, phase: "check" });
   });
 });
 

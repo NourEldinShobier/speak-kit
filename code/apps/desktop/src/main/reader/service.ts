@@ -1,5 +1,6 @@
 import { clipboard } from "electron";
 import type { Ctx } from "../context";
+import { toDesktopError } from "../../shared/errors";
 import type { PreviewAudio } from "../../shared/ipc";
 import type { ReaderCommand, ReaderSource, ReaderState } from "../../shared/reader";
 import type { ToastCenter } from "../toasts";
@@ -41,10 +42,10 @@ function selectionReader(ctx: Ctx, controller: ReaderController, readText: (text
     try {
       const text = await captureSelection({ clip: electronClipboard, copy: sendCopyKeys, sleep: (ms) => new Promise((r) => setTimeout(r, ms)) });
       if (text.trim()) readText(text, "selection");
-      else controller.fail("No text is selected. Select some text, then try again.");
+      else controller.fail({ code: "no-selection" });
     } catch (e) {
       ctx.log.warn("reading the selection failed", e instanceof Error ? e.message : e);
-      controller.fail(e instanceof Error ? e.message : "Could not read the selection.");
+      controller.fail(toDesktopError(e));
     } finally {
       capturing = false;
     }
@@ -54,7 +55,7 @@ function selectionReader(ctx: Ctx, controller: ReaderController, readText: (text
 async function readClipboard(controller: ReaderController, readText: (text: string, source: ReaderSource) => boolean) {
   const text = await clipboard.readText();
   if (!text.trim()) {
-    controller.fail("The clipboard has no text.");
+    controller.fail({ code: "empty-clipboard" });
     return false;
   }
   return readText(text, "clipboard");
@@ -105,7 +106,7 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
 
   const readText = (text: string, source: ReaderSource) => {
     const ok = controller.start(text, source);
-    if (!ok) controller.fail("There is no text to read.");
+    if (!ok) controller.fail({ code: "nothing-to-read" });
     return ok;
   };
   const readSelection = selectionReader(ctx, controller, readText);

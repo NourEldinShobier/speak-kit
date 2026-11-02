@@ -106,7 +106,7 @@ describe("ReaderController", () => {
     const { c } = setup({ failOn: "Two is second." });
     c.start(TEXT, "selection");
     await flush();
-    expect(c.state).toMatchObject({ status: "error", error: "engine-not-ready" });
+    expect(c.state).toMatchObject({ status: "error", error: { code: "unexpected", args: { detail: "engine-not-ready" } } });
   });
 
   it("stop returns to idle and cancels synthesis", async () => {
@@ -119,8 +119,8 @@ describe("ReaderController", () => {
 
   it("fail shows a message without a reading, and stop clears it", () => {
     const { c } = setup();
-    c.fail("No text selected.");
-    expect(c.state).toMatchObject({ status: "error", error: "No text selected.", total: 0 });
+    c.fail({ code: "no-selection" });
+    expect(c.state).toMatchObject({ status: "error", error: { code: "no-selection" }, total: 0 });
     c.command({ type: "stop" });
     expect(c.state.status).toBe("idle");
   });

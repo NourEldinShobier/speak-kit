@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banner, Button, Kbd, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
+import type { DesktopError } from "../../../shared/errors";
+import { errorText } from "../../error-text";
 import { recordKey, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../../../shared/shortcuts";
 import { api, Page } from "../../ui";
 
@@ -34,7 +36,7 @@ function problemFor(id: ShortcutId, attempt: Problem | null, clash: Conflict): P
 /** Listens for the new keys while a row is recording; Esc cancels, an unusable combination is reported, a good one is applied. */
 function useRecorder(
   recording: ShortcutId | null,
-  on: { cancel: () => void; invalid: (id: ShortcutId, reason: string) => void; accept: (id: ShortcutId, accelerator: string) => void },
+  on: { cancel: () => void; invalid: (id: ShortcutId, reason: DesktopError) => void; accept: (id: ShortcutId, accelerator: string) => void },
   platform: string,
 ) {
   const { cancel, invalid, accept } = on;
@@ -113,12 +115,12 @@ export function ShortcutsPage({ s }: { s: AppState }) {
   const apply = useCallback(async (id: ShortcutId, accelerator: string) => {
     const r = await api.setShortcut(id, accelerator);
     if (r.ok) setAttempt(null);
-    else setAttempt({ id, text: r.error, accelerator, suggestion: r.conflict?.suggestion });
+    else setAttempt({ id, text: errorText(r.error), accelerator, suggestion: r.conflict?.suggestion });
   }, []);
   const recorder = useMemo(
     () => ({
       cancel: () => setRecording(null),
-      invalid: (id: ShortcutId, text: string) => setAttempt({ id, text }),
+      invalid: (id: ShortcutId, reason: DesktopError) => setAttempt({ id, text: errorText(reason) }),
       accept: (id: ShortcutId, accelerator: string) => {
         setRecording(null);
         void apply(id, accelerator);

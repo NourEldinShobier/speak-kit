@@ -125,7 +125,7 @@ export class Updates {
   }
 
   #fail(message: string) {
-    this.#set({ kind: "error", message, reason: classifyUpdateError(message), phase: this.#state.kind === "downloading" ? "download" : "check" });
+    this.#set({ kind: "error", error: classifyUpdateError(message), phase: this.#state.kind === "downloading" ? "download" : "check" });
   }
 
   /** The updater both emits "error" and rejects: report the rejection only when the event did not already. */

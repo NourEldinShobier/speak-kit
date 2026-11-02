@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { DesktopFault } from "../../shared/errors";
 import { launchEnv } from "./launch-env";
 
 const VK_SHIFT = 0x10;
@@ -18,7 +19,7 @@ export async function sendCopyKeys(): Promise<void> {
       execFile("osascript", ["-e", 'tell application "System Events" to keystroke "c" using command down'], { timeout: 3000, env: launchEnv() }, (err) => (err ? reject(err) : resolve())),
     );
   }
-  if (process.platform !== "win32") throw new Error("Reading the selection is only available on Windows and macOS.");
+  if (process.platform !== "win32") throw new DesktopFault({ code: "selection-unsupported" });
   const koffi = (await import("koffi")).default;
   const user32 = koffi.load("user32.dll");
   const keybd = user32.func("void __stdcall keybd_event(uint8_t bVk, uint8_t bScan, uint32_t dwFlags, uintptr_t dwExtraInfo)");

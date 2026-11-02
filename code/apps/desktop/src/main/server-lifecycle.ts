@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
+import { toDesktopError } from "../shared/errors";
 import { createChatterbox, createServer } from "@speakkit/server";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
@@ -114,8 +115,8 @@ export class ServerRuntime {
       if (missing.length) log.info("server has no runtime setter for:", missing.join(", "));
       log.info(`server listening on 127.0.0.1:${port}`);
     } catch (e) {
-      state.serverError = e instanceof Error ? e.message : String(e);
-      log.error("server failed to start", state.serverError);
+      state.serverError = toDesktopError(e);
+      log.error("server failed to start", e instanceof Error ? e.message : e);
     }
     await this.refreshHealth();
   }

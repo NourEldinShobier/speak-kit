@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Banner, Button, SettingRow, SettingsSection, StatusPill, TextInput } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
-import { api, Page, TokenField } from "../../ui";
-
-const IPC_PREFIX = /^Error invoking remote method '[^']+': (Error: )?/;
+import { api, cleanError, Page, TokenField } from "../../ui";
 
 /** The port field with its Apply button; the message of a refused port stays under the field. */
 function PortRow({ s }: { s: AppState }) {
@@ -18,7 +16,7 @@ function PortRow({ s }: { s: AppState }) {
       await api.setPort(n);
       setErr("");
     } catch (e) {
-      setErr(e instanceof Error ? e.message.replace(IPC_PREFIX, "") : String(e));
+      setErr(cleanError(e));
     } finally {
       setBusy(false);
     }

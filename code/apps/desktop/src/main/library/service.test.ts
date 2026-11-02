@@ -23,7 +23,7 @@ let base = "";
 
 const make = () => createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, fetch, now: () => 1000 });
 const ok = (r: ImportResult) => {
-  if (!r.ok) throw new Error(r.message);
+  if (!r.ok) throw new Error(r.error.code);
   return r.doc;
 };
 
@@ -107,14 +107,14 @@ describe("importing", () => {
 
   it("refuses a local address when no fetch is injected", async () => {
     const guarded = await createLibrary({ dir, readClipboard: () => "", reveal: () => {}, chooseFiles: async () => [] });
-    expect(await guarded.importUrl(`${base}/article`)).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("Only public web addresses") });
+    expect(await guarded.importUrl(`${base}/article`)).toMatchObject({ ok: false, reason: "network", error: { code: "local-address" } });
   });
 
   it("explains failures in plain words", async () => {
-    expect(await lib.importUrl(`${base}/missing`)).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("HTTP 404") });
+    expect(await lib.importUrl(`${base}/missing`)).toMatchObject({ ok: false, reason: "network", error: { code: "http-status", args: { status: 404 } } });
     expect(await lib.importUrl(`${base}/image`)).toMatchObject({ ok: false, reason: "unsupported" });
-    expect(await lib.importUrl("ftp://example.com/x")).toMatchObject({ ok: false, message: "Only http and https addresses can be read." });
-    expect(await lib.importUrl("http://127.0.0.1:1/")).toMatchObject({ ok: false, reason: "network", message: expect.stringContaining("Could not reach") });
+    expect(await lib.importUrl("ftp://example.com/x")).toMatchObject({ ok: false, error: { code: "only-http" } });
+    expect(await lib.importUrl("http://127.0.0.1:1/")).toMatchObject({ ok: false, reason: "network", error: { code: "unreachable", args: { host: "127.0.0.1:1" } } });
   });
 });
 

@@ -1,5 +1,6 @@
 import { plural, type Health } from "@speakkit/protocol";
 import { trayState as engineTrayState, trayTooltip, type TrayState } from "./engine-view";
+import type { DesktopError } from "./errors";
 import type { ReaderState } from "./reader";
 import type { Bindings } from "./shortcuts";
 import type { UpdateState } from "./updates";
@@ -7,7 +8,7 @@ import type { UpdateState } from "./updates";
 /** Everything the tray icon, tooltip and menu depend on. */
 export interface TrayContext {
   health: Health | null;
-  serverError: string | null;
+  serverError: DesktopError | null;
   reader: ReaderState;
   update: UpdateState;
   exportsRunning: number;

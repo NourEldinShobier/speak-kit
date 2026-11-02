@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import { appState } from "../../app-state.fixture";
+import type { DesktopError } from "../../../shared/errors";
 import { connectPhase, downloadSub, downloadView, initWizard, wizardReducer, type WizardAction } from "./model";
 
 const run = (...actions: WizardAction[]) => actions.reduce(wizardReducer, initWizard());
-const withEngine = (engine: object, serverError: string | null = null) =>
+const withEngine = (engine: object, serverError: DesktopError | null = null) =>
   appState({ health: { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", ...engine } } as never, serverError });
 
 describe("wizardReducer", () => {
@@ -37,7 +38,7 @@ describe("downloadView", () => {
 
   it("failed wins: an engine error or a server error, with the detail", () => {
     expect(downloadView(withEngine({ state: "error", detail: "ECONNRESET", progress: 0.5 }))).toEqual({ phase: "failed", pct: 0.5, detail: "ECONNRESET" });
-    expect(downloadView(withEngine({ state: "ready" }, "port busy"))).toMatchObject({ phase: "failed", detail: "port busy" });
+    expect(downloadView(withEngine({ state: "ready" }, { code: "unexpected", args: { detail: "port busy" } }))).toMatchObject({ phase: "failed", detail: "port busy" });
   });
 
   it("words each phase", () => {

@@ -44,7 +44,7 @@ describe("proxy fetch", () => {
   it("rejects with a TypeError when the server cannot be reached", async () => {
     const f = fakeBridge();
     const p = createProxyFetch(f.bridge)("http://127.0.0.1:1/v1/health");
-    f.push({ id: 1, type: "error", message: "connect ECONNREFUSED" });
+    f.push({ id: 1, type: "error", error: { code: "unexpected", args: { detail: "connect ECONNREFUSED" } } });
     await expect(p).rejects.toBeInstanceOf(TypeError);
   });
 

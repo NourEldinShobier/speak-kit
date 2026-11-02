@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Banner, Button, ProgressBar } from "@speakkit/ui";
 import type { ExportView } from "../../../shared/export";
 import { api, formatBytes } from "../../ui";
+import { errorText } from "../../error-text";
 import type { ExportAction } from "./model";
 
 const STAGE_TEXT = { encoding: "Encoding the MP3", saving: "Saving the file" } as const;
@@ -86,7 +87,7 @@ export function endedView({ job, onClose, dispatch }: JobProps) {
   const body =
     job.stage === "error" ? (
       <Banner tone="error" title="The export did not finish">
-        {job.error}
+        {job.error && errorText(job.error)}
       </Banner>
     ) : (
       <p className="sk-modal-text">The export was cancelled. No file was written.</p>

@@ -17,21 +17,21 @@ export function checkZip(name: string, bytes: Uint8Array): void {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = bytes.length - END_FIXED;
   while (end >= 0 && view.getUint32(end, true) !== END_SIGNATURE) end--;
-  if (end < 0) throw new ImportError("unreadable", `${name} is not a valid archive.`);
+  if (end < 0) throw new ImportError("unreadable", { code: "bad-archive", args: { name } });
   const count = view.getUint16(end + 10, true);
   let at = view.getUint32(end + 16, true);
-  if (count > MAX_ENTRIES) throw new ImportError("too-large", `${name} has too many parts (${count}).`);
+  if (count > MAX_ENTRIES) throw new ImportError("too-large", { code: "archive-too-many-parts", args: { name, count } });
   let unpacked = 0;
   let packed = 0;
   for (let i = 0; i < count; i++) {
-    if (at + ENTRY_FIXED > bytes.length || view.getUint32(at, true) !== ENTRY_SIGNATURE) throw new ImportError("unreadable", `${name} is not a valid archive.`);
+    if (at + ENTRY_FIXED > bytes.length || view.getUint32(at, true) !== ENTRY_SIGNATURE) throw new ImportError("unreadable", { code: "bad-archive", args: { name } });
     packed += view.getUint32(at + 20, true);
     unpacked += view.getUint32(at + 24, true);
     const nameLength = view.getUint16(at + 28, true);
     const entry = new TextDecoder().decode(bytes.subarray(at + ENTRY_FIXED, at + ENTRY_FIXED + nameLength));
     const parts = entry.replaceAll("\\", "/").split("/");
-    if (parts[0] === "" || /^[a-z]:/i.test(entry) || parts.includes("..")) throw new ImportError("unreadable", `${name} contains a part outside its own folder.`);
+    if (parts[0] === "" || /^[a-z]:/i.test(entry) || parts.includes("..")) throw new ImportError("unreadable", { code: "archive-part-outside", args: { name } });
     at += ENTRY_FIXED + nameLength + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
   }
-  if (unpacked > MAX_UNPACKED_BYTES || unpacked > Math.max(packed, 1) * MAX_RATIO) throw new ImportError("too-large", `${name} unpacks to far more than its size, so it was not opened.`);
+  if (unpacked > MAX_UNPACKED_BYTES || unpacked > Math.max(packed, 1) * MAX_RATIO) throw new ImportError("too-large", { code: "archive-too-big", args: { name } });
 }

@@ -6,6 +6,7 @@ import { fetchPage } from "./fetch-url";
 import { ImportError } from "./parse";
 import { runParseJob, type ParseFn } from "./parse/job";
 import { textToBlocks, titleFromBlocks, wordCount, type Parsed } from "../../shared/library/text";
+import { toDesktopError } from "../../shared/errors";
 import { LibraryStore } from "./store";
 
 interface LibraryDeps {
@@ -24,8 +25,8 @@ interface LibraryDeps {
 }
 
 const failure = (e: unknown, name?: string): ImportResult => {
-  if (e instanceof ImportError) return { ok: false, reason: e.reason, message: e.message, ...(name ? { name } : {}) };
-  return { ok: false, reason: "unreadable", message: e instanceof Error ? e.message : String(e), ...(name ? { name } : {}) };
+  const reason = e instanceof ImportError ? e.reason : "unreadable";
+  return { ok: false, reason, error: toDesktopError(e), ...(name ? { name } : {}) };
 };
 
 type AddInfo = { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string };
@@ -54,7 +55,7 @@ function importers(store: LibraryStore, now: () => number, parse: NonNullable<Li
 
   async function importBytes(name: string, bytes: Uint8Array, filePath?: string): Promise<ImportResult> {
     try {
-      if (bytes.length > MAX_FILE_BYTES) throw new ImportError("too-large", `${name} is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
+      if (bytes.length > MAX_FILE_BYTES) throw new ImportError("too-large", { code: "file-too-large", args: { name, mb: MAX_FILE_BYTES / 1024 / 1024 } });
       const { format, parsed } = await parse({ type: "file", name, bytes });
       const title = parsed.title || path.basename(name, path.extname(name));
       return await add({ ...parsed, title }, { source: "file", format, origin: path.basename(name), ...(filePath ? { path: filePath } : {}) }, bytes);
@@ -65,7 +66,7 @@ function importers(store: LibraryStore, now: () => number, parse: NonNullable<Li
 
   async function importText(text: string, title?: string, voice?: string): Promise<ImportResult> {
     const blocks = textToBlocks(text);
-    if (!blocks.length) return failure(new ImportError("empty", "There is no text to add."));
+    if (!blocks.length) return failure(new ImportError("empty", { code: "nothing-to-add" }));
     return add({ title: "", blocks }, { source: "paste", format: "text", origin: "Pasted text", ...(title ? { title } : {}), ...(voice ? { voice } : {}) });
   }
   return { add, importBytes, importText };
@@ -74,7 +75,7 @@ function importers(store: LibraryStore, now: () => number, parse: NonNullable<Li
 /** One picked file: too large or unreadable files become a failure result, not an exception. */
 async function importPicked(p: string, importBytes: (name: string, bytes: Uint8Array, filePath?: string) => Promise<ImportResult>): Promise<ImportResult> {
   try {
-    if ((await stat(p)).size > MAX_FILE_BYTES) throw new ImportError("too-large", `${path.basename(p)} is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
+    if ((await stat(p)).size > MAX_FILE_BYTES) throw new ImportError("too-large", { code: "file-too-large", args: { name: path.basename(p), mb: MAX_FILE_BYTES / 1024 / 1024 } });
     return await importBytes(path.basename(p), await readFile(p), p);
   } catch (e) {
     return failure(e, path.basename(p));

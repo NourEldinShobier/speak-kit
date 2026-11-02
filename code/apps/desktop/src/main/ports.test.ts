@@ -25,6 +25,6 @@ describe("listenWithFallback", () => {
 
   it("gives up after the tries are used", async () => {
     const busy = { listen: () => Promise.reject(inUse()) };
-    await expect(listenWithFallback(50000, () => busy, 3)).rejects.toThrow("No free port from 50000 to 50002");
+    await expect(listenWithFallback(50000, () => busy, 3)).rejects.toMatchObject({ error: { code: "no-free-port", args: { from: 50000, to: 50002 } } });
   });
 });

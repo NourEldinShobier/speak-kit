@@ -137,7 +137,7 @@ describe("ExportJobs", () => {
     const dir = tmp();
     writeFileSync(path.join(dir, "reading.wav"), "old");
     const { j, done } = jobs(fakeServer().server);
-    await expect(j.start(opts(dir))).rejects.toThrow("A file with that name already exists.");
+    await expect(j.start(opts(dir))).rejects.toMatchObject({ error: { code: "file-exists" } });
     await j.start(opts(dir, { conflict: "keep-both" }));
     await until(() => done.length === 1);
     expect(done[0]!.path).toBe(path.join(dir, "reading (2).wav"));
@@ -159,12 +159,12 @@ describe("ExportJobs", () => {
     expect(j.views.filter((v) => v.stage === "rendering").length).toBe(0);
   });
 
-  it("a server failure becomes an error view with the server's message", async () => {
+  it("a server failure becomes an error view with the server's error", async () => {
     const dir = tmp();
     const { j } = jobs(fakeServer({ startExport: async () => Promise.reject(new Error("engine-not-ready")) }).server);
     await j.start(opts(dir));
     await until(() => j.views[0]!.stage === "error");
-    expect(j.views[0]!.error).toBe("engine-not-ready");
+    expect(j.views[0]!.error).toEqual({ code: "unexpected", args: { detail: "engine-not-ready" } });
   });
 
   it("a write error ends in an error view, frees the server's copy and leaves no partial file", async () => {
@@ -174,13 +174,13 @@ describe("ExportJobs", () => {
     const { j } = jobs(server);
     await j.start(opts(path.join(dir, "blocked", "exports")));
     await until(() => j.views[0]!.stage === "error");
-    expect(j.views[0]!.error).toMatch(/ENOTDIR|EEXIST|not a directory/i);
+    expect(j.views[0]!.error).toMatchObject({ code: "unexpected", args: { detail: expect.stringMatching(/ENOTDIR|EEXIST|not a directory/i) } });
     await until(() => calls.includes("delete srv1"));
     expect(readdirSync(dir)).toEqual(["blocked"]);
   });
 
   it("text with nothing to say is rejected before any request", async () => {
     const { j } = jobs(fakeServer().server);
-    await expect(j.start(opts(tmp(), { text: " ... " }))).rejects.toThrow("There is no text to export.");
+    await expect(j.start(opts(tmp(), { text: " ... " }))).rejects.toMatchObject({ error: { code: "nothing-to-export" } });
   });
 });

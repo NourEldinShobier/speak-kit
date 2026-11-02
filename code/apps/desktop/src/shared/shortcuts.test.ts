@@ -18,12 +18,12 @@ describe("accelerators", () => {
   });
 
   it("rejects combinations that would break typing or Windows", () => {
-    expect(checkAccelerator("S")).toBe("Use Ctrl or Alt together with another key.");
-    expect(checkAccelerator("Shift+S")).toBe("Use Ctrl or Alt together with another key.");
-    expect(checkAccelerator("Ctrl+C")).toBe("Use at least two modifier keys, such as Ctrl+Alt, so normal typing is not blocked.");
-    expect(checkAccelerator("Alt+F4")).toBe("Windows uses that combination.");
-    expect(checkAccelerator("Ctrl+Alt+Delete")).toBe("Windows uses that combination.");
-    expect(checkAccelerator("nonsense")).toBe("That is not a valid key combination.");
+    expect(checkAccelerator("S")).toEqual({ code: "shortcut-needs-modifier" });
+    expect(checkAccelerator("Shift+S")).toEqual({ code: "shortcut-needs-modifier" });
+    expect(checkAccelerator("Ctrl+C")).toEqual({ code: "shortcut-needs-two" });
+    expect(checkAccelerator("Alt+F4")).toEqual({ code: "shortcut-reserved" });
+    expect(checkAccelerator("Ctrl+Alt+Delete")).toEqual({ code: "shortcut-reserved" });
+    expect(checkAccelerator("nonsense")).toEqual({ code: "shortcut-invalid" });
     expect(checkAccelerator("Ctrl+F9")).toBeNull();
   });
 });
@@ -64,9 +64,9 @@ describe("recorder", () => {
   it("Escape cancels, a lone modifier waits, bad input explains itself", () => {
     expect(key("Escape")).toEqual({ kind: "cancel" });
     expect(key("ControlLeft", { ctrlKey: true })).toEqual({ kind: "waiting" });
-    expect(key("KeyA")).toEqual({ kind: "invalid", reason: "Use Ctrl or Alt together with another key." });
-    expect(key("KeyA", { metaKey: true, ctrlKey: true })).toEqual({ kind: "invalid", reason: "The Windows key is reserved for Windows." });
-    expect(key("KeyA", { metaKey: true, ctrlKey: true }, "darwin")).toEqual({ kind: "invalid", reason: "The Command key is reserved for macOS." });
-    expect(key("IntlRo", { ctrlKey: true, altKey: true })).toEqual({ kind: "invalid", reason: "That key cannot be used." });
+    expect(key("KeyA")).toEqual({ kind: "invalid", reason: { code: "shortcut-needs-modifier" } });
+    expect(key("KeyA", { metaKey: true, ctrlKey: true })).toEqual({ kind: "invalid", reason: { code: "shortcut-meta-key", args: { platform: "win32" } } });
+    expect(key("KeyA", { metaKey: true, ctrlKey: true }, "darwin")).toEqual({ kind: "invalid", reason: { code: "shortcut-meta-key", args: { platform: "darwin" } } });
+    expect(key("IntlRo", { ctrlKey: true, altKey: true })).toEqual({ kind: "invalid", reason: { code: "shortcut-bad-key" } });
   });
 });

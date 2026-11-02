@@ -1,3 +1,5 @@
+import { DesktopFault } from "../shared/errors";
+
 interface Listenable {
   listen(): Promise<unknown> | unknown;
 }
@@ -14,5 +16,5 @@ export async function listenWithFallback<T extends Listenable>(start: number, ma
       if ((e as NodeJS.ErrnoException).code !== "EADDRINUSE") throw e;
     }
   }
-  throw new Error(`No free port from ${start} to ${start + tries - 1}`);
+  throw new DesktopFault({ code: "no-free-port", args: { from: start, to: start + tries - 1 } });
 }

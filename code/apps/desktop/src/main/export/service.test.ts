@@ -110,7 +110,7 @@ describe("createExports", () => {
     await t.ex.handlers.exportReveal(file, true);
     expect(electron.showItemInFolder).toHaveBeenCalledWith(file);
     expect(electron.openPath).toHaveBeenCalledWith(file);
-    await expect(t.ex.handlers.exportReveal("C:/Windows/system32/cmd.exe", true)).rejects.toThrow("That file was not exported by this session.");
+    await expect(t.ex.handlers.exportReveal("C:/Windows/system32/cmd.exe", true)).rejects.toMatchObject({ error: { code: "not-exported" } });
     expect(electron.openPath).toHaveBeenCalledTimes(1);
   });
 

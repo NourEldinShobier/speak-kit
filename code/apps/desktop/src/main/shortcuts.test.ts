@@ -72,15 +72,15 @@ describe("ShortcutRegistry", () => {
     const t = setup(["Ctrl+Alt+Q"]);
     t.reg.apply(DEFAULT_SHORTCUTS);
     const r = t.reg.set(DEFAULT_SHORTCUTS, "stop", "Ctrl+Alt+Q");
-    expect(r).toEqual({ ok: false, error: "Another app is using it.", conflict: { accelerator: "Ctrl+Alt+Q", reason: "taken", suggestion: "Ctrl+Alt+Shift+Q" } });
+    expect(r).toEqual({ ok: false, error: { code: "shortcut-taken" }, conflict: { accelerator: "Ctrl+Alt+Q", reason: "taken", suggestion: "Ctrl+Alt+Shift+Q" } });
     expect(t.live.has("Ctrl+Alt+X")).toBe(true);
   });
 
   it("set() refuses invalid keys and a combination Speak Kit already uses", () => {
     const t = setup();
     t.reg.apply(DEFAULT_SHORTCUTS);
-    expect(t.reg.set(DEFAULT_SHORTCUTS, "stop", "Alt+F4")).toEqual({ ok: false, error: "Windows uses that combination." });
+    expect(t.reg.set(DEFAULT_SHORTCUTS, "stop", "Alt+F4")).toEqual({ ok: false, error: { code: "shortcut-reserved" } });
     const dup = t.reg.set(DEFAULT_SHORTCUTS, "stop", "Ctrl+Alt+S");
-    expect(dup).toMatchObject({ ok: false, error: "Another Speak Kit action already uses it.", conflict: { reason: "duplicate", suggestion: "Ctrl+Alt+Shift+S" } });
+    expect(dup).toMatchObject({ ok: false, error: { code: "shortcut-duplicate" }, conflict: { reason: "duplicate", suggestion: "Ctrl+Alt+Shift+S" } });
   });
 });

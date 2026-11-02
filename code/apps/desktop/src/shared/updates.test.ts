@@ -1,28 +1,20 @@
 import { describe, expect, it } from "vite-plus/test";
 import { IDLE_READER } from "./reader";
-import { classifyUpdateError, isNewerVersion, updateBlockers, updateErrorText, workRunning } from "./updates";
+import { classifyUpdateError, isNewerVersion, updateBlockers, workRunning } from "./updates";
 
 describe("classifyUpdateError", () => {
   it.each([
-    ["sha512 checksum mismatch, expected a, got b", "checksum"],
-    ["Cannot find latest.yml in the latest release artifacts: HttpError: 404 Not Found", "not-found"],
-    ["GitHub answered 404 for the latest release", "not-found"],
-    ["read ECONNRESET", "interrupted"],
-    ["net::ERR_CONNECTION_RESET", "interrupted"],
-    ["net::ERR_INTERNET_DISCONNECTED", "offline"],
-    ["getaddrinfo ENOTFOUND github.com", "offline"],
-    ["connect ECONNREFUSED 127.0.0.1:1", "offline"],
-    ["fetch failed", "offline"],
-    ["something else broke", "other"],
-  ] as const)("%s -> %s", (message, reason) => expect(classifyUpdateError(message)).toBe(reason));
-});
-
-describe("updateErrorText", () => {
-  it("words each reason and shows the raw message only for an unknown one", () => {
-    expect(updateErrorText("offline", "check", "x")).toEqual({ title: "Could not check for updates", body: expect.stringContaining("cannot reach the update server") });
-    expect(updateErrorText("checksum", "download", "x").title).toBe("Could not download the update");
-    expect(updateErrorText("other", "check", "weird").body).toBe("weird");
-  });
+    ["sha512 checksum mismatch, expected a, got b", "update-checksum"],
+    ["Cannot find latest.yml in the latest release artifacts: HttpError: 404 Not Found", "update-not-found"],
+    ["GitHub answered 404 for the latest release", "update-not-found"],
+    ["read ECONNRESET", "update-interrupted"],
+    ["net::ERR_CONNECTION_RESET", "update-interrupted"],
+    ["net::ERR_INTERNET_DISCONNECTED", "update-offline"],
+    ["getaddrinfo ENOTFOUND github.com", "update-offline"],
+    ["connect ECONNREFUSED 127.0.0.1:1", "update-offline"],
+    ["fetch failed", "update-offline"],
+    ["something else broke", "update-failed"],
+  ] as const)("%s -> %s", (message, code) => expect(classifyUpdateError(message)).toMatchObject({ code, ...(code === "update-failed" ? { args: { detail: message } } : {}) }));
 });
 
 describe("isNewerVersion", () => {

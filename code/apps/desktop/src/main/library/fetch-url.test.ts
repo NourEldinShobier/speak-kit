@@ -12,7 +12,7 @@ describe("fetchPage: redirects", () => {
 
   it("stops after five redirects", async () => {
     const doFetch = (async () => new Response(null, { status: 302, headers: { location: "https://loop.example/" } })) as unknown as typeof fetch;
-    await expect(fetchPage("https://loop.example/", doFetch)).rejects.toMatchObject({ message: expect.stringContaining("redirected too many times") });
+    await expect(fetchPage("https://loop.example/", doFetch)).rejects.toMatchObject({ error: { code: "too-many-redirects", args: { host: "loop.example" } } });
   });
 });
 

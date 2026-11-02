@@ -13,15 +13,17 @@ import {
   type Health,
   type VoiceList,
 } from "@speakkit/protocol";
+import { DesktopFault } from "../shared/errors";
 import type { PreviewAudio } from "../shared/ipc";
 import { APP_CLIENT_HEADER } from "./pairing";
 
 /** The server answered, but not with success: carries the code and message of its error body. */
-export class ServerError extends Error {
+export class ServerError extends DesktopFault {
   readonly status: number;
   readonly code: string;
-  constructor(status: number, code: string, message: string) {
-    super(message);
+  /** `detail` is the diagnostic of the server's error body; without a body the renderer words the HTTP status itself. */
+  constructor(status: number, code: string, detail: string | null) {
+    super({ code: "server-error", args: { status, detail } });
     this.name = "ServerError";
     this.status = status;
     this.code = code;
@@ -46,7 +48,7 @@ export class ServerApi {
     });
     if (res.ok) return res;
     const parsed = v.safeParse(errorBodySchema, await res.json().catch(() => null));
-    throw parsed.success ? new ServerError(res.status, parsed.output.error.code, parsed.output.error.message) : new ServerError(res.status, "internal", `The server answered HTTP ${res.status}.`);
+    throw parsed.success ? new ServerError(res.status, parsed.output.error.code, parsed.output.error.message) : new ServerError(res.status, "internal", null);
   }
 
   async #json<T>(schema: v.GenericSchema<unknown, T>, res: Promise<Response>): Promise<T> {
@@ -56,7 +58,7 @@ export class ServerApi {
   /** Synthesizes text through POST /v1/speak and collects the whole answer (a sentence or a short preview). */
   async speak({ text, voice, speed }: { text: string; voice: string; speed: number }, signal?: AbortSignal): Promise<PreviewAudio> {
     const res = await this.#call("POST", "/v1/speak", { body: { sentences: [text], voice, speed }, signal });
-    if (!res.body) throw new Error("The server sent no audio.");
+    if (!res.body) throw new DesktopFault({ code: "no-audio" });
     const dec = new FrameDecoder();
     const out: PreviewAudio = { sampleRate: 24000, chunks: [] };
     const reader = res.body.getReader();
@@ -64,7 +66,7 @@ export class ServerApi {
       const { done, value } = await reader.read();
       if (done) break;
       for (const f of dec.push(value)) {
-        if (f.header.type === "error") throw new Error(f.header.message);
+        if (f.header.type === "error") throw new DesktopFault({ code: "unexpected", args: { detail: f.header.message } });
         if (f.header.type === "audio" && f.pcm) {
           out.sampleRate = f.header.sampleRate;
           out.chunks.push(f.pcm);

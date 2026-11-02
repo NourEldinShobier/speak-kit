@@ -1,6 +1,7 @@
 import { useReducer } from "react";
 import { Banner, Button, Modal, Select, TextInput } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
+import { errorText } from "../../error-text";
 import type { DocMeta } from "../../../shared/library/contract";
 import { library } from "./api";
 import { countWords, initPaste, pasteReducer } from "./add-model";
@@ -50,7 +51,7 @@ export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdde
   const empty = !countWords(st.text);
   const add = async (play: boolean) => {
     const r = await library.importText(st.text, st.title.trim() || undefined, st.voice === defaultVoice ? undefined : st.voice);
-    if (!r.ok) return dispatch({ type: "failed", message: r.message });
+    if (!r.ok) return dispatch({ type: "failed", message: errorText(r.error) });
     dispatch({ type: "added" });
     onAdded(r.doc, play);
   };

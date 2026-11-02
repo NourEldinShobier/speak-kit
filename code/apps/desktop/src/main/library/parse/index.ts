@@ -46,14 +46,14 @@ async function parseBytes(format: Format, bytes: Uint8Array): Promise<Parsed> {
 /** Parse a file's bytes by its extension. An empty result is an error unless a PDF may be scanned (OCR can fill it). */
 export async function parseFile(name: string, bytes: Uint8Array): Promise<{ format: Format; parsed: Parsed }> {
   const format = formatOf(name);
-  if (!format) throw new ImportError("unsupported", `${path.extname(name) || "This file"} is not a supported type. Supported: ${SUPPORTED}.`);
+  if (!format) throw new ImportError("unsupported", { code: "unsupported-type", args: { ext: path.extname(name), supported: SUPPORTED } });
   if (format === "docx" || format === "epub") checkZip(name, bytes);
   let parsed: Parsed;
   try {
     parsed = await parseBytes(format, bytes);
   } catch (e) {
-    throw new ImportError("unreadable", `${name} could not be read: ${e instanceof Error ? e.message : String(e)}`);
+    throw new ImportError("unreadable", { code: "unreadable", args: { name, detail: e instanceof Error ? e.message : String(e) } });
   }
-  if (!parsed.blocks.length && !parsed.needsOcr) throw new ImportError("empty", `${name} has no text to read.`);
+  if (!parsed.blocks.length && !parsed.needsOcr) throw new ImportError("empty", { code: "file-has-no-text", args: { name } });
   return { format, parsed };
 }

@@ -1,4 +1,5 @@
 import type { ExportPrefs } from "./schemas";
+import type { DesktopError } from "./errors";
 import { estimateMs } from "./reader";
 
 export type ExportConflict = "replace" | "keep-both";
@@ -33,7 +34,7 @@ export interface ExportView {
   path?: string;
   bytes?: number;
   durationMs?: number;
-  error?: string;
+  error?: DesktopError;
 }
 
 export const exportRunning = (e: ExportView) => e.stage === "rendering" || e.stage === "encoding" || e.stage === "saving";

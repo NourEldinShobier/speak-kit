@@ -137,13 +137,14 @@ Five rules, from Ostio rules R1 to R13:
 
 The current list (13 codes): `app-not-running`, `token-rejected`, `engine-not-ready`, `page-unreadable`, `file-access`, `synthesis-failed`, `version-mismatch`, `invalid-request`, `forbidden`, `busy` (HTTP 429), `engine-unavailable` (409), `clip-rejected` (422), `not-found`.
 
-When a code is added, update in the same change: `ERROR_CODES` in `packages/protocol/src/api.ts`; the server route that produces it and a server test that triggers it; the extension's `ERROR_TEXT`; any popup state that depends on it (`docs/testing.md` state list); this list. Known gap: some desktop paths still send English text over IPC (`e.message`); work package 14 changes them to `{ code, args }`.
+When a code is added, update in the same change: `ERROR_CODES` in `packages/protocol/src/api.ts`; the server route that produces it and a server test that triggers it; the extension's `ERROR_TEXT`; any popup state that depends on it (`docs/testing.md` state list); this list.
+
+**Desktop IPC.** Errors that cross from the Electron main process to the renderer are a `DesktopError` (`{ code, args }`, `apps/desktop/src/shared/errors.ts`), a closed list separate from `ERROR_CODES` because it never goes over HTTP. Main throws a `DesktopFault` (the JSON of the error is its message, because `ipcRenderer.invoke` keeps only the message of a rejection) or puts the error into a result or state (`ImportResult.error`, `ExportView.error`, `ReaderState.error`, `UpdateState.error`, `AppState.serverError`, `ShortcutResult.error`). The renderer words every code in one table, `renderer/error-text.ts`; a code with no entry fails type-check. When a code is added, update `ErrorArgs`, `ERROR_TEXT` and its case in `error-text.test.ts`.
 
 ## Open (2026-11-01)
 - Move library import parsing off the Electron main thread (G01, work package 11).
 - Event-loop delay budget and startup marks (G02, G06).
 - Replace `child_process.fork` of the model host with `utilityProcess.fork` so `RunAsNode` can go off (ADR 0004).
-- Desktop errors as `{ code, args }` (G42, work package 14).
 
 ## Sources
 - `docs/engineering/refactor-plan.md` (gap analysis G01 to G66), `docs/engineering/ostio-practices.md` (rule ids).

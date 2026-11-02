@@ -1,3 +1,4 @@
+import { toDesktopError } from "../../shared/errors";
 import type { ProxyChunk, ProxyRequest } from "../../shared/library/contract";
 
 interface ProxyDeps {
@@ -17,7 +18,7 @@ export function createSpeakProxy({ target, fetch: doFetch = fetch }: ProxyDeps) 
   const running = new Map<number, AbortController>();
 
   async function open(req: ProxyRequest, send: (chunk: ProxyChunk) => void): Promise<void> {
-    if (running.size >= MAX_OPEN_REQUESTS) return send({ id: req.id, type: "error", message: "Too many requests at once." });
+    if (running.size >= MAX_OPEN_REQUESTS) return send({ id: req.id, type: "error", error: { code: "too-many-requests" } });
     const abort = new AbortController();
     running.set(req.id, abort);
     const { port, token } = target();
@@ -43,7 +44,7 @@ export function createSpeakProxy({ target, fetch: doFetch = fetch }: ProxyDeps) 
       }
       send({ id: req.id, type: "end" });
     } catch (e) {
-      if (!abort.signal.aborted) send({ id: req.id, type: "error", message: e instanceof Error ? e.message : String(e) });
+      if (!abort.signal.aborted) send({ id: req.id, type: "error", error: toDesktopError(e) });
     } finally {
       running.delete(req.id);
     }

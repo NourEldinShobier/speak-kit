@@ -1,6 +1,7 @@
 import { Banner, Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { DOT_CLASS, engineDetail, engineView } from "../shared/engine-view";
+import { errorText } from "./error-text";
 import { api, Page, TokenField } from "./ui";
 
 function ServerAlerts({ s }: { s: AppState }) {
@@ -16,7 +17,7 @@ function ServerAlerts({ s }: { s: AppState }) {
             </Button>
           }
         >
-          {s.serverError}
+          {errorText(s.serverError)}
         </Banner>
       )}
       {s.portFallback && (

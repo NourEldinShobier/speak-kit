@@ -2,6 +2,7 @@ import { dialog, shell, type BrowserWindow } from "electron";
 import { mkdir } from "node:fs/promises";
 import type { Ctx } from "../context";
 import type { Api } from "../../shared/ipc";
+import { DesktopFault } from "../../shared/errors";
 import { exportRunning } from "../../shared/export";
 import type { ToastCenter } from "../toasts";
 import { ExportJobs, targetFor } from "./jobs";
@@ -43,7 +44,7 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => 
     exportCancel: (id) => jobs.cancel(id),
     exportReveal: async (path, open) => {
       // Only files this session exported: the renderer cannot make the main process open arbitrary paths.
-      if (!ctx.state.exports.some((e) => e.path === path)) throw new Error("That file was not exported by this session.");
+      if (!ctx.state.exports.some((e) => e.path === path)) throw new DesktopFault({ code: "not-exported" });
       if (open) await shell.openPath(path);
       else shell.showItemInFolder(path);
     },

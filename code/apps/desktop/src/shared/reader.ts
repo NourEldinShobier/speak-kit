@@ -1,3 +1,5 @@
+import type { DesktopError } from "./errors";
+
 /** What the reader (mini player, tray panel, palette) shares: state shape, commands, and text to sentences. */
 export type ReaderStatus = "idle" | "preparing" | "playing" | "paused" | "finished" | "error";
 export type ReaderSource = "selection" | "clipboard" | "text";
@@ -15,7 +17,7 @@ export interface ReaderState {
   totalMs: number;
   /** The sentence after the current one, for "Next in queue". */
   next: string | null;
-  error: string | null;
+  error: DesktopError | null;
 }
 
 export const IDLE_READER: ReaderState = { status: "idle", source: null, title: "", index: 0, total: 0, elapsedMs: 0, totalMs: 0, next: null, error: null };
@@ -64,21 +66,3 @@ export const titleOf = (text: string) => {
 };
 
 export { clock } from "@speakkit/protocol";
-
-/** One line under the title in the mini player and the tray panel. */
-export const statusLine = (r: ReaderState): string => {
-  switch (r.status) {
-    case "preparing":
-      return "Preparing the voice...";
-    case "playing":
-      return `Sentence ${r.index + 1} of ${r.total}`;
-    case "paused":
-      return `Paused · sentence ${r.index + 1} of ${r.total}`;
-    case "finished":
-      return "Finished";
-    case "error":
-      return r.error ?? "Something went wrong";
-    default:
-      return "";
-  }
-};

@@ -1,8 +1,6 @@
+import type { DesktopError } from "./errors";
 import { exportRunning } from "./export";
 import type { AppState } from "./ipc";
-
-/** Why a check or download failed, as far as the message tells. The UI words each reason; "other" shows the raw message. */
-export type UpdateFailure = "offline" | "not-found" | "checksum" | "interrupted" | "other";
 
 /**
  * Update flow shown by the title bar pill, the popover (H18), the update card (H9) and the updating card (H19). Updates are never forced.
@@ -17,38 +15,21 @@ export type UpdateState =
   | { kind: "ready"; version: string; onQuit: boolean }
   | { kind: "restarting"; version: string }
   | { kind: "manual"; version: string; url: string }
-  | { kind: "error"; message: string; reason: UpdateFailure; phase: "check" | "download" };
+  | { kind: "error"; error: DesktopError; phase: "check" | "download" };
 
 export const UPDATE_UNSUPPORTED: UpdateState = { kind: "unsupported" };
 
 export const UPDATE_ACTIONS = ["check", "download", "install-now", "install-now-anyway", "install-on-quit", "remind-later", "open-release"] as const;
 export type UpdateAction = (typeof UPDATE_ACTIONS)[number];
 
-/** Maps an electron-updater / network error message to a reason. Checksum and 404 are matched before the generic network codes. */
-export function classifyUpdateError(message: string): UpdateFailure {
-  if (/checksum|sha512|sha256/i.test(message)) return "checksum";
-  if (/\b404\b|cannot find (latest|channel)|not found/i.test(message)) return "not-found";
-  if (/ECONNRESET|socket hang up|aborted|premature|ERR_CONNECTION_(RESET|CLOSED|ABORTED)|ERR_HTTP2|ERR_STREAM|stream.*(closed|ended)/i.test(message)) return "interrupted";
+/** Maps an electron-updater / network error message to an error. Checksum and 404 are matched before the generic network codes. */
+export function classifyUpdateError(message: string): DesktopError {
+  if (/checksum|sha512|sha256/i.test(message)) return { code: "update-checksum" };
+  if (/\b404\b|cannot find (latest|channel)|not found/i.test(message)) return { code: "update-not-found" };
+  if (/ECONNRESET|socket hang up|aborted|premature|ERR_CONNECTION_(RESET|CLOSED|ABORTED)|ERR_HTTP2|ERR_STREAM|stream.*(closed|ended)/i.test(message)) return { code: "update-interrupted" };
   if (/ERR_INTERNET_DISCONNECTED|ERR_NETWORK_CHANGED|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|timed? ?out|fetch failed/i.test(message))
-    return "offline";
-  return "other";
-}
-
-/** What the user reads for a failed update. */
-export function updateErrorText(reason: UpdateFailure, phase: "check" | "download", message: string): { title: string; body: string } {
-  const title = phase === "download" ? "Could not download the update" : "Could not check for updates";
-  switch (reason) {
-    case "offline":
-      return { title, body: "Speak Kit cannot reach the update server. Check your internet connection and try again." };
-    case "not-found":
-      return { title, body: "No update information is published at the update address yet. Try again later." };
-    case "checksum":
-      return { title, body: "The downloaded file did not match its checksum, so it was discarded. Try again; nothing was installed." };
-    case "interrupted":
-      return { title, body: "The connection dropped during the download. Try again to fetch the update again; nothing was installed." };
-    case "other":
-      return { title, body: message };
-  }
+    return { code: "update-offline" };
+  return { code: "update-failed", args: { detail: message } };
 }
 
 const SEMVER = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/;

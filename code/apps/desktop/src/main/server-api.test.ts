@@ -46,9 +46,9 @@ describe("ServerApi", () => {
     expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual(['POST /v1/engines/select {"id":"chatterbox"}', "POST /v1/engines/chatterbox/install ", "DELETE /v1/engines/chatterbox "]);
   });
 
-  it("turns the server's error body into a ServerError with status, code and message", async () => {
+  it("turns the server's error body into a ServerError with status, code and the server's detail", async () => {
     const { api } = await stub((_r, _b, res) => json(res, 409, { error: { code: "engine-unavailable", message: "needs a GPU" } }));
-    await expect(api.selectEngine("chatterbox")).rejects.toMatchObject({ status: 409, code: "engine-unavailable", message: "needs a GPU" });
+    await expect(api.selectEngine("chatterbox")).rejects.toMatchObject({ status: 409, code: "engine-unavailable", error: { code: "server-error", args: { status: 409, detail: "needs a GPU" } } });
     await expect(api.selectEngine("chatterbox")).rejects.toBeInstanceOf(ServerError);
   });
 
@@ -56,7 +56,7 @@ describe("ServerApi", () => {
     const { api } = await stub((_r, _b, res) => {
       res.writeHead(502).end("bad gateway");
     });
-    await expect(api.engines()).rejects.toMatchObject({ status: 502, code: "internal", message: "The server answered HTTP 502." });
+    await expect(api.engines()).rejects.toMatchObject({ status: 502, code: "internal", error: { code: "server-error", args: { status: 502, detail: null } } });
   });
 
   it("rejects an answer of the wrong shape instead of passing it on", async () => {
