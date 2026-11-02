@@ -1,10 +1,10 @@
 {
   "lint": {
     "code": {
-      "max-lines-per-function": 16,
-      "no-nested-ternary": 13,
-      "max-params": 14,
-      "exhaustive-deps": 1,
+      "max-lines-per-function": 8,
+      "no-nested-ternary": 2,
+      "max-params": 11,
+      "exhaustive-deps": 0,
       "complexity": 7
     },
     "tests": {
