@@ -8,6 +8,8 @@ export interface UpdaterLike {
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
+  /** Protected in its typings, public at run time. Hooks the app's quit event; electron-updater does that itself only when autoInstallOnAppQuit is already true as the download ends. */
+  addQuitHandler?(): void;
   setFeedURL?(options: { provider: "generic"; url: string }): void;
   on(event: string, listener: (payload: unknown) => void): unknown;
 }
@@ -199,6 +201,7 @@ export class Updates {
     const u = await this.#updater();
     if (u && this.#state.kind === "ready") {
       u.autoInstallOnAppQuit = true;
+      u.addQuitHandler?.();
       this.#set({ ...this.#state, onQuit: true });
     }
   }

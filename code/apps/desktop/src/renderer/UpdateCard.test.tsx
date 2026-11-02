@@ -8,7 +8,7 @@ vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
-import { UpdateCard, UpdatePill } from "./UpdateCard";
+import { UpdateCard, UpdatePill, UpdatingCard } from "./UpdateCard";
 
 const card = (update: UpdateState, over = {}) => renderToStaticMarkup(<UpdateCard s={appState({ update, ...over })} />);
 const pill = (update: UpdateState, config = {}) => renderToStaticMarkup(<UpdatePill s={appState({ update, config: parseConfig({ setupDone: true, ...config }) })} />);
@@ -43,6 +43,25 @@ describe("UpdateCard", () => {
   it("ready offers both install choices", () => {
     const html = card({ kind: "ready", version: "0.3.2", onQuit: false });
     for (const text of ["Install when I quit", "Restart now", "Remind me later"]) expect(html).toContain(text);
+  });
+});
+
+describe("UpdateCard progress and arming", () => {
+  it("downloading shows the version and percent", () => {
+    expect(card({ kind: "downloading", version: "0.3.2", percent: 41 })).toContain("Downloading 0.3.2, 41%");
+  });
+
+  it("ready with Install when I quit armed says so and drops that button", () => {
+    const html = card({ kind: "ready", version: "0.3.2", onQuit: true });
+    expect(html).toContain("It installs when you quit Speak Kit.");
+    expect(html).not.toContain("Install when I quit</button>");
+    expect(html).not.toContain("Remind me later");
+  });
+
+  it("restarting shows the updating card", () => {
+    const html = renderToStaticMarkup(<UpdatingCard s={appState({ update: { kind: "restarting", version: "0.3.2" } })} />);
+    expect(html).toContain("Updating to 0.3.2");
+    expect(renderToStaticMarkup(<UpdatingCard s={appState({ update: { kind: "idle", checkedAtMs: null } })} />)).toBe("");
   });
 });
 

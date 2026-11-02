@@ -11,6 +11,7 @@ class FakeUpdater extends EventEmitter implements UpdaterLike {
   checkForUpdates = async () => void this.calls.push("check");
   downloadUpdate = async () => void this.calls.push("download");
   quitAndInstall = (silent?: boolean, run?: boolean) => void this.calls.push(`install ${silent} ${run}`);
+  addQuitHandler = () => void this.calls.push("quit-handler");
 }
 
 function setup(mode: UpdateMode = "auto", o: { latest?: () => Promise<{ version: string; url: string }>; busy?: boolean } = {}) {
@@ -89,6 +90,8 @@ describe("Updates", () => {
     t.u.emit("update-downloaded", { version: "0.2.0" });
     await t.up.installOnQuit();
     expect(t.u.autoInstallOnAppQuit).toBe(true);
+    // electron-updater only hooks the app's quit event while downloading and only if the flag was already true then
+    expect(t.u.calls.at(-1)).toBe("quit-handler");
     expect(t.up.state).toEqual({ kind: "ready", version: "0.2.0", onQuit: true });
     await t.up.installNow();
     expect(t.up.state).toEqual({ kind: "restarting", version: "0.2.0" });
