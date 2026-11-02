@@ -146,14 +146,14 @@ function keyOfCode(code: string): string | undefined {
   return /^F\d+$/.test(code) ? code : CODE_KEY[code];
 }
 
-/** Turns one keydown into the recorder's next step. Escape alone cancels, a lone modifier keeps waiting. */
-export function recordKey(e: KeyEventLike): Recorded {
+/** Turns one keydown into the recorder's next step (`platform` names the reserved key in the message). Escape alone cancels, a lone modifier keeps waiting. */
+export function recordKey(e: KeyEventLike, platform: string): Recorded {
   const hasMod = e.ctrlKey || e.altKey || e.shiftKey || e.metaKey;
   if (e.code === "Escape" && !hasMod) return { kind: "cancel" };
   if (/^(Control|Alt|Shift|Meta|OS)(Left|Right)$/.test(e.code)) return { kind: "waiting" };
   const key = keyOfCode(e.code);
   if (!key) return { kind: "invalid", reason: "That key cannot be used." };
-  if (e.metaKey) return { kind: "invalid", reason: "The Windows key is reserved for Windows." };
+  if (e.metaKey) return { kind: "invalid", reason: platform === "darwin" ? "The Command key is reserved for macOS." : "The Windows key is reserved for Windows." };
   const accelerator = normalize([e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", key].filter(Boolean).join("+"))!;
   const reason = checkAccelerator(accelerator);
   return reason ? { kind: "invalid", reason } : { kind: "accelerator", accelerator };

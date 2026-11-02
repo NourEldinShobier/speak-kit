@@ -32,21 +32,25 @@ function problemFor(id: ShortcutId, attempt: Problem | null, clash: Conflict): P
 }
 
 /** Listens for the new keys while a row is recording; Esc cancels, an unusable combination is reported, a good one is applied. */
-function useRecorder(recording: ShortcutId | null, on: { cancel: () => void; invalid: (id: ShortcutId, reason: string) => void; accept: (id: ShortcutId, accelerator: string) => void }) {
+function useRecorder(
+  recording: ShortcutId | null,
+  on: { cancel: () => void; invalid: (id: ShortcutId, reason: string) => void; accept: (id: ShortcutId, accelerator: string) => void },
+  platform: string,
+) {
   const { cancel, invalid, accept } = on;
   useEffect(() => {
     if (!recording) return;
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const r = recordKey(e);
+      const r = recordKey(e, platform);
       if (r.kind === "cancel") cancel();
       else if (r.kind === "invalid") invalid(recording, r.reason);
       else if (r.kind === "accelerator") accept(recording, r.accelerator);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [recording, cancel, invalid, accept]);
+  }, [recording, cancel, invalid, accept, platform]);
 }
 
 interface RowProps {
@@ -122,7 +126,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
     }),
     [apply],
   );
-  useRecorder(recording, recorder);
+  useRecorder(recording, recorder, s.platform);
   const toggle = (id: ShortcutId) => {
     if (recording !== id) setAttempt(null);
     setRecording(recording === id ? null : id);
