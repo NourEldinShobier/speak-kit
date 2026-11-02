@@ -78,5 +78,5 @@ The extension pages ask for Inter first and bundle no web font, so layout checks
 ## Verified runs
 
 - All jobs green on `main`: https://github.com/NourEldinShobier/speak-kit/actions/runs/41375351442
-- A docs-only push (this section) runs `changes` and `ci-ok` and skips the unit, e2e, desktop and static jobs: see the next entry.
+- A docs-only push skips the unit, e2e and desktop jobs and still runs `changes`, `static` and `ci-ok`: https://github.com/NourEldinShobier/speak-kit/actions/runs/41376112492
 - The desktop smoke test `home: pairing token regenerates and the old token stops working` timed out once in its 60 s hook on the Windows runner (run 41375327512) and passed on the next run; rerun the job before treating it as a regression.
