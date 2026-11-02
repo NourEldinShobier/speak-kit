@@ -21,15 +21,21 @@ describe("tokens module", () => {
     expect(readFileSync(TOKENS_FILE, "utf8")).toBe(renderTokens(readFileSync(CSS_FILE, "utf8")));
   });
 
-  test("carries both themes and the values of lumen.css", () => {
-    expect(tokens.dark["surface-window"]).toBe("#191a1b");
+  test("carries the Lockix light values of lumen.css", () => {
+    expect(tokens.light["surface-window"]).toBe("#f0f0f0");
+    expect(tokens.light["surface-card"]).toBe("#ffffff");
+    expect(tokens.light["cta"]).toBe("#201e25");
     expect(tokens.light["accent-default"]).toBe("#0069cc");
+    expect(tokens.light["stroke-control"]).toBe("#e5e5e5");
+    expect(tokens.light["stroke-field"]).toBe("#c3c6cc");
+    expect(tokens.light["text-primary"]).toBe("#1b2230");
     expect(tokens.light["text-on-highlight"]).toBe("#1e1f20");
-    expect(Object.keys(tokens.dark)).toEqual(Object.keys(tokens.light));
+    expect(tokens.light["chip-red"]).toBe("#ffe4e5");
+    expect(tokens.light["disabled-thumb"]).toBe("#c9ccd2");
   });
 
   test("native tokens are picked from the same table", () => {
-    expect(nativeTokens.light).toEqual({ surfaceWindow: tokens.light["surface-window"], surfaceCard: tokens.light["surface-card"], textPrimary: tokens.light["text-primary"] });
+    expect(nativeTokens.light).toEqual({ surfaceWindow: "#f0f0f0", surfaceCard: "#ffffff", textPrimary: "#1b2230" });
   });
 });
 

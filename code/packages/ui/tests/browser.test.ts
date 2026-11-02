@@ -9,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let browser: Browser;
 let page: Page;
 let close: () => void;
-const dark = (spec: string) => `[data-panel="dark"] [data-spec="${spec}"]`;
+const light = (spec: string) => `[data-panel="light"] [data-spec="${spec}"]`;
 
 beforeAll(async () => {
   await build({ configFile: resolve(root, "vite.config.ts"), logLevel: "silent" });
@@ -27,7 +27,7 @@ afterAll(async () => {
 
 describe("Toggle (role=switch)", () => {
   test("Space and Enter toggle it, aria-checked follows, focus ring is shown for keyboard focus", async () => {
-    const sw = page.locator(`${dark("toggle-off")} [role=switch]`);
+    const sw = page.locator(`${light("toggle-off")} [role=switch]`);
     await sw.focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Shift+Tab");
@@ -44,17 +44,17 @@ describe("Toggle (role=switch)", () => {
   });
 
   test("knob travels 14px (screen) and 20px (board); sizes are 32x18 and 40x20", async () => {
-    const screen = page.locator(`${dark("pattern-settings-page-toggle-on")} [role=switch]`);
+    const screen = page.locator(`${light("pattern-settings-page-toggle-on")} [role=switch]`);
     expect(await screen.evaluate((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height])).toEqual([32, 18]);
     const knob = screen.locator(".lm-toggle__knob");
     const x = await knob.evaluate((k) => k.getBoundingClientRect().x - (k.parentElement as HTMLElement).getBoundingClientRect().x);
     expect(x).toBe(16);
-    const board = page.locator(`${dark("toggle-on")} [role=switch]`);
+    const board = page.locator(`${light("toggle-on")} [role=switch]`);
     expect(await board.evaluate((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height])).toEqual([40, 20]);
   });
 
   test("disabled toggle ignores clicks and has 40% opacity", async () => {
-    const sw = page.locator(`${dark("toggle-disabled-on")} [role=switch]`);
+    const sw = page.locator(`${light("toggle-disabled-on")} [role=switch]`);
     await sw.click({ force: true });
     await expect(sw.getAttribute("aria-checked")).resolves.toBe("true");
     expect(await sw.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.4");
@@ -63,7 +63,7 @@ describe("Toggle (role=switch)", () => {
 
 describe("Button states (real CSS)", () => {
   test("hover uses fill/hover, pressed fill/selected, primary hover tag/blue", async () => {
-    const sec = page.locator(`${dark("button-secondary-rest")} button`);
+    const sec = page.locator(`${light("button-secondary-rest")} button`);
     await sec.hover();
     await page.waitForTimeout(200);
     expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(255, 255, 255, 0.08)");
@@ -71,7 +71,7 @@ describe("Button states (real CSS)", () => {
     await page.waitForTimeout(250);
     expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(255, 255, 255, 0.13)");
     await page.mouse.up();
-    const pri = page.locator(`${dark("button-primary-rest")} button`);
+    const pri = page.locator(`${light("button-primary-rest")} button`);
     await pri.hover();
     await page.waitForTimeout(200);
     expect(await pri.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(74, 158, 255)");
@@ -84,7 +84,7 @@ describe("Button states (real CSS)", () => {
         const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         s.setAttribute("class", `lm-icon lm-icon--${n}`);
         s.style.color = "rgb(255, 255, 255)";
-        document.querySelector('[data-panel="dark"]')!.prepend(s);
+        document.querySelector('[data-panel="light"]')!.prepend(s);
         const c = getComputedStyle(s);
         const r = [c.fill, c.strokeLinejoin];
         s.remove();
@@ -109,7 +109,7 @@ describe("Button states (real CSS)", () => {
       const b = document.createElement("button");
       b.className = "lm-btn lm-btn--primary";
       b.innerHTML = '<span class="lm-kbd lm-kbd--sm">Ctrl N</span>';
-      document.querySelector('[data-panel="dark"]')!.prepend(b);
+      document.querySelector('[data-panel="light"]')!.prepend(b);
       const c = getComputedStyle(b.querySelector(".lm-kbd")!).color;
       b.remove();
       return c;
@@ -123,7 +123,7 @@ describe("Button states (real CSS)", () => {
       b.id = "t-play";
       b.className = "lm-btn lm-btn--icon lm-btn--primary lm-btn--round";
       b.textContent = "x";
-      document.querySelector('[data-panel="dark"]')!.prepend(b);
+      document.querySelector('[data-panel="light"]')!.prepend(b);
     });
     const b = page.locator("#t-play");
     const read = () => b.evaluate((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]);
@@ -136,7 +136,7 @@ describe("Button states (real CSS)", () => {
   });
 
   test("focus-visible shows a 2px accent outline only for keyboard focus", async () => {
-    const b = page.locator(`${dark("button-ghost-rest")} button`);
+    const b = page.locator(`${light("button-ghost-rest")} button`);
     await b.focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Shift+Tab");
@@ -147,16 +147,16 @@ describe("Button states (real CSS)", () => {
   });
 
   test("disabled is 40% and not clickable; loading keeps the width", async () => {
-    const dis = page.locator(`${dark("button-primary-disabled")} button`);
+    const dis = page.locator(`${light("button-primary-disabled")} button`);
     expect(await dis.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.4");
     expect(await dis.isDisabled()).toBe(true);
-    const w = (spec: string) => page.locator(`${dark(spec)} button`).evaluate((e) => e.getBoundingClientRect().width);
+    const w = (spec: string) => page.locator(`${light(spec)} button`).evaluate((e) => e.getBoundingClientRect().width);
     expect(await w("button-primary-loading")).toBe(await w("button-primary-rest"));
     expect(await w("icon-button-loading")).toBe(await w("icon-button-rest"));
   });
 
   test("reduced motion stops the spinner loop", async () => {
-    const spin = page.locator(`${dark("button-primary-loading")} .lm-spin`);
+    const spin = page.locator(`${light("button-primary-loading")} .lm-spin`);
     expect(await spin.evaluate((e) => getComputedStyle(e).animationName)).toBe("lm-spin");
     await page.emulateMedia({ reducedMotion: "reduce" });
     expect(await spin.evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
@@ -164,7 +164,7 @@ describe("Button states (real CSS)", () => {
   });
 
   test("motion tokens: hover 83ms, press 167ms with the decelerate curve", async () => {
-    const b = page.locator(`${dark("button-ghost-rest")} button`);
+    const b = page.locator(`${light("button-ghost-rest")} button`);
     const t = await b.evaluate((e) => getComputedStyle(e).transition);
     expect(t).toContain("0.083s");
     expect(t).toContain("cubic-bezier(0, 0, 0, 1)");
@@ -172,7 +172,7 @@ describe("Button states (real CSS)", () => {
 });
 
 describe("Select (Radix)", () => {
-  const sel = () => page.locator(`${dark("pattern-select-dropdown-select")} .lm-select`);
+  const sel = () => page.locator(`${light("pattern-select-dropdown-select")} .lm-select`);
   const optionFocused = async () => {
     await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "option");
     await page.waitForTimeout(120); // Radix settles focus and ignores keys for a moment after opening
@@ -228,7 +228,7 @@ describe("Select (Radix)", () => {
 
 describe("Tabs, Modal", () => {
   test("Tabs: ArrowRight selects the next tab and moves focus (roving tabindex)", async () => {
-    const tabs = page.locator(`${dark("tabs-underline-default")} [role=tab]`);
+    const tabs = page.locator(`${light("tabs-underline-default")} [role=tab]`);
     await tabs.nth(0).focus();
     await page.keyboard.press("ArrowRight");
     await page.waitForFunction(
@@ -240,7 +240,7 @@ describe("Tabs, Modal", () => {
   });
 
   test("Modal: focus moves in, Tab is trapped, Escape closes and focus returns", async () => {
-    const opener = page.locator(`${dark("modal-live")} > button, ${dark("modal-live")} button`).first();
+    const opener = page.locator(`${light("modal-live")} > button, ${light("modal-live")} button`).first();
     await opener.click();
     const dlg = page.locator(".lm-scrim [role=dialog]");
     await dlg.waitFor();

@@ -48,7 +48,7 @@ import {
 } from "../src/index";
 import { ButtonStates, Cell, FORCED, Group, MENU, OVERLAY, RING, STATES } from "./layout";
 
-export function Board({ theme }: { theme: string }) {
+export function Board() {
   const [tab, setTab] = useState("answer");
   const [seg, setSeg] = useState("search");
   const [seg2, setSeg2] = useState("comfortable");
@@ -63,9 +63,9 @@ export function Board({ theme }: { theme: string }) {
     { value: "edit", label: "Can edit" },
   ];
   const selectOptions = [
-    { value: "system", label: "System" },
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
+    { value: "default", label: "Default" },
+    { value: "compact", label: "Compact" },
+    { value: "wide", label: "Wide" },
   ];
   return (
     <>
@@ -167,16 +167,16 @@ export function Board({ theme }: { theme: string }) {
           <Checkbox label="Skip code blocks" defaultChecked />
         </Cell>
         <Cell id="radio-off">
-          <Radio name={"r1-" + theme} aria-label="Off" />
+          <Radio name={"r1"} aria-label="Off" />
         </Cell>
         <Cell id="radio-on">
-          <Radio name={"r2-" + theme} defaultChecked aria-label="On" />
+          <Radio name={"r2"} defaultChecked aria-label="On" />
         </Cell>
         <Cell id="radio-disabled-on">
-          <Radio name={"r3-" + theme} defaultChecked disabled aria-label="Disabled on" />
+          <Radio name={"r3"} defaultChecked disabled aria-label="Disabled on" />
         </Cell>
         <Cell id="radio-label">
-          <Radio name={"r4-" + theme} defaultChecked label="Neural voice" />
+          <Radio name={"r4"} defaultChecked label="Neural voice" />
         </Cell>
       </Group>
 

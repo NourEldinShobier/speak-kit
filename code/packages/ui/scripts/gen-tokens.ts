@@ -17,17 +17,18 @@ const block = (css: string, selector: string): Table => {
 
 /** The generated source of src/tokens.ts for a lumen.css text. */
 export function renderTokens(css: string): string {
-  const tokens = { dark: block(css, '[data-theme="dark"]'), light: block(css, '[data-theme="light"]') };
+  const light = block(css, ":root,\n:host");
   const native = (t: Table) => `{ surfaceWindow: ${JSON.stringify(t["surface-window"]!)}, surfaceCard: ${JSON.stringify(t["surface-card"]!)}, textPrimary: ${JSON.stringify(t["text-primary"]!)} }`;
   return `// Generated from src/lumen.css by scripts/gen-tokens.ts (pnpm --filter @speakkit/ui gen:tokens). Do not edit.
-/** Lumen colour tokens per theme, keyed by custom property name without the leading dashes. For code that cannot read CSS variables (badges, native window colours, pages without lumen.css). */
-export const tokens = ${JSON.stringify(tokens, null, 2)} as const;
+/** Lockix light colour tokens, keyed by custom property name without the leading dashes. For code that cannot read CSS variables (badges, native window colours, pages without lumen.css). Speak Kit has no dark theme. */
+const light = ${JSON.stringify(light, null, 2)} as const;
+
+/** \`dark\` is a transitional alias of \`light\` so callers that still index by theme keep compiling; remove it with those callers. */
+export const tokens = { light, dark: light } as const;
 
 /** The few tokens native code (Electron window backgrounds, title bar overlay) needs. */
-export const nativeTokens = {
-  dark: ${native(tokens.dark)},
-  light: ${native(tokens.light)},
-} as const;
+const nativeLight = ${native(light)} as const;
+export const nativeTokens = { light: nativeLight, dark: nativeLight } as const;
 `;
 }
 

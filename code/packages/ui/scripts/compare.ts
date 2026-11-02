@@ -1,7 +1,7 @@
 /**
- * Visual check: screenshots every [data-spec] cell of the gallery (dark and light, 2x) and diffs it against the
+ * Visual check: screenshots every [data-spec] cell of the gallery (2x) and diffs it against the
  * Lumen reference PNGs in docs/lumen-components. Writes ref | mine | diff images and report.json to out/compare.
- *   pnpm exec vp run compare   (or: node scripts/compare.ts [--only <text>] [--theme dark|light] [--no-build])
+ *   pnpm exec vp run compare   (or: node scripts/compare.ts [--only <text>] [--no-build])
  */
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -18,7 +18,7 @@ const OUT = resolve(root, "out/compare");
 const args = process.argv.slice(2);
 const opt = (n: string) => args[args.indexOf(n) + 1];
 const only = args.includes("--only") ? opt("--only") : undefined;
-const themes = args.includes("--theme") ? [opt("--theme") as string] : ["dark", "light"];
+const themes = ["light"];
 
 if (!args.includes("--no-build")) {
   await build({ configFile: resolve(root, "vite.config.ts"), logLevel: "silent" });
@@ -74,7 +74,7 @@ for (const theme of themes) {
     if (only && !id.includes(only)) continue;
     const refFile = resolve(REF, `${id}-${theme}.png`);
     if (!existsSync(refFile)) {
-      if (theme === "dark") missing.push(id);
+      missing.push(id);
       continue;
     }
     const ref = PNG.sync.read(readFileSync(refFile));

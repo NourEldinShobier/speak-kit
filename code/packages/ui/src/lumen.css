@@ -1,133 +1,151 @@
 /*
- * Lumen component styles for SpeakKit. Class names (prefix lm-) are the contract shared by the React
- * components (src/react) and the vanilla builders (src/vanilla.ts). Values come from docs/lumen-components.md
- * (read from the Lumen .figcraft file). Put class "lm" on a root element (page, shadow-root container).
- * Theme: prefers-color-scheme, overridden by data-theme="light|dark" on any ancestor.
+ * Lumen component styles for SpeakKit, in the Lockix look (light only; there is no dark theme).
+ * Class names (prefix lm-) are the contract shared by the React components (src/react) and the vanilla builders (src/vanilla.ts).
+ * Values come from docs/lockix-design-system.md and docs/lockix-design-system/tokens.json. Put class "lm" on a root element (page, shadow-root container).
  * Forced states for galleries/tests: .is-hover .is-pressed .is-focus mirror :hover :active :focus-visible.
  */
 
 /* ---------- tokens ---------- */
 :root,
-:host,
-[data-theme="dark"] {
-  color-scheme: dark;
-  --surface-window: #191a1b;
-  --surface-editor: #121314;
-  --surface-card: #1e1f20;
-  --surface-raised: #252627;
-  --surface-input: #191a1b;
-  --stroke-divider: #2a2b2c;
-  --stroke-control: rgba(255, 255, 255, 0.078);
-  --fill-hover: rgba(255, 255, 255, 0.078);
-  --fill-selected: rgba(255, 255, 255, 0.129);
-  --text-primary: #e6e6e6;
-  --text-secondary: #bfbfbf;
-  --text-tertiary: #8c8c8c;
-  --accent-default: #0078d4;
-  --accent-button: #0078d4;
-  --accent-subtle: rgba(0, 120, 212, 0.4);
-  --text-on-accent: #ffffff;
-  --text-on-highlight: #1e1f20;
-  --tag-blue: #4a9eff;
-  --tag-green: #4cc38a;
-  --tag-orange: #f5a524;
-  --tag-red: #f2555a;
-  --tag-purple: #a77bf3;
-  --tag-yellow: #f2c04e;
-  --lm-ink-sm: rgba(0, 0, 0, 0.3);
-  --lm-ink-md: rgba(0, 0, 0, 0.35);
-}
-[data-theme="light"] {
+:host {
   color-scheme: light;
-  --surface-window: #f3f3f6;
+  --surface-window: #f0f0f0;
   --surface-editor: #ffffff;
-  --surface-card: #fafafd;
+  --surface-card: #ffffff;
   --surface-raised: #ffffff;
   --surface-input: #ffffff;
-  --stroke-divider: #e2e2e5;
-  --stroke-control: rgba(0, 0, 0, 0.102);
-  --fill-hover: rgba(0, 0, 0, 0.059);
-  --fill-selected: rgba(0, 0, 0, 0.11);
-  --text-primary: #202020;
-  --text-secondary: #3b3b3b;
-  --text-tertiary: #606060;
-  --accent-default: #0069cc;
-  --accent-button: #0069cc;
-  --accent-subtle: rgba(0, 105, 204, 0.122);
+  --surface-tray: #f4f4f4;
+  --surface-well: #f5f5f5;
+  --stroke-divider: #ebebeb;
+  --stroke-hairline: #f0f0f0;
+  --stroke-control: #e5e5e5;
+  --stroke-field: #c3c6cc;
+  --stroke-focus-field: #171717;
+  --fill-hover: rgb(0 0 0 / 0.04);
+  --fill-pressed: rgb(0 0 0 / 0.07);
+  --fill-selected: #f0f0f0;
+  --fill-raised-hover: #f7f8fa;
+  --fill-raised-press: #f0f0f0;
+  --track: #f0f0f0;
+  --text-primary: #1b2230;
+  --text-secondary: #475467;
+  --text-tertiary: #5f6a7d;
+  --text-placeholder: #6b7280;
+  --text-label-on-white: #171717;
   --text-on-accent: #ffffff;
   --text-on-highlight: #1e1f20;
-  --tag-blue: #0a6ed1;
-  --tag-green: #1a7f4b;
-  --tag-orange: #b35c00;
-  --tag-red: #c62828;
+  --icon: #667085;
+  --icon-quiet: #737373;
+  --accent-default: #0069cc;
+  --accent-button: #201e25;
+  --accent-subtle: rgb(0 105 204 / 0.122);
+  --cta: #201e25;
+  --text-on-cta: #fafafa;
+  --destructive: #c62828;
+  --tag-blue: #0b5cad;
+  --tag-green: #17693d;
+  --tag-orange: #9a5200;
+  --tag-red: #a61b1b;
   --tag-purple: #7a4cd9;
   --tag-yellow: #b8860b;
-  --lm-ink-sm: rgba(0, 0, 0, 0.06);
-  --lm-ink-md: rgba(0, 0, 0, 0.07);
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]),
-  :host(:not([data-theme])) {
-    color-scheme: light;
-    --surface-window: #f3f3f6;
-    --surface-editor: #ffffff;
-    --surface-card: #fafafd;
-    --surface-raised: #ffffff;
-    --surface-input: #ffffff;
-    --stroke-divider: #e2e2e5;
-    --stroke-control: rgba(0, 0, 0, 0.102);
-    --fill-hover: rgba(0, 0, 0, 0.059);
-    --fill-selected: rgba(0, 0, 0, 0.11);
-    --text-primary: #202020;
-    --text-secondary: #3b3b3b;
-    --text-tertiary: #606060;
-    --accent-default: #0069cc;
-    --accent-button: #0069cc;
-    --accent-subtle: rgba(0, 105, 204, 0.122);
-    --text-on-accent: #ffffff;
-    --text-on-highlight: #1e1f20;
-    --tag-blue: #0a6ed1;
-    --tag-green: #1a7f4b;
-    --tag-orange: #b35c00;
-    --tag-red: #c62828;
-    --tag-purple: #7a4cd9;
-    --tag-yellow: #b8860b;
-    --lm-ink-sm: rgba(0, 0, 0, 0.06);
-    --lm-ink-md: rgba(0, 0, 0, 0.07);
-  }
+  --dot-green: #05c283;
+  --dot-orange: #fd9812;
+  --dot-red: #f24349;
+  --dot-blue: #2e9ff1;
+  --chip-green: #d5f3e0;
+  --chip-orange: #ffebcf;
+  --chip-red: #ffe4e5;
+  --chip-blue: #daeffe;
+  --chip-gray: #f0f0f0;
+  --neutral: #d0d5dd;
+  --divider-strong: #d0d0d0;
+  --disabled-line: #d5d7db;
+  --disabled-track: #ecedef;
+  --disabled-fill: #b7b9bf;
+  --disabled-text: #a3a9b5;
+  --disabled-seg: #9aa0ab;
+  --disabled-thumb: #c9ccd2;
+  --scrim: rgb(27 34 48 / 0.32);
+  --scroll-thumb: rgb(0 0 0 / 0.18);
+  --lm-ink-sm: rgb(0 0 0 / 0.06);
+  --lm-ink-md: rgb(0 0 0 / 0.07);
 }
 
 .lm {
-  /* Floating surfaces keep their 1px stroke (--stroke-control) and add only a short, soft shadow (the Lockix scale): menus lift 1px, popovers and toasts 2px/6px, dialogs 4px/12px. */
-  --lm-shadow-menu: 0 1px 2px var(--lm-ink-sm);
-  --lm-shadow-overlay: 0 2px 6px var(--lm-ink-sm);
-  --lm-shadow-dialog: 0 4px 12px var(--lm-ink-md);
-  --lm-shadow-window: 0 18px 50px rgba(0, 0, 0, 0.5);
-  /* motion: instant 83ms (hover), fast 167ms decelerate (press, menus), normal 250ms, slow 333ms, exit 120ms */
-  --lm-ease: cubic-bezier(0, 0, 0, 1);
-  --lm-ease-slow: cubic-bezier(0.55, 0.55, 0, 1);
-  --lm-ease-exit: cubic-bezier(0.3, 0, 1, 1);
-  --lm-dur-instant: 83ms;
-  --lm-dur-fast: 167ms;
-  --lm-dur-normal: 250ms;
-  --lm-dur-slow: 333ms;
-  --lm-dur-exit: 120ms;
+  /* elevation: at most two layers, blur 12 px at most */
+  --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-card-ring: 0 0 0 1px var(--stroke-divider), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-menu: var(--shadow-control);
+  --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
+  --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
+  --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
+  --shadow-panel: var(--shadow-card);
+  /* radii: one per container level, inner = max(2, outer - inset) */
+  --radius-dialog: 16px;
+  --radius-panel: 14px;
+  --radius-tray: 14px;
+  --radius-menu: 10px;
+  --radius-window: 12px;
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-track: 8px;
+  --radius-menu-item: 8px;
+  --radius-item: 8px;
+  --radius-chip: 6px;
+  --radius-check: 5px;
+  --radius-xs: 4px;
+  --radius-bar: 2px;
+  --radius-pill: 9999px;
+  /* motion: spring step responses as linear() easings, durations are settle times */
+  --ease-spring: linear(0, 0.026, 0.092, 0.181, 0.282, 0.385, 0.484, 0.576, 0.659, 0.731, 0.792, 0.843, 0.885, 0.918, 0.943, 0.963, 0.977, 0.987, 0.994, 0.998, 1);
+  --ease-layout: linear(0, 0.024, 0.084, 0.166, 0.259, 0.354, 0.447, 0.534, 0.614, 0.685, 0.747, 0.8, 0.845, 0.882, 0.913, 0.937, 0.957, 0.972, 0.984, 0.993, 1);
+  --ease-soft: linear(0, 0.022, 0.076, 0.15, 0.235, 0.323, 0.41, 0.493, 0.57, 0.64, 0.702, 0.757, 0.805, 0.846, 0.882, 0.911, 0.936, 0.957, 0.974, 0.989, 1);
+  --dur-snap: 130ms;
+  --dur-ui: 190ms;
+  --dur-layout: 260ms;
+  --dur-morph: 330ms;
+  --dur-gentle: 460ms;
+  --dur-release: 310ms;
+  --dur-fade-in: 167ms;
+  --dur-fade-out: 83ms;
+  --dur-exit: 120ms;
+  --dur-focus: 120ms;
+  /* old names, kept as aliases while the apps migrate */
+  --lm-shadow-menu: var(--shadow-menu);
+  --lm-shadow-overlay: var(--shadow-popover);
+  --lm-shadow-dialog: var(--shadow-dialog);
+  --lm-shadow-window: var(--shadow-popover);
+  --lm-ease: var(--ease-spring);
+  --lm-ease-slow: var(--ease-layout);
+  --lm-ease-exit: ease-in;
+  --lm-dur-instant: var(--dur-fade-out);
+  --lm-dur-fast: var(--dur-fade-in);
+  --lm-dur-normal: var(--dur-layout);
+  --lm-dur-slow: var(--dur-morph);
+  --lm-dur-exit: var(--dur-exit);
   /* looping animations: one cycle of the spinner, and of shimmer, indeterminate bar and caret blink */
   --lm-dur-spin: 800ms;
   --lm-dur-shimmer: 1200ms;
-  /* focus ring: 2px accent. The board header says 2px offset, the drawn nodes have none. Drawn
-     components (buttons, pills) use --lm-ring-offset-drawn, the rest --lm-ring-offset. */
-  --lm-ring: 2px;
+  /* focus ring: 1 px accent line inside the element, offset 2 px on the black button, switch, checkbox, radio */
+  --lm-ring: 1px;
   --lm-ring-offset: 2px;
-  --lm-ring-offset-drawn: 0px;
-  /* not in Lumen (no scrim node): flagged */
-  --lm-scrim: rgba(0, 0, 0, 0.45);
-  font-family: Inter, "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --lm-ring-offset-drawn: -1px;
+  --lm-scrim: var(--scrim);
+  font-family: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 13px;
   line-height: 16px;
   letter-spacing: 0;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+}
+.lm--win32 {
+  --radius-panel: 8px;
+  --radius-tray: 10px;
+  --radius-window: 10px;
+  --radius-dialog: 10px;
 }
 .lm,
 .lm *,
@@ -136,7 +154,7 @@
   box-sizing: border-box;
 }
 
-/* Reader "paper" theme: a warm sheet that stays the same in both Lumen themes. */
+/* Reader "paper" theme: a warm sheet. */
 :root,
 :host {
   --paper-bg: #f4ecd8;

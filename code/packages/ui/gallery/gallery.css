@@ -19,26 +19,6 @@ body {
     600 15px/18px Inter,
     system-ui;
 }
-.g-modes {
-  display: flex;
-  gap: 4px;
-}
-.g-modes button {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--stroke-control);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-secondary);
-  font:
-    500 12px Inter,
-    system-ui;
-  cursor: pointer;
-}
-.g-modes button[aria-pressed="true"] {
-  background: var(--fill-selected);
-  color: var(--text-primary);
-}
 .g-panel {
   display: block;
   padding: 40px;
