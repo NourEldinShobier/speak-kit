@@ -256,3 +256,17 @@ html[data-platform="darwin"] .sk-title {
     justify-content: center;
   }
 }
+/* Lockix scrollbar (lockix-components.css section 15): 10 px, pill thumb, no arrow buttons. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb, rgb(0 0 0 / 0.18));
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
