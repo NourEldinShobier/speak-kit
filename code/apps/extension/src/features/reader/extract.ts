@@ -3,8 +3,8 @@ import { Collector } from "./collect";
 import type { Block, Extraction, ExtractOptions, Sentence } from "./types";
 
 /** Page extraction: main-content detection, blocks with live Ranges, sentence splitting. */
-export type { Block, Extraction, ExtractOptions, Piece, Sentence, SkipOpts } from "./types";
-export { blockRange, sentenceIndexAt, sentenceRange, wordRange } from "./ranges";
+export type { Extraction } from "./types";
+export { sentenceIndexAt, sentenceRange, wordRange } from "./ranges";
 
 // ---------------------------------------------------------------- main content
 
@@ -93,10 +93,3 @@ export function extract(doc: Document, opts: ExtractOptions): Extraction {
   const h1 = root.querySelector("h1")?.textContent?.trim();
   return { title: (doc.title || h1 || "").trim(), root, blocks, sentences };
 }
-
-/** Estimated reading time in ms (architecture: 15 chars per second at 1x). */
-export const estimateMs = (ex: Extraction, speed: number): number => {
-  let n = 0;
-  for (const s of ex.sentences) n += s.text.length;
-  return (n / 15 / Math.max(0.5, speed)) * 1000;
-};
