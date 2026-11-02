@@ -45,7 +45,7 @@ body {
   padding: 0;
   border: 0;
   background: none;
-  /* the blue tag colour keeps 4.5:1 on both window surfaces; --accent-default is only 3.9:1 on the dark one */
+  /* the blue tag colour keeps 4.5:1 on the window surfaces */
   color: var(--tag-blue);
   font:
     500 12px/15px Inter,
@@ -55,7 +55,7 @@ body {
   cursor: pointer;
 }
 .sk-link:focus-visible {
-  outline: 2px solid var(--accent-default);
+  outline: 1px solid var(--accent-default);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -160,9 +160,9 @@ body {
 .pp-quote {
   margin: 0;
   padding: 10px 12px;
-  border-left: 2px solid var(--accent-default);
+  border-left: 2px solid var(--stroke-control);
   border-radius: 0 8px 8px 0;
-  background: var(--fill-hover);
+  background: var(--fill-selected);
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 18px;
@@ -397,12 +397,13 @@ body {
   min-width: 0;
 }
 .sk-voice__opt:focus-visible {
-  outline: 2px solid var(--accent-default);
-  outline-offset: -2px;
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
   border-radius: 8px;
 }
 .sk-voice.is-selected {
-  background: var(--accent-subtle);
+  background: var(--fill-selected);
+  font-weight: 500;
 }
 .sk-voice__text {
   display: flex;
@@ -419,7 +420,7 @@ body {
   font-size: 12px;
 }
 .sk-voice__check {
-  color: var(--accent-default);
+  color: var(--text-primary);
 }
 .sk-voices__none {
   padding: 12px 8px;
@@ -459,8 +460,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin: 4px 0 4px 4px;
   padding: 16px 12px;
-  border-right: 1px solid var(--stroke-divider);
+  border-radius: 14px;
+  background: var(--surface-card);
 }
 .op-logo {
   display: flex;
@@ -553,11 +556,11 @@ body {
   color: var(--text-secondary);
 }
 .op-conn-ic.ok {
-  background: color-mix(in srgb, var(--tag-green) 16%, transparent);
+  background: var(--chip-green);
   color: var(--tag-green);
 }
 .op-conn-ic.err {
-  background: color-mix(in srgb, var(--tag-red) 14%, transparent);
+  background: var(--chip-red);
   color: var(--tag-red);
 }
 .op-conn-t {
@@ -662,8 +665,8 @@ body {
   border-radius: 10px;
 }
 .op-engine.on {
-  border-color: var(--accent-default);
-  background: var(--accent-subtle);
+  border-color: var(--stroke-focus-field);
+  background: var(--fill-selected);
 }
 .op-engine-h {
   display: flex;
@@ -897,7 +900,7 @@ body {
   gap: 10px;
   padding: 20px 20px 16px;
   border-radius: 12px;
-  background: var(--accent-subtle);
+  background: var(--fill-selected);
 }
 .sp-now-t {
   font:
@@ -952,12 +955,13 @@ body {
   background: var(--fill-hover);
 }
 .sp-outline li.cur button {
-  background: var(--fill-hover);
+  background: var(--fill-selected);
   color: var(--text-primary);
+  font-weight: 500;
 }
 .sp-outline li.cur .n,
 .sp-outline li.cur svg {
-  color: var(--accent-default);
+  color: var(--text-primary);
 }
 .sp-outline .n {
   width: 18px;
@@ -1038,11 +1042,6 @@ body {
   --rd-fg: var(--text-primary);
   --rd-sentence: var(--accent-subtle);
 }
-.op-reader-prev[data-rtheme="dark"] {
-  --rd-bg: var(--surface-editor);
-  --rd-fg: var(--text-primary);
-  --rd-sentence: var(--accent-subtle);
-}
 .op-reader-prev[data-rhl="on"] .op-reader-hl {
   background: var(--rd-sentence);
   border-radius: 4px;
@@ -1089,11 +1088,6 @@ body {
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }
-}
-
-/* Tinted status pills: the tone colour alone is under 4.5:1 on its own tint in the light theme; blend a little text colour in. */
-.lm-pill {
-  color: color-mix(in srgb, var(--tone) 45%, var(--text-primary));
 }
 
 /* Settings rows put the control under the text on a narrow screen (400% zoom): nothing runs past the card. */
