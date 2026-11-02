@@ -8,15 +8,20 @@ export type O = {
   shadow?: string; [k: string]: any;
 };
 const KEYMAP: Record<string, string> = { sw: "strokeWeight", sa: "strokeAlign", r: "cornerRadius", pad: "padding", align: "crossAlign", justify: "mainAlign" };
-// Lumen elevation (lumen.css, Lockix scale; black ink 6%/30% sm, 7%/35% md; light/dark): md = menu 0 1 2, lg = popover/dock/toast/pill/launcher 0 2 6, dlg = dialog and command palette 0 4 12, xl = window 0 18 50 .5. sm is not from Lumen (selected segment lift).
-const sh = (dark: boolean, y: number, r: number, md = false) => [{ type: "dropShadow", color: dark ? (md ? "#00000059" : "#0000004D") : md ? "#00000012" : "#0000000F", offset: [0, y], radius: r }];
-const SHADOWS = (dark: boolean): Record<string, any[]> => ({
-  sm: [{ type: "dropShadow", color: "#00000014", offset: [0, 1], radius: 3 }],
-  md: sh(dark, 1, 2), lg: sh(dark, 2, 6), dlg: sh(dark, 4, 12, true),
-  xl: [{ type: "dropShadow", color: "#00000080", offset: [0, 18], radius: 50 }],
-});
-// Lumen radii are 4, 5, 6, 8, 10, 12, 14, 999: snap the stray ones the screens used.
-const RSNAP: Record<number, number> = { 7: 8, 9: 8, 11: 10, 13: 12 };
+// Lockix elevation (docs/lockix-design-system.md, light only): at most two layers, blur at most 12.
+// sm/ctl = control 0 1 2 6%, md = menu (same, with its 1 px stroke), lg = popover (1 px ring 10% + 0 2 6 6%), dlg = dialog (ring + 0 4 12 7%),
+// card = 0 0 4 7% + 0 1 2 4%, ring = card on a tray (1 px #EBEBEB + 0 1 2 5%), cta = 0 2 4 10%, tab = 0 1 3 12%. xl (OS window in a mockup) = popover.
+const ds = (a: string, y: number, r: number, spread = 0, x = 0) => ({ type: "dropShadow", color: a, offset: [x, y], radius: r, ...(spread ? { spread } : {}) });
+const SHADOWS: Record<string, any[]> = {
+  sm: [ds("#0000000F", 1, 2)], ctl: [ds("#0000000F", 1, 2)], md: [ds("#0000000F", 1, 2)],
+  lg: [ds("#0000001A", 0, 0, 1), ds("#0000000F", 2, 6)], xl: [ds("#0000001A", 0, 0, 1), ds("#0000000F", 2, 6)],
+  dlg: [ds("#0000001A", 0, 0, 1), ds("#00000012", 4, 12)],
+  card: [ds("#00000012", 0, 4), ds("#0000000A", 1, 2)],
+  ring: [ds("#EBEBEB", 0, 0, 1), ds("#0000000D", 1, 2)],
+  cta: [ds("#0000001A", 2, 4)], focusCta: [ds("#FFFFFF", 0, 0, 2), ds("#0069CC", 0, 0, 3)], tab: [ds("#0000001F", 1, 3)],
+};
+// Lockix radii are 4, 5, 6, 8, 10, 12, 14, 16, 999: snap the stray ones the screens used.
+const RSNAP: Record<number, number> = { 7: 8, 9: 8, 11: 10, 13: 12, 15: 14 };
 
 import tabler from "./tabler.json";
 import tablerBounds from "./tabler-bounds.json";
@@ -45,7 +50,6 @@ const SOLID: Record<string, number> = { play: 2.25, stop: 2.25, pause: 2.75 };
 
 export class B {
   cmds: any[] = [];
-  dark = true; // theme of the frame being built (main.ts sets it); picks shadow opacity
   n = 0;
   add(command: string, params: any, as?: string): Ref {
     const a = as ?? `r${this.n++}`;
@@ -62,7 +66,7 @@ export class B {
       else if (k === "crossAlign") { const m = ({ start: "min", end: "max" } as any)[v as string] ?? v; if (m !== "stretch") props[k] = m; }
       else if (k === "mainAlign") props[k] = ({ start: "min", end: "max" } as any)[v as string] ?? v;
       else if (k === "cornerRadius" && typeof v === "number" && RSNAP[v] !== undefined) props[k] = RSNAP[v];
-      else if (k === "shadow") props.effects = SHADOWS(this.dark)[v as string];
+      else if (k === "shadow") props.effects = SHADOWS[v as string];
       else if (k === "w") { if (v === "fill" || v === "hug") props.sizingH = v; else { top.width = v; if (!isText) props.sizingH = "fixed"; } }
       else if (k === "h") { if (v === "fill" || v === "hug") props.sizingV = v; else { top.height = v; if (!isText) props.sizingV = "fixed"; } }
       else props[k] = v;

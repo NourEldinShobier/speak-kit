@@ -1,42 +1,39 @@
-# SpeakKit design system = Lumen
+# SpeakKit design system = Lockix (light only)
 
-Source: `D:\workspaces\perplexity\designs\Lumen — AI answer engine (open-source Perplexity alternative).figcraft` (10 pages: Web app, Desktop app, Foundations & components, Browser & devices, Motion, Browser layouts, Generative UI, Browser features, Arc-inspired features). Read from the file: the variable collection "Lumen / Color" (Light + Dark), the "Components and states" board (web) and "Desktop components" board. SpeakKit uses the same tokens in light and dark; dark follows the OS/browser.
+The look is the Lockix design system. The full spec, tokens and component CSS are in [`lockix-design-system.md`](lockix-design-system.md), `lockix-design-system/tokens.json` and `lockix-design-system/lockix-components.css`. Speak Kit has no dark mode: there is one light theme. A dark website under the extension is the host page, not our theme; the pill, bubble and launcher are white and stay readable over it (frames B11, B21).
 
-## Color tokens (Lumen name -> SpeakKit variable)
-| Lumen | SpeakKit | Dark | Light |
-|---|---|---|---|
-| surface-window | `--bg` | #191A1B | #F3F3F6 |
-| surface-editor | page canvas behind cards | #121314 | #FFFFFF |
-| surface-card | `--surface` | #1E1F20 | #FAFAFD |
-| surface-raised | `--surface2` (insets, hover rows) | #252627 | #EBEBEE (fill-hover over card; Lumen raised is #FFFFFF) |
-| surface-input | inputs | #191A1B | #FFFFFF |
-| stroke-divider | `--border` | #2A2B2C | #E2E2E5 |
-| stroke-control | `--stroke-control` | white 8% | black 10% |
-| fill-hover / fill-selected | `--fill-hover` / `--fill-selected` | white 8% / 13% | black 6% / 11% |
-| text-primary / secondary / tertiary | `--text` `--text2` `--text3` | #E6E6E6 #BFBFBF #8C8C8C | #202020 #3B3B3B #606060 |
-| accent-default / accent-button | `--accent` | #0078D4 | #0069CC |
-| accent-subtle | `--accent-subtle`; `--accent-soft` is the same tint pre-mixed on the card | 40% | 12% |
-| text-on-accent | `--accent-text` | #FFFFFF | #FFFFFF |
-| tag-green / orange / red / blue | `--ok` `--warn` `--err` `--info` | #4CC38A #F5A524 #F2555A #4A9EFF | #1A7F4B #B35C00 #C62828 #0A6ED1 |
-| tag-purple / yellow | `--tag-purple` `--tag-yellow` | #A77BF3 #F2C04E | #7A4CD9 #B8860B |
+## Color tokens (design generator `designs/gen/kit.ts` LIGHT)
+| Role | Key | Value |
+|---|---|---|
+| window | `bg` | #F0F0F0 |
+| panel, card, popover, input | `editor` `surface` `raised` `input` | #FFFFFF |
+| well, tray | `well` `tray` | #F5F5F5, #F4F4F4 |
+| divider, control stroke, field stroke | `border` `control` `field` | #EBEBEB, #E5E5E5, #C3C6CC |
+| text 1/2/3 | `text` `text2` `text3` | #1B2230, #475467, #5F6A7D |
+| primary action (button, play, on switch, checked box) | `cta` / `ctaText` | #201E25 / #FAFAFA |
+| accent (focus ring, links, selection, progress) | `accent` | #0069CC |
+| status text / chip fill | `ok` `warn` `err` `info` / `okSoft`... | #17693D #9A5200 #A61B1B #0B5CAD / #D5F3E0 #FFEBCF #FFE4E5 #DAEFFE |
+| destructive | `destructive` | #C62828 |
+| hover, pressed, selected | `hover` `pressed` `selected` | black 4%, black 7%, #F0F0F0 |
+| scrim | `overlay` | rgb(27 34 48 / .32) |
 
-Soft status fills (`--ok-soft` etc.) are the tag color mixed 12% (light) / 16% (dark) over the card. Reading highlight (our own): sentence `--hl-sent` (yellow tint, #FFF1C2 light, #433921 dark), word `--hl-word` (#FFD24D light, tag-yellow #F2C04E dark). Never use the accent for highlight: blue is for actions.
+Reading highlight (our own, `hlSent` #FFF1C2, `hlWord` #FFD24D), `tag-purple` and `tag-yellow` are kept. The accent never fills a button.
 
-## Type, shape, state (from the component boards)
-- Font Inter. Page/section title 24 semibold, body 13 regular, small 11 to 12, ALL-CAPS section labels 11 semibold with letter spacing, mono for time and keys.
-- Radii: 6 icon button, 8 buttons, inputs, segmented controls and toggle buttons (never a pill), 10 rows and cards, 12 approval/status cards, 14 large inputs and the quick-ask bar, 16 windows and panels, 999 for pills, status pills and the floating working pill.
-- Icons: Tabler outline, stroke 1.5, sizes 14/16/20/24. Icon buttons 32 / 28 / 24.
-- States: rest, hover (fill-hover), pressed (fill-selected), focus (2 px accent ring with 2 px offset: `--focus-ring`), disabled (40% opacity), loading (spinner replaces the icon, width kept). Motion: 83 ms hover, 167 ms press/fade, decelerate curve `cubic-bezier(0,0,0,1)`.
-- Buttons: primary (accent fill), secondary (outline), ghost, danger (red outline). Selected toggle buttons use fill-selected.
-- Floating surfaces and dock use the raised surface (#252627 dark) with a 1 px divider border; toast: card surface, 8 radius, action button on the right.
+## Shape, elevation, controls
+- Radii: 16 dialog, 14 panel and tray, 12 floating card and popover, 10 card and menu, 8 control, 6 chip, 5 checkbox, 999 pill.
+- Panels (sidebar, content) are white r14 on the grey window, 4 px from the edge and 8 px apart, no stroke, shadow `card`.
+- Shadows are FigCraft drop-shadow effects with at most two layers: control `0 1 2 6%`, menu the same plus a 1 px stroke, popover and pill `1 px ring 10% + 0 2 6 6%`, dialog `ring + 0 4 12 7%`, card `0 0 4 7% + 0 1 2 4%`, card on a tray `1 px #EBEBEB + 0 1 2 5%`, cta `0 2 4 10%`.
+- Buttons 36 (default), 28 sm, 24 xs, 40 xl (dialog footers), r8. Primary = cta black, secondary = white with a 1 px stroke and control shadow, ghost, danger = 10% red tint. Disabled = 50% opacity.
+- Switch 32x20 with a 16 px white knob (off: #E5E5E5 track with a 1 px #C3C6CC ring, on: cta). Checkbox and radio 16 px, 1 px #C3C6CC, checked = cta with a #FAFAFA mark (check 12 px stroke 2, radio dot 8 px). Segmented 36 high on #F0F0F0, selected item white with a 1 px stroke. Input and select 36 high, focus = 2 px #171717.
+- Font Inter, controls 13 px, menus and dialog body 14 px. Icons: Tabler outline, stroke 1.5, sizes 12/14/16/18/20/24. Icon buttons 36 / 28 / 24.
+- States: rest, hover, pressed, focus (1 px accent, offset 2 on the cta button), disabled, loading. Motion tokens are in the Lockix spec.
 
 ## Where it lives in code
 - Colours are defined once, in the token blocks of `code/packages/ui/src/lumen.css` (plus `--text-on-highlight` for text on the word highlight and the `--paper-*` set of the reader's paper theme). `code/packages/ui/src/tokens.ts` is generated from it (`pnpm --filter @speakkit/ui gen:tokens`) for code that cannot read CSS variables (the toolbar badge, the highlight colours on host pages, Electron window colours). `packages/ui/tests/tokens.test.ts` fails on a stale module, on a `var(--x)` with no definition and on a hex colour anywhere but `lumen.css`, `tokens.ts` and the highlight swatches (`features/highlight/colors.ts`, colours users pick and that are painted on pages without Lumen).
 - Components: `code/packages/ui` (React and vanilla twins, compared in `tests/parity.test.tsx`); the extension composes them in `code/apps/extension/src/styles/compose.css` and each feature's own css.
-- Designs: `designs/gen/kit.ts` (LIGHT/DARK) regenerated into `designs/screens/*.png` and `designs/review.html`.
+- Designs: `designs/gen/kit.ts` (LIGHT) regenerated into `designs/next/screens/*.png`, `designs/next/manifest.json` and `designs/next/review.html` (`bun main.ts`, then `DIR=.../designs/next bun build-review.ts`).
 
 ## UI rules added 2026-11-01 (match `code/packages/ui/src/lumen.css`)
 - Transport glyphs (play, pause, stop) are solid: fill and stroke are the current colour, round joins, stroke 2.25 px (play, stop) and 2.75 px (pause) on screen. Pause is two thin rounded bars (lines x 8.5 and 15.5, y 5.5 to 18.5 in a 24 box), not Tabler's rectangles. Skip, back and forward stay outline. Play and pause on primary (blue) buttons are white.
-- A key chip (Kbd, for example `Ctrl N`) inside a primary button uses text-on-accent (white) and a 45% white border instead of text-tertiary and stroke-control.
-- Elevation (Lockix scale): floating surfaces keep their 1 px stroke-control plus a short shadow. Menu `0 1 2`, popover, pill, dock, toast, tooltip and launcher `0 2 6` (both 6% light, 30% dark), dialog and command palette `0 4 12` (7% light, 35% dark), app window `0 18 50 .5`. The old `0 8 24` and `0 16 48` shadows are removed. Shadows are Figma effects (drop shadow), not baked into fills.
+- A key chip (Kbd, for example `Ctrl N`) inside a primary (cta) button uses the cta text colour and a 45% white border instead of text-tertiary and stroke-control.
 - The paragraph play button (gutter) is not shown on a fresh page. It appears only after reading has started on that page load. The edge launcher tab at the right edge is always shown.

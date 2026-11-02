@@ -10,7 +10,7 @@ const SITE = "reader.example.com";
 // ---- local helpers (contrast-safe versions of kit pieces) ----
 export const kb = K.kbd;
 export const stat = (b: B, t: T, p: Ref | undefined, label: string, k: "ok" | "warn" | "err" | "neutral") => K.badge(b, t, p, label, k);
-const sc = (t: T): T => ({ ...t, border: t.mode === "dark" ? "#3A3B3C" : "#D2CBBF" });
+const sc = (t: T): T => ({ ...t, border: "#D2CBBF" });
 const vav = (b: B, t: T, p: Ref | undefined, name: string, size: number, sel = false) => {
   const f = b.frame(p, { w: size, h: size, r: size / 2, fill: sel ? t.subtle : t.selected, layout: "horizontal", align: "center", justify: "center" });
   b.text(f, name.slice(0, 1), { size: Math.round(size * 0.42), weight: "SemiBold", c: sel ? t.accent : t.text2 });
@@ -40,8 +40,8 @@ const transport = (b: B, t: T, p: Ref, state: PS) => {
   const r = b.row(p, { gap: 14 });
   const ic = (name: string, size: number, col: string) => { const f = dim(b, r, size, off); b.icon(f, name, size, col); };
   ic("skipBack", 18, t.text2); ic("back10", 24, t.text);
-  const pb = b.frame(r, { w: 52, h: 52, r: 26, fill: t.accent, layout: "horizontal", align: "center", justify: "center" });
-  if (off) b.icon(pb, "loader", 22, t.accentText); else b.icon(pb, state === "playing" ? "pause" : state === "done" ? "refresh" : "play", 22, t.accentText);
+  const pb = b.frame(r, { w: 52, h: 52, r: 26, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" });
+  if (off) b.icon(pb, "loader", 22, t.ctaText); else b.icon(pb, state === "playing" ? "pause" : state === "done" ? "refresh" : "play", 22, t.ctaText);
   ic("fwd10", 24, t.text); ic("skipFwd", 18, t.text2);
 };
 const controls = (b: B, t: T, pop: Ref, state: PS) => {
@@ -100,12 +100,12 @@ export const voiceList = (b: B, t: T, p: Ref, w: number, visible: number) => {
     K.iconBtn(b, t, r, "play", { size: 32, c: t.text2 });
   });
   for (let i = 0; i < 8; i++) b.rect(lf, { x: 0, y: H - 64 + i * 8, w, h: 8, fill: t.surface + Math.round(255 * 0.95 * (i + 1) / 8).toString(16).padStart(2, "0") });
-  b.rect(lf, { x: w - 5, y: 6, w: 4, h: 84, r: 2, fill: t.mode === "dark" ? "#3A3B3C" : "#CFC8BC" });
+  b.rect(lf, { x: w - 5, y: 6, w: 4, h: 84, r: 2, fill: "#CFC8BC" });
   return lf;
 };
 
-const popup = (id: string, title: string, note: string, state: PS, h: number, dark = false): S => ({
-  id, group: "A", title, note, w: 520, h: h + 76, dark,
+const popup = (id: string, title: string, note: string, state: PS, h: number): S => ({
+  id, group: "A", title, note, w: 520, h: h + 76,
   build: (b, t, root) => {
     const pop = K.popupCanvas(b, t, root, h);
     if (state === "noapp") {
@@ -171,7 +171,7 @@ const popup = (id: string, title: string, note: string, state: PS, h: number, da
     nowCard(b, t, pop, state === "playing" || state === "paused" ? `${SITE} · 6:48 at 1.2x` : state === "done" ? `${SITE} · finished` : `${SITE} · 6:48 at 1.2x`);
     if (state === "voices") {
       const m = b.row(pop, { w: "fill", pad: [4, 16, 12, 16], gap: 12 });
-      const pb = b.frame(m, { w: 36, h: 36, r: 18, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 14, t.accentText);
+      const pb = b.frame(m, { w: 36, h: 36, r: 18, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "pause", 14, t.ctaText);
       const mc = b.col(m, { w: "fill", gap: 4 }); K.bar(b, t, mc, 0.36, 280, { knob: false });
       const mr = b.row(mc, { w: "fill", justify: "spaceBetween" }); b.text(mr, "2:27", { size: 12, c: t.text2, mono: true }); b.text(mr, "4:21 left", { size: 12, c: t.text2, mono: true });
       b.rect(pop, { w: "fill", h: 1, fill: t.border });
@@ -215,14 +215,13 @@ export const A: S[] = [
   popup("A9", "Popup · app not running", "The desktop app is closed. Launch it, or download it.", "noapp", 398),
   popup("A10", "Popup · model loading", "App is up but the voice engine is still starting. Skips disabled, Cancel available.", "starting", 450),
   popup("A11", "Popup · page not readable", "Chrome internal pages and the Web Store block extensions.", "unreadable", 339),
-  popup("A12", "Popup · playing (dark)", "Dark theme follows the browser.", "playing", 400, true),
   popup("A13", "Popup · app not installed", "First run: the app is not on this computer yet, so Download is the primary action.", "install", 368),
   popup("A14", "Popup · pairing token rejected", "App and browser no longer share a token; paste a new one in the extension options.", "token", 387),
   popup("A15", "Popup · local file needs permission", "file:// pages need “Allow access to file URLs” in the extension settings.", "fileurl", 387),
 ];
 
 // ---------------- B: on-page ----------------
-export type BO = { hl?: { para: number; sent: number; word: number }; selection?: boolean; dock?: K.DockState; rtheme?: "paper" | "dark"; rpop?: boolean; hover?: boolean; bubble?: boolean; ctx?: boolean; toast?: string; reader?: boolean; scrolled?: boolean; back?: boolean; pop?: "speed" | "voice"; details?: boolean; edge?: "tab" | "open" | "reading" | "readingOpen" };
+export type BO = { hl?: { para: number; sent: number; word: number }; selection?: boolean; dock?: K.DockState; rpop?: boolean; hover?: boolean; bubble?: boolean; ctx?: boolean; toast?: string; reader?: boolean; scrolled?: boolean; back?: boolean; pop?: "speed" | "voice"; details?: boolean; edge?: "tab" | "open" | "reading" | "readingOpen" };
 
 const winMenu = (b: B, t: T, p: Ref, x: number, y: number, w: number, items: { l: string; k?: string; sub?: boolean; sep?: boolean; hi?: boolean; logo?: boolean }[]) => {
   const m = b.col(p, { x, y, w, pad: 8, gap: 0, r: 10, fill: "#FFFFFF", stroke: "#0000002E", sw: 1, shadow: "md" });
@@ -237,11 +236,11 @@ const winMenu = (b: B, t: T, p: Ref, x: number, y: number, w: number, items: { l
   return m;
 };
 
-// Reader view, Lumen F5: dark chrome, paper card inset 8 px (r12), 680 px serif column, current sentence block, reading popover top right.
-const readerView = (b: B, t: T, c: Ref, hl: { sent: number; word: number }, rt: "paper" | "dark", pop: boolean) => {
-  const P = rt === "paper" ? { bg: "#F7F3EA", tx: "#1F2328", sub: "#57606A", kick: "#8A6D00", sent: "#F5DFAC", word: "#F2C04E", wordTx: "#1F2328" } : { bg: "#17181A", tx: "#E6E6E6", sub: "#8C8C8C", kick: "#F2C04E", sent: "#433921", word: "#F2C04E", wordTx: "#121314" };
+// Reader view, Lumen F5: paper card inset 8 px (r12), 680 px serif column, current sentence block, reading popover top right.
+const readerView = (b: B, t: T, c: Ref, hl: { sent: number; word: number }, pop: boolean) => {
+  const P = { bg: "#F7F3EA", tx: "#1F2328", sub: "#57606A", kick: "#8A6D00", sent: "#F5DFAC", word: "#F2C04E", wordTx: "#1F2328" };
   const FF = "Georgia";
-  b.rect(c, { x: 0, y: 0, w: 1280, h: 720, fill: t.mode === "dark" ? "#191A1B" : t.chrome2 });
+  b.rect(c, { x: 0, y: 0, w: 1280, h: 720, fill: t.chrome2 });
   const card = b.frame(c, { x: 8, y: 0, w: 1264, h: 712, r: [12, 12, 12, 12], fill: P.bg, clip: true });
   const col = b.col(card, { x: 292, y: 56, w: 680, gap: 18 });
   b.text(col, "LOCAL-FIRST · 8 MIN READ", { size: 11, weight: "SemiBold", c: P.kick, ls: 0.5 });
@@ -258,40 +257,40 @@ const readerView = (b: B, t: T, c: Ref, hl: { sent: number; word: number }, rt: 
     }));
   };
   para(K.ARTICLE.paras[0], true); para(K.ARTICLE.paras[1], false); para(K.ARTICLE.paras[2], false);
-  if (pop) K.readingPopover(b, t, c, { abs: true, x: 1020, y: 24, theme: rt === "paper" ? "Paper" : "Dark", font: 1 });
+  if (pop) K.readingPopover(b, t, c, { abs: true, x: 1020, y: 24, theme: "Paper", font: 1 });
 };
 
-// tooltip on a page that may be light or dark: Lumen tooltip tokens, forced dark like the dock
-const DT = (t: T): T => ({ ...t, raised: "#1E1F20", text: "#FFFFFF", text3: "#BFBFBF", control: "#FFFFFF1F" });
-export const page = (id: string, title: string, note: string, o: BO, dark0 = false): S => ({
-  id, group: "B", title, note, w: 1280, h: 800, dark: dark0,
+// A dark WEBSITE under the extension surfaces (host page, not our theme): the pill, bubble and launcher are white and must stay readable on it.
+const DARK_SITE = (t: T): T => ({ ...t, bg: "#17161A", surface: "#17161A", border: "#2A2B2C", text: "#E6E6E6", text2: "#BFBFBF", text3: "#8C8C8C", hlSent: "#78621F", hlWord: "#F2C04E", hlWordText: "#121314" });
+export const page = (id: string, title: string, note: string, o: BO, darkSite = false): S => ({
+  id, group: "B", title, note, w: 1280, h: 800,
   build: (b, t0, root) => {
-    const dark = dark0 || t0.mode === "dark";
-    const t: T = dark ? { ...t0, hlSent: "#78621F" } : t0; // dark sentence band >= 3:1 against the page
-    const c = K.browser(b, t, root, o.reader ? { reader: true } : {});
-    if (o.reader) readerView(b, t, c, { sent: o.hl!.sent, word: o.hl!.word }, o.rtheme ?? "paper", !!o.rpop);
+    const tp: T = darkSite ? DARK_SITE(t0) : t0; // page content (host); every extension surface below uses t0
+    const t = t0;
+    const c = K.browser(b, t, root, o.reader ? { reader: true, dark: darkSite } : { dark: darkSite });
+    if (o.reader) readerView(b, t, c, { sent: o.hl!.sent, word: o.hl!.word }, !!o.rpop);
     else if (o.scrolled) {
       const vp = b.frame(c, { x: 0, y: 0, w: 1280, h: 720, clip: true });
       const inner = b.frame(vp, { x: 0, y: -380, w: 1280, h: 1400 });
-      K.article(b, t, inner, { hl: o.hl });
+      K.article(b, tp, inner, { hl: o.hl });
       const more = b.col(inner, { x: 280, y: 650, w: 720, gap: 18 });
-      b.text(more, "Why now", { size: 26, weight: "Bold", c: t.text, lh: 32 });
+      b.text(more, "Why now", { size: 26, weight: "Bold", c: tp.text, lh: 32 });
       b.text(more, "Three things changed at once. Phones and laptops gained dedicated silicon for machine learning, open models shrank by an order of magnitude, and the tools to ship them became ordinary packages instead of research projects.", { size: 18, lh: 30, c: t.text, w: 720 });
       b.text(more, "The result is software that treats the network as an optional extra. Sync still matters, but it happens when it can, not when it must, and the app never waits on a server to be useful.", { size: 18, lh: 30, c: t.text, w: 720 });
     } else {
-      K.article(b, t, c, { hl: o.hl, selection: o.selection });
+      K.article(b, tp, c, { hl: o.hl, selection: o.selection });
       if (o.hover) {
-        b.rect(c, { x: 281, y: 422, w: 720, h: 120, r: 8, fill: t.accent + "14" });
-        const g = b.frame(c, { x: 233, y: 424, w: 32, h: 32, r: 16, fill: t.accent, layout: "horizontal", align: "center", justify: "center", shadow: "lg" }); b.icon(g, "play", 16, t.accentText);
-        K.tooltip(b, DT(t), c, "Read from here", undefined, { x: 105, y: 427 });
+        b.rect(c, { x: 281, y: 422, w: 720, h: 120, r: 8, fill: t.hover });
+        const g = b.frame(c, { x: 245, y: 428, w: 24, h: 24, r: 6, fill: t.surface, layout: "horizontal", align: "center", justify: "center", shadow: "lg" }); b.icon(g, "play", 14, t.text);
+        K.tooltip(b, t, c, "Read from here", undefined, { x: 105, y: 427 });
       }
     }
     if (o.bubble) {
       // anchored 8px above the first selected line (screen y 334), centered on the selection
-      const bb = b.row(c, { x: 546, y: 206, h: 40, pad: [0, 4], gap: 4, r: 12, fill: "#1E1F20", shadow: "lg" });
+      const bb = b.row(c, { x: 546, y: 202, h: 44, pad: [0, 4], gap: 4, r: 12, fill: t.raised, shadow: "lg" });
       K.btn(b, t, bb, "Listen", { v: "primary", icon: "play" });
-      K.iconBtn(b, t, bb, "sliders", { size: 32, c: "#E6E6E6" }); K.iconBtn(b, t, bb, "copy", { size: 32, c: "#E6E6E6" });
-      K.tooltip(b, DT(t), c, "Listen", "Ctrl Shift S", { x: 556, y: 172 });
+      K.iconBtn(b, t, bb, "sliders", { size: 32, c: t.text2 }); K.iconBtn(b, t, bb, "copy", { size: 32, c: t.text2 });
+      K.tooltip(b, t, c, "Listen", "Ctrl Shift S", { x: 556, y: 172 });
     }
     if (o.ctx) {
       winMenu(b, t, c, 560, 290, 360, [
@@ -302,7 +301,7 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
     }
     if (o.back) {
       const r = b.row(c, { x: 0, y: 16, w: 1280, justify: "center" });
-      const pill = b.row(r, { h: 36, pad: [0, 16, 0, 12], gap: 8, r: 18, fill: "#1E1F20", shadow: "lg" }); b.icon(pill, "up", 16, "#FFFFFF"); b.text(pill, "Back to current", { size: 13, weight: "SemiBold", c: "#FFFFFF" });
+      const pill = b.row(r, { h: 36, pad: [0, 16, 0, 12], gap: 8, r: 18, fill: t.raised, shadow: "lg" }); b.icon(pill, "up", 16, t.text); b.text(pill, "Back to current", { size: 13, weight: "Medium", c: t.text });
     }
     if (o.toast) { const r = b.row(c, { x: 0, y: 640, w: 1280, justify: "center" }); K.toast(b, t, r, o.toast, "ok", { action: "View queue" }); }
     if (o.details) {
@@ -332,33 +331,33 @@ export const page = (id: string, title: string, note: string, o: BO, dark0 = fal
     }
     if (o.edge) {
       const reading = o.edge === "reading" || o.edge === "readingOpen";
-      const bg = dark ? "#252627" : "#1E1F20"; const wc = "#FFFFFF"; const dim = "#BFBFBF";
+      const bg = t.raised; const wc = t.text; const dim = t.text3; const sepc = t.control;
       if (o.edge === "tab" || o.edge === "reading") {
         const w = reading ? 44 : 14;
-        const tab = b.frame(c, { x: 1280 - w, y: 300, w, h: 76, r: [14, 0, 0, 14], fill: bg, shadow: "lg", layout: "horizontal", align: "center", justify: "center", ...(dark ? { stroke: "#2A2B2C", sw: 1 } : {}) });
+        const tab = b.frame(c, { x: 1280 - w, y: 300, w, h: 76, r: [14, 0, 0, 14], fill: bg, shadow: "lg", layout: "horizontal", align: "center", justify: "center" });
         if (reading) {
-          const pb = b.frame(tab, { w: 26, h: 26, r: 13, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 12, t.accentText);
-          b.rect(c, { x: 1280 - w + 5, y: 312, w: 3, h: 52, r: 2, fill: "#FFFFFF33" }); b.rect(c, { x: 1280 - w + 5, y: 345, w: 3, h: 19, r: 2, fill: t.accent });
+          const pb = b.frame(tab, { w: 26, h: 26, r: 13, fill: t.cta, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 12, t.ctaText);
+          b.rect(c, { x: 1280 - w + 5, y: 312, w: 3, h: 52, r: 2, fill: t.track }); b.rect(c, { x: 1280 - w + 5, y: 345, w: 3, h: 19, r: 2, fill: t.dotGreen }); b.ellipse(c, { x: 1280 - w + 4, y: 304, w: 8, h: 8, fill: t.dotGreen });
         } else b.icon(tab, "left", 12, dim);
       } else {
-        const W = 60; const sep = () => b.rect(pill, { w: 28, h: 1, fill: "#FFFFFF26" });
-        const pill = b.col(c, { x: 1280 - W - 14, y: reading ? 186 : 236, w: W, pad: [10, 0], gap: 8, align: "center", r: 30, fill: bg, shadow: "lg", ...(dark ? { stroke: "#2A2B2C", sw: 1 } : {}) });
+        const W = 60; const sep = () => b.rect(pill, { w: 28, h: 1, fill: sepc });
+        const pill = b.col(c, { x: 1280 - W - 14, y: reading ? 186 : 236, w: W, pad: [10, 0], gap: 8, align: "center", r: 30, fill: bg, shadow: "lg" });
         K.iconBtn(b, t, pill, "right", { size: 28, c: dim });
         K.logo(b, t, pill, 32);
-        const pb = b.frame(pill, { w: 44, h: 44, r: 22, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, reading ? "pause" : "play", 16, t.accentText);
+        const pb = b.frame(pill, { w: 44, h: 44, r: 22, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, reading ? "pause" : "play", 16, t.ctaText);
         if (reading) {
-          const rail = b.frame(pill, { w: 4, h: 56, r: 2, fill: "#FFFFFF33" }); b.rect(rail, { x: 0, y: 0, w: 4, h: 20, r: 2, fill: t.accent });
+          const rail = b.frame(pill, { w: 4, h: 56, r: 2, fill: t.track }); b.rect(rail, { x: 0, y: 0, w: 4, h: 20, r: 2, fill: t.accent });
           b.text(pill, "4:21", { size: 12, weight: "Medium", c: dim, mono: true });
           sep();
           K.skip(b, pill, "back", 24, wc); K.skip(b, pill, "fwd", 24, wc);
         } else { sep(); K.iconBtn(b, t, pill, "book", { size: 36, c: wc }); }
-        const sp = b.row(pill, { h: 28, w: 44, r: 8, fill: "#FFFFFF1F", justify: "center" }); b.text(sp, "1.2x", { size: 12, weight: "Medium", c: wc });
-        const vc = b.frame(pill, { w: 36, h: 36, r: 18, fill: "#FFFFFF1F", layout: "horizontal", align: "center", justify: "center" }); K.avatar(b, t, vc, "H", 24, 0);
+        const sp = b.row(pill, { h: 28, w: 44, r: 8, fill: t.chipGray, justify: "center" }); b.text(sp, "1.2x", { size: 12, weight: "Medium", c: wc });
+        const vc = b.frame(pill, { w: 36, h: 36, r: 18, fill: t.chipGray, layout: "horizontal", align: "center", justify: "center" }); K.avatar(b, t, vc, "H", 24, 0);
         if (reading) K.iconBtn(b, t, pill, "stop", { size: 36, c: wc }); else K.iconBtn(b, t, pill, "moreV", { size: 36, c: dim });
-        K.tooltip(b, DT(t), c, reading ? "Pause" : "Listen to this page", reading ? "Space" : "6:48", { x: 1280 - W - 14 - (reading ? 113 : 178), y: reading ? 281 : 332 });
+        K.tooltip(b, t, c, reading ? "Pause" : "Listen to this page", reading ? "Space" : "6:48", { x: 1280 - W - 14 - (reading ? 113 : 178), y: reading ? 281 : 332 });
       }
     }
-    if (o.pop) b.frame(c, { x: o.pop === "speed" ? 696 : 760, y: 649, w: o.pop === "speed" ? 59 : 156, h: 34, r: 17, stroke: t.accent, sw: 2 }); // trigger ring, drawn over the dock
+    if (o.pop) b.frame(c, { x: o.pop === "speed" ? 696 : 760, y: 649, w: o.pop === "speed" ? 59 : 156, h: 34, r: 17, stroke: t.accent, sw: 1 }); // trigger ring, drawn over the dock
   },
 });
 const HL = { para: 0, sent: 1, word: 6 };
@@ -373,8 +372,7 @@ export const Bs: S[] = [
   page("B8", "Page · finished", "The pill confirms the end and offers Read again.", { dock: "done" }),
   page("B9", "Page · app offline error", "One surface only: the pill explains the problem and offers Open Speak Kit and Retry; technical detail sits behind Details.", { dock: "error", details: true }),
   page("B10", "Page · reader view", "Paper reader at full fidelity: 680 px serif column, current sentence block, Reading popover and the pill. Close keeps playback running.", { reader: true, rpop: true, hl: { para: 0, sent: 1, word: 4 }, dock: "playing" }),
-  page("B11", "Page · reading (dark)", "Dark page and dark highlight palette.", { hl: HL, dock: "playing" }, true),
-  page("B12", "Page · reader view (dark)", "Dark reader: same column and highlight, paused state in the pill.", { reader: true, rtheme: "dark", hl: { para: 0, sent: 1, word: 4 }, dock: "paused" }),
+  page("B11", "Page · reading on a dark site", "The pill, bubble and launcher stay white and readable over a dark host page; the highlight palette adapts to the site.", { hl: HL, dock: "playing" }, true),
   page("B13", "Page · added to queue", "Confirmation toast after Add to queue, with a link to the side panel.", { selection: true, toast: "Added to queue · 2 items" }),
   page("B15", "Page · speed popover", "Speed popover opened from the pill; right edges aligned, slider shows the live value.", { hl: HL, dock: "playing", pop: "speed" }),
   page("B16", "Page · voice popover", "Voice popover opened from the voice button in the pill, with search and a preview button on every row.", { hl: HL, dock: "playing", pop: "voice" }),
@@ -382,7 +380,7 @@ export const Bs: S[] = [
   page("B18", "Page · edge launcher, hover", "Hovering the tab opens a vertical pill, like Speechify: logo, a big play button (tooltip shows the length), reader view, speed, voice, more.", { edge: "open" }),
   page("B19", "Page · edge launcher, reading", "While reading, the tab stays peeking out wider with a pause button and a thin progress line. Click to pause or resume without opening it.", { edge: "reading", hl: HL }),
   page("B20", "Page · edge launcher, reading expanded", "Hover while reading: the pill stacks pause, a vertical progress rail with time left, 10 s skips, speed, voice and stop. Moving away hides it after 1.5 s.", { edge: "readingOpen", hl: HL }),
-  page("B21", "Page · edge launcher (dark)", "Same vertical pill on a dark page.", { edge: "open" }, true),
+  page("B21", "Page · edge launcher on a dark site", "Same vertical pill over a dark host page.", { edge: "open" }, true),
   page("B22", "Page · pill, engine asleep", "Idle unload freed the voice model; the pill says Engine asleep and play wakes it.", { hl: HL, dock: "unloaded" }),
   page("B23", "Page · pill, waking the engine", "Play on an unloaded engine: the play button spins and the bar loops for about 2 s.", { hl: HL, dock: "waking" }),
   page("B24", "Page · reading settings popover", "Reading popover opened from the pill: font, size, width, theme and the Highlight sentence toggle.", { hl: HL, dock: "playing", rpop: true }),

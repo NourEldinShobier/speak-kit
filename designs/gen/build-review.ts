@@ -6,7 +6,7 @@ const raw = JSON.parse(readFileSync(`${D}/manifest.json`, "utf8"));
 // feature rows = numbered sections of the design file, stacked in file order; each row is a horizontal strip
 const m = {
   groups: Object.fromEntries(raw.features.map((f: any) => [f.key, { name: `${f.page}: ${f.n} · ${f.title}`, blurb: f.cover }])),
-  screens: raw.screens.map((s: any) => ({ id: s.id, group: s.feature, title: s.title, note: s.rule, dark: s.theme === "dark", tag: s.tag, w: s.w, h: s.h })),
+  screens: raw.screens.map((s: any) => ({ id: s.id, group: s.feature, title: s.title, note: s.rule, tag: s.tag, w: s.w, h: s.h })),
 };
 const html = String.raw`<!doctype html>
 <html lang="en">
@@ -15,8 +15,7 @@ const html = String.raw`<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__APP__ design review</title>
 <style>
-:root{--bg:#F3F3F6;--surface:#fff;--s2:#EBEBEE;--bd:#E2E2E5;--tx:#1E1F20;--tx2:#5E574E;--tx3:#8F887D;--ac:#0069CC;--acs:#DCE9F7;--ok:#1A7F4B;--oks:#DFF5EA;--wn:#B35C00;--wns:#FDF0D5;--er:#C62828;--ers:#FDE4E1;--sh:0 1px 3px #0001,0 6px 16px #0000000d}
-:root[data-theme=dark]{--bg:#191A1B;--surface:#1E1F20;--s2:#252627;--bd:#2A2B2C;--tx:#E6E6E6;--tx2:#B9B2A7;--tx3:#857E73;--acs:#124368;--oks:#14382B;--wns:#3A2D12;--ers:#40201C;--ac:#0078D4;--ok:#4CC38A;--wn:#F5A524;--er:#F2555A;--sh:0 1px 3px #0006}
+:root{--bg:#F0F0F0;--surface:#fff;--s2:#F5F5F5;--bd:#E5E5E5;--tx:#1B2230;--tx2:#475467;--tx3:#5F6A7D;--ac:#0069CC;--acs:#DCE9F7;--ok:#1A7F4B;--oks:#DFF5EA;--wn:#B35C00;--wns:#FDF0D5;--er:#C62828;--ers:#FDE4E1;--sh:0 1px 3px #0001,0 6px 16px #0000000d}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:120px}
 body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
 header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd)}
@@ -69,7 +68,6 @@ textarea{display:none;margin:0 14px 12px;width:calc(100% - 28px);border:1px soli
   <div class="bar">
     <div><h1>__APP__ design review</h1><div class="sub">__COUNT__ screens &middot; __GROUPS__ features &middot; click an image to enlarge &middot; keys in viewer: &larr; &rarr; move, A approve, C change, R reject</div></div>
     <div class="stats" id="stats"></div>
-    <button class="btn" id="theme">Theme</button>
     <button class="btn" id="copy">Copy summary</button>
     <button class="btn pri" id="export">Export decisions</button>
   </div>
@@ -100,7 +98,7 @@ function render() {
       const st = get(s.id);
       const c = document.createElement("article"); c.className = "card"; c.dataset.s = st.s; c.dataset.id = s.id;
       if (filter !== "all" && st.s !== filter) c.classList.add("hide");
-      c.innerHTML = '<div class="thumb" data-zoom="' + s.id + '"><img loading="lazy" src="screens/' + s.id + '.png" alt="' + esc(s.title) + '"></div><div class="meta"><span class="id">' + s.id + '</span>' + (s.dark ? '<span class="dk">DARK</span>' : '<span class="dk">LIGHT</span>') + (s.tag ? '<span class="dk">' + esc(s.tag) + '</span>' : "") + '<h3>' + esc(s.title) + '</h3><p>' + esc(s.note) + '</p></div><div class="acts"><button class="a" data-set="approved">✓ Approve</button><button class="c" data-set="change">✎ Change</button><button class="r" data-set="rejected">✕ Reject</button></div><textarea placeholder="What should change?" class="' + (st.n ? "has" : "") + '">' + esc(st.n) + '</textarea>';
+      c.innerHTML = '<div class="thumb" data-zoom="' + s.id + '"><img loading="lazy" src="screens/' + s.id + '.png" alt="' + esc(s.title) + '"></div><div class="meta"><span class="id">' + s.id + '</span>' + (s.tag ? '<span class="dk">' + esc(s.tag) + '</span>' : "") + '<h3>' + esc(s.title) + '</h3><p>' + esc(s.note) + '</p></div><div class="acts"><button class="a" data-set="approved">✓ Approve</button><button class="c" data-set="change">✎ Change</button><button class="r" data-set="rejected">✕ Reject</button></div><textarea placeholder="What should change?" class="' + (st.n ? "has" : "") + '">' + esc(st.n) + '</textarea>';
       row.appendChild(c);
     });
     main.appendChild(sec);
@@ -137,9 +135,6 @@ document.addEventListener("keydown", e => { if (lbIdx < 0 || e.target.tagName ==
 const decisions = () => S.map(s => ({ id: s.id, feature: G[s.group].name, title: s.title, g: s.group, status: get(s.id).s, comment: get(s.id).n }));
 document.getElementById("export").onclick = () => { const b = new Blob([JSON.stringify(decisions(), null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "design-decisions.json"; a.click(); };
 document.getElementById("copy").onclick = async () => { const d = decisions(); const L = []; groups.forEach(k => { const x = d.filter(r => r.g === k && r.status !== "approved" && r.status !== "pending"); if (x.length) { L.push("## " + G[k].name); x.forEach(r => L.push("- " + r.id + " " + r.title + " — " + r.status + (r.comment ? ": " + r.comment : ""))); } }); const txt = L.join("\n") || "No change or reject notes yet."; try { await navigator.clipboard.writeText(txt); } catch (e) { prompt("Copy:", txt); } document.getElementById("copy").textContent = "Copied"; setTimeout(() => document.getElementById("copy").textContent = "Copy summary", 1200); };
-const root = document.documentElement; const th = (() => { try { return localStorage.getItem(KEY + "-theme"); } catch (e) { return null; } })();
-if (th) root.dataset.theme = th; else if (matchMedia("(prefers-color-scheme: dark)").matches) root.dataset.theme = "dark";
-document.getElementById("theme").onclick = () => { root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark"; try { localStorage.setItem(KEY + "-theme", root.dataset.theme); } catch (e) {} };
 render();
 </script>
 </body>

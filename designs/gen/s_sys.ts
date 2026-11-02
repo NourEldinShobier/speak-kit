@@ -50,12 +50,11 @@ const readerBackdrop = (b: B, t: T, main: Ref) => {
 // ---------- I: Windows 11 desktop scene + tray surfaces ----------
 const ANCH_R = 1268, ANCH_B = 740;
 const scene = (b: B, t: T, root: Ref, trayActive = false) => {
-  const dk = t.mode === "dark";
-  b.rect(root, { x: 0, y: 0, w: W, h: H, fills: [{ type: "linearGradient", stops: dk ? ["#1F2A44", "#3B2A4A"] : ["#BFD7F2", "#F2D8E4"], from: [0, 0], to: [1, 1] }] });
+  b.rect(root, { x: 0, y: 0, w: W, h: H, fills: [{ type: "linearGradient", stops: ["#BFD7F2", "#F2D8E4"], from: [0, 0], to: [1, 1] }] });
   const w = b.col(root, { x: 120, y: 50, w: 900, h: 640, r: 10, fill: t.surface, shadow: "dlg", clip: true, gap: 0 });
-  const tb = b.row(w, { w: "fill", h: 38, pad: [0, 12], fill: dk ? "#2B2927" : "#EBEBEE" }); b.text(tb, "Quarterly report.docx - Word", { size: 12, c: t.text2 });
+  const tb = b.row(w, { w: "fill", h: 38, pad: [0, 12], fill: "#EBEBEE" }); b.text(tb, "Quarterly report.docx - Word", { size: 12, c: t.text2 });
   const c = b.col(w, { w: "fill", pad: [30, 48], gap: 12 }); b.text(c, "Q4 planning summary", { size: 26, weight: "Bold", c: t.text }); b.text(c, K.ARTICLE.paras[0], { size: 15, lh: 24, c: t.text2, w: "fill" }); b.text(c, K.ARTICLE.paras[1], { size: 15, lh: 24, c: t.text2, w: "fill" }); b.text(c, K.ARTICLE.paras[2], { size: 15, lh: 24, c: t.text2, w: "fill" });
-  const bar = b.frame(root, { x: 0, y: H - 48, w: W, h: 48, fill: dk ? "#202020" : "#F3F3F3", stroke: dk ? "#333333" : "#DCDCDC", sw: 1 });
+  const bar = b.frame(root, { x: 0, y: H - 48, w: W, h: 48, fill: "#F3F3F3", stroke: "#DCDCDC", sw: 1 });
   const ctr = b.row(bar, { abs: true, x: 0, y: 0, w: W, h: 48, justify: "center", gap: 4 } as any);
   const slot = (run: boolean, f: (s: Ref) => void) => { const s = b.col(ctr, { w: 40, h: 40, r: 6, align: "center", justify: "center", gap: 3 }); f(s); if (run) b.rect(s, { w: 12, h: 3, r: 2, fill: t.text3 }); };
   slot(false, (s) => { const g = b.frame(s, { w: 18, h: 18, layout: "horizontal", wrap: true, gap: 2, crossGap: 2 } as any); [0, 1, 2, 3].forEach(() => b.rect(g, { w: 8, h: 8, r: 1, fill: "#0A78D4" })); });
@@ -64,7 +63,7 @@ const scene = (b: B, t: T, root: Ref, trayActive = false) => {
   const row = b.row(bar, { abs: true, x: 0, y: 0, w: W, h: 48, pad: [0, 12], justify: "spaceBetween" } as any);
   const wx = b.col(row, { gap: 0 }); b.text(wx, "18°C", { size: 12, weight: "SemiBold", c: t.text }); b.text(wx, "Clear", { size: 12, c: t.text2 });
   const rr = b.row(row, { gap: 6 }); b.icon(rr, "up", 14, t.text2);
-  const tk = b.frame(rr, { w: 32, h: 32, r: 6, fill: trayActive ? (dk ? "#FFFFFF1A" : "#00000012") : "none", layout: "horizontal", align: "center", justify: "center" }); K.logo(b, t, tk, 20);
+  const tk = b.frame(rr, { w: 32, h: 32, r: 6, fill: trayActive ? "#00000012" : "none", layout: "horizontal", align: "center", justify: "center" }); K.logo(b, t, tk, 20);
   b.icon(rr, "volume", 16, t.text2); const dt = b.col(rr, { gap: 0, align: "end", pad: [0, 0, 0, 8] }); b.text(dt, "12:07 PM", { size: 12, c: t.text, ta: "right" }); b.text(dt, "11/1/2026", { size: 12, c: t.text, ta: "right" });
 };
 // bottom-right anchor: right edge 12px from the screen edge, bottom 12px above the taskbar
@@ -75,7 +74,7 @@ const trayBtn = (b: B, t: T, p: Ref, icon: string, size = 34, c = t.text2) => { 
 type TK = "menu" | "menu-idle" | "menu-loading" | "menu-error";
 const trayMenu = (b: B, t: T, root: Ref, kind: TK) => {
   const m = b.col(anchor(b, root, 340), { w: 340, pad: 8, gap: 2, r: 12, fill: t.surface, stroke: t.border, sw: 1, shadow: "lg" });
-  if (kind === "menu") { const np = b.col(m, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.surface2 }); b.text(np, "NOW READING", { size: 12, weight: "SemiBold", c: t.text2, ls: 1 }); b.text(np, "The quiet return of local-first software", { size: 13.5, weight: "SemiBold", c: t.text, w: "fill", lh: 18 }); const pr = b.row(np, { w: "fill", gap: 8 }); b.text(pr, "2:27", { size: 12, c: t.text2, mono: true }); K.bar(b, t, pr, 0.36, 230, { knob: false }); b.text(pr, "4:21 left", { size: 12, c: t.text2 }); const cr = b.row(np, { w: "fill", justify: "center", gap: 10 }); trayBtn(b, t, cr, "skipBack"); skipTxt(b, t, cr, "back", t.text); const pb = b.frame(cr, { w: 38, h: 38, r: 19, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 15, t.accentText); skipTxt(b, t, cr, "fwd", t.text); trayBtn(b, t, cr, "skipFwd"); }
+  if (kind === "menu") { const np = b.col(m, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.surface2 }); b.text(np, "NOW READING", { size: 12, weight: "SemiBold", c: t.text2, ls: 1 }); b.text(np, "The quiet return of local-first software", { size: 13.5, weight: "SemiBold", c: t.text, w: "fill", lh: 18 }); const pr = b.row(np, { w: "fill", gap: 8 }); b.text(pr, "2:27", { size: 12, c: t.text2, mono: true }); K.bar(b, t, pr, 0.36, 230, { knob: false }); b.text(pr, "4:21 left", { size: 12, c: t.text2 }); const cr = b.row(np, { w: "fill", justify: "center", gap: 10 }); trayBtn(b, t, cr, "skipBack"); skipTxt(b, t, cr, "back", t.text); const pb = b.frame(cr, { w: 38, h: 38, r: 19, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "pause", 15, t.ctaText); skipTxt(b, t, cr, "fwd", t.text); trayBtn(b, t, cr, "skipFwd"); }
   const off = kind === "menu-loading" || kind === "menu-error";
   if (kind === "menu-error") { const e = b.row(m, { w: "fill", pad: 12, gap: 10, r: 10, fill: t.errSoft, align: "start" }); b.icon(e, "alertCircle", 18, t.err); const q = b.col(e, { gap: 6, w: "fill" }); b.text(q, "The voice engine stopped", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(q, "Reading can't start until it restarts.", { size: 12.5, c: t.text2, w: "fill" }); K.btn(b, t, q, "Restart engine", { v: "primary", sz: "sm", icon: "refresh" }); }
   [["clipboard", "Read clipboard", "Ctrl+Alt+C", true], ["scan", "Read selected text", "Ctrl+Alt+S", true], ["book", "Open library", "", false], ["mic", "Voice: Heart · 1.2×", "", false], ["sliders", "Settings", "", false], ["power", "Quit Speak Kit", "", false]].forEach(([i, l, k], n) => {
@@ -95,17 +94,17 @@ const mini = (b: B, t: T, p: Ref, st: MS) => {
   const gr = b.row(m, { w: "fill", justify: "center" }); b.frame(gr, { w: 36, h: 4, r: 2, fill: t.border });
   const h = b.row(m, { w: "fill", justify: "spaceBetween", gap: 8 }); const l = b.row(h, { gap: 10, w: "fill" }); K.logo(b, t, l, 24);
   const q = b.col(l, { gap: 1, w: "fill" }); b.text(q, "Quarterly report.docx", { size: 13, weight: "SemiBold", c: t.text }); b.text(q, st === "done" ? "Finished · 4:16" : st === "preparing" ? "Preparing voice…" : st === "paused" ? "Paused · 3:12 left" : "3:12 left · Heart · 1.2×", { size: 12, c: t.text2 });
-  const r = b.row(h, { gap: 2 }); const pin = b.frame(r, { w: 30, h: 30, r: 15, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(pin, "pin", 15, t.accent); trayBtn(b, t, r, "x", 30, t.text2);
+  const r = b.row(h, { gap: 2 }); const pin = b.frame(r, { w: 30, h: 30, r: 15, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(pin, "pin", 15, t.iconQuiet); trayBtn(b, t, r, "x", 30, t.text2);
   b.text(m, st === "preparing" ? "Getting the selected text ready…" : st === "done" ? "That was the whole selection." : "…Notes, documents and even voices lived on someone else's server, rented back to us…", { size: 12.5, c: t.text2, w: "fill", lh: 18 });
   const pr = b.row(m, { w: "fill", gap: 8 }); b.text(pr, st === "done" ? "4:16" : st === "preparing" ? "--:--" : "1:04", { size: 12, c: t.text2, mono: true }); K.bar(b, t, pr, st === "done" ? 1 : st === "preparing" ? 0 : 0.25, 250, { knob: false }); b.text(pr, st === "preparing" ? "" : "4:16", { size: 12, c: t.text2, mono: true });
   const c = b.row(m, { w: "fill", justify: "spaceBetween" }); const sp = b.row(c, { h: 30, pad: [0, 10], r: 15, fill: t.surface2 }); b.text(sp, "1.2×", { size: 12.5, weight: "SemiBold", c: t.text });
-  const ctr = b.row(c, { gap: 2, opacity: st === "preparing" ? 0.45 : undefined }); trayBtn(b, t, ctr, "skipBack"); skipTxt(b, t, ctr, "back", t.text); const pb = b.frame(ctr, { w: 40, h: 40, r: 20, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, st === "playing" ? "pause" : st === "done" ? "refresh" : st === "preparing" ? "loader" : "play", 16, t.accentText); skipTxt(b, t, ctr, "fwd", t.text); trayBtn(b, t, ctr, "skipFwd");
+  const ctr = b.row(c, { gap: 2, opacity: st === "preparing" ? 0.45 : undefined }); trayBtn(b, t, ctr, "skipBack"); skipTxt(b, t, ctr, "back", t.text); const pb = b.frame(ctr, { w: 40, h: 40, r: 20, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, st === "playing" ? "pause" : st === "done" ? "refresh" : st === "preparing" ? "loader" : "play", 16, t.ctaText); skipTxt(b, t, ctr, "fwd", t.text); trayBtn(b, t, ctr, "skipFwd");
   kebab(b, t, c, 32);
   return m;
 };
 type IK = TK | "mini" | "mini-states" | "hotkey" | "clip";
-const tray = (id: string, title: string, note: string, kind: IK, dark = false): S => ({
-  id, group: "I", title, note, w: W, h: H, dark,
+const tray = (id: string, title: string, note: string, kind: IK): S => ({
+  id, group: "I", title, note, w: W, h: H,
   build: (b, t, root) => {
     if (kind === "mini-states") {
       b.rect(root, { x: 0, y: 0, w: W, h: H, fill: t.bg });
@@ -121,11 +120,11 @@ const tray = (id: string, title: string, note: string, kind: IK, dark = false): 
       tip(b, t, root, 1222, 534, 150, "Always on top: on");
     }
     if (kind === "hotkey") {
-      const h = b.row(anchor(b, root, 540), { w: 540, pad: [10, 12, 10, 14], gap: 12, r: 16, fill: t.mode === "dark" ? "#252627" : "#1E1F20", shadow: "lg" });
-      K.logo(b, t, h, 32); const q = b.col(h, { gap: 2, w: "fill" }); b.text(q, "Reading selection from Word", { size: 14, weight: "SemiBold", c: "#FFFFFF" }); b.text(q, "Ctrl+Alt+Space pause · Ctrl+Alt+X stop", { size: 12, c: "#BFBFBF" });
-      K.waveform(b, { ...t, border: "#FFFFFF33" }, h, 44, 20, 0.5, 6);
-      const pb = b.frame(h, { w: 34, h: 34, r: 17, fill: "#FFFFFF1F", layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 14, "#FFFFFF");
-      const sb = b.row(h, { h: 34, pad: [0, 12], gap: 6, r: 17, fill: t.accent }); b.icon(sb, "stop", 13, t.accentText); b.text(sb, "Stop", { size: 12.5, weight: "SemiBold", c: t.accentText });
+      const h = b.row(anchor(b, root, 540), { w: 540, pad: [10, 12, 10, 14], gap: 12, r: 16, fill: t.raised, shadow: "lg" });
+      K.logo(b, t, h, 32); const q = b.col(h, { gap: 2, w: "fill" }); b.text(q, "Reading selection from Word", { size: 14, weight: "SemiBold", c: t.text }); b.text(q, "Ctrl+Alt+Space pause · Ctrl+Alt+X stop", { size: 12, c: t.text3 });
+      K.waveform(b, t, h, 44, 20, 0.5, 6);
+      const pb = b.frame(h, { w: 34, h: 34, r: 17, fill: t.chipGray, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 14, t.text);
+      const sb = b.row(h, { h: 34, pad: [0, 12], gap: 6, r: 17, fill: t.cta }); b.icon(sb, "stop", 13, t.ctaText); b.text(sb, "Stop", { size: 12.5, weight: "SemiBold", c: t.ctaText });
     }
     if (kind === "clip") {
       const c = b.col(anchor(b, root, 360), { w: 360, pad: 16, gap: 10, r: 14, fill: t.surface, stroke: t.border, sw: 1, shadow: "lg" });
@@ -144,7 +143,6 @@ export const I: S[] = [
   tray("I3", "Mini player · always on top", "Draggable header, time left, pin state with tooltip, previous/next and −10 / +10, overflow menu for the sleep timer. The document text stays visible.", "mini"),
   tray("I4", "Global shortcut toast", "Ctrl+Alt+S reads the selected text in any app. The toast offers pause and Stop; Esc is not captured.", "hotkey"),
   tray("I5", "Clipboard prompt", "Optional prompt after copying long text. Skips password-manager copies. Turn off lives in the … menu, with an 8 s countdown.", "clip"),
-  tray("I6", "Tray menu · playing (dark)", "Dark theme variant.", "menu", true),
   tray("I7", "Tray menu · engine loading", "Read actions are disabled while Kokoro loads; status shows the wait.", "menu-loading"),
   tray("I8", "Tray menu · engine error", "Engine stopped: red status, Restart engine, read actions disabled.", "menu-error"),
   tray("I9", "Mini player · states", "Paused, preparing the voice, and finished (replay).", "mini-states"),
@@ -152,13 +150,13 @@ export const I: S[] = [
 
 // ---------------- J: export ----------------
 type JS = "dialog" | "progress" | "done" | "overwrite" | "pill" | "toast";
-const exp = (id: string, title: string, note: string, st: JS, dark = false): S => ({
-  id, group: "J", title, note, w: W, h: H, dark,
+const exp = (id: string, title: string, note: string, st: JS): S => ({
+  id, group: "J", title, note, w: W, h: H,
   build: (b, t, root) => {
     const { win, main } = K.desktopWindow(b, t, root, { nav: "library" });
     libBackdrop(b, t, main, { exporting: st === "pill" || st === "toast" ? st === "pill" : false });
     if (st === "pill") {
-      const p = b.col(win, { abs: true, x: 12, y: 560, w: 208, pad: 12, gap: 8, r: 12, fill: t.accentSoft, stroke: t.accent, sw: 1 } as any);
+      const p = b.col(win, { abs: true, x: 12, y: 560, w: 208, pad: 12, gap: 8, r: 12, fill: t.well, stroke: t.control, sw: 1 } as any);
       const r = b.row(p, { w: "fill", justify: "spaceBetween" }); const l = b.row(r, { gap: 6 }); K.spinner(b, t, l, 14); b.text(l, "Exporting audio", { size: 12.5, weight: "SemiBold", c: t.text }); b.text(r, "44%", { size: 12.5, weight: "Bold", c: t.accent });
       K.bar(b, t, p, 0.44, 184, { knob: false }); const f = b.row(p, { w: "fill", justify: "spaceBetween" }); b.text(f, "0:26 left", { size: 12, c: t.text2 }); b.text(f, "Cancel", { size: 12, weight: "SemiBold", c: t.err });
       return;
@@ -192,7 +190,7 @@ const exp = (id: string, title: string, note: string, st: JS, dark = false): S =
     } else {
       const r = b.row(bd, { w: "fill", gap: 14, pad: [6, 0] }); const ic = b.frame(r, { w: 48, h: 48, r: 24, fill: t.okSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "check", 24, t.ok); const x = b.col(r, { gap: 2, w: "fill" }); b.text(x, "quiet-return-of-local-first-software.mp3", { size: 14, weight: "SemiBold", c: t.text }); b.text(x, "6.5 MB · 6:48 · 128 kbps", { size: 12.5, c: t.text2 });
       const pr = b.row(bd, { w: "fill", gap: 10 }); b.icon(pr, "folder", 14, t.text3); b.text(pr, "D:\\Audio\\Speak Kit\\quiet-return-of-local-first-software.mp3", { size: 12.5, c: t.text2, w: "fill" }); K.btn(b, t, pr, "Copy path", { v: "ghost", sz: "sm", icon: "copy" });
-      const p = b.row(bd, { w: "fill", gap: 12, pad: 12, r: 10, fill: t.surface2 }); const pb = b.frame(p, { w: 36, h: 36, r: 18, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 14, t.accentText); K.waveform(b, t, p, 350, 28, 0, 3); b.text(p, "0:00 / 6:48", { size: 12, c: t.text2, mono: true });
+      const p = b.row(bd, { w: "fill", gap: 12, pad: 12, r: 10, fill: t.surface2 }); const pb = b.frame(p, { w: 36, h: 36, r: 18, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "play", 14, t.ctaText); K.waveform(b, t, p, 350, 28, 0, 3); b.text(p, "0:00 / 6:48", { size: 12, c: t.text2, mono: true });
       dFoot(b, t, d, undefined, (r) => { K.btn(b, t, r, "Done", { v: "ghost" }); K.btn(b, t, r, "Open file", { v: "secondary", icon: "external" }); K.btn(b, t, r, "Show in folder", { v: "primary", icon: "folder" }); });
     }
   },
@@ -201,7 +199,6 @@ export const J: S[] = [
   exp("J1", "Export · options", "Format, MP3 quality, voice and speed, file name, folder with Browse, size estimate.", "dialog"),
   exp("J2", "Export · rendering", "Progress per sentence. Run in background is primary; Cancel export is destructive. No header X.", "progress"),
   exp("J3", "Export · done", "Full-width preview with time, path with Copy, Open file and Show in folder.", "done"),
-  exp("J4", "Export · options (dark)", "Dark theme variant.", "dialog", true),
   exp("J5", "Export · file exists", "Replace, Keep both, or Choose another name.", "overwrite"),
   exp("J6", "Export · in background", "Sidebar progress pill and the library row show the running export.", "pill"),
   exp("J7", "Export · complete toast", "Non-blocking toast with Show in folder.", "toast"),
@@ -219,8 +216,8 @@ const KDEF: Record<string, KD> = {
   version: { icon: "refresh", tone: "info", title: "The extension is out of date", body: "Chrome extension 0.3.9 can't talk to app 0.4.2. Update it from the Chrome Web Store; reading from the desktop app still works.", primary: "Open Web Store", secondary: "Remind me later" },
   mic: { icon: "mic", tone: "warn", title: "Microphone access is off", body: "Windows blocks Speak Kit from using the microphone, which is needed to record a voice sample. You can upload an audio file instead.", primary: "Open Windows settings", secondary: "Upload a file" },
 };
-const sys = (id: string, title: string, note: string, st: KS, dark = false): S => ({
-  id, group: "K", title, note, w: W, h: H, dark,
+const sys = (id: string, title: string, note: string, st: KS): S => ({
+  id, group: "K", title, note, w: W, h: H,
   build: (b, t, root) => {
     const sb = { crash: { label: "Kokoro-82M · Restarting…", sub: "Engine stopped unexpectedly", tone: "warn" as const }, port: { label: "Extension link blocked", sub: "Port 51730 is in use", tone: "err" as const }, corrupt: { label: "Kokoro-82M · Needs repair", sub: "Model failed its check", tone: "err" as const }, repair: { label: "Kokoro-82M · Repairing", sub: "Downloading 330 MB", tone: "warn" as const } } as Record<string, any>;
     const nav = st === "disk" ? "engines" : st === "port" ? "settings" : st === "mic" ? "voices" : "library";
@@ -254,6 +251,5 @@ export const Ks: S[] = [
   sys("K6", "Permission · microphone blocked", "Over the clone screen after Record now. Upload a file is the alternative.", "mic"),
   sys("K7", "Notice · already running", "No dialog: the existing window is restored and a toast says why.", "instance"),
   sys("K8", "Notice · offline", "Status chip in the header plus a toast; nothing blocks the app.", "offline-ok"),
-  sys("K9", "Error · engine crashed (dark)", "Dark theme variant.", "crash", true),
   sys("K10", "Error · repairing model", "Repair progress with size and time left; can run in the background.", "repair"),
 ];

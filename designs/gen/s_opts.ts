@@ -10,7 +10,7 @@ const SITE = "reader.example.com";
 
 const lum = (h: string) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
 const ratio = (a: string, b: string) => { const x = lum(a), y = lum(b); return ((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(1); };
-const errTx = (t: T) => (t.mode === "dark" ? t.err : "#A3281D");
+const errTx = (t: T) => t.err;
 
 const section = (b: B, t: T, p: Ref, title: string, desc?: string) => {
   const c = K.card(b, t, p, { w: "fill", pad: [18, 20], gap: 0 });
@@ -41,10 +41,10 @@ const swatch = (b: B, t: T, p: Ref, hex: string | null, name: string, sel: boole
 };
 const link = (b: B, t: T, p: Ref, label: string, icon?: string) => { const r = b.row(p, { h: 32, pad: [0, 4], gap: 6 }); b.text(r, label, { size: 13, weight: "Medium", c: t.accent }); if (icon) b.icon(r, icon, 14, t.accent); return r; };
 
-const opts = (id: string, title: string, note: string, sec: Sec, dark = false): S => ({
-  id, group: "C", title, note, w: 1280, h: 800, dark,
+const opts = (id: string, title: string, note: string, sec: Sec): S => ({
+  id, group: "C", title, note, w: 1280, h: 800,
   build: (b, t0, root) => {
-    const t: T = dark ? { ...t0, hlSent: "#78621F" } : t0;
+    const t: T = t0;
     const c = K.browser(b, t, root, { url: "chrome-extension://speakkit/options.html", title: "Speak Kit options", ext: true });
     b.rect(c, { x: 0, y: 0, w: 1280, h: 720, fill: t.bg });
     const nav = b.col(c, { x: 0, y: 0, w: 248, h: 720, pad: [24, 12], gap: 2, fill: t.bg });
@@ -125,12 +125,11 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
       K.input(b, t, bx, { value: "Notes, documents and even voices lived on someone else's server.", w: "fill" }); K.btn(b, t, bx, "Play sample", { v: "primary", icon: "play" });
     } else if (sec === "highlight") {
       head("Highlighting", "How the sentence and the current word are marked while Speak Kit reads.", "Reset section");
-      const dk = t.mode === "dark";
       const pv = K.card(b, t, m, { w: "fill", pad: 16, gap: 12 });
       const ph = b.row(pv, { w: "fill", justify: "spaceBetween" });
-      const pl = b.row(ph, { gap: 14 }); b.text(pl, "Preview", { size: 15, weight: "Bold", c: t.text }); K.seg(b, t, pl, ["Light page", "Dark page"], dk ? 1 : 0);
+      const pl = b.row(ph, { gap: 14 }); b.text(pl, "Preview", { size: 15, weight: "Bold", c: t.text }); K.seg(b, t, pl, ["Light site", "Dark site"], 0);
       const cr = b.row(ph, { gap: 12 }); b.text(cr, `Text on sentence ${ratio(t.text, t.hlSent)}:1`, { size: 12, c: t.text2 }); b.text(cr, `Text on word ${ratio(t.hlWordText, t.hlWord)}:1`, { size: 12, c: t.text2 });
-      const box = b.col(pv, { w: "fill", pad: 16, r: 12, fill: dk ? "#14110F" : "#FFFFFF", stroke: t.border, sw: 1 });
+      const box = b.col(pv, { w: "fill", pad: 16, r: 12, fill: "#FFFFFF", stroke: t.border, sw: 1 });
       K.para(b, t, box, K.ARTICLE.paras[0].split(". Small")[0] + ".", 880, { size: 18, lh: 30, hl: { sent: 1, word: 4 } });
       const a = section(b, t, m, "Style");
       K.settingRow(b, t, a, "Highlight", "Sentence gives context; word helps you follow along.", (f) => K.seg(b, t, f, ["Sentence + word", "Sentence", "Word", "Off"], 0));
@@ -139,7 +138,7 @@ const opts = (id: string, title: string, note: string, sec: Sec, dark = false): 
       K.divider(b, t, a);
       K.settingRow(b, t, a, "Word color", "Marks the word being spoken.", (f) => { const r = b.row(f, { gap: 10, align: "start" }); [["#FFD24D", "Amber"], ["#7CC4F5", "Blue"], ["#8FDB7A", "Green"], ["#FF8FB5", "Pink"], ["#B9A4FF", "Violet"]].forEach(([h, n], i) => swatch(b, t, r, h, n, i === 0)); swatch(b, t, r, null, "Custom", false); });
       K.divider(b, t, a);
-      K.settingRow(b, t, a, "Match page theme", "Use dark variants on dark pages.", (f) => K.toggle(b, t, f, true));
+      K.settingRow(b, t, a, "Match page theme", "Use the dark highlight palette on dark websites.", (f) => K.toggle(b, t, f, true));
     } else if (sec === "shortcuts") {
       head("Shortcuts", "Browser-wide keys are managed by Chrome. Keys that work on the page can be changed here.", "Reset to defaults");
       const c1 = K.card(b, t, m, { w: "fill", pad: [18, 20], gap: 0 });
@@ -183,17 +182,16 @@ export const C: S[] = [
   opts("C2", "Options · General (app not running)", "Same layout as connected; only the status card changes. Primary action launches the app, the error code sits behind Details.", "general-error"),
   opts("C3", "Options · General (token rejected)", "Pairing token mismatch: paste a new token into the focused field, with Re-pair as the fallback.", "general-pair"),
   opts("C4", "Options · Voice and speed", "Engine cards with radio and install action, default voice, speed slider with live value, paragraph pause, preview.", "voice"),
-  opts("C5", "Options · Highlighting", "Preview with light/dark switch and contrast readout, named color swatches with a custom option.", "highlight"),
+  opts("C5", "Options · Highlighting", "Preview on a light or a dark website with contrast readout, named color swatches with a custom option.", "highlight"),
   opts("C6", "Options · Shortcuts", "Browser-wide Chrome shortcuts (edited in Chrome) and in-page keys, with Not set and conflict states.", "shortcuts"),
   opts("C7", "Options · Sites and filters", "Skip rules and per-site rules; each rule is a dropdown (Always show pill, Hide controls, Never read).", "sites"),
-  opts("C8", "Options · Highlighting (dark)", "Dark theme variant.", "highlight", true),
 ];
 
 type PanelState = "queue" | "empty";
-const panel = (id: string, title: string, note: string, st: PanelState, dark = false): S => ({
-  id, group: "C", title, note, w: 1280, h: 800, dark,
+const panel = (id: string, title: string, note: string, st: PanelState): S => ({
+  id, group: "C", title, note, w: 1280, h: 800,
   build: (b, t0, root) => {
-    const t: T = dark ? { ...t0, hlSent: "#78621F" } : t0;
+    const t: T = t0;
     const c = K.browser(b, t, root, {});
     // the page reflows in the 880 px left of the panel
     const vp = b.frame(c, { x: 0, y: 0, w: 880, h: 720, clip: true });
@@ -208,17 +206,17 @@ const panel = (id: string, title: string, note: string, st: PanelState, dark = f
       b.text(e, "Nothing queued", { size: 16, weight: "Bold", c: t.text }); b.text(e, "Line up several articles. Add this page now, or right-click a page or selection and choose Speak Kit, then Add to queue.", { size: 13, c: t.text2, ta: "center", w: "fill", lh: 19 });
       K.btn(b, t, e, "Add this page", { v: "primary", icon: "plus" }); return;
     }
-    const tt: T = { ...t, border: dark ? "#3A4570" : "#BFCBF0" };
+    const tt: T = { ...t, border: "#BFCBF0" };
     const np = b.col(p, { w: "fill", pad: [16, 16, 8, 16], gap: 10 });
     b.text(np, "NOW PLAYING", { size: 12, weight: "SemiBold", c: t.text2, ls: 1 });
-    const cd = K.card(b, t, np, { w: "fill", pad: 14, gap: 10, fill: t.accentSoft, stroke: "none" as any });
+    const cd = K.card(b, t, np, { w: "fill", pad: 14, gap: 10, fill: t.well, stroke: "none" as any });
     b.text(cd, "The quiet return of local-first software", { size: 14, weight: "SemiBold", c: t.text, w: "fill", lh: 19 });
     b.text(cd, `${SITE} · paragraph 1 of 3`, { size: 12, c: t.text2 });
     K.bar(b, t, cd, 0.36, 336, { knob: true });
     const tr = b.row(cd, { w: "fill", justify: "spaceBetween" }); b.text(tr, "2:27", { size: 12, c: t.text2, mono: true }); b.text(tr, "4:21 left", { size: 12, c: t.text2, mono: true });
     const ct = b.row(cd, { w: "fill", justify: "spaceBetween" });
     const cl = b.row(ct, { gap: 8 }); b.icon(cl, "skipBack", 18, t.text); b.icon(cl, "back10", 24, t.text);
-    const pb = b.frame(cl, { w: 40, h: 40, r: 20, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "pause", 16, t.accentText);
+    const pb = b.frame(cl, { w: 40, h: 40, r: 20, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "pause", 16, t.ctaText);
     b.icon(cl, "fwd10", 24, t.text); b.icon(cl, "skipFwd", 18, t.text);
     K.btn(b, t, ct, "1.2x", { v: "secondary" });
     const ol = b.col(p, { w: "fill", pad: [8, 16, 8, 16], gap: 4 });
@@ -236,5 +234,4 @@ export const C2: S[] = [
   opts("C12", "Options · Edge launcher", "Turn the edge launcher on or off, choose its side, how it hides, when it opens and how long it stays open.", "launcher"),
   panel("C9", "Side panel · queue and outline", "Chrome side panel: now playing with transport, paragraph outline, up-next queue with Play now, Remove and Clear all.", "queue"),
   panel("C10", "Side panel · empty queue", "Empty state explains how to add pages; the page reflows beside the panel.", "empty"),
-  panel("C11", "Side panel · queue (dark)", "Dark theme variant.", "queue", true),
 ];

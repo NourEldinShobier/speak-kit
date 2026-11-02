@@ -1,6 +1,6 @@
 import { B, Ref, ICONS } from "./lib";
 import * as K from "./kit";
-import { T, tint, LIGHT, DARK } from "./kit";
+import { T, tint, LIGHT } from "./kit";
 import * as X from "./kit2";
 import { S } from "./types";
 
@@ -51,7 +51,7 @@ const flows = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "First read in four steps", "The path from install to sound, with the frame that shows each step.");
   const r = b.row(c, { w: "fill", gap: 14, align: "start" });
   [["1", "Set up", "Setup window: engine, download 390 MB once, done.", "W1  W2  W3  W5"], ["2", "Pair", "Six-character code, or the Open Speak Kit link.", "W4  C13  C14"], ["3", "Play", "Press the pill. If the engine is asleep it wakes in about 2 s and starts reading.", "B4  B22  B23  B6"], ["4", "Adjust", "Reading popover, speed and voice from the pill; memory and shortcuts in Settings.", "B24  B15  H12  H5"]].forEach(([n, ti, d, ids]) => {
-    const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10, h: 230 }); const nb = b.frame(k, { w: 28, h: 28, r: 999, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.text(nb, n, { size: 13, weight: "SemiBold", c: "#FFFFFF" });
+    const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10, h: 230 }); const nb = b.frame(k, { w: 28, h: 28, r: 999, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.text(nb, n, { size: 13, weight: "SemiBold", c: "#FFFFFF" });
     b.text(k, ti, { size: 16, weight: "SemiBold", c: t.text }); b.text(k, d, { size: 12, c: t.text2, w: "fill", lh: 17 }); b.frame(k, { w: 1, h: "fill" }); const ch = b.row(k, { gap: 6, wrap: true }); ids.split("  ").forEach((i) => K.chip(b, t, ch, i));
   });
   const m = b.row(c, { w: "fill", gap: 14, align: "start" });
@@ -73,7 +73,7 @@ const lifecycle = (b: B, t: T, root: Ref) => {
 const patterns = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "Lumen patterns adopted", "Every Speak Kit surface names the Lumen frame it copies. The Lumen file is the source of truth for layout, components and behavior.");
   table(b, t, c, [200, 180, "fill"], ["Speak Kit surface", "Lumen frame", "What is copied"], [
-    ["Read-aloud pill, Reading popover", "F5 (46082)", "Dark pill 649x52, 40 px play, paragraph text, speed and voice pills; 236 px popover"], ["Desktop shell, Home", "X15 / X16", "Title bar search 420x30, status pill, 248 px sidebar, inset content card"], ["Setup window", "X9 to X14", "960x680, 5-step stepper, 720 px column, footer navigation only"],
+    ["Read-aloud pill, Reading popover", "F5 (46082)", "White pill 649x52, 40 px play, paragraph text, speed and voice pills; 236 px popover"], ["Desktop shell, Home", "X15 / X16", "Title bar search 420x30, status pill, 248 px sidebar, inset content card"], ["Setup window", "X9 to X14", "960x680, 5-step stepper, 720 px column, footer navigation only"],
     ["Settings", "SD1 to SD9", "Settings nav 248, search in the title bar, 760 px column, caps group labels"], ["Command palette", "CP1", "640x432 panel, grouped results, Enter hint, footer keys"], ["Tray menu and panel", "TR1", "Short native menu, own panel with state icons, rules card"],
     ["Notifications", "NO1", "364 px toasts without buttons, grouped, Do not disturb respected"], ["Updates", "UP1", "Green pill in the title bar, popover, restart card"], ["Quit confirmation", "QT1", "What stops and how to resume"], ["Edge and empty states", "ES1 / EM1", "Banner cases, empty cards with one action"],
     ["Pairing", "BR4", "Outlined card, numbered steps, six boxes"], ["Mini player", "M4", "36 px pill, spring, dot after quiet"], ["Light mode", "LM1 / LM3", "Same layout, only tokens change; 3 to 4 frames per surface"]], { rowH: 36 });
@@ -81,27 +81,27 @@ const patterns = (b: B, t: T, root: Ref) => {
 const decisions = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "Decisions that shape the UI", "Recorded in docs/decisions/0001-stack.md and docs/design-system.md.");
   const g = b.row(c, { w: "fill", gap: 14, wrap: true, align: "start" });
-  [["lock", "Local only", "No account, no cloud voice. The UI never shows a sign-in and says 'on device' wherever sound is made."], ["package", "Packages first", "Radix for primitives, valibot for validation, electron-log and electron-store for the desktop. Nothing is built from scratch if a maintained package does the job."], ["moon", "Dark first", "Every flow is drawn dark first; 3 to 4 light twins per surface, same layout."], ["zap", "Performance", "Models load on demand and unload when idle; the UI shows the state in words."], ["eye", "Calm status", "Color only for state. One primary action per banner. Toasts only for background work."], ["book", "Lumen is the source", "Components, spacing, type (Inter 11 to 22) and motion tokens come from the Lumen file."]].forEach(([ic, ti, d]) => {
+  [["lock", "Local only", "No account, no cloud voice. The UI never shows a sign-in and says 'on device' wherever sound is made."], ["package", "Packages first", "Radix for primitives, valibot for validation, electron-log and electron-store for the desktop. Nothing is built from scratch if a maintained package does the job."], ["sun", "Light only", "One light theme, the Lockix look: no dark mode. Pages that are dark are the website, not Speak Kit."], ["zap", "Performance", "Models load on demand and unload when idle; the UI shows the state in words."], ["eye", "Calm status", "Color only for state. One primary action per banner. Toasts only for background work."], ["book", "Lumen is the source", "Components, spacing, type (Inter 11 to 22) and motion tokens come from the Lumen file."]].forEach(([ic, ti, d]) => {
     const k = K.card(b, t, g, { w: 380, pad: 16, gap: 8, h: 150 }); const h = b.row(k, { gap: 8 }); b.icon(h, ic === "package" ? "box" : ic, 18, t.accent); b.text(h, ti, { size: 14, weight: "SemiBold", c: t.text }); b.text(k, d, { size: 12, c: t.text2, w: "fill", lh: 17 });
   });
 };
 
 // ---------------- foundations ----------------
 const tokens = (b: B, t: T, root: Ref) => {
-  const c = board(b, t, root, "Tokens: color, type, radius, elevation", "Values from the Lumen variable collection, both modes. Light changes values only.");
+  const c = board(b, t, root, "Tokens: color, type, radius, elevation", "Lockix light values (docs/lockix-design-system.md). One theme, no dark mode.");
   const r = b.row(c, { w: "fill", gap: 24, align: "start" });
-  [DARK, LIGHT].forEach((m) => {
-    const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, k, m.mode === "dark" ? "DARK" : "LIGHT");
+  [LIGHT].forEach((m) => {
+    const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, k, "LIGHT · LOCKIX");
     const g = b.row(k, { w: "fill", gap: 8, wrap: true, align: "start" });
-    ([["window", m.bg], ["card", m.surface], ["editor", m.editor], ["raised", m.raised], ["input", m.input], ["divider", m.border], ["text", m.text], ["text 2", m.text2], ["text 3", m.text3], ["accent", m.accent], ["green", m.ok], ["orange", m.warn], ["red", m.err], ["info", m.info]] as [string, string][]).forEach(([n, hx]) => {
+    ([["window", m.bg], ["card", m.surface], ["editor", m.editor], ["raised", m.raised], ["input", m.input], ["divider", m.border], ["text", m.text], ["text 2", m.text2], ["text 3", m.text3], ["cta", m.cta], ["accent", m.accent], ["tray", m.tray], ["well", m.well], ["field", m.field], ["control", m.control], ["green", m.ok], ["orange", m.warn], ["red", m.err], ["info", m.info]] as [string, string][]).forEach(([n, hx]) => {
       const q = b.col(g, { w: 100, gap: 4 }); b.frame(q, { w: "fill", h: 32, r: 6, fill: hx, stroke: t.control, sw: 1, sa: "inside" }); b.text(q, n, { size: 11, weight: "Medium", c: t.text }); b.text(q, hx, { size: 10, c: t.text3 });
     });
   });
   const r2 = b.row(c, { w: "fill", gap: 24, align: "start" });
   const ty = K.card(b, t, r2, { w: "fill", pad: 16, gap: 8 }); X.caps(b, t, ty, "TYPE · INTER");
   [[22, "SemiBold", "Page title 22"], [20, "SemiBold", "Setup title 20"], [16, "SemiBold", "Dialog title 16"], [13, "Medium", "Body and rows 13"], [12, "Regular", "Secondary and descriptions 12"], [11, "SemiBold", "CAPS LABELS 11"]].forEach(([s, w, l]) => b.text(ty, l as string, { size: s as number, weight: w as string, c: t.text }));
-  const ra = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, ra, "RADIUS"); const rr = b.row(ra, { gap: 10 }); [4, 6, 8, 10, 12, 14, 999].forEach((v) => { const q = b.col(rr, { gap: 4, align: "center" }); b.frame(q, { w: 40, h: 40, r: v, stroke: t.text2, sw: 1, sa: "inside" }); b.text(q, v === 999 ? "pill" : String(v), { size: 11, c: t.text3 }); });
-  const el = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, el, "ELEVATION"); const er = b.row(el, { gap: 18 }); (["md", "lg", "dlg", "xl"] as const).forEach((s, i) => { const q = b.col(er, { gap: 6, align: "center" }); b.frame(q, { w: 70, h: 50, r: 10, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: s }); b.text(q, ["menu 0 1 2", "popover 0 2 6", "dialog 0 4 12", "window"][i], { size: 11, c: t.text3 }); });
+  const ra = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, ra, "RADIUS"); const rr = b.row(ra, { gap: 10 }); [4, 6, 8, 10, 12, 14, 16, 999].forEach((v) => { const q = b.col(rr, { gap: 4, align: "center" }); b.frame(q, { w: 40, h: 40, r: v, stroke: t.text2, sw: 1, sa: "inside" }); b.text(q, v === 999 ? "pill" : String(v), { size: 11, c: t.text3 }); });
+  const el = K.card(b, t, r2, { w: "fill", pad: 16, gap: 10 }); X.caps(b, t, el, "ELEVATION"); const er = b.row(el, { gap: 18 }); (["md", "card", "lg", "dlg"] as const).forEach((s, i) => { const q = b.col(er, { gap: 6, align: "center" }); b.frame(q, { w: 70, h: 50, r: 10, fill: t.raised, stroke: s === "md" ? t.control : undefined, sw: 1, sa: "inside", shadow: s }); b.text(q, ["menu 0 1 2", "card 0 0 4", "popover ring 0 2 6", "dialog ring 0 4 12"][i], { size: 11, c: t.text3 }); });
 };
 const iconSet = (b: B, t: T, root: Ref) => {
   const names = Object.keys(ICONS);
@@ -139,13 +139,13 @@ const deskComponents = (b: B, t: T, root: Ref) => {
   X.caps(b, t, m, "TRAY ICON STATES"); const tr = b.row(m, { gap: 10 }); (["normal", "working", "needs", "paused", "asleep"] as const).forEach((s) => X.trayIcon(b, t, tr, s, 36));
 };
 const extComponents = (b: B, t: T, root: Ref) => {
-  const c = board(b, t, root, "Extension components", "The read-aloud pill in every state, the Reading popover and the selection bubble. The pill is always dark.", 1280, 800, 12);
+  const c = board(b, t, root, "Extension components", "The read-aloud pill in every state, the Reading popover and the selection bubble. All surfaces are white with the popover shadow.", 1280, 800, 12);
   const r = b.row(c, { w: "fill", gap: 24, align: "start" });
   const a = b.col(r, { gap: 8 });
   (["idle", "loading", "playing", "paused", "done", "unloaded", "waking", "error"] as const).forEach((s) => { const x = b.row(a, { gap: 10, align: "center" }); b.text(x, s, { size: 11, c: t.text3, w: 60 }); K.dock(b, t, x, s); });
   const m = b.col(r, { gap: 14, w: "fill" });
   X.caps(b, t, m, "READING POPOVER"); K.readingPopover(b, t, m, {});
-  X.caps(b, t, m, "SELECTION BUBBLE"); const bb = b.row(m, { h: 40, pad: [0, 4], gap: 4, r: 12, fill: "#1E1F20", shadow: "lg" }); K.btn(b, t, bb, "Listen", { v: "primary", icon: "play" }); K.iconBtn(b, t, bb, "sliders", { size: 32, c: "#E6E6E6" }); K.iconBtn(b, t, bb, "copy", { size: 32, c: "#E6E6E6" });
+  X.caps(b, t, m, "SELECTION BUBBLE"); const bb = b.row(m, { h: 44, pad: [0, 4], gap: 4, r: 12, fill: t.raised, shadow: "lg" }); K.btn(b, t, bb, "Listen", { v: "primary", icon: "play" }); K.iconBtn(b, t, bb, "sliders", { size: 32, c: t.text2 }); K.iconBtn(b, t, bb, "copy", { size: 32, c: t.text2 });
 };
 
 // ---------------- motion ----------------
@@ -190,8 +190,8 @@ export const N5: S[] = [
   scr("R3", "R", "First read in four steps", "Set up, pair, play and adjust, each with the frames that draw it.", flows),
   scr("R4", "R", "Resource lifecycle", "Unloaded, Loading, Ready with the same words on every surface.", lifecycle),
   scr("R5", "R", "Lumen patterns adopted", "Each Speak Kit surface names the Lumen frame it copies.", patterns),
-  scr("R6", "R", "Decisions that shape the UI", "Local only, packages first, dark first, performance, calm status.", decisions),
-  scr("Q1", "Q", "Tokens", "Color, type, radius and elevation in dark and light.", tokens),
+  scr("R6", "R", "Decisions that shape the UI", "Local only, packages first, light only, performance, calm status.", decisions),
+  scr("Q1", "Q", "Tokens", "Color, type, radius and elevation, light only (Lockix).", tokens),
   scr("Q2", "Q", "Icon set", "Tabler outline icons at a constant 1.5 px stroke.", iconSet, 1280, 800),
   scr("Q3", "Q", "Components and states", "Buttons, inputs, selection controls, menus, tags and toasts in every state.", components),
   scr("Q4", "Q", "Desktop components", "Stepper, banners, rows, pills, storage bar, pairing code, toast, tray icons.", deskComponents),

@@ -105,7 +105,7 @@ export const voicesScreen = (b: B, t: T, win: Ref, main: Ref, o: { view?: "grid"
     const rowOf = (n: string, a: string, g: string, gr: string, d: string, i: number, k: "voice" | "clone" | "playing" | "default") => {
       K.divider(b, t, list);
       const r = b.row(list, { w: "fill", h: 42, pad: [0, 16], gap: 12, fill: k === "playing" ? t.accentSoft : "none", opacity: k === "clone" && gated ? 0.6 : undefined });
-      const pb = b.frame(r, { w: 32, h: 32, r: 16, fill: k === "playing" ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, k === "playing" ? "pause" : "play", 13, k === "playing" ? t.accentText : t.text2);
+      const pb = b.frame(r, { w: 32, h: 32, r: 16, fill: k === "playing" ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, k === "playing" ? "pause" : "play", 13, k === "playing" ? t.ctaText : t.text2);
       const nm = b.row(r, { w: 170, gap: 6 }); b.text(nm, n, { size: 14, weight: "SemiBold", c: t.text }); if (k === "default" || k === "playing") K.badge(b, t, nm, "Default", "accent");
       const ac = b.row(r, { w: 150, gap: 8 }); const pl = b.row(ac, { h: 20, pad: [0, 6], r: 5, fill: t.surface2, stroke: t.border, sw: 1 }); b.text(pl, a === "Chatterbox" ? "—" : a, { size: 12, weight: "SemiBold", c: t.text2 }); b.text(ac, a === "UK" ? "UK English" : a === "US" ? "US English" : "Chatterbox", { size: 12.5, c: t.text2 });
       b.text(r, g, { size: 13, c: t.text2, w: 80 });
@@ -133,13 +133,13 @@ export const cloneScreen = (b: B, t: T, win: Ref, main: Ref, st: CS) => {
   K.pageHeader(b, t, main, "Clone a voice", "Chatterbox · zero-shot · runs on your NVIDIA GPU");
   const c = b.col(main, { w: "fill", h: "fill", pad: [8, 32, 24, 32], gap: 18 });
   const idx = { clone1: 0, "clone-rec": 0, "clone-review": 0, "clone-proc": 1, "clone-done": 2, "clone-err": 0 }[st];
-  const sr = b.row(c, { gap: 8 }); ["Reference audio", "Analyze", "Name and test"].forEach((s, i) => { const x = b.row(sr, { gap: 6 }); const d = b.frame(x, { w: 22, h: 22, r: 11, fill: i <= idx ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); if (i < idx) b.icon(d, "check", 12, t.accentText); else b.text(d, `${i + 1}`, { size: 12, weight: "Bold", c: i <= idx ? t.accentText : t.text3 }); b.text(x, s, { size: 13, weight: i === idx ? "SemiBold" : "Medium", c: i === idx ? t.text : t.text3 }); if (i < 2) b.rect(sr, { w: 36, h: 2, fill: i < idx ? t.accent : t.border }); });
+  const sr = b.row(c, { gap: 8 }); ["Reference audio", "Analyze", "Name and test"].forEach((s, i) => { const x = b.row(sr, { gap: 6 }); const d = b.frame(x, { w: 22, h: 22, r: 11, fill: i <= idx ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); if (i < idx) b.icon(d, "check", 12, t.ctaText); else b.text(d, `${i + 1}`, { size: 12, weight: "Bold", c: i <= idx ? t.ctaText : t.text3 }); b.text(x, s, { size: 13, weight: i === idx ? "SemiBold" : "Medium", c: i === idx ? t.text : t.text3 }); if (i < 2) b.rect(sr, { w: 36, h: 2, fill: i < idx ? t.accent : t.border }); });
   const row = b.row(c, { w: "fill", gap: 20, align: "start" });
   const lft = K.card(b, t, row, { w: "fill", pad: 24, gap: 16 });
   const consent = (on: boolean) => checkbox(b, t, lft, on, "I have the right to clone this voice. It is my own voice, or the speaker gave me permission.");
   if (st === "clone1") {
     const dz = b.col(lft, { w: "fill", h: 190, r: 14, stroke: t.border, sw: 2, dashes: [8, 6], align: "center", justify: "center", gap: 10, fill: t.surface2 } as any);
-    const ic = b.frame(dz, { w: 52, h: 52, r: 26, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "upload", 24, t.accent);
+    const ic = b.frame(dz, { w: 52, h: 52, r: 26, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "upload", 24, t.iconQuiet);
     b.text(dz, "Drop an audio file", { size: 16, weight: "Bold", c: t.text }); b.text(dz, "WAV, MP3, M4A · 10 to 30 seconds of one speaker", { size: 13, c: t.text2 });
     const r = b.row(dz, { gap: 10 }); K.btn(b, t, r, "Choose file", { v: "secondary", icon: "folder" }); K.btn(b, t, r, "Record now", { v: "primary", icon: "mic" });
     consent(false);
@@ -157,7 +157,7 @@ export const cloneScreen = (b: B, t: T, win: Ref, main: Ref, st: CS) => {
     consent(true);
   } else if (st === "clone-review") {
     b.text(lft, "Review your take", { size: 18, weight: "Bold", c: t.text });
-    const p = b.row(lft, { w: "fill", pad: 14, gap: 14, r: 12, fill: t.surface2 }); const pb = b.frame(p, { w: 44, h: 44, r: 22, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 18, t.accentText); K.waveform(b, t, p, 330, 36, 0.0, 5); b.text(p, "0:00 / 0:14", { size: 13, c: t.text2, mono: true });
+    const p = b.row(lft, { w: "fill", pad: 14, gap: 14, r: 12, fill: t.surface2 }); const pb = b.frame(p, { w: 44, h: 44, r: 22, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "play", 18, t.ctaText); K.waveform(b, t, p, 330, 36, 0.0, 5); b.text(p, "0:00 / 0:14", { size: 13, c: t.text2, mono: true });
     const ac = b.row(lft, { gap: 10 }); K.btn(b, t, ac, "Re-record", { v: "secondary", icon: "refresh" }); K.btn(b, t, ac, "Use this take", { v: "primary", icon: "check" });
     consent(true);
   } else if (st === "clone-err") {
@@ -175,7 +175,7 @@ export const cloneScreen = (b: B, t: T, win: Ref, main: Ref, st: CS) => {
     b.text(lft, "Name your voice", { size: 18, weight: "Bold", c: t.text });
     const nf = b.col(lft, { w: "fill", gap: 6 }); b.text(nf, "Voice name", { size: 12.5, weight: "SemiBold", c: t.text2 }); K.input(b, t, nf, { value: "Maya (you)", h: 42, state: "focus" });
     const ai = b.row(lft, { gap: 8 }); b.icon(ai, "info", 14, t.text3); b.text(ai, "AI-generated voice. It is labeled that way in your library.", { size: 12.5, c: t.text2 });
-    const tr = b.col(lft, { w: "fill", pad: 14, gap: 10, r: 12, fill: t.surface2 }); b.text(tr, "Test sentence", { size: 12, weight: "SemiBold", c: t.text3 }); b.text(tr, "This is what I sound like when a computer reads to me.", { size: 15, c: t.text, w: "fill" }); const p = b.row(tr, { w: "fill", gap: 12 }); const pb = b.frame(p, { w: 40, h: 40, r: 20, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 16, t.accentText); K.waveform(b, t, p, 440, 28, 0.2, 2);
+    const tr = b.col(lft, { w: "fill", pad: 14, gap: 10, r: 12, fill: t.surface2 }); b.text(tr, "Test sentence", { size: 12, weight: "SemiBold", c: t.text3 }); b.text(tr, "This is what I sound like when a computer reads to me.", { size: 15, c: t.text, w: "fill" }); const p = b.row(tr, { w: "fill", gap: 12 }); const pb = b.frame(p, { w: 40, h: 40, r: 20, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "play", 16, t.ctaText); K.waveform(b, t, p, 440, 28, 0.2, 2);
     sliderBlock(b, t, lft, "Emotion exaggeration", "0.50 is a neutral reading. Applies to Maya (you) only.", 0.5, 480, { label: "0.50", min: "Neutral", max: "Dramatic" });
   }
   if (st === "clone-err") clipCheck(b, t, row, [["Length", "4 s. Needs 10 to 30 s.", false], ["Background noise", "Music detected at 0:02.", false], ["Single speaker", "One voice found.", true]]);
@@ -241,8 +241,8 @@ export const styleModal = (b: B, t: T, win: Ref) => {
   const f = b.row(d, { w: "fill", pad: [14, 22], gap: 8, justify: "spaceBetween", fill: t.surface2 }); K.btn(b, t, f, "Reset to defaults", { v: "ghost" }); K.btn(b, t, f, "Play sample", { v: "primary", icon: "play" });
 };
 
-const voices = (id: string, title: string, note: string, st: GS, dark = false): S => ({
-  id, group: "G", title, note, w: W, h: H, dark,
+const voices = (id: string, title: string, note: string, st: GS): S => ({
+  id, group: "G", title, note, w: W, h: H,
   build: (b, t, root) => {
     const nav = st === "library" || st === "list" || st === "detail" || st === "gated" || st === "style" || st.startsWith("clone") ? "voices" : "engines";
     const status = st.startsWith("clone") || st === "engines-ready" ? { label: "Chatterbox · Ready", sub: "GPU · RTX 3060", tone: "ok" as const } : st === "engines-gpu" ? { label: "Chatterbox · Warming up", sub: "Loading onto the GPU", tone: "warn" as const } : st === "engines-oom" ? { label: "Chatterbox · Out of memory", sub: "1.1 GB of GPU free", tone: "err" as const } : undefined;
@@ -259,7 +259,7 @@ const voices = (id: string, title: string, note: string, st: GS, dark = false): 
       const hd = b.row(d, { gap: 14 }); K.avatar(b, t, hd, "Heart", 64, 0); const x = b.col(hd, { gap: 3 }); b.text(x, "Heart", { size: 24, weight: "Bold", c: t.text }); b.text(x, "af_heart · US English · Female", { size: 13, c: t.text3 }); const g = b.row(x, { gap: 6 }); K.badge(b, t, g, "Grade A", "ok"); K.badge(b, t, g, "Default", "accent", "check");
       b.text(d, "Warm and clear. Best all-round voice for articles and long documents.", { size: 14, c: t.text2, w: "fill", lh: 21 });
       const sm = K.card(b, t, d, { w: "fill", pad: 14, gap: 10, fill: t.surface2, stroke: "none" as any }); const sh = b.row(sm, { w: "fill", justify: "spaceBetween" }); b.text(sh, "TRY IT", { size: 12, weight: "SemiBold", c: t.text3, ls: 1 }); const eh = b.row(sh, { gap: 4 }); b.icon(eh, "edit", 13, t.accent); b.text(eh, "Edit text", { size: 12, weight: "SemiBold", c: t.accent });
-      b.text(sm, "The quick brown fox jumps over the lazy dog, then reads you a short paragraph about local-first software.", { size: 13.5, c: t.text, w: "fill", lh: 20 }); const r = b.row(sm, { w: "fill", gap: 12 }); const pb = b.frame(r, { w: 40, h: 40, r: 20, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 16, t.accentText); K.waveform(b, t, r, 250, 26, 0.45);
+      b.text(sm, "The quick brown fox jumps over the lazy dog, then reads you a short paragraph about local-first software.", { size: 13.5, c: t.text, w: "fill", lh: 20 }); const r = b.row(sm, { w: "fill", gap: 12 }); const pb = b.frame(r, { w: 40, h: 40, r: 20, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "play", 16, t.ctaText); K.waveform(b, t, r, 250, 26, 0.45);
       sliderBlock(b, t, d, "Speed for this voice", "Used whenever you pick Heart.", 0.2, 270, { label: "1.0×", min: "0.5×", max: "3×" });
       K.btn(b, t, d, "Default voice", { v: "secondary", w: "fill", icon: "check", disabled: true }); K.btn(b, t, d, "Remove from favorites", { v: "secondary", w: "fill", icon: "heart" });
     }
@@ -278,7 +278,6 @@ export const G: S[] = [
   voices("G9", "Engines · Chatterbox warming up", "GPU load progress after install, inside the card padding, with percentage.", "engines-gpu"),
   voices("G10", "Engines · out of GPU memory", "Live GPU chip, top VRAM users, three ways forward. Raw CUDA text stays behind Details.", "engines-oom"),
   voices("G11", "Chatterbox · voice style", "Opened from Style on a cloned voice card. Sliders show values; scope is Maya (you).", "style"),
-  voices("G12", "Voices · library (dark)", "Dark theme variant.", "library", true),
   voices("G13", "Voices · list view", "Dense rows: play, name, accent, gender, grade, style, favorite. Scales to all 28 voices.", "list"),
   voices("G14", "Voices · cloning unavailable", "Chatterbox not installed: Clone is disabled with the reason, a requirements check and a link to Engines. Cloned voices are dimmed.", "gated"),
   voices("G15", "Clone · review take", "After stopping: play back, re-record or use the take. All three clip checks pass.", "clone-review"),
@@ -337,25 +336,25 @@ export const settingsScreen = (b: B, t: T, win: Ref, main: Ref, st: HS, o: { por
     rows(sect("Cache and folders"), [["Keep audio cache up to", "Older sentences are removed first.", (f) => K.select(b, t, f, "2 GB", 140)], ["Models folder", "D:\\SpeakKit\\models", (f) => K.btn(b, t, f, "Change…", { v: "secondary", sz: "sm" })]]);
   }
   if (st === "appearance") {
-    head("Appearance"); const s = sect("Theme"); const r = b.row(s, { w: "fill", gap: 14, pad: [8, 0] });
-    ["System", "Light", "Dark"].forEach((n, i) => { const x = b.col(r, { w: "fill", pad: 12, gap: 8, r: 12, stroke: i === 1 ? t.accent : t.border, sw: i === 1 ? 2 : 1, sa: "inside" }); const pv = b.frame(x, { w: 190, h: 80, r: 8, clip: true, stroke: t.border, sw: 1, fill: i === 2 ? "#1E1F20" : "#F3F3F6" }); if (i === 0) b.rect(pv, { x: 95, y: 0, w: 95, h: 80, fill: "#1E1F20" }); const ic1 = i === 2 ? "#E6E6E6" : "#1E1F20"; b.rect(pv, { x: 12, y: 14, w: 60, h: 8, r: 3, fill: ic1 }); b.rect(pv, { x: 12, y: 30, w: 120, h: 6, r: 3, fill: "#0069CC" }); const nr = b.row(x, { gap: 6 }); b.text(nr, n, { size: 13, weight: "SemiBold", c: t.text }); if (i === 1) { b.icon(nr, "check", 14, t.accent); b.text(nr, "Selected", { size: 12, c: t.accent, weight: "Medium" }); } });
+    head("Appearance"); const s = sect("Reading theme"); const r = b.row(s, { w: "fill", gap: 14, pad: [8, 0] });
+    ["White", "Paper", "Sepia"].forEach((n, i) => { const x = b.col(r, { w: "fill", pad: 12, gap: 8, r: 12, stroke: i === 1 ? t.cta : t.border, sw: i === 1 ? 2 : 1, sa: "inside" }); const pv = b.frame(x, { w: 190, h: 80, r: 8, clip: true, stroke: t.border, sw: 1, fill: ["#FFFFFF", "#F7F3EA", "#F1E4C8"][i] }); b.rect(pv, { x: 12, y: 14, w: 60, h: 8, r: 3, fill: "#1F2328" }); b.rect(pv, { x: 12, y: 30, w: 120, h: 6, r: 3, fill: "#F5DFAC" }); const nr = b.row(x, { gap: 6 }); b.text(nr, n, { size: 13, weight: "SemiBold", c: t.text }); if (i === 1) { b.icon(nr, "check", 14, t.text); b.text(nr, "Selected", { size: 12, c: t.text2, weight: "Medium" }); } });
     const h = sect("Highlight"); const sw = b.row(h, { w: "fill", gap: 14, pad: [10, 0, 4, 0], align: "start" });
     const SW: [string, string][] = [["Butter", "#FFE58A"], ["Sky", "#B8DCFF"], ["Mint", "#BDEBC3"], ["Rose", "#FFC2D6"]];
     SW.forEach(([n, hx], i) => { const q = b.col(sw, { gap: 4, align: "center", w: 56 }); const ring = b.frame(q, { w: 44, h: 44, r: 22, stroke: i === 0 ? t.accent : "none" as any, sw: 2, sa: "inside", layout: "horizontal", align: "center", justify: "center" }); b.frame(ring, { w: 32, h: 32, r: 16, fill: hx, stroke: t.text3, sw: 1, sa: "inside" }); b.text(q, n, { size: 12, weight: i === 0 ? "SemiBold" : "Regular", c: i === 0 ? t.text : t.text2 }); });
-    const pw = b.col(sw, { w: "fill", pad: 12, r: 10, fill: t.bg, gap: 4 }); b.text(pw, "Preview", { size: 12, weight: "SemiBold", c: t.text3 }); K.para(b, { ...t, hlSent: "#FFE58A", hlWord: "#FFC21A", hlWordText: "#1E1F20", mode: "light" } as any, pw, "Small models now run on a laptop. Nothing leaves the device.", 400, { size: 15, lh: 26, hl: { sent: 0, word: 2 } });
+    const pw = b.col(sw, { w: "fill", pad: 12, r: 10, fill: t.bg, gap: 4 }); b.text(pw, "Preview", { size: 12, weight: "SemiBold", c: t.text3 }); K.para(b, { ...t, hlSent: "#FFE58A", hlWord: "#FFC21A", hlWordText: "#1E1F20" } as any, pw, "Small models now run on a laptop. Nothing leaves the device.", 400, { size: 15, lh: 26, hl: { sent: 0, word: 2 } });
     rows(h, [["Word highlight", "Marks the word being spoken inside the sentence.", on(true)], ["Reduce motion", "Disables smooth scrolling and animations.", on(false)]]);
   }
   if (st === "about" || st === "update") {
     head("About");
-    if (st === "update") { const u = K.card(b, t, c, { w: "fill", pad: 20, gap: 14, fill: t.accentSoft, stroke: t.accent }); const ur = b.row(u, { w: "fill", gap: 14 }); const ui = b.frame(ur, { w: 44, h: 44, r: 22, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(ui, "download", 20, t.accentText); const q = b.col(ur, { gap: 2, w: "fill" }); b.text(q, "Version 0.5.0 is available", { size: 16, weight: "Bold", c: t.text }); b.text(q, "Faster start-up, PDF outline, fixes for Windows sleep. 64 MB download.", { size: 13, c: t.text2, w: "fill" }); b.text(u, "Speak Kit restarts to install it, so reading stops. Your library and settings are kept.", { size: 12.5, c: t.text2 }); const ub = b.row(u, { w: "fill", gap: 8 }); K.btn(b, t, ub, "Update and restart", { v: "primary" }); K.btn(b, t, ub, "Remind me later", { v: "secondary" }); K.btn(b, t, ub, "Release notes", { v: "ghost", iconRight: "external" }); }
+    if (st === "update") { const u = K.card(b, t, c, { w: "fill", pad: 20, gap: 14, fill: t.well, stroke: t.accent }); const ur = b.row(u, { w: "fill", gap: 14 }); const ui = b.frame(ur, { w: 44, h: 44, r: 22, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(ui, "download", 20, t.ctaText); const q = b.col(ur, { gap: 2, w: "fill" }); b.text(q, "Version 0.5.0 is available", { size: 16, weight: "Bold", c: t.text }); b.text(q, "Faster start-up, PDF outline, fixes for Windows sleep. 64 MB download.", { size: 13, c: t.text2, w: "fill" }); b.text(u, "Speak Kit restarts to install it, so reading stops. Your library and settings are kept.", { size: 12.5, c: t.text2 }); const ub = b.row(u, { w: "fill", gap: 8 }); K.btn(b, t, ub, "Update and restart", { v: "primary" }); K.btn(b, t, ub, "Remind me later", { v: "secondary" }); K.btn(b, t, ub, "Release notes", { v: "ghost", iconRight: "external" }); }
     const s = K.card(b, t, c, { w: "fill", pad: 20, gap: 12 }); const r = b.row(s, { gap: 16 }); K.logo(b, t, r, 56, { r: 16 }); const x = b.col(r, { gap: 3 }); b.text(x, "Speak Kit", { size: 22, weight: "Bold", c: t.text }); b.text(x, "Version 0.4.2 · MIT licensed · open source", { size: 13, c: t.text2 });
     const br = b.row(s, { w: "fill", gap: 8 }); K.btn(b, t, br, "Check for updates", { v: "secondary", icon: "refresh" }); if (st === "about") { const ok = b.row(br, { gap: 6 }); b.icon(ok, "circleCheck", 16, t.ok); b.text(ok, "You're up to date · checked just now", { size: 13, weight: "Medium", c: t.text }); }
     const lk = b.row(s, { gap: 4 }); ["Privacy", "License text", "Open logs folder"].forEach((l) => K.btn(b, t, lk, l, { v: "ghost", sz: "sm", iconRight: "external" }));
     if (st === "update") { const q = K.card(b, t, c, { w: "fill", pad: [14, 20], gap: 0 }); const qr = b.row(q, { w: "fill", justify: "spaceBetween" }); b.text(qr, "Open-source libraries and licenses (5)", { size: 13.5, weight: "Medium", c: t.text }); b.icon(qr, "external", 15, t.text3); } else rows(sect("Open source"), [["Kokoro-82M", "Apache-2.0 · hexgrad", (f) => b.icon(f, "external", 15, t.text3)], ["Chatterbox", "MIT · Resemble AI", (f) => b.icon(f, "external", 15, t.text3)], ["ONNX Runtime", "MIT · Microsoft", (f) => b.icon(f, "external", 15, t.text3)], ["Electron", "MIT · OpenJS Foundation", (f) => b.icon(f, "external", 15, t.text3)], ["espeak-ng", "GPL-3.0 · runs as a separate process", (f) => b.icon(f, "external", 15, t.text3)]]);
   }
 };
-const settings = (id: string, title: string, note: string, st: HS, dark = false): S => ({
-  id, group: "H", title, note, w: W, h: H, dark,
+const settings = (id: string, title: string, note: string, st: HS): S => ({
+  id, group: "H", title, note, w: W, h: H,
   build: (b, t, root) => { const { win, main } = K.desktopWindow(b, t, root, { nav: "settings", settingsKey: st === "keys-capture" ? "keys" : st === "update" ? "about" : st, settingsDot: st === "update" ? "about" : undefined, update: st === "update" }); settingsScreen(b, t, win, main, st); },
 });
 export const Hs: S[] = [
@@ -365,9 +364,8 @@ export const Hs: S[] = [
   settings("H4", "Settings · Browser integration", "Server status, port with Apply and re-pair, token, destructive actions with confirm text.", "browser"),
   settings("H5", "Settings · Shortcuts", "Global Ctrl+Alt shortcuts, inline conflict on one row, in-app keys, Reset all.", "keys"),
   settings("H6", "Settings · Storage and models", "Usage adds up to 1.6 GB, segmented bar with legend, Clear asks first.", "storage"),
-  settings("H7", "Settings · Appearance", "Theme, named highlight colors with a live preview.", "appearance"),
+  settings("H7", "Settings · Appearance", "Reading theme, named highlight colors with a live preview.", "appearance"),
   settings("H8", "Settings · About", "Version, update result, links and one row per open-source library.", "about"),
   settings("H9", "Settings · Update available", "Update card with restart warning and Remind me later; dot on the About item.", "update"),
-  settings("H10", "Settings · Browser integration (dark)", "Dark theme variant.", "browser", true),
   settings("H11", "Settings · Shortcuts (recording a key)", "Capture state: Press new keys, Esc to cancel.", "keys-capture"),
 ];

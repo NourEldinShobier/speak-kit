@@ -2,7 +2,7 @@ import { B, Ref } from "./lib";
 import { T } from "./kit";
 
 export type S = {
-  id: string; group: string; title: string; note: string; w: number; h: number; dark?: boolean;
+  id: string; group: string; title: string; note: string; w: number; h: number;
   build: (b: B, t: T, root: Ref) => void;
 };
 export const GROUPS: Record<string, { name: string; blurb: string }> = {

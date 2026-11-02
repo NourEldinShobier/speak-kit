@@ -4,12 +4,12 @@ import { $ } from "bun";
 import { homedir } from "os";
 import { writeFileSync, mkdirSync, readdirSync, renameSync, existsSync, readFileSync } from "fs";
 import { B } from "./lib";
-import { LIGHT, DARK } from "./kit";
+import { LIGHT } from "./kit";
 import { S } from "./types";
 import { PAGES, FD } from "./plan";
 
 const FC = process.env.FIGCRAFT_CLI ?? `${homedir()}/AppData/Local/Programs/FigCraft/figcraft-cli.exe`;
-const ROOT = "D:/workspaces/speak-it/designs/next";
+const ROOT = process.env.ROOT ?? `${import.meta.dir}/../next`;
 const OUT = process.env.OUT ?? ROOT + "/speakkit.figcraft";
 const PNG = process.env.PNG ?? ROOT + "/screens";
 const BUILD = process.env.BUILD ?? ROOT + "/build";
@@ -28,7 +28,7 @@ const clean = (s: string) => s.replace(/:\s/g, ", ").replace(/[:"<>|?*\\/]/g, " 
 const firstSentence = (n: string) => { const m = n.match(/^.*?[.!?](\s|$)/); const s = (m ? m[0] : n).trim(); return s.length > 96 ? s.slice(0, 93).replace(/[ ,;:]+\S*$/, "") + "..." : s; };
 const frameName = (fd: FD, s: S) => {
   const tag = fd.tag ? fd.tag + " · " : "";
-  return clean(`${fd.id} · ${tag}${(fd.title ?? s.title).replace(" · ", ", ").replace(/ \((dark|light)\)$/, "")} — ${fd.rule ?? firstSentence(s.note)}`).slice(0, 150);
+  return clean(`${fd.id} · ${tag}${(fd.title ?? s.title).replace(" · ", ", ")} — ${fd.rule ?? firstSentence(s.note)}`).slice(0, 150);
 };
 
 const b = new B();
@@ -58,24 +58,23 @@ PAGES.forEach((pg, pi) => {
     let x = 100;
     frames.forEach((fd, i) => {
       const s = reg.get(fd.src ?? fd.id)!;
-      const dark = (fd.theme ?? "dark") === "dark";
-      const t = dark ? DARK : LIGHT;
+      const t = LIGHT;
       const { fw, fh } = dims[i];
       const name = frameName(fd, s);
       const narrow = s.w <= 800;
-      const wrap = b.frame(sref, { name, x, y: 140, w: fw, h: fh, fill: dark ? "#0F1011" : "#DEDFE3", clip: true });
+      const wrap = b.frame(sref, { name, x, y: 140, w: fw, h: fh, fill: "#DEDFE3", clip: true });
       const ox = narrow ? 120 : Math.round((fw - s.w) / 2); const oy = narrow ? Math.max(40, Math.round((fh - s.h) / 2)) : Math.round((fh - s.h) / 2);
       const root = b.frame(wrap, { name: `${fd.id} screen`, x: ox, y: oy, w: s.w, h: s.h, fill: t.bg, clip: true, r: 12 });
-      b.dark = dark; s.build(b, t, root);
+      s.build(b, t, root);
       if (narrow) {
-        const rc = b.col(wrap, { x: ox + s.w + 64, y: oy, w: 420, pad: 16, gap: 8, r: 12, fill: t.surface, stroke: t.border, sw: 1, sa: "inside" });
+        const rc = b.col(wrap, { x: ox + s.w + 64, y: oy, w: 420, pad: 16, gap: 8, r: 12, fill: t.surface, shadow: "ring" });
         b.text(rc, `${fd.id} rules`, { size: 11, weight: "SemiBold", c: t.text3, ls: 0.5 });
         const rules = (fd.rules ?? s.note.split(/(?<=[.!?])\s+/)).filter(Boolean).slice(0, 4);
         rules.forEach((r) => { const row = b.row(rc, { w: "fill", gap: 8, align: "start" }); b.ellipse(row, { w: 4, h: 4, fill: t.text3, y: 7 }); b.text(row, r, { size: 12, c: t.text2, w: "fill", lh: 17 }); });
-        b.text(rc, `${dark ? "Dark" : "Light"} theme · ${s.w} px wide`, { size: 11, c: t.text3 });
+        b.text(rc, `${s.w} px wide`, { size: 11, c: t.text3 });
       }
       exportRefs.push({ id: fd.id, ref: wrap, name });
-      ms.frames.push({ id: fd.id, src: fd.src ?? fd.id, title: (fd.title ?? s.title).replace(/ \((dark|light)\)$/, ""), rule: fd.rule ?? firstSentence(s.note), note: s.note, theme: dark ? "dark" : "light", tag: fd.tag ?? "", w: fw, h: fh, name });
+      ms.frames.push({ id: fd.id, src: fd.src ?? fd.id, title: (fd.title ?? s.title), rule: fd.rule ?? firstSentence(s.note), note: s.note, tag: fd.tag ?? "", w: fw, h: fh, name });
       x += fw + 100;
     });
     y += secH + 160;

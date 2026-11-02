@@ -1,14 +1,12 @@
 // File structure (Lumen): pages > numbered sections > frames. Frame ids stay stable where a screen survives.
-// theme defaults to dark (Lumen draws the dark frame first); "-L" frames are light twins built from the same builder.
-export type FD = { id: string; src?: string; theme?: "dark" | "light"; rule?: string; rules?: string[]; tag?: string; title?: string };
+// Light only (Lockix design system): one theme, no twins. A dark host WEBSITE frame (B11, B21) is the host page, not a Speak Kit theme.
+export type FD = { id: string; src?: string; rule?: string; rules?: string[]; tag?: string; title?: string };
 export type Sec = { title: string; cover: string; frames: FD[] };
 export type Pg = { name: string; sections: Sec[] };
 
 const f = (id: string, rule?: string, o: Partial<FD> = {}): FD => ({ id, rule, ...o });
 const later = (id: string, rule?: string): FD => ({ id, rule, tag: "LATER (v1.1)" });
 const sup = (id: string, by: string, rule?: string): FD => ({ id, rule, tag: `SUPERSEDED by ${by}` });
-/** light twin of a frame: same builder, light tokens */
-const L = (id: string, rule?: string, tag?: string): FD => ({ id: `${id}-L`, src: id, theme: "light", rule: rule ?? "Light twin: same layout and radii, only the tokens swap.", tag });
 
 export const PAGES: Pg[] = [
   {
@@ -27,20 +25,19 @@ export const PAGES: Pg[] = [
       { title: "Popup engine states", cover: "unloaded, waking, loading: the engine wakes on play", frames: [f("A16"), f("A17"), f("A10")] },
       { title: "Popup problems", cover: "app not running or installed, pairing, permissions, unreadable page", frames: [f("A9"), f("A13"), f("A14"), f("A15"), f("A11")] },
       { title: "Read-aloud pill", cover: "Lumen F5 pill on the page: idle, preparing, reading, paused, finished, error, engine states", frames: [
-        f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."),
+        f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."), f("B11", "The white pill stays readable over a dark website; the highlight palette adapts to the page."),
         f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open Speak Kit and Retry."),
         f("B22"), f("B23")] },
       { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3"), f("B13"), f("B14")] },
       { title: "Pill popovers and reading settings", cover: "speed, voice and the Reading popover (Sans, Serif, Dyslexic, size, width, theme, highlight)", frames: [f("B15"), f("B16"), f("B24")] },
-      { title: "Reader view", cover: "paper and dark reader at full fidelity, with the pill and the Reading popover", frames: [
-        f("B10", "Paper reader, 680 px serif column, current sentence block, Reading popover top right, pill below."), f("B12", "Dark reader, same column; Close keeps playback running in the pill."), L("B10", "Light chrome with the paper reader: the reader looks the same in both modes.")] },
+      { title: "Reader view", cover: "paper reader at full fidelity, with the pill and the Reading popover", frames: [
+        f("B10", "Paper reader, 680 px serif column, current sentence block, Reading popover top right, pill below.")] },
       { title: "Edge launcher", cover: "the 14 px tab at the page edge; the expanded vertical pill is replaced by the read-aloud pill", frames: [
-        f("B17"), f("B19"), sup("B18", "B4", "Hover now opens the horizontal read-aloud pill (B4), not a vertical one."), sup("B20", "B6", "Expanded reading state is the read-aloud pill (B6)."), sup("B21", "B4", "Dark is the default theme; the vertical pill is gone.")] },
+        f("B17"), f("B19"), sup("B18", "B4", "Hover now opens the horizontal read-aloud pill (B4), not a vertical one."), sup("B20", "B6", "Expanded reading state is the read-aloud pill (B6)."), sup("B21", "B4", "The vertical pill is gone; the read-aloud pill replaces it.")] },
       { title: "Options page", cover: "connection, voice, highlighting, shortcuts, sites, edge launcher", frames: [f("C1"), f("C2"), f("C3"), f("C4"), f("C5"), f("C6"), f("C7"), f("C12")] },
       { title: "Pairing and permissions", cover: "token field and test connection, Open Speak Kit deep link, per-site permissions, shortcut conflict", frames: [f("C13"), f("C14"), f("C15"), f("C16")] },
       { title: "Side panel", cover: "queue and outline, empty queue", frames: [f("C9"), f("C10")] },
       { title: "Responsive options page", cover: "breakpoint rules and the narrow layout below 1025 px", frames: [f("C17"), f("C18")] },
-      { title: "Light mode", cover: "light twins for popup, pill, reader, options and side panel", frames: [L("A1"), L("A4"), L("A9"), L("B6"), L("B15"), L("C1"), L("C6"), L("C9")] },
     ],
   },
   {
@@ -66,7 +63,6 @@ export const PAGES: Pg[] = [
       { title: "Export audio", cover: "options, rendering, background, done", frames: [later("J1"), later("J2"), later("J3"), later("J5"), later("J6"), later("J7")] },
       { title: "Quit and system states", cover: "quit confirmation, crashes, resources, permissions, offline", frames: [f("K11"), f("K1"), f("K10"), f("K2"), f("K3"), f("K4"), f("K5"), f("K6"), f("K7"), f("K8")] },
       { title: "Edge-state and empty-state boards", cover: "12 edge cases on one board, empty states for every list", frames: [f("K12"), f("E17")] },
-      { title: "Light mode", cover: "light twins for shell, setup, settings, voices, tray and states", frames: [L("L1"), L("W1"), L("W3"), L("H1"), L("H12"), L("G1"), L("I10"), L("K1"), L("O1")] },
       { title: "Superseded first-run layouts", cover: "the nine onboarding screens replaced by the setup window", frames: [
         sup("D1", "W1"), sup("D2", "W2"), sup("D3", "W2b"), sup("D4", "W3"), sup("D5", "W3b"), sup("D6", "W4"), sup("D7", "W5"), sup("D9", "W5")] },
     ],
@@ -75,15 +71,15 @@ export const PAGES: Pg[] = [
     name: "Foundations & components",
     sections: [
       { title: "Tokens", cover: "color, type, radius, elevation and the Tabler icon set", frames: [f("Q1"), f("Q2")] },
-      { title: "Components and states", cover: "buttons, inputs, selection controls, menus, tags in every state", frames: [f("Q3"), L("Q3")] },
-      { title: "Desktop components", cover: "title bar, sidebar, settings rows, stepper, banners, toasts, storage bar, code boxes", frames: [f("Q4"), L("Q4")] },
-      { title: "Extension components", cover: "pill, Reading popover, bubble, popup header, banners, tooltips", frames: [f("Q5"), L("Q5")] },
+      { title: "Components and states", cover: "buttons, inputs, selection controls, menus, tags in every state", frames: [f("Q3")] },
+      { title: "Desktop components", cover: "title bar, sidebar, settings rows, stepper, banners, toasts, storage bar, code boxes", frames: [f("Q4")] },
+      { title: "Extension components", cover: "pill, Reading popover, bubble, popup header, banners, tooltips", frames: [f("Q5")] },
     ],
   },
   {
     name: "Motion",
     sections: [
-      { title: "Motion tokens", cover: "durations 83/167/250/333/120 ms, easing, spring 420/34", frames: [f("MO1"), L("MO1")] },
+      { title: "Motion tokens", cover: "durations 83/167/250/333/120 ms, easing, spring 420/34", frames: [f("MO1")] },
       { title: "Per-element rules", cover: "trigger, animation, duration, easing and reduce-motion fallback for 18 elements", frames: [f("MO2"), f("MO3")] },
     ],
   },

@@ -37,15 +37,15 @@ const markPara = (b: B, t: T, p: Ref, text: string, w: number, mark?: (word: str
 type OB = "welcome" | "engine" | "engine-nogpu" | "download" | "dlfail" | "pair" | "pairok" | "pairskip";
 const steps = ["Welcome", "Engine", "Download", "Browser", "Done"];
 const IDX: Record<OB, number> = { welcome: 0, engine: 1, "engine-nogpu": 1, download: 2, dlfail: 2, pair: 3, pairok: 4, pairskip: 4 };
-const onboard = (id: string, title: string, note: string, st: OB, dark = false): S => ({
-  id, group: "D", title, note, w: W, h: H, dark,
+const onboard = (id: string, title: string, note: string, st: OB): S => ({
+  id, group: "D", title, note, w: W, h: H,
   build: (b, t, root) => {
     const { main } = K.desktopWindow(b, t, root, { nav: "none" });
     const idx = IDX[st];
     // fixed top offset: stepper, then top-aligned body, then one footer row
     const c = b.col(main, { w: "fill", h: "fill", align: "center", pad: [32, 60, 28, 60], gap: 28 });
     const sr = b.row(c, { gap: 8 });
-    steps.forEach((s, i) => { const on = i <= idx; const x = b.row(sr, { gap: 6 }); const d = b.frame(x, { w: 22, h: 22, r: 11, fill: on ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); if (i < idx) b.icon(d, "check", 12, t.accentText); else b.text(d, `${i + 1}`, { size: 12, weight: "Bold", c: on ? t.accentText : t.text3 }); b.text(x, s, { size: 12.5, weight: i === idx ? "SemiBold" : "Medium", c: i === idx ? t.text : t.text3 }); if (i < 4) b.rect(sr, { w: 28, h: 2, fill: i < idx ? t.accent : t.border }); });
+    steps.forEach((s, i) => { const on = i <= idx; const x = b.row(sr, { gap: 6 }); const d = b.frame(x, { w: 22, h: 22, r: 11, fill: on ? t.accent : t.surface2, layout: "horizontal", align: "center", justify: "center" }); if (i < idx) b.icon(d, "check", 12, t.ctaText); else b.text(d, `${i + 1}`, { size: 12, weight: "Bold", c: on ? t.ctaText : t.text3 }); b.text(x, s, { size: 12.5, weight: i === idx ? "SemiBold" : "Medium", c: i === idx ? t.text : t.text3 }); if (i < 4) b.rect(sr, { w: 28, h: 2, fill: i < idx ? t.accent : t.border }); });
     const body = b.col(c, { w: 760, h: "fill", align: "center", gap: 18 });
     const foot = b.row(c, { w: 760, justify: "spaceBetween" });
     const head = (s: string, sub: string) => { b.text(body, s, { size: 30, weight: "Bold", c: t.text, ta: "center", w: "fill" }); b.text(body, sub, { size: 15, c: t.text2, ta: "center", w: "fill" }); };
@@ -57,7 +57,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       b.text(body, "Read anything out loud.", { size: 40, weight: "Bold", c: t.text, ta: "center", w: "fill" });
       b.text(body, "On your own computer. No account, no cloud, no limits.", { size: 18, c: t.text2, ta: "center", w: "fill" });
       const r = b.row(body, { gap: 16, pad: [10, 0], align: "start" });
-      [["lock", "Private", "Text never leaves this device"], ["zap", "Fast", "Starts speaking in about a second"], ["globe", "Everywhere", "Web pages, PDFs, any text"]].forEach(([ic, a, d]) => { const x = K.card(b, t, r, { w: 242, h: 150, pad: 18, gap: 6 }); const i = b.frame(x, { w: 36, h: 36, r: 10, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(i, ic, 18, t.accent); b.text(x, a, { size: 15, weight: "Bold", c: t.text }); b.text(x, d, { size: 13, c: t.text2, w: "fill", lh: 18 }); });
+      [["lock", "Private", "Text never leaves this device"], ["zap", "Fast", "Starts speaking in about a second"], ["globe", "Everywhere", "Web pages, PDFs, any text"]].forEach(([ic, a, d]) => { const x = K.card(b, t, r, { w: 242, h: 150, pad: 18, gap: 6 }); const i = b.frame(x, { w: 36, h: 36, r: 10, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(i, ic, 18, t.iconQuiet); b.text(x, a, { size: 15, weight: "Bold", c: t.text }); b.text(x, d, { size: 13, c: t.text2, w: "fill", lh: 18 }); });
       b.text(foot, "Setup takes about 3 minutes", { size: 13, c: t.text3 }); next("Get started");
     } else if (st === "engine" || st === "engine-nogpu") {
       const gpu = st === "engine";
@@ -116,7 +116,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
     } else if (st === "pair") {
       head("Connect your browser", "Two quick steps so Chrome, Edge or Brave can use the voice engine on this computer.");
       const cd = K.card(b, t, body, { w: "fill", pad: 20, gap: 14 });
-      const num = (r: Ref, n: string) => { const nb = b.frame(r, { w: 30, h: 30, r: 15, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.text(nb, n, { size: 14, weight: "Bold", c: t.accent }); };
+      const num = (r: Ref, n: string) => { const nb = b.frame(r, { w: 30, h: 30, r: 15, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.text(nb, n, { size: 14, weight: "Bold", c: t.iconQuiet }); };
       const r1 = b.row(cd, { w: "fill", gap: 14, align: "start" }); num(r1, "1");
       const x1 = b.col(r1, { gap: 8, w: "fill" }); b.text(x1, "Install the extension", { size: 15, weight: "SemiBold", c: t.text }); b.text(x1, "Add Speak Kit from the Chrome Web Store. It also installs in Edge and Brave.", { size: 13, c: t.text2, w: "fill", lh: 19 });
       const pin = b.row(x1, { gap: 8 }); const e1 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e1, "puzzle", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e2 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); b.icon(e2, "pin", 15, t.text2); b.icon(pin, "arrowRight", 14, t.text3); const e3 = b.frame(pin, { w: 28, h: 28, r: 8, fill: t.surface2, layout: "horizontal", align: "center", justify: "center" }); K.logo(b, t, e3, 20); b.text(pin, "Open the puzzle menu, pin Speak Kit to the toolbar", { size: 12.5, c: t.text2 });
@@ -138,7 +138,7 @@ const onboard = (id: string, title: string, note: string, st: OB, dark = false):
       const x = b.col(r, { gap: 2, w: "fill" }); b.text(x, paired ? "Browser extension connected" : "Browser extension not connected", { size: 15, weight: "SemiBold", c: t.text }); b.text(x, paired ? "Paired today at 12:04 · Speak Kit 0.4.2" : "You can connect it later in Settings > Browser integration.", { size: 12.5, c: t.text2 });
       if (!paired) K.btn(b, t, r, "Connect now", { v: "secondary", sz: "sm" });
       K.divider(b, t, cd); b.text(cd, "“Notes, documents and even voices lived on someone else's server, rented back to us by the month.”", { size: 16, c: t.text, w: "fill", lh: 25 });
-      const p = b.row(cd, { w: "fill", gap: 14 }); const pb = b.frame(p, { w: 44, h: 44, r: 22, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(pb, "play", 18, t.accentText); const pc = b.col(p, { gap: 1 }); b.text(pc, "Play sample", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(pc, "0:08", { size: 12, c: t.text2, mono: true }); K.waveform(b, t, p, 330, 28, 0.3); b.frame(p, { w: "fill", h: 1 }); K.select(b, t, p, "Heart", 120);
+      const p = b.row(cd, { w: "fill", gap: 14 }); const pb = b.frame(p, { w: 44, h: 44, r: 22, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, "play", 18, t.ctaText); const pc = b.col(p, { gap: 1 }); b.text(pc, "Play sample", { size: 13.5, weight: "SemiBold", c: t.text }); b.text(pc, "0:08", { size: 12, c: t.text2, mono: true }); K.waveform(b, t, p, 330, 28, 0.3); b.frame(p, { w: "fill", h: 1 }); K.select(b, t, p, "Heart", 120);
       const hd = K.card(b, t, body, { w: "fill", pad: 18, gap: 12 }); b.text(hd, "Handy to know", { size: 14, weight: "Bold", c: t.text });
       const hr = (fn: (l: Ref) => void, txt: string, fn2?: (r: Ref) => void) => { const q = b.row(hd, { w: "fill", gap: 12 }); const l = b.row(q, { w: 130, gap: 8 }); fn(l); b.text(q, txt, { size: 13, c: t.text2, w: "fill" }); fn2?.(q); };
       hr((l) => K.kbd(b, t, l, ["Ctrl", "Alt", "S"]), "Reads the text you selected, in any app.");
@@ -156,7 +156,6 @@ export const D: S[] = [
   onboard("D5", "Download paused", "Resumable. Retry, choose a file you downloaded yourself, auto-retry and proxy options.", "dlfail"),
   onboard("D6", "Connect your browser", "Install, pin, then paste the pairing token. Continue stays disabled until the extension pairs.", "pair"),
   onboard("D7", "Ready: hear a sample", "Pairing confirmed. Press play to hear the voice; tips for the shortcut, tray and startup.", "pairok"),
-  onboard("D8", "Welcome (dark)", "Dark theme variant.", "welcome", true),
   onboard("D9", "Ready: extension skipped", "Setup finished without pairing; the extension can be connected later in Settings > Browser integration.", "pairskip"),
 ];
 
@@ -190,8 +189,8 @@ const listRow = (b: B, t: T, list: Ref, it: It, i: number, q?: string, active = 
   b.text(r, it.d, { size: 12.5, c: t.text2, mono: true, w: 64, ta: "right" }); b.text(r, it.when, { size: 12.5, c: t.text2, w: 64, ta: "right" });
   kebab(b, t, r, active);
 };
-const library = (id: string, title: string, note: string, st: LB, dark = false): S => ({
-  id, group: "E", title, note, w: W, h: H, dark,
+const library = (id: string, title: string, note: string, st: LB): S => ({
+  id, group: "E", title, note, w: W, h: H,
   build: (b, t, root) => {
     const { win, main } = K.desktopWindow(b, t, root, { nav: "library", status: STATUS });
     const searching = st === "search" || st === "nosearch";
@@ -203,7 +202,7 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
     if (st === "empty") {
       const c = b.col(main, { w: "fill", h: "fill", pad: [16, 32, 32, 32], gap: 20 });
       const dz = b.col(c, { w: "fill", h: 340, r: 20, stroke: t.border, sw: 2, dashes: [8, 6], align: "center", justify: "center", gap: 12, fill: t.surface } as any);
-      const ic = b.frame(dz, { w: 60, h: 60, r: 30, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "upload", 26, t.accent);
+      const ic = b.frame(dz, { w: 60, h: 60, r: 30, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "upload", 26, t.iconQuiet);
       b.text(dz, "Drop a PDF, document or text file here", { size: 20, weight: "Bold", c: t.text }); b.text(dz, "PDF, EPUB, DOCX, TXT, Markdown, HTML.", { size: 14, c: t.text2 });
       const r = b.row(dz, { gap: 10, pad: [4, 0, 0, 0] }); K.btn(b, t, r, "Choose file", { v: "primary", sz: "lg", icon: "folder" }); K.btn(b, t, r, "Paste text", { v: "ghost", sz: "lg", icon: "clipboard" }); K.btn(b, t, r, "From web address", { v: "ghost", sz: "lg", icon: "link" });
       const tips = b.row(c, { w: "fill", gap: 16 });
@@ -211,8 +210,8 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
     } else {
       const c = b.col(main, { w: "fill", h: "fill", pad: [8, 32, 24, 32], gap: 18 });
       if (!searching) {
-        const hero = b.row(c, { w: "fill", pad: 20, gap: 20, r: 16, fill: t.accentSoft });
-        const cv = b.frame(hero, { w: 84, h: 84, r: 14, fill: t.accent, layout: "horizontal", align: "center", justify: "center" }); b.icon(cv, "headphones", 38, t.accentText);
+        const hero = b.row(c, { w: "fill", pad: 20, gap: 20, r: 16, fill: t.well });
+        const cv = b.frame(hero, { w: 84, h: 84, r: 14, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(cv, "headphones", 38, t.iconQuiet);
         const x = b.col(hero, { gap: 4, w: "fill" }); b.text(x, "CONTINUE LISTENING", { size: 12, weight: "SemiBold", c: t.accent, ls: 1 }); b.text(x, ITEMS[0].n, { size: 20, weight: "Bold", c: t.text }); b.text(x, "reader.example.com · 2:27 of 6:48 · Heart", { size: 13, c: t.text2 }); K.bar(b, t, x, 0.36, 520, { knob: false });
         K.btn(b, t, hero, "Resume", { v: "primary", sz: "lg", icon: "play" });
       }
@@ -262,7 +261,7 @@ const library = (id: string, title: string, note: string, st: LB, dark = false):
       const bad = st === "drag-bad"; const col = bad ? t.err : t.accent;
       b.rect(win, { abs: true, x: 232, y: 41, w: 1048, h: 759, fill: t.bg + "E6" });
       const z = b.col(win, { abs: true, x: 248, y: 57, w: 1016, h: 727, r: 20, stroke: col, sw: 2, dashes: [10, 8], fill: (bad ? t.errSoft : t.accentSoft) + "F2", align: "center", justify: "center", gap: 14 } as any);
-      const ic = b.frame(z, { w: 76, h: 76, r: 38, fill: col, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, bad ? "x" : "download", 34, bad ? "#FFFFFF" : t.accentText);
+      const ic = b.frame(z, { w: 76, h: 76, r: 38, fill: col, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, bad ? "x" : "download", 34, bad ? "#FFFFFF" : t.ctaText);
       b.text(z, bad ? "This file type isn't supported" : st === "drag" ? "Drop to add to your library" : "Drop 3 files to add them", { size: 26, weight: "Bold", c: t.text });
       if (st === "drag") b.text(z, "Attention Is All You Need.pdf · PDF · 15 pages", { size: 14, c: t.text2 });
       else if (bad) { b.text(z, "setup.exe (.exe) can't be read aloud.", { size: 14, c: t.text2 }); b.text(z, "Speak Kit reads PDF, EPUB, DOCX, TXT, Markdown and HTML.", { size: 14, c: t.text2 }); }
@@ -292,7 +291,6 @@ export const E: S[] = [
   library("E8", "Library · no search results", "Clear search is the primary action; Add text is secondary.", "nosearch"),
   library("E9", "Library · row menu", "Anchored to the row's trigger: play, rename, export, pin, voice, finished, folder, delete.", "menu"),
   library("E10", "Library · delete confirmation", "Imported file: the original is untouched. Cancel has default focus.", "delete"),
-  library("E11", "Library · with readings (dark)", "Dark theme variant.", "items", true),
   library("E12", "Library · deleted toast", "After deleting, a toast offers Undo.", "deleted"),
   library("E13", "Library · added toast", "Success toast after adding; the new reading is at the top.", "added"),
   library("E14", "Library · dragging several files", "Drop target lists each accepted file.", "drag-multi"),
@@ -315,11 +313,11 @@ const pdfPage = (b: B, t: T, p: Ref, hl: boolean) => {
   let y = 164; wd.forEach((w, i) => { if (!w) { y += 14; return; } if (hl && i >= 3 && i <= 6) b.rect(pg, { x: 66, y: y - 3, w: w + 8, h: 15, r: 3, fill: "#FFF1C2" }); b.rect(pg, { x: 70, y, w, h: 8, r: 2, fill: "#CFC9BF" }); if (hl && i === 4) b.rect(pg, { x: 150, y: y - 3, w: 70, h: 15, r: 3, fill: "#FFD24D" }); y += 21; });
   return pg;
 };
-const reader = (id: string, title: string, note: string, st: RS, dark = false): S => ({
-  id, group: "F", title, note, w: W, h: H, dark,
+const reader = (id: string, title: string, note: string, st: RS): S => ({
+  id, group: "F", title, note, w: W, h: H,
   build: (b, t, root) => {
     const { win, main } = K.desktopWindow(b, t, root, { nav: "none" });
-    const t2: T = dark ? { ...t, hlSent: "#5A4A14" } : t;
+    const t2: T = t;
     const pdf = st === "pdf" || st === "pdf-scan" || st === "ocr"; const scan = st === "pdf-scan" || st === "ocr";
     const page = st === "pdf" ? 1 : st === "ocr" ? 4 : 9;
     // header: breadcrumb and badge only (the title is in the page itself)
@@ -349,7 +347,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
           b.text(ov, "Page 9 is a scanned image", { size: 17, weight: "Bold", c: t.text }); b.text(ov, "There's no text layer to read. Recognize the text (OCR) on this computer to listen to it. Nothing is uploaded.", { size: 13, c: t.text2, w: "fill", lh: 19 });
           K.btn(b, t, ov, "Recognize text on this page", { v: "primary", w: "fill", icon: "scan" }); K.btn(b, t, ov, "Recognize whole document (15 pages)", { v: "secondary", w: "fill" });
         } else {
-          const ic = b.frame(ov, { w: 44, h: 44, r: 22, fill: t.accentSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "loader", 22, t.accent);
+          const ic = b.frame(ov, { w: 44, h: 44, r: 22, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "loader", 22, t.iconQuiet);
           b.text(ov, "Recognizing text, page 4 of 15", { size: 17, weight: "Bold", c: t.text }); K.bar(b, t, ov, 4 / 15, 372, { knob: false });
           const pr = b.row(ov, { w: "fill", justify: "spaceBetween" }); b.text(pr, "27%", { size: 13, weight: "SemiBold", c: t.text }); b.text(pr, "About 2 min left", { size: 13, c: t.text2 });
           b.text(ov, "Runs on this PC; nothing is uploaded. You can keep reading other pages that already have text.", { size: 13, c: t.text2, w: "fill", lh: 19 }); K.btn(b, t, ov, "Cancel", { v: "secondary", w: "fill" });
@@ -360,7 +358,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
       const col = b.col(mid, { w: "fill", h: "fill", align: "center", pad: [36, 0], clip: true });
       const a = b.col(col, { w: 700, gap: 18 });
       const hlq = st === "find" ? "software" : undefined; const cur = (i: number) => i === 0;
-      const mk = (c0: boolean) => ({ fill: c0 ? t.accent : t.hlWord + "99", c: c0 ? t.accentText : t.text });
+      const mk = (c0: boolean) => ({ fill: c0 ? t.accent : t.hlWord + "99", c: c0 ? t.ctaText : t.text });
       if (away) { MORE.forEach((s) => b.text(a, s, { size: 19, lh: 32, c: t.text, w: 700 })); ["The next decade of software may be defined less by what it adds than by what it no longer asks of us: an account, a connection, a subscription.", "Whether that vision wins will not be decided by benchmarks. It will be decided by small, ordinary moments: the tool that opens instantly on a train, the document that is still there next year, the voice that never asks you to sign in.", "That is the quiet part. Nobody announces it. One day a person notices that nothing they rely on needs permission from a server, and wonders why it was ever different."].forEach((s) => b.text(a, s, { size: 19, lh: 32, c: t.text, w: 700 })); }
       else {
         if (hlq) markPara(b, t, a, ARTICLE_TITLE, 700, (w) => (w.toLowerCase().startsWith(hlq) ? mk(true) : undefined), { size: 34, lh: 40, weight: "Bold" }); else b.text(a, ARTICLE_TITLE, { size: 34, weight: "Bold", lh: 40, c: t.text, w: "fill" });
@@ -381,7 +379,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
     if (st === "panel") {
       const p = b.col(mid, { w: 340, h: "fill", pad: 20, gap: 16, fill: t.surface, stroke: t.border, sw: 1 });
       b.text(p, "Voice", { size: 15, weight: "Bold", c: t.text });
-      const cv = b.row(p, { w: "fill", pad: 12, gap: 12, r: 12, fill: t.accentSoft }); K.avatar(b, t, cv, "H", 40, 0); const cc = b.col(cv, { gap: 2, w: "fill" }); b.text(cc, "Heart", { size: 14, weight: "Bold", c: t.text }); b.text(cc, "US English · Kokoro", { size: 12.5, c: t.text2 }); K.btn(b, t, cv, "Change", { v: "secondary", sz: "sm" });
+      const cv = b.row(p, { w: "fill", pad: 12, gap: 12, r: 12, fill: t.well }); K.avatar(b, t, cv, "H", 40, 0); const cc = b.col(cv, { gap: 2, w: "fill" }); b.text(cc, "Heart", { size: 14, weight: "Bold", c: t.text }); b.text(cc, "US English · Kokoro", { size: 12.5, c: t.text2 }); K.btn(b, t, cv, "Change", { v: "secondary", sz: "sm" });
       b.text(p, "RECENT VOICES", { size: 12, weight: "SemiBold", c: t.text3, ls: 1 });
       [["Heart", "US English · Female", true], ["Michael", "US English · Male", false], ["Emma", "British English · Female", false]].forEach(([n, m, on], i) => { const q = b.row(p, { w: "fill", pad: [6, 8], gap: 10, r: 8, fill: on ? t.surface2 : "none" }); K.avatar(b, t, q, n as string, 30, [0, 3, 5][i]); const qc = b.col(q, { gap: 0, w: "fill" }); b.text(qc, n as string, { size: 13.5, weight: "Medium", c: t.text }); b.text(qc, m as string, { size: 12, c: t.text2 }); if (on) b.icon(q, "check", 16, t.accent); else K.iconBtn(b, t, q, "play", { size: 28, c: t.text2 }); });
       K.divider(b, t, p); b.text(p, "Speed", { size: 14, weight: "Bold", c: t.text }); K.slider(b, t, p, 0.28, 220, { label: "1.2x", min: "0.5x", max: "3x" });
@@ -393,7 +391,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
 
     const BAR = 716;
     if (st === "buffering") { const w = centered(b, win, 0, BAR - 60, W); K.toast(b, t, w, "Preparing next paragraph…", "neutral", { icon: "loader" }); }
-    if (st === "away") { const w = centered(b, win, 0, BAR - 56, W, 40); const pl = b.row(w, { h: 40, pad: [0, 16], gap: 8, r: 20, fill: t.accent, shadow: "lg" }); b.icon(pl, "up", 16, t.accentText); b.text(pl, "Back to current", { size: 13.5, weight: "SemiBold", c: t.accentText }); }
+    if (st === "away") { const w = centered(b, win, 0, BAR - 56, W, 40); const pl = b.row(w, { h: 40, pad: [0, 16], gap: 8, r: 20, fill: t.raised, shadow: "lg" }); b.icon(pl, "up", 16, t.text); b.text(pl, "Back to current", { size: 13.5, weight: "Medium", c: t.text }); }
     if (st === "done") {
       dim(b, t, win); const c = K.card(b, t, win, { abs: true, x: 380, y: 230, w: 520, pad: 28, gap: 12, align: "center", shadow: "dlg" } as any);
       const ic = b.frame(c, { w: 56, h: 56, r: 28, fill: t.okSoft, layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, "check", 26, t.ok);
@@ -404,8 +402,8 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
     if (st === "from-here") {
       // anchored above the clicked word (accent-tinted) in paragraph two; caret points at it
       const x = 393, y = 392;
-      const bb = b.row(win, { abs: true, x, y, h: 38, pad: [0, 8], gap: 6, r: 19, fill: "#1E1F20", shadow: "lg" } as any); const pl = b.row(bb, { h: 28, pad: [0, 10], gap: 6, r: 14, fill: t.accent }); b.icon(pl, "play", 12, t.accentText); b.text(pl, "Read from here", { size: 12.5, weight: "SemiBold", c: t.accentText }); const cp = b.row(bb, { h: 28, pad: [0, 8], gap: 5, r: 14, fill: "#FFFFFF1F" }); b.icon(cp, "copy", 14, "#FFFFFF"); b.text(cp, "Copy", { size: 12.5, weight: "Medium", c: "#FFFFFF" });
-      b.add("node.create", { type: "vector", path: "M0 0H14L7 7Z", width: 14, height: 7, x: x + 40, y: y + 38, absolute: true, parent: win, props: { fill: "#1E1F20", stroke: "none" } });
+      const bb = b.row(win, { abs: true, x, y, h: 38, pad: [0, 8], gap: 6, r: 19, fill: t.raised, shadow: "lg" } as any); const pl = b.row(bb, { h: 28, pad: [0, 10], gap: 6, r: 14, fill: t.cta }); b.icon(pl, "play", 12, t.ctaText); b.text(pl, "Read from here", { size: 12.5, weight: "SemiBold", c: t.ctaText }); const cp = b.row(bb, { h: 28, pad: [0, 8], gap: 5, r: 14, fill: t.chipGray }); b.icon(cp, "copy", 14, t.text); b.text(cp, "Copy", { size: 12.5, weight: "Medium", c: t.text });
+      b.add("node.create", { type: "vector", path: "M0 0H14L7 7Z", width: 14, height: 7, x: x + 40, y: y + 38, absolute: true, parent: win, props: { fill: "#FFFFFF", stroke: "none" } });
     }
     if (st === "sleep") {
       const h = 300; const p = popBox(b, t, win, 996, 728 - h, 260, { h, gap: 6 }); caret(b, t, win, 1127, 728, "down");
@@ -422,7 +420,7 @@ const reader = (id: string, title: string, note: string, st: RS, dark = false): 
     }
     if (st === "display") {
       const h = 396; const c = popBox(b, t, win, 920, 93, 340, { h, pad: 18, gap: 14 }); caret(b, t, win, 1196, 86, "up");
-      b.text(c, "Display", { size: 14, weight: "Bold", c: t.text }); K.seg(b, t, c, ["Light", "Sepia", "Dark"], 0);
+      b.text(c, "Display", { size: 14, weight: "Bold", c: t.text }); K.seg(b, t, c, ["White", "Paper", "Sepia"], 1);
       const f = b.col(c, { w: "fill", gap: 6 }); b.text(f, "Text size", { size: 13, c: t.text2 }); K.slider(b, t, f, 0.5, 200, { label: "18 px", min: "14", max: "28" });
       const g = b.col(c, { w: "fill", gap: 6 }); b.text(g, "Line spacing", { size: 13, c: t.text2 }); K.slider(b, t, g, 0.6, 200, { label: "1.6", min: "1.2", max: "2.0" });
       const fnt = b.row(c, { w: "fill", justify: "spaceBetween" }); b.text(fnt, "Font", { size: 13, c: t.text2 }); K.select(b, t, fnt, "Inter", 170);
@@ -449,7 +447,6 @@ export const F: S[] = [
   reader("F9", "Reader · speed and voice", "Popover from the speed pill: slider with value, presets, voice and engine.", "voice"),
   reader("F10", "PDF reader · playing", "Player bar shows the PDF's own title, page and duration.", "pdf"),
   reader("F11", "PDF reader · scanned page", "Page 9 has no text layer: offer local OCR; the player is disabled until it finishes.", "pdf-scan"),
-  reader("F12", "Reader · playing (dark)", "Dark theme variant.", "playing", true),
   reader("F13", "PDF reader · recognizing text", "Local OCR progress: page 4 of 15, time left, cancel.", "ocr"),
   reader("F14", "Reader · voice panel", "Docked right panel: current voice, recent voices, speed slider, advanced.", "panel"),
   reader("F15", "Reader · back to current", "After scrolling away from the spoken sentence, a pill jumps back.", "away"),

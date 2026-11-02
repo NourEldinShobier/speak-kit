@@ -22,7 +22,7 @@ export const homeContent = (b: B, t: T, main: Ref, colW = 880, narrow = false) =
   b.text(cp, "Paste text, drop a file or type a web address to read it aloud", { size: 14, c: t.text3, w: "fill" });
   const cr = b.row(cp, { w: "fill", justify: "spaceBetween" });
   K.seg(b, t, cr, ["Paste", "Web address", "File"], 0);
-  const rr = b.row(cr, { gap: 10 }); K.select(b, t, rr, "Heart · US English", 160); K.iconBtn(b, t, rr, "mic", { size: 32 }); K.iconBtn(b, t, rr, "play", { size: 36, bg: t.accent, c: "#FFFFFF" });
+  const rr = b.row(cr, { gap: 10 }); K.select(b, t, rr, "Heart · US English", 160); K.iconBtn(b, t, rr, "mic", { size: 32 }); K.iconBtn(b, t, rr, "play", { size: 36, bg: t.cta, c: t.ctaText });
   const wr = b.row(col, { w: "fill", gap: 12 });
   widget(b, t, wr, "READING NOW", "The quiet return of local-first software", "Paragraph 2 of 14 · 9 min left", "ok", 0.14);
   if (!narrow) widget(b, t, wr, "NEXT IN QUEUE", "How small speech models got good", "blog.example.org · 6 min", "info");
@@ -140,7 +140,7 @@ export const N1: S[] = [
   scr("W5", "W", "Setup 5 · Done", "Ends on the feature, not a summary: hear a sample now; background behavior is two toggles.", (b, t, root) => {
     X.setupWindow(b, t, root, 4, { h1: "You're ready to listen", sub: "Try the voice now, or open any page in Chrome and press the pill.", next: "Finish", body: (c) => {
       const s = b.row(c, { w: "fill", pad: 18, gap: 16, r: 12, fill: t.surface, stroke: t.border, sw: 1, sa: "inside", align: "center" });
-      K.iconBtn(b, t, s, "play", { size: 40, bg: t.accent, c: "#FFFFFF" });
+      K.iconBtn(b, t, s, "play", { size: 40, bg: t.cta, c: t.ctaText });
       const x = b.col(s, { gap: 4, w: "fill" }); b.text(x, "Hear a sample", { size: 13, weight: "Medium", c: t.text }); b.text(x, "“Small models now run on an ordinary laptop, and nobody asks where the audio came from.”", { size: 12, c: t.text2, w: "fill", lh: 17 });
       K.select(b, t, s, "Heart", 110);
       X.group(b, t, c, "BACKGROUND", [
