@@ -24,6 +24,10 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # dorny/paths-filter lists a pull request's files through the API, which needs this scope.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       full: ${{ steps.plan.outputs.full }}
       unit: ${{ steps.plan.outputs.unit }}
