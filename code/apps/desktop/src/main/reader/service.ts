@@ -53,7 +53,7 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
   };
 
   const controller: ReaderController = new ReaderController({
-    synth: (text, voice, speed, signal): Promise<PreviewAudio> => ctx.server.speak(text, voice, speed, signal),
+    synth: (req, signal): Promise<PreviewAudio> => ctx.server.speak(req, signal),
     voice: () => ctx.config.voice,
     speed: () => ctx.config.speed,
     emit: onState,

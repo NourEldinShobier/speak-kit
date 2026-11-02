@@ -10,13 +10,13 @@ import { mp3InWorker } from "./mp3-runner";
 type ExportHandlers = Pick<Api, "exportCheck" | "exportStart" | "exportCancel" | "exportReveal" | "pickFolder">;
 
 /** Exports for the app: the job runner wired to the server, the state stream, toasts and the folder picker. */
-export function createExports(ctx: Ctx, toasts: ToastCenter, parent: () => BrowserWindow | null, workerFile: URL, onChange: () => void) {
+export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => BrowserWindow | null; workerFile: URL; onChange: () => void }) {
   const jobs = new ExportJobs({
     server: ctx.server,
-    mp3: mp3InWorker(workerFile),
+    mp3: mp3InWorker(o.workerFile),
     onChange: (views) => {
       ctx.state.exports = views.map((v) => ({ ...v }));
-      onChange();
+      o.onChange();
       ctx.publish();
     },
     onDone: (v) => {
@@ -48,7 +48,7 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, parent: () => Brows
       else shell.showItemInFolder(path);
     },
     pickFolder: async (current) => {
-      const w = parent();
+      const w = o.parent();
       const opts = { defaultPath: current || ctx.state.exportDir, properties: ["openDirectory", "createDirectory"] as ("openDirectory" | "createDirectory")[] };
       const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
       return r.canceled ? null : (r.filePaths[0] ?? null);

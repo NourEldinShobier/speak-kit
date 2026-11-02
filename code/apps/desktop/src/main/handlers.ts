@@ -112,7 +112,7 @@ export function createAppHandlers(d: HandlerDeps) {
       return d.publish();
     },
     voices: () => d.api.voices(),
-    preview: (voice, text, speed = 1) => d.api.speak(text, voice, speed),
+    preview: (voice, text, speed = 1) => d.api.speak({ text, voice, speed }),
     copy: async (text) => clipboard.writeText(text),
     openExternal: async (link) => {
       const urls = { webstore: "https://chromewebstore.google.com/search/SpeakKit" };

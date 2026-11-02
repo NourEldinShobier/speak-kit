@@ -39,7 +39,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
 
   // ---- reading, exports, updates ----
   const reading = createReading(ctx, toasts, () => tray.refresh());
-  const exports = createExports(ctx, toasts, o.parent, new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), () => tray.refresh());
+  const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
   // Restart now: what is running stops first; quitAndInstall then quits the app itself.
   const stopWork = () => {

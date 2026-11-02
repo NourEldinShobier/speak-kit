@@ -83,7 +83,7 @@ function jobs(server: ExportServer, mp3?: (kbps: number) => void) {
   const j = new ExportJobs({
     server,
     pollMs: 1,
-    mp3: async (wav, kbps, onProgress) => {
+    mp3: async ({ wav, kbps, onProgress }) => {
       mp3?.(kbps);
       onProgress(1);
       return new Uint8Array([0xff, 0xfb, wav.samples.length & 0xff]);

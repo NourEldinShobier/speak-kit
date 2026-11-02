@@ -11,7 +11,7 @@ function setup(opts: { failOn?: string; textMs?: number } = {}) {
   const states: ReaderState[] = [];
   const synthed: string[] = [];
   const c = new ReaderController({
-    synth: async (text, _voice, _speed, signal) => {
+    synth: async ({ text }, signal) => {
       synthed.push(text);
       await tick();
       if (signal.aborted) throw new Error("aborted");

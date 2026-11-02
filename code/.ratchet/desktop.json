@@ -1,8 +1,8 @@
 {
   "lint": {
     "code": {
-      "max-params": 11,
-      "complexity": 7,
+      "complexity": 6,
+      "max-params": 5,
       "max-lines-per-function": 8,
       "no-nested-ternary": 2
     },

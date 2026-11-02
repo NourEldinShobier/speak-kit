@@ -6,7 +6,7 @@ const AHEAD = 3;
 
 interface ReaderDeps {
   /** One sentence to PCM through the local server. Must reject when the signal aborts. */
-  synth(text: string, voice: string, speed: number, signal: AbortSignal): Promise<PreviewAudio>;
+  synth(req: { text: string; voice: string; speed: number }, signal: AbortSignal): Promise<PreviewAudio>;
   voice(): string;
   speed(): number;
   /** State changed; every view (mini player, tray panel, main window) renders from it. */
@@ -207,7 +207,7 @@ export class ReaderController {
     try {
       while (epoch === this.#epoch && this.#cursor < this.#sentences.length && this.#cursor - Math.max(this.#playing, 0) <= AHEAD) {
         const i = this.#cursor;
-        const audio = await this.#d.synth(this.#sentences[i]!, this.#voice, this.#speed, signal);
+        const audio = await this.#d.synth({ text: this.#sentences[i]!, voice: this.#voice, speed: this.#speed }, signal);
         if (epoch !== this.#epoch) return;
         this.#dur[i] = (audio.chunks.reduce((n, c) => n + c.length, 0) / audio.sampleRate) * 1000;
         this.#d.player.chunk(epoch, i, audio);

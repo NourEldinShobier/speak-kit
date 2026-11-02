@@ -37,7 +37,7 @@ export class ServerApi {
     this.#token = token;
   }
 
-  async #call(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
+  async #call(method: string, path: string, { body, signal }: { body?: unknown; signal?: AbortSignal } = {}): Promise<Response> {
     const res = await fetch(`${this.#base()}${path}`, {
       method,
       headers: { Authorization: `Bearer ${this.#token()}`, [APP_CLIENT_HEADER]: "1", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
@@ -54,8 +54,8 @@ export class ServerApi {
   }
 
   /** Synthesizes text through POST /v1/speak and collects the whole answer (a sentence or a short preview). */
-  async speak(text: string, voice: string, speed: number, signal?: AbortSignal): Promise<PreviewAudio> {
-    const res = await this.#call("POST", "/v1/speak", { sentences: [text], voice, speed }, signal);
+  async speak({ text, voice, speed }: { text: string; voice: string; speed: number }, signal?: AbortSignal): Promise<PreviewAudio> {
+    const res = await this.#call("POST", "/v1/speak", { body: { sentences: [text], voice, speed }, signal });
     if (!res.body) throw new Error("The server sent no audio.");
     const dec = new FrameDecoder();
     const out: PreviewAudio = { sampleRate: 24000, chunks: [] };
@@ -79,17 +79,17 @@ export class ServerApi {
     await this.#call("POST", "/v1/engine/warm");
   }
 
-  health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", undefined, signal));
+  health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", { signal }));
   voices = (): Promise<VoiceList> => this.#json(voiceListSchema, this.#call("GET", "/v1/voices"));
   engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
-  selectEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", "/v1/engines/select", { id }));
+  selectEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", "/v1/engines/select", { body: { id } }));
   installEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", `/v1/engines/${id}/install`));
   removeEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("DELETE", `/v1/engines/${id}`));
 
-  startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", req));
+  startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));
   exportStatus = (id: string): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("GET", `/v1/export/${id}`));
   async exportAudio(id: string, signal?: AbortSignal): Promise<Uint8Array> {
-    return new Uint8Array(await (await this.#call("GET", `/v1/export/${id}/audio`, undefined, signal)).arrayBuffer());
+    return new Uint8Array(await (await this.#call("GET", `/v1/export/${id}/audio`, { signal })).arrayBuffer());
   }
   async cancelExport(id: string): Promise<void> {
     await this.#call("DELETE", `/v1/export/${id}`);

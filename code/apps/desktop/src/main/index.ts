@@ -189,15 +189,14 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     };
     powerMonitor.on("on-battery", () => onPower(true));
     powerMonitor.on("on-ac", () => onPower(false));
-    watchPairing(
-      state.pairing,
-      () => state.token,
-      () => state.port,
-      () => {
+    watchPairing(state.pairing, {
+      token: () => state.token,
+      port: () => state.port,
+      onChange: () => {
         if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
         publish();
       },
-    );
+    });
     const appHandlers = createAppHandlers({
       state,
       config,

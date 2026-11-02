@@ -55,7 +55,7 @@ function setup() {
   const notify = vi.fn();
   const changed = vi.fn();
   const parent = vi.fn(() => null);
-  const ex = createExports(ctx, { notify } as unknown as ToastCenter, parent, new URL("file:///x/mp3-worker.js"), changed);
+  const ex = createExports(ctx, { notify } as unknown as ToastCenter, { parent, workerFile: new URL("file:///x/mp3-worker.js"), onChange: changed });
   return { ctx, ex, notify, changed, parent };
 }
 const until = async (f: () => boolean) => {

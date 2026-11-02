@@ -21,9 +21,10 @@ export function emptyPairing(): Pairing {
 }
 
 /** Records authenticated calls in `p`; calls `onChange` when the first call arrives or the last-seen time moves by 5 s or more. */
-export function watchPairing(p: Pairing, getToken: () => string, getPort: () => number, onChange: () => void, now: () => number = Date.now): () => void {
+export function watchPairing(p: Pairing, o: { token: () => string; port: () => number; onChange: () => void; now?: () => number }): () => void {
+  const now = o.now ?? Date.now;
   const fn = (m: unknown) => {
-    const hit = authedCall((m as { request: IncomingMessage }).request, getToken(), getPort());
+    const hit = authedCall((m as { request: IncomingMessage }).request, o.token(), o.port());
     if (!hit) return;
     const t = now();
     const first = p.firstSeenMs === null;
@@ -32,7 +33,7 @@ export function watchPairing(p: Pairing, getToken: () => string, getPort: () => 
     if (first || stale) {
       p.lastSeenMs = t;
       if (hit.origin) p.origin = hit.origin;
-      onChange();
+      o.onChange();
     }
   };
   dc.subscribe("http.server.request.start", fn);

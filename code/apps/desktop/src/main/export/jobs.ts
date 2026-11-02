@@ -16,7 +16,7 @@ export interface ExportServer {
 export interface ExportDeps {
   server: ExportServer;
   /** Encodes off the main thread. Rejects with an AbortError when the signal aborts. */
-  mp3(wav: Wav, kbps: number, onProgress: (f: number) => void, signal: AbortSignal): Promise<Uint8Array>;
+  mp3(o: { wav: Wav; kbps: number; onProgress: (f: number) => void; signal: AbortSignal }): Promise<Uint8Array>;
   /** Called whenever any export changes. */
   onChange(views: ExportView[]): void;
   onDone(view: ExportView): void;
@@ -75,7 +75,7 @@ export class ExportJobs {
     this.#aborts.set(view.id, ac);
     this.#views = [view, ...this.#views].slice(0, 8);
     this.#d.onChange(this.#views);
-    void this.#run(view, ac, { sentences, voice: o.voice, speed: o.speed }, file, o.format, o.mp3Kbps);
+    void this.#run({ view, ac, req: { sentences, voice: o.voice, speed: o.speed }, file, format: o.format, kbps: o.mp3Kbps });
     return { ...view };
   }
 
@@ -93,26 +93,32 @@ export class ExportJobs {
     this.#d.onChange(this.#views);
   }
 
-  async #run(view: ExportView, ac: AbortController, req: Omit<ExportRequest, "gapMs">, file: string, format: "wav" | "mp3", kbps: number) {
+  /** Starts the render on the server and waits until it is finished; throws when it failed or was cancelled. */
+  async #render(view: ExportView, req: ExportRequest, format: "wav" | "mp3", signal: AbortSignal, onStarted: (id: string) => void): Promise<ExportJob> {
+    let job = await this.#d.server.startExport(req);
+    onStarted(job.id);
+    const poll = this.#d.pollMs ?? 250;
+    while (job.state === "running") {
+      this.#patch(view, { done: job.done, progress: (job.total ? job.done / job.total : 0) * (format === "mp3" ? 0.7 : 0.95), durationMs: job.durationMs });
+      await new Promise((r) => setTimeout(r, poll));
+      if (signal.aborted) throw new DOMException("cancelled", "AbortError");
+      job = await this.#d.server.exportStatus(job.id);
+    }
+    if (job.state === "error") throw new Error(job.error ?? "The server could not render the audio.");
+    if (job.state === "cancelled") throw new DOMException("cancelled", "AbortError");
+    return job;
+  }
+
+  async #run({ view, ac, req, file, format, kbps }: { view: ExportView; ac: AbortController; req: Omit<ExportRequest, "gapMs">; file: string; format: "wav" | "mp3"; kbps: number }) {
     const { signal } = ac;
     const part = `${file}.part`;
     let serverId: string | undefined;
     try {
-      let job = await this.#d.server.startExport({ ...req, gapMs: GAP_MS });
-      serverId = job.id;
-      const poll = this.#d.pollMs ?? 250;
-      while (job.state === "running") {
-        this.#patch(view, { done: job.done, progress: (job.total ? job.done / job.total : 0) * (format === "mp3" ? 0.7 : 0.95), durationMs: job.durationMs });
-        await new Promise((r) => setTimeout(r, poll));
-        if (signal.aborted) throw new DOMException("cancelled", "AbortError");
-        job = await this.#d.server.exportStatus(job.id);
-      }
-      if (job.state === "error") throw new Error(job.error ?? "The server could not render the audio.");
-      if (job.state === "cancelled") throw new DOMException("cancelled", "AbortError");
+      const job = await this.#render(view, { ...req, gapMs: GAP_MS }, format, signal, (id) => (serverId = id));
       let bytes = await this.#d.server.exportAudio(job.id, signal);
       if (format === "mp3") {
         this.#patch(view, { stage: "encoding", progress: 0.7, done: job.total });
-        bytes = await this.#d.mp3(parseWav(bytes), kbps, (f) => this.#patch(view, { progress: 0.7 + f * 0.28 }), signal);
+        bytes = await this.#d.mp3({ wav: parseWav(bytes), kbps, onProgress: (f) => this.#patch(view, { progress: 0.7 + f * 0.28 }), signal });
       }
       this.#patch(view, { stage: "saving", progress: 0.98 });
       await mkdir(path.dirname(file), { recursive: true });
