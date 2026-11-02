@@ -1,0 +1,1240 @@
+/*
+ * Lockix design system, light only, as plain CSS for Speak Kit. Source of truth: Lockix
+ * apps/desktop/src/renderer/styles.css and components/ui/*.tsx (read 2026-11-02). No dark values, no prefers-color-scheme.
+ * Class names are the existing Speak Kit roles (lm-*) where one exists; classes starting lx- are new roles.
+ * Variable names are the Speak Kit names of docs/lockix-design-system.md section 3 (existing names keep their name, new ones are marked "new" there).
+ * Put class "lm" on a root element. Every length is a CSS px.
+ */
+
+/* ---------- 1. tokens ---------- */
+.lm {
+  color-scheme: light;
+
+  /* surfaces */
+  --surface-window: #f0f0f0; /* Lockix background: window, rail, header */
+  --surface-editor: #ffffff; /* Lockix panel: the white centre/left panels */
+  --surface-card: #ffffff;
+  --surface-raised: #ffffff; /* secondary/outline button, popover, menu */
+  --surface-input: #ffffff;
+  --surface-tray: #f4f4f4; /* new: the grey group around a card */
+  --surface-well: #f5f5f5; /* new: note cards, code chips, tiles */
+
+  /* lines */
+  --stroke-divider: #ebebeb; /* Lockix border */
+  --stroke-hairline: #f0f0f0; /* new: lines inside a card, drawer, table */
+  --stroke-control: #e5e5e5; /* Lockix input: stroke of a labelled button, a text field, a menu */
+  --stroke-field: #c3c6cc; /* new: stroke of a checkbox, radio, off switch (no label of its own) */
+  --stroke-focus-field: #171717; /* new: text field or select with focus, 2 px */
+
+  /* fills */
+  --fill-hover: rgb(0 0 0 / 0.04);
+  --fill-pressed: rgb(0 0 0 / 0.07); /* new */
+  --fill-selected: #f0f0f0; /* selected nav row / left-panel row (Lockix accent) */
+  --fill-raised-hover: #f7f8fa; /* new: hover of a white button */
+  --fill-raised-press: #f0f0f0; /* new */
+  --track: #f0f0f0; /* new: segmented track, progress track, skeleton */
+
+  /* text */
+  --text-primary: #1b2230;
+  --text-secondary: #475467;
+  --text-tertiary: #5f6a7d;
+  --text-placeholder: #6b7280; /* new */
+  --text-label-on-white: #171717; /* new: label of a white control (outline button, selected segment) */
+  --text-on-accent: #ffffff;
+  --icon: #667085; /* new: rail, panel and toolbar icons */
+  --icon-quiet: #737373; /* new */
+
+  /* the blue: focus ring, links, selection, progress. Never a button fill. */
+  --accent-default: #0069cc;
+  --accent-subtle: rgb(0 105 204 / 0.122); /* kept from Speak Kit (selection tint), Lockix has none */
+
+  /* call to action: the black primary button, black switch, checkbox and radio when on */
+  --cta: #201e25; /* new */
+  --text-on-cta: #fafafa; /* new */
+  --destructive: #c62828; /* new */
+
+  /* status: text and icon (tag), dot, tinted tile or chip */
+  --tag-green: #17693d;
+  --tag-orange: #9a5200;
+  --tag-red: #a61b1b;
+  --tag-blue: #0b5cad;
+  --dot-green: #05c283; /* new */
+  --dot-orange: #fd9812; /* new */
+  --dot-red: #f24349; /* new */
+  --dot-blue: #2e9ff1; /* new */
+  --chip-green: #d5f3e0; /* new */
+  --chip-orange: #ffebcf; /* new */
+  --chip-red: #ffe4e5; /* new */
+  --chip-blue: #daeffe; /* new */
+  --chip-gray: #f0f0f0; /* new */
+  --neutral: #d0d5dd; /* new: avatar circle, step rings */
+  --divider-strong: #d0d0d0; /* new */
+
+  /* disabled: opaque greys, never opacity (a busy control may still dim with opacity .5) */
+  --disabled-line: #d5d7db; /* off checkbox / radio stroke */
+  --disabled-track: #ecedef; /* off switch, segmented track */
+  --disabled-fill: #b7b9bf; /* on switch, checkbox, radio */
+  --disabled-text: #a3a9b5; /* label */
+  --disabled-seg: #9aa0ab; /* segmented item text */
+  --disabled-thumb: #c9ccd2; /* off switch thumb */
+
+  --scrim: rgb(27 34 48 / 0.32);
+  --scroll-thumb: rgb(0 0 0 / 0.18);
+
+  /* elevation (light shadows are at most two layers, blur 12 px at most) */
+  --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-card-ring: 0 0 0 1px var(--stroke-divider), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-menu: var(--shadow-control); /* menus, select lists: + 1 px --stroke-control border */
+  --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
+  --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06); /* popover window, notification card, tray window, tooltip-free */
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
+  --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
+  --shadow-panel: var(--shadow-card);
+
+  /* radii: one per container level, inner = max(2, outer - inset) */
+  --radius-dialog: 16px;
+  --radius-panel: 14px; /* win32: 8 */
+  --radius-tray: 14px; /* win32: 10 */
+  --radius-menu: 10px;
+  --radius-window: 12px; /* notification card, undo toast; win32: 10 */
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-track: 8px;
+  --radius-menu-item: 8px;
+  --radius-item: 8px; /* 32 px tiles, rail items */
+  --radius-chip: 6px;
+  --radius-check: 5px;
+  --radius-xs: 4px;
+  --radius-bar: 2px;
+  --radius-pill: 9999px;
+
+  /* motion: spring step responses as linear() easings; durations are settle times */
+  --ease-spring: linear(0, 0.026, 0.092, 0.181, 0.282, 0.385, 0.484, 0.576, 0.659, 0.731, 0.792, 0.843, 0.885, 0.918, 0.943, 0.963, 0.977, 0.987, 0.994, 0.998, 1);
+  --ease-layout: linear(0, 0.024, 0.084, 0.166, 0.259, 0.354, 0.447, 0.534, 0.614, 0.685, 0.747, 0.8, 0.845, 0.882, 0.913, 0.937, 0.957, 0.972, 0.984, 0.993, 1);
+  --ease-soft: linear(0, 0.022, 0.076, 0.15, 0.235, 0.323, 0.41, 0.493, 0.57, 0.64, 0.702, 0.757, 0.805, 0.846, 0.882, 0.911, 0.936, 0.957, 0.974, 0.989, 1);
+  --dur-snap: 130ms;
+  --dur-ui: 190ms;
+  --dur-layout: 260ms;
+  --dur-morph: 330ms;
+  --dur-gentle: 460ms;
+  --dur-release: 310ms;
+  --dur-fade-in: 167ms;
+  --dur-fade-out: 83ms;
+  --dur-exit: 120ms;
+  --dur-focus: 120ms;
+
+  font-family: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.lm,
+.lm *,
+.lm *::before,
+.lm *::after {
+  box-sizing: border-box;
+}
+.lm--win32 {
+  --radius-panel: 8px;
+  --radius-tray: 10px;
+  --radius-window: 10px;
+  --radius-dialog: 10px;
+}
+
+/* ---------- 2. state motion and focus (one rule for every control) ---------- */
+/* Entering a state (hover, open, on, selected, disabled): 167 ms ease-out. Leaving: 83 ms ease-in. Focus: 120 ms. Press: 130 ms on the spring. Colour, opacity, transform only. */
+.lm :is(button, a, input, textarea, select, summary, label, [role], [tabindex]) {
+  transition-property: color, background-color, border-color, outline-color, outline-offset, box-shadow, opacity, transform, translate, scale;
+  transition-duration: var(--dur-fade-out);
+  transition-timing-function: ease-in;
+}
+.lm :is(button, a, input, textarea, select, summary, label, [role], [tabindex]):is(:hover, :disabled, [aria-expanded="true"], [aria-pressed="true"], [aria-checked="true"], [aria-selected="true"], [aria-current="page"], [data-state="on"], [data-state="checked"], [data-state="open"]) {
+  transition-duration: var(--dur-fade-in);
+  transition-timing-function: ease-out;
+}
+.lm :is(button, a, input, textarea, select, summary, label, [role]):focus-visible {
+  transition-duration: var(--dur-focus);
+  transition-timing-function: ease-out;
+}
+.lm :is(button, a, input, textarea, select, summary, label, [role]):active {
+  transition-duration: var(--dur-snap);
+  transition-timing-function: var(--ease-spring);
+}
+/* Keyboard focus only: a 1 px accent line inside the element. The line always exists (transparent) so its colour can fade. */
+.lm :is(button, a, input, textarea, select, summary, [role="button"]) {
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+.lm :is(button, a, input, textarea, select, summary, [role="button"]):focus-visible {
+  outline-color: var(--accent-default);
+}
+/* Press feedback */
+.lm .lx-press:active:not(:disabled) {
+  scale: var(--press, 0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm {
+    --dur-snap: 1ms;
+    --dur-ui: 1ms;
+    --dur-layout: 1ms;
+    --dur-morph: 1ms;
+    --dur-gentle: 1ms;
+    --dur-release: 1ms;
+    --dur-exit: 1ms;
+    --ease-spring: ease-out;
+    --ease-layout: ease-out;
+    --ease-soft: ease-out;
+  }
+  .lm .lx-press:active:not(:disabled) {
+    scale: none;
+  }
+}
+
+/* ---------- 3. button ---------- */
+/* DOM: <button class="lm-btn lm-btn--primary|secondary|outline|ghost|danger|link [lm-btn--xs|sm|xl|icon|icon-xs|icon-sm]">. Default size = Lockix default (36). */
+.lm-btn {
+  appearance: none;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background-clip: padding-box;
+  background: transparent;
+  color: var(--text-primary);
+  font: 500 13px/16px "Inter Variable", Inter, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+.lm-btn:active:not(:disabled) {
+  scale: 0.97;
+}
+.lm-btn:disabled,
+.lm-btn.is-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+.lm-btn:focus-visible {
+  border-color: var(--accent-default);
+}
+.lm-btn svg,
+.lm-btn .lm-icon {
+  flex-shrink: 0;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+.lm-btn:has([data-icon="start"]) {
+  padding-left: 8px;
+}
+.lm-btn:has([data-icon="end"]) {
+  padding-right: 8px;
+}
+
+/* primary = Lockix default: the black call to action */
+.lm-btn--primary {
+  border-width: 0;
+  background: var(--cta);
+  color: var(--text-on-cta);
+  box-shadow: var(--shadow-cta);
+  outline-offset: 2px;
+}
+.lm-btn--primary:is(:hover, .is-hover) {
+  background: color-mix(in srgb, var(--cta) 90%, transparent);
+}
+.lm-btn--primary:is(:active, .is-pressed) {
+  background: color-mix(in srgb, var(--cta) 80%, transparent);
+}
+/* secondary = Lockix outline: white, 1 px stroke, control shadow */
+.lm-btn--secondary {
+  border-color: var(--stroke-control);
+  background: var(--surface-raised);
+  color: var(--text-label-on-white);
+  box-shadow: var(--shadow-control);
+}
+.lm-btn--secondary svg,
+.lm-btn--secondary .lm-icon {
+  color: var(--text-secondary);
+}
+.lm-btn--secondary:is(:hover, .is-hover, [aria-expanded="true"]) {
+  background: var(--fill-raised-hover);
+}
+.lm-btn--secondary:is(:active, .is-pressed) {
+  background: var(--fill-raised-press);
+}
+.lm-btn--secondary:focus-visible {
+  border-color: var(--accent-default);
+}
+/* ghost */
+.lm-btn--ghost {
+  color: var(--text-secondary);
+}
+.lm-btn--ghost:is(:hover, .is-hover, [aria-expanded="true"]) {
+  background: var(--fill-hover);
+  color: var(--text-primary);
+}
+.lm-btn--ghost:is(:active, .is-pressed) {
+  background: var(--fill-pressed);
+}
+/* danger = Lockix destructive: red text on a 10% red tint (not an outline) */
+.lm-btn--danger {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+}
+.lm-btn--danger:is(:hover, .is-hover) {
+  background: color-mix(in srgb, var(--destructive) 20%, transparent);
+}
+.lm-btn--danger:focus-visible {
+  border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+}
+.lm-btn--link {
+  height: auto;
+  padding: 0;
+  color: var(--accent-default);
+  text-underline-offset: 4px;
+}
+.lm-btn--link:hover {
+  text-decoration: underline;
+}
+/* sizes: default 36 | sm 28 | xs 24 | xl 40 (dialog and sheet footers) */
+.lm-btn--sm {
+  height: 28px;
+  padding: 0 12px;
+}
+.lm-btn--sm:has([data-icon="start"]) {
+  padding-left: 6px;
+}
+.lm-btn--sm:has([data-icon="end"]) {
+  padding-right: 6px;
+}
+.lm-btn--sm svg,
+.lm-btn--sm .lm-icon {
+  width: 14px;
+  height: 14px;
+}
+.lm-btn--xs {
+  height: 24px;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  line-height: 15px;
+}
+.lm-btn--xs svg,
+.lm-btn--xs .lm-icon {
+  width: 12px;
+  height: 12px;
+}
+.lm-btn--xl {
+  height: 40px;
+  gap: 8px;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 17px;
+  letter-spacing: 0;
+}
+.lm-btn--icon {
+  width: 36px;
+  padding: 0;
+}
+.lm-btn--icon.lm-btn--sm {
+  width: 28px;
+}
+.lm-btn--icon.lm-btn--xs {
+  width: 24px;
+}
+/* window-card action (notification card, tray): 28 px, 12.5 px text, gap 5, padding 8 / 10 */
+.lx-btn-card {
+  height: 28px;
+  gap: 5px;
+  padding: 0 10px 0 8px;
+  font-size: 12.5px;
+  line-height: 15px;
+  letter-spacing: 0;
+}
+/* close button: ghost 24 px chip, 12 px glyph, 32 px hit area; place it at container radius - 6 from the corner */
+.lm-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline-offset: 2px;
+}
+.lm-close::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+.lm-close svg {
+  width: 12px;
+  height: 12px;
+}
+.lm-close:hover {
+  background: var(--fill-hover);
+  color: var(--text-primary);
+}
+.lm-close:active {
+  background: var(--fill-pressed);
+  scale: 0.97;
+}
+
+/* ---------- 4. switch ---------- */
+/* DOM (Radix Switch): <button role="switch" class="lm-toggle" aria-checked data-state="checked|unchecked"><span class="lm-toggle__knob" data-state></span></button> */
+.lm-toggle {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 32px;
+  height: 20px;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--stroke-control); /* off track #E5E5E5 */
+  box-shadow: inset 0 0 0 1px var(--stroke-field); /* off ring #C3C6CC */
+  outline-offset: 2px;
+  cursor: pointer;
+}
+.lm-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -8px -12px; /* 56 x 36 hit area */
+}
+.lm-toggle[aria-checked="true"] {
+  background: var(--cta);
+  box-shadow: none;
+}
+.lm-toggle__knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow: var(--shadow-control);
+  pointer-events: none;
+  translate: 0 0;
+  transition: translate var(--dur-ui) var(--ease-spring), width var(--dur-ui) var(--ease-spring), background-color var(--dur-ui) var(--ease-spring);
+}
+.lm-toggle[aria-checked="true"] .lm-toggle__knob {
+  translate: 12px 0; /* travel = 32 - 4 padding - 16 knob */
+}
+.lm-toggle:disabled,
+.lm-toggle.is-disabled {
+  cursor: not-allowed;
+}
+.lm-toggle:disabled[aria-checked="false"] {
+  background: var(--disabled-track);
+  box-shadow: none;
+}
+.lm-toggle:disabled[aria-checked="true"] {
+  background: var(--disabled-fill);
+}
+.lm-toggle:disabled .lm-toggle__knob {
+  box-shadow: none;
+}
+.lm-toggle:disabled[aria-checked="false"] .lm-toggle__knob {
+  background: var(--disabled-thumb);
+}
+
+/* ---------- 5. checkbox and radio ---------- */
+/* DOM: <label class="lm-check"><input class="lm-check__input" type="checkbox"><span class="lm-check__box"><svg>check</svg></span> Label</label>
+   radio: <label class="lm-radio"><input class="lm-check__input" type="radio"><span class="lm-check__box"></span> Label</label> */
+.lm-check,
+.lm-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.lm-check__input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.lm-check__box {
+  position: relative;
+  display: grid;
+  place-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--stroke-field);
+  border-radius: var(--radius-check);
+  background: transparent;
+  color: var(--text-on-cta);
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+}
+.lm-check__box::after {
+  content: "";
+  position: absolute;
+  inset: -8px -12px; /* 40 x 32 hit area */
+}
+.lm-radio .lm-check__box {
+  border-radius: var(--radius-pill);
+}
+.lm-check__input:active + .lm-check__box {
+  scale: 0.92;
+}
+.lm-check__input:focus-visible + .lm-check__box {
+  outline-color: var(--accent-default);
+}
+.lm-check__input:checked + .lm-check__box {
+  border-color: var(--cta);
+  background: var(--cta);
+}
+/* check glyph: Tabler "check", 12 px, 2 px stroke that does not scale; enters from 50% size in 130 ms on the spring */
+.lm-check__box svg {
+  display: none;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lm-check__box svg * {
+  vector-effect: non-scaling-stroke;
+}
+.lm-check__input:checked + .lm-check__box svg {
+  display: block;
+  animation: lx-pop var(--dur-snap) var(--ease-spring) backwards;
+}
+/* radio dot: 8 px, in --text-on-cta */
+.lm-radio .lm-check__box::before {
+  content: "";
+  grid-area: 1 / 1;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--text-on-cta);
+  transform: scale(0);
+}
+.lm-radio .lm-check__input:checked + .lm-check__box::before {
+  transform: none;
+  animation: lx-pop var(--dur-snap) var(--ease-spring) backwards;
+}
+@keyframes lx-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+/* disabled: opaque greys */
+.lm-check.is-disabled,
+.lm-radio.is-disabled {
+  color: var(--disabled-text);
+  cursor: not-allowed;
+}
+.lm-check__input:disabled + .lm-check__box {
+  border-color: var(--disabled-line);
+  background: transparent;
+}
+.lm-check__input:disabled:checked + .lm-check__box {
+  border-color: transparent;
+  background: var(--disabled-fill);
+}
+
+/* ---------- 6. segmented control ---------- */
+/* DOM (Radix ToggleGroup single): <div class="lm-seg"><button class="lm-seg__opt" data-state="on|off" aria-checked>Day</button>...</div>
+   md: track 36, padding 2, items 32. sm (tool rows): track 28, items 24. */
+.lm-seg {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  height: 36px;
+  padding: 2px;
+  border-radius: var(--radius-track);
+  background: var(--track);
+}
+.lm-seg__opt {
+  flex: 1 1 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-tertiary);
+  font: 400 14px/20px "Inter Variable", Inter, system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lm-seg__opt:hover {
+  background: var(--fill-hover);
+}
+.lm-seg__opt:is([data-state="on"], [aria-checked="true"]) {
+  border-color: var(--stroke-control);
+  background: var(--surface-card);
+  color: var(--text-label-on-white);
+  font-weight: 500;
+  box-shadow: var(--shadow-control);
+}
+.lm-seg__opt:focus-visible {
+  outline-offset: -1px;
+}
+.lm-seg--sm {
+  height: 28px;
+  gap: 0;
+  border-radius: var(--radius-control);
+}
+.lm-seg--sm .lm-seg__opt {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 16px;
+}
+.lm-seg[data-disabled],
+.lm-seg.is-disabled {
+  background: var(--disabled-track);
+}
+.lm-seg.is-disabled .lm-seg__opt {
+  color: var(--disabled-seg);
+  pointer-events: none;
+}
+.lm-seg.is-disabled .lm-seg__opt:is([data-state="on"], [aria-checked="true"]) {
+  border-color: transparent;
+  background: #fff;
+  box-shadow: none;
+}
+
+/* ---------- 7. input and select ---------- */
+.lm-input,
+.lm-select__trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font: 400 13px/16px "Inter Variable", Inter, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  box-shadow: var(--shadow-control);
+  outline: none;
+}
+.lm-input::placeholder {
+  color: var(--text-placeholder);
+}
+/* focus (caret or keyboard): a 2 px stroke made of the border plus a 1 px inner line, so nothing moves; no halo */
+.lm-input:focus-visible,
+.lm-select__trigger:focus-visible {
+  border-color: var(--stroke-focus-field);
+  box-shadow: inset 0 0 0 1px var(--stroke-focus-field), var(--shadow-control);
+  outline: none;
+}
+.lm-input:disabled {
+  background: color-mix(in srgb, var(--stroke-control) 50%, transparent);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lm-input[aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+.lm-input--sm,
+.lm-select--sm .lm-select__trigger {
+  height: 28px;
+}
+.lm-select__trigger {
+  width: fit-content;
+  min-width: 160px;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.lm-select__trigger:is(:hover, [aria-expanded="true"]) {
+  background: var(--fill-raised-hover);
+}
+.lm-select__trigger svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 8. menu, select list, popover ---------- */
+/* DOM: <div class="lm-menu" role="menu"><div class="lm-menu__label">Rule</div><button class="lm-menu__item" role="menuitem">…</button><div class="lm-menu__sep"></div>… */
+.lm-menu,
+.lm-popover {
+  min-width: 128px;
+  padding: 4px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-menu);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-menu);
+  font-size: 14px;
+  line-height: 20px;
+}
+.lm-popover {
+  width: 296px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lm-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius-menu-item);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  user-select: none;
+  outline: none;
+}
+.lm-menu__item:is(:hover, :focus-visible, [data-highlighted], [data-state="open"]) {
+  background: var(--fill-hover);
+}
+.lm-menu__item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--icon);
+}
+.lm-menu__item[data-variant="destructive"] {
+  color: var(--destructive);
+}
+.lm-menu__item[data-variant="destructive"] svg {
+  color: var(--destructive);
+}
+.lm-menu__item[data-variant="destructive"]:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+.lm-menu__item:disabled,
+.lm-menu__item[data-disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+.lm-menu__shortcut {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+}
+.lm-menu__label {
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 16px; /* 24 px high */
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+.lm-menu__sep {
+  height: 1px;
+  margin: 4px -4px;
+  background: var(--stroke-divider);
+}
+
+/* ---------- 9. tooltip ---------- */
+.lm-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 320px;
+  padding: 6px 12px;
+  border-radius: var(--radius-chip);
+  background: var(--text-primary); /* Lockix foreground #1B2230 */
+  color: var(--surface-window); /* Lockix background #F0F0F0 */
+  font-size: 12px;
+  line-height: 16px;
+}
+.lm-tooltip__arrow {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--text-primary);
+  rotate: 45deg;
+}
+
+/* ---------- 10. badge, status pill, tag, count ---------- */
+/* badge (shadcn): 20 px pill, 12 px / 500, padding 2 / 8, border 1 transparent */
+.lm-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: fit-content;
+  height: 20px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--accent-default);
+  color: var(--text-on-accent);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.lm-badge--secondary {
+  background: var(--surface-raised);
+  color: var(--text-label-on-white);
+}
+.lm-badge--outline {
+  border-color: var(--stroke-divider);
+  background: transparent;
+  color: var(--text-primary);
+}
+/* status pill (the one used for status, in windows and tables): 20 px, 11.5 px / 500, padding 2 / 7, tinted */
+.lm-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 2px 7px 0;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lm-pill--green {
+  background: var(--chip-green);
+  color: var(--tag-green);
+}
+.lm-pill--orange {
+  background: var(--chip-orange);
+  color: var(--tag-orange);
+}
+.lm-pill--blue {
+  background: var(--chip-blue);
+  color: var(--tag-blue);
+}
+.lm-pill--red {
+  background: var(--chip-red);
+  color: var(--tag-red);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tag-red) 55%, transparent); /* still visible on a red-tinted row */
+}
+.lm-pill--neutral {
+  background: var(--chip-gray);
+  color: var(--text-secondary);
+}
+/* tag / code chip: 22 px, radius 6, mono */
+.lx-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  max-width: 100%;
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-well);
+  color: var(--text-secondary);
+  font: 400 12px/14px "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
+}
+/* count pill after a title */
+.lx-count {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 2px 6px 0;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+/* tile: 32 px, radius 8, 16 px icon (stroke 1.5; 1 on the grey tile) */
+.lx-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-item);
+  background: var(--surface-well);
+  color: var(--icon-quiet);
+}
+.lx-tile--amber {
+  background: var(--chip-orange);
+  color: var(--tag-orange);
+}
+.lx-tile--red {
+  background: var(--chip-red);
+  color: var(--tag-red);
+}
+
+/* ---------- 11. dialog ---------- */
+.lm-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  animation: lx-fade 120ms ease-out backwards;
+}
+.lm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 14px;
+  width: min(384px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: var(--radius-dialog);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-dialog);
+  font-size: 14px;
+  line-height: 20px;
+  translate: -50% -50%;
+  animation: lx-dialog-in var(--dur-layout) var(--ease-layout) backwards;
+}
+.lm-dialog__title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+}
+.lm-dialog__body {
+  color: var(--text-tertiary);
+}
+.lm-dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+.lm-dialog > .lm-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+@keyframes lx-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lx-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+/* ---------- 12. tray (the grey group of the light design) ---------- */
+/* DOM: <section class="lx-tray"><header class="lx-tray__head"><h2>Title</h2><span class="lx-count">4</span><div class="lx-tray__aside">…</div></header><div class="lx-tray__card">rows (divide with --stroke-hairline)</div><footer class="lx-tray__foot">…</footer></section> */
+.lx-tray {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: var(--radius-tray);
+  background: var(--surface-tray);
+}
+.lx-tray__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 16px;
+}
+.lx-tray__head h2 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.lx-tray__aside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.lx-tray__card {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+}
+.lx-tray__card > * + * {
+  border-top: 1px solid var(--stroke-hairline);
+}
+.lx-tray__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  padding: 4px 16px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 13. panels (window shell) ---------- */
+/* window = --surface-window; a panel is white, radius 14 (win32 8), no stroke, --shadow-card; panels sit 4 px from the window edge */
+.lx-panel {
+  border-radius: var(--radius-panel);
+  background: var(--surface-editor);
+  box-shadow: var(--shadow-panel);
+}
+.lx-row-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-item);
+  background: transparent;
+  color: var(--text-secondary);
+  font: 400 13px/18px "Inter Variable", Inter, system-ui, sans-serif;
+  text-align: left;
+}
+.lx-row-nav svg {
+  color: var(--icon);
+}
+.lx-row-nav:hover {
+  background: var(--fill-hover);
+  color: var(--text-primary);
+}
+.lx-row-nav[aria-current="page"] {
+  background: var(--fill-selected);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ---------- 14. floating windows ---------- */
+/* Notification stack: the window is transparent; its page pads 18 px left/right, 10 px top, 26 px bottom (room for the shadow), cards 8 px apart, newest on top. */
+.lx-notify-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 18px 26px;
+}
+.lx-card-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 356px;
+  padding: 14px;
+  overflow: hidden;
+  border-radius: var(--radius-window);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
+  animation: lx-card-in var(--dur-fade-in) ease-out backwards;
+}
+@keyframes lx-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.lx-card-window__kind {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+.lx-card-window__kind--first {
+  background: var(--dot-orange);
+}
+.lx-card-window__kind--denied {
+  background: var(--dot-red);
+}
+.lx-card-window__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-right: 16px;
+}
+.lx-card-window__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.lx-card-window__sub {
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lx-card-window > .lm-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.lx-card-window__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+/* undo toast: 52 px, the card surface, a 24 px countdown ring */
+.lx-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 356px;
+  height: 52px;
+  padding: 0 14px;
+  border-radius: var(--radius-window);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
+  animation: lx-card-in var(--dur-fade-in) ease-out backwards;
+}
+.lx-toast__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 20px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lx-toast__ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  line-height: 13px;
+  font-weight: 500;
+}
+.lx-toast__ring svg {
+  position: absolute;
+  inset: 0;
+  rotate: -90deg;
+  fill: none;
+  stroke-width: 1.92;
+}
+.lx-toast__ring .track {
+  stroke: var(--track);
+}
+.lx-toast__ring .arc {
+  stroke: var(--cta);
+  transition: stroke-dasharray 250ms linear;
+}
+/* tray popover window: 320 px, radius 14, popover surface, 8 px padding, the shadow of a popover; the page pads 24 px (room for the shadow) */
+.lx-tray-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  padding: 0 8px 8px;
+  border-radius: var(--radius-tray);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
+}
+.lx-tray-window__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  margin: 0 -8px;
+  padding: 0 6px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
+}
+.lx-tray-window__title {
+  padding: 0 0 0 1px;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.lx-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+}
+.lx-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--dot-green);
+  transition: width var(--dur-gentle) var(--ease-soft);
+}
+
+/* ---------- 15. slider, progress, scroll ---------- */
+.lm-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--track);
+}
+.lm-progress__bar {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent-default);
+  transition: transform var(--dur-gentle) var(--ease-soft);
+}
+.lm-slider__track {
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--track);
+}
+.lm-slider__thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--stroke-field), 0 1px 2px rgb(0 0 0 / 0.12);
+}
+.lm ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.lm ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}

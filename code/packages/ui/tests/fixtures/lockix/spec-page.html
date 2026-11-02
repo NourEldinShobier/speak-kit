@@ -1,0 +1,38 @@
+<!doctype html><meta charset=utf-8><link rel=stylesheet href=../../../../../../docs/lockix-design-system/lockix-components.css>
+<style>body{margin:0;background:#fff}.row{position:relative;width:420px;height:36px;margin-bottom:21px}.row>*{position:absolute}
+.panel{background:#fff;padding:16px;width:452px}.shell{background:#f0f0f0}
+.big{display:flex;flex-direction:column;gap:16px;padding:16px;width:900px}</style>
+<body class="lm"><div class="panel" id="p1"><div class="row" id="row-en">
+<button class="lm-toggle" role="switch" aria-checked="false" style="left:0;top:8px"><span class="lm-toggle__knob"></span></button>
+<button class="lm-toggle" role="switch" aria-checked="true" style="left:50px;top:8px"><span class="lm-toggle__knob"></span></button>
+<label class="lm-check" style="left:100px;top:10px"><input class="lm-check__input" type=checkbox><span class="lm-check__box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></svg></span></label>
+<label class="lm-check" style="left:134px;top:10px"><input class="lm-check__input" type=checkbox checked><span class="lm-check__box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></svg></span></label>
+<label class="lm-radio" style="left:168px;top:10px"><input class="lm-check__input" type=radio><span class="lm-check__box"></span></label>
+<label class="lm-radio" style="left:202px;top:10px"><input class="lm-check__input" type=radio checked><span class="lm-check__box"></span></label>
+<div class="lm-seg" style="left:236px;top:0;width:132px"><button class="lm-seg__opt" data-state="on" aria-checked="true">Day</button><button class="lm-seg__opt" aria-checked="false">Week</button></div>
+<span style="left:386px;top:10px;font-size:13px;color:#1b2230">Label</span></div><div class="row" id="row-dis">
+<button class="lm-toggle" role="switch" aria-checked="false" disabled style="left:0;top:8px"><span class="lm-toggle__knob"></span></button>
+<button class="lm-toggle" role="switch" aria-checked="true" disabled style="left:50px;top:8px"><span class="lm-toggle__knob"></span></button>
+<label class="lm-check is-disabled" style="left:100px;top:10px"><input class="lm-check__input" type=checkbox disabled><span class="lm-check__box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></svg></span></label>
+<label class="lm-check is-disabled" style="left:134px;top:10px"><input class="lm-check__input" type=checkbox checked disabled><span class="lm-check__box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></svg></span></label>
+<label class="lm-radio is-disabled" style="left:168px;top:10px"><input class="lm-check__input" type=radio disabled><span class="lm-check__box"></span></label>
+<label class="lm-radio is-disabled" style="left:202px;top:10px"><input class="lm-check__input" type=radio checked disabled><span class="lm-check__box"></span></label>
+<div class="lm-seg is-disabled" style="left:236px;top:0;width:132px"><button class="lm-seg__opt" data-state="on" aria-checked="true" disabled>Day</button><button class="lm-seg__opt" aria-checked="false" disabled>Week</button></div>
+<span style="left:386px;top:10px;font-size:13px;color:#a3a9b5">Label</span></div></div>
+<div class="big shell" id="big">
+<div style="display:flex;gap:8px;align-items:center" id="btns">
+<button class="lm-btn lm-btn--primary">Allow</button><button class="lm-btn lm-btn--secondary">Details</button><button class="lm-btn lm-btn--ghost">Cancel</button><button class="lm-btn lm-btn--danger">Revoke</button>
+<button class="lm-btn lm-btn--primary lm-btn--sm">Small</button><button class="lm-btn lm-btn--secondary lm-btn--xs">Xs</button><button class="lm-btn lm-btn--primary lm-btn--xl">Dialog</button><button class="lm-btn lm-btn--secondary" disabled>Disabled</button></div>
+<div style="display:flex;gap:12px;align-items:center"><input class="lm-input" id="inp" placeholder="Search programs" style="width:240px"><input class="lm-input" id="inpf" value="focused" style="width:160px"><span class="lm-pill lm-pill--green">Allowed</span><span class="lm-pill lm-pill--orange">Unsigned</span><span class="lm-pill lm-pill--red">Blocked</span><span class="lx-tag">GITHUB_TOKEN</span><span class="lm-badge">Badge</span></div>
+<div style="display:flex;gap:16px;align-items:flex-start">
+<div class="lm-menu" id="menu" style="width:200px"><div class="lm-menu__label">Rule</div><button class="lm-menu__item">Edit rule</button><button class="lm-menu__item" data-highlighted>Revoke grant</button><div class="lm-menu__sep"></div><button class="lm-menu__item" data-variant="destructive">Forget program</button></div>
+<div class="lm-tooltip" id="tip">Copy reference</div>
+<div class="lm-dialog" id="dlg" style="position:relative;left:auto;top:auto;translate:none;animation:none;width:320px"><h2 class="lm-dialog__title">Lock now?</h2><div class="lm-dialog__body">Secrets stay hidden until you unlock again.</div><div class="lm-dialog__foot"><button class="lm-btn lm-btn--secondary lm-btn--xl">Cancel</button><button class="lm-btn lm-btn--primary lm-btn--xl">Lock</button></div></div></div>
+<div class="lx-notify-stack" style="width:392px" id="stack">
+<article class="lx-card-window" id="card" style="animation:none"><span class="lx-card-window__kind lx-card-window__kind--first"></span>
+<div class="lx-card-window__head"><span class="lx-tile lx-tile--amber">T</span><div><div class="lx-card-window__title">First time: deploy.ps1 (pwsh) read OPENAI_API_KEY</div><div class="lx-card-window__sub">pwsh, C:/dev/shop/deploy.ps1</div></div></div>
+<div class="lx-card-window__actions"><span class="lm-pill lm-pill--orange">Unsigned script</span><span style="font-size:12px;color:#5f6a7d">from dev, just now</span></div>
+<div class="lx-card-window__actions"><button class="lm-btn lm-btn--secondary lx-btn-card">Details</button><button class="lm-btn lm-btn--secondary lx-btn-card">Revoke</button></div></article>
+<article class="lx-toast" id="toast" style="animation:none"><span class="lx-toast__ring">8</span><span class="lx-toast__text">Blocked deploy.ps1</span><button class="lm-btn lm-btn--ghost lm-btn--sm">Undo</button></article></div>
+<section class="lx-tray" id="tray" style="width:320px"><header class="lx-tray__head"><h2>Programs</h2><span class="lx-count">4</span></header><div class="lx-tray__card"><div style="padding:10px 12px">Claude Code</div><div style="padding:10px 12px">Cursor</div></div><footer class="lx-tray__foot">Showing 2 of 4</footer></section>
+</div></body>

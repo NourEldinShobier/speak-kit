@@ -1,0 +1,13 @@
+{
+  "note": "Rendered boxes (CSS px, width x height) of spec-page.html with docs/lockix-design-system/lockix-components.css in Chromium, checked against the Lockix design file and the Lockix smoke layouts (lockix-*.layout.json, boxes are [path, x, y, w, h]).",
+  "switch": "32x20", "switchKnob": { "size": 16, "leftOff": 2, "leftOn": 14, "top": 2 },
+  "checkboxAndRadio": "16x16",
+  "segmentedMd": "132x36 for two segments, items 32 high, track padding 2",
+  "button": { "default": "h36", "sm": "h28", "xs": "h24", "xl": "h40" },
+  "input": "h36", "pill": "h20", "tag": "h22", "badge": "h20",
+  "menuItem": "h28", "menuLabel": "h24", "tooltip": "h28",
+  "notificationCard": { "width": 356, "pad": 14, "closeButton": "24x24 at 6 px from the corner", "tile": "32x32", "kindBar": "4 px wide" },
+  "undoToast": "356x52",
+  "trayHead": "h38", "trayFoot": "h36", "trayWindow": "width 320, page pad 24, header 32",
+  "dialog": "width 520 for the unlock dialog (max-w-sm 384 default), pad 16, close button at 10 px"
+}
