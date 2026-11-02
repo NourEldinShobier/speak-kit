@@ -39,6 +39,6 @@ describe("config", () => {
   });
 
   it("ignores the retired theme setting without an error", () => {
-    expect(parseConfig({ theme: "dark" }).theme).toBe("system");
+    expect(parseConfig({ theme: "dark" })).not.toHaveProperty("theme");
   });
 });

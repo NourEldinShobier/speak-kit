@@ -61,14 +61,6 @@ export const ConfigSchema = v.object({
   preferredPort: v.fallback(port, DEFAULT_PORT),
   startMinimized: bool(false),
   language: v.fallback(v.picklist(["system", "en"]), "system"),
-  /** Retired Theme setting: a stored value is read and dropped. Delete once no renderer references `config.theme`. */
-  theme: v.fallback(
-    v.pipe(
-      v.unknown(),
-      v.transform((): "system" | "light" | "dark" => "system"),
-    ),
-    "system",
-  ),
   idleUnload: v.fallback(v.picklist(IDLE_CHOICES), "5"),
   loadAtStart: bool(false),
   batterySaver: bool(true),
@@ -95,7 +87,6 @@ export const ConfigPatchSchema = v.partial(
     setupSkipped: v.boolean(),
     startMinimized: v.boolean(),
     language: v.picklist(["system", "en"]),
-    theme: v.unknown(), // retired: accepted from an old renderer and ignored
     idleUnload: v.picklist(IDLE_CHOICES),
     loadAtStart: v.boolean(),
     batterySaver: v.boolean(),

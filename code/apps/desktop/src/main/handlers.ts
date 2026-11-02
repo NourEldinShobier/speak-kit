@@ -67,8 +67,7 @@ const loginItemArgs = (config: Config) => (config.startMinimized ? ["--hidden"] 
 async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
   const { state, config, runtime, mainWindow } = d;
   const setupWas = config.setupDone;
-  const { theme: _retired, ...kept } = patch; // the Theme control is gone; an old renderer's value is dropped
-  Object.assign(config, kept);
+  Object.assign(config, patch);
   d.saveConfig();
   if (patch.startMinimized !== undefined) app.setLoginItemSettings({ openAtLogin: app.getLoginItemSettings().openAtLogin, args: loginItemArgs(config) });
   if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);
