@@ -129,7 +129,7 @@ catalog:
   tesseract.js-core: "7.0.0"
   tsrs: "0.20.1-ts7.1.0-beta"
   typescript: "7.0.2"
-  undici: "7.30.1"
+  undici: "8.12.3"
   valibot: "1.5.0"
   vite-plus: "1.4.0"
   wasm-media-encoders: "0.7.0"
