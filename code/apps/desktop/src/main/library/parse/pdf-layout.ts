@@ -48,7 +48,8 @@ function toLines(items: PdfItem[]): Line[] {
 const ENDS_SENTENCE = /[.!?:;"')\]]$/;
 
 /** Join wrapped lines; a hyphen at a line end is dropped when the next line continues in lower case. */
-const joinLines = (lines: string[]) => lines.reduce((acc, l) => (!acc ? l : /[a-z]-$/.test(acc) && /^[a-z]/.test(l) ? acc.slice(0, -1) + l : `${acc} ${l}`), "");
+const joinLines = (lines: string[]) => lines.reduce((acc, l) => (acc ? joinPair(acc, l) : l), "");
+const joinPair = (acc: string, l: string) => (/[a-z]-$/.test(acc) && /^[a-z]/.test(l) ? acc.slice(0, -1) + l : `${acc} ${l}`);
 
 /**
  * Layout-aware paragraphs for one page: larger type and short lines become headings; a paragraph ends at a vertical gap

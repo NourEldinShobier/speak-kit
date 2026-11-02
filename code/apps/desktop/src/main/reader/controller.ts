@@ -46,10 +46,17 @@ export class ReaderController {
     this.#d = deps;
   }
 
+  #status(): ReaderState["status"] {
+    if (this.#error) return "error";
+    if (this.#finished) return "finished";
+    if (this.#paused) return "paused";
+    return this.#playing >= 0 ? "playing" : "preparing";
+  }
+
   get state(): ReaderState {
     const total = this.#sentences.length;
     if (!total) return this.#error ? { ...IDLE_READER, status: "error", title: "Speak Kit", error: this.#error } : IDLE_READER;
-    const status = this.#error ? "error" : this.#finished ? "finished" : this.#paused ? "paused" : this.#playing >= 0 ? "playing" : "preparing";
+    const status = this.#status();
     const index = Math.max(0, this.#playing);
     let before = 0;
     let all = 0;

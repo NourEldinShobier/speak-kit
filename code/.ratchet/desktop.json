@@ -2,7 +2,7 @@
   "lint": {
     "code": {
       "max-lines-per-function": 24,
-      "no-nested-ternary": 24,
+      "no-nested-ternary": 20,
       "max-params": 14,
       "exhaustive-deps": 3,
       "complexity": 10,
