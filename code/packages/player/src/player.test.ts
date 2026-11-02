@@ -179,6 +179,26 @@ describe("start of playback", () => {
     });
   });
 
+  it("reports synthesis-failed when the stream ends without a done frame", async () => {
+    const { player } = rig(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(c) {
+              c.enqueue(encodeFrame({ type: "audio", index: 0, sampleRate: 24000, samples: SEC, durationMs: 1000 }, new Int16Array(SEC)));
+              c.close();
+            },
+          }),
+        ),
+    );
+    player.command({ cmd: "play", doc: doc(["One.", "Two."]) });
+    await settle();
+    expect(player.state()).toMatchObject({
+      status: "error",
+      error: { code: "synthesis-failed", message: "The stream ended before the server finished it." },
+    });
+  });
+
   it("fails with token-rejected without any request when no token is paired", async () => {
     const { player, calls } = rig(undefined, cfg({ token: "" }));
     player.command({ cmd: "play", doc: doc(["One."]) });

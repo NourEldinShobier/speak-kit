@@ -52,7 +52,7 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
       if (!r.current()) return;
       const { done, value } = await reader.read();
       if (!r.current()) return;
-      if (done) break;
+      if (done) throw new StreamError("synthesis-failed", "The stream ended before the server finished it.");
       // One read can carry many frames; wait for room before each so the lookahead limit holds.
       for (const f of decoder.push(value)) {
         await r.room();
