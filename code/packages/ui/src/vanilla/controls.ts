@@ -4,7 +4,7 @@ import { cx, h, icon, rovingIndex } from "./dom";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export interface ButtonOptions {
   variant?: ButtonVariant;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   label?: string;
   iconLeft?: IconName;
   iconRight?: IconName;
@@ -17,26 +17,27 @@ export interface ButtonOptions {
 export function button(o: ButtonOptions = {}): HTMLButtonElement {
   const variant = o.variant ?? "secondary";
   const lead = o.loading ? "loader-2" : o.iconLeft;
+  const glyph = o.size === "xs" ? 12 : o.size === "sm" ? 14 : 16;
   return h(
     "button",
     {
       type: "button",
-      class: cx("lm-btn", `lm-btn--${variant}`, o.size === "sm" && "lm-btn--sm", o.size === "lg" && "lm-btn--lg", o.loading && "is-loading"),
+      class: cx("lm-btn", `lm-btn--${variant}`, o.size === "xs" && "lm-btn--xs", o.size === "sm" && "lm-btn--sm", o.size === "xl" && "lm-btn--xl", o.loading && "is-loading"),
       disabled: o.disabled,
       "aria-busy": o.loading ? "true" : undefined,
       "aria-label": o.ariaLabel,
       on: o.onClick ? { click: o.onClick } : undefined,
     },
-    lead && icon(lead, 16, o.loading ? "lm-spin" : undefined),
+    lead && icon(lead, glyph, o.loading ? "lm-spin" : undefined),
     o.label,
-    o.iconRight && icon(o.iconRight, 16),
+    o.iconRight && icon(o.iconRight, glyph),
   );
 }
 
 export interface IconButtonOptions {
   name: IconName;
   label: string;
-  size?: 32 | 28 | 24;
+  size?: 40 | 36 | 32 | 28 | 24;
   round?: boolean;
   disabled?: boolean;
   loading?: boolean;
@@ -47,25 +48,26 @@ export interface IconButtonOptions {
 }
 
 export function iconButton(o: IconButtonOptions): HTMLButtonElement {
-  const size = o.size ?? 32;
+  const size = o.size ?? 36;
   return h(
     "button",
     {
       type: "button",
-      class: cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", o.round && "lm-btn--round", o.loading && "is-loading", o.className),
+      class: cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", size === 40 && "lm-btn--xl", o.round && "lm-btn--round", o.loading && "is-loading", o.className),
       "aria-label": o.label,
       "aria-busy": o.loading ? "true" : undefined,
       disabled: o.disabled,
       on: o.onClick ? { click: o.onClick } : undefined,
       ...Object.fromEntries(Object.entries(o.data ?? {}).map(([k, v]) => [`data-${k}`, v])),
     },
-    icon(o.loading ? "loader-2" : o.name, size === 24 ? 14 : 16, o.loading ? "lm-spin" : undefined),
+    icon(o.loading ? "loader-2" : o.name, size === 24 ? 12 : size === 28 ? 14 : 16, o.loading ? "lm-spin" : undefined),
   );
 }
 
 export interface ToggleOptions {
   checked?: boolean;
   disabled?: boolean;
+  /** Deprecated, no effect. */
   board?: boolean;
   label?: string;
   onChange?: (checked: boolean) => void;
@@ -83,7 +85,7 @@ export function toggle(o: ToggleOptions = {}): HTMLButtonElement {
       "aria-checked": String(!!o.checked),
       "data-state": state(!!o.checked),
       value: "on",
-      class: cx("lm-toggle", o.board && "lm-toggle--board"),
+      class: "lm-toggle",
       "aria-label": o.label,
       "data-disabled": o.disabled,
       disabled: o.disabled,
@@ -137,7 +139,7 @@ export function slider(o: SliderOptions): SliderHandle {
     const p = ((v - o.min) / (o.max - o.min)) * 100;
     range.style.left = "0";
     range.style.right = `${100 - p}%`;
-    thumbWrap.style.left = `calc(${p}% + ${(0.5 - p / 100) * 14}px)`;
+    thumbWrap.style.left = `calc(${p}% + ${(0.5 - p / 100) * 16}px)`;
     thumb.setAttribute("aria-valuenow", String(+v.toFixed(3)));
   };
   const at = (e: PointerEvent) => {

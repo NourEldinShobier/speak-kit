@@ -31,12 +31,8 @@ export function logo(size = 24): HTMLSpanElement {
 }
 
 /** Initial in a coloured circle (same markup as <Avatar>); tone "accent" uses the brand colour. */
-export function avatar(name: string, size = 32, tone: PillTone | "accent" = "purple"): HTMLSpanElement {
-  return h(
-    "span",
-    { class: tone === "accent" ? "lm-avatar" : `lm-avatar lm-tone-${tone}`, style: tone === "accent" ? `--s:${size};--tone:var(--accent-default)` : `--s:${size}` },
-    name.slice(0, 1).toUpperCase(),
-  );
+export function avatar(name: string, size = 32, tone: PillTone | "accent" = "neutral"): HTMLSpanElement {
+  return h("span", { class: `lm-avatar lm-tone-${tone}`, style: `--s:${size}` }, name.slice(0, 1).toUpperCase());
 }
 
 export interface ProgressHandle {

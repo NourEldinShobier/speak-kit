@@ -12,7 +12,7 @@ export interface StatusPillProps extends HTMLAttributes<HTMLSpanElement> {
   icon?: IconName | undefined;
 }
 
-/** 17px status pill. Indexing uses icon="loader-2" (spins). */
+/** 20px status pill. Indexing uses icon="loader-2" (spins). */
 export function StatusPill({ tone = "neutral", icon, className, children, ...rest }: StatusPillProps) {
   return (
     <span className={cx("lm-pill", `lm-pill--${tone}`, className)} {...rest}>
@@ -71,23 +71,18 @@ export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   name: string;
   size?: number;
   /** "accent" paints the brand colour (the selected voice). */
-  tone?: Tone | "accent";
+  tone?: Tone | "neutral" | "accent";
 }
 
-export function Avatar({ name, size = 32, tone = "purple", className, ...rest }: AvatarProps) {
+export function Avatar({ name, size = 32, tone = "neutral", className, ...rest }: AvatarProps) {
   return (
-    <span
-      className={cx("lm-avatar", tone !== "accent" && `lm-tone-${tone}`, className)}
-      style={{ "--s": size, ...(tone === "accent" ? { "--tone": "var(--accent-default)" } : null) } as CSSProperties}
-      {...rest}
-    >
+    <span className={cx("lm-avatar", `lm-tone-${tone}`, className)} style={{ "--s": size } as CSSProperties} {...rest}>
       {name.slice(0, 1)}
     </span>
   );
 }
 
-export function Favicon({ name, size = 14, tone = "green", className, ...rest }: AvatarProps) {
-  if (tone === "accent") tone = "blue";
+export function Favicon({ name, size = 14, tone = "neutral", className, ...rest }: AvatarProps) {
   return (
     <span className={cx("lm-favicon", `lm-tone-${tone}`, className)} style={{ "--s": size } as CSSProperties} aria-hidden="true" {...rest}>
       {name.slice(0, 1)}

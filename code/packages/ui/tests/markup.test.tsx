@@ -16,7 +16,9 @@ describe("Button", () => {
   test("variant and size classes", () => {
     expect(html(<Button variant="primary">Send</Button>)).toContain('class="lm-btn lm-btn--primary"');
     expect(html(<Button size="sm">x</Button>)).toContain("lm-btn--sm");
-    expect(html(<Button size="lg">x</Button>)).toContain("lm-btn--lg");
+    expect(html(<Button size="xs">x</Button>)).toContain("lm-btn--xs");
+    expect(html(<Button size="xl">x</Button>)).toContain("lm-btn--xl");
+    expect(html(<Button size="lg">x</Button>)).not.toContain("lm-btn--lg");
   });
 
   test("disabled sets the attribute (CSS gives opacity 0.4)", () => {
@@ -51,11 +53,11 @@ describe("Button", () => {
 });
 
 describe("IconButton", () => {
-  test("is named by aria-label and uses 14px icons at 24", () => {
+  test("is named by aria-label and uses 12px icons at 24", () => {
     const m = html(<IconButton name="dots" label="More" size={24} />);
     expect(m).toContain('aria-label="More"');
     expect(m).toContain("lm-btn--xs");
-    expect(m).toContain("--s:14");
+    expect(m).toContain("--s:12");
   });
 });
 
@@ -66,9 +68,9 @@ describe("Toggle", () => {
     expect(on).toContain('aria-checked="true"');
     expect(html(<Toggle aria-label="x" />)).toContain('aria-checked="false"');
   });
-  test("board geometry and disabled", () => {
+  test("one geometry for every caller (board is a no-op) and disabled", () => {
     const m = html(<Toggle board disabled aria-label="x" />);
-    expect(m).toContain("lm-toggle--board");
+    expect(m).not.toContain("lm-toggle--board");
     expect(m).toContain("disabled");
   });
 });

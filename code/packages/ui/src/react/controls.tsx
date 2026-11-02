@@ -7,8 +7,9 @@ type BtnAttrs = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">;
 
 export interface ButtonProps extends BtnAttrs {
   variant?: "primary" | "secondary" | "ghost" | "danger";
-  size?: "sm" | "md" | "lg";
-  /** Filled red (confirmed destructive action in dialogs). */
+  /** md = 36, sm = 28, xs = 24, xl = 40 (dialog footers); lg is the same as md. */
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  /** Maps to the tinted destructive button (the system has no solid red). */
   solid?: boolean;
   iconLeft?: IconName;
   iconRight?: IconName;
@@ -19,17 +20,27 @@ export interface ButtonProps extends BtnAttrs {
 
 export function Button({ variant = "secondary", size = "md", solid, iconLeft, iconRight, loading, disabled, className, children, type = "button", ...rest }: ButtonProps) {
   const lead = loading ? "loader-2" : iconLeft;
+  const glyph = size === "xs" ? 12 : size === "sm" ? 14 : 16;
   return (
     <button
       type={type}
-      className={cx("lm-btn", `lm-btn--${variant}`, solid && "lm-btn--danger-solid", size === "sm" && "lm-btn--sm", size === "lg" && "lm-btn--lg", loading && "is-loading", className)}
+      className={cx(
+        "lm-btn",
+        `lm-btn--${variant}`,
+        solid && "lm-btn--danger-solid",
+        size === "xs" && "lm-btn--xs",
+        size === "sm" && "lm-btn--sm",
+        size === "xl" && "lm-btn--xl",
+        loading && "is-loading",
+        className,
+      )}
       disabled={disabled}
       aria-busy={loading ? "true" : undefined}
       {...rest}
     >
-      {lead ? <Icon name={lead} className={loading ? "lm-spin" : undefined} /> : null}
+      {lead ? <Icon name={lead} size={glyph} className={loading ? "lm-spin" : undefined} /> : null}
       {children}
-      {iconRight ? <Icon name={iconRight} /> : null}
+      {iconRight ? <Icon name={iconRight} size={glyph} /> : null}
     </button>
   );
 }
@@ -38,22 +49,23 @@ export interface IconButtonProps extends BtnAttrs {
   name: IconName;
   /** Required: icon-only buttons need an accessible name. */
   label: string;
-  size?: 32 | 28 | 24;
+  /** 36 is the default, 32 renders as 36, 28 = sm, 24 = xs, 40 = xl. */
+  size?: 40 | 36 | 32 | 28 | 24;
   /** 36px circle (composer). */
   round?: boolean;
   loading?: boolean;
 }
 
-export function IconButton({ name, label, size = 32, round, loading, className, type = "button", ...rest }: IconButtonProps) {
+export function IconButton({ name, label, size = 36, round, loading, className, type = "button", ...rest }: IconButtonProps) {
   return (
     <button
       type={type}
       aria-label={label}
       aria-busy={loading ? "true" : undefined}
-      className={cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", round && "lm-btn--round", loading && "is-loading", className)}
+      className={cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", size === 40 && "lm-btn--xl", round && "lm-btn--round", loading && "is-loading", className)}
       {...rest}
     >
-      <Icon name={loading ? "loader-2" : name} size={size === 24 ? 14 : 16} className={loading ? "lm-spin" : undefined} />
+      <Icon name={loading ? "loader-2" : name} size={size === 24 ? 12 : size === 28 ? 14 : 16} className={loading ? "lm-spin" : undefined} />
     </button>
   );
 }
@@ -76,7 +88,7 @@ export function ToggleButton({ pressed, iconLeft, className, children, type = "b
 
 export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   icon?: IconName;
-  /** md = 36px, sm = 32px (popovers). */
+  /** md = 36px, sm = 28px (popovers). */
   size?: "md" | "sm";
   label?: string;
   error?: string | undefined;
@@ -113,20 +125,14 @@ export interface ToggleProps extends Omit<BtnAttrs, "onChange" | "role"> {
   checked?: boolean;
   defaultChecked?: boolean;
   onChange?: (checked: boolean) => void;
-  /** 40x20 board geometry instead of the 32x18 screen toggle. */
+  /** Deprecated, no effect: the switch is 32x20 everywhere. */
   board?: boolean;
 }
 
 /** Radix Switch under the Lumen toggle: role=switch, Space/Enter toggle, aria-checked drives the CSS. */
-export function Toggle({ checked, defaultChecked = false, onChange, board, className, ...rest }: ToggleProps) {
+export function Toggle({ checked, defaultChecked = false, onChange, board: _board, className, ...rest }: ToggleProps) {
   return (
-    <RSwitch.Root
-      checked={checked}
-      defaultChecked={checked === undefined ? defaultChecked : undefined}
-      onCheckedChange={onChange}
-      className={cx("lm-toggle", board && "lm-toggle--board", className)}
-      {...rest}
-    >
+    <RSwitch.Root checked={checked} defaultChecked={checked === undefined ? defaultChecked : undefined} onCheckedChange={onChange} className={cx("lm-toggle", className)} {...rest}>
       <RSwitch.Thumb className="lm-toggle__knob" />
     </RSwitch.Root>
   );
@@ -147,8 +153,8 @@ export function Checkbox({ label, indeterminate, className, disabled, boxClassNa
     <label className={cx("lm-check", disabled && "is-disabled", className)}>
       <input ref={ref} type="checkbox" className="lm-check__input" disabled={disabled} {...rest} />
       <span className={cx("lm-check__box", boxClassName)}>
-        <Icon name="check" size={14} />
-        <Icon name="minus" size={14} />
+        <Icon name="check" size={12} />
+        <Icon name="minus" size={12} />
       </span>
       {label}
     </label>
@@ -186,7 +192,7 @@ export interface SliderProps {
   id?: string;
 }
 
-/** Radix Slider under tokens (Lumen has no slider): 4px track, accent range, 14px white thumb. */
+/** Radix Slider under tokens: 5px track, accent range, 16px white thumb. */
 export function Slider({ min = 0, max = 100, step = 1, value, defaultValue = 0, onChange, onCommit, className, "aria-label": label, "aria-labelledby": labelledBy, ...rest }: SliderProps) {
   return (
     <RSlider.Root

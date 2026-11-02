@@ -40,41 +40,42 @@ describe("Toggle (role=switch)", () => {
       const c = getComputedStyle(e);
       return [c.outlineStyle, c.outlineWidth, c.outlineOffset];
     });
-    expect(ring).toEqual(["solid", "2px", "2px"]);
+    expect(ring).toEqual(["solid", "1px", "2px"]);
   });
 
-  test("knob travels 14px (screen) and 20px (board); sizes are 32x18 and 40x20", async () => {
-    const screen = page.locator(`${light("pattern-settings-page-toggle-on")} [role=switch]`);
-    expect(await screen.evaluate((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height])).toEqual([32, 18]);
-    const knob = screen.locator(".lm-toggle__knob");
-    const x = await knob.evaluate((k) => k.getBoundingClientRect().x - (k.parentElement as HTMLElement).getBoundingClientRect().x);
-    expect(x).toBe(16);
-    const board = page.locator(`${light("toggle-on")} [role=switch]`);
-    expect(await board.evaluate((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height])).toEqual([40, 20]);
+  test("switch is 32x20 with a 16px knob that travels 12px, in every placement", async () => {
+    for (const spec of ["pattern-settings-page-toggle-on", "toggle-on"]) {
+      const sw = page.locator(`${light(spec)} [role=switch]`);
+      expect(await sw.evaluate((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height])).toEqual([32, 20]);
+      const knob = sw.locator(".lm-toggle__knob");
+      expect(await knob.evaluate((k) => [k.getBoundingClientRect().width, k.getBoundingClientRect().x - (k.parentElement as HTMLElement).getBoundingClientRect().x])).toEqual([16, 14]);
+    }
+    const off = page.locator(`${light("toggle-off")} .lm-toggle__knob`);
+    expect(await off.evaluate((k) => k.getBoundingClientRect().x - (k.parentElement as HTMLElement).getBoundingClientRect().x)).toBe(2);
   });
 
-  test("disabled toggle ignores clicks and has 40% opacity", async () => {
+  test("disabled toggle ignores clicks and dims by opaque greys, not opacity", async () => {
     const sw = page.locator(`${light("toggle-disabled-on")} [role=switch]`);
     await sw.click({ force: true });
     await expect(sw.getAttribute("aria-checked")).resolves.toBe("true");
-    expect(await sw.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.4");
+    expect(await sw.evaluate((e) => [getComputedStyle(e).opacity, getComputedStyle(e).backgroundColor])).toEqual(["1", "rgb(183, 185, 191)"]);
   });
 });
 
 describe("Button states (real CSS)", () => {
-  test("hover uses fill/hover, pressed fill/selected, primary hover tag/blue", async () => {
+  test("hover and pressed fills of the white button, hover of the black button", async () => {
     const sec = page.locator(`${light("button-secondary-rest")} button`);
     await sec.hover();
     await page.waitForTimeout(200);
-    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(255, 255, 255, 0.08)");
+    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(247, 248, 250)");
     await page.mouse.down();
     await page.waitForTimeout(250);
-    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(255, 255, 255, 0.13)");
+    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(240, 240, 240)");
     await page.mouse.up();
     const pri = page.locator(`${light("button-primary-rest")} button`);
     await pri.hover();
     await page.waitForTimeout(200);
-    expect(await pri.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(74, 158, 255)");
+    expect(await pri.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("color(srgb 0.12549 0.117647 0.145098 / 0.9)");
     await page.mouse.move(0, 0);
   });
 
@@ -94,17 +95,21 @@ describe("Button states (real CSS)", () => {
     expect(styles).toEqual(Array(3).fill(["rgb(255, 255, 255)", "round"]));
   });
 
-  test("floating-surface shadows are the short Lockix scale, softer in light than in dark", async () => {
-    const read = (panel: string) =>
-      page.evaluate((p) => {
-        const c = getComputedStyle(document.querySelector(`[data-panel="${p}"]`)!);
-        return ["--lm-shadow-menu", "--lm-shadow-overlay", "--lm-shadow-dialog"].map((v) => c.getPropertyValue(v).trim());
-      }, panel);
-    expect(await read("dark")).toEqual(["0 1px 2px #0000004d", "0 2px 6px #0000004d", "0 4px 12px #00000059"]);
-    expect(await read("light")).toEqual(["0 1px 2px #0000000f", "0 2px 6px #0000000f", "0 4px 12px #00000012"]);
+  test("floating surfaces use the Lockix shadows (ring plus a soft drop, two layers at most)", async () => {
+    const shadow = (cls: string) =>
+      page.evaluate((c) => {
+        const e = document.createElement("div");
+        e.className = c;
+        document.querySelector('[data-panel="light"]')!.prepend(e);
+        const v = getComputedStyle(e).boxShadow;
+        e.remove();
+        return v;
+      }, cls);
+    expect(await shadow("lm-menu")).toBe("rgba(0, 0, 0, 0.06) 0px 1px 2px 0px");
+    expect(await shadow("lm-dialog")).toBe("rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.07) 0px 4px 12px 0px");
   });
 
-  test("a key chip inside a primary button is white, not the grey tertiary text", async () => {
+  test("a key chip inside a primary button takes the on-cta text, not the grey tertiary text", async () => {
     const color = await page.evaluate(() => {
       const b = document.createElement("button");
       b.className = "lm-btn lm-btn--primary";
@@ -114,7 +119,7 @@ describe("Button states (real CSS)", () => {
       b.remove();
       return c;
     });
-    expect(color).toBe("rgb(255, 255, 255)");
+    expect(color).toBe("rgb(250, 250, 250)");
   });
 
   test("primary icon button (play/pause) keeps a light icon and the primary fill on rest and hover", async () => {
@@ -127,28 +132,29 @@ describe("Button states (real CSS)", () => {
     });
     const b = page.locator("#t-play");
     const read = () => b.evaluate((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]);
-    expect(await read()).toEqual(["rgb(255, 255, 255)", "rgb(0, 120, 212)"]);
+    expect(await read()).toEqual(["rgb(250, 250, 250)", "rgb(32, 30, 37)"]);
     await b.hover();
     await page.waitForTimeout(200);
-    expect(await read()).toEqual(["rgb(255, 255, 255)", "rgb(74, 158, 255)"]);
+    expect(await read()).toEqual(["rgb(250, 250, 250)", "color(srgb 0.12549 0.117647 0.145098 / 0.9)"]);
     await page.mouse.move(0, 0);
     await b.evaluate((e) => e.remove());
   });
 
-  test("focus-visible shows a 2px accent outline only for keyboard focus", async () => {
+  test("focus-visible shows a 1px accent outline only for keyboard focus", async () => {
     const b = page.locator(`${light("button-ghost-rest")} button`);
     await b.focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Shift+Tab");
-    expect(await b.evaluate((e) => [getComputedStyle(e).outlineWidth, getComputedStyle(e).outlineColor])).toEqual(["2px", "rgb(0, 120, 212)"]);
+    await page.waitForTimeout(250);
+    expect(await b.evaluate((e) => [getComputedStyle(e).outlineWidth, getComputedStyle(e).outlineColor])).toEqual(["1px", "rgb(0, 105, 204)"]);
     await page.mouse.click(5, 5);
     await b.click();
     expect(await b.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe("none");
   });
 
-  test("disabled is 40% and not clickable; loading keeps the width", async () => {
+  test("disabled is 50% and not clickable; loading keeps the width", async () => {
     const dis = page.locator(`${light("button-primary-disabled")} button`);
-    expect(await dis.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.4");
+    expect(await dis.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.5");
     expect(await dis.isDisabled()).toBe(true);
     const w = (spec: string) => page.locator(`${light(spec)} button`).evaluate((e) => e.getBoundingClientRect().width);
     expect(await w("button-primary-loading")).toBe(await w("button-primary-rest"));
@@ -163,11 +169,90 @@ describe("Button states (real CSS)", () => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
   });
 
-  test("motion tokens: hover 83ms, press 167ms with the decelerate curve", async () => {
+  test("motion tokens: leaving a state 83ms ease-in, entering 167ms ease-out", async () => {
     const b = page.locator(`${light("button-ghost-rest")} button`);
-    const t = await b.evaluate((e) => getComputedStyle(e).transition);
-    expect(t).toContain("0.083s");
-    expect(t).toContain("cubic-bezier(0, 0, 0, 1)");
+    await b.evaluate((e) => e.blur());
+    await page.mouse.move(0, 0);
+    expect(await b.evaluate((e) => getComputedStyle(e).transitionDuration.split(",")[0])).toBe("0.083s");
+    await b.hover();
+    await page.waitForTimeout(250);
+    expect(await b.evaluate((e) => getComputedStyle(e).transitionDuration.split(",")[0])).toBe("0.167s");
+    await page.mouse.move(0, 0);
+  });
+});
+
+describe("Lockix geometry", () => {
+  /** Mounts markup in the light panel and returns the [width, height] of every matching element. */
+  const boxes = (html: string, sel: string) =>
+    page.evaluate(
+      ([h, q]) => {
+        const host = document.createElement("div");
+        host.innerHTML = h!;
+        document.querySelector('[data-panel="light"]')!.prepend(host);
+        host.getAnimations({ subtree: true }).forEach((a) => a.finish());
+        const out = [...host.querySelectorAll(q!)].map((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height]);
+        host.remove();
+        return out;
+      },
+      [html, sel] as const,
+    );
+  const heights = async (html: string, sel: string) => (await boxes(html, sel)).map((x) => x[1]);
+
+  test("buttons are 36, 28, 24 and 40 high; icon buttons are square", async () => {
+    const html = ["", " lm-btn--sm", " lm-btn--xs", " lm-btn--xl"].map((c) => `<button class="lm-btn lm-btn--secondary${c}">Go</button><button class="lm-btn lm-btn--icon${c}"></button>`).join("");
+    const b = await boxes(html, "button");
+    expect(b.map((x) => x[1])).toEqual([36, 36, 28, 28, 24, 24, 40, 40]);
+    expect([b[1], b[3], b[5], b[7]]).toEqual([
+      [36, 36],
+      [28, 28],
+      [24, 24],
+      [40, 40],
+    ]);
+  });
+
+  test("checkbox and radio boxes are 16x16, the check glyph is 12px", async () => {
+    const html =
+      '<label class="lm-check"><input class="lm-check__input" type="checkbox" checked><span class="lm-check__box"><svg class="lm-icon lm-icon--check" style="--s:12" viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></svg></span></label><label class="lm-radio"><input class="lm-check__input" type="radio" checked><span class="lm-check__box"></span></label>';
+    expect(await boxes(html, ".lm-check__box")).toEqual([
+      [16, 16],
+      [16, 16],
+    ]);
+    expect(await boxes(html, ".lm-icon")).toEqual([[12, 12]]);
+    const look = await page.evaluate((h) => {
+      const host = document.createElement("div");
+      host.innerHTML = h;
+      document.querySelector('[data-panel="light"]')!.prepend(host);
+      const r = [...host.querySelectorAll(".lm-check__box")].map((e) => getComputedStyle(e).borderRadius + " " + getComputedStyle(e).backgroundColor);
+      host.remove();
+      return r;
+    }, html);
+    expect(look).toEqual(["5px rgb(32, 30, 37)", "9999px rgb(32, 30, 37)"]);
+  });
+
+  test("segmented control: track 36 with 32px items (sm 28 with 24px items)", async () => {
+    const seg = (c: string) => `<div class="lm-seg${c}"><button class="lm-seg__opt" aria-checked="true">On</button><button class="lm-seg__opt" aria-checked="false">Off</button></div>`;
+    expect(await heights(seg(""), ".lm-seg, .lm-seg__opt")).toEqual([36, 32, 32]);
+    expect(await heights(seg(" lm-seg--sm"), ".lm-seg, .lm-seg__opt")).toEqual([28, 24, 24]);
+  });
+
+  test("input and select trigger are 36 high (sm 28); status pill 20; menu item 28; tooltip 28", async () => {
+    expect(await heights('<div class="lm-input"><input class="lm-input__field"></div><div class="lm-input lm-input--sm"></div>', ".lm-input")).toEqual([36, 28]);
+    expect(await heights('<button class="lm-select__trigger">A</button>', ".lm-select__trigger")).toEqual([36]);
+    expect(await heights('<span class="lm-pill lm-pill--green">Read</span><span class="lm-badge">2</span>', "span")).toEqual([20, 20]);
+    expect(await heights('<div class="lm-menu"><button class="lm-menu__item">Copy</button></div>', ".lm-menu__item")).toEqual([28]);
+    expect(await heights('<span class="lm-tooltip">Play</span>', ".lm-tooltip")).toEqual([28]);
+  });
+
+  test("radius follows the container level: dialog 16, menu 10, control 8, chip 6", async () => {
+    const r = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML = '<div class="lm-dialog"></div><div class="lm-menu"></div><button class="lm-btn"></button><button class="lm-btn lm-btn--xs"></button>';
+      document.querySelector('[data-panel="light"]')!.prepend(host);
+      const out = [...host.children].map((e) => getComputedStyle(e).borderRadius);
+      host.remove();
+      return out;
+    });
+    expect(r).toEqual(["16px", "10px", "8px", "6px"]);
   });
 });
 

@@ -135,7 +135,7 @@ export function Board() {
         </Cell>
       </Group>
 
-      <Group title="Toggle (board 40x20 · screen 32x18) · checkbox · radio">
+      <Group title="Toggle 32x20 · checkbox · radio">
         <Cell id="toggle-off">
           <Toggle board aria-label="Off" />
         </Cell>

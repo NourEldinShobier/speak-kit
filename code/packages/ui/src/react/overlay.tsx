@@ -56,7 +56,7 @@ export function Select({ options, value, defaultValue, onChange, label, size = "
             <RSelect.Value>{renderValue ? renderValue(selected) : selected?.label}</RSelect.Value>
           </span>
           <RSelect.Icon asChild>
-            <Icon name="chevron-down" size={14} />
+            <Icon name="chevron-down" size={16} />
           </RSelect.Icon>
         </RSelect.Trigger>
         <RSelect.Content position="popper" sideOffset={4} collisionPadding={8} className="lm-menu lm-menu--overlay lm-select__menu">
@@ -144,7 +144,7 @@ export function Dialog({ title, footer, width, onClose, titleId, children, class
         <h2 id={titleId} className="lm-dialog__title">
           {title}
         </h2>
-        {onClose ? <IconButton name="x" label="Close" size={28} onClick={onClose} /> : null}
+        {onClose ? <IconButton name="x" label="Close" size={24} onClick={onClose} /> : null}
       </div>
       <div className="lm-dialog__body">{children}</div>
       {footer ? <div className="lm-dialog__foot">{footer}</div> : null}
@@ -179,7 +179,7 @@ export function Modal({ open, onClose, title, footer, width, children, className
           <div className="lm-dialog__head">
             <RDialog.Title className="lm-dialog__title">{title}</RDialog.Title>
             <RDialog.Close asChild>
-              <IconButton name="x" label="Close" size={28} />
+              <IconButton name="x" label="Close" size={24} />
             </RDialog.Close>
           </div>
           <div className="lm-dialog__body">{children}</div>
