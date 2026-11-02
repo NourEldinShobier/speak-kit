@@ -38,8 +38,9 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
     if (w?.isVisible()) return panel.close();
     const win = panel.open(aboveTray(tray.getBounds()), true);
     run.wake(); // the panel is where a read is started from: load the model while it opens
-    // Clicking anywhere else dismisses it, like a native flyout; closing frees its renderer.
-    win.once("blur", () => panel.close());
+    // Clicking anywhere else dismisses it, like a native flyout; closing frees its renderer. Only a panel that
+    // has had focus can lose it: another window taking focus first must not close it before it was ever shown.
+    win.once("focus", () => win.once("blur", () => panel.close()));
   };
   tray.on("click", togglePanel);
   // macOS opens a context menu on the normal click, which would hide the panel: show it on right click only.

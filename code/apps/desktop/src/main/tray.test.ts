@@ -44,6 +44,7 @@ const mocks = vi.hoisted(() => {
     visible = false;
     closed = 0;
     blur: (() => void) | undefined;
+    focus: (() => void) | undefined;
     window = { isVisible: () => this.visible };
     page: string;
     options: unknown;
@@ -54,7 +55,8 @@ const mocks = vi.hoisted(() => {
     }
     open() {
       this.visible = true;
-      return { once: (_: string, f: () => void) => (this.blur = f) };
+      const win = { once: (e: string, f: () => void) => (e === "focus" ? ((this.focus = f), win) : ((this.blur = f), win)) };
+      return win;
     }
     close() {
       this.visible = false;
@@ -198,8 +200,16 @@ describe("tray panel", () => {
     t.fake.handlers.get("click")!();
     expect(t.panel.visible).toBe(false);
     t.fake.handlers.get("click")!();
+    t.panel.focus!();
     t.panel.blur!();
     expect(t.panel.visible).toBe(false);
+  });
+
+  it("a blur before the panel ever had focus does not close it", () => {
+    const t = setup();
+    t.fake.handlers.get("click")!();
+    expect(t.panel.blur).toBeUndefined();
+    expect(t.panel.visible).toBe(true);
   });
 
   it("opening the panel wakes the model so a read from it starts warm; closing it does not", () => {
