@@ -1,4 +1,4 @@
-// electron-builder afterPack hook (see electron-builder.yml): for macOS, drop the native binaries of the other architecture from
+// electron-builder afterPack hook (see electron-builder.yml): sets the Electron fuses (docs/decisions/0004-electron-fuses-runasnode.md), then, for macOS, drop the native binaries of the other architecture from
 // the app and give it an ad-hoc signature. Apple Silicon refuses to run code without a valid signature, and Electron's own
 // signature breaks once the app is renamed and filled; a real Developer ID signature replaces this later (docs/releasing.md).
 const { execFileSync } = require("node:child_process");
@@ -7,7 +7,23 @@ const path = require("node:path");
 
 const ARCHS = { 1: "x64", 3: "arm64" }; // electron-builder's Arch enum
 
+// Flipped here rather than through electron-builder's electronFuses option: that option runs after this hook, and changing the
+// binary after the ad-hoc signature below would invalidate it. RunAsNode stays on: the model host starts with child_process.fork.
+async function setFuses(context) {
+  const { flipFuses, FuseVersion, FuseV1Options } = await import("@electron/fuses");
+  const mac = context.electronPlatformName === "darwin";
+  const { productFilename } = context.packager.appInfo;
+  await flipFuses(path.join(context.appOutDir, mac ? `${productFilename}.app` : `${productFilename}.exe`), {
+    version: FuseVersion.V1,
+    [FuseV1Options.RunAsNode]: true,
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+    [FuseV1Options.EnableNodeCliInspectArguments]: false,
+    [FuseV1Options.EnableCookieEncryption]: true,
+  });
+}
+
 exports.default = async function afterPack(context) {
+  await setFuses(context);
   if (context.electronPlatformName !== "darwin") return;
   const { foreignMacArch } = await import("./stage-lib.mjs");
   const arch = ARCHS[context.arch];

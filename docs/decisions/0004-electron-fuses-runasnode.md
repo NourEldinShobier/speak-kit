@@ -9,7 +9,7 @@ Label: [S]. Exit test: the `RunAsNode` fuse may be turned off when `packages/eng
 Gap G52 (S4): the packaged app has no Electron fuses set. `apps/desktop/electron-builder.yml` has `asar: false` because the engine worker is its own Node process and loads `kokoro-js`, `onnxruntime-node` and `koffi` from disk, so the two asar-related fuses do not apply. `packages/engine/src/kokoro.ts` (around line 70) starts the model host with `child_process.fork`, which inside Electron runs the Electron binary as Node and needs the `RunAsNode` fuse on (Electron fuse documentation; not tested here).
 
 ## Decision
-1. Through `electron-builder.yml` `electronFuses`, set `EnableNodeOptionsEnvironmentVariable` off, `EnableNodeCliInspectArguments` off and `EnableCookieEncryption` on.
+1. Through the `afterPack` hook (ADR 0013), set `EnableNodeOptionsEnvironmentVariable` off, `EnableNodeCliInspectArguments` off and `EnableCookieEncryption` on.
 2. Leave `RunAsNode` on. This is a recorded exception, not an oversight. A process that can set `ELECTRON_RUN_AS_NODE` already runs as the user, so the fuse adds little against the local-process attacker in `docs/threat-model.md`.
 3. Follow-up (separate package): pass a `spawnHost` function into `createKokoroEngine` so the desktop can use `utilityProcess.fork`, then turn `RunAsNode` off and replace this exception with a superseding ADR.
 4. Work package 11 owns the `electron-builder.yml` change and a check in `scripts/smoke-packaged.mjs` that reads the fuse state of the built binary.

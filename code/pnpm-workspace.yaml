@@ -91,6 +91,7 @@ minimumReleaseAgeExclude:
 
 catalog:
   "@axe-core/playwright": "4.14.0"
+  "@electron/fuses": "1.8.0"
   "@lingo-reader/epub-parser": "0.4.6"
   "@mozilla/readability": "0.6.0"
   "@playwright/test": "1.64.1"

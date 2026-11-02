@@ -38,6 +38,7 @@
     "wasm-media-encoders": "catalog:"
   },
   "devDependencies": {
+    "@electron/fuses": "catalog:",
     "@resvg/resvg-js": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
