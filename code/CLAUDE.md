@@ -38,5 +38,5 @@ A change to a decided item (an ADR); a new or replaced shipped dependency, langu
 21. Test-only code is compiled out of shipped builds. (enforced by: `tests/bundle.test.ts`; origin: ostio C22)
 22. Local secrets are never logged or put in URLs; the pairing token appears only in the data directory file, the extension storage and the Authorization header. (enforced by: review; origin: ADR 0006)
 23. No TODO or FIXME in source; record follow-ups in the report or an ADR. (enforced by: review; origin: ostio C15)
-24. Work only in your own worktree and branch; push small slices fast-forward only; never force-push or rewrite `main`. (enforced by: review; origin: ostio G4)
+24. Work only in your own worktree and branch; commit small, push to `main` in batches of about ten commits (each push costs a CI run), fast-forward only; never force-push or rewrite `main`. (enforced by: review; origin: ostio G4)
 25. End each task with a report: what changed, what passed, what was not verified. (enforced by: review; origin: ostio D19)
