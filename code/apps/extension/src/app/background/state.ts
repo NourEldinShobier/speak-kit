@@ -31,11 +31,10 @@ const session = {
 const ACCENT = tokens.light["accent-default"];
 const ERR = tokens.light["tag-red"];
 
-const idleState = async (): Promise<PlayerState> => {
+export const idle = async (): Promise<PlayerState> => {
   const s = await loadSettings();
   return { status: "idle", sentenceIndex: 0, sentenceCount: 0, elapsedMs: 0, totalMs: 0, speed: s.speed, voice: s.voice, queueLength: 0 };
 };
-export const idle = idleState;
 
 let lastState: PlayerState | undefined;
 let queue: QueueItem[] | undefined;
@@ -56,7 +55,7 @@ export const getState = (): Promise<PlayerState> =>
   cached(
     () => lastState,
     (v) => (lastState = v),
-    async () => (await session.get<PlayerState>(SESSION_STATE)) ?? (await idleState()),
+    async () => (await session.get<PlayerState>(SESSION_STATE)) ?? (await idle()),
   );
 
 export const getQueue = (): Promise<QueueItem[]> =>
@@ -91,8 +90,10 @@ export const sendToTab = (tabId: number | undefined, m: BgToContent) => {
   if (tabId !== undefined) chrome.tabs.sendMessage(tabId, m).catch(() => {}); // the tab closed or has no content script
 };
 
+const BADGE_TEXT: Partial<Record<PlayerState["status"], string>> = { playing: "▶", paused: "II", error: "!" };
+
 function badge(state: PlayerState) {
-  const text = state.status === "playing" ? "▶" : state.status === "paused" ? "II" : state.status === "error" ? "!" : "";
+  const text = BADGE_TEXT[state.status] ?? "";
   void chrome.action.setBadgeText({ text });
   void chrome.action.setBadgeBackgroundColor({ color: state.status === "error" ? ERR : ACCENT });
 }
