@@ -153,7 +153,7 @@ jobs:
           cache-dependency-path: code/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       # Packages/ui and the extension's content script run in real Chromium.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('code/pnpm-lock.yaml') }}
@@ -211,7 +211,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: code/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('code/pnpm-lock.yaml') }}
