@@ -35,6 +35,56 @@ const pillTrigger = (label: string, icon?: ReactElement) => (p: { onClick: () =>
   </button>
 );
 
+function SleepPopover({ leftMs, onSleep }: { leftMs: number; onSleep(minutes: number | null): void }) {
+  return (
+    <Popover
+      side="top"
+      align="end"
+      width={280}
+      title="Sleep timer"
+      trigger={(t) => (
+        <button type="button" className="rd-pill" aria-label="Sleep timer" {...t}>
+          <Icon name="zzz" size={16} />
+          {leftMs > 0 && <span data-testid="sleep-left">{clock(leftMs)}</span>}
+        </button>
+      )}
+    >
+      <div className="rd-pop">
+        {leftMs > 0 && (
+          <div className="rd-pop__row">
+            <span>Pauses in</span>
+            <b>{clock(leftMs)}</b>
+          </div>
+        )}
+        {SLEEP_CHOICES.map((m) => (
+          <button key={m} type="button" className="rd-option" onClick={() => onSleep(m)}>
+            {m} minutes
+          </button>
+        ))}
+        <button type="button" className="rd-option" disabled={leftMs === 0} onClick={() => onSleep(null)}>
+          Off
+        </button>
+      </div>
+    </Popover>
+  );
+}
+
+function NowTile({ title, voiceName }: { title: string; voiceName?: string }) {
+  return (
+    <div className="rd-bar__now">
+      <span className="rd-bar__tile">
+        <Icon name="headphones" size={20} />
+      </span>
+      <div>
+        <div className="rd-bar__title" dir="auto">
+          {title}
+        </div>
+        <div className="rd-bar__sub">{voiceName ? `${voiceName} · Kokoro` : "Kokoro"}</div>
+      </div>
+    </div>
+  );
+}
+
 export function PlayerBar(p: BarProps) {
   const s = p.state;
   const busy = s.status === "preparing";
@@ -44,17 +94,7 @@ export function PlayerBar(p: BarProps) {
   const voice = p.voices.find((v) => v.id === p.voiceId);
   return (
     <footer className="rd-bar" aria-label="Player">
-      <div className="rd-bar__now">
-        <span className="rd-bar__tile">
-          <Icon name="headphones" size={20} />
-        </span>
-        <div>
-          <div className="rd-bar__title" dir="auto">
-            {p.title}
-          </div>
-          <div className="rd-bar__sub">{voice ? `${voice.name} · Kokoro` : "Kokoro"}</div>
-        </div>
-      </div>
+      <NowTile title={p.title} voiceName={voice?.name} />
       <div className="rd-bar__center">
         <div className="rd-bar__buttons">
           <IconButton name="player-skip-back" label="Previous paragraph" disabled={p.disabled} onClick={() => p.onBlock(-1)} />
@@ -77,35 +117,7 @@ export function PlayerBar(p: BarProps) {
             <SpeedControls speed={p.speed} onSpeed={p.onSpeed} />
           </div>
         </Popover>
-        <Popover
-          side="top"
-          align="end"
-          width={280}
-          title="Sleep timer"
-          trigger={(t) => (
-            <button type="button" className="rd-pill" aria-label="Sleep timer" {...t}>
-              <Icon name="zzz" size={16} />
-              {p.sleepLeftMs > 0 && <span data-testid="sleep-left">{clock(p.sleepLeftMs)}</span>}
-            </button>
-          )}
-        >
-          <div className="rd-pop">
-            {p.sleepLeftMs > 0 && (
-              <div className="rd-pop__row">
-                <span>Pauses in</span>
-                <b>{clock(p.sleepLeftMs)}</b>
-              </div>
-            )}
-            {SLEEP_CHOICES.map((m) => (
-              <button key={m} type="button" className="rd-option" onClick={() => p.onSleep(m)}>
-                {m} minutes
-              </button>
-            ))}
-            <button type="button" className="rd-option" disabled={p.sleepLeftMs === 0} onClick={() => p.onSleep(null)}>
-              Off
-            </button>
-          </div>
-        </Popover>
+        <SleepPopover leftMs={p.sleepLeftMs} onSleep={p.onSleep} />
         <Popover side="top" align="end" width={280} title="Voice" trigger={(t) => <IconButton name="volume" label="Voice" {...t} />}>
           <VoiceList voices={p.voices} voiceId={p.voiceId} onVoice={p.onVoice} />
         </Popover>

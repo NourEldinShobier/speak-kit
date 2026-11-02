@@ -16,7 +16,7 @@ export interface OcrProgress {
 }
 
 /** Recognizes every page in order and returns the text as blocks tagged with their page. Stops at the next page boundary when aborted. */
-export async function recognizeAll(engine: OcrEngine, onProgress: (p: OcrProgress) => void, signal: AbortSignal, now: () => number = Date.now): Promise<Block[]> {
+export async function recognizeAll(engine: OcrEngine, { onProgress, signal, now = Date.now }: { onProgress: (p: OcrProgress) => void; signal: AbortSignal; now?: () => number }): Promise<Block[]> {
   const out: Block[] = [];
   const t0 = now();
   try {

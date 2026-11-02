@@ -103,7 +103,7 @@ export function useFollowScroll({ sentence, follow, following, scroller, textRoo
     const sc = scroller.current;
     const root = textRoot.current;
     if (!sentence || !sc || !root || !following.current || !follow) return;
-    const rect = rangeIn(root, sentence.block, sentence.start, sentence.end)?.getBoundingClientRect();
+    const rect = rangeIn(root, sentence)?.getBoundingClientRect();
     const box = sc.getBoundingClientRect();
     if (rect && (rect.top < box.top + 40 || rect.bottom > box.bottom - 40)) scrollToCurrent();
   }, [sentence, follow, following, scroller, textRoot, scrollToCurrent]);

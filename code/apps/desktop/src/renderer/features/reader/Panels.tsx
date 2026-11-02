@@ -84,6 +84,11 @@ export function VoicePanel({
   );
 }
 
+function findStatus(query: string, count: number, current: number): string {
+  if (!query.trim()) return "";
+  return count ? `${current + 1} of ${count}` : "No results";
+}
+
 export function FindBar({ query, count, current, onQuery, onStep, onClose }: { query: string; count: number; current: number; onQuery(q: string): void; onStep(dir: 1 | -1): void; onClose(): void }) {
   return (
     <div className="rd-find" role="search">
@@ -101,7 +106,7 @@ export function FindBar({ query, count, current, onQuery, onStep, onClose }: { q
         }}
       />
       <span className="rd-muted" role="status" data-testid="find-count">
-        {query.trim() ? (count ? `${current + 1} of ${count}` : "No results") : ""}
+        {findStatus(query, count, current)}
       </span>
       <IconButton name="chevron-up" label="Previous match" size={28} disabled={!count} onClick={() => onStep(-1)} />
       <IconButton name="chevron-down" label="Next match" size={28} disabled={!count} onClick={() => onStep(1)} />

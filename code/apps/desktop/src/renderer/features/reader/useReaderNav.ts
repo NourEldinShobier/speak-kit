@@ -40,7 +40,7 @@ function useFollowControls({ sentence, refs, status, dispatch }: { sentence: Rea
     const sc = refs.scroller.current;
     const root = refs.textRoot.current;
     if (!sc || !root || !sentence) return;
-    const rect = rangeIn(root, sentence.block, sentence.start, sentence.end)?.getBoundingClientRect();
+    const rect = rangeIn(root, sentence)?.getBoundingClientRect();
     const box = sc.getBoundingClientRect();
     if (rect) sc.scrollTo({ top: sc.scrollTop + rect.top - box.top - box.height * 0.35, behavior: "smooth" });
   }, [sentence, refs.scroller, refs.textRoot]);

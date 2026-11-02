@@ -121,11 +121,16 @@ function wordSpans(text: string): WordSpan[] {
   return [...text.matchAll(/\S+/g)].map((m) => ({ start: m.index, end: m.index + m[0].length }));
 }
 
+function pauseWeight(word: string): number {
+  if (/[,;:]$/.test(word)) return 2;
+  return /[.!?]$/.test(word) ? 3 : 0;
+}
+
 /** The word being spoken at `fraction` (0..1) of the sentence: cumulative weight is word length plus a pause weight for punctuation. */
 export function wordAt(text: string, fraction: number): WordSpan | undefined {
   const words = wordSpans(text);
   if (!words.length) return undefined;
-  const weights = words.map((w) => w.end - w.start + (/[,;:]$/.test(text.slice(w.start, w.end)) ? 2 : /[.!?]$/.test(text.slice(w.start, w.end)) ? 3 : 0));
+  const weights = words.map((w) => w.end - w.start + pauseWeight(text.slice(w.start, w.end)));
   const total = weights.reduce((a, b) => a + b, 0);
   let acc = 0;
   const at = Math.min(Math.max(fraction, 0), 0.9999) * total;

@@ -42,9 +42,43 @@ export function useVisible(): boolean {
   return vis;
 }
 
-export const formatBytes = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${Math.round(n / 1e6)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
+export function formatBytes(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)} GB`;
+  if (n >= 1e6) return `${Math.round(n / 1e6)} MB`;
+  return n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`;
+}
+
+/** The play button of the mini player and the tray panel: replay when finished, pause while it speaks, else play. */
+export function playButton(status: string): { name: "refresh" | "player-pause" | "player-play"; label: string } {
+  if (status === "finished") return { name: "refresh", label: "Read again" };
+  if (status === "playing" || status === "preparing") return { name: "player-pause", label: "Pause" };
+  return { name: "player-play", label: "Play" };
+}
 
 const mask = (t: string) => (t ? `${"•".repeat(14)}-${t.slice(-4)}` : "starting…");
+
+function RegenerateModal({ open, busy, onClose, onConfirm }: { open: boolean; busy: boolean; onClose: () => void; onConfirm: () => void }) {
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Regenerate the pairing token?"
+      width={440}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="danger" solid loading={busy} onClick={onConfirm}>
+            Regenerate
+          </Button>
+        </>
+      }
+    >
+      <p className="sk-modal-text" style={{ margin: 0 }}>
+        Every paired browser stops working until you paste the new token in its options.
+      </p>
+    </Modal>
+  );
+}
 
 /** Pairing token: masked until revealed. Regenerate can ask for confirmation (Settings) or act at once (Home). */
 export function TokenField({ token, regenerate, confirmRegenerate, onCopied }: { token: string; regenerate?: boolean; confirmRegenerate?: boolean; onCopied?: () => void }) {
@@ -88,26 +122,7 @@ export function TokenField({ token, regenerate, confirmRegenerate, onCopied }: {
           Regenerate
         </Button>
       )}
-      {confirmRegenerate && (
-        <Modal
-          open={ask}
-          onClose={() => setAsk(false)}
-          title="Regenerate the pairing token?"
-          width={440}
-          footer={
-            <>
-              <Button onClick={() => setAsk(false)}>Cancel</Button>
-              <Button variant="danger" solid loading={busy} onClick={doRegenerate}>
-                Regenerate
-              </Button>
-            </>
-          }
-        >
-          <p className="sk-modal-text" style={{ margin: 0 }}>
-            Every paired browser stops working until you paste the new token in its options.
-          </p>
-        </Modal>
-      )}
+      {confirmRegenerate && <RegenerateModal open={ask} busy={busy} onClose={() => setAsk(false)} onConfirm={doRegenerate} />}
     </div>
   );
 }

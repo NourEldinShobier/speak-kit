@@ -16,12 +16,7 @@ describe("recognizeAll", () => {
     const { e, state } = engine(["First line\nsecond line.\n\nNew paragraph.", "Page two."]);
     const seen: OcrProgress[] = [];
     let t = 0;
-    const blocks = await recognizeAll(
-      e,
-      (p) => seen.push(p),
-      new AbortController().signal,
-      () => (t += 1000),
-    );
+    const blocks = await recognizeAll(e, { onProgress: (p) => seen.push(p), signal: new AbortController().signal, now: () => (t += 1000) });
     expect(blocks).toEqual([
       { kind: "paragraph", text: "First line second line.", page: 1 },
       { kind: "paragraph", text: "New paragraph.", page: 1 },
@@ -38,7 +33,7 @@ describe("recognizeAll", () => {
   it("stops at the next page when cancelled and still closes the engine", async () => {
     const { e, state } = engine(["One.", "Two.", "Three."]);
     const ac = new AbortController();
-    const run = recognizeAll(e, (p) => p.page === 2 && ac.abort(), ac.signal);
+    const run = recognizeAll(e, { onProgress: (p) => p.page === 2 && ac.abort(), signal: ac.signal });
     await expect(run).rejects.toMatchObject({ name: "AbortError" });
     expect(state.asked).toEqual([1, 2]);
     expect(state.closed).toBe(true);
