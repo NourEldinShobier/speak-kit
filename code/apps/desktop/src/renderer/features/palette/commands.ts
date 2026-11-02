@@ -1,7 +1,7 @@
-import type { AppState } from "../shared/ipc";
-import type { Command, PaletteAction } from "../shared/palette";
-import type { ShellAction } from "./shell-model";
-import { api } from "./ui";
+import type { AppState } from "../../../shared/ipc";
+import type { Command, PaletteAction } from "./model";
+import type { ShellAction } from "../../shell-model";
+import { api } from "../../ui";
 
 interface CommandContext {
   s: AppState;

@@ -1,12 +1,11 @@
 import { useEffect, useReducer, useRef, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
-import { runCommand } from "./commands";
 import { EnginesPage } from "./features/engines";
 import { VoicesPage } from "./features/voices";
 import { ExportDialog } from "./features/export";
 import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
-import { Palette } from "./Palette";
+import { Palette, runCommand } from "./features/palette";
 import { QuitDialog } from "./QuitDialog";
 import { NewReading } from "./NewReading";
 import { Settings } from "./settings";

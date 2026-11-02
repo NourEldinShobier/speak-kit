@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Voice } from "@speakkit/protocol";
-import { buildCommands, filterCommands } from "./palette";
+import { buildCommands, filterCommands } from "./model";
 
 const voices: Voice[] = [
   { id: "af_bella", name: "Bella", lang: "en-US", gender: "female", quality: "A", traits: "warm" },

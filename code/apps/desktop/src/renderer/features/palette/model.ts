@@ -1,6 +1,6 @@
 import type { Voice } from "@speakkit/protocol";
 import type { IconName } from "@speakkit/ui";
-import type { Page, SettingsSub } from "./ipc";
+import type { Page, SettingsSub } from "../../../shared/ipc";
 
 export type PaletteGroup = "Actions" | "Pages" | "Settings" | "Voices";
 export type PaletteAction =
@@ -28,14 +28,24 @@ export interface Command {
   action: PaletteAction;
 }
 
-const nav = (id: string, group: PaletteGroup, title: string, icon: IconName, page: Page, sub?: SettingsSub, keywords = ""): Command => ({
-  id,
-  group,
-  title,
-  icon,
-  keywords,
-  action: { type: "nav", page, sub },
-});
+type NavRow = [id: string, group: PaletteGroup, title: string, icon: IconName, page: Page, sub?: SettingsSub, keywords?: string];
+
+const NAV_ROWS: NavRow[] = [
+  ["p-home", "Pages", "Home", "home", "home"],
+  ["p-voices", "Pages", "Voices", "microphone", "voices"],
+  ["p-engines", "Pages", "Engines", "cpu", "engines", undefined, "kokoro chatterbox model"],
+  ["p-browser", "Pages", "Browser", "world", "browser", undefined, "extension pair chrome"],
+  ["s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language theme"],
+  ["s-voice", "Settings", "Settings: Voice and playback", "volume", "settings", "voice", "speed default"],
+  ["s-shortcuts", "Settings", "Settings: Shortcuts", "keyboard", "settings", "shortcuts", "global keys hotkey record ctrl alt"],
+  ["s-notifications", "Settings", "Settings: Notifications", "bell", "settings", "notifications", "toast bell sound do not disturb clipboard"],
+  ["s-memory", "Settings", "Settings: Memory", "cpu", "settings", "memory", "idle unload ram battery startup"],
+  ["s-browser", "Settings", "Settings: Browser integration", "world", "settings", "browser", "port token pair"],
+  ["s-storage", "Settings", "Settings: Storage", "folder", "settings", "storage", "models disk"],
+  ["s-about", "Settings", "Settings: About", "info-circle", "settings", "about", "version licenses"],
+];
+
+const navCommand = ([id, group, title, icon, page, sub, keywords = ""]: NavRow): Command => ({ id, group, title, icon, keywords, action: { type: "nav", page, sub } });
 
 export function buildCommands(voices: Voice[] = []): Command[] {
   return [
@@ -50,18 +60,7 @@ export function buildCommands(voices: Voice[] = []): Command[] {
     { id: "install-extension", group: "Actions", title: "Install the extension", icon: "brand-chrome", keywords: "chrome edge browser load unpacked", action: { type: "install-extension" } },
     { id: "copy-token", group: "Actions", title: "Copy pairing token", icon: "copy", keywords: "browser extension key", action: { type: "copy-token" } },
     { id: "logs", group: "Actions", title: "Open log folder", icon: "folder", keywords: "debug", action: { type: "open-logs" } },
-    nav("p-home", "Pages", "Home", "home", "home"),
-    nav("p-voices", "Pages", "Voices", "microphone", "voices"),
-    nav("p-engines", "Pages", "Engines", "cpu", "engines", undefined, "kokoro chatterbox model"),
-    nav("p-browser", "Pages", "Browser", "world", "browser", undefined, "extension pair chrome"),
-    nav("s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language theme"),
-    nav("s-voice", "Settings", "Settings: Voice and playback", "volume", "settings", "voice", "speed default"),
-    nav("s-shortcuts", "Settings", "Settings: Shortcuts", "keyboard", "settings", "shortcuts", "global keys hotkey record ctrl alt"),
-    nav("s-notifications", "Settings", "Settings: Notifications", "bell", "settings", "notifications", "toast bell sound do not disturb clipboard"),
-    nav("s-memory", "Settings", "Settings: Memory", "cpu", "settings", "memory", "idle unload ram battery startup"),
-    nav("s-browser", "Settings", "Settings: Browser integration", "world", "settings", "browser", "port token pair"),
-    nav("s-storage", "Settings", "Settings: Storage", "folder", "settings", "storage", "models disk"),
-    nav("s-about", "Settings", "Settings: About", "info-circle", "settings", "about", "version licenses"),
+    ...NAV_ROWS.map(navCommand),
     ...voices.map<Command>((v) => ({
       id: `v-${v.id}`,
       group: "Voices",
@@ -72,6 +71,12 @@ export function buildCommands(voices: Voice[] = []): Command[] {
       action: { type: "preview", voice: v.id },
     })),
   ];
+}
+
+/** Cost of a title match: none at the start, 1 at a word start, 3 inside a word. */
+function matchCost(title: string, at: number): number {
+  if (at === 0) return 0;
+  return title[at - 1] === " " ? 1 : 3;
 }
 
 /** Every query word must occur in the title or keywords; title matches rank first, earlier matches before later ones. Empty query keeps the order but drops voices (too many). */
@@ -85,7 +90,7 @@ export function filterCommands(all: Command[], query: string): Command[] {
     let score = 0;
     for (const w of words) {
       const ti = t.indexOf(w);
-      if (ti >= 0) score += ti === 0 ? 0 : t[ti - 1] === " " ? 1 : 3;
+      if (ti >= 0) score += matchCost(t, ti);
       else if (k.includes(w)) score += 10;
       else return;
     }
