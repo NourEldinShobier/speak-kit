@@ -20,8 +20,9 @@ export const engineRoutes: Route[] = [
   {
     method: "POST",
     path: "/v1/engines/select",
-    handle: async ({ req, res }, { engines }) => {
+    handle: async ({ req, res, signal }, { engines }) => {
       const raw = await readBody(req);
+      signal.throwIfAborted();
       await engines.select(validated(() => parseEngineId(raw)));
       json(res, 200, engines.list());
     },

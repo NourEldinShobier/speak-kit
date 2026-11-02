@@ -50,8 +50,10 @@ export class ExportManager {
     rmSync(dir, { recursive: true, force: true }); // leftovers of a previous run
   }
 
-  async create(engine: TtsEngine, input: ExportInput): Promise<ExportJob> {
+  /** Fails with the signal's reason, creating nothing, when the request was abandoned (504) while the sweep ran. */
+  async create(engine: TtsEngine, input: ExportInput, signal: AbortSignal): Promise<ExportJob> {
     await this.#sweep();
+    signal.throwIfAborted();
     if (this.#jobs.size >= MAX_JOBS) throw new ExportFullError(`at most ${MAX_JOBS} exports at once; delete finished ones`);
     const id = randomBytes(8).toString("hex");
     const job = { id, state: "running", done: 0, total: input.sentences.length, durationMs: 0, ac: new AbortController(), file: join(this.#dir, `${id}.wav`) } as Job;

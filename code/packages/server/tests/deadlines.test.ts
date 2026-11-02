@@ -1,3 +1,4 @@
+import { request } from "node:http";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { FrameDecoder } from "@speakkit/protocol";
 import { StalledEngine, readFrames, speakBody, start, type Ctx } from "./harness";
@@ -81,6 +82,25 @@ describe("control route deadline", () => {
     const r = await fetch(`${ctx.base}/v1/export/${job.id}`, { method: "DELETE", headers: ctx.auth });
     expect(r.status).toBe(504);
     expect(await r.json()).toEqual({ error: { code: "internal", message: "no answer within 0.15 s" } });
+  });
+
+  it("creates no export job after the client saw 504: the body that arrives late is not acted on", async () => {
+    ctx = await start({}, undefined, { controlDeadlineMs: 80 });
+    const body = JSON.stringify({ sentences: ["a"], voice: "af_heart", speed: 1 });
+    const req = request({
+      host: "127.0.0.1",
+      port: ctx.server.port,
+      method: "POST",
+      path: "/v1/export",
+      headers: { ...ctx.auth, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    });
+    req.on("error", () => {}); // the server may drop the connection once it has answered
+    const status = new Promise<number>((resolve) => req.on("response", (r) => (r.resume(), resolve(r.statusCode!))));
+    req.write(body.slice(0, 10));
+    expect(await status).toBe(504);
+    req.end(body.slice(10));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(ctx.engine.calls).toEqual([]); // a created job would have rendered its sentence by now
   });
 
   it("does not apply to the speak stream: a stream longer than the control deadline completes", async () => {

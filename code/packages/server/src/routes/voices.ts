@@ -29,8 +29,9 @@ export const voiceRoutes: Route[] = [
   {
     method: "POST",
     path: "/v1/voices/clone",
-    handle: async ({ req, res }, { engines }) => {
+    handle: async ({ req, res, signal }, { engines }) => {
       const raw = await readBody(req, MAX_CLIP_BODY);
+      signal.throwIfAborted();
       json(
         res,
         201,

@@ -41,7 +41,7 @@ describe("export faults", () => {
     });
     const exporter = new ExportManager(dir, { acquireSlot: (ac) => queue.slot(ac), render, open: failing as never });
     const engine = new FakeEngine();
-    const job = await exporter.create(engine, { sentences: ["a", "b"], voice: "af_heart", speed: 1, gapMs: 0 });
+    const job = await exporter.create(engine, { sentences: ["a", "b"], voice: "af_heart", speed: 1, gapMs: 0 }, new AbortController().signal);
     await exporter.get(job.id)!.settled;
     expect(exporter.view(exporter.get(job.id)!)).toMatchObject({ state: "error", error: "ENOSPC: no space left on device" });
     expect(closed).toBe(true);

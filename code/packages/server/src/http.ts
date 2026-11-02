@@ -50,11 +50,18 @@ export async function readBody(req: IncomingMessage, max = MAX_BODY): Promise<un
   }
 }
 
-/** Fails with 504 when `work` takes longer than `ms`. The abandoned work keeps running; its result is dropped. */
-export async function withDeadline<T>(work: Promise<T> | T, ms: number): Promise<T> {
+/**
+ * Fails with 504 when `work` takes longer than `ms` and aborts `ac` with that error, so a handler that checks its signal before it
+ * creates state stops there. The abandoned work keeps running until it does; its result is dropped.
+ */
+export async function withDeadline<T>(work: Promise<T> | T, ms: number, ac: AbortController): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new HttpError(504, "internal", `no answer within ${ms / 1000} s`)), ms);
+    timer = setTimeout(() => {
+      const e = new HttpError(504, "internal", `no answer within ${ms / 1000} s`);
+      ac.abort(e);
+      reject(e);
+    }, ms);
   });
   try {
     return await Promise.race([work, late]);

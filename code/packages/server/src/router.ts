@@ -18,6 +18,8 @@ export interface Exchange {
   res: ServerResponse;
   /** Capture groups of the route's path pattern. */
   params: string[];
+  /** Aborted when the control deadline passes (the client has been answered 504): check it before creating any state. Never aborted for a stream route. */
+  signal: AbortSignal;
 }
 
 export interface Route {

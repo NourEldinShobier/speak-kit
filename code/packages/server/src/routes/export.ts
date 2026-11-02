@@ -10,10 +10,11 @@ export const exportRoutes: Route[] = [
   {
     method: "POST",
     path: "/v1/export",
-    handle: async ({ req, res }, { engines, exporter }) => {
+    handle: async ({ req, res, signal }, { engines, exporter }) => {
       const raw = await readBody(req);
+      signal.throwIfAborted();
       const input = validated(() => parseExport(voiceIds(engines), raw));
-      json(res, 202, await exporter.create(engines.active, input));
+      json(res, 202, await exporter.create(engines.active, input, signal));
     },
   },
   {
