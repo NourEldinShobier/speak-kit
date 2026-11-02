@@ -103,6 +103,7 @@ export class ServerRuntime {
           port,
           version: state.version,
           ...(token ? { token } : {}),
+          onError: (e) => this.#onServerError(e),
           // Lazy-load options of the server build; extra keys are ignored by a build that predates them.
           ...serverOptions(config),
         }),
@@ -160,6 +161,13 @@ export class ServerRuntime {
   stopPolling(): void {
     clearTimeout(this.#healthTimer);
     this.#healthTimer = undefined;
+  }
+
+  /** The node server raised an error after it was listening: shown like a failed start, and logged. */
+  #onServerError(e: Error): void {
+    this.#d.state.serverError = toDesktopError(e);
+    this.#d.log.error("server error", e.message);
+    this.#d.publish();
   }
 
   async #onEngineEvent(): Promise<void> {
