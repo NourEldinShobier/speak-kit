@@ -132,6 +132,74 @@ function onDeepLink(link: DeepLink) {
   });
 }
 
+function watchPower() {
+  state.onBattery = powerMonitor.isOnBatteryPower();
+  const onPower = (battery: boolean) => {
+    state.onBattery = battery;
+    applyMemory(runtime.server, config, battery);
+    publish();
+  };
+  powerMonitor.on("on-battery", () => onPower(true));
+  powerMonitor.on("on-ac", () => onPower(false));
+}
+
+function watchPairingActivity() {
+  watchPairing(state.pairing, {
+    token: () => state.token,
+    port: () => state.port,
+    onChange: () => {
+      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
+      publish();
+    },
+  });
+}
+
+function createHandlers() {
+  return createAppHandlers({
+    state,
+    config,
+    saveConfig: store.save,
+    publish,
+    runtime,
+    mainWindow,
+    api: serverApi,
+    dataDir,
+    modelsDir,
+    logsDir,
+    addActivity,
+    onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
+  });
+}
+
+function startDesktop() {
+  return setupDesktop(
+    {
+      state,
+      config,
+      saveConfig: store.save,
+      publish,
+      sinks,
+      showWindow: () => mainWindow.show(),
+      sendUi: (e) => mainWindow.sendUi(e),
+      addActivity,
+      server: serverApi,
+      log,
+      looking: () => mainWindow.isVisible() && mainWindow.isFocused(),
+    },
+    {
+      parent: () => mainWindow.window,
+      distDir: here,
+      requestQuit: () => {
+        mainWindow.show();
+        mainWindow.sendUi({ type: "confirm-quit" });
+      },
+      retryEngine: () => runtime.retry(),
+      test: test.hook,
+      fakeUpdate: test.fakeUpdate,
+    },
+  );
+}
+
 // ---- boot ----
 // `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
 const QUIT_FLAG = "--quit";
@@ -181,62 +249,10 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
-    state.onBattery = powerMonitor.isOnBatteryPower();
-    const onPower = (battery: boolean) => {
-      state.onBattery = battery;
-      applyMemory(runtime.server, config, battery);
-      publish();
-    };
-    powerMonitor.on("on-battery", () => onPower(true));
-    powerMonitor.on("on-ac", () => onPower(false));
-    watchPairing(state.pairing, {
-      token: () => state.token,
-      port: () => state.port,
-      onChange: () => {
-        if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
-        publish();
-      },
-    });
-    const appHandlers = createAppHandlers({
-      state,
-      config,
-      saveConfig: store.save,
-      publish,
-      runtime,
-      mainWindow,
-      api: serverApi,
-      dataDir,
-      modelsDir,
-      logsDir,
-      addActivity,
-      onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
-    });
-    desktop = setupDesktop(
-      {
-        state,
-        config,
-        saveConfig: store.save,
-        publish,
-        sinks,
-        showWindow: () => mainWindow.show(),
-        sendUi: (e) => mainWindow.sendUi(e),
-        addActivity,
-        server: serverApi,
-        log,
-        looking: () => mainWindow.isVisible() && mainWindow.isFocused(),
-      },
-      {
-        parent: () => mainWindow.window,
-        distDir: here,
-        requestQuit: () => {
-          mainWindow.show();
-          mainWindow.sendUi({ type: "confirm-quit" });
-        },
-        retryEngine: () => runtime.retry(),
-        test: test.hook,
-        fakeUpdate: test.fakeUpdate,
-      },
-    );
+    watchPower();
+    watchPairingActivity();
+    const appHandlers = createHandlers();
+    desktop = startDesktop();
     const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
     registerValidatedIpc<Method>(ipcMain, {
       methods: METHODS,

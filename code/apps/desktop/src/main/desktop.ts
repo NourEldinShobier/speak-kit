@@ -30,6 +30,21 @@ interface DesktopOptions {
   fakeUpdate?: string;
 }
 
+const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
+  "read-selection": () => void reading.readSelection(),
+  "play-pause": () => reading.controller.command({ type: "toggle" }),
+  stop: () => reading.controller.command({ type: "stop" }),
+  "read-clipboard": () => void reading.readClipboard(),
+});
+
+const readerHandlers = (reading: ReturnType<typeof createReading>) =>
+  ({
+    reader: async (cmd) => reading.command(cmd),
+    readClipboard: async () => reading.readClipboard(),
+    readerStarted: async (epoch, index) => reading.started(epoch, index),
+    readerDone: async (epoch, index) => reading.done(epoch, index),
+  }) satisfies Partial<Api>;
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, the clipboard prompt, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -49,13 +64,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   // ---- global shortcuts ----
-  const actions: Record<ShortcutId, () => void> = {
-    "read-selection": () => void reading.readSelection(),
-    "play-pause": () => reading.controller.command({ type: "toggle" }),
-    stop: () => reading.controller.command({ type: "stop" }),
-    "read-clipboard": () => void reading.readClipboard(),
-  };
-  const shortcuts = setupShortcuts(ctx, actions, o.test);
+  const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
 
   const announceEngine = engineAnnouncer(ctx, toasts);
   const clipboardPrompt = setupClipboardPrompt(ctx, toasts, reading);
@@ -68,10 +77,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     ...exports.handlers,
     ...updates.handlers,
     ...shortcuts.handlers,
-    reader: async (cmd) => reading.command(cmd),
-    readClipboard: async () => reading.readClipboard(),
-    readerStarted: async (epoch, index) => reading.started(epoch, index),
-    readerDone: async (epoch, index) => reading.done(epoch, index),
+    ...readerHandlers(reading),
     installExtension: () => installExtension(!o.test),
   } satisfies Partial<Api>;
 

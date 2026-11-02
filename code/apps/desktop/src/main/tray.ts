@@ -6,6 +6,20 @@ import type { Ctx } from "./context";
 
 type TrayHandlers = Record<TrayAction, () => void>;
 
+function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers, mac: boolean): MenuItemConstructorOptions[] {
+  return items.map((i) =>
+    i.type === "separator"
+      ? { type: "separator" }
+      : {
+          label: i.label,
+          enabled: i.enabled,
+          ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
+          ...(i.hint ? { accelerator: i.hint.replace("Ctrl", mac ? "Control" : "CommandOrControl"), registerAccelerator: false } : {}),
+          click: () => run[i.action](),
+        },
+  );
+}
+
 /**
  * The tray icon, its short native menu (right click) and SpeakKit's own panel (left click). Icon, tooltip and menu are rebuilt
  * only when what they show has changed.
@@ -42,17 +56,7 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
     summary = `${icon}|${tip}`;
     tray.setImage(trayIcon(icon));
     tray.setToolTip(tip);
-    const template: MenuItemConstructorOptions[] = items.map((i) =>
-      i.type === "separator"
-        ? { type: "separator" }
-        : {
-            label: i.label,
-            enabled: i.enabled,
-            ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
-            ...(i.hint ? { accelerator: i.hint.replace("Ctrl", mac ? "Control" : "CommandOrControl"), registerAccelerator: false } : {}),
-            click: () => run[i.action](),
-          },
-    );
+    const template = menuTemplate(items, run, mac);
     menu = Menu.buildFromTemplate(template);
     if (!mac) tray.setContextMenu(menu);
   };

@@ -28,13 +28,11 @@ const failure = (e: unknown, name?: string): ImportResult => {
   return { ok: false, reason: "unreadable", message: e instanceof Error ? e.message : String(e), ...(name ? { name } : {}) };
 };
 
-export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
-  const store = await LibraryStore.open(deps.dir);
-  if (store.recovered) deps.onRecovered?.(store.recovered);
-  const now = deps.now ?? Date.now;
-  const parse = deps.parse ?? runParseJob;
+type AddInfo = { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string };
 
-  async function add(parsed: Parsed, info: { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string }, original?: Uint8Array): Promise<ImportResult> {
+/** Turns bytes, text and fetched pages into documents in the store. */
+function importers(store: LibraryStore, now: () => number, parse: NonNullable<LibraryDeps["parse"]>) {
+  async function add(parsed: Parsed, info: AddInfo, original?: Uint8Array): Promise<ImportResult> {
     const meta: DocMeta = {
       id: randomUUID(),
       title: info.title?.trim() || parsed.title.trim() || titleFromBlocks(parsed.blocks, info.origin),
@@ -70,6 +68,25 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
     if (!blocks.length) return failure(new ImportError("empty", "There is no text to add."));
     return add({ title: "", blocks }, { source: "paste", format: "text", origin: "Pasted text", ...(title ? { title } : {}), ...(voice ? { voice } : {}) });
   }
+  return { add, importBytes, importText };
+}
+
+/** One picked file: too large or unreadable files become a failure result, not an exception. */
+async function importPicked(p: string, importBytes: (name: string, bytes: Uint8Array, filePath?: string) => Promise<ImportResult>): Promise<ImportResult> {
+  try {
+    if ((await stat(p)).size > MAX_FILE_BYTES) throw new ImportError("too-large", `${path.basename(p)} is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
+    return await importBytes(path.basename(p), await readFile(p), p);
+  } catch (e) {
+    return failure(e, path.basename(p));
+  }
+}
+
+export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
+  const store = await LibraryStore.open(deps.dir);
+  if (store.recovered) deps.onRecovered?.(store.recovered);
+  const now = deps.now ?? Date.now;
+  const parse = deps.parse ?? runParseJob;
+  const { add, importBytes, importText } = importers(store, now, parse);
 
   const patch = (id: string, p: Partial<DocMeta>) => store.update(id, p);
 
@@ -84,17 +101,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
     importText,
     importClipboard: async () => importText(await deps.readClipboard()),
     importBytes: (name, bytes) => importBytes(name, bytes),
-    pickFiles: async () =>
-      Promise.all(
-        (await deps.chooseFiles()).map(async (p) => {
-          try {
-            if ((await stat(p)).size > MAX_FILE_BYTES) throw new ImportError("too-large", `${path.basename(p)} is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
-            return await importBytes(path.basename(p), await readFile(p), p);
-          } catch (e) {
-            return failure(e, path.basename(p));
-          }
-        }),
-      ),
+    pickFiles: async () => Promise.all((await deps.chooseFiles()).map((p) => importPicked(p, importBytes))),
     importUrl: async (url) => {
       try {
         const page = await fetchPage(url, deps.fetch, parse);

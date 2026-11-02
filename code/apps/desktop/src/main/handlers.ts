@@ -62,10 +62,34 @@ function metrics(): Metrics {
 
 export { metrics };
 
+const loginItemArgs = (config: Config) => (config.startMinimized ? ["--hidden"] : []);
+
+async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
+  const { state, config, runtime, mainWindow } = d;
+  const setupWas = config.setupDone;
+  Object.assign(config, patch);
+  d.saveConfig();
+  if (patch.theme) nativeTheme.themeSource = config.theme;
+  if (patch.startMinimized !== undefined) app.setLoginItemSettings({ openAtLogin: app.getLoginItemSettings().openAtLogin, args: loginItemArgs(config) });
+  if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);
+  if (patch.loadAtStart && runtime.engine?.status().state === "unloaded") runtime.startEngine();
+  d.onConfigPatch(patch);
+  if (config.setupDone !== setupWas) mainWindow.applyMode();
+  return d.publish();
+}
+
+async function regenerateToken(d: HandlerDeps) {
+  const token = randomBytes(32).toString("hex");
+  await writeFile(path.join(d.dataDir, "token"), token);
+  Object.assign(d.state.pairing, emptyPairing());
+  d.addActivity("info", "Pairing token regenerated", "Every paired browser must be paired again.");
+  return d.runtime.restart(token);
+}
+
 /** The IPC methods of the app shell: settings, server and engine control, storage. The desktop features add their own. */
 export function createAppHandlers(d: HandlerDeps) {
   const { state, config, runtime, mainWindow } = d;
-  const loginArgs = () => (config.startMinimized ? ["--hidden"] : []);
+  const loginArgs = () => loginItemArgs(config);
 
   async function storage(): Promise<StorageInfo> {
     const [modelsBytes, logsBytes, all] = await Promise.all([dirSize(d.modelsDir), dirSize(d.logsDir), dirSize(d.dataDir)]);
@@ -75,18 +99,7 @@ export function createAppHandlers(d: HandlerDeps) {
 
   return {
     state: async () => d.publish(),
-    patchConfig: async (patch) => {
-      const setupWas = config.setupDone;
-      Object.assign(config, patch);
-      d.saveConfig();
-      if (patch.theme) nativeTheme.themeSource = config.theme;
-      if (patch.startMinimized !== undefined) app.setLoginItemSettings({ openAtLogin: app.getLoginItemSettings().openAtLogin, args: loginArgs() });
-      if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);
-      if (patch.loadAtStart && runtime.engine?.status().state === "unloaded") runtime.startEngine();
-      d.onConfigPatch(patch);
-      if (config.setupDone !== setupWas) mainWindow.applyMode();
-      return d.publish();
-    },
+    patchConfig: (patch) => patchConfig(d, patch),
     setLaunchAtLogin: async (on) => {
       app.setLoginItemSettings({ openAtLogin: on, args: loginArgs() });
       return d.publish();
@@ -96,13 +109,7 @@ export function createAppHandlers(d: HandlerDeps) {
       d.saveConfig();
       return runtime.restart(state.token);
     },
-    regenerateToken: async () => {
-      const token = randomBytes(32).toString("hex");
-      await writeFile(path.join(d.dataDir, "token"), token);
-      Object.assign(state.pairing, emptyPairing());
-      d.addActivity("info", "Pairing token regenerated", "Every paired browser must be paired again.");
-      return runtime.restart(token);
-    },
+    regenerateToken: () => regenerateToken(d),
     retryEngine: () => runtime.retry(),
     downloadModel: async () => {
       const engine = runtime.engine ?? runtime.createEngine();
