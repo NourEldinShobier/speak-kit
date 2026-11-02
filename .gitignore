@@ -30,3 +30,6 @@ designs/logo/v3/*.png
 !designs/logo/v3/round3-board.png
 designs/logo/final/*.png
 !designs/logo/final/round4-board.png
+
+# everything temporary stays inside the workspace: agent worktrees in tmp/wt/<name>, scratch files in tmp/
+tmp/

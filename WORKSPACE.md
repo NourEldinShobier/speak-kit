@@ -22,3 +22,6 @@ Needs `figcraft-cli.exe` (default `<home>/AppData/Local/Programs/FigCraft/`, ove
 
 ## Docs map
 - `docs/architecture.md` contract and ownership, `docs/design-system.md` Lumen tokens and rules, `docs/lumen-study.md` what is copied from Lumen and the restructure plan, `docs/lumen-components.md` real component specs, `docs/decisions/0001-stack.md` stack ADR, `docs/perf.md`, `docs/testing.md`, `docs/visual-fidelity.md` (written by the agents).
+
+## Temporary files
+Everything stays inside this folder. Agent worktrees live in `tmp/wt/<name>` (git-ignored), scratch files in `tmp/`; remove them when the task is done. Nothing is created next to `speak-it` in `D:\workspaces`.
