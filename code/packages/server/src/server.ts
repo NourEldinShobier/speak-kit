@@ -43,6 +43,8 @@ export interface ServerOptions {
   streamIdleMs?: number;
   /** Only these extension ids may call (the part after chrome-extension://). Default: any extension that has the token. */
   allowedExtensions?: string[];
+  /** Called with an error the node server raises after it started listening (for example EMFILE on accept). Default: one line on stderr. */
+  onError?: (e: Error) => void;
 }
 
 export interface SpeakKitServer {
@@ -129,6 +131,18 @@ function httpServerTracking(handle: ReturnType<typeof requestHandler>, sockets: 
   return server;
 }
 
+/** Listens and resolves with the bound port; an error before that rejects, one after it goes to `onError` (unhandled, it would be an uncaught exception). */
+function listenOn(server: Server, at: { port: number; host: string }, onError: (e: Error) => void): Promise<number> {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(at.port, at.host, () => {
+      server.off("error", reject);
+      server.on("error", onError);
+      resolve((server.address() as AddressInfo).port);
+    });
+  });
+}
+
 /** Wires the pieces: the guard (Host, Origin, token), the route table, the stream queue and the engines. */
 export function createServer(opts: ServerOptions): SpeakKitServer {
   const { dataDir, host = "127.0.0.1" } = opts;
@@ -154,6 +168,11 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
   const handle = requestHandler(services, tokenChecker(token), { port: () => boundPort, ...(allowedExtensions && { allowedExtensions }) });
 
   const server = httpServerTracking(handle, sockets);
+  const onError =
+    opts.onError ??
+    ((e: Error) =>
+      void process.stderr.write(`speakkit server error: ${e.message}
+`));
 
   return {
     get port() {
@@ -162,16 +181,10 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
     token,
     setIdleUnloadMs: (ms) => engines.all().forEach((e) => e.setIdleUnloadMs?.(ms)),
     setOnBattery: (b) => engines.all().forEach((e) => e.setOnBattery?.(b)),
-    listen: () =>
-      new Promise((resolve, reject) => {
-        server.once("error", reject);
-        server.listen(boundPort, host, () => {
-          server.off("error", reject);
-          boundPort = (server.address() as AddressInfo).port;
-          if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
-          resolve();
-        });
-      }),
+    listen: async () => {
+      boundPort = await listenOn(server, { port: boundPort, host }, onError);
+      if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
+    },
     close: async () => {
       queue.abortAll();
       await exporter.close();
