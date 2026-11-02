@@ -34,7 +34,7 @@ jobs:
     steps:
       # A tag needs docs/perf-runs/<version>.json from "pnpm run release:check" (the perf phase runs on the dev machine, not here)
       # for a commit in the tagged history; no build starts without it.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.ref_type == 'tag'
         with:
           fetch-depth: 0
@@ -68,7 +68,7 @@ jobs:
         shell: bash
         working-directory: code
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
