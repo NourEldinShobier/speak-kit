@@ -8,7 +8,7 @@ import { appScenarios } from "./desktop-app";
 import { optionsScenarios, panelScenarios, popupScenarios, builtName, cur, type Ctx, type Scenario } from "./scenarios";
 import { OUT, launchExt, startEnv, type Ext, type Env } from "./support";
 
-// ONLY=A1,B6 limits ids; GROUP=popup,page limits by group prefix; THEME=dark|light limits themes; STATE=slug filters states.
+// ONLY=A1,B6 limits ids; GROUP=popup,page limits by group prefix; STATE=slug filters states.
 const list = (v?: string) =>
   v
     ?.split(",")
@@ -17,8 +17,7 @@ const list = (v?: string) =>
 const only = list(process.env.ONLY);
 const groups = list(process.env.GROUP)?.map((g) => g.toLowerCase());
 const states = list(process.env.STATE);
-const themeOnly = process.env.THEME as "dark" | "light" | undefined;
-const partial = !!(only || groups || states || themeOnly);
+const partial = !!(only || groups || states);
 const results: Result[] = [];
 let ext: Ext;
 let env: Env;
@@ -50,10 +49,10 @@ describe("visual capture", () => {
     if (only && !only.includes(s.id)) continue;
     if (groups && !groups.some((g) => s.group.toLowerCase().includes(g))) continue;
     if (states && !states.includes(s.state)) continue;
-    for (const theme of s.themes ?? (["dark", "light"] as const)) {
-      if (themeOnly && theme !== themeOnly) continue;
+    {
+      const theme = "light";
       it(`${s.id} ${s.state} ${theme}`, async () => {
-        const dark = theme === "dark";
+        const dark = false;
         Object.assign(cur, { id: s.id, state: s.state, dark });
         const c: Ctx = { ext, env, dark };
         const path = await s.run(c);

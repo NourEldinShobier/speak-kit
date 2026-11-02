@@ -24,12 +24,12 @@ afterAll(async () => {
 });
 
 const shots: [Scenario[], string, string, boolean, string][] = [
-  [appScenarios, "F1", "playing", true, "app-reader.png"],
+  [appScenarios, "F1", "playing", false, "app-reader.png"],
   [appScenarios, "F1", "playing", false, "app-reader-light.png"],
-  [desktopScenarios, "G1", "voices", true, "app-voices.png"],
-  [appScenarios, "H5", "shortcuts", true, "app-shortcuts.png"],
-  [popupScenarios, "A4", "playing", true, "popup-playing.png"],
-  [pageScenarios, "B6", "reading-highlight", true, "page-highlight.png"],
+  [desktopScenarios, "G1", "voices", false, "app-voices.png"],
+  [appScenarios, "H5", "shortcuts", false, "app-shortcuts.png"],
+  [popupScenarios, "A4", "playing", false, "popup-playing.png"],
+  [pageScenarios, "B6", "reading-highlight", false, "page-highlight.png"],
 ];
 
 for (const [list, id, state, dark, file] of shots) {

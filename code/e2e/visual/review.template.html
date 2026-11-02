@@ -23,24 +23,6 @@
         --ers: #fde4e1;
         --sh: 0 1px 3px #0001, 0 6px 16px #0000000d;
       }
-      :root[data-theme="dark"] {
-        --bg: #191a1b;
-        --surface: #1e1f20;
-        --s2: #252627;
-        --bd: #2a2b2c;
-        --tx: #e6e6e6;
-        --tx2: #b9b2a7;
-        --tx3: #857e73;
-        --acs: #124368;
-        --oks: #14382b;
-        --wns: #3a2d12;
-        --ers: #40201c;
-        --ac: #0078d4;
-        --ok: #4cc38a;
-        --wn: #f5a524;
-        --er: #f2555a;
-        --sh: 0 1px 3px #0006;
-      }
       * {
         box-sizing: border-box;
       }
@@ -522,9 +504,8 @@
         <div class="stats" id="stats"></div>
       </div>
       <div class="bar" style="padding-top: 0">
-        <span class="sub">Screens</span><span class="seg" id="gth"><button data-t="dark">Dark</button><button data-t="light">Light</button></span>
+        <span class="sub">Screens</span>
         <button class="btn" id="cmp">Compare with design</button>
-        <button class="btn" id="theme">Page theme</button>
         <button class="btn" id="copy">Copy summary</button>
         <button class="btn pri" id="export">Export decisions</button>
       </div>
@@ -539,8 +520,7 @@
       </div>
       <div class="ctl">
         <button class="btn" data-k="prev">&larr; Prev</button><button class="btn" data-k="a">Approve</button><button class="btn" data-k="c">Change</button><button class="btn" data-k="r">Reject</button
-        ><button class="btn" data-k="t">Theme (T)</button><button class="btn" data-k="d">Compare (D)</button><button class="btn" data-k="next">Next &rarr;</button
-        ><button class="btn" data-k="x">Close</button>
+        ><button class="btn" data-k="d">Compare (D)</button><button class="btn" data-k="next">Next &rarr;</button><button class="btn" data-k="x">Close</button>
       </div>
     </div>
     <script>
@@ -573,7 +553,6 @@
       C.forEach((c) => (byGroup[c.group] ??= []).push(c));
       const groups = G.filter((g) => byGroup[g.key]);
       let filter = "all",
-        gTheme = pref("gtheme", "dark"),
         cmp = pref("cmp", "0") === "1";
       const get = (k) => state[k] || { s: "pending", n: "" };
       const set = (k, p) => {
@@ -581,7 +560,7 @@
         save();
       };
       const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-      const themeOf = (c) => (c.th && c.shots[c.th] ? c.th : c.shots[gTheme] ? gTheme : c.shots.dark ? "dark" : "light");
+      const themeOf = () => "light";
       const label = (r) =>
         r
           ? { match: "match", minor: "minor drift", known: "known difference", major: "drifts", only: "product only", twin: "no light twin" }[r.verdict] + (r.pct != null ? " " + r.pct + "%" : "")
@@ -628,7 +607,6 @@
             el.dataset.s = st.s;
             el.dataset.key = c.key;
             if (filter !== "all" && st.s !== filter) el.classList.add("hide");
-            const both = c.shots.dark && c.shots.light;
             el.innerHTML =
               '<div class="thumbs">' +
               thumbs(c) +
@@ -643,15 +621,6 @@
               "</h3><p>" +
               esc(r && r.reason ? r.reason : "") +
               "</p></div>" +
-              '<div class="tr">' +
-              (both
-                ? '<span class="seg" data-ct><button data-t="dark" class="' +
-                  (t === "dark" ? "on" : "") +
-                  '">Dark</button><button data-t="light" class="' +
-                  (t === "light" ? "on" : "") +
-                  '">Light</button></span>'
-                : '<span class="sub">' + t + " only</span>") +
-              "</div>" +
               '<div class="acts"><button class="a" data-set="approved">&#10003; Approve</button><button class="c" data-set="change">&#9998; Change</button><button class="r" data-set="rejected">&#10005; Reject</button></div><textarea placeholder="What should change?" class="' +
               (st.n ? "has" : "") +
               '">' +
@@ -690,10 +659,9 @@
           C.length +
           " screens captured from the built product (" +
           DATA.counts.shots +
-          " images, light and dark) · " +
+          " images, light) · " +
           groups.length +
-          " features · click an image to enlarge · viewer keys: ← → move, A approve, C change, R reject, T theme, D compare";
-        document.querySelectorAll("#gth button").forEach((b) => b.classList.toggle("on", b.dataset.t === gTheme));
+          " features · click an image to enlarge · viewer keys: ← → move, A approve, C change, R reject, D compare";
         document.getElementById("cmp").classList.toggle("on", cmp);
       }
       function apply(key, s) {
@@ -707,7 +675,7 @@
         if (lbIdx >= 0) lbShow();
       }
       document.addEventListener("click", (e) => {
-        const t = e.target.closest("[data-set],[data-zoom],[data-f],[data-all],#gth button,#cmp,[data-ct] button");
+        const t = e.target.closest("[data-set],[data-zoom],[data-f],[data-all],#cmp,[data-ct] button");
         if (!t) return;
         if (t.dataset.set) {
           const k = t.closest(".card").dataset.key;
@@ -724,13 +692,6 @@
         } else if (t.id === "cmp") {
           cmp = !cmp;
           setPref("cmp", cmp ? "1" : "0");
-          render();
-        } else if (t.closest("#gth")) {
-          gTheme = t.dataset.t;
-          setPref("gtheme", gTheme);
-          C.forEach((c) => {
-            delete c.th;
-          });
           render();
         } else if (t.closest("[data-ct]")) {
           const c = C.find((x) => x.key === t.closest(".card").dataset.key);
@@ -767,14 +728,6 @@
         lbIdx = -1;
         lb.classList.remove("on");
       };
-      const lbTheme = () => {
-        const c = C[lbIdx];
-        if (c.shots.dark && c.shots.light) {
-          c.th = themeOf(c) === "dark" ? "light" : "dark";
-          lbShow();
-          render();
-        }
-      };
       lb.addEventListener("click", (e) => {
         const k = e.target.dataset.k;
         if (!k) {
@@ -784,7 +737,6 @@
         if (k === "x") lbClose();
         else if (k === "prev") lbMove(-1);
         else if (k === "next") lbMove(1);
-        else if (k === "t") lbTheme();
         else if (k === "d") {
           cmp = !cmp;
           setPref("cmp", cmp ? "1" : "0");
@@ -798,7 +750,6 @@
         if (e.key === "ArrowRight") lbMove(1);
         else if (e.key === "ArrowLeft") lbMove(-1);
         else if (e.key === "Escape") lbClose();
-        else if (k === "t") lbTheme();
         else if (k === "d") {
           cmp = !cmp;
           setPref("cmp", cmp ? "1" : "0");
@@ -814,7 +765,7 @@
           title: c.title,
           status: get(c.key).s,
           comment: get(c.key).n,
-          diff: { dark: c.res.dark && c.res.dark.pct, light: c.res.light && c.res.light.pct },
+          diff: { light: c.res.light && c.res.light.pct },
         }));
       document.getElementById("export").onclick = () => {
         const b = new Blob([JSON.stringify(decisions(), null, 2)], { type: "application/json" });
@@ -841,14 +792,6 @@
         }
         document.getElementById("copy").textContent = "Copied";
         setTimeout(() => (document.getElementById("copy").textContent = "Copy summary"), 1200);
-      };
-      const root = document.documentElement;
-      const th = pref("theme", "");
-      if (th) root.dataset.theme = th;
-      else if (matchMedia("(prefers-color-scheme: dark)").matches) root.dataset.theme = "dark";
-      document.getElementById("theme").onclick = () => {
-        root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
-        setPref("theme", root.dataset.theme);
       };
       render();
     </script>

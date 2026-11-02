@@ -13,7 +13,7 @@ export interface Crop {
 export interface Result {
   id: string;
   state: string;
-  theme: "dark" | "light";
+  theme: "light";
   group: string;
   title: string;
   file: string;
@@ -81,7 +81,7 @@ export function designCrop(id: string, d: PNG): Crop {
   return { x: 81, y: 51, w: 1278, h: 798 };
 }
 
-/** The design file a capture answers: dark is the default theme, light twins carry the -L suffix. */
+/** The design file a capture answers: light twins carry the -L suffix (dark designs are not used). */
 export function designFile(id: string, dark: boolean): string | null {
   const f = join(DESIGNS, dark ? `${id}.png` : `${id}-L.png`);
   return existsSync(f) ? f : null;

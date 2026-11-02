@@ -27,14 +27,13 @@ export type Group = (typeof GROUPS)[keyof typeof GROUPS];
 
 /**
  * One captured screen. `id` is the design frame id the screen answers (or an own id when the design has none), `state` a short slug.
- * Files are written as built/<id>-<state>-<theme>.png. `themes` defaults to both. `design` is false when no design frame exists.
+ * Files are written as built/<id>-<state>-<theme>.png. Captures are light only. `design` is false when no design frame exists.
  */
 export interface Scenario {
   id: string;
   state: string;
   group: Group;
   title: string;
-  themes?: ("dark" | "light")[];
   design?: boolean;
   run(c: Ctx): Promise<string>;
 }
@@ -47,7 +46,7 @@ export const builtPath = (_legacy?: string) => {
   return join(OUT, "built", builtName(cur.id, cur.state, cur.dark));
 };
 
-export const S = (id: string, state: string, group: Group, title: string, run: Scenario["run"], o: { themes?: Scenario["themes"]; design?: boolean } = {}): Scenario => ({
+export const S = (id: string, state: string, group: Group, title: string, run: Scenario["run"], o: { design?: boolean } = {}): Scenario => ({
   id,
   state,
   group,

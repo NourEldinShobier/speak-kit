@@ -18,7 +18,7 @@ const GROUPS = [
     "On-page reading",
     "What the content script draws on the page: selection bubble, paragraph gutter, the Lumen read-aloud pill in every state, popovers, toast, back-to-current and the edge launcher.",
   ],
-  ["Reader view", "The reader overlay in paper, light and dark with the reading panel (font, size, width, theme, highlight sentence)."],
+  ["Reader view", "The reader overlay in paper and light with the reading panel (font, size, width, theme, highlight sentence)."],
   ["Options", "The extension options page: connection, launcher, voice and speed, highlighting, reader view, shortcuts, sites, and the narrow layout."],
   ["Side panel (queue)", "The side panel: now playing, page outline and the queue."],
   ["Desktop setup", "First-run setup window: welcome, voice engine, download, connect browser, done."],
@@ -58,7 +58,7 @@ for (const r of results) {
   const n = notes[k] ?? notes[`${r.id}-${r.state}`] ?? {};
   if (r.diffPct != null) c.res[r.theme] = { pct: r.diffPct, verdict: n.verdict ?? verdictOf(r), reason: n.reason ?? r.note ?? "", design: hasDesign ? dfile : null };
   else if (r.note === "product-only") c.res[r.theme] = { pct: null, verdict: "only", reason: n.reason ?? "Product state without a design frame.", design: null };
-  else c.res[r.theme] = { pct: null, verdict: "twin", reason: "The design set has no light twin of this screen; the verdict is on the dark capture.", design: null };
+  else c.res[r.theme] = { pct: null, verdict: "twin", reason: "The design set has no frame for this screen.", design: null };
 }
 const order = (a, b) => Number(a.group) - Number(b.group);
 const list = [...cards.values()].sort(order); // stable: capture order inside a group
@@ -67,7 +67,6 @@ const list = [...cards.values()].sort(order); // stable: capture order inside a 
 const frames = manifest.pages.flatMap((p) => p.sections.flatMap((s) => s.frames.map((f) => ({ ...f, page: p.name, section: s.title }))));
 const seen = new Set();
 const uniq = frames.filter((f) => (seen.has(f.id) ? false : seen.add(f.id)));
-const capturedDark = new Set(results.filter((r) => r.theme === "dark" && r.diffPct != null).map((r) => r.id));
 const capturedLight = new Set(results.filter((r) => r.theme === "light" && r.diffPct != null).map((r) => r.id));
 const capturedAny = new Set(results.map((r) => r.id));
 const reasons = JSON.parse(readFileSync(join(here, "missing-reasons.json"), "utf8"));
@@ -82,10 +81,7 @@ const missing = [];
 for (const f of uniq) {
   const light = f.id.endsWith("-L");
   const base = light ? f.id.slice(0, -2) : f.id;
-  if (light ? capturedLight.has(base) : capturedDark.has(f.id)) continue;
-  if (!light && capturedAny.has(f.id) && !capturedDark.has(f.id)) {
-    /* captured without a dark diff: counts as captured */ continue;
-  }
+  if (capturedLight.has(base)) continue;
   missing.push({
     id: f.id,
     title: `${f.title} (${f.page})`,
@@ -119,14 +115,14 @@ const tally = { match: 0, minor: 0, major: 0, known: 0 };
 for (const c of list) for (const r of Object.values(c.res)) if (r.pct != null) tally[r.verdict] = (tally[r.verdict] ?? 0) + 1;
 const rows = [];
 for (const c of list)
-  for (const t of ["dark", "light"]) {
+  for (const t of ["light"]) {
     const r = c.res[t];
     if (r && r.pct != null)
       rows.push(`| ${c.id} | ${c.title} | ${t} | ${{ match: "match", minor: "minor drift", major: "drift", known: "known difference" }[r.verdict]} | ${r.pct ?? "-"} | ${r.reason || ""} |`);
   }
 const intro = readFileSync(join(here, "fidelity-intro.md"), "utf8");
 const perGroup = GROUPS.map((g) => `| ${g.name} | ${list.filter((c) => c.group === g.key).length} | ${list.filter((c) => c.group === g.key).reduce((n, c) => n + Object.keys(c.shots).length, 0)} |`);
-const md = `${intro.replace("{{COUNTS}}", `**Counts:** ${counts.cards} screens captured (${counts.shots} images, dark and light) against ${counts.frames} design frames. Diffed against a design frame: ${rows.length} images: ${tally.match} match, ${tally.minor} minor drift, ${tally.major} drift, ${tally.known} known difference. ${counts.missing} design frames could not be captured (list below).`)}
+const md = `${intro.replace("{{COUNTS}}", `**Counts:** ${counts.cards} screens captured (${counts.shots} images, light) against ${counts.frames} design frames. Diffed against a design frame: ${rows.length} images: ${tally.match} match, ${tally.minor} minor drift, ${tally.major} drift, ${tally.known} known difference. ${counts.missing} design frames could not be captured (list below).`)}
 
 ## Screens captured per feature group
 

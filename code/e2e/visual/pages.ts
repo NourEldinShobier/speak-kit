@@ -7,7 +7,7 @@ type Patch = (s: Settings) => Settings;
 const noLauncher: Patch = (s) => ({ ...s, launcher: { ...s.launcher, enabled: false } });
 const dockOnly: Patch = (s) => ({ ...noLauncher(s), sites: { "127.0.0.1": "always-dock" } });
 const reader =
-  (theme: "paper" | "light" | "dark", p: Patch = dockOnly): Patch =>
+  (theme: "paper" | "light", p: Patch = dockOnly): Patch =>
   (s) => {
     const x = p(s) as any;
     return { ...x, reader: { ...x.reader, theme, font: "serif", size: 19, width: 680 } };
@@ -268,11 +268,6 @@ export const pageScenarios: Scenario[] = [
   }),
   S("B10", "reader-paper", R, "Page · reader view (paper)", async (c) => {
     const p = await openPage(c, { settings: reader("paper") });
-    await openReader(p);
-    return shot(p);
-  }),
-  S("B12", "reader-dark", R, "Page · reader view (dark)", async (c) => {
-    const p = await openPage(c, { settings: reader("dark") });
     await openReader(p);
     return shot(p);
   }),
