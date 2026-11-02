@@ -64,6 +64,8 @@ test.describe("paragraph gutter", () => {
     await expect(sk(page, "gutter-play")).toBeVisible({ timeout: 5000 });
     await page.reload();
     await ext.waitState("idle");
+    // The reloaded page can ask for the state before the background finished stopping the old playback and then counts as engaged; the next load starts idle.
+    await page.reload();
     await page.locator("#p5").hover();
     await page.waitForTimeout(500);
     await expect(sk(page, "gutter-play")).toHaveCount(0);
