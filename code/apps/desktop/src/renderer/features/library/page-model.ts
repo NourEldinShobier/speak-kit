@@ -85,7 +85,7 @@ export function libraryView(docs: DocMeta[] | null, o: Pick<LibraryUi, "query" |
   };
 }
 
-export type BodyKind = "list" | "library-empty" | "no-match" | "filter-empty";
+type BodyKind = "list" | "library-empty" | "no-match" | "filter-empty";
 
 /** What fills the page under the header: the list, or the empty state that explains why there is none. */
 export function bodyKind(loaded: boolean, view: Pick<LibraryView, "all" | "visible">, searching: boolean): BodyKind {

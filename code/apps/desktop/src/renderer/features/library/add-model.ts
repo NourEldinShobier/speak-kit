@@ -1,14 +1,14 @@
 /** The words in a pasted text. */
 export const countWords = (t: string): number => t.match(/\S+/g)?.length ?? 0;
 
-export interface PasteState {
+interface PasteState {
   text: string;
   title: string;
   voice: string;
   error: string | null;
 }
 
-export type PasteAction = { type: "text"; text: string } | { type: "title"; title: string } | { type: "voice"; voice: string } | { type: "failed"; message: string } | { type: "added" };
+type PasteAction = { type: "text"; text: string } | { type: "title"; title: string } | { type: "voice"; voice: string } | { type: "failed"; message: string } | { type: "added" };
 
 export const initPaste = (voice: string): PasteState => ({ text: "", title: "", voice, error: null });
 
@@ -31,16 +31,16 @@ export function pasteReducer(s: PasteState, a: PasteAction): PasteState {
   }
 }
 
-export type FetchPhase = { kind: "idle" } | { kind: "fetching" } | { kind: "failed"; message: string };
+type FetchPhase = { kind: "idle" } | { kind: "fetching" } | { kind: "failed"; message: string };
 
-export interface UrlState {
+interface UrlState {
   url: string;
   phase: FetchPhase;
   /** The technical reason is expanded. */
   details: boolean;
 }
 
-export type UrlAction = { type: "url"; url: string } | { type: "fetch" } | { type: "failed"; message: string } | { type: "added" } | { type: "toggle-details" };
+type UrlAction = { type: "url"; url: string } | { type: "fetch" } | { type: "failed"; message: string } | { type: "added" } | { type: "toggle-details" };
 
 export const initUrl = (): UrlState => ({ url: "", phase: { kind: "idle" }, details: false });
 

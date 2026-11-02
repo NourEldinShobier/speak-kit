@@ -4,7 +4,7 @@ import type { AppState } from "../../../shared/ipc";
 import { recordKey, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../../../shared/shortcuts";
 import { api, Page } from "../../ui";
 
-export const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
+const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
   <span className="sk-keys">
     {showAccelerator(accelerator, platform, scope)
       .split("+")

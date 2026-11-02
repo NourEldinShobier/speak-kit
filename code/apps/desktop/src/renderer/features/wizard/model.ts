@@ -5,7 +5,7 @@ export const MODEL_MB = 177;
 
 export type WizardStep = 0 | 1 | 2 | 3 | 4;
 
-export interface WizardState {
+interface WizardState {
   step: WizardStep;
   /** The token was copied (unlocks Continue on the browser step). */
   copied: boolean;
@@ -34,7 +34,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 
 export type DownloadPhase = "failed" | "ready" | "downloading";
 
-export interface DownloadView {
+interface DownloadView {
   phase: DownloadPhase;
   /** 0..1 */
   pct: number;

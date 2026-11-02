@@ -10,7 +10,7 @@ export const VOICE_FILTERS: { id: VoiceFilter; label: string }[] = [
   { id: "male", label: "Male" },
 ];
 
-export interface VoicesState {
+interface VoicesState {
   voices: Voice[];
   /** Id of the default voice. */
   def: string;
@@ -19,7 +19,7 @@ export interface VoicesState {
   filter: VoiceFilter;
 }
 
-export type VoicesAction = { type: "loaded"; voices: Voice[]; def: string } | { type: "failed"; message: string } | { type: "query"; query: string } | { type: "filter"; filter: VoiceFilter };
+type VoicesAction = { type: "loaded"; voices: Voice[]; def: string } | { type: "failed"; message: string } | { type: "query"; query: string } | { type: "filter"; filter: VoiceFilter };
 
 export const initVoices = (): VoicesState => ({ voices: [], def: "", error: "", query: "", filter: "all" });
 

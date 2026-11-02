@@ -1,7 +1,7 @@
 import type { EngineInfo, EngineList } from "@speakkit/protocol";
 import type { EngineAction } from "../../../shared/engines";
 
-export interface EnginesState {
+interface EnginesState {
   /** The server's list; null before the first answer or when it failed. */
   list: EngineList | null;
   error: string | null;
