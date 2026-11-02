@@ -1,4 +1,4 @@
-/* Reader view: a full-page card in the Shadow DOM. Themes: paper (sand), light, dark; the Lumen tokens follow data-theme. */
+/* Reader view: a full-page card in the Shadow DOM. Themes: paper (sand) and light. */
 .sk-reader {
   --rd-bg: var(--paper-bg);
   --rd-fg: var(--paper-fg);
@@ -17,18 +17,9 @@
   background: var(--rd-bg);
   color: var(--rd-fg);
   z-index: 1;
-  animation: lm-fade var(--lm-dur-normal) var(--lm-ease);
+  animation: lm-fade var(--dur-fade-in, 167ms) ease-out;
 }
 .sk-reader[data-rtheme="light"] {
-  --rd-bg: var(--surface-editor);
-  --rd-fg: var(--text-primary);
-  --rd-muted: var(--text-tertiary);
-  --rd-block: var(--fill-hover);
-  --rd-sentence: var(--accent-subtle);
-  --rd-word: var(--tag-yellow);
-  --rd-line: var(--stroke-divider);
-}
-.sk-reader[data-rtheme="dark"] {
   --rd-bg: var(--surface-editor);
   --rd-fg: var(--text-primary);
   --rd-muted: var(--text-tertiary);
@@ -68,8 +59,8 @@
   outline: none;
 }
 .sk-reader-scroll:focus-visible {
-  outline: 2px solid var(--accent-default);
-  outline-offset: -2px;
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
 }
 .sk-reader-col {
   width: 100%;
@@ -111,9 +102,9 @@
 .sk-reader-block {
   margin: 0 -12px 1em;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-control, 8px);
   cursor: pointer;
-  transition: background-color var(--lm-dur-fast) var(--lm-ease);
+  transition: background-color var(--dur-fade-in, 167ms) ease-out;
 }
 .sk-reader-block:hover {
   background: color-mix(in srgb, var(--rd-block) 45%, transparent);

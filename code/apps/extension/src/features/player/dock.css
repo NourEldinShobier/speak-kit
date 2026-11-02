@@ -10,13 +10,12 @@
   gap: 10px;
   min-height: 52px;
   padding: 6px 10px 6px 12px;
-  border-radius: 28px;
+  border-radius: var(--radius-window, 12px);
   background: var(--surface-raised);
-  border: 1px solid var(--stroke-control);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
   white-space: nowrap;
   max-width: calc(100% - 24px);
-  animation: lm-pop var(--lm-dur-normal) var(--lm-ease);
+  animation: lm-pop var(--dur-layout, 260ms) var(--ease-layout, ease);
 }
 .sk-dock.is-raised {
   bottom: 36px;
@@ -100,10 +99,9 @@
   transform: translateX(-50%);
   max-width: min(520px, calc(100% - 32px));
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-card, 10px);
   background: var(--surface-card);
-  border: 1px solid var(--stroke-control);
-  box-shadow: var(--lm-shadow-menu);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-secondary);
@@ -115,7 +113,6 @@
     flex-wrap: wrap;
     justify-content: center;
     width: calc(100% - 24px);
-    border-radius: 20px;
   }
   .sk-dock-mid {
     order: -1;

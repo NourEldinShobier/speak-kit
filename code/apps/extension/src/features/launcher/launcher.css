@@ -1,4 +1,4 @@
-/* Selection bubble, paragraph gutter, edge launcher, toast and back pill. Surfaces use the raised token with the control stroke. */
+/* Selection bubble, paragraph gutter, edge launcher, toast and back pill. Floating surfaces: white, the Lockix popover shadow (1px ring + soft shadow), window radius 12. */
 .sk-bubble {
   position: absolute;
   display: flex;
@@ -6,33 +6,25 @@
   gap: 4px;
   height: 40px;
   padding: 0 4px;
-  border-radius: 20px;
+  border-radius: var(--radius-window, 12px);
   background: var(--surface-raised);
-  border: 1px solid var(--stroke-control);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
 }
 .sk-listen {
-  border-radius: 16px;
   height: 32px;
 }
 .sk-tint {
   position: absolute;
-  border-radius: 8px;
+  border-radius: var(--radius-control, 8px);
   background: color-mix(in srgb, var(--accent-default) 8%, transparent);
   pointer-events: none !important;
 }
 .sk .sk-gbtn {
   position: absolute;
-  width: 32px;
-  height: 32px;
-  box-shadow: var(--lm-shadow-menu);
+  width: 24px;
+  height: 24px;
 }
 .sk .sk-gbtn.is-reading {
-  background: var(--accent-subtle);
-  color: var(--accent-default);
-  box-shadow:
-    var(--lm-shadow-menu),
-    inset 0 0 0 1px var(--accent-default);
   cursor: default;
 }
 .sk-tint.is-reading {
@@ -47,11 +39,10 @@
   right: 0;
   width: 14px;
   height: 76px;
-  border-radius: 14px 0 0 14px;
+  border-radius: var(--radius-card, 10px) 0 0 var(--radius-card, 10px);
   background: var(--surface-raised);
-  border: 1px solid var(--stroke-control);
-  border-right: 0;
-  box-shadow: var(--lm-shadow-menu);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  clip-path: inset(-12px 0 -12px -12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,15 +50,14 @@
   cursor: pointer;
   touch-action: none;
   transition:
-    width var(--lm-dur-fast) var(--lm-ease),
-    opacity var(--lm-dur-fast) var(--lm-ease);
+    width var(--dur-ui, 190ms) var(--ease-spring, ease),
+    opacity var(--dur-fade-in, 167ms) ease-out;
 }
 .sk-tab.sk-left {
   right: auto;
   left: 0;
-  border-radius: 0 14px 14px 0;
-  border: 1px solid var(--stroke-control);
-  border-left: 0;
+  border-radius: 0 var(--radius-card, 10px) var(--radius-card, 10px) 0;
+  clip-path: inset(-12px -12px -12px 0);
 }
 .sk-tab.is-reading {
   width: 44px;
@@ -85,7 +75,7 @@
   width: 3px;
   height: 52px;
   border-radius: 2px;
-  background: var(--fill-selected);
+  background: var(--track, #f0f0f0);
   overflow: hidden;
 }
 .sk-tab.sk-left .sk-rail {
@@ -95,7 +85,7 @@
 .sk-rail i {
   display: block;
   width: 100%;
-  background: var(--accent-default);
+  background: var(--dot-green, #05c283);
 }
 .sk .sk-tpb {
   width: 26px;
@@ -111,14 +101,13 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  border-radius: 30px;
+  border-radius: var(--radius-window, 12px);
   background: var(--surface-raised);
-  border: 1px solid var(--stroke-control);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
   touch-action: none;
   transition:
-    opacity var(--lm-dur-fast) var(--lm-ease),
-    transform var(--lm-dur-fast) var(--lm-ease);
+    opacity var(--dur-fade-in, 167ms) ease-out,
+    transform var(--dur-ui, 190ms) var(--ease-spring, ease);
 }
 .sk-pill.sk-left {
   right: auto;
@@ -140,12 +129,10 @@
   min-width: 44px;
   justify-content: center;
   padding: 0 6px;
-  border-radius: 14px;
 }
 .sk-pill .sk-vc {
   width: 36px;
   height: 36px;
-  border-radius: 18px;
   padding: 0;
 }
 .sk-vrail {
@@ -153,7 +140,7 @@
   width: 4px;
   height: 56px;
   border-radius: 2px;
-  background: var(--fill-selected);
+  background: var(--track, #f0f0f0);
   overflow: hidden;
   cursor: pointer;
 }
@@ -162,7 +149,7 @@
   inset-inline-start: 0;
   top: 0;
   width: 100%;
-  background: var(--accent-default);
+  background: var(--dot-green, #05c283);
 }
 .sk-time {
   color: var(--text-secondary);
@@ -203,8 +190,8 @@
   top: 16px;
   transform: translateX(-50%);
   height: 36px;
-  border-radius: 18px;
-  box-shadow: var(--lm-shadow-overlay);
+  border-radius: var(--radius-window, 12px);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
 }
 .sk-back.is-down .lm-icon {
   transform: rotate(180deg);

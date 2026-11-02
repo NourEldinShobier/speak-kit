@@ -75,14 +75,14 @@ describe("selection bubble (B1)", () => {
 /** The paragraph buttons only show on a page where a reading has been started: pretend one ran and ended. */
 
 describe("paragraph gutter (B2)", () => {
-  test("hover tints the paragraph and shows a 32 px play button 48 px to its left; click reads from that paragraph", async () => {
+  test("hover tints the paragraph and shows a 24 px play button 48 px to its left; click reads from that paragraph", async () => {
     const page = await open();
     await engage(page);
     await page.hover("#p2");
     await page.waitForSelector("[data-sk=gutter-play]");
     const p = await box(page, "#p2");
     const g = await box(page, "[data-sk=gutter-play]");
-    expect([g.width, g.height]).toEqual([32, 32]);
+    expect([g.width, g.height]).toEqual([24, 24]);
     expect(Math.abs(g.x - (p.x - 48))).toBeLessThan(1);
     expect(Math.abs(g.y - (p.y + 2))).toBeLessThan(1);
     const tint = await box(page, ".sk-tint");

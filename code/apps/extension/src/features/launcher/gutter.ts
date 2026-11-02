@@ -58,8 +58,8 @@ export class ParagraphGutter {
       name: reading ? "volume" : "player-play",
       label,
       data: { sk: "gutter-play", state: reading ? "reading" : "idle" },
-      round: true,
-      className: `lm-btn--primary sk-gbtn${reading ? " is-reading" : ""}`,
+      size: 24,
+      className: `${reading ? "lm-btn--primary" : "lm-btn--secondary"} sk-gbtn${reading ? " is-reading" : ""}`,
       onClick: () => {
         const t = this.g?.el;
         if (reading || !t) return;
@@ -134,7 +134,7 @@ export class ParagraphGutter {
     const tipW = g.tip.offsetWidth || 108;
     const tx = x - 20 - tipW;
     g.tip.style.left = `${tx >= 4 ? tx : x}px`;
-    g.tip.style.top = `${tx >= 4 ? y + 6 : y + 40}px`;
+    g.tip.style.top = `${tx >= 4 ? y + 3 : y + 32}px`;
   }
 
   private adopt(via: HTMLElement) {

@@ -42,7 +42,8 @@
   z-index: 3;
   width: 300px;
   gap: 10px;
-  box-shadow: var(--lm-shadow-overlay);
+  border-radius: var(--radius-menu, 10px);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
 }
 .sk .lm-popover.sk-pop-voice {
   width: 320px;
@@ -51,6 +52,8 @@
   position: absolute;
   z-index: 3;
   min-width: 200px;
+  border-radius: var(--radius-menu, 10px);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
 }
 .sk-pop-row {
   display: flex;
@@ -109,7 +112,7 @@
   gap: 10px;
   min-height: 44px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-control, 8px);
   cursor: pointer;
   flex: none;
 }
@@ -133,12 +136,13 @@
   min-width: 0;
 }
 .sk-vopt:focus-visible {
-  outline: 2px solid var(--accent-default);
-  outline-offset: -2px;
-  border-radius: 8px;
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+  border-radius: var(--radius-control, 8px);
 }
 .sk-vrow.is-selected {
-  background: var(--accent-subtle);
+  background: var(--fill-selected);
+  font-weight: 500;
 }
 .sk-vname {
   display: flex;
@@ -155,7 +159,7 @@
   font-size: 12px;
 }
 .sk-vcheck {
-  color: var(--accent-default);
+  color: var(--cta, #201e25);
 }
 .sk-vnone {
   padding: 12px 8px;
@@ -177,4 +181,8 @@
   .sk-tint {
     outline: 1px dashed CanvasText;
   }
+}
+/* Dark host page: a white surface is already readable; the ring turns light so its edge stays visible. */
+.sk[data-theme="dark"] {
+  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.18), 0 2px 8px rgb(0 0 0 / 0.35);
 }

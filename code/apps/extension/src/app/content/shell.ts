@@ -37,6 +37,7 @@ export class ShadowShell implements Shell {
     return this.host.clientHeight;
   }
 
+  /** Marks a dark HOST page (the extension itself is light only); the dock keeps its own contrast there. */
   setTheme(dark: boolean) {
     this.root.dataset.theme = dark ? "dark" : "light";
   }
