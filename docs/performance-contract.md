@@ -16,6 +16,7 @@ Tiers: **CI** runs on every push (`ci.yml`); **dev** runs on the maintainer's ma
 | Unloaded model to first audio (real Kokoro) | < 3000 ms; model ready to first audio < 1000 ms | `warm`, lazy load, `hold` while paused | `e2e/tests/perf.spec.ts` "unloaded to first audio on a click without any earlier warm-up, and the warm path" (runs with the real model under `pnpm run e2e:full`) | dev |
 | Desktop memory, unloaded model, hidden window | private bytes < 150 MB, working set < 200 MB | Hidden window stops polling; window destroyed after 30 s hidden; GPU and network services in process | `apps/desktop/tests/perf.test.ts` | dev (Electron) |
 | Server memory after idle unload | after unload < unloaded + 40 MB | Idle unload of the model host | `e2e/tests/full.spec.ts` "model lifecycle with the real engine: first audio after warm vs cold, memory ready vs unloaded" | dev |
+| Event-loop delay in Electron main, window shown and idle (ADR 0014) | Target (dev machine): p99 minus median <= 10 ms. CI gate (shared 2-vCPU runner): p99 < 50 ms, max < 250 ms. Idle CPU of all processes < 5 % | Work on the main thread stays in short slices; parsing and MP3 encoding run in worker threads | `apps/desktop/tests/perf.test.ts` "event loop: p99 delay under 50 ms and max under 250 ms while idle, p99 above the median within 10 ms off CI; idle CPU of all processes under 5%" | CI (gate), dev (target) |
 | Hidden-window polling | polling stops while hidden | Timer cleared on hide and minimize | `apps/desktop/tests/shell.test.ts` "a hidden window stops polling health; showing it resumes" | dev (Electron) |
 
 ## Gaps (budget needed, test needed)
@@ -23,7 +24,7 @@ These rows have no test today. Each is assigned to a work package in `docs/engin
 
 | Feature | Proposed budget | Work package |
 |---|---|---|
-| Event-loop delay in Electron main during stream, export and import | p99 <= 10 ms | 11 (G02) |
+| Event-loop delay in Electron main during stream, export and import | p99 minus median <= 10 ms, the same target as the idle row (ADR 0014); the CI gate is never the target | 11 (G02) |
 | Idle CPU of the desktop app with the window hidden | < 1 % over 60 s, no timer faster than 1 Hz | 11 (G35) |
 | Desktop renderer bundle size, per entry (main, mini, panel) | current gzip size + 10 % | 11 (G33) |
 | Cold start phases (`main:ready`, `server:listening`, `window:shown`, `renderer:first-paint`) | frozen from the first run [est.] | 11 (G06) |

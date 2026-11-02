@@ -57,16 +57,20 @@ describe("desktop resource budget", () => {
 });
 
 describe("main process responsiveness", () => {
-  it("event loop: p99 delay under 50 ms and max under 250 ms while idle; idle CPU of all processes under 5%", async () => {
+  it("event loop: p99 delay under 50 ms and max under 250 ms while idle, p99 above the median within 10 ms off CI; idle CPU of all processes under 5%", async () => {
     l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await l.app.evaluate(({ app }) => app.getAppMetrics());
     await new Promise((r) => setTimeout(r, 5000));
     const cpu = await l.app.evaluate(({ app }) => app.getAppMetrics().reduce((a, m) => a + m.cpu.percentCPUUsage, 0));
-    const loop = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopDelay(): { p99Ms: number; maxMs: number } } }).__speakkit.loopDelay());
-    console.log(JSON.stringify({ cpu, loop }));
+    const loop = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopDelay(): { p50Ms: number; p99Ms: number; maxMs: number } } }).__speakkit.loopDelay());
+    // The histogram samples a timer, so every value includes the timer tick (about 15.6 ms on Windows, the resolution elsewhere): p99 minus
+    // the median is the delay the app adds. ADR 0014: the 10 ms target is on that number on a quiet machine, the gate below is for shared CI runners.
+    const excessMs = loop.p99Ms - loop.p50Ms;
+    console.log(JSON.stringify({ cpu, loop, excessMs }));
     expect(loop.p99Ms).toBeLessThan(50);
     expect(loop.maxMs).toBeLessThan(250);
+    if (!process.env.CI) expect(excessMs).toBeLessThanOrEqual(10);
     expect(cpu).toBeLessThan(5);
   }, 60_000);
 });

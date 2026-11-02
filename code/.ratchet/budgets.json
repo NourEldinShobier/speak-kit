@@ -13,6 +13,7 @@
   "apps/desktop/tests/perf.test.ts#out.hiddenWorkingSetMb": 200,
   "apps/desktop/tests/perf.test.ts#loop.p99Ms": 50,
   "apps/desktop/tests/perf.test.ts#loop.maxMs": 250,
+  "apps/desktop/tests/perf.test.ts#excessMs": 10,
   "apps/desktop/tests/perf.test.ts#cpu": 5,
   "e2e/tests/perf.spec.ts#ms": 600,
   "e2e/tests/perf.spec.ts#m.maxGap": 120,
