@@ -24,7 +24,7 @@ describe("settings navigation", () => {
 describe("General", () => {
   it("shows startup, appearance, tray and privacy settings", () => {
     const html = page("general");
-    for (const text of ["Launch at login", "Start minimized to tray", "Language", "Theme", "Closing the window", "Offer to read long text I copy"]) expect(html).toContain(text);
+    for (const text of ["Launch at login", "Start minimized to tray", "Language", "Closing the window", "Offer to read long text I copy"]) expect(html).toContain(text);
   });
 
   it("reflects the stored values: the clipboard prompt switch is on when configured", () => {

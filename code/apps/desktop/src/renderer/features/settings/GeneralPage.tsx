@@ -1,4 +1,4 @@
-import { Segmented, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
 
@@ -33,21 +33,6 @@ function Appearance({ s }: { s: AppState }) {
             options={[
               { value: "system", label: "System default" },
               { value: "en", label: "English" },
-            ]}
-          />
-        }
-      />
-      <SettingRow
-        label="Theme"
-        control={
-          <Segmented
-            label="Theme"
-            value={c.theme}
-            onChange={(v) => api.patchConfig({ theme: v as "system" | "light" | "dark" })}
-            items={[
-              { id: "system", label: "System" },
-              { id: "light", label: "Light" },
-              { id: "dark", label: "Dark" },
             ]}
           />
         }

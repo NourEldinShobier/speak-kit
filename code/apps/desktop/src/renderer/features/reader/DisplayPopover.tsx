@@ -16,11 +16,6 @@ function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   );
 }
 
-const THEMES = [
-  { id: "app", label: "App" },
-  { id: "light", label: "Light" },
-  { id: "dark", label: "Dark" },
-];
 const FONTS = [
   { id: "sans", label: "Sans" },
   { id: "serif", label: "Serif" },
@@ -29,9 +24,6 @@ const FONTS = [
 function Choices({ d, onChange }: Props) {
   return (
     <>
-      <Field label="Theme">
-        <Segmented label="Theme" value={d.theme} onChange={(v) => onChange({ theme: v as Display["theme"] })} items={THEMES} />
-      </Field>
       <Field label="Font">
         <Segmented label="Font" value={d.font} onChange={(v) => onChange({ font: v as Display["font"] })} items={FONTS} />
       </Field>

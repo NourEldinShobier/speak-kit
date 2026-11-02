@@ -57,7 +57,7 @@ function ReaderReady({ s, id, autoplay, onBack, onExport, meta, doc, ui, dispatc
 
   const style = { "--rd-size": `${display.size}px`, "--rd-line": display.line, "--rd-width": `${display.width}px`, "--rd-font": FONT_STACK[display.font] } as React.CSSProperties;
   return (
-    <div className="rd" data-theme={display.theme === "app" ? undefined : display.theme} style={style} data-testid="reader" data-status={st.status}>
+    <div className="rd" style={style} data-testid="reader" data-status={st.status}>
       <ReaderTop
         meta={meta}
         display={display}

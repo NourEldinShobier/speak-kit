@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import * as v from "valibot";
 
 export const DisplaySchema = v.object({
-  theme: v.fallback(v.picklist(["app", "light", "dark"]), "app"),
   font: v.fallback(v.picklist(["sans", "serif"]), "sans"),
   size: v.fallback(v.pipe(v.number(), v.minValue(14), v.maxValue(30)), 19),
   line: v.fallback(v.pipe(v.number(), v.minValue(1.3), v.maxValue(2.2)), 1.7),

@@ -23,11 +23,6 @@ export function App() {
   const s = useAppState();
   useVisible();
   useEffect(() => {
-    const t = s?.config.theme;
-    if (!t || t === "system") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", t);
-  }, [s?.config.theme]);
-  useEffect(() => {
     if (s?.platform) document.documentElement.dataset.platform = s.platform;
   }, [s?.platform]);
   return (

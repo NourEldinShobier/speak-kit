@@ -35,7 +35,7 @@ const NAV_ROWS: NavRow[] = [
   ["p-voices", "Pages", "Voices", "microphone", "voices"],
   ["p-engines", "Pages", "Engines", "cpu", "engines", undefined, "kokoro chatterbox model"],
   ["p-browser", "Pages", "Browser", "world", "browser", undefined, "extension pair chrome"],
-  ["s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language theme"],
+  ["s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language"],
   ["s-voice", "Settings", "Settings: Voice and playback", "volume", "settings", "voice", "speed default"],
   ["s-shortcuts", "Settings", "Settings: Shortcuts", "keyboard", "settings", "shortcuts", "global keys hotkey record ctrl alt"],
   ["s-notifications", "Settings", "Settings: Notifications", "bell", "settings", "notifications", "toast bell sound do not disturb clipboard"],
