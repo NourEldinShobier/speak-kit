@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as v from "valibot";
@@ -29,16 +29,32 @@ export class ClonedVoiceStore {
   #index: Entry[] = [];
   #chain: Promise<unknown> = Promise.resolve();
 
+  /* oxlint-disable node/no-sync -- startup: the index is read once when the engine is built */
   constructor(dir: string) {
     this.#dir = dir;
+    const file = join(dir, "index.json");
+    let text: string;
     try {
-      // oxlint-disable-next-line node/no-sync -- startup: the index is read once when the engine is built
-      const r = v.safeParse(IndexSchema, JSON.parse(readFileSync(join(dir, "index.json"), "utf8")));
-      if (r.success) this.#index = r.output.filter((e) => existsSync(this.path(e.id)));
+      text = readFileSync(file, "utf8");
     } catch {
-      // missing or corrupt index: start empty; clips stay on disk
+      return; // no index yet: start empty
+    }
+    try {
+      const r = v.safeParse(IndexSchema, JSON.parse(text));
+      if (r.success) {
+        this.#index = r.output.filter((e) => existsSync(this.path(e.id)));
+        return;
+      }
+    } catch {
+      // not JSON: set aside below
+    }
+    try {
+      renameSync(file, file + ".bad");
+    } catch {
+      // the file vanished or cannot be moved; the store still starts empty
     }
   }
+  /* oxlint-enable node/no-sync */
 
   path(id: string): string {
     return join(this.#dir, `${id}.wav`);

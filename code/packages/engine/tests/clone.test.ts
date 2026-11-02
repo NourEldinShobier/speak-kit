@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
@@ -72,6 +72,17 @@ describe("ClonedVoiceStore", () => {
         .map((x) => x.name)
         .sort(),
     ).toEqual(["A", "B", "C"]);
+  });
+
+  it("sets a corrupt index aside as index.json.bad so the next write cannot destroy it", async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "index.json"), "[{ not json");
+    const s = new ClonedVoiceStore(dir);
+    expect(s.list()).toEqual([]);
+    await s.create({ name: "Maya", wav: clip(6), durationMs: 6000, checks: [] });
+    expect(readFileSync(join(dir, "index.json.bad"), "utf8")).toBe("[{ not json");
+    expect(new ClonedVoiceStore(dir).list().map((x) => x.name)).toEqual(["Maya"]);
   });
 
   it("a failed index write leaves no voice and no clip behind", async () => {

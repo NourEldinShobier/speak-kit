@@ -1,7 +1,7 @@
 {
   "lint": {
     "code": {
-      "no-sync": 1
+      "no-sync": 0
     },
     "tests": {}
   },
