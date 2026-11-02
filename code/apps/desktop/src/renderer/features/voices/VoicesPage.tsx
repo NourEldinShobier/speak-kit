@@ -3,7 +3,7 @@ import { Avatar, Badge, Banner, Button, EmptyState, Segmented, StatusPill, TextI
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { usePlayer } from "../../pages";
-import { api, Page } from "../../ui";
+import { api, cleanError, Page } from "../../ui";
 import { filterVoices, initVoices, VOICE_FILTERS, voicesReducer, type VoiceFilter } from "./model";
 
 const GRADE_TONE: Record<Voice["quality"], Tone> = { A: "green", B: "blue", C: "orange", D: "red" };
@@ -51,7 +51,7 @@ function useVoiceList(s: AppState, dispatch: (a: Parameters<typeof voicesReducer
     api
       .voices()
       .then((v) => dispatch({ type: "loaded", voices: v.voices, def: v.default }))
-      .catch((e) => dispatch({ type: "failed", message: String(e.message ?? e) }));
+      .catch((e) => dispatch({ type: "failed", message: cleanError(e) }));
   }, [usable, s.token, dispatch]);
 }
 
