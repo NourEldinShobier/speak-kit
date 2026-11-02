@@ -140,7 +140,7 @@ export class ReaderView {
     const r = this.d.settings();
     const el = this.el;
     el.dataset.rtheme = r.theme;
-    el.dataset.theme = r.theme === "dark" ? "dark" : "light";
+    el.dataset.theme = "light";
     el.dataset.rhl = r.highlight ? "on" : "off";
     el.style.setProperty("--rd-font", READER_FONT_STACK[r.font]);
     el.style.setProperty("--rd-size", `${r.size}px`);
@@ -235,7 +235,6 @@ export class ReaderView {
       items: [
         { id: "paper", label: "Paper" },
         { id: "light", label: "Light" },
-        { id: "dark", label: "Dark" },
       ],
       onChange: (id) => this.change({ theme: id as ReaderSettings["theme"] }),
     });

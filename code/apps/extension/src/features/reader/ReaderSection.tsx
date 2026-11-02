@@ -63,7 +63,7 @@ function ThemeRow({ R, set }: RowProps) {
   return (
     <SettingRow
       label="Theme"
-      description="Paper is a warm sand page; Light and Dark follow the extension colours."
+      description="Paper is a warm sand page; Light follows the extension colours."
       control={
         <Segmented
           label="Reader theme"
@@ -72,7 +72,6 @@ function ThemeRow({ R, set }: RowProps) {
           items={[
             { id: "paper", label: "Paper" },
             { id: "light", label: "Light" },
-            { id: "dark", label: "Dark" },
           ]}
         />
       }
@@ -83,14 +82,7 @@ function ThemeRow({ R, set }: RowProps) {
 function Preview({ R }: Pick<RowProps, "R">) {
   return (
     <Card id="reader-prev-h">
-      <p
-        className="op-reader-prev"
-        data-testid="reader-preview"
-        data-rtheme={R.theme}
-        data-theme={R.theme === "dark" ? "dark" : "light"}
-        data-rhl={R.highlight ? "on" : "off"}
-        style={{ fontFamily: READER_FONT_STACK[R.font], fontSize: R.size }}
-      >
+      <p className="op-reader-prev" data-testid="reader-preview" data-rtheme={R.theme} data-rhl={R.highlight ? "on" : "off"} style={{ fontFamily: READER_FONT_STACK[R.font], fontSize: R.size }}>
         For a decade, the default answer to every software question was the cloud. <span className="op-reader-hl">Notes, documents and even voices lived on someone else's server.</span> Lately that
         answer has started to wobble.
       </p>

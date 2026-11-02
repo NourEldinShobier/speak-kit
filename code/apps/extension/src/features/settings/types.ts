@@ -7,7 +7,7 @@ export interface ReaderSettings {
   size: number;
   /** px, 480 to 960 */
   width: number;
-  theme: "paper" | "light" | "dark";
+  theme: "paper" | "light";
   /** sentence / paragraph / word highlight inside the reader */
   highlight: boolean;
 }

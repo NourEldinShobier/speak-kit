@@ -140,16 +140,16 @@ test.describe("reader view", () => {
     await expect(panel).toBeVisible();
     await panel.getByRole("radio", { name: "Serif" }).click();
     await expect(reader).toHaveAttribute("data-rfont", "serif");
-    await panel.getByRole("radio", { name: "Dark" }).click();
-    await expect(reader).toHaveAttribute("data-rtheme", "dark");
-    await expect(reader).toHaveAttribute("data-theme", "dark");
+    await panel.getByRole("radio", { name: "Light" }).click();
+    await expect(reader).toHaveAttribute("data-rtheme", "light");
+    await expect(reader).toHaveAttribute("data-theme", "light");
     const size = panel.getByRole("slider", { name: "Text size" });
     await size.focus();
     await page.keyboard.press("ArrowRight");
     await expect.poll(async () => (await ext.settings()).reader?.size).toBe(19);
     await expect.poll(() => reader.evaluate((e) => (e as HTMLElement).style.getPropertyValue("--rd-size"))).toBe("19px");
     await expect.poll(async () => (await ext.settings()).reader?.font).toBe("serif");
-    expect((await ext.settings()).reader?.theme).toBe("dark");
+    expect((await ext.settings()).reader?.theme).toBe("light");
     await page.keyboard.press("Escape");
 
     // Highlights inside the reader while reading
@@ -191,7 +191,7 @@ test.describe("reader view", () => {
     const again = sk(page, "reader");
     await expect(again).toBeVisible();
     await expect(again).toHaveAttribute("data-rfont", "serif");
-    await expect(again).toHaveAttribute("data-rtheme", "dark");
+    await expect(again).toHaveAttribute("data-rtheme", "light");
     await expect(again).toHaveAttribute("data-rhl", "off");
     await page.keyboard.press("Escape");
     await expect(again).toHaveCount(0);

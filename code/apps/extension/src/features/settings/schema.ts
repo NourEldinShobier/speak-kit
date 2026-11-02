@@ -36,7 +36,7 @@ const sites = v.fallback(
 );
 
 const READER_FONTS = ["sans", "serif", "dyslexic"] as const;
-const READER_THEMES = ["paper", "light", "dark"] as const;
+const READER_THEMES = ["paper", "light"] as const;
 const READER_LIMITS = { size: [14, 28], width: [480, 960] } as const;
 
 const readerSchema = group(

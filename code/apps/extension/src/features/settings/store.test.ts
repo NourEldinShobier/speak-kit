@@ -23,6 +23,10 @@ describe("normalizeSettings", () => {
     expect(normalizeSettings([])).toEqual(defaultSettings());
   });
 
+  it("ignores a stored dark reader theme from before the app became light only", () => {
+    expect(normalizeSettings({ reader: { theme: "dark", size: 20 } }).reader).toEqual({ ...defaultSettings().reader, size: 20 });
+  });
+
   it("keeps valid values, clamps numbers and rejects wrong types and enums", () => {
     const s = normalizeSettings({
       port: 70000,
