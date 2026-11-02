@@ -55,3 +55,18 @@ describe("desktop resource budget", () => {
     expect(hidden.length).toBe(1); // GPU and network service run inside the main process
   }, 60_000);
 });
+
+describe("main process responsiveness", () => {
+  it("event loop: p99 delay under 50 ms and max under 250 ms while idle; idle CPU of all processes under 5%", async () => {
+    l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.app.evaluate(({ app }) => app.getAppMetrics());
+    await new Promise((r) => setTimeout(r, 5000));
+    const cpu = await l.app.evaluate(({ app }) => app.getAppMetrics().reduce((a, m) => a + m.cpu.percentCPUUsage, 0));
+    const loop = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopDelay(): { p99Ms: number; maxMs: number } } }).__speakkit.loopDelay());
+    console.log(JSON.stringify({ cpu, loop }));
+    expect(loop.p99Ms).toBeLessThan(50);
+    expect(loop.maxMs).toBeLessThan(250);
+    expect(cpu).toBeLessThan(5);
+  }, 60_000);
+});
