@@ -97,7 +97,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Electron app: main process, preload, renderer (library, reader, settings), shared contracts.
 
-May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 170, stylesheets: 9.
+May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 173, stylesheets: 9.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
@@ -109,9 +109,9 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 | `main/reader` | 2 | no |
 | `main/system` | 5 | no |
 | `preload` | 1 | yes |
-| `renderer` | 16 | no |
+| `renderer` | 18 | no |
 | `renderer/features` | 69 | yes |
-| `shared` | 12 | no |
+| `shared` | 13 | no |
 | `shared/library` | 4 | no |
 
 ## e2e
