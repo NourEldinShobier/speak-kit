@@ -32,7 +32,7 @@ export function useReaderPlayer(onSentence: (s: SentenceStart) => void): ReaderP
           emitState: setState,
           emitSentence: (s) => sentence.current(s),
           stretch: soundTouchStretch(),
-          hold: (ms) => void send("/v1/engine/hold", { method: "POST", body: JSON.stringify({ ms }) }).catch(() => {}),
+          hold: (ms) => void send("/v1/engine/hold", { method: "POST", body: JSON.stringify({ ms }) }).catch(() => {}), // a missed hold only lets the model unload sooner
           engineState: async (): Promise<EngineState | undefined> => {
             try {
               return parseHealth(await (await send("/v1/health")).json())?.engine.state;

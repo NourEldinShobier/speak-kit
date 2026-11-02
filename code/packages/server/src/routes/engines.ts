@@ -36,7 +36,7 @@ export const engineRoutes: Route[] = [
       const st = engine.status();
       if (st.state === "unavailable") throw new EngineUnavailableError(st.detail ?? `${id} cannot run here`, engine.info?.().reason);
       if (engine.install) engine.install().catch(() => {}); // failure shows as state "missing" with a detail
-      else if (st.state === "missing") engine.start().catch(() => {});
+      else if (st.state === "missing") engine.start().catch(() => {}); // failure shows in the engine status
       json(res, 202, engines.list());
     },
   },

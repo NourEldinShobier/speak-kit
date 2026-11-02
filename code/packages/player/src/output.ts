@@ -64,7 +64,7 @@ export class AudioOutput {
     const c = this.ctx;
     this.ctx = undefined;
     this.out = undefined;
-    void c?.close?.().catch(() => {});
+    void c?.close?.().catch(() => {}); // already closed
   }
 
   clock(): { time: number; state: string } {

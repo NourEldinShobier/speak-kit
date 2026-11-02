@@ -14,7 +14,7 @@ export async function withLoadWait(attempt: () => Promise<void>, o: { frames: ()
     } catch (e) {
       const waits = e instanceof StreamError && e.code === "engine-not-ready" && o.frames() === before && tries < LOAD_WAIT_TRIES && o.current();
       if (!waits) throw e;
-      const st = await o.deps.engineState?.().catch(() => undefined);
+      const st = await o.deps.engineState?.().catch(() => undefined); // unknown state: keep waiting
       if (st !== "loading" && st !== "unloaded") throw e;
       await sleep(1000);
       if (!o.current()) return;

@@ -71,7 +71,7 @@ const reading = (c: Ctx, docs: Docs): Handlers<"listen" | "readSelection" | "cop
   readSelection: () => docs.play("selection"),
   copySelection: () => {
     const t = getSelection()?.toString() ?? "";
-    if (t) void navigator.clipboard?.writeText(t).catch(() => {});
+    if (t) void navigator.clipboard?.writeText(t).catch(() => {}); // the page denied clipboard access; nothing to copy to
   },
   readFromHere: (el) => docs.play("from-here", el),
   retry: () => {

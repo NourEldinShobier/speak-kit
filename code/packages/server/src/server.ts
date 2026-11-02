@@ -167,7 +167,7 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
         server.listen(boundPort, host, () => {
           server.off("error", reject);
           boundPort = (server.address() as AddressInfo).port;
-          if (loadAtStart) engines.active.start().catch(() => {});
+          if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
           resolve();
         });
       }),

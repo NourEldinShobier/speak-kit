@@ -44,7 +44,7 @@ export const statusRoutes: Route[] = [
       req.resume();
       const engine = engines.active;
       if (engine.warm) engine.warm();
-      else if (engine.status().state === "unloaded") engine.start().catch(() => {});
+      else if (engine.status().state === "unloaded") engine.start().catch(() => {}); // failure shows in the engine status
       json(res, 202, { state: engine.status().state });
     },
   },

@@ -143,7 +143,7 @@ export abstract class LifecycleEngine implements TtsEngine {
   warm(): void {
     const st = this.#em.status.state;
     if (st === "ready") return this.#touch();
-    if (st === "unloaded" || (st === "error" && !this.#tripped)) this.start().catch(() => {});
+    if (st === "unloaded" || (st === "error" && !this.#tripped)) this.start().catch(() => {}); // a failed start shows as the error state
   }
 
   hold(ms: number): void {
@@ -225,7 +225,7 @@ export abstract class LifecycleEngine implements TtsEngine {
   }
 
   async release(): Promise<void> {
-    await this.#loading?.catch(() => {});
+    await this.#loading?.catch(() => {}); // a failed load is reported through the status; release only waits for it to end
     for (let i = 0; this.#busy() && i < 400; i++) await new Promise((r) => setTimeout(r, 25));
     await this.unload();
   }

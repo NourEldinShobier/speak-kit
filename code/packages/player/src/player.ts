@@ -181,7 +181,7 @@ export class Player {
 
   private pause() {
     if (!this.to("pause")) return;
-    this.output.current?.suspend().catch(() => {});
+    this.output.current?.suspend().catch(() => {}); // the context closed meanwhile (stop)
     this.hold.start();
     this.emit();
   }
@@ -239,7 +239,7 @@ export class Player {
 
   private startStream(from: number) {
     const ctx = this.output.ensure();
-    if (this.status !== "paused") ctx.resume().catch(() => {});
+    if (this.status !== "paused") ctx.resume().catch(() => {}); // the context closed meanwhile (stop)
     const onAudio = (index: number, pcm: Int16Array, sampleRate: number, durationMs: number) => this.schedule(index, pcm, sampleRate, durationMs);
     const job = { doc: this.doc!, cfg: this.cfg, deps: this.deps, output: this.output, sched: this.sched, from, onAudio };
     this.run.start(

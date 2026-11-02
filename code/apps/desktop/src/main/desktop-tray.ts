@@ -30,7 +30,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, requestQuit, re
     pause: () => reading.controller.command({ type: "pause" }),
     resume: () => reading.controller.command({ type: "resume" }),
     stop: () => reading.controller.command({ type: "stop" }),
-    wake: () => void ctx.server.warm().catch(() => {}),
+    wake: () => void ctx.server.warm().catch(() => {}), // a failed warm-up shows as the engine state
     "restart-engine": () => void retryEngine(),
     dnd: () => {
       ctx.config.doNotDisturb = !ctx.config.doNotDisturb;

@@ -33,6 +33,6 @@ export async function launchApp(deps: LaunchDeps, waitMs = 8000, url = LINKS.lau
     }
     return false;
   })();
-  if (id !== undefined) await deps.closeTab(id).catch(() => {});
+  if (id !== undefined) await deps.closeTab(id).catch(() => {}); // the user already closed it
   return started ? { ok: true, via: "protocol" } : { ok: false, via: "none", reason: "not-installed-or-slow" };
 }

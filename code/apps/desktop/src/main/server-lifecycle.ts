@@ -130,7 +130,7 @@ export class ServerRuntime {
   /** Drops the engine and starts over (Retry after an error). */
   async retry(): Promise<AppState> {
     await this.stop();
-    await this.#engine?.close().catch(() => {});
+    await this.#engine?.close().catch(() => {}); // the engine is replaced anyway; a failed close leaves nothing to keep
     this.#engine = null;
     await this.start(this.#d.state.token || undefined);
     this.startEngine();

@@ -163,7 +163,7 @@ export class ChatterboxEngine extends LifecycleEngine {
 
   /** Deletes the environment and downloaded weights; cloned voices stay. */
   async remove(): Promise<void> {
-    await this.#installing?.catch(() => {});
+    await this.#installing?.catch(() => {}); // an install that failed has nothing left running to wait for
     await this.release();
     if (this.status().state === "ready") throw new Error("engine is busy");
     for (const f of ["env", "hf", MARKER]) await rm(join(this.#o.dir, f), { recursive: true, force: true });

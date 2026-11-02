@@ -65,6 +65,6 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
       }
     }
   } finally {
-    void reader.cancel().catch(() => {});
+    void reader.cancel().catch(() => {}); // the stream is already closed or errored
   }
 }
