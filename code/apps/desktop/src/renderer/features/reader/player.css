@@ -6,7 +6,7 @@
   align-items: center;
   gap: 16px;
   padding: 10px 24px 12px;
-  border-top: 1px solid var(--stroke-divider);
+  border-top: 1px solid var(--stroke-hairline);
   background: var(--surface-card);
 }
 .rd-bar__now {
@@ -21,9 +21,9 @@
   flex: none;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
-  background: var(--accent-subtle);
-  color: var(--accent-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-well);
+  color: var(--icon-quiet);
 }
 .rd-bar__title {
   overflow: hidden;
@@ -53,8 +53,9 @@
   height: 40px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent-button);
-  color: var(--text-on-accent);
+  background: #201e25;
+  color: #fafafa;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
   cursor: pointer;
 }
 .rd-play:disabled {
@@ -62,7 +63,7 @@
   cursor: default;
 }
 .rd-play:focus-visible {
-  outline: 2px solid var(--lm-ring);
+  outline: 1px solid var(--accent-default);
   outline-offset: 2px;
 }
 .rd-bar__scrub {
@@ -88,18 +89,20 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-control);
   background: var(--surface-raised);
   color: var(--text-primary);
   font: inherit;
   cursor: pointer;
 }
 .rd-pill:hover {
-  background: var(--fill-hover);
+  background: #f7f8fa;
 }
 .rd-pill:focus-visible {
-  outline: 2px solid var(--lm-ring);
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
 }
 
 /* popovers */
@@ -166,5 +169,6 @@
   cursor: default;
 }
 .rd-option:focus-visible {
-  outline: 2px solid var(--lm-ring);
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
 }

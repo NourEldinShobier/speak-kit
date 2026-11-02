@@ -44,7 +44,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  border-top: 1px solid var(--stroke-divider);
+  border-top: 1px solid var(--stroke-hairline);
 }
 .sk-setup__foot > div {
   display: flex;
@@ -66,9 +66,9 @@
   width: 100%;
 }
 .sk-feat {
-  border: 1px solid var(--stroke-divider);
+  box-shadow: var(--shadow-card-ring);
   background: var(--surface-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 14px;
   text-align: start;
   display: flex;
@@ -95,8 +95,8 @@
   opacity: 0.55;
 }
 .sk-radio.is-sel {
-  box-shadow: inset 0 0 0 1px var(--accent-default);
-  border-radius: 8px;
+  background: var(--fill-selected);
+  border-radius: var(--radius-card);
 }
 .sk-check {
   display: flex;

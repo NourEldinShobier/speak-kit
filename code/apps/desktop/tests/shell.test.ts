@@ -18,7 +18,7 @@ const box = async (l: Launched, sel: string) => (await l.page.locator(sel).first
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 
 describe("Lumen shell", () => {
-  it("measures: title bar 40, sidebar 248, search 420x30, content card inset 8 px with a 1 px divider", async () => {
+  it("measures: title bar 40, sidebar 248, search 420x30, content panel inset 4 px with no stroke", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     expect((await box(l, ".sk-title")).height).toBe(40);
@@ -28,10 +28,10 @@ describe("Lumen shell", () => {
     const main = await box(l, ".sk-main");
     const inner = await l.page.evaluate(() => [innerWidth, innerHeight]);
     expect(main.x).toBe(248);
-    expect(main.x + main.width).toBe(inner[0]! - 8);
-    expect(main.y + main.height).toBe(inner[1]! - 8);
-    // 1 CSS px, rendered as one device pixel (0.67 css px at 150% display scaling).
-    expect(await l.page.locator(".sk-main").evaluate((e) => Math.round(parseFloat(getComputedStyle(e).borderTopWidth) * devicePixelRatio))).toBe(1);
+    expect(main.x + main.width).toBe(inner[0]! - 4);
+    expect(main.y + main.height).toBe(inner[1]! - 4);
+    // Lockix panel: no stroke, a card shadow instead.
+    expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: New reading, Home, Library, Voices, Engines, Browser, Settings, Recent.
     const nav = l.page.getByRole("navigation", { name: "Main" });
     for (const n of ["Home", "Voices", "Engines", "Browser", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
@@ -42,7 +42,7 @@ describe("Lumen shell", () => {
     expect(await l.page.getByRole("button", { name: "Notifications" }).count()).toBe(1);
     // Sidebar toggle hides it and the card grows.
     await l.page.getByRole("button", { name: "Toggle sidebar" }).click();
-    expect((await box(l, ".sk-main")).x).toBe(8);
+    expect((await box(l, ".sk-main")).x).toBe(4);
   });
 
   it("first run opens the 960x680 setup window with a 32 px title, 52 px stepper, 720 px column and 64 px footer", async () => {

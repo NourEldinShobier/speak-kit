@@ -1,4 +1,4 @@
-/* Reader (F1-F16): Lumen tokens only. The reading pane follows the app theme unless the display popover overrides it. */
+/* Reader (F1-F16): Lumen tokens only. The reading pane is white; the display popover can switch it to the paper theme. */
 .rd {
   display: flex;
   flex-direction: column;
@@ -17,7 +17,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-bottom: 1px solid var(--stroke-divider);
+  border-bottom: 1px solid var(--stroke-hairline);
 }
 .rd-crumb {
   all: unset;
@@ -25,12 +25,13 @@
   font-weight: 500;
 }
 .rd-crumb:focus-visible {
-  outline: 2px solid var(--lm-ring);
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
 }
 .rd-source {
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--surface-raised);
+  background: var(--chip-gray, #f0f0f0);
   color: var(--text-secondary);
   font-size: 12px;
 }
@@ -131,7 +132,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 16px;
-  border-bottom: 1px solid var(--stroke-divider);
+  border-bottom: 1px solid var(--stroke-hairline);
   background: var(--surface-card);
 }
 .rd-find .lm-field {
@@ -143,10 +144,9 @@
   display: flex;
   gap: 6px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--surface-card);
-  border: 1px solid var(--stroke-divider);
-  box-shadow: var(--lm-shadow-menu);
+  box-shadow: var(--shadow-popover);
   transform: translateX(-50%);
 }
 .rd-back {
@@ -161,10 +161,10 @@
   padding: 6px 14px;
   border: 0;
   border-radius: 999px;
-  background: var(--accent-button);
-  color: var(--text-on-accent);
+  background: #201e25;
+  color: #fafafa;
   cursor: pointer;
-  box-shadow: var(--lm-shadow-menu);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 .rd-prepare {
   position: absolute;
@@ -177,15 +177,14 @@
   padding: 6px 14px;
   border-radius: 999px;
   background: var(--surface-card);
-  border: 1px solid var(--stroke-divider);
-  box-shadow: var(--lm-shadow-menu);
+  box-shadow: var(--shadow-popover);
 }
 .rd-outline {
   width: 280px;
   flex: none;
   overflow: auto;
   padding: 12px;
-  border-inline-start: 1px solid var(--stroke-divider);
+  border-inline-start: 1px solid var(--stroke-hairline);
   background: var(--surface-card);
 }
 .rd-outline__head {
@@ -224,9 +223,11 @@
 }
 .rd-outline__item[aria-current="true"] {
   background: var(--fill-selected);
+  font-weight: 500;
 }
 .rd-outline__item:focus-visible {
-  outline: 2px solid var(--lm-ring);
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
 }
 
 .rd-scrim {
@@ -235,7 +236,7 @@
   z-index: 8;
   display: grid;
   place-items: center;
-  background: var(--lm-scrim);
+  background: var(--scrim);
 }
 .rd-finished {
   display: flex;
@@ -245,8 +246,7 @@
   padding: 28px 32px;
   border-radius: 12px;
   background: var(--surface-card);
-  border: 1px solid var(--stroke-divider);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--shadow-popover);
 }
 .rd-finished h2 {
   margin: 0;
@@ -266,9 +266,9 @@
   gap: 8px;
   margin: 0 0 24px;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--surface-card);
-  border: 1px solid var(--stroke-divider);
+  box-shadow: var(--shadow-card-ring);
   font-family: system-ui, sans-serif;
   font-size: 13px;
 }

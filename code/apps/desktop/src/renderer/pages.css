@@ -34,9 +34,9 @@
   gap: 12px;
 }
 .sk-stat {
-  border: 1px solid var(--stroke-divider);
+  box-shadow: var(--shadow-card-ring);
   background: var(--surface-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -64,14 +64,14 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--tag-green);
+  background: var(--dot-green);
   flex: none;
 }
 .sk-dot.is-warn {
-  background: var(--tag-orange);
+  background: var(--dot-orange);
 }
 .sk-dot.is-err {
-  background: var(--tag-red);
+  background: var(--dot-red);
 }
 .sk-dot.is-idle {
   background: var(--text-tertiary);
@@ -90,12 +90,13 @@ code,
 .sk-token__box {
   flex: 1;
   min-width: 220px;
-  height: 32px;
+  height: 36px;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 1px solid var(--stroke-control);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-control);
   background: var(--surface-input);
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
@@ -119,8 +120,8 @@ code,
   color: var(--text-primary);
 }
 .sk-accent-card {
-  border: 1px solid var(--accent-default);
-  border-radius: 8px;
+  box-shadow: var(--shadow-card-ring);
+  border-radius: var(--radius-card);
   background: var(--surface-card);
   padding: 16px;
   display: flex;
@@ -154,9 +155,9 @@ code,
   gap: 12px;
 }
 .sk-voice {
-  border: 1px solid var(--stroke-divider);
+  box-shadow: var(--shadow-card-ring);
   background: var(--surface-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -194,13 +195,14 @@ code,
   padding: 14px 16px;
 }
 .sk-tile {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--fill-selected);
+  background: var(--surface-well);
+  color: var(--icon-quiet);
   flex: none;
 }
 .sk-engine__body {
@@ -222,7 +224,7 @@ code,
   height: 8px;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--fill-selected);
+  background: var(--track);
   margin: 4px 0 12px;
 }
 .sk-bar i {

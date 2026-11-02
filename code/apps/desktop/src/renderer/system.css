@@ -21,7 +21,7 @@
 .sk-notify td {
   padding: 10px 16px;
   text-align: center;
-  border-top: 1px solid var(--stroke-divider);
+  border-top: 1px solid var(--stroke-hairline);
 }
 .sk-notify thead th {
   border-top: 0;
@@ -55,10 +55,9 @@
   gap: 6px;
   width: 280px;
   padding: 12px 14px;
-  border: 1px solid var(--stroke-divider);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface-raised);
-  box-shadow: var(--lm-shadow-overlay);
+  box-shadow: var(--shadow-popover);
 }
 .sk-updating span {
   color: var(--text-secondary);
@@ -75,8 +74,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid var(--stroke-divider);
-  border-radius: 8px;
+  box-shadow: var(--shadow-card-ring);
+  border-radius: var(--radius-control);
   background: var(--surface-card);
   color: var(--text-primary);
   font: inherit;
@@ -117,8 +116,8 @@
   gap: 6px;
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--stroke-divider);
-  border-radius: 10px;
+  box-shadow: var(--shadow-card-ring);
+  border-radius: var(--radius-card);
   background: var(--surface-card);
 }
 .sk-active {
