@@ -234,7 +234,7 @@ jobs:
           E2E_TIME_SCALE: "4"
       - name: Keep test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-results-${{ strategy.job-index }}
           path: |
@@ -273,7 +273,7 @@ jobs:
         run: pnpm --filter @speakkit/desktop exec vp test run
       - name: Keep test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-results
           path: code/apps/desktop/test-results

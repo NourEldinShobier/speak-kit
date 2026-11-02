@@ -112,7 +112,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path apps/extension/dist-pack/* -DestinationPath apps/desktop/release/speakkit-extension-${{ steps.v.outputs.version }}.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.platform }}
           if-no-files-found: error
