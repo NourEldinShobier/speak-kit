@@ -1,7 +1,7 @@
 import { Banner, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
-import type { AppState } from "../shared/ipc";
-import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotifyChannel, type NotifyEvent } from "../shared/schemas";
-import { api, Page } from "./ui";
+import type { AppState } from "../../../shared/ipc";
+import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotifyChannel, type NotifyEvent } from "../../../shared/schemas";
+import { api, Page } from "../../ui";
 
 const EVENT_LABEL: Record<NotifyEvent, string> = {
   "reading-finished": "Reading finished",

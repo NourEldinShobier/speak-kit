@@ -140,12 +140,18 @@ interface KeyEventLike {
 }
 type Recorded = { kind: "cancel" } | { kind: "waiting" } | { kind: "invalid"; reason: string } | { kind: "accelerator"; accelerator: string };
 
+function keyOfCode(code: string): string | undefined {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  return /^F\d+$/.test(code) ? code : CODE_KEY[code];
+}
+
 /** Turns one keydown into the recorder's next step. Escape alone cancels, a lone modifier keeps waiting. */
 export function recordKey(e: KeyEventLike): Recorded {
   const hasMod = e.ctrlKey || e.altKey || e.shiftKey || e.metaKey;
   if (e.code === "Escape" && !hasMod) return { kind: "cancel" };
   if (/^(Control|Alt|Shift|Meta|OS)(Left|Right)$/.test(e.code)) return { kind: "waiting" };
-  const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : /^F\d+$/.test(e.code) ? e.code : CODE_KEY[e.code];
+  const key = keyOfCode(e.code);
   if (!key) return { kind: "invalid", reason: "That key cannot be used." };
   if (e.metaKey) return { kind: "invalid", reason: "The Windows key is reserved for Windows." };
   const accelerator = normalize([e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", key].filter(Boolean).join("+"))!;
