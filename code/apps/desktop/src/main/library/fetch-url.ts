@@ -42,16 +42,14 @@ function parseWebAddress(raw: string): URL {
   return url;
 }
 
-/** Fetch a page and extract the article (Readability). Failures say what happened in plain words. */
-export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetch, parse: ParseFn = runParseJob): Promise<Parsed & { host: string }> {
-  let url = parseWebAddress(raw);
-  let res: Response;
+/** Follows redirects by hand so that every hop goes through doFetch, whose default refuses non-public addresses. */
+async function fetchFollowing(start: URL, doFetch: typeof fetch): Promise<{ url: URL; res: Response }> {
+  let url = start;
   try {
-    // Redirects are followed by hand so that every hop goes through doFetch, whose default refuses non-public addresses.
     for (let hops = 0; ; hops++) {
-      res = await doFetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: "manual", headers: { Accept: "text/html,text/plain;q=0.9", "User-Agent": "SpeakKit" } });
+      const res = await doFetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: "manual", headers: { Accept: "text/html,text/plain;q=0.9", "User-Agent": "SpeakKit" } });
       const next = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
-      if (!next) break;
+      if (!next) return { url, res };
       if (hops === MAX_REDIRECTS) throw new ImportError("network", `${url.host} redirected too many times.`);
       url = parseWebAddress(new URL(next, url).href);
     }
@@ -61,6 +59,11 @@ export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetc
     const timeout = e instanceof Error && e.name === "TimeoutError";
     throw new ImportError("network", timeout ? `${url.host} did not answer in ${TIMEOUT_MS / 1000} seconds.` : `Could not reach ${url.host}. Check the address and your connection.`);
   }
+}
+
+/** Fetch a page and extract the article (Readability). Failures say what happened in plain words. */
+export async function fetchPage(raw: string, doFetch: typeof fetch = defaultFetch, parse: ParseFn = runParseJob): Promise<Parsed & { host: string }> {
+  const { url, res } = await fetchFollowing(parseWebAddress(raw), doFetch);
   if (!res.ok) throw new ImportError("network", `${url.host} answered with HTTP ${res.status}.`);
   const type = res.headers.get("content-type") ?? "";
   if (!/html|text\/plain/i.test(type)) throw new ImportError("unsupported", `${url.host} is not a web page (${type || "unknown type"}). Download the file and add it instead.`);

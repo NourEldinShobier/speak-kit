@@ -68,6 +68,10 @@ export function pageBlocks(items: PdfItem[], body: number, page: number): Block[
   const width = Math.max(...lines.map((l) => l.right)) - left;
   const out: Block[] = [];
   let cur: Line[] = [];
+  const startsParagraph = (l: Line, prev: Line) => {
+    const endsSentence = ENDS_SENTENCE.test(prev.text);
+    return prev.y - l.y > spacing * 1.45 || (endsSentence && (l.x - left > body * 1.2 || prev.right < left + width * 0.7));
+  };
   const flush = () => {
     const text = joinLines(cur.map((l) => l.text));
     if (text) out.push({ kind: "paragraph", text, page });
@@ -84,12 +88,7 @@ export function pageBlocks(items: PdfItem[], body: number, page: number): Block[
       else out.push({ kind: "heading", text: l.text, level: l.h > body * 1.6 ? 1 : 2, page });
       return;
     }
-    if (prev && cur.length) {
-      const gap = prev.y - l.y;
-      const indented = l.x - left > body * 1.2 && ENDS_SENTENCE.test(prev.text);
-      const shortPrev = prev.right < left + width * 0.7 && ENDS_SENTENCE.test(prev.text);
-      if (gap > spacing * 1.45 || indented || shortPrev) flush();
-    }
+    if (prev && cur.length && startsParagraph(l, prev)) flush();
     cur.push(l);
   });
   flush();

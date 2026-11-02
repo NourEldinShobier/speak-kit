@@ -94,7 +94,7 @@ export class ExportJobs {
   }
 
   /** Starts the render on the server and waits until it is finished; throws when it failed or was cancelled. */
-  async #render(view: ExportView, req: ExportRequest, format: "wav" | "mp3", signal: AbortSignal, onStarted: (id: string) => void): Promise<ExportJob> {
+  async #render({ view, req, format, signal, onStarted }: { view: ExportView; req: ExportRequest; format: "wav" | "mp3"; signal: AbortSignal; onStarted: (id: string) => void }): Promise<ExportJob> {
     let job = await this.#d.server.startExport(req);
     onStarted(job.id);
     const poll = this.#d.pollMs ?? 250;
@@ -114,7 +114,7 @@ export class ExportJobs {
     const part = `${file}.part`;
     let serverId: string | undefined;
     try {
-      const job = await this.#render(view, { ...req, gapMs: GAP_MS }, format, signal, (id) => (serverId = id));
+      const job = await this.#render({ view, req: { ...req, gapMs: GAP_MS }, format, signal, onStarted: (id) => (serverId = id) });
       let bytes = await this.#d.server.exportAudio(job.id, signal);
       if (format === "mp3") {
         this.#patch(view, { stage: "encoding", progress: 0.7, done: job.total });

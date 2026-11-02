@@ -75,7 +75,7 @@ describe("createReading", () => {
     const t = setup();
     expect(t.reading.readText("Hello there.", "text")).toBe(true);
     await until(() => mocks.mini.ui.some((e) => e.type === "chunk"));
-    expect(t.ctx.server.speak).toHaveBeenCalledWith("Hello there.", "bf_emma", 1.25, expect.any(AbortSignal));
+    expect(t.ctx.server.speak).toHaveBeenCalledWith({ text: "Hello there.", voice: "bf_emma", speed: 1.25 }, expect.any(AbortSignal));
     expect(mocks.mini.opened[0]).toEqual(["corner", false]);
     expect(t.ctx.state.reader).toMatchObject({ status: "preparing", source: "text", title: "Hello there.", total: 1 });
     expect(t.ctx.publish).toHaveBeenCalled();

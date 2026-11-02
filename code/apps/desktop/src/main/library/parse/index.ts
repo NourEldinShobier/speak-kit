@@ -31,6 +31,18 @@ export { ImportError };
 
 const decode = (b: Uint8Array) => new TextDecoder("utf-8").decode(b).replace(/^﻿/, "");
 
+async function parseBytes(format: Format, bytes: Uint8Array): Promise<Parsed> {
+  if (format === "text") return { title: "", blocks: textToBlocks(decode(bytes)) };
+  if (format === "markdown") {
+    const blocks = markdownToBlocks(decode(bytes));
+    return { title: blocks.find((b) => b.kind === "heading")?.text ?? "", blocks };
+  }
+  if (format === "html") return htmlToParsed(decode(bytes), { readable: true });
+  if (format === "pdf") return pdfToParsed(bytes);
+  if (format === "docx") return docxToParsed(bytes);
+  return epubToParsed(bytes);
+}
+
 /** Parse a file's bytes by its extension. An empty result is an error unless a PDF may be scanned (OCR can fill it). */
 export async function parseFile(name: string, bytes: Uint8Array): Promise<{ format: Format; parsed: Parsed }> {
   const format = formatOf(name);
@@ -38,14 +50,7 @@ export async function parseFile(name: string, bytes: Uint8Array): Promise<{ form
   if (format === "docx" || format === "epub") checkZip(name, bytes);
   let parsed: Parsed;
   try {
-    if (format === "text") parsed = { title: "", blocks: textToBlocks(decode(bytes)) };
-    else if (format === "markdown") {
-      const blocks = markdownToBlocks(decode(bytes));
-      parsed = { title: blocks.find((b) => b.kind === "heading")?.text ?? "", blocks };
-    } else if (format === "html") parsed = htmlToParsed(decode(bytes), { readable: true });
-    else if (format === "pdf") parsed = await pdfToParsed(bytes);
-    else if (format === "docx") parsed = await docxToParsed(bytes);
-    else parsed = await epubToParsed(bytes);
+    parsed = await parseBytes(format, bytes);
   } catch (e) {
     throw new ImportError("unreadable", `${name} could not be read: ${e instanceof Error ? e.message : String(e)}`);
   }

@@ -107,9 +107,7 @@ export class ReaderController {
     const st = this.state.status;
     switch (c.type) {
       case "toggle":
-        if (st === "playing" || st === "preparing") this.command({ type: "pause" });
-        else if (st === "paused") this.command({ type: "resume" });
-        else if (st === "finished") this.command({ type: "replay" });
+        this.#toggle(st);
         return;
       case "pause":
         if (st !== "playing" && st !== "preparing") return;
@@ -128,19 +126,25 @@ export class ReaderController {
       case "open-app":
         return; // window commands, handled by the reading service
       case "replay":
-        if (!this.#sentences.length) return;
-        this.#begin(0);
-        return;
       case "step":
-        if (!this.#sentences.length || this.#finished) return;
-        this.#begin(Math.min(this.#sentences.length - 1, Math.max(0, this.#playing + c.by)));
-        return;
       case "skip":
-        if (!this.#sentences.length || this.#finished) return;
-        this.#begin(this.#indexAt(this.state.elapsedMs + c.ms));
+        this.#seek(c);
         return;
     }
     this.#d.emit(this.state);
+  }
+
+  #toggle(st: ReaderState["status"]) {
+    if (st === "playing" || st === "preparing") this.command({ type: "pause" });
+    else if (st === "paused") this.command({ type: "resume" });
+    else if (st === "finished") this.command({ type: "replay" });
+  }
+
+  #seek(c: Extract<ReaderCommand, { type: "replay" | "step" | "skip" }>) {
+    if (!this.#sentences.length || (c.type !== "replay" && this.#finished)) return;
+    if (c.type === "replay") this.#begin(0);
+    else if (c.type === "step") this.#begin(Math.min(this.#sentences.length - 1, Math.max(0, this.#playing + c.by)));
+    else this.#begin(this.#indexAt(this.state.elapsedMs + c.ms));
   }
 
   /** The player started sentence `index`. */

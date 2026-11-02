@@ -42,6 +42,12 @@ interface DomNode {
   childNodes: ArrayLike<DomNode>;
 }
 
+const rowText = (tr: DomNode) =>
+  Array.from(tr.childNodes)
+    .map((x) => squash(x.textContent ?? ""))
+    .filter(Boolean)
+    .join(", ");
+
 /** Walk an HTML tree into blocks. Inline runs between block elements become paragraphs. */
 function domToBlocks(root: DomNode): Block[] {
   const out: Block[] = [];
@@ -61,23 +67,19 @@ function domToBlocks(root: DomNode): Block[] {
       else if (!BLOCKS.has(c.nodeName)) run += c.textContent ?? ""; // inline: a, span, em, b
       else {
         flush();
-        const h = HEADING.exec(c.nodeName);
-        if (h) add("heading", c.textContent ?? "", Number(h[1]));
-        else if (c.nodeName === "LI") item(c);
-        else if (c.nodeName === "BLOCKQUOTE") add("quote", c.textContent ?? "");
-        else if (c.nodeName === "TR")
-          add(
-            "paragraph",
-            Array.from(c.childNodes)
-              .map((x) => squash(x.textContent ?? ""))
-              .filter(Boolean)
-              .join(", "),
-          );
-        else if (c.nodeName === "P") add("paragraph", c.textContent ?? "");
-        else walk(c);
+        block(c);
       }
     }
     flush();
+  };
+  const block = (c: DomNode) => {
+    const h = HEADING.exec(c.nodeName);
+    if (h) add("heading", c.textContent ?? "", Number(h[1]));
+    else if (c.nodeName === "LI") item(c);
+    else if (c.nodeName === "BLOCKQUOTE") add("quote", c.textContent ?? "");
+    else if (c.nodeName === "TR") add("paragraph", rowText(c));
+    else if (c.nodeName === "P") add("paragraph", c.textContent ?? "");
+    else walk(c);
   };
   // An item with a nested list: its own text first, then the nested items.
   const item = (li: DomNode) => {
