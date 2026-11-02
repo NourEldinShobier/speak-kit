@@ -6,7 +6,7 @@ import "./float.css";
 import { clock } from "../shared/reader";
 import { statusLine } from "./status-line";
 import { ChunkPlayer, type AudioLike } from "./player";
-import { api, playButton, useAppState, useTheme } from "./ui";
+import { api, playButton, useAppState } from "./ui";
 
 /** The mini player owns the audio output: main sends sentences here and follows the start and end events. */
 const player = new ChunkPlayer((rate) => new AudioContext({ sampleRate: rate }) as unknown as AudioLike, {
@@ -20,7 +20,6 @@ api.onUi((e) => {
 
 function Mini() {
   const s = useAppState();
-  useTheme(s?.config.theme);
   const [onTop, setOnTop] = useState(true);
   useEffect(() => void api.reader({ type: "keep-on-top", on: onTop }), [onTop]);
   if (!s) return null;

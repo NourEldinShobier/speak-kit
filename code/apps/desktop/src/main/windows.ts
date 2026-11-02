@@ -1,13 +1,15 @@
-import { type BrowserWindow, nativeTheme, screen, type BrowserWindowConstructorOptions, type Rectangle } from "electron";
+import { type BrowserWindow, screen, type BrowserWindowConstructorOptions, type Rectangle } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSecureWindow } from "./secure-window";
-import { floatBackground } from "./window-colors";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 type FloatPage = "mini" | "panel";
+
+/** Transparent room around the card for its shadow (Lockix: page padding 18). The renderer pads its page by the same amount (float.css `--float-pad`). */
+export const FLOAT_PAD = 18;
 
 /**
  * A small frameless window (mini player, tray panel). It exists only while it is in use: opening creates it, closing destroys
@@ -23,7 +25,8 @@ export class FloatWindow {
 
   constructor(page: FloatPage, options: BrowserWindowConstructorOptions, state: () => AppState) {
     this.#page = page;
-    this.#options = options;
+    const { width, height } = options;
+    this.#options = { ...options, ...(width && height ? { width: width + 2 * FLOAT_PAD, height: height + 2 * FLOAT_PAD } : {}) };
     this.#state = state;
   }
 
@@ -46,7 +49,8 @@ export class FloatWindow {
           skipTaskbar: true,
           alwaysOnTop: true,
           show: false,
-          backgroundColor: floatBackground(nativeTheme.shouldUseDarkColors),
+          transparent: true,
+          hasShadow: false,
           ...this.#options,
         },
         (loaded) => {
@@ -99,12 +103,12 @@ export class FloatWindow {
   }
 }
 
-/** Bottom-right corner of the primary display's work area, above the taskbar. */
+/** Bottom-right corner of the primary display's work area, above the taskbar; `margin` is the gap to the card, not to the transparent frame. */
 export const cornerOf =
   (margin = 16) =>
   (size: { width: number; height: number }): Rectangle => {
     const wa = screen.getPrimaryDisplay().workArea;
-    return { ...size, x: wa.x + wa.width - size.width - margin, y: wa.y + wa.height - size.height - margin };
+    return { ...size, x: wa.x + wa.width - size.width - margin + FLOAT_PAD, y: wa.y + wa.height - size.height - margin + FLOAT_PAD };
   };
 
 /** Above (or beside) the tray icon, kept inside the work area of the display that holds it. */
@@ -112,8 +116,8 @@ export const aboveTray =
   (tray: Rectangle) =>
   (size: { width: number; height: number }): Rectangle => {
     const wa = screen.getDisplayNearestPoint({ x: tray.x, y: tray.y }).workArea;
-    const x = Math.min(Math.max(wa.x + 8, Math.round(tray.x + tray.width / 2 - size.width / 2)), wa.x + wa.width - size.width - 8);
-    const above = tray.y - size.height - 12;
-    const y = above >= wa.y ? above : Math.min(tray.y + tray.height + 12, wa.y + wa.height - size.height - 8);
+    const x = Math.min(Math.max(wa.x + 8 - FLOAT_PAD, Math.round(tray.x + tray.width / 2 - size.width / 2)), wa.x + wa.width - size.width - 8 + FLOAT_PAD);
+    const above = tray.y - size.height - 12 + FLOAT_PAD;
+    const y = above >= wa.y - FLOAT_PAD ? above : Math.min(tray.y + tray.height + 12 - FLOAT_PAD, wa.y + wa.height - size.height - 8 + FLOAT_PAD);
     return { ...size, x, y };
   };

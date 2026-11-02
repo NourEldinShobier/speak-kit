@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 const made = vi.hoisted(() => ({ calls: [] as string[][] }));
-vi.mock("electron", () => ({ nativeTheme: { shouldUseDarkColors: false }, screen: {} }));
+vi.mock("electron", () => ({ screen: {} }));
 vi.mock("./secure-window", () => ({
   createSecureWindow: () => {
     const calls: string[][] = [];

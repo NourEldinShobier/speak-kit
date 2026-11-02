@@ -27,7 +27,7 @@ function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers
 export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandlers) {
   const mac = process.platform === "darwin";
   const tray = new Tray(trayIcon("asleep"));
-  const panel = new FloatWindow("panel", { width: 340, height: 330 }, () => ctx.state);
+  const panel = new FloatWindow("panel", { width: 320, height: 330 }, () => ctx.state);
   ctx.sinks.add((s) => panel.sendState(s));
   let menu: Menu | null = null;
   let shown = "";

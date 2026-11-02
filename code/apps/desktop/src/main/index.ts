@@ -240,7 +240,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     performance.mark("main:ready");
     const menu = appMenuTemplate(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
-    nativeTheme.themeSource = config.theme;
+    nativeTheme.themeSource = "light"; // Speak Kit has no dark mode
     await setupLibrary({
       dataDir,
       window: () => mainWindow.window,

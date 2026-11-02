@@ -1,4 +1,4 @@
-import { app, nativeTheme, type BrowserWindow } from "electron";
+import { app, type BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
@@ -104,7 +104,7 @@ export class MainWindow {
         height: done ? 800 : 680,
         title: TITLE,
         show: false,
-        backgroundColor: appBackground(nativeTheme.shouldUseDarkColors),
+        backgroundColor: appBackground(),
         icon: appIcon(),
         titleBarStyle: "hidden",
         ...(process.platform === "darwin" ? { trafficLightPosition: { x: 16, y: 14 } } : { titleBarOverlay: this.#overlay() }),
@@ -151,7 +151,7 @@ export class MainWindow {
   #overlay() {
     return {
       color: "#00000000",
-      symbolColor: titleBarSymbol(nativeTheme.shouldUseDarkColors),
+      symbolColor: titleBarSymbol(),
       height: this.#config.setupDone ? 40 : 32, // Lumen: shell title bar 40, setup window 32
     };
   }

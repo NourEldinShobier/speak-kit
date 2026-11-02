@@ -1,4 +1,8 @@
-/* Small always-on-top windows: the mini player and the tray panel. Components come from @speakkit/ui; this only places them. */
+/* Small always-on-top windows: the mini player and the tray panel. Components come from @speakkit/ui; this only places them.
+   Lockix floating window: a transparent OS window whose page is padded --float-pad (FLOAT_PAD in main/windows.ts) around a white card with a 1 px ring and the popover shadow. */
+:root {
+  --float-pad: 18px;
+}
 html,
 body,
 #root {
@@ -6,7 +10,7 @@ body,
   margin: 0;
 }
 body {
-  background: var(--surface-card);
+  background: transparent;
   color: var(--text-primary);
   font:
     13px/1.4 Inter,
@@ -27,20 +31,26 @@ body {
 }
 
 /* ---- mini player: draggable header, progress, controls ---- */
+.mini,
+.panel {
+  margin: var(--float-pad);
+  height: calc(100% - 2 * var(--float-pad));
+  box-sizing: border-box;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  overflow: hidden;
+}
 .mini {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
-  height: 100%;
-  border: 1px solid var(--stroke-divider);
-  box-sizing: border-box;
-  background: var(--surface-card);
+  border-radius: 12px;
 }
 .mini__head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 8px 8px 12px;
+  padding: 10px 8px 8px 14px;
   -webkit-app-region: drag;
 }
 .mini__nodrag,
@@ -79,10 +89,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
-  padding: 12px;
-  box-sizing: border-box;
-  border: 1px solid var(--stroke-divider);
+  padding: 0 8px 8px;
+  border-radius: 14px;
+}
+.panel__head {
+  min-height: 32px;
+  padding-top: 8px;
+  padding-inline: 4px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
 }
 .panel__head,
 .panel__row,
@@ -101,7 +117,7 @@ body {
   gap: 8px;
   padding: 10px;
   border-radius: 10px;
-  background: var(--surface-raised);
+  background: var(--surface-well, var(--surface-window));
 }
 .panel__txt {
   display: flex;

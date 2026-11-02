@@ -8,7 +8,7 @@ import { showAccelerator } from "../shared/shortcuts";
 import { clock } from "../shared/reader";
 import { statusLine } from "./status-line";
 import type { AppState } from "../shared/ipc";
-import { api, playButton, useAppState, useTheme } from "./ui";
+import { api, playButton, useAppState } from "./ui";
 
 function NowPlaying({ s }: { s: AppState }) {
   const r = s.reader;
@@ -51,7 +51,6 @@ function RunningExports({ exports }: { exports: AppState["exports"] }) {
 /** Left click on the tray icon: what is playing, what is next, what is rendering, and the two actions people reach for. */
 function Panel() {
   const s = useAppState();
-  useTheme(s?.config.theme);
   if (!s) return null;
   const r = s.reader;
   const v = engineView(s.health, s.serverError);

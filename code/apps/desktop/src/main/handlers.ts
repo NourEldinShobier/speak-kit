@@ -1,4 +1,4 @@
-import { app, clipboard, nativeTheme, shell } from "electron";
+import { app, clipboard, shell } from "electron";
 import { randomBytes } from "node:crypto";
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -67,9 +67,9 @@ const loginItemArgs = (config: Config) => (config.startMinimized ? ["--hidden"] 
 async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
   const { state, config, runtime, mainWindow } = d;
   const setupWas = config.setupDone;
-  Object.assign(config, patch);
+  const { theme: _retired, ...kept } = patch; // the Theme control is gone; an old renderer's value is dropped
+  Object.assign(config, kept);
   d.saveConfig();
-  if (patch.theme) nativeTheme.themeSource = config.theme;
   if (patch.startMinimized !== undefined) app.setLoginItemSettings({ openAtLogin: app.getLoginItemSettings().openAtLogin, args: loginItemArgs(config) });
   if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);
   if (patch.loadAtStart && runtime.engine?.status().state === "unloaded") runtime.startEngine();
