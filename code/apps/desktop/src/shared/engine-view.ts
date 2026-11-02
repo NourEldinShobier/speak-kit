@@ -69,3 +69,13 @@ export function trayTooltip(health: Health | null, serverError: string | null): 
   const v = engineView(health, serverError);
   return `Speak Kit - ${v.label}${v.hint ? ` (${v.hint.toLowerCase()})` : ""}`;
 }
+
+/** The line under the engine name on Home: download progress, the idle explanation, or what the engine reports. */
+export function engineDetail(engine: Health["engine"] | undefined): string {
+  if (engine?.state === "downloading") return `Downloading the model, ${Math.round((engine.progress ?? 0) * 100)}%`;
+  if (engine?.state === "unloaded") return "Kokoro-82M is on disk. It loads when you press play and unloads when idle.";
+  return engine?.detail ?? "Kokoro-82M, runs on the CPU";
+}
+
+/** The class of the status dot next to a pill tone on Home: green has none. */
+export const DOT_CLASS: Record<PillTone, string> = { green: "", red: "is-err", neutral: "is-idle", blue: "is-warn", orange: "is-warn" };

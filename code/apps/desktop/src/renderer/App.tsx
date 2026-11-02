@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useRef, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { runCommand } from "./commands";
+import { EnginesPage } from "./features/engines";
+import { VoicesPage } from "./features/voices";
 import { ExportDialog } from "./features/export";
 import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
@@ -12,7 +14,9 @@ import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
 import { Wizard } from "./features/wizard";
-import { BrowserPage, Engines, Home, PreviewCtx, Voices } from "./pages";
+import { BrowserPage } from "./BrowserPage";
+import { Home } from "./HomePage";
+import { PreviewCtx } from "./pages";
 import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
 import { api, useAppState, usePreview, useVisible } from "./ui";
 
@@ -71,9 +75,9 @@ function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; su
         <LibraryPage s={s} onOpen={(id, autoplay) => dispatch({ type: "open-doc", doc: { id, autoplay } })} />
       );
     case "voices":
-      return <Voices s={s} />;
+      return <VoicesPage s={s} />;
     case "engines":
-      return <Engines s={s} />;
+      return <EnginesPage s={s} />;
     case "browser":
       return <BrowserPage s={s} />;
     case "settings":

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
-import { engineView, trayState, trayTooltip } from "./engine-view";
+import { DOT_CLASS, engineDetail, engineView, trayState, trayTooltip } from "./engine-view";
 
 const h = (state: EngineState, extra: object = {}): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state, ...extra } });
 
@@ -30,5 +30,19 @@ describe("engine state to words and tray icon", () => {
   it("tooltip names the state and the wake hint", () => {
     expect(trayTooltip(h("unloaded"), null)).toBe("Speak Kit - Unloaded (wakes on play)");
     expect(trayTooltip(h("ready"), null)).toBe("Speak Kit - Ready");
+  });
+});
+
+describe("Home engine line", () => {
+  it("words the downloading, unloaded and reported states", () => {
+    expect(engineDetail(h("downloading", { progress: 0.424 }).engine)).toBe("Downloading the model, 42%");
+    expect(engineDetail(h("unloaded").engine)).toBe("Kokoro-82M is on disk. It loads when you press play and unloads when idle.");
+    expect(engineDetail(h("ready", { detail: "cpu, q8" }).engine)).toBe("cpu, q8");
+    expect(engineDetail(h("ready").engine)).toBe("Kokoro-82M, runs on the CPU");
+    expect(engineDetail(undefined)).toBe("Kokoro-82M, runs on the CPU");
+  });
+
+  it("maps a tone to the dot class", () => {
+    expect(["green", "red", "neutral", "orange", "blue"].map((t) => DOT_CLASS[t as keyof typeof DOT_CLASS])).toEqual(["", "is-err", "is-idle", "is-warn", "is-warn"]);
   });
 });
