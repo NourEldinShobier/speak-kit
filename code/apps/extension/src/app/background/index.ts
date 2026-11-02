@@ -1,13 +1,13 @@
 import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { invalidateSettings, loadSettings, migrateStoredSettings } from "../../features/settings";
-import type { FromOffscreen } from "../../shared/internal";
+import type { FromOffscreen, WorkerFailure } from "../../shared/internal";
 import { parseInbound } from "../../shared/schemas";
 import { onCommand } from "./commands";
 import { clearHealth } from "./connection";
 import { menuLog, menusStale, onMenuClick, rebuildMenus } from "./menus";
 import { OFFSCREEN_URL } from "./offscreen";
 import { handleOffscreen, runPlayerCommand } from "./player";
-import { KNOWN_TYPES, route } from "./router";
+import { KNOWN_TYPES, routeSafely } from "./router";
 import { getState, sendToPages, sendToTab } from "./state";
 
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
@@ -21,10 +21,10 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   // Trust boundary: content scripts run inside web pages. Anything that is not a well-formed request is dropped.
   const parsed = parseInbound(m);
   if (!parsed) {
-    if (KNOWN_TYPES.has(m.t)) sendResponse({ ok: false, error: "invalid-message" });
+    if (KNOWN_TYPES.has(m.t)) sendResponse({ ok: false, error: "invalid-message" } satisfies WorkerFailure);
     return false;
   }
-  route(parsed, sender).then(sendResponse, (e) => sendResponse({ ok: false, error: String(e) }));
+  void routeSafely(parsed, sender).then(sendResponse);
   return true;
 });
 

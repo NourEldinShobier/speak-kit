@@ -16,6 +16,9 @@ export type FromOffscreen =
 
 export type ConnResult<T> = { ok: true; value: T } | { ok: false; code: ErrorCode; message: string };
 
+/** The worker's answer to a message it could not serve: a fixed code, never exception text. */
+export type WorkerFailure = { ok: false; error: "invalid-message" | "route-failed" };
+
 /** Extra requests answered by the service worker (contract additions, see the final report). */
 export type ExtraToBg =
   | { t: "get-health"; force?: boolean | undefined } // reply ConnResult<Health>, cached 3 s

@@ -117,4 +117,13 @@ describe("service worker router", () => {
     await first;
     expect(await getQueue()).toEqual([item]);
   });
+
+  it("answers a route that throws with a fixed code, not the exception text, and logs the exception", async () => {
+    const { routeSafely } = await wake();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const answer = await routeSafely({ t: "open-sidepanel" }, sender); // no windowId and no chrome.windows: the handler throws
+    expect(answer).toEqual({ ok: false, error: "route-failed" });
+    expect(log).toHaveBeenCalledWith("[speakkit] route failed", "open-sidepanel", expect.any(TypeError));
+    log.mockRestore();
+  });
 });

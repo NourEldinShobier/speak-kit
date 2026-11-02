@@ -1,5 +1,6 @@
 import { toInfo } from "../../features/voices";
 import { inboundSchema, type Inbound } from "../../shared/schemas";
+import type { WorkerFailure } from "../../shared/internal";
 import { engine, getHealthResult, health, startApp } from "./connection";
 import { runPlayerCommand } from "./player";
 import { activeTabId, startRead, toggleReader } from "./reading";
@@ -93,4 +94,14 @@ const handlers: { [T in Inbound["t"]]: Handler<T> } = {
 
 export async function route(msg: Inbound, sender: Sender): Promise<unknown> {
   return (handlers[msg.t] as Handler<typeof msg.t>)(msg, sender);
+}
+
+/** Answers a route that throws with a fixed code: exception text must not cross to the page (CLAUDE.md rule 12). It is logged here instead. */
+export async function routeSafely(msg: Inbound, sender: Sender): Promise<unknown> {
+  try {
+    return await route(msg, sender);
+  } catch (e) {
+    console.error("[speakkit] route failed", msg.t, e);
+    return { ok: false, error: "route-failed" } satisfies WorkerFailure;
+  }
 }

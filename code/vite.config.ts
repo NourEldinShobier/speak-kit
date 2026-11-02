@@ -80,6 +80,8 @@ export default defineConfig({
         rules: { "no-restricted-globals": ["warn", { name: "chrome", message: "Use the chrome API only in extension app/ and shared/, or through features/settings/browser.ts." }] },
       },
       { files: ["apps/extension/src/features/settings/browser.ts"], rules: { "no-restricted-globals": "off" } },
+      // The service worker has no log sink but its console; console.error is how it reports an exception (rule 12).
+      { files: ["apps/extension/src/app/background/**"], rules: { "no-console": ["warn", { allow: ["error"] }] } },
       // The extension has no Node; oxlint takes CSSStyleSheet.replaceSync for a file API.
       { files: ["apps/extension/src/**"], rules: { "node/no-sync": "off" } },
       // Playwright fixtures call a function named use(); it is not a React hook.
