@@ -172,7 +172,7 @@ describe("sidecar faults", () => {
     await expect(speak(e, "please be killed")).rejects.toThrow(/chatterbox sidecar exited/);
     expect(e.status().state).toBe("unloaded");
     expect(states).toEqual(["unloaded"]);
-    await expect(speak(e, "fine")).resolves.toBeDefined();
+    expect((await speak(e, "fine")).pcm.length).toBeGreaterThan(0);
   });
 
   it("a request with no sign of life for the deadline fails, kills the sidecar and unloads", async () => {
@@ -182,7 +182,7 @@ describe("sidecar faults", () => {
     await expect(speak(e, "hang forever")).rejects.toThrow("chatterbox sidecar sent nothing for 0.25 s");
     expect(Date.now() - t0).toBeGreaterThanOrEqual(240);
     expect(e.status().state).toBe("unloaded");
-    await expect(speak(e, "fine")).resolves.toBeDefined();
+    expect((await speak(e, "fine")).pcm.length).toBeGreaterThan(0);
   });
 
   it("an idle sidecar with no request outstanding is never timed out", async () => {
@@ -190,7 +190,7 @@ describe("sidecar faults", () => {
     await e.start();
     await new Promise((r) => setTimeout(r, 300));
     expect(e.status().state).toBe("ready");
-    await expect(speak(e, "still here")).resolves.toBeDefined();
+    expect((await speak(e, "still here")).pcm.length).toBeGreaterThan(0);
   });
 
   it("a sidecar that goes quiet while loading fails the load with the deadline", async () => {
@@ -213,7 +213,7 @@ describe("sidecar faults", () => {
     expect(e.status().detail).toContain("3 crashes in 5 min");
     await expect(speak(e, "fine")).rejects.toBeInstanceOf(EngineNotReadyError);
     await e.start();
-    await expect(speak(e, "fine")).resolves.toBeDefined();
+    expect((await speak(e, "fine")).pcm.length).toBeGreaterThan(0);
   });
 
   it("an installer that prints nothing for the deadline fails and returns to missing", async () => {
@@ -240,7 +240,7 @@ describe("sidecar", () => {
     expect(r.pcm[0]).toBe(1000);
     await e.unload();
     expect(e.status().state).toBe("unloaded");
-    await expect(e.synthesize("again", { voice: "chatterbox", speed: 1 })).resolves.toBeDefined(); // reloads lazily
+    expect((await e.synthesize("again", { voice: "chatterbox", speed: 1 })).pcm.length).toBeGreaterThan(0); // reloads lazily
   });
 
   it("uses the reference clip of a cloned voice and lists it", async () => {
@@ -264,7 +264,7 @@ describe("sidecar", () => {
     await expect(e.synthesize("please fail", { voice: "chatterbox", speed: 1 })).rejects.toThrow("synthesis exploded");
     await expect(e.synthesize("now crash", { voice: "chatterbox", speed: 1 })).rejects.toThrow(/exited with code 3/);
     expect(e.status().state).toBe("unloaded");
-    await expect(e.synthesize("fine", { voice: "chatterbox", speed: 1 })).resolves.toBeDefined();
+    expect((await e.synthesize("fine", { voice: "chatterbox", speed: 1 })).pcm.length).toBeGreaterThan(0);
   });
 
   it("an abort rejects with the reason", async () => {

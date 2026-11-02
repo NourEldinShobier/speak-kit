@@ -20,13 +20,13 @@ describe("FakeEngine", () => {
     const ac = new AbortController();
     const p = e.synthesize("hello", { voice: "af_heart", speed: 1, signal: ac.signal });
     setTimeout(() => ac.abort(), 20);
-    await expect(p).rejects.toBeDefined();
+    await expect(p).rejects.toThrow();
     expect(e.aborted).toBe(1);
     expect(e.active).toBe(0);
     e.latencyMs = 0;
     e.failOn = (t) => t.includes("boom");
     await expect(e.synthesize("boom", { voice: "af_heart", speed: 1 })).rejects.toThrow("fake engine failure");
-    await expect(e.synthesize("fine", { voice: "af_heart", speed: 1 })).resolves.toBeDefined();
+    expect((await e.synthesize("fine", { voice: "af_heart", speed: 1 })).pcm.length).toBeGreaterThan(0);
   });
   it("refuses to synthesize until ready", async () => {
     const e = new FakeEngine({ state: "downloading" });
