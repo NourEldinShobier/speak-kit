@@ -1,9 +1,8 @@
 {
   "lint": {
     "code": {
-      "no-nested-ternary": 2,
       "complexity": 3,
-      "no-sync": 9,
+      "no-nested-ternary": 2,
       "max-params": 5
     },
     "tests": {}

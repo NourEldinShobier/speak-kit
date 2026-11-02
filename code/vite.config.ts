@@ -14,7 +14,7 @@ const noMain = { patterns: [{ group: ["**/main/**"], message: "The renderer must
 const noDeepFeature = { patterns: [{ group: ["**/features/*/*"], message: "Import a feature through its index.ts." }] };
 
 const tests = ["**/*.test.{ts,tsx}", "**/*.spec.ts", "**/tests/**", "**/testing/**", "**/bench/**", "e2e/**", "packages/ui/gallery/**"];
-const tooling = ["**/scripts/**", "**/cli.ts"];
+const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**/vite.config.ts", "**/node-build.ts"];
 
 // Playwright specs in e2e/ run with `pnpm run e2e`, not under vitest.
 export default defineConfig({

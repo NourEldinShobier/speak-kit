@@ -3,8 +3,8 @@
     "tests": {
       "no-explicit-any": 14,
       "complexity": 2,
-      "no-nested-ternary": 2,
-      "max-depth": 1
+      "max-depth": 1,
+      "no-nested-ternary": 2
     },
     "code": {}
   },
