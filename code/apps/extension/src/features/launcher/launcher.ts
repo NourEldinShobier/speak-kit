@@ -5,7 +5,7 @@ import { ParagraphGutter } from "./gutter";
 import { Notices } from "./notices";
 
 /** What the launcher is built from: the shadow shell, the controller's handlers, the first model, and the dock element (toasts sit above it). */
-export interface LauncherDeps {
+interface LauncherDeps {
   shell: Shell;
   hd: UiHandlers;
   model: UiModel;

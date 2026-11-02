@@ -8,10 +8,10 @@ const CHECK_DELAY_MS = 10;
 const MIN_PARAGRAPH_CHARS = 20;
 
 /** What a reading shortcut does. */
-export type KeyEffect = { cmd: PlayerCommand } | { speed: number } | { closePopover: true };
+type KeyEffect = { cmd: PlayerCommand } | { speed: number } | { closePopover: true };
 
 /** True for page controls and fields where typing must not trigger a reading shortcut. */
-export const editable = (t: EventTarget | null) => {
+const editable = (t: EventTarget | null) => {
   const e = t as HTMLElement | null;
   return !!e && (e.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(e.tagName) || e.getAttribute?.("role") === "button");
 };
