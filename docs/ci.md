@@ -74,3 +74,9 @@ The extension pages ask for Inter first and bundle no web font, so layout checks
 | `packages/engine/tests/real-chatterbox.test.ts` | `SPEAKKIT_REAL_CHATTERBOX=1` | NVIDIA GPU and Python |
 | `e2e/tests/full.spec.ts`, `desktop.spec.ts` | `@slow` tag, `pnpm run e2e:full` | real model, Electron |
 | `e2e/tests/perf.spec.ts` | `E2E_SKIP_PERF=1` on CI | absolute timing budgets |
+
+## Verified runs
+
+- All jobs green on `main`: https://github.com/NourEldinShobier/speak-kit/actions/runs/41375351442
+- A docs-only push (this section) runs `changes` and `ci-ok` and skips the unit, e2e, desktop and static jobs: see the next entry.
+- The desktop smoke test `home: pairing token regenerates and the old token stops working` timed out once in its 60 s hook on the Windows runner (run 41375327512) and passed on the next run; rerun the job before treating it as a regression.
