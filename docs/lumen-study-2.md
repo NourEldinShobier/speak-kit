@@ -1,5 +1,7 @@
 # Lumen study 2: layouts and behavior SpeakKit copies (2026-11-01)
 
+> Historical reference (Lumen study, dark and light). The shipped look is Lockix, light only: see [design-system.md](design-system.md), [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md). Dark and blue-fill statements below no longer apply.
+
 Source: `Lumen — AI answer engine ... .figcraft`, read via figcraft by frame id. Images: `docs/lumen-study-frames/<id>-<slug>.png` (40 files, 1x). Part 1 is `lumen-study.md` (shell X15/X16, components boards, F5 read-aloud, repo). Measurements below are from layer data (marked m) or read off the 1440x900 renders (marked ~, +-2 px).
 
 Tokens (variable collection, two modes). Dark: accent `#0078D4`, window `#191A1B`, editor `#121314`, card `#1E1F20`, raised `#252627`, input `#191A1B`, divider `#2A2B2C`, control stroke `#FFFFFF14`, selected fill `#FFFFFF21`, text `#E6E6E6` / `#BFBFBF` / `#8C8C8C`. Light: accent `#0069CC`, window `#F3F3F6`, editor and raised `#FFFFFF`, card `#FAFAFD`, divider `#E2E2E5`, control stroke `#0000001A`, selected fill `#0000001C`, text `#202020` / `#3B3B3B` / `#606060`, tags green `#1A7F4B`, orange `#B35C00`, red `#C62828`. Light mode darkens the accent and the tag colors for contrast; it adds no new tokens.

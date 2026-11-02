@@ -20,8 +20,6 @@ A private text-to-speech reader. Select text in Chrome, press a key, and a natur
 | ![Extension popup](docs/screenshots/popup-playing.png) | ![Shortcuts](docs/screenshots/app-shortcuts.png) |
 | Extension popup | Global shortcuts you can change |
 
-There is also a light theme: [reader in light](docs/screenshots/app-reader-light.png).
-
 ## Install
 
 ### Windows
@@ -117,7 +115,7 @@ Build the Windows installer with `pnpm --filter @speakkit/desktop exec node scri
 | `code/packages/engine` | Engine interface, Kokoro in a child process, Chatterbox sidecar |
 | `code/packages/player` | Shared gapless playback |
 | `code/packages/protocol` | API types, audio frame codec, extension messages |
-| `code/packages/ui` | The Lumen component kit shared by the extension and the app |
+| `code/packages/ui` | The Lockix-styled (Lumen) component kit shared by the extension and the app |
 | `code/e2e` | Playwright suites |
 | `designs/` | Design source, generator and built screens |
 | `docs/` | [Documentation index](docs/index.md) |

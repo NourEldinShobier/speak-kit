@@ -14,7 +14,7 @@ Start with the [README](../README.md) for what the product is and how to install
 - [Public repository audit](engineering/public-audit.md)
 
 ## Design
-- [Design system](design-system.md) (Lumen tokens), [Lumen components](lumen-components.md), [Lumen study](lumen-study.md)
+- [Design system](design-system.md) (Lockix, light only; [ADR 0015](decisions/0015-light-only.md); [spec](lockix-design-system.md)), [Lumen components](lumen-components.md), [Lumen study](lumen-study.md)
 - [Visual fidelity](visual-fidelity.md): each built screen against its design frame
 - [Design restructure](design-restructure.md), [design review notes](design-review/)
 - Research: [products](research/product-research.md), [local models](research/local-models.md), [logo](research/logo-research.md)

@@ -1,5 +1,7 @@
 # Lumen study: what SpeakKit copies (2026-11-01)
 
+> Historical reference (Lumen study, dark and light). The shipped look is Lockix, light only: see [design-system.md](design-system.md), [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md). Dark and blue-fill statements below no longer apply.
+
 Sources read: workspace `D:\workspaces\perplexity` (WORKSPACE.md, `docs/lumen-repo-docs/*`), the design file `Lumen — AI answer engine (open-source Perplexity alternative).figcraft` (10 pages, 50,785 layers; read: variable collection, "Components and states" board, "Desktop components" board, desktop main window X15/X16, browser feature F5 "Reader mode + read aloud").
 Not read in depth yet: the other ~120 frames (settings, onboarding, agents, MCP, mobile). A deeper pass is part of the restructure workflow below.
 

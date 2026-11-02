@@ -1,5 +1,7 @@
 # SpeakKit screen map to Lumen frames (2026-11-01)
 
+> Historical reference (Lumen study, dark and light). The shipped look is Lockix, light only: see [design-system.md](design-system.md), [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md). Dark and blue-fill statements below no longer apply.
+
 Lumen frame ids refer to `Lumen ... .figcraft`; details and measurements are in `lumen-study-2.md`, images in `lumen-study-frames/`. "F5" is the browser-feature frame (reader mode + read-aloud pill + reading popover, page 45134, studied in `lumen-study.md`). SpeakKit titles are in `designs/manifest.json`.
 
 ## Mapping

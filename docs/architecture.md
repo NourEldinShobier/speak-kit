@@ -3,7 +3,7 @@
 Applies to: v0.3.0, header added 2026-11-01. Sections written before that date are marked with their own date. Decided: everything outside "Open". Open: see the last section. Estimates are marked [est.]. Decisions: `docs/decisions/`. Vocabulary: `docs/glossary.md`. Sources are listed at the end.
 
 Contract source of truth: `code/packages/protocol/src` (types, frame codec, settings). Change it only with a note in this file.
-Design source of truth: `designs/screens/<ID>.png` + `designs/manifest.json` (ID, title, note) + tokens in `designs/gen/kit.ts` (LIGHT/DARK, blue accent #2457F5, Tabler icons).
+Design source of truth: `designs/screens/<ID>.png` + `designs/manifest.json` (ID, title, note) + tokens in `designs/gen/kit.ts` (LIGHT only, Lockix look: near-black primary #201E25, blue #0069CC only for focus, links, selection and progress, Tabler icons; see [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md)).
 Priority: the Chrome extension must be fully working with the local server. The desktop app is a thin companion in v1 (library and reader screens D-F are v1.1).
 
 ## Stack (do not swap)
@@ -72,7 +72,7 @@ popup / options / side panel talk to the service worker only (ContentToBg / Play
 - Context menu entries (created in the service worker): "Read selection", "Read from here", "Add to queue" under a SpeakKit parent.
 
 ## Popup / options / side panel (React, `apps/extension/src/{popup,options,sidepanel}`)
-Pixel-faithful to A1-A15 (popup 380 px wide), C1-C8 + C12 (options), C9-C11 (side panel). Shared tokens in `src/ui/tokens.css` from `designs/gen/kit.ts` (light + dark via `prefers-color-scheme`). States come only from `PlayerState` plus `Health` (poll `/v1/health` through the service worker, cache 3 s).
+Pixel-faithful to A1-A15 (popup 380 px wide), C1-C8 + C12 (options), C9-C11 (side panel). Shared tokens in `src/ui/tokens.css` from `designs/gen/kit.ts` (light only, Lockix; no dark mode, ADR 0015). States come only from `PlayerState` plus `Health` (poll `/v1/health` through the service worker, cache 3 s).
 
 ## Desktop (apps/desktop)
 Electron main starts the same `createServer` in-process (engine in its worker thread), tray icon (open / quit), `requestSingleInstanceLock`, window with React UI: first-run (welcome, engine download with progress, pair browser: token reveal/copy and the extension install hint), settings basics (port, launch at login), voices list with preview. Library/reader are v1.1.

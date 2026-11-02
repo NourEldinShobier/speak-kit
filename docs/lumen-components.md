@@ -1,5 +1,7 @@
 # Lumen component spec (extracted)
 
+> Historical reference (Lumen study, dark and light). The shipped look is Lockix, light only: see [design-system.md](design-system.md), [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md). Dark and blue-fill statements below no longer apply.
+
 Source: `D:/workspaces/perplexity/designs/Lumen — AI answer engine (open-source Perplexity alternative).figcraft` (read from the file, not guessed). Machine-readable twin: `code/packages/ui/spec/lumen-spec.json` (schema `lumen-spec/1`: `tokens`, `components.<name>.{states, anatomy, notes}`, `patterns`).
 
 Colour cells read `variable (dark / light)`. Alpha tokens are resolved to rgba. "paint opacity" is the opacity of the fill/stroke paint on top of the variable. Node ids refer to the .figcraft file. Images are in `docs/lumen-components/` named `<component>-<state>-<dark|light>.png` (2x). The light images were rendered by switching the board frame to the Light mode of the variable collection (the file has no separate light component board; the light-mode section 14562 holds full screens).

@@ -269,3 +269,25 @@ Window chrome from the frames: title bar 36 on `#F0F0F0` with a 20 px logo tile 
 ## 8. Not covered
 
 Table, drawer, sheet, skeleton, alert and scroll-area internals are only summarised in `tokens.json` and the CSS (progress, slider, scrollbar); read the Lockix files for those before porting them. The toast ring and tray window were not pixel compared.
+
+## 9. Applied (2026-11-02)
+
+Speak Kit applies the system light only ([ADR 0015](decisions/0015-light-only.md)). The summary of the shipped look is in [design-system.md](design-system.md).
+
+| Lockix | Speak Kit |
+|---|---|
+| `tokens.json` colours, radii, shadows | token blocks of `code/packages/ui/src/lumen.css`; `tokens.ts` generated from it; `designs/gen/kit.ts` LIGHT |
+| `lockix-components.css` (`lm-*`, `lx-*`) | `code/packages/ui` React and vanilla components (button, switch, checkbox, radio, segmented, input, select, menu, popover, tooltip, dialog, toast, badge, tray) |
+| Floating windows (transparent, 1 px ring, popover shadow, 14/12 radius) | desktop mini player and tray panel windows; in-page pill, bubble and launcher in the extension |
+| Window `#F0F0F0`, white panels r14 | desktop app shell, extension options, side panel |
+| Primary `#201E25` button, switch on, checked box | every primary action, including play and pause (white filled glyph) |
+| Frames in `frames/` | compared against `designs/next` frames (see review.html) |
+
+Deliberate differences from Lockix:
+
+- Reading highlight stays yellow (`hlSent` #FFF1C2, `hlWord` #FFD24D); Lockix has no highlight.
+- Icons stay Tabler outline (stroke 1.5); transport glyphs (play, pause, stop) are solid.
+- Blue `#0069CC` is only the focus ring, links, selection and progress; it never fills a button.
+- Kept `tag-purple`, `tag-yellow` and the reader `paper` theme.
+- No dark mode; the in-page UI stays white over dark host pages. Logo and store assets keep dark variants.
+- Switch and checkbox off strokes follow the code (`#C3C6CC`), not the darker design-file stroke (section 6).

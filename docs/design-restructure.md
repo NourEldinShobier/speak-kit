@@ -1,5 +1,7 @@
 # Design file restructure (2026-11-01)
 
+> Historical reference (Lumen study, dark and light). The shipped look is Lockix, light only: see [design-system.md](design-system.md), [lockix-design-system.md](lockix-design-system.md) and [ADR 0015](decisions/0015-light-only.md). Dark and blue-fill statements below no longer apply.
+
 Output: `designs/next/` (staging; `designs/screens` and `designs/review.html` are the old set and were not touched).
 `speakkit.figcraft`, `screens/<id>.png` (2x, 2880x1800 for a 1440x900 frame), `manifest.json`, `review.html`, `build/sheets/s01-s23.png` (contact sheets).
 Icon alignment check (`_measure.ts` and `_measure.py`) re-run after the changes: 0 fails.

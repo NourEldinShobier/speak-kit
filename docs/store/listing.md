@@ -41,9 +41,9 @@ What you get
 - Read a selection, a paragraph or a whole page.
 - Sentence and word highlighting while it reads, with a floating player on the page.
 - An edge launcher that stays out of the way until you hover it.
-- Reader view: a clean, distraction-free version of the article, in paper, light or dark.
+- Reader view: a clean, distraction-free version of the article, in paper or light.
 - Queue side panel: line up several pages and jump through the outline of the current one.
-- Speed from 0.5x to 3x, several voices, light and dark themes.
+- Speed from 0.5x to 3x, several voices.
 - Keyboard shortcuts: Ctrl+Shift+S read, Ctrl+Shift+Y play or pause, Ctrl+Shift+X stop (Command on Mac; change them at chrome://extensions/shortcuts).
 - Right-click menu to read a selection or add it to the queue.
 - Per-site control: choose where the player appears, or turn it off for a site.
