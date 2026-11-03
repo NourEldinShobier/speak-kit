@@ -83,7 +83,7 @@ export const windowShot = (
     state,
     SY,
     title,
-    async (c) => {
+    async () => {
       const { launch } = await import("../../apps/desktop/tests/harness");
       const l = await launch({ env: { SPEAKKIT_TEST: "1", ...slow, ...o.env }, config: { ...DONE } });
       try {

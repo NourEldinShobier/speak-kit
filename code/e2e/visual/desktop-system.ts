@@ -54,12 +54,18 @@ export const systemScenarios: Scenario[] = [
       await p.getByTestId("updating-card").waitFor();
     },
   }),
-  sys("L5", "sidebar-collapsed", "Collapsed sidebar", {
-    drive: async (p) => {
-      await p.getByRole("button", { name: "Toggle sidebar" }).click();
-      await sleep(400);
+  sys(
+    "L5",
+    "sidebar-collapsed",
+    "Collapsed sidebar",
+    {
+      drive: async (p) => {
+        await p.getByRole("button", { name: "Toggle sidebar" }).click();
+        await sleep(400);
+      },
     },
-  }, { design: false }),
+    { design: false },
+  ),
   windowShot("I9", "mini-preparing", "Mini player · preparing", "mini.html", "mini", read, { env: { SPEAKKIT_FAKE_LATENCY_MS: "6000" }, after: miniAfter("preparing") }),
   windowShot("I9", "mini-playing", "Mini player · playing", "mini.html", "mini", read, { after: miniAfter("playing") }),
   windowShot("I9", "mini-paused", "Mini player · paused", "mini.html", "mini", read, {
@@ -70,15 +76,23 @@ export const systemScenarios: Scenario[] = [
   }),
   windowShot("I13", "mini-finished", "Mini player · finished", "mini.html", "mini", read, { after: miniAfter("finished") }),
   windowShot("I10", "tray-panel-idle", "Tray panel · idle", "panel.html", "tray-panel", async (app) => void (await hook(app, "togglePanel"))),
-  windowShot("I10", "tray-panel-paused", "Tray panel · paused", "panel.html", "tray-panel", async (app) => {
-    await read(app);
-    await hook(app, "togglePanel");
-  }, {
-    after: async (w) => {
-      await w.getByRole("button", { name: "Pause" }).click();
-      await sleep(400);
+  windowShot(
+    "I10",
+    "tray-panel-paused",
+    "Tray panel · paused",
+    "panel.html",
+    "tray-panel",
+    async (app) => {
+      await read(app);
+      await hook(app, "togglePanel");
     },
-  }),
+    {
+      after: async (w) => {
+        await w.getByRole("button", { name: "Pause" }).click();
+        await sleep(400);
+      },
+    },
+  ),
   sys("J2", "export-rendering", "Export · rendering", { ...exportTo("4000"), drive: async (p) => (await startExport(p), await p.getByTestId("export-progress").waitFor()) }),
   sys("J3", "export-done", "Export · done", { ...exportTo("100"), drive: async (p) => (await startExport(p), await p.getByTestId("export-done").waitFor()) }),
   sys("J6", "export-background", "Export · in background", {
@@ -89,13 +103,20 @@ export const systemScenarios: Scenario[] = [
       await p.getByTestId("export-pill").waitFor();
     },
   }),
-  home("E10", "deleted-toast", GROUPS.library, "Library · deleted, undo toast", {
-    drive: async (p) => {
-      await libraryWith(p);
-      await p.getByRole("button", { name: "More for Meeting notes" }).click();
-      await p.getByRole("menuitem", { name: "Delete" }).click();
-      await p.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
-      await p.getByRole("button", { name: "Undo" }).waitFor();
+  home(
+    "E10",
+    "deleted-toast",
+    GROUPS.library,
+    "Library · deleted, undo toast",
+    {
+      drive: async (p) => {
+        await libraryWith(p);
+        await p.getByRole("button", { name: "More for Meeting notes" }).click();
+        await p.getByRole("menuitem", { name: "Delete" }).click();
+        await p.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+        await p.getByRole("button", { name: "Undo" }).waitFor();
+      },
     },
-  }, { design: false }),
+    { design: false },
+  ),
 ];

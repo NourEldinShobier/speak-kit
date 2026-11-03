@@ -56,7 +56,7 @@ describe("visual capture", () => {
       const path = await s.run(c);
       const base = { id: s.id, state: s.state, theme: "light" as const, group: s.group, title: s.title, file: builtName(s.id, s.state) };
       const design = s.design === false ? null : designFile(s.id);
-      const r = compare({ ...base, design: design ? design.split(/[\/]/).pop() : undefined }, path, design);
+      const r = compare({ ...base, design: design ? design.split(/[\\/]/).pop() : undefined }, path, design);
       if (!r.design) r.note = s.design === false ? "product-only" : "no light twin";
       results.push(r);
       console.log(`[visual] ${r.id} ${r.state} diff ${r.diffPct ?? "-"}% ${r.note ?? ""}`);
