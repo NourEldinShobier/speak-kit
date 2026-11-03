@@ -20,7 +20,7 @@ export const OUT = resolve(HERE, "out");
 export const EXT_DIR = process.env.SK_EXT_DIR ?? resolve(CODE, "apps/extension/dist-visual");
 
 export const TOKEN = "sk_local_9d4f27a1c42e";
-export const SERVER_PORT = 51730;
+export const SERVER_PORT = Number(process.env.SK_PORT ?? 51730);
 
 export const ARTICLE = {
   kicker: "ESSAY · 8 MIN READ",
