@@ -37,7 +37,7 @@ const toLibrary = async (p: Page) => {
   await p.getByRole("heading", { name: "Library" }).waitFor();
 };
 /** Fills the library through the preload bridge; the list reads once when the page opens, so leave and come back. */
-const libraryWith = async (p: Page) => {
+export const libraryWith = async (p: Page) => {
   await p.evaluate(async (list) => {
     for (const [name, text] of list) await window.speakkitLibrary.importBytes(name, new TextEncoder().encode(text));
   }, docs);

@@ -1,7 +1,10 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { GROUPS, type Scenario } from "./scenarios";
-import { home, settings, press, type Opts } from "./desktop";
-import { READ, hook, windowShot } from "./desktop-app";
+import { DONE, home, settings, press, type Opts } from "./desktop";
+import { READ, hook, libraryWith, windowShot } from "./desktop-app";
 import { sleep } from "./support";
 
 // Screens of the Lockix pass that need their own states: update pill and card, mini player and tray panel states, collapsed sidebar, in-app toast.
@@ -25,6 +28,19 @@ const miniAfter = (s: string, then?: (w: Page) => Promise<void>) => async (w: Pa
   await then?.(w);
 };
 const read = (app: Parameters<Parameters<typeof windowShot>[5]>[0]) => hook(app, "readText", READ).then(() => undefined);
+const note = "Exporting is simple. Each sentence is rendered once. Then the file is saved.";
+const startExport = async (p: Page) => {
+  await p.getByRole("button", { name: "New reading" }).click();
+  await p.getByRole("textbox", { name: "Text to read" }).fill(note);
+  await p.getByRole("button", { name: "Export audio" }).click();
+  await p.getByRole("dialog", { name: "Export audio" }).waitFor();
+  await p.getByRole("textbox", { name: "File name" }).fill("My note");
+  await p.getByRole("button", { name: "Export", exact: true }).click();
+};
+const exportTo = (latency: string): Opts => ({
+  env: { SPEAKKIT_FAKE_LATENCY_MS: latency },
+  config: { ...DONE, exportPrefs: { format: "wav", mp3Kbps: 192, folder: mkdtempSync(join(tmpdir(), "sk-visual-export-")) } },
+});
 const sys = (id: string, state: string, title: string, o: Opts, extra: { design?: boolean } = {}) => home(id, state, SY, title, o, extra);
 
 export const systemScenarios: Scenario[] = [
@@ -63,4 +79,23 @@ export const systemScenarios: Scenario[] = [
       await sleep(400);
     },
   }),
+  sys("J2", "export-rendering", "Export · rendering", { ...exportTo("4000"), drive: async (p) => (await startExport(p), await p.getByTestId("export-progress").waitFor()) }),
+  sys("J3", "export-done", "Export · done", { ...exportTo("100"), drive: async (p) => (await startExport(p), await p.getByTestId("export-done").waitFor()) }),
+  sys("J6", "export-background", "Export · in background", {
+    ...exportTo("4000"),
+    drive: async (p) => {
+      await startExport(p);
+      await p.getByRole("button", { name: "Run in background" }).click();
+      await p.getByTestId("export-pill").waitFor();
+    },
+  }),
+  home("E10", "deleted-toast", GROUPS.library, "Library · deleted, undo toast", {
+    drive: async (p) => {
+      await libraryWith(p);
+      await p.getByRole("button", { name: "More for Meeting notes" }).click();
+      await p.getByRole("menuitem", { name: "Delete" }).click();
+      await p.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+      await p.getByRole("button", { name: "Undo" }).waitFor();
+    },
+  }, { design: false }),
 ];
