@@ -31,7 +31,7 @@
 .rd-source {
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--chip-gray, #f0f0f0);
+  background: var(--chip-gray);
   color: var(--text-secondary);
   font-size: 12px;
 }
@@ -161,8 +161,8 @@
   padding: 6px 14px;
   border: 0;
   border-radius: 999px;
-  background: #201e25;
-  color: #fafafa;
+  background: var(--cta);
+  color: var(--text-on-cta);
   cursor: pointer;
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
