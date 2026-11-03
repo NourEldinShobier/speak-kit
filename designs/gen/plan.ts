@@ -29,7 +29,7 @@ export const PAGES: Pg[] = [
         f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."), f("B11", "The white pill stays readable over a dark website; the highlight palette adapts to the page."),
         f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open Speak Kit and Retry."),
         f("B22"), f("B23"), f("B25"), f("B26"), f("B27"), f("B28"), f("B35")] },
-      { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3"), f("B13"), f("B14"), f("B29"), f("B30"), f("B31")] },
+      { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3", "design-only: cannot be screenshotted (native Chrome context menu)"), f("B13"), f("B14"), f("B29"), f("B30"), f("B31")] },
       { title: "Pill popovers and reading settings", cover: "speed, voice and the Reading popover (Sans, Serif, Dyslexic, size, width, theme, highlight)", frames: [f("B15"), f("B16"), f("B33"), f("B24")] },
       { title: "Reader view", cover: "paper reader at full fidelity, with the pill and the Reading popover", frames: [
         f("B10", "Paper reader, 680 px serif column, current sentence block, Reading popover top right, pill below."), f("B34"), f("B32")] },
