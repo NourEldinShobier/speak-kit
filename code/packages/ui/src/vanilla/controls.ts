@@ -14,10 +14,13 @@ export interface ButtonOptions {
   ariaLabel?: string;
 }
 
+const BTN_GLYPH: Record<string, number> = { xs: 12, sm: 14 };
+const ICON_GLYPH: Record<number, number> = { 24: 12, 28: 14 };
+
 export function button(o: ButtonOptions = {}): HTMLButtonElement {
   const variant = o.variant ?? "secondary";
   const lead = o.loading ? "loader-2" : o.iconLeft;
-  const glyph = o.size === "xs" ? 12 : o.size === "sm" ? 14 : 16;
+  const glyph = BTN_GLYPH[o.size ?? ""] ?? 16;
   return h(
     "button",
     {
@@ -60,7 +63,7 @@ export function iconButton(o: IconButtonOptions): HTMLButtonElement {
       on: o.onClick ? { click: o.onClick } : undefined,
       ...Object.fromEntries(Object.entries(o.data ?? {}).map(([k, v]) => [`data-${k}`, v])),
     },
-    icon(o.loading ? "loader-2" : o.name, size === 24 ? 12 : size === 28 ? 14 : 16, o.loading ? "lm-spin" : undefined),
+    icon(o.loading ? "loader-2" : o.name, ICON_GLYPH[size] ?? 16, o.loading ? "lm-spin" : undefined),
   );
 }
 

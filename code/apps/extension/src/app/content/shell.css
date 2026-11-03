@@ -159,7 +159,7 @@
   font-size: 12px;
 }
 .sk-vcheck {
-  color: var(--cta, #201e25);
+  color: var(--cta);
 }
 .sk-vnone {
   padding: 12px 8px;

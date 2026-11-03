@@ -75,7 +75,7 @@
   width: 3px;
   height: 52px;
   border-radius: 2px;
-  background: var(--track, #f0f0f0);
+  background: var(--track);
   overflow: hidden;
 }
 .sk-tab.sk-left .sk-rail {
@@ -85,7 +85,7 @@
 .sk-rail i {
   display: block;
   width: 100%;
-  background: var(--dot-green, #05c283);
+  background: var(--dot-green);
 }
 .sk .sk-tpb {
   width: 26px;
@@ -140,7 +140,7 @@
   width: 4px;
   height: 56px;
   border-radius: 2px;
-  background: var(--track, #f0f0f0);
+  background: var(--track);
   overflow: hidden;
   cursor: pointer;
 }
@@ -149,7 +149,7 @@
   inset-inline-start: 0;
   top: 0;
   width: 100%;
-  background: var(--dot-green, #05c283);
+  background: var(--dot-green);
 }
 .sk-time {
   color: var(--text-secondary);

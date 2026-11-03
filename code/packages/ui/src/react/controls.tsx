@@ -18,22 +18,18 @@ export interface ButtonProps extends BtnAttrs {
   children?: ReactNode;
 }
 
+const BTN_GLYPH: Record<string, number> = { xs: 12, sm: 14 };
+const BTN_SIZE_CLASS: Record<string, string> = { xs: "lm-btn--xs", sm: "lm-btn--sm", xl: "lm-btn--xl" };
+const ICON_GLYPH: Record<number, number> = { 24: 12, 28: 14 };
+const ICON_SIZE_CLASS: Record<number, string> = { 24: "lm-btn--xs", 28: "lm-btn--sm", 40: "lm-btn--xl" };
+
 export function Button({ variant = "secondary", size = "md", solid, iconLeft, iconRight, loading, disabled, className, children, type = "button", ...rest }: ButtonProps) {
   const lead = loading ? "loader-2" : iconLeft;
-  const glyph = size === "xs" ? 12 : size === "sm" ? 14 : 16;
+  const glyph = BTN_GLYPH[size] ?? 16;
   return (
     <button
       type={type}
-      className={cx(
-        "lm-btn",
-        `lm-btn--${variant}`,
-        solid && "lm-btn--danger-solid",
-        size === "xs" && "lm-btn--xs",
-        size === "sm" && "lm-btn--sm",
-        size === "xl" && "lm-btn--xl",
-        loading && "is-loading",
-        className,
-      )}
+      className={cx("lm-btn", `lm-btn--${variant}`, solid && "lm-btn--danger-solid", BTN_SIZE_CLASS[size], loading && "is-loading", className)}
       disabled={disabled}
       aria-busy={loading ? "true" : undefined}
       {...rest}
@@ -62,10 +58,10 @@ export function IconButton({ name, label, size = 36, round, loading, className, 
       type={type}
       aria-label={label}
       aria-busy={loading ? "true" : undefined}
-      className={cx("lm-btn lm-btn--icon", size === 28 && "lm-btn--sm", size === 24 && "lm-btn--xs", size === 40 && "lm-btn--xl", round && "lm-btn--round", loading && "is-loading", className)}
+      className={cx("lm-btn lm-btn--icon", ICON_SIZE_CLASS[size], round && "lm-btn--round", loading && "is-loading", className)}
       {...rest}
     >
-      <Icon name={loading ? "loader-2" : name} size={size === 24 ? 12 : size === 28 ? 14 : 16} className={loading ? "lm-spin" : undefined} />
+      <Icon name={loading ? "loader-2" : name} size={ICON_GLYPH[size] ?? 16} className={loading ? "lm-spin" : undefined} />
     </button>
   );
 }
