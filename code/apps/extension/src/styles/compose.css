@@ -777,6 +777,7 @@ body {
 }
 .op-add {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 14px;
 }
