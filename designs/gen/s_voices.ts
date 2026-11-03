@@ -266,7 +266,7 @@ const voices = (id: string, title: string, note: string, st: GS): S => ({
     if (st === "style") styleModal(b, t, win);
   },
 });
-export const G: S[] = [
+const G_OLD: S[] = [ // superseded by s_v_voices.ts (not exported so main.ts does not register it)
   voices("G1", "Voices · library", "After Chatterbox is installed: Your voices on top, Kokoro voices as cards with accent, grade and preview (playing state shown), grade legend open.", "library"),
   voices("G2", "Voices · detail drawer", "Scrim under the drawer, previous/next voice, editable try-it sentence. Heart is already the default, so the button is disabled.", "detail"),
   voices("G3", "Clone · choose reference", "Upload or record. Continue stays disabled until a clip is added and the consent box is ticked.", "clone1"),
