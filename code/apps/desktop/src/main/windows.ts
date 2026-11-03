@@ -8,8 +8,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 type FloatPage = "mini" | "panel";
 
-/** Transparent room around the card for its shadow (Lockix: page padding 18). The renderer pads its page by the same amount (float.css `--float-pad`). */
-export const FLOAT_PAD = 18;
+/** Transparent room around the card for its shadow (Lockix: tray window page padding 24). The renderer pads its page by the same amount (float.css `--float-pad`). */
+export const FLOAT_PAD = 24;
 
 let lastFloatClose = 0;
 /**

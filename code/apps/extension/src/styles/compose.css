@@ -103,7 +103,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px 16px 16px;
+  padding: 16px;
 }
 .pp-now {
   display: flex;
@@ -497,10 +497,10 @@ body {
   width: 100%;
   max-width: 880px;
   margin: 0 auto;
-  padding: 32px 32px 64px;
+  padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--page-gap);
 }
 .op-head {
   display: flex;
@@ -511,13 +511,15 @@ body {
 .op-head h1 {
   margin: 0;
   font:
-    600 24px/29px Inter,
+    600 22px/26px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
 }
 .op-head p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 17px;
   color: var(--text-secondary);
 }
 .op-head-r {
@@ -538,7 +540,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px;
+  padding: var(--card-pad-y) var(--card-pad-x);
 }
 .op-conn-l {
   min-width: 0;

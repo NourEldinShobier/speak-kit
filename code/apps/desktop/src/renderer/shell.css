@@ -39,7 +39,7 @@ html[data-hidden] *::after {
 }
 .sk-app {
   display: grid;
-  grid-template-rows: 40px 1fr;
+  grid-template-rows: var(--bar-h) 1fr;
   height: 100%;
 }
 .sk-body {
@@ -47,12 +47,12 @@ html[data-hidden] *::after {
   min-height: 0;
 }
 
-/* ---- title bar 40 px: logo, toggle, history | search 420x30 | status pill, bell | native window controls ---- */
+/* ---- title bar 36 px (--bar-h): toggle, history | search 420x28 | status pill, bell | native window controls ---- */
 .sk-title {
   display: grid;
   grid-template-columns: 1fr 420px 1fr;
   align-items: center;
-  padding: 0 0 0 12px;
+  padding: 0 0 0 8px;
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -81,7 +81,7 @@ html[data-platform="darwin"] .sk-title {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
 .sk-search {
-  height: 30px;
+  height: 28px;
   width: 420px;
   display: flex;
   align-items: center;
@@ -119,14 +119,14 @@ html[data-platform="darwin"] .sk-title {
   pointer-events: none;
 }
 
-/* ---- sidebar 248 + content card ---- */
+/* ---- sidebar 248 + content panel: items 8 from the window edge and 8 from the panel (Lockix rail: pl-2, pr-1 + panel pl-1) ---- */
 .sk-side {
   width: 248px;
   flex: none;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 4px 12px 12px;
+  padding: 2px 4px var(--panel-inset) 8px;
   overflow-y: auto;
 }
 .sk-side[hidden] {
@@ -204,19 +204,15 @@ html[data-platform="darwin"] .sk-title {
 .sk-main {
   flex: 1;
   min-width: 0;
-  margin: 0 4px 4px 0;
+  margin: 0 var(--panel-inset) var(--panel-inset);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
   background: var(--surface-editor);
   overflow: auto;
 }
-.sk-side[hidden] + .sk-main {
-  margin-inline-start: 4px;
-}
 @media (max-width: 1024px) {
   .sk-side {
-    width: 60px;
-    padding-inline: 8px;
+    width: 48px;
   }
   .sk-side .lm-nav__label,
   .sk-side .lm-nav__section,

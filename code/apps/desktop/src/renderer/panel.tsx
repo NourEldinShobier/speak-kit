@@ -58,7 +58,7 @@ function Panel() {
   return (
     <div className="lm panel" data-testid="tray-panel">
       <header className="panel__head">
-        <Logo size={18} />
+        <Logo size={20} />
         <b>Speak Kit</b>
         <StatusPill tone={v.tone} icon={v.spinner ? "loader-2" : undefined}>
           {v.label}

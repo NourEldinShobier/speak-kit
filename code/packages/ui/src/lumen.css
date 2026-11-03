@@ -71,7 +71,7 @@
   --lm-ink-md: rgb(0 0 0 / 0.07);
 }
 
-/* ---------- radii ---------- */
+/* ---------- radii and layout ---------- */
 /* One radius per container level, inner = max(2, outer - inset). macOS values by default; on Windows (data-platform="win32" on the document root,
    or on the in-page container inside a shadow root) the panel is 8 and the tray, window and dialog 10, as in Lockix (docs/lockix-design-system.md). */
 :root,
@@ -91,6 +91,15 @@
   --radius-xs: 4px;
   --radius-bar: 2px;
   --radius-pill: 9999px;
+  /* layout (Lockix): title bar, inset of a panel from the window edge, page header and body padding, gap between page sections, card padding */
+  --bar-h: 36px;
+  --panel-inset: 4px;
+  --page-pad-top: 22px;
+  --page-pad-x: 28px;
+  --page-pad-bottom: 24px;
+  --page-gap: 16px;
+  --card-pad-y: 14px;
+  --card-pad-x: 16px;
 }
 [data-platform="win32"] {
   --radius-dialog: 10px;
@@ -1546,19 +1555,24 @@
 .lm-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
+  gap: 16px;
+  min-height: 42px;
+  padding: 3px 16px;
+}
+.lm-row:has(.lm-row__desc) {
+  min-height: 58px;
+  padding-block: 11px;
 }
 .lm-row__text {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 .lm-row__label {
   font:
-    500 13px/16px Inter,
+    500 13.5px/16px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
@@ -1566,7 +1580,7 @@
 }
 .lm-row__desc {
   font:
-    400 12px/15px Inter,
+    400 12.5px/17px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
@@ -1576,22 +1590,20 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 .lm-listrow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 12px;
+  min-height: 58px;
+  padding: 0 14px;
   border-top: 1px solid var(--stroke-hairline);
   color: var(--text-tertiary);
   text-align: start;
   background: transparent;
   width: 100%;
   font: inherit;
-}
-.lm-listrow .lm-icon {
-  margin-top: 1px;
 }
 button.lm-listrow {
   appearance: none;

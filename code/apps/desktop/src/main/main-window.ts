@@ -152,7 +152,7 @@ export class MainWindow {
     return {
       color: "#00000000",
       symbolColor: titleBarSymbol(),
-      height: this.#config.setupDone ? 40 : 32, // Lumen: shell title bar 40, setup window 32
+      height: this.#config.setupDone ? 36 : 32, // Lockix: shell title bar 36 (--bar-h), setup window 32
     };
   }
 }

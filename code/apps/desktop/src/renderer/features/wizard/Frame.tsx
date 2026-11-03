@@ -7,7 +7,7 @@ export function Frame({ at, title, sub, foot, children, center }: { at: number; 
   return (
     <div className="sk-setup">
       <div className="sk-setup__title">
-        <Logo size={16} />
+        <Logo size={20} />
         Set up Speak Kit
       </div>
       <div className="sk-setup__stepper">

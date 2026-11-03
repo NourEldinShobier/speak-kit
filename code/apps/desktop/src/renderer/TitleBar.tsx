@@ -53,7 +53,7 @@ export interface TitleBarProps {
   onSearch(): void;
 }
 
-/** The 40 px bar: sidebar toggle and history, the search box that opens the palette, engine status, update pill and notifications. */
+/** The 36 px bar: sidebar toggle and history, the search box that opens the palette, engine status, update pill and notifications. */
 export function TitleBar(p: TitleBarProps) {
   const v = engineView(p.s.health, p.s.serverError);
   return (

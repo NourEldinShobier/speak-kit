@@ -18,16 +18,16 @@ const box = async (l: Launched, sel: string) => (await l.page.locator(sel).first
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 
 describe("Lumen shell", () => {
-  it("measures: title bar 40, sidebar 248, search 420x30, content panel inset 4 px with no stroke", async () => {
+  it("measures: title bar 36, sidebar 248, search 420x28, content panel inset 4 px with no stroke", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect((await box(l, ".sk-title")).height).toBe(40);
+    expect((await box(l, ".sk-title")).height).toBe(36);
     expect((await box(l, ".sk-side")).width).toBe(248);
     const search = await box(l, ".sk-search");
-    expect([search.width, search.height]).toEqual([420, 30]);
+    expect([search.width, search.height]).toEqual([420, 28]);
     const main = await box(l, ".sk-main");
     const inner = await l.page.evaluate(() => [innerWidth, innerHeight]);
-    expect(main.x).toBe(248);
+    expect(main.x).toBe(252);
     expect(main.x + main.width).toBe(inner[0]! - 4);
     expect(main.y + main.height).toBe(inner[1]! - 4);
     // Lockix panel: no stroke, a card shadow instead.

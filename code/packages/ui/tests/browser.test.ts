@@ -276,6 +276,33 @@ describe("Lockix geometry", () => {
     expect(await radii(null)).toEqual(await radii("darwin"));
     expect(await radii("win32")).toEqual({ panel: "8px", tray: "10px", window: "10px", dialog: "10px", card: "10px", menu: "10px", control: "8px", dialogBox: "10px" });
   });
+
+  test("spacing follows Lockix: rows 42 / 58, list row 58, dialog padding 16 gap 14 foot gap 8, menu padding 4 item 28, toast 356 x 52, fields 36 / 28", async () => {
+    const m = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML = `<div class="lm-card"><div class="lm-row"><div class="lm-row__text"><span class="lm-row__label">A</span></div></div>
+        <div class="lm-row"><div class="lm-row__text"><span class="lm-row__label">B</span><span class="lm-row__desc">One line.</span></div></div></div>
+        <div class="lm-listrow"><span class="lm-listrow__text"><span class="lm-listrow__title">T</span></span></div>
+        <div class="lm-dialog"><div class="lm-dialog__head"><h2 class="lm-dialog__title">T</h2></div><div class="lm-dialog__foot"><button class="lm-btn">A</button><button class="lm-btn">B</button></div></div>
+        <div class="lm-menu"><button class="lm-menu__item">Copy</button></div>
+        <div class="lm-toast"><span class="lm-toast__msg">Saved</span></div>`;
+      document.querySelector('[data-panel="light"]')!.prepend(host);
+      const q = (sel: string) => host.querySelector(sel) as HTMLElement;
+      const h = (sel: string) => q(sel).getBoundingClientRect().height;
+      const cs = (sel: string) => getComputedStyle(q(sel));
+      const rows = [...host.querySelectorAll(".lm-row")].map((r) => r.getBoundingClientRect().height);
+      const out = {
+        rows,
+        listrow: h(".lm-listrow"),
+        dialog: [cs(".lm-dialog").padding, cs(".lm-dialog").rowGap, cs(".lm-dialog__foot").columnGap],
+        menu: [cs(".lm-menu").padding, h(".lm-menu__item")],
+        toast: [q(".lm-toast").getBoundingClientRect().width, h(".lm-toast"), cs(".lm-toast").paddingLeft],
+      };
+      host.remove();
+      return out;
+    });
+    expect(m).toEqual({ rows: [42, 58], listrow: 58, dialog: ["16px", "14px", "8px"], menu: ["4px", 28], toast: [356, 52, "14px"] });
+  });
 });
 
 describe("Select (Radix)", () => {
