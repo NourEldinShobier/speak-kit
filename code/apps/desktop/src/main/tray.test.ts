@@ -6,7 +6,7 @@ import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import type { Ctx } from "./context";
 
 const mocks = vi.hoisted(() => {
-  const state = { trays: [] as FakeTray[], panels: [] as FakePanel[] };
+  const state = { trays: [] as FakeTray[], panels: [] as FakePanel[], ownClose: false };
   class FakeTray {
     image: unknown;
     tip = "";
@@ -76,7 +76,7 @@ vi.mock("electron", () => ({
     }),
   },
 }));
-vi.mock("./windows", () => ({ FloatWindow: mocks.FakePanel, aboveTray: (b: unknown) => ({ above: b }) }));
+vi.mock("./windows", () => ({ FloatWindow: mocks.FakePanel, aboveTray: (b: unknown) => ({ above: b }), floatClosedWithin: () => mocks.state.ownClose }));
 vi.mock("./icon", () => ({ trayIcon: (state: string) => `icon:${state}` }));
 
 import { createTray } from "./tray";
@@ -108,6 +108,7 @@ const labels = (t: ReturnType<typeof setup>) => t.fake.menu!.items.filter((i) =>
 beforeEach(() => {
   mocks.state.trays.length = 0;
   mocks.state.panels.length = 0;
+  mocks.state.ownClose = false;
 });
 
 describe("tray wiring", () => {
@@ -210,6 +211,18 @@ describe("tray panel", () => {
     t.fake.handlers.get("click")!();
     expect(t.panel.blur).toBeUndefined();
     expect(t.panel.visible).toBe(true);
+  });
+
+  it("a blur right after the mini player closed (Windows reassigns the active window) keeps the panel; the next blur closes it", () => {
+    const t = setup();
+    t.fake.handlers.get("click")!();
+    t.panel.focus!();
+    mocks.state.ownClose = true;
+    t.panel.blur!();
+    expect(t.panel.visible).toBe(true);
+    mocks.state.ownClose = false;
+    t.panel.blur!();
+    expect(t.panel.visible).toBe(false);
   });
 
   it("opening the panel wakes the model so a read from it starts warm; closing it does not", () => {

@@ -12,6 +12,8 @@ vi.mock("./secure-window", () => ({
       getSize: () => [340, 330],
       setBounds: () => {},
       isVisible: () => false,
+      isDestroyed: () => false,
+      destroy: () => {},
       show: () => {},
       showInactive: () => {},
       setAlwaysOnTop: (...a: unknown[]) => calls.push(["alwaysOnTop", ...a.map(String)]),
@@ -40,5 +42,21 @@ describe("FloatWindow on macOS", () => {
 
   it("leaves other platforms alone", () => {
     expect(open("win32")).toEqual([]);
+  });
+});
+
+describe("floatClosedWithin", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("is true for a moment after a float window was destroyed, then false", async () => {
+    vi.useFakeTimers();
+    const { floatClosedWithin } = await import("./windows");
+    expect(floatClosedWithin(400)).toBe(false);
+    const w = new FloatWindow("mini", { width: 360, height: 112 }, () => ({}) as never);
+    w.open({ x: 0, y: 0, width: 360, height: 112 }, false);
+    w.close();
+    expect(floatClosedWithin(400)).toBe(true);
+    vi.advanceTimersByTime(401);
+    expect(floatClosedWithin(400)).toBe(false);
   });
 });

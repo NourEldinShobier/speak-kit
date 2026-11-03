@@ -11,6 +11,13 @@ type FloatPage = "mini" | "panel";
 /** Transparent room around the card for its shadow (Lockix: page padding 18). The renderer pads its page by the same amount (float.css `--float-pad`). */
 export const FLOAT_PAD = 18;
 
+let lastFloatClose = 0;
+/**
+ * Was a mini player or panel destroyed in the last `ms`? Windows hands the active window to another app when one of ours is destroyed,
+ * which blurs a panel the user never left; the panel uses this to tell that blur from a click elsewhere.
+ */
+export const floatClosedWithin = (ms: number): boolean => Date.now() - lastFloatClose < ms;
+
 /**
  * A small frameless window (mini player, tray panel). It exists only while it is in use: opening creates it, closing destroys
  * it, so a hidden SpeakKit holds no renderer for them. Messages sent before the page has loaded wait in a queue.
@@ -77,6 +84,7 @@ export class FloatWindow {
   }
 
   close(): void {
+    if (this.window) lastFloatClose = Date.now();
     this.window?.destroy();
     this.#win = null;
     this.#pending = [];
