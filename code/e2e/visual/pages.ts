@@ -120,6 +120,20 @@ const openReader = async (p: PageCtx) => {
   await sleep(1500);
 };
 
+
+/** A dark host WEBSITE (not our UI): the fixture article restyled before the content script reads the page. */
+const darkSite = async (p: PageCtx) => {
+  await p.page.addStyleTag({ content: "html,body{background:#17181c!important;color:#e4e5e9!important}h1{color:#fff!important}.by{color:#9a9ca6!important}hr{border-color:#2d2f36!important}.k{color:#6cb4ff!important}" });
+  await sleep(500);
+};
+const errorPill = (code: string, message: string) => async (c: Ctx) => {
+  const p = await openPage(c, { settings: dockOnly });
+  const { docId } = await armDoc(p);
+  await state(p, docId, "error", { error: { code, message } });
+  await sleep(500);
+  return shot(p);
+};
+
 const G = GROUPS.page;
 const R = GROUPS.reader;
 export const pageScenarios: Scenario[] = [
@@ -237,6 +251,56 @@ export const pageScenarios: Scenario[] = [
     },
     { design: false },
   ),
+  S("B11", "dark-site-reading", G, "Page · reading on a dark site", async (c) => {
+    const p = await openPage(c, { settings: dockOnly });
+    await darkSite(p);
+    await startReading(p);
+    await sleep(5000);
+    return shot(p);
+  }),
+  S("B11", "dark-site-idle", G, "Page · pill idle on a dark site", async (c) => {
+    const p = await openPage(c, { settings: dockOnly });
+    await darkSite(p);
+    await sleep(600);
+    return shot(p);
+  }, { design: false }),
+  S("B21", "dark-site-launcher", G, "Page · edge launcher on a dark site", async (c) => {
+    const p = await openPage(c);
+    await darkSite(p);
+    await startReading(p);
+    await sleep(4500);
+    return shot(p);
+  }, { design: false }),
+  S("B21", "dark-site-launcher-tab", G, "Page · edge launcher tab on a dark site", async (c) => {
+    const p = await openPage(c);
+    await darkSite(p);
+    await sleep(600);
+    return shot(p);
+  }, { design: false }),
+  S("B25", "pill-error-token", G, "Page · pill, token rejected", errorPill("token-rejected", "Speak Kit needs to be paired"), { design: false }),
+  S("B26", "pill-error-engine", G, "Page · pill, engine not ready", errorPill("engine-not-ready", "loading"), { design: false }),
+  S("B27", "pill-error-generic", G, "Page · pill, synthesis failed", errorPill("synthesis-failed", "Speech synthesis failed."), { design: false }),
+  S("B28", "pill-error-unreadable", G, "Page · pill, page not readable", errorPill("page-unreadable", "cannot read"), { design: false }),
+  S("B29", "gutter-while-reading", G, "Page · paragraph gutter button while reading", async (c) => {
+    const p = await openPage(c, { settings: noLauncher });
+    await startReading(p);
+    await sleep(3000);
+    await p.page.mouse.move(600, 480);
+    await sleep(700);
+    return shot(p);
+  }, { design: false }),
+  S("B30", "toast-error", G, "Page · error toast", async (c) => {
+    const p = await openPage(c, { settings: noLauncher });
+    await send(c.ext, p.tab, { t: "toast", message: "Could not add to the queue. Is Speak Kit running?", kind: "err" });
+    await sleep(500);
+    return shot(p);
+  }, { design: false }),
+  S("B31", "toast-info", G, "Page · info toast", async (c) => {
+    const p = await openPage(c, { settings: noLauncher });
+    await send(c.ext, p.tab, { t: "toast", message: "Nothing selected to read", kind: "info" });
+    await sleep(500);
+    return shot(p);
+  }, { design: false }),
   S("B17", "launcher-tab", G, "Page · edge launcher, hidden tab", async (c) => {
     const p = await openPage(c);
     await sleep(600);
@@ -281,6 +345,11 @@ export const pageScenarios: Scenario[] = [
     },
     { design: false },
   ),
+  S("B32", "reader-dark", R, "Page · reader view (dark)", async (c) => {
+    const p = await openPage(c, { settings: (s) => { const x = reader("paper")(s) as any; x.reader.theme = "dark"; return x; } });
+    await openReader(p);
+    return shot(p);
+  }, { design: false }),
   S("B24", "reader-reading-panel", R, "Page · reading settings popover", async (c) => {
     const p = await openPage(c, { settings: reader("paper") });
     await openReader(p);

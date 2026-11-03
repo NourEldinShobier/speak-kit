@@ -175,6 +175,11 @@ export const popupScenarios: Scenario[] = [
     (c) => popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, url: "https://reader.example.com/files/attention.pdf", title: "attention.pdf" }, state: playerState() }),
     { design: false },
   ),
+  S("A20", "engine-missing", P, "Popup · no voice engine installed", (c) => popupShot(c, { health: engineHealth("missing"), tab: READER_TAB, state: playerState() }), { design: false }),
+  S("A21", "engine-downloading", P, "Popup · downloading the voice model", (c) => popupShot(c, { health: engineHealth("downloading"), tab: READER_TAB, state: playerState() }), { design: false }),
+  S("A22", "engine-error", P, "Popup · voice engine error", (c) => popupShot(c, { health: engineHealth("error"), tab: READER_TAB, state: playerState() }), { design: false }),
+  S("A23", "playing-selection", P, "Popup · playing with a selection on the page", (c) =>
+    popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, selection: "Small models now run on an ordinary laptop." }, state: playing("playing") }), { design: false }),
   S("A16", "engine-asleep", P, "Popup · engine asleep", (c) => popupShot(c, { health: engineHealth("unloaded"), tab: READER_TAB, state: playerState() })),
   S("A17", "engine-waking", P, "Popup · waking the engine", (c) => popupShot(c, { health: engineHealth("unloaded"), tab: READER_TAB, state: playing("preparing", { elapsedMs: 0 }) })),
 ];
@@ -235,6 +240,9 @@ export const optionsScenarios: Scenario[] = [
     }),
   ),
   S("C12", "edge-launcher", O, "Options · Edge launcher", (c) => optionsShot(c, "#launcher")),
+  S("C20", "sites-empty", O, "Options · Sites and filters (no rules yet)", (c) => optionsShot(c, "#sites", { settings: (s) => ({ ...s, sites: {} }) }), { design: false }),
+  S("C21", "voice-speed-offline", O, "Options · Voice and speed (app not running)", (c) => optionsShot(c, "#voice", { settings: (s) => ({ ...s, port: 51999 }) }), { design: false }),
+  S("C23", "launcher-off", O, "Options · Edge launcher (turned off)", (c) => optionsShot(c, "#launcher", { settings: (s) => ({ ...s, launcher: { ...s.launcher, enabled: false } }) }), { design: false }),
   S("C19", "reader-view", O, "Options · Reader view", (c) => optionsShot(c, "#reader"), { design: false }),
   S("C18", "narrow", O, "Options · Narrow layout", (c) => optionsShot(c, "#general", { w: 758, h: 718 })),
   S("C5", "highlighting-dark-page-preview", O, "Options · Highlighting (dark page preview)", (c) => optionsShot(c, "#highlight", { after: clickText("Dark page") }), { design: false }),
@@ -269,6 +277,8 @@ export const panelScenarios: Scenario[] = [
     panelShot(c, { health: OK_HEALTH, tab: READER_TAB, state: playing("playing", { queueLength: 2, sentenceIndex: 0 }), queue: panelQueue }),
   ),
   S("C10", "empty-queue", SP, "Side panel · empty queue", (c) => panelShot(c, { health: OK_HEALTH, tab: READER_TAB, state: playerState(), queue: { autoPlay: true, outline: [], items: [] } })),
+  S("C24", "outline-only", SP, "Side panel · outline without a queue", (c) => panelShot(c, { health: OK_HEALTH, tab: READER_TAB, state: playing("paused", { queueLength: 0, sentenceIndex: 4 }), queue: { ...panelQueue, items: [], paragraphIndex: 1 } }), { design: false }),
+  S("C25", "token-rejected", SP, "Side panel · pairing token rejected", (c) => panelShot(c, { health: { ok: false, error: "token-rejected" }, tab: READER_TAB, state: playerState(), queue: { autoPlay: true, outline: [], items: [] } }), { design: false }),
   S(
     "C9",
     "app-offline",
