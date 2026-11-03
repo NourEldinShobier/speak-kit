@@ -44,13 +44,13 @@ Interface (`src/index.ts` header): Gapless streaming playback shared by the exte
 
 Lumen components (React and vanilla), tokens, icons and logo data.
 
-May import: no workspace package. Source files: 25, stylesheets: 1.
+May import: no workspace package. Source files: 26, stylesheets: 1.
 
 Interface (`src/index.ts` header): @speakkit/ui: the Lumen components for React (buttons, inputs, menus, overlays, navigation, settings rows), the icon set and ErrorBoundary. Styles are in lumen.css, the vanilla builders in ./vanilla. It holds no app state and does no I/O. Area: shared UI kit.
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `(src root)` | 7 | yes |
+| `(src root)` | 8 | yes |
 | `react` | 8 | no |
 | `vanilla` | 4 | no |
 
@@ -97,7 +97,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Electron app: main process, preload, renderer (library, reader, settings), shared contracts.
 
-May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 173, stylesheets: 9.
+May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 174, stylesheets: 9.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
@@ -108,7 +108,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 | `main/library` | 19 | yes |
 | `main/reader` | 2 | no |
 | `main/system` | 5 | no |
-| `preload` | 1 | yes |
+| `preload` | 2 | yes |
 | `renderer` | 18 | no |
 | `renderer/features` | 69 | yes |
 | `shared` | 13 | no |
