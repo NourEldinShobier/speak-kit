@@ -76,3 +76,11 @@ Page background `#F5F5F5` as in Lumen.
 ## Update 2026-11-01
 
 - Solid transport glyphs (thin pause bars), on-accent key chip in primary buttons (`Ctrl N` in the sidebar), Lockix elevation (menu 0 1 2, popover and pill 0 2 6, dialog and palette 0 4 12; old 0 8 24 and 0 16 48 removed), gutter play button only after reading has started (B2 now shows the pill playing). All 207 frames, the .figcraft file, manifest, contact sheets and review.html rebuilt. Rules are in `design-system.md`.
+
+## Designs from the built UI (2026-11-03)
+
+`designs/speakkit.figcraft` (236 frames, light only) is generated from `designs/gen`; every product frame is an editable copy of the built UI shown in real context: the full Windows 11 app window with caption buttons on a desktop, the full Chrome window with the popup or on-page overlay in place, tray flyouts and toasts on the taskbar. `designs/screens/<ID>.png` are the exports (scale 1.5 to stay under ~80 MB), `designs/review.html` is the review page.
+
+- Mapping to shots: a frame id equals the id in `designs/built/shots/<ID>-<state>-light.png` (real captures of the client area, from `code/e2e/visual`). The review page's Design / Built / Side by side toggle swaps the two. Built shots show the client area only, so they sit next to the framed design, not cropped into it. The capture `C25` (empty side-panel queue) is shown under `C10`.
+- Frames without a shot are design-only: boards (R, Q, MO, O1 and similar), the native Chrome context menu (B3) and states the harness cannot force. The list with reasons is `designs/built/coverage.json` (`missing`).
+- Rebuild: `cd designs/gen && bun main.ts [ids]` (needs the FigCraft CLI; `ROOT=<dir>` redirects all output). Without ids it writes `designs/next` (figcraft file, `screens/`, `manifest.json`); promote by copying `speakkit.figcraft` and `screens/` to `designs/`, delete `next/build`. Review page: `DIR=<designs dir> SHOTS=<path to built/shots/ relative to DIR> bun build-review2.ts` (`SHOTS=built/shots/` for `designs`, default `../built/shots/` for `designs/next`). Decisions are kept in localStorage key `speakkit-designs-v2`.
