@@ -37,12 +37,33 @@
     "K8": "Offline notice is not built: everything runs locally and only the model download needs a network (error banner in W3b).",
     "K10": "Model repair screen is not built.",
     "K12": "Board of edge states (2560 px wide), not a product screen; its single cases are captured individually where they exist.",
-    "E17": "Board of empty states (2320 px wide), not a product screen."
+    "E17": "Board of empty states (2320 px wide), not a product screen.",
+    "G3": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G4": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G5": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G6": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G7": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G15": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G11": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "G14": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release).",
+    "J7": "The export-complete toast is a Windows notification drawn by the operating system and cannot be captured. The entry it leaves in the bell panel is captured as J7 / bell-with-entries."
   },
   "byPattern": [
-    ["^R\\d", "Research board: documentation of the feature map, flows and Lumen patterns, not a product screen."],
-    ["^Q\\d", "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."],
-    ["^MO\\d", "Motion board: motion tokens and rules, not a product screen."],
-    ["^O1$", "Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."]
+    [
+      "^R\\d",
+      "Research board: documentation of the feature map, flows and Lumen patterns, not a product screen."
+    ],
+    [
+      "^Q\\d",
+      "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
+    ],
+    [
+      "^MO\\d",
+      "Motion board: motion tokens and rules, not a product screen."
+    ],
+    [
+      "^O1$",
+      "Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."
+    ]
   ]
 }

@@ -104,7 +104,7 @@ export const systemScenarios: Scenario[] = [
     },
   }),
   home(
-    "E10",
+    "E12",
     "deleted-toast",
     GROUPS.library,
     "Library · deleted, undo toast",
