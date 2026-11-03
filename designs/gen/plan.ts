@@ -14,7 +14,7 @@ export const PAGES: Pg[] = [
     sections: [
       { title: "Feature map", cover: "what ships in v1 and what waits, per surface", frames: [f("R1", "Every feature sits on one surface and carries v1 or v1.1; nothing is on two."), f("R2", "Surfaces stay separate: extension, desktop app, loopback server, engine.")] },
       { title: "Flows and resources", cover: "the three flows that matter, and the engine lifecycle behind them", frames: [f("R3", "First read in four steps: install, pair, play, and the engine wakes by itself."), f("R4", "The engine unloads when idle and wakes on play; the model never reloads while reading.")] },
-      { title: "Lumen patterns adopted", cover: "which Lumen frame each Speak Kit surface copies", frames: [f("R5", "Every Speak Kit surface names the Lumen frame it copies; no new look is invented."), f("R6", "Decisions that shape the UI: local only, no account, no cloud voice.")] },
+      { title: "Lockix patterns adopted", cover: "which Lockix frame each Speak Kit surface copies", frames: [f("R5", "Every Speak Kit surface names the Lockix frame it copies; no new look is invented."), f("R6", "Decisions that shape the UI: local only, no account, no cloud voice.")] },
     ],
   },
   {
@@ -74,6 +74,7 @@ export const PAGES: Pg[] = [
       { title: "Components and states", cover: "buttons, inputs, selection controls, menus, tags in every state", frames: [f("Q3")] },
       { title: "Desktop components", cover: "title bar, sidebar, settings rows, stepper, banners, toasts, storage bar, code boxes", frames: [f("Q4")] },
       { title: "Extension components", cover: "pill, Reading popover, bubble, popup header, banners, tooltips", frames: [f("Q5")] },
+      { title: "Elevation and platform radii", cover: "the Lockix shadows with their radii; Windows 8/10 px against macOS 14/16 px container radii", frames: [f("Q6"), f("Q7")] },
     ],
   },
   {
