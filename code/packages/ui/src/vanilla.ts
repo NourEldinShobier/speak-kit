@@ -10,3 +10,4 @@ export { avatar, kbd, logo, pill, progress, tooltip } from "./vanilla/display";
 export type { PillTone, ProgressHandle } from "./vanilla/display";
 export { menu, menuItem, popoverSurface } from "./vanilla/menu";
 export type { MenuItemOptions } from "./vanilla/menu";
+export { browserPlatform } from "./platform";

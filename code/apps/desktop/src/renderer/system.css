@@ -9,7 +9,7 @@
   gap: 8px;
   padding: 4px 10px;
   border: 1px solid var(--accent-default);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: var(--accent-default);
   white-space: nowrap;
 }
@@ -55,7 +55,7 @@
   gap: 6px;
   width: 280px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-window);
   background: var(--surface-raised);
   box-shadow: var(--shadow-popover);
 }

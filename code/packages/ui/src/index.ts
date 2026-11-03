@@ -4,6 +4,7 @@
  * It holds no app state and does no I/O. Area: shared UI kit.
  */
 export { Icon, Spinner, cx } from "./react/shared";
+export { browserPlatform } from "./platform";
 export type { IconProps } from "./react/shared";
 export { ErrorBoundary } from "./react/error-boundary";
 export type { ErrorBoundaryProps } from "./react/error-boundary";

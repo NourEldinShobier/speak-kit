@@ -9,6 +9,7 @@ const ui = resolve(here, "../../../packages/ui/src");
 /** Sections of lumen.css (the `/* ---------- name ... ---------- *\/` markers) the in-page UI uses. Everything else stays out of content.js. */
 export const CONTENT_SECTIONS = [
   "tokens",
+  "radii",
   "icons",
   "focus ring",
   "disabled",

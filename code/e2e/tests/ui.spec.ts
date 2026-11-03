@@ -43,6 +43,10 @@ test.describe("read-aloud pill (dock)", () => {
     const dock = sk(page, "dock");
     await expect(dock).toBeVisible();
     await expect(dock).toHaveAttribute("data-state", "playing");
+    // The in-page container carries the browser platform: Windows radii on Windows (window 10), the macOS set elsewhere (window 12).
+    const win = process.platform === "win32";
+    await expect(page.locator(".sk")).toHaveAttribute("data-platform", win ? "win32" : process.platform === "darwin" ? "darwin" : "linux");
+    expect(await dock.evaluate((e) => getComputedStyle(e).getPropertyValue("--radius-window").trim())).toBe(win ? "10px" : "12px");
 
     // Paragraph text and progress
     const text = page.locator(".sk-dock-text");

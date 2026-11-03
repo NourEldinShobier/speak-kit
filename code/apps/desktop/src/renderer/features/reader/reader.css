@@ -201,7 +201,7 @@
   all: unset;
   box-sizing: border-box;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-chip);
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,7 +244,7 @@
   align-items: center;
   gap: 8px;
   padding: 28px 32px;
-  border-radius: 12px;
+  border-radius: var(--radius-window);
   background: var(--surface-card);
   box-shadow: var(--shadow-popover);
 }

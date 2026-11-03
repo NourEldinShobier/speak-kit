@@ -1,5 +1,5 @@
 import kitCss from "virtual:lumen-content-css";
-import { h } from "@speakkit/ui/vanilla";
+import { browserPlatform, h } from "@speakkit/ui/vanilla";
 import type { PopoverRequest, Shell } from "../../shared/ui-types";
 
 declare const __TEST__: boolean | undefined;
@@ -22,7 +22,7 @@ export class ShadowShell implements Shell {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync([kitCss, ...featureCss].join("\n"));
     shadow.adoptedStyleSheets = [sheet];
-    this.root = h("div", { class: "lm sk", "data-theme": "light" });
+    this.root = h("div", { class: "lm sk", "data-theme": "light", "data-platform": browserPlatform() });
     shadow.append(this.root);
     document.documentElement.append(this.host);
     document.addEventListener("pointerdown", this.onDown, true);

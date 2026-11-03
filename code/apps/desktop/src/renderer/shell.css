@@ -1,9 +1,4 @@
 /* Desktop shell layout. Components come from @speakkit/ui (lumen.css); this file only places them, with Lumen tokens. */
-/* Windows 11 draws tighter corners: the Lockix win32 radii. */
-html[data-platform="win32"] {
-  --radius-dialog: 10px;
-  --radius-panel: 8px;
-}
 html,
 body,
 #root {

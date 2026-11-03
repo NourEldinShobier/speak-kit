@@ -44,7 +44,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
-  border-radius: 12px;
+  border-radius: var(--radius-window);
 }
 .mini__head {
   display: flex;
@@ -90,7 +90,7 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 0 8px 8px;
-  border-radius: 14px;
+  border-radius: var(--radius-tray);
 }
 .panel__head {
   min-height: 32px;
@@ -116,7 +116,7 @@ body {
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--surface-well, var(--surface-window));
 }
 .panel__txt {

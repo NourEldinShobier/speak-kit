@@ -254,6 +254,28 @@ describe("Lockix geometry", () => {
     });
     expect(r).toEqual(["16px", "10px", "8px", "6px"]);
   });
+
+  test("data-platform switches the container radii: macOS panel 14 / tray 14 / window 12 / dialog 16, Windows 8 / 10 / 10 / 10; controls stay 8", async () => {
+    const radii = (platform: string | null) =>
+      page.evaluate((pf) => {
+        const root = document.documentElement;
+        if (pf) root.dataset.platform = pf;
+        else delete root.dataset.platform;
+        const names = ["panel", "tray", "window", "dialog", "card", "menu", "control"];
+        const cs = getComputedStyle(document.querySelector('[data-panel="light"]')!);
+        const out = Object.fromEntries(names.map((n) => [n, cs.getPropertyValue(`--radius-${n}`).trim()]));
+        const dialog = document.createElement("div");
+        dialog.className = "lm-dialog";
+        document.querySelector('[data-panel="light"]')!.prepend(dialog);
+        const used = getComputedStyle(dialog).borderRadius;
+        dialog.remove();
+        delete root.dataset.platform;
+        return { ...out, dialogBox: used };
+      }, platform);
+    expect(await radii("darwin")).toEqual({ panel: "14px", tray: "14px", window: "12px", dialog: "16px", card: "10px", menu: "10px", control: "8px", dialogBox: "16px" });
+    expect(await radii(null)).toEqual(await radii("darwin"));
+    expect(await radii("win32")).toEqual({ panel: "8px", tray: "10px", window: "10px", dialog: "10px", card: "10px", menu: "10px", control: "8px", dialogBox: "10px" });
+  });
 });
 
 describe("Select (Radix)", () => {

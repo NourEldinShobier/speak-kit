@@ -116,7 +116,7 @@ body {
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-item);
   background: var(--fill-hover);
   color: var(--text-secondary);
   flex: none;
@@ -161,7 +161,7 @@ body {
   margin: 0;
   padding: 10px 12px;
   border-left: 2px solid var(--stroke-control);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
   background: var(--fill-selected);
   color: var(--text-secondary);
   font-size: 13px;
@@ -274,7 +274,7 @@ body {
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid var(--stroke-divider);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
 }
 .pp-next > div {
   display: flex;
@@ -373,7 +373,7 @@ body {
   gap: 10px;
   min-height: 44px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   cursor: pointer;
 }
 .sk-voice:hover,
@@ -399,7 +399,7 @@ body {
 .sk-voice__opt:focus-visible {
   outline: 1px solid var(--accent-default);
   outline-offset: -1px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 .sk-voice.is-selected {
   background: var(--fill-selected);
@@ -462,7 +462,7 @@ body {
   gap: 2px;
   margin: 4px 0 4px 4px;
   padding: 16px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--surface-card);
 }
 .op-logo {
@@ -662,7 +662,7 @@ body {
   gap: 8px;
   padding: 12px;
   border: 1px solid var(--stroke-control);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
 }
 .op-engine.on {
   border-color: var(--stroke-focus-field);
@@ -709,7 +709,7 @@ body {
 .op-prev {
   margin: 14px;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   font:
     400 16px/26px Georgia,
     serif;
@@ -843,7 +843,7 @@ body {
 .op-reader-prev {
   margin: 14px;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   border: 1px solid var(--stroke-divider);
 }
 
@@ -900,7 +900,7 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 20px 20px 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-window);
   background: var(--fill-selected);
 }
 .sp-now-t {
@@ -944,7 +944,7 @@ body {
   width: 100%;
   padding: 10px 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: none;
   color: var(--text-secondary);
   font-size: 14px;
@@ -987,12 +987,12 @@ body {
   gap: 12px;
   padding: 8px 12px 8px 8px;
   border: 1px solid var(--stroke-divider);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
 }
 .sp-queue li > .lm-btn:first-child {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--fill-hover);
 }
 .sp-queue .tx {
@@ -1033,7 +1033,7 @@ body {
   --rd-sentence: var(--paper-sentence);
   margin: 14px;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--rd-bg);
   color: var(--rd-fg);
   line-height: 1.7;

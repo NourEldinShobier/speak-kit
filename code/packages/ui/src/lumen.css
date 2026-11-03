@@ -71,19 +71,11 @@
   --lm-ink-md: rgb(0 0 0 / 0.07);
 }
 
-.lm {
-  /* elevation: at most two layers, blur 12 px at most */
-  --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-card-ring: 0 0 0 1px var(--stroke-divider), 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
-  --shadow-menu: var(--shadow-control);
-  --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
-  --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
-  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
-  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
-  --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
-  --shadow-panel: var(--shadow-card);
-  /* radii: one per container level, inner = max(2, outer - inset) */
+/* ---------- radii ---------- */
+/* One radius per container level, inner = max(2, outer - inset). macOS values by default; on Windows (data-platform="win32" on the document root,
+   or on the in-page container inside a shadow root) the panel is 8 and the tray, window and dialog 10, as in Lockix (docs/lockix-design-system.md). */
+:root,
+:host {
   --radius-dialog: 16px;
   --radius-panel: 14px;
   --radius-tray: 14px;
@@ -99,6 +91,28 @@
   --radius-xs: 4px;
   --radius-bar: 2px;
   --radius-pill: 9999px;
+}
+[data-platform="win32"] {
+  --radius-dialog: 10px;
+  --radius-panel: 8px;
+  --radius-tray: 10px;
+  --radius-menu: 10px;
+  --radius-window: 10px;
+  --radius-card: 10px;
+}
+
+.lm {
+  /* elevation: at most two layers, blur 12 px at most */
+  --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-card-ring: 0 0 0 1px var(--stroke-divider), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-menu: var(--shadow-control);
+  --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
+  --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
+  --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
+  --shadow-panel: var(--shadow-card);
   /* motion: spring step responses as linear() easings, durations are settle times */
   --ease-spring: linear(0, 0.026, 0.092, 0.181, 0.282, 0.385, 0.484, 0.576, 0.659, 0.731, 0.792, 0.843, 0.885, 0.918, 0.943, 0.963, 0.977, 0.987, 0.994, 0.998, 1);
   --ease-layout: linear(0, 0.024, 0.084, 0.166, 0.259, 0.354, 0.447, 0.534, 0.614, 0.685, 0.747, 0.8, 0.845, 0.882, 0.913, 0.937, 0.957, 0.972, 0.984, 0.993, 1);
@@ -140,12 +154,6 @@
   letter-spacing: 0;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-}
-.lm--win32 {
-  --radius-panel: 8px;
-  --radius-tray: 10px;
-  --radius-window: 10px;
-  --radius-dialog: 10px;
 }
 .lm,
 .lm *,
