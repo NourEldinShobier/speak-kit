@@ -77,13 +77,12 @@ const windowShot = (id: string, state: string, title: string, part: string, test
     title,
     async (c) => {
       const { launch } = await import("../../apps/desktop/tests/harness");
-      const l = await launch({ env: { SPEAKKIT_TEST: "1", ...slow }, config: { ...DONE, theme: c.dark ? "dark" : "light" } });
+      const l = await launch({ env: { SPEAKKIT_TEST: "1", ...slow }, config: { ...DONE } });
       try {
         await l.page.getByRole("heading", { name: "Home" }).waitFor();
         const win = l.app.waitForEvent("window", { predicate: (w) => w.url().includes(part), timeout: 15_000 });
         await open(l.app);
         const w = await win;
-        await w.emulateMedia({ colorScheme: c.dark ? "dark" : "light" });
         await w.getByTestId(testId).waitFor();
         await sleep(900);
         const path = builtPath();

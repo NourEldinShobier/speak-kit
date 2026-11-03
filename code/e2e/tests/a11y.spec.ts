@@ -4,18 +4,14 @@ import { test, expect, begin, type Ext } from "../support/ext";
 import { startApp, type App } from "../support/servers";
 import { axeViolations, layoutIssues } from "../support/ui-checks";
 
-const THEMES = ["light", "dark"] as const;
 const sk = (page: Page, name: string) => page.locator(`[data-sk="${name}"]`);
 
-/** Axe (WCAG 2.2 AA) and the layout checks, in both colour schemes. */
+/** Axe (WCAG 2.2 AA) and the layout checks (light only, ADR 0015). */
 async function audit(page: Page, label: string, opts: { include?: string; scope?: string } = {}) {
-  for (const colorScheme of THEMES) {
-    await page.emulateMedia({ colorScheme });
-    // axe reads colours mid-transition otherwise (the theme switch animates the text colour)
-    await page.waitForFunction(() => !document.getAnimations().some((a) => a instanceof CSSTransition && a.playState === "running"));
-    expect(await axeViolations(page, opts.include), `axe: ${label} (${colorScheme})`).toEqual([]);
-    expect(await layoutIssues(page, opts.scope), `layout: ${label} (${colorScheme})`).toEqual([]);
-  }
+  // axe reads colours mid-transition otherwise
+  await page.waitForFunction(() => !document.getAnimations().some((a) => a instanceof CSSTransition && a.playState === "running"));
+  expect(await axeViolations(page, opts.include), `axe: ${label}`).toEqual([]);
+  expect(await layoutIssues(page, opts.scope), `layout: ${label}`).toEqual([]);
 }
 const view = (popup: Page) => popup.locator(".pp");
 

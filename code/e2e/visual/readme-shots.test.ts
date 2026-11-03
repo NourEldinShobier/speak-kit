@@ -23,21 +23,20 @@ afterAll(async () => {
   await env?.close();
 });
 
-const shots: [Scenario[], string, string, boolean, string][] = [
-  [appScenarios, "F1", "playing", false, "app-reader.png"],
-  [appScenarios, "F1", "playing", false, "app-reader-light.png"],
-  [desktopScenarios, "G1", "voices", false, "app-voices.png"],
-  [appScenarios, "H5", "shortcuts", false, "app-shortcuts.png"],
-  [popupScenarios, "A4", "playing", false, "popup-playing.png"],
-  [pageScenarios, "B6", "reading-highlight", false, "page-highlight.png"],
+const shots: [Scenario[], string, string, string][] = [
+  [appScenarios, "F1", "playing", "app-reader.png"],
+  [desktopScenarios, "G1", "voices", "app-voices.png"],
+  [appScenarios, "H5", "shortcuts", "app-shortcuts.png"],
+  [popupScenarios, "A4", "playing", "popup-playing.png"],
+  [pageScenarios, "B6", "reading-highlight", "page-highlight.png"],
 ];
 
-for (const [list, id, state, dark, file] of shots) {
+for (const [list, id, state, file] of shots) {
   it(file, async () => {
     const s = list.find((x) => x.id === id && x.state === state);
     if (!s) throw new Error(`no scenario ${id} ${state}`);
-    Object.assign(cur, { id, state, dark });
-    const path = await s.run({ ext, env, dark });
+    Object.assign(cur, { id, state });
+    const path = await s.run({ ext, env });
     copyFileSync(path, join(OUT, file));
     expect(path).toContain(id);
   });

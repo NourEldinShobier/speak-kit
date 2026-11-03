@@ -81,9 +81,9 @@ export function designCrop(id: string, d: PNG): Crop {
   return { x: 81, y: 51, w: 1278, h: 798 };
 }
 
-/** The design file a capture answers: light twins carry the -L suffix (dark designs are not used). */
-export function designFile(id: string, dark: boolean): string | null {
-  const f = join(DESIGNS, dark ? `${id}.png` : `${id}-L.png`);
+/** The design file a capture answers: light twins carry the -L suffix. */
+export function designFile(id: string): string | null {
+  const f = join(DESIGNS, `${id}-L.png`);
   return existsSync(f) ? f : null;
 }
 
@@ -121,7 +121,7 @@ export function compare(r: Omit<Result, "diffPct">, builtPath: string, designPat
   }
   writeFileSync(join(OUT, "sbs", `${key}.png`), PNG.sync.write(sbs));
   const note = d.width !== b0.width || d.height !== b0.height ? `size design ${d.width}x${d.height} built ${b0.width}x${b0.height}` : undefined;
-  // share of differing pixels among the pixels that are not background in either image (dark pages are mostly background, which flatters diffPct)
+  // share of differing pixels among the pixels that are not background in either image (mostly-background pages would flatter diffPct)
   const bg = (p: PNG) => {
     const m = new Map<number, number>();
     for (let i = 0; i < p.data.length; i += 4 * 7) {

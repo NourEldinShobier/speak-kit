@@ -19,14 +19,12 @@ export interface PageCtx {
   c: Ctx;
 }
 
-/** Opens the fixture article with the real content script and waits until its Shadow DOM host exists. Dark theme = dark page + dark colour scheme. */
+/** Opens the fixture article with the real content script and waits until its Shadow DOM host exists. */
 export async function openPage(c: Ctx, o: { settings?: Patch; panel?: boolean } = {}): Promise<PageCtx> {
   await seed(c.ext, o.settings ?? ((s) => s));
   const page = await c.ext.ctx.newPage();
   await page.setViewportSize({ width: 1278, height: 718 });
-  await page.emulateMedia({ colorScheme: c.dark ? "dark" : "light" });
-  const q = [c.dark ? "dark" : "", o.panel ? "panel" : ""].filter(Boolean).join("&");
-  await page.goto(`${c.env.pageUrl}${q ? "?" + q : ""}`);
+  await page.goto(`${c.env.pageUrl}${o.panel ? "?panel" : ""}`);
   await page.mouse.move(5, 5);
   await page.mouse.move(15, 15);
   await page.waitForSelector("speakkit-ui", { state: "attached", timeout: 10_000 });

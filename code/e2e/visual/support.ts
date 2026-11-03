@@ -20,7 +20,8 @@ export const OUT = resolve(HERE, "out");
 export const EXT_DIR = process.env.SK_EXT_DIR ?? resolve(CODE, "apps/extension/dist-visual");
 
 export const TOKEN = "sk_local_9d4f27a1c42e";
-export const SERVER_PORT = Number(process.env.SK_PORT ?? 51730);
+/** SK_PORT pins the port; otherwise a random free one is picked per process, so parallel runs do not collide. */
+export const SERVER_PORT = Number(process.env.SK_PORT ?? 20000 + Math.floor(Math.random() * 30000));
 
 export const ARTICLE = {
   kicker: "ESSAY · 8 MIN READ",
@@ -34,16 +35,11 @@ export const ARTICLE = {
 };
 
 /** The article of designs B1-B21: 720 px column, Inter 18/30, 56 px top padding; wide=true uses the side panel layout (column at x=181). */
-export const articleHtml = (o: { dark?: boolean; left?: number } = {}) => {
-  const dark = !!o.dark;
-  const bg = dark ? "#17161A" : "#fff";
-  const text = dark ? "#E6E6E6" : "#202020";
-  const text3 = dark ? "#8C8C8C" : "#606060";
-  const accent = dark ? "#0078D4" : "#0069CC";
-  const border = dark ? "#2A2B2C" : "#E2E2E5";
+export const articleHtml = (o: { left?: number } = {}) => {
+  const [bg, text, text3, accent, border] = ["#fff", "#202020", "#606060", "#0069CC", "#E2E2E5"];
   const pad = o.left !== undefined ? `margin:0 0 0 ${o.left}px` : "margin:0 auto";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${ARTICLE.title}</title>
-<meta name="color-scheme" content="${dark ? "dark" : "light"}">
+<meta name="color-scheme" content="light">
 <style>
 html,body{margin:0;background:${bg};color:${text}}
 body{font:400 18px/30px Inter,system-ui,sans-serif}
@@ -75,7 +71,7 @@ export async function startEnv(engineOpts: FakeEngineOptions = { secondsPerChar:
   const http = createHttp((rq, rs) => {
     const u = new URL(rq.url ?? "/", "http://x");
     rs.setHeader("content-type", "text/html; charset=utf-8");
-    rs.end(articleHtml({ dark: u.searchParams.has("dark"), left: u.searchParams.has("panel") ? 181 : undefined }));
+    rs.end(articleHtml({ left: u.searchParams.has("panel") ? 181 : undefined }));
   });
   await new Promise<void>((r) => http.listen(0, "127.0.0.1", r));
   const port = (http.address() as { port: number }).port;
@@ -99,13 +95,13 @@ export interface Ext {
 }
 
 /** Chromium with the built extension loaded (new headless mode supports extensions). */
-export async function launchExt(opts: { dark?: boolean } = {}): Promise<Ext> {
+export async function launchExt(): Promise<Ext> {
   const ctx = await pw.chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "sk-visual-profile-")), {
     channel: "chromium",
     headless: true,
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 1,
-    colorScheme: opts.dark ? "dark" : "light",
+    colorScheme: "light",
     args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`, "--hide-scrollbars", "--font-render-hinting=none"],
   });
   const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker"));

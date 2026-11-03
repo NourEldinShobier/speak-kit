@@ -27,7 +27,7 @@ export interface Opts {
 
 export async function desktopShot(c: Ctx, o: Opts) {
   const launch = await getLaunch();
-  const l = await launch({ env: { SPEAKKIT_TEST: "1", ...o.env }, config: { theme: c.dark ? "dark" : "light", ...o.config } });
+  const l = await launch({ env: { SPEAKKIT_TEST: "1", ...o.env }, config: { ...o.config } });
   try {
     const size = o.size ?? WIN;
     await l.app.evaluate(({ BrowserWindow }, s) => {
@@ -35,7 +35,6 @@ export async function desktopShot(c: Ctx, o: Opts) {
       w.setContentSize(s.width, s.height);
       w.center();
     }, size);
-    await l.page.emulateMedia({ colorScheme: c.dark ? "dark" : "light" });
     await l.page.getByRole("heading").first().waitFor({ timeout: 15_000 });
     await sleep(700);
     if (o.drive) {

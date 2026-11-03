@@ -49,20 +49,16 @@ describe("visual capture", () => {
     if (only && !only.includes(s.id)) continue;
     if (groups && !groups.some((g) => s.group.toLowerCase().includes(g))) continue;
     if (states && !states.includes(s.state)) continue;
-    {
-      const theme = "light";
-      it(`${s.id} ${s.state} ${theme}`, async () => {
-        const dark = false;
-        Object.assign(cur, { id: s.id, state: s.state, dark });
-        const c: Ctx = { ext, env, dark };
-        const path = await s.run(c);
-        const base = { id: s.id, state: s.state, theme, group: s.group, title: s.title, file: builtName(s.id, s.state, dark) };
-        const design = s.design === false ? null : designFile(s.id, dark);
-        const r = compare({ ...base, design: design ? design.split(/[\\/]/).pop() : undefined }, path, design);
-        if (!r.design) r.note = s.design === false ? "product-only" : "no light twin";
-        results.push(r);
-        console.log(`[visual] ${r.id} ${r.state} ${theme} diff ${r.diffPct ?? "-"}% ${r.note ?? ""}`);
-      });
-    }
+    it(`${s.id} ${s.state}`, async () => {
+      Object.assign(cur, { id: s.id, state: s.state });
+      const c: Ctx = { ext, env };
+      const path = await s.run(c);
+      const base = { id: s.id, state: s.state, theme: "light" as const, group: s.group, title: s.title, file: builtName(s.id, s.state) };
+      const design = s.design === false ? null : designFile(s.id);
+      const r = compare({ ...base, design: design ? design.split(/[\/]/).pop() : undefined }, path, design);
+      if (!r.design) r.note = s.design === false ? "product-only" : "no light twin";
+      results.push(r);
+      console.log(`[visual] ${r.id} ${r.state} diff ${r.diffPct ?? "-"}% ${r.note ?? ""}`);
+    });
   }
 });

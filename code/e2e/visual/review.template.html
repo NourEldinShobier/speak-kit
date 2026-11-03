@@ -560,20 +560,19 @@
         save();
       };
       const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-      const themeOf = () => "light";
       const label = (r) =>
         r
           ? { match: "match", minor: "minor drift", known: "known difference", major: "drifts", only: "product only", twin: "no light twin" }[r.verdict] + (r.pct != null ? " " + r.pct + "%" : "")
           : "";
       function thumbs(c) {
-        const t = themeOf(c),
+        const t = "light",
           r = c.res[t];
         const built = '<div class="thumb" data-zoom="' + c.key + '"><i>BUILT · ' + t.toUpperCase() + '</i><img loading="lazy" src="shots/' + c.shots[t] + '" alt="' + esc(c.title) + '"></div>';
         if (!cmp) return built;
         const d =
           r && r.design
             ? '<div class="thumb" data-zoom="' + c.key + '"><i>DESIGN</i><img loading="lazy" src="design/' + r.design + '" alt=""></div>'
-            : '<div class="thumb none">No design frame for this theme</div>';
+            : '<div class="thumb none">No design frame for this screen</div>';
         return d + built;
       }
       function render() {
@@ -600,7 +599,7 @@
           const row = sec.querySelector(".row");
           list.forEach((c) => {
             const st = get(c.key),
-              t = themeOf(c),
+              t = "light",
               r = c.res[t];
             const el = document.createElement("article");
             el.className = "card";
@@ -711,7 +710,7 @@
         const c = C[lbIdx];
         if (!c) return;
         lb.classList.add("on");
-        const t = themeOf(c),
+        const t = "light",
           r = c.res[t];
         document.getElementById("lbimg").src = "shots/" + c.shots[t];
         const d = document.getElementById("lbd");

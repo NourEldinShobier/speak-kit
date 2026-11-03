@@ -6,7 +6,6 @@ import { OUT, playerState, seed, send, sleep, tabIdOf, type Env, type Ext } from
 export interface Ctx {
   ext: Ext;
   env: Env;
-  dark: boolean;
 }
 export const GROUPS = {
   popup: "Extension popup",
@@ -39,11 +38,11 @@ export interface Scenario {
 }
 
 /** The capture in progress: scenario files call builtPath() without arguments and get the stable name. */
-export const cur = { id: "", state: "", dark: false };
-export const builtName = (id: string, state: string, dark: boolean) => `${id}-${state}-${dark ? "dark" : "light"}.png`;
+export const cur = { id: "", state: "" };
+export const builtName = (id: string, state: string) => `${id}-${state}-light.png`;
 export const builtPath = (_legacy?: string) => {
   mkdirSync(join(OUT, "built"), { recursive: true });
-  return join(OUT, "built", builtName(cur.id, cur.state, cur.dark));
+  return join(OUT, "built", builtName(cur.id, cur.state));
 };
 
 export const S = (id: string, state: string, group: Group, title: string, run: Scenario["run"], o: { design?: boolean } = {}): Scenario => ({
@@ -88,10 +87,9 @@ const mockScript = (m: Mock) => `(() => {
   if (M.fileAccess === false) chrome.extension.isAllowedFileSchemeAccess = (cb) => cb(false);
 })();`;
 
-export async function extPage(c: Ctx, file: string, mock: Mock, o: { w: number; h: number; dark?: boolean; hash?: string }): Promise<Page> {
+export async function extPage(c: Ctx, file: string, mock: Mock, o: { w: number; h: number; hash?: string }): Promise<Page> {
   const page = await c.ext.ctx.newPage();
   await page.setViewportSize({ width: o.w, height: o.h });
-  await page.emulateMedia({ colorScheme: (o.dark ?? c.dark) ? "dark" : "light" });
   await page.addInitScript(mockScript(mock));
   await page.goto(`chrome-extension://${c.ext.id}/${file}${o.hash ?? ""}`);
   return page;
