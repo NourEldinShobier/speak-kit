@@ -1,6 +1,6 @@
 # Third-party notices
 
-Speak Kit is released under the [MIT licence](LICENSE). It includes and downloads the third-party software, models, fonts and icons below, each under its own licence.
+Speak Kit is released under the [Apache License 2.0](LICENSE). It includes and downloads the third-party software, models, fonts and icons below, each under its own licence.
 
 ## Models and assets
 
@@ -11,7 +11,7 @@ Speak Kit is released under the [MIT licence](LICENSE). It includes and download
 | [Inter](https://rsms.me/inter/) | UI typeface named in the style sheets; used when installed on the system, not bundled. | SIL Open Font License 1.1 |
 | [Tabler Icons](https://tabler.io/icons) | Interface icons (`@tabler/icons-react`). | MIT |
 | [LAME](https://lame.sourceforge.io/) through `wasm-media-encoders` | MP3 export, compiled to WebAssembly and loaded as a separate module. | LGPL-2.1 (the wrapper is MIT) |
-| Lumen design tokens and components | Visual language of the app and extension. | The author's own work, MIT |
+| Lumen design tokens and components | Visual language of the app and extension. | The author's own work, Apache-2.0 |
 
 Kokoro and Chatterbox model weights are not part of this repository or the installer. Their licences apply to the weights you download; read the model cards before redistributing generated audio.
 

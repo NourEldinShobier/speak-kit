@@ -74,7 +74,7 @@ writeFileSync(
       version,
       description: "Text to speech on your own computer",
       author: "Speak Kit",
-      license: "MIT",
+      license: "Apache-2.0",
       type: "module",
       main: "dist/main/index.js",
       dependencies,

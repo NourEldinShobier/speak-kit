@@ -1,7 +1,7 @@
 # Speak Kit
 
 [![CI](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A private text-to-speech reader. Select text in Chrome, press a key, and a natural voice reads it aloud while the sentence and word being spoken are highlighted. The voice model runs on your computer: no account, no cloud, nothing uploaded.
 
@@ -126,4 +126,4 @@ Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) an
 
 ## License
 
-[MIT](LICENSE), Copyright (c) 2026 Nour Eldin Shobier. Third-party software, models, fonts and icons are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Kokoro-82M is Apache-2.0 and Chatterbox is MIT; their weights are downloaded, not bundled.
+[Apache License 2.0](LICENSE), Copyright 2026 Nour Eldin Shobier. Third-party software, models, fonts and icons are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Kokoro-82M is Apache-2.0 and Chatterbox is MIT; their weights are downloaded, not bundled.

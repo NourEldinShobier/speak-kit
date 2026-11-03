@@ -1,7 +1,7 @@
 # Windows installer (NSIS) and portable exe, macOS dmg and zip. Run through scripts/package.mjs, which stages a plain app folder in dist-app first.
 appId: app.speakkit.desktop
 productName: Speak Kit
-copyright: MIT License
+copyright: Copyright 2026 Nour Eldin Shobier, Apache License 2.0
 directories:
   app: dist-app
   output: release

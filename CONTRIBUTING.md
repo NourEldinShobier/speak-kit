@@ -62,4 +62,4 @@ A bug fix starts with a failing test. Do not loosen a test, lint limit or screen
 
 ## Licence
 
-Contributions are released under the [MIT licence](LICENSE).
+Contributions are released under the [Apache License 2.0](LICENSE), including its patent grant (section 3).
