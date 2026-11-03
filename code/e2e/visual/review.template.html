@@ -692,13 +692,6 @@
           cmp = !cmp;
           setPref("cmp", cmp ? "1" : "0");
           render();
-        } else if (t.closest("[data-ct]")) {
-          const c = C.find((x) => x.key === t.closest(".card").dataset.key);
-          c.th = t.dataset.t;
-          const row = t.closest(".row"),
-            x = row.scrollLeft;
-          render();
-          document.querySelector('.card[data-key="' + c.key + '"]').closest(".row").scrollLeft = x;
         }
       });
       document.addEventListener("input", (e) => {

@@ -1,75 +1,75 @@
 {
  "counts": {
-  "shots": 210,
-  "cards": 105,
-  "frames": 207,
-  "missing": 100
+  "shots": 118,
+  "cards": 118,
+  "frames": 185,
+  "missing": 93
  },
  "perGroup": [
   {
    "group": "Extension popup",
    "screens": 18,
-   "images": 36
+   "images": 18
   },
   {
    "group": "On-page reading",
    "screens": 19,
-   "images": 38
+   "images": 19
   },
   {
    "group": "Reader view",
-   "screens": 4,
-   "images": 8
+   "screens": 3,
+   "images": 3
   },
   {
    "group": "Options",
    "screens": 14,
-   "images": 28
+   "images": 14
   },
   {
    "group": "Side panel (queue)",
    "screens": 3,
-   "images": 6
+   "images": 3
   },
   {
    "group": "Desktop setup",
    "screens": 8,
-   "images": 16
+   "images": 8
   },
   {
    "group": "Desktop home and shell",
    "screens": 7,
-   "images": 14
+   "images": 7
   },
   {
    "group": "Desktop library",
-   "screens": 5,
-   "images": 10
+   "screens": 6,
+   "images": 6
   },
   {
    "group": "Desktop reader and export",
    "screens": 6,
-   "images": 12
+   "images": 6
   },
   {
    "group": "Voices and engines",
    "screens": 6,
-   "images": 12
+   "images": 6
   },
   {
    "group": "Desktop settings",
    "screens": 9,
-   "images": 18
+   "images": 9
   },
   {
    "group": "Tray, notifications and system states",
-   "screens": 3,
-   "images": 6
+   "screens": 16,
+   "images": 16
   },
   {
    "group": "Errors and edge states",
    "screens": 3,
-   "images": 6
+   "images": 3
   }
  ],
  "missing": [
@@ -104,13 +104,18 @@
    "reason": "Research board: documentation of the feature map, flows and Lumen patterns, not a product screen."
   },
   {
+   "id": "B11",
+   "title": "Page · reading on a dark site (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "B3",
    "title": "Page · context menu (Chrome extension)",
    "reason": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are Speak Kit > Read selection, Read from here, Add to queue (asserted in the e2e suite)."
   },
   {
    "id": "B21",
-   "title": "Page · edge launcher (Chrome extension)",
+   "title": "Page · edge launcher on a dark site (Chrome extension)",
    "reason": "Superseded by B4; the pill replaced the edge launcher expanded state. Dark launcher is covered by B17-B20."
   },
   {
@@ -249,6 +254,11 @@
    "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
   },
   {
+   "id": "G10",
+   "title": "Engines · out of GPU memory (Desktop app)",
+   "reason": "Needs an installed Chatterbox engine; the product's engine error page is captured as G10 / engines-error without a diff."
+  },
+  {
    "id": "G16",
    "title": "Engines · Chatterbox ready (Desktop app)",
    "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
@@ -329,24 +339,24 @@
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
   },
   {
-   "id": "H18",
-   "title": "Update ready · pill and popover (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
-  },
-  {
-   "id": "H19",
-   "title": "Updating (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
-  },
-  {
    "id": "O1",
    "title": "Engine states board (Desktop app)",
    "reason": "Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."
   },
   {
+   "id": "I10",
+   "title": "Tray menu and left-click panel (Desktop app)",
+   "reason": "The left-click panel is captured as I10 / tray-panel in the app (no diff). The native tray menu is an Electron menu and cannot be screenshotted."
+  },
+  {
    "id": "I11",
    "title": "Tray icon states (Desktop app)",
    "reason": "Tray icon states are drawn into the operating system tray and are not part of any window."
+  },
+  {
+   "id": "I3",
+   "title": "Mini player · always on top (Desktop app)",
+   "reason": "Captured as I3 / mini-player in the app (the mini window), compared by eye: it is a small always-on-top window, not a design-sized frame."
   },
   {
    "id": "I9",
@@ -394,23 +404,8 @@
    "reason": "Implemented (main/system/clipboard-watch.ts); the prompt is an OS notification and cannot be screenshotted."
   },
   {
-   "id": "J2",
-   "title": "Export · rendering (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "J3",
-   "title": "Export · done (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
    "id": "J5",
    "title": "Export · file exists (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "J6",
-   "title": "Export · in background (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
@@ -462,16 +457,6 @@
    "id": "E17",
    "title": "Empty-state board (Desktop app)",
    "reason": "Board of empty states (2320 px wide), not a product screen."
-  },
-  {
-   "id": "I10-L",
-   "title": "Tray menu and left-click panel (Desktop app)",
-   "reason": "Light twin of I10: the product capture has no matching light run"
-  },
-  {
-   "id": "O1-L",
-   "title": "Engine states board (Desktop app)",
-   "reason": "Light twin of O1: Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."
   },
   {
    "id": "D1",
@@ -529,19 +514,9 @@
    "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
   },
   {
-   "id": "Q3-L",
-   "title": "Components and states (Foundations & components)",
-   "reason": "Light twin of Q3: Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
-  },
-  {
    "id": "Q4",
    "title": "Desktop components (Foundations & components)",
    "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
-  },
-  {
-   "id": "Q4-L",
-   "title": "Desktop components (Foundations & components)",
-   "reason": "Light twin of Q4: Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
   },
   {
    "id": "Q5",
@@ -549,19 +524,9 @@
    "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
   },
   {
-   "id": "Q5-L",
-   "title": "Extension components (Foundations & components)",
-   "reason": "Light twin of Q5: Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
-  },
-  {
    "id": "MO1",
    "title": "Motion tokens (Motion)",
    "reason": "Motion board: motion tokens and rules, not a product screen."
-  },
-  {
-   "id": "MO1-L",
-   "title": "Motion tokens (Motion)",
-   "reason": "Light twin of MO1: Motion board: motion tokens and rules, not a product screen."
   },
   {
    "id": "MO2",
