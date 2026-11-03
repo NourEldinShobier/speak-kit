@@ -28,13 +28,13 @@ export const PAGES: Pg[] = [
       { title: "Read-aloud pill", cover: "Lumen F5 pill on the page: idle, preparing, reading, paused, finished, error, engine states", frames: [
         f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."), f("B11", "The white pill stays readable over a dark website; the highlight palette adapts to the page."),
         f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open Speak Kit and Retry."),
-        f("B22"), f("B23")] },
-      { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3"), f("B13"), f("B14")] },
-      { title: "Pill popovers and reading settings", cover: "speed, voice and the Reading popover (Sans, Serif, Dyslexic, size, width, theme, highlight)", frames: [f("B15"), f("B16"), f("B24")] },
+        f("B22"), f("B23"), f("B25"), f("B26"), f("B27"), f("B28"), f("B35")] },
+      { title: "Selecting and starting", cover: "selection bubble, paragraph gutter, context menu, queue toast, back to current", frames: [f("B1"), f("B2"), f("B3"), f("B13"), f("B14"), f("B29"), f("B30"), f("B31")] },
+      { title: "Pill popovers and reading settings", cover: "speed, voice and the Reading popover (Sans, Serif, Dyslexic, size, width, theme, highlight)", frames: [f("B15"), f("B16"), f("B33"), f("B24")] },
       { title: "Reader view", cover: "paper reader at full fidelity, with the pill and the Reading popover", frames: [
-        f("B10", "Paper reader, 680 px serif column, current sentence block, Reading popover top right, pill below.")] },
-      { title: "Edge launcher", cover: "the 14 px tab at the page edge; the expanded vertical pill is replaced by the read-aloud pill", frames: [
-        f("B17"), f("B19"), sup("B18", "B4", "Hover now opens the horizontal read-aloud pill (B4), not a vertical one."), sup("B20", "B6", "Expanded reading state is the read-aloud pill (B6)."), sup("B21", "B4", "The vertical pill is gone; the read-aloud pill replaces it.")] },
+        f("B10", "Paper reader, 680 px serif column, current sentence block, Reading popover top right, pill below."), f("B34"), f("B32")] },
+      { title: "Edge launcher", cover: "the 14 px tab at the page edge, the reading tab, the vertical pill on hover, and the dark-site variants", frames: [
+        f("B17"), f("B18"), f("B19"), f("B20"), f("B21"), f("B36")] },
       { title: "Options page", cover: "connection, voice, highlighting, reader view, shortcuts, sites, edge launcher, with their offline, off and empty states", frames: [f("C1"), f("C2"), f("C3"), f("C4"), f("C21"), f("C5"), f("C22"), f("C19"), f("C6"), f("C7"), f("C20"), f("C12"), f("C23")] },
       { title: "Pairing and permissions", cover: "token field and test connection, Open Speak Kit deep link, per-site permissions, shortcut conflict", frames: [f("C13"), f("C14"), f("C15"), f("C16")] },
       { title: "Side panel", cover: "queue and outline, empty queue", frames: [f("C9"), f("C24"), f("C10")] },
