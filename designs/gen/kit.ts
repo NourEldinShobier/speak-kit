@@ -307,7 +307,8 @@ export const desktopWindow = (b: B, t: T, root: Ref, o: { nav?: "home" | "librar
   const isSet = nav === "settings";
   titleBar(b, t, win, w, { search: o.search ?? (isSet ? "Search settings" : "Search readings, voices and commands"), pill: o.pill === false ? undefined : o.pill ?? (o.status ? { label: o.status.label.split(" · ")[1] ?? o.status.label, tone: o.status.tone } : { label: "Kokoro ready", tone: "ok" }), update: o.update, bell: o.bell });
   b.rect(win, { w: "fill", h: 1, fill: t.bg });
-  const body = b.row(win, { w: "fill", h: "fill", gap: 8, align: "stretch", pad: [0, 4, 4, 4] });
+  // Lockix: the panel is 8 px from the right edge, 4 from the left and ends on a 28 px footer band (bottom 0 here).
+  const body = b.row(win, { w: "fill", h: "fill", gap: 8, align: "stretch", pad: [0, 8, 0, 4] });
   if (nav !== "none" && o.rail) {
     const sb = b.col(body, { w: 56, h: "fill", pad: [8, 10, 12, 10], gap: 4, align: "center", fill: t.surface, r: 14, shadow: "card" });
     iconBtn(b, t, sb, "plus", { size: 36, bg: t.cta, c: t.ctaText });
@@ -347,6 +348,11 @@ export const desktopWindow = (b: B, t: T, root: Ref, o: { nav?: "home" | "librar
     }
   }
   const main = b.col(body, { w: "fill", h: "fill", gap: 0, fill: t.editor, r: 14, shadow: "card", clip: true });
+  // Footer band 28 px: right-aligned status line, 12 px muted, 1 px dividers (code: Footer.tsx).
+  const ft = b.row(win, { w: "fill", h: 28, pad: [0, 14], gap: 10, align: "center", justify: "max" });
+  const sv = o.status;
+  const eng = !sv || sv.tone === "ok" ? "Kokoro ready" : sv.tone === "neutral" ? "Voice engine asleep" : sv.label.split(" · ").pop()!;
+  ["" + eng, "Voice: Heart", "3 readings"].forEach((s, i) => { if (i) b.rect(ft, { w: 1, h: 12, fill: t.field }); b.text(ft, s, { size: 12, c: t.text3 }); });
   return { win, main };
 };
 
