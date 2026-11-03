@@ -39,7 +39,7 @@ html[data-hidden] *::after {
 }
 .sk-app {
   display: grid;
-  grid-template-rows: var(--bar-h) 1fr;
+  grid-template-rows: var(--bar-h) 1fr var(--footer-h);
   height: 100%;
 }
 .sk-body {
@@ -126,7 +126,7 @@ html[data-platform="darwin"] .sk-title {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 2px 4px var(--panel-inset) 8px;
+  padding: 2px 4px 2px 8px;
   overflow-y: auto;
 }
 .sk-side[hidden] {
@@ -204,11 +204,41 @@ html[data-platform="darwin"] .sk-title {
 .sk-main {
   flex: 1;
   min-width: 0;
-  margin: 0 var(--panel-inset) var(--panel-inset);
+  margin: 0 var(--panel-inset-end) 0 var(--panel-inset);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
   background: var(--surface-editor);
   overflow: auto;
+}
+/* Footer band 28 px (Lockix footer.tsx): the window grey under the panel, one right-aligned muted line. */
+.sk-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 14px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  user-select: none;
+}
+.sk-footer__item {
+  flex: none;
+  white-space: nowrap;
+}
+.sk-footer__item:last-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-footer__div {
+  flex: none;
+  width: 1px;
+  height: 12px;
+  background: var(--stroke-field);
 }
 @media (max-width: 1024px) {
   .sk-side {

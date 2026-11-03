@@ -29,7 +29,7 @@ const probe = (p: Page, sel: string) =>
 const box = (p: Page, sel: string) => probe(p, sel).then((b) => b!);
 
 describe("spacing and radius on Windows (data-platform=win32; the macOS values are pinned in packages/ui)", () => {
-  it("main window: title bar 36, panel 4 px from the edges, page header and body spacing, panel 8 / card 10 / dialog 10 / menu 10", async () => {
+  it("main window: title bar 36, panel 8 px from the right edge and a 28 px footer band under it, page header and body spacing, panel 8 / card 10 / dialog 10 / menu 10", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     expect(await l.page.evaluate(() => document.documentElement.dataset.platform)).toBe("win32");
@@ -37,10 +37,19 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect(await box(l.page, ".sk-title")).toMatchObject({ h: 36, pad: [0, 0, 0, 8] });
     expect(await box(l.page, ".sk-search")).toMatchObject({ w: 420, h: 28, radius: "8px" });
     // Sidebar: items 36 high, 2 apart, 8 from the window edge and 8 from the panel.
-    expect(await box(l.page, ".sk-side")).toMatchObject({ x: 0, w: 248, pad: [2, 4, 4, 8] });
+    expect(await box(l.page, ".sk-side")).toMatchObject({ x: 0, w: 248, pad: [2, 4, 2, 8] });
     expect(await box(l.page, ".sk-side .lm-nav__item")).toMatchObject({ x: 8, w: 236, h: 36, radius: "8px" });
     const main = await box(l.page, ".sk-main");
-    expect([main.x, main.y, w! - (main.x + main.w), h! - (main.y + main.h), main.radius]).toEqual([252, 36, 4, 4, "8px"]);
+    expect([main.x, main.y, w! - (main.x + main.w), h! - (main.y + main.h), main.radius]).toEqual([252, 36, 8, 28, "8px"]);
+    // Footer band: 28 high at the window bottom, the status text centred in it, one line.
+    const foot = await box(l.page, ".sk-footer");
+    expect([foot.y + foot.h, foot.h]).toEqual([h, 28]);
+    const text = await l.page.evaluate(() => {
+      const r = document.querySelector(".sk-footer__item")!.getBoundingClientRect();
+      return { mid: r.y + r.height / 2, h: r.height };
+    });
+    expect(text.mid).toBe(foot.y + 14);
+    expect(text.h).toBeLessThanOrEqual(16);
     // Page: header 22 from the top, 28 inset, 16 between header and body, title 22/26, subtitle 13/17.
     expect(await box(l.page, ".sk-page")).toMatchObject({ pad: [22, 28, 24, 28], gap: 16 });
     expect(await box(l.page, ".sk-page__head h1")).toMatchObject({ y: 58, h: 26 });

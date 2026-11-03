@@ -2,7 +2,7 @@
 
 Date: 3 Nov 2026. Reference: `docs/lockix-design-system.md` and the Lockix source (`apps/desktop/src/renderer/styles.css`, `components/shell/*`, `pages/settings/settings.parts.tsx`, `docs/desktop.md` "Windows radii"). Light only.
 
-Measured values come from `apps/desktop/tests/spacing.test.ts` (Electron, Windows, so `data-platform="win32"`), `packages/ui/tests/browser.test.ts` (Chromium, kit markup) and `e2e/tests/ui.spec.ts` (extension in-page container). "Before" values for the shell were measured on the build before this change. Where a "Before" is marked `css`, it is the declared fixed pixel value in the CSS before the change (the same number the browser computes). Values the kit and the apps share are now tokens in `packages/ui/src/lumen.css` (`--bar-h`, `--panel-inset`, `--page-pad-top`, `--page-pad-x`, `--page-pad-bottom`, `--page-gap`, `--card-pad-y`, `--card-pad-x`); Lockix has none (Tailwind steps), so these are Speak Kit's names for the Lockix numbers.
+Measured values come from `apps/desktop/tests/spacing.test.ts` (Electron, Windows, so `data-platform="win32"`), `packages/ui/tests/browser.test.ts` (Chromium, kit markup) and `e2e/tests/ui.spec.ts` (extension in-page container). "Before" values for the shell were measured on the build before this change. Where a "Before" is marked `css`, it is the declared fixed pixel value in the CSS before the change (the same number the browser computes). Values the kit and the apps share are now tokens in `packages/ui/src/lumen.css` (`--bar-h`, `--panel-inset`, `--panel-inset-end`, `--footer-h`, `--page-pad-top`, `--page-pad-x`, `--page-pad-bottom`, `--page-gap`, `--card-pad-y`, `--card-pad-x`); Lockix has none (Tailwind steps), so these are Speak Kit's names for the Lockix numbers.
 
 ## Radius per platform
 
@@ -46,10 +46,12 @@ Lockix is the reference. "n/a" means Speak Kit has no equivalent surface, so the
 | App title bar logo | 8 from the left and top | none in the bar | n/a (Speak Kit shows no logo there) |
 | Nav item height, radius, padding | 36, 8, 0 10 | 36, 8, 0 10 | unchanged |
 | Nav item gap (left-panel list) | 2 | 2 | unchanged |
-| Sidebar padding (top, right, bottom, left) | rail: 2, 4, 2, 8 | 4, 12, 12, 12 | 2, 4, 4, 8 |
+| Sidebar padding (top, right, bottom, left) | rail: 2, 4, 2, 8 | 4, 12, 12, 12 | 2, 4, 2, 8 (was 2, 4, 4, 8 before the footer band) |
 | Sidebar width | rail 48 + left panel 250 | 248 | unchanged (one column replaces both) |
 | Collapsed sidebar (window under 1025 px) | rail 48, items 36 | 60, items 44 | 48, items 36 |
-| Content panel from the window edge (right, bottom) | 4 | 4, 4 | 4, 4 (`--panel-inset`) |
+| Content panel from the window edge, right | 8 (`pr-2`) | 4 | 8 (`--panel-inset-end`) |
+| Content panel from the window bottom | 28 (the footer band, `h-7`) | 4 | 28 (`--footer-h`) |
+| Footer band under the panel | 28 high, `px-3.5`, `text-xs` muted, right-aligned, thin dividers between items, one line | none | 28 high, 14 inline padding, 12 px `--text-tertiary`, right-aligned, 12 px `--stroke-field` dividers, ellipsis on the last item; engine state, voice name, then the library count or the reading in progress (`Footer.tsx`, `footer-model.ts`) |
 | Content panel from the title bar | 0 | 0 | 0 |
 | Content panel from the sidebar items | 8 (rail 4 + panel 4) | 12 (items end at 236, panel at 248) | 8 (items end at 244, panel at 252) |
 | Page header top padding | 22 | 32 | 22 (`--page-pad-top`) |
