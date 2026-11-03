@@ -45,18 +45,21 @@ describe("FloatWindow on macOS", () => {
   });
 });
 
-describe("floatClosedWithin", () => {
+describe("floatChangedWithin", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("is true for a moment after a float window was destroyed, then false", async () => {
+  it("is true for a moment after a float window was created or destroyed, then false", async () => {
     vi.useFakeTimers();
-    const { floatClosedWithin } = await import("./windows");
-    expect(floatClosedWithin(400)).toBe(false);
+    const { floatChangedWithin } = await import("./windows");
+    vi.setSystemTime(Date.now() + 100_000);
     const w = new FloatWindow("mini", { width: 360, height: 112 }, () => ({}) as never);
     w.open({ x: 0, y: 0, width: 360, height: 112 }, false);
-    w.close();
-    expect(floatClosedWithin(400)).toBe(true);
+    expect(floatChangedWithin(400)).toBe(true);
     vi.advanceTimersByTime(401);
-    expect(floatClosedWithin(400)).toBe(false);
+    expect(floatChangedWithin(400)).toBe(false);
+    w.close();
+    expect(floatChangedWithin(400)).toBe(true);
+    vi.advanceTimersByTime(401);
+    expect(floatChangedWithin(400)).toBe(false);
   });
 });

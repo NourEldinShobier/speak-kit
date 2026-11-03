@@ -12,7 +12,8 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
 const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
-const hook = (app: ElectronApplication, fn: string, ...a: unknown[]) => app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])), [fn, a] as const);
+const hook = (app: ElectronApplication, fn: string, ...a: unknown[]) =>
+  app.evaluate((_, [f, args]) => (globalThis as unknown as Record<string, Record<string, (...x: unknown[]) => unknown>>).__speakkit![f as string]!(...(args as unknown[])), [fn, a] as const);
 
 /** Runs in the page: the rectangle and the computed spacing of the first element that matches. */
 const probe = (p: Page, sel: string) =>

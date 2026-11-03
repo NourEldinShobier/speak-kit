@@ -76,7 +76,7 @@ vi.mock("electron", () => ({
     }),
   },
 }));
-vi.mock("./windows", () => ({ FloatWindow: mocks.FakePanel, aboveTray: (b: unknown) => ({ above: b }), floatClosedWithin: () => mocks.state.ownClose }));
+vi.mock("./windows", () => ({ FloatWindow: mocks.FakePanel, aboveTray: (b: unknown) => ({ above: b }), floatChangedWithin: () => mocks.state.ownClose }));
 vi.mock("./icon", () => ({ trayIcon: (state: string) => `icon:${state}` }));
 
 import { createTray } from "./tray";
@@ -213,7 +213,7 @@ describe("tray panel", () => {
     expect(t.panel.visible).toBe(true);
   });
 
-  it("a blur right after the mini player closed (Windows reassigns the active window) keeps the panel; the next blur closes it", () => {
+  it("a blur right after a float window opened or closed (Windows reassigns the active window) keeps the panel; the next blur closes it", () => {
     const t = setup();
     t.fake.handlers.get("click")!();
     t.panel.focus!();

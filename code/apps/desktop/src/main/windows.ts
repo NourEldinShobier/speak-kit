@@ -11,12 +11,12 @@ type FloatPage = "mini" | "panel";
 /** Transparent room around the card for its shadow (Lockix: tray window page padding 24). The renderer pads its page by the same amount (float.css `--float-pad`). */
 export const FLOAT_PAD = 24;
 
-let lastFloatClose = 0;
+let lastFloatChange = 0;
 /**
- * Was a mini player or panel destroyed in the last `ms`? Windows hands the active window to another app when one of ours is destroyed,
- * which blurs a panel the user never left; the panel uses this to tell that blur from a click elsewhere.
+ * Was a mini player or panel created or destroyed in the last `ms`? Windows moves the active window around when one of ours appears or
+ * goes away, which blurs a panel the user never left; the panel uses this to tell that blur from a click elsewhere.
  */
-export const floatClosedWithin = (ms: number): boolean => Date.now() - lastFloatClose < ms;
+export const floatChangedWithin = (ms: number): boolean => Date.now() - lastFloatChange < ms;
 
 /**
  * A small frameless window (mini player, tray panel). It exists only while it is in use: opening creates it, closing destroys
@@ -46,6 +46,7 @@ export class FloatWindow {
     let w = this.window;
     if (!w) {
       this.#loaded = false;
+      lastFloatChange = Date.now();
       w = this.#win = createSecureWindow(
         {
           frame: false,
@@ -84,7 +85,7 @@ export class FloatWindow {
   }
 
   close(): void {
-    if (this.window) lastFloatClose = Date.now();
+    if (this.window) lastFloatChange = Date.now();
     this.window?.destroy();
     this.#win = null;
     this.#pending = [];

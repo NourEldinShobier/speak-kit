@@ -1,11 +1,11 @@
 import { Menu, Tray, type MenuItemConstructorOptions } from "electron";
 import { trayIconState, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext } from "../shared/tray";
-import { aboveTray, FloatWindow, floatClosedWithin } from "./windows";
+import { aboveTray, FloatWindow, floatChangedWithin } from "./windows";
 import { trayIcon } from "./icon";
 import type { Ctx } from "./context";
 
-/** A blur this soon after the mini player closed is Windows reassigning the active window, not the user clicking elsewhere. */
-const OWN_CLOSE_GRACE_MS = 400;
+/** A blur this soon after a mini player or panel opened or closed is Windows reassigning the active window, not the user clicking elsewhere. */
+const FLOAT_CHANGE_GRACE_MS = 400;
 
 type TrayHandlers = Record<TrayAction, () => void>;
 
@@ -43,7 +43,7 @@ export function createTray(ctx: Ctx, context: () => TrayContext, run: TrayHandle
     run.wake(); // the panel is where a read is started from: load the model while it opens
     // Clicking anywhere else dismisses it, like a native flyout; closing frees its renderer. Only a panel that
     // has had focus can lose it: another window taking focus first must not close it before it was ever shown.
-    const closeOnBlur = () => win.once("blur", () => (floatClosedWithin(OWN_CLOSE_GRACE_MS) ? closeOnBlur() : panel.close()));
+    const closeOnBlur = () => win.once("blur", () => (floatChangedWithin(FLOAT_CHANGE_GRACE_MS) ? closeOnBlur() : panel.close()));
     win.once("focus", closeOnBlur);
   };
   tray.on("click", togglePanel);
