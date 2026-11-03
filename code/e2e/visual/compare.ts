@@ -81,9 +81,9 @@ export function designCrop(id: string, d: PNG): Crop {
   return { x: 81, y: 51, w: 1278, h: 798 };
 }
 
-/** The design file a capture answers: light twins carry the -L suffix. */
+/** The design file a capture answers: designs/next holds one light frame per id. */
 export function designFile(id: string): string | null {
-  const f = join(DESIGNS, `${id}-L.png`);
+  const f = join(DESIGNS, `${id}.png`);
   return existsSync(f) ? f : null;
 }
 

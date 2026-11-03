@@ -61,15 +61,23 @@ const search = (q: string) => async (p: Page) => {
   await sleep(500);
 };
 
-const slow = { SPEAKKIT_FAKE_LATENCY_MS: "250" };
+export const slow = { SPEAKKIT_FAKE_LATENCY_MS: "250" };
 const lib = (id: string, state: string, title: string, o: Opts) => home(id, state, LIB, title, o);
 const reader = (id: string, state: string, title: string, drive: NonNullable<Opts["drive"]>) => home(id, state, RD, title, { env: slow, drive });
 
-const hook = (app: ElectronApplication, fn: string, ...a: unknown[]) => app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])), [fn, a] as const);
-const READ = "One short sentence here. A second sentence follows it. And a third to finish the paragraph.";
+export const hook = (app: ElectronApplication, fn: string, ...a: unknown[]) => app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])), [fn, a] as const);
+export const READ = "One short sentence here. A second sentence follows it. And a third to finish the paragraph.";
 
 /** The mini player and the tray panel are windows of their own: capture the window, not the main page. */
-const windowShot = (id: string, state: string, title: string, part: string, testId: string, open: (app: ElectronApplication) => Promise<void>): Scenario =>
+export const windowShot = (
+  id: string,
+  state: string,
+  title: string,
+  part: string,
+  testId: string,
+  open: (app: ElectronApplication) => Promise<void>,
+  o: { env?: Record<string, string>; after?: (w: Page) => Promise<void> } = {},
+): Scenario =>
   S(
     id,
     state,
@@ -77,13 +85,14 @@ const windowShot = (id: string, state: string, title: string, part: string, test
     title,
     async (c) => {
       const { launch } = await import("../../apps/desktop/tests/harness");
-      const l = await launch({ env: { SPEAKKIT_TEST: "1", ...slow }, config: { ...DONE } });
+      const l = await launch({ env: { SPEAKKIT_TEST: "1", ...slow, ...o.env }, config: { ...DONE } });
       try {
         await l.page.getByRole("heading", { name: "Home" }).waitFor();
         const win = l.app.waitForEvent("window", { predicate: (w) => w.url().includes(part), timeout: 15_000 });
         await open(l.app);
         const w = await win;
         await w.getByTestId(testId).waitFor();
+        await o.after?.(w);
         await sleep(900);
         const path = builtPath();
         await w.screenshot({ path, scale: "css" });

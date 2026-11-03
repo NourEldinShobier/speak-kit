@@ -5,6 +5,7 @@ import { compare, designFile, type Result } from "./compare";
 import { pageScenarios } from "./pages";
 import { desktopScenarios } from "./desktop";
 import { appScenarios } from "./desktop-app";
+import { systemScenarios } from "./desktop-system";
 import { optionsScenarios, panelScenarios, popupScenarios, builtName, cur, type Ctx, type Scenario } from "./scenarios";
 import { OUT, launchExt, startEnv, type Ext, type Env } from "./support";
 
@@ -42,7 +43,7 @@ afterAll(async () => {
   writeFileSync(file, JSON.stringify(merged, null, 1));
 });
 
-const all: Scenario[] = [...popupScenarios, ...pageScenarios, ...optionsScenarios, ...panelScenarios, ...desktopScenarios, ...appScenarios];
+const all: Scenario[] = [...popupScenarios, ...pageScenarios, ...optionsScenarios, ...panelScenarios, ...desktopScenarios, ...appScenarios, ...systemScenarios];
 
 describe("visual capture", () => {
   for (const s of all) {

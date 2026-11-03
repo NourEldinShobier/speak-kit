@@ -124,3 +124,14 @@
   color: var(--tag-green);
   font-weight: 400;
 }
+
+/* The update card inside the title-bar popover: the text takes the full width and the buttons wrap below it (H18). */
+.lm-popover .lm-banner {
+  flex-wrap: wrap;
+}
+.lm-popover .lm-banner__body {
+  flex-basis: 220px;
+}
+.lm-popover .lm-banner__actions {
+  margin-inline-start: auto;
+}
