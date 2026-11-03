@@ -23,8 +23,7 @@ export function renderTokens(css: string): string {
 /** Lockix light colour tokens, keyed by custom property name without the leading dashes. For code that cannot read CSS variables (badges, native window colours, pages without lumen.css). Speak Kit has no dark theme. */
 const light = ${JSON.stringify(light, null, 2)} as const;
 
-/** \`dark\` is a transitional alias of \`light\` so callers that still index by theme keep compiling; remove it with those callers. */
-export const tokens = { light, dark: light } as const;
+export const tokens = { light } as const;
 
 /** The few tokens native code (Electron window backgrounds, title bar overlay) needs. */
 const nativeLight = ${native(light)} as const;

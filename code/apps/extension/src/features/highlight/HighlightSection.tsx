@@ -5,10 +5,10 @@ import { tokens } from "@speakkit/ui/tokens";
 import { defaultSettings, type SectionProps, type Settings } from "../settings";
 import { contrast } from "../../shared/format";
 import { Card, PageHead, ToggleRow } from "../../shared/ui";
-import { SENTENCE_SWATCHES, WORD_SWATCHES, WORD_TEXT, paint, swatchIndex, type Swatch } from "./colors";
+import { DARK_PAGE_BG, DARK_PAGE_TEXT, SENTENCE_SWATCHES, WORD_SWATCHES, WORD_TEXT, paint, swatchIndex, type Swatch } from "./colors";
 
 /** The page the preview is drawn on, per theme. */
-const PAGE = { light: { bg: tokens.light["surface-editor"], text: tokens.light["text-on-highlight"] }, dark: { bg: tokens.dark["surface-card"], text: tokens.dark["text-primary"] } };
+const PAGE = { light: { bg: tokens.light["surface-editor"], text: tokens.light["text-on-highlight"] }, dark: { bg: DARK_PAGE_BG, text: DARK_PAGE_TEXT } };
 
 const HL_MODES: { id: Settings["highlight"]["mode"]; label: string }[] = [
   { id: "sentence+word", label: "Sentence + word" },

@@ -36,5 +36,8 @@ export function paint(list: Swatch[], hex: string, page: { dark: boolean; matchT
  */
 export const WORD_TEXT = "#1e1f20";
 export const DARK_PAGE_WORD = "#f2c04e";
+/** The preview of a dark host page in the settings (a page the user visits, not our UI). */
+export const DARK_PAGE_BG = "#1b1b1e";
+export const DARK_PAGE_TEXT = "#ececf0";
 /** Sentence highlight on a dark page when "Match page theme" is on. */
 export const DARK_PAGE_SENTENCE = "#78621F";

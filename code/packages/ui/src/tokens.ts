@@ -63,8 +63,7 @@ const light = {
   "lm-ink-md": "rgb(0 0 0 / 0.07)"
 } as const;
 
-/** `dark` is a transitional alias of `light` so callers that still index by theme keep compiling; remove it with those callers. */
-export const tokens = { light, dark: light } as const;
+export const tokens = { light } as const;
 
 /** The few tokens native code (Electron window backgrounds, title bar overlay) needs. */
 const nativeLight = { surfaceWindow: "#f0f0f0", surfaceCard: "#ffffff", textPrimary: "#1b2230" } as const;
