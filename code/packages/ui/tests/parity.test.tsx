@@ -18,7 +18,8 @@ const norm = (n: Node): string => {
     })
     .sort()
     .join(" ");
-  return `<${el.localName} ${attrs}>${[...el.childNodes].map(norm).join("")}</${el.localName}>`;
+  const tag = el.localName.toLowerCase(); // the HTML parser lowercases camelCase svg tags such as clipPath
+  return `<${tag} ${attrs}>${[...el.childNodes].map(norm).join("")}</${tag}>`;
 };
 
 let V: typeof import("../src/vanilla");

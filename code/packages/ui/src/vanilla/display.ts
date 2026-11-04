@@ -1,4 +1,4 @@
-import { LOGO_COLORS, logoVariant } from "../logo";
+import { LOGO_CLIP_ID, LOGO_COLORS, logoVariant } from "../logo";
 import type { IconName } from "../icons";
 import { cx, h, icon } from "./dom";
 
@@ -22,7 +22,12 @@ export function tooltip(target: HTMLElement, text: string, shortcut?: string): H
 /** SpeakKit brand mark (same markup as <Logo>). */
 export function logo(size = 24): HTMLSpanElement {
   const v = logoVariant(size);
-  const svg = h("svg", { viewBox: "0 0 512 512", focusable: "false" }, ...v.pieces.map((p, i) => h("path", { d: p, fill: LOGO_COLORS.pieces[i] })));
+  const svg = h(
+    "svg",
+    { viewBox: "0 0 512 512", focusable: "false" },
+    h("clipPath", { id: LOGO_CLIP_ID }, h("path", { d: v.clip })),
+    h("g", { "clip-path": `url(#${LOGO_CLIP_ID})` }, ...v.pieces.map((p, i) => h("path", { d: p, fill: LOGO_COLORS.pieces[i] }))),
+  );
   svg.append(
     h("path", { d: v.hub, fill: LOGO_COLORS.hub }),
     h("path", { d: v.wave, fill: "none", stroke: LOGO_COLORS.wave, "stroke-width": v.waveWidth, "stroke-linecap": "round", "stroke-linejoin": "round" }),

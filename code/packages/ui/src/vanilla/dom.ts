@@ -1,7 +1,7 @@
 import { ICON_DATA, iconAttrs, type IconName } from "../icons";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const SVG_TAGS = new Set(["svg", "path", "circle", "rect", "line", "polyline", "polygon", "g"]);
+const SVG_TAGS = new Set(["svg", "path", "circle", "rect", "line", "polyline", "polygon", "g", "clipPath"]);
 
 export type Child = Node | string | number | false | null | undefined;
 export type Props = Record<string, unknown> & {

@@ -1,7 +1,7 @@
 import { Tooltip as RTooltip } from "radix-ui";
 import { type CSSProperties, type HTMLAttributes, type ReactElement, type ReactNode } from "react";
 import type { IconName } from "../icons";
-import { LOGO_COLORS, logoVariant } from "../logo";
+import { LOGO_CLIP_ID, LOGO_COLORS, logoVariant } from "../logo";
 import { Button } from "./controls";
 import { cx, Icon, Spinner } from "./shared";
 
@@ -142,9 +142,14 @@ export function Logo({ size = 24, className }: { size?: number; className?: stri
   return (
     <span className={cx("lm-logo", className)} style={{ "--s": size } as CSSProperties} aria-hidden="true">
       <svg viewBox="0 0 512 512" focusable="false">
-        {v.pieces.map((p, i) => (
-          <path key={i} d={p} fill={LOGO_COLORS.pieces[i]} />
-        ))}
+        <clipPath id={LOGO_CLIP_ID}>
+          <path d={v.clip} />
+        </clipPath>
+        <g clipPath={`url(#${LOGO_CLIP_ID})`}>
+          {v.pieces.map((p, i) => (
+            <path key={i} d={p} fill={LOGO_COLORS.pieces[i]} />
+          ))}
+        </g>
         <path d={v.hub} fill={LOGO_COLORS.hub} />
         <path d={v.wave} fill="none" stroke={LOGO_COLORS.wave} strokeWidth={v.waveWidth} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
