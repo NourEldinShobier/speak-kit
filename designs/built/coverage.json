@@ -2,8 +2,8 @@
  "counts": {
   "shots": 118,
   "cards": 118,
-  "frames": 185,
-  "missing": 93
+  "frames": 184,
+  "missing": 92
  },
  "perGroup": [
   {
@@ -397,11 +397,6 @@
    "id": "I4",
    "title": "Global shortcut toast (Desktop app)",
    "reason": "Implemented (main/toasts.ts); the shortcut toast is an OS notification and cannot be screenshotted."
-  },
-  {
-   "id": "I5",
-   "title": "Clipboard prompt (Desktop app)",
-   "reason": "Implemented (main/system/clipboard-watch.ts); the prompt is an OS notification and cannot be screenshotted."
   },
   {
    "id": "J5",

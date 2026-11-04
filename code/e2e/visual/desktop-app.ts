@@ -149,7 +149,7 @@ export const appScenarios: Scenario[] = [
     await p.getByRole("button", { name: "Export audio" }).click();
     await p.getByRole("dialog", { name: "Export audio" }).waitFor();
   }),
-  windowShot("I3", "mini-player", "Mini player · reading the clipboard", "mini.html", "mini", async (app) => void (await hook(app, "readText", READ))),
+  windowShot("I3", "mini-player", "Mini player · reading", "mini.html", "mini", async (app) => void (await hook(app, "readText", READ))),
   windowShot("I10", "tray-panel", "Tray panel · now playing", "panel.html", "tray-panel", async (app) => {
     await hook(app, "readText", READ);
     await hook(app, "togglePanel");

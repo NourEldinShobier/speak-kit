@@ -134,7 +134,7 @@ const connection = (b: B, t: T, m: Ref, st: Conn, narrow = false) => {
   const bt = b.row(r, { gap: 8 });
   K.btn(b, t, bt, "Test connection", { v: bad ? "ghost" : "secondary", icon: "refresh" });
   if (st === "ok") K.btn(b, t, bt, "Re-pair", { icon: "link" });
-  else if (st === "token") { K.btn(b, t, bt, "Re-pair", { icon: "link" }); K.btn(b, t, bt, "Paste new token", { v: "primary", icon: "clipboard" }); }
+  else if (st === "token") { K.btn(b, t, bt, "Re-pair", { v: "primary", icon: "link" }); }
   else { K.btn(b, t, bt, "Download app", { icon: "download" }); K.btn(b, t, bt, "Open Speak Kit", { v: "primary", icon: "external" }); }
   if (bad) {
     hair(b, c);

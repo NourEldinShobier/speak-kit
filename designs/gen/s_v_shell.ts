@@ -273,7 +273,7 @@ const palette = (b: B, t: T, c: Ref, q: string, group: string, rows: Row[], h: n
   ["↑↓ move", "Enter run", "Esc close"].forEach((s) => tx(b, ft, s, { size: 11, c: t.text3, lh: 15 }));
   if (scroll) b.rect(p, { x: 631, y: 58, w: 4, h: 155, r: 2, fill: "#0000002E" });
 };
-const PAL_ROWS: Row[] = [["plus", "New reading"], ["pause", "Pause"], ["clipboard", "Read clipboard"], ["play", "Play or pause reading"], ["download", "Export audio…"], ["cpu", "Load the voice engine now"], ["bell", "Toggle Do not disturb"], ["refresh", "Check for updates"], ["chrome", "Install the extension"], ["copy", "Copy pairing token"], ["folder", "Open log folder"]].map(([ic, l], i) => ({ ic, l, sel: i === 0 }));
+const PAL_ROWS: Row[] = [["plus", "New reading"], ["pause", "Pause"], ["play", "Play or pause reading"], ["download", "Export audio…"], ["cpu", "Load the voice engine now"], ["bell", "Toggle Do not disturb"], ["refresh", "Check for updates"], ["chrome", "Install the extension"], ["copy", "Copy pairing token"], ["folder", "Open log folder"]].map(([ic, l], i) => ({ ic, l, sel: i === 0 }));
 
 // ---------------------------------------------------------------- frames
 const newReading = (b: B, t: T, c: Ref) => {

@@ -217,7 +217,7 @@ const browserSettings = (c0: Ref, b: B) => {
 };
 const SHORTCUTS: [string, string, string[]][] = [
   ["Read selection", "Reads the text selected in any app.", ["Ctrl", "Alt", "S"]], ["Play or pause", "Pauses and resumes the current reading.", ["Ctrl", "Alt", "Space"]],
-  ["Stop", "Stops the reading and closes the mini player.", ["Ctrl", "Alt", "X"]], ["Read clipboard", "Reads whatever text you copied last.", ["Ctrl", "Alt", "C"]],
+  ["Stop", "Stops the reading and closes the mini player.", ["Ctrl", "Alt", "X"]]
 ];
 const shortcuts = (b: B, mode: "idle" | "record" | "conflict") => (c0: Ref) => {
   section(b, c0, "Global", undefined, (c) => {
@@ -234,7 +234,7 @@ const shortcuts = (b: B, mode: "idle" | "record" | "conflict") => (c0: Ref) => {
         banner(b, p, { tone: "warning", title: "Another app is using Ctrl+Alt+S.", text: "Speak Kit never takes a shortcut another app owns. Pick another combination or\nuse the suggestion.", action: (a) => btn(b, a, "Use Ctrl+Alt+Shift+S", { sz: "sm" }) });
       }
     });
-    row(b, c, "Reset all", "Back to Ctrl+Alt+S, Space, X and C.", (f) => btn(b, f, "Reset", { sz: "sm" }));
+    row(b, c, "Reset all", "Back to Ctrl+Alt+S, Space and X.", (f) => btn(b, f, "Reset", { sz: "sm" }));
   });
   section(b, c0, "In this app", undefined, (c) => {
     row(b, c, "Search and commands", undefined, (f) => keys(b, f, ["Ctrl", "K"]));
@@ -264,7 +264,7 @@ const memory = (unloaded: boolean) => (c0: Ref, b: B) => {
     row(b, c, "Battery saver", "On battery, the model unloads sooner.", (f) => toggle(b, f, true), { sep: true });
   });
 };
-const EVENTS: [string, boolean[]][] = [["Export finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]], ["Copied text: read it?", [true, false, false]]];
+const EVENTS: [string, boolean[]][] = [["Export finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]]];
 const notifications = (c0: Ref, b: B) => {
   section(b, c0, "Do not disturb", undefined, (c) => row(b, c, "Do not disturb", "No toasts or sounds from Speak Kit. The bell still keeps a line for each event.", (f) => toggle(b, f, false)));
   section(b, c0, "Events", "At most one toast per task every 10 minutes.", (c) => {

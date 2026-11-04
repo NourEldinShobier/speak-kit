@@ -28,7 +28,6 @@
     "I9": "The mini player states other than reading are not captured; the sleep-timer overflow menu is not built.",
     "I13": "Out of scope: the mini player closes itself 6 s after finishing, it does not shrink to a dot.",
     "I4": "Implemented (main/toasts.ts); the shortcut toast is an OS notification and cannot be screenshotted.",
-    "I5": "Implemented (main/system/clipboard-watch.ts); the prompt is an OS notification and cannot be screenshotted.",
     "K3": "Low disk space check is not built.",
     "K4": "Model checksum failure screen is not built (download errors show the Retry banner, captured as W3b).",
     "K5": "Extension out-of-date notice is not built.",

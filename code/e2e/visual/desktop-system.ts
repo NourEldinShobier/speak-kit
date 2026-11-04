@@ -8,7 +8,7 @@ import { READ, hook, libraryWith, windowShot } from "./desktop-app";
 import { sleep } from "./support";
 
 // Screens of the Lockix pass that need their own states: update pill and card, mini player and tray panel states, collapsed sidebar, in-app toast.
-// Native OS toasts (I4, I5, I12, J7) are drawn by the system and cannot be captured here.
+// Native OS toasts (I4, I12, J7) are drawn by the system and cannot be captured here.
 
 const SY = GROUPS.system;
 const UPD = { SPEAKKIT_FAKE_UPDATE: "0.2.0" };

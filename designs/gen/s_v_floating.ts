@@ -56,7 +56,6 @@ export const panelCard = (b: B, t: T, parent: Ref, x: number, y: number, eng: En
   if (now?.next) { const s2 = b.col(c, { w: "fill", gap: 6 }); caps(b, t, s2, "Next in queue"); b.text(s2, now.next, { size: 13, c: t.text, w: "fill", maxLines: 1, lh: 18 }); }
   b.frame(c, { w: 1, h: "fill" });
   const ft = b.row(c, { w: "fill", gap: 8 });
-  K.btn(b, t, ft, "Read clipboard", { v: "secondary", icon: "clipboard", w: "fill" });
   K.btn(b, t, ft, "Open Speak Kit", { v: "primary", w: "fill" });
   return c;
 };
@@ -102,16 +101,15 @@ const MT = "One short sentence here. A second sentence follows it. A third";
 // ------------------------------------------------------------------ native tray menu (tray.ts menuTemplate + shared/tray.ts trayMenuModel)
 const trayMenu = (b: B, t: T, root: Ref) => {
   const d = desk(b, root);
-  const items: K3.MenuItem[] = [{ l: "Read clipboard", k: "Ctrl+Alt+C" }, "-", { l: "Open Speak Kit" }, { l: "Pause", k: "Ctrl+Alt+Space" }, { l: "Stop", k: "Ctrl+Alt+X" }, "-", { l: "Do not disturb" }, { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit Speak Kit" }];
+  const items: K3.MenuItem[] = [{ l: "Open Speak Kit" }, { l: "Pause", k: "Ctrl+Alt+Space" }, { l: "Stop", k: "Ctrl+Alt+X" }, "-", { l: "Do not disturb" }, { l: "Settings" }, { l: "Check for updates" }, "-", { l: "Quit Speak Kit" }];
   const w = 248, h = 8 + items.reduce((a, i) => a + (i === "-" ? 9 : 32), 0);
   K3.nativeMenu(b, d.ref, { x: Math.min(d.trayIcon.x + d.trayIcon.w / 2 - w + 24, d.w - w - 8), y: d.taskbar.y - 4 - h, items, w, style: "win" });
 };
 
-// ------------------------------------------------------------------ toasts (main/notify-rules.ts, updates-service.ts, export/service.ts, desktop-clipboard.ts, reader/service.ts)
+// ------------------------------------------------------------------ toasts (main/notify-rules.ts, updates-service.ts, export/service.ts, reader/service.ts)
 const TOASTS = {
   ...K3.TOAST,
   exportDone: { title: "Export finished", body: "My note.wav is saved. Click to show it in its folder." },
-  clipboard: { title: "Copied text: read it?", body: "Click to read it out loud. Turn this off in Settings." },
   finished: { title: "Finished reading", body: "The quiet return of local-first software" },
 };
 const toastStack = (list: { title: string; body: string }[]) => (b: B, t: T, root: Ref) => {
@@ -219,14 +217,14 @@ const bellPop = (entries: [string, string][]) => (b: B, t: T, c: Ref) => {
 const RS: [string, string][] = [["Local server on 127.0.0.1:48158 stops", "The browser extension cannot read until Speak Kit starts again."], ["The voice model leaves memory", "It loads again on the next play."]];
 
 export const FLOATING: S[] = [
-  scr("I10", "I", "Tray panel · reading", "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Read clipboard, Open Speak Kit.", trayScene(READY, NOW_PLAYING)),
+  scr("I10", "I", "Tray panel · reading", "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Open Speak Kit.", trayScene(READY, NOW_PLAYING)),
   scr("I14", "I", "Tray panel · idle", "Nothing is playing: the hint names the global shortcut. Both footer actions stay.", trayScene(READY, null)),
   scr("I15", "I", "Tray panel · paused", "Paused keeps the title and shows play instead of pause.", trayScene(READY, NOW_PAUSED)),
   scr("I16", "I", "Tray panel · engine unloaded", "The engine is asleep and reads Ready: it wakes by itself when the panel opens.", trayScene(READY, null, 320)),
   scr("I17", "I", "Tray panel · engine loading", "A blue Loading pill with a spinner.", trayScene({ pill: "Loading", tone: "info", icon: "loader" }, null, 320)),
   scr("I18", "I", "Tray panel · model downloading", "Download progress sits in the pill.", trayScene({ pill: "Download 62%", tone: "info", icon: "loader" }, null, 320)),
   scr("I19", "I", "Tray panel · engine error", "A red Error pill; the panel does not explain, Open Speak Kit does.", trayScene({ pill: "Error", tone: "err" }, null, 320)),
-  scr("I11", "I", "Tray right-click menu", "Short native menu: read clipboard, open, pause and stop while reading, Do not disturb, Settings, updates, Quit." + DESIGN_ONLY, trayMenu),
+  scr("I11", "I", "Tray right-click menu", "Short native menu: open, pause and stop while reading, Do not disturb, Settings, updates, Quit." + DESIGN_ONLY, trayMenu),
   scr("I3", "I", "Mini player · playing", "Always-on-top card in the bottom-right corner, 16 px from the work area: title, sentence count, time left, keep-on-top, close, transport.", miniScene({ title: MT, status: "Sentence 1 of 3", left: "0:06 left", play: "pause", pct: 0 })),
   scr("I9", "I", "Mini player · paused", "Paused: the status line keeps the sentence number; play replaces pause.", miniScene({ title: MT, status: "Paused · sentence 1 of 3", left: "0:06 left", play: "play", pct: 0 })),
   scr("I20", "I", "Mini player · preparing", "Preparing the voice: indeterminate bar.", miniScene({ title: MT, status: "Preparing the voice...", left: "0:06 left", play: "pause", pct: undefined })),
@@ -234,7 +232,6 @@ export const FLOATING: S[] = [
   scr("I13", "I", "Mini player · finished", "Finished: the time left is gone; the card closes itself 6 s later.", miniScene({ title: MT, status: "Finished", left: "", play: "refresh", pct: 1 })),
   scr("I12", "I", "Windows toasts · system", "Voice engine problem and Update ready: no buttons, a click opens the exact place. The engine or model becoming ready never shows a toast." + DESIGN_ONLY, toastStack([TOASTS.updateReady, TOASTS.engineError])),
   scr("I22", "I", "Windows toast · export", "Export finished: the body names the file." + DESIGN_ONLY, toastStack([TOASTS.exportDone])),
-  scr("I5", "I", "Clipboard prompt", "Copying long text offers to read it; skips password-manager copies; Settings turns it off." + DESIGN_ONLY, toastStack([TOASTS.clipboard])),
   scr("K11", "K", "Quit confirmation", "Quitting says what stops and how to resume it; Keep running in tray is the safe choice.", homeScene({}, quitDialog(RS, "Closing the window keeps Speak Kit in the tray. Quitting stops:")), 1440, 900),
   scr("K13", "K", "Quit confirmation · reading and export running", "With work running the lead names it, and the list adds what is cancelled.", homeScene({ port: 48130, exp: true, footer: ["Kokoro ready", "Voice: Heart", "Reading: One short sentence here. A second sentence follows it. And..."] }, quitDialog([["Local server on 127.0.0.1:48130 stops", "The browser extension cannot read until Speak Kit starts again."], ["The reading in progress stops", "Start it again from the app, the tray or a shortcut."], ["The export is cancelled", "Nothing half-written is kept. Export again when Speak Kit is open."], RS[1]], "1 reading is playing and 1 export is rendering. Quitting stops:"))),
   scr("K1", "K", "Error · engine could not load", "The engine card says what failed and offers Retry; the title-bar pill, sidebar card and footer say Error.", homeScene({ status: "err", port: 48130, token: "46a8", engine: { label: "Error", detail: "huggingface.co, connection reset (ECONNRESET)", err: true, retry: true }, footer: ["Voice engine error", "Voice: Heart", "0 readings"] })),
