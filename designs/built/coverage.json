@@ -1,35 +1,35 @@
 {
  "counts": {
-  "shots": 118,
-  "cards": 118,
-  "frames": 184,
-  "missing": 92
+  "shots": 175,
+  "cards": 175,
+  "frames": 236,
+  "missing": 119
  },
  "perGroup": [
   {
    "group": "Extension popup",
-   "screens": 18,
-   "images": 18
+   "screens": 23,
+   "images": 23
   },
   {
    "group": "On-page reading",
-   "screens": 19,
-   "images": 19
+   "screens": 32,
+   "images": 32
   },
   {
    "group": "Reader view",
-   "screens": 3,
-   "images": 3
+   "screens": 4,
+   "images": 4
   },
   {
    "group": "Options",
-   "screens": 14,
-   "images": 14
+   "screens": 17,
+   "images": 17
   },
   {
    "group": "Side panel (queue)",
-   "screens": 3,
-   "images": 3
+   "screens": 5,
+   "images": 5
   },
   {
    "group": "Desktop setup",
@@ -43,13 +43,13 @@
   },
   {
    "group": "Desktop library",
-   "screens": 6,
-   "images": 6
+   "screens": 15,
+   "images": 15
   },
   {
    "group": "Desktop reader and export",
-   "screens": 6,
-   "images": 6
+   "screens": 19,
+   "images": 19
   },
   {
    "group": "Voices and engines",
@@ -58,13 +58,13 @@
   },
   {
    "group": "Desktop settings",
-   "screens": 9,
-   "images": 9
+   "screens": 12,
+   "images": 12
   },
   {
    "group": "Tray, notifications and system states",
-   "screens": 16,
-   "images": 16
+   "screens": 24,
+   "images": 24
   },
   {
    "group": "Errors and edge states",
@@ -95,7 +95,7 @@
   },
   {
    "id": "R5",
-   "title": "Lumen patterns adopted (Research & feature map)",
+   "title": "Lockix patterns adopted (Research & feature map)",
    "reason": "Research board: documentation of the feature map, flows and Lumen patterns, not a product screen."
   },
   {
@@ -104,8 +104,58 @@
    "reason": "Research board: documentation of the feature map, flows and Lumen patterns, not a product screen."
   },
   {
-   "id": "B11",
-   "title": "Page · reading on a dark site (Chrome extension)",
+   "id": "A23",
+   "title": "Popup · playing with a selection on the page (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "A21",
+   "title": "Popup · downloading the voice model (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "A20",
+   "title": "Popup · no voice engine installed (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "A22",
+   "title": "Popup · voice engine error (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "A18",
+   "title": "Popup · app and extension versions differ (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "A19",
+   "title": "Popup · Chrome's PDF viewer (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B25",
+   "title": "Page · pill, token rejected (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B26",
+   "title": "Page · pill, engine not ready (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B27",
+   "title": "Page · pill, synthesis failed (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B28",
+   "title": "Page · pill, page not readable (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B35",
+   "title": "Page · pill idle on a dark site (Chrome extension)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
@@ -114,14 +164,79 @@
    "reason": "Native Chrome context menu: headless Chromium does not render it and Playwright cannot screenshot it. The entries the background worker registers are Speak Kit > Read selection, Read from here, Add to queue (asserted in the e2e suite)."
   },
   {
+   "id": "B29",
+   "title": "Page · paragraph gutter while reading (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B30",
+   "title": "Page · error toast (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B31",
+   "title": "Page · info toast (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B33",
+   "title": "Page · pill more menu (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B34",
+   "title": "Page · reader view, light (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "B32",
+   "title": "Page · reader view, theme dark requested (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "B21",
-   "title": "Page · edge launcher on a dark site (Chrome extension)",
+   "title": "Page · edge launcher reading on a dark site (Chrome extension)",
    "reason": "Superseded by B4; the pill replaced the edge launcher expanded state. Dark launcher is covered by B17-B20."
+  },
+  {
+   "id": "B36",
+   "title": "Page · edge launcher tab on a dark site (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "C21",
+   "title": "Options · Voice and speed (app not running) (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "C22",
+   "title": "Options · Highlighting (dark page preview) (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "C19",
+   "title": "Options · Reader view (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "C20",
+   "title": "Options · Sites and filters (no rules yet) (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "C23",
+   "title": "Options · Edge launcher (turned off) (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "C14",
    "title": "Open Speak Kit link flow (Chrome extension)",
    "reason": "The Open Speak Kit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it."
+  },
+  {
+   "id": "C24",
+   "title": "Side panel · outline without a queue (Chrome extension)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "C17",
@@ -135,47 +250,32 @@
   },
   {
    "id": "W2b",
-   "title": "Setup 2 · Voice engine (no GPU) (Desktop app)",
+   "title": "Setup 2 · Voice engine (GPU found) (Desktop app)",
    "reason": "Implemented: the wizard shows the detected GPU or says none was found. The harness machine has a GPU, so the no-GPU state is not reachable without hardware detection being faked."
   },
   {
-   "id": "E3",
-   "title": "Add · paste text (Desktop app)",
+   "id": "W4b",
+   "title": "Setup 4 · Token revealed and copied (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "E4",
-   "title": "Add · web address fetching (Desktop app)",
+   "id": "W5b",
+   "title": "Setup 5 · Done (browser skipped) (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "E5",
-   "title": "Add · web address failed (Desktop app)",
+   "id": "L5",
+   "title": "Sidebar hidden (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "E6",
-   "title": "Library · dragging a file (Desktop app)",
+   "id": "L6",
+   "title": "New reading (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "E14",
-   "title": "Library · dragging several files (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "E15",
-   "title": "Library · unsupported file (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "E9",
-   "title": "Library · row menu (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "E16",
-   "title": "Library · delete pasted text (Desktop app)",
+   "id": "L7",
+   "title": "Notifications (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
@@ -184,58 +284,13 @@
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "E13",
-   "title": "Library · added toast (Desktop app)",
+   "id": "F12",
+   "title": "PDF reader · recognize text consent (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "F3",
-   "title": "Reader · preparing next paragraph (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F4",
-   "title": "Reader · finished (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F5",
-   "title": "Reader · read from here (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F7",
-   "title": "Reader · display settings (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F8",
-   "title": "Reader · sleep timer (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F15",
-   "title": "Reader · back to current (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F16",
-   "title": "Reader · search in text (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F10",
-   "title": "PDF reader · playing (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F11",
-   "title": "PDF reader · scanned page (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "F13",
-   "title": "PDF reader · recognizing text (Desktop app)",
+   "id": "F17",
+   "title": "PDF reader · recognition failed (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
@@ -249,13 +304,18 @@
    "reason": "List/grid view toggle for voices is not built (one list layout)."
   },
   {
+   "id": "G17",
+   "title": "Engines · Chatterbox not installed (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "G9",
-   "title": "Engines · Chatterbox warming up (Desktop app)",
+   "title": "Engines · Chatterbox installing (Desktop app)",
    "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
   },
   {
    "id": "G10",
-   "title": "Engines · out of GPU memory (Desktop app)",
+   "title": "Engines · error (Desktop app)",
    "reason": "Needs an installed Chatterbox engine; the product's engine error page is captured as G10 / engines-error without a diff."
   },
   {
@@ -264,44 +324,49 @@
    "reason": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md)."
   },
   {
+   "id": "G18",
+   "title": "Engines · remove confirmation (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "G3",
    "title": "Clone · choose reference (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G4",
    "title": "Clone · recording (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G5",
    "title": "Clone · analyzing (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G6",
    "title": "Clone · name and test (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G7",
    "title": "Clone · bad reference (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G15",
    "title": "Clone · review take (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G11",
    "title": "Chatterbox · voice style (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "G14",
    "title": "Voices · cloning unavailable (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+   "reason": "Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release)."
   },
   {
    "id": "H3",
@@ -310,62 +375,107 @@
   },
   {
    "id": "H17",
-   "title": "Settings · Search settings (Desktop app)",
+   "title": "Command palette (filtered) (Desktop app)",
    "reason": "Settings search is not built; the title bar search opens the command palette (L2, L3)."
   },
   {
-   "id": "H11",
-   "title": "Settings · Shortcuts (recording a key) (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. The recording state needs a key press driven inside the app window."
+   "id": "H21",
+   "title": "Browser · pair your browser (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
-   "id": "H16",
-   "title": "Settings · Shortcuts (conflict) (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. The conflict state needs a rejected key combination driven inside the app window."
+   "id": "H20",
+   "title": "Home · engine unloaded (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "H15",
-   "title": "Settings · Startup and tray (Desktop app)",
+   "title": "Settings · General (Desktop app)",
    "reason": "Launch at login and start minimized are rows inside Settings > General in the product (H1)."
   },
   {
    "id": "H7",
-   "title": "Settings · Appearance (Desktop app)",
+   "title": "Settings · General (Desktop app)",
    "reason": "Appearance (theme, language) is part of Settings > General in the product (H1)."
   },
   {
-   "id": "H9",
-   "title": "Settings · Update available (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE)."
+   "id": "H23",
+   "title": "Settings · Update ready (pill) (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "H22",
+   "title": "Update ready · restart confirm (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "O1",
-   "title": "Engine states board (Desktop app)",
+   "title": "Engine states · board (Desktop app)",
    "reason": "Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13."
   },
   {
    "id": "I10",
-   "title": "Tray menu and left-click panel (Desktop app)",
+   "title": "Tray panel · reading (Desktop app)",
    "reason": "The left-click panel is captured as I10 / tray-panel in the app (no diff). The native tray menu is an Electron menu and cannot be screenshotted."
   },
   {
+   "id": "I14",
+   "title": "Tray panel · idle (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I15",
+   "title": "Tray panel · paused (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I16",
+   "title": "Tray panel · engine unloaded (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I17",
+   "title": "Tray panel · engine loading (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I18",
+   "title": "Tray panel · model downloading (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I19",
+   "title": "Tray panel · engine error (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "I11",
-   "title": "Tray icon states (Desktop app)",
+   "title": "Tray right-click menu (Desktop app)",
    "reason": "Tray icon states are drawn into the operating system tray and are not part of any window."
   },
   {
    "id": "I3",
-   "title": "Mini player · always on top (Desktop app)",
+   "title": "Mini player · playing (Desktop app)",
    "reason": "Captured as I3 / mini-player in the app (the mini window), compared by eye: it is a small always-on-top window, not a design-sized frame."
   },
   {
    "id": "I9",
-   "title": "Mini player · states (Desktop app)",
+   "title": "Mini player · paused (Desktop app)",
    "reason": "The mini player states other than reading are not captured; the sleep-timer overflow menu is not built."
   },
   {
+   "id": "I20",
+   "title": "Mini player · preparing (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I21",
+   "title": "Mini player · error (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
    "id": "I13",
-   "title": "Mini player storyboard (Desktop app)",
+   "title": "Mini player · finished (Desktop app)",
    "reason": "Out of scope: the mini player closes itself 6 s after finishing, it does not shrink to a dot."
   },
   {
@@ -390,8 +500,28 @@
   },
   {
    "id": "I12",
-   "title": "Windows toasts (Desktop app)",
+   "title": "Windows toasts · system (Desktop app)",
    "reason": "Windows toasts are shown by the operating system; Playwright cannot capture them (notification content is unit-tested in notify-rules.test.ts)."
+  },
+  {
+   "id": "I22",
+   "title": "Windows toasts · reading and export (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I5",
+   "title": "Clipboard prompt (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I23",
+   "title": "Notifications bell · empty (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "I24",
+   "title": "Notifications bell · entries (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
    "id": "I4",
@@ -399,13 +529,8 @@
    "reason": "Implemented (main/toasts.ts); the shortcut toast is an OS notification and cannot be screenshotted."
   },
   {
-   "id": "J5",
-   "title": "Export · file exists (Desktop app)",
-   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
-  },
-  {
-   "id": "J7",
-   "title": "Export · complete toast (Desktop app)",
+   "id": "K13",
+   "title": "Quit confirmation · reading and export running (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
@@ -516,6 +641,16 @@
   {
    "id": "Q5",
    "title": "Extension components (Foundations & components)",
+   "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
+  },
+  {
+   "id": "Q6",
+   "title": "Elevation (Foundations & components)",
+   "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
+  },
+  {
+   "id": "Q7",
+   "title": "Platform radii (Foundations & components)",
    "reason": "Foundations board: tokens, icons and component sheets, not a product screen (tokens and components are verified through the kit gallery in packages/ui)."
   },
   {
