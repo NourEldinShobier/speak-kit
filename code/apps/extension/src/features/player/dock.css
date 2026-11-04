@@ -39,6 +39,7 @@
     "Inter Variable",
     system-ui,
     sans-serif;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
 }
 .sk-seek {

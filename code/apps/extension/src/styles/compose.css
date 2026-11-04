@@ -17,6 +17,7 @@ body {
     "Segoe UI",
     sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 .sk-sr {
   position: absolute;
@@ -59,8 +60,10 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
-.sk-link:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .sk-link:hover {
+    text-decoration: underline;
+  }
 }
 .sk-primary-round {
   width: 40px;
@@ -376,9 +379,13 @@ body {
   border-radius: var(--radius-control);
   cursor: pointer;
 }
-.sk-voice:hover,
 .sk-voice:has(.sk-voice__opt:focus-visible) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-voice:hover {
+    background: var(--fill-hover);
+  }
 }
 /* the option and the preview button are siblings: an option must not contain another control */
 .sk-voice__opt {
@@ -887,12 +894,10 @@ body {
   margin: 4px 0 0;
   color: var(--text-tertiary);
   font:
-    600 12px/15px Inter,
+    500 12px/16px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 .sp-lblrow {
   display: flex;
@@ -956,8 +961,10 @@ body {
   text-align: left;
   cursor: pointer;
 }
-.sp-outline button:hover {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .sp-outline button:hover {
+    background: var(--fill-hover);
+  }
 }
 .sp-outline li.cur button {
   background: var(--fill-selected);
@@ -996,7 +1003,8 @@ body {
 .sp-queue li > .lm-btn:first-child {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-control);
+  /* nested radius: card radius minus its 1px border and 8px padding */
+  border-radius: max(var(--radius-xs), calc(var(--radius-card) - 9px));
   background: var(--fill-hover);
 }
 .sp-queue .tx {
@@ -1054,6 +1062,25 @@ body {
 .sp-empty .lm-empty {
   border: 0;
   background: transparent;
+}
+
+/* Readouts with a font shorthand reset the numeric variant: set it after the shorthand. */
+.pp-slider output,
+.op-slider output {
+  font-variant-numeric: tabular-nums;
+}
+/* Touch: small icon buttons get an invisible 44 px hit area. */
+@media (pointer: coarse) {
+  .sp-head .lm-btn,
+  .sp-queue li > .lm-btn:last-child {
+    position: relative;
+  }
+  .sp-head .lm-btn::after,
+  .sp-queue li > .lm-btn:last-child::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
 }
 
 /* Below 1025 px the options nav collapses to a select at the top and rows stack in one column (design C17, C18). */

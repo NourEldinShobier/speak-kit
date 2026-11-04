@@ -106,8 +106,10 @@
   cursor: pointer;
   transition: background-color var(--dur-fade-in, 167ms) ease-out;
 }
-.sk-reader-block:hover {
-  background: color-mix(in srgb, var(--rd-block) 45%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .sk-reader-block:hover {
+    background: color-mix(in srgb, var(--rd-block) 45%, transparent);
+  }
 }
 .sk-reader blockquote.sk-reader-block {
   border-inline-start: 3px solid var(--rd-line);

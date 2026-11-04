@@ -65,8 +65,10 @@
 .sk-tab.is-ghost {
   opacity: 0;
 }
-.sk-tab.is-ghost:hover {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .sk-tab.is-ghost:hover {
+    opacity: 1;
+  }
 }
 .sk-rail {
   position: absolute;
@@ -154,9 +156,11 @@
 .sk-time {
   color: var(--text-secondary);
   font:
-    500 12px/15px ui-monospace,
-    Consolas,
-    monospace;
+    500 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 .sk-ltip {
   position: absolute;
@@ -195,4 +199,19 @@
 }
 .sk-back.is-down .lm-icon {
   transform: rotate(180deg);
+}
+
+/* Touch: small icon buttons get an invisible 44 px hit area. */
+@media (pointer: coarse) {
+  .sk .sk-tpb,
+  .sk-pill .sk-vc {
+    position: relative;
+  }
+  .sk .sk-gbtn::after,
+  .sk .sk-tpb::after,
+  .sk-pill .sk-vc::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
 }

@@ -10,6 +10,7 @@
   inset: 0;
   pointer-events: none;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 .sk > * {
   pointer-events: auto;
@@ -71,6 +72,7 @@
     "Inter Variable",
     system-ui,
     sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 .sk-pop-scale {
   display: flex;
@@ -120,9 +122,13 @@
   cursor: pointer;
   flex: none;
 }
-.sk-vrow:hover,
 .sk-vrow:has(.sk-vopt:focus-visible) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-vrow:hover {
+    background: var(--fill-hover);
+  }
 }
 .sk-vopt {
   padding: 0;
