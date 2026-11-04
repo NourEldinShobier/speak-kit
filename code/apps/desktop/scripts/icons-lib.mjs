@@ -33,7 +33,8 @@ export const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
 
 /** The logo svg placed inside a 1024 px canvas at `frac` of its width (centred), under optional extra markup. */
 const inset = (svg, frac, under = "") => {
-  const side = 1024 * frac, off = (1024 - side) / 2;
+  const side = 1024 * frac,
+    off = (1024 - side) / 2;
   const inner = svg.replace('width="1024" height="1024"', `x="${off}" y="${off}" width="${side}" height="${side}"`);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${under}${inner}</svg>`;
 };
@@ -41,7 +42,8 @@ const png = (svg, size) => new Resvg(svg, { fitTo: { mode: "width", value: size 
 
 /** macOS app icon: the Big Sur grid. The squircle body is 824 px on a 1024 canvas (100 px transparent margin), with Apple's soft shadow (10 px down, blur 20, 30 % black) baked in because macOS does not mask or shadow icons. */
 export function macIconSvg() {
-  const full = svgOf("logo", true), clip = full.match(/<clipPath id="sq"><path d="([^"]+)"/)[1];
+  const full = svgOf("logo", true),
+    clip = full.match(/<clipPath id="sq"><path d="([^"]+)"/)[1];
   const shadow = `<defs><filter id="mac-sh" x="-20%" y="-20%" width="140%" height="150%"><feGaussianBlur in="SourceAlpha" stdDeviation="10"/><feOffset dy="10"/><feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer></filter></defs><g filter="url(#mac-sh)"><path transform="translate(100 100) scale(0.8047)" d="${clip}" fill="#000"/></g>`;
   return inset(full, 824 / 1024, shadow);
 }
