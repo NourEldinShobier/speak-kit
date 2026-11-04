@@ -23,8 +23,9 @@ Hub `#2F6BFF` · sky `#2EC5FF` · read-word yellow `#FFC23D` · violet `#7B61FF`
 - One line weight: the seams and the ring round the hub are exactly as thick as the wave.
 - Small version at 48 px and below, full version above.
 - Clear space: a quarter of the mark's width on every side.
+- The container is a continuous-corner squircle (radius 22.4 %); the pieces are clipped to it. App icons put a white squircle under the pieces so the seams are white.
 - Don't recolour, rotate or rearrange the pieces; the only effect is the hub shadow.
 - One colour: ink on light, white on dark.
 
 ## Regenerate
-`node logo.mjs` (marks) then `node lockups.mjs [Inter-Variable.ttf]` (lockups; needs `npm i` in `../v2` for fontkit). Explorations: `puzzle.mjs` (Puzzle kit palettes), `wave-variants.mjs` (round 4).
+`node logo.mjs` (marks) then `node lockups.mjs [Inter-Variable.ttf]` (lockups; needs `npm i` in `../v2` for fontkit and figma-squircle). Explorations: `puzzle.mjs` (Puzzle kit palettes), `wave-variants.mjs` (round 4).

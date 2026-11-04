@@ -10,6 +10,7 @@
   "type": "commonjs",
   "dependencies": {
     "d3-contour": "^4.0.2",
+    "figma-squircle": "1.1.0",
     "fit-curve": "^0.2.0",
     "fontkit": "^2.0.4"
   }

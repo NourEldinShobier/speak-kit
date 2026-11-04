@@ -37,3 +37,18 @@ Reading highlight (our own, `hlSent` #FFF1C2, `hlWord` #FFD24D), `tag-purple` an
 - Transport glyphs (play, pause, stop) are solid: fill and stroke are the current colour, round joins, stroke 2.25 px (play, stop) and 2.75 px (pause) on screen. Pause is two thin rounded bars (lines x 8.5 and 15.5, y 5.5 to 18.5 in a 24 box), not Tabler's rectangles. Skip, back and forward stay outline. Play and pause on primary (blue) buttons are white.
 - A key chip (Kbd, for example `Ctrl N`) inside a primary (cta) button uses the cta text colour and a 45% white border instead of text-tertiary and stroke-control.
 - The paragraph play button (gutter) is not shown on a fresh page. It appears only after reading has started on that page load. The edge launcher tab at the right edge is always shown.
+
+## App icon
+The Voice hub puzzle sits in one container: a continuous-corner squircle (Apple style smoothing 0.6, corner radius 22.4 % of the body, path from `figma-squircle` in `designs/logo/v2/squircle.mjs`). The four pieces are cut larger than the squircle and clipped to it (`<clipPath id="sq">`, also in `logo-data.ts` as `clip`), so the seams run cleanly to the edge and all four corners are identical. Before 2026-11-04 the pieces formed their own outline (a superellipse with uneven seam corners), which read as an irregular shape.
+
+Reference notes (text only, no third-party images kept):
+- macOS Big Sur and later: 1024 canvas, 824 x 824 rounded body (100 px transparent margin), corner radius about 185 px (22.4 %), continuous curve, soft shadow 10 px down, blur 20, 30 % black. macOS does not mask or shadow icons, so both are baked into `icon.png` (`macIconPng` in `apps/desktop/scripts/icons-lib.mjs`).
+- Windows 11: ICO frames 16, 24, 32, 48, 256 at least (we ship 16 to 256); full-colour squircle, no extra plate. We fill 94 % of the frame from 48 px up and the whole frame at 16, 24 and 32 px.
+- Claude Code / Claude desktop: one flat mark inside a rounded-square tile. Our container follows the same idea: one silhouette, mark inside it.
+- Seams are white in app, tray and installer icons (a white squircle sits under the pieces) so the icon has no holes on dark docks and taskbars; the in-app `Logo` and the menu-bar template keep transparent seams.
+
+Corner radius compared at 256 px and 32 px: 20 %, 22.4 % and 26 %. 22.4 % chosen (Apple's value; 20 % looks boxier next to system icons, 26 % starts to eat the outer pieces at 32 px).
+
+Alternatives rendered for review only, not in code: B the puzzle at 72 % on a white squircle tile, C the puzzle at 72 % on a deep-blue (#14226B) tile with white seams. A (full-bleed) is the default.
+
+Sizes: macOS 1024 (body 824); Windows ICO 16, 24, 32, 48, 64, 128, 256; extension toolbar 16, 32, 48 (edge to edge) and 128 (94 %); tray 32 px (36 px at 2x on macOS, template cut-out for the plain states).
