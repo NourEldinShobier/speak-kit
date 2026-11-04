@@ -83,6 +83,8 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     target: "chrome116",
+    // Every Chrome the extension supports (116+) has modulepreload; the polyfill would be dead bytes on every page.
+    modulePreload: { polyfill: false },
     minify: !test,
     sourcemap: test,
     rollupOptions: {
