@@ -1150,7 +1150,10 @@ body {
   .op-prev-h {
     flex-wrap: wrap;
   }
+  /* narrow: options that do not fit on one line wrap onto a second one instead of overflowing their buttons */
   .op .lm-seg {
+    flex-wrap: wrap;
+    height: auto;
     max-width: 100%;
   }
   .op .lm-seg__opt {
