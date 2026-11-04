@@ -91,8 +91,13 @@
   background: transparent;
   border: 0;
 }
+/* unavailable: the row stays readable; only the tile (the control) turns to opaque greys */
 .sk-radio:disabled {
-  opacity: 0.55;
+  cursor: default;
+}
+.sk-radio:disabled .sk-tile {
+  background: var(--disabled-track);
+  color: var(--disabled-seg);
 }
 .sk-radio.is-sel {
   background: var(--fill-selected);

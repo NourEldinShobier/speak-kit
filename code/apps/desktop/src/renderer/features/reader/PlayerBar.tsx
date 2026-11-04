@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Icon, IconButton, Popover, Slider, Spinner } from "@speakkit/ui";
+import { Icon, IconButton, Popover, Slider } from "@speakkit/ui";
 import type { PlayerState, Voice } from "@speakkit/protocol";
 import { clock } from "../library";
 import { SpeedControls, VoiceList } from "./Controls";
@@ -99,9 +99,17 @@ export function PlayerBar(p: BarProps) {
         <div className="rd-bar__buttons">
           <IconButton name="player-skip-back" label="Previous paragraph" disabled={p.disabled} onClick={() => p.onBlock(-1)} />
           <IconButton name="rewind-backward-10" label="Back 10 seconds" disabled={p.disabled} onClick={() => p.onSkip(-10_000)} />
-          <button type="button" className="rd-play" aria-label={playing ? "Pause" : "Play"} disabled={p.disabled} onClick={p.onToggle}>
-            {busy && s.elapsedMs === 0 ? <Spinner size={20} /> : <Icon name={playing ? "player-pause" : "player-play"} size={22} />}
-          </button>
+          <IconButton
+            variant="primary"
+            round
+            size={40}
+            glyph={22}
+            name={playing ? "player-pause" : "player-play"}
+            label={playing ? "Pause" : "Play"}
+            loading={busy && s.elapsedMs === 0}
+            disabled={p.disabled}
+            onClick={p.onToggle}
+          />
           <IconButton name="rewind-forward-10" label="Forward 10 seconds" disabled={p.disabled} onClick={() => p.onSkip(10_000)} />
           <IconButton name="player-skip-forward" label="Next paragraph" disabled={p.disabled} onClick={() => p.onBlock(1)} />
         </div>

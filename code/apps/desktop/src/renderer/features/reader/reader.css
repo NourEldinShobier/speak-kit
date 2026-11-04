@@ -149,22 +149,13 @@
   box-shadow: var(--shadow-popover);
   transform: translateX(-50%);
 }
+/* the look comes from the shared primary Button; only the position is local */
 .rd-back {
   position: absolute;
   /* physical: centred with translateX, mirrored only by the transform */
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--cta);
-  color: var(--text-on-cta);
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 .rd-prepare {
   position: absolute;
@@ -218,8 +209,10 @@
 .rd-outline__item[data-level="4"] {
   padding-inline-start: 20px;
 }
-.rd-outline__item:hover {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .rd-outline__item:hover {
+    background: var(--fill-hover);
+  }
 }
 .rd-outline__item[aria-current="true"] {
   background: var(--fill-selected);

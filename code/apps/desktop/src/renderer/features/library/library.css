@@ -87,7 +87,7 @@
   place-items: center;
   width: 64px;
   height: 64px;
-  border-radius: var(--radius-control);
+  border-radius: max(var(--radius-xs), calc(var(--radius-card) - 16px)); /* inside the 16 px padded resume card */
   background: var(--surface-well);
   color: var(--icon-quiet);
 }
@@ -129,13 +129,18 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.lib-chip:hover {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .lib-chip:hover {
+    background: var(--fill-hover);
+  }
 }
 .lib-chip[aria-pressed="true"] {
   background: var(--fill-selected);
   color: var(--text-primary);
   font-weight: 500;
+}
+.lib-chip:active {
+  scale: 0.97;
 }
 .lib-chip:focus-visible {
   outline: 1px solid var(--accent-default);
@@ -178,8 +183,10 @@
   padding: 14px 8px 14px 16px;
   cursor: pointer;
 }
-.lib-row__main:hover {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .lib-row__main:hover {
+    background: var(--fill-hover);
+  }
 }
 .lib-row__main:focus-visible {
   outline: 1px solid var(--accent-default);

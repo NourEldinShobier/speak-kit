@@ -1,5 +1,5 @@
 import type { Dispatch } from "react";
-import { Banner, Button, Icon, IconButton, Spinner } from "@speakkit/ui";
+import { Banner, Button, IconButton, Spinner } from "@speakkit/ui";
 import type { PlayerState } from "@speakkit/protocol";
 import type { DocMeta } from "../../../shared/library/contract";
 import { DisplayPopover } from "./DisplayPopover";
@@ -132,9 +132,9 @@ export function PickChip({ pick, onRead, onBookmark, onCopy }: { pick: Pick; onR
 
 export function BackToCurrent({ onClick }: { onClick(): void }) {
   return (
-    <button type="button" className="rd-back" onClick={onClick}>
-      <Icon name="arrow-down" size={14} /> Back to current
-    </button>
+    <Button variant="primary" size="sm" iconLeft="arrow-down" className="rd-back" onClick={onClick}>
+      Back to current
+    </Button>
   );
 }
 

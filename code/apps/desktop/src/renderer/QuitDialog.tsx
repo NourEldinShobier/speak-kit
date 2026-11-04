@@ -14,7 +14,9 @@ export function QuitDialog({ s, open, playing, onClose }: { s: AppState; open: b
       width={480}
       footer={
         <>
-          <Button onClick={onClose}>Keep running in tray</Button>
+          <Button data-autofocus onClick={onClose}>
+            Keep running in tray
+          </Button>
           <span style={{ flex: 1 }} />
           <Button variant="danger" solid onClick={() => api.quit()}>
             Quit

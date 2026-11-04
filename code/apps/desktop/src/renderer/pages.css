@@ -23,10 +23,9 @@
   color: var(--text-secondary);
 }
 .sk-caps {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
   color: var(--text-tertiary);
   margin: 0 0 4px;
 }
@@ -45,10 +44,9 @@
   gap: 6px;
 }
 .sk-stat__k {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
   color: var(--text-tertiary);
 }
 .sk-stat__v {
@@ -166,6 +164,7 @@ code,
   gap: 8px;
 }
 .sk-voice__h {
+  min-height: 32px;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -184,6 +183,7 @@ code,
   min-height: 32px;
 }
 .sk-voice__f {
+  margin-top: auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -199,7 +199,7 @@ code,
 .sk-tile {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-control);
+  border-radius: max(var(--radius-xs), calc(var(--radius-card) - 14px)); /* inside the 14 px padded engine row */
   display: flex;
   align-items: center;
   justify-content: center;

@@ -6,6 +6,7 @@ body,
   margin: 0;
 }
 body {
+  font-variant-numeric: tabular-nums;
   background: var(--surface-window);
   color: var(--text-primary);
   font:
@@ -104,8 +105,10 @@ html[data-platform="darwin"] .sk-title__r {
   cursor: text;
   text-align: start;
 }
-.sk-search:hover {
-  background: var(--fill-raised-hover);
+@media (hover: hover) and (pointer: fine) {
+  .sk-search:hover {
+    background: var(--fill-raised-hover);
+  }
 }
 .sk-search span {
   flex: 1;
@@ -205,9 +208,12 @@ html[data-platform="darwin"] .sk-title__r {
   font-size: 12px;
 }
 .sk-side .lm-nav__item[aria-disabled="true"] {
-  opacity: 0.55;
+  color: var(--text-secondary);
   cursor: default;
   pointer-events: none;
+}
+.sk-side .lm-nav__item[aria-disabled="true"] .lm-icon {
+  color: var(--disabled-seg);
 }
 .sk-main {
   flex: 1;
