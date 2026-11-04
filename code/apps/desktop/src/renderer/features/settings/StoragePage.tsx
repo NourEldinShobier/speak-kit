@@ -31,6 +31,32 @@ function useDeleteFlow(reload: () => void) {
   return { phase, setPhase, remove };
 }
 
+function UsageRows({ rows, total }: { rows: [string, number, string][]; total: number }) {
+  return (
+    <>
+      <div className="sk-pad" data-testid="storage-bar">
+        <div className="sk-bar">
+          {rows.map(([k, n]) => (
+            <i key={k} style={{ width: share(n, total) }} />
+          ))}
+        </div>
+      </div>
+      {rows.map(([k, n, color]) => (
+        <SettingRow
+          key={k}
+          label={
+            <>
+              <span className="sk-sw" style={{ background: color }} />
+              {k}
+            </>
+          }
+          control={<span>{formatBytes(n)}</span>}
+        />
+      ))}
+    </>
+  );
+}
+
 export function StoragePage() {
   const [st, setSt] = useState<StorageInfo | null>(null);
   const load = useCallback(() => api.storage().then(setSt, () => {}), []);
@@ -41,25 +67,7 @@ export function StoragePage() {
   return (
     <Page title="Storage" lead={st ? `On this computer: ${formatBytes(total)}` : "Measuring..."}>
       <SettingsSection title="Models folder" description={st?.modelsDir}>
-        <div className="sk-pad" data-testid="storage-bar">
-          <div className="sk-bar">
-            {rows.map(([k, n]) => (
-              <i key={k} style={{ width: share(n, total) }} />
-            ))}
-          </div>
-        </div>
-        {rows.map(([k, n, color]) => (
-          <SettingRow
-            key={k}
-            label={
-              <>
-                <span className="sk-sw" style={{ background: color }} />
-                {k}
-              </>
-            }
-            control={<span>{formatBytes(n)}</span>}
-          />
-        ))}
+        <UsageRows rows={rows} total={total} />
         <SettingRow
           label="Open folder"
           control={
