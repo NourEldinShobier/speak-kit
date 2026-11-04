@@ -241,7 +241,7 @@ const shortcuts = (b: B, mode: "idle" | "record" | "conflict") => (c0: Ref) => {
     row(b, c, "New reading", undefined, (f) => keys(b, f, ["Ctrl", "N"]), { sep: true });
   });
 };
-const storage = (c0: Ref, b: B) => section(b, c0, "Models folder", "C:/Users/noure/AppData/Roaming/@speakkit/desktop/models", (c) => {
+const storage = (c0: Ref, b: B) => section(b, c0, "Models folder", "C:/Users/Maya/AppData/Roaming/@speakkit/desktop/models", (c) => {
   const p = pad(b, c);
   b.frame(p, { w: 1, h: 2 });
   const bar = b.row(p, { w: "fill", h: 8, r: 4, fill: C.hair, clip: true });
