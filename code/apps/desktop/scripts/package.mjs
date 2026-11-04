@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ICO_SIZES, logoPng, macIconPng } from "./icons-lib.mjs";
+import { ICO_SIZES, macIconPng, winIconPng } from "./icons-lib.mjs";
 import { icoFromPngs, importedPackages } from "./stage-lib.mjs";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -124,7 +124,7 @@ if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ?
 // 3. installer icon, rasterised from the logo SVGs (electron-builder turns the 1024 px PNG into the macOS .icns)
 mkdirSync(res, { recursive: true });
 if (mac) writeFileSync(path.join(res, "icon.png"), macIconPng());
-else writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) => ({ size, png: logoPng(size) }))));
+else writeFileSync(path.join(res, "icon.ico"), icoFromPngs(ICO_SIZES.map((size) => ({ size, png: winIconPng(size) }))));
 
 // 4. electron-builder
 console.log("== electron-builder");
