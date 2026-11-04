@@ -323,12 +323,12 @@
        "id": "A14",
        "src": "A14",
        "title": "Popup · pairing token rejected",
-       "rule": "App and browser no longer share a token; paste a new one in the extension options.",
-       "note": "App and browser no longer share a token; paste a new one in the extension options.",
+       "rule": "App and browser no longer share a token; re-pair from the extension options.",
+       "note": "App and browser no longer share a token; re-pair from the extension options.",
        "tag": "",
        "w": 1600,
        "h": 1000,
-       "name": "A14 · Popup, pairing token rejected — App and browser no longer share a token; paste a new one in the extension options."
+       "name": "A14 · Popup, pairing token rejected — App and browser no longer share a token; re-pair from the extension options."
       },
       {
        "id": "A18",
@@ -2227,7 +2227,7 @@
        "src": "I10",
        "title": "Tray panel · reading",
        "rule": "Left click on the tray icon: Speak Kit's own panel above the taskbar.",
-       "note": "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Read clipboard, Open Speak Kit.",
+       "note": "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Open Speak Kit.",
        "tag": "",
        "w": 1600,
        "h": 1000,
@@ -2303,12 +2303,12 @@
        "id": "I11",
        "src": "I11",
        "title": "Tray right-click menu",
-       "rule": "Short native menu: read clipboard, open, pause and stop while reading, Do not disturb...",
-       "note": "Short native menu: read clipboard, open, pause and stop while reading, Do not disturb, Settings, updates, Quit. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
+       "rule": "Short native menu: open, pause and stop while reading, Do not disturb, Settings, updates, Quit.",
+       "note": "Short native menu: open, pause and stop while reading, Do not disturb, Settings, updates, Quit. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
        "tag": "",
        "w": 1600,
        "h": 1000,
-       "name": "I11 · Tray right-click menu — Short native menu, read clipboard, open, pause and stop while reading, Do not disturb..."
+       "name": "I11 · Tray right-click menu — Short native menu, open, pause and stop while reading, Do not disturb, Settings, updates, Quit."
       }
      ]
     },
@@ -2421,7 +2421,7 @@
     {
      "n": 18,
      "title": "Notifications and shortcuts",
-     "cover": "Windows toasts (no buttons), clipboard prompt",
+     "cover": "Windows toasts (no buttons)",
      "frames": [
       {
        "id": "I12",
@@ -2444,17 +2444,6 @@
        "w": 1600,
        "h": 1000,
        "name": "I22 · Windows toast, export — Export finished, the body names the file."
-      },
-      {
-       "id": "I5",
-       "src": "I5",
-       "title": "Clipboard prompt",
-       "rule": "Copying long text offers to read it; skips password-manager copies; Settings turns it off.",
-       "note": "Copying long text offers to read it; skips password-manager copies; Settings turns it off. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
-       "tag": "",
-       "w": 1600,
-       "h": 1000,
-       "name": "I5 · Clipboard prompt — Copying long text offers to read it; skips password-manager copies; Settings turns it off."
       },
       {
        "id": "I23",
@@ -3497,11 +3486,10 @@
    "page": "Desktop app",
    "n": 18,
    "title": "Notifications and shortcuts",
-   "cover": "Windows toasts (no buttons), clipboard prompt",
+   "cover": "Windows toasts (no buttons)",
    "ids": [
     "I12",
     "I22",
-    "I5",
     "I23",
     "I24",
     "I4"
@@ -3961,12 +3949,12 @@
    "id": "A14",
    "src": "A14",
    "title": "Popup · pairing token rejected",
-   "rule": "App and browser no longer share a token; paste a new one in the extension options.",
-   "note": "App and browser no longer share a token; paste a new one in the extension options.",
+   "rule": "App and browser no longer share a token; re-pair from the extension options.",
+   "note": "App and browser no longer share a token; re-pair from the extension options.",
    "tag": "",
    "w": 1600,
    "h": 1000,
-   "name": "A14 · Popup, pairing token rejected — App and browser no longer share a token; paste a new one in the extension options.",
+   "name": "A14 · Popup, pairing token rejected — App and browser no longer share a token; re-pair from the extension options.",
    "feature": "2.4",
    "page": "Chrome extension"
   },
@@ -5990,7 +5978,7 @@
    "src": "I10",
    "title": "Tray panel · reading",
    "rule": "Left click on the tray icon: Speak Kit's own panel above the taskbar.",
-   "note": "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Read clipboard, Open Speak Kit.",
+   "note": "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Open Speak Kit.",
    "tag": "",
    "w": 1600,
    "h": 1000,
@@ -6080,12 +6068,12 @@
    "id": "I11",
    "src": "I11",
    "title": "Tray right-click menu",
-   "rule": "Short native menu: read clipboard, open, pause and stop while reading, Do not disturb...",
-   "note": "Short native menu: read clipboard, open, pause and stop while reading, Do not disturb, Settings, updates, Quit. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
+   "rule": "Short native menu: open, pause and stop while reading, Do not disturb, Settings, updates, Quit.",
+   "note": "Short native menu: open, pause and stop while reading, Do not disturb, Settings, updates, Quit. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
    "tag": "",
    "w": 1600,
    "h": 1000,
-   "name": "I11 · Tray right-click menu — Short native menu, read clipboard, open, pause and stop while reading, Do not disturb...",
+   "name": "I11 · Tray right-click menu — Short native menu, open, pause and stop while reading, Do not disturb, Settings, updates, Quit.",
    "feature": "3.16",
    "page": "Desktop app"
   },
@@ -6229,19 +6217,6 @@
    "w": 1600,
    "h": 1000,
    "name": "I22 · Windows toast, export — Export finished, the body names the file.",
-   "feature": "3.18",
-   "page": "Desktop app"
-  },
-  {
-   "id": "I5",
-   "src": "I5",
-   "title": "Clipboard prompt",
-   "rule": "Copying long text offers to read it; skips password-manager copies; Settings turns it off.",
-   "note": "Copying long text offers to read it; skips password-manager copies; Settings turns it off. Design-only: an OS surface that cannot be screenshotted; drawn from the real code.",
-   "tag": "",
-   "w": 1600,
-   "h": 1000,
-   "name": "I5 · Clipboard prompt — Copying long text offers to read it; skips password-manager copies; Settings turns it off.",
    "feature": "3.18",
    "page": "Desktop app"
   },
