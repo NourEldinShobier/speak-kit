@@ -435,9 +435,9 @@ describe("Tabs, Modal", () => {
     await dlg.waitFor();
     const focused = await page.evaluate(() => {
       const a = document.activeElement as HTMLElement;
-      return [a.textContent, a.matches(":focus-visible"), getComputedStyle(a).outlineColor];
+      return [a.textContent, a.matches(":focus-visible"), getComputedStyle(a).outlineStyle];
     });
-    expect(focused).toEqual(["Cancel", false, "rgba(0, 0, 0, 0)"]);
+    expect(focused).toEqual(["Cancel", false, "none"]); // outline-color is mid-fade right after focus, so the stable signal is that no outline is drawn
     await page.keyboard.press("Escape");
     await dlg.waitFor({ state: "detached" });
   });
@@ -595,7 +595,7 @@ describe("Tactile refinements", () => {
     expect(await scale("no-preference")).toEqual(["0.97", "0.92", "0.92"]);
     expect(await scale("reduce")).toEqual(["1", "1", "1"]);
     await page.emulateMedia({ reducedMotion: "no-preference" });
-  });
+  }, 20_000); // six presses of 400 ms each plus hovers: about 4 s on a fast machine, over the 5 s default on CI
 
   test("touch devices get an invisible 44px hit area on small icon buttons; mouse devices do not", async () => {
     const html = '<button class="lm-btn lm-btn--icon lm-btn--xs" aria-label="a"></button><button class="lm-close" aria-label="c"></button>';
