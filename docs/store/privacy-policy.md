@@ -19,7 +19,7 @@ Speak Kit is an open-source project by Nour Eldin Shobier. Source code: https://
 
 ## What the desktop app does with your data
 
-- Runs a local server that listens only on 127.0.0.1 and accepts only requests that carry the pairing token. Text you send for reading, files and pages you add to the library, and exported audio files are kept on your computer, in the app's data folder and the places you choose for exports. Deleting an item in the app or uninstalling the app removes them.
+- Runs a local server that listens only on 127.0.0.1 and accepts only requests that carry the pairing token. Text you send for reading, files and pages you add to the library, and exported audio files are kept on your computer, in the app's data folder and the places you choose for exports. Deleting an item in the app removes it. Uninstalling the app on Windows removes the downloaded voice models and engines; your library, cloned voices and settings stay in the data folder until you delete that folder (on a Mac, delete the models first in Settings > Storage).
 - Makes a network connection only when you or the app's update check need one:
   - **Voice model download.** On first setup, the app downloads the Kokoro voice model from Hugging Face (huggingface.co). Hugging Face sees the usual connection information (your IP address, the file requested) under its own policy. No text is sent.
   - **Updates.** The app asks GitHub Releases (github.com) whether a newer version exists and, if you agree, downloads it. GitHub sees the usual connection information under its own policy.

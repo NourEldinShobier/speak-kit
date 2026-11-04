@@ -40,6 +40,14 @@ Start Speak Kit. The first run downloads the Kokoro model (about 180 MB) and wal
 
 There is no macOS build yet; the app is built and tested on Windows only. The extension and the local server (`code/packages/server`) run on any system with Node 24. When macOS builds are published they will be unsigned: open the `.dmg`, drag the app to Applications, then right-click it, choose **Open** and confirm once (or run `xattr -dr com.apple.quarantine "/Applications/Speak Kit.app"`).
 
+### Uninstalling
+
+Everything Speak Kit stores is in one data folder: `%APPDATA%\@speakkit\desktop` on Windows, `~/Library/Application Support/@speakkit/desktop` on macOS, `~/.config/@speakkit/desktop` on Linux.
+
+- **Windows:** uninstalling from Settings > Apps (or the Start menu entry) removes the downloaded voice models and engines (`models`, `engines`, exports and OCR language data). Installing a new version over the old one keeps them. Your library, cloned voices, settings and pairing token stay; delete the data folder to remove them too.
+- **macOS:** the app has no uninstaller. Before you drag Speak Kit to the Trash, open Settings > Storage > Delete downloaded models and engines. Otherwise delete `~/Library/Application Support/@speakkit/desktop/models` and `.../engines` yourself.
+- The same button exists on Windows and frees the space without uninstalling.
+
 ### The Chrome extension
 
 - **Chrome Web Store**: not listed yet. This section will link it once it is.

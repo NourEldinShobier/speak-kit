@@ -46,6 +46,12 @@ Local builds: `pnpm --filter @speakkit/desktop exec node scripts/package.mjs [--
 
 What the smoke test checks, on both platforms: the app starts hidden, `/v1/health` answers, voices list with the token, one sentence is spoken with the fake engine, the extension and engine worker are bundled, a second launch hands over and adds no processes, `--quit` exits cleanly, the port is freed, no process is left. On macOS it starts the arm64 app (the runner is arm64); the x64 app is built from the same files but is not started in CI.
 
+## Uninstalling and downloaded models
+
+- **Windows (NSIS):** `apps/desktop/build/installer.nsh` (`customUnInstall`, included through `nsis.include`) deletes `models`, `engines`, `chatterbox` (installs from before `engines/`), `exports` and `IndexedDB` (OCR language data) in the data folder when the uninstaller runs, and stops the Chatterbox Python process first so files are not locked. It does nothing when the uninstaller runs for an update (`${isUpdated}`), so models survive an upgrade. It keeps the library, cloned voices, settings, token, engine choice and logs. It honours `SPEAKKIT_USER_DATA` like the app does, which `scripts/smoke-installer.mjs` uses to check install, update-keeps-models and uninstall-removes-models in an isolated folder. `deleteAppDataOnUninstall` stays off: it would remove `%APPDATA%\Speak Kit`, which this app does not use.
+- **macOS (dmg, zip):** no uninstaller exists. Settings > Storage > Delete downloaded models and engines does the same work in the app; Settings > About and the README say to use it before moving the app to the Trash, otherwise `~/Library/Application Support/@speakkit/desktop` keeps the models.
+- The folder names live in `src/shared/app-data.ts`; `src/shared/app-data.test.ts` fails when the NSIS file and that list differ.
+
 ## First launch of the unsigned Mac app
 
 The macOS build is not signed with an Apple Developer ID and not notarized. It carries an ad-hoc signature (`scripts/after-pack.cjs`), which Apple Silicon needs to run it at all, but Gatekeeper still treats a downloaded copy as coming from an unidentified developer. Tell users:
