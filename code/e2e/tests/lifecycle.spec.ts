@@ -163,7 +163,7 @@ test.describe("model lifecycle: unloaded", () => {
 
 test.describe("model lifecycle: hold while paused", () => {
   test("pause holds the model past the idle window, resume releases the hold, then it unloads", async ({ ext }) => {
-    const app = await startApp({ idleUnloadMs: 1200 * SCALE });
+    const app = await startApp({ idleUnloadMs: 4000 * SCALE });
     try {
       await ext.pair(app);
       const page = await ext.open("/article");
@@ -172,7 +172,7 @@ test.describe("model lifecycle: hold while paused", () => {
       await ext.bg({ t: "player", command: { cmd: "pause" } });
       await ext.waitState("paused");
       await expect.poll(() => app.holds).toEqual([600_000]);
-      await page.waitForTimeout(3 * 1200 * SCALE); // three idle windows
+      await page.waitForTimeout(3 * 4000 * SCALE); // three idle windows
       expect(app.engine.unloads, "held model stays loaded while paused").toBe(0);
       expect((await health(app)).engine.state).toBe("ready");
 
