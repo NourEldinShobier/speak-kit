@@ -6,12 +6,11 @@ import type { EngineState } from "@speakkit/protocol";
 import { noticeFor } from "./notify-rules";
 import { ToastCenter } from "./toasts";
 
-const BELL_KIND: Record<NotifyEvent | "clipboard", Activity["kind"]> = {
+const BELL_KIND: Record<NotifyEvent, Activity["kind"]> = {
   "reading-finished": "reading",
   "export-done": "export",
   "engine-error": "error",
   "update-ready": "update",
-  clipboard: "info",
 };
 
 export interface ShownToast {

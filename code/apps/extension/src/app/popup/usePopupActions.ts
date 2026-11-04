@@ -69,9 +69,6 @@ function playbackActions(d: Deps): Playback {
   };
 }
 
-/** A pasted token must look like one: at least 8 characters, no whitespace. */
-const looksLikeToken = (t: string) => t.length >= 8 && !/\s/.test(t);
-
 function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback> {
   return {
     openApp: async () => {
@@ -82,19 +79,6 @@ function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback> {
     },
     download: () => void openUrl(LINKS.download),
     recheck: () => void d.refresh(),
-    pasteToken: async () => {
-      try {
-        const t = (await navigator.clipboard.readText()).trim();
-        if (looksLikeToken(t)) {
-          d.setToken(t);
-          await d.refresh();
-          return;
-        }
-      } catch {
-        /* clipboard permission denied */
-      }
-      void openOptions();
-    },
     options: () => void openOptions(),
     extSettings: () => void openUrl(extensionSettingsUrl()),
     help: () => void openUrl(LINKS.help),

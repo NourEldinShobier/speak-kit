@@ -48,7 +48,7 @@ describe("ShortcutRegistry", () => {
     const t = setup(["Ctrl+Alt+S"]);
     const c = t.reg.apply(DEFAULT_SHORTCUTS);
     expect(c).toEqual({ "read-selection": { accelerator: "Ctrl+Alt+S", reason: "taken", suggestion: "Ctrl+Alt+Shift+S" } });
-    expect(t.live.size).toBe(3);
+    expect(t.live.size).toBe(2);
   });
 
   it("flags the second of two actions that share a combination", () => {
@@ -56,7 +56,7 @@ describe("ShortcutRegistry", () => {
     const c = t.reg.apply({ ...DEFAULT_SHORTCUTS, stop: "Ctrl+Alt+S" });
     expect(c.stop).toMatchObject({ reason: "duplicate", accelerator: "Ctrl+Alt+S" });
     expect(c["read-selection"]).toBeUndefined();
-    expect(t.live.size).toBe(3);
+    expect(t.live.size).toBe(2);
   });
 
   it("set() rebinds, and unregisters the old combination", () => {

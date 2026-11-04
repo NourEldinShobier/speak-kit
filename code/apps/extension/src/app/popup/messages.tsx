@@ -40,7 +40,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
     icon: "link",
     title: "Pair Speak Kit with this browser again",
     body: "The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them.",
-    primary: { label: "Paste new token", onClick: a.pasteToken },
+    primary: { label: "Re-pair", onClick: a.options },
     secondary: { label: "Open Speak Kit", onClick: a.openApp },
     launchNote: true,
     footer: { right: "Extension options", onRight: a.options },

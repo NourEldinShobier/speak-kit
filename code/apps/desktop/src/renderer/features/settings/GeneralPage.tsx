@@ -41,10 +41,6 @@ function Appearance({ s }: { s: AppState }) {
   );
 }
 
-/** Where the system shows notifications: Windows names them toasts, macOS banners. */
-const clipboardNote = (platform: string) =>
-  `Shows a ${platform === "darwin" ? "macOS" : "Windows"} notification after you copy a few sentences. Copies from password managers are skipped. The text never leaves this computer.`;
-
 export function GeneralPage({ s }: { s: AppState }) {
   return (
     <Page title="General" lead="Startup, language and notifications.">
@@ -55,13 +51,6 @@ export function GeneralPage({ s }: { s: AppState }) {
           label="Closing the window"
           description="Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
           control={<span>Keeps running</span>}
-        />
-      </SettingsSection>
-      <SettingsSection title="Privacy">
-        <SettingRow
-          label="Offer to read long text I copy"
-          description={clipboardNote(s.platform)}
-          control={<Toggle aria-label="Clipboard prompt" checked={s.config.clipboardPrompt} onChange={(v) => api.patchConfig({ clipboardPrompt: v })} />}
         />
       </SettingsSection>
     </Page>

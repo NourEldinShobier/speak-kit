@@ -57,7 +57,7 @@ describe("problem screens", () => {
   const cases: [PopupModel["view"], string, string, string][] = [
     ["install", "Install Speak Kit to start listening", "Download Speak Kit for Windows", "download"],
     ["offline", "Speak Kit isn't running", "Open Speak Kit", "openApp"],
-    ["token", "Pair Speak Kit with this browser again", "Paste new token", "pasteToken"],
+    ["token", "Pair Speak Kit with this browser again", "Re-pair", "options"],
     ["version", "Speak Kit needs an update", "Download the latest app", "download"],
     ["pdf", "Chrome's PDF viewer can't be read", "Paste text in the app", "openApp"],
     ["unreadable", "Can't read this page", "Paste text in the app", "openApp"],

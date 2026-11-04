@@ -3,11 +3,8 @@ import type { NotifyEvent, Notifications } from "../shared/schemas";
 /** Lumen NO1: one toast per task per 10 minutes. */
 export const THROTTLE_MS = 10 * 60_000;
 
-/** The clipboard prompt has its own switch in Settings > General, so it is not in the notifications table. */
-const CLIPBOARD_PROMPT = { toast: true, bell: false, sound: false };
-
 interface ToastRequest {
-  event: NotifyEvent | "clipboard";
+  event: NotifyEvent;
   /** The task the toast is about (an export id, an engine id); repeats with the same key are dropped. */
   taskKey?: string;
   title: string;
@@ -23,7 +20,7 @@ interface ToastDeps {
   /** True while the main window is visible and focused; a toast would only repeat what is on screen. */
   looking(): boolean;
   show(t: { title: string; body: string; silent: boolean; onClick?: (() => void) | undefined }): void;
-  bell(event: NotifyEvent | "clipboard", title: string, body: string): void;
+  bell(event: NotifyEvent, title: string, body: string): void;
   now(): number;
 }
 
@@ -37,7 +34,7 @@ export class ToastCenter {
 
   notify(r: ToastRequest): ToastOutcome {
     const { notifications, doNotDisturb } = this.#d.prefs();
-    const ch = r.event === "clipboard" ? CLIPBOARD_PROMPT : notifications[r.event];
+    const ch = notifications[r.event];
     if (!ch.toast && !ch.bell) return "off";
     const now = this.#d.now();
     for (const [k, t] of this.#last) if (now - t >= THROTTLE_MS) this.#last.delete(k);

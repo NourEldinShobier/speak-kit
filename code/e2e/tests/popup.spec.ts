@@ -12,7 +12,7 @@ test.describe("popup states", () => {
     await opt.close();
     const popup2 = await ext.popup(page);
     await expect(view(popup2)).toHaveAttribute("data-view", "token", { timeout: 8000 });
-    await expect(popup2.getByRole("button", { name: "Paste new token" })).toBeVisible();
+    await expect(popup2.getByRole("button", { name: "Re-pair" })).toBeVisible();
   });
 
   test("app offline -> offline state, and back to idle when the app returns", async ({ ext, app }) => {

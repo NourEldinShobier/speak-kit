@@ -37,7 +37,7 @@ const NAV_ROWS: NavRow[] = [
   ["s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language"],
   ["s-voice", "Settings", "Settings: Voice and playback", "volume", "settings", "voice", "speed default"],
   ["s-shortcuts", "Settings", "Settings: Shortcuts", "keyboard", "settings", "shortcuts", "global keys hotkey record ctrl alt"],
-  ["s-notifications", "Settings", "Settings: Notifications", "bell", "settings", "notifications", "toast bell sound do not disturb clipboard"],
+  ["s-notifications", "Settings", "Settings: Notifications", "bell", "settings", "notifications", "toast bell sound do not disturb"],
   ["s-memory", "Settings", "Settings: Memory", "cpu", "settings", "memory", "idle unload ram battery startup"],
   ["s-browser", "Settings", "Settings: Browser integration", "world", "settings", "browser", "port token pair"],
   ["s-storage", "Settings", "Settings: Storage", "folder", "settings", "storage", "models disk"],

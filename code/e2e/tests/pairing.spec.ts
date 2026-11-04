@@ -18,7 +18,7 @@ test.describe("pairing and connection", () => {
     const opt = await ext.pair({ port: app.port, token: "not-the-token-0000" }, false);
     await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "token", { timeout: 10_000 });
     await expect(opt.getByText("Pairing token rejected")).toBeVisible();
-    await expect(opt.getByRole("button", { name: "Paste new token" })).toBeVisible();
+    await expect(opt.getByRole("button", { name: "Re-pair" })).toBeVisible();
     // Fix it by typing the right one.
     await opt.getByRole("button", { name: "Re-pair" }).click();
     await opt.locator("#token").fill(app.token);

@@ -64,7 +64,6 @@ export const ConfigSchema = v.object({
   batterySaver: bool(true),
   notifications: v.fallback(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
-  clipboardPrompt: bool(false),
   autoUpdate: bool(true),
   /** Epoch ms before which the update card stays hidden ("Remind me later"). */
   updateRemindAtMs: v.fallback(v.pipe(v.number(), v.minValue(0)), 0),
@@ -90,7 +89,6 @@ export const ConfigPatchSchema = v.partial(
     batterySaver: v.boolean(),
     notifications: NotificationsSchema,
     doNotDisturb: v.boolean(),
-    clipboardPrompt: v.boolean(),
     autoUpdate: v.boolean(),
     updateRemindAtMs: v.pipe(v.number(), v.minValue(0)),
     exportPrefs: ExportPrefsSchema,

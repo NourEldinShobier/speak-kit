@@ -41,7 +41,6 @@ export interface PopupActions {
   openApp(): void;
   download(): void;
   recheck(): void;
-  pasteToken(): void;
   options(): void;
   extSettings(): void;
   help(): void;

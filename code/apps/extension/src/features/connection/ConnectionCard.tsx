@@ -58,24 +58,10 @@ function useTokenEditor({ token, setToken, test, rejected }: { token: string; se
       await test();
     }
   };
-  const paste = async () => {
-    try {
-      const t = (await navigator.clipboard.readText()).trim();
-      if (t) {
-        setToken(t);
-        setDraft(null);
-        await test();
-        return;
-      }
-    } catch {
-      /* clipboard blocked: fall back to the field */
-    }
-    repair();
-  };
   // A rejected token shows an empty, focused field waiting for the new one (C3).
   const shown = reveal ? token : maskToken(token);
   const value = draft ?? (rejected ? "" : shown);
-  return { ref, reveal, toggleReveal: () => setReveal((r) => !r), draft, setDraft, value, repair, commit, paste };
+  return { ref, reveal, toggleReveal: () => setReveal((r) => !r), draft, setDraft, value, repair, commit };
 }
 
 interface StatusProps {
@@ -84,11 +70,10 @@ interface StatusProps {
   busy: boolean;
   onTest: () => void;
   onRepair: () => void;
-  onPaste: () => void;
   refresh: () => Promise<HealthResult>;
 }
 
-function ConnActions({ st, ok, busy, onTest, onRepair, onPaste, refresh }: StatusProps) {
+function ConnActions({ st, ok, busy, onTest, onRepair, refresh }: StatusProps) {
   const [launching, setLaunching] = useState(false);
   const launch = async () => {
     setLaunching(true);
@@ -115,14 +100,9 @@ function ConnActions({ st, ok, busy, onTest, onRepair, onPaste, refresh }: Statu
         </>
       )}
       {st === "token" && (
-        <>
-          <Button iconLeft="link" onClick={onRepair}>
-            Re-pair
-          </Button>
-          <Button variant="primary" iconLeft="clipboard" onClick={onPaste}>
-            Paste new token
-          </Button>
-        </>
+        <Button variant="primary" iconLeft="link" onClick={onRepair}>
+          Re-pair
+        </Button>
       )}
       {st === "ok" && (
         <Button iconLeft="link" onClick={onRepair}>
@@ -271,7 +251,7 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
   return (
     <section className="lm-card op-card" aria-labelledby="conn-h">
       <h2 id="conn-h">Desktop app connection</h2>
-      <ConnStatus st={st} ok={st === "ok" && health?.ok ? health : null} busy={busy} onTest={test} onRepair={editor.repair} onPaste={editor.paste} refresh={refresh} />
+      <ConnStatus st={st} ok={st === "ok" && health?.ok ? health : null} busy={busy} onTest={test} onRepair={editor.repair} refresh={refresh} />
       {(st === "offline" || st === "token") && <ConnAlert st={st} port={s.port} health={health} />}
       <div className="op-two">
         <PortField port={s.port} upd={upd} />
