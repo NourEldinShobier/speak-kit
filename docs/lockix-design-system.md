@@ -291,3 +291,24 @@ Deliberate differences from Lockix:
 - Kept `tag-purple`, `tag-yellow` and the reader `paper` theme.
 - No dark mode; the in-page UI stays white over dark host pages. Logo and store assets keep dark variants.
 - Switch and checkbox off strokes follow the code (`#C3C6CC`), not the darker design-file stroke (section 6).
+
+## 10. Tactile refinements (2026-11-05)
+
+Applied from the tactile-design audit. No Lockix value changed (1 px strokes, bordered white fields, weights 400/500/600, 1 px inside focus ring, spring curves, primary hover 90%). Kit: `packages/ui/src/lumen.css`; desktop: `apps/desktop/src/renderer`. Tests: `packages/ui/tests/browser.test.ts` (Tactile refinements), `apps/desktop/src/renderer/tactile.test.tsx`.
+
+| # | Applied |
+|---|---|
+| 1 | Every `:hover` rule sits in `@media (hover: hover) and (pointer: fine)`; forced `.is-hover` selectors stay outside. |
+| 2 | `font-variant-numeric: tabular-nums` on `.lm` and the desktop `body`, so time, speed, size and count readouts keep their width. |
+| 3 | Reader play/pause is `IconButton` (new `variant` and `glyph` props) as a 40 px round primary; "Back to current" is a shared small primary `Button`. `.rd-play` is deleted and `.rd-back` only positions. `.lm-btn--icon.lm-btn--xl.lm-btn--round` is 40 wide. |
+| 4 | `:active` scale 0.97 on `lm-seg__opt`, `lib-chip`, `rd-preset`, `rd-pill`; 0.92 on `lm-btn--xs` and `lm-close` (as the checkbox). Same 130 ms spring. `prefers-reduced-motion` sets `scale: 1` and keeps the colour fades. |
+| 5 | Unselected segmented options use `--text-secondary` (`#475467`, 6.2:1) on hover and press; tertiary was 4.1 to 4.4:1. Yellow and purple pill text uses new text-only tokens `--tag-yellow-text #80600a` (4.95:1 on the 16% tint) and `--tag-purple-text #6f42c1` (5.35:1 on the 14% tint); `--tag-yellow`, `--tag-purple` and the dots are unchanged. The Chatterbox row and disabled nav items no longer fade as a whole: text stays `--text-secondary`, only the tile and icon take `--disabled-track` and `--disabled-seg`. `.rd-option:disabled` uses the same grey instead of opacity. |
+| 6 | Avatars: chip tint with the tag colour as letter (`.lm-avatar.lm-tone-*`; favicons keep solid tones). Voice cards: `.sk-voice__h` min-height 32, `.sk-voice__f` margin-top auto. Quit dialog: `data-autofocus` on "Keep running in tray" (`Modal` focuses it; the ring shows for keyboard focus only); dialog body text is `--text-primary`. Nested radii computed from the parent for the resume tile and engine tile. `@media (pointer: coarse)` adds an invisible 44 px `::after` hit area to `lm-btn--xs`, `lm-btn--sm` and `lm-close`. Captions `.sk-caps` and `.sk-stat__k` are sentence case 12/16 weight 500 `--text-tertiary`. |
+| + | Segmented label jump: the label is wrapped in `.lm-seg__label` whose `::after` carries the text at weight 500 (`data-label`), so selecting does not move it. Weights stay 400/500. |
+
+Kept as defined or not defined by Lockix:
+
+- Uppercase kept: the table column headers of the notification table (`.sk-notify thead th`) and the reader outline group headings (`.rd-outline__item[data-level="0"]`); the kit has no uppercase captions, Lockix settings group labels and nav captions are not touched. This document does not define an uppercase caption, so the panel, tray and Home captions follow the menu label spec (12/16 weight 500).
+- Ghost button hover text stays `--text-primary` (`#1B2230`, Lockix section 2): it is darker than `--text-secondary` and already above 4.5:1 on the hover and press fills.
+
+Skill rules intentionally not applied (Lockix wins): one weight for all text (Lockix uses 400/500/600); 0.5 px lines and outlines (Lockix uses 1 px strokes and ring shadows); ink-step wells (Lockix wells are `#F5F5F5` grey); focus ring thickness (Lockix 1 px inside line); motion curves and durations (Lockix springs, not the skill's ease-out); progress colour (Lockix blue progress, not black); dark mode treatments (light only).
