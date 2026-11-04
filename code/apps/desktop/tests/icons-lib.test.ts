@@ -11,7 +11,15 @@ function body(svg: string) {
     maxX = -1,
     minY = width,
     maxY = -1;
-  for (let y = 0; y < width; y++) for (let x = 0; x < width; x++) if (solid(x, y)) ((minX = Math.min(minX, x)), (maxX = Math.max(maxX, x)), (minY = Math.min(minY, y)), (maxY = Math.max(maxY, y)));
+  for (let y = 0; y < width; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!solid(x, y)) continue;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+  }
   return { solid, minX, maxX, minY, maxY };
 }
 
