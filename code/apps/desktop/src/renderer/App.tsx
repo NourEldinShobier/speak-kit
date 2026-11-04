@@ -103,6 +103,10 @@ function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
         e.preventDefault();
         dispatch({ type: "toggle-palette" });
       }
+      // Escape leaves Settings unless it was meant for an open dialog, menu, list or text field.
+      const t = e.target instanceof HTMLElement ? e.target : null;
+      const busy = e.defaultPrevented || t?.closest("input, textarea, select, [contenteditable=true]") || document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]');
+      if (e.key === "Escape" && !busy) dispatch({ type: "close-settings" });
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
@@ -165,7 +169,7 @@ function Shell({ s }: { s: AppState }) {
             sub={sub}
             recent={st.recent}
             go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
-            onBack={() => dispatch({ type: "back" })}
+            onCloseSettings={() => dispatch({ type: "close-settings" })}
             onNewReading={(text) => dispatch({ type: "open-reading", text })}
             onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
           />

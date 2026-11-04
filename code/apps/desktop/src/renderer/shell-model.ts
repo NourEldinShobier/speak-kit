@@ -29,6 +29,7 @@ export interface ShellState {
 export type ShellAction =
   | { type: "go"; page: Page; sub?: SettingsSub }
   | { type: "back" }
+  | { type: "close-settings" }
   | { type: "forward" }
   | { type: "toggle-side" }
   | { type: "palette"; open: boolean }
@@ -66,6 +67,8 @@ function go(s: ShellState, page: Page, sub?: SettingsSub): ShellState {
   const cur = currentLoc(s);
   const next: Loc = { page, sub: sub ?? (page === "settings" ? cur.sub : "general") };
   if (cur.page === next.page && cur.sub === next.sub) return s;
+  // Moving between settings sections replaces the entry: Back/Forward only walk main pages.
+  if (cur.page === "settings" && next.page === "settings") return { ...s, hist: s.hist.map((l, i) => (i === s.at ? next : l)) };
   return moveTo(s, s.at + 1, [...s.hist.slice(0, s.at + 1), next]);
 }
 
@@ -75,12 +78,21 @@ export function rememberRecent(recent: string[], text: string): string[] {
   return t ? [t, ...recent.filter((r) => r !== t)].slice(0, MAX_RECENT) : recent;
 }
 
+/** Leaves Settings for the page that was open before it (the entry just before it; sections never add entries), dropping the Settings entry. */
+function closeSettings(s: ShellState): ShellState {
+  if (currentLoc(s).page !== "settings" || s.palette || s.reading !== null || s.quit || s.exporting) return s;
+  if (s.at === 0) return moveTo(s, 0, [{ page: "home", sub: "general" }, ...s.hist.slice(1)]);
+  return moveTo(s, s.at - 1, [...s.hist.slice(0, s.at), ...s.hist.slice(s.at + 1)]);
+}
+
 export function shellReducer(s: ShellState, a: ShellAction): ShellState {
   switch (a.type) {
     case "go":
       return go(s, a.page, a.sub);
     case "back":
       return s.at > 0 ? moveTo(s, s.at - 1, s.hist) : s;
+    case "close-settings":
+      return closeSettings(s);
     case "forward":
       return s.at < s.hist.length - 1 ? moveTo(s, s.at + 1, s.hist) : s;
     case "toggle-side":

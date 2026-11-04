@@ -114,14 +114,31 @@ describe("settings", () => {
     expect(await sel(".rd-text")).toBe("text");
   });
 
-  it("the Back button's icon is centred in its hover square", async () => {
+  it("the settings close button's icon is centred in its hover square", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();
-    const back = l.page.locator(".sk-side__head").getByRole("button", { name: "Back" });
+    const back = l.page.locator(".sk-side__head").getByRole("button", { name: "Close settings" });
     await back.waitFor();
     const [b, i] = [await back.boundingBox(), await back.locator("svg").boundingBox()];
     expect(Math.abs(b!.x + b!.width / 2 - (i!.x + i!.width / 2))).toBeLessThan(0.6);
     expect(Math.abs(b!.y + b!.height / 2 - (i!.y + i!.height / 2))).toBeLessThan(0.6);
+  });
+
+  it("the settings arrow closes Settings and returns to the page before it, however many sections were visited", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("link", { name: "Voices" }).click();
+    await l.page.getByRole("heading", { name: "Voices" }).waitFor();
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("link", { name: "Memory" }).click();
+    await l.page.getByRole("link", { name: "Shortcuts" }).click();
+    await l.page.getByRole("button", { name: "Close settings" }).click();
+    await l.page.getByRole("heading", { name: "Voices" }).waitFor();
+    expect(await l.page.locator(".sk-side__head").count()).toBe(0);
+    // Escape does the same from Settings.
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("link", { name: "About" }).click();
+    await l.page.keyboard.press("Escape");
+    await l.page.getByRole("heading", { name: "Voices" }).waitFor();
   });
 
   it("Memory: idle unload, load at startup and battery saver persist to config.json; engine state and RAM are shown", async () => {

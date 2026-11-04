@@ -22,7 +22,7 @@ export interface SidebarProps {
   sub: SettingsSub;
   recent: string[];
   go(page: Page, sub?: SettingsSub): void;
-  onBack(): void;
+  onCloseSettings(): void;
   onNewReading(text: string): void;
   onOpenExport(jobId: string): void;
 }
@@ -43,7 +43,7 @@ function SettingsNav(p: SidebarProps) {
   return (
     <SidebarNav label="Settings">
       <div className="sk-side__head">
-        <IconButton name="arrow-left" label="Back" size={28} onClick={p.onBack} />
+        <IconButton name="arrow-left" label="Close settings" size={28} onClick={p.onCloseSettings} />
         <span className="sk-side__label">Settings</span>
       </div>
       {SETTINGS_NAV.map((g) => (

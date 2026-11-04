@@ -37,6 +37,27 @@ describe("navigation", () => {
     expect(t.hist).toHaveLength(2);
   });
 
+  it("moving between settings sections adds no history entry; closing returns to the page before Settings", () => {
+    const s = run([
+      { type: "go", page: "voices" },
+      { type: "go", page: "settings", sub: "memory" },
+      { type: "go", page: "settings", sub: "shortcuts" },
+      { type: "go", page: "settings", sub: "about" },
+    ]);
+    expect(s.hist.map((l) => l.page)).toEqual(["home", "voices", "settings"]);
+    const closed = run([{ type: "close-settings" }], s);
+    expect(currentLoc(closed)).toEqual({ page: "voices", sub: "general" });
+    expect(closed.hist.map((l) => l.page)).toEqual(["home", "voices"]);
+    expect(run([{ type: "close-settings" }], closed)).toBe(closed);
+  });
+
+  it("close-settings opens Home when Settings was the first entry and waits while a dialog is open", () => {
+    const first = { ...initShell([]), hist: [{ page: "settings" as const, sub: "memory" as const }] };
+    expect(currentLoc(run([{ type: "close-settings" }], first)).page).toBe("home");
+    const withDialog = run([{ type: "go", page: "settings" }, { type: "quit", open: true }]);
+    expect(run([{ type: "close-settings" }], withDialog)).toBe(withDialog);
+  });
+
   it("closes the open reading when the page changes, keeps it on the same page", () => {
     const open = run([
       { type: "go", page: "library" },
