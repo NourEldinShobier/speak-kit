@@ -32,9 +32,11 @@ export async function getTab(tabId: number): Promise<TabInfo> {
 export function patchTab(tabId: number, patch: Partial<TabInfo> | ((t: TabInfo) => Partial<TabInfo>)): Promise<TabInfo> {
   const run = async () => {
     const next = { ...(await getTab(tabId)), ...(typeof patch === "function" ? patch(await getTab(tabId)) : patch) };
-    await area()
-      .set({ [key(tabId)]: next })
-      .catch(() => {}); // losing the mirror only forgets the flags after a worker restart
+    try {
+      await area().set({ [key(tabId)]: next });
+    } catch {
+      /* losing the mirror only forgets the flags after a worker restart */
+    }
     return next;
   };
   const p = (writes.get(tabId) ?? Promise.resolve()).then(run, run);
@@ -47,9 +49,11 @@ export const resetTab = (tabId: number) => patchTab(tabId, (t) => ({ ...FRESH, e
 
 export async function dropTab(tabId: number): Promise<void> {
   writes.delete(tabId);
-  await area()
-    .remove(key(tabId))
-    .catch(() => {}); // nothing was stored
+  try {
+    await area().remove(key(tabId));
+  } catch {
+    /* nothing was stored */
+  }
 }
 
 /** Two URLs are the same page when they differ at most in the fragment. */

@@ -85,16 +85,11 @@ function closeSettings(s: ShellState): ShellState {
   return moveTo(s, s.at - 1, [...s.hist.slice(0, s.at), ...s.hist.slice(s.at + 1)]);
 }
 
-export function shellReducer(s: ShellState, a: ShellAction): ShellState {
+type NavAction = Extract<ShellAction, { type: "go" | "back" | "close-settings" | "forward" }>;
+
+/** The actions that only set a flag or a value; navigation is in `shellReducer`. */
+function flagReducer(s: ShellState, a: Exclude<ShellAction, NavAction>): ShellState {
   switch (a.type) {
-    case "go":
-      return go(s, a.page, a.sub);
-    case "back":
-      return s.at > 0 ? moveTo(s, s.at - 1, s.hist) : s;
-    case "close-settings":
-      return closeSettings(s);
-    case "forward":
-      return s.at < s.hist.length - 1 ? moveTo(s, s.at + 1, s.hist) : s;
     case "toggle-side":
       return { ...s, side: !s.side };
     case "palette":
@@ -117,5 +112,20 @@ export function shellReducer(s: ShellState, a: ShellAction): ShellState {
       const unreachable: never = a;
       return unreachable;
     }
+  }
+}
+
+export function shellReducer(s: ShellState, a: ShellAction): ShellState {
+  switch (a.type) {
+    case "go":
+      return go(s, a.page, a.sub);
+    case "back":
+      return s.at > 0 ? moveTo(s, s.at - 1, s.hist) : s;
+    case "close-settings":
+      return closeSettings(s);
+    case "forward":
+      return s.at < s.hist.length - 1 ? moveTo(s, s.at + 1, s.hist) : s;
+    default:
+      return flagReducer(s, a);
   }
 }
