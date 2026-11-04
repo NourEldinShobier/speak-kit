@@ -12,7 +12,7 @@ const dims = (svg: string) => { const m = svg.match(/<svg[^>]*\swidth="(\d+)"[^>
 const clipD = (svg: string) => svg.match(/<clipPath id="sq"><path d="([^"]+)"/)![1];
 
 // ---- svg recipes (same as icons-lib.mjs) ----
-const withTile = (svg: string) => svg.replace("</defs>\n", `</defs>\n<path transform="translate(1 1) scale(0.998)" d="${clipD(svg)}" fill="#FFFFFF"/>\n`);
+export const withTile = (svg: string) => svg.replace("</defs>\n", `</defs>\n<path transform="translate(1 1) scale(0.998)" d="${clipD(svg)}" fill="#FFFFFF"/>\n`);
 const BADGES: Record<string, string> = { working: "#4A9EFF", error: "#F2555A", paused: "#9AA0AB", attention: "#F59E0B" };
 const withDot = (svg: string, color: string) => svg.replace("\n</svg>", `<circle cx="778" cy="778" r="246" fill="#FFFFFF"/><circle cx="778" cy="778" r="185" fill="${color}"/>\n</svg>`);
 const lum = (hex: string) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); const v = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b).toString(16).padStart(2, "0"); return `#${v}${v}${v}`; };

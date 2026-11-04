@@ -13,6 +13,8 @@
 //   nativeMenu(b, wrap, { x, y, items: ["Back", "-", { l: "Speak Kit", sub: true, hi: true }] });
 // Fonts: Segoe UI (Windows chrome). Real texts of the toasts: apps/desktop/src/main/notify-rules.ts and updates-service.ts (see TOAST below).
 import { B, Ref } from "./lib";
+import { mkdirSync, writeFileSync, existsSync } from "fs";
+import { svgFile, withTile } from "./s_logo";
 
 export type Rect = { x: number; y: number; w: number; h: number; ref: Ref };
 const SEG = "Segoe UI";
@@ -23,11 +25,17 @@ const logoDir = `${import.meta.dir}/../logo/final/svg/logo`.replace(/\\/g, "/");
 /** The real Speak Kit mark (designs/logo/final, editable vectors): small variant up to 32 px, flat full variant above. */
 export const skLogo = (b: B, parent: Ref | undefined, size: number, o: { x?: number; y?: number; abs?: boolean } = {}): Ref => {
   const wrap = b.frame(parent, { w: size, h: size, x: o.x, y: o.y, abs: o.abs });
-  const im = b.add("file.import", { path: `${logoDir}/speakkit-logo${size <= 32 ? "-small" : "-flat"}.svg`, x: -9000, y: -9000 });
+  const im = b.add("file.import", { path: tiledLogo(size <= 32 ? "speakkit-logo-small" : "speakkit-logo-flat"), x: -9000, y: -9000 });
   b.add("transform.scale", { ids: [im], factor: size / 1024 });
   b.add("node.reparent", { ids: [im], parent: wrap });
   b.add("node.set", { ids: [im], x: 0, y: 0 });
   return wrap;
+};
+/** App icon as shipped (squircle, 22.4 % corners, white seams between the pieces): the logo svg with its white tile, written once to tmp/. */
+const tiledLogo = (name: string) => {
+  const dir = `${import.meta.dir}/../../tmp/gen-logo`; const f = `${dir}/${name}-tile.svg`;
+  if (!existsSync(f)) { mkdirSync(dir, { recursive: true }); writeFileSync(f, withTile(svgFile(name))); }
+  return f;
 };
 
 /** Free-form vector glyph in a size x size box: paths are given in box pixels. */
@@ -135,6 +143,24 @@ export const winApp = (b: B, parent: Ref | undefined, o: Stage & { w: number; h:
   const client = b.frame(win, { name: "Client area", x: 0, y: 0, w, h });
   captions(b, win, w, tbH); // sibling above `client`: draws over the app's empty title-bar area
   return { x: st.x, y: st.y, w, h, ref: client, win, desktop: st.desktop };
+};
+
+
+// ---------------------------------------------------------------- macOS window
+const MAC_SHADOW = [ds("#00000024", 0, 2), ds("#00000047", 22, 50)];
+/** macOS window around the Electron client (titleBarStyle hidden: traffic lights drawn over the app's 36 px bar at x 16, y 14 as in main-window.ts), on a desktop with a menu bar. */
+export const macApp = (b: B, parent: Ref | undefined, o: { w: number; h: number; backdrop: { w: number; h: number } }): Rect & { win: Ref } => {
+  const { w, h } = o; const bd = o.backdrop;
+  const d = b.frame(parent, { name: "macOS desktop", x: 0, y: 0, w: bd.w, h: bd.h, fill: "#C5CFE3", clip: true });
+  b.ellipse(d, { x: -200, y: bd.h - 520, w: 1100, h: 800, fill: "#E3D4EC" });
+  b.ellipse(d, { x: bd.w - 700, y: -300, w: 1000, h: 700, fill: "#B3D4EE" });
+  const mb = b.row(d, { name: "Menu bar", x: 0, y: 0, w: bd.w, h: 24, pad: [0, 14], gap: 18, fill: "#FFFFFF8C" });
+  ["Speak Kit", "File", "Edit", "View", "Window", "Help"].forEach((s, i) => b.text(mb, s, { ff: "Inter", size: 13, weight: i ? "Regular" : "Bold", c: "#1D1D1F" }));
+  const x = Math.round((bd.w - w) / 2), y = 24 + Math.round((bd.h - 24 - h) / 2);
+  const win = b.frame(d, { name: "Speak Kit", x, y, w, h, fill: "#F0F0F0", r: 10, clip: true, stroke: "#00000026", sw: 1, sa: "outside", effects: MAC_SHADOW });
+  const client = b.frame(win, { name: "Client area", x: 0, y: 0, w, h });
+  ["#FF5F57", "#FEBC2E", "#28C840"].forEach((c, i) => b.ellipse(win, { name: "Traffic light", abs: true, x: 16 + i * 20, y: 14, w: 12, h: 12, fill: c, stroke: "#0000001F", sw: 0.5, sa: "inside" } as any));
+  return { x, y, w, h, ref: client, win };
 };
 
 // ---------------------------------------------------------------- Chrome window

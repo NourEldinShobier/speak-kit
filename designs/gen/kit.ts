@@ -1,3 +1,4 @@
+import { skLogo } from "./kit3";
 import { B, Ref, O } from "./lib";
 
 // Lumen components (spec: docs/lumen-components.md, extracted from the Lumen .figcraft). Geometry, strokes, states and icon sizes follow the file.
@@ -29,11 +30,8 @@ export const tint = (c: string, a: number) => c.slice(0, 7) + Math.round(a * 255
 /** icon size inside a square icon button: Lumen draws 16 px icons in 24..40 px buttons (14 below 28) */
 const icoFor = (size: number) => (size < 28 ? 14 : 16);
 
-export const logo = (b: B, t: T, p: Ref | undefined, size = 24, o: O = {}) => {
-  const f = b.frame(p, { w: size, h: size, r: Math.round(size * 0.29 * 100) / 100, fill: t.accent, layout: "horizontal", align: "center", justify: "center", gap: Math.max(1.5, size * 0.07), ...o });
-  [0.28, 0.5, 0.7, 0.42, 0.22].forEach((h) => b.rect(f, { w: Math.max(2, size * 0.08), h: size * h, r: size * 0.04, fill: t.accentText }));
-  return f;
-};
+/** The app icon as shipped (squircle, white seams): every logo in the designs is the real mark from kit3, never a redrawn one. */
+export const logo = (b: B, _t: T, p: Ref | undefined, size = 24, o: O = {}) => skLogo(b, p, size, { x: (o as any).x, y: (o as any).y, abs: (o as any).abs });
 
 // ---------- button (Lockix): 36 px default, 28 sm, 24 xs, 40 xl (dialog footers); r8 (xs r6), pad 0/14 (sm 12, xs 8, xl 18), gap 6, Inter Medium 13, 16 px icon (sm 14, xs 12) ----------
 // primary = cta (#201E25 fill, no border, cta shadow); secondary = outline (white, 1 px stroke-control, control shadow); ghost; danger = destructive (10% red tint, red text; hover 20%).
