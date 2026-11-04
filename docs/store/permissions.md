@@ -31,7 +31,7 @@ Source of truth: `code/apps/extension/manifest.json` (version 0.3.0). Each text 
 ### `web_accessible_resources`: `content-ui.js`
 > The content script loads the player and reader interface (content-ui.js, bundled in the package) into the page on first use. It is exposed to the same pages as the content script and uses a dynamic URL so pages cannot detect the extension.
 
-Commands (`read-selection`, `play-pause`, `stop`) need no permission.
+Commands (`read-selection`, `play-pause`, `stop`) need no permission. The extension does not request `clipboardRead` and never reads the clipboard; it only writes to it when the user presses Copy (`src/manifest.test.ts` checks the permission).
 
 ## Remote code
 

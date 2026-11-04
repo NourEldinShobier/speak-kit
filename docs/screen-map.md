@@ -41,10 +41,9 @@ Lumen frame ids refer to `Lumen ... .figcraft`; details and measurements are in 
 | F1-F16 (reader, PDF, settings, sleep timer, search, voice) | F5 reader + pill; BR2 36783 page reader (cited passages highlighted); X15 content card centered 760 | Reader = inset card, text column 760 (or user width), pill dock at bottom, reading popover top right; search in text = in-card find bar; PDF scanned = E1 "Run OCR" banner. Outline = right panel. |
 | G1-G16 (voices, cloning, engines) | EH1 38009 hub cards; SD2 30622 models; X9 provider rows; ES1 engine banners | Hub: 4 cards (Engines, Voices, Pronunciation, Sites); engine rows with status pills; GPU memory error = red banner `Use CPU`; cloning steps use the X-stepper pattern inside a modal (EX1 19752 for the consent sheet). |
 | H1-H11 (settings) | SD1-SD9 30356-32743 | Same nav groups, rows and controls; H9 update = SD4 + UP1 popover; H4 browser = BR4; H5/H11 shortcuts = SD6; H6 storage = SD4 storage bar; H7 appearance = ST2. |
-| I1, I2, I6, I7, I8 (tray menus: playing, idle, dark, loading, error) | TR1 29857 (native menu + own panel) | Native menu short: `Read clipboard`, `Open SpeakKit` / `Pause`, `Do not disturb`, `Settings`, `Check for updates`, `Quit`. Icon states: normal, working (animated), needs you (orange dot), paused (grey). Add left-click panel (now playing, next in queue). |
+| I1, I2, I6, I7, I8 (tray menus: playing, idle, dark, loading, error) | TR1 29857 (native menu + own panel) | Native menu short: `Open SpeakKit` / `Pause`, `Do not disturb`, `Settings`, `Check for updates`, `Quit`. Icon states: normal, working (animated), needs you (orange dot), paused (grey). Add left-click panel (now playing, next in queue). |
 | I3, I9 (mini player, states) | M4 43116 voice pill storyboard; F5 pill | 36 px pill, spring width, stop never moves, shrinks to a dot after quiet. |
 | I4 (global shortcut toast) | NO1 30080 | Toast with `SpeakKit` header, title, body, hint line. |
-| I5 (clipboard prompt) | NO1 + TR1 panel | Toast "Copied text: read it?" (click opens). No buttons (Windows toast rule). |
 | J1-J7 (export) | Web share & export section 11115 (not rendered here); X13/X10 rows; UP1 progress card | Options as a dialog with rows; rendering = progress card with bar; background export = tray row with spinner; done = toast. |
 | K1, K9, K10 (engine crashed, repairing) | ES1 "engine not responding"; UP1 progress card | Banner or dialog: "SpeakKit's engine stopped. Your readings are saved." + `Restart engine` + `Send crash report`. |
 | K2, K7 (port in use, already running) | ES1 "shortcut taken"; X4 | Banner with the port and `Choose port`; "already running" = focus existing window + toast. |
@@ -58,10 +57,10 @@ Lumen frame ids refer to `Lumen ... .figcraft`; details and measurements are in 
 
 | Pattern | Lumen frame to copy | SpeakKit use |
 |---|---|---|
-| Global search / command palette | CP1 38258 + title-bar search (X15) | `Ctrl K` palette: readings, voices, actions ("Read clipboard", "Pause"), settings. Needs frame `CP1`. |
+| Global search / command palette | CP1 38258 + title-bar search (X15) | `Ctrl K` palette: readings, voices, actions ("Pause", "Export"), settings. Needs frame `CP1`. |
 | Status pill in the title bar | X15/X16, UP1 30170 (`Update ready - 1.1.0`) | `Reading 3 of 14` / `Downloading model 42%` / `Update ready`. |
 | Notifications settings table (event x Toast, Bell, Sound) + Do not disturb | SD7 32102 | Events: reading finished, export done, model download done, engine error, update ready. |
-| Notification toasts (Windows) | NO1 30080 | Export complete, clipboard read, engine problem; rules card included. |
+| Notification toasts (Windows) | NO1 30080 | Export complete, engine problem; rules card included. |
 | Updates popover + "Updating..." card + "install when I quit" | UP1 30170, SD4 31233 | New screen; H9 only covers the settings row. |
 | Quit confirmation | QT1 30273 | "Quit SpeakKit? 1 reading is playing and 2 exports are rendering." |
 | Tray left-click panel with state icons | TR1 29857, TR2 29994 | Part of I1 family but missing the panel; add I10 panel. |

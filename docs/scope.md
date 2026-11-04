@@ -26,7 +26,7 @@ How to read it:
 | H9 H18 H19 (Update available, update pill, updating) | `renderer/UpdateCard.tsx`, `main/updates*.ts`; the update flow runs against a fake updater, a real GitHub release was never installed |
 | I3 I9 (Mini player) | `renderer/mini.tsx`; the sleep-timer overflow menu is not built |
 | I10 I11 (Tray menu and panel, tray icon states) | `main/tray.ts`, `renderer/panel.tsx`; native menu and icon pixels are asserted through the test hook only |
-| I4 I5 I12 (Shortcut toast, clipboard prompt, OS toasts) | `main/toasts.ts`, `main/system/clipboard-watch.ts`; simulated in tests, never seen as a real Windows toast |
+| I4 I12 (Shortcut toast, OS toasts) | `main/toasts.ts`; simulated in tests, never seen as a real Windows toast |
 | J1 J2 J3 J5 J6 J7 (Export: options, rendering, done, file exists, background, toast) | `renderer/ExportDialog.tsx`, `main/export` |
 | K1 (Engine crashed) | error banner with Retry in the shell, `retryEngine` |
 | K2 (Port in use) | the server falls back to the next free port and the Browser page says so (`portFallback`) |

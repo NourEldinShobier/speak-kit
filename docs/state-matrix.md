@@ -28,7 +28,7 @@ Columns: **Empty** (no data, first run), **Large** (very long titles, 5,000 para
 | Export (WAV, MP3, background) | J1 | gap (10-hour document) | K1; `system.test.ts` | gap | gap |
 | Tray menu and icon | I1 | n/a | I8 (error); `shell.test.ts` tray state | n/a | I6 (dark) |
 | Mini player | I3 | n/a | I9 | n/a | gap |
-| Toasts (shortcut, clipboard) | I4, I5 | n/a | K8 | n/a | gap |
+| Toasts (shortcut) | I4 | n/a | K8 | n/a | gap |
 | Update card | H9 | n/a | n/a (unsupported build reports "unsupported") | gap | gap |
 | Errors: port in use, low disk, checksum failed | K2, K7 | n/a | K3, K4 | gap | gap |
 

@@ -3,7 +3,8 @@
 Applies to: Speak Kit v0.3.0 (Windows), written 2026-11-01 from the source, `docs/architecture.md` and the decision records. Rule ids S1 and S18 in `docs/engineering/ostio-practices.md`. This is a design-level model: each threat names the defence in the code, its cost, and what is not verified. It is not a penetration test.
 
 ## Assets
-- The user's text (pages, library documents, clipboard content that is read aloud).
+- The user's text (pages, library documents, text you paste into the app).
+- The user's clipboard: nothing reads it except the selection capture, which restores it (`docs/privacy.md`); renderer pages are denied `clipboard-read`.
 - The user's voice clips used for cloning.
 - The pairing token (ADR 0006).
 - The integrity of the installed app and its updates.

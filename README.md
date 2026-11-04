@@ -6,7 +6,7 @@
 A private text-to-speech reader. Select text in Chrome, press a key, and a natural voice reads it aloud while the sentence and word being spoken are highlighted. The voice model runs on your computer: no account, no cloud, nothing uploaded.
 
 - **Chrome extension** (Manifest V3): reads selections and whole pages, floating player, reader view, side panel queue.
-- **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, adds global shortcuts, a mini player, clipboard reading, a library for files (PDF, EPUB, DOCX, Markdown, text) and MP3 or WAV export.
+- **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, adds global shortcuts, a mini player, a library for files (PDF, EPUB, DOCX, Markdown, text) and MP3 or WAV export.
 - **Voices**: 28 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) voices out of the box, and optional [Chatterbox](https://github.com/resemble-ai/chatterbox) voice cloning on machines with a GPU.
 
 <p align="center">
@@ -56,7 +56,6 @@ Global, work in any app while the desktop app runs (change them in Settings, Sho
 | Ctrl+Alt+S | Read the selected text |
 | Ctrl+Alt+Space | Play or pause |
 | Ctrl+Alt+X | Stop |
-| Ctrl+Alt+C | Read the clipboard |
 
 In the browser the extension suggests these (change them at `chrome://extensions/shortcuts`; on macOS the modifier is Command):
 
