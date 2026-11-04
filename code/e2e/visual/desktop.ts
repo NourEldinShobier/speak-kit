@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { createServer as netServer } from "node:net";
 import type { Page } from "@playwright/test";
 import { GROUPS, S, builtPath, type Ctx, type Scenario } from "./scenarios";
-import { sleep } from "./support";
+import { clickTrayQuit, sleep } from "./support";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const harnessPath = resolve(here, "../../apps/desktop/tests/harness.ts");
@@ -230,11 +230,7 @@ export const desktopScenarios: Scenario[] = [
   // system
   home("K11", "quit-confirmation", SY, "Quit confirmation", {
     drive: async (p, { app }) => {
-      await app.evaluate(() => {
-        const t = (globalThis as any).__speakkit;
-        const q = t.trayItems().find((i: any) => i.label.startsWith("Quit"));
-        t.clickTray(q.label);
-      });
+      await clickTrayQuit(app);
       await p.getByRole("dialog").waitFor({ timeout: 5000 });
     },
   }),

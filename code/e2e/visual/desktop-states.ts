@@ -8,7 +8,7 @@ import type { Page } from "@playwright/test";
 import { GROUPS, S, type Scenario } from "./scenarios";
 import { DONE, desktopShot, home, press, settings, type Opts } from "./desktop";
 import { READ, hook, libraryWith, slow, windowShot } from "./desktop-app";
-import { sleep } from "./support";
+import { clickTrayQuit, sleep } from "./support";
 
 // Desktop states that came after the first harness pass: library add / drag / menu / toasts, reader sub-states, PDF reader, shortcut recording,
 // update available, tray panel and quit variants, bell with entries. Design ids follow the design set.
@@ -24,10 +24,8 @@ const toLibrary = async (p: Page) => {
   await p.getByRole("link", { name: "Library" }).click();
   await p.getByRole("heading", { name: "Library" }).waitFor();
 };
-const importText = (p: Page, text: string, title?: string) =>
-  p.evaluate(([t, ti]) => window.speakkitLibrary.importText(t as string, (ti as string | undefined) ?? undefined), [text, title] as const);
-const importBytes = (p: Page, name: string, bytes: number[]) =>
-  p.evaluate(([n, b]) => window.speakkitLibrary.importBytes(n as string, new Uint8Array(b as number[])), [name, bytes] as const);
+const importText = (p: Page, text: string, title?: string) => p.evaluate(([t, ti]) => window.speakkitLibrary.importText(t as string, (ti as string | undefined) ?? undefined), [text, title] as const);
+const importBytes = (p: Page, name: string, bytes: number[]) => p.evaluate(([n, b]) => window.speakkitLibrary.importBytes(n as string, new Uint8Array(b as number[])), [name, bytes] as const);
 /** Leave and come back: the list reads once when the page opens. */
 const reopenLibrary = async (p: Page) => {
   await p.getByRole("link", { name: "Home" }).click();
@@ -47,7 +45,10 @@ const play = async (p: Page) => {
   await status(p, "playing");
 };
 const SHORT = "One short sentence here. A second sentence follows it. And a third to finish the paragraph.";
-const LONG = Array.from({ length: 14 }, (_, i) => `Paragraph ${i + 1} of the essay. It has a few sentences so the page needs scrolling. The voice reads one paragraph after another until the end.`).join("\n\n");
+const LONG = Array.from(
+  { length: 14 },
+  (_, i) => `Paragraph ${i + 1} of the essay. It has a few sentences so the page needs scrolling. The voice reads one paragraph after another until the end.`,
+).join("\n\n");
 const withText = (title: string, text: string) => async (p: Page) => {
   await importText(p, text, title);
   await openDoc(p, title);
@@ -355,10 +356,7 @@ export const stateScenarios: Scenario[] = [
       await p.getByRole("button", { name: "Run in background" }).click();
       await hook(app, "readText", READ);
       await sleep(500);
-      await app.evaluate(() => {
-        const t = (globalThis as any).__speakkit;
-        t.clickTray(t.trayItems().find((i: any) => i.label.startsWith("Quit")).label);
-      });
+      await clickTrayQuit(app);
       await p.getByRole("dialog").waitFor({ timeout: 5000 });
     },
   }),

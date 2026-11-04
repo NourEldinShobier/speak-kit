@@ -1,7 +1,7 @@
 {
   "lint": {
     "tests": {
-      "no-explicit-any": 14,
+      "no-explicit-any": 13,
       "complexity": 2,
       "max-depth": 1,
       "no-nested-ternary": 2

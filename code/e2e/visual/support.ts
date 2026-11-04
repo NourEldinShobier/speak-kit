@@ -145,3 +145,12 @@ export const playerState = (p: Partial<PlayerState> = {}): PlayerState => ({
 });
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type TrayHook = { trayItems(): { label: string }[]; clickTray(label: string): void };
+
+/** Clicks the tray menu's Quit item through the app's test hook. */
+export const clickTrayQuit = (app: import("@playwright/test").ElectronApplication) =>
+  app.evaluate(() => {
+    const t = (globalThis as unknown as { __speakkit: TrayHook }).__speakkit;
+    t.clickTray(t.trayItems().find((i) => i.label.startsWith("Quit"))?.label ?? "");
+  });
