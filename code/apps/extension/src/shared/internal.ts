@@ -5,7 +5,7 @@ export type { PlayerConfig, QueueItem };
 
 /** Messages between the service worker and the offscreen player, plus extra worker requests beyond protocol/messages.ts. */
 
-export type ToOffscreen = { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig } | { to: "offscreen"; query: "queue" } | { to: "offscreen"; autoPlay: boolean };
+export type ToOffscreen = { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig } | { to: "offscreen"; query: "queue" | "state" } | { to: "offscreen"; autoPlay: boolean };
 
 export type FromOffscreen =
   | { from: "offscreen"; kind: "state"; state: PlayerState }

@@ -1,4 +1,4 @@
-import type { PlayerCommand } from "@speakkit/protocol";
+import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
 import { getToken, loadSettings, saveSettings } from "../../features/settings";
 import type { FromOffscreen, PlayerConfig } from "../../shared/internal";
 import { closeOffscreenIfIdle, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
@@ -41,4 +41,18 @@ export async function handleOffscreen(m: FromOffscreen): Promise<void> {
     setQueue(m.queue);
     sendToPages({ t: "queue", queue: m.queue });
   }
+}
+
+/**
+ * After the worker was suspended its memory is gone and the mirrored state may be stale (the offscreen document kept playing, or was closed).
+ * Ask the player what it is doing and publish that when it differs, so every tab and the badge catch up.
+ */
+export async function reconcilePlayer(): Promise<void> {
+  const last = await getState();
+  if (!(await hasOffscreen())) {
+    if (last.status !== "idle") publishState(await idle());
+    return;
+  }
+  const now = (await sendOffscreen({ to: "offscreen", query: "state" })) as PlayerState | undefined;
+  if (now && (now.status !== last.status || now.docId !== last.docId || now.tabId !== last.tabId)) publishState(now);
 }

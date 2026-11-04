@@ -46,6 +46,8 @@ export const inboundSchema = v.variant("t", [
   v.object({ t: v.literal("player"), command: playerCommandSchema }),
   v.object({ t: v.literal("get-state") }),
   v.object({ t: v.literal("open-options") }),
+  v.object({ t: v.literal("hello"), url: v.pipe(v.string(), v.maxLength(4000)) }),
+  v.object({ t: v.literal("dismiss"), on: v.boolean() }),
   v.object({ t: v.literal("get-health"), force: v.optional(v.boolean()) }),
   v.object({ t: v.literal("auth-check"), port: v.optional(int(1, 65535)), token: v.optional(v.pipe(v.string(), v.maxLength(500))) }),
   v.object({ t: v.literal("get-voices") }),

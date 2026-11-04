@@ -5,7 +5,8 @@ import { engine, getHealthResult, health, startApp } from "./connection";
 import { runPlayerCommand } from "./player";
 import { activeTabId, startRead, toggleReader } from "./reading";
 import { sendOffscreenIfOpen } from "./offscreen";
-import { getAutoPlay, getQueue, getState, lastDoc, setAutoPlay } from "./state";
+import { getAutoPlay, getQueue, getState, getTabState, lastDoc, setAutoPlay } from "./state";
+import { helloReply, patchTab } from "./tabs";
 
 const PREVIEW_TEXT = "Hello, this is how I sound when I read to you.";
 
@@ -53,7 +54,27 @@ const handlers: { [T in Inbound["t"]]: Handler<T> } = {
     await runPlayerCommand(msg.command, sender.tab?.id);
     return OK;
   },
-  "get-state": () => getState(),
+  // A page sees the state of its own tab only; the popup and side panel (no tab) see the global one.
+  "get-state": async (_msg, sender) => (sender.tab?.id === undefined ? getState() : getTabState(sender.tab.id)),
+  hello: async (msg, sender) => {
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) return { state: null, dismissed: false };
+    const tab = await patchTab(tabId, { alive: true });
+    const state = await getState();
+    const reply = helloReply(state, tab, tabId, msg.url);
+    // The tab was the reader but this is another page: the audio belongs to a document that is gone.
+    if (!reply.state && state.tabId === tabId && state.status !== "idle") await runPlayerCommand({ cmd: "stop" });
+    return reply;
+  },
+  dismiss: async (msg, sender) => {
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) return { ok: false };
+    await patchTab(tabId, { dismissed: msg.on });
+    if (msg.on) {
+      if ((await getState()).tabId === tabId) await runPlayerCommand({ cmd: "stop" });
+    }
+    return OK;
+  },
   "open-options": async () => {
     await chrome.runtime.openOptionsPage();
     return OK;

@@ -34,10 +34,12 @@ describe("service worker router", () => {
     expect([...KNOWN_TYPES].sort()).toEqual(
       [
         "auth-check",
+        "dismiss",
         "get-health",
         "get-queue",
         "get-state",
         "get-voices",
+        "hello",
         "launch-app",
         "open-app",
         "open-options",

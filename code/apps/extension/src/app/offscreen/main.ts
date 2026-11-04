@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((msg: ToOffscreen, _sender, sendResponse) =
     return false;
   }
   if ("query" in msg) {
-    sendResponse(player.queueItems());
+    sendResponse(msg.query === "state" ? player.state() : player.queueItems());
     return false;
   }
   cfg = { port: msg.cfg.port, token: msg.cfg.token };

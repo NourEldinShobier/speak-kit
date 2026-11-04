@@ -9,7 +9,7 @@ export { ERROR_CODES } from "./api";
 export type { EngineState, ErrorCode, Health, HoldRequest, SpeakRequest, Voice, VoiceList } from "./api";
 export { FrameDecoder, encodeFrame, floatToInt16 } from "./frames";
 export type { Frame, FrameHeader } from "./frames";
-export type { BgToContent, ContentToBg, ExtractReply, PlayerCommand, PlayerState, PlayerStatus, ReadDoc, ReadSentence, SentenceStart } from "./messages";
+export type { BgToContent, ContentToBg, ExtractReply, HelloReply, PlayerCommand, PlayerState, PlayerStatus, ReadDoc, ReadSentence, SentenceStart } from "./messages";
 export { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, SETTINGS_KEY, TOKEN_KEY, defaultSettings } from "./settings";
 export type { Settings, SiteDefault, SiteRule } from "./settings";
 export { CLONE_MAX_MS, CLONE_MIN_MS, CLONE_MIN_RATE } from "./engines";

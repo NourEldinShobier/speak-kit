@@ -3,6 +3,7 @@ import { tokens } from "@speakkit/ui/tokens";
 import { ERROR_TEXT } from "../../features/connection";
 import { loadSettings } from "../../features/settings";
 import type { ExtraBroadcast, QueueItem } from "../../shared/internal";
+import { idleFor, viewFor } from "./tabs";
 
 /**
  * What the worker knows about playback. The service worker is suspended after about 30 s idle and loses module variables,
@@ -99,19 +100,31 @@ function badge(state: PlayerState) {
 }
 
 export function publishState(state: PlayerState) {
-  // Reading moved to another tab: tell the old one so it clears its highlight and controls.
-  const prev = lastState?.tabId;
-  if (prev !== undefined && state.tabId !== undefined && prev !== state.tabId) sendToTab(prev, { t: "state", state: { ...state, status: "idle", tabId: prev } });
+  // Read the previous reader before the mirror below replaces it; after a worker restart that is storage, not memory.
+  const before = lastState ? Promise.resolve(lastState) : session.get<PlayerState>(SESSION_STATE);
   lastState = state;
   session.set(SESSION_STATE, state);
   badge(state);
   sendToPages({ t: "state", state });
   sendToTab(state.tabId, { t: "state", state });
+  // Reading moved to another tab, or stopped (a stopped player names no tab): the old reader must clear its highlight and controls.
+  void before.then((prev) => {
+    if (prev?.tabId !== undefined && prev.tabId !== state.tabId) sendToTab(prev.tabId, { t: "state", state: idleFor(state, prev.tabId) });
+  });
 }
+
+/** The state one tab may see (see viewFor). Extension pages, which have no tab, use getState. */
+export const getTabState = async (tabId: number) => viewFor(await getState(), tabId);
 
 const optionalTab = (tabId: number | undefined) => (tabId === undefined ? {} : { tabId });
 
 export async function reportError(code: ErrorCode, tabId?: number) {
   const base = await getState();
-  publishState({ ...base, status: "error", ...optionalTab(tabId ?? base.tabId), error: { code, message: ERROR_TEXT[code] } });
+  const error = { code, message: ERROR_TEXT[code] };
+  // Another tab is being read: its audio keeps playing, so the failure is shown only in the tab that asked.
+  if (tabId !== undefined && base.tabId !== undefined && base.tabId !== tabId && base.status !== "idle" && base.status !== "finished" && base.status !== "error") {
+    sendToTab(tabId, { t: "state", state: { ...idleFor(base, tabId), status: "error", error } });
+    return;
+  }
+  publishState({ ...base, status: "error", ...optionalTab(tabId ?? base.tabId), error });
 }

@@ -6,9 +6,10 @@ import { onCommand } from "./commands";
 import { clearHealth } from "./connection";
 import { menuLog, menusStale, onMenuClick, rebuildMenus } from "./menus";
 import { OFFSCREEN_URL } from "./offscreen";
-import { handleOffscreen, runPlayerCommand } from "./player";
+import { handleOffscreen, reconcilePlayer } from "./player";
 import { KNOWN_TYPES, routeSafely } from "./router";
-import { getState, sendToPages, sendToTab } from "./state";
+import { sendToPages, sendToTab } from "./state";
+import { onTabRemoved, onTabReplaced, onTabUpdated } from "./tab-events";
 
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as { from?: string; to?: string; t?: string } | null;
@@ -62,14 +63,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   for (const t of await chrome.tabs.query({})) sendToTab(t.id, { t: "settings-changed" });
 });
 
-// Reading belongs to one page: closing it or navigating away stops playback.
-const stopIfPlayingTab = async (tabId: number) => {
-  const s = await getState();
-  if (s.tabId === tabId && s.status !== "idle") await runPlayerCommand({ cmd: "stop" });
-};
-chrome.tabs.onRemoved.addListener((tabId) => {
-  void stopIfPlayingTab(tabId);
-});
-chrome.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status === "loading") void stopIfPlayingTab(tabId); // also on reload, which carries no url
-});
+chrome.tabs.onRemoved.addListener((tabId) => void onTabRemoved(tabId));
+chrome.tabs.onReplaced.addListener((added, removed) => void onTabReplaced(added, removed));
+chrome.tabs.onUpdated.addListener((tabId, info) => void onTabUpdated(tabId, info)); // a reload carries no url, only status "loading"
+void reconcilePlayer();

@@ -63,7 +63,20 @@ export type PlayerCommand =
   | { cmd: "queue-clear" };
 
 /** content script / popup / side panel -> background */
-export type ContentToBg = { t: "player"; command: PlayerCommand } | { t: "get-state" } | { t: "open-options" };
+export type ContentToBg =
+  | { t: "player"; command: PlayerCommand }
+  | { t: "get-state" }
+  | { t: "open-options" }
+  /** Handshake: sent when a content script starts, again on a bfcache restore (pageshow persisted) and after a re-injection. Reply: HelloReply. */
+  | { t: "hello"; url: string }
+  /** The close control of the on-page UI: `on` stops this tab's reading and hides the UI for this tab until the next navigation or an explicit read. Reply: { ok: true }. */
+  | { t: "dismiss"; on: boolean };
+
+/** Reply to `hello`. `state` is set only when this tab is the one being read and the document has the same URL; otherwise null and the page starts idle. */
+export interface HelloReply {
+  state: PlayerState | null;
+  dismissed: boolean;
+}
 /** background -> content script */
 export type BgToContent =
   | { t: "state"; state: PlayerState }
@@ -72,6 +85,8 @@ export type BgToContent =
   | { t: "settings-changed" }
   | { t: "toast"; message: string; kind?: "ok" | "info" | "err"; action?: "open-sidepanel" | "open-options"; actionLabel?: string }
   /** open or close the reader view */
-  | { t: "reader"; open: boolean };
+  | { t: "reader"; open: boolean }
+  /** The tab's dismissed flag changed outside the page (an explicit read from the popup, the keyboard or the menu clears it). */
+  | { t: "dismissed"; on: boolean };
 
 export type ExtractReply = { doc: ReadDoc } | { error: ErrorCode };

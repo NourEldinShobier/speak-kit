@@ -3,6 +3,7 @@ import { classifyUrl } from "../../features/connection";
 import { loadSettings, siteRule } from "../../features/settings";
 import { runPlayerCommand } from "./player";
 import { reportError, sendToTab } from "./state";
+import { getTab, patchTab } from "./tabs";
 
 type ReadMode = "page" | "selection" | "from-here";
 
@@ -11,15 +12,47 @@ export async function activeTabId(): Promise<number | undefined> {
   return tab?.id;
 }
 
-/** Sends a message to a tab's content script, injecting it first when the page has none yet. null: the page could not be reached. */
+const LOAD_WAIT_MS = 5000;
+
+/** Resolves when the tab has finished loading (its manifest content script is then in place), or after a limit. */
+function loaded(tabId: number): Promise<void> {
+  return new Promise((done) => {
+    const finish = () => {
+      clearTimeout(timer);
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      done();
+    };
+    const onUpdated = (id: number, info: { status?: string }) => {
+      if (id === tabId && info.status === "complete") finish();
+    };
+    const timer = setTimeout(finish, LOAD_WAIT_MS);
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs
+      .get(tabId)
+      .then((t) => t.status === "complete" && finish())
+      .catch(finish); // the tab is gone; the ask below fails and reports it
+  });
+}
+
+/**
+ * Sends a message to a tab's content script. A page that has none is injected once, never while it is still loading (the manifest script
+ * arrives at document_idle and would be a second copy) and never when a copy already said hello. null: the page could not be reached.
+ */
 async function askTab<T>(tabId: number, msg: BgToContent): Promise<{ reply: T } | null> {
   const ask = async () => ({ reply: (await chrome.tabs.sendMessage(tabId, msg)) as T });
   try {
     return await ask();
   } catch {
-    /* no content script yet: inject on demand */
+    /* no content script yet, or it is not listening yet */
+  }
+  await loaded(tabId);
+  try {
+    return await ask();
+  } catch {
+    /* still none: inject on demand */
   }
   try {
+    if ((await getTab(tabId)).alive) return null; // a copy exists but did not answer: a second one would only double the page UI
     await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
     return await ask();
   } catch {
@@ -42,6 +75,7 @@ export async function startRead(tabId: number, mode: ReadMode, opts: { queue?: b
     await reportError(bad, tabId);
     return false;
   }
+  const epoch = (await getTab(tabId)).epoch;
   const extract = async (m: ReadMode) => (await askTab<ExtractReply | undefined>(tabId, { t: "extract", mode: m }))?.reply;
   let reply = await extract(mode);
   if (opts.fallbackToPage && mode === "selection" && (!reply || "error" in reply || !reply.doc.sentences.length)) reply = await extract("page");
@@ -57,9 +91,18 @@ export async function startRead(tabId: number, mode: ReadMode, opts: { queue?: b
     await reportError("page-unreadable", tabId);
     return false;
   }
+  // The tab was reloaded or navigated while the text was being extracted: that page is gone.
+  if ((await getTab(tabId)).epoch !== epoch) return false;
+  await undismiss(tabId); // an explicit request to read brings the page UI back
   await runPlayerCommand({ cmd: opts.queue ? "queue-add" : "play", doc: { ...reply.doc, tabId } });
   if (opts.queue) sendToTab(tabId, { t: "toast", message: "Added to queue", kind: "ok", action: "open-sidepanel", actionLabel: "View queue" });
   return true;
+}
+
+async function undismiss(tabId: number) {
+  if (!(await getTab(tabId)).dismissed) return;
+  await patchTab(tabId, { dismissed: false });
+  sendToTab(tabId, { t: "dismissed", on: false });
 }
 
 export async function toggleReader(tabId: number, open: boolean): Promise<boolean> {
