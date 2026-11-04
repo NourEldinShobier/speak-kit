@@ -94,3 +94,19 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect(await box(panel, ".panel__now")).toMatchObject({ radius: "10px" });
   });
 });
+
+describe("title bar on macOS (data-platform=darwin set by hand; Windows keeps its native caption buttons)", () => {
+  it("the right group runs to the far right with equal right and top gaps while the search box stays centred", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.evaluate(() => (document.documentElement.dataset.platform = "darwin"));
+    const bell = await box(l.page, ".sk-bell");
+    const search = await box(l.page, ".sk-search");
+    const toggle = await box(l.page, ".sk-title__l button");
+    const w = await l.page.evaluate(() => innerWidth);
+    expect(w - (bell.x + bell.w)).toBe(bell.y); // right gap equals top gap (4 px for a 28 px button in the 36 px bar)
+    expect(bell.y).toBe(4);
+    expect(Math.round(search.x + search.w / 2)).toBe(Math.round(w / 2));
+    expect(toggle.x).toBeGreaterThanOrEqual(78); // clear of the traffic lights
+  });
+});

@@ -62,9 +62,17 @@ html[data-hidden] *::after {
 .sk-title .lm-pill {
   -webkit-app-region: no-drag;
 }
-/* macOS: the traffic lights sit at the start of the bar (about 78 px); the same inset on the other side keeps the search box centred. */
+/* macOS: the traffic lights sit at the start of the bar (about 78 px), so the left group starts after them. The right group has no native
+   controls beside it: it runs to the far right edge with the same gap as above and below its 28 px buttons (4 px), and the columns stay
+   equal so the search box stays centred in the window. */
 html[data-platform="darwin"] .sk-title {
-  padding-inline: 78px;
+  padding-inline: 0;
+}
+html[data-platform="darwin"] .sk-title__l {
+  padding-inline-start: 78px;
+}
+html[data-platform="darwin"] .sk-title__r {
+  padding-right: calc((var(--bar-h) - 28px) / 2);
 }
 .sk-title__l,
 .sk-title__r {
