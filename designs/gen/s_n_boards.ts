@@ -86,6 +86,30 @@ const decisions = (b: B, t: T, root: Ref) => {
   });
 };
 
+const perTab = (b: B, t: T, root: Ref) => {
+  const c = board(b, t, root, "Per-tab behavior: one audio output, everything else belongs to its tab", "Closing the pill in a tab touches that tab only. It lasts until the page reloads; Hide on this site is the saved version of the same choice.");
+  const r = b.row(c, { w: "fill", gap: 14, align: "start" });
+  const col = (ic: string, ti: string, sub: string, rows: string[][]) => {
+    const k = K.card(b, t, r, { w: "fill", pad: 16, gap: 10 }); const h = b.row(k, { gap: 8 }); b.icon(h, ic, 18, t.accent); b.text(h, ti, { size: 14, weight: "SemiBold", c: t.text });
+    b.text(k, sub, { size: 12, c: t.text2, w: "fill", lh: 17 });
+    table(b, t, k, [150, "fill"], ["Thing", "Rule"], rows, { rowH: 40 });
+  };
+  col("volume", "Shared by the whole browser", "There is one speaker, so there is one reading at a time.", [
+    ["Audio output", "Starting a reading in another tab stops the one that is playing."],
+    ["Voice and speed", "Chosen once in the popup or Options; every tab uses them."],
+    ["Queue", "One queue in the side panel; items remember their tab."],
+    ["Pairing and engine", "One connection to the app; the engine wakes on the first play."],
+  ]);
+  col("browser", "Owned by each tab", "Another tab never changes what this tab shows.", [
+    ["Pill and edge tab", "Each tab has its own; Close for this tab removes them there only."],
+    ["Highlight and position", "Band, word marker and tint stay in the reading tab."],
+    ["Selection bubble, gutter", "Appear on the tab you are using; never on a background tab."],
+    ["Reader view", "Opens in the tab you chose; closing it leaves other tabs alone."],
+    ["Close for this tab", "Stops reading and hides the pill; a reload restores it."],
+    ["Popup", "Shows the active tab's state, incl. Hidden in this tab."],
+  ]);
+};
+
 // ---------------- foundations ----------------
 const tokens = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "Tokens: color, type, radius, elevation", "Lockix light values (docs/lockix-design-system.md). One theme, no dark mode.");
@@ -190,6 +214,7 @@ export const N5: S[] = [
   scr("R3", "R", "First read in four steps", "Set up, pair, play and adjust, each with the frames that draw it.", flows),
   scr("R4", "R", "Resource lifecycle", "Unloaded, Loading, Ready with the same words on every surface.", lifecycle),
   scr("R5", "R", "Lumen patterns adopted", "Each Speak Kit surface names the Lumen frame it copies.", patterns),
+  scr("R7", "R", "Per-tab behavior", "One audio output, everything else per tab; Close for this tab lasts until the page reloads.", perTab),
   scr("R6", "R", "Decisions that shape the UI", "Local only, packages first, light only, performance, calm status.", decisions),
   scr("Q1", "Q", "Tokens", "Color, type, radius and elevation, light only (Lockix).", tokens),
   scr("Q2", "Q", "Icon set", "Tabler outline icons at a constant 1.5 px stroke.", iconSet, 1280, 800),

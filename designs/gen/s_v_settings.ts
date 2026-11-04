@@ -264,7 +264,7 @@ const memory = (unloaded: boolean) => (c0: Ref, b: B) => {
     row(b, c, "Battery saver", "On battery, the model unloads sooner.", (f) => toggle(b, f, true), { sep: true });
   });
 };
-const EVENTS: [string, boolean[]][] = [["Reading finished", [false, false, false]], ["Export finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]]];
+const EVENTS: [string, boolean[]][] = [["Export finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]], ["Copied text: read it?", [true, false, false]]];
 const notifications = (c0: Ref, b: B) => {
   section(b, c0, "Do not disturb", undefined, (c) => row(b, c, "Do not disturb", "No toasts or sounds from Speak Kit. The bell still keeps a line for each event.", (f) => toggle(b, f, false)));
   section(b, c0, "Events", "At most one toast per task every 10 minutes.", (c) => {
@@ -341,7 +341,7 @@ export const SETTINGS_FRAMES: S[] = [
   settings("H6", "Settings · Storage", "Usage bar with legend, per-folder sizes and Open folder buttons.", "storage", 799, {}, { title: "Storage", lead: "On this computer: 3 MB" }, pg(storage)),
   settings("H12", "Settings · Memory", "Live engine state, memory in use, idle unload, load at startup, battery saver.", "memory", 799, {}, { title: "Memory", lead: "The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when\nidle." }, pg(memory(false))),
   settings("H13", "Settings · Memory (engine unloaded)", "Same page with the engine asleep: 0 MB in memory, wakes on play, Load now.", "memory", 799, { status: ASLEEP, footer: ["Voice engine asleep", "Voice: Heart", "0 readings"] }, { title: "Memory", lead: "The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when\nidle." }, pg(memory(true))),
-  settings("H14", "Settings · Notifications", "Do not disturb, and the Toast, Bell and Sound table per event.", "notifications", 799, {}, { title: "Notifications", lead: "A toast is a Windows notification. The bell is the list in the title bar. Clicking a toast opens the place it is about." }, pg(notifications)),
+  settings("H14", "Settings · Notifications", "Do not disturb, and the Toast, Bell and Sound table per event. There is no row for the engine or model becoming ready: that never notifies.", "notifications", 799, {}, { title: "Notifications", lead: "A toast is a Windows notification. The bell is the list in the title bar. Clicking a toast opens the place it is about." }, pg(notifications)),
   aboutFrame("H8", "Settings · About", "Versions, update section for a folder copy, open source licenses.", 799, "unsupported", {}),
   aboutFrame("H9", "Settings · Update available", "Manual update: release notes and download, Remind me later.", 798, "manual", { update: "Update available · 0.9.0" }),
   aboutFrame("H23", "Settings · Update ready (pill)", "Update ready: green pill and notification dot in the title bar, card in About.", 799, "ready", { update: "Update ready · 0.2.0", bellDot: true }),

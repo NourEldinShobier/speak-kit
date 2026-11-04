@@ -251,7 +251,7 @@ const voicePanel = (b: B, p: Node) => {
   const list = b.col(vs, { w: "fill", gap: 2 });
   VOICES.forEach(([n, lang, q], i) => {
     const sel = i === 0;
-    const r = b.row(list, { w: "fill", h: 44, pad: [0, 8], gap: 10, r: 8, fill: sel ? C.selected : "none" });
+    const r = b.row(list, { w: "fill", h: 44, pad: [0, 8], gap: 10, r: 4, fill: sel ? C.selected : "none" });
     avatar(b, r, n[0], 28, sel ? "accent" : "purple");
     const t = b.col(r, { w: "fill", gap: 1 });
     T(b, t, n, { size: 13, weight: "SemiBold", lh: 16, w: "fill" });
@@ -323,6 +323,8 @@ const STATES: St[] = [
     draw: (b, p) => msg(b, p, "alert", "The voice engine isn't ready", "Speak Kit is running but the Kokoro voice model isn't installed or failed to start. Open the app to download or repair it.", "Open Speak Kit", "Check again") },
   { id: "A23", title: "Popup · playing with a selection on the page", note: "Playback keeps the page title; a selection on the page does not change the player.", h: 383, pill: ["Kokoro ready", "green"], ctx: "selection",
     draw: (b, p) => { nowCard(b, p, TITLE, `${SITE} · 6:48 at 1.2x`); liveControls(b, p, { pct: 0.36, left: "2:27", right: "4:21 left", centre: "pause" }); hr(b, p); voiceSpeed(b, p); shortcuts(b, p); } },
+  { id: "A24", title: "Popup · hidden in this tab", note: "The pill was closed in this tab: the popup says so and offers Show on this page; a reload brings the pill back.", h: 335, pill: ["Kokoro ready", "green"], ctx: "article",
+    draw: (b, p) => msg(b, p, "eyeOff", "Hidden in this tab", "Speak Kit's pill is hidden on this page. It comes back when you reload the page, or show it now.", "Show on this page") },
 ];
 const FOOT: Record<string, [string, string]> = { A9: ["Runs on this computer", "Troubleshooting"], A13: ["Free. Works offline.", "Learn more"], A14: ["Runs on this computer", "Extension options"], A18: ["Runs on this computer", "Troubleshooting"] };
 

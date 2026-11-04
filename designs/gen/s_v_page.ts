@@ -79,8 +79,9 @@ const article = (b: B, vp: Ref, o: { dark?: boolean; sent?: boolean; sel?: boole
 const txt = (b: B, p: Ref, s: string, o: Record<string, any> = {}) => b.text(p, s, { ff: "Inter", ...o });
 const logo = (b: B, p: Ref, size: number, o: Record<string, any> = {}) => { const w = K3.skLogo(b, p, size, o); return w; };
 /** lm-btn--icon sm: 28 px, r8, transparent. */
-const ib = (b: B, p: Ref, icon: string, o: { size?: number; c?: string; iconSize?: number; opacity?: number } = {}) => {
-  const s = o.size ?? 28; const f = b.row(p, { w: s, h: s, r: 8, justify: "center", opacity: o.opacity }); b.icon(f, icon, o.iconSize ?? 16, o.c ?? INK); return f;
+const ib = (b: B, p: Ref, icon: string, o: { size?: number; c?: string; iconSize?: number; opacity?: number; hover?: boolean; tip?: string } = {}) => {
+  const s = o.size ?? 28; const f = b.row(p, { w: s, h: s, r: 8, justify: "center", opacity: o.opacity, fill: o.hover ? "#0000000A" : undefined }); b.icon(f, icon, o.iconSize ?? 16, o.c ?? INK);
+  return f;
 };
 const avatar = (b: B, p: Ref, ch: string, size: number, fill: string) => { const f = b.row(p, { w: size, h: size, r: 999, fill, justify: "center" }); txt(b, f, ch, { size: Math.round(size * 0.42), weight: "SemiBold", c: ON_CTA }); return f; };
 /** lm-btn sm secondary / primary / ghost */
@@ -110,10 +111,10 @@ const idlePill = (b: B, p: Ref, sub = "45 s at 1.2x") => {
   logo(b, f, 28);
   const col = b.col(f, { gap: 2 }); txt(b, col, "Read this page", { size: 13, lh: 16, weight: "SemiBold", c: INK }); txt(b, col, sub, { size: 12, lh: 15, c: SEC });
   const pb = b.row(f, { w: 40, h: 40, r: 999, fill: CTA, justify: "center", effects: SHCTA }); b.icon(pb, "play", 16, ON_CTA);
-  ib(b, f, "moreV");
+  ib(b, f, "moreV"); ib(b, f, "x");
   return f;
 };
-const readingPill = (b: B, p: Ref, st: Dock) => {
+const readingPill = (b: B, p: Ref, st: Dock, closeHover = false) => {
   const off = st === "preparing" || st === "waking" || st === "finished";
   const f = pillBox(b, p);
   ib(b, f, "skipBack", { opacity: off ? 0.5 : undefined });
@@ -128,7 +129,7 @@ const readingPill = (b: B, p: Ref, st: Dock) => {
   const sp = b.row(f, { h: 28, w: 50, r: 8, fill: "#FFFFFF", stroke: CTRL, sw: 1, sa: "inside", justify: "center", effects: SHCTL }); txt(b, sp, "1.2x", { size: 13, lh: 16, weight: "Medium", c: "#171717", ls: -0.13 });
   const vc = b.row(f, { name: "Voice chip", h: 28, pad: [0, 6, 0, 4], gap: 6, r: 8, fill: "#FFFFFF", stroke: CTRL, sw: 1, sa: "inside", effects: SHCTL });
   avatar(b, vc, "H", 20, CTA); txt(b, vc, "Heart · on device", { size: 13, lh: 16, c: SEC, weight: "Regular" }); b.icon(vc, "down", 14, SEC);
-  ib(b, f, "moreV"); ib(b, f, "x");
+  ib(b, f, "moreV"); ib(b, f, "x", closeHover ? { hover: true } : {});
   return f;
 };
 const ERR: Record<string, { msg: string; act?: string; primary?: boolean }> = {
@@ -145,15 +146,16 @@ const errorPill = (b: B, p: Ref, kind: keyof typeof ERR, retry: boolean) => {
   txt(b, f, e.msg, { size: 13, lh: 16, weight: "SemiBold", c: INK });
   if (e.act) btn(b, f, e.act, "primary");
   if (retry) btn(b, f, "Retry", "secondary");
-  ib(b, f, "moreV");
+  ib(b, f, "moreV"); ib(b, f, "x");
   return f;
 };
 
 type Ov = (b: B, vp: Ref) => void;
-const dockOv = (st: Dock, o: { kind?: keyof typeof ERR; retry?: boolean; asleep?: boolean; raise?: boolean } = {}): Ov => (b, vp) => {
+const dockOv = (st: Dock, o: { kind?: keyof typeof ERR; retry?: boolean; asleep?: boolean; raise?: boolean; closeHover?: boolean } = {}): Ov => (b, vp) => {
   const err = st === "error";
   const row = SHELL(b, vp, err ? 630 : 641);
-  if (st === "idle") idlePill(b, row); else if (err) errorPill(b, row, o.kind ?? "offline", o.retry ?? true); else readingPill(b, row, st);
+  if (st === "idle") idlePill(b, row); else if (err) errorPill(b, row, o.kind ?? "offline", o.retry ?? true); else readingPill(b, row, st, o.closeHover);
+  if (o.closeHover) tooltip(b, vp, "Close for this tab", undefined, 890, 607); // above the x button (centre x 952 of the playing pill)
   if (err) { const d = b.row(vp, { x: 0, y: 686, w: VW, h: 28, justify: "center" }); btn(b, d, "Details", "ghost", { iconRight: "down" }); }
 };
 
@@ -211,7 +213,7 @@ const speedPop: Ov = (b, vp) => {
   txt(b, p, "1.2x", { x: 235, y: 43, w: 52, size: 14, lh: 17, weight: "SemiBold", c: INK, ta: "right" });
   ["0.5x", "1x", "1.2x", "1.5x", "2x", "3x"].forEach((v, i) => {
     const on = v === "1.2x";
-    const bt = b.row(p, { x: 13 + i * 46.67, y: 91, w: 40.67, h: 36, r: 8, justify: "center", fill: on ? "#FFFFFF" : "none", stroke: on ? CTRL : undefined, sw: 1, sa: "inside", effects: on ? SHCTL : undefined });
+    const bt = b.row(p, { x: 13 + i * 46.67, y: 91, w: 40.67, h: 36, r: 4, justify: "center", fill: on ? "#FFFFFF" : "none", stroke: on ? CTRL : undefined, sw: 1, sa: "inside", effects: on ? SHCTL : undefined });
     txt(b, bt, v, { size: 13, lh: 16, weight: "Medium", c: on ? "#171717" : SEC, ls: -0.13 });
   });
   const r = b.row(p, { x: 13, y: 137, h: 28, pad: [0, 12], gap: 6, r: 8, justify: "center" });
@@ -225,7 +227,7 @@ const voicePop: Ov = (b, vp) => {
   const inp = b.row(p, { x: 13, y: 67, w: 294, h: 28, pad: [0, 10], gap: 8, r: 8, fill: "#FFFFFF", stroke: "#171717", sw: 2, sa: "inside" });
   b.icon(inp, "search", 16, TER); txt(b, inp, "Search voices", { size: 13, lh: 16, c: "#6B7280" });
   VOICES.forEach(([n, sub, sel], i) => {
-    const r = b.row(p, { x: 13, y: 105 + i * 46, w: 294, h: 44, pad: [0, 8], gap: 10, r: 8, fill: sel ? "#F0F0F0" : i === 2 ? "#F5F5F5" : "none" });
+    const r = b.row(p, { x: 13, y: 105 + i * 46, w: 294, h: 44, pad: [0, 8], gap: 10, r: 4, fill: sel ? "#F0F0F0" : i === 2 ? "#F5F5F5" : "none" });
     avatar(b, r, n[0], 28, sel ? CTA : "#7A4CD9");
     const c = b.col(r, { w: "fill", gap: 1 }); txt(b, c, n, { size: 13, lh: 16, weight: "SemiBold", c: INK }); txt(b, c, sub, { size: 12, lh: 15, c: SEC });
     if (sel) b.icon(r, "check", 14, CTA);
@@ -233,9 +235,9 @@ const voicePop: Ov = (b, vp) => {
   });
 };
 const moreMenu: Ov = (b, vp) => {
-  const m = b.col(vp, { name: "More menu", x: 729, y: 522, w: 200, pad: 5, gap: 0, r: 10, fill: "#FFFFFF", stroke: CTRL, sw: 1, sa: "inside", effects: POP });
-  [["sliders", "Settings"], ["x", "Close"], ["eyeOff", "Hide on this site"]].forEach(([ic, l]) => {
-    const r = b.row(m, { w: "fill", h: 28, pad: [0, 6], gap: 6, r: 8 }); if (ic === "sliders") adjust(b, r, 16, "#667085"); else b.icon(r, ic, 16, "#667085"); txt(b, r, l, { size: 14, lh: 20, c: INK });
+  const m = b.col(vp, { name: "More menu", x: 702, y: 537, w: 200, pad: 5, gap: 0, r: 10, fill: "#FFFFFF", stroke: CTRL, sw: 1, sa: "inside", effects: POP });
+  [["sliders", "Settings"], ["eyeOff", "Hide for this tab"], ["eyeOff", "Hide on this site"]].forEach(([ic, l]) => {
+    const r = b.row(m, { w: "fill", h: 28, pad: [0, 6], gap: 6, r: 5 }); if (ic === "sliders") adjust(b, r, 16, "#667085"); else b.icon(r, ic, 16, "#667085"); txt(b, r, l, { size: 14, lh: 20, c: INK });
   });
 };
 // edge launcher (launcher.css .sk-tab / .sk-pill)
@@ -312,7 +314,7 @@ const readingPop: Ov = (b, vp) => {
   txt(b, p, "Reading", { x: 13, y: 13, size: 14, lh: 20, weight: "SemiBold", c: INK });
   const seg = (y: number, w: number, items: [string, number][], on: number) => {
     const f = b.row(p, { x: 13, y, w, h: 36, pad: 3, gap: 0, r: 8, fill: "#F0F0F0" });
-    items.forEach(([l, iw], i) => { const o = b.row(f, { w: iw, h: 30, r: 6, justify: "center", fill: i === on ? "#FFFFFF" : "none", stroke: i === on ? CTRL : undefined, sw: 1, sa: "inside", effects: i === on ? SHCTL : undefined }); txt(b, o, l, { size: 13, lh: 16, weight: i === on ? "Medium" : "Regular", c: i === on ? "#171717" : TER }); });
+    items.forEach(([l, iw], i) => { const o = b.row(f, { w: iw, h: 30, r: 5, justify: "center", fill: i === on ? "#FFFFFF" : "none", stroke: i === on ? CTRL : undefined, sw: 1, sa: "inside", effects: i === on ? SHCTL : undefined }); txt(b, o, l, { size: 13, lh: 16, weight: i === on ? "Medium" : "Regular", c: i === on ? "#171717" : TER }); });
   };
   seg(43, 206, [["Sans", 62], ["Serif", 56], ["Dyslexic", 85]], 1);
   const row = (cy: number, label: string, val: string, thumb: number) => {
@@ -378,5 +380,7 @@ export const Bs: S[] = [
   frame({ id: "B34", title: "Page · reader view, light", note: "Light reader theme: white page, grey current block, blue sentence band.", view: (b, vp) => readerView(b, vp, RLIGHT, "documents"), ov: [dockOv("playing")] }),
   frame({ id: "B32", title: "Page · reader view, theme dark requested", note: "The dark reader theme was removed (light only): choosing it renders the paper theme, identical to B10.", view: (b, vp) => readerView(b, vp, PAPER, "documents"), ov: [dockOv("playing")] }),
   frame({ id: "B24", title: "Page · reading settings popover", note: "Reading popover opened from the reader bar: font, size, width, theme and the Highlight sentence switch (drawn unstyled, as the product renders it).", view: (b, vp) => readerView(b, vp, PAPER, "even"), ov: [dockOv("playing"), readingPop] }),
-  frame({ id: "B33", title: "Page · pill more menu", note: "The pill's more button opens Settings, Close and Hide on this site.", page: READ, ov: [dockOv("playing"), moreMenu] }),
+  frame({ id: "B37", title: "Page · close button hover", note: "Hovering the pill's x shows the Close for this tab tooltip; the click stops reading and removes the pill for this tab only.", page: READ, ov: [dockOv("playing", { closeHover: true })] }),
+  frame({ id: "B38", title: "Page · closed for this tab", note: "After Close for this tab the page is left alone: reading stopped, highlight cleared, no pill and no edge tab until the page reloads. Other tabs are not affected.", ov: [] }),
+  frame({ id: "B33", title: "Page · pill more menu", note: "The pill's more button opens Settings, Hide for this tab and Hide on this site. The x beside it closes the pill for this tab.", page: READ, ov: [dockOv("playing"), moreMenu] }),
 ];

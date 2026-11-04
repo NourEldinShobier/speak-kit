@@ -433,7 +433,7 @@ const F3S = ["Kokoro ready", "Voice: Heart", "1 reading"];
 const popCard = (b: B, c: Ref, x: number, y: number, w: number, h: number) => b.frame(c, { x, y, w, h, r: 12, fill: "#FFFFFF", stroke: "#E5E5E5", sw: 1, sa: "inside", shadow: "lg", clip: true });
 const VOICES = ["Heart", "Bella", "Nicole", "Aoede", "Kore", "Sarah", "Alloy", "Nova", "Sky", "Jessica", "River"];
 const voiceRow = (b: B, p: Ref, name: string, x: number, cy: number, w: number, sel: boolean, rh: number) => {
-  if (sel) rr(b, p, x, cy - rh / 2, w, rh, { r: 8, fill: "#F0F0F0" });
+  if (sel) rr(b, p, x, cy - rh / 2, w, rh, { r: 4, fill: "#F0F0F0" });
   const nm = b.text(p, name, { x: x + 8, y: cy - 9, size: 14, c: INK, lh: 18 });
   const sub = b.text(p, "US · female", { x: x + 8 + name.length * 8.2 + 8, y: cy - 8, size: 12, c: INK3, lh: 16 }); void nm; void sub;
   if (sel) ic(b, p, "check", 16, x + w - 14, cy, INK);

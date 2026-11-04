@@ -91,7 +91,7 @@ const nav = (b: B, t: T, vp: Ref, sec: Sec) => {
   const items = b.col(n, { x: 12, y: 64, w: 224, gap: 2 });
   NAV.forEach(([id, label, ic]) => {
     const on = id === sec;
-    const f = b.row(items, { w: "fill", h: 36, pad: [0, 10], gap: 10, r: 8, fill: on ? t.selected : "none" });
+    const f = b.row(items, { w: "fill", h: 36, pad: [0, 10], gap: 10, r: 4, fill: on ? t.selected : "none" });
     icon(b, f, ic, 18, on ? t.text : t.text2);
     b.text(f, label, { size: 13, weight: on ? "Medium" : "Regular", c: on ? t.text : t.text2, ls: -0.13 });
   });
@@ -351,7 +351,7 @@ const panel = (b: B, t: T, vp: Ref, st: "queue" | "outline" | "empty") => {
   const ol = b.col(p, { x: 16, y: 313, w: 367, gap: 2 });
   const OUT = st === "queue" ? ["For a decade, the default answer to every…", "The appeal is simple. When the work happen…", "None of this is nostalgia. It is a bet that the be…"] : ["For a decade, the default answer to every sof…", "The appeal is simple. When the work happen…", "None of this is nostalgia. It is a bet that the b…"];
   const cur = st === "queue" ? 0 : 2;
-  OUT.forEach((s, i) => { const r = b.row(ol, { w: "fill", h: 36, pad: [0, 12, 0, 20], gap: 4, r: 8, fill: i === cur ? t.selected : "none" }); b.text(r, `${i + 1}`, { size: 12, c: t.text2, w: 16, ta: "center" }); b.text(r, s, { size: 14, weight: i === cur ? "Medium" : "Regular", c: i === cur ? t.text : t.text2, w: "fill" }); if (i === cur && st === "queue") b.icon(r, "volume", 14, t.text); });
+  OUT.forEach((s, i) => { const r = b.row(ol, { w: "fill", h: 36, pad: [0, 12, 0, 20], gap: 4, r: 4, fill: i === cur ? t.selected : "none" }); b.text(r, `${i + 1}`, { size: 12, c: t.text2, w: 16, ta: "center" }); b.text(r, s, { size: 14, weight: i === cur ? "Medium" : "Regular", c: i === cur ? t.text : t.text2, w: "fill" }); if (i === cur && st === "queue") b.icon(r, "volume", 14, t.text); });
   if (st === "queue") {
     lbl("UP NEXT · 2 · 9 MIN", 436); const cl = b.frame(p, { x: 337, y: 434, layout: "horizontal" }); b.text(cl, "Clear all", { size: 13, weight: "Medium", c: t.accent });
     [["How small speech models got good", "blog.example.org · 6 min", 459], ["Privacy by default", "docs.example.com · 3 min", 525]].forEach(([a, d, y]) => {
