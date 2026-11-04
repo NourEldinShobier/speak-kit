@@ -251,7 +251,7 @@ const home = (b: B, t: T, main: Ref, pw: number, port: string, token: string) =>
 };
 const scrim = (b: B, t: T, c: Ref, W: number, H: number) => b.rect(c, { x: 0, y: 0, w: W, h: H, fill: t.overlay });
 
-// command palette (Palette.tsx / overlays.css): 640 wide, 54 px input row, 8 px list padding, 32 px footer
+// command palette (Palette.tsx / overlays.css): 640 wide, 54 px input row, 8 px list padding (row r4 = dialog r10 - 8, min 4), 32 px footer
 type Row = { ic: string; l: string; k?: string; sel?: boolean };
 const palette = (b: B, t: T, c: Ref, q: string, group: string, rows: Row[], h: number, scroll?: boolean) => {
   const p = b.frame(c, { x: 319, y: 120, w: 640, h, r: 10, fill: t.raised, shadow: "dlg", clip: true });
@@ -263,7 +263,7 @@ const palette = (b: B, t: T, c: Ref, q: string, group: string, rows: Row[], h: n
   const gl = b.row(list, { w: "fill", h: 24, pad: [0, 6] }); tx(b, gl, group, { size: 12, weight: "Medium", c: t.text3, lh: 15 });
   b.frame(list, { w: 1, h: 0 });
   rows.forEach((r) => {
-    const it = b.row(list, { w: "fill", h: 28, pad: [0, 8], gap: 8, r: 8, fill: r.sel ? "#F5F5F5" : "none" });
+    const it = b.row(list, { w: "fill", h: 28, pad: [0, 8], gap: 8, r: 4, fill: r.sel ? "#F5F5F5" : "none" });
     b.icon(it, r.ic, 16, t.icon); tx(b, it, r.l, { size: 14, c: t.text, w: "fill", lh: 18 });
     if (r.sel || r.k) tx(b, it, r.sel ? "Enter" : r.k!, { size: 12, c: t.text3, lh: 15, ls: 0.6 });
   });

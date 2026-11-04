@@ -224,10 +224,10 @@ export const tooltip = (b: B, t: T, p: Ref | undefined, label: string, keys?: st
   if (keys) { const k = b.row(f, { h: 16, pad: [0, 5], r: 4, stroke: "#FFFFFF40", sw: 1, sa: "inside" }); b.text(k, keys, { size: 10, c: "#D0D5DD" }); }
   return f;
 };
-// ---------- menu (Lockix): pad 4, r10, white, 1 px stroke-control, menu shadow 0 1 2; item 28 px, pad 0/6, gap 6, r8, 16 px icon #667085, Inter 14; hover/selected fill-hover; destructive #C62828 with a 10% red highlight ----------
+// ---------- menu (Lockix): pad 4, r10, white, 1 px stroke-control, menu shadow 0 1 2; item 28 px, pad 0/6, gap 6, r5 (concentric: menu r10 - 1 px stroke - 4 px pad), 16 px icon #667085, Inter 14; hover/selected fill-hover; destructive #C62828 with a 10% red highlight ----------
 export const menu = (b: B, t: T, p: Ref | undefined, o: O = {}) => b.col(p, { pad: 4, gap: 0, r: 10, fill: t.raised, stroke: t.control, sw: 1, sa: "inside", shadow: "md", ...o });
 export const menuItem = (b: B, t: T, p: Ref | undefined, label: string, o: { icon?: string; shortcut?: string; selected?: boolean; hover?: boolean; destructive?: boolean; disabled?: boolean; h?: number } = {}) => {
-  const f = b.row(p, { w: "fill", h: o.h ?? 28, pad: [0, 6], gap: 6, r: 8, fill: o.selected || o.hover ? (o.destructive ? tint(t.destructive, 0.1) : t.hover) : "none", opacity: o.disabled ? 0.5 : undefined });
+  const f = b.row(p, { w: "fill", h: o.h ?? 28, pad: [0, 6], gap: 6, r: 5, fill: o.selected || o.hover ? (o.destructive ? tint(t.destructive, 0.1) : t.hover) : "none", opacity: o.disabled ? 0.5 : undefined });
   if (o.icon) b.icon(f, o.icon, 16, o.destructive ? t.destructive : t.icon);
   b.text(f, label, { size: 14, c: o.destructive ? t.destructive : t.text, w: "fill" });
   if (o.shortcut) b.text(f, o.shortcut, { size: 12, c: t.text3 });
