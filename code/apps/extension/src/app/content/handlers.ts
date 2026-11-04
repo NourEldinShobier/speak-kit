@@ -87,7 +87,8 @@ const reading = (c: Ctx, docs: Docs): Handlers<"listen" | "readSelection" | "cop
 });
 
 /** Settings the page itself changes: hide the controls on this site, move the launcher tab. */
-const site = (c: Ctx): Handlers<"hideOnSite" | "moveLauncher"> => ({
+const site = (c: Ctx): Handlers<"hideOnSite" | "closeTab" | "moveLauncher"> => ({
+  closeTab: () => c.closeTab(),
   hideOnSite: () => {
     void c
       .saveSettings((s) => {

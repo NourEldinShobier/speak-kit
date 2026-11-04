@@ -42,14 +42,16 @@ export class PageInput {
   }
 
   listen(signal: AbortSignal) {
-    document.addEventListener("pointerup", this.onPointerUp, { capture: true, signal });
-    document.addEventListener("keyup", this.onKeyUp, { capture: true, signal });
-    document.addEventListener("selectionchange", this.onSelChange, { signal });
-    document.addEventListener("pointermove", this.onMove, { passive: true, signal });
-    document.addEventListener("focusin", this.onFocusIn, { signal });
-    document.addEventListener("contextmenu", (e) => this.docs.rememberPoint(e), { capture: true, signal });
-    document.addEventListener("keydown", this.onKey, { capture: true, signal });
-    document.documentElement.addEventListener("pointerleave", () => this.c.ui?.scheduleGutterHide(), { signal });
+    // an orphaned script (extension reloaded) finds out on its first event and removes itself
+    const on = <E extends Event>(type: string, fn: (e: E) => void, o: AddEventListenerOptions = {}) => document.addEventListener(type, (e) => this.c.alive() && fn(e as E), { ...o, signal });
+    on<PointerEvent>("pointerup", this.onPointerUp, { capture: true });
+    on<KeyboardEvent>("keyup", this.onKeyUp, { capture: true });
+    on("selectionchange", this.onSelChange);
+    on<PointerEvent>("pointermove", this.onMove, { passive: true });
+    on<FocusEvent>("focusin", this.onFocusIn);
+    on<MouseEvent>("contextmenu", (e) => this.docs.rememberPoint(e), { capture: true });
+    on<KeyboardEvent>("keydown", this.onKey, { capture: true });
+    document.documentElement.addEventListener("pointerleave", () => this.c.alive() && this.c.ui?.scheduleGutterHide(), { signal });
   }
 
   private inUi = (e: Event) => !!this.c.ui && e.composedPath().includes(this.c.ui.host);
@@ -90,7 +92,7 @@ export class PageInput {
   /** The pointer heading for the launcher tab: start loading the model about a second before the click can happen. */
   private warmNearLauncher(e: PointerEvent) {
     const l = this.c.settings.launcher;
-    if (!l.enabled) return;
+    if (!l.enabled || this.c.dismissed) return;
     const edge = l.side === "right" ? innerWidth - e.clientX : e.clientX;
     if (edge > LAUNCHER_EDGE_PX || Math.abs(e.clientY / innerHeight - l.y) > 0.2) return;
     const rule = this.c.rule();

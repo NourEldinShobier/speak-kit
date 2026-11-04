@@ -36,6 +36,7 @@ export interface Ctx {
   voices: VoiceInfo[];
   readonly host: string;
   readonly reading: boolean;
+  readonly dismissed: boolean;
   rule(): SiteRule | undefined;
   model(): UiModel;
   refresh(): void;
@@ -45,5 +46,8 @@ export interface Ctx {
   warm(reason: "hover" | "selection" | "dock"): void;
   setSpeed(speed: number): void;
   closeReader(): void;
+  closeTab(): void;
+  /** page-lifetime check: false once the extension was reloaded; the script then removes itself */
+  alive(): boolean;
   saveSettings(mut: (s: Settings) => void): Promise<void>;
 }

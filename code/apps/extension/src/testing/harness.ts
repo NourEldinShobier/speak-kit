@@ -46,16 +46,18 @@ const CHROME_STUB = `
   window.__health = undefined;
   window.chrome = {
     runtime: {
+      id: "speakkit-test",
       getURL: (p) => "http://sk.test/__" + p,
       sendMessage: (m) => { window.__sent.push(JSON.parse(JSON.stringify(m))); return Promise.resolve(m.t === "get-voices" ? { voices: window.__voices } : m.t === "get-health" ? window.__health : undefined); },
-      onMessage: { addListener: (f) => window.__listeners.push(f) },
+      onMessage: { addListener: (f) => window.__listeners.push(f), removeListener: (f) => { window.__listeners = window.__listeners.filter((x) => x !== f); } },
     },
     storage: {
       sync: { get: async (k) => (typeof k === "string" ? { [k]: store[k] } : { ...store }), set: async (o) => { Object.assign(store, JSON.parse(JSON.stringify(o))); } },
-      onChanged: { addListener: () => {} },
+      onChanged: { addListener: () => {}, removeListener: () => {} },
     },
   };
   window.__store = store;
+  window.__orphan = () => { delete window.chrome.runtime.id; };
   window.__deliver = (msg) => new Promise((res) => {
     for (const f of window.__listeners) { const r = f(msg, {}, (x) => res(x)); if (r === true) return; }
     res(undefined);

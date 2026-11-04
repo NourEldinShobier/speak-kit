@@ -31,6 +31,12 @@ export class Docs {
     this.c = c;
   }
 
+  /** A new page in the same document: the cached content root and "from here" point belong to the old one. */
+  reset() {
+    this.root = null;
+    this.point = null;
+  }
+
   mainRoot(): Element {
     const now = performance.now();
     if (!this.root || !this.root.el.isConnected || now - this.root.t > ROOT_TTL_MS) this.root = { el: findMainRoot(document), t: now };

@@ -35,6 +35,7 @@ export class Launcher {
   render(m: UiModel) {
     this.m = m;
     if (!m.showBubble) this.bubble.hide();
+    if (m.dismissed) this.notices.destroy();
     this.gutter.refresh();
     this.edge.render();
   }

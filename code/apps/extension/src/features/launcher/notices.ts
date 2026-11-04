@@ -66,6 +66,8 @@ export class Notices {
   destroy() {
     clearTimeout(this.toastTimer);
     this.toastEl?.remove();
+    this.toastEl = null;
     this.backEl?.remove();
+    this.backEl = null;
   }
 }

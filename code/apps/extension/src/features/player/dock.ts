@@ -101,6 +101,14 @@ export class Dock {
         },
       }),
       menuItem({
+        label: "Hide for this tab",
+        icon: "x",
+        onSelect: () => {
+          this.shell.closePopover();
+          this.hd.closeTab();
+        },
+      }),
+      menuItem({
         label: "Hide on this site",
         icon: "eye-off",
         onSelect: () => {
@@ -110,7 +118,7 @@ export class Dock {
       }),
     );
     m.classList.add("sk-menu");
-    m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-close", "menu-hide-site"][i]!));
+    m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-close", "menu-hide-tab", "menu-hide-site"][i]!));
     return m;
   }
 
@@ -155,7 +163,7 @@ export class Dock {
     const mid = h("div", { class: "sk-dock-mid" }, text, bar.el);
     const speed = this.speedButton();
     const { voice, av, label } = this.voiceChip();
-    const close = iconButton({ name: "x", label: "Close player", size: 28, data: { sk: "dock-close" }, onClick: () => this.dismiss() });
+    const close = iconButton({ name: "x", label: "Close for this tab", size: 28, data: { sk: "dock-close" }, onClick: () => this.hd.closeTab() });
     d.append(prev, toggle, next, mid, speed, voice, this.moreButton(), close);
     this.parts = { text, speed, voice: label, av, bar };
     this.shell.root.append(d);

@@ -123,7 +123,7 @@ export class Playback {
   }
 
   /** Nothing is being read: clear the marks and the back pill. */
-  private stopHighlight() {
+  stopHighlight() {
     const c = this.c;
     this.clock.stop();
     this.hl.clear();

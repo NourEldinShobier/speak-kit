@@ -1,10 +1,11 @@
 /// <reference types="chrome" />
 import { SETTINGS_KEY, type BgToContent, type ContentToBg, type PlayerCommand, type PlayerState, type ReadDoc, type SiteRule } from "@speakkit/protocol";
-import { extract, type ReaderView } from "../../features/reader";
+import type { ReaderView } from "../../features/reader";
 import { defaultSettings, siteRule, type Settings } from "../../features/settings";
 import type { ExtraToBg, VoiceInfo } from "../../shared/internal";
 import type { UiModel } from "../../shared/ui-types";
 import type { Ctx, Current, Doc, ReadMode } from "./context";
+import { OPEN, reduceTabUi, type TabUi, type TabUiEvent } from "./dismiss";
 import { Docs } from "./docs";
 import { EngineWake, loadSettings, saveSettings } from "./bridge";
 import { Follow, Playback } from "./playback";
@@ -12,13 +13,14 @@ import { makeHandlers } from "./handlers";
 import { PageInput } from "./input";
 import { defer, loadUi, type Deferred } from "./lazy";
 import { ACTIVE, asPlayerState } from "./player-state";
+import { PlayerView } from "./player-view";
 import { ReaderSession } from "./reader-session";
 import type { Ui } from "./ui";
 
 /** The lazy half of the content script: settings, extraction, highlight and the Shadow DOM UI. Loaded by index.ts. */
 
-const ESTIMATE_TTL_MS = 20000;
-const CHARS_PER_SECOND = 15;
+/** The page address without its fragment: moving to #section is not a new page. */
+const pageKey = () => location.href.replace(/#.*/, "");
 
 /** Composes the parts of the content script (documents, playback, follow, reader, input) around the shared state they read and write. */
 class Controller implements Ctx {
@@ -33,9 +35,13 @@ class Controller implements Ctx {
   voices: VoiceInfo[] = [];
   /** The paragraph play buttons only appear once the user has started reading on this page load. */
   private engaged = false;
-  private est: { t: number; chars: number } | null = null;
+  private tabUi: TabUi = OPEN;
+  private pageUrl = pageKey();
+  private gone = false;
+  private onGone: () => void = () => {};
 
   private readonly ac = new AbortController();
+  private readonly view = new PlayerView(this);
   private readonly docsPart = new Docs(this);
   private readonly follow = new Follow(this);
   private readonly playback = new Playback(this, this.follow);
@@ -56,13 +62,56 @@ class Controller implements Ctx {
     chrome.storage.onChanged.addListener(this.onStorage);
     this.input.listen(signal);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.refresh(), { signal });
+    // same-document navigation (pushState, back/forward in a single-page app): the new page starts without the old reading
+    (globalThis as { navigation?: EventTarget }).navigation?.addEventListener("currententrychange", () => this.onNavigate(), { signal });
+    addEventListener("pageshow", (e) => e.persisted && this.adoptRunning(), { signal });
     this.playback.restyle();
     this.refresh();
-    // pick up a reading that is already running (page reloaded or UI enabled mid-reading)
+    this.adoptRunning();
+  }
+
+  /** Picks up a reading that is already running in this tab (UI enabled mid-reading, page restored from the back/forward cache). Another page's reading is not ours. */
+  private adoptRunning() {
     this.post({ t: "get-state" }, (r) => {
       const st = asPlayerState(r);
-      if (st && !this.state) this.onState(st);
+      if (st && !this.state && st.url === location.href) this.onState(st);
     });
+  }
+
+  private onNavigate() {
+    if (this.gone || pageKey() === this.pageUrl) return;
+    this.pageUrl = pageKey();
+    if (this.reading) this.cmd({ cmd: "stop" });
+    this.session.close();
+    this.playback.stopHighlight();
+    this.state = null;
+    this.docs.clear();
+    this.docsPart.reset();
+    this.lastDoc = null;
+    this.engaged = false;
+    this.view.reset();
+    this.ui?.showGutter(null);
+    this.ui?.hideBubble();
+    this.refresh();
+  }
+
+  alive() {
+    if (this.gone) return false;
+    if (chrome.runtime?.id) return true;
+    this.teardown();
+    return false;
+  }
+
+  /** The extension was reloaded or updated under this page: remove every listener and element, quietly. */
+  private teardown() {
+    this.gone = true;
+    this.ac.abort();
+    this.session.close();
+    this.playback.stopHighlight();
+    this.follow.sync();
+    this.ui?.destroy();
+    this.ui = null;
+    this.onGone();
   }
 
   // ------------------------------------------------------------ settings and model
@@ -80,6 +129,40 @@ class Controller implements Ctx {
     this.ac.abort();
     chrome.storage.onChanged.removeListener(this.onStorage);
   }
+  onceGone(cb: () => void) {
+    this.onGone = cb;
+  }
+
+  get dismissed() {
+    return this.tabUi.dismissed;
+  }
+  private tabEvent(e: TabUiEvent) {
+    this.tabUi = reduceTabUi(this.tabUi, e);
+  }
+
+  /** The close button: stops the reading of this tab, clears the page and hides every surface until reading is asked for again. */
+  closeTab() {
+    const st = this.state;
+    if (this.reading) this.cmd({ cmd: "stop" });
+    this.tabEvent({ t: "close", docId: st?.docId });
+    this.session.close();
+    this.playback.stopHighlight();
+    if (st) this.state = { ...st, status: "idle" };
+    this.ui?.closePop();
+    this.ui?.showGutter(null);
+    this.ui?.hideBubble();
+    this.refresh();
+  }
+  /** Reading was asked for (shortcut, menu, popup, icon, reader): the surfaces return. */
+  restoreTab() {
+    if (!this.tabUi.dismissed) return;
+    this.tabEvent({ t: "restore" });
+    this.refresh();
+  }
+  tabUiReply(action: "get" | "show") {
+    if (action === "show") this.restoreTab();
+    return { dismissed: this.dismissed };
+  }
 
   get host() {
     return location.hostname.replace(/^www\./, "");
@@ -91,66 +174,13 @@ class Controller implements Ctx {
     return siteRule(this.settings, location.href);
   }
 
-  private voiceName(id: string) {
-    return this.voices.find((v) => v.id === id)?.name ?? id.replace(/^[a-z]{2}_/, "").replace(/^./, (c) => c.toUpperCase());
-  }
-
-  private estimate = () => {
-    const now = performance.now();
-    if (!this.est || now - this.est.t > ESTIMATE_TTL_MS) {
-      const ex = extract(document, { skip: this.settings.skip });
-      let chars = 0;
-      for (const s of ex.sentences) chars += s.text.length;
-      this.est = { t: now, chars };
-    }
-    return (this.est.chars / CHARS_PER_SECOND / Math.max(0.5, this.state?.speed ?? this.settings.speed)) * 1000;
-  };
-
-  /** "Paragraph n of N": blocks of the document being read, counted from 1. */
-  private paragraph(): UiModel["paragraph"] {
-    const st = this.state;
-    const d = st?.docId ? this.docs.get(st.docId) : undefined;
-    const s = d?.doc.sentences[st!.sentenceIndex];
-    if (!d || !s) return undefined;
-    const n = d.blocks.indexOf(s.block) + 1;
-    return n > 0 ? { n, of: d.blocks.length } : undefined;
-  }
-
-  private readingBlock(): Element | undefined {
-    const st = this.state;
-    if (!st || !ACTIVE.includes(st.status)) return undefined;
-    const d = this.docs.get(st.docId ?? "");
-    const block = d?.doc.sentences[st.sentenceIndex]?.block;
-    return block === undefined ? undefined : d?.ex.blocks[block]?.el;
-  }
-
-  /** The player half of the model. Optional fields are left out, not set to undefined. */
-  private playerView(st: PlayerState | null) {
-    const s = this.settings;
-    const voice = st?.voice ?? s.voice;
-    const paragraph = this.paragraph();
-    const readingBlock = this.readingBlock();
-    return {
-      status: st?.status ?? "idle",
-      elapsedMs: st?.elapsedMs ?? 0,
-      totalMs: st?.totalMs ?? 0,
-      speed: st?.speed ?? s.speed,
-      voice,
-      voiceName: this.voiceName(voice),
-      estimate: this.estimate,
-      ...(st?.error && { error: st.error }),
-      ...(paragraph && { paragraph }),
-      ...(readingBlock && { readingBlock }),
-    };
-  }
-
   /** Which surfaces the settings and the site rule allow. */
   private surfaces(rule: SiteRule | undefined) {
     const s = this.settings;
-    const off = rule === "hide-controls" || rule === "never-read";
+    const off = rule === "hide-controls" || rule === "never-read" || this.dismissed;
     return {
       showDock: s.show.dock && !off,
-      alwaysDock: rule === "always-dock",
+      alwaysDock: rule === "always-dock" && !this.dismissed,
       launcher: s.launcher.enabled && !off ? s.launcher : null,
       showBubble: s.show.bubble && !off,
       showGutter: s.show.gutter && !off && this.engaged,
@@ -159,13 +189,14 @@ class Controller implements Ctx {
 
   model(): UiModel {
     const rule = this.rule();
-    const st = rule === "never-read" ? null : this.state;
+    const st = rule === "never-read" || this.dismissed ? null : this.state;
     return {
-      ...this.playerView(st),
+      ...this.view.of(st),
       ...this.surfaces(rule),
       dark: this.playback.dark,
       engineAsleep: this.wake.asleep && (st?.status ?? "idle") === "idle",
       readerOpen: !!this.reader,
+      dismissed: this.dismissed,
     };
   }
 
@@ -175,6 +206,7 @@ class Controller implements Ctx {
 
   /** Create the UI on demand and push the current model. */
   refresh() {
+    if (this.gone) return;
     const m = this.model();
     if (!this.ui) {
       if (!this.wantsUi(m)) return;
@@ -195,6 +227,7 @@ class Controller implements Ctx {
   // ------------------------------------------------------------ bg messaging
 
   post(msg: ContentToBg | ExtraToBg, cb?: (r: unknown) => void) {
+    if (!this.alive()) return;
     try {
       void chrome.runtime.sendMessage(msg).then(cb, () => {});
     } catch {
@@ -216,6 +249,8 @@ class Controller implements Ctx {
   /** A new player state: the paragraph buttons appear once something has played. */
   private onState(st: PlayerState) {
     if (this.rule() === "never-read") return;
+    this.tabEvent({ t: "state", active: ACTIVE.includes(st.status), docId: st.docId });
+    if (this.dismissed) return; // the reading we closed is still winding down
     if (st.status !== "idle") this.engaged = true;
     this.playback.onState(st);
   }
@@ -239,13 +274,16 @@ class Controller implements Ctx {
         this.toast(msg);
         break;
       case "reader":
-        if (msg.open) this.session.open();
-        else this.session.close();
+        if (msg.open) {
+          this.restoreTab();
+          this.session.open();
+        } else this.session.close();
         break;
     }
   }
 
   private toast(msg: Extract<BgToContent, { t: "toast" }>) {
+    if (this.dismissed) return;
     const act = msg.action;
     this.ensureUi().toast(
       msg.message,
@@ -256,6 +294,7 @@ class Controller implements Ctx {
 
   /** Reply to a background 'extract' request. */
   extractReply(mode: ReadMode) {
+    this.restoreTab();
     return this.docsPart.extractReply(mode);
   }
   openReader() {
@@ -267,9 +306,13 @@ class Controller implements Ctx {
 }
 
 let instance: Promise<Controller> | null = null;
-export const boot = (): Promise<Controller> =>
+export const boot = (onGone: () => void = () => {}): Promise<Controller> =>
   (instance ??= (async () => {
     const c = new Controller();
+    c.onceGone(onGone);
     await c.init();
     return c;
-  })());
+  })().catch((e) => {
+    instance = null; // a failed start can be retried by the next message
+    throw e;
+  }));

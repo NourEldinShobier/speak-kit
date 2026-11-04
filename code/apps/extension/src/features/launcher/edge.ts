@@ -2,7 +2,7 @@ import type { Settings } from "@speakkit/protocol";
 import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
-import { moreMenu, speedVoiceButtons } from "./edge-parts";
+import { closeButton, moreMenu, speedVoiceButtons } from "./edge-parts";
 import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
@@ -77,7 +77,8 @@ export class EdgeLauncher {
     this.tab?.remove();
     this.pill?.remove();
     this.ltip?.remove();
-    this.tab = this.pill = this.ltip = null;
+    this.tab = this.pill = this.ltip = this.railFill = this.pillTime = null;
+    if (!l) this.pillOpen = false; // closed for this tab: it comes back as the quiet tab
     if (!l || m.readerOpen) return;
     if (open) this.buildPill(l, reading);
     else this.buildTab(l, reading);
@@ -89,10 +90,7 @@ export class EdgeLauncher {
     const t = h("div", { class: tabClass(l, reading), "data-sk": "launcher-tab", "data-state": this.m.status });
     t.style.top = `${this.tabTop()}px`;
     if (reading && l.widerWhileReading) t.append(...this.tabProgress());
-    else {
-      this.railFill = null;
-      t.append(icon(l.side === "right" ? "chevron-left" : "chevron-right", 10));
-    }
+    else t.append(icon(l.side === "right" ? "chevron-left" : "chevron-right", 10));
     this.drag(t);
     this.openOnIntent(t, l);
     this.s.shell.root.append(t);
@@ -176,7 +174,16 @@ export class EdgeLauncher {
     const { speed, voice, avatar } = speedVoiceButtons(this.s, l);
     this.pillSpeed = speed;
     this.pillVoice = avatar;
-    p.append(speed, voice, this.pillLast(l, reading));
+    p.append(
+      speed,
+      voice,
+      this.pillLast(l, reading),
+      closeButton(
+        this.s.hd,
+        (anchor) => this.showLtip(anchor, () => ({ label: "Close for this tab", hint: "" })),
+        () => this.hideLtip(),
+      ),
+    );
     this.drag(p);
     this.closeWhenAway(p);
     p.classList.add("is-out");
@@ -197,12 +204,9 @@ export class EdgeLauncher {
     big.addEventListener("click", () => (reading ? hd.toggle() : hd.listen()));
     big.addEventListener("pointerenter", () => {
       hd.warm("hover");
-      this.showLtip(big, reading);
+      this.showLtip(big, () => tooltipText(this.m, reading));
     });
-    big.addEventListener("pointerleave", () => {
-      this.ltip?.remove();
-      this.ltip = null;
-    });
+    big.addEventListener("pointerleave", () => this.hideLtip());
     return big;
   }
 
@@ -229,8 +233,6 @@ export class EdgeLauncher {
 
   /** Idle: the reader view button. */
   private pillReader(): HTMLElement[] {
-    this.railFill = null;
-    this.pillTime = null;
     return [
       this.sep(),
       iconButton({
@@ -295,16 +297,21 @@ export class EdgeLauncher {
     this.ltipPatch?.();
   }
 
-  private showLtip(anchor: HTMLElement, reading: boolean) {
+  private hideLtip() {
+    this.ltip?.remove();
+    this.ltip = null;
+  }
+
+  private showLtip(anchor: HTMLElement, text: () => { label: string; hint: string }) {
     this.ltip?.remove();
     const label = h("span");
     const hint = h("kbd", { class: "lm-kbd lm-kbd--sm" });
     const t = h("div", { class: "lm-tooltip sk-ltip", "data-sk": "launcher-tooltip" }, label, hint);
     this.ltipPatch = () => {
-      const text = tooltipText(this.m, reading);
-      label.textContent = text.label;
-      hint.textContent = text.hint;
-      hint.hidden = !text.hint;
+      const t = text();
+      label.textContent = t.label;
+      hint.textContent = t.hint;
+      hint.hidden = !t.hint;
     };
     this.ltipPatch();
     this.s.shell.root.append(t);

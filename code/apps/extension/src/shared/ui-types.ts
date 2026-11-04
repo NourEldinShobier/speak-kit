@@ -29,6 +29,8 @@ export interface UiModel {
   showGutter: boolean;
   /** a reader view is open (the launcher then stays out of the way) */
   readerOpen: boolean;
+  /** the user closed the in-page UI for this tab: every surface is off until reading is asked for again or the page reloads */
+  dismissed: boolean;
 }
 
 export interface UiHandlers {
@@ -52,6 +54,8 @@ export interface UiHandlers {
   openSidepanel(): void;
   replay(): void;
   hideOnSite(): void;
+  /** stop reading in this tab and hide every in-page surface here until reading is asked for again or the page reloads */
+  closeTab(): void;
   moveLauncher(y: number): void;
   backToCurrent(): void;
   /** hover / open intent: ask the app to load the model ahead of the click */

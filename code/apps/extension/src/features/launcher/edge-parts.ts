@@ -1,5 +1,5 @@
 import type { Settings } from "@speakkit/protocol";
-import { avatar, h, menu, menuItem } from "@speakkit/ui/vanilla";
+import { avatar, h, iconButton, menu, menuItem } from "@speakkit/ui/vanilla";
 import { speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
 import type { Shell } from "../../shared/ui-types";
@@ -19,6 +19,14 @@ export function moreMenu(shell: Shell, hd: Surface["hd"]): HTMLElement {
       },
     }),
     menuItem({
+      label: "Hide for this tab",
+      icon: "x",
+      onSelect: () => {
+        shell.closePopover();
+        hd.closeTab();
+      },
+    }),
+    menuItem({
       label: "Hide on this site",
       icon: "eye-off",
       onSelect: () => {
@@ -28,7 +36,7 @@ export function moreMenu(shell: Shell, hd: Surface["hd"]): HTMLElement {
     }),
   );
   m.classList.add("sk-menu");
-  m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-hide-site"][i]!));
+  m.querySelectorAll<HTMLElement>("button").forEach((b, i) => (b.dataset.sk = ["menu-settings", "menu-hide-tab", "menu-hide-site"][i]!));
   return m;
 }
 
@@ -52,4 +60,17 @@ export function speedVoiceButtons(s: Surface, l: Settings["launcher"]): { speed:
     }),
   );
   return { speed, voice, avatar: av };
+}
+
+/** The pill's close button: stops the reading in this tab and hides the in-page UI here until reading is asked for again or the page reloads. */
+export function closeButton(hd: Surface["hd"], showTip: (anchor: HTMLElement) => void, hideTip: () => void): HTMLElement {
+  const b = iconButton({ name: "x", label: "Close for this tab", size: 28, data: { sk: "launcher-close" }, onClick: () => hd.closeTab() });
+  for (const [ev, fn] of [
+    ["pointerenter", showTip],
+    ["focus", showTip],
+    ["pointerleave", hideTip],
+    ["blur", hideTip],
+  ] as const)
+    b.addEventListener(ev, () => fn(b));
+  return b;
 }
