@@ -255,6 +255,46 @@ describe("Lockix geometry", () => {
     expect(r).toEqual(["16px", "10px", "8px", "6px"]);
   });
 
+  test("hover fills are concentric with their container on both platforms: inner radius is below the outer one, at least 4", async () => {
+    const measure = (platform: string) =>
+      page.evaluate((pf) => {
+        const root = document.documentElement;
+        root.dataset.platform = pf;
+        const host = document.createElement("div");
+        host.innerHTML =
+          '<div class="lm-menu" id="m"><button class="lm-menu__item">Copy</button></div>' +
+          '<div class="lm-card" id="c"><button class="lm-listrow">First</button><button class="lm-listrow">Last</button></div>' +
+          '<div class="lm-seg" id="s"><button class="lm-seg__opt">A</button></div>' +
+          '<div class="lm-dialog" id="d"><div class="lm-menu__item" style="border-radius: var(--radius-palette-item)">Row</div></div>';
+        document.querySelector('[data-panel="light"]')!.prepend(host);
+        const px = (e: Element, prop: string) => parseFloat(getComputedStyle(e).getPropertyValue(prop));
+        const q = (s: string) => host.querySelector(s)!;
+        const rows = [...q("#c").children];
+        const out = {
+          menu: [px(q("#m"), "border-top-left-radius"), px(q(".lm-menu__item"), "border-top-left-radius")],
+          select: [px(q("#m"), "border-top-left-radius"), px(q("#m .lm-menu__item"), "border-top-left-radius")],
+          seg: [px(q("#s"), "border-top-left-radius"), px(q(".lm-seg__opt"), "border-top-left-radius")],
+          cardTop: [px(q("#c"), "border-top-left-radius"), px(rows[0]!, "border-top-left-radius")],
+          cardBottom: [px(q("#c"), "border-bottom-right-radius"), px(rows[1]!, "border-bottom-right-radius")],
+          palette: [px(q("#d"), "border-top-left-radius"), px(q("#d .lm-menu__item"), "border-top-left-radius")],
+        };
+        host.remove();
+        delete root.dataset.platform;
+        return out;
+      }, platform);
+    for (const pf of ["darwin", "win32"]) {
+      const r = await measure(pf);
+      for (const [name, [outer, inner]] of Object.entries(r)) {
+        expect(inner!, `${name} on ${pf}`).toBeLessThan(name.startsWith("card") ? outer! + 0.01 : outer!);
+        expect(inner!, `${name} on ${pf}`).toBeGreaterThanOrEqual(4);
+      }
+    }
+    expect((await measure("win32")).palette).toEqual([10, 4]);
+    expect((await measure("darwin")).palette).toEqual([16, 8]);
+    expect((await measure("darwin")).menu).toEqual([10, 5]);
+    expect((await measure("darwin")).seg).toEqual([8, 6]);
+  });
+
   test("data-platform switches the container radii: macOS panel 14 / tray 14 / window 12 / dialog 16, Windows 8 / 10 / 10 / 10; controls stay 8", async () => {
     const radii = (platform: string | null) =>
       page.evaluate((pf) => {

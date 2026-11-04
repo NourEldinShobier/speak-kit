@@ -84,7 +84,6 @@
   --radius-card: 10px;
   --radius-control: 8px;
   --radius-track: 8px;
-  --radius-menu-item: 8px;
   --radius-item: 8px;
   --radius-chip: 6px;
   --radius-check: 5px;
@@ -110,6 +109,16 @@
   --radius-menu: 10px;
   --radius-window: 10px;
   --radius-card: 10px;
+}
+
+/* Concentric inner radii: a fill that sits inside a rounded container has radius = container radius - (border + padding), at least --radius-xs.
+   Declared for every element that can carry data-platform so a platform override of the container radius reaches them. */
+:root,
+:host,
+[data-platform] {
+  --radius-menu-item: max(var(--radius-xs), calc(var(--radius-menu) - 1px - 4px)); /* menu: 1px border, 4px padding */
+  --radius-seg-opt: max(var(--radius-xs), calc(var(--radius-track) - 2px)); /* segmented track: 2px padding */
+  --radius-palette-item: max(var(--radius-xs), calc(var(--radius-dialog) - 8px)); /* command palette: 8px list padding */
 }
 
 .lm {
@@ -1134,7 +1143,7 @@
   padding: 0 12px;
   margin: 0;
   border: 1px solid transparent;
-  border-radius: var(--radius-chip);
+  border-radius: var(--radius-seg-opt);
   background: transparent;
   color: var(--text-tertiary);
   font:
@@ -1550,6 +1559,15 @@
   border-radius: var(--radius-card);
   background: var(--surface-card);
   box-shadow: var(--shadow-card-ring);
+}
+/* The first and last row of a card follow its corners, so a hover fill never pokes out of them. */
+.lm-card > :first-child {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+.lm-card > :last-child {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
 }
 .lm-card > .lm-row + .lm-row {
   border-top: 1px solid var(--stroke-hairline);
