@@ -179,25 +179,27 @@ const navIcon = (b: B, t: T, p: Ref, ic: string, label: string | undefined, sel 
   b.icon(r, ic, 18, t.icon); if (label) tx(b, r, label, { size: 13, weight: sel ? "Medium" : "Regular", c: sel ? t.text : t.text2, lh: 16 });
   return r;
 };
-const titleBar = (b: B, t: T, c: Ref, W: number) => {
+const titleBar = (b: B, t: T, c: Ref, W: number, mac = false) => {
   const ib = (x: number, ic: string, dis = false) => { const f = b.frame(c, { x, y: 4, w: 28, h: 28 }); K.iconBtn(b, t, f, ic, { size: 28, c: t.text2, state: dis ? "disabled" : undefined }); };
-  ib(8, "sidebar"); ib(40, "left", true); ib(72, "right", true);
-  const sx = Math.round(8 + (W - 8 - 420) / 2);
+  const x0 = mac ? 78 : 8; // macOS: the left group starts after the traffic lights (shell.css 78 px)
+  ib(x0, "sidebar"); ib(x0 + 32, "left", true); ib(x0 + 64, "right", true);
+  const sx = mac ? Math.round((W - 420) / 2) : Math.round(8 + (W - 8 - 420) / 2);
   const sf = b.row(c, { x: sx, y: 4, w: 420, h: 28, pad: [0, 8, 0, 10], gap: 8, r: 8, fill: t.input, stroke: t.control, sw: 1, sa: "inside", shadow: "ctl" });
   b.icon(sf, "search", 16, t.text3); tx(b, sf, "Search readings, voices and commands", { size: 13, c: t.text3, w: "fill", lh: 16 });
-  const kb = b.row(sf, { h: 16, pad: [0, 4], r: 4, stroke: t.control, sw: 1, sa: "inside" }); tx(b, kb, "Ctrl K", { size: 10, c: t.text3, lh: 12 });
-  const rg = b.row(c, { x: W - 137 - 300, y: 4, w: 300, h: 28, gap: 8, justify: "end" });
+  const kb = b.row(sf, { h: 16, pad: [0, 4], r: 4, stroke: t.control, sw: 1, sa: "inside" }); tx(b, kb, mac ? "Cmd K" : "Ctrl K", { size: 10, c: t.text3, lh: 12 });
+  // macOS: no native controls on the right, so the group runs to the edge with the same 4 px gap as above and below
+  const rg = b.row(c, { x: W - (mac ? 4 : 137) - 300, y: 4, w: 300, h: 28, gap: 8, justify: "end" });
   K.badge(b, t, rg, "Ready", "ok"); K.iconBtn(b, t, rg, "bell", { size: 28, c: t.text2 });
 };
 const footer = (b: B, t: T, c: Ref, W: number, H: number) => {
   const f = b.row(c, { x: 0, y: H - 28, w: W, h: 28, pad: [0, 14], gap: 10, justify: "end" });
   ["Kokoro ready", "Voice: Heart", "0 readings"].forEach((s, i) => { if (i) b.rect(f, { w: 1, h: 12, fill: t.field }); tx(b, f, s, { size: 12, c: t.text3, lh: 16 }); });
 };
-const sidebar = (b: B, t: T, c: Ref, H: number, rail: boolean) => {
+const sidebar = (b: B, t: T, c: Ref, H: number, rail: boolean, mac = false) => {
   const sb = b.col(c, { x: 8, y: 38, w: rail ? 36 : 236, h: H - 36 - 28 - 4, gap: 2 });
   const nw = b.row(sb, { w: "fill", h: 36, pad: rail ? 0 : [0, 15], gap: 6, r: 8, fill: t.cta, shadow: "cta", justify: rail ? "center" : "start" });
   b.icon(nw, "plus", 16, t.ctaText);
-  if (!rail) { tx(b, nw, "New reading", { size: 13, weight: "Medium", c: t.ctaText, w: "fill", lh: 16, ls: -0.13 }); const kb = b.row(nw, { h: 16, pad: [0, 4], r: 4, stroke: "#FAFAFA73", sw: 1, sa: "inside" }); tx(b, kb, "Ctrl N", { size: 10, c: t.ctaText, lh: 12 }); }
+  if (!rail) { tx(b, nw, "New reading", { size: 13, weight: "Medium", c: t.ctaText, w: "fill", lh: 16, ls: -0.13 }); const kb = b.row(nw, { h: 16, pad: [0, 4], r: 4, stroke: "#FAFAFA73", sw: 1, sa: "inside" }); tx(b, kb, mac ? "Cmd N" : "Ctrl N", { size: 10, c: t.ctaText, lh: 12 }); }
   b.frame(sb, { w: 1, h: 8 });
   [["home", "Home"], ["book", "Library"], ["mic", "Voices"], ["cpu", "Engines"], ["globe", "Browser"]].forEach(([ic, l], i) => navIcon(b, t, sb, ic, rail ? undefined : l, i === 0));
   if (!rail) {
@@ -214,15 +216,15 @@ const sidebar = (b: B, t: T, c: Ref, H: number, rail: boolean) => {
   navIcon(b, t, sb, "settings", rail ? undefined : "Settings");
 };
 /** The window content: title bar, sidebar, panel, footer. Returns the panel frame and its size. */
-const mainWin = (b: B, t: T, root: Ref, o: { W?: number; H?: number; side?: Side } = {}) => {
-  const { W = 1278, H = 799, side = "full" } = o;
-  const a = K3.winApp(b, root, { w: W, h: H, backdrop: { w: DW, h: DH } });
+const mainWin = (b: B, t: T, root: Ref, o: { W?: number; H?: number; side?: Side; mac?: boolean } = {}) => {
+  const { W = 1278, H = 799, side = "full", mac = false } = o;
+  const a = mac ? K3.macApp(b, root, { w: W, h: H, backdrop: { w: DW, h: DH } }) : K3.winApp(b, root, { w: W, h: H, backdrop: { w: DW, h: DH } });
   const c = a.ref;
-  titleBar(b, t, c, W);
-  if (side !== "off") sidebar(b, t, c, H, side === "rail");
+  titleBar(b, t, c, W, mac);
+  if (side !== "off") sidebar(b, t, c, H, side === "rail", mac);
   const px = side === "full" ? 252 : side === "rail" ? 52 : 4;
   const pw = W - px - 8, ph = H - 36 - 28;
-  const main = b.frame(c, { x: px, y: 36, w: pw, h: ph, r: 8, fill: t.editor, shadow: "card", clip: true });
+  const main = b.frame(c, { x: px, y: 36, w: pw, h: ph, r: mac ? 14 : 8, fill: t.editor, shadow: "card", clip: true });
   footer(b, t, c, W, H);
   return { a, c, main, pw, ph };
 };
@@ -312,7 +314,10 @@ export const V_SHELL: S[] = [
   scr("W5", "W", "Setup 5 · Done", "Server running banner, a sample to play, and the two background toggles with the tray note.", W5(false, "48136")),
   scr("W5b", "W", "Setup 5 · Done (browser skipped)", "Same page when the browser step was skipped: neutral banner points to Browser.", W5(true, "48136")),
   scr("L1", "L", "Home", HOME_NOTE, homeFrame("48138", "5c14")),
-  scr("L2", "L", "Command palette", "Ctrl K opens a 640 px palette over a scrim: grouped 28 px rows, the active row shows Enter, footer hints; the list scrolls.", (b, t, root) => {
+  scr("L1m", "L", "Home (macOS)", "Same window on macOS: traffic lights at the start of the bar, the left group after them, status pill and bell at the far right with a 4 px gap above and to the right, search centred, panel radius 14, shortcuts shown as Cmd.", (b, t, root) => {
+    const m = mainWin(b, t, root, { mac: true }); home(b, t, m.main, m.pw, "48138", "5c14");
+  }),
+  scr("L2", "L", "Command palette", "Ctrl K opens a 640 px palette over a scrim: grouped 28 px rows, the active row shows Enter, footer hints; the list scrolls. Row hover radius is 4 here (Windows dialog 10 minus 8 padding, minimum 4); macOS draws 8.", (b, t, root) => {
     const m = mainWin(b, t, root); home(b, t, m.main, m.pw, "48138", "5c14"); scrim(b, t, m.c, 1278, 799);
     palette(b, t, m.c, "", "Actions", PAL_ROWS, 432, true);
   }),

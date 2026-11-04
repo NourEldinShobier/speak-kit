@@ -112,7 +112,7 @@ const tokenField = (b: B, p: Ref, tail: string, w: number | "fill" = "fill") => 
 // ------------------------------------------------------------------ app shell (shell.css, TitleBar, Sidebar, Footer)
 type Shell = {
   w?: number; h?: number; nav: "settings" | "main"; sel: string; status: { label: string; tone: "green" | "neutral"; icon?: string }; update?: string; bellDot?: boolean;
-  fwd?: boolean; back?: boolean; pron?: boolean; footer?: string[]; eng?: { title: string; hint?: string }; popover?: boolean;
+  fwd?: boolean; back?: boolean; mac?: boolean; closeTip?: boolean; pron?: boolean; footer?: string[]; eng?: { title: string; hint?: string }; popover?: boolean;
 };
 const SETTINGS_NAV: [string, [string, string, string][]][] = [
   ["General", [["general", "General", "settings"], ["voice", "Voice and playback", "volume"], ["shortcuts", "Shortcuts", "keyboard"], ["notifications", "Notifications", "bell"]]],
@@ -126,10 +126,11 @@ const shell = (b: B, c: Ref, o: Shell) => {
   b.rect(c, { x: 0, y: 0, w: W, h: H, fill: C.win });
   // title bar 36
   const ib = (x: number, icon: string, dis = false) => { const f = b.frame(c, { x, y: 4, w: 28, h: 28, layout: "horizontal", align: "center", justify: "center", opacity: dis ? 0.5 : undefined }); b.icon(f, icon, 14, C.ink); };
-  ib(8, "sidebar"); ib(40, "left", o.back === false); ib(72, "right", !o.fwd);
-  const sf = b.row(c, { x: 433, y: 4, w: 420, h: 28, pad: [0, 8, 0, 10], gap: 8, r: 8, fill: "#FFFFFF", stroke: C.ctl, sw: 1, sa: "inside", shadow: "ctl" });
-  b.icon(sf, "search", 16, C.ter); tx(b, sf, "Search readings, voices and commands", { c: C.ter, lh: 16, fill: true }); kbd(b, sf, "Ctrl K", true);
-  const rg = b.row(c, { x: 741, y: 4, w: 400, h: 28, gap: 8, justify: "max" });
+  const x0 = o.mac ? 78 : 8; // macOS: the left group starts after the traffic lights
+  ib(x0, "sidebar"); ib(x0 + 32, "left", o.back === false); ib(x0 + 64, "right", !o.fwd);
+  const sf = b.row(c, { x: o.mac ? Math.round((W - 420) / 2) : 433, y: 4, w: 420, h: 28, pad: [0, 8, 0, 10], gap: 8, r: 8, fill: "#FFFFFF", stroke: C.ctl, sw: 1, sa: "inside", shadow: "ctl" });
+  b.icon(sf, "search", 16, C.ter); tx(b, sf, "Search readings, voices and commands", { c: C.ter, lh: 16, fill: true }); kbd(b, sf, o.mac ? "Cmd K" : "Ctrl K", true);
+  const rg = b.row(c, { x: o.mac ? W - 4 - 400 : 741, y: 4, w: 400, h: 28, gap: 8, justify: "max" });
   pill(b, rg, o.status.label, o.status.tone, o.status.icon);
   if (o.update) pill(b, rg, o.update, "green", "circleCheck");
   const bell = b.frame(rg, { w: 28, h: 28, layout: "horizontal", align: "center", justify: "center" }); b.icon(bell, "bell", 14, C.ink);
@@ -138,7 +139,7 @@ const shell = (b: B, c: Ref, o: Shell) => {
   const sb = b.col(c, { x: 0, y: 36, w: 248, h: H - 36 - 28, pad: [2, 4, 2, 8], gap: 0 });
   if (o.nav === "settings") {
     const hd = b.row(sb, { w: "fill", h: 32, gap: 8 });
-    const ab = b.frame(hd, { w: 28, h: 28, layout: "horizontal", align: "center", justify: "center" }); b.icon(ab, "arrowLeft", 14, C.ink);
+    const ab = b.frame(hd, { w: 28, h: 28, r: 8, fill: o.closeTip ? "#0000000A" : undefined, layout: "horizontal", align: "center", justify: "center" }); b.icon(ab, "arrowLeft", 14, C.ink);
     tx(b, hd, "Settings", { size: 18, w: "SemiBold", lh: 22 });
     b.frame(sb, { w: 1, h: 6 });
     SETTINGS_NAV.forEach(([g, items]) => {
@@ -147,7 +148,7 @@ const shell = (b: B, c: Ref, o: Shell) => {
     });
   } else {
     const nr = b.row(sb, { w: "fill", h: 36, pad: [0, 15], gap: 6, r: 8, fill: C.cta, shadow: "cta" });
-    b.icon(nr, "plus", 16, C.ctaTx); tx(b, nr, "New reading", { w: "Medium", c: C.ctaTx, lh: 16, ls: -0.13, fill: true }); kbd(b, nr, "Ctrl N", true, true);
+    b.icon(nr, "plus", 16, C.ctaTx); tx(b, nr, "New reading", { w: "Medium", c: C.ctaTx, lh: 16, ls: -0.13, fill: true }); kbd(b, nr, o.mac ? "Cmd N" : "Ctrl N", true, true);
     b.frame(sb, { w: 1, h: 10 });
     MAIN_NAV.forEach(([id, l, ic]) => { navItem(b, sb, l, ic, id === o.sel); b.frame(sb, { w: 1, h: 2 }); });
     const rl = b.row(sb, { w: "fill", pad: [16, 10, 6, 10] }); tx(b, rl, "Recent", { size: 11, w: "SemiBold", c: C.ter, lh: 13 });
@@ -161,11 +162,12 @@ const shell = (b: B, c: Ref, o: Shell) => {
     b.frame(sb, { w: 1, h: 6 });
     navItem(b, sb, "Settings", "settings", false);
   }
+  if (o.closeTip) K.tooltip(b, LIGHT, c, "Close settings", undefined, { abs: true, x: 8, y: 74 }); // hover label of the arrow (aria-label in Sidebar.tsx)
   // footer 28
   const ft = b.row(c, { x: 0, y: H - 28, w: W, h: 28, pad: [0, 14], gap: 10, justify: "max" });
   (o.footer ?? ["Kokoro ready", "Voice: Heart", "0 readings"]).forEach((s, i) => { if (i) b.rect(ft, { w: 1, h: 12, fill: C.fld }); tx(b, ft, s, { size: 12, c: C.ter, lh: 16 }); });
   // panel
-  return b.frame(c, { name: "Panel", x: 252, y: 36, w: 1018, h: H - 36 - 28, r: 8, fill: "#FFFFFF", shadow: "card", clip: true });
+  return b.frame(c, { name: "Panel", x: 252, y: 36, w: 1018, h: H - 36 - 28, r: o.mac ? 14 : 8, fill: "#FFFFFF", shadow: "card", clip: true });
 };
 function navItem(b: B, p: Ref, label: string, icon: string, sel: boolean) {
   const f = b.row(p, { w: "fill", h: 36, pad: [0, 10], gap: 12, r: 8 });
@@ -191,6 +193,10 @@ const mk = (id: string, title: string, note: string, shotH: number, build: (b: B
   id, group: "H", title, note, w: 1440, h: 900,
   build: (b, _t, root) => { const a = K3.winApp(b, root, { w: 1278, h: shotH, backdrop: { w: 1440, h: 900 } }); build(b, a.ref, a); },
 });
+const mkMac = (id: string, title: string, note: string, shotH: number, build: (b: B, c: Ref) => void): S => ({
+  id, group: "H", title, note, w: 1440, h: 900,
+  build: (b, _t, root) => { const a = K3.macApp(b, root, { w: 1278, h: shotH, backdrop: { w: 1440, h: 900 } }); build(b, a.ref); },
+});
 const settings = (id: string, title: string, note: string, sel: string, h: number, o: Partial<Shell>, pg: { title: string; lead?: string; sb?: number }, body: (c: Ref) => void, extra?: (b: B, c: Ref, panel: Ref) => void) =>
   mk(id, title, note, h, (b, c) => { const panel = shell(b, c, { nav: "settings", sel, status: ENG, h, ...o }); page(b, panel, pg, body); extra?.(b, c, panel); });
 
@@ -202,7 +208,6 @@ const general = (c0: Ref, b: B) => {
   });
   section(b, c0, "Appearance", undefined, (c) => row(b, c, "Language", undefined, (f) => select(b, f, "System default")));
   section(b, c0, "Tray", undefined, (c) => row(b, c, "Closing the window", "Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray\nmenu.", (f) => tx(b, f, "Keeps running", { lh: 16 })));
-  section(b, c0, "Privacy", undefined, (c) => row(b, c, "Offer to read long text I copy", "Shows a Windows notification after you copy a few sentences. Copies from password managers are\nskipped. The text never leaves this computer.", (f) => toggle(b, f, false)));
 };
 const voice = (c0: Ref, b: B) => section(b, c0, "Preview", undefined, (c) => {
   row(b, c, "Voice", undefined, (f) => select(b, f, "Heart"));
@@ -354,7 +359,8 @@ const deleteDialog = (b: B, c: Ref) => {
 
 const FIRST = "Global shortcuts work in any app. Click a shortcut, then press the new keys.";
 export const SETTINGS_FRAMES: S[] = [
-  settings("H1", "Settings · General", "Startup, language, tray and privacy on one page.", "general", 799, {}, { title: "General", lead: "Startup, language and notifications." }, pg(general)),
+  settings("H1", "Settings · General", "Startup, language and the tray on one page. The arrow beside Settings is labelled Close settings: it closes Settings and returns to the page you came from (Esc does the same); title-bar Back and Forward only walk the main pages.", "general", 799, { closeTip: true }, { title: "General", lead: "Startup, language and notifications." }, pg(general)),
+  mkMac("H1m", "Settings · General (macOS)", "Same page on macOS: status pill and bell at the far right with equal 4 px gaps, search centred, left group after the traffic lights, panel radius 14.", 799, (b, c) => { const panel = shell(b, c, { nav: "settings", sel: "general", status: ENG, h: 799, mac: true }); page(b, panel, { title: "General", lead: "Startup, language and notifications." }, pg(general)); }),
   settings("H2", "Settings · Voice and playback", "Preview voice and speed; the extension keeps its own.", "voice", 799, {}, { title: "Voice and playback", lead: "Used for previews in this app. The extension keeps its own voice and speed." }, pg(voice)),
   settings("H4", "Settings · Browser integration", "Server port with Apply, paired browser state, masked pairing token.", "browser", 799, {}, { title: "Browser integration", lead: "How the extension finds and trusts this app." }, pg(browserSettings)),
   settings("H5", "Settings · Shortcuts", "Global Ctrl+Alt shortcuts with Change, Reset all, and the in-app keys.", "shortcuts", 799, {}, { title: "Shortcuts", lead: FIRST }, (c) => shortcuts(curB!, "idle")(c)),
