@@ -48,6 +48,9 @@
   --tag-red: #a61b1b;
   --tag-purple: #7a4cd9;
   --tag-yellow: #b8860b;
+  /* text-only variants of the purple and yellow tags: >= 4.5:1 on their 14% / 16% chip tints (the tag colours stay for dots and icons) */
+  --tag-purple-text: #6f42c1;
+  --tag-yellow-text: #80600a;
   --dot-green: #05c283;
   --dot-orange: #fd9812;
   --dot-red: #f24349;
@@ -173,6 +176,7 @@
   line-height: 16px;
   letter-spacing: 0;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 .lm,
@@ -238,7 +242,6 @@
 }
 .lm
   :is(button, a, input, textarea, select, summary, label, [role], [tabindex]):is(
-    :hover,
     :disabled,
     [aria-expanded="true"],
     [aria-pressed="true"],
@@ -251,6 +254,12 @@
   ) {
   transition-duration: var(--dur-fade-in);
   transition-timing-function: ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm :is(button, a, input, textarea, select, summary, label, [role], [tabindex]):hover {
+    transition-duration: var(--dur-fade-in);
+    transition-timing-function: ease-out;
+  }
 }
 .lm :is(button, a, input, textarea, select, summary, label, [role]):is(:focus-visible, .is-focus) {
   transition-duration: var(--dur-focus);
@@ -282,8 +291,13 @@
   outline-color: transparent;
 }
 .lm-btn:active:not(:disabled),
-.lm-close:active {
+.lm-seg__opt:active:not(:disabled) {
   scale: 0.97;
+}
+/* small controls squeeze further, like the checkbox */
+.lm-btn--xs:active:not(:disabled),
+.lm-close:active {
+  scale: 0.92;
 }
 
 /* ---------- button ---------- */
@@ -334,8 +348,13 @@
 .lm-btn--primary:is(:focus-visible, .is-focus) {
   border-color: transparent;
 }
-.lm-btn--primary:is(:hover, .is-hover) {
+.lm-btn--primary:is(.is-hover) {
   background: color-mix(in srgb, var(--cta) 90%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--primary:hover {
+    background: color-mix(in srgb, var(--cta) 90%, transparent);
+  }
 }
 .lm-btn--primary:is(:active, .is-pressed) {
   background: color-mix(in srgb, var(--cta) 80%, transparent);
@@ -349,8 +368,13 @@
 .lm-btn--secondary .lm-icon {
   color: var(--text-secondary);
 }
-.lm-btn--secondary:is(:hover, .is-hover, [aria-expanded="true"]) {
+.lm-btn--secondary:is(.is-hover, [aria-expanded="true"]) {
   background: var(--fill-raised-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--secondary:hover {
+    background: var(--fill-raised-hover);
+  }
 }
 .lm-btn--secondary:is(:active, .is-pressed) {
   background: var(--fill-raised-press);
@@ -358,9 +382,15 @@
 .lm-btn--ghost {
   color: var(--text-secondary);
 }
-.lm-btn--ghost:is(:hover, .is-hover, [aria-expanded="true"]) {
+.lm-btn--ghost:is(.is-hover, [aria-expanded="true"]) {
   background: var(--fill-hover);
   color: var(--text-primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--ghost:hover {
+    background: var(--fill-hover);
+    color: var(--text-primary);
+  }
 }
 .lm-btn--ghost:is(:active, .is-pressed) {
   background: var(--fill-pressed);
@@ -371,9 +401,15 @@
   background: color-mix(in srgb, var(--destructive) 10%, transparent);
   color: var(--destructive);
 }
-.lm-btn--danger:is(:hover, .is-hover, :active, .is-pressed),
-.lm-btn--danger-solid:is(:hover, .is-hover, :active, .is-pressed) {
+.lm-btn--danger:is(.is-hover, :active, .is-pressed),
+.lm-btn--danger-solid:is(.is-hover, :active, .is-pressed) {
   background: color-mix(in srgb, var(--destructive) 20%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--danger:hover,
+  .lm-btn--danger-solid:hover {
+    background: color-mix(in srgb, var(--destructive) 20%, transparent);
+  }
 }
 .lm-btn--danger:is(:focus-visible, .is-focus),
 .lm-btn--danger-solid:is(:focus-visible, .is-focus) {
@@ -383,8 +419,13 @@
 .lm-btn--toggle {
   color: var(--text-secondary);
 }
-.lm-btn--toggle:is(:hover, .is-hover) {
+.lm-btn--toggle:is(.is-hover) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--toggle:hover {
+    background: var(--fill-hover);
+  }
 }
 .lm-btn--toggle[aria-pressed="true"] {
   border-color: var(--stroke-control);
@@ -429,6 +470,9 @@
   width: 36px;
   border-radius: var(--radius-pill);
 }
+.lm-btn--icon.lm-btn--xl.lm-btn--round {
+  width: 40px;
+}
 .lm-btn--icon.lm-btn--solid {
   background: var(--cta);
   color: var(--text-on-cta);
@@ -464,9 +508,11 @@
   position: absolute;
   inset: -4px;
 }
-.lm-close:hover {
-  background: var(--fill-hover);
-  color: var(--text-primary);
+@media (hover: hover) and (pointer: fine) {
+  .lm-close:hover {
+    background: var(--fill-hover);
+    color: var(--text-primary);
+  }
 }
 .lm-close:active {
   background: var(--fill-pressed);
@@ -753,11 +799,11 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tag-red) 55%, transparent);
 }
 .lm-pill--purple {
-  --tone: var(--tag-purple);
+  --tone: var(--tag-purple-text);
   background: color-mix(in srgb, var(--tag-purple) 14%, transparent);
 }
 .lm-pill--yellow {
-  --tone: var(--tag-yellow);
+  --tone: var(--tag-yellow-text);
   background: color-mix(in srgb, var(--tag-yellow) 16%, transparent);
 }
 .lm-pill--neutral {
@@ -789,8 +835,13 @@
   font-weight: 400;
   color: var(--text-tertiary);
 }
-.lm-citation:is(:hover, .is-hover) {
+.lm-citation:is(.is-hover) {
   background: var(--fill-pressed);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-citation:hover {
+    background: var(--fill-pressed);
+  }
 }
 .lm-citation:is([aria-pressed="true"], .is-active) {
   box-shadow: inset 0 0 0 1px var(--accent-default);
@@ -979,6 +1030,32 @@
   --tone: var(--tag-yellow);
 }
 
+/* avatars: chip tint with the matching tag colour as the letter (favicons keep the solid tones) */
+.lm-avatar.lm-tone-blue {
+  --tone: var(--chip-blue);
+  --ink: var(--tag-blue);
+}
+.lm-avatar.lm-tone-green {
+  --tone: var(--chip-green);
+  --ink: var(--tag-green);
+}
+.lm-avatar.lm-tone-orange {
+  --tone: var(--chip-orange);
+  --ink: var(--tag-orange);
+}
+.lm-avatar.lm-tone-red {
+  --tone: var(--chip-red);
+  --ink: var(--tag-red);
+}
+.lm-avatar.lm-tone-purple {
+  --tone: color-mix(in srgb, var(--tag-purple) 14%, transparent);
+  --ink: var(--tag-purple-text);
+}
+.lm-avatar.lm-tone-yellow {
+  --tone: color-mix(in srgb, var(--tag-yellow) 16%, transparent);
+  --ink: var(--tag-yellow-text);
+}
+
 /* ---------- menu ---------- */
 .lm-menu {
   display: flex;
@@ -1032,15 +1109,25 @@
   display: flex;
   color: var(--text-primary);
 }
-.lm-menu__item:is(:hover, .is-hover, .is-active, [aria-selected="true"], [aria-current="true"], [data-highlighted], [data-state="open"]) {
+.lm-menu__item:is(.is-hover, .is-active, [aria-selected="true"], [aria-current="true"], [data-highlighted], [data-state="open"]) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-menu__item:hover {
+    background: var(--fill-hover);
+  }
 }
 .lm-menu__item.is-destructive,
 .lm-menu__item.is-destructive .lm-icon {
   color: var(--destructive);
 }
-.lm-menu__item.is-destructive:is(:hover, .is-hover, [data-highlighted]) {
+.lm-menu__item.is-destructive:is(.is-hover, [data-highlighted]) {
   background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-menu__item.is-destructive:hover {
+    background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  }
 }
 .lm-menu__item[data-disabled] {
   opacity: 0.5;
@@ -1106,8 +1193,13 @@
   width: 100%;
   background: transparent;
 }
-.lm-tab:is(:hover, .is-hover) {
+.lm-tab:is(.is-hover) {
   color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-tab:hover {
+    color: var(--text-secondary);
+  }
 }
 .lm-tab[aria-selected="true"] {
   color: var(--text-primary);
@@ -1154,8 +1246,22 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.lm-seg__opt:is(:hover, .is-hover) {
+.lm-seg__opt:is(.is-hover) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-seg__opt:hover {
+    background: var(--fill-hover);
+  }
+}
+/* tertiary text drops below 4.5:1 on the darker hover and pressed fills, so those states use the secondary text colour */
+.lm-seg__opt:is(:active, .is-pressed, .is-hover):not([aria-checked="true"]) {
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-seg__opt:hover:not([aria-checked="true"]) {
+    color: var(--text-secondary);
+  }
 }
 .lm-seg__opt[aria-checked="true"] {
   border-color: var(--stroke-control);
@@ -1163,6 +1269,17 @@
   color: var(--text-label-on-white);
   font-weight: 500;
   box-shadow: var(--shadow-control);
+}
+/* the label reserves the width of its selected (500) weight, so selecting does not move it */
+.lm-seg__label {
+  display: inline-grid;
+}
+.lm-seg__label::after {
+  content: attr(data-label);
+  height: 0;
+  line-height: 0;
+  visibility: hidden;
+  font-weight: 500;
 }
 .lm-seg--sm {
   height: 28px;
@@ -1232,8 +1349,13 @@
 .lm-select--sm .lm-select__trigger {
   height: 28px;
 }
-.lm-select__trigger:is(:hover, .is-hover, [aria-expanded="true"]) {
+.lm-select__trigger:is(.is-hover, [aria-expanded="true"]) {
   background: var(--fill-raised-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-select__trigger:hover {
+    background: var(--fill-raised-hover);
+  }
 }
 .lm-select__trigger:is(:focus-visible, .is-focus) {
   border-color: var(--stroke-focus-field);
@@ -1389,9 +1511,15 @@
   opacity: 0;
   transition: opacity var(--dur-fade-out) ease-in;
 }
-.lm-tip:is(:hover, :focus-within, .is-open) > .lm-tooltip {
+.lm-tip:is(:focus-within, .is-open) > .lm-tooltip {
   opacity: 1;
   transition: opacity 100ms ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-tip:hover > .lm-tooltip {
+    opacity: 1;
+    transition: opacity 100ms ease-out;
+  }
 }
 
 /* ---------- loading ---------- */
@@ -1632,8 +1760,13 @@ button.lm-listrow {
   border-inline-start: 0;
   cursor: pointer;
 }
-.lm-listrow:is(:hover, .is-hover) {
+.lm-listrow:is(.is-hover) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-listrow:hover {
+    background: var(--fill-hover);
+  }
 }
 .lm-listrow__text {
   display: flex;
@@ -1714,7 +1847,7 @@ button.lm-listrow {
     sans-serif;
 }
 .lm-dialog__body {
-  color: var(--text-tertiary);
+  color: var(--text-primary);
 }
 .lm-dialog__foot {
   display: flex;
@@ -1790,8 +1923,13 @@ button.lm-listrow {
   cursor: pointer;
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
 }
-.lm-nav__item:is(:hover, .is-hover) {
+.lm-nav__item:is(.is-hover) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-nav__item:hover {
+    background: var(--fill-hover);
+  }
 }
 .lm-nav__item .lm-icon {
   color: var(--icon);
@@ -1976,8 +2114,13 @@ button.lm-listrow {
   box-shadow: var(--shadow-card-ring);
   transition: background-color var(--lm-dur-instant) var(--lm-ease);
 }
-.lm-source:is(:hover, .is-hover) {
+.lm-source:is(.is-hover) {
   background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-source:hover {
+    background: var(--fill-hover);
+  }
 }
 .lm-source.is-cited {
   background: var(--fill-hover);
@@ -2027,6 +2170,28 @@ button.lm-listrow {
   height: 100%;
 }
 
+/* ---------- touch: an invisible 44 px hit area on small buttons (no visual change) ---------- */
+@media (pointer: coarse) {
+  .lm-btn--xs,
+  .lm-btn--sm,
+  .lm-close {
+    position: relative;
+  }
+  .lm-btn--xs::after,
+  .lm-btn--sm::after,
+  .lm-close::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+    translate: -50% -50%;
+  }
+}
+
 /* ---------- reduced motion: fades only, loops stop ---------- */
 @media (prefers-reduced-motion: reduce) {
   .lm *,
@@ -2039,6 +2204,11 @@ button.lm-listrow {
   .lm-toggle__knob,
   .lm-progress__bar {
     transition: none !important;
+  }
+  /* no press scale; colour fades stay */
+  .lm :active,
+  .lm-check__input:active + .lm-check__box {
+    scale: 1 !important;
   }
   .lm-spin,
   .lm-skeleton.is-shimmer .lm-skeleton__line,

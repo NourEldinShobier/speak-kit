@@ -513,9 +513,14 @@ export function Board() {
             onClose={() => setModal(false)}
             title="Rename thread"
             footer={
-              <Button variant="primary" size="lg" onClick={() => setModal(false)}>
-                Save
-              </Button>
+              <>
+                <Button data-autofocus onClick={() => setModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="lg" onClick={() => setModal(false)}>
+                  Save
+                </Button>
+              </>
             }
           >
             <TextInput defaultValue="Heat pumps" aria-label="Name" />

@@ -427,6 +427,21 @@ describe("Tabs, Modal", () => {
     expect(await opener.evaluate((e) => e === document.activeElement)).toBe(true);
   });
 
+  test("Modal: the control marked data-autofocus takes the initial focus, with no focus ring after a mouse click", async () => {
+    const opener = page.locator(light("modal-live") + " button").first();
+    await page.mouse.click(2, 2); // earlier tests used the keyboard; a pointer press resets the focus-visible heuristic
+    await opener.click();
+    const dlg = page.locator(".lm-scrim [role=dialog]");
+    await dlg.waitFor();
+    const focused = await page.evaluate(() => {
+      const a = document.activeElement as HTMLElement;
+      return [a.textContent, a.matches(":focus-visible"), getComputedStyle(a).outlineColor];
+    });
+    expect(focused).toEqual(["Cancel", false, "rgba(0, 0, 0, 0)"]);
+    await page.keyboard.press("Escape");
+    await dlg.waitFor({ state: "detached" });
+  });
+
   test("icons keep a 1.5px on-screen stroke at every size", async () => {
     const w = await page.evaluate(() => {
       const out: Record<string, string> = {};
@@ -440,5 +455,169 @@ describe("Tabs, Modal", () => {
     expect(n(w["16"])).toBeCloseTo(2.25, 3);
     expect(n(w["14"])).toBeCloseTo(36 / 14, 3);
     expect(n(w["12"])).toBeCloseTo(3, 3);
+  });
+});
+
+describe("Tactile refinements", () => {
+  /** Mounts markup in the light panel, runs fn on the host, removes it. */
+  const withHost = async <T>(html: string, fn: (host: HTMLElement) => T): Promise<T> => {
+    await page.evaluate((h) => {
+      const host = document.createElement("div");
+      host.id = "tz-host";
+      host.innerHTML = h;
+      document.querySelector('[data-panel="light"]')!.prepend(host);
+    }, html);
+    try {
+      return (await page.locator("#tz-host").evaluate(fn)) as T;
+    } finally {
+      await page.evaluate(() => document.getElementById("tz-host")?.remove());
+    }
+  };
+
+  /** Contrast ratio of a text colour on a (possibly translucent) fill laid over a backdrop, all as "rgb(a)" strings. */
+  const ratio = (fg: string, fill: string, backdrop: string) => {
+    // color-mix() results come back as "color(srgb 0.7 0.5 0.1 / 0.16)" with channels in 0..1
+    const n = (c: string) => {
+      const v = (c.match(/[\d.]+/g) ?? []).map(Number);
+      return c.startsWith("color(") ? [v[0]! * 255, v[1]! * 255, v[2]! * 255, ...v.slice(3)] : v;
+    };
+    const over = (top: number[], under: number[]) => {
+      const a = top[3] ?? 1;
+      return [0, 1, 2].map((i) => top[i]! * a + under[i]! * (1 - a));
+    };
+    const lum = (c: number[]) => {
+      const [r, g, b] = c.map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    const bg = over(n(fill), n(backdrop));
+    const [hi, lo] = [lum(over(n(fg), bg)), lum(bg)].sort((a, b) => b - a);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  test("lumen.css has no bare :hover rule: every :hover sits inside (hover: hover) and (pointer: fine)", async () => {
+    const r = await page.evaluate(() => {
+      const bare: string[] = [];
+      let inside = 0;
+      for (const sheet of document.styleSheets) {
+        let rules: CSSRuleList;
+        try {
+          rules = sheet.cssRules;
+        } catch {
+          continue;
+        }
+        for (const rule of rules) {
+          if (rule instanceof CSSStyleRule && rule.selectorText.includes(":hover")) bare.push(rule.selectorText);
+          if (rule instanceof CSSMediaRule && rule.conditionText.replace(/\s+/g, "") === "(hover:hover)and(pointer:fine)") {
+            inside += [...rule.cssRules].filter((x) => x instanceof CSSStyleRule && x.selectorText.includes(":hover")).length;
+          }
+        }
+      }
+      return { bare, inside };
+    });
+    expect(r.bare).toEqual([]);
+    expect(r.inside).toBeGreaterThan(15);
+  });
+
+  test("forced .is-hover still works outside the media query", async () => {
+    const bg = await withHost('<button class="lm-btn lm-btn--secondary is-hover">A</button>', (h) => getComputedStyle(h.firstElementChild!).backgroundColor);
+    expect(bg).toBe("rgb(247, 248, 250)");
+  });
+
+  test("purple and yellow pill text reach 4.5:1 on their tints, and the tag colours themselves are unchanged", async () => {
+    const m = await withHost('<span class="lm-pill lm-pill--purple">A</span><span class="lm-pill lm-pill--yellow">B</span>', (h) =>
+      [...h.children].map((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]),
+    );
+    expect(m.map(([fg, bg]) => ratio(fg!, bg!, "rgb(255, 255, 255)") >= 4.5)).toEqual([true, true]);
+    expect(m.map(([fg]) => fg)).toEqual(["rgb(111, 66, 193)", "rgb(128, 96, 10)"]);
+    const tags = await page.evaluate(() => ["--tag-purple", "--tag-yellow"].map((t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim()));
+    expect(tags).toEqual(["#7a4cd9", "#b8860b"]);
+  });
+
+  test("segmented option text on hover and pressed fills reaches 4.5:1; ghost button hover and pressed text too", async () => {
+    const seg = await withHost('<div class="lm-seg" style="background:#f0f0f0"><button class="lm-seg__opt is-hover">A</button><button class="lm-seg__opt is-pressed">B</button></div>', (h) =>
+      [...h.querySelectorAll("button")].map((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]),
+    );
+    expect(seg[0]![0]).toBe("rgb(71, 84, 103)");
+    expect(seg[1]![0]).toBe("rgb(71, 84, 103)");
+    for (const [fg, bg] of seg) expect(ratio(fg!, bg!, "rgb(240, 240, 240)")).toBeGreaterThanOrEqual(4.5);
+    const ghost = await withHost('<button class="lm-btn lm-btn--ghost is-hover">A</button><button class="lm-btn lm-btn--ghost is-pressed">B</button>', (h) =>
+      [...h.querySelectorAll("button")].map((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]),
+    );
+    for (const [fg, bg] of ghost) expect(ratio(fg!, bg!, "rgb(255, 255, 255)")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("avatars take the chip tint with the tag colour as letter", async () => {
+    const a = await withHost('<span class="lm-avatar lm-tone-blue">A</span><span class="lm-avatar lm-tone-red">B</span>', (h) =>
+      [...h.children].map((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color]),
+    );
+    expect(a).toEqual([
+      ["rgb(218, 239, 254)", "rgb(11, 92, 173)"],
+      ["rgb(255, 228, 229)", "rgb(166, 27, 27)"],
+    ]);
+  });
+
+  test("segmented label reserves the 500-weight width so selecting does not move it", async () => {
+    const seg =
+      '<div class="lm-seg"><button class="lm-seg__opt" aria-checked="false"><span class="lm-seg__label" data-label="Medium">Medium</span></button><button class="lm-seg__opt" aria-checked="false"><span class="lm-seg__label" data-label="Slow">Slow</span></button></div>';
+    const w = await withHost(seg, (h) => {
+      const opts = [...h.querySelectorAll(".lm-seg__opt")];
+      const widths = () => opts.map((o) => o.getBoundingClientRect().width);
+      const before = widths();
+      opts[0]!.setAttribute("aria-checked", "true");
+      return { before, after: widths() };
+    });
+    expect(w.after).toEqual(w.before);
+  });
+
+  test("press squeezes lm-seg__opt to 0.97 and small controls to 0.92; reduced motion removes the squeeze", async () => {
+    const html =
+      '<div class="lm-seg" id="tz-seg"><button class="lm-seg__opt" aria-checked="false">Go</button></div><button class="lm-btn lm-btn--xs" id="tz-xs">x</button><button class="lm-close" id="tz-close"></button>';
+    const scale = async (motion: "no-preference" | "reduce") => {
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.evaluate((h) => {
+        const host = document.createElement("div");
+        host.id = "tz-host";
+        host.innerHTML = h;
+        document.querySelector('[data-panel="light"]')!.prepend(host);
+      }, html);
+      const out: string[] = [];
+      for (const sel of ["#tz-seg .lm-seg__opt", "#tz-xs", "#tz-close"]) {
+        await page.locator(sel).hover();
+        await page.mouse.down();
+        await page.waitForTimeout(400);
+        out.push(await page.locator(sel).evaluate((e) => getComputedStyle(e).scale));
+        await page.mouse.up();
+      }
+      await page.evaluate(() => document.getElementById("tz-host")!.remove());
+      await page.mouse.move(0, 0);
+      return out;
+    };
+    expect(await scale("no-preference")).toEqual(["0.97", "0.92", "0.92"]);
+    expect(await scale("reduce")).toEqual(["1", "1", "1"]);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+  });
+
+  test("touch devices get an invisible 44px hit area on small icon buttons; mouse devices do not", async () => {
+    const html = '<button class="lm-btn lm-btn--icon lm-btn--xs" aria-label="a"></button><button class="lm-close" aria-label="c"></button>';
+    const probe = (h: string) => {
+      const host = document.createElement("div");
+      host.innerHTML = h;
+      document.body.prepend(host);
+      return [...host.children].map((e) => [getComputedStyle(e, "::after").width, getComputedStyle(e, "::after").height, e.getBoundingClientRect().width]);
+    };
+    expect(await page.evaluate(probe, html)).toEqual([
+      ["auto", "auto", 24],
+      ["auto", "auto", 24],
+    ]);
+    const touch = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 500, height: 800 } });
+    const tp = await touch.newPage();
+    await tp.goto(page.url());
+    await tp.waitForSelector("[data-spec]");
+    const t = await tp.evaluate(probe, html);
+    await touch.close();
+    expect(t).toEqual([
+      ["44px", "44px", 24],
+      ["44px", "44px", 24],
+    ]);
   });
 });

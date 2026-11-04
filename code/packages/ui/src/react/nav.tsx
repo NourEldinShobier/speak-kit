@@ -64,7 +64,13 @@ export function Segmented({ items, value, onChange, label, variant = "settings",
       {items.map((it) => (
         <RToggleGroup.Item key={it.id} value={it.id} aria-label={it.ariaLabel} className="lm-seg__opt">
           {it.icon ? <Icon name={it.icon} size={14} /> : null}
-          {it.label}
+          {typeof it.label === "string" ? (
+            <span className="lm-seg__label" data-label={it.label}>
+              {it.label}
+            </span>
+          ) : (
+            it.label
+          )}
         </RToggleGroup.Item>
       ))}
     </RToggleGroup.Root>

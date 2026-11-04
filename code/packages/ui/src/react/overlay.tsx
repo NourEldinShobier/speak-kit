@@ -157,7 +157,7 @@ export interface ModalProps extends Omit<DialogProps, "titleId" | "onClose"> {
   onClose: () => void;
 }
 
-/** Scrim + dialog on Radix Dialog: focus moves in, Tab is trapped, Escape and scrim click close, focus returns to the opener. */
+/** Scrim + dialog on Radix Dialog: focus moves in (to the element marked data-autofocus, else the first control), Tab is trapped, Escape and scrim click close, focus returns to the opener. */
 export function Modal({ open, onClose, title, footer, width, children, className, style }: ModalProps) {
   // Radix returns focus only to a Dialog.Trigger; this modal is opened from state, so remember the opener.
   const opener = useRef<HTMLElement | null>(null);
@@ -169,6 +169,14 @@ export function Modal({ open, onClose, title, footer, width, children, className
       <RDialog.Overlay className="lm-scrim">
         <RDialog.Content
           aria-describedby={undefined}
+          // The safe action carries data-autofocus and takes the initial focus instead of the close button; the ring still shows for keyboard focus only.
+          onOpenAutoFocus={(e) => {
+            const safe = e.currentTarget instanceof HTMLElement ? e.currentTarget.querySelector<HTMLElement>("[data-autofocus]") : null;
+            if (!safe) return;
+            e.preventDefault();
+            // the ring is for keyboard focus only: keep it off when the dialog was opened with the mouse
+            safe.focus({ focusVisible: opener.current?.matches(":focus-visible") ?? false } as FocusOptions);
+          }}
           onCloseAutoFocus={(e) => {
             e.preventDefault();
             opener.current?.focus?.();

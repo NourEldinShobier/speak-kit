@@ -216,7 +216,9 @@ export function segmented(o: SegmentedOptions): SegmentedHandle {
     set(id);
     o.onChange(id);
   };
-  const btns = o.items.map((it) => h("button", { type: "button", role: "radio", class: "lm-seg__opt", "data-id": it.id, on: { click: () => choose(it.id) } }, it.label));
+  const btns = o.items.map((it) =>
+    h("button", { type: "button", role: "radio", class: "lm-seg__opt", "data-id": it.id, on: { click: () => choose(it.id) } }, h("span", { class: "lm-seg__label", "data-label": it.label }, it.label)),
+  );
   el.append(...btns);
   el.addEventListener("keydown", (e) => {
     const root = el.getRootNode() as Document | ShadowRoot;

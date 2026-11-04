@@ -40,6 +40,8 @@ const light = {
   "tag-red": "#a61b1b",
   "tag-purple": "#7a4cd9",
   "tag-yellow": "#b8860b",
+  "tag-purple-text": "#6f42c1",
+  "tag-yellow-text": "#80600a",
   "dot-green": "#05c283",
   "dot-orange": "#fd9812",
   "dot-red": "#f24349",

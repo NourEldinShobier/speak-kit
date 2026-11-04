@@ -50,18 +50,22 @@ export interface IconButtonProps extends BtnAttrs {
   /** 36px circle (composer). */
   round?: boolean;
   loading?: boolean;
+  /** Same variants as Button; the default has no fill (plain icon button). */
+  variant?: ButtonProps["variant"];
+  /** Glyph size in px when the default for the button size does not fit. */
+  glyph?: number;
 }
 
-export function IconButton({ name, label, size = 36, round, loading, className, type = "button", ...rest }: IconButtonProps) {
+export function IconButton({ name, label, size = 36, round, loading, variant, glyph, className, type = "button", ...rest }: IconButtonProps) {
   return (
     <button
       type={type}
       aria-label={label}
       aria-busy={loading ? "true" : undefined}
-      className={cx("lm-btn lm-btn--icon", ICON_SIZE_CLASS[size], round && "lm-btn--round", loading && "is-loading", className)}
+      className={cx("lm-btn lm-btn--icon", variant && `lm-btn--${variant}`, ICON_SIZE_CLASS[size], round && "lm-btn--round", loading && "is-loading", className)}
       {...rest}
     >
-      <Icon name={loading ? "loader-2" : name} size={ICON_GLYPH[size] ?? 16} className={loading ? "lm-spin" : undefined} />
+      <Icon name={loading ? "loader-2" : name} size={glyph ?? ICON_GLYPH[size] ?? 16} className={loading ? "lm-spin" : undefined} />
     </button>
   );
 }

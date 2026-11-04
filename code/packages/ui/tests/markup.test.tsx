@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vite-plus/test";
-import { Button, Checkbox, Icon, IconButton, Select, StatusPill, Toggle } from "../src/index";
+import { Button, Checkbox, Icon, IconButton, Segmented, Select, StatusPill, Toggle } from "../src/index";
 
 const html = (n: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(n);
 
@@ -58,6 +58,19 @@ describe("IconButton", () => {
     expect(m).toContain('aria-label="More"');
     expect(m).toContain("lm-btn--xs");
     expect(m).toContain("--s:12");
+  });
+
+  test("variant and glyph size: the 40px round primary button with a 22px glyph", () => {
+    const m = html(<IconButton name="player-play" label="Play" size={40} round variant="primary" glyph={22} />);
+    expect(m).toContain('class="lm-btn lm-btn--icon lm-btn--primary lm-btn--xl lm-btn--round"');
+    expect(m).toContain("--s:22");
+  });
+});
+
+describe("Segmented", () => {
+  test("a text label is wrapped so its width is reserved at the selected weight", () => {
+    const m = html(<Segmented label="Speed" value="a" onChange={() => {}} items={[{ id: "a", label: "Slow" }]} />);
+    expect(m).toContain('<span class="lm-seg__label" data-label="Slow">Slow</span>');
   });
 });
 
