@@ -78,7 +78,7 @@ export function idleFor(state: PlayerState, tabId: number): PlayerState {
 }
 
 /** What a content script gets when it says hello: the running state only if this tab is the reader and the document is the one that was read. */
-export function helloReply(state: PlayerState, tab: TabInfo, tabId: number, url: string): HelloReply {
-  const reading = state.tabId === tabId && state.status !== "idle" && !tab.dismissed && samePage(state.url, url);
+export function helloReply(state: PlayerState, tab: TabInfo, page: { tabId: number; url: string }): HelloReply {
+  const reading = state.tabId === page.tabId && state.status !== "idle" && !tab.dismissed && samePage(state.url, page.url);
   return { state: reading ? state : null, dismissed: tab.dismissed };
 }

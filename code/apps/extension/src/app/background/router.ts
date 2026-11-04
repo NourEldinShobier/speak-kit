@@ -23,6 +23,9 @@ async function queueSnapshot() {
   return { items: await getQueue(), outline, autoPlay: await getAutoPlay() };
 }
 
+/** The tab of a web page that sent the message; undefined for extension pages, even when they are open in a tab (options, test popups). */
+const pageTabId = (sender: chrome.runtime.MessageSender) => (sender.url?.startsWith(chrome.runtime.getURL("")) ? undefined : sender.tab?.id);
+
 const OK = { ok: true } as const;
 const tabOf = async (explicit: number | undefined, sender: chrome.runtime.MessageSender) => explicit ?? sender.tab?.id ?? (await activeTabId());
 
@@ -55,13 +58,13 @@ const handlers: { [T in Inbound["t"]]: Handler<T> } = {
     return OK;
   },
   // A page sees the state of its own tab only; the popup and side panel (no tab) see the global one.
-  "get-state": async (_msg, sender) => (sender.tab?.id === undefined ? getState() : getTabState(sender.tab.id)),
+  "get-state": async (_msg, sender) => (pageTabId(sender) === undefined ? getState() : getTabState(pageTabId(sender)!)),
   hello: async (msg, sender) => {
     const tabId = sender.tab?.id;
     if (tabId === undefined) return { state: null, dismissed: false };
     const tab = await patchTab(tabId, { alive: true });
     const state = await getState();
-    const reply = helloReply(state, tab, tabId, msg.url);
+    const reply = helloReply(state, tab, { tabId, url: msg.url });
     // The tab was the reader but this is another page: the audio belongs to a document that is gone.
     if (!reply.state && state.tabId === tabId && state.status !== "idle") await runPlayerCommand({ cmd: "stop" });
     return reply;

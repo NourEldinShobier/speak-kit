@@ -30,6 +30,7 @@ function stubChrome() {
   const chromeStub = {
     storage: { sync: area({}), local: area({}), session: area(data) },
     runtime: {
+      getURL: (path: string) => `chrome-extension://abc/${path}`,
       getContexts: async (): Promise<unknown[]> => [{}],
       sendMessage: async (m: unknown): Promise<unknown> => void ((m as { to?: string }).to === "offscreen" && toOffscreen.push(m)),
     },
@@ -111,6 +112,14 @@ describe("worker per-tab state", () => {
     expect(await route({ t: "get-state" }, sender(1))).toMatchObject({ status: "playing", docId: "d1" });
     expect(await route({ t: "get-state" }, sender(2))).toMatchObject({ status: "idle", tabId: 2 });
     expect(await route({ t: "get-state" }, {} as chrome.runtime.MessageSender)).toMatchObject({ status: "playing" });
+  });
+
+  it("an extension page open in a tab (options) still sees the global state", async () => {
+    const { route } = await import("./router");
+    const { publishState } = await import("./state");
+    publishState(playing(1));
+    const options = { tab: { id: 9 }, url: "chrome-extension://abc/options.html" } as chrome.runtime.MessageSender;
+    expect(await route({ t: "get-state" }, options)).toMatchObject({ status: "playing", tabId: 1 });
   });
 
   it("hello replays the state to the reader tab on the same URL and starts every other page idle", async () => {
