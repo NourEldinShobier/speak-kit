@@ -5,6 +5,7 @@ import * as K from "./kit";
 import { T } from "./kit";
 import { S } from "./types";
 import * as K3 from "./kit3";
+import { KDEF } from "./s_sys";
 
 const scr = (id: string, group: string, title: string, note: string, build: (b: B, t: T, root: Ref) => void, w = 1440, h = 900): S => ({ id, group, title, note, w, h, build });
 const DESIGN_ONLY = " Design-only: an OS surface that cannot be screenshotted; drawn from the real code.";
@@ -168,7 +169,7 @@ export const homeShell = (b: B, t: T, c: Ref, o: HomeO = {}) => {
   const lk = b.row(ec, { gap: 6 }); b.icon(lk, "lock", 12, t.ok); b.text(lk, "100% on this device", { size: 12, c: t.ok, lh: 16 });
   const st = b.row(c, { x: 8, y: 739, w: 236, h: 24, pad: [0, 0, 0, 11], gap: 11 }); b.icon(st, "settings", 16, t.text2); b.text(st, "Settings", { size: 13, c: t.text2, lh: 18 });
   // content panel
-  b.rect(c, { x: 252, y: 36, w: 1018, h: 735, r: 14, fill: t.surface, shadow: "card" });
+  b.rect(c, { x: 252, y: 36, w: 1018, h: 735, r: 8, fill: t.surface, shadow: "card" }); // Windows panel radius 8 (macOS 14)
   const pg = b.col(c, { x: 409, y: 56, w: 704, gap: 16 });
   const hd = b.col(pg, { w: "fill", gap: 1 }); b.text(hd, "Home", { size: 22, weight: "SemiBold", c: t.text, lh: 30 }); b.text(hd, "Speak Kit runs a private voice server on this computer. Your browser extension talks to it.", { size: 13, c: t.text2, lh: 18 });
   if (o.banner) { const bn = b.row(pg, { w: "fill", pad: [10, 16, 10, 16], gap: 12, r: 8, fill: t.warnSoft }); b.icon(bn, "alert", 18, t.warn); const bx = b.col(bn, { w: "fill", gap: 0 }); b.text(bx, o.banner.title, { size: 13, weight: "SemiBold", c: t.text, lh: 18 }); b.text(bx, o.banner.body, { size: 12, c: t.text2, w: "fill", lh: 17 }); }
@@ -216,7 +217,32 @@ const bellPop = (entries: [string, string][]) => (b: B, t: T, c: Ref) => {
 };
 const RS: [string, string][] = [["Local server on 127.0.0.1:48158 stops", "The browser extension cannot read until Speak Kit starts again."], ["The voice model leaves memory", "It loads again on the next play."]];
 
+// K3 to K10: system dialogs and notices over the same Home window as K1 and K2 (the built shell), instead of the old floating-panel window.
+const sysDialog = (key: string) => (b: B, t: T, c: Ref) => {
+  const d = KDEF[key]; const tone = d.tone === "err" ? t.err : d.tone === "warn" ? t.warn : t.info;
+  b.rect(c, { x: 0, y: 0, w: 1278, h: 799, fill: t.overlay });
+  const m = b.col(c, { name: "Dialog", x: 399, y: 190, w: 480, pad: [20, 20, 16, 20], gap: 12, r: 16, fill: t.surface, shadow: "dlg" });
+  const ic = b.frame(m, { w: 44, h: 44, r: 12, fill: K.tint(tone, 0.12), layout: "horizontal", align: "center", justify: "center" }); b.icon(ic, d.icon, 22, tone);
+  b.text(m, d.title, { size: 16, weight: "SemiBold", c: t.text, w: "fill", lh: 22 }); b.text(m, d.body, { size: 14, c: t.text2, w: "fill", lh: 20 });
+  if (key === "repair") { const pr = b.row(m, { w: "fill", gap: 12 }); K.bar(b, t, pr, 0.62, 380, { knob: false }); b.text(pr, "62%", { size: 14, weight: "SemiBold", c: t.text, lh: 20 }); b.text(m, "205 MB of 330 MB, about 20 s left", { size: 12, c: t.text3, lh: 16 }); }
+  if (d.detail) { const r = b.row(m, { gap: 6 }); b.icon(r, "right", 13, t.text2); b.text(r, "Details", { size: 13, weight: "Medium", c: t.text2, lh: 18 }); }
+  const ft = b.row(m, { w: "fill", gap: 8, justify: "max", pad: [8, 0, 0, 0] });
+  if (d.secondary) K.btn(b, t, ft, d.secondary, { v: "secondary" });
+  K.btn(b, t, ft, d.primary, { v: "primary" });
+};
+const sysToast = (msg: string, icon?: string) => (b: B, t: T, c: Ref) => { const w = b.col(c, { abs: true, x: 0, y: 0, w: 1278, h: 799, align: "end", justify: "end", pad: [0, 16, 44, 16] } as any); K.toast(b, t, w, msg, "neutral", icon ? { icon } : {}); };
+const sysFrames: S[] = [
+  scr("K3", "K", "Error · low disk space", "Starting the Chatterbox download without room for it: the dialog names the free space and offers another folder.", homeScene({}, sysDialog("disk"))),
+  scr("K4", "K", "Error · model checksum failed", "A model file fails its check: Repair is primary, the checksum sits behind Details, Open Engines is the alternative.", homeScene({ status: "err", engine: { label: "Needs repair", detail: "Model failed its check", err: true } }, sysDialog("corrupt"))),
+  scr("K5", "K", "Notice · extension out of date", "Non-blocking banner above the status cards; no dialog.", homeScene({ banner: { title: "The Chrome extension is out of date", body: "Extension 0.3.9 cannot talk to app 0.4.2. Update it from the Chrome Web Store; reading from the app still works." } })),
+  scr("K6", "K", "Permission · microphone blocked", "Voice cloning is not built (v1.1). Design-only: Windows blocks the microphone and Upload a file is the alternative.", homeScene({}, sysDialog("mic"))),
+  scr("K7", "K", "Notice · already running", "No dialog: the existing window is restored and a toast says why.", homeScene({}, sysToast("Speak Kit was already running. Showing your window."))),
+  scr("K8", "K", "Notice · offline", "Nothing blocks the app: a toast says reading still works and downloads wait.", homeScene({ pill: "Offline" }, sysToast("You're offline. Reading still works; downloads wait until you're back.", "wifiOff"))),
+  scr("K10", "K", "Error · repairing model", "Repair progress with size and time left; it can run in the background.", homeScene({ engine: { label: "Repairing", detail: "Downloading a fresh Kokoro model" } }, sysDialog("repair"))),
+];
+
 export const FLOATING: S[] = [
+  ...sysFrames,
   scr("I10", "I", "Tray panel · reading", "Left click on the tray icon: Speak Kit's own panel above the taskbar. Now playing with pause and stop, next in queue, Open Speak Kit.", trayScene(READY, NOW_PLAYING)),
   scr("I14", "I", "Tray panel · idle", "Nothing is playing: the hint names the global shortcut. Both footer actions stay.", trayScene(READY, null)),
   scr("I15", "I", "Tray panel · paused", "Paused keeps the title and shows play instead of pause.", trayScene(READY, NOW_PAUSED)),

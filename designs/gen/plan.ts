@@ -6,7 +6,8 @@ export type Pg = { name: string; sections: Sec[] };
 
 const f = (id: string, rule?: string, o: Partial<FD> = {}): FD => ({ id, rule, ...o });
 const later = (id: string, rule?: string): FD => ({ id, rule, tag: "LATER (v1.1)" });
-const sup = (id: string, by: string, rule?: string): FD => ({ id, rule, tag: `SUPERSEDED by ${by}` });
+// a superseded frame redraws its replacement, so no old look survives in the file
+const sup = (id: string, by: string, rule?: string): FD => ({ id, rule, src: by, tag: `SUPERSEDED by ${by}` });
 
 export const PAGES: Pg[] = [
   {
@@ -24,7 +25,7 @@ export const PAGES: Pg[] = [
       { title: "Popup pickers and finish", cover: "voice, speed and the finished state", frames: [f("A6"), f("A7"), f("A8")] },
       { title: "Popup engine states", cover: "unloaded, waking, loading: the engine wakes on play", frames: [f("A16"), f("A17"), f("A10"), f("A21"), f("A20"), f("A22")] },
       { title: "Popup connection problems", cover: "app not running or installed, pairing token, version mismatch", frames: [f("A9"), f("A13"), f("A14"), f("A18")] },
-      { title: "Popup page problems", cover: "file URL permission, unreadable page, Chrome PDF viewer", frames: [f("A15"), f("A11"), f("A19"), f("A24", "Closed in this tab: the popup says Hidden in this tab and offers Show on this page.")] },
+      { title: "Popup page problems", cover: "file URL permission, unreadable page, Chrome PDF viewer", frames: [f("A15"), f("A11"), f("A19"), f("A24", "Closed in this tab: the idle popup adds a Show on this page button.")] },
       { title: "Read-aloud pill", cover: "Lumen F5 pill on the page: idle, preparing, reading, paused, finished, error, engine states", frames: [
         f("B4", "Pill appears bottom center on first use: play, paragraph count and time, speed, voice, more and a close x for this tab."), f("B5", "Preparing shows a spinner in the play button and a looping bar."), f("B6", "Paragraph 2 of 14 · 9 min left, sentence band plus word marker, page follows."), f("B11", "The white pill stays readable over a dark website; the highlight palette adapts to the page."),
         f("B7", "Paused keeps the highlight on the last spoken sentence."), f("B8", "Done replaces the text with Read again."), f("B9", "One surface: the pill explains the problem, Open Speak Kit and Retry."),
@@ -45,7 +46,7 @@ export const PAGES: Pg[] = [
     name: "Desktop app",
     sections: [
       { title: "First launch and setup", cover: "status screen, then the 960x680 setup window with its 5-step stepper", frames: [sup("W0", "W1", "The product has no splash window: first launch opens the setup window on Welcome."), f("W1"), f("W2"), f("W2b", "design-only: cannot be screenshotted (the capture machine reports no GPU)."), f("W3"), f("W3b"), f("W4"), f("W4b"), f("W5"), f("W5b")] },
-      { title: "Desktop shell", cover: "title bar with search and status pill, 248 px sidebar, inset card, command palette, narrow rail", frames: [f("L1"), f("L2"), f("L3"), f("L4"), f("L5"), f("L6"), f("L7")] },
+      { title: "Desktop shell", cover: "title bar with search and status pill, 248 px sidebar, inset card, command palette, narrow rail", frames: [f("L1"), f("L1m"), f("L2"), f("L3"), f("L4"), f("L5"), f("L6"), f("L7")] },
       { title: "Library", cover: "readings, adding content, search", frames: [f("E1"), f("E2"), f("E3"), f("E4"), f("E5"), f("E7"), f("E8")] },
       { title: "Library actions", cover: "drag and drop, menus, delete, toasts", frames: [f("E6"), f("E14"), f("E15"), f("E9"), f("E10"), f("E16"), f("E12"), f("E13")] },
       { title: "Reader", cover: "playing, paused, preparing, finished, read from here", frames: [f("F1"), f("F2"), f("F3"), f("F4"), f("F5")] },
@@ -53,7 +54,7 @@ export const PAGES: Pg[] = [
       { title: "PDF reader", cover: "PDF playing, scanned page, recognition consent, recognizing text, recognition failed", frames: [f("F10"), f("F11"), f("F12"), f("F13"), f("F17")] },
       { title: "Voices and engines", cover: "Kokoro library, detail, engine manager and warnings", frames: [f("G1"), f("G2","design-only: voice detail drawer is not built yet (v1.1)",{tag:"LATER (v1.1)"}), f("G13","design-only: list view is not built yet (v1.1)",{tag:"LATER (v1.1)"}), f("G8"), f("G17","design-only: cannot be screenshotted, needs a GPU machine with Chatterbox available"), f("G9","design-only: cannot be screenshotted, needs a GPU machine with Chatterbox"), f("G10"), f("G16","design-only: cannot be screenshotted, needs a GPU machine with Chatterbox"), f("G18","design-only: not captured by the harness; the Remove dialog of EnginesPage.tsx")] },
       { title: "Voice cloning", cover: "Chatterbox cloning flow, consent and failures", frames: [later("G3","design-only: voice cloning is not built (v1.1)"), later("G4","design-only: voice cloning is not built (v1.1)"), later("G5","design-only: voice cloning is not built (v1.1)"), later("G6","design-only: voice cloning is not built (v1.1)"), later("G7","design-only: voice cloning is not built (v1.1)"), later("G15","design-only: voice cloning is not built (v1.1)"), later("G11","design-only: voice cloning is not built (v1.1)"), later("G14","design-only: voice cloning is not built (v1.1)")] },
-      { title: "Settings: general and playback", cover: "nav 248, search, groups of rows on a 760 px column", frames: [f("H1", "The arrow beside Settings closes Settings completely and returns to the page you came from; it never steps back through settings pages."), f("H2"), f("H3", "Out of scope for v1: no engine API for custom pronunciations (docs/scope.md). Design-only, not built.", { tag: "OUT OF SCOPE (v1)" }), f("H17", "The title-bar search opens the command palette, which finds every settings page.", { tag: "SUPERSEDED by L3", src: "L3" })] },
+      { title: "Settings: general and playback", cover: "nav 248, search, groups of rows on a 760 px column", frames: [f("H1", "The arrow beside Settings closes Settings completely and returns to the page you came from; it never steps back through settings pages. Esc does the same; title-bar Back and Forward only walk the main pages."), f("H1m", "macOS: traffic lights, status pill and bell at the far right with equal 4 px gaps, panel radius 14."), f("H2"), f("H3", "Out of scope for v1: no engine API for custom pronunciations (docs/scope.md). Design-only, not built.", { tag: "OUT OF SCOPE (v1)" }), f("H17", "The title-bar search opens the command palette, which finds every settings page.", { tag: "SUPERSEDED by L3", src: "L3" })] },
       { title: "Settings: browser and shortcuts", cover: "paired browsers, port, token, shortcut recording and conflicts", frames: [f("H4"), f("H21"), f("H5"), f("H11"), f("H16")] },
       { title: "Settings: memory and performance", cover: "idle unload 1/5/15/never, load at startup, battery saver; storage", frames: [f("H12"), f("H13"), f("H20"), f("H6"), f("H6b")] },
       { title: "Settings: notifications and startup", cover: "event table, Do not disturb, sign-in start, tray behavior", frames: [f("H14"), f("H15", "Startup and tray settings live on the General page (H1).", { tag: "SUPERSEDED by H1", src: "H1" }), f("H7", "Appearance is the Language row on the General page (H1); there is no theme choice.", { tag: "SUPERSEDED by H1", src: "H1" })] },

@@ -139,12 +139,13 @@ const msg = (b: B, p: Node, icon: string, title: string, bodyText: string, prima
 
 // ---- player views (home.tsx, pickers.tsx)
 const hint = (b: B, p: Node, s: string) => T(b, p, s, { size: 12, c: C.text3, lh: 16, ta: "center", w: "fill" });
-const idleActions = (b: B, p: Node, hintText: string) => {
+const idleActions = (b: B, p: Node, hintText: string, hidden = false) => {
   const a = b.col(p, { w: "fill", gap: 10 });
   btn(b, a, "Listen to this page", { v: "primary", icon: "play", w: "fill" });
   const two = b.row(a, { w: "fill", gap: 8 });
   const l = btn(b, two, "From selection", { icon: "scan", disabled: true, w: "fill" });
   btn(b, two, "Reader view", { icon: "book", w: "fill" });
+  if (hidden) btn(b, a, "Show on this page", { w: "fill" }); // home.tsx: shown beside the idle actions while the pill is closed in this tab
   hint(b, a, hintText);
   return a;
 };
@@ -323,8 +324,8 @@ const STATES: St[] = [
     draw: (b, p) => msg(b, p, "alert", "The voice engine isn't ready", "Speak Kit is running but the Kokoro voice model isn't installed or failed to start. Open the app to download or repair it.", "Open Speak Kit", "Check again") },
   { id: "A23", title: "Popup · playing with a selection on the page", note: "Playback keeps the page title; a selection on the page does not change the player.", h: 383, pill: ["Kokoro ready", "green"], ctx: "selection",
     draw: (b, p) => { nowCard(b, p, TITLE, `${SITE} · 6:48 at 1.2x`); liveControls(b, p, { pct: 0.36, left: "2:27", right: "4:21 left", centre: "pause" }); hr(b, p); voiceSpeed(b, p); shortcuts(b, p); } },
-  { id: "A24", title: "Popup · hidden in this tab", note: "The pill was closed in this tab: the popup says so and offers Show on this page; a reload brings the pill back.", h: 335, pill: ["Kokoro ready", "green"], ctx: "article",
-    draw: (b, p) => msg(b, p, "eyeOff", "Hidden in this tab", "Speak Kit's pill is hidden on this page. It comes back when you reload the page, or show it now.", "Show on this page") },
+  { id: "A24", title: "Popup · closed in this tab", note: "The pill was closed in this tab (Close for this tab): the idle popup adds a Show on this page button; a reload also brings the pill back.", h: 439, pill: ["Kokoro ready", "green"], ctx: "article",
+    draw: (b, p) => { nowCard(b, p, TITLE, `${SITE} · 6:48 at 1.2x`); idleActions(b, p, "Select text on the page to read just that part.", true); hr(b, p); voiceSpeed(b, p); shortcuts(b, p); } },
 ];
 const FOOT: Record<string, [string, string]> = { A9: ["Runs on this computer", "Troubleshooting"], A13: ["Free. Works offline.", "Learn more"], A14: ["Runs on this computer", "Extension options"], A18: ["Runs on this computer", "Troubleshooting"] };
 

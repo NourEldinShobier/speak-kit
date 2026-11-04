@@ -21,6 +21,7 @@ Reading highlight (our own, `hlSent` #FFF1C2, `hlWord` #FFD24D), `tag-purple` an
 
 ## Shape, elevation, controls
 - Radii: 16 dialog, 14 panel and tray, 12 floating card and popover, 10 card and menu, 8 control, 6 chip, 5 checkbox, 999 pill.
+- Hover fills are concentric (inner radius = container radius minus border and padding, minimum 4): menu and select option 5, segmented option 6, command palette row 8 on macOS and 4 on Windows; the first and last row of a card follow the card corners.
 - Panels (sidebar, content) are white r14 on the grey window, 4 px from the edge and 8 px apart, no stroke, shadow `card`.
 - Shadows are FigCraft drop-shadow effects with at most two layers: control `0 1 2 6%`, menu the same plus a 1 px stroke, popover and pill `1 px ring 10% + 0 2 6 6%`, dialog `ring + 0 4 12 7%`, card `0 0 4 7% + 0 1 2 4%`, card on a tray `1 px #EBEBEB + 0 1 2 5%`, cta `0 2 4 10%`.
 - Buttons 36 (default), 28 sm, 24 xs, 40 xl (dialog footers), r8. Primary = cta black, secondary = white with a 1 px stroke and control shadow, ghost, danger = 10% red tint. Disabled = 50% opacity.

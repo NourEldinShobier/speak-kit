@@ -207,7 +207,7 @@ export const J: S[] = [
 // ---------------- K: system states ----------------
 type KS = "crash" | "port" | "disk" | "corrupt" | "repair" | "version" | "mic" | "instance" | "offline-ok";
 type KD = { icon: string; tone: "err" | "warn" | "info"; title: string; body: string; detail?: string; primary: string; secondary?: string };
-const KDEF: Record<string, KD> = {
+export const KDEF: Record<string, KD> = {
   crash: { icon: "alert", tone: "err", title: "The voice engine stopped unexpectedly", body: "Speak Kit is restarting Kokoro. Your reading was interrupted at 2:27 and your library and settings are safe.", detail: "tts-worker exited with code 3221225477 (0xC0000005) at 12:04:31", primary: "Resume reading", secondary: "Copy diagnostics" },
   port: { icon: "alert", tone: "warn", title: "Speak Kit can't reach the browser extension", body: "Another program is using the port the extension talks to. Pick another port; the extension is re-paired automatically.", detail: "Port 51730 is in use (EADDRINUSE 127.0.0.1:51730)", primary: "Use port 51731", secondary: "Choose a port…" },
   disk: { icon: "hardDrive", tone: "warn", title: "Not enough disk space", body: "Chatterbox needs 2.4 GB, but the models folder on E:\\ has only 1.1 GB free. Free some space or choose another models folder.", primary: "Choose another folder", secondary: "Manage storage" },
