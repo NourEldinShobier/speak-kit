@@ -80,6 +80,15 @@ export const PAGES: Pg[] = [
     ],
   },
   {
+    name: "Logo",
+    sections: [
+      { title: "Marks", cover: "primary, small variant and one-colour versions as editable vectors", frames: [f("LG1", "The primary mark is the Voice hub in a continuous-corner squircle, 1024 px, on white and on ink."), f("LG2", "The small variant has wider seams, a bigger hub and a bolder wave for 48 px and below."), f("LG3", "One colour: ink on light, white on dark, with the wave knocked out of the hub.")] },
+      { title: "Lockups", cover: "horizontal and stacked with the Speak Kit wordmark, ink and white", frames: [f("LG4", "Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, ink on light and white on dark.")] },
+      { title: "App icons and tray", cover: "macOS 1024 with 824 body and shadow, Windows .ico sizes, extension toolbar, tray states, menu-bar template", frames: [f("LG5", "App icons put a white squircle under the pieces; macOS bakes in an 824 px body and shadow; tray states add a dot or grey out the mark.")] },
+      { title: "Construction and rules", cover: "squircle 22.4 %, one line weight, clear space, minimum sizes, colours, do and don't", frames: [f("LG6", "Squircle radius 22.4 % with smoothing 0.6; seam, ring and wave share one line weight (41 px, small 65 px).")] },
+    ],
+  },
+  {
     name: "Motion",
     sections: [
       { title: "Motion tokens", cover: "durations 83/167/250/333/120 ms, easing, spring 420/34", frames: [f("MO1")] },

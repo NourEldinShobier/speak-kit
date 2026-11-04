@@ -2925,6 +2925,105 @@
    ]
   },
   {
+   "name": "Logo",
+   "sections": [
+    {
+     "n": 1,
+     "title": "Marks",
+     "cover": "primary, small variant and one-colour versions as editable vectors",
+     "frames": [
+      {
+       "id": "LG1",
+       "src": "LG1",
+       "title": "Primary mark",
+       "rule": "The primary mark is the Voice hub in a continuous-corner squircle, 1024 px, on white and on ink.",
+       "note": "The primary mark is the Voice hub in a continuous-corner squircle at 1024 px, shown on white and on ink.",
+       "tag": "",
+       "w": 2560,
+       "h": 1380,
+       "name": "LG1 · Primary mark — The primary mark is the Voice hub in a continuous-corner squircle, 1024 px, on white and on ink."
+      },
+      {
+       "id": "LG2",
+       "src": "LG2",
+       "title": "Small variant",
+       "rule": "The small variant has wider seams, a bigger hub and a bolder wave for 48 px and below.",
+       "note": "The small variant is for 48 px and below: wider seams, a bigger hub and a bolder wave.",
+       "tag": "",
+       "w": 1760,
+       "h": 1000,
+       "name": "LG2 · Small variant — The small variant has wider seams, a bigger hub and a bolder wave for 48 px and below."
+      },
+      {
+       "id": "LG3",
+       "src": "LG3",
+       "title": "One colour",
+       "rule": "One colour: ink on light, white on dark, with the wave knocked out of the hub.",
+       "note": "One colour: ink on light, white on dark, with the wave knocked out of the hub; small variants for small sizes.",
+       "tag": "",
+       "w": 1760,
+       "h": 930,
+       "name": "LG3 · One colour — One colour, ink on light, white on dark, with the wave knocked out of the hub."
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "title": "Lockups",
+     "cover": "horizontal and stacked with the Speak Kit wordmark, ink and white",
+     "frames": [
+      {
+       "id": "LG4",
+       "src": "LG4",
+       "title": "Lockups",
+       "rule": "Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, ink on light and white on dark.",
+       "note": "Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, in ink on light and white on dark.",
+       "tag": "",
+       "w": 1760,
+       "h": 1280,
+       "name": "LG4 · Lockups — Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, ink on light and white on dark."
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "title": "App icons and tray",
+     "cover": "macOS 1024 with 824 body and shadow, Windows .ico sizes, extension toolbar, tray states, menu-bar template",
+     "frames": [
+      {
+       "id": "LG5",
+       "src": "LG5",
+       "title": "App icons and tray",
+       "rule": "App icons put a white squircle under the pieces; macOS bakes in an 824 px body and shadow; tray states add a dot or grey out the mark.",
+       "note": "App icons: macOS 1024 canvas with an 824 body and shadow, Windows .ico sizes, extension toolbar sizes, tray states and the menu-bar template.",
+       "tag": "",
+       "w": 2560,
+       "h": 1720,
+       "name": "LG5 · App icons and tray — App icons put a white squircle under the pieces; macOS bakes in an 824 px body and shadow; tray states add a dot or grey ou"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "title": "Construction and rules",
+     "cover": "squircle 22.4 %, one line weight, clear space, minimum sizes, colours, do and don't",
+     "frames": [
+      {
+       "id": "LG6",
+       "src": "LG6",
+       "title": "Construction and rules",
+       "rule": "Squircle radius 22.4 % with smoothing 0.6; seam, ring and wave share one line weight (41 px, small 65 px).",
+       "note": "Construction: squircle 22.4 % with smoothing 0.6, seam = ring = wave = one line weight; clear space, minimum sizes, colours, do and don't.",
+       "tag": "",
+       "w": 2560,
+       "h": 1660,
+       "name": "LG6 · Construction and rules — Squircle radius 22.4 % with smoothing 0.6; seam, ring and wave share one line weight (41 px, small 65 px)."
+      }
+     ]
+    }
+   ]
+  },
+  {
    "name": "Motion",
    "sections": [
     {
@@ -3612,6 +3711,48 @@
   },
   {
    "key": "5.1",
+   "page": "Logo",
+   "n": 1,
+   "title": "Marks",
+   "cover": "primary, small variant and one-colour versions as editable vectors",
+   "ids": [
+    "LG1",
+    "LG2",
+    "LG3"
+   ]
+  },
+  {
+   "key": "5.2",
+   "page": "Logo",
+   "n": 2,
+   "title": "Lockups",
+   "cover": "horizontal and stacked with the Speak Kit wordmark, ink and white",
+   "ids": [
+    "LG4"
+   ]
+  },
+  {
+   "key": "5.3",
+   "page": "Logo",
+   "n": 3,
+   "title": "App icons and tray",
+   "cover": "macOS 1024 with 824 body and shadow, Windows .ico sizes, extension toolbar, tray states, menu-bar template",
+   "ids": [
+    "LG5"
+   ]
+  },
+  {
+   "key": "5.4",
+   "page": "Logo",
+   "n": 4,
+   "title": "Construction and rules",
+   "cover": "squircle 22.4 %, one line weight, clear space, minimum sizes, colours, do and don't",
+   "ids": [
+    "LG6"
+   ]
+  },
+  {
+   "key": "6.1",
    "page": "Motion",
    "n": 1,
    "title": "Motion tokens",
@@ -3621,7 +3762,7 @@
    ]
   },
   {
-   "key": "5.2",
+   "key": "6.2",
    "page": "Motion",
    "n": 2,
    "title": "Per-element rules",
@@ -6702,6 +6843,84 @@
    "page": "Foundations & components"
   },
   {
+   "id": "LG1",
+   "src": "LG1",
+   "title": "Primary mark",
+   "rule": "The primary mark is the Voice hub in a continuous-corner squircle, 1024 px, on white and on ink.",
+   "note": "The primary mark is the Voice hub in a continuous-corner squircle at 1024 px, shown on white and on ink.",
+   "tag": "",
+   "w": 2560,
+   "h": 1380,
+   "name": "LG1 · Primary mark — The primary mark is the Voice hub in a continuous-corner squircle, 1024 px, on white and on ink.",
+   "feature": "5.1",
+   "page": "Logo"
+  },
+  {
+   "id": "LG2",
+   "src": "LG2",
+   "title": "Small variant",
+   "rule": "The small variant has wider seams, a bigger hub and a bolder wave for 48 px and below.",
+   "note": "The small variant is for 48 px and below: wider seams, a bigger hub and a bolder wave.",
+   "tag": "",
+   "w": 1760,
+   "h": 1000,
+   "name": "LG2 · Small variant — The small variant has wider seams, a bigger hub and a bolder wave for 48 px and below.",
+   "feature": "5.1",
+   "page": "Logo"
+  },
+  {
+   "id": "LG3",
+   "src": "LG3",
+   "title": "One colour",
+   "rule": "One colour: ink on light, white on dark, with the wave knocked out of the hub.",
+   "note": "One colour: ink on light, white on dark, with the wave knocked out of the hub; small variants for small sizes.",
+   "tag": "",
+   "w": 1760,
+   "h": 930,
+   "name": "LG3 · One colour — One colour, ink on light, white on dark, with the wave knocked out of the hub.",
+   "feature": "5.1",
+   "page": "Logo"
+  },
+  {
+   "id": "LG4",
+   "src": "LG4",
+   "title": "Lockups",
+   "rule": "Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, ink on light and white on dark.",
+   "note": "Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, in ink on light and white on dark.",
+   "tag": "",
+   "w": 1760,
+   "h": 1280,
+   "name": "LG4 · Lockups — Lockups pair the mark with the Speak Kit wordmark, horizontal or stacked, ink on light and white on dark.",
+   "feature": "5.2",
+   "page": "Logo"
+  },
+  {
+   "id": "LG5",
+   "src": "LG5",
+   "title": "App icons and tray",
+   "rule": "App icons put a white squircle under the pieces; macOS bakes in an 824 px body and shadow; tray states add a dot or grey out the mark.",
+   "note": "App icons: macOS 1024 canvas with an 824 body and shadow, Windows .ico sizes, extension toolbar sizes, tray states and the menu-bar template.",
+   "tag": "",
+   "w": 2560,
+   "h": 1720,
+   "name": "LG5 · App icons and tray — App icons put a white squircle under the pieces; macOS bakes in an 824 px body and shadow; tray states add a dot or grey ou",
+   "feature": "5.3",
+   "page": "Logo"
+  },
+  {
+   "id": "LG6",
+   "src": "LG6",
+   "title": "Construction and rules",
+   "rule": "Squircle radius 22.4 % with smoothing 0.6; seam, ring and wave share one line weight (41 px, small 65 px).",
+   "note": "Construction: squircle 22.4 % with smoothing 0.6, seam = ring = wave = one line weight; clear space, minimum sizes, colours, do and don't.",
+   "tag": "",
+   "w": 2560,
+   "h": 1660,
+   "name": "LG6 · Construction and rules — Squircle radius 22.4 % with smoothing 0.6; seam, ring and wave share one line weight (41 px, small 65 px).",
+   "feature": "5.4",
+   "page": "Logo"
+  },
+  {
    "id": "MO1",
    "src": "MO1",
    "title": "Motion tokens",
@@ -6711,7 +6930,7 @@
    "w": 1440,
    "h": 900,
    "name": "MO1 · Motion tokens — Lockix durations, springs as linear() easings, state fades.",
-   "feature": "5.1",
+   "feature": "6.1",
    "page": "Motion"
   },
   {
@@ -6724,7 +6943,7 @@
    "w": 1440,
    "h": 900,
    "name": "MO2 · Per-element rules — Trigger, animation, time, easing and reduce-motion fallback for 18 elements.",
-   "feature": "5.2",
+   "feature": "6.2",
    "page": "Motion"
   },
   {
@@ -6737,7 +6956,7 @@
    "w": 1440,
    "h": 900,
    "name": "MO3 · Reduce motion and principles — Zero durations under reduce motion; loops stop; nothing over 350 ms.",
-   "feature": "5.2",
+   "feature": "6.2",
    "page": "Motion"
   }
  ]
