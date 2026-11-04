@@ -105,8 +105,8 @@ const featCard = (b: B, t: T, p: Ref, ic: string, title: string, d: string) => {
   b.icon(f, ic, 18, t.text); tx(b, f, title, { size: 13, weight: "SemiBold", c: t.text, lh: 18 }); tx(b, f, d, { size: 12, c: t.text2, lh: 16 });
 };
 const radioEngine = (b: B, t: T, p: Ref | undefined, o: { ic: string; name: string; l1: string; l2: string; pill: [string, "ok" | "neutral"]; sel?: boolean; dim?: boolean }) => {
-  const r = b.row(p, { w: "fill", pad: [14, 16], gap: 12, align: "start", r: 10, fill: o.sel ? t.selected : "none", opacity: o.dim ? 0.55 : undefined });
-  const tile = b.frame(r, { w: 32, h: 32, r: 8, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, o.ic, 18, t.iconQuiet);
+  const r = b.row(p, { w: "fill", pad: [14, 16], gap: 12, align: "start", r: 10, fill: o.sel ? t.selected : "none" });
+  const tile = b.frame(r, { w: 32, h: 32, r: 8, fill: o.dim ? "#ECEDEF" : t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, o.ic, 18, o.dim ? "#9AA0AB" : t.iconQuiet); // unavailable: the row stays readable, only the tile turns grey
   const x = b.col(r, { gap: 4, w: "fill" });
   tx(b, x, o.name, { size: 14, weight: "SemiBold", c: t.text, lh: 16 }); tx(b, x, o.l1, { size: 13, c: t.text2, lh: 16 }); tx(b, x, o.l2, { size: 13, c: t.text2, lh: 16 });
   const pw = b.frame(r, { layout: "vertical", pad: [2, 0, 0, 0] }); K.badge(b, t, pw, o.pill[0], o.pill[1]);
@@ -230,7 +230,7 @@ const mainWin = (b: B, t: T, root: Ref, o: { W?: number; H?: number; side?: Side
 };
 const stat = (b: B, t: T, p: Ref, key: string, v: string, d: (f: Ref) => void) => {
   const f = b.frame(p, { w: "fill", h: 88, r: 10, fill: t.surface, shadow: "ring" });
-  tx(b, f, key, { x: 16, y: 14.5, size: 11, weight: "SemiBold", c: t.text3, lh: 15, ls: 0.44 });
+  tx(b, f, key, { x: 16, y: 14.5, size: 12, weight: "Medium", c: t.text3, lh: 16 });
   const r = b.row(f, { x: 16, y: 34.5, gap: 8, h: 18 }); b.ellipse(r, { w: 8, h: 8, fill: t.dotGreen }); tx(b, r, v, { size: 15, weight: "SemiBold", c: t.text, lh: 18 });
   const dd = b.row(f, { x: 16, y: 57, gap: 3, h: 17 }); d(dd);
   return f;
@@ -241,8 +241,8 @@ const home = (b: B, t: T, main: Ref, pw: number, port: string, token: string) =>
   const h = b.col(col, { w: "fill", gap: 4 });
   tx(b, h, "Home", { size: 22, weight: "SemiBold", c: t.text, lh: 26 }); tx(b, h, "Speak Kit runs a private voice server on this computer. Your browser extension talks to it.", { size: 13, c: t.text2, lh: 17 });
   const g = b.row(col, { w: "fill", gap: 12, align: "start" });
-  stat(b, t, g, "SERVER", "Running", (d) => { tx(b, d, "Listening on", { size: 12, c: t.text2, lh: 17 }); tx(b, d, "127.0.0.1:" + port, { size: 12, c: t.text, ff: MONO, lh: 17 }); });
-  stat(b, t, g, "VOICE ENGINE", "Ready", (d) => tx(b, d, "Kokoro-82M, runs on the CPU", { size: 12, c: t.text2, lh: 17 }));
+  stat(b, t, g, "Server", "Running", (d) => { tx(b, d, "Listening on", { size: 12, c: t.text2, lh: 17 }); tx(b, d, "127.0.0.1:" + port, { size: 12, c: t.text, ff: MONO, lh: 17 }); });
+  stat(b, t, g, "Voice engine", "Ready", (d) => tx(b, d, "Kokoro-82M, runs on the CPU", { size: 12, c: t.text2, lh: 17 }));
   const s1 = section(b, t, col, "Pairing token", "Paste this token in the extension under Options > General > Pairing token.");
   const k1 = lcard(b, t, s1); const pad = b.frame(k1, { w: "fill", layout: "vertical", pad: [14, 16] }); tokenField(b, t, pad, { text: "•".repeat(14) + "-" + token });
   const s2 = section(b, t, col, "Install the extension", "Add Speak Kit from the Chrome Web Store (also Edge and Brave). Then pin it to the toolbar.");

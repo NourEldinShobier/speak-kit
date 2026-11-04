@@ -334,8 +334,8 @@ const panel = (b: B, t: T, vp: Ref, st: "queue" | "outline" | "empty") => {
     K.btn(b, t, e, "Add this page", { v: "primary" });
     return;
   }
-  const lbl = (s: string, y: number) => b.text(p, s, { x: 16, y, size: 12, weight: "SemiBold", c: t.text3, ls: 0.5, lh: 15 });
-  lbl("NOW PLAYING", 72);
+  const lbl = (s: string, y: number) => b.text(p, s, { x: 16, y, size: 12, weight: "Medium", c: t.text3, lh: 16 });
+  lbl("Now playing", 72);
   const n = b.frame(p, { x: 16, y: 95, w: 367, h: 182, r: 12, fill: t.selected, clip: false });
   b.text(n, "The quiet return of local-first software", { x: 20, y: 20, size: 16, weight: "SemiBold", c: t.text, lh: 20 });
   b.text(n, `reader.example.com · paragraph ${st === "queue" ? 1 : 3} of 3`, { x: 20, y: 49, size: 13, c: t.text2, lh: 16 });
@@ -347,16 +347,16 @@ const panel = (b: B, t: T, vp: Ref, st: "queue" | "outline" | "empty") => {
   cb("skipBack", 33); cb("back10", 66); cb("fwd10", 142); cb("skipFwd", 173);
   const pb = b.frame(n, { x: 84, y: 122, w: 40, h: 40, r: 20, fill: t.cta, layout: "horizontal", align: "center", justify: "center", shadow: "cta" }); b.icon(pb, st === "queue" ? "pause" : "play", 16, t.ctaText);
   const sp = b.frame(n, { x: 297, y: 135, w: 50, h: 26, layout: "horizontal" }); K.btn(b, t, sp, "1.2x", { sz: "sm" });
-  lbl("THIS PAGE · 3 PARAGRAPHS", 290);
+  lbl("This page · 3 paragraphs", 290);
   const ol = b.col(p, { x: 16, y: 313, w: 367, gap: 2 });
   const OUT = st === "queue" ? ["For a decade, the default answer to every…", "The appeal is simple. When the work happen…", "None of this is nostalgia. It is a bet that the be…"] : ["For a decade, the default answer to every sof…", "The appeal is simple. When the work happen…", "None of this is nostalgia. It is a bet that the b…"];
   const cur = st === "queue" ? 0 : 2;
   OUT.forEach((s, i) => { const r = b.row(ol, { w: "fill", h: 36, pad: [0, 12, 0, 20], gap: 4, r: 4, fill: i === cur ? t.selected : "none" }); b.text(r, `${i + 1}`, { size: 12, c: t.text2, w: 16, ta: "center" }); b.text(r, s, { size: 14, weight: i === cur ? "Medium" : "Regular", c: i === cur ? t.text : t.text2, w: "fill" }); if (i === cur && st === "queue") b.icon(r, "volume", 14, t.text); });
   if (st === "queue") {
-    lbl("UP NEXT · 2 · 9 MIN", 436); const cl = b.frame(p, { x: 337, y: 434, layout: "horizontal" }); b.text(cl, "Clear all", { size: 13, weight: "Medium", c: t.accent });
+    lbl("Up next · 2 · 9 min", 436); const cl = b.frame(p, { x: 337, y: 434, layout: "horizontal" }); b.text(cl, "Clear all", { size: 13, weight: "Medium", c: t.accent });
     [["How small speech models got good", "blog.example.org · 6 min", 459], ["Privacy by default", "docs.example.com · 3 min", 525]].forEach(([a, d, y]) => {
       const c = b.frame(p, { x: 16, y: y as number, w: 367, h: 57, r: 10, fill: "#FFFFFF", stroke: LINE, sw: 1, sa: "inside" });
-      const tile = b.frame(c, { x: 8, y: 8, w: 40, h: 40, r: 8, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, "play", 16, t.text);
+      const tile = b.frame(c, { x: 8, y: 8, w: 40, h: 40, r: 4, fill: t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, "play", 16, t.text);
       b.text(c, a as string, { x: 61, y: 12, size: 13, weight: "Medium", c: t.text, lh: 16 }); b.text(c, d as string, { x: 61, y: 29, size: 12, c: t.text2, lh: 15 });
       const xb = b.frame(c, { x: 325, y: 14, w: 28, h: 28, layout: "horizontal", align: "center", justify: "center" }); b.icon(xb, "x", 16, t.text);
     });

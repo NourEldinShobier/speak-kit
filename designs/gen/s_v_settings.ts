@@ -384,14 +384,14 @@ export const SETTINGS_EXTRA: S[] = [];
 // ------------------------------------------------------------------ pages that are not under Settings but belong to this group
 const stat = (b: B, p: Ref, k: string, dot: string, v: string, d: (f: Ref) => void) => {
   const c = b.col(p, { w: "fill", h: "fill", pad: [14, 16], gap: 6, r: 10, fill: "#FFFFFF", stroke: C.div, sw: 1, sa: "outside", shadow: "ctl" });
-  tx(b, c, k, { size: 11, w: "SemiBold", c: C.ter, lh: 15, ls: 0.44 });
+  tx(b, c, k, { size: 12, w: "Medium", c: C.ter, lh: 16 });
   const r = b.row(c, { gap: 8 }); b.ellipse(r, { w: 8, h: 8, fill: dot }); tx(b, r, v, { size: 15, w: "SemiBold", lh: 21 });
   const dd = b.row(c, { gap: 4 }); d(dd);
 };
 const home = (c0: Ref, b: B) => {
   const g = b.row(c0, { w: "fill", h: 105, gap: 12, align: "stretch", clip: false });
-  stat(b, g, "SERVER", "#05C283", "Running", (f) => { tx(b, f, "Listening on", { size: 12, c: C.sec, lh: 17 }); tx(b, f, "127.0.0.1:48131", { size: 12, lh: 17, mono: true }); });
-  stat(b, g, "VOICE ENGINE", C.ter, "Unloaded", (f) => tx(b, f, "Kokoro-82M is on disk. It loads when you press play" + "\n" + "and unloads when idle.", { size: 12, c: C.sec, lh: 17 }));
+  stat(b, g, "Server", "#05C283", "Running", (f) => { tx(b, f, "Listening on", { size: 12, c: C.sec, lh: 17 }); tx(b, f, "127.0.0.1:48131", { size: 12, lh: 17, mono: true }); });
+  stat(b, g, "Voice engine", C.ter, "Unloaded", (f) => tx(b, f, "Kokoro-82M is on disk. It loads when you press play" + "\n" + "and unloads when idle.", { size: 12, c: C.sec, lh: 17 }));
   section(b, c0, "Pairing token", "Paste this token in the extension under Options > General > Pairing token.", (c) => tokenField(b, pad(b, c), "fe2c"));
   section(b, c0, "Install the extension", "Add Speak Kit from the Chrome Web Store (also Edge and Brave). Then pin it to the toolbar.", (c) => {
     row(b, c, "Speak Kit for Chrome", "Not connected yet", (f) => acts(b, f, (a) => { btn(b, a, "Pair", { sz: "sm" }); btn(b, a, "Open Web Store", { sz: "sm", icon: "external" }); }));

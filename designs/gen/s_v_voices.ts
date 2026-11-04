@@ -103,20 +103,23 @@ export const VOICES: V[] = [
 ];
 export const AV = ["#0B5CAD", "#9A5200", "#17693D", "#7A4CD9", "#A61B1B", "#B8860B"];
 export const GT: Record<string, PT> = { A: "green", B: "blue", C: "orange", D: "red" };
+// .lm-avatar.lm-tone-*: chip tint with the tag colour as the letter (purple and yellow letters use the text-only tag tokens)
+const AVT: Record<string, [string, string]> = { "#0B5CAD": ["#DAEFFE", "#0B5CAD"], "#9A5200": ["#FFEBCF", "#9A5200"], "#17693D": ["#D5F3E0", "#17693D"], "#7A4CD9": ["#ECE6FA", "#6F42C1"], "#A61B1B": ["#FFE4E5", "#A61B1B"], "#B8860B": ["#F4ECD8", "#80600A"] };
 export const avatar = (b: B, p: Ref | undefined, name: string, size: number, color: string) => {
-  const f = b.frame(p, { w: size, h: size, r: 999, fill: color, layout: "horizontal", align: "center", justify: "center" });
-  b.text(f, name.slice(0, 1).toUpperCase(), { size: size * 0.42, weight: "SemiBold", c: "#FFFFFF" });
+  const [tint, ink] = AVT[color] ?? [color, "#FFFFFF"];
+  const f = b.frame(p, { w: size, h: size, r: 999, fill: tint, layout: "horizontal", align: "center", justify: "center" });
+  b.text(f, name.slice(0, 1).toUpperCase(), { size: size * 0.42, weight: "SemiBold", c: ink });
   return f;
 };
 export const voiceCard = (b: B, t: T, p: Ref, v: V, i: number, h: number, o: { def?: boolean; playing?: boolean } = {}) => {
   const [n, a, g, gr, tr] = v;
   const x = b.col(p, { w: "fill", h, pad: 14, gap: 8, r: 10, fill: "#FFFFFF", shadow: "ring" });
-  const hd = b.row(x, { w: "fill", h: o.def ? 36 : 34, gap: 10 });
+  const hd = b.row(x, { w: "fill", h: 34, gap: 10 });
   avatar(b, hd, n, 32, AV[i % 6]);
   const q = b.col(hd, { gap: 0, w: "fill" });
   const nr = b.row(q, { gap: 6 }); b.text(nr, n, { size: 14, weight: "SemiBold", c: C.text }); if (o.def) pill(b, nr, "Default", "neutral");
   b.text(q, `${a === "US" ? "US English" : "UK English"} · ${g}`, { size: 12, c: C.t2 });
-  const tz = b.row(x, { w: "fill", h: 32 });
+  const tz = b.row(x, { w: "fill", h: Math.max(32, h - 106) }); // .sk-voice__h min 32, footer margin-top auto: footers align across a row
   if (tr) b.text(tz, tr, { size: 13, c: C.t2, ff: "Segoe UI Emoji" });
   const ft = b.row(x, { w: "fill", justify: "spaceBetween" });
   K.btn(b, t, ft, o.playing ? "Stop" : "Preview", { v: o.playing ? "primary" : "secondary", sz: "sm", icon: o.playing ? "stop" : "play" });
@@ -147,7 +150,7 @@ export type ER = { name: string; icon: string; active?: boolean; blurb: string; 
 export const BLURB = { kokoro: "Natural English voices, runs on the CPU, about one second to the first word.", chatterbox: "Expressive voices with emotion control and voice cloning. Needs a GPU and about 2.4 GB." };
 export const engineRow = (b: B, t: T, p: Ref, e: ER) => {
   const r = b.row(p, { w: "fill", pad: [14, 16], gap: 14, align: "start" });
-  const tile = b.frame(r, { w: 32, h: 32, r: 8, fill: C.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, e.icon, 18, C.quiet);
+  const tile = b.frame(r, { w: 32, h: 32, r: 4, fill: C.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, e.icon, 18, C.quiet);
   const body = b.col(r, { w: "fill", gap: 4 });
   const ti = b.row(body, { gap: 0 }); b.text(ti, e.name, { size: 14, weight: "SemiBold", c: C.text, lh: 17 }); if (e.active) b.text(ti, " · In use", { size: 14, c: C.t2, lh: 17 });
   const line = (s: string) => b.text(body, s, { size: 13, c: C.t2, lh: 16, w: "fill" });

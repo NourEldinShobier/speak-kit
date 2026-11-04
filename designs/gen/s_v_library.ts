@@ -356,7 +356,7 @@ export const playerBar = (b: B, t: T, c: Ref, o: Bar, dy = 0) => {
   tx(b, c, o.sub ?? "Heart · Kokoro", 328, Y(737), { size: 12, c: INK2, lh: 16 });
   const tc = o.dim ? "#A0A5AF" : INK;
   ic(b, c, "skipBack", 18, 663, Y(719), tc); ic(b, c, "back10", 20, 711, Y(719), tc); ic(b, c, "fwd10", 20, 811, Y(719), tc); ic(b, c, "skipFwd", 18, 861, Y(719), tc);
-  const pb = b.frame(c, { x: 741, y: Y(699), w: 40, h: 40, r: 20, fill: t.cta, opacity: op }); ic(b, pb, o.playing === false ? "play" : "pause", 20, 20, 20, "#FAFAFA");
+  const pb = b.frame(c, { x: 741, y: Y(699), w: 40, h: 40, r: 20, fill: t.cta, shadow: "cta", opacity: op }); ic(b, pb, o.playing === false ? "play" : "pause", 20, 20, 20, "#FAFAFA");
   tx(b, c, o.cur, 481, Y(751), { size: 12, c: INK2, lh: 16 }); tx(b, c, o.end, 1041, Y(751), { size: 12, c: INK2, lh: 16, w: 60, ta: "right" });
   const track = box(b, c, 533, Y(749), 200, 4, { r: 2, fill: "#F0F0F0" });
   const fr = o.frac ?? 0; if (fr > 0) box(b, track, 0, 0, 8 + 184 * fr, 4, { r: 2, fill: t.accent });
@@ -539,7 +539,7 @@ export const VLIB_F2: S[] = [
     const lines: Line[] = [{ k: "p", t: P2, cy: 96 }];
     [148.5, 232.5, 315.5, 399.5, 482.5, 566.5, 650.5].forEach((cy, i) => { lines.push({ k: "p", t: para(i + 7), cy }, { k: "p", t: P2, cy: cy + 32 }); });
     reader(b, t, c, { h: 798, source: SRC_PASTE, lines, footer: F3S, thumb: [347, 592], bar: { title: "Long essay", cur: "0:01", end: "2:05", frac: 0.01, playing: true }, extra: () => {
-      const p = b.row(c, { x: 692, y: 644, w: 138, h: 27, pad: [0, 14], gap: 6, r: 999, fill: t.cta, shadow: "cta" }); b.icon(p, "down", 14, "#FAFAFA"); b.text(p, "Back to current", { size: 13, weight: "Medium", c: "#FAFAFA", lh: 18 }); } });
+      const p = b.row(c, { x: 693, y: 643, w: 136, h: 28, pad: [0, 12], gap: 6, r: 8, fill: t.cta, shadow: "cta" }); b.icon(p, "down", 14, "#FAFAFA"); b.text(p, "Back to current", { size: 13, weight: "Medium", c: "#FAFAFA", lh: 18 }); } });
   }, 798),
   mk("F16", "Reader · find in text", "Find bar under the title: matches in blue, the current one in orange, with a count and previous / next.", (b, t, c) => {
     const lines: Line[] = [{ k: "title", t: "Long essay", cy: 196 }, { k: "meta", t: "350 words", cy: 235.5 }];
@@ -558,7 +558,7 @@ export const VLIB_F2: S[] = [
 const MONO = "Consolas";
 const homeCard = (b: B, m: Ref, x: number, w: number, cap: string, big: string, sub: (p: Ref) => void) => {
   const c = rr(b, m, x, 84.5, w, 89.5, { r: 12, fill: "#FFFFFF", shadow: "ring" });
-  tx(b, c, cap, 15.5, 23, { size: 11, weight: "SemiBold", c: INK3, lh: 14, ls: 0.5 });
+  tx(b, c, cap, 15.5, 23, { size: 12, weight: "Medium", c: INK3, lh: 16 });
   b.ellipse(c, { x: 16, y: 41, w: 8, h: 8, fill: "#05C283" }); tx(b, c, big, 32, 45, { size: 16, weight: "SemiBold", lh: 20 });
   sub(c);
 };
@@ -566,8 +566,8 @@ const homeCard = (b: B, m: Ref, x: number, w: number, cap: string, big: string, 
 export const homePage = (b: B, t: T, m: Ref, port: string, tail: string) => {
   tx(b, m, "Home", 157, 35.5, { size: 22, weight: "SemiBold", lh: 28 });
   tx(b, m, "Speak Kit runs a private voice server on this computer. Your browser extension talks to it.", 157, 60, { size: 13, c: INK2, lh: 18 });
-  homeCard(b, m, 157, 347, "SERVER", "Running", (c) => { tx(b, c, "Listening on", 15.5, 66, { size: 13, c: INK2, lh: 18 }); tx(b, c, port, 96, 66, { size: 13, c: INK, lh: 18, ff: MONO }); });
-  homeCard(b, m, 514, 350, "VOICE ENGINE", "Ready", (c) => tx(b, c, "Kokoro-82M, runs on the CPU", 15.5, 66, { size: 13, c: INK2, lh: 18 }));
+  homeCard(b, m, 157, 347, "Server", "Running", (c) => { tx(b, c, "Listening on", 15.5, 66, { size: 13, c: INK2, lh: 18 }); tx(b, c, port, 96, 66, { size: 13, c: INK, lh: 18, ff: MONO }); });
+  homeCard(b, m, 514, 350, "Voice engine", "Ready", (c) => tx(b, c, "Kokoro-82M, runs on the CPU", 15.5, 66, { size: 13, c: INK2, lh: 18 }));
   tx(b, m, "Pairing token", 157, 198.5, { size: 16, weight: "SemiBold", lh: 20 });
   tx(b, m, "Paste this token in the extension under Options > General > Pairing token.", 157, 216, { size: 12, c: INK3, lh: 16 });
   const tk = rr(b, m, 157, 234, 707, 64, { r: 12, fill: "#FFFFFF", shadow: "ring" });

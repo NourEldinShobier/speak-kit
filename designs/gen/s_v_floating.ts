@@ -31,7 +31,7 @@ const thin = (b: B, t: T, p: Ref, v: number | undefined) => {
 // ------------------------------------------------------------------ tray panel (apps/desktop renderer/panel.tsx + float.css)
 type Eng = { pill: string; tone: "ok" | "info" | "err"; icon?: string };
 type Now = { title: string; status: string; icon: "pause" | "play"; left: string; pct: number; next?: string } | null;
-const caps = (b: B, t: T, p: Ref, s: string) => b.text(p, s.toUpperCase(), { size: 11, c: t.text3, ls: 0.66, lh: 15 });
+const caps = (b: B, t: T, p: Ref, s: string) => b.text(p, s, { size: 12, weight: "Medium", c: t.text3, lh: 16 });
 export const panelCard = (b: B, t: T, parent: Ref, x: number, y: number, eng: Eng, now: Now, w = 322) => {
   const c = b.col(parent, { name: "Tray panel", x, y, w, h: 330, pad: [0, 8, 8, 8], gap: 12, r: 14, fill: t.surface, shadow: "lg", clip: true });
   const hd = b.row(c, { w: "fill", h: 32, gap: 8 });
@@ -125,7 +125,7 @@ type HomeO = { status?: "ok" | "err"; token?: string; port?: number; engine?: { 
 const kbd = (b: B, t: T, p: Ref, s: string, dark = false) => { const k = b.row(p, { h: 16, pad: [0, 4], r: 4, stroke: dark ? "#FFFFFF66" : t.control, sw: 1, sa: "inside" }); b.text(k, s, { size: 10, c: dark ? "#FFFFFFCC" : t.text2, lh: 12 }); return k; };
 const stat = (b: B, t: T, p: Ref, label: string, value: string, dotc: string, detail: (r: Ref) => void) => {
   const c = b.col(p, { w: "fill", h: "fill", pad: [14, 16, 14, 16], gap: 0, r: 12, fill: t.surface, shadow: "card", stroke: "#0000000A", sw: 1, sa: "inside" });
-  b.text(c, label.toUpperCase(), { size: 11, weight: "Medium", c: t.text2, ls: 0.55, lh: 15 });
+  b.text(c, label, { size: 12, weight: "Medium", c: t.text3, lh: 16 });
   b.frame(c, { w: 1, h: 4 });
   const v = b.row(c, { gap: 8, h: 22 }); b.ellipse(v, { w: 8, h: 8, fill: dotc }); b.text(v, value, { size: 15, weight: "SemiBold", c: t.text, lh: 22 });
   b.frame(c, { w: 1, h: 2 });
@@ -200,13 +200,13 @@ const quitDialog = (rows: [string, string][], lead: string) => (b: B, t: T, c: R
   const mh = 154 + rows.length * 61;
   const m = b.col(c, { name: "Quit dialog", x: 399, y: Math.round((799 - mh) / 2), w: 480, h: mh, pad: [0, 16, 15, 16], gap: 0, r: 16, fill: t.surface, shadow: "dlg" });
   const hd = b.row(m, { w: "fill", h: 49 }); b.text(hd, "Quit Speak Kit?", { size: 15, weight: "SemiBold", c: t.text, w: "fill", lh: 20 });
-  const x = b.frame(hd, { w: 24, h: 24, r: 6, layout: "horizontal", align: "center", justify: "center", stroke: rows.length === 2 ? "#3287D5" : undefined, sw: 2, sa: "outside" }); b.icon(x, "x", 12, t.text);
-  b.text(m, lead, { size: 14, c: t.text2, w: "fill", lh: 20 });
+  const x = b.frame(hd, { w: 24, h: 24, r: 6, layout: "horizontal", align: "center", justify: "center"}); b.icon(x, "x", 12, t.text);
+  b.text(m, lead, { size: 14, c: t.text, w: "fill", lh: 20 });
   b.frame(m, { w: 1, h: 13 });
   const l = b.col(m, { w: "fill", r: 10, stroke: t.border, sw: 1, sa: "inside", gap: 0, clip: true });
-  rows.forEach(([a, d], i) => { if (i) b.rect(l, { w: "fill", h: 1, fill: t.border }); const r = b.col(l, { w: "fill", pad: [12, 12], gap: 2 }); b.text(r, a, { size: 14, c: t.text3, lh: 18 }); b.text(r, d, { size: 12, c: t.text2, w: "fill", lh: 16 }); });
+  rows.forEach(([a, d], i) => { if (i) b.rect(l, { w: "fill", h: 1, fill: t.border }); const r = b.col(l, { w: "fill", pad: [12, 12], gap: 2 }); b.text(r, a, { size: 14, c: t.text, lh: 18 }); b.text(r, d, { size: 12, c: t.text2, w: "fill", lh: 16 }); });
   b.frame(m, { w: 1, h: 21 });
-  const ft = b.row(m, { w: "fill", gap: 8 }); K.btn(b, t, ft, "Keep running in tray", { v: "secondary" }); b.frame(ft, { w: "fill", h: 1 });
+  const ft = b.row(m, { w: "fill", gap: 8 }); K.btn(b, t, ft, "Keep running in tray", { v: "secondary", state: "focus" }); /* data-autofocus: ring for keyboard focus */ b.frame(ft, { w: "fill", h: 1 });
   const q = b.row(ft, { h: 36, pad: [0, 14], r: 8, fill: "#F9E9E9" }); b.text(q, "Quit", { size: 13, weight: "Medium", c: t.err, lh: 16 });
 };
 const bellPop = (entries: [string, string][]) => (b: B, t: T, c: Ref) => {
