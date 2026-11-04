@@ -9,7 +9,7 @@ import { S } from "./types";
 const C = {
   win: "#F0F0F0", ink: "#1B2230", sec: "#475467", ter: "#5F6A7D", ph: "#6B7280", ctl: "#E5E5E5", fld: "#C3C6CC", div: "#EBEBEB", hair: "#F0F0F0",
   cta: "#201E25", ctaTx: "#FAFAFA", acc: "#0069CC", icon: "#667085", label: "#171717", raised: "#F7F8FA", red: "#C62828",
-  green: "#17693D", chipG: "#D5F3E0", blue: "#0B5CAD", chipB: "#DAEFFE", orange: "#9A5200", chipO: "#FFEBCF", chipGray: "#F0F0F0", purple: "#7A4CD9", dotOrange: "#FD9812",
+  green: "#17693D", chipG: "#D5F3E0", blue: "#0B5CAD", chipB: "#DAEFFE", orange: "#9A5200", chipO: "#FFEBCF", chipGray: "#F0F0F0", purple: "#7A4CD9", dotOrange: "#FD9812", dotYellow: "#B8860B",
 };
 type W = "Regular" | "Medium" | "SemiBold";
 
@@ -241,17 +241,21 @@ const shortcuts = (b: B, mode: "idle" | "record" | "conflict") => (c0: Ref) => {
     row(b, c, "New reading", undefined, (f) => keys(b, f, ["Ctrl", "N"]), { sep: true });
   });
 };
-const storage = (c0: Ref, b: B) => section(b, c0, "Models folder", "C:\\Users\\noure\\AppData\\Local\\Temp\\speakkit-desktop-nwNVzT\\models", (c) => {
+const storage = (c0: Ref, b: B) => section(b, c0, "Models folder", "C:/Users/noure/AppData/Roaming/@speakkit/desktop/models", (c) => {
   const p = pad(b, c);
   b.frame(p, { w: 1, h: 2 });
-  const bar = b.row(p, { w: "fill", h: 8, r: 4, fill: C.hair, clip: true }); b.rect(bar, { w: "fill", h: 8, fill: C.purple });
+  const bar = b.row(p, { w: "fill", h: 8, r: 4, fill: C.hair, clip: true });
+  [[C.blue, 15], [C.green, 690], [C.dotYellow, 2], [C.orange, 1]].forEach(([fill, w]) => b.rect(bar, { w: w as number, h: 8, fill: fill as string })); b.rect(bar, { w: "fill", h: 8, fill: C.purple });
   b.frame(p, { w: 1, h: 13 }); // margin under the bar
   b.frame(p, { w: 1, h: 0 });
   const sw = (col: string, name: string) => (l: Ref) => { b.rect(l, { w: 10, h: 10, r: 3, fill: col }); b.frame(l, { w: 8, h: 1 }); tx(b, l, name, { size: 13.5, w: "Medium", lh: 16 }); };
-  row(b, c, sw(C.blue, "Voice models"), undefined, (f) => tx(b, f, "0 B", { lh: 16 }));
-  row(b, c, sw(C.orange, "Logs"), undefined, (f) => tx(b, f, "108 B", { lh: 16 }), { sep: true });
+  row(b, c, sw(C.blue, "Voice models"), undefined, (f) => tx(b, f, "92 MB", { lh: 16 }));
+  row(b, c, sw(C.green, "Optional engines"), undefined, (f) => tx(b, f, "4.3 GB", { lh: 16 }), { sep: true });
+  row(b, c, sw(C.dotYellow, "OCR data and exports"), undefined, (f) => tx(b, f, "12 MB", { lh: 16 }), { sep: true });
+  row(b, c, sw(C.orange, "Logs"), undefined, (f) => tx(b, f, "108 KB", { lh: 16 }), { sep: true });
   row(b, c, sw(C.purple, "Settings and token"), undefined, (f) => tx(b, f, "3 MB", { lh: 16 }), { sep: true });
   row(b, c, "Open folder", undefined, (f) => acts(b, f, (a) => { btn(b, a, "Models", { sz: "sm", icon: "folder" }); btn(b, a, "Logs", { sz: "sm", icon: "folder" }); }), { sep: true });
+  row(b, c, "Delete downloaded models and engines", "Frees the space. Your library, cloned voices and settings stay.", (f) => btn(b, f, "Delete...", { v: "danger", sz: "sm", icon: "trash" }), { sep: true });
 });
 const memory = (unloaded: boolean) => (c0: Ref, b: B) => {
   section(b, c0, "Right now", undefined, (c) => {
@@ -330,6 +334,24 @@ const updatingCard = (b: B, c: Ref, h: number) => {
   const tr = b.frame(f, { w: "fill", h: 3, r: 999, fill: C.hair, clip: true }); b.rect(tr, { x: 198, y: 0, w: 42, h: 3, r: 999, fill: C.acc });
 };
 
+/** Confirmation before the downloads are deleted (apps/desktop DeleteDownloadsDialog): sizes first, library and cloned voices stay. */
+const deleteDialog = (b: B, c: Ref) => {
+  const t = LIGHT;
+  b.rect(c, { x: 0, y: 0, w: 1278, h: 799, fill: t.overlay });
+  const rows: [string, string][] = [["Voice models", "92 MB"], ["Optional engines", "4.3 GB"], ["OCR language data and exports", "12 MB"]];
+  const mh = 154 + 20 + rows.length * 41;
+  const m = b.col(c, { name: "Delete downloads dialog", x: 399, y: Math.round((799 - mh) / 2), w: 480, h: mh, pad: [0, 16, 15, 16], gap: 0, r: 16, fill: t.surface, shadow: "dlg" });
+  const hd = b.row(m, { w: "fill", h: 49 }); b.text(hd, "Delete downloaded models and engines?", { size: 15, weight: "SemiBold", c: t.text, w: "fill", lh: 20 });
+  const x = b.frame(hd, { w: 24, h: 24, r: 6, layout: "horizontal", align: "center", justify: "center" }); b.icon(x, "x", 12, t.text);
+  b.text(m, "These files are deleted from this computer. Your library, cloned voices and settings stay.", { size: 14, c: t.text2, w: "fill", lh: 20 });
+  b.frame(m, { w: 1, h: 13 });
+  const l = b.col(m, { w: "fill", r: 10, stroke: t.border, sw: 1, sa: "inside", gap: 0, clip: true });
+  rows.forEach(([a, d], i) => { if (i) b.rect(l, { w: "fill", h: 1, fill: t.border }); const r = b.row(l, { w: "fill", pad: [12, 12], justify: "spaceBetween" }); b.text(r, a, { size: 14, c: t.text3, lh: 18 }); b.text(r, d, { size: 12, c: t.text2, lh: 18 }); });
+  b.frame(m, { w: 1, h: 21 });
+  const ft = b.row(m, { w: "fill", gap: 8 }); K.btn(b, t, ft, "Cancel", { v: "secondary" }); b.frame(ft, { w: "fill", h: 1 });
+  const q = b.row(ft, { h: 36, pad: [0, 14], r: 8, fill: "#F9E9E9" }); b.text(q, "Delete", { size: 13, weight: "Medium", c: t.err, lh: 16 });
+};
+
 const FIRST = "Global shortcuts work in any app. Click a shortcut, then press the new keys.";
 export const SETTINGS_FRAMES: S[] = [
   settings("H1", "Settings · General", "Startup, language, tray and privacy on one page.", "general", 799, {}, { title: "General", lead: "Startup, language and notifications." }, pg(general)),
@@ -338,7 +360,8 @@ export const SETTINGS_FRAMES: S[] = [
   settings("H5", "Settings · Shortcuts", "Global Ctrl+Alt shortcuts with Change, Reset all, and the in-app keys.", "shortcuts", 799, {}, { title: "Shortcuts", lead: FIRST }, (c) => shortcuts(curB!, "idle")(c)),
   settings("H11", "Settings · Shortcuts (recording a key)", "Capture state: Press new keys, Esc to cancel.", "shortcuts", 798, {}, { title: "Shortcuts", lead: FIRST }, (c) => shortcuts(curB!, "record")(c)),
   settings("H16", "Settings · Shortcuts (conflict)", "A conflict names the other app and offers one alternative, never a silent override.", "shortcuts", 798, {}, { title: "Shortcuts", lead: FIRST }, (c) => shortcuts(curB!, "conflict")(c)),
-  settings("H6", "Settings · Storage", "Usage bar with legend, per-folder sizes and Open folder buttons.", "storage", 799, {}, { title: "Storage", lead: "On this computer: 3 MB" }, pg(storage)),
+  settings("H6", "Settings · Storage", "Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models and engines.", "storage", 799, {}, { title: "Storage", lead: "On this computer: 4.4 GB" }, pg(storage)),
+  settings("H6b", "Settings · Storage (confirm delete)", "Delete downloaded models and engines asks first with the size of each part; the library, cloned voices and settings stay.", "storage", 799, {}, { title: "Storage", lead: "On this computer: 4.4 GB" }, pg(storage), (b, c) => deleteDialog(b, c)),
   settings("H12", "Settings · Memory", "Live engine state, memory in use, idle unload, load at startup, battery saver.", "memory", 799, {}, { title: "Memory", lead: "The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when\nidle." }, pg(memory(false))),
   settings("H13", "Settings · Memory (engine unloaded)", "Same page with the engine asleep: 0 MB in memory, wakes on play, Load now.", "memory", 799, { status: ASLEEP, footer: ["Voice engine asleep", "Voice: Heart", "0 readings"] }, { title: "Memory", lead: "The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when\nidle." }, pg(memory(true))),
   settings("H14", "Settings · Notifications", "Do not disturb, and the Toast, Bell and Sound table per event. There is no row for the engine or model becoming ready: that never notifies.", "notifications", 799, {}, { title: "Notifications", lead: "A toast is a Windows notification. The bell is the list in the title bar. Clicking a toast opens the place it is about." }, pg(notifications)),

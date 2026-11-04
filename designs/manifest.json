@@ -2055,12 +2055,23 @@
        "id": "H6",
        "src": "H6",
        "title": "Settings · Storage",
-       "rule": "Usage bar with legend, per-folder sizes and Open folder buttons.",
-       "note": "Usage bar with legend, per-folder sizes and Open folder buttons.",
+       "rule": "Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models...",
+       "note": "Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models and engines.",
        "tag": "",
        "w": 1600,
        "h": 1000,
-       "name": "H6 · Settings, Storage — Usage bar with legend, per-folder sizes and Open folder buttons."
+       "name": "H6 · Settings, Storage — Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models..."
+      },
+      {
+       "id": "H6b",
+       "src": "H6b",
+       "title": "Settings · Storage (confirm delete)",
+       "rule": "Delete downloaded models and engines asks first with the size of each part; the library...",
+       "note": "Delete downloaded models and engines asks first with the size of each part; the library, cloned voices and settings stay.",
+       "tag": "",
+       "w": 1600,
+       "h": 1000,
+       "name": "H6b · Settings, Storage (confirm delete) — Delete downloaded models and engines asks first with the size of each part; the library..."
       }
      ]
     },
@@ -3503,7 +3514,8 @@
     "H12",
     "H13",
     "H20",
-    "H6"
+    "H6",
+    "H6b"
    ]
   },
   {
@@ -5949,12 +5961,25 @@
    "id": "H6",
    "src": "H6",
    "title": "Settings · Storage",
-   "rule": "Usage bar with legend, per-folder sizes and Open folder buttons.",
-   "note": "Usage bar with legend, per-folder sizes and Open folder buttons.",
+   "rule": "Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models...",
+   "note": "Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models and engines.",
    "tag": "",
    "w": 1600,
    "h": 1000,
-   "name": "H6 · Settings, Storage — Usage bar with legend, per-folder sizes and Open folder buttons.",
+   "name": "H6 · Settings, Storage — Usage bar with legend, per-folder sizes, Open folder buttons and Delete downloaded models...",
+   "feature": "3.12",
+   "page": "Desktop app"
+  },
+  {
+   "id": "H6b",
+   "src": "H6b",
+   "title": "Settings · Storage (confirm delete)",
+   "rule": "Delete downloaded models and engines asks first with the size of each part; the library...",
+   "note": "Delete downloaded models and engines asks first with the size of each part; the library, cloned voices and settings stay.",
+   "tag": "",
+   "w": 1600,
+   "h": 1000,
+   "name": "H6b · Settings, Storage (confirm delete) — Delete downloaded models and engines asks first with the size of each part; the library...",
    "feature": "3.12",
    "page": "Desktop app"
   },
