@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
+import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
 import { createChatterbox, createServer } from "@speakkit/server";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
@@ -9,6 +10,7 @@ import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
 import type { Logger } from "./context";
+import { removeDownloads } from "./downloads";
 import { listenWithFallback } from "./ports";
 import type { ServerApi } from "./server-api";
 
@@ -48,6 +50,7 @@ export class ServerRuntime {
   #engine: TtsEngine | null = null; // outlives token/port changes; recreated on retry
   #chatterbox: TtsEngine | undefined; // optional second engine (needs a GPU); created once, installed from the Engines page
   #firstEngine = true;
+  #keepMissing = false; // after the person deleted the models, do not fetch them again until asked
   #unsubEngine: (() => void) | null = null;
   #lastEngineState: EngineState | undefined;
   #healthTimer: NodeJS.Timeout | undefined;
@@ -72,7 +75,9 @@ export class ServerRuntime {
     this.#lastEngineState = engine.status().state;
     this.#unsubEngine = engine.onStatus(() => void this.#onEngineEvent());
     // Setup finished but the model is gone: fetch it again. Otherwise stay lazy unless the user asked for load at startup.
-    if (this.#d.config.loadAtStart || (this.#d.config.setupDone && engine.status().state === "missing")) this.startEngine();
+    const refetch = this.#d.config.setupDone && engine.status().state === "missing" && !this.#keepMissing;
+    this.#keepMissing = false;
+    if (this.#d.config.loadAtStart || refetch) this.startEngine();
     return engine;
   }
 
@@ -136,6 +141,22 @@ export class ServerRuntime {
     await this.start(this.#d.state.token || undefined);
     this.startEngine();
     return this.#d.publish();
+  }
+
+  /**
+   * Settings > Storage > Delete downloaded models: stops the server and both engines (their files are open while they run), deletes the
+   * downloads, then starts again with the engine in the "missing" state. Cloned voices, the library and settings stay.
+   */
+  async removeDownloads(): Promise<DownloadsReport> {
+    await this.stop();
+    await Promise.all([this.#engine?.close(), this.#chatterbox?.close()]).catch((e) => this.#d.log.warn("engine close failed", e instanceof Error ? e.message : e));
+    this.#engine = null;
+    this.#chatterbox = undefined;
+    const report = await removeDownloads(this.#d.dataDir, this.#d.modelsDir);
+    this.#keepMissing = true;
+    await this.start(this.#d.state.token || undefined);
+    this.#d.publish();
+    return report;
   }
 
   async shutdown(): Promise<void> {

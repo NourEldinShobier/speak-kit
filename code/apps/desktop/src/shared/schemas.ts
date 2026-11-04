@@ -135,6 +135,7 @@ export const ARGS = {
   openExternal: v.tuple([v.picklist(EXTERNAL_LINKS)]),
   openPath: v.tuple([v.picklist(OPEN_PATHS)]),
   storage: v.tuple([]),
+  deleteDownloads: v.tuple([]),
   metrics: v.tuple([]),
   hideWindow: v.tuple([]),
   quit: v.tuple([]),

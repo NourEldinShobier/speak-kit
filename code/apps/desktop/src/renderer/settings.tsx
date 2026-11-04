@@ -28,6 +28,16 @@ function About({ s }: { s: AppState }) {
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
+      <SettingsSection title="Uninstalling">
+        <SettingRow
+          label="Downloaded models and engines"
+          description={
+            s.platform === "darwin"
+              ? "Before you drag Speak Kit to the Trash, use Settings > Storage > Delete downloaded models and engines. Otherwise remove ~/Library/Application Support/@speakkit/desktop yourself."
+              : "Uninstalling Speak Kit removes the downloaded models and engines. Your library, cloned voices and settings stay in the data folder."
+          }
+        />
+      </SettingsSection>
       <SettingsSection
         title="Updates"
         description={

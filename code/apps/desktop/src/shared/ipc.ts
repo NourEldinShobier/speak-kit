@@ -1,4 +1,5 @@
 import type { EngineId, EngineList, Health, VoiceList } from "@speakkit/protocol";
+import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
@@ -62,6 +63,10 @@ export interface StorageInfo {
   modelsDir: string;
   logsDir: string;
   modelsBytes: number;
+  /** Optional engines (Chatterbox). */
+  enginesBytes: number;
+  /** Exports and OCR language data. */
+  cacheBytes: number;
   logsBytes: number;
   otherBytes: number;
 }
@@ -105,6 +110,8 @@ export interface Api {
   openExternal(link: ExternalLink): Promise<void>;
   openPath(which: OpenPath): Promise<void>;
   storage(): Promise<StorageInfo>;
+  /** Stops the engines and deletes the downloaded models, engines, OCR data and exports. The library, cloned voices and settings stay. */
+  deleteDownloads(): Promise<DownloadsReport>;
   metrics(): Promise<Metrics>;
   hideWindow(): Promise<void>;
   /** Really quits (after the renderer's confirmation dialog). */
@@ -149,6 +156,7 @@ export const METHODS = [
   "openExternal",
   "openPath",
   "storage",
+  "deleteDownloads",
   "metrics",
   "hideWindow",
   "quit",

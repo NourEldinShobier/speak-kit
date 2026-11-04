@@ -47,3 +47,22 @@ describe("Notifications", () => {
     expect(html).toMatch(/aria-label="Export finished: Sound"[^>]*aria-checked="false"|aria-checked="false"[^>]*aria-label="Export finished: Sound"/);
   });
 });
+
+describe("Storage", () => {
+  it("offers to delete the downloaded models and engines", () => {
+    const html = page("storage");
+    expect(html).toContain("Delete downloaded models and engines");
+    expect(html).toContain("Your library, cloned voices and settings stay.");
+  });
+});
+
+describe("About", () => {
+  it("tells a Mac user to delete the models before the Trash", () => {
+    const html = renderToStaticMarkup(<Settings s={appState({ platform: "darwin" })} sub="about" />);
+    expect(html).toContain("Before you drag Speak Kit to the Trash, use Settings &gt; Storage &gt; Delete downloaded models and engines.");
+  });
+
+  it("says a Windows uninstall removes them", () => {
+    expect(page("about")).toContain("Uninstalling Speak Kit removes the downloaded models and engines.");
+  });
+});

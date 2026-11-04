@@ -1,7 +1,8 @@
 import { app, clipboard, shell } from "electron";
 import { randomBytes } from "node:crypto";
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { dirSize, measureDownloads } from "./downloads";
 import type { Activity, Api, AppState, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
 import type { Config, ConfigPatch } from "../shared/schemas";
@@ -24,26 +25,6 @@ interface HandlerDeps {
   addActivity(kind: Activity["kind"], title: string, body: string): void;
   /** Settings changes the desktop features react to (Do Not Disturb). */
   onConfigPatch(patch: ConfigPatch): void;
-}
-
-async function dirSize(dir: string): Promise<number> {
-  let total = 0;
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return 0;
-  }
-  for (const e of entries) {
-    const p = path.join(dir, e.name);
-    total += e.isDirectory()
-      ? await dirSize(p)
-      : await stat(p).then(
-          (s) => s.size,
-          () => 0,
-        );
-  }
-  return total;
 }
 
 function metrics(): Metrics {
@@ -85,16 +66,18 @@ async function regenerateToken(d: HandlerDeps) {
   return d.runtime.restart(token);
 }
 
+async function storageInfo(d: HandlerDeps): Promise<StorageInfo> {
+  const [sizes, logsBytes, all] = await Promise.all([measureDownloads(d.dataDir, d.modelsDir), dirSize(d.logsDir), dirSize(d.dataDir)]);
+  const { modelsBytes, enginesBytes, cacheBytes } = sizes;
+  // A models folder set by SPEAKKIT_MODELS_DIR lies outside the data folder and is not part of its total.
+  const inside = (d.modelsDir.startsWith(d.dataDir) ? modelsBytes : 0) + enginesBytes + cacheBytes;
+  return { modelsDir: d.modelsDir, logsDir: d.logsDir, modelsBytes, enginesBytes, cacheBytes, logsBytes, otherBytes: Math.max(0, all - inside - logsBytes) };
+}
+
 /** The IPC methods of the app shell: settings, server and engine control, storage. The desktop features add their own. */
 export function createAppHandlers(d: HandlerDeps) {
   const { state, config, runtime, mainWindow } = d;
   const loginArgs = () => loginItemArgs(config);
-
-  async function storage(): Promise<StorageInfo> {
-    const [modelsBytes, logsBytes, all] = await Promise.all([dirSize(d.modelsDir), dirSize(d.logsDir), dirSize(d.dataDir)]);
-    const inside = d.modelsDir.startsWith(d.dataDir) ? modelsBytes : 0;
-    return { modelsDir: d.modelsDir, logsDir: d.logsDir, modelsBytes, logsBytes, otherBytes: Math.max(0, all - inside - logsBytes) };
-  }
 
   return {
     state: async () => d.publish(),
@@ -129,7 +112,12 @@ export function createAppHandlers(d: HandlerDeps) {
       await mkdir(dir, { recursive: true });
       await shell.openPath(dir);
     },
-    storage,
+    storage: () => storageInfo(d),
+    deleteDownloads: async () => {
+      const report = await runtime.removeDownloads();
+      d.addActivity("info", "Downloaded models removed", report.failed.length ? "Some files could not be removed." : "Voice models and engines were deleted from this computer.");
+      return report;
+    },
     metrics: async () => metrics(),
     hideWindow: async () => mainWindow.hide(),
     quit: async () => mainWindow.quit(),
