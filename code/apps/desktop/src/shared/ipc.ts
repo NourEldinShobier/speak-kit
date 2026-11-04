@@ -16,7 +16,7 @@ export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 export interface Activity {
   id: number;
   atMs: number;
-  kind: "download" | "error" | "pair" | "info" | "export" | "update" | "reading";
+  kind: "error" | "pair" | "info" | "export" | "update" | "reading";
   title: string;
   body: string;
 }

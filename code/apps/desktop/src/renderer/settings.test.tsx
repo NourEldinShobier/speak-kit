@@ -42,7 +42,7 @@ describe("Voice and playback", () => {
 describe("Notifications", () => {
   it("has a toast, bell and sound switch for every event", () => {
     const html = page("notifications");
-    for (const ev of ["Export finished", "Model download finished", "Voice engine problem", "Update ready"])
+    for (const ev of ["Export finished", "Voice engine problem", "Update ready"])
       for (const ch of ["Toast", "Bell", "Sound"]) expect(html).toContain(`aria-label="${ev}: ${ch}"`);
   });
 

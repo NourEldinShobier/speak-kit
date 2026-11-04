@@ -9,10 +9,8 @@ interface Notice {
   body: string;
 }
 
-/** What an engine state change is worth telling the user: the model finished downloading, or the engine failed. */
+/** What an engine state change is worth telling the user: only a failure. Becoming ready is never announced. */
 export function noticeFor(prev: EngineState | undefined, next: EngineState, detail: string | undefined): Notice | null {
-  if (prev === "downloading" && next !== "downloading" && next !== "error" && next !== "missing")
-    return { event: "download-done", taskKey: "kokoro", title: "Voice model downloaded", body: "Kokoro is on this computer. Speak Kit works offline. Click to open." };
   if (next === "error" && prev !== "error") return { event: "engine-error", taskKey: "kokoro", title: "Voice engine problem", body: `${detail ?? "The engine stopped."} Click to open Speak Kit.` };
   return null;
 }

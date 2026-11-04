@@ -264,7 +264,7 @@ const memory = (unloaded: boolean) => (c0: Ref, b: B) => {
     row(b, c, "Battery saver", "On battery, the model unloads sooner.", (f) => toggle(b, f, true), { sep: true });
   });
 };
-const EVENTS: [string, boolean[]][] = [["Reading finished", [false, false, false]], ["Export finished", [true, true, false]], ["Model download finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]]];
+const EVENTS: [string, boolean[]][] = [["Reading finished", [false, false, false]], ["Export finished", [true, true, false]], ["Voice engine problem", [true, true, true]], ["Update ready", [true, true, false]]];
 const notifications = (c0: Ref, b: B) => {
   section(b, c0, "Do not disturb", undefined, (c) => row(b, c, "Do not disturb", "No toasts or sounds from Speak Kit. The bell still keeps a line for each event.", (f) => toggle(b, f, false)));
   section(b, c0, "Events", "At most one toast per task every 10 minutes.", (c) => {

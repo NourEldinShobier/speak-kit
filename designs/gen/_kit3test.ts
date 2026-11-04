@@ -32,7 +32,7 @@ const f3 = mk("K3-tray", 2000);
 const d = K3.desktopWithTaskbar(b, f3, { w: W, h: H, trayActive: true });
 const fl = d.flyoutAt(370, 378);
 const ph = b.frame(f3, { x: fl.x - 0, y: fl.y - 0, w: 370, h: 378, clip: true }); img(ph, "I10-tray-panel-idle-light.png", 370, 378);
-const T1 = K3.TOAST.updateReady, T2 = { ...K3.TOAST.downloadDone, footer: "Opens the Speak Kit window" };
+const T1 = K3.TOAST.updateReady, T2 = { ...K3.TOAST.engineError, footer: "Opens the Speak Kit window" };
 const t1 = K3.winToast(b, f3, { ...d.toastAt(K3.toastH(T1)), ...T1 });
 K3.winToast(b, f3, { ...d.toastAt(K3.toastH(T2), K3.toastH(T1) + 8), ...T2 });
 K3.nativeMenu(b, f3, { x: 120, y: 120, items: [{ l: "Back", k: "Alt+Left" }, { l: "Forward", k: "Alt+Right", disabled: true }, { l: "Reload", k: "Ctrl+R" }, "-", { l: "Speak Kit", sub: true, hi: true }, { l: "Save as...", k: "Ctrl+S" }, "-", { l: "Inspect", k: "Ctrl+Shift+I" }] });

@@ -192,7 +192,6 @@ export const chromeWin = (b: B, parent: Ref | undefined, o: Stage & { w: number;
 export const TOAST_W = 364;
 /** Texts the desktop app really sends (notify-rules.ts, updates-service.ts); the body already ends with its "Click to ..." sentence. */
 export const TOAST = {
-  downloadDone: { title: "Voice model downloaded", body: "Kokoro is on this computer. Speak Kit works offline. Click to open." },
   engineError: { title: "Voice engine problem", body: "The engine stopped. Click to open Speak Kit." },
   updateReady: { title: "Update ready", body: "Speak Kit 1.1.0 is ready to install. Click to choose when." },
 };

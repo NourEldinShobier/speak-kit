@@ -10,7 +10,7 @@ export type IdleChoice = (typeof IDLE_CHOICES)[number];
 const bool = (d: boolean) => v.fallback(v.boolean(), d);
 
 /** Events in Settings > Notifications; each can show a Windows toast, a line in the bell, and play a sound. */
-export const NOTIFY_EVENTS = ["reading-finished", "export-done", "download-done", "engine-error", "update-ready"] as const;
+export const NOTIFY_EVENTS = ["reading-finished", "export-done", "engine-error", "update-ready"] as const;
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number];
 export const NOTIFY_CHANNELS = ["toast", "bell", "sound"] as const;
 export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
@@ -18,7 +18,6 @@ const channelsOf = (toast: boolean, bell: boolean, sound: boolean) => v.fallback
 const NotificationsSchema = v.object({
   "reading-finished": channelsOf(false, false, false),
   "export-done": channelsOf(true, true, false),
-  "download-done": channelsOf(true, true, false),
   "engine-error": channelsOf(true, true, true),
   "update-ready": channelsOf(true, true, false),
 });

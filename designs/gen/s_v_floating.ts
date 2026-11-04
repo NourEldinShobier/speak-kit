@@ -232,7 +232,7 @@ export const FLOATING: S[] = [
   scr("I20", "I", "Mini player · preparing", "Preparing the voice: indeterminate bar.", miniScene({ title: MT, status: "Preparing the voice...", left: "0:06 left", play: "pause", pct: undefined })),
   scr("I21", "I", "Mini player · error", "The status line turns red and says what went wrong.", miniScene({ title: MT, status: "Something went wrong", left: "0:06 left", play: "play", pct: 0, err: true }, 360)),
   scr("I13", "I", "Mini player · finished", "Finished: the time left is gone; the card closes itself 6 s later.", miniScene({ title: MT, status: "Finished", left: "", play: "refresh", pct: 1 })),
-  scr("I12", "I", "Windows toasts · system", "Voice engine problem, Voice model downloaded and Update ready: no buttons, a click opens the exact place." + DESIGN_ONLY, toastStack([TOASTS.updateReady, TOASTS.downloadDone, TOASTS.engineError])),
+  scr("I12", "I", "Windows toasts · system", "Voice engine problem and Update ready: no buttons, a click opens the exact place." + DESIGN_ONLY, toastStack([TOASTS.updateReady, TOASTS.engineError])),
   scr("I22", "I", "Windows toasts · reading and export", "Finished reading and Export finished: the body names the file." + DESIGN_ONLY, toastStack([TOASTS.finished, TOASTS.exportDone])),
   scr("I5", "I", "Clipboard prompt", "Copying long text offers to read it; skips password-manager copies; Settings turns it off." + DESIGN_ONLY, toastStack([TOASTS.clipboard])),
   scr("K11", "K", "Quit confirmation", "Quitting says what stops and how to resume it; Keep running in tray is the safe choice.", homeScene({}, quitDialog(RS, "Closing the window keeps Speak Kit in the tray. Quitting stops:")), 1440, 900),

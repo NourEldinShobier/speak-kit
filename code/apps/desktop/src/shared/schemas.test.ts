@@ -19,6 +19,11 @@ describe("config defaults and repair", () => {
     expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space", "read-clipboard": "Ctrl+Alt+C" });
   });
 
+  it("loads a saved config that still has the removed download-done notification", () => {
+    const c = parseConfig({ notifications: { "download-done": { toast: true, bell: true, sound: true }, "export-done": { toast: false, bell: false, sound: false } } });
+    expect(Object.keys(c.notifications)).toEqual(["reading-finished", "export-done", "engine-error", "update-ready"]);
+    expect(c.notifications["export-done"]).toEqual({ toast: false, bell: false, sound: false });
+  });
   it("repairs a half-written notifications table and export preferences field by field", () => {
     const c = parseConfig({ notifications: { "export-done": { toast: false }, "update-ready": "yes" }, exportPrefs: { format: "ogg", mp3Kbps: 192, folder: 5 } });
     expect(c.notifications["export-done"]).toEqual({ toast: false, bell: true, sound: false });

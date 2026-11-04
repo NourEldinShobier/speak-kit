@@ -6,7 +6,6 @@ import { api, Page } from "../../ui";
 const EVENT_LABEL: Record<NotifyEvent, string> = {
   "reading-finished": "Reading finished",
   "export-done": "Export finished",
-  "download-done": "Model download finished",
   "engine-error": "Voice engine problem",
   "update-ready": "Update ready",
 };

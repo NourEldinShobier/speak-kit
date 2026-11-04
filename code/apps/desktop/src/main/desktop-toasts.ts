@@ -9,7 +9,6 @@ import { ToastCenter } from "./toasts";
 const BELL_KIND: Record<NotifyEvent | "clipboard", Activity["kind"]> = {
   "reading-finished": "reading",
   "export-done": "export",
-  "download-done": "download",
   "engine-error": "error",
   "update-ready": "update",
   clipboard: "info",
@@ -44,7 +43,7 @@ export function createDesktopToasts(ctx: Ctx, test: boolean) {
   return { toasts, shown };
 }
 
-/** The engine changed state: tell the user about a finished download or a failure. */
+/** The engine changed state: tell the user about a failure. */
 export const engineAnnouncer = (ctx: Ctx, toasts: ToastCenter) => (prev: EngineState | undefined, next: EngineState, detail: string | undefined) => {
   const n = noticeFor(prev, next, detail);
   if (!n) return;
