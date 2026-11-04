@@ -90,7 +90,6 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
     await settings(l, "Shortcuts");
     await l.page.locator('[data-shortcut="read-selection"]').getByText("Another app is using Ctrl+Alt+S.").waitFor();
   });
-
 });
 
 describe("mini player and tray", () => {

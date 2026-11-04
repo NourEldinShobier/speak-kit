@@ -18,7 +18,10 @@ function files(dir: string): string[] {
 describe("no clipboard reading", () => {
   it("only the selection reader reads the clipboard in main and renderer", () => {
     const root = path.join(__dirname);
-    const hits = ["main", "renderer"].flatMap((d) => files(path.join(root, d))).filter((f) => FORBIDDEN.test(readFileSync(f, "utf8"))).map((f) => path.relative(root, f).replaceAll("\\", "/"));
+    const hits = ["main", "renderer"]
+      .flatMap((d) => files(path.join(root, d)))
+      .filter((f) => FORBIDDEN.test(readFileSync(f, "utf8")))
+      .map((f) => path.relative(root, f).replaceAll("\\", "/"));
     expect(hits.filter((h) => !ALLOWED.has(h))).toEqual([]);
   });
 });

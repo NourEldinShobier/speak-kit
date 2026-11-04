@@ -54,7 +54,10 @@ describe("navigation", () => {
   it("close-settings opens Home when Settings was the first entry and waits while a dialog is open", () => {
     const first = { ...initShell([]), hist: [{ page: "settings" as const, sub: "memory" as const }] };
     expect(currentLoc(run([{ type: "close-settings" }], first)).page).toBe("home");
-    const withDialog = run([{ type: "go", page: "settings" }, { type: "quit", open: true }]);
+    const withDialog = run([
+      { type: "go", page: "settings" },
+      { type: "quit", open: true },
+    ]);
     expect(run([{ type: "close-settings" }], withDialog)).toBe(withDialog);
   });
 

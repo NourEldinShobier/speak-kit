@@ -72,7 +72,7 @@ html[data-platform="darwin"] .sk-title__l {
   padding-inline-start: 78px;
 }
 html[data-platform="darwin"] .sk-title__r {
-  padding-right: calc((var(--bar-h) - 28px) / 2);
+  padding-inline-end: calc((var(--bar-h) - 28px) / 2);
 }
 .sk-title__l,
 .sk-title__r {
