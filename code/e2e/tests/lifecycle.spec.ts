@@ -172,7 +172,8 @@ test.describe("model lifecycle: hold while paused", () => {
       await ext.bg({ t: "player", command: { cmd: "pause" } });
       await ext.waitState("paused");
       await expect.poll(() => app.holds).toEqual([600_000]);
-      await page.waitForTimeout(3 * 4000 * SCALE); // three idle windows
+      // Three idle windows, capped below the 30 s after which Chrome closes an offscreen audio document that is not playing (that close releases the hold).
+      await page.waitForTimeout(Math.min(3 * 4000 * SCALE, 25_000));
       expect(app.engine.unloads, "held model stays loaded while paused").toBe(0);
       expect((await health(app)).engine.state).toBe("ready");
 
