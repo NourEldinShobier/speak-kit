@@ -1,4 +1,4 @@
-import type { PlayerState, PlayerStatus } from "@speakkit/protocol";
+import type { HelloReply, PlayerState, PlayerStatus } from "@speakkit/protocol";
 
 /** Statuses in which something is being read (the page shows the highlight and scroll tracking). */
 export const ACTIVE: readonly string[] = ["preparing", "playing", "paused"] satisfies PlayerStatus[];
@@ -20,4 +20,11 @@ export function asPlayerState(x: unknown): PlayerState | undefined {
     typeof s.elapsedMs === "number" &&
     typeof s.totalMs === "number";
   return ok ? (x as PlayerState) : undefined;
+}
+
+/** The worker's answer to hello, checked like get-state: the running state of this document, if any, and whether the tab was closed. */
+export function asHello(x: unknown): HelloReply | undefined {
+  const r = x as Partial<Record<keyof HelloReply, unknown>> | null;
+  if (typeof r !== "object" || r === null || typeof r.dismissed !== "boolean") return undefined;
+  return { dismissed: r.dismissed, state: r.state ? (asPlayerState(r.state) ?? null) : null };
 }

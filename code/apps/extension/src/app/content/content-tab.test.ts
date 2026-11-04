@@ -22,7 +22,7 @@ describe("close for this tab", () => {
     await page.hover("[data-sk=launcher-close]");
     expect(await page.locator("[data-sk=launcher-tooltip]").textContent()).toBe("Close for this tab");
     await page.click("[data-sk=launcher-close]");
-    expect((await sent(page)).filter((m) => m.t === "player").at(-1)).toEqual({ t: "player", command: { cmd: "stop" } });
+    expect((await sent(page)).filter((m) => m.t === "dismiss")).toEqual([{ t: "dismiss", on: true }]);
     await page.waitForFunction((s: string) => !document.querySelector("speakkit-ui")?.shadowRoot?.querySelector(s), surfaces);
     expect(await count(page, "speakkit-ui")).toBe(1);
     expect(await page.evaluate(() => (CSS as any).highlights.get("sk-sentence")?.size ?? 0)).toBe(0);
@@ -94,11 +94,10 @@ describe("close for this tab", () => {
 });
 
 describe("page lifetime", () => {
-  test("a same-document navigation stops the old reading and clears the page", async () => {
+  test("a same-document navigation clears the old reading from the page", async () => {
     const page = await open();
     await reading(page);
     await page.evaluate(() => history.pushState({}, "", "/other"));
-    await page.waitForFunction(() => (window as any).__sent.some((m: any) => m.t === "player" && m.command.cmd === "stop"));
     await page.waitForFunction(() => document.querySelector("speakkit-ui")?.shadowRoot?.querySelector("[data-sk=launcher-tab],[data-sk=launcher-pill]")?.getAttribute("data-state") === "idle");
     await page.context().close();
   });
@@ -112,11 +111,29 @@ describe("page lifetime", () => {
     await page.context().close();
   });
 
-  test("another page's running reading is not adopted", async () => {
+  test("the hello reply of a closed tab starts the page without UI", async () => {
+    const page = await open(base(), { hello: { state: null, dismissed: true } });
+    await page.waitForFunction(() => (window as any).__sent.some((m: any) => m.t === "hello"));
+    expect((await sent(page)).find((m) => m.t === "hello")).toEqual({ t: "hello", url: "http://sk.test/page" });
+    await page.waitForTimeout(300);
+    expect(await count(page, "[data-sk=launcher-tab]")).toBe(0);
+    expect((await deliver(page, { t: "tab-ui", action: "get" })).dismissed).toBe(true);
+    await page.context().close();
+  });
+
+  test("the hello reply carries the reading of this document, and nothing else is adopted", async () => {
+    const page = await open(base(), { hello: { state: st({ docId: "x", url: "http://sk.test/page" }), dismissed: false } });
+    await page.waitForSelector("[data-sk=launcher-tab][data-state=playing]");
+    await page.context().close();
+  });
+
+  test("the worker's dismissed message hides and restores the UI", async () => {
     const page = await open();
     await page.waitForSelector("[data-sk=launcher-tab]");
-    await deliver(page, { t: "state", state: st({ status: "idle" }) });
-    expect(await page.locator("[data-sk=launcher-tab]").getAttribute("data-state")).toBe("idle");
+    await deliver(page, { t: "dismissed", on: true });
+    await page.waitForFunction(() => !document.querySelector("speakkit-ui")?.shadowRoot?.querySelector("[data-sk=launcher-tab]"));
+    await deliver(page, { t: "dismissed", on: false });
+    await page.waitForSelector("[data-sk=launcher-tab]");
     await page.context().close();
   });
 

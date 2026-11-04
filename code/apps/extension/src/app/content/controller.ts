@@ -12,7 +12,7 @@ import { Follow, Playback } from "./playback";
 import { makeHandlers } from "./handlers";
 import { PageInput } from "./input";
 import { defer, loadUi, type Deferred } from "./lazy";
-import { ACTIVE, asPlayerState } from "./player-state";
+import { ACTIVE, asHello } from "./player-state";
 import { PlayerView } from "./player-view";
 import { ReaderSession } from "./reader-session";
 import type { Ui } from "./ui";
@@ -64,24 +64,26 @@ class Controller implements Ctx {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.refresh(), { signal });
     // same-document navigation (pushState, back/forward in a single-page app): the new page starts without the old reading
     (globalThis as { navigation?: EventTarget }).navigation?.addEventListener("currententrychange", () => this.onNavigate(), { signal });
-    addEventListener("pageshow", (e) => e.persisted && this.adoptRunning(), { signal });
+    addEventListener("pageshow", (e) => e.persisted && this.hello(), { signal });
     this.playback.restyle();
     this.refresh();
-    this.adoptRunning();
+    this.hello();
   }
 
-  /** Picks up a reading that is already running in this tab (UI enabled mid-reading, page restored from the back/forward cache). Another page's reading is not ours. */
-  private adoptRunning() {
-    this.post({ t: "get-state" }, (r) => {
-      const st = asPlayerState(r);
-      if (st && !this.state && st.url === location.href) this.onState(st);
+  /** Handshake with the worker: it tells this page whether its tab was closed and whether a reading of this very document is running (UI enabled mid-reading, page restored from the back/forward cache). */
+  private hello() {
+    this.post({ t: "hello", url: location.href }, (r) => {
+      const h = asHello(r);
+      if (!h) return;
+      if (h.dismissed && !this.dismissed) this.closeLocal();
+      if (h.state && !this.state) this.onState(h.state);
+      this.refresh();
     });
   }
 
   private onNavigate() {
     if (this.gone || pageKey() === this.pageUrl) return;
     this.pageUrl = pageKey();
-    if (this.reading) this.cmd({ cmd: "stop" });
     this.session.close();
     this.playback.stopHighlight();
     this.state = null;
@@ -140,10 +142,14 @@ class Controller implements Ctx {
     this.tabUi = reduceTabUi(this.tabUi, e);
   }
 
-  /** The close button: stops the reading of this tab, clears the page and hides every surface until reading is asked for again. */
+  /** The close button: the worker stops this tab's reading and remembers the flag; the page clears itself at once. */
   closeTab() {
+    this.post({ t: "dismiss", on: true });
+    this.closeLocal();
+  }
+  /** Clears the page and hides every surface of this tab. */
+  private closeLocal() {
     const st = this.state;
-    if (this.reading) this.cmd({ cmd: "stop" });
     this.tabEvent({ t: "close", docId: st?.docId });
     this.session.close();
     this.playback.stopHighlight();
@@ -157,6 +163,7 @@ class Controller implements Ctx {
   restoreTab() {
     if (!this.tabUi.dismissed) return;
     this.tabEvent({ t: "restore" });
+    this.post({ t: "dismiss", on: false });
     this.refresh();
   }
   tabUiReply(action: "get" | "show") {
@@ -272,6 +279,10 @@ class Controller implements Ctx {
         break;
       case "toast":
         this.toast(msg);
+        break;
+      case "dismissed":
+        if (msg.on) this.closeLocal();
+        else this.restoreTab();
         break;
       case "reader":
         if (msg.open) {

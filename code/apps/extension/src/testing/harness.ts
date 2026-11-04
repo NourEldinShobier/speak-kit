@@ -44,11 +44,12 @@ const CHROME_STUB = `
   window.__listeners = [];
   window.__voices = undefined;
   window.__health = undefined;
+  window.__hello = undefined;
   window.chrome = {
     runtime: {
       id: "speakkit-test",
       getURL: (p) => "http://sk.test/__" + p,
-      sendMessage: (m) => { window.__sent.push(JSON.parse(JSON.stringify(m))); return Promise.resolve(m.t === "get-voices" ? { voices: window.__voices } : m.t === "get-health" ? window.__health : undefined); },
+      sendMessage: (m) => { window.__sent.push(JSON.parse(JSON.stringify(m))); return Promise.resolve(m.t === "get-voices" ? { voices: window.__voices } : m.t === "get-health" ? window.__health : m.t === "hello" ? window.__hello : undefined); },
       onMessage: { addListener: (f) => window.__listeners.push(f), removeListener: (f) => { window.__listeners = window.__listeners.filter((x) => x !== f); } },
     },
     storage: {
@@ -68,7 +69,7 @@ const CHROME_STUB = `
 export interface Session {
   browser: Pw;
   close(): Promise<void>;
-  page(html: string, opts?: { settings?: unknown; viewport?: { width: number; height: number }; colorScheme?: "dark" | "light"; bundle?: boolean; health?: unknown }): Promise<Pw>;
+  page(html: string, opts?: { settings?: unknown; viewport?: { width: number; height: number }; colorScheme?: "dark" | "light"; bundle?: boolean; health?: unknown; hello?: unknown }): Promise<Pw>;
 }
 
 export async function launch(): Promise<Session> {
@@ -84,6 +85,7 @@ export async function launch(): Promise<Session> {
         throw e;
       });
       await page.addInitScript(CHROME_STUB);
+      if (opts.hello !== undefined) await page.addInitScript(`window.__hello = ${JSON.stringify(opts.hello)};`);
       if (opts.health !== undefined) await page.addInitScript(`window.__health = ${JSON.stringify(opts.health)};`);
       if (opts.settings !== undefined)
         await page.addInitScript(`window.__initialSettings = ${JSON.stringify(opts.settings)}; (() => { const k = "speakkit.settings"; window.__store[k] = window.__initialSettings; })();`);
