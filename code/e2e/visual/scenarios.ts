@@ -60,7 +60,7 @@ export interface Mock {
   state?: unknown;
   health?: unknown;
   queue?: unknown;
-  tab?: { id: number; url: string; title: string; selection?: string; chars?: number } | null;
+  tab?: { id: number; url: string; title: string; selection?: string; chars?: number; hidden?: boolean } | null;
   fileAccess?: boolean;
   commands?: { name: string; description: string; shortcut: string }[];
 }
@@ -81,7 +81,7 @@ const mockScript = (m: Mock) => `(() => {
   };
   if (M.tab !== undefined) {
     chrome.tabs.query = async () => (M.tab ? [{ id: M.tab.id, url: M.tab.url, title: M.tab.title, active: true }] : []);
-    chrome.scripting.executeScript = async () => [{ result: { sel: M.tab ? M.tab.selection || "" : "", chars: M.tab ? M.tab.chars || 0 : 0 } }];
+    chrome.scripting.executeScript = async () => [{ result: { sel: M.tab ? M.tab.selection || "" : "", chars: M.tab ? M.tab.chars || 0 : 0, hidden: M.tab ? !!M.tab.hidden : false } }];
   }
   if (M.commands) chrome.commands.getAll = async () => M.commands;
   if (M.fileAccess === false) chrome.extension.isAllowedFileSchemeAccess = (cb) => cb(false);
@@ -164,6 +164,9 @@ export const popupScenarios: Scenario[] = [
   S("A15", "file-permission", P, "Popup · local file needs permission", (c) =>
     popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, url: "file:///C:/Users/maya/essay.html", title: "essay.html" }, fileAccess: false, state: playerState() }),
   ),
+  S("A24", "tab-hidden", P, "Popup · page controls closed in this tab, Show on this page", (c) => popupShot(c, { health: OK_HEALTH, tab: { ...READER_TAB, hidden: true }, state: playerState() }), {
+    design: false,
+  }),
   S("A18", "version-mismatch", P, "Popup · app and extension versions differ (K5)", (c) => popupShot(c, { health: { ok: false, error: "version-mismatch" }, tab: READER_TAB, state: playerState() }), {
     design: false,
   }),

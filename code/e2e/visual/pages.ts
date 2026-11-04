@@ -371,6 +371,25 @@ export const pageScenarios: Scenario[] = [
     await sleep(700);
     return shot(p);
   }),
+  S("B37", "launcher-close-hover", G, "Page · pill, close button tooltip (Close for this tab)", async (c) => {
+    const p = await openPage(c);
+    await startReading(p);
+    await sleep(4500);
+    await hoverLauncher(p);
+    await p.page.locator("speakkit-ui [data-sk=launcher-close]").hover();
+    await sleep(700);
+    return shot(p);
+  }),
+  S("B38", "tab-closed", G, "Page · closed for this tab, no controls left", async (c) => {
+    const p = await openPage(c);
+    await startReading(p);
+    await sleep(2500);
+    await hoverLauncher(p);
+    await p.page.locator("speakkit-ui [data-sk=launcher-close]").click();
+    await p.page.mouse.move(640, 400);
+    await sleep(900);
+    return shot(p);
+  }),
   S("B10", "reader-paper", R, "Page · reader view (paper)", async (c) => {
     const p = await openPage(c, { settings: reader("paper") });
     await openReader(p);

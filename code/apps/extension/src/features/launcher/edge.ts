@@ -291,7 +291,7 @@ export class EdgeLauncher {
       const t = text();
       label.textContent = t.label;
       hint.textContent = t.hint;
-      hint.hidden = !t.hint;
+      hint.style.display = t.hint ? "" : "none"; // the kit sets display on .lm-kbd, which overrides the hidden attribute
     };
     this.ltipPatch();
     this.s.shell.root.append(t);
