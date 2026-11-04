@@ -9,7 +9,7 @@ import { buildModel } from "./model";
 import { PopupScreen } from "./Popup";
 import type { PopupModel } from "./types";
 import { usePopupActions } from "./usePopupActions";
-import { useTab } from "./useTab";
+import { useTab, useTabHidden } from "./useTab";
 
 /** True for 1.5 s after `setStarting(true)`. Between the click and the first player-state broadcast (page extraction) the popup already shows "Waking up" / "Preparing". */
 function useStarting(): [boolean, (on: boolean) => void] {
@@ -33,13 +33,14 @@ export function PopupApp() {
   const voices = useVoices(!!health && health.ok);
   const [launch, setLaunch] = useState<PopupModel["launch"]>("idle");
   const [starting, setStarting] = useStarting();
+  const [hidden, showOnPage] = useTabHidden(tab.id);
 
   // The popup opening is the earliest hint that the user may press play: load the model now.
   useEffect(() => warm("popup"), []);
 
-  const model = buildModel({ player, token, health, settings, tab, queue, commands, voices, launch, starting });
+  const model = buildModel({ player, token, health, settings, tab, queue, commands, voices, launch, starting, hidden });
   const actions = usePopupActions({ tabId: tab.id, elapsedMs: player?.elapsedMs ?? 0, next: queue?.items[0], speed: settings.speed, update, refresh, setToken, setStarting, setLaunch });
 
   if (!tokenReady || health === null) return <div className="lm pp pp-wait" aria-busy="true" />;
-  return <PopupScreen m={model} a={actions} />;
+  return <PopupScreen m={model} a={{ ...actions, showOnPage }} />;
 }

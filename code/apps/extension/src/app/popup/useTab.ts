@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 import { classifyProbeError } from "../../features/connection";
+import type { TabUiMessage } from "../../shared/internal";
 
 /** The tab the popup acts on. Test builds accept ?tab=<id> because a popup opened as a tab would otherwise see itself. */
 export async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
   const forced = __TEST__ ? Number(new URLSearchParams(location.search).get("tab")) : 0;
   if (forced) return chrome.tabs.get(forced);
   return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+}
+
+/** Whether the in-page UI of the tab was closed with its close button, and the action that brings it back. A page without the content script counts as not hidden. */
+export function useTabHidden(tabId: number | undefined): [boolean, () => void] {
+  const [hidden, setHidden] = useState(false);
+  const ask = (action: "get" | "show") => {
+    if (tabId === undefined || typeof chrome === "undefined" || !chrome.tabs) return;
+    const msg: TabUiMessage = { t: "tab-ui", action };
+    chrome.tabs.sendMessage(tabId, msg).then(
+      (r: { dismissed?: boolean } | undefined) => setHidden(!!r?.dismissed),
+      () => setHidden(false), // no content script in this tab
+    );
+  };
+  useEffect(() => ask("get"), [tabId]); // eslint-disable-line react-hooks/exhaustive-deps -- ask only reads tabId
+  return [hidden, () => ask("show")];
 }
 
 export interface TabInfo {

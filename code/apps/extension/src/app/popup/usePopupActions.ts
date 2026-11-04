@@ -69,7 +69,7 @@ function playbackActions(d: Deps): Playback {
   };
 }
 
-function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback> {
+function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback | "showOnPage"> {
   return {
     openApp: async () => {
       d.setLaunch("starting");
@@ -87,7 +87,7 @@ function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback> {
 }
 
 /** The popup's button handlers. Rebuilt only when something they read changes. */
-export function usePopupActions(d: Deps): PopupActions {
+export function usePopupActions(d: Deps): Omit<PopupActions, "showOnPage"> {
   const { tabId, elapsedMs, next, speed, update, refresh, setToken, setStarting, setLaunch } = d;
   return useMemo(() => {
     const deps = { tabId, elapsedMs, next, speed, update, refresh, setToken, setStarting, setLaunch };

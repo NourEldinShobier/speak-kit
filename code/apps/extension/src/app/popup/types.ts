@@ -22,6 +22,8 @@ export interface PopupModel {
   shortcuts: Record<string, string | undefined>;
   /** state of the "Open SpeakKit" deep link */
   launch: "idle" | "starting" | "failed";
+  /** the in-page UI is closed in this tab (its close button) */
+  hidden: boolean;
 }
 
 export interface PopupActions {
@@ -45,4 +47,6 @@ export interface PopupActions {
   extSettings(): void;
   help(): void;
   learn(): void;
+  /** bring the in-page UI back in this tab */
+  showOnPage(): void;
 }

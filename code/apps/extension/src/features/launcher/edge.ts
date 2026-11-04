@@ -2,7 +2,7 @@ import type { Settings } from "@speakkit/protocol";
 import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
-import { closeButton, moreMenu, speedVoiceButtons } from "./edge-parts";
+import { closeButton, moreMenu, readerButton, speedVoiceButtons } from "./edge-parts";
 import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
@@ -26,6 +26,7 @@ export class EdgeLauncher {
   private pillSpeed: HTMLElement | null = null;
   private pillVoice: HTMLElement | null = null;
   private readonly s: Surface;
+  private readonly tip = { show: (a: HTMLElement, label: string) => this.showLtip(a, () => ({ label, hint: "" })), hide: () => this.hideLtip() };
 
   constructor(s: Surface) {
     this.s = s;
@@ -174,16 +175,7 @@ export class EdgeLauncher {
     const { speed, voice, avatar } = speedVoiceButtons(this.s, l);
     this.pillSpeed = speed;
     this.pillVoice = avatar;
-    p.append(
-      speed,
-      voice,
-      this.pillLast(l, reading),
-      closeButton(
-        this.s.hd,
-        (anchor) => this.showLtip(anchor, () => ({ label: "Close for this tab", hint: "" })),
-        () => this.hideLtip(),
-      ),
-    );
+    p.append(speed, voice, this.pillLast(l, reading), closeButton(this.s.hd, this.tip));
     this.drag(p);
     this.closeWhenAway(p);
     p.classList.add("is-out");
@@ -233,19 +225,7 @@ export class EdgeLauncher {
 
   /** Idle: the reader view button. */
   private pillReader(): HTMLElement[] {
-    return [
-      this.sep(),
-      iconButton({
-        name: "book",
-        label: "Reader view",
-        size: 32,
-        data: { sk: "launcher-reader" },
-        onClick: () => {
-          this.setPill(false, true);
-          this.s.hd.openReader();
-        },
-      }),
-    ];
+    return [this.sep(), readerButton(this.s.hd, () => this.setPill(false, true))];
   }
 
   /** The last button: stop while reading, else the "More" menu. */

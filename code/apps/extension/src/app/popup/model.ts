@@ -18,6 +18,7 @@ interface ModelInputs {
   voices: VoicesState;
   launch: PopupModel["launch"];
   starting: boolean;
+  hidden: boolean;
 }
 
 /** Test builds can pin a state that needs no player data (file:// permission cannot be reached from a Playwright tab). */
@@ -73,5 +74,6 @@ export function buildModel(i: ModelInputs): PopupModel {
     voices: i.voices,
     shortcuts: Object.fromEntries((i.commands ?? []).map((c) => [c.name ?? "", c.shortcut || undefined])),
     launch: i.launch,
+    hidden: i.hidden,
   };
 }

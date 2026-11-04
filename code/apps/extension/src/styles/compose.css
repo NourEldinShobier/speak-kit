@@ -151,6 +151,29 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+.pp-hidden {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--fill-selected);
+}
+.pp-hidden > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--text-tertiary);
+}
+.pp-hidden b {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
 .pp-hint {
   margin: 0;
   color: var(--text-tertiary);

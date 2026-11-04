@@ -83,6 +83,21 @@ function SelectionActions({ m, a }: { m: PopupModel; a: PopupActions }) {
   );
 }
 
+/** Shown when the tab's in-page controls were closed: they stay away until reading starts or the page reloads. */
+function HiddenNote({ a }: { a: PopupActions }) {
+  return (
+    <section className="pp-hidden" data-sk="popup-hidden">
+      <div>
+        <b>Hidden in this tab</b>
+        <span>The page controls were closed here. They return when you start reading or reload the page.</span>
+      </div>
+      <Button size="sm" onClick={a.showOnPage}>
+        Show on this page
+      </Button>
+    </section>
+  );
+}
+
 function Busy({ m }: { m: PopupModel }) {
   const { label, value, text } = busyInfo(m);
   return (
@@ -145,6 +160,7 @@ export function HomeBody({ m, a, pickers }: { m: PopupModel; a: PopupActions; pi
   return (
     <>
       {card}
+      {m.hidden && (view === "idle" || view === "selection") && <HiddenNote a={a} />}
       {view === "idle" && <IdleActions m={m} a={a} />}
       {view === "selection" && <SelectionActions m={m} a={a} />}
       {CONTROL_VIEWS.includes(view) && <Controls m={m} a={a} />}

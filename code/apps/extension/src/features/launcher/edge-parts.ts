@@ -62,15 +62,30 @@ export function speedVoiceButtons(s: Surface, l: Settings["launcher"]): { speed:
   return { speed, voice, avatar: av };
 }
 
+/** Shows and hides a tooltip beside the pill. */
+export interface Tip {
+  show(anchor: HTMLElement, label: string): void;
+  hide(): void;
+}
+
 /** The pill's close button: stops the reading in this tab and hides the in-page UI here until reading is asked for again or the page reloads. */
-export function closeButton(hd: Surface["hd"], showTip: (anchor: HTMLElement) => void, hideTip: () => void): HTMLElement {
-  const b = iconButton({ name: "x", label: "Close for this tab", size: 28, data: { sk: "launcher-close" }, onClick: () => hd.closeTab() });
-  for (const [ev, fn] of [
-    ["pointerenter", showTip],
-    ["focus", showTip],
-    ["pointerleave", hideTip],
-    ["blur", hideTip],
-  ] as const)
-    b.addEventListener(ev, () => fn(b));
+export function closeButton(hd: Surface["hd"], tip: Tip): HTMLElement {
+  const b = iconButton({ name: "x", label: "Close for this tab", size: 32, data: { sk: "launcher-close" }, onClick: () => hd.closeTab() });
+  for (const ev of ["pointerenter", "focus"]) b.addEventListener(ev, () => tip.show(b, "Close for this tab"));
+  for (const ev of ["pointerleave", "blur"]) b.addEventListener(ev, () => tip.hide());
   return b;
+}
+
+/** The idle pill's reader view button; `collapse` closes the pill first. */
+export function readerButton(hd: Surface["hd"], collapse: () => void): HTMLElement {
+  return iconButton({
+    name: "book",
+    label: "Reader view",
+    size: 32,
+    data: { sk: "launcher-reader" },
+    onClick: () => {
+      collapse();
+      hd.openReader();
+    },
+  });
 }

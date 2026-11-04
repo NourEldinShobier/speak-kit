@@ -49,6 +49,7 @@ const model = (over: Partial<PopupModel> = {}): PopupModel => ({
   },
   shortcuts: { "read-selection": "Ctrl+Shift+S", "play-pause": "Ctrl+Shift+Y" },
   launch: "idle",
+  hidden: false,
   ...over,
 });
 const button = (root: Element, name: string) => [...root.querySelectorAll("button")].find((b) => text(b) === name || b.getAttribute("aria-label") === name) ?? null;
@@ -236,6 +237,23 @@ describe("shortcuts", () => {
     const m = await mount(<PopupScreen m={model()} a={a} />);
     const rows = [...m.root.querySelectorAll(".pp-keys > div")].map(text);
     expect(rows).toEqual(["Read selectionCtrlShiftS", "Play / pauseCtrlShiftY"]);
+    await m.unmount();
+  });
+});
+
+describe("tab closed", () => {
+  test("a tab whose page controls were closed offers Show on this page", async () => {
+    const { a, fn } = actions();
+    const m = await mount(<PopupScreen m={model({ hidden: true })} a={a} />);
+    expect(text(m.root.querySelector("[data-sk=popup-hidden]"))).toContain("Hidden in this tab");
+    await click(button(m.root, "Show on this page"));
+    expect(fn.mock.calls).toEqual([["showOnPage"]]);
+    await m.unmount();
+  });
+  test("an open tab shows no note", async () => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model()} a={a} />);
+    expect(m.root.querySelector("[data-sk=popup-hidden]")).toBeNull();
     await m.unmount();
   });
 });
