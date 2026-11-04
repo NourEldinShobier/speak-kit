@@ -245,7 +245,6 @@ describe("tab closed", () => {
   test("a tab whose page controls were closed offers Show on this page", async () => {
     const { a, fn } = actions();
     const m = await mount(<PopupScreen m={model({ hidden: true })} a={a} />);
-    expect(text(m.root.querySelector("[data-sk=popup-hidden]"))).toContain("Hidden in this tab");
     await click(button(m.root, "Show on this page"));
     expect(fn.mock.calls).toEqual([["showOnPage"]]);
     await m.unmount();
@@ -253,7 +252,7 @@ describe("tab closed", () => {
   test("an open tab shows no note", async () => {
     const { a } = actions();
     const m = await mount(<PopupScreen m={model()} a={a} />);
-    expect(m.root.querySelector("[data-sk=popup-hidden]")).toBeNull();
+    expect(button(m.root, "Show on this page")).toBeNull();
     await m.unmount();
   });
 });

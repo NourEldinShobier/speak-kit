@@ -140,6 +140,7 @@ class Controller implements Ctx {
   }
   private tabEvent(e: TabUiEvent) {
     this.tabUi = reduceTabUi(this.tabUi, e);
+    if (window.__speakkitContent) window.__speakkitContent.closed = this.tabUi.dismissed; // read by the popup's probe, which runs in this world
   }
 
   /** The close button: the worker stops this tab's reading and remembers the flag; the page clears itself at once. */
@@ -166,9 +167,9 @@ class Controller implements Ctx {
     this.post({ t: "dismiss", on: false });
     this.refresh();
   }
-  tabUiReply(action: "get" | "show") {
-    if (action === "show") this.restoreTab();
-    return { dismissed: this.dismissed };
+  showTab() {
+    this.restoreTab();
+    return true;
   }
 
   get host() {

@@ -4,6 +4,8 @@ import { base, deliver, engage, sent, st, startPage, contentSession } from "../.
 
 const { open } = contentSession();
 const count = (page: any, sel: string): Promise<number> => page.locator(sel).count();
+/** The flag the popup reads from the content script's slot. */
+const dismissed = (page: any): Promise<boolean> => page.evaluate(() => !!(window as any).__speakkitContent?.closed);
 const surfaces = "[data-sk=launcher-tab],[data-sk=launcher-pill],[data-sk=dock],[data-sk=gutter-play],[data-sk=back-to-current]";
 
 /** A reading in progress with the pill open. */
@@ -61,10 +63,10 @@ describe("close for this tab", () => {
     await deliver(page, { t: "state", state: st({ docId: doc.docId, url: "http://sk.test/page" }) });
     await page.waitForTimeout(200);
     expect(await count(page, "[data-sk=launcher-tab]")).toBe(0);
-    expect((await deliver(page, { t: "tab-ui", action: "get" })).dismissed).toBe(true);
+    expect(await dismissed(page)).toBe(true);
     await deliver(page, { t: "extract", mode: "page" });
     await page.waitForSelector("[data-sk=launcher-tab]");
-    expect((await deliver(page, { t: "tab-ui", action: "get" })).dismissed).toBe(false);
+    expect(await dismissed(page)).toBe(false);
     await page.context().close();
   });
 
@@ -72,7 +74,7 @@ describe("close for this tab", () => {
     const page = await open();
     await reading(page);
     await page.click("[data-sk=launcher-close]");
-    expect(await deliver(page, { t: "tab-ui", action: "show" })).toEqual({ dismissed: false });
+    expect(await deliver(page, { t: "tab-ui" })).toBe(true);
     await page.waitForSelector("[data-sk=launcher-tab]");
     await page.context().close();
   });
@@ -88,7 +90,7 @@ describe("close for this tab", () => {
 
   test("a page nobody interacted with reports nothing dismissed", async () => {
     const page = await open(base({ launcher: { enabled: false } }));
-    expect(await deliver(page, { t: "tab-ui", action: "get" })).toEqual({ dismissed: false });
+    expect(await dismissed(page)).toBe(false);
     await page.context().close();
   });
 });
@@ -117,7 +119,7 @@ describe("page lifetime", () => {
     expect((await sent(page)).find((m) => m.t === "hello")).toEqual({ t: "hello", url: "http://sk.test/page" });
     await page.waitForTimeout(300);
     expect(await count(page, "[data-sk=launcher-tab]")).toBe(0);
-    expect((await deliver(page, { t: "tab-ui", action: "get" })).dismissed).toBe(true);
+    expect(await dismissed(page)).toBe(true);
     await page.context().close();
   });
 

@@ -40,8 +40,8 @@ export type ExtraToBg =
   /** open or close the reader view of a tab (default: the active tab) */
   | { t: "reader"; tabId?: number | undefined; open: boolean };
 
-/** Popup to a tab's content script: whether the in-page UI is closed in that tab, and bringing it back. Reply { dismissed: boolean }. */
-export type TabUiMessage = { t: "tab-ui"; action: "get" | "show" };
+/** Popup to a tab's content script: bring the in-page UI back after its close button. Whether it is closed, the popup reads from the content script's slot (see useTab). */
+export type TabUiMessage = { t: "tab-ui" };
 
 export interface VoiceInfo {
   id: string;

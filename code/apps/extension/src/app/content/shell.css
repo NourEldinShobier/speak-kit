@@ -106,13 +106,17 @@
   padding-inline-end: 6px;
   scrollbar-width: thin;
 }
+/* The voice rows sit inside the popover: its radius minus 1px border and 12px padding, at least --radius-xs. */
+.sk {
+  --radius-pop-row: max(var(--radius-xs, 4px), calc(var(--radius-menu, 10px) - 1px - 12px));
+}
 .sk-vrow {
   display: flex;
   align-items: center;
   gap: 10px;
   min-height: 44px;
   padding: 0 8px;
-  border-radius: var(--radius-control, 8px);
+  border-radius: var(--radius-pop-row);
   cursor: pointer;
   flex: none;
 }
@@ -138,7 +142,7 @@
 .sk-vopt:focus-visible {
   outline: 1px solid var(--accent-default);
   outline-offset: -1px;
-  border-radius: var(--radius-control, 8px);
+  border-radius: var(--radius-pop-row);
 }
 .sk-vrow.is-selected {
   background: var(--fill-selected);

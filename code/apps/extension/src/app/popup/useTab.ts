@@ -1,27 +1,11 @@
 import { useEffect, useState } from "react";
 import { classifyProbeError } from "../../features/connection";
-import type { TabUiMessage } from "../../shared/internal";
 
 /** The tab the popup acts on. Test builds accept ?tab=<id> because a popup opened as a tab would otherwise see itself. */
 export async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
   const forced = __TEST__ ? Number(new URLSearchParams(location.search).get("tab")) : 0;
   if (forced) return chrome.tabs.get(forced);
   return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
-}
-
-/** Whether the in-page UI of the tab was closed with its close button, and the action that brings it back. A page without the content script counts as not hidden. */
-export function useTabHidden(tabId: number | undefined): [boolean, () => void] {
-  const [hidden, setHidden] = useState(false);
-  const ask = (action: "get" | "show") => {
-    if (tabId === undefined || typeof chrome === "undefined" || !chrome.tabs) return;
-    const msg: TabUiMessage = { t: "tab-ui", action };
-    chrome.tabs.sendMessage(tabId, msg).then(
-      (r: { dismissed?: boolean } | undefined) => setHidden(!!r?.dismissed),
-      () => setHidden(false), // no content script in this tab
-    );
-  };
-  useEffect(() => ask("get"), [tabId]); // eslint-disable-line react-hooks/exhaustive-deps -- ask only reads tabId
-  return [hidden, () => ask("show")];
 }
 
 export interface TabInfo {
@@ -31,6 +15,7 @@ export interface TabInfo {
   selection: string;
   chars: number;
   fileAccess: boolean;
+  hidden?: boolean | undefined;
 }
 
 const fileAccess = () =>
@@ -46,10 +31,13 @@ interface Probe {
   url?: string | undefined;
   selection: string;
   chars: number;
+  /** the in-page UI of the tab was closed with its close button (the content script sets the flag on its slot, which this probe shares) */
+  hidden?: boolean | undefined;
 }
 
 /** Runs in the page: the selection and the amount of readable text. */
 const readPage = () => ({
+  hidden: (window as { __speakkitContent?: { closed?: boolean } }).__speakkitContent?.closed,
   sel: String(getSelection() ?? ""),
   chars: ((document.querySelector("article, main, [role=main]") as HTMLElement | null) ?? document.body).innerText.length,
 });
@@ -66,8 +54,8 @@ async function probeTab(tab: chrome.tabs.Tab | undefined): Promise<Probe> {
   if (tab?.id === undefined) return probe;
   try {
     const r = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readPage });
-    const o = r[0]?.result as { sel: string; chars: number } | undefined;
-    return { ...probe, selection: (o?.sel ?? "").trim(), chars: o?.chars ?? 0 };
+    const o = r[0]?.result as { sel: string; chars: number; hidden?: boolean } | undefined;
+    return { ...probe, selection: (o?.sel ?? "").trim(), chars: o?.chars ?? 0, hidden: o?.hidden };
   } catch (e) {
     return { ...probe, url: urlAfterFailedProbe(probe.url, e) };
   }

@@ -4,6 +4,7 @@ import { command, openOptions, previewVoice, send } from "../../shared/client";
 import { extensionSettingsUrl, LINKS, openUrl } from "../../shared/links";
 import type { Settings } from "../../features/settings";
 import type { PopupActions, PopupModel } from "./types";
+import type { TabUiMessage } from "../../shared/internal";
 import { activeTab } from "./useTab";
 
 const SAMPLE = "This is how this voice sounds when it reads to you.";
@@ -20,7 +21,7 @@ interface Deps {
   setLaunch: (s: PopupModel["launch"]) => void;
 }
 
-type Group = Pick<PopupActions, "listenPage" | "listenSelection" | "readerView">;
+type Group = Pick<PopupActions, "listenPage" | "listenSelection" | "readerView" | "showOnPage">;
 
 // The tab may still be loading when the button is clicked right after the popup opens.
 const resolveTab = async (d: Deps) => d.tabId ?? (await activeTab())?.id;
@@ -35,6 +36,12 @@ function readActions(d: Deps): Group {
   return {
     listenPage: listen("page"),
     listenSelection: listen("selection"),
+    showOnPage: async () => {
+      const id = await resolveTab(d);
+      if (id === undefined) return;
+      await chrome.tabs.sendMessage(id, { t: "tab-ui" } satisfies TabUiMessage);
+      if (!__TEST__) window.close();
+    },
     readerView: async () => {
       const id = await resolveTab(d);
       if (id === undefined) return;
@@ -69,7 +76,7 @@ function playbackActions(d: Deps): Playback {
   };
 }
 
-function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback | "showOnPage"> {
+function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback> {
   return {
     openApp: async () => {
       d.setLaunch("starting");
@@ -87,7 +94,7 @@ function appActions(d: Deps): Omit<PopupActions, keyof Group | keyof Playback | 
 }
 
 /** The popup's button handlers. Rebuilt only when something they read changes. */
-export function usePopupActions(d: Deps): Omit<PopupActions, "showOnPage"> {
+export function usePopupActions(d: Deps): PopupActions {
   const { tabId, elapsedMs, next, speed, update, refresh, setToken, setStarting, setLaunch } = d;
   return useMemo(() => {
     const deps = { tabId, elapsedMs, next, speed, update, refresh, setToken, setStarting, setLaunch };

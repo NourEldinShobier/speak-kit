@@ -67,6 +67,7 @@ function IdleActions({ m, a }: { m: PopupModel; a: PopupActions }) {
           Reader view
         </Button>
       </div>
+      {m.hidden && <Button onClick={a.showOnPage}>Show on this page</Button>}
       <p className="pp-hint">{m.engine === "unloaded" ? "The voice wakes when you press play. Select text to read just that part." : "Select text on the page to read just that part."}</p>
     </section>
   );
@@ -78,21 +79,6 @@ function SelectionActions({ m, a }: { m: PopupModel; a: PopupActions }) {
       <blockquote className="pp-quote">“{m.selection.length > 160 ? `${m.selection.slice(0, 157).trimEnd()}…` : m.selection}”</blockquote>
       <Button variant="primary" size="lg" className="sk-fill" iconLeft="player-play" onClick={a.listenSelection}>
         Listen to selection
-      </Button>
-    </section>
-  );
-}
-
-/** Shown when the tab's in-page controls were closed: they stay away until reading starts or the page reloads. */
-function HiddenNote({ a }: { a: PopupActions }) {
-  return (
-    <section className="pp-hidden" data-sk="popup-hidden">
-      <div>
-        <b>Hidden in this tab</b>
-        <span>The page controls were closed here. They return when you start reading or reload the page.</span>
-      </div>
-      <Button size="sm" onClick={a.showOnPage}>
-        Show on this page
       </Button>
     </section>
   );
@@ -160,7 +146,6 @@ export function HomeBody({ m, a, pickers }: { m: PopupModel; a: PopupActions; pi
   return (
     <>
       {card}
-      {m.hidden && (view === "idle" || view === "selection") && <HiddenNote a={a} />}
       {view === "idle" && <IdleActions m={m} a={a} />}
       {view === "selection" && <SelectionActions m={m} a={a} />}
       {CONTROL_VIEWS.includes(view) && <Controls m={m} a={a} />}

@@ -11,7 +11,7 @@ import type { TabUiMessage } from "../../shared/internal";
  */
 declare global {
   interface Window {
-    __speakkitContent?: { alive(): boolean; stop(): void } | undefined;
+    __speakkitContent?: { alive(): boolean; stop(): void; closed?: boolean } | undefined;
   }
 }
 
@@ -47,13 +47,11 @@ const onMessage = (msg: BgToContent | TabUiMessage, _sender: chrome.runtime.Mess
     return true; // async reply
   }
   if (msg.t === "tab-ui") {
-    // the popup asks; a page that never loaded the UI has nothing dismissed
-    if (!app && msg.action === "get") send({ dismissed: false });
-    else
-      void load().then(
-        (c) => send(c.tabUiReply(msg.action)),
-        () => send({ dismissed: false }),
-      );
+    // the popup's "Show on this page"
+    void load().then(
+      (c) => send(c.showTab()),
+      () => send(false),
+    );
     return true;
   }
   void load().then((c) => c.onMessage(msg), retryLater);
