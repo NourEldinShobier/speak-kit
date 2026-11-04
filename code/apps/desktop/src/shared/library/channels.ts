@@ -5,7 +5,6 @@ export const LIBRARY_METHODS = [
   "get",
   "search",
   "importText",
-  "importClipboard",
   "importBytes",
   "pickFiles",
   "importUrl",

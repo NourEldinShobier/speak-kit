@@ -25,7 +25,6 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, requestQuit, re
     shortcuts: ctx.config.shortcuts,
   });
   const actions: Record<TrayAction, () => void> = {
-    "read-clipboard": () => void reading.readClipboard(),
     open: ctx.showWindow,
     pause: () => reading.controller.command({ type: "pause" }),
     resume: () => reading.controller.command({ type: "resume" }),

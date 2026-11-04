@@ -35,19 +35,18 @@ export function trayTooltipFor(c: TrayContext): string {
   return trayTooltip(c.health, c.serverError);
 }
 
-export type TrayAction = "read-clipboard" | "open" | "pause" | "resume" | "stop" | "wake" | "restart-engine" | "dnd" | "settings" | "check-updates" | "restart-update" | "quit";
+export type TrayAction = "open" | "pause" | "resume" | "stop" | "wake" | "restart-engine" | "dnd" | "settings" | "check-updates" | "restart-update" | "quit";
 
 type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
 
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
 export function trayMenuModel(c: TrayContext): TrayItem[] {
   const engine = c.health?.engine.state;
-  const busy = engine === "loading" || engine === "downloading" || engine === "missing" || engine === "error" || !c.health;
   const item = (action: TrayAction, label: string, extra: Partial<Extract<TrayItem, { type: "item" }>> = {}): TrayItem => ({ type: "item", action, label, enabled: true, ...extra });
   const sep: TrayItem = { type: "separator" };
   const reading = c.reader.status === "playing" || c.reader.status === "preparing";
   const paused = c.reader.status === "paused";
-  const rows: TrayItem[] = [item("read-clipboard", "Read clipboard", { enabled: !busy, hint: c.shortcuts["read-clipboard"] }), sep, item("open", "Open Speak Kit")];
+  const rows: TrayItem[] = [item("open", "Open Speak Kit")];
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));

@@ -6,7 +6,6 @@ import type { ShortcutId } from "../shared/shortcuts";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import type { Ctx } from "./context";
-import { setupClipboardPrompt } from "./desktop-clipboard";
 import { desktopTestHook } from "./desktop-test-hook";
 import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
@@ -34,19 +33,17 @@ const shortcutActions = (reading: ReturnType<typeof createReading>): Record<Shor
   "read-selection": () => void reading.readSelection(),
   "play-pause": () => reading.controller.command({ type: "toggle" }),
   stop: () => reading.controller.command({ type: "stop" }),
-  "read-clipboard": () => void reading.readClipboard(),
 });
 
 const readerHandlers = (reading: ReturnType<typeof createReading>) =>
   ({
     reader: async (cmd) => reading.command(cmd),
-    readClipboard: async () => reading.readClipboard(),
     readerStarted: async (epoch, index) => reading.started(epoch, index),
     readerDone: async (epoch, index) => reading.done(epoch, index),
   }) satisfies Partial<Api>;
 
 /**
- * Everything beyond the server and the main window: global shortcuts, reading and the mini player, the clipboard prompt, toasts,
+ * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
  */
 export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
@@ -67,7 +64,6 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
 
   const announceEngine = engineAnnouncer(ctx, toasts);
-  const clipboardPrompt = setupClipboardPrompt(ctx, toasts, reading);
   const tray = setupTray(ctx, { reading, exports, updates, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   ctx.state.reader = IDLE_READER;
   ctx.state.update ??= UPDATE_UNSUPPORTED;
@@ -87,14 +83,12 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     ownsWindow: (c: Electron.WebContents) => reading.owns(c) || tray.owns(c),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
-      if (patch.clipboardPrompt !== undefined) clipboardPrompt.sync();
       if (patch.doNotDisturb !== undefined) ctx.publish();
     },
     onEngineState: announceEngine,
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
     dispose: () => {
-      clipboardPrompt.stop();
       shortcuts.unregisterAll();
       reading.dispose();
       exports.dispose();

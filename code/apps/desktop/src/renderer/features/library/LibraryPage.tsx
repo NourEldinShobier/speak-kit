@@ -60,7 +60,7 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
   const { toast } = ui;
   return (
     <div className="lib" {...actions.dragProps} data-testid="library">
-      <LibraryHead loaded={docs !== null} view={view} query={ui.query} dispatch={dispatch} pickFiles={actions.pickFiles} importClipboard={actions.importClipboard} />
+      <LibraryHead loaded={docs !== null} view={view} query={ui.query} dispatch={dispatch} pickFiles={actions.pickFiles} />
       <ProblemsBanner problems={ui.problems} dispatch={dispatch} />
       <LibraryBody loaded={docs !== null} ui={ui} view={view} hits={hits} speed={speed} now={now} dispatch={dispatch} pickFiles={actions.pickFiles} open={actions.open} refresh={refresh} />
       {ui.dragging > 0 && (

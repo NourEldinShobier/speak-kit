@@ -7,7 +7,6 @@ export type PaletteAction =
   | { type: "nav"; page: Page; sub?: SettingsSub | undefined }
   | { type: "new-reading" }
   | { type: "pause" }
-  | { type: "read-clipboard" }
   | { type: "toggle-reading" }
   | { type: "export" }
   | { type: "check-updates" }
@@ -51,7 +50,6 @@ export function buildCommands(voices: Voice[] = []): Command[] {
   return [
     { id: "new", group: "Actions", title: "New reading", icon: "plus", keywords: "paste text speak read", action: { type: "new-reading" } },
     { id: "pause", group: "Actions", title: "Pause", icon: "player-pause", keywords: "stop playback", action: { type: "pause" } },
-    { id: "read-clipboard", group: "Actions", title: "Read clipboard", icon: "clipboard", keywords: "speak copied text paste", action: { type: "read-clipboard" } },
     { id: "toggle-reading", group: "Actions", title: "Play or pause reading", icon: "player-play", keywords: "resume mini player", action: { type: "toggle-reading" } },
     { id: "export", group: "Actions", title: "Export audio...", icon: "download", keywords: "save mp3 wav file", action: { type: "export" } },
     { id: "load-engine", group: "Actions", title: "Load the voice engine now", icon: "cpu", keywords: "wake warm", action: { type: "load-engine" } },

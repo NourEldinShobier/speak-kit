@@ -79,7 +79,6 @@ export function useLibraryActions({ dispatch, refresh, onOpen }: Deps) {
     finish,
     open,
     pickFiles: () => void library.pickFiles().then(finish),
-    importClipboard: () => void library.importClipboard().then((r) => finish([r])),
     dragProps: dragProps(dispatch, addFiles),
     remove: async (doc: DocMeta) => {
       close();

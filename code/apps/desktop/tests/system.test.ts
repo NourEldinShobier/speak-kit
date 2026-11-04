@@ -43,7 +43,7 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
   it("the four defaults are registered", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+C", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
   });
 
   it("the recorder rebinds a key, rejects a bad combination, and Escape cancels", async () => {
@@ -91,26 +91,6 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
     await l.page.locator('[data-shortcut="read-selection"]').getByText("Another app is using Ctrl+Alt+S.").waitFor();
   });
 
-  it("pressing Read clipboard reads the clipboard in the mini player; an empty clipboard says so", async () => {
-    const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await l.app.evaluate(({ clipboard }) => clipboard.writeText("First sentence of the clipboard. Second sentence follows."));
-    const mini = newWindow(l, "mini.html");
-    await hook(l, "pressShortcut", "Ctrl+Alt+C");
-    const page = await mini;
-    await page.getByTestId("mini").waitFor();
-    await page.getByText("First sentence of the clipboard. Second sentence follows.").first().waitFor();
-    expect(await page.getByTestId("mini-status").textContent()).toMatch(/Sentence [12] of 2|Preparing the voice/);
-    await hook(l, "pressShortcut", "Ctrl+Alt+X");
-    await until(() => page.isClosed());
-
-    await l.app.evaluate(({ clipboard }) => clipboard.clear());
-    const again = newWindow(l, "mini.html");
-    await new Promise((r) => setTimeout(r, 500)); // past the key-repeat guard
-    await hook(l, "pressShortcut", "Ctrl+Alt+C");
-    const empty = await again;
-    await empty.getByText("The clipboard has no text.").first().waitFor();
-  });
 });
 
 describe("mini player and tray", () => {
@@ -183,18 +163,6 @@ describe("notifications", () => {
     await l.page.getByRole("switch", { name: "Reading finished: Toast" }).click();
     await l.page.getByRole("switch", { name: "Do not disturb" }).click();
     await expect.poll(() => configOf(l)).toMatchObject({ doNotDisturb: true, notifications: { "export-done": { toast: true, bell: true, sound: true }, "reading-finished": { toast: true } } });
-  });
-
-  it("the clipboard prompt offers long copied text as a toast; clicking it reads the text", async () => {
-    const l = await start({ config: { ...DONE, clipboardPrompt: true } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await hide(l);
-    await new Promise((r) => setTimeout(r, 1200));
-    await l.app.evaluate(({ clipboard }) => clipboard.writeText("The quick brown fox jumps over the lazy dog while the sun sets slowly behind the distant hills and everyone goes home."));
-    await until(async () => (await hook<{ title: string }[]>(l, "toasts")).some((t) => t.title === "Copied text: read it?"), 10_000);
-    const mini = newWindow(l, "mini.html");
-    await hook(l, "clickToast", 0);
-    await (await mini).getByTestId("mini").waitFor();
   });
 });
 
@@ -336,9 +304,6 @@ describe("palette, engines and the extension", () => {
     await l.page.getByRole("combobox").fill("disturb");
     await l.page.keyboard.press("Enter");
     await expect.poll(() => configOf(l).doNotDisturb).toBe(true);
-    await l.page.keyboard.press("Control+K");
-    await l.page.getByRole("combobox").fill("clipboard");
-    await l.page.getByRole("option", { name: /Read clipboard/ }).waitFor();
   });
 
   it("Engines lists the server's engines with their state and a Load now action", async () => {

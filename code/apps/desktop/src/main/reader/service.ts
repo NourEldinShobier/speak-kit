@@ -1,4 +1,3 @@
-import { clipboard } from "electron";
 import type { Ctx } from "../context";
 import { toDesktopError } from "../../shared/errors";
 import type { PreviewAudio } from "../../shared/ipc";
@@ -16,8 +15,6 @@ const LINGER_MS = 6000;
 interface Reading {
   readonly controller: ReaderController;
   readSelection(): Promise<void>;
-  /** False when the clipboard holds no text. */
-  readClipboard(): Promise<boolean>;
   readText(text: string, source: ReaderSource): boolean;
   command(c: ReaderCommand): void;
   started(epoch: number, index: number): void;
@@ -52,15 +49,6 @@ function selectionReader(ctx: Ctx, controller: ReaderController, readText: (text
   };
 }
 
-async function readClipboard(controller: ReaderController, readText: (text: string, source: ReaderSource) => boolean) {
-  const text = await clipboard.readText();
-  if (!text.trim()) {
-    controller.fail({ code: "empty-clipboard" });
-    return false;
-  }
-  return readText(text, "clipboard");
-}
-
 /** One "Finished reading" toast per reading, however often the finished state is published. */
 function finishNotifier(ctx: Ctx, toasts: ToastCenter) {
   let notified = false;
@@ -73,7 +61,7 @@ function finishNotifier(ctx: Ctx, toasts: ToastCenter) {
 }
 
 /**
- * Reading from anywhere: global shortcuts, the clipboard prompt and the tray all end up here. Owns the reader controller and the
+ * Reading from anywhere: global shortcuts and the tray all end up here. Owns the reader controller and the
  * mini player window, which plays the audio and exists only while something is being read.
  */
 export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: ReaderState) => void): Reading {
@@ -115,7 +103,6 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
     controller,
     readText,
     readSelection,
-    readClipboard: () => readClipboard(controller, readText),
     command(c) {
       if (c.type === "keep-on-top") mini.window?.setAlwaysOnTop(c.on, "floating");
       else if (c.type === "open-app") ctx.showWindow();

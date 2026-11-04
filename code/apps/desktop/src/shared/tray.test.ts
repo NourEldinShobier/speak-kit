@@ -49,17 +49,13 @@ describe("tray tooltip", () => {
 });
 
 describe("tray menu", () => {
-  it("idle: short menu with the shortcut hint on Read clipboard", () => {
-    expect(labels(ctx())).toEqual(["Read clipboard", "Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
-    expect(trayMenuModel(ctx())[0]).toMatchObject({ action: "read-clipboard", enabled: true, hint: "Ctrl+Alt+C" });
+  it("idle: short menu", () => {
+    expect(labels(ctx())).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
   it("reading and paused swap in Pause or Resume and Stop", () => {
     expect(labels(ctx({ reader: reader("playing") }))).toContain("Pause");
     expect(labels(ctx({ reader: reader("paused") }))).toEqual(expect.arrayContaining(["Resume", "Stop"]));
     expect(labels(ctx({ reader: reader("paused") }))).not.toContain("Pause");
-  });
-  it("read actions are disabled while the engine loads, downloads or failed (I7, I8)", () => {
-    for (const s of ["loading", "downloading", "error", "missing"] as const) expect(trayMenuModel(ctx({ health: health(s) }))[0]).toMatchObject({ action: "read-clipboard", enabled: false });
   });
   it("one row changes for asleep, engine error and update ready", () => {
     expect(labels(ctx({ health: health("unloaded") }))).toContain("Load the voice engine now");

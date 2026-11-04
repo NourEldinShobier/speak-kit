@@ -40,7 +40,6 @@ export const ERROR_TEXT: Table = {
   "render-failed": (a) => a.detail ?? "The server could not render the audio.",
   "not-exported": () => "That file was not exported by this session.",
   "no-selection": () => "No text is selected. Select some text, then try again.",
-  "empty-clipboard": () => "The clipboard has no text.",
   "nothing-to-read": () => "There is no text to read.",
   "selection-unsupported": () => "Reading the selection is only available on Windows and macOS.",
   "shortcut-invalid": () => "That is not a valid key combination.",

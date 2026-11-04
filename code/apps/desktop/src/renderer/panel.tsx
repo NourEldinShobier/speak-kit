@@ -80,9 +80,6 @@ function Panel() {
       )}
       <RunningExports exports={running} />
       <footer className="panel__foot">
-        <Button iconLeft="clipboard" onClick={() => api.readClipboard()}>
-          Read clipboard
-        </Button>
         <Button variant="primary" onClick={() => api.reader({ type: "open-app" })}>
           Open Speak Kit
         </Button>

@@ -84,7 +84,6 @@ export const LIBRARY_ARGS = {
   get: v.tuple([id]),
   search: v.tuple([v.pipe(v.string(), v.maxLength(200))]),
   importText: v.tuple([v.pipe(v.string(), v.maxLength(MAX_PASTE_CHARS)), v.optional(title), v.optional(id)]),
-  importClipboard: v.tuple([]),
   importBytes: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(255)), v.instance(Uint8Array)]),
   pickFiles: v.tuple([]),
   importUrl: v.tuple([v.pipe(v.string(), v.maxLength(2048))]),
@@ -108,7 +107,6 @@ export interface LibraryApi {
   /** ids of documents whose title, origin or text contains every word of the query */
   search(query: string): Promise<SearchHit[]>;
   importText(text: string, title?: string, voice?: string): Promise<ImportResult>;
-  importClipboard(): Promise<ImportResult>;
   importBytes(name: string, bytes: Uint8Array): Promise<ImportResult>;
   /** Opens the system file dialog and imports the chosen files; resolves to one result per file. */
   pickFiles(): Promise<ImportResult[]>;

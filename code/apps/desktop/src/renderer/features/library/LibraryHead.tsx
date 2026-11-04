@@ -4,7 +4,7 @@ import { plural } from "@speakkit/protocol";
 import { span } from "./model";
 import type { LibraryAction, LibraryView } from "./page-model";
 
-function AddMenu({ dispatch, pickFiles, importClipboard }: { dispatch: Dispatch<LibraryAction>; pickFiles(): void; importClipboard(): void }) {
+function AddMenu({ dispatch, pickFiles }: { dispatch: Dispatch<LibraryAction>; pickFiles(): void }) {
   return (
     <DropdownMenu
       trigger={
@@ -22,9 +22,6 @@ function AddMenu({ dispatch, pickFiles, importClipboard }: { dispatch: Dispatch<
       <DropdownMenuItem icon="link" onSelect={() => dispatch({ type: "dialog", dialog: { kind: "url" } })}>
         From a web address
       </DropdownMenuItem>
-      <DropdownMenuItem icon="copy" onSelect={importClipboard}>
-        From the clipboard
-      </DropdownMenuItem>
     </DropdownMenu>
   );
 }
@@ -40,10 +37,9 @@ interface HeadProps {
   query: string;
   dispatch: Dispatch<LibraryAction>;
   pickFiles(): void;
-  importClipboard(): void;
 }
 
-export function LibraryHead({ loaded, view, query, dispatch, pickFiles, importClipboard }: HeadProps) {
+export function LibraryHead({ loaded, view, query, dispatch, pickFiles }: HeadProps) {
   return (
     <header className="lib-head">
       <div>
@@ -60,7 +56,7 @@ export function LibraryHead({ loaded, view, query, dispatch, pickFiles, importCl
           onChange={(e) => dispatch({ type: "query", query: e.target.value })}
           className="lib-search"
         />
-        <AddMenu dispatch={dispatch} pickFiles={pickFiles} importClipboard={importClipboard} />
+        <AddMenu dispatch={dispatch} pickFiles={pickFiles} />
       </div>
     </header>
   );

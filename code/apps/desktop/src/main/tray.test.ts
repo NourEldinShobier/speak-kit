@@ -98,7 +98,7 @@ function setup(initial: TrayContext = base()) {
   let context = initial;
   const sinks = new Set<(s: unknown) => void>();
   const run = Object.fromEntries(
-    ["read-clipboard", "open", "pause", "resume", "stop", "wake", "restart-engine", "dnd", "settings", "check-updates", "restart-update", "quit"].map((a) => [a, vi.fn()]),
+    ["open", "pause", "resume", "stop", "wake", "restart-engine", "dnd", "settings", "check-updates", "restart-update", "quit"].map((a) => [a, vi.fn()]),
   ) as never as Record<string, ReturnType<typeof vi.fn>>;
   const tray = createTray({ state: { id: "state" }, sinks } as unknown as Ctx, () => context, run as never);
   return { tray, sinks, run, fake: mocks.state.trays.at(-1)!, panel: mocks.state.panels.at(-1)!, set: (c: TrayContext) => (context = c) };
@@ -118,13 +118,11 @@ describe("tray wiring", () => {
     expect(t.fake.tip).toMatch(/^Speak Kit - Ready/);
     expect(t.tray.summary()).toBe(`normal|${t.fake.tip}`);
     expect(t.tray.summary().startsWith("normal|")).toBe(true);
-    expect(labels(t)).toEqual(["Read clipboard", "Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+    expect(labels(t)).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
 
   it("turns menu rows into native items: accelerators that do not register, a checkbox for Do not disturb, disabled rows", () => {
     const t = setup(base({ doNotDisturb: true, health: health("loading") }));
-    const [clipboard] = t.fake.menu!.items;
-    expect(clipboard).toMatchObject({ label: "Read clipboard", enabled: false, accelerator: DEFAULT_SHORTCUTS["read-clipboard"].replace("Ctrl", "CommandOrControl"), registerAccelerator: false });
     expect(t.fake.menu!.items.find((i) => i.label === "Do not disturb")).toMatchObject({ type: "checkbox", checked: true });
   });
 
@@ -136,7 +134,7 @@ describe("tray wiring", () => {
       expect(t.fake.menu).toBeNull();
       t.fake.handlers.get("right-click")!();
       expect(t.fake.popped).toHaveLength(1);
-      expect(t.fake.popped[0]!.items[0]).toMatchObject({ label: "Read clipboard", accelerator: "Control+Alt+C" });
+      expect(t.fake.popped[0]!.items[0]).toMatchObject({ label: "Open Speak Kit" });
     } finally {
       Object.defineProperty(process, "platform", { value: original });
     }

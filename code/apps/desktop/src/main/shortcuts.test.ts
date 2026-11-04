@@ -23,10 +23,10 @@ function setup(foreign: string[] = []) {
 }
 
 describe("ShortcutRegistry", () => {
-  it("registers the four defaults and runs the action on a press", () => {
+  it("registers the three defaults and runs the action on a press", () => {
     const t = setup();
     expect(t.reg.apply(DEFAULT_SHORTCUTS)).toEqual({});
-    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+C", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
     t.press("Ctrl+Alt+S");
     t.advance(1000);
     t.press("Ctrl+Alt+Space");

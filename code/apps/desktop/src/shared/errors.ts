@@ -42,7 +42,6 @@ export interface ErrorArgs {
   "render-failed": { detail: string | null };
   "not-exported": undefined;
   "no-selection": undefined;
-  "empty-clipboard": undefined;
   "nothing-to-read": undefined;
   "selection-unsupported": undefined;
   "shortcut-invalid": undefined;

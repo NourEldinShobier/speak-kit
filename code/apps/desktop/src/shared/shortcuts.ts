@@ -1,7 +1,7 @@
 import type { DesktopError } from "./errors";
 
 /** Global shortcuts: ids, defaults and the pure rules (validation, conflicts, recording). Registration with the OS lives in main/shortcuts.ts. */
-export const SHORTCUT_IDS = ["read-selection", "play-pause", "stop", "read-clipboard"] as const;
+export const SHORTCUT_IDS = ["read-selection", "play-pause", "stop"] as const;
 export type ShortcutId = (typeof SHORTCUT_IDS)[number];
 export type Bindings = Record<ShortcutId, string>;
 
@@ -9,14 +9,12 @@ export const DEFAULT_SHORTCUTS: Bindings = {
   "read-selection": "Ctrl+Alt+S",
   "play-pause": "Ctrl+Alt+Space",
   stop: "Ctrl+Alt+X",
-  "read-clipboard": "Ctrl+Alt+C",
 };
 
 export const SHORTCUT_LABELS: Record<ShortcutId, { title: string; description: string }> = {
   "read-selection": { title: "Read selection", description: "Reads the text selected in any app." },
   "play-pause": { title: "Play or pause", description: "Pauses and resumes the current reading." },
   stop: { title: "Stop", description: "Stops the reading and closes the mini player." },
-  "read-clipboard": { title: "Read clipboard", description: "Reads whatever text you copied last." },
 };
 
 const MODIFIERS = ["Ctrl", "Alt", "Shift"] as const;

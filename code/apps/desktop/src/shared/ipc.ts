@@ -113,8 +113,6 @@ export interface Api {
   resetShortcuts(): Promise<AppState>;
   /** Controls the current reading (mini player, tray panel, palette). */
   reader(cmd: ReaderCommand): Promise<void>;
-  /** Reads whatever text is on the clipboard now; false when there is none. */
-  readClipboard(): Promise<boolean>;
   /** The mini player reports what its audio output is doing. */
   readerStarted(epoch: number, index: number): Promise<void>;
   readerDone(epoch: number, index: number): Promise<void>;
@@ -157,7 +155,6 @@ export const METHODS = [
   "setShortcut",
   "resetShortcuts",
   "reader",
-  "readClipboard",
   "readerStarted",
   "readerDone",
   "warmEngine",

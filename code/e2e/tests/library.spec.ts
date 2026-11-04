@@ -172,13 +172,9 @@ test.describe("desktop library @slow", () => {
     }
   });
 
-  test("clipboard import and a scanned PDF (flagged for text recognition)", async () => {
+  test("a scanned PDF (flagged for text recognition)", async () => {
     const d = await openLibrary();
     try {
-      await d.app.evaluate(({ clipboard }) => clipboard.writeText("Copied from another window."));
-      await d.page.getByRole("button", { name: "Add", exact: true }).click();
-      await d.page.getByRole("menuitem", { name: "From the clipboard" }).click();
-      await expect(d.page.getByTestId("doc-row")).toContainText("Copied from another window.");
       const r = await importBytes(d, "scan.pdf", fixtureBytes("scanned.pdf"));
       expect(r).toMatchObject({ ok: true, doc: { needsOcr: true, pages: 2 } });
     } finally {

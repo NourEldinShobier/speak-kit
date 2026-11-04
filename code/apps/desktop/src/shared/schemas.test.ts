@@ -15,8 +15,8 @@ describe("config defaults and repair", () => {
   });
 
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {
-    const c = parseConfig({ shortcuts: { "read-selection": "S", stop: "alt+ctrl+q", "play-pause": 12, "read-clipboard": "Alt+F4" } });
-    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space", "read-clipboard": "Ctrl+Alt+C" });
+    const c = parseConfig({ shortcuts: { "read-selection": "S", stop: "alt+ctrl+q", "play-pause": 12 } });
+    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space" });
   });
 
   it("loads a saved config that still has the removed download-done notification", () => {

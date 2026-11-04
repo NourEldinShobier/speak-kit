@@ -97,7 +97,7 @@ export class ReaderController {
     return true;
   }
 
-  /** Shows an error without a reading (nothing selected, empty clipboard). Stop or the next start clears it. */
+  /** Shows an error without a reading (nothing selected). Stop or the next start clears it. */
   fail(error: DesktopError): void {
     this.#reset(false);
     this.#error = error;

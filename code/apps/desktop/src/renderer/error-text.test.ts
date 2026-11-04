@@ -41,7 +41,6 @@ const CASES: [DesktopError, string][] = [
   [{ code: "render-failed", args: { detail: null } }, "The server could not render the audio."],
   [{ code: "not-exported" }, "That file was not exported by this session."],
   [{ code: "no-selection" }, "No text is selected. Select some text, then try again."],
-  [{ code: "empty-clipboard" }, "The clipboard has no text."],
   [{ code: "nothing-to-read" }, "There is no text to read."],
   [{ code: "selection-unsupported" }, "Reading the selection is only available on Windows and macOS."],
   [{ code: "shortcut-invalid" }, "That is not a valid key combination."],

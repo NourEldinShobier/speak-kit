@@ -15,13 +15,12 @@ const fixture = (n: string) => new Uint8Array(readFileSync(path.join(fixtureDir,
 
 let dir: string;
 let lib: LibraryApi;
-let clipboard = "";
 let revealed: string[] = [];
 let chosen: string[] = [];
 let web: Server;
 let base = "";
 
-const make = () => createLibrary({ dir, readClipboard: () => clipboard, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, fetch, now: () => 1000 });
+const make = () => createLibrary({ dir, reveal: (p) => revealed.push(p), chooseFiles: async () => chosen, fetch, now: () => 1000 });
 const ok = (r: ImportResult) => {
   if (!r.ok) throw new Error(r.error.code);
   return r.doc;
@@ -31,7 +30,6 @@ beforeEach(async () => {
   dir = mkdtempSync(path.join(tmpdir(), "speakkit-lib-"));
   revealed = [];
   chosen = [];
-  clipboard = "";
   web = createServer((req, res) => {
     if (req.url === "/article") {
       res.setHeader("content-type", "text/html");
@@ -63,11 +61,6 @@ describe("importing", () => {
   it("uses the given title and voice, and refuses empty text", async () => {
     expect(ok(await lib.importText("Hello there.", "My title", "bf_emma"))).toMatchObject({ title: "My title", voice: "bf_emma" });
     expect(await lib.importText("   \n ")).toMatchObject({ ok: false, reason: "empty" });
-  });
-
-  it("reads the clipboard", async () => {
-    clipboard = "Copied sentence.";
-    expect(ok(await lib.importClipboard()).title).toBe("Copied sentence.");
   });
 
   it("imports a dropped file with the file name as title fallback", async () => {
@@ -106,7 +99,7 @@ describe("importing", () => {
   });
 
   it("refuses a local address when no fetch is injected", async () => {
-    const guarded = await createLibrary({ dir, readClipboard: () => "", reveal: () => {}, chooseFiles: async () => [] });
+    const guarded = await createLibrary({ dir, reveal: () => {}, chooseFiles: async () => [] });
     expect(await guarded.importUrl(`${base}/article`)).toMatchObject({ ok: false, reason: "network", error: { code: "local-address" } });
   });
 
@@ -123,7 +116,7 @@ describe("a corrupt index", () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, "library.json"), '{"docs": [{"id": ');
     const recovered: string[] = [];
-    const again = await createLibrary({ dir, readClipboard: () => "", reveal: () => {}, chooseFiles: async () => [], onRecovered: (f) => recovered.push(f) });
+    const again = await createLibrary({ dir, reveal: () => {}, chooseFiles: async () => [], onRecovered: (f) => recovered.push(f) });
     expect(await again.list()).toEqual([]);
     expect(recovered).toEqual([path.join(dir, "library.json.bad")]);
     expect(readFileSync(path.join(dir, "library.json.bad"), "utf8")).toBe('{"docs": [{"id": ');

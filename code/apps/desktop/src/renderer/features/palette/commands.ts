@@ -20,7 +20,6 @@ const RUNNERS: Runners = {
   pause: (_a, _c, x) => x.halt(),
   "copy-token": (_a, _c, x) => void api.copy(x.s.token),
   "open-logs": () => void api.openPath("logs"),
-  "read-clipboard": () => void api.readClipboard(),
   "toggle-reading": () => void api.reader({ type: "toggle" }),
   export: (_a, _c, x) => x.dispatch({ type: "export", open: { text: "" } }),
   "check-updates": () => void api.updateAction("check"),

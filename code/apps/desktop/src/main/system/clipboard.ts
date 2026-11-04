@@ -12,15 +12,3 @@ export const electronClipboard: ClipboardIO = {
   },
   clear: () => clipboard.clear(),
 };
-
-/** Password managers tag their copies with this format so clipboard tools skip them. */
-const EXCLUDE_FORMAT = 'electron application/osclipboard;format="ExcludeClipboardContentFromMonitorProcessing"';
-
-export const copyIsPrivate = async (): Promise<boolean> => {
-  if (process.platform !== "win32") return false;
-  try {
-    return await clipboard.has(EXCLUDE_FORMAT);
-  } catch {
-    return false;
-  }
-};

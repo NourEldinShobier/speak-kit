@@ -1,5 +1,5 @@
 import path from "node:path";
-import { clipboard, dialog, ipcMain, shell, type BrowserWindow } from "electron";
+import { dialog, ipcMain, shell, type BrowserWindow } from "electron";
 import { EXTENSIONS } from "../../shared/library/contract";
 import { registerLibraryIpc } from "./ipc";
 import { parseInWorker } from "./parse/parse-runner";
@@ -22,7 +22,6 @@ export async function setupLibrary({ dataDir, window, target, allowLocalUrls, on
     dir: path.join(dataDir, "library"),
     onRecovered,
     parse: parseInWorker(new URL("./parse-worker.js", `file://${path.resolve(distDir)}/`)),
-    readClipboard: () => clipboard.readText(),
     reveal: (p) => shell.showItemInFolder(p),
     ...(allowLocalUrls && { fetch }),
     chooseFiles: async () => {

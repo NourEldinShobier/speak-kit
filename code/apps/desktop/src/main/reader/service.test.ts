@@ -13,9 +13,8 @@ const mocks = vi.hoisted(() => {
     alwaysOnTop: [] as unknown[][],
     window: { setAlwaysOnTop: (...a: unknown[]) => mini.alwaysOnTop.push(a) },
   };
-  return { mini, readText: vi.fn(async () => ""), capture: vi.fn(async (): Promise<string> => ""), copyKeys: vi.fn(async () => {}) };
+  return { mini, capture: vi.fn(async (): Promise<string> => ""), copyKeys: vi.fn(async () => {}) };
 });
-vi.mock("electron", () => ({ clipboard: { readText: mocks.readText } }));
 vi.mock("../windows", () => ({
   cornerOf: () => "corner",
   FloatWindow: class {
@@ -113,16 +112,6 @@ describe("createReading", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(t.ctx.state.reader.status).toBe("idle");
     expect(mocks.mini.closed).toBeGreaterThan(closedBefore);
-  });
-
-  it("readClipboard reads the clipboard text, and reports an empty clipboard", async () => {
-    const t = setup();
-    mocks.readText.mockResolvedValueOnce("From the clipboard.");
-    expect(await t.reading.readClipboard()).toBe(true);
-    expect(t.ctx.state.reader).toMatchObject({ source: "clipboard", title: "From the clipboard." });
-    mocks.readText.mockResolvedValueOnce("  ");
-    expect(await t.reading.readClipboard()).toBe(false);
-    expect(t.ctx.state.reader).toMatchObject({ status: "error", error: { code: "empty-clipboard" } });
   });
 
   it("readSelection reads what the capture found", async () => {

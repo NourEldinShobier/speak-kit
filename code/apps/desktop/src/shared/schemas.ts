@@ -36,7 +36,6 @@ const ShortcutsSchema = v.object({
   "read-selection": accelerator("read-selection"),
   "play-pause": accelerator("play-pause"),
   stop: accelerator("stop"),
-  "read-clipboard": accelerator("read-clipboard"),
 });
 
 const EXPORT_FORMATS = ["wav", "mp3"] as const;
@@ -144,7 +143,6 @@ export const ARGS = {
   setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),
   resetShortcuts: v.tuple([]),
   reader: v.tuple([ReaderCommandSchema]),
-  readClipboard: v.tuple([]),
   readerStarted: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
   readerDone: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
   warmEngine: v.tuple([]),

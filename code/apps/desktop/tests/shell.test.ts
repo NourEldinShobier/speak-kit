@@ -208,7 +208,6 @@ describe("tray and lifecycle", () => {
     const hook = <T>(fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     expect(items.filter((i) => i.type !== "separator").map((i) => i.label)).toEqual([
-      "Read clipboard",
       "Open Speak Kit",
       "Load the voice engine now",
       "Do not disturb",
@@ -216,7 +215,6 @@ describe("tray and lifecycle", () => {
       "Check for updates",
       "Quit Speak Kit",
     ]);
-    expect(items[0]!.enabled).toBe(true);
     expect(await hook<string>("trayState")).toMatch(/^asleep\|Speak Kit - Unloaded \(wakes on play\)$/);
 
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());

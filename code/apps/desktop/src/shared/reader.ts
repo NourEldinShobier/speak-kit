@@ -2,7 +2,7 @@ import type { DesktopError } from "./errors";
 
 /** What the reader (mini player, tray panel, palette) shares: state shape, commands, and text to sentences. */
 export type ReaderStatus = "idle" | "preparing" | "playing" | "paused" | "finished" | "error";
-export type ReaderSource = "selection" | "clipboard" | "text";
+export type ReaderSource = "selection" | "text";
 
 export interface ReaderState {
   status: ReaderStatus;

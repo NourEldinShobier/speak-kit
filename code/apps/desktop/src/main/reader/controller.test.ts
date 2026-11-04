@@ -51,7 +51,7 @@ describe("ReaderController", () => {
 
   it("pause and resume go to the player, and the state follows", async () => {
     const { c, log } = setup();
-    c.start(TEXT, "clipboard");
+    c.start(TEXT, "text");
     await flush();
     c.started(2, 0);
     c.command({ type: "toggle" });
@@ -130,14 +130,14 @@ describe("ReaderController", () => {
     c.start(TEXT, "selection");
     await flush();
     const before = states.length;
-    c.start("Another text to read.", "clipboard");
+    c.start("Another text to read.", "text");
     expect(states.slice(before).map((s) => s.status)).toEqual(["preparing"]);
-    expect(c.state).toMatchObject({ source: "clipboard", total: 1 });
+    expect(c.state).toMatchObject({ source: "text", total: 1 });
   });
 
   it("text without letters starts nothing", () => {
     const { c } = setup();
-    expect(c.start("  ... --- ", "clipboard")).toBe(false);
+    expect(c.start("  ... --- ", "text")).toBe(false);
     expect(c.state.status).toBe("idle");
   });
 });

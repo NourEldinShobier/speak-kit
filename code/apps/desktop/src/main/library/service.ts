@@ -13,7 +13,6 @@ interface LibraryDeps {
   dir: string;
   /** Fetches web addresses; the default refuses non-public addresses. Replaced in tests. */
   fetch?: typeof fetch;
-  readClipboard(): Promise<string> | string;
   /** system open dialog: absolute paths of the chosen files (empty when cancelled) */
   chooseFiles(): Promise<string[]>;
   reveal(filePath: string): void;
@@ -100,7 +99,6 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
     },
     search: (q) => store.search(q),
     importText,
-    importClipboard: async () => importText(await deps.readClipboard()),
     importBytes: (name, bytes) => importBytes(name, bytes),
     pickFiles: async () => Promise.all((await deps.chooseFiles()).map((p) => importPicked(p, importBytes))),
     importUrl: async (url) => {

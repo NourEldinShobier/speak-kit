@@ -22,7 +22,7 @@ interface HandlerDeps {
   modelsDir: string;
   logsDir: string;
   addActivity(kind: Activity["kind"], title: string, body: string): void;
-  /** Settings changes the desktop features react to (clipboard watcher, Do Not Disturb). */
+  /** Settings changes the desktop features react to (Do Not Disturb). */
   onConfigPatch(patch: ConfigPatch): void;
 }
 
