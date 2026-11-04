@@ -7,7 +7,8 @@ const BOUNDARY = words(
 );
 const SEMANTIC = words("p li h1 h2 h3 h4 h5 h6 blockquote figcaption dd dt summary");
 const NEVER = words("script style noscript template svg canvas iframe object embed video audio select option textarea input button dialog img picture map head math");
-const CODEISH = words("pre code kbd samp");
+// Only code blocks are skipped; inline code, kbd and samp are words in a sentence ("run `hello`") and are read.
+const CODEISH = words("pre");
 const SR_ONLY = /(?:^|\s)(?:sr-only|visually-hidden|screen-reader-text|screenreader|a11y-hidden)(?:\s|$)/;
 const REF_CLASS = /(?:^|\s)(?:reference|mw-ref|footnote-ref|noteref|citation|cite-ref)(?:\s|$)/;
 const CITE_TEXT = /^\s*\[?\s*(?:\d{1,3}(?:\s*[,–-]\s*\d{1,3})*|[a-z]|[*†‡§]+)\s*\]?\s*$/i;

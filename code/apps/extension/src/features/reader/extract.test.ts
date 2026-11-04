@@ -160,7 +160,7 @@ describe("messy page", () => {
       "Nested item two follows right behind it.",
       "Second item after the nested list is finished here.",
       "Visible text stays in one paragraph.",
-      "Run to begin, then wait for it to finish properly.",
+      "Run npm install to begin, then wait for it to finish properly.",
       "Figure 1: A caption that is optional to read.",
       expect.stringMatching(/^This sentence is intentionally very long .* or a conjunction$/),
       "while keeping every word in order, and never cutting through the middle of a word at all.",
