@@ -16,7 +16,7 @@ Start with the [README](../README.md) for what the product is and how to install
 ## Design
 - [Design system](design-system.md) (Lockix, light only; [ADR 0015](decisions/0015-light-only.md); [spec](lockix-design-system.md)), [Lumen components](lumen-components.md), [Lumen study](lumen-study.md)
 - [Visual fidelity](visual-fidelity.md): each built screen against its design frame
-- [Design restructure](design-restructure.md), [design review notes](design-review/)
+- [Design restructure](design-restructure.md), [design review notes](design-review/), [design decisions to apply to the code](design-decisions-to-apply.md)
 - Research: [products](research/product-research.md), [local models](research/local-models.md), [logo](research/logo-research.md)
 
 ## Project
