@@ -82,6 +82,7 @@ type SetupOpts = { step: number; h1: string; sub: string; center?: boolean; body
 const setupWin = (b: B, t: T, root: Ref, o: SetupOpts) => {
   const a = K3.winApp(b, root, { w: 958, h: 680, backdrop: { w: DW, h: DH }, titleBar: 32, title: "Set up Speak Kit" });
   const c = a.ref;
+  b.rect(c, { name: "Setup background", x: 0, y: 0, w: 958, h: 680, fill: t.surface }); // the setup window is white like the settings panel, not the grey app ground
   K3.skLogo(b, c, 20, { x: 6, y: 6 });
   tx(b, c, "Set up Speak Kit", { x: 34, y: 8, size: 12, c: t.text2, lh: 16 });
   const sr = b.row(c, { x: 0, y: 48, w: 958, h: 20, justify: "center" }); stepper(b, t, sr, o.step);

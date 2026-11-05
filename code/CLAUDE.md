@@ -32,7 +32,7 @@ A change to a decided item (an ADR); a new or replaced shipped dependency, langu
 15. Every feature with a budget has a row in `docs/performance-contract.md` and a test; never raise a budget without an ADR. (enforced by: `check-integrity.mjs`; origin: ostio F1)
 16. Every change ships with tests; a bug fix starts with a failing test; tests use literal expected values through the public interface. (enforced by: review; origin: ostio T1, T2)
 17. Do not skip, loosen or delete a test, budget or baseline to get green; report what cannot pass. (enforced by: `check-integrity.mjs`; origin: ostio T22)
-18. UI changes update the screenshots named after the design frame id (`<ID>-<what>-<theme>.png`); designs: `designs/review.html`, source `designs/speakkit.figcraft`, generator `designs/gen`. (enforced by: visual harness; origin: ostio A10, D18)
+18. UI changes update the screenshots named after the design frame id (`<ID>-<what>-<theme>.png`); designs: source `designs/speakkit.figcraft`, generator `designs/gen`. (enforced by: visual harness; origin: ostio A10, D18)
 19. Conventional Commits, one logical change per commit, optional trailers `Design: <frame id>` and `ADR: <number or n/a>`. (enforced by: `.githooks/commit-msg`; origin: ostio D20)
 20. Generated files (`tokens.ts`, `icon-data.ts`, `logo-data.ts`, `docs/MODULES.md`, `docs/LAYERS.md`) are never edited by hand; regenerate them. (enforced by: staleness tests, `gen-docs.mjs --check`; origin: ostio P4, D14)
 21. Test-only code is compiled out of shipped builds. (enforced by: `tests/bundle.test.ts`; origin: ostio C22)

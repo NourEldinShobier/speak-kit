@@ -7,7 +7,7 @@ Planned stack: Electron, React, TypeScript, Vite+ (Vite), `kokoro-js` / `onnxrun
 | Folder | What is in it |
 |---|---|
 | `code/` | pnpm workspace: `packages/{protocol,engine,server,ui}`, `apps/{extension,desktop}`, `e2e/`; CLAUDE.md, CONTRIBUTING.md, `.githooks/` |
-| `designs/` | `review.html` (open this to review and approve), `screens/<ID>.png` (107 screens), `manifest.json`, `speakkit.figcraft` (FigCraft source), `gen/` (TypeScript generator), `build/` (intermediates) |
+| `designs/` | `screens/<ID>.png` (one per frame), `manifest.json`, `speakkit.figcraft` (FigCraft source), `gen/` (TypeScript generator), `build/` (intermediates) |
 | `docs/research/` | `product-research.md`, `local-models.md`, `logo-research.md` |
 | `drive/` | chat handoffs (none yet) |
 | `tools/` | `extract-transcript.ts` (builds `drive/` handoffs, copied from the Lumen workspace) |
@@ -16,7 +16,6 @@ Planned stack: Electron, React, TypeScript, Vite+ (Vite), `kokoro-js` / `onnxrun
 ```bash
 cd designs/gen
 bun main.ts            # regenerates speakkit.figcraft, screens/*.png, manifest.json
-bun build-review.ts    # regenerates review.html (APP_NAME=... to change the title)
 ```
 Needs `figcraft-cli.exe` (default `<home>/AppData/Local/Programs/FigCraft/`, override with the `FIGCRAFT_CLI` env var) and `bun`. Screens are code: one function per screen in `gen/s_*.ts` (A ext popup, B on-page, C options/side panel in `s_ext.ts`/`s_opts.ts`; D onboarding, E library, F reader in `s_app.ts`; G voices/engines, H settings in `s_voices.ts`; I tray, J export, K errors in `s_sys.ts`). To rename the product, find-and-replace "SpeakKit" in `gen/` and rebuild.
 
