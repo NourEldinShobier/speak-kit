@@ -65,6 +65,7 @@ export class MainWindow {
   }
 
   show(): void {
+    void app.dock?.show(); // macOS: the Dock icon comes back with the window (undefined elsewhere)
     const w = this.window;
     if (!w) return this.create(false);
     if (w.isMinimized()) w.restore();
@@ -74,6 +75,7 @@ export class MainWindow {
 
   hide(): void {
     this.window?.hide();
+    app.dock?.hide(); // macOS: hidden to the menu bar, no Dock icon until the window is shown again
   }
 
   /** Setup is a fixed 960x680 window; after setup the app window is 1280x800 and resizable. */
@@ -115,6 +117,7 @@ export class MainWindow {
       },
     ));
     this.applyMode(true);
+    if (hidden) app.dock?.hide(); // launched with --hidden: menu bar only
     w.once("ready-to-show", () => {
       if (!hidden) w.show();
     });
@@ -134,7 +137,7 @@ export class MainWindow {
     w.on("close", (e) => {
       if (this.quitting) return;
       e.preventDefault();
-      w.hide();
+      this.hide();
     });
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;
