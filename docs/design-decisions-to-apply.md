@@ -23,7 +23,8 @@ Status: **Applied** means the code matches. **Design only** means the design fil
 | # | Decision | Value | Status |
 |---|---|---|---|
 | 2.1 | Settings back arrow closes Settings, with a "Close settings" tooltip; Esc closes it too. Sections inside Settings do not add history entries. | Arrow button labelled "Close settings" | Applied (code and frame H1). |
-| 2.2 | Panel margins match Lockix | Panel 8 from the right edge, a 28 footer band under it with a one-line status, panel 4 from the sidebar, 0 below the title bar. Title bar 36, search 28 high. | Applied. |
+| 2.2 | Panel margins match Lockix | Panel 8 from the right edge, panel 4 from the sidebar, 0 below the title bar. Title bar 36, search 28 high. (The 28 footer band that used to sit under the panel is removed, see 2.2a.) | Applied, except the band. |
+| 2.2a | **Remove the footer band** (user, 2026-11-05) | The 28 px status band under the panel (engine, voice, readings) is gone in all 57 shell frames. The panel and sidebar grow by 20 px, so the panel is **8 px from the bottom**, equal to the 8 px right gap. Anything anchored to the panel's bottom edge (the reader's player bar) moves down by 20 with it. | **Design only.** Code still has the band: `--footer-h` in `lumen.css`, `footer-model.ts` and its test, the footer markup in the shell, and the `spacing.test.ts` and `shell.test.ts` checks that pin it (panel bottom 28, footer 28 high). Remove them and set the panel's bottom inset to 8. Generator drift: `designs/gen/kit.ts` `desktopWindow` still draws it. |
 | 2.3 | No logo in the title bar | Title bar starts with the sidebar toggle, back and forward, then centred search. | Applied. |
 | 2.4 | macOS title bar | Traffic lights at the left, left group after them, search centred, status pill, update pill and bell at the **far right**, with equal 4 gaps to the top and the right. Frames L1m and H1m. | Applied (code and frames). |
 | 2.5 | Window controls | Minimize, maximize and close glyphs are pure black (`#000`), no grey. | Applied (code). |
@@ -54,6 +55,7 @@ Status: **Applied** means the code matches. **Design only** means the design fil
 ## Still to do in code
 
 1. Everything in section 1 (setup window). Start with 1.2, because the clipped ring also affects the real window.
+1a. Remove the footer band from the real shell (2.2a) and set the panel's bottom inset to 8.
 2. Check that no footer, card or button shadow is clipped by `overflow` in the other windows.
 3. Decide 1.4 (inset pill or top-corner rows) and 1.9 (equal left and right footer gaps).
 
