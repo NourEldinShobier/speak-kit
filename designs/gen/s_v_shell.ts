@@ -95,7 +95,8 @@ const setupWin = (b: B, t: T, root: Ref, o: SetupOpts) => {
     tx(b, c, o.sub, { x: 119, y: 125, size: 13, c: t.text2, lh: 18 });
   }
   const col = b.col(c, { x: 119, y: o.bodyTop ?? 156, w: 720, gap: o.colGap ?? 14, clip: false }); o.body(col);
-  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 28], justify: "spaceBetween", clip: false });
+  // 28 px from the bottom and the right; the left pad is 14 because the ghost Back button has 14 px inside, so its arrow sits 28 px from the edge too
+  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 28, 28, 14], justify: "spaceBetween", clip: false });
   const l = b.row(ft, { gap: 8, clip: false }); if (o.left) K.btn(b, t, l, o.left.label, { v: "ghost", icon: o.left.icon ?? "arrowLeft" });
   const r = b.row(ft, { gap: 8, clip: false }); o.right(r);
   return a;
