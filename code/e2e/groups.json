@@ -10,6 +10,7 @@
       "shardable": true,
       "specs": [
         "a11y.spec.ts",
+        "closetab.spec.ts",
         "content.spec.ts",
         "hostile.spec.ts",
         "keyboard.spec.ts",
@@ -21,6 +22,7 @@
         "playback.spec.ts",
         "popup.spec.ts",
         "system.spec.ts",
+        "tabs.spec.ts",
         "ui.spec.ts"
       ]
     },
