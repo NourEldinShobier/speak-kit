@@ -24,7 +24,7 @@ const dup = (b: B, p: Ref | undefined, c: string, o: Record<string, any> = {}) =
 // ---------------------------------------------------------------- Lumen parts used by both windows
 /** SettingsSection: 15/18 title, 12/15 description, 10 gap, card below */
 const section = (b: B, t: T, p: Ref | undefined, title: string, desc?: string, o: Record<string, any> = {}) => {
-  const s = b.col(p, { w: "fill", gap: 10, ...o });
+  const s = b.col(p, { w: "fill", gap: 10, clip: false, ...o }); // unclipped: the 1 px card ring and button shadows draw outside their wrapper
   const h = b.col(s, { w: "fill", gap: 2 });
   tx(b, h, title, { size: 15, weight: "SemiBold", c: t.text, lh: 18 });
   if (desc) tx(b, h, desc, { size: 12, c: t.text3, lh: 15 });
@@ -91,13 +91,13 @@ const setupWin = (b: B, t: T, root: Ref, o: SetupOpts) => {
     tx(b, c, o.h1, { x: 119, y: 192, w: 720, ta: "center", size: 28, weight: "SemiBold", c: t.text, lh: 34 });
     tx(b, c, o.sub, { x: 119, y: 223, w: 720, ta: "center", size: 13, c: t.text2, lh: 18 });
   } else {
-    tx(b, c, o.h1, { x: 119, y: 87.5, size: 20, weight: "SemiBold", c: t.text, lh: 24 });
-    tx(b, c, o.sub, { x: 119, y: 113, size: 13, c: t.text2, lh: 18 });
+    tx(b, c, o.h1, { x: 119, y: 99.5, size: 20, weight: "SemiBold", c: t.text, lh: 24 });
+    tx(b, c, o.sub, { x: 119, y: 125, size: 13, c: t.text2, lh: 18 });
   }
-  const col = b.col(c, { x: 119, y: o.bodyTop ?? 144, w: 720, gap: o.colGap ?? 14 }); o.body(col);
-  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 28], justify: "spaceBetween" });
-  const l = b.row(ft, { gap: 8 }); if (o.left) K.btn(b, t, l, o.left.label, { v: "ghost", icon: o.left.icon ?? "arrowLeft" });
-  const r = b.row(ft, { gap: 8 }); o.right(r);
+  const col = b.col(c, { x: 119, y: o.bodyTop ?? 156, w: 720, gap: o.colGap ?? 14, clip: false }); o.body(col);
+  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 28], justify: "spaceBetween", clip: false });
+  const l = b.row(ft, { gap: 8, clip: false }); if (o.left) K.btn(b, t, l, o.left.label, { v: "ghost", icon: o.left.icon ?? "arrowLeft" });
+  const r = b.row(ft, { gap: 8, clip: false }); o.right(r);
   return a;
 };
 const back = (label = "Back") => ({ label });
@@ -115,7 +115,7 @@ const radioEngine = (b: B, t: T, p: Ref | undefined, o: { ic: string; name: stri
 
 const W1 = (b: B, t: T, root: Ref) => setupWin(b, t, root, { step: 0, center: true, h1: "Read anything out loud.", sub: "On your own computer. No account, no cloud, no limits.", left: undefined,
   body: (c) => {
-    const g = b.row(c, { w: 720, gap: 12, align: "start" });
+    const g = b.row(c, { w: 720, gap: 12, align: "start", clip: false });
     featCard(b, t, g, "lock", "Private", "Text never leaves this device"); featCard(b, t, g, "zap", "Fast", "Starts speaking in about a second"); featCard(b, t, g, "globe", "Everywhere", "Web pages, PDFs, any text");
   }, bodyTop: 255,
   right: (r) => { tx(b, r, "Setup takes about 3 minutes", { size: 13, c: t.text3, lh: 18 }); K.btn(b, t, r, "Get started", { v: "primary", iconRight: "arrowRight" }); } });
