@@ -192,7 +192,7 @@ export const chromeWin = (b: B, parent: Ref | undefined, o: Stage & { w: number;
   const omniX = 108, omniW = puzX - 8 - omniX;
   const omni = b.row(tool, { name: "Omnibox", x: omniX, y: 4, w: omniW, h: 32, r: 16, fill: "#F1F3F4", pad: [0, 4, 0, 4], gap: 0 });
   const site = center(b, omni, { w: 24, h: 24, r: 12, fill: "#FFFFFF" }); b.icon(site, "sliders", 14, ICON);
-  const [host, ...rest] = o.url.split("/"); const u = b.row(omni, { w: "fill", pad: [0, 0, 0, 10], gap: 0 });
+  const [host, ...rest] = o.url.split("/"); const u = b.row(omni, { w: "fill", pad: [0, 0, 0, 10], gap: 0, clip: true });
   txt(b, u, host, { size: 14, c: INK }); if (rest.length) txt(b, u, "/" + rest.join("/"), { size: 14, c: "#5F6368", maxLines: 1 });
   const star = center(b, omni, { w: 28, h: 28 }); b.icon(star, "star", 16, ICON);
   const pz = center(b, tool, { x: puzX, y: 4, w: 32, h: 32, r: 16 }); b.icon(pz, "puzzle", 18, ICON);

@@ -27,10 +27,10 @@ const clonePage = (b: B, t: T, c: Ref, title: string, lead: string, body: (col: 
   body(col);
   const f = b.row(col, { w: "fill", gap: 8, justify: "max" }); foot(f);
 };
-const sliderRow = (b: B, t: T, p: Ref, title: string, desc: string, v: number, label: string, min: string, max: string) => {
+const sliderRow = (b: B, t: T, p: Ref, title: string, desc: string, v: number, label: string, min: string, max: string, sw = 640) => {
   const r = b.col(p, { w: "fill", gap: 8 }); const h = b.row(r, { w: "fill", justify: "spaceBetween" });
   const q = b.col(h, { gap: 1 }); b.text(q, title, { size: 13, weight: "Medium", c: C.text }); b.text(q, desc, { size: 12, c: C.t2 }); b.text(h, label, { size: 13, weight: "Medium", c: C.text });
-  K.slider(b, t, r, v, 640, { min, max });
+  K.slider(b, t, r, v, sw, { min, max });
 };
 const engRows = (cb: ER) => [KOKORO(), cb];
 const CB = (o: Partial<ER> = {}): ER => ({ name: "Chatterbox", icon: "sparkles", blurb: BLURB.chatterbox, extra: "Found NVIDIA GeForce RTX 3060, 12 GB", pill: { label: "Not installed", tone: "orange" }, actions: [{ label: "Install" }], ...o });
@@ -96,7 +96,7 @@ export const GV2: S[] = [
   }, (f) => { K.btn(b, t, f, "Choose another file", { icon: "upload" }); K.btn(b, t, f, "Record", { v: "primary", icon: "mic" }); })),
   win("G11", "Chatterbox · voice style", "Design-only (v1.1): a dialog opened from Style on a cloned voice. Sliders show their values.", (b, t, c) => {
     voicesPage(b, t, shell(b, t, c, { nav: "voices" })); scrim(b, c);
-    dialog(b, t, c, 440, "Voice style: Maya", (d) => { sliderRow(b, t, d, "Exaggeration", "0.50 is neutral.", 0.5, "0.50", "Calm", "Dramatic"); sliderRow(b, t, d, "Pace", "How fast the voice speaks.", 0.4, "0.40", "Slow", "Fast"); }, (f) => { K.btn(b, t, f, "Reset"); K.btn(b, t, f, "Done", { v: "primary" }); });
+    dialog(b, t, c, 440, "Voice style: Maya", (d) => { sliderRow(b, t, d, "Exaggeration", "0.50 is neutral.", 0.5, "0.50", "Calm", "Dramatic", 408); sliderRow(b, t, d, "Pace", "How fast the voice speaks.", 0.4, "0.40", "Slow", "Fast", 408); }, (f) => { K.btn(b, t, f, "Reset"); K.btn(b, t, f, "Done", { v: "primary" }); });
   }),
   win("G17", "Engines · Chatterbox not installed", "Design-only (needs a GPU machine): the optional engine row with the GPU it found, the Not installed pill and Install.", (b, t, c) => enginesPage(b, t, shell(b, t, c, { nav: "engines" }), engRows(CB()))),
   win("G9", "Engines · Chatterbox installing", "Design-only (needs a GPU machine): Installing 42% pill with a spinner, the setup note and a thin progress bar.", (b, t, c) =>

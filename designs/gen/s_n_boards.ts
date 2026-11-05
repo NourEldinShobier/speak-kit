@@ -55,8 +55,8 @@ const flows = (b: B, t: T, root: Ref) => {
     b.text(k, ti, { size: 16, weight: "SemiBold", c: t.text }); b.text(k, d, { size: 12, c: t.text2, w: "fill", lh: 17 }); b.frame(k, { w: 1, h: "fill" }); const ch = b.row(k, { gap: 6, wrap: true }); ids.split("  ").forEach((i) => K.chip(b, t, ch, i));
   });
   const m = b.row(c, { w: "fill", gap: 14, align: "start" });
-  X.rulesCard(b, t, m, "Time budget", ["Setup: about 2 minutes, mostly the one-time download.", "First sound after pressing play: under 1 s when loaded, about 3 s when the engine was asleep.", "Every later reading in the same session: under 1 s."], { w: 620 });
-  X.rulesCard(b, t, m, "What can go wrong", ["App not running: A9, B9. Not installed: A13. Token rejected: A14, C13.", "Engine problems: K1, K10, O3. Disk or model: K3, K4.", "Browser problems: A11 page not readable, A15 file URLs."], { w: 620 });
+  X.rulesCard(b, t, m, "Time budget", ["Setup: about 2 minutes, mostly the one-time download.", "First sound after pressing play: under 1 s when loaded, about 3 s when the engine was asleep.", "Every later reading in the same session: under 1 s."], { w: "fill" });
+  X.rulesCard(b, t, m, "What can go wrong", ["App not running: A9, B9. Not installed: A13. Token rejected: A14, C13.", "Engine problems: K1, K10, O3. Disk or model: K3, K4.", "Browser problems: A11 page not readable, A15 file URLs."], { w: "fill" });
 };
 const lifecycle = (b: B, t: T, root: Ref) => {
   const c = board(b, t, root, "Resource lifecycle: the engine loads on play and unloads when idle", "A loaded model costs about 420 MB. It is never loaded for nothing and never unloaded while it is needed.");

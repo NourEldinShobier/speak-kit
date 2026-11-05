@@ -78,6 +78,8 @@ export class B {
     if (type === "frame" && props.fill === undefined) props.fill = "none";
     if (type === "frame" && props.layout && props.sizingV === undefined && top.height === undefined) props.sizingV = "hug";
     if (type === "frame" && props.layout && props.sizingH === undefined && top.width === undefined) props.sizingH = "hug";
+    // A bare wrapper (no fill, stroke or radius) must not clip: its children's rings and shadows are drawn outside their own bounds.
+    if (type === "frame" && props.clip === undefined && props.fill === "none" && props.stroke === undefined && !props.cornerRadius) props.clip = false;
     const params: any = { type, ...top, ...extra, props };
     if (parent !== undefined) params.parent = parent;
     return this.add("node.create", params);
