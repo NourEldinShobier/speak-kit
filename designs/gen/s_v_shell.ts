@@ -106,8 +106,8 @@ const featCard = (b: B, t: T, p: Ref, ic: string, title: string, d: string) => {
   b.icon(f, ic, 18, t.text); tx(b, f, title, { size: 13, weight: "SemiBold", c: t.text, lh: 18 }); tx(b, f, d, { size: 12, c: t.text2, lh: 16 });
 };
 const radioEngine = (b: B, t: T, p: Ref | undefined, o: { ic: string; name: string; l1: string; l2: string; pill: [string, "ok" | "neutral"]; sel?: boolean; dim?: boolean }) => {
-  const r = b.row(p, { w: "fill", pad: [14, 16], gap: 12, align: "start", r: 10, fill: o.sel ? t.selected : "none" });
-  const tile = b.frame(r, { w: 32, h: 32, r: 8, fill: o.dim ? "#ECEDEF" : t.well, layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, o.ic, 18, o.dim ? "#9AA0AB" : t.iconQuiet); // unavailable: the row stays readable, only the tile turns grey
+  const r = b.row(p, { w: "fill", pad: [14, 16], gap: 12, align: "start", r: o.sel ? [10, 10, 0, 0] : 10, fill: o.sel ? t.hover : "none" }); // selection is the light hover tint and follows the card corners (top row)
+  const tile = b.frame(r, { w: 32, h: 32, r: 8, fill: o.dim ? "#ECEDEF" : t.surface, stroke: o.dim ? undefined : t.control, sw: 1, sa: "inside", layout: "horizontal", align: "center", justify: "center" }); b.icon(tile, o.ic, 18, o.dim ? "#9AA0AB" : t.iconQuiet); // unavailable: the row stays readable, only the tile turns grey
   const x = b.col(r, { gap: 4, w: "fill" });
   tx(b, x, o.name, { size: 14, weight: "SemiBold", c: t.text, lh: 16 }); tx(b, x, o.l1, { size: 13, c: t.text2, lh: 16 }); tx(b, x, o.l2, { size: 13, c: t.text2, lh: 16 });
   const pw = b.frame(r, { layout: "vertical", pad: [2, 0, 0, 0] }); K.badge(b, t, pw, o.pill[0], o.pill[1]);
