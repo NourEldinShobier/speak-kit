@@ -33,9 +33,11 @@ const section = (b: B, t: T, p: Ref | undefined, title: string, desc?: string, o
 const lcard = (b: B, t: T, p: Ref | undefined, o: Record<string, any> = {}) => b.col(p, { w: "fill", gap: 0, r: 10, fill: t.surface, shadow: "ring", ...o });
 const hair = (b: B, t: T, p: Ref | undefined) => b.rect(p, { w: "fill", h: 1, fill: "#F0F0F0" });
 /** SettingRow: label 13.5/500, description 12.5 tertiary, control right; 42 px (58 with a description, +17 per extra line) */
-const lrow = (b: B, t: T, p: Ref | undefined, label: string, desc: string[] | string | undefined, ctl?: (f: Ref) => void, o: { gap?: number } = {}) => {
+const lrow = (b: B, t: T, p: Ref | undefined, label: string, desc: string[] | string | undefined, ctl?: (f: Ref) => void, o: { gap?: number; padY?: number | [number, number] } = {}) => {
   const d = desc === undefined ? [] : typeof desc === "string" ? [desc] : desc;
-  const pad = d.length === 0 ? [3, 16] : d.length === 1 ? [12, 16] : [11, 16];
+  // padY: rows that hold buttons in the setup cards use 14 px, like the token card, so every card on a step has the same inner spacing
+  const py = o.padY;
+  const pad = py !== undefined ? (typeof py === "number" ? [py, 16] : [py[0], 16, py[1], 16]) : d.length === 0 ? [3, 16] : d.length === 1 ? [12, 16] : [11, 16];
   const r = b.row(p, { w: "fill", gap: 16, pad });
   const x = b.col(r, { gap: 1, w: "fill" });
   tx(b, x, label, { size: 13.5, weight: "Medium", c: t.text, lh: 16 });
@@ -95,8 +97,8 @@ const setupWin = (b: B, t: T, root: Ref, o: SetupOpts) => {
     tx(b, c, o.sub, { x: 119, y: 125, size: 13, c: t.text2, lh: 18 });
   }
   const col = b.col(c, { x: 119, y: o.bodyTop ?? 156, w: 720, gap: o.colGap ?? 14, clip: false }); o.body(col);
-  // 28 px from the bottom and the right; the left pad is 14 because the ghost Back button has 14 px inside, so its arrow sits 28 px from the edge too
-  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 28, 28, 14], justify: "spaceBetween", clip: false });
+  // 20 px from the bottom and the right; the left pad is 6 because the ghost Back button has 14 px inside, so its arrow sits 20 px from the edge too
+  const ft = b.row(c, { x: 0, y: 616, w: 958, h: 64, pad: [0, 20, 12, 6], justify: "spaceBetween", clip: false });
   const l = b.row(ft, { gap: 8, clip: false }); if (o.left) K.btn(b, t, l, o.left.label, { v: "ghost", icon: o.left.icon ?? "arrowLeft" });
   const r = b.row(ft, { gap: 8, clip: false }); o.right(r);
   return a;
@@ -133,7 +135,7 @@ const W2 = (gpu: boolean) => (b: B, t: T, root: Ref) => setupWin(b, t, root, { s
 
 const modelCard = (b: B, t: T, c: Ref, pill: (f: Ref) => void) => {
   const s = section(b, t, c, "Model"); const k = lcard(b, t, s);
-  lrow(b, t, k, "kokoro-82m (q8)", "110 MB of 177 MB", pill);
+  lrow(b, t, k, "kokoro-82m (q8)", "110 MB of 177 MB", pill, { padY: [14, 12] });
   const pw = b.frame(k, { w: "fill", layout: "vertical", pad: [0, 14, 14, 14] });
   K.progress(b, t, pw, 0.62, { w: 240 });
 };
@@ -153,12 +155,12 @@ const W3b = (b: B, t: T, root: Ref) => setupWin(b, t, root, { step: 2, h1: "Down
 const W4 = (o: { revealed?: boolean; port: string; token: string }) => (b: B, t: T, root: Ref) => setupWin(b, t, root, { step: 3, h1: "Connect your browser", sub: "Install the extension, paste the token, then test the connection.", left: back(),
   body: (c) => {
     const s1 = section(b, t, c, "1. Install the extension", "Add Speak Kit from the Chrome Web Store. It also installs in Edge and Brave. Then pin it from the puzzle menu.");
-    lrow(b, t, lcard(b, t, s1), "Speak Kit for Chrome", undefined, (f) => { K.btn(b, t, f, "Open Web Store", { v: "secondary", icon: "external" }); K.btn(b, t, f, "Install from this app", { v: "secondary", icon: "folder" }); }, { gap: 8 });
+    lrow(b, t, lcard(b, t, s1), "Speak Kit for Chrome", undefined, (f) => { K.btn(b, t, f, "Open Web Store", { v: "secondary", icon: "external" }); K.btn(b, t, f, "Install from this app", { v: "secondary", icon: "folder" }); }, { gap: 8, padY: 14 });
     const s2 = section(b, t, c, "2. Pair it with this app", "Copy the token and paste it in the extension under Options > General > Pairing token.");
     const k2 = lcard(b, t, s2); const pad = b.frame(k2, { w: "fill", layout: "vertical", pad: [14, 16] });
     tokenField(b, t, pad, { text: o.token, revealed: o.revealed, copied: o.revealed });
     const s3 = section(b, t, c, "3. Test the connection");
-    lrow(b, t, lcard(b, t, s3), "Check that the extension reaches this app", ["Listening on 127.0.0.1:" + o.port + ". If Windows asks about the firewall, choose Private networks or", "Cancel; Speak Kit only listens on 127.0.0.1."], (f) => K.btn(b, t, f, "Test connection", { v: "secondary" }));
+    lrow(b, t, lcard(b, t, s3), "Check that the extension reaches this app", ["Listening on 127.0.0.1:" + o.port + ". If Windows asks about the firewall, choose Private networks or", "Cancel; Speak Kit only listens on 127.0.0.1."], (f) => K.btn(b, t, f, "Test connection", { v: "secondary" }), { padY: 14 });
   },
   right: (r) => { K.btn(b, t, r, "Skip for now", { v: "ghost" }); K.btn(b, t, r, "Continue", { v: "primary", iconRight: "arrowRight", disabled: !o.revealed }); } });
 
@@ -166,7 +168,7 @@ const W5 = (skipped: boolean, port: string) => (b: B, t: T, root: Ref) => setupW
   body: (c) => {
     banner(b, t, c, "info", skipped ? "info" : "circleCheck", skipped ? "Browser extension not connected" : "Server is running", (x) => small(b, t, x, skipped ? "Pair it later under Browser." : "Listening on 127.0.0.1:" + port, { c: t.text2 }));
     const s1 = section(b, t, c, "Hear it");
-    lrow(b, t, lcard(b, t, s1), "Play sample", ["“Notes, documents and even voices lived on someone else's server, rented back to us by the", "month.”"], (f) => K.btn(b, t, f, "Play", { v: "primary", icon: "play" }));
+    lrow(b, t, lcard(b, t, s1), "Play sample", ["“Notes, documents and even voices lived on someone else's server, rented back to us by the", "month.”"], (f) => K.btn(b, t, f, "Play", { v: "primary", icon: "play" }), { padY: 14 });
     const s2 = section(b, t, c, "Handy to know"); const k = lcard(b, t, s2);
     lrow(b, t, k, "Tray icon", ["Speak Kit lives in the system tray. Windows 11 may hide it under the arrow; drag the icon out to keep it in view.", "Closing the window keeps it running."]);
     hair(b, t, k); lrow(b, t, k, "Launch at login", "Start Speak Kit when you sign in to Windows.", (f) => toggle(b, t, f, false));
