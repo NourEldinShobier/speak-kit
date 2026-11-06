@@ -31,6 +31,12 @@ Status: **Applied** means the code matches. **Design only** means the design fil
 | 2.6 | Per-platform radii | Windows: panel 8, tray, card, menu, mini player and dialog 10, controls 8. macOS: panel and tray 14, card and menu 10, window 12, dialog 16. | Applied. |
 | 2.7 | Concentric hover radii | Inner radius is container radius minus gap: menu and select option 5, segmented option 6, palette row 4 on Windows and 8 on macOS. | Applied. |
 | 2.8 | Light only | No dark theme anywhere. Only adaptation to dark host websites in the extension stays. | Applied. |
+| 2.10 | **Title bar 38 high, search field 30 high** (user, 2026-11-06). Supersedes the 36 and 28 in 2.2. | Search field 420×30, no shadow, white fill, 1 `#E5E5E5` border, radius 8, 6 side padding. Icon, text and chip start 7 from the left, top and bottom. Sidebar toggle, back, forward and bell group move down 1 (y 5). Panel and sidebar start at y 38 and lose 2 of height, so their bottom edges do not move. Caption buttons are 38 high. | **Design only.** Code (`titleBarOverlay`, `shell.css` title bar 36, search 28, `spacing.test.ts` and `shell.test.ts`) still has 36 and 28. Generator drift. |
+| 2.11 | "Ctrl K" chip in the search field copies the `kbd` style of the Secrets Watchman file (node 1287) | Fill `#ECECEC`, no border, radius 4, 16 high, 6 side padding, text `#5F6A7D` Inter Medium 12. Gaps around the chip equal the field's 7. | Design only. Code has the outlined chip. |
+| 2.12 | **Remove the "Ready" status pill from every title bar** (user, 2026-11-05). The engine widget above Settings already shows the state. 93 pills deleted. | The not-ready pills ("Unloaded", "Loading", "Offline", 7 frames) stay, restyled like Secrets Watchman node 635: no background, an 8 dot `#C9CCD2`, text `#475467` Inter Medium 13, 6 apart. Open: the macOS Settings frame H1m still shows "Ready". | Design only. Code still renders the pill (`titleBarStatus`). Decide whether to keep a not-ready indicator at all. |
+| 2.13 | "New reading" button: shortcut chip is solid, not outlined (user, 2026-11-06) | Button 36 high, fill `#201E25`. Chip 18 high, radius 4, fill `#3A3841` (no border), text white Inter Medium 11, 6 side padding. Chip is 9 from the top, bottom and right edges. The "+" icon box starts 9 from the left, so the visible "+" is 12 in and lines up with the nav icons; gap to the label is 12, so "New reading" stays aligned with the nav labels (x 37). | Design only. Code has the outlined chip (`Sidebar.tsx` and CSS). |
+| 2.14 | macOS bell: container's right edge aligns with the panel's right edge (8 from the window edge) | Bell row moved 4 left in L1m and H1m. The bell button stays borderless; a visible container is an open question. | Design only. |
+| 2.15 | Experiment on one frame (L1) that became the rule: no shadow on the search field. The tested alternative styles for the bell button (node 707 of the other file) were rejected and undone. | Search field has no shadow. Bell has no fill, border or shadow. | Design only. |
 | 2.9 | macOS Dock | Closing the window hides the Dock icon and the app stays in the menu bar; showing the window brings it back. | Applied in code (commit `7eb2fd1`). No design frame. |
 
 ## 3. Extension — applied
@@ -56,9 +62,10 @@ Status: **Applied** means the code matches. **Design only** means the design fil
 
 1. Everything in section 1 (setup window). Start with 1.2, because the clipped ring also affects the real window.
 1a. Remove the footer band from the real shell (2.2a) and set the panel's bottom inset to 8.
+1b. Title bar 38 / search 30 (2.10), the solid chips (2.11, 2.13), "Ready" pill removal (2.12) and the macOS bell (2.14) in the shell and its tests.
 2. Check that no footer, card or button shadow is clipped by `overflow` in the other windows.
 3. Decide 1.4 (inset pill or top-corner rows) and 1.9 (equal left and right footer gaps).
 
 ## Not covered
 
-This page lists what the chat history of this session and its summaries record. Decisions taken earlier in the project are in `docs/lockix-design-system.md`, `docs/lockix-spacing-audit.md` and `docs/design-restructure.md`. The generator in `designs/gen` is not kept in sync with direct edits; a full rebuild from it would undo section 1.7 and 1.9.
+This page lists what the chat history of this session and its summaries record. Decisions taken earlier in the project are in `docs/lockix-design-system.md`, `docs/lockix-spacing-audit.md` and `docs/design-restructure.md`. The generator in `designs/gen` is not kept in sync with direct edits; a full rebuild from it would undo sections 1.7, 1.9 and 2.10 to 2.14.
