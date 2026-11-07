@@ -18,6 +18,8 @@ const tests = ["**/*.test.{ts,tsx}", "**/*.spec.ts", "**/tests/**", "**/testing/
 const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**/vite.config.ts", "**/node-build.ts"];
 
 // Playwright specs in e2e/ run with `pnpm run e2e`, not under vitest.
+const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**"];
+
 export default defineConfig({
   // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
   fmt: {
@@ -36,7 +38,25 @@ export default defineConfig({
   // Extension code reads this build flag; the extension package defines it for its own tests, the root run needs it too.
   define: { __TEST__: "false" },
   // The extension package runs its browser tests with 20 s; the root run has to allow the same when everything runs in parallel (the default is 5 s). Desktop specs set their own 60 s.
-  test: { testTimeout: 20_000, exclude: ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**"] },
+  // The desktop resource and event-loop budgets measure the whole machine, so that file runs alone, after every other file (group order 2), against the same budgets.
+  test: {
+    testTimeout: 20_000,
+    projects: [
+      { extends: true, test: { name: "main", exclude: [...EXCLUDE, "apps/desktop/tests/**"] } },
+      // Every Electron spec starts whole apps; eleven at once starve each other (a window took over 30 s to appear), so three at a time.
+      { extends: true, test: { name: "desktop", include: ["apps/desktop/tests/**/*.test.ts"], exclude: [...EXCLUDE, "apps/desktop/tests/perf.test.ts"], maxWorkers: 3, sequence: { groupOrder: 1 } } },
+      {
+        extends: true,
+        test: {
+          name: "perf",
+          include: ["apps/desktop/tests/perf.test.ts"],
+          exclude: EXCLUDE,
+          fileParallelism: false,
+          sequence: { groupOrder: 2 },
+        },
+      },
+    ],
+  },
   lint: {
     ignorePatterns: ["scripts/canary/*/**"],
     plugins: ["typescript", "unicorn", "oxc", "react", "import", "node"],

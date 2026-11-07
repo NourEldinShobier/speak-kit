@@ -174,7 +174,7 @@ describe("POST /v1/engine/hold", () => {
 
 describe("concurrency cap and replace", () => {
   it("queues beyond maxStreams FIFO and answers 429 busy beyond maxQueue", async () => {
-    ctx = await start({ latencyMs: 150 }, undefined, { maxStreams: 1, maxQueue: 1 });
+    ctx = await start({ latencyMs: 600 }, undefined, { maxStreams: 1, maxQueue: 1 });
     const order: string[] = [];
     const run = async (name: string) => {
       const r = await speak(ctx!, [name]);
