@@ -42,8 +42,8 @@ describe("MiniPlayer", () => {
   });
 
   it("draws the pause button as two 3 px bars while it speaks and a play icon otherwise", () => {
-    expect(mini({ status: "playing" })).toContain('<span class="mini__pause" aria-hidden="true"><i></i><i></i></span>');
-    expect(mini({ status: "paused" })).not.toContain("mini__pause");
+    expect(mini({ status: "playing" })).toContain("lm-icon--player-pause");
+    expect(mini({ status: "paused" })).not.toContain("lm-icon--player-pause");
   });
 
   it("puts the lock and close buttons in the header next to the time left", () => {

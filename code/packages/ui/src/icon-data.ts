@@ -50,7 +50,7 @@ export const ICON_DATA = {
   "minus": "<path d=\"M5 12l14 0\"/>",
   "moon": "<path d=\"M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008\"/>",
   "pencil": "<path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\"/><path d=\"M13.5 6.5l4 4\"/>",
-  "player-pause": "<path d=\"M6 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12\"/><path d=\"M14 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12\"/>",
+  "player-pause": "<rect x=\"5.25\" y=\"3\" width=\"4.5\" height=\"18\" rx=\"1.5\"/><rect x=\"14.25\" y=\"3\" width=\"4.5\" height=\"18\" rx=\"1.5\"/>",
   "player-play": "<path d=\"M7 4v16l13 -8l-13 -8\"/>",
   "player-skip-back": "<path d=\"M20 5v14l-12 -7l12 -7\"/><path d=\"M4 5l0 14\"/>",
   "player-skip-forward": "<path d=\"M4 5v14l12 -7l-12 -7\"/><path d=\"M20 5l0 14\"/>",

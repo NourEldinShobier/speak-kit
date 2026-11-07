@@ -90,16 +90,6 @@ body {
   height: 4px;
   margin-inline: 14px;
 }
-.mini__pause {
-  display: flex;
-  gap: 3px;
-}
-.mini__pause i {
-  width: 3px;
-  height: 12px;
-  border-radius: 1px;
-  background: currentColor;
-}
 .mini__ctl {
   display: flex;
   align-items: center;

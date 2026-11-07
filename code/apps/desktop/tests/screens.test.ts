@@ -276,9 +276,9 @@ describe("mini player (2.19)", () => {
   it("the pause button is two 3 px bars with a 3 px gap", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_LATENCY_MS: "400" } });
     const m = await openMini(l);
-    await m.locator(".mini__pause").waitFor();
-    const a = await box(m, ".mini__pause i", 0);
-    const b = await box(m, ".mini__pause i", 1);
-    expect([a.w, b.w, b.x - a.r]).toEqual([3, 3, 3]);
+    await m.locator(".lm-icon--player-pause").waitFor();
+    const a = await box(m, ".lm-icon--player-pause rect", 0);
+    const b = await box(m, ".lm-icon--player-pause rect", 1);
+    expect([a.w, b.w, b.h, b.x - a.r]).toEqual([3, 3, 12, 3]);
   });
 });

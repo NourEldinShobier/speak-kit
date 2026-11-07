@@ -17,6 +17,14 @@ const NAMES =
     /\s+/,
   );
 
+// Drawn here instead of taken from Tabler: two 3 px bars with a 3 px gap at the default 16 px glyph (4.5 units on the 24 grid), 12 px high.
+const OVERRIDES = {
+  "player-pause": [
+    ["rect", { x: 5.25, y: 3, width: 4.5, height: 18, rx: 1.5 }],
+    ["rect", { x: 14.25, y: 3, width: 4.5, height: 18, rx: 1.5 }],
+  ],
+};
+
 const attrs = (a) =>
   Object.entries(a)
     .filter(([k]) => k !== "key")
@@ -26,7 +34,7 @@ const attrs = (a) =>
 export function renderIconData() {
   const out = {};
   for (const name of NAMES) {
-    const n = nodes[name];
+    const n = OVERRIDES[name] ?? nodes[name];
     if (!n) throw new Error(`missing icon ${name}`);
     out[name] = n
       .filter(([, a]) => a.stroke !== "none")

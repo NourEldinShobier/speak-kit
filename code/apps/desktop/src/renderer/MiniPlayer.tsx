@@ -12,19 +12,10 @@ export function miniProgress(r: Pick<ReaderState, "status" | "elapsedMs" | "tota
   return { value: pct, error: r.status === "error" };
 }
 
-/** Play, replay or pause; the pause glyph is two 3 px bars 3 px apart. */
+/** Play, replay or pause (the shared pause glyph is two 3 px bars 3 px apart). */
 function PlayButton({ status }: { status: string }) {
   const b = playButton(status);
-  const onClick = () => api.reader({ type: "toggle" });
-  if (b.name !== "player-pause") return <IconButton round className="lm-btn--primary" name={b.name} label={b.label} onClick={onClick} />;
-  return (
-    <button type="button" className="lm-btn lm-btn--icon lm-btn--round lm-btn--primary" aria-label={b.label} onClick={onClick}>
-      <span className="mini__pause" aria-hidden="true">
-        <i />
-        <i />
-      </span>
-    </button>
-  );
+  return <IconButton round className="lm-btn--primary" name={b.name} label={b.label} onClick={() => api.reader({ type: "toggle" })} />;
 }
 
 export function MiniPlayer({ s, onTop, setOnTop }: { s: AppState; onTop: boolean; setOnTop(on: boolean): void }) {
