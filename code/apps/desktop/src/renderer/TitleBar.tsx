@@ -1,14 +1,9 @@
 import { useState } from "react";
-import { Icon, IconButton, Kbd, Popover, StatusPill } from "@speakkit/ui";
+import { Icon, IconButton, Kbd, Popover } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import { showAccelerator } from "../shared/shortcuts";
 import { UpdatePill } from "./UpdateCard";
-
-function pillIcon(v: ReturnType<typeof engineView>) {
-  if (v.spinner) return "loader-2";
-  return v.key === "unloaded" ? "moon" : undefined;
-}
 
 function Bell({ s }: { s: AppState }) {
   const [seen, setSeen] = useState(0);
@@ -53,7 +48,7 @@ export interface TitleBarProps {
   onSearch(): void;
 }
 
-/** The 36 px bar: sidebar toggle and history, the search box that opens the palette, engine status, update pill and notifications. */
+/** The 38 px bar: sidebar toggle and history, the search box that opens the palette, the engine status while it is not ready, update pill and notifications. */
 export function TitleBar(p: TitleBarProps) {
   const v = engineView(p.s.health, p.s.serverError);
   return (
@@ -69,10 +64,12 @@ export function TitleBar(p: TitleBarProps) {
         <Kbd small>{showAccelerator("Ctrl+K", p.s.platform, "app").replace("+", " ")}</Kbd>
       </button>
       <div className="sk-title__r">
-        <StatusPill data-testid="engine-pill" tone={v.tone} icon={pillIcon(v)}>
-          {v.label}
-          {v.hint ? ` · ${v.hint}` : ""}
-        </StatusPill>
+        {v.key !== "ready" && (
+          <span className="sk-engstat" data-testid="title-engine-status">
+            {v.label}
+            {v.hint ? ` · ${v.hint}` : ""}
+          </span>
+        )}
         <UpdatePill s={p.s} />
         <Bell s={p.s} />
       </div>

@@ -14,7 +14,6 @@ import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
 import { Wizard } from "./features/wizard";
 import { BrowserPage } from "./BrowserPage";
-import { Footer } from "./Footer";
 import { Home } from "./HomePage";
 import { PreviewCtx } from "./pages";
 import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
@@ -177,7 +176,6 @@ function Shell({ s }: { s: AppState }) {
             <PageView s={s} page={page} sub={sub} doc={st.doc} dispatch={dispatch} />
           </main>
         </div>
-        <Footer s={s} page={page} />
         <Overlays s={s} st={st} dispatch={dispatch} player={player} />
         <UpdatingCard s={s} />
       </div>

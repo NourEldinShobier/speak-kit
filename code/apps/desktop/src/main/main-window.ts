@@ -5,7 +5,7 @@ import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ip
 import type { Config } from "../shared/schemas";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
-import { appBackground, titleBarSymbol } from "./window-colors";
+import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const TITLE = "Speak Kit";
@@ -83,6 +83,7 @@ export class MainWindow {
     const w = this.window;
     if (!w) return;
     if (process.platform !== "darwin") w.setTitleBarOverlay(this.#overlay()); // macOS keeps its traffic lights
+    w.setBackgroundColor(this.#background());
     if (this.#config.setupDone) {
       w.setMinimumSize(960, 640);
       w.setResizable(true);
@@ -106,7 +107,7 @@ export class MainWindow {
         height: done ? 800 : 680,
         title: TITLE,
         show: false,
-        backgroundColor: appBackground(),
+        backgroundColor: this.#background(),
         icon: appIcon(),
         titleBarStyle: "hidden",
         ...(process.platform === "darwin" ? { trafficLightPosition: { x: 16, y: 14 } } : { titleBarOverlay: this.#overlay() }),
@@ -151,11 +152,16 @@ export class MainWindow {
     app.quit();
   }
 
+  /** White while setup runs (no grey flash), the window grey afterwards. */
+  #background() {
+    return this.#config.setupDone ? appBackground() : setupBackground();
+  }
+
   #overlay() {
     return {
       color: "#00000000",
       symbolColor: titleBarSymbol(),
-      height: this.#config.setupDone ? 36 : 32, // Lockix: shell title bar 36 (--bar-h), setup window 32
+      height: this.#config.setupDone ? 38 : 32, // shell title bar 38 (--bar-h), setup window 32
     };
   }
 }

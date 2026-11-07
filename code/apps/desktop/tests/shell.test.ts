@@ -18,18 +18,18 @@ const box = async (l: Launched, sel: string) => (await l.page.locator(sel).first
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 
 describe("Lumen shell", () => {
-  it("measures: title bar 36, sidebar 248, search 420x28, content panel 8 px from the right edge, 28 px footer band, no stroke", async () => {
+  it("measures: title bar 38, sidebar 248, search 420x30, content panel 8 px from the right and bottom edges, no footer band, no stroke", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect((await box(l, ".sk-title")).height).toBe(36);
+    expect((await box(l, ".sk-title")).height).toBe(38);
     expect((await box(l, ".sk-side")).width).toBe(248);
     const search = await box(l, ".sk-search");
-    expect([search.width, search.height]).toEqual([420, 28]);
+    expect([search.width, search.height]).toEqual([420, 30]);
     const main = await box(l, ".sk-main");
     const inner = await l.page.evaluate(() => [innerWidth, innerHeight]);
     expect(main.x).toBe(252);
     expect(main.x + main.width).toBe(inner[0]! - 8);
-    expect(main.y + main.height).toBe(inner[1]! - 28);
+    expect(main.y + main.height).toBe(inner[1]! - 8);
     // Lockix panel: no stroke, a card shadow instead.
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: New reading, Home, Library, Voices, Engines, Browser, Settings, Recent.
@@ -37,8 +37,8 @@ describe("Lumen shell", () => {
     for (const n of ["Home", "Voices", "Engines", "Browser", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
     expect(await nav.getByRole("link", { name: "Library" }).count()).toBe(1);
     expect(await nav.getByText("Recent").count()).toBe(1);
-    // Status pill and bell live in the title bar.
-    expect(await l.page.getByTestId("engine-pill").textContent()).toBe("Ready");
+    // A ready engine shows nothing in the title bar (the sidebar card says it); the bell lives there.
+    await l.page.getByTestId("title-engine-status").waitFor({ state: "detached" });
     expect(await l.page.getByRole("button", { name: "Notifications" }).count()).toBe(1);
     // Sidebar toggle hides it and the card grows.
     await l.page.getByRole("button", { name: "Toggle sidebar" }).click();
@@ -54,6 +54,48 @@ describe("Lumen shell", () => {
     expect((await box(l, ".sk-setup__col")).width).toBe(720);
     expect((await box(l, ".sk-setup__foot")).height).toBe(64);
     expect(await l.page.locator(".lm-step").count()).toBe(5);
+  });
+
+  it("setup window: white page, 20 px under the stepper, unclipped card rings, 16 px footer buttons, faint selected engine row", async () => {
+    const l = await start();
+    await l.page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
+    const style = (sel: string, props: string[]) =>
+      l.page
+        .locator(sel)
+        .first()
+        .evaluate((e, ps) => ps.map((p) => getComputedStyle(e).getPropertyValue(p)), props);
+    expect(await style(".sk-setup", ["background-color"])).toEqual(["rgb(255, 255, 255)"]);
+    await l.page.getByRole("button", { name: /Get started/ }).click();
+    await l.page.getByRole("heading", { name: "Choose a voice engine" }).waitFor();
+    // Headline 20 px under the stepper (stepper ends at 84).
+    expect((await box(l, ".sk-setup__col h1")).y).toBe(104);
+    // The scroller spans the window and the column does not clip, so the ring of a card (1 px outside it) shows at both sides.
+    expect(await style(".sk-setup__scroll", ["overflow-y"])).toEqual(["auto"]);
+    expect(await style(".sk-setup__col", ["overflow-x", "overflow-y"])).toEqual(["visible", "visible"]);
+    const [scroll, card] = [await box(l, ".sk-setup__scroll"), await box(l, ".sk-setup .lm-card")];
+    expect([scroll.x < card.x - 1, scroll.x + scroll.width > card.x + card.width + 1, card.width]).toEqual([true, true, 720]);
+    // Selected engine: tint, top corners round, bottom flat; the icon tile is white with a 1 px stroke.
+    expect(await style(".sk-radio.is-sel", ["background-color", "border-top-left-radius", "border-bottom-left-radius"])).toEqual(["rgba(0, 0, 0, 0.04)", "10px", "0px"]);
+    expect(await style(".sk-radio.is-sel .sk-tile", ["background-color", "border-top-color"])).toEqual(["rgb(255, 255, 255)", "rgb(229, 229, 229)"]);
+    expect(Number.parseFloat((await style(".sk-radio.is-sel .sk-tile", ["border-top-width"]))[0]!)).toBeGreaterThan(0.5); // 1 px, or one device pixel on a scaled screen
+    // Footer: Back's box 12 from the left, the primary 20 from the right, both 16 from the bottom.
+    const [h, w] = await l.page.evaluate(() => [innerHeight, innerWidth] as const);
+    const back = await box(l, ".sk-setup__foot .lm-btn--ghost");
+    const next = await box(l, ".sk-setup__foot .lm-btn--primary");
+    expect([back.x, w - (next.x + next.width), h - (back.y + back.height), h - (next.y + next.height), next.height]).toEqual([12, 20, 16, 16, 36]);
+  });
+
+  it("setup rows share one 14 px vertical padding", async () => {
+    const l = await start();
+    await l.page.getByRole("button", { name: /Get started/ }).click();
+    await l.page.getByRole("button", { name: /Download Kokoro/ }).click();
+    await l.page.getByRole("button", { name: /^Continue/ }).click();
+    await l.page.getByRole("heading", { name: "Connect your browser" }).waitFor();
+    const pads = await l.page.locator(".sk-setup .lm-row").evaluateAll((rows) => rows.map((r) => [getComputedStyle(r).paddingTop, getComputedStyle(r).paddingBottom]));
+    expect(pads).toEqual([
+      ["14px", "14px"],
+      ["14px", "14px"],
+    ]);
   });
 
   it("test connection waits for the extension's first authenticated call", async () => {
@@ -197,7 +239,14 @@ describe("settings", () => {
     const kokoro = await l.page.locator("[data-engine=kokoro]").textContent();
     expect(kokoro).toContain("Unloaded");
     expect(kokoro).toContain("Not in memory (0 MB)");
-    expect(await l.page.getByTestId("engine-pill").textContent()).toBe("Unloaded · Wakes on play");
+    expect(await l.page.getByTestId("title-engine-status").textContent()).toBe("Unloaded · Wakes on play");
+    // Not ready: a grey 8 px dot and one line of text, no pill and no fill.
+    const look = await l.page.getByTestId("title-engine-status").evaluate((e) => {
+      const c = getComputedStyle(e);
+      const d = getComputedStyle(e, "::before");
+      return [c.backgroundColor, c.color, c.fontSize, c.fontWeight, c.columnGap, d.width, d.height, d.backgroundColor];
+    });
+    expect(look).toEqual(["rgba(0, 0, 0, 0)", "rgb(71, 84, 103)", "13px", "500", "6px", "8px", "8px", "rgb(201, 204, 210)"]);
   });
 });
 

@@ -39,8 +39,9 @@ html[data-hidden] *::after {
   animation-play-state: paused !important;
 }
 .sk-app {
+  --bar-h: 38px;
   display: grid;
-  grid-template-rows: var(--bar-h) 1fr var(--footer-h);
+  grid-template-rows: var(--bar-h) 1fr;
   height: 100%;
 }
 .sk-body {
@@ -48,7 +49,7 @@ html[data-hidden] *::after {
   min-height: 0;
 }
 
-/* ---- title bar 36 px (--bar-h): toggle, history | search 420x28 | status pill, bell | native window controls ---- */
+/* ---- title bar 38 px (--bar-h): toggle, history | search 420x30 | engine status (only when not ready), bell | native window controls ---- */
 .sk-title {
   display: grid;
   grid-template-columns: 1fr 420px 1fr;
@@ -64,7 +65,7 @@ html[data-hidden] *::after {
   -webkit-app-region: no-drag;
 }
 /* macOS: the traffic lights sit at the start of the bar (about 78 px), so the left group starts after them. The right group has no native
-   controls beside it: it runs to the far right edge with the same gap as above and below its 28 px buttons (4 px), and the columns stay
+   controls beside it: the bell's right edge lines up with the panel's right edge (8 px from the window edge), and the columns stay
    equal so the search box stays centred in the window. */
 html[data-platform="darwin"] .sk-title {
   padding-inline: 0;
@@ -73,7 +74,7 @@ html[data-platform="darwin"] .sk-title__l {
   padding-inline-start: 78px;
 }
 html[data-platform="darwin"] .sk-title__r {
-  padding-inline-end: calc((var(--bar-h) - 28px) / 2);
+  padding-inline-end: var(--panel-inset-end);
 }
 .sk-title__l,
 .sk-title__r {
@@ -90,15 +91,15 @@ html[data-platform="darwin"] .sk-title__r {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
 .sk-search {
-  height: 28px;
+  height: 30px;
   width: 420px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px 0 10px;
+  padding: 0 6px;
   border: 1px solid var(--stroke-control);
   border-radius: var(--radius-control);
-  box-shadow: var(--shadow-control);
   background: var(--surface-input);
   color: var(--text-tertiary);
   font: inherit;
@@ -116,6 +117,40 @@ html[data-platform="darwin"] .sk-title__r {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Key chip (Secrets Watchman kbd): grey fill, no border, 16 high. */
+.sk-search .lm-kbd {
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, black 7.5%, white);
+  color: var(--text-tertiary);
+  font:
+    500 12px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+/* Shown only while the engine is not ready: a grey dot and one line of text, no pill. */
+.sk-engstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font:
+    500 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+.sk-engstat::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--disabled-thumb);
+}
 .sk-bell {
   position: relative;
 }
@@ -130,7 +165,7 @@ html[data-platform="darwin"] .sk-title__r {
   pointer-events: none;
 }
 
-/* ---- sidebar 248 + content panel: items 8 from the window edge and 8 from the panel (Lockix rail: pl-2, pr-1 + panel pl-1) ---- */
+/* ---- sidebar 248 + content panel: items 8 from the window edge and 8 from the panel (Lockix rail: pl-2, pr-1 + panel pl-1); both end 8 above the window bottom ---- */
 .sk-side {
   width: 248px;
   flex: none;
@@ -138,6 +173,7 @@ html[data-platform="darwin"] .sk-title__r {
   flex-direction: column;
   gap: 4px;
   padding: 2px 4px 2px 8px;
+  margin-block-end: var(--panel-inset-end);
   overflow-y: auto;
 }
 .sk-side[hidden] {
@@ -150,6 +186,24 @@ html[data-platform="darwin"] .sk-title__r {
   width: 100%;
   box-sizing: border-box;
   justify-content: flex-start;
+}
+.sk-side .lm-btn--primary {
+  padding: 0 9px;
+  gap: 13px; /* the spec says 12 from the icon box; 13 puts the label on the nav labels, which is the stated aim */
+}
+/* Shortcut chip on the New reading button: solid, no border, 18 high, 9 from the top, bottom and right edges. */
+.sk-side .lm-btn--primary .lm-kbd {
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, white 11.5%, var(--cta));
+  color: var(--text-on-cta);
+  font:
+    500 11px/18px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
 }
 .sk-side .lm-btn--icon {
   width: 28px;
@@ -218,57 +272,11 @@ html[data-platform="darwin"] .sk-title__r {
 .sk-main {
   flex: 1;
   min-width: 0;
-  margin: 0 var(--panel-inset-end) 0 var(--panel-inset);
+  margin: 0 var(--panel-inset-end) var(--panel-inset-end) var(--panel-inset);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
   background: var(--surface-editor);
   overflow: auto;
-}
-/* Footer band 28 px (Lockix footer.tsx): the window grey under the panel, one right-aligned muted line. */
-.sk-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-width: 0;
-  padding: 0 14px;
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 12px;
-  line-height: 16px;
-  user-select: none;
-}
-.sk-footer__item {
-  flex: none;
-  white-space: nowrap;
-}
-.sk-footer__item:last-child {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sk-footer__div {
-  flex: none;
-  width: 1px;
-  height: 12px;
-  background: var(--stroke-field);
-}
-@media (max-width: 1024px) {
-  .sk-side {
-    width: 48px;
-  }
-  .sk-side .lm-nav__label,
-  .sk-side .lm-nav__section,
-  .sk-side .lm-badge,
-  .sk-side__label,
-  .sk-side__empty,
-  .sk-engcard {
-    display: none;
-  }
-  .sk-side .lm-btn {
-    justify-content: center;
-  }
 }
 /* Lockix scrollbar (lockix-components.css section 15): 10 px, pill thumb, no arrow buttons. */
 ::-webkit-scrollbar {

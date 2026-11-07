@@ -1,8 +1,9 @@
-/* ---- setup window: title 32, stepper 52, column 720, footer 64 ---- */
+/* ---- setup window: white, title 32, stepper 52, column 720, footer 64 ---- */
 .sk-setup {
   display: grid;
   grid-template-rows: 32px 52px 1fr 64px;
   height: 100%;
+  background: var(--surface-card);
 }
 .sk-setup__title {
   display: flex;
@@ -18,17 +19,20 @@
   align-items: center;
   justify-content: center;
 }
+/* The scroller spans the window and the column inside does not clip, so the 1 px card rings and button shadows at the column edges show. */
+.sk-setup__scroll {
+  overflow-y: auto;
+  min-height: 0;
+}
 .sk-setup__col {
   width: 720px;
   max-width: 100%;
   margin: 0 auto;
-  padding-top: 8px;
+  padding: 20px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow-y: auto;
   box-sizing: border-box;
-  min-height: 0;
 }
 .sk-setup__col h1 {
   margin: 0;
@@ -41,9 +45,9 @@
 }
 .sk-setup__foot {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  align-items: flex-end;
+  padding: 0 20px 16px 12px; /* buttons 16 from the bottom, Back's box 12 from the left, the primary 20 from the right */
   border-top: 1px solid var(--stroke-hairline);
 }
 .sk-setup__foot > div {
@@ -99,9 +103,19 @@
   background: var(--disabled-track);
   color: var(--disabled-seg);
 }
+/* Selected engine: a faint tint; the top corners follow the card, the bottom meets the divider flat. */
 .sk-radio.is-sel {
-  background: var(--fill-selected);
-  border-radius: var(--radius-card);
+  background: var(--fill-hover);
+  border-start-start-radius: var(--radius-card);
+  border-start-end-radius: var(--radius-card);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+/* The icon tile is white with a 1 px stroke, so it reads on the tint. */
+.sk-setup .sk-tile {
+  box-sizing: border-box;
+  border: 1px solid var(--stroke-control);
+  background: var(--surface-card);
 }
 .sk-check {
   display: flex;
@@ -114,4 +128,10 @@
 
 .sk-error {
   padding: 32px;
+}
+
+/* Every row in a setup card has the same 14 px above and below (the token card's padding). */
+.sk-setup .lm-row,
+.sk-setup .lm-row:has(.lm-row__desc) {
+  padding-block: var(--card-pad-y);
 }

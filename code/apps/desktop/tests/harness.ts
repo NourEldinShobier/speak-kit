@@ -51,7 +51,7 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
   const app = await _electron.launch({ executablePath: electronPath, args: [appDir, ...(opts.args ?? [])], env });
   const page = await app.firstWindow();
   // The app window opens at 1280x800 unless the screen's work area is smaller (a hosted runner is 1024x768): it is then clamped to the screen
-  // and the sidebar falls into its 60 px rail. Resizing after it opened is not clamped. The setup window is not resizable and fits any screen.
+  // and the layout shrinks to the screen. Resizing after it opened is not clamped. The setup window is not resizable and fits any screen.
   await app.evaluate(({ BrowserWindow }) => {
     const w = BrowserWindow.getAllWindows()[0]!;
     if (w.isResizable()) w.setContentSize(1280, 800);

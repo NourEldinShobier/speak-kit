@@ -13,15 +13,17 @@ export function Frame({ at, title, sub, foot, children, center }: { at: number; 
       <div className="sk-setup__stepper">
         <Stepper steps={[...STEPS]} current={at} />
       </div>
-      <div className="sk-setup__col">
-        {center && (
-          <div className="sk-center">
-            <Logo size={72} />
-          </div>
-        )}
-        <h1 style={center ? { textAlign: "center", fontSize: 28 } : undefined}>{title}</h1>
-        <p style={center ? { textAlign: "center" } : undefined}>{sub}</p>
-        {children}
+      <div className="sk-setup__scroll">
+        <div className="sk-setup__col">
+          {center && (
+            <div className="sk-center">
+              <Logo size={72} />
+            </div>
+          )}
+          <h1 style={center ? { textAlign: "center", fontSize: 28 } : undefined}>{title}</h1>
+          <p style={center ? { textAlign: "center" } : undefined}>{sub}</p>
+          {children}
+        </div>
       </div>
       <div className="sk-setup__foot">{foot}</div>
     </div>
