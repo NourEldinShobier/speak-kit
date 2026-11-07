@@ -70,6 +70,13 @@ describe("splitSentences, longer cases", () => {
     expect(texts(splitSentences("Hello there. ... Another one."))).toEqual(["Hello there. ...", "Another one."]);
   });
 
+  test("sentence ends without a following space split Chinese, Japanese, Hindi and Arabic text", () => {
+    expect(texts(splitSentences("今天天气很好。我们去公园散步吧！", "zh"))).toEqual(["今天天气很好。", "我们去公园散步吧！"]);
+    expect(texts(splitSentences("東京は大きな都市です。私は毎日電車で通勤します。", "ja"))).toEqual(["東京は大きな都市です。", "私は毎日電車で通勤します。"]);
+    expect(texts(splitSentences("यह एक परीक्षण वाक्य है। दूसरा वाक्य यहाँ है।", "hi"))).toEqual(["यह एक परीक्षण वाक्य है।", "दूसरा वाक्य यहाँ है।"]);
+    expect(texts(splitSentences("هل أنت بخير؟نعم أنا بخير.", "ar"))).toEqual(["هل أنت بخير؟", "نعم أنا بخير."]);
+  });
+
   test("batch splitting equals one-by-one splitting", () => {
     const blocks = ["One. Two.", "Single sentence without a stop", "Dr. A went home. Then he slept.", ""];
     expect(splitMany(blocks)).toEqual(blocks.map((b) => splitSentences(b)));

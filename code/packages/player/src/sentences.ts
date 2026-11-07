@@ -18,7 +18,8 @@ const ABBR =
 const HAS_WORD = /[0-9A-Za-z\u00c0-\u1fff\u2c00-\ud7ff]/; // cheaper than \p{L}: Latin, Greek, Cyrillic, Arabic, Indic, CJK
 /** Whether the text holds a letter or digit (stray quotes and bullets do not). */
 export const hasWord = (s: string) => HAS_WORD.test(s);
-const INNER_BOUNDARY = /[.!?…。！？]["'”’)\]]*\s+\S/;
+// CJK, Devanagari and Arabic text ends a sentence without a following space.
+const INNER_BOUNDARY = /[.!?…。！？]["'”’)\]]*\s+\S|[。！？｡।॥؟۔]./u;
 const CLAUSE = /[;:](?=\s)|,(?=\s)|\s[—–-]\s|\s(?=(?:and|but|or|which|that|because|while|although|so)\s)/g;
 
 const segmenters = new Map<string, Intl.Segmenter>();
