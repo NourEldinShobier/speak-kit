@@ -131,7 +131,7 @@ export function guardRequest(req: IncomingMessage, res: ServerResponse, o: Guard
 export function preflight(res: ServerResponse, origin: string | undefined): void {
   if (!origin) throw new HttpError(403, "forbidden", "preflight needs an extension origin");
   res.writeHead(204, {
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-SpeakKit-Replace",
     "Access-Control-Max-Age": "600",
   });
