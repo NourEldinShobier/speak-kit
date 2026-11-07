@@ -71,16 +71,20 @@ export class Docs {
     }
   }
 
+  /** What to read: the selected range, else the selected text of a field, else the page (the selection is empty). */
+  private source(mode: ReadMode): { ex: Extraction | undefined; effective: ReadMode } {
+    const sel = mode === "selection" ? currentSelection() : undefined;
+    const field = mode === "selection" && !sel ? fieldSelection(document.activeElement) : undefined;
+    return { ex: field ? extractFieldText(document, field) : this.extraction(sel), effective: mode === "selection" && !sel && !field ? "page" : mode };
+  }
+
   build(mode: ReadMode, el?: Element): ReadDoc | { error: "page-unreadable" } {
     const c = this.c;
     if (c.rule() === "never-read") return { error: "page-unreadable" };
     // With the reader open, reading the page means reading the document the reader shows, so its highlight follows.
     const shown = c.reader && c.readerDoc && mode === "page" ? c.docs.get(c.readerDoc)?.doc : undefined;
     if (shown && shown.source !== "selection") return { ...shown, startIndex: 0 };
-    const sel = mode === "selection" ? currentSelection() : undefined;
-    const field = mode === "selection" && !sel ? fieldSelection(document.activeElement) : undefined;
-    const effective = mode === "selection" && !sel && !field ? "page" : mode;
-    const ex = field ? extractFieldText(document, field) : this.extraction(sel);
+    const { ex, effective } = this.source(mode);
     if (!ex) return { error: "page-unreadable" };
     let startIndex = 0;
     if (effective === "from-here") {
