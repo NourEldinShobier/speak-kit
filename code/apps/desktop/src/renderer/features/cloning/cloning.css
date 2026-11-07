@@ -134,9 +134,8 @@
 .sk-clone-slider .lm-slider {
   width: 100%;
 }
+.sk-clone-slider__head,
 .sk-clone-slider__head {
-  display: flex;
-  justify-content: space-between;
   align-items: flex-start;
 }
 .sk-clone-slider__head span {

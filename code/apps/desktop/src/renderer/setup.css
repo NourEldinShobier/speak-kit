@@ -117,19 +117,6 @@
   border: 1px solid var(--stroke-control);
   background: var(--surface-card);
 }
-.sk-check {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.sk-check .lm-icon {
-  color: var(--tag-green);
-}
-
-.sk-error {
-  padding: 32px;
-}
-
 /* Every row in a setup card has the same 14 px above and below (the token card's padding). */
 .sk-setup .lm-card .lm-row.lm-row {
   padding-block: var(--card-pad-y);

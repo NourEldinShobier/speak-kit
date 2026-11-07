@@ -25,9 +25,7 @@ input,
 textarea,
 [contenteditable="true"],
 .rd-text,
-.sk-mono,
 .sk-token__box,
-.sk-selectable,
 code,
 [data-testid="url-details"] {
   user-select: text;

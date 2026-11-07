@@ -82,8 +82,7 @@
 .sk-dot.is-idle {
   background: var(--text-tertiary);
 }
-code,
-.sk-mono {
+code {
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
 }
