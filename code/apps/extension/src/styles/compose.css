@@ -214,10 +214,15 @@ body {
   white-space: nowrap;
   text-align: left;
 }
+/* plain buttons in the kit's segmented track (the Radix toggle group would add to the popup bundle): pressed = the selected tab */
 .pp-presets {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+  width: 100%;
+}
+.pp-presets .lm-seg__opt[aria-pressed="true"] {
+  background: var(--surface-card);
+  color: var(--text-label-on-white);
+  font-weight: 500;
+  box-shadow: var(--shadow-tab);
 }
 .pp-speed-f {
   display: flex;
@@ -231,27 +236,28 @@ body {
   flex-direction: column;
   gap: 10px;
 }
-.pp-slider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.pp-slider .lm-slider {
+.pp-speed .lm-slider {
   width: 100%;
 }
-.pp-slider output {
-  min-width: 44px;
-  text-align: right;
+.pp-srow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--text-secondary);
   font:
-    600 14px/17px Inter,
+    500 13px/16px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
 }
+.pp-srow output {
+  color: var(--text-primary);
+  font-weight: 600;
+}
 .pp-slider-l {
   display: flex;
   justify-content: space-between;
-  margin-top: 2px;
+  margin-top: -6px;
   color: var(--text-tertiary);
   font-size: 11px;
 }
@@ -355,10 +361,18 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+/* three 104 px dropdowns in one row (popup 328 px wide), all 36 high */
 .sk-voices__filters {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 104px);
+  gap: 8px;
+}
+.sk-voices__filters .lm-select {
+  width: 104px;
+}
+.sk-voices__filters .lm-select__trigger {
+  min-width: 0;
+  padding-inline: 10px;
 }
 .sk-voices__list {
   display: flex;
@@ -446,14 +460,6 @@ body {
     "Inter Variable",
     system-ui,
     sans-serif;
-}
-.pp-mini {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.pp-mini .lm-progress {
-  width: 100%;
 }
 
 /* ---------- options page ---------- */
@@ -1129,7 +1135,7 @@ body {
 }
 
 /* Readouts with a font shorthand reset the numeric variant: set it after the shorthand. */
-.pp-slider output,
+.pp-srow output,
 .op-slider output {
   font-variant-numeric: tabular-nums;
 }

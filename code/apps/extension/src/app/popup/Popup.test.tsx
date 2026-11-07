@@ -188,6 +188,28 @@ describe("playback screens", () => {
   });
 });
 
+describe("progress style", () => {
+  test.each([
+    ["playing", "playing"],
+    ["paused", "paused"],
+    ["finished", "finished"],
+  ] as const)("%s: the seek bar is the kit slider", async (view, status) => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model({ view, player: player({ status }) })} a={a} />);
+    expect(m.root.querySelectorAll(".pp-scrub .lm-slider")).toHaveLength(1);
+    expect(m.root.querySelector(".pp-scrub .lm-slider__range")).not.toBeNull();
+    await m.unmount();
+  });
+
+  test.each(["preparing", "loading-model"] as const)("%s: the compact progress line is the kit progress bar", async (view) => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model({ view, engine: "unloaded", player: player({ status: "preparing" }) })} a={a} />);
+    expect(m.root.querySelectorAll(".pp-prog .lm-progress")).toHaveLength(1);
+    expect(m.root.querySelector(".pp-scrub")).toBeNull();
+    await m.unmount();
+  });
+});
+
 describe("speed and voice", () => {
   test("the speed button opens the panel; a preset sets the speed and Reset goes back to 1x", async () => {
     const { a, fn } = actions();
@@ -211,8 +233,44 @@ describe("speed and voice", () => {
     const { a } = actions();
     const m = await mount(<PopupScreen m={model({ speed: 1.5 })} a={a} />);
     await click(byLabel(m.root, "Speed 1.5x"));
-    const pressed = [...m.root.querySelectorAll(".pp-presets button")].filter((b) => b.getAttribute("aria-pressed") === "true").map(text);
-    expect(pressed).toEqual(["1.5x"]);
+    const presets = [...m.root.querySelectorAll(".pp-presets button")];
+    expect(presets.map(text)).toEqual(["0.5x", "1x", "1.2x", "1.5x", "2x", "3x"]);
+    expect(presets.filter((b) => b.getAttribute("aria-pressed") === "true").map(text)).toEqual(["1.5x"]);
+    await m.unmount();
+  });
+
+  test("the speed panel has the Speed label and value on one row, a slider with its end labels, and presets in one segmented track", async () => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model()} a={a} />);
+    await click(byLabel(m.root, "Speed 1.2x"));
+    expect(text(m.root.querySelector(".pp-srow"))).toBe("Speed1.2x");
+    expect(text(m.root.querySelector(".pp-slider-l"))).toBe("0.5x3x");
+    expect(m.root.querySelectorAll(".pp-speed .lm-slider")).toHaveLength(1);
+    expect(m.root.querySelector(".pp-presets")!.className).toBe("lm-seg pp-presets");
+    expect(text(m.root.querySelector(".pp-speed-f .lm-btn"))).toBe("Reset to 1x");
+    await m.unmount();
+  });
+
+  test("a speed between presets leaves every preset unselected", async () => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model({ speed: 1.3 })} a={a} />);
+    await click(byLabel(m.root, "Speed 1.3x"));
+    expect([...m.root.querySelectorAll(".pp-presets button")].filter((b) => b.getAttribute("aria-pressed") === "true")).toEqual([]);
+    await m.unmount();
+  });
+
+  test("the voice picker has no player strip or page card: Voice and Done, search, three dropdowns, the list and one note", async () => {
+    const { a } = actions();
+    const m = await mount(<PopupScreen m={model({ view: "playing", player: player() })} a={a} />);
+    await click(m.root.querySelector(".pp-voicebtn"));
+    expect(m.root.querySelector(".pp-mini")).toBeNull();
+    expect(m.root.querySelector(".pp-now")).toBeNull();
+    expect(text(m.root.querySelector(".sk-voices__head"))).toBe("VoiceDone");
+    expect(m.root.querySelector(".sk-voices input[type=search]")).not.toBeNull();
+    expect([...m.root.querySelectorAll(".sk-voices__filters button")].map(text)).toEqual(["English", "Accent", "Voice"]);
+    expect(m.root.querySelectorAll(".sk-voice")).toHaveLength(2);
+    expect(m.root.querySelectorAll("[aria-label^='Preview ']")).toHaveLength(2);
+    expect(m.root.querySelectorAll(".pp-note")).toHaveLength(1);
     await m.unmount();
   });
 

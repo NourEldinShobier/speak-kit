@@ -1,6 +1,6 @@
-import { Avatar, Button, Icon, IconButton, ProgressBar, Slider, ToggleButton } from "@speakkit/ui";
+import { Avatar, Button, Icon, Slider } from "@speakkit/ui";
 import { VoiceList, voiceLine, voiceName } from "../../features/voices";
-import { clampSpeed, clock, speedLabel, timeLeft } from "../../shared/format";
+import { clampSpeed, speedLabel } from "../../shared/format";
 import type { PopupActions, PopupModel } from "./types";
 
 const SPEEDS = [0.5, 1, 1.2, 1.5, 2, 3];
@@ -25,21 +25,22 @@ export function VoiceSpeedRow({ m, speedOpen, onVoice, onSpeed }: { m: PopupMode
 export function SpeedPanel({ m, a }: { m: PopupModel; a: PopupActions }) {
   return (
     <section className="pp-speed">
-      <div className="pp-slider">
-        <div className="sk-grow">
-          <Slider aria-label="Speed" value={m.speed} min={0.5} max={3} step={0.1} onChange={(v) => a.setSpeed(clampSpeed(v))} />
-          <div className="pp-slider-l">
-            <span>0.5x</span>
-            <span>3x</span>
-          </div>
-        </div>
+      <div className="pp-srow">
+        <span>Speed</span>
         <output aria-live="polite">{speedLabel(m.speed)}</output>
       </div>
-      <div className="pp-presets" role="group" aria-label="Speed presets">
+      <Slider aria-label="Speed" value={m.speed} min={0.5} max={3} step={0.1} onChange={(v) => a.setSpeed(clampSpeed(v))} />
+      <div className="pp-slider-l">
+        <span>0.5x</span>
+        <span>3x</span>
+      </div>
+      <div className="lm-seg pp-presets" role="group" aria-label="Speed presets">
         {SPEEDS.map((s) => (
-          <ToggleButton key={s} pressed={Math.abs(s - m.speed) < 0.05} onClick={() => a.setSpeed(s)}>
-            {speedLabel(s)}
-          </ToggleButton>
+          <button key={s} type="button" className="lm-seg__opt" aria-pressed={Math.abs(s - m.speed) < 0.05} onClick={() => a.setSpeed(s)}>
+            <span className="lm-seg__label" data-label={speedLabel(s)}>
+              {speedLabel(s)}
+            </span>
+          </button>
         ))}
       </div>
       <div className="pp-speed-f">
@@ -52,20 +53,10 @@ export function SpeedPanel({ m, a }: { m: PopupModel; a: PopupActions }) {
   );
 }
 
+/** Voice picker (A6): header, search and filters, voice list with preview buttons, one note. No player strip. */
 export function VoicePanel({ m, a, onDone }: { m: PopupModel; a: PopupActions; onDone: () => void }) {
-  const p = m.player;
   return (
     <>
-      <div className="pp-mini">
-        <IconButton name={p?.status === "playing" ? "player-pause" : "player-play"} label={p?.status === "playing" ? "Pause" : "Play"} onClick={a.toggle} />
-        <div className="sk-grow">
-          <ProgressBar thin value={p && p.totalMs ? Math.min(100, (p.elapsedMs / p.totalMs) * 100) : 0} label="Progress" />
-          <div className="pp-times">
-            <span>{clock(p?.elapsedMs ?? 0)}</span>
-            <span>{timeLeft(p?.elapsedMs ?? 0, p?.totalMs ?? 0)}</span>
-          </div>
-        </div>
-      </div>
       <div className="sk-voices__head">
         <h2>Voice</h2>
         <button type="button" className="sk-link" onClick={onDone}>

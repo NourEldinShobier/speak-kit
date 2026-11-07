@@ -1,20 +1,23 @@
 import { useMemo, useState } from "react";
 import { plural, type Voice } from "@speakkit/protocol";
-import { Avatar, Icon, IconButton, Select, TextInput } from "@speakkit/ui";
+import { Avatar, Icon, IconButton, Select, TextInput, type SelectOption } from "@speakkit/ui";
 import { filterVoices, langLabel, qualityLabel, type AccentFilter, type GenderFilter } from "./catalog";
 import type { VoicesState } from "./hooks";
 
 const ACCENTS = [
-  { value: "any", label: "Accent: Any" },
-  { value: "en-US", label: "Accent: US English" },
-  { value: "en-GB", label: "Accent: UK English" },
+  { value: "any", label: "Any accent" },
+  { value: "en-US", label: "US English" },
+  { value: "en-GB", label: "UK English" },
 ];
 const GENDERS = [
-  { value: "any", label: "Voice: Any" },
-  { value: "female", label: "Voice: Female" },
-  { value: "male", label: "Voice: Male" },
+  { value: "any", label: "Any voice" },
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
 ];
-const LANGS = [{ value: "en", label: "Language: English" }];
+const LANGS = [{ value: "en", label: "English" }];
+
+/** The 104 px dropdowns show their own name until a filter is chosen. */
+const shown = (name: string) => (o: SelectOption | undefined) => (!o || o.value === "any" ? name : o.label);
 
 interface VoiceListProps {
   state: VoicesState;
@@ -67,11 +70,11 @@ export function VoiceList({ state, selected, onSelect, onPreview }: VoiceListPro
   const none = noRowsText(state.status, list.length);
   return (
     <section className="sk-voices" aria-label="Voices">
-      <TextInput type="search" size="sm" icon="search" aria-label={label} placeholder={label} value={q} onChange={(e) => setQ(e.target.value)} />
+      <TextInput type="search" icon="search" aria-label={label} placeholder={label} value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="sk-voices__filters">
-        <Select size="sm" label="Language" options={LANGS} value="en" />
-        <Select size="sm" label="Accent" options={ACCENTS} value={accent} onChange={(v) => setAccent(v as AccentFilter)} />
-        <Select size="sm" label="Gender" options={GENDERS} value={gender} onChange={(v) => setGender(v as GenderFilter)} />
+        <Select label="Language" options={LANGS} value="en" />
+        <Select label="Accent" options={ACCENTS} value={accent} renderValue={shown("Accent")} onChange={(v) => setAccent(v as AccentFilter)} />
+        <Select label="Gender" options={GENDERS} value={gender} renderValue={shown("Voice")} onChange={(v) => setGender(v as GenderFilter)} />
       </div>
       <ul className="sk-voices__list" aria-label="Voices" aria-busy={state.status === "loading"}>
         {list.map((v) => (

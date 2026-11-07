@@ -135,17 +135,10 @@ const CONTROL_VIEWS = ["preparing", "loading-model", "playing", "paused", "finis
 /** Body of every view that shows the player: page card, actions or controls, then the voice and speed row. */
 export function HomeBody({ m, a, pickers }: { m: PopupModel; a: PopupActions; pickers: Pickers }) {
   const { view } = m;
-  const card = <NowCard title={view === "selection" ? "Selected text" : m.title} sub={homeSub(m)} />;
-  if (pickers.voiceOpen)
-    return (
-      <>
-        {card}
-        <VoicePanel m={m} a={a} onDone={pickers.closeVoice} />
-      </>
-    );
+  if (pickers.voiceOpen) return <VoicePanel m={m} a={a} onDone={pickers.closeVoice} />;
   return (
     <>
-      {card}
+      <NowCard title={view === "selection" ? "Selected text" : m.title} sub={homeSub(m)} />
       {view === "idle" && <IdleActions m={m} a={a} />}
       {view === "selection" && <SelectionActions m={m} a={a} />}
       {CONTROL_VIEWS.includes(view) && <Controls m={m} a={a} />}
