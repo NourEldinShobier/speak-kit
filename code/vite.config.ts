@@ -35,7 +35,8 @@ export default defineConfig({
   },
   // Extension code reads this build flag; the extension package defines it for its own tests, the root run needs it too.
   define: { __TEST__: "false" },
-  test: { exclude: ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**"] },
+  // The extension package runs its browser tests with 20 s; the root run has to allow the same when everything runs in parallel (the default is 5 s). Desktop specs set their own 60 s.
+  test: { testTimeout: 20_000, exclude: ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**"] },
   lint: {
     ignorePatterns: ["scripts/canary/*/**"],
     plugins: ["typescript", "unicorn", "oxc", "react", "import", "node"],

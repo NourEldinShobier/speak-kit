@@ -54,8 +54,8 @@ const settle = (p: Page) =>
         .map((a) => a.finished.catch(() => {})),
     );
   });
-/** Height of a row without its 1 px divider (a divider is 1 device pixel: 0.667 CSS px on a 150 % display). */
-const rowHeight = async (p: Page, sel: string) => (await box(p, sel)).h - Number.parseFloat(await style(p, sel, "border-top-width"));
+/** Height of a row, divider included: a control row measures 68 whether or not it has a divider on top. */
+const rowHeight = async (p: Page, sel: string) => (await box(p, sel)).h;
 const hairline = (p: Page) => p.evaluate(() => 1 / devicePixelRatio);
 
 const openSettings = async (l: Launched, page: string) => {

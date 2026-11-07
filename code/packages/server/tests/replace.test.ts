@@ -78,7 +78,7 @@ describe("X-SpeakKit-Replace stream groups", () => {
 
 describe("work for a request that is already gone", () => {
   it("a request replaced while it waits for a slot never reaches the engine", async () => {
-    ctx = await start({ latencyMs: 100 }, undefined, { maxStreams: 1, maxQueue: 4 });
+    ctx = await start({ latencyMs: 600 }, undefined, { maxStreams: 1, maxQueue: 4 });
     const first = speak(ctx, ["running"], "tab-1").then(types);
     await sleep(30);
     const queued = speak(ctx, ["queued"], "tab-2").then(types);
