@@ -18,6 +18,15 @@ export function rangeIn(root: HTMLElement, span: TextSpan): Range | null {
   return r;
 }
 
+/**
+ * The word as a span of the block. The word comes from a timer and can still belong to the previous sentence for one frame after the sentence
+ * changed; a word that does not fit in the sentence is dropped, because a range past the end of the text node throws and the reader crashes.
+ */
+export function wordSpanIn(sentence: ReaderSentence, word: WordSpan | undefined): TextSpan | null {
+  if (!word || word.end > sentence.end - sentence.start) return null;
+  return { block: sentence.block, start: sentence.start + word.start, end: sentence.start + word.end };
+}
+
 function set(name: (typeof NAMES)[number], ranges: (Range | null)[]) {
   const live = ranges.filter((r): r is Range => !!r);
   if (live.length) CSS.highlights.set(name, new Highlight(...live));
@@ -33,7 +42,8 @@ export function useHighlights(root: RefObject<HTMLElement | null>, p: { sentence
   }, [root, sentence]);
   useEffect(() => {
     const el = root.current;
-    set("sk-word", el && sentence && word ? [rangeIn(el, { block: sentence.block, start: sentence.start + word.start, end: sentence.start + word.end })] : []);
+    const span = sentence && wordSpanIn(sentence, word);
+    set("sk-word", el && span ? [rangeIn(el, span)] : []);
   }, [root, sentence, word]);
   useEffect(() => {
     const el = root.current;
