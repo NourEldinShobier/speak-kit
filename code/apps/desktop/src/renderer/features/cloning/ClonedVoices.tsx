@@ -4,7 +4,7 @@ import { clock, type ClonedVoice, type UpdateVoiceRequest } from "@speakkit/prot
 import { usePlayer } from "../../pages";
 import { api, cleanError } from "../../ui";
 import { NEUTRAL } from "./model";
-import { StyleSlider } from "./ResultScreens";
+import { StyleSlider } from "./StyleSlider";
 import "./cloning.css";
 
 /** What a cloned voice says when previewed. */
