@@ -157,6 +157,17 @@ describe("voice cloning flow", () => {
     expect(await status()).toBe("Voice saved: Maya.");
   });
 
+  it("the exaggeration slider spans the card, from the start of the label to the end of Dramatic", async () => {
+    const l = await start();
+    await chooseFile(l, wavFile(8));
+    await consentAndContinue(l, "Upload a clip");
+    await l.page.getByLabel("Name").waitFor({ timeout: 30_000 });
+    const widths = await l.page.evaluate(() =>
+      [".lm-slider", ".sk-clone-slider__ends"].map((q) => Math.round(document.querySelector(".sk-clone-slider")!.querySelector(q)!.getBoundingClientRect().width)),
+    );
+    expect(widths[0]).toBe(widths[1]);
+  });
+
   it("uploads a good file, and cancelling the name step deletes the voice again", async () => {
     const l = await start();
     await chooseFile(l, wavFile(8));

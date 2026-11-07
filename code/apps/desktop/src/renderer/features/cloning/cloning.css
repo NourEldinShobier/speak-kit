@@ -131,6 +131,9 @@
   gap: 8px;
   padding: 16px;
 }
+.sk-clone-slider .lm-slider {
+  width: 100%;
+}
 .sk-clone-slider__head {
   display: flex;
   justify-content: space-between;
