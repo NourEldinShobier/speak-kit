@@ -42,10 +42,10 @@ test.describe("release probes", () => {
   test("a page of 10,000 words is read from its first sentence without an error", async ({ ext, app }) => {
     const paragraph = (p: number) => `<p>${sentence(p, 1)} ${sentence(p, 2)}</p>`; // 14 words
     const html = shell("Big", `<main><article><h1>Big page</h1>${Array.from({ length: 715 }, (_, i) => paragraph(i + 1)).join("")}</article></main>`);
-    ext.fx.set("/big", html);
+    ext.fx.set("/ten-thousand-words", html);
     await ext.pair(app);
     await ext.setSettings({ launcher: { enabled: false } });
-    const page = await ext.open("/big");
+    const page = await ext.open("/ten-thousand-words");
     const t0 = Date.now();
     expect((await readTab(ext, page)).ok).toBe(true);
     await ext.waitState("playing", 30_000);
