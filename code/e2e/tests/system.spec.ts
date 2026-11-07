@@ -149,7 +149,7 @@ test.describe("site rules (edited in the options page)", () => {
     const label = { "always-dock": "Always show dock", "hide-controls": "Hide controls", "never-read": "Never read" }[rule]!;
     await opt.getByRole("combobox", { name: "Rule for new site" }).click(); // Radix Select
     await opt.getByRole("option", { name: label }).click();
-    await opt.getByRole("button", { name: "Add", exact: true }).click();
+    await opt.getByRole("button", { name: "Add site", exact: true }).click();
     await expect.poll(async () => (await ext.settings()).sites?.[host]).toBe(rule);
     return opt;
   }
