@@ -11,8 +11,7 @@ export const MARGIN = 8;
 const PLAY_CENTRE = 10 + 28 + 8 + 32 + 8 + 22;
 /** The tab's middle sits this far below its top. */
 const TAB_MIDDLE = 38;
-/** The collapsed reading state (B19-V2): a 12 px wide tab that holds only a progress rail, centred on the viewport height. */
-export const RAIL_WIDTH = 12;
+/** The collapsed reading state (B19-V2): a 12 px wide tab (width set in launcher.css) that holds only a progress rail, centred on the viewport height. */
 export const RAIL_HEIGHT = 96;
 const RAIL_MIDDLE = RAIL_HEIGHT / 2;
 
