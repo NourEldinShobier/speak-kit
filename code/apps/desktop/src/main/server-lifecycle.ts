@@ -45,20 +45,22 @@ export async function engineWorkerUrl(distDir: string): Promise<URL> {
   );
 }
 
+const exists = (p: string) =>
+  access(p).then(
+    () => true,
+    () => false,
+  );
+
 /** The Chatterbox sidecar script: shipped in `resources/chatterbox` by electron-builder, or the engine package's own file in development. Undefined when neither exists. */
 export async function chatterboxScript(resources: string | undefined = process.resourcesPath): Promise<string | undefined> {
   const shipped = resources ? path.join(resources, "chatterbox", "chatterbox_sidecar.py") : undefined;
-  const source = fileURLToPath(new URL("../sidecar/chatterbox_sidecar.py", import.meta.resolve("@speakkit/engine")));
-  for (const p of [shipped, source])
-    if (
-      p &&
-      (await access(p).then(
-        () => true,
-        () => false,
-      ))
-    )
-      return p;
-  return undefined;
+  if (shipped && (await exists(shipped))) return shipped;
+  try {
+    const source = fileURLToPath(new URL("../sidecar/chatterbox_sidecar.py", import.meta.resolve("@speakkit/engine")));
+    return (await exists(source)) ? source : undefined;
+  } catch {
+    return undefined; // a bundle without the workspace packages on disk (packaged app) has no development file to fall back to
+  }
 }
 
 /** The local server and its engines: creation, restart, shutdown, and the health state the UI shows. */
