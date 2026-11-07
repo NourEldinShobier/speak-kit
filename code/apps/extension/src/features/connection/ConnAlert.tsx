@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@speakkit/ui";
 import type { HealthResult } from "../../shared/client";
 
@@ -13,29 +13,36 @@ const detailsText = (st: "offline" | "token", port: number, health: HealthResult
 
 /** Warning under the status row of the connection card. The button only writes to the clipboard on a click; nothing here reads it. */
 export function ConnAlert({ st, port, health }: { st: "offline" | "token"; port: number; health: HealthResult | null }) {
-  const [copied, setCopied] = useState(false);
+  const [result, setResult] = useState<"copied" | "failed" | null>(null);
+  const timer = useRef(0);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(detailsText(st, port, health));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setResult("copied");
     } catch {
-      /* clipboard blocked: the button stays as it was */
+      setResult("failed"); // clipboard blocked: say so on the button and to screen readers
     }
+    clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setResult(null), 1500);
   };
+  const message = result === "copied" ? "Copied" : result === "failed" ? "Could not copy" : "";
   return (
     <div className="op-alert">
       <Banner
         tone="warning"
         icon="alert-triangle"
         action={
-          <Button iconLeft={copied ? "check" : "copy"} onClick={copy}>
-            {copied ? "Copied" : "Copy details"}
+          <Button iconLeft={result === "copied" ? "check" : result === "failed" ? "alert-circle" : "copy"} onClick={copy}>
+            {message || "Copy details"}
           </Button>
         }
       >
         {ALERT_TEXT[st]}
       </Banner>
+      <span className="sk-sr" role="status" aria-live="polite">
+        {message}
+      </span>
     </div>
   );
 }

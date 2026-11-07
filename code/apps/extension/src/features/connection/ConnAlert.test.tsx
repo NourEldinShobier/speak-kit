@@ -24,7 +24,7 @@ describe("ConnAlert", () => {
     expect(buttons[0]!.className).toBe("lm-btn lm-btn--secondary");
     expect(m.root.querySelector("[aria-expanded]")).toBeNull();
     expect(m.root.querySelector("code")).toBeNull();
-    expect(m.root.querySelector(".op-alert")!.getAttribute("role")).toBeNull();
+    expect([...m.root.querySelectorAll("[role=alert]")].map((e) => e.className)).toEqual(["lm-banner lm-banner--warning"]); // Banner carries the alert role; a second one on the wrapper would announce twice
     await m.unmount();
   });
 
@@ -33,7 +33,18 @@ describe("ConnAlert", () => {
     await click(m.root.querySelector(".lm-banner button"));
     expect(writeText).toHaveBeenCalledWith("app-not-running · 127.0.0.1:47321");
     expect(text(m.root.querySelector(".lm-banner button"))).toBe("Copied");
+    expect(text(m.root.querySelector("[role=status][aria-live=polite]"))).toBe("Copied");
     expect(readText).not.toHaveBeenCalled();
+    await m.unmount();
+  });
+
+  test("a blocked clipboard shows and announces Could not copy", async () => {
+    writeText.mockImplementationOnce(() => Promise.reject(new Error("denied")));
+    const m = await mount(<ConnAlert st="offline" port={47321} health={null} />);
+    expect(text(m.root.querySelector("[role=status]"))).toBe("");
+    await click(m.root.querySelector(".lm-banner button"));
+    expect(text(m.root.querySelector(".lm-banner button"))).toBe("Could not copy");
+    expect(text(m.root.querySelector("[role=status][aria-live=polite]"))).toBe("Could not copy");
     await m.unmount();
   });
 
