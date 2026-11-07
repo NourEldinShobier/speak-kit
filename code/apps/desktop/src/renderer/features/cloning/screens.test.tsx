@@ -39,6 +39,12 @@ describe("G3 choose a reference", () => {
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue<\/button>/);
   });
 
+  it("the sources are one tab stop: the selected one, or the first when none is selected", () => {
+    const stops = (html: string) => [...html.matchAll(/data-source="(\w+)"[^>]*tabindex="(-?\d)"/g)].map((m) => `${m[1]}:${m[2]}`);
+    expect(stops(choose())).toEqual(["upload:0", "record:-1"]);
+    expect(stops(choose({ source: "record" }))).toEqual(["upload:-1", "record:0"]);
+  });
+
   it("enables Continue with consent and a source, and shows a failure to read the file", () => {
     const html = choose({ consent: true, source: "upload", error: "maya.mp3 could not be read as audio." });
     expect(html).not.toMatch(/disabled=""[^>]*>Continue/);

@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { Button, Checkbox, Icon, Modal, ProgressBar, type IconName } from "@speakkit/ui";
 import { CLONE_MAX_MS, CLONE_MIN_MS, clock } from "@speakkit/protocol";
 import type { Take } from "./audio";
@@ -23,6 +24,20 @@ interface ChooseProps {
   onCancel(): void;
 }
 
+/** Arrow keys move through a radio group and select as they go (ARIA authoring practices); Home and End jump to the ends. */
+function moveSource(e: KeyboardEvent<HTMLElement>, current: Source | null, onSource: (s: Source) => void) {
+  const at = Math.max(
+    0,
+    SOURCES.findIndex((s) => s.id === current),
+  );
+  const to = { ArrowRight: at + 1, ArrowDown: at + 1, ArrowLeft: at - 1, ArrowUp: at - 1, Home: 0, End: SOURCES.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  const next = SOURCES[(to + SOURCES.length) % SOURCES.length]!;
+  onSource(next.id);
+  e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-source="${next.id}"]`)?.focus();
+}
+
 /** G3: choose where the reference comes from and confirm the right to clone it. */
 export function ChooseScreen({ state, onConsent, onSource, onContinue, onCancel }: ChooseProps) {
   return (
@@ -34,7 +49,17 @@ export function ChooseScreen({ state, onConsent, onSource, onContinue, onCancel 
       )}
       <div className="sk-clone-sources" role="radiogroup" aria-label="Where the voice sample comes from">
         {SOURCES.map((s) => (
-          <button key={s.id} type="button" role="radio" aria-checked={state.source === s.id} className="sk-clone-source" data-source={s.id} onClick={() => onSource(s.id)}>
+          <button
+            key={s.id}
+            type="button"
+            role="radio"
+            aria-checked={state.source === s.id}
+            className="sk-clone-source"
+            data-source={s.id}
+            tabIndex={(state.source ?? SOURCES[0]!.id) === s.id ? 0 : -1}
+            onKeyDown={(e) => moveSource(e, state.source, onSource)}
+            onClick={() => onSource(s.id)}
+          >
             <Icon name={s.icon} size={18} />
             <b>{s.title}</b>
             <span>{s.body}</span>

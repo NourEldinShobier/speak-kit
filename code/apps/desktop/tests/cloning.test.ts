@@ -134,6 +134,12 @@ describe("voice cloning flow", () => {
     await l.page.getByRole("button", { name: "Clone a voice" }).click();
     await expect.poll(focused).toBe("Choose a voice sample");
     expect(await l.page.getByTestId("clone-status").getAttribute("aria-live")).toBe("polite");
+    await l.page.keyboard.press("Tab"); // the two sources are one tab stop; the arrow keys move inside it
+    expect(await l.page.evaluate(() => document.activeElement?.getAttribute("data-source"))).toBe("upload");
+    await l.page.keyboard.press("ArrowRight");
+    expect(await l.page.evaluate(() => [document.activeElement?.getAttribute("data-source"), document.activeElement?.getAttribute("aria-checked")])).toEqual(["record", "true"]);
+    await l.page.keyboard.press("ArrowLeft");
+    expect(await l.page.evaluate(() => [document.activeElement?.getAttribute("data-source"), document.activeElement?.getAttribute("aria-checked")])).toEqual(["upload", "true"]);
     await chooseFile(l, wavFile(3));
     await l.page.getByRole("radio", { name: /^Upload a clip/ }).click();
     await l.page.getByText(/the right to clone it/).click();
