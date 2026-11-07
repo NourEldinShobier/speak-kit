@@ -23,10 +23,17 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
         <Icon name={e.id === "kokoro" ? "cpu" : "sparkles"} size={18} />
       </span>
       <div className="sk-engine__body">
-        <b>
-          {e.name}
-          {active && <span className="sk-active"> · In use</span>}
-        </b>
+        <div className="sk-engine__head">
+          <b>
+            {e.name}
+            {active && <span className="sk-active"> · In use</span>}
+          </b>
+          {d.pill.tone !== "green" && ( // the sidebar engine card shows "Ready" (design 2.18)
+            <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
+              {d.pill.label}
+            </StatusPill>
+          )}
+        </div>
         <span>{ENGINE_BLURBS[e.id]}</span>
         {e.gpu && (
           <span>
@@ -41,18 +48,15 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
           </details>
         )}
         {d.progress !== null && <ProgressBar thin value={Math.round(d.progress * 100)} label={`${e.name} progress`} />}
-      </div>
-      <div className="sk-row-actions">
-        {d.pill.tone !== "green" && ( // the sidebar engine card shows "Ready" (design 2.18)
-          <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
-            {d.pill.label}
-          </StatusPill>
+        {d.actions.length > 0 && (
+          <div className="sk-row-actions">
+            {d.actions.map((a) => (
+              <Button key={a} variant={variant(a)} loading={busy === `${e.id}:${a}`} onClick={() => onAction(a)}>
+                {ACTION_LABELS[a]}
+              </Button>
+            ))}
+          </div>
         )}
-        {d.actions.map((a) => (
-          <Button key={a} variant={variant(a)} loading={busy === `${e.id}:${a}`} onClick={() => onAction(a)}>
-            {ACTION_LABELS[a]}
-          </Button>
-        ))}
       </div>
     </div>
   );

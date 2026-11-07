@@ -9,11 +9,18 @@
 .sk-engines .sk-engine + .sk-engine {
   border-block-start: 1px solid var(--stroke-hairline);
 }
+/* Buttons sit under the text, left-aligned: the text keeps the full row width and nothing squeezes at any window size. */
 .sk-engines .sk-row-actions {
-  gap: 16px;
-  flex-wrap: nowrap;
-  flex: none;
-  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block-start: 12px; /* 4 px body gap + 12 = 16 */
+}
+.sk-engine__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
 }
 .sk-engines .sk-engine__body {
   min-width: 0;
