@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -36,5 +37,21 @@ describe("gen-docs", () => {
 
   it("counts the numbered rules under the Rules heading", () => {
     expect(claudeRuleCount("# T\n1. no\n## Rules\n1. a\n2. b\n\n3. c\n")).toBe(3);
+  });
+
+  it("counts only the files git tracks, so a dirty tree and a clean checkout give the same list", () => {
+    const repo = mkdtempSync(join(tmpdir(), "gen-docs-git-"));
+    try {
+      mkdirSync(join(repo, "packages/ui/src"), { recursive: true });
+      writeFileSync(join(repo, "packages/ui/src/a.css"), "a{}");
+      const git = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd: repo, stdio: "ignore" });
+      git("init", "-q");
+      git("add", ".");
+      git("commit", "-q", "-m", "init");
+      writeFileSync(join(repo, "packages/ui/src/untracked.css"), "b{}");
+      expect(scan(repo)).toEqual(["packages/ui/src/a.css"]);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 });

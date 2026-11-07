@@ -2,6 +2,7 @@
 // Writes docs/MODULES.md (what each package and app area holds) and docs/LAYERS.md (the import rules and who is checked against them).
 // `node scripts/gen-docs.mjs` writes both; `--check` writes nothing and fails when a file is stale, an import breaks a rule, or code/CLAUDE.md has more than 25 rules.
 // Imports are found with a regex, so a computed import specifier is not seen (shortcut: no dependency on a parser; upgrade if such an import is ever added).
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,12 +50,25 @@ function walk(dir, out = []) {
   return out;
 }
 
-/** Source files of every unit, relative to `root` with forward slashes. */
+/** Paths git tracks under `root`, or null outside a repository. Untracked and ignored files must not change the output: CI sees a clean checkout. */
+function tracked(root) {
+  try {
+    return new Set(execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 1 << 26, stdio: ["ignore", "pipe", "ignore"] }).split("\0"));
+  } catch {
+    return null; // not a repository (the unit test builds a temp tree): every file counts
+  }
+}
+
+/** Source files of every unit that git tracks, relative to `root` with forward slashes. */
 export function scan(root) {
   const files = [];
+  const known = tracked(root);
   for (const unit of Object.keys(UNITS)) {
     if (!existsSync(join(root, unit))) continue;
-    for (const f of walk(join(root, unit))) files.push(relative(root, f).split("\\").join("/"));
+    for (const f of walk(join(root, unit))) {
+      const rel = relative(root, f).split("\\").join("/");
+      if (!known || known.has(rel)) files.push(rel);
+    }
   }
   return files.sort();
 }
