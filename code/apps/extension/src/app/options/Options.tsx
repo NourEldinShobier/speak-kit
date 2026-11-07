@@ -109,15 +109,17 @@ export function OptionsApp() {
         />
       </div>
       <OptionsNav sec={sec} />
-      <main className="op-main" id="main" data-section={sec} aria-busy={!ready}>
-        {sec === "general" ? (
-          <General settings={settings} update={update} saved={saved} health={health} refresh={refresh} token={token} setToken={setToken} />
-        ) : (
-          <Suspense fallback={null}>
-            <Sections id={sec} s={settings} upd={update} saved={saved} />
-          </Suspense>
-        )}
-      </main>
+      <div className="op-panel">
+        <main className="op-main" id="main" data-section={sec} aria-busy={!ready}>
+          {sec === "general" ? (
+            <General settings={settings} update={update} saved={saved} health={health} refresh={refresh} token={token} setToken={setToken} />
+          ) : (
+            <Suspense fallback={null}>
+              <Sections id={sec} s={settings} upd={update} saved={saved} />
+            </Suspense>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

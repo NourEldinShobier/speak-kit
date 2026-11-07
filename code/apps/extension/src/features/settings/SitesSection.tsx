@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { compareNames, plural, type SiteDefault, type SiteRule } from "@speakkit/protocol";
-import { Button, Icon, IconButton, Select, SettingRow, TextInput } from "@speakkit/ui";
+import { Icon, IconButton, Select, SettingRow, TextInput } from "@speakkit/ui";
 import { Card, PageHead, ToggleGrid } from "../../shared/ui";
 import { recentWebTabs } from "./browser";
 import { defaultSettings, type SectionProps, type Settings } from "./types";
@@ -79,21 +79,24 @@ function RuleAdder({ upd }: { upd: Upd }) {
   return (
     <>
       <div className="op-add">
-        <TextInput
-          icon="world"
-          aria-label="Site"
-          placeholder="Add a site, e.g. news.example.com"
-          value={host}
-          onChange={(e) => setHost(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-        />
-        <Select label="Rule for new site" options={RULES} value={rule} onChange={(v) => setRule(v as SiteRule)} />
-        <Button variant="primary" iconLeft="plus" onClick={add}>
-          Add
-        </Button>
-        <Button variant="ghost" onClick={useTab}>
-          Use this tab's site
-        </Button>
+        <div className="lm-field">
+          <div className="lm-input">
+            <Icon name="world" className="lm-input__icon" />
+            <input
+              className="lm-input__field"
+              aria-label="Site"
+              placeholder="Add a site, e.g. news.example.com"
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+            />
+            <button type="button" className="op-chip" onClick={useTab}>
+              Use this tab's site
+            </button>
+          </div>
+        </div>
+        <Select className="op-rule-select" label="Rule for new site" options={RULES} value={rule} onChange={(v) => setRule(v as SiteRule)} />
+        <IconButton name="plus" label="Add site" variant="primary" onClick={add} />
       </div>
       {err && (
         <p className="op-err" role="alert">
@@ -114,7 +117,7 @@ function RuleRow({ host, rule, upd }: { host: string; rule: SiteRule; upd: Upd }
         {rule === "never-read" && <small>Nothing on this site is sent to the voice engine.</small>}
       </div>
       <Select
-        size="sm"
+        className="op-rule-select"
         label={`Rule for ${host}`}
         options={RULES}
         value={rule}
@@ -151,9 +154,7 @@ function RulesCard({ s, upd }: Pick<SectionProps, "s" | "upd">) {
           <h2 id="rules-h">Site permissions</h2>
           <p className="op-card-d">Applies to the site and its subdomains.</p>
         </div>
-        {entries.length > 0 && (
-          <TextInput size="sm" icon="search" aria-label="Search rules" placeholder={`Search ${plural(entries.length, "rule", "rules")}`} value={q} onChange={(e) => setQ(e.target.value)} />
-        )}
+        {entries.length > 0 && <TextInput icon="search" aria-label="Search rules" placeholder={`Search ${plural(entries.length, "rule", "rules")}`} value={q} onChange={(e) => setQ(e.target.value)} />}
       </div>
       <RuleAdder upd={upd} />
       <ul className="op-rules" aria-label="Site rules">

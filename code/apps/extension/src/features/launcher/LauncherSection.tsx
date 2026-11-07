@@ -73,6 +73,7 @@ function CloseDelayRow({ L, set }: RowProps) {
   const sec = (L.closeDelayMs / 1000).toFixed(1);
   return (
     <SettingRow
+      className="lm-row--control"
       label="Close after the pointer leaves"
       description={`${sec} s. Longer gives more time to reach the buttons.`}
       control={

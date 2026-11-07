@@ -33,7 +33,7 @@ function EngineCard({ count }: { count: number }) {
             <StatusPill>Not installed</StatusPill>
           </div>
           <p>Expressive voices and voice cloning. Needs an NVIDIA GPU.</p>
-          <Button size="sm" iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>
+          <Button iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>
             Install in the app
           </Button>
         </div>
@@ -77,6 +77,7 @@ function PlaybackCard({ s, upd, list }: Pick<SectionProps, "s" | "upd"> & { list
     <Card title="Voice and playback" id="vp-h">
       <DefaultVoiceRow s={s} upd={upd} list={list} />
       <SettingRow
+        className="lm-row--control"
         label="Speed"
         description={`${speedLabel(s.speed)} · about ${wordsPerMinute(s.speed)} words per minute. Arrow keys change it by 0.1x.`}
         control={

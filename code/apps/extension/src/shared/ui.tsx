@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Icon, SettingRow, Toggle } from "@speakkit/ui";
+import { Button, Icon, SettingRow, Toggle } from "@speakkit/ui";
 
 /** Small compositions of kit components shared by the options sections. */
 export const ToggleRow = ({ title, desc, on, onChange }: { title: string; desc?: string; on: boolean; onChange: (v: boolean) => void }) => (
@@ -32,10 +32,9 @@ export function PageHead({ title, desc, saved, onReset, resetLabel = "Reset sect
           </span>
         )}
         {onReset && (
-          <button type="button" className="sk-link" onClick={onReset}>
+          <Button iconRight="refresh" onClick={onReset}>
             {resetLabel}
-            <Icon name="refresh" size={13} />
-          </button>
+          </Button>
         )}
       </div>
     </div>

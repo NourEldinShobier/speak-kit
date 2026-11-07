@@ -47,7 +47,7 @@ test.describe("options page", () => {
     const opt = await ext.ctx.newPage();
     await opt.goto(ext.url("options") + "#sites");
     await opt.getByLabel("Site", { exact: true }).fill("https://Reader.Example.com/essay");
-    await opt.getByRole("button", { name: "Add", exact: true }).click();
+    await opt.getByRole("button", { name: "Add site", exact: true }).click();
     await expect.poll(async () => (await ext.settings()).sites).toEqual({ "reader.example.com": "always-dock" });
     await expect(opt.getByRole("list", { name: "Site rules" }).getByText("reader.example.com")).toBeVisible();
     await opt.getByRole("combobox", { name: "Default for other sites" }).click();
@@ -88,5 +88,70 @@ test.describe("options page", () => {
     await expect(row.getByText("Not assigned")).toBeVisible();
     await expect(opt.locator('[data-command="play-pause"]').getByText("Not assigned")).toHaveCount(0);
     await expect(opt.getByRole("alert").getByText("A shortcut is not assigned")).toBeVisible();
+  });
+
+  test("shell: grey window, menu on the grey, one white 8 px panel 4 px from the menu and the edges, 824 px content", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.setViewportSize({ width: 1280, height: 800 });
+    await opt.goto(ext.url("options") + "#sites");
+    await expect(opt.getByRole("heading", { level: 1, name: "Sites and filters" })).toBeVisible();
+    const m = await opt.evaluate(() => {
+      const css = (sel: string) => getComputedStyle(document.querySelector(sel)!);
+      const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+      const panel = r(".op-panel");
+      const cur = document.querySelector('.op-nav [aria-current="page"]')!;
+      return {
+        window: css(".op").backgroundColor,
+        nav: css(".op-nav").backgroundColor,
+        panelBg: css(".op-panel").backgroundColor,
+        radius: css(".op-panel").borderRadius,
+        panel: [panel.left, panel.top, 1280 - panel.right, 800 - panel.bottom],
+        head: r(".op-head").width,
+        selected: getComputedStyle(cur).backgroundColor,
+        card: [css(".op-card").backgroundColor, css(".op-card").borderRadius, css(".op-card").boxShadow],
+      };
+    });
+    expect(m.window).toBe("rgb(240, 240, 240)");
+    expect(m.nav).toBe("rgba(0, 0, 0, 0)");
+    expect([m.panelBg, m.radius]).toEqual(["rgb(255, 255, 255)", "8px"]);
+    expect(m.panel).toEqual([252, 4, 4, 4]);
+    expect(m.head).toBe(824);
+    expect(m.selected).toBe("rgba(0, 0, 0, 0.05)");
+    expect(m.card.slice(0, 2)).toEqual(["rgb(255, 255, 255)", "8px"]);
+    expect(m.card[2]).toContain("rgb(229, 229, 229) 0px 0px 0px 1px");
+  });
+
+  test("control rows are 68 px with 36 px controls: site permissions, voice and speed, shortcuts", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.setViewportSize({ width: 1280, height: 800 });
+    const size = (sel: string) =>
+      opt.evaluate((q) => {
+        const b = document.querySelector(q)!.getBoundingClientRect();
+        return [Math.round(b.width), Math.round(b.height), Math.round(b.right)];
+      }, sel);
+    await opt.goto(ext.url("options") + "#sites");
+    await opt.getByLabel("Site", { exact: true }).fill("reader.example.com");
+    await opt.getByRole("button", { name: "Add site", exact: true }).click();
+    await expect(opt.getByRole("list", { name: "Site rules" }).getByText("reader.example.com")).toBeVisible();
+    expect((await size(".op-add")).slice(1, 2)).toEqual([68]);
+    expect(await size('[aria-label="Add site"]')).toEqual([36, 36, (await size('[aria-label="Remove rule for reader.example.com"]'))[2]]);
+    expect(await size('[aria-label="Remove rule for reader.example.com"]')).toEqual([36, 36, (await size('[aria-label="Add site"]'))[2]]);
+    expect(await size(".op-add .op-rule-select")).toEqual([177, 36, (await size(".op-rules .op-rule-select"))[2]]);
+    expect((await size(".op-rules li")).slice(1, 2)).toEqual([68]);
+    expect((await size(".op-head-r button")).slice(1, 2)).toEqual([36]);
+    await opt.goto(ext.url("options") + "#voice");
+    await expect(opt.getByRole("heading", { level: 1, name: "Voice and speed" })).toBeVisible();
+    for (const label of ["Default voice", "Speed", "Pause between paragraphs"]) {
+      const h = await opt
+        .getByText(label, { exact: true })
+        .first()
+        .evaluate((el) => el.closest(".lm-row")!.getBoundingClientRect().height);
+      expect([label, h]).toEqual([label, 68]);
+    }
+    expect((await size(".op-preview")).slice(1, 2)).toEqual([68]);
+    await opt.goto(ext.url("options") + "#shortcuts");
+    await expect(opt.getByTestId("chrome-commands").getByText("Play / pause")).toBeVisible();
+    expect((await size('[data-command="play-pause"]')).slice(1, 2)).toEqual([68]);
+    expect(await size('[aria-label="Change shortcut for Play / pause"]')).toEqual([36, 36, expect.any(Number)]);
   });
 });

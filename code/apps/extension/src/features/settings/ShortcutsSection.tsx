@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Banner, Button, IconButton, Kbd, StatusPill } from "@speakkit/ui";
 import { Card, PageHead } from "../../shared/ui";
 import { LINKS, openUrl } from "../../shared/links";
@@ -27,7 +28,7 @@ function ConflictBanner({ count, onEdit }: { count: number; onEdit: () => void }
       tone="warning"
       title={count === 1 ? "A shortcut is not assigned" : "Some shortcuts are not assigned"}
       action={
-        <Button size="sm" variant="primary" onClick={onEdit}>
+        <Button variant="primary" onClick={onEdit}>
           Choose keys in Chrome
         </Button>
       }
@@ -38,14 +39,24 @@ function ConflictBanner({ count, onEdit }: { count: number; onEdit: () => void }
   );
 }
 
+/** One shortcut row: the label on the left; the keys (or the badge) and the pencil button as one cluster on the right. */
+function KeyRow({ label, command, children, pencil }: { label: string; command?: string | undefined; children: ReactNode; pencil: ReactNode }) {
+  return (
+    <div className="op-keyrow" data-command={command}>
+      <div className="lm-row__label">{label}</div>
+      <div className="op-keycluster">
+        {children}
+        {pencil}
+      </div>
+    </div>
+  );
+}
+
 function CommandRow({ c, unassigned, onEdit }: { c: chrome.commands.Command; unassigned: boolean; onEdit: () => void }) {
   const keys = splitShortcut(c.shortcut);
-  const label = CMD_LABEL[c.name!] ?? c.description ?? c.name;
+  const label = CMD_LABEL[c.name!] ?? c.description ?? c.name!;
   return (
-    <div className="op-keyrow" data-command={c.name}>
-      <div>
-        <div className="lm-row__label">{label}</div>
-      </div>
+    <KeyRow label={label} command={c.name} pencil={<IconButton name="pencil" label={`Change shortcut for ${label}`} onClick={onEdit} />}>
       {keys.length ? (
         <Keys keys={keys} />
       ) : (
@@ -59,8 +70,7 @@ function CommandRow({ c, unassigned, onEdit }: { c: chrome.commands.Command; una
           )}
         </span>
       )}
-      <IconButton name="pencil" label={`Change shortcut for ${label}`} onClick={onEdit} />
-    </div>
+    </KeyRow>
   );
 }
 
@@ -73,7 +83,7 @@ function BrowserWideCard({ cmds, missing, onEdit }: { cmds: chrome.commands.Comm
           <h2 id="bw-h">Browser-wide (Chrome shortcuts)</h2>
           <p className="op-card-d">Work on any tab, even when the page has no focus. Chrome allows four per extension.</p>
         </div>
-        <Button size="sm" iconLeft="external-link" onClick={onEdit}>
+        <Button iconLeft="external-link" onClick={onEdit}>
           Edit in Chrome
         </Button>
       </div>
@@ -100,11 +110,9 @@ export function ShortcutsSection() {
       <Card title="On this page" desc="Active while you read and no text field has focus." id="onpage-h">
         <div className="op-grid2 keys">
           {PAGE_KEYS.map(([l, k]) => (
-            <div className="op-keyrow" key={l}>
-              <div className="lm-row__label">{l}</div>
+            <KeyRow key={l} label={l} pencil={<IconButton name="pencil" label={`${l} is fixed in this version`} disabled />}>
               <Keys keys={k} small />
-              <IconButton name="pencil" label={`${l} is fixed in this version`} disabled />
-            </div>
+            </KeyRow>
           ))}
         </div>
       </Card>

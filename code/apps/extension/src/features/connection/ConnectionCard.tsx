@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Banner, Button, Icon, IconButton, TextInput } from "@speakkit/ui";
+import { Button, Icon, IconButton, TextInput } from "@speakkit/ui";
 import { maskToken, type Settings } from "../settings";
 import { send, type HealthResult } from "../../shared/client";
+import { ConnAlert } from "./ConnAlert";
 import { engineText } from "./errors";
 import { connState, validPort } from "./hooks";
 import { LINKS, openUrl } from "../../shared/links";
@@ -22,10 +23,6 @@ const STATUS_TEXT: Record<Exclude<ConnState, "ok">, { title: string; sub: string
   token: { title: "Pairing token rejected", sub: "This browser's token doesn't match the app." },
   offline: { title: "Speak Kit isn't running", sub: "Nothing is answering on this computer." },
   checking: { title: "Checking connection", sub: "Looking for Speak Kit on this computer." },
-};
-const ALERT_TEXT = {
-  offline: "Open Speak Kit and this page reconnects by itself. If it doesn't, download the app first.",
-  token: "Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch.",
 };
 
 /** The text of the status line; `ok` is the health answer when connected. */
@@ -129,27 +126,6 @@ function ConnStatus(p: StatusProps) {
         </div>
       </div>
       <ConnActions {...p} />
-    </div>
-  );
-}
-
-function ConnAlert({ st, port, health }: { st: "offline" | "token"; port: number; health: HealthResult | null }) {
-  const [details, setDetails] = useState(false);
-  return (
-    <div className="op-alert" role="alert">
-      <Banner tone="warning" icon="alert-triangle">
-        {ALERT_TEXT[st]}
-      </Banner>
-      <button type="button" className="sk-link" aria-expanded={details} onClick={() => setDetails((d) => !d)}>
-        Details
-        <Icon name={details ? "chevron-up" : "chevron-down"} size={13} />
-      </button>
-      {details && (
-        <code>
-          {st === "offline" ? "app-not-running" : "token-rejected"} · 127.0.0.1:{port}
-          {!health?.ok && health?.detail ? ` · ${health.detail}` : ""}
-        </code>
-      )}
     </div>
   );
 }

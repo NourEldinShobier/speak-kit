@@ -32,6 +32,7 @@ function FontRow({ R, set }: RowProps) {
 function SizeRow({ R, set }: RowProps) {
   return (
     <SettingRow
+      className="lm-row--control"
       label="Text size"
       description={`${R.size} px`}
       control={
@@ -47,6 +48,7 @@ function SizeRow({ R, set }: RowProps) {
 function WidthRow({ R, set }: RowProps) {
   return (
     <SettingRow
+      className="lm-row--control"
       label="Page width"
       description={`${R.width} px`}
       control={
