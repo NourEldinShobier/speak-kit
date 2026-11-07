@@ -4,6 +4,14 @@ import type { AppState } from "../../../shared/ipc";
 import { api, usePreview } from "../../ui";
 import { Back, Foot, Frame } from "./Frame";
 
+async function startInstall(): Promise<void> {
+  try {
+    await api.installEngine("chatterbox");
+  } catch {
+    // setup goes on: the Engines page shows why the install could not start (no disk space, no network)
+  }
+}
+
 const SAMPLE = "Notes, documents and even voices lived on someone else's server, rented back to us by the month.";
 
 function HandyToKnow({ s }: { s: AppState }) {
@@ -44,9 +52,9 @@ export function DoneStep({ s, skipped, chatterbox, onBack }: { s: AppState; skip
   }, [engineState]);
   const on = playing === voice && !!voice;
   // The install runs in the server and goes on after setup; a failure shows on the Engines page (disk space, network), so it is not awaited here.
-  const open = () => {
-    if (chatterbox) void api.installEngine("chatterbox").catch(() => {});
-    void api.patchConfig({ setupDone: true, setupSkipped: skipped });
+  const open = async () => {
+    if (chatterbox) await startInstall();
+    await api.patchConfig({ setupDone: true, setupSkipped: skipped });
   };
   return (
     <Frame
@@ -55,7 +63,7 @@ export function DoneStep({ s, skipped, chatterbox, onBack }: { s: AppState; skip
       sub={doneSub(skipped, chatterbox)}
       foot={
         <Foot back={<Back onClick={onBack} />}>
-          <Button variant="primary" size="lg" iconRight="arrow-right" onClick={open}>
+          <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => void open()}>
             Open Speak Kit
           </Button>
         </Foot>

@@ -27,6 +27,13 @@ const gone = (pid: number) => {
     return true;
   }
 };
+/** The engine reports "unloaded" before its process has finished exiting; wait for the process. */
+async function exited(pid: number, limitMs = 15_000): Promise<number> {
+  const t = performance.now();
+  while (!gone(pid) && ms(t) < limitMs) await sleep(100);
+  expect(gone(pid)).toBe(true);
+  return ms(t);
+}
 
 /** Reads a /v1/speak stream to its end; `firstAudioMs` is the time from the request to the first audio frame. */
 async function readStream(res: Response, t0: number) {
@@ -46,7 +53,7 @@ async function readStream(res: Response, t0: number) {
   }
 }
 
-describe.skipIf(!process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the server (real GPU)", () => {
+describe.runIf(process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the server (real GPU)", () => {
   it("selects, speaks, exports, clones, unloads when idle and gives the GPU back when Kokoro is selected", async () => {
     mkdirSync(dataDir, { recursive: true });
     const kokoro = new KokoroEngine({ modelsDir });
@@ -121,7 +128,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the s
       while (cb.status().state === "ready" && ms(tIdle) < IDLE_MS * 4) await sleep(250);
       m.idleUnloadAfterMs = ms(tIdle);
       expect(cb.status().state).toBe("unloaded");
-      expect(gone(pid1)).toBe(true);
+      m.idleExitAfterUnloadMs = await exited(pid1);
       await sleep(1000);
       m.vramAfterIdleMb = vramMb();
       expect(m.vramAfterIdleMb - m.vramBaseMb).toBeLessThan(400);
@@ -134,7 +141,7 @@ describe.skipIf(!process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the s
       const back = (await (await call("POST", "/v1/engines/select", { id: "kokoro" })).json()) as EngineList;
       expect(back.active).toBe("kokoro");
       expect(cb.status().state).toBe("unloaded");
-      expect(gone(pid2)).toBe(true);
+      m.switchExitMs = await exited(pid2);
       await sleep(1000);
       m.vramAfterSwitchMb = vramMb();
       expect(m.vramAfterSwitchMb - m.vramBaseMb).toBeLessThan(400);

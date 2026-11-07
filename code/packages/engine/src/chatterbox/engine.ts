@@ -151,7 +151,11 @@ export class ChatterboxEngine extends LifecycleEngine {
   /** Stops a running install and waits until its processes are gone and the partial environment is deleted. */
   async cancelInstall(): Promise<void> {
     this.#cancel?.abort(new InstallCancelledError());
-    await this.#installing?.catch(() => {}); // the install reports its own failure
+    try {
+      await this.#installing;
+    } catch {
+      // the install reports its own failure through the status; cancel only waits for it to end
+    }
   }
 
   async #requireDisk(): Promise<void> {

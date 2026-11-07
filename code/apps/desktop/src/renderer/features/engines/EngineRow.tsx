@@ -4,8 +4,8 @@ import { describeEngine, type EngineAction } from "../../../shared/engines";
 import { ACTION_LABELS, ENGINE_BLURBS } from "./model";
 import "./engines.css";
 
-const PRIMARY = new Set<EngineAction>(["install", "retry"]);
-const variant = (a: EngineAction) => (a === "remove" ? "danger" : PRIMARY.has(a) ? "primary" : "secondary");
+const VARIANTS: Partial<Record<EngineAction, "primary" | "danger">> = { install: "primary", retry: "primary", remove: "danger" };
+const variant = (a: EngineAction) => VARIANTS[a] ?? "secondary";
 
 interface RowProps {
   engine: EngineInfo;

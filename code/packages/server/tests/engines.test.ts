@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { ClonedVoice, EngineList, ExportJob, Health, VoiceList } from "@speakkit/protocol";
 import { ChatterboxEngine, FakeEngine, type Hardware } from "@speakkit/engine";
 import { clip } from "../../engine/tests/clip-fixture";
@@ -77,6 +77,7 @@ describe("install, select, remove", () => {
     expect(accepted.status).toBe(202);
     expect((await list(accepted)).engines[1]!.state).toBe("installing");
     expect((await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" })).status).toBe(409); // still installing
+    await vi.waitFor(() => expect(finish).toBeDefined()); // the installer starts after the disk-space check
     finish();
     while ((await list(await call(ctx, "GET", "/v1/engines"))).engines[1]!.state === "installing") await new Promise((r) => setTimeout(r, 10));
 
