@@ -56,7 +56,7 @@ class Flow {
   }
 }
 const flow = (slug: string, title: string, run: (f: Flow) => Promise<void>) =>
-  it.skipIf(only && !only.includes(slug))(slug, async () => {
+  it.runIf(!only || only.includes(slug))(slug, async () => {
     const f = new Flow(slug, title);
     await run(f);
     f.finish();
@@ -77,7 +77,7 @@ async function popup(m: Mock, f: Flow, caption: string, after?: (p: Page) => Pro
   await page.close();
 }
 
-describe.skipIf(!process.env.FLOWS)("flows", () => {
+describe.runIf(!!process.env.FLOWS)("flows", () => {
   flow("extension-read-selection", "Extension: select text, Listen, read, pause, change speed, finish", async (f) => {
     const p = await openPage(ctx(), { settings: dock });
     await sleep(500);
