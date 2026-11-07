@@ -1,0 +1,1 @@
+{ "files": { "packages/player/src/leak.ts": "canary" }, "hosts": { "tracker.example.net": "canary" } }

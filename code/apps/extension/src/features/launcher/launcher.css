@@ -1,0 +1,223 @@
+/* Selection bubble, paragraph gutter, edge launcher, toast and back pill. Floating surfaces: white, the popover shadow (1px ring + soft shadow), window radius 12. */
+.sk-bubble {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-popover);
+}
+.sk-bubble .sk-listen {
+  height: 32px;
+  padding-inline: 14px;
+}
+/* settings and copy: 32 x 32, radius 8 */
+.sk-bubble .lm-btn--icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.sk-tint {
+  position: absolute;
+  border-radius: var(--radius-control, 8px);
+  background: color-mix(in srgb, var(--accent-default) 8%, transparent);
+  pointer-events: none !important;
+}
+.sk .sk-gbtn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+}
+.sk .sk-gbtn.is-reading {
+  cursor: default;
+}
+.sk-tint.is-reading {
+  background: color-mix(in srgb, var(--accent-default) 14%, transparent);
+}
+.sk-gtip {
+  position: absolute;
+  pointer-events: none;
+}
+.sk-tab {
+  position: absolute;
+  right: 0;
+  width: 14px;
+  height: 76px;
+  border-radius: var(--radius-card, 10px) 0 0 var(--radius-card, 10px);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-popover);
+  clip-path: inset(-12px 0 -12px -12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  touch-action: none;
+  transition:
+    width var(--dur-ui, 190ms) var(--ease-spring, ease),
+    opacity var(--dur-fade-in, 167ms) ease-out;
+}
+.sk-tab.sk-left {
+  right: auto;
+  left: 0;
+  border-radius: 0 var(--radius-card, 10px) var(--radius-card, 10px) 0;
+  clip-path: inset(-12px -12px -12px 0);
+}
+/* Reading: the tab is only a progress rail, 12 x 96, centred on the viewport height by edge.ts. */
+.sk-tab.is-reading {
+  width: 12px;
+  height: 96px;
+  border-radius: 6px 0 0 6px;
+}
+.sk-tab.sk-left.is-reading {
+  border-radius: 0 6px 6px 0;
+}
+.sk-tab:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.sk-tab.is-ghost {
+  opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-tab.is-ghost:hover {
+    opacity: 1;
+  }
+}
+.sk-rail {
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 8px;
+  width: 4px;
+  height: 80px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+.sk-rail i {
+  display: block;
+  width: 100%;
+  background: var(--cta);
+}
+.sk-pill {
+  position: absolute;
+  right: 14px;
+  width: 60px;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-popover);
+  touch-action: none;
+  transition:
+    opacity var(--dur-fade-in, 167ms) ease-out,
+    transform var(--dur-ui, 190ms) var(--ease-spring, ease);
+}
+.sk-pill.sk-left {
+  right: auto;
+  left: 14px;
+}
+.sk-pill.is-out {
+  opacity: 0;
+  transform: translateX(12px);
+  pointer-events: none;
+}
+.sk-pill.sk-left.is-out {
+  transform: translateX(-12px);
+}
+.sk .sk-big {
+  width: 44px;
+  height: 44px;
+}
+.sk-pill .sk-speed {
+  min-width: 44px;
+  justify-content: center;
+  padding: 0 6px;
+}
+.sk-pill .sk-vc {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.sk-vrail {
+  position: relative;
+  width: 4px;
+  height: 56px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+  cursor: pointer;
+}
+.sk-vrail i {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  width: 100%;
+  background: var(--cta);
+}
+.sk-time {
+  color: var(--text-secondary);
+  font:
+    500 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.sk-ltip {
+  position: absolute;
+  pointer-events: none;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sk-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 36px;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: min(520px, calc(100% - 32px));
+  white-space: nowrap;
+}
+.sk-toast.is-up {
+  bottom: 96px;
+}
+.sk-toast.is-ok > .lm-icon {
+  color: var(--tag-green);
+}
+.sk-toast.is-err > .lm-icon {
+  color: var(--tag-red);
+}
+.sk-back {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  height: 36px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-popover);
+}
+.sk-back.is-down .lm-icon {
+  transform: rotate(180deg);
+}
+
+/* Touch: small icon buttons get an invisible 44 px hit area. */
+@media (pointer: coarse) {
+  .sk-pill .sk-vc {
+    position: relative;
+  }
+  .sk .sk-gbtn::after,
+  .sk-pill .sk-vc::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
+}

@@ -1,0 +1,92 @@
+# Windows installer (NSIS) and portable exe, macOS dmg and zip. Run through scripts/package.mjs, which stages a plain app folder in dist-app first.
+appId: app.speakkit.desktop
+productName: Speak Kit
+directories:
+  app: dist-app
+  output: release
+  buildResources: dist-app-res
+
+# No asar: the engine worker runs as its own Node process and loads kokoro-js, onnxruntime and koffi from disk, so the files
+# stay unpacked next to the app (resources/app). Start-up cost is a few hundred more file reads.
+asar: false
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+
+# macOS: drops the other architecture's native binaries and signs the app ad hoc (see the script).
+afterPack: scripts/after-pack.cjs
+
+files:
+  - "**/*"
+  - "!**/*.map"
+  - "!**/{test,tests,__tests__,docs,examples}/**"
+  - "!**/node_modules/**/*.md"
+  - "!**/node_modules/.bin"
+
+extraResources:
+  # The Chrome extension, unpacked, for "Load unpacked" (Settings > Browser > Install the extension).
+  - from: ../extension/dist-pack
+    to: extension
+    filter: ["**/*", "!**/*.map"]
+  # The Chatterbox sidecar runs in the engine's own Python virtualenv, so it must be a real file on disk (resources/chatterbox).
+  - from: ../../packages/engine/sidecar
+    to: chatterbox
+    filter: ["*.py"]
+
+protocols:
+  - name: Speak Kit
+    schemes: [speakkit]
+
+win:
+  target:
+    - { target: nsis, arch: [x64] }
+    - { target: portable, arch: [x64] }
+  icon: dist-app-res/icon.ico
+  # Not signed: no certificate yet. Windows SmartScreen shows "unknown publisher" until one is bought.
+  signAndEditExecutable: true
+
+mac:
+  target:
+    - { target: dmg, arch: [arm64, x64] }
+    - { target: zip, arch: [arm64, x64] }
+  icon: dist-app-res/icon.png
+  category: public.app-category.utilities
+  artifactName: Speak-Kit-${version}-mac-${arch}.${ext}
+  # Not signed with a Developer ID and not notarized: no Apple Developer account yet. afterPack gives the app an ad-hoc signature,
+  # which Apple Silicon needs to run it at all. Gatekeeper still asks the user to approve the first launch.
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    # Reading the selection presses Cmd+C through System Events.
+    NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
+    # Recording a voice sample for cloning. The audio stays on this computer.
+    NSMicrophoneUsageDescription: Speak Kit records a short voice sample when you clone a voice. The recording stays on this computer.
+
+dmg:
+  title: Speak Kit ${version}
+  sign: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Speak Kit
+  runAfterFinish: true
+  # Not electron-builder's switch: it removes %APPDATA%\Speak Kit, a folder this app does not use, and would take the library with it.
+  # build/installer.nsh removes only the downloaded models and engines (not on an update).
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+  artifactName: Speak-Kit-Setup-${version}.${ext}
+
+portable:
+  artifactName: Speak-Kit-${version}-portable.${ext}
+
+# electron-updater reads this; releases come from GitHub (release.yml uploads the installer and latest.yml).
+publish:
+  provider: github
+  owner: NourEldinShobier
+  repo: speak-kit
+  releaseType: release

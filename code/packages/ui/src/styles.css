@@ -1,0 +1,2284 @@
+/*
+ * Component styles for SpeakKit (light only; there is no dark theme).
+ * Class names (prefix lm-) are the contract shared by the React components (src/react) and the vanilla builders (src/vanilla.ts).
+ * Put class "lm" on a root element (page, shadow-root container).
+ * Forced states for galleries/tests: .is-hover .is-pressed .is-focus mirror :hover :active :focus-visible.
+ */
+
+:root,
+:host {
+  color-scheme: light;
+  --surface-window: #f0f0f0;
+  --surface-editor: #ffffff;
+  --surface-card: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-input: #ffffff;
+  --surface-tray: #f4f4f4;
+  --surface-well: #f5f5f5;
+  --stroke-divider: #ebebeb;
+  --stroke-hairline: #f0f0f0;
+  --stroke-control: #e5e5e5;
+  --stroke-field: #c3c6cc;
+  --stroke-focus-field: #171717;
+  --fill-hover: rgb(0 0 0 / 0.04);
+  --fill-pressed: rgb(0 0 0 / 0.07);
+  --fill-selected: #f0f0f0;
+  --fill-raised-hover: #f7f8fa;
+  --fill-raised-press: #f0f0f0;
+  --track: #ececec;
+  --kbd-fill: #ececec;
+  --kbd-fill-on-cta: #3a3841;
+  --text-primary: #1b2230;
+  --text-secondary: #475467;
+  --text-tertiary: #5f6a7d;
+  --text-placeholder: #6b7280;
+  --text-label-on-white: #171717;
+  --text-on-accent: #ffffff;
+  --text-on-highlight: #1e1f20;
+  --icon: #667085;
+  --icon-quiet: #737373;
+  --accent-default: #0069cc;
+  --accent-button: #201e25;
+  --accent-subtle: rgb(0 105 204 / 0.122);
+  --cta: #201e25;
+  --text-on-cta: #fafafa;
+  --destructive: #c62828;
+  --destructive-fill-hover: #fef2f2;
+  --destructive-ring-hover: #f2b8b8;
+  --destructive-fill-pressed: #fde4e4;
+  --tag-blue: #0b5cad;
+  --tag-green: #17693d;
+  --tag-orange: #9a5200;
+  --tag-red: #a61b1b;
+  --tag-purple: #7a4cd9;
+  --tag-yellow: #b8860b;
+  /* text-only variants of the purple and yellow tags: >= 4.5:1 on their 14% / 16% chip tints (the tag colours stay for dots and icons) */
+  --tag-purple-text: #6f42c1;
+  --tag-yellow-text: #80600a;
+  --dot-green: #05c283;
+  --dot-orange: #fd9812;
+  --dot-red: #f24349;
+  --dot-blue: #2e9ff1;
+  --chip-green: #d5f3e0;
+  --chip-orange: #ffebcf;
+  --chip-red: #ffe4e5;
+  --chip-blue: #daeffe;
+  --chip-gray: #f0f0f0;
+  --neutral: #d0d5dd;
+  --divider-strong: #d0d0d0;
+  --disabled-line: #d5d7db;
+  --disabled-track: #ecedef;
+  --disabled-fill: #b7b9bf;
+  --disabled-text: #a3a9b5;
+  --disabled-seg: #9aa0ab;
+  --disabled-thumb: #c9ccd2;
+  --scrim: rgb(27 34 48 / 0.32);
+  --scroll-thumb: rgb(0 0 0 / 0.18);
+  --lm-ink-sm: rgb(0 0 0 / 0.06);
+  --lm-ink-md: rgb(0 0 0 / 0.07);
+}
+
+/* One radius per container level, inner = max(2, outer - inset). macOS values by default; on Windows (data-platform="win32" on the document root,
+   or on the in-page container inside a shadow root) the panel is 8 and the tray, window and dialog 10 */
+:root,
+:host {
+  --radius-dialog: 16px;
+  --radius-panel: 14px;
+  --radius-tray: 14px;
+  --radius-menu: 10px;
+  --radius-window: 12px;
+  --radius-card: 8px;
+  --radius-control: 8px;
+  --radius-track: 8px;
+  --radius-item: 8px;
+  --radius-chip: 6px;
+  --radius-check: 5px;
+  --radius-xs: 4px;
+  --radius-bar: 2px;
+  --radius-pill: 9999px;
+  /* layout: title bar, inset of a panel from the window edge, page header and body padding, gap between page sections, card padding */
+  --bar-h: 36px;
+  --panel-inset: 4px;
+  --panel-inset-end: 8px;
+  --page-pad-top: 22px;
+  --page-pad-x: 28px;
+  --page-pad-bottom: 24px;
+  --page-gap: 16px;
+  --card-pad-y: 14px;
+  --card-pad-x: 16px;
+}
+[data-platform="win32"] {
+  --radius-dialog: 10px;
+  --radius-panel: 8px;
+  --radius-tray: 10px;
+  --radius-menu: 10px;
+  --radius-window: 10px;
+  --radius-card: 8px;
+}
+
+/* Concentric inner radii: a fill that sits inside a rounded container has radius = container radius - (border + padding), at least --radius-xs.
+   Declared for every element that can carry data-platform so a platform override of the container radius reaches them. */
+:root,
+:host,
+[data-platform] {
+  --radius-menu-item: 6px; /* menu rows: 6, selected row included */
+  --radius-seg-opt: max(var(--radius-xs), calc(var(--radius-track) - 2px)); /* segmented track: 2px padding */
+  --radius-palette-item: max(var(--radius-xs), calc(var(--radius-dialog) - 8px)); /* command palette: 8px list padding */
+}
+
+.lm {
+  /* elevation: at most two layers, blur 12 px at most */
+  --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-card-ring: 0 0 0 1px var(--stroke-control), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
+  /* floating cards (menu, select list, popover): the element has its own 1 px --stroke-control border, so the shadow is the drop only */
+  --shadow-menu: 0 2px 6px rgb(0 0 0 / 0.06);
+  --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
+  --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
+  /* the same card for a surface without a border (toast, in-page cards): the edge is the 1 px ring */
+  --shadow-popover: 0 0 0 1px var(--stroke-control), var(--shadow-menu);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
+  --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
+  --shadow-panel: var(--shadow-card);
+  /* motion: spring step responses as linear() easings, durations are settle times */
+  --ease-spring: linear(0, 0.026, 0.092, 0.181, 0.282, 0.385, 0.484, 0.576, 0.659, 0.731, 0.792, 0.843, 0.885, 0.918, 0.943, 0.963, 0.977, 0.987, 0.994, 0.998, 1);
+  --ease-layout: linear(0, 0.024, 0.084, 0.166, 0.259, 0.354, 0.447, 0.534, 0.614, 0.685, 0.747, 0.8, 0.845, 0.882, 0.913, 0.937, 0.957, 0.972, 0.984, 0.993, 1);
+  --ease-soft: linear(0, 0.022, 0.076, 0.15, 0.235, 0.323, 0.41, 0.493, 0.57, 0.64, 0.702, 0.757, 0.805, 0.846, 0.882, 0.911, 0.936, 0.957, 0.974, 0.989, 1);
+  --dur-snap: 130ms;
+  --dur-ui: 190ms;
+  --dur-layout: 260ms;
+  --dur-morph: 330ms;
+  --dur-gentle: 460ms;
+  --dur-release: 310ms;
+  --dur-fade-in: 167ms;
+  --dur-fade-out: 83ms;
+  --dur-exit: 120ms;
+  --dur-focus: 120ms;
+  /* aliases of the tokens above */
+  --lm-shadow-menu: var(--shadow-menu);
+  --lm-shadow-overlay: var(--shadow-popover);
+  --lm-shadow-dialog: var(--shadow-dialog);
+  --lm-shadow-window: var(--shadow-popover);
+  --lm-ease: var(--ease-spring);
+  --lm-ease-slow: var(--ease-layout);
+  --lm-ease-exit: ease-in;
+  --lm-dur-instant: var(--dur-fade-out);
+  --lm-dur-fast: var(--dur-fade-in);
+  --lm-dur-normal: var(--dur-layout);
+  --lm-dur-slow: var(--dur-morph);
+  --lm-dur-exit: var(--dur-exit);
+  /* looping animations: one cycle of the spinner, and of shimmer, indeterminate bar and caret blink */
+  --lm-dur-spin: 800ms;
+  --lm-dur-shimmer: 1200ms;
+  /* focus ring: 1 px accent line inside the element, offset 2 px on the black button, switch, checkbox, radio */
+  --lm-ring: 1px;
+  --lm-ring-offset: 2px;
+  --lm-ring-offset-drawn: -1px;
+  --lm-scrim: var(--scrim);
+  font-family: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 16px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+.lm,
+.lm *,
+.lm *::before,
+.lm *::after {
+  box-sizing: border-box;
+}
+
+/* Reader "paper" theme: a warm sheet. */
+:root,
+:host {
+  --paper-bg: #f4ecd8;
+  --paper-fg: #2b2a28;
+  --paper-muted: #6b6557;
+  --paper-block: #ece1c4;
+  --paper-sentence: #e3d09b;
+  --paper-word: #f0b95a;
+  --paper-line: #d9cfb4;
+}
+
+/* Icon boxes are centred by their flex parent; the stroke stays 1.5px on screen at every size
+   (viewBox 24, so stroke-width = 36 / size in viewBox units). Never inline-baseline: display:block. */
+.lm-icon {
+  --s: 16;
+  display: block;
+  flex: none;
+  width: calc(var(--s) * 1px);
+  height: calc(var(--s) * 1px);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: calc(36 / var(--s));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Transport glyphs are solid shapes with softly rounded corners (the stroke rounds the joins). */
+.lm-icon--player-play,
+.lm-icon--player-pause,
+.lm-icon--player-stop {
+  fill: currentColor;
+  stroke-width: calc(54 / var(--s));
+}
+/* The pause bars are drawn to size with their own rounded corners, so they take no stroke (3 px bars, 3 px gap at 16 px). */
+.lm-icon--player-pause {
+  stroke: none;
+}
+.lm-spin {
+  animation: lm-spin var(--lm-dur-spin) linear infinite;
+}
+@keyframes lm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Entering a state (hover, open, on, selected, disabled): 167 ms ease-out. Leaving: 83 ms ease-in. Focus: 120 ms. Press: 130 ms on the spring. Colour, opacity, transform only. */
+.lm :is(button, a, input, textarea, select, summary, label, [role], [tabindex]) {
+  transition-property: color, background-color, border-color, outline-color, outline-offset, box-shadow, opacity, transform, translate, scale;
+  transition-duration: var(--dur-fade-out);
+  transition-timing-function: ease-in;
+}
+.lm
+  :is(button, a, input, textarea, select, summary, label, [role], [tabindex]):is(
+    :disabled,
+    [aria-expanded="true"],
+    [aria-pressed="true"],
+    [aria-checked="true"],
+    [aria-selected="true"],
+    [aria-current="page"],
+    [data-state="on"],
+    [data-state="checked"],
+    [data-state="open"]
+  ) {
+  transition-duration: var(--dur-fade-in);
+  transition-timing-function: ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm :is(button, a, input, textarea, select, summary, label, [role], [tabindex]):hover {
+    transition-duration: var(--dur-fade-in);
+    transition-timing-function: ease-out;
+  }
+}
+.lm :is(button, a, input, textarea, select, summary, label, [role]):is(:focus-visible, .is-focus) {
+  transition-duration: var(--dur-focus);
+  transition-timing-function: ease-out;
+}
+.lm :is(button, a, input, textarea, select, summary, label, [role]):active {
+  transition-duration: var(--dur-snap);
+  transition-timing-function: var(--ease-spring);
+}
+/* Keyboard focus only: a 1 px accent line inside the element. The line always exists (transparent) so its colour can fade. */
+.lm :focus:not(:focus-visible):not(.is-focus) {
+  outline: none;
+}
+.lm :is(button, a, input, textarea, select, summary, [role="button"], [role="slider"], [role="tab"], [role="switch"]) {
+  outline: var(--lm-ring) solid transparent;
+  outline-offset: -1px;
+}
+.lm :is(button, a, input, textarea, select, summary, [role="button"], [role="slider"], [role="tab"], [role="switch"]):is(:focus-visible, .is-focus) {
+  outline-color: var(--accent-default);
+}
+/* offset 2 px for the black button, switch, checkbox and radio */
+.lm .lm-btn--primary,
+.lm .lm-toggle,
+.lm .lm-close,
+.lm .lm-check__box {
+  outline-offset: var(--lm-ring-offset);
+}
+.lm-menu__item:is(:focus-visible, .is-focus) {
+  outline-color: transparent;
+}
+.lm-btn:active:not(:disabled),
+.lm-seg__opt:active:not(:disabled) {
+  scale: 0.97;
+}
+/* small controls squeeze further, like the checkbox */
+.lm-btn--xs:active:not(:disabled),
+.lm-close:active {
+  scale: 0.92;
+}
+
+/* sizes: default 36 | sm 28 | xs 24 | xl 40; lg is the default size */
+.lm-btn {
+  appearance: none;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  background-clip: padding-box;
+  color: var(--text-primary);
+  font:
+    500 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+.lm-btn:is(:disabled, .is-disabled) {
+  pointer-events: none;
+  opacity: 0.5;
+}
+.lm-btn:is(:focus-visible, .is-focus) {
+  border-color: var(--accent-default);
+}
+.lm-btn .lm-icon {
+  pointer-events: none;
+}
+.lm-btn--primary {
+  border-width: 0;
+  padding: 0 15px;
+  background: var(--cta);
+  color: var(--text-on-cta);
+  box-shadow: var(--shadow-cta);
+}
+.lm-btn--primary:is(:focus-visible, .is-focus) {
+  border-color: transparent;
+}
+.lm-btn--primary:is(.is-hover) {
+  background: color-mix(in srgb, var(--cta) 90%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--primary:hover {
+    background: color-mix(in srgb, var(--cta) 90%, transparent);
+  }
+}
+.lm-btn--primary:is(:active, .is-pressed) {
+  background: color-mix(in srgb, var(--cta) 80%, transparent);
+}
+.lm-btn--secondary {
+  border-color: var(--stroke-control);
+  background: var(--surface-raised);
+  color: var(--text-label-on-white);
+  box-shadow: var(--shadow-control);
+}
+.lm-btn--secondary .lm-icon {
+  color: var(--text-secondary);
+}
+.lm-btn--secondary:is(.is-hover, [aria-expanded="true"]) {
+  background: var(--fill-raised-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--secondary:hover {
+    background: var(--fill-raised-hover);
+  }
+}
+.lm-btn--secondary:is(:active, .is-pressed) {
+  background: var(--fill-raised-press);
+}
+.lm-btn--ghost {
+  color: var(--text-secondary);
+}
+.lm-btn--ghost:is(.is-hover, [aria-expanded="true"]) {
+  background: var(--fill-hover);
+  color: var(--text-primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--ghost:hover {
+    background: var(--fill-hover);
+    color: var(--text-primary);
+  }
+}
+.lm-btn--ghost:is(:active, .is-pressed) {
+  background: var(--fill-pressed);
+}
+/* danger = destructive action: the secondary button (white, 1 px ring, soft shadow) with red text. There is no filled red button. */
+.lm-btn--danger {
+  border-color: var(--stroke-control);
+  background: var(--surface-raised);
+  color: var(--destructive);
+  box-shadow: var(--shadow-control);
+}
+.lm-btn--danger:is(.is-hover) {
+  border-color: var(--destructive-ring-hover);
+  background: var(--destructive-fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--danger:hover {
+    border-color: var(--destructive-ring-hover);
+    background: var(--destructive-fill-hover);
+  }
+}
+.lm-btn--danger:is(:active, .is-pressed) {
+  border-color: var(--destructive-ring-hover);
+  background: var(--destructive-fill-pressed);
+}
+/* focus: a 2 px solid red ring 2 px outside the button (5.6:1 on white; red at 40% was 1.97:1) */
+.lm .lm-btn--danger:is(:focus-visible, .is-focus) {
+  border-color: var(--stroke-control);
+  outline: 2px solid var(--destructive);
+  outline-offset: 2px;
+}
+.lm-btn--danger:is(:disabled, .is-disabled) {
+  opacity: 1;
+  color: color-mix(in srgb, var(--destructive) 40%, transparent);
+}
+/* toggle button: selected = white card with stroke on the grey track, like a segmented item */
+.lm-btn--toggle {
+  color: var(--text-secondary);
+}
+.lm-btn--toggle:is(.is-hover) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--toggle:hover {
+    background: var(--fill-hover);
+  }
+}
+.lm-btn--toggle[aria-pressed="true"] {
+  border-color: var(--stroke-control);
+  background: var(--surface-card);
+  color: var(--text-label-on-white);
+  box-shadow: var(--shadow-control);
+}
+.lm-btn--sm {
+  height: 28px;
+  padding: 0 12px;
+}
+.lm-btn--xs {
+  height: 24px;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  line-height: 15px;
+}
+.lm-btn--xl {
+  height: 40px;
+  gap: 8px;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 17px;
+  letter-spacing: 0;
+}
+.lm-btn--icon {
+  width: 36px;
+  padding: 0;
+}
+.lm-btn--icon.lm-btn--sm {
+  width: 28px;
+}
+.lm-btn--icon.lm-btn--xs {
+  width: 24px;
+}
+.lm-btn--icon.lm-btn--xl {
+  width: 40px;
+}
+.lm-btn--icon.lm-btn--round {
+  width: 36px;
+  border-radius: var(--radius-pill);
+}
+.lm-btn--icon.lm-btn--xl.lm-btn--round {
+  width: 40px;
+}
+.lm-btn--icon.lm-btn--solid {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.lm-btn.is-loading {
+  cursor: progress;
+}
+/* window-card action (notification card, tray): 28 px, 12.5 px text */
+.lx-btn-card {
+  height: 28px;
+  gap: 5px;
+  padding: 0 10px 0 8px;
+  font-size: 12.5px;
+  line-height: 15px;
+  letter-spacing: 0;
+}
+/* close button: ghost 24 px chip, 12 px glyph, 32 px hit area */
+.lm-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.lm-close::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-close:hover {
+    background: var(--fill-hover);
+    color: var(--text-primary);
+  }
+}
+.lm-close:active {
+  background: var(--fill-pressed);
+}
+
+.lm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lm-field__label {
+  font:
+    500 12px/15px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  color: var(--text-secondary);
+}
+.lm-field__error {
+  font:
+    400 11px/13px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  color: var(--tag-red);
+}
+.lm-field__hint {
+  font:
+    400 11px/13px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  color: var(--text-tertiary);
+}
+/* the frame holds the icon and the field; focus is a 2 px stroke (border plus a 1 px inner line), so nothing moves */
+.lm-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--icon);
+  box-shadow: var(--shadow-control);
+}
+.lm-input:is(:focus-within, .is-focus) {
+  border-color: var(--stroke-focus-field);
+  box-shadow:
+    inset 0 0 0 1px var(--stroke-focus-field),
+    var(--shadow-control);
+}
+.lm-input--sm {
+  height: 28px;
+}
+.lm-input.is-error,
+.lm-input[aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+.lm-input.is-disabled {
+  background: color-mix(in srgb, var(--stroke-control) 50%, transparent);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lm-input__field {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font:
+    400 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.01em;
+}
+/* the frame shows the focus (only the outer ring); the field inside it draws no outline of its own. The outline stays 1 px transparent: forced-colors mode paints it, and it is the only focus indicator there. */
+.lm .lm-input .lm-input__field:is(:focus, :focus-visible, .is-focus) {
+  outline: 1px solid transparent;
+}
+.lm-input__field::placeholder {
+  color: var(--text-placeholder);
+  opacity: 1;
+}
+
+/* switch: 32 x 20, knob 16, travel 12 */
+.lm-toggle {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 32px;
+  height: 20px;
+  padding: 2px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--stroke-control);
+  box-shadow: inset 0 0 0 1px var(--stroke-field);
+  cursor: pointer;
+}
+.lm-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+}
+.lm-toggle[aria-checked="true"] {
+  background: var(--cta);
+  box-shadow: none;
+}
+.lm-toggle__knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow: var(--shadow-control);
+  pointer-events: none;
+  translate: 0 0;
+  transition:
+    translate var(--dur-ui) var(--ease-spring),
+    width var(--dur-ui) var(--ease-spring),
+    background-color var(--dur-ui) var(--ease-spring);
+}
+.lm-toggle[aria-checked="true"] .lm-toggle__knob {
+  translate: 12px 0;
+}
+.lm-toggle:is(:disabled, .is-disabled) {
+  cursor: not-allowed;
+}
+.lm-toggle:is(:disabled, .is-disabled)[aria-checked="false"] {
+  background: var(--disabled-track);
+  box-shadow: none;
+}
+.lm-toggle:is(:disabled, .is-disabled)[aria-checked="true"] {
+  background: var(--disabled-fill);
+}
+.lm-toggle:is(:disabled, .is-disabled) .lm-toggle__knob {
+  box-shadow: none;
+}
+.lm-toggle:is(:disabled, .is-disabled)[aria-checked="false"] .lm-toggle__knob {
+  background: var(--disabled-thumb);
+}
+
+/* checkbox / radio: 16 x 16, border 1, radius 5 / full, glyph 12 */
+.lm-check,
+.lm-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.lm-check__input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.lm-check__box {
+  position: relative;
+  display: grid;
+  place-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--stroke-field);
+  border-radius: var(--radius-check);
+  background: transparent;
+  color: var(--text-on-cta);
+  outline: var(--lm-ring) solid transparent;
+}
+.lm-check__box::after {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+}
+.lm-radio .lm-check__box {
+  border-radius: var(--radius-pill);
+}
+.lm-check__input:active + .lm-check__box {
+  scale: 0.92;
+}
+.lm-check__input:focus-visible + .lm-check__box,
+.lm-check__box.is-focus {
+  outline-color: var(--accent-default);
+}
+.lm-check__input:checked + .lm-check__box,
+.lm-check__input[type="checkbox"]:indeterminate + .lm-check__box {
+  border-color: var(--cta);
+  background: var(--cta);
+}
+.lm-radio .lm-check__input:checked + .lm-check__box {
+  background: var(--cta);
+}
+/* glyph: check (and minus when indeterminate), 12 px, 2 px stroke that does not scale; enters from 50% in 130 ms on the spring */
+.lm-check__box .lm-icon {
+  display: none;
+  stroke-width: 2;
+}
+.lm-check__box .lm-icon * {
+  vector-effect: non-scaling-stroke;
+}
+.lm-check__input:checked:not(:indeterminate) + .lm-check__box .lm-icon--check,
+.lm-check__input[type="checkbox"]:indeterminate + .lm-check__box .lm-icon--minus {
+  display: block;
+  animation: lm-glyph var(--dur-snap) var(--ease-spring) backwards;
+}
+.lm-radio .lm-check__box::before {
+  content: "";
+  grid-area: 1 / 1;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--text-on-cta);
+  transform: scale(0);
+}
+.lm-radio .lm-check__input:checked + .lm-check__box::before {
+  transform: none;
+  animation: lm-glyph var(--dur-snap) var(--ease-spring) backwards;
+}
+@keyframes lm-glyph {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+.lm-check.is-disabled,
+.lm-radio.is-disabled {
+  color: var(--disabled-text);
+  cursor: not-allowed;
+}
+.lm-check__input:disabled + .lm-check__box {
+  border-color: var(--disabled-line);
+  background: transparent;
+}
+.lm-check__input:disabled:checked + .lm-check__box,
+.lm-check__input[type="checkbox"]:disabled:indeterminate + .lm-check__box {
+  border-color: transparent;
+  background: var(--disabled-fill);
+}
+
+/* status and grade pill: 20 px, 11.5 px / 500, soft tinted fill with a dark text of the same hue, never a stroke */
+.lm-pill {
+  --tone: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 2px 7px 0;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--tone);
+  font:
+    500 11.5px/14px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+.lm-pill--green {
+  --tone: var(--tag-green);
+  background: var(--chip-green);
+}
+.lm-pill--blue {
+  --tone: var(--tag-blue);
+  background: var(--chip-blue);
+}
+.lm-pill--orange {
+  --tone: var(--tag-orange);
+  background: var(--chip-orange);
+}
+.lm-pill--red {
+  --tone: var(--tag-red);
+  background: var(--chip-red);
+}
+.lm-pill--purple {
+  --tone: var(--tag-purple-text);
+  background: color-mix(in srgb, var(--tag-purple) 14%, transparent);
+}
+.lm-pill--yellow {
+  --tone: var(--tag-yellow-text);
+  background: color-mix(in srgb, var(--tag-yellow) 16%, transparent);
+}
+.lm-pill--neutral {
+  --tone: var(--text-secondary);
+  background: var(--chip-gray);
+}
+
+.lm-citation {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 2px 8px 0;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--text-secondary);
+  font:
+    500 11.5px/14px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lm-citation__count {
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+.lm-citation:is(.is-hover) {
+  background: var(--fill-pressed);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-citation:hover {
+    background: var(--fill-pressed);
+  }
+}
+.lm-citation:is([aria-pressed="true"], .is-active) {
+  box-shadow: inset 0 0 0 1px var(--accent-default);
+}
+.lm-citation--file {
+  background: var(--chip-orange);
+  color: var(--tag-orange);
+}
+.lm-citation.is-removed {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--tag-red);
+  color: var(--tag-red);
+  text-decoration: line-through;
+}
+
+.lm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 2px 8px;
+  border: 1px solid var(--stroke-divider);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font:
+    500 12px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+/* badge: neutral grey pill (there is no blue badge) */
+.lm-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--text-secondary);
+  font:
+    500 12px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+/* tag / code chip, count and tile */
+.lx-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  max-width: 100%;
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-well);
+  color: var(--text-secondary);
+  font:
+    400 12px/14px "JetBrains Mono Variable",
+    ui-monospace,
+    Consolas,
+    monospace;
+}
+.lx-count {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 2px 6px 0;
+  border-radius: var(--radius-pill);
+  background: var(--chip-gray);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lx-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-item);
+  background: var(--surface-well);
+  color: var(--icon-quiet);
+}
+.lx-tile--amber {
+  background: var(--chip-orange);
+  color: var(--tag-orange);
+}
+.lx-tile--red {
+  background: var(--chip-red);
+  color: var(--tag-red);
+}
+
+/* key chip: solid grey, no border, 16 high; inside a dark primary button it is #3A3841 with white 11 px text, 18 high */
+.lm-kbd,
+.lm-kbd--sm {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--kbd-fill);
+  color: var(--text-tertiary);
+  font:
+    500 12px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+.lm-btn--primary .lm-kbd {
+  height: 18px;
+  background: var(--kbd-fill-on-cta);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+}
+.lm-kbds {
+  display: inline-flex;
+  gap: 4px;
+}
+.lm-avatar,
+.lm-favicon {
+  --s: 32;
+  --tone: var(--chip-gray);
+  --ink: var(--text-secondary);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--s) * 1px);
+  height: calc(var(--s) * 1px);
+  border-radius: var(--radius-pill);
+  background: var(--tone);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: calc(var(--s) * 0.42px);
+  line-height: 1.2;
+  font-family: Inter, "Inter Variable", system-ui, sans-serif;
+  user-select: none;
+}
+.lm-favicon {
+  --s: 14;
+  --tone: var(--chip-gray);
+  font-size: calc(var(--s) * 0.58px);
+}
+.lm-tone-neutral {
+  --tone: var(--chip-gray);
+  --ink: var(--text-secondary);
+}
+.lm-tone-accent {
+  --tone: var(--cta);
+  --ink: var(--text-on-cta);
+}
+.lm-tone-blue,
+.lm-tone-green,
+.lm-tone-orange,
+.lm-tone-red,
+.lm-tone-purple,
+.lm-tone-yellow {
+  --ink: #fff;
+}
+.lm-tone-blue {
+  --tone: var(--tag-blue);
+}
+.lm-tone-green {
+  --tone: var(--tag-green);
+}
+.lm-tone-orange {
+  --tone: var(--tag-orange);
+}
+.lm-tone-red {
+  --tone: var(--tag-red);
+}
+.lm-tone-purple {
+  --tone: var(--tag-purple);
+}
+.lm-tone-yellow {
+  --tone: var(--tag-yellow);
+}
+
+/* avatars: chip tint with the matching tag colour as the letter (favicons keep the solid tones) */
+.lm-avatar.lm-tone-blue {
+  --tone: var(--chip-blue);
+  --ink: var(--tag-blue);
+}
+.lm-avatar.lm-tone-green {
+  --tone: var(--chip-green);
+  --ink: var(--tag-green);
+}
+.lm-avatar.lm-tone-orange {
+  --tone: var(--chip-orange);
+  --ink: var(--tag-orange);
+}
+.lm-avatar.lm-tone-red {
+  --tone: var(--chip-red);
+  --ink: var(--tag-red);
+}
+.lm-avatar.lm-tone-purple {
+  --tone: color-mix(in srgb, var(--tag-purple) 14%, transparent);
+  --ink: var(--tag-purple-text);
+}
+.lm-avatar.lm-tone-yellow {
+  --tone: color-mix(in srgb, var(--tag-yellow) 16%, transparent);
+  --ink: var(--tag-yellow-text);
+}
+
+.lm-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 128px;
+  padding: 4px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-menu);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-menu);
+  font-size: 14px;
+  line-height: 20px;
+}
+.lm-menu__item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 6px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-menu-item);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: default;
+  user-select: none;
+}
+.lm-menu__item .lm-icon {
+  color: var(--icon);
+}
+.lm-menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lm-menu__shortcut {
+  margin-inline-start: auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+.lm-menu__item .lm-menu__check {
+  display: flex;
+  color: var(--text-primary);
+}
+.lm-menu__item:is(.is-hover, .is-active, [aria-selected="true"], [aria-current="true"], [data-highlighted], [data-state="open"]) {
+  background: var(--fill-hover);
+}
+/* the current choice: a full-width row, radius 6, with the check mark at the right */
+.lm-menu__item:is(.is-selected, [aria-checked="true"], [data-state="checked"]) {
+  background: var(--fill-selected);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-menu__item:hover {
+    background: var(--fill-hover);
+  }
+}
+.lm-menu__item.is-destructive,
+.lm-menu__item.is-destructive .lm-icon {
+  color: var(--destructive);
+}
+.lm-menu__item.is-destructive:is(.is-hover, [data-highlighted]) {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-menu__item.is-destructive:hover {
+    background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  }
+}
+.lm-menu__item[data-disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.lm-menu--floating,
+.lm-popover--floating {
+  z-index: 60;
+  animation: lm-pop var(--dur-layout) var(--ease-layout);
+}
+.lm-popover--floating:focus,
+.lm-popover--floating:focus-visible {
+  outline: none;
+}
+.lm-tooltip--floating {
+  z-index: 70;
+  animation: lm-fade 100ms ease-out;
+}
+.lm-menu__sep {
+  height: 1px;
+  margin: 4px -4px;
+  background: var(--stroke-divider);
+}
+/* group label: 24 px high */
+.lm-menu__group {
+  padding: 4px 6px;
+  color: var(--text-tertiary);
+  font:
+    500 12px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+
+.lm-tabs {
+  display: inline-flex;
+  gap: 20px;
+}
+.lm-tab {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 26px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font:
+    400 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lm-tab::after {
+  content: "";
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: transparent;
+}
+.lm-tab:is(.is-hover) {
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-tab:hover {
+    color: var(--text-secondary);
+  }
+}
+.lm-tab[aria-selected="true"] {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.lm-tab[aria-selected="true"]::after {
+  background: var(--accent-default);
+}
+.lm-tab:disabled {
+  color: var(--disabled-seg);
+  pointer-events: none;
+}
+
+/* segmented: track 32, items 28 (lg: 36 / 32 for a 36 px settings row; sm: 28 / 24) */
+.lm-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  height: 32px;
+  padding: 2px;
+  border-radius: var(--radius-track);
+  background: var(--track);
+}
+.lm-seg__opt {
+  appearance: none;
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-seg-opt);
+  background: transparent;
+  color: var(--text-tertiary);
+  font:
+    400 14px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lm-seg__opt:is(.is-hover) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-seg__opt:hover {
+    background: var(--fill-hover);
+  }
+}
+/* tertiary text drops below 4.5:1 on the darker hover and pressed fills, so those states use the secondary text colour */
+.lm-seg__opt:is(:active, .is-pressed, .is-hover):not([aria-checked="true"]) {
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-seg__opt:hover:not([aria-checked="true"]) {
+    color: var(--text-secondary);
+  }
+}
+.lm-seg__opt[aria-checked="true"] {
+  background: var(--surface-card);
+  color: var(--text-label-on-white);
+  font-weight: 500;
+  box-shadow: var(--shadow-tab);
+}
+/* the label reserves the width of its selected (500) weight, so selecting does not move it */
+.lm-seg__label {
+  display: inline-grid;
+}
+.lm-seg__label::after {
+  content: attr(data-label);
+  height: 0;
+  line-height: 0;
+  visibility: hidden;
+  font-weight: 500;
+}
+.lm-seg--lg {
+  height: 36px;
+}
+.lm-seg--lg .lm-seg__opt {
+  height: 32px;
+}
+.lm-seg--sm {
+  height: 28px;
+  gap: 0;
+  border-radius: var(--radius-control);
+}
+.lm-seg--sm .lm-seg__opt {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 16px;
+}
+.lm-seg--pill {
+  border-radius: var(--radius-pill);
+}
+.lm-seg--pill .lm-seg__opt {
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+}
+.lm-seg:disabled,
+.lm-seg.is-disabled {
+  background: var(--disabled-track);
+}
+.lm-seg__opt:disabled,
+.lm-seg.is-disabled .lm-seg__opt {
+  color: var(--disabled-seg);
+  pointer-events: none;
+}
+.lm-seg__opt[aria-checked="true"]:disabled,
+.lm-seg.is-disabled .lm-seg__opt[aria-checked="true"] {
+  border-color: transparent;
+  background: #fff;
+  box-shadow: none;
+}
+
+.lm-select {
+  position: relative;
+  display: inline-block;
+}
+.lm-select__trigger {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 160px;
+  height: 36px;
+  padding: 4px 12px;
+  margin: 0;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-control);
+  font:
+    400 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lm-select--sm .lm-select__trigger {
+  height: 28px;
+}
+.lm-select__trigger:is(.is-hover, [aria-expanded="true"]) {
+  background: var(--fill-raised-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-select__trigger:hover {
+    background: var(--fill-raised-hover);
+  }
+}
+.lm-select__trigger:is(:focus-visible, .is-focus) {
+  border-color: var(--stroke-focus-field);
+  box-shadow:
+    inset 0 0 0 1px var(--stroke-focus-field),
+    var(--shadow-control);
+  outline-color: transparent;
+}
+.lm-select.is-disabled .lm-select__trigger {
+  background: color-mix(in srgb, var(--stroke-control) 50%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.lm-select__value {
+  flex: 1;
+  text-align: start;
+}
+.lm-select__trigger .lm-icon {
+  color: var(--text-tertiary);
+}
+.lm-select__menu {
+  z-index: 60;
+  min-width: var(--radix-select-trigger-width, 100%);
+  max-height: min(320px, var(--radix-select-content-available-height, 320px));
+  overflow: auto;
+  animation: lm-pop var(--dur-layout) var(--ease-layout);
+}
+/* the scrollbar is 3 px from the right edge: a 6 px bar whose thumb has a transparent 3 px end border */
+.lm-select__menu::-webkit-scrollbar {
+  width: 6px;
+}
+.lm-select__menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lm-select__menu::-webkit-scrollbar-thumb {
+  border-inline-end: 3px solid transparent;
+  border-radius: var(--radius-bar);
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+@keyframes lm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+}
+@keyframes lm-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.lm-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 356px;
+  max-width: 100%;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: var(--radius-window);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
+  font:
+    500 13.5px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.lm-toast .lm-icon {
+  color: var(--text-secondary);
+}
+.lm-toast__msg {
+  flex: 1;
+  min-width: 0;
+}
+.lm-banner {
+  --tone: var(--tag-blue);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--chip-blue);
+  color: var(--text-primary);
+  font:
+    400 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.lm-banner--warning {
+  --tone: var(--tag-orange);
+  background: var(--chip-orange);
+}
+.lm-banner--error {
+  --tone: var(--tag-red);
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--chip-red);
+}
+.lm-banner .lm-icon {
+  color: var(--tone);
+}
+.lm-banner__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.lm-banner__actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.lm-banner__title {
+  font-weight: 600;
+}
+.lm-banner__text {
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--text-secondary);
+}
+.lm-tip {
+  position: relative;
+  display: inline-flex;
+}
+/* tooltip: dark ink fill, light text, 28 px high */
+.lm-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 6px 12px;
+  border-radius: var(--radius-chip);
+  background: var(--text-primary);
+  color: var(--surface-window);
+  font:
+    400 12px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+.lm-tooltip .lm-kbd {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: inherit;
+}
+.lm-tooltip__arrow {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--text-primary);
+  rotate: 45deg;
+}
+.lm-tip > .lm-tooltip {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fade-out) ease-in;
+}
+.lm-tip:is(:focus-within, .is-open) > .lm-tooltip {
+  opacity: 1;
+  transition: opacity 100ms ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-tip:hover > .lm-tooltip {
+    opacity: 1;
+    transition: opacity 100ms ease-out;
+  }
+}
+
+.lm-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+}
+.lm-skeleton__line {
+  height: 10px;
+  border-radius: var(--radius-xs);
+  background: var(--stroke-control);
+}
+.lm-skeleton.is-shimmer .lm-skeleton__line {
+  background: linear-gradient(90deg, var(--stroke-control) 25%, var(--track) 50%, var(--stroke-control) 75%) 0 0 / 200% 100%;
+  animation: lm-shimmer var(--lm-dur-shimmer) linear infinite;
+}
+@keyframes lm-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.lm-loading .lm-icon {
+  color: var(--accent-default);
+}
+.lm-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.lm-progress {
+  --p: 0;
+  position: relative;
+  width: 240px;
+  height: 4px;
+  border-radius: var(--radius-bar);
+  background: var(--track);
+  overflow: hidden;
+}
+.lm-progress--thin {
+  height: 3px;
+}
+/* Fills its container instead of the 240 px default. */
+.lm-progress--block {
+  width: 100%;
+}
+.lm-progress__bar {
+  height: 100%;
+  width: calc(var(--p) * 1%);
+  border-radius: var(--radius-bar);
+  background: var(--cta);
+  transition: width var(--dur-gentle) var(--ease-soft);
+}
+.lm-progress.is-error .lm-progress__bar {
+  background: var(--destructive);
+}
+.lm-progress.is-indeterminate .lm-progress__bar {
+  width: 40%;
+  animation: lm-indeterminate var(--lm-dur-shimmer) var(--lm-ease-slow) infinite;
+}
+@keyframes lm-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.lm-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  margin-inline-start: 1px;
+  vertical-align: text-bottom;
+  background: var(--accent-default);
+  animation: lm-blink var(--lm-dur-shimmer) steps(1) infinite;
+}
+@keyframes lm-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* slider (Radix Slider structure): track 4, thumb 18 */
+/* The track is inset by half the thumb, so the thumb (placed by Radix, or by vanilla/controls.ts) is centred on the end of the fill. */
+.lm-slider {
+  --thumb: 18px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 200px;
+  height: var(--thumb);
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.lm-slider[data-disabled] {
+  cursor: not-allowed;
+}
+.lm-slider__track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  margin-inline: calc(var(--thumb) / 2);
+  border-radius: var(--radius-bar);
+  background: var(--track);
+}
+.lm-slider__range {
+  position: absolute;
+  height: 100%;
+  border-radius: var(--radius-bar);
+  background: var(--cta);
+}
+.lm-slider__thumb {
+  display: block;
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow:
+    inset 0 0 0 1px var(--stroke-field),
+    0 1px 2px rgb(0 0 0 / 0.1);
+}
+.lm-slider[data-disabled] .lm-slider__track {
+  background: var(--disabled-track);
+}
+.lm-slider[data-disabled] .lm-slider__range {
+  background: var(--disabled-fill);
+}
+.lm-slider[data-disabled] .lm-slider__thumb {
+  box-shadow: 0 0 0 1px var(--disabled-line);
+}
+
+.lm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lm-section__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lm-section__title {
+  margin: 0;
+  font:
+    600 15px/18px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+}
+.lm-section__desc {
+  margin: 0;
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-tertiary);
+}
+.lm-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+}
+/* The first and last row of a card follow its corners, so a hover fill never pokes out of them. */
+.lm-card > :first-child {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+.lm-card > :last-child {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+.lm-card > .lm-row + .lm-row {
+  border-top: 1px solid var(--stroke-hairline);
+}
+.lm-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 42px;
+  padding: 3px 16px;
+}
+.lm-row:has(.lm-row__desc) {
+  min-height: 58px;
+  padding-block: 11px;
+}
+/*
+ * Settings row helper. A row that holds a 36 px control (dropdown, segmented control, input, button, chips) is 68 high:
+ * 16 px above, below and to the right of the control, and the title block is centred. Add .lm-row--control to the row;
+ * rows whose control is a .lm-input, .lm-select, .lm-seg or a default-size .lm-btn get it without the class.
+ * Toggle-only rows keep the 42 / 58 height.
+ */
+.lm-row.lm-row--control,
+.lm-row:has(.lm-row__control :is(.lm-input, .lm-select, .lm-seg, .lm-btn:not(.lm-btn--sm, .lm-btn--xs, .lm-btn--xl))) {
+  align-items: center;
+  min-height: 68px;
+  padding-block: 16px;
+  padding-inline: 16px;
+}
+/* A control row after the first has a 1 px divider on top: 15 px padding plus the divider keeps the control 16 px from the row edge and the row 68 high. */
+.lm-card > .lm-row + .lm-row.lm-row--control,
+.lm-card > .lm-row + .lm-row:has(.lm-row__control :is(.lm-input, .lm-select, .lm-seg, .lm-btn:not(.lm-btn--sm, .lm-btn--xs, .lm-btn--xl))) {
+  padding-top: 15px;
+}
+.lm-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.lm-row__label {
+  font:
+    500 13.5px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+}
+.lm-row__desc {
+  font:
+    400 12.5px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-tertiary);
+}
+.lm-row__control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16px;
+}
+.lm-listrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 0 14px;
+  border-top: 1px solid var(--stroke-hairline);
+  color: var(--text-tertiary);
+  text-align: start;
+  background: transparent;
+  width: 100%;
+  font: inherit;
+}
+button.lm-listrow {
+  appearance: none;
+  border-inline-end: 0;
+  border-bottom: 0;
+  border-inline-start: 0;
+  cursor: pointer;
+}
+.lm-listrow:is(.is-hover) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-listrow:hover {
+    background: var(--fill-hover);
+  }
+}
+.lm-listrow__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.lm-listrow__title {
+  font:
+    500 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+}
+.lm-listrow__sub,
+.lm-listrow__meta {
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-tertiary);
+}
+
+.lm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--scrim);
+  animation: lm-fade var(--dur-exit) ease-out;
+}
+.lm-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 384px;
+  max-width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-dialog);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-dialog);
+  font-size: 14px;
+  line-height: 20px;
+  animation: lm-dialog-in var(--dur-layout) var(--ease-layout) backwards;
+}
+@keyframes lm-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+.lm-dialog__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  padding-inline-end: 24px;
+}
+.lm-dialog__head > .lm-btn {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+}
+.lm-dialog__title {
+  margin: 0;
+  font:
+    600 15px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.lm-dialog__body {
+  color: var(--text-primary);
+}
+.lm-dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+.lm-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 296px;
+  padding: 12px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-menu);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-menu);
+  font:
+    400 14px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.lm-popover__title {
+  margin: 0;
+  font:
+    600 14px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.lm-pop {
+  position: relative;
+  display: inline-block;
+}
+.lm-pop > .lm-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  animation: lm-pop var(--dur-layout) var(--ease-layout);
+}
+
+.lm-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 248px;
+  padding: 12px;
+}
+.lm-nav__item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-item);
+  background: transparent;
+  color: var(--text-secondary);
+  font:
+    400 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--lm-dur-instant) var(--lm-ease);
+}
+.lm-nav__item:is(.is-hover) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-nav__item:hover {
+    background: var(--fill-hover);
+  }
+}
+.lm-nav__item .lm-icon {
+  color: var(--icon);
+}
+.lm-nav__item:is([aria-current="page"], .is-selected) {
+  background: var(--fill-selected);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.lm-nav__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lm-nav__section {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 10px 6px;
+  color: var(--text-tertiary);
+  font:
+    600 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.lm-nav__item--thread {
+  height: 32px;
+}
+
+.lm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  border-radius: var(--radius-panel);
+  background: var(--surface-editor);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+.lm-empty__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-tray);
+  background: var(--surface-well);
+  color: var(--text-secondary);
+}
+.lm-empty__title {
+  margin: 0;
+  font:
+    600 16px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+}
+.lm-empty__body {
+  max-width: 440px;
+  margin: 0;
+  font:
+    400 13px/19px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-secondary);
+}
+.lm-empty__actions {
+  display: flex;
+  gap: 8px;
+}
+.lm-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lm-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font:
+    400 12px/15px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.lm-step__marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-pill);
+  font:
+    600 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-tertiary);
+}
+.lm-step.is-active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.lm-step.is-active .lm-step__marker,
+.lm-step.is-done .lm-step__marker {
+  border-color: transparent;
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.lm-step__line {
+  width: 24px;
+  height: 1px;
+  background: var(--stroke-divider);
+}
+
+.lm-composer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 420px;
+  height: 52px;
+  padding: 0 8px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+}
+.lm-composer:is(:focus-within, .is-focus) {
+  border-color: var(--stroke-focus-field);
+}
+.lm-composer__field {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font:
+    400 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.lm-composer__field::placeholder {
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+.lm-composer .lm-btn--send {
+  background: var(--fill-hover);
+  color: var(--text-tertiary);
+}
+.lm-composer:is(:focus-within, .is-focus) .lm-btn--send {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.lm-composer .lm-btn--send.is-stop {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+
+.lm-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 220px;
+  padding: 10px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+  transition: background-color var(--lm-dur-instant) var(--lm-ease);
+}
+.lm-source:is(.is-hover) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lm-source:hover {
+    background: var(--fill-hover);
+  }
+}
+.lm-source.is-cited {
+  background: var(--fill-hover);
+  box-shadow: 0 0 0 1px var(--accent-default);
+}
+.lm-source.is-excluded {
+  box-shadow: 0 0 0 1px var(--tag-red);
+  opacity: 0.5;
+}
+.lm-source__title {
+  font:
+    500 12px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lm-source__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font:
+    400 11px/13px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.lm-source__meta .lm-spacer {
+  flex: 1;
+}
+
+/* brand mark (SpeakKit Voice hub); --s is the mark size in px */
+.lm-logo {
+  display: inline-flex;
+  flex: none;
+  width: calc(var(--s) * 1px);
+  height: calc(var(--s) * 1px);
+}
+.lm-logo > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* touch: an invisible 44 px hit area on small buttons (no visual change) */
+@media (pointer: coarse) {
+  .lm-btn--xs,
+  .lm-btn--sm,
+  .lm-close {
+    position: relative;
+  }
+  .lm-btn--xs::after,
+  .lm-btn--sm::after,
+  .lm-close::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+    translate: -50% -50%;
+  }
+}
+
+/* reduced motion: fades only, loops stop */
+@media (prefers-reduced-motion: reduce) {
+  .lm *,
+  .lm *::before,
+  .lm *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--lm-dur-instant) !important;
+  }
+  .lm-toggle__knob,
+  .lm-progress__bar {
+    transition: none !important;
+  }
+  /* no press scale; colour fades stay */
+  .lm :active,
+  .lm-check__input:active + .lm-check__box {
+    scale: 1 !important;
+  }
+  .lm-spin,
+  .lm-skeleton.is-shimmer .lm-skeleton__line,
+  .lm-caret,
+  .lm-progress.is-indeterminate .lm-progress__bar {
+    animation: none !important;
+  }
+}
+
+/* more contrast: strokes and tertiary text take the strong colours */
+@media (prefers-contrast: more) {
+  .lm {
+    --stroke-control: var(--text-secondary);
+    --stroke-divider: var(--text-secondary);
+    --text-tertiary: var(--text-secondary);
+  }
+}
+
+/* reduced transparency: no blurred backdrops */
+@media (prefers-reduced-transparency: reduce) {
+  .lm,
+  .lm * {
+    backdrop-filter: none !important;
+  }
+}

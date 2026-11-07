@@ -1,0 +1,22 @@
+{
+  "lint": {
+    "code": {
+      "no-sync": 0
+    },
+    "tests": {}
+  },
+  "patterns": {
+    "asAny": 0,
+    "asUnknownAs": 0,
+    "tsDirective": 0,
+    "atomicsWait": 0,
+    "sendSync": 0,
+    "shortInterval": 0,
+    "oxlintDisable": 3,
+    "swallowingCatch": 4,
+    "physicalCss": 0,
+    "skipped": 3,
+    "focused": 0,
+    "tsNocheck": 0
+  }
+}

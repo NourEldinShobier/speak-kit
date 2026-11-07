@@ -1,0 +1,11 @@
+{
+  "name": "@speakkit/knip-runner",
+  "private": true,
+  "description": "Runs knip with TypeScript 6: knip 5 needs the TypeScript JS API, which the native TypeScript 7 of the other packages does not ship.",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "knip": "catalog:",
+    "typescript": "7.0.2"
+  }
+}

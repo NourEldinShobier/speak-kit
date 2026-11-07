@@ -1,0 +1,40 @@
+/* A row holding 36 px controls is 68 px high with 16 px around the controls and 16 px between them. */
+.sk-engines .sk-engine {
+  min-height: 68px;
+  padding: 16px;
+  gap: 16px;
+  align-items: flex-start; /* tile, text and buttons start at the row's top */
+}
+.sk-engines .sk-engine + .sk-engine {
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+/* Buttons sit under the text, left-aligned: the text keeps the full row width and nothing squeezes at any window size. */
+.sk-engines .sk-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block-start: 12px;
+}
+.sk-engine__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+.sk-engines .sk-engine__body {
+  min-width: 0;
+}
+.sk-engine__more {
+  color: var(--text-secondary);
+}
+.sk-engine__more summary {
+  cursor: pointer;
+  width: max-content;
+}
+.sk-engine__more code {
+  display: block;
+  margin-block-start: 4px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}

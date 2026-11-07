@@ -1,0 +1,49 @@
+{
+  "name": "@speakkit/desktop",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "vp build",
+    "start": "electron .",
+    "test": "vp test run",
+    "typecheck": "tsrs --noEmit -p .",
+    "package": "node scripts/package.mjs",
+    "smoke:packaged": "node scripts/smoke-packaged.mjs"
+  },
+  "dependencies": {
+    "@lingo-reader/epub-parser": "catalog:",
+    "@mozilla/readability": "catalog:",
+    "@speakkit/engine": "workspace:*",
+    "@speakkit/player": "workspace:*",
+    "@speakkit/protocol": "workspace:*",
+    "@speakkit/server": "workspace:*",
+    "@speakkit/ui": "workspace:*",
+    "electron-log": "catalog:",
+    "electron-store": "catalog:",
+    "electron-updater": "catalog:",
+    "koffi": "catalog:",
+    "linkedom": "catalog:",
+    "lowdb": "catalog:",
+    "mammoth": "catalog:",
+    "marked": "catalog:",
+    "pdfjs-dist": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tesseract.js": "catalog:",
+    "tesseract.js-core": "catalog:",
+    "undici": "catalog:",
+    "valibot": "catalog:",
+    "wasm-media-encoders": "catalog:"
+  },
+  "devDependencies": {
+    "@electron/fuses": "catalog:",
+    "@resvg/resvg-js": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "electron": "catalog:",
+    "electron-builder": "catalog:"
+  }
+}

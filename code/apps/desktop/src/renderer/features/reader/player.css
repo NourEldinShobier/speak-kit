@@ -1,0 +1,162 @@
+.rd-bar {
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 61px;
+  padding-inline: 16px;
+  border-top: 1px solid var(--stroke-hairline);
+  background: var(--surface-card);
+}
+.rd-bar__buttons {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.rd-bar__scrub {
+  flex: 1;
+  min-width: 160px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rd-bar__scrub .lm-slider {
+  width: 100%;
+}
+.rd-bar__scrub span:last-child {
+  text-align: end;
+}
+.rd-bar__right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.rd-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-control);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rd-pill:hover {
+    background: var(--fill-raised-hover);
+  }
+}
+.rd-pill:active {
+  scale: 0.97;
+}
+.rd-pill:focus-visible {
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+}
+
+.rd-pill--voice {
+  max-width: 140px;
+}
+.rd-pill--voice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rd-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* the voice list is the whole popover: one border, no clipping, scrollbar 3 px from the right edge */
+.lm-popover.rd-voicepop {
+  gap: 0;
+  padding: 0;
+}
+.rd-pop--list {
+  max-height: 320px;
+  overflow: auto;
+  gap: 2px;
+  padding: 4px;
+}
+.rd-pop--list::-webkit-scrollbar {
+  width: 6px;
+}
+.rd-pop--list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rd-pop--list::-webkit-scrollbar-thumb {
+  border-inline-end: 3px solid transparent;
+  border-radius: var(--radius-bar);
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+.rd-pop__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rd-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rd-preset {
+  all: unset;
+  box-sizing: border-box;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke-control);
+  cursor: pointer;
+}
+.rd-preset:active {
+  scale: 0.97;
+}
+.rd-preset[aria-pressed="true"] {
+  background: var(--fill-selected);
+}
+.rd-option {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-menu-item);
+  cursor: pointer;
+}
+.rd-option small {
+  flex: 1;
+  color: var(--text-secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rd-option:hover {
+    background: var(--fill-hover);
+  }
+}
+.rd-option[aria-selected="true"] {
+  background: var(--fill-selected);
+}
+.rd-option:disabled {
+  color: var(--disabled-seg);
+  cursor: default;
+}
+.rd-option:disabled small {
+  color: var(--disabled-seg);
+}
+.rd-option:focus-visible {
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+}

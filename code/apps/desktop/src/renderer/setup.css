@@ -1,0 +1,122 @@
+.sk-setup {
+  display: grid;
+  grid-template-rows: 32px 52px 1fr 64px;
+  height: 100%;
+  background: var(--surface-card);
+}
+.sk-setup__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 6px; /* the 20 px logo is as far from the left edge as from the top (6 px in the 32 px bar) */
+  font-size: 12px;
+  color: var(--text-secondary);
+  -webkit-app-region: drag;
+}
+.sk-setup__stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The scroller spans the window and the column inside does not clip, so the 1 px card rings and button shadows at the column edges show. */
+.sk-setup__scroll {
+  overflow-y: auto;
+  min-height: 0;
+}
+.sk-setup__col {
+  width: 720px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+.sk-setup__col h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.sk-setup__col > p {
+  margin: -8px 0 0;
+  color: var(--text-secondary);
+}
+.sk-setup__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 20px 16px 12px; /* buttons 16 from the bottom, Back's box 12 from the left, the primary 20 from the right */
+  border-top: 1px solid var(--stroke-hairline);
+}
+.sk-setup__foot > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sk-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding-top: 24px;
+}
+.sk-feats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+.sk-feat {
+  box-shadow: var(--shadow-card-ring);
+  background: var(--surface-card);
+  border-radius: var(--radius-card);
+  padding: 14px;
+  text-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sk-feat span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-radio {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+}
+/* unavailable: the row stays readable; only the tile (the control) turns to opaque greys */
+.sk-radio:disabled {
+  cursor: default;
+}
+.sk-radio:disabled .sk-tile {
+  background: var(--disabled-track);
+  color: var(--disabled-seg);
+}
+/* Selected engine: a faint tint; the top corners follow the card, the bottom meets the divider flat. */
+.sk-radio.is-sel {
+  background: var(--fill-hover);
+  border-start-start-radius: var(--radius-card);
+  border-start-end-radius: var(--radius-card);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+/* The icon tile is white with a 1 px stroke, so it reads on the tint. */
+.sk-setup .sk-tile {
+  box-sizing: border-box;
+  border: 1px solid var(--stroke-control);
+  background: var(--surface-card);
+}
+/* Every row in a setup card has the same 14 px above and below (the token card's padding). */
+.sk-setup .lm-card .lm-row.lm-row {
+  padding-block: var(--card-pad-y);
+}

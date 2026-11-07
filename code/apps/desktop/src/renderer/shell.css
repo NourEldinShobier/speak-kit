@@ -1,0 +1,296 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-window);
+  color: var(--text-primary);
+  font:
+    13px/1.4 Inter,
+    "Segoe UI Variable Text",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  /* An app, not a page: labels, buttons and headings are not selectable. Content people copy opts back in below. */
+  user-select: none;
+  cursor: default;
+}
+input,
+textarea,
+[contenteditable="true"],
+.rd-text,
+.sk-token__box,
+code,
+[data-testid="url-details"] {
+  user-select: text;
+  cursor: auto;
+}
+html[data-hidden] *,
+html[data-hidden] *::before,
+html[data-hidden] *::after {
+  animation-play-state: paused !important;
+}
+.sk-app {
+  --bar-h: 38px;
+  display: grid;
+  grid-template-rows: var(--bar-h) 1fr;
+  height: 100%;
+}
+.sk-body {
+  display: flex;
+  min-height: 0;
+}
+
+.sk-title {
+  display: grid;
+  grid-template-columns: 1fr 420px 1fr;
+  align-items: center;
+  padding: 0 0 0 8px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.sk-title button,
+.sk-title a,
+.sk-title input,
+.sk-title .lm-pill {
+  -webkit-app-region: no-drag;
+}
+/* macOS: the traffic lights sit at the start of the bar (about 78 px), so the left group starts after them. The right group has no native
+   controls beside it: the bell's right edge lines up with the panel's right edge (8 px from the window edge), and the columns stay
+   equal so the search box stays centred in the window. */
+html[data-platform="darwin"] .sk-title {
+  padding-inline: 0;
+}
+html[data-platform="darwin"] .sk-title__l {
+  padding-inline-start: 78px;
+}
+html[data-platform="darwin"] .sk-title__r {
+  padding-inline-end: var(--panel-inset-end);
+}
+.sk-title__l,
+.sk-title__r {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sk-title__r {
+  justify-content: flex-end;
+  gap: 8px;
+  /* room for the native caption buttons, so the search box stays centred in the window */
+  /* physical: the native window controls sit at the right edge in every language */
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
+}
+.sk-search {
+  height: 30px;
+  width: 420px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--text-tertiary);
+  font: inherit;
+  cursor: text;
+  text-align: start;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-search:hover {
+    background: var(--fill-raised-hover);
+  }
+}
+.sk-search span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sk-search .lm-kbd,
+.sk-new .lm-kbd {
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, black 7.5%, white);
+  color: var(--text-tertiary);
+  font:
+    500 12px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+/* Shown only while the engine is not ready: a grey dot and one line of text, no pill. */
+.sk-engstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font:
+    500 13px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+}
+.sk-engstat::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--disabled-thumb);
+}
+.sk-bell {
+  position: relative;
+}
+.sk-bell__dot {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot-orange);
+  pointer-events: none;
+}
+
+.sk-side {
+  width: 248px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  margin-block-end: var(--panel-inset-end);
+  overflow-y: auto;
+}
+.sk-side[hidden] {
+  display: none;
+}
+.sk-side {
+  overflow-x: hidden;
+}
+.sk-side .lm-btn {
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: flex-start;
+}
+.sk-new {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.sk-new__tile {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--cta);
+  box-shadow: var(--shadow-cta);
+}
+.sk-new__tile .lm-icon {
+  color: var(--text-on-accent);
+}
+.sk-new .lm-kbd {
+  height: 18px;
+  margin-inline-end: -1px;
+  font:
+    500 11px/18px Inter,
+    system-ui,
+    sans-serif;
+}
+/* 17 px between New reading and Home (8, 1 line that is not drawn, 8); the list's 2 px gaps are taken out so the rows are 17 apart. */
+.sk-side__sep {
+  height: 17px;
+  margin-block: -2px;
+  flex: none;
+}
+.sk-side .lm-btn--icon {
+  width: 28px;
+  flex: none;
+  justify-content: center;
+}
+.sk-side__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.sk-side__spacer {
+  flex: 1;
+  min-height: 12px;
+}
+.sk-side > .lm-nav {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 0;
+}
+.sk-engcard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  background: var(--surface-card);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-engcard b {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.sk-engcard__ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tag-green);
+}
+.sk-side__empty {
+  padding: 4px 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sk-side .lm-nav__item[aria-disabled="true"] {
+  color: var(--text-secondary);
+  cursor: default;
+  pointer-events: none;
+}
+.sk-side .lm-nav__item[aria-disabled="true"] .lm-icon {
+  color: var(--disabled-seg);
+}
+.sk-main {
+  flex: 1;
+  min-width: 0;
+  margin: 0 var(--panel-inset-end) var(--panel-inset-end) var(--panel-inset);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-card);
+  background: var(--surface-editor);
+  overflow: auto;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb, rgb(0 0 0 / 0.18));
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}

@@ -1,0 +1,138 @@
+name: Release
+
+# Push a tag such as v0.2.0 to build the Windows installer and portable exe, the macOS dmg and zip files (arm64 and x64) and the
+# extension zip, and attach them (with the update metadata electron-updater reads) to a GitHub release. Nothing is code-signed.
+# Run it by hand (Actions > Release > Run workflow) with dry_run on to build everything and keep the files as workflow artifacts
+# without creating a release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and keep the files as workflow artifacts; do not create a release
+        type: boolean
+        default: true
+      version:
+        description: Version to build (a tag push uses the tag)
+        type: string
+        default: 0.0.0-dryrun
+      platforms:
+        description: Which installers to build (macOS minutes cost ten times as much)
+        type: choice
+        options: [both, windows, mac]
+        default: both
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          PLATFORMS: ${{ inputs.platforms || 'both' }}
+        run: |
+          win='{"name":"Windows","os":"windows-latest","platform":"win"}'
+          mac='{"name":"macOS","os":"macos-latest","platform":"mac"}'
+          case "$PLATFORMS" in
+            windows) m="[$win]" ;;
+            mac) m="[$mac]" ;;
+            *) m="[$win,$mac]" ;;
+          esac
+          echo "matrix=$m" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.name }}
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: code/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Version
+        id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            # The files in the release carry the tag's version; the sources must say the same (the extension manifest is what Chrome shows).
+            for f in package.json apps/desktop/package.json apps/extension/package.json apps/extension/manifest.json; do
+              got=$(node -p "require('./$f').version")
+              [ "$got" = "$v" ] || { echo "::error::$f says $got, the tag says $v: bump the versions, commit, and tag again"; exit 1; }
+            done
+          else v="$INPUT_VERSION"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      # Builds the engine worker, the extension and the app, stages a plain app folder and runs electron-builder
+      # (Windows: NSIS + portable; macOS: dmg + zip for arm64 and x64).
+      - name: Package
+        run: pnpm --filter @speakkit/desktop exec node scripts/package.mjs --platform ${{ matrix.platform }} --version ${{ steps.v.outputs.version }}
+
+      # Starts the unpacked app headless with the fake engine and checks /v1/health, a spoken sentence, the second launch and --quit.
+      # The macOS runner is arm64, so only the arm64 app is started.
+      - name: Smoke test the packaged app
+        run: pnpm --filter @speakkit/desktop exec node scripts/smoke-packaged.mjs
+
+      - name: Extension zip
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: Compress-Archive -Path apps/extension/dist-pack/* -DestinationPath apps/desktop/release/speakkit-extension-${{ steps.v.outputs.version }}.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            code/apps/desktop/release/Speak-Kit-Setup-*.exe
+            code/apps/desktop/release/Speak-Kit-Setup-*.exe.blockmap
+            code/apps/desktop/release/Speak-Kit-*-portable.exe
+            code/apps/desktop/release/latest.yml
+            code/apps/desktop/release/Speak-Kit-*-mac-*.dmg
+            code/apps/desktop/release/Speak-Kit-*-mac-*.dmg.blockmap
+            code/apps/desktop/release/Speak-Kit-*-mac-*.zip
+            code/apps/desktop/release/Speak-Kit-*-mac-*.zip.blockmap
+            code/apps/desktop/release/latest-mac.yml
+            code/apps/desktop/release/speakkit-extension-*.zip
+
+  # One job creates the release, so the two builds cannot race to create it.
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: files
+          pattern: release-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: files/*
+          generate_release_notes: true

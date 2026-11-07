@@ -1,0 +1,46 @@
+name: Nightly
+
+# Drift checks that must not block a pull request: the reference compiler against tsrs, and known vulnerabilities.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: code/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # tsrs is the gate; tsc is the reference that shows where tsrs drifts from it.
+      - name: tsc --noEmit per project (reference compiler, non-blocking)
+        shell: bash
+        continue-on-error: true
+        run: |
+          status=0
+          for p in packages/* apps/* e2e/tsconfig.check.json; do
+            if [ -f "$p/tsconfig.json" ] || [ -f "$p" ]; then
+              pnpm exec tsc --noEmit -p "$p" || status=1
+            fi
+          done
+          exit $status
+
+      - name: Known vulnerabilities (pnpm audit, non-blocking)
+        continue-on-error: true
+        run: pnpm audit --audit-level=high
