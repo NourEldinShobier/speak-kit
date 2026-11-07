@@ -1,4 +1,4 @@
-import { Button, Icon, IconButton, Kbd, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
+import { Icon, IconButton, Kbd, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
 import type { AppState, Page, SettingsSub } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import { showAccelerator } from "../shared/shortcuts";
@@ -90,13 +90,14 @@ function RecentList({ recent, onPick }: { recent: string[]; onPick(text: string)
 function MainNav(p: SidebarProps) {
   return (
     <SidebarNav label="Main">
-      <Button variant="primary" iconLeft="plus" onClick={() => p.onNewReading("")}>
-        <span className="sk-side__label sk-side__grow">New reading</span>
-        <Kbd small className="sk-side__label">
-          {showAccelerator("Ctrl+N", p.s.platform, "app").replace("+", " ")}
-        </Kbd>
-      </Button>
-      <div style={{ height: 8 }} />
+      <button type="button" className="lm-nav__item sk-new" onClick={() => p.onNewReading("")}>
+        <span className="sk-new__tile">
+          <Icon name="plus" size={14} />
+        </span>
+        <span className="lm-nav__label">New reading</span>
+        <Kbd small>{showAccelerator("Ctrl+N", p.s.platform, "app").replace("+", " ")}</Kbd>
+      </button>
+      <div className="sk-side__sep" aria-hidden="true" />
       {NAV.map((n) => (
         <Link key={n.page} icon={n.icon} href={`#${n.page}`} selected={p.page === n.page} onActivate={() => p.go(n.page)}>
           {n.label}

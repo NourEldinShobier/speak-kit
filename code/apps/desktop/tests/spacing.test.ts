@@ -62,25 +62,22 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect(
       await l.page.locator(".sk-search .lm-kbd").evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).borderTopWidth, getComputedStyle(e).color, getComputedStyle(e).fontWeight]),
     ).toEqual(["rgb(236, 236, 236)", "0px", "rgb(95, 106, 125)", "500"]);
-    // New reading: 36 high, a solid 18 high chip 9 px from the top, bottom and right, the plus box 9 from the left, the label on the nav labels.
-    const btn = await box(l.page, ".sk-side .lm-btn--primary");
-    const chip = await box(l.page, ".sk-side .lm-btn--primary .lm-kbd");
-    expect([btn.h, chip.h, chip.y - btn.y, btn.y + btn.h - (chip.y + chip.h), btn.x + btn.w - (chip.x + chip.w)].map(Math.round)).toEqual([36, 18, 9, 9, 9]);
-    expect(await l.page.locator(".sk-side .lm-btn--primary .lm-kbd").evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).borderTopWidth, getComputedStyle(e).fontSize])).toEqual([
-      "color(srgb 0.226059 0.219118 0.243412)",
-      "0px",
-      "11px",
+    // New reading (2.21): no fill, 36 high, padding 10, gap 10, a 20 px dark tile with a white plus, a semibold label, a grey 18 high chip 9 px from the top, bottom and right.
+    const row = await box(l.page, ".sk-new");
+    const chip = await box(l.page, ".sk-new .lm-kbd");
+    const tile = await box(l.page, ".sk-new__tile");
+    expect([row.h, row.pad[1]!, row.pad[3]!, row.gap, chip.h, chip.y - row.y, row.y + row.h - (chip.y + chip.h), row.x + row.w - (chip.x + chip.w), tile.w, tile.h, tile.x - row.x].map(Math.round)).toEqual([
+      36, 10, 10, 10, 18, 9, 9, 9, 20, 20, 10,
     ]);
-    const labelX = (sel: string) =>
-      l.page
-        .locator(sel)
-        .first()
-        .evaluate((e) => {
-          const r = document.createRange();
-          r.selectNodeContents(e);
-          return r.getBoundingClientRect().x;
-        });
-    expect(await labelX(".sk-side .lm-btn--primary .sk-side__grow")).toBe(await labelX(".sk-side .lm-nav__item .lm-nav__label"));
+    const css = (sel: string, ...props: string[]) => l.page.locator(sel).evaluate((e, ps) => ps.map((k) => getComputedStyle(e).getPropertyValue(k)), props);
+    expect(await css(".sk-new", "background-color", "font-weight", "color", "font-size")).toEqual(["rgba(0, 0, 0, 0)", "600", "rgb(27, 34, 48)", "13px"]);
+    expect(await css(".sk-new__tile", "background-color", "border-top-left-radius", "box-shadow")).toEqual(["rgb(32, 30, 37)", "6px", "rgba(0, 0, 0, 0.1) 0px 2px 4px 0px"]);
+    expect(await css(".sk-new .lm-icon", "color")).toEqual(["rgb(255, 255, 255)"]);
+    expect(await css(".sk-new .lm-kbd", "background-color", "color", "font-size", "border-top-width")).toEqual(["rgb(236, 236, 236)", "rgb(95, 106, 125)", "11px", "0px"]);
+    // A 17 px separator (line not drawn) puts Home 17 px under New reading.
+    const home = await box(l.page, ".sk-side .lm-nav__item:not(.sk-new)");
+    expect([Math.round((await box(l.page, ".sk-side__sep")).h), Math.round(home.y - (row.y + row.h))]).toEqual([17, 17]);
+    expect(await l.page.locator(".sk-new .lm-nav__label").evaluate((e) => e.textContent)).toBe("New reading");
     // Page: header 22 from the top, 28 inset, 16 between header and body, title 22/26, subtitle 13/17.
     expect(await box(l.page, ".sk-page")).toMatchObject({ pad: [22, 28, 24, 28], gap: 16 });
     expect(await box(l.page, ".sk-page__head h1")).toMatchObject({ y: 60, h: 26 });

@@ -53,7 +53,8 @@ describe("renderer bundle", () => {
 });
 
 /** Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR and worker chunks are not counted). Current size plus 10 %. */
-const RENDERER_BUDGET_BYTES = { index: 191_000, mini: 133_000, panel: 135_000 };
+// index 191_000 -> 191_100: the 2.21 New reading row (tile, chip, separator) adds 59 gzip bytes over the removed button styles.
+const RENDERER_BUDGET_BYTES = { index: 191_100, mini: 133_000, panel: 135_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

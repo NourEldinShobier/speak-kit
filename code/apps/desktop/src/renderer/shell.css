@@ -116,7 +116,8 @@ html[data-platform="darwin"] .sk-title__r {
   white-space: nowrap;
 }
 /* Key chip (Secrets Watchman kbd): grey fill, no border, 16 high. */
-.sk-search .lm-kbd {
+.sk-search .lm-kbd,
+.sk-new .lm-kbd {
   height: 16px;
   padding: 0 6px;
   border: 0;
@@ -185,23 +186,33 @@ html[data-platform="darwin"] .sk-title__r {
   box-sizing: border-box;
   justify-content: flex-start;
 }
-.sk-side .lm-btn--primary {
-  padding: 0 9px;
-  gap: 13px; /* the spec says 12 from the icon box; 13 puts the label on the nav labels, which is the stated aim */
+/* New reading row (2.21): a nav row without fill; dark 20 px tile with a plus, semibold label, grey chip 9 from the row's top, bottom and right. */
+.sk-new {
+  font-weight: 600;
+  color: var(--text-primary);
 }
-/* Shortcut chip on the New reading button: solid, no border, 18 high, 9 from the top, bottom and right edges. */
-.sk-side .lm-btn--primary .lm-kbd {
+.sk-new__tile {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--cta);
+  box-shadow: var(--shadow-cta);
+}
+.sk-new__tile .lm-icon {
+  color: var(--text-on-accent);
+}
+.sk-new .lm-kbd {
   height: 18px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-xs);
-  background: color-mix(in srgb, white 11.5%, var(--cta));
-  color: var(--text-on-cta);
-  font:
-    500 11px/18px Inter,
-    "Inter Variable",
-    system-ui,
-    sans-serif;
+  margin-inline-end: -1px;
+  font: 500 11px/18px Inter, system-ui, sans-serif;
+}
+/* 17 px between New reading and Home (8, 1 line that is not drawn, 8); the list's 2 px gaps are taken out so the rows are 17 apart. */
+.sk-side__sep {
+  height: 17px;
+  margin-block: -2px;
+  flex: none;
 }
 .sk-side .lm-btn--icon {
   width: 28px;
@@ -226,10 +237,6 @@ html[data-platform="darwin"] .sk-title__r {
   min-height: 0;
   width: 100%;
   padding: 0;
-}
-.sk-side__grow {
-  flex: 1;
-  text-align: start;
 }
 .sk-engcard {
   display: flex;
