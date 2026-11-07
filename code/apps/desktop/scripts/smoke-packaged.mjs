@@ -122,6 +122,8 @@ try {
     const resources = mac ? path.join(path.dirname(exe), "../Resources") : path.join(path.dirname(exe), "resources");
     check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
     check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
+    const script = path.join(resources, "chatterbox/chatterbox_sidecar.py"); // without it Chatterbox installs but cannot load
+    check("bundles the Chatterbox sidecar script", existsSync(script) && readFileSync(script, "utf8").includes('"op": "synth"'));
   }
 
   const q = spawn(exe, ["--quit"], { env, stdio: "ignore" });

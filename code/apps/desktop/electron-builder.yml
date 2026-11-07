@@ -29,6 +29,10 @@ extraResources:
   - from: ../extension/dist-pack
     to: extension
     filter: ["**/*", "!**/*.map"]
+  # The Chatterbox sidecar runs in the engine's own Python virtualenv, so it must be a real file on disk (resources/chatterbox).
+  - from: ../../packages/engine/sidecar
+    to: chatterbox
+    filter: ["*.py"]
 
 protocols:
   - name: Speak Kit

@@ -65,6 +65,7 @@ try {
   const code = await run(installer, ["/S", `/D=${dir}`], env);
   check("silent install exits 0", code === 0, `exit ${code} in ${Date.now() - t0} ms`);
   check("installs the app", existsSync(exe) && existsSync(path.join(dir, "resources/extension/manifest.json")), dir);
+  check("installs the Chatterbox sidecar script", existsSync(path.join(dir, "resources/chatterbox/chatterbox_sidecar.py")));
   const uninstaller = path.join(dir, "Uninstall Speak Kit.exe");
   check("writes an uninstaller", existsSync(uninstaller));
 

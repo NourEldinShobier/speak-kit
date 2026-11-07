@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
@@ -24,6 +24,8 @@ interface RuntimeDeps {
   modelsDir: string;
   /** The model host: dist/worker/worker.js when built, the engine package's source file in development (see engineWorkerUrl). */
   engineWorker: URL;
+  /** chatterbox_sidecar.py: resources/chatterbox when packaged, the engine package's source file in development (see chatterboxScript). */
+  chatterboxScript?: string | undefined;
   log: Logger;
   api: ServerApi;
   /** Sends the state to every window. */
@@ -41,6 +43,22 @@ export async function engineWorkerUrl(distDir: string): Promise<URL> {
     () => pathToFileURL(built),
     () => new URL("./worker.ts", import.meta.resolve("@speakkit/engine")),
   );
+}
+
+/** The Chatterbox sidecar script: shipped in `resources/chatterbox` by electron-builder, or the engine package's own file in development. Undefined when neither exists. */
+export async function chatterboxScript(resources: string | undefined = process.resourcesPath): Promise<string | undefined> {
+  const shipped = resources ? path.join(resources, "chatterbox", "chatterbox_sidecar.py") : undefined;
+  const source = fileURLToPath(new URL("../sidecar/chatterbox_sidecar.py", import.meta.resolve("@speakkit/engine")));
+  for (const p of [shipped, source])
+    if (
+      p &&
+      (await access(p).then(
+        () => true,
+        () => false,
+      ))
+    )
+      return p;
+  return undefined;
 }
 
 /** The local server and its engines: creation, restart, shutdown, and the health state the UI shows. */
@@ -99,7 +117,9 @@ export class ServerRuntime {
       const engine = this.#engine ?? this.createEngine();
       // Same rule as the standalone server: the fake engine (tests) has no sidecar, and SPEAKKIT_CHATTERBOX=off skips the hardware probe.
       if (!this.#chatterbox && process.env.SPEAKKIT_ENGINE !== "fake" && process.env.SPEAKKIT_CHATTERBOX !== "off")
-        this.#chatterbox = await createChatterbox(dataDir).catch((e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined));
+        this.#chatterbox = await createChatterbox(dataDir, { ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }) }).catch(
+          (e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined),
+        );
       const { server, port } = await listenWithFallback(config.preferredPort, (port) =>
         createServer({
           engine,
