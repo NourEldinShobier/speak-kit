@@ -84,24 +84,35 @@ function useEngineLoad(st: CloneState, s: AppState, dispatch: (a: CloneAction) =
 /** The recorder and the take player: what must be stopped when the flow is left. */
 function useMedia(dispatch: (a: CloneAction) => void) {
   const rec = useRef<Recording | null>(null);
+  const starting = useRef<AbortController | null>(null);
   const stopTake = useRef<(() => void) | null>(null);
   const [takePlaying, setTakePlaying] = useState(false);
+  /** Ends the recording, or the start still waiting for the permission prompt. */
+  const cancelRecording = () => {
+    starting.current?.abort();
+    rec.current?.cancel();
+  };
   useEffect(
     () => () => {
-      rec.current?.cancel();
+      cancelRecording();
       stopTake.current?.();
     },
     [],
   );
   const record = async () => {
     dispatch({ type: "record-start" });
+    const ac = (starting.current = new AbortController());
     try {
-      rec.current = await startRecording({
-        onTick: (elapsedMs, level) => dispatch({ type: "record-tick", elapsedMs, level }),
-        onDone: (take) => dispatch({ type: "record-done", take }),
-        onFailed: (problem, message) => dispatch({ type: "record-failed", problem, message }),
-      });
+      rec.current = await startRecording(
+        {
+          onTick: (elapsedMs, level) => dispatch({ type: "record-tick", elapsedMs, level }),
+          onDone: (take) => dispatch({ type: "record-done", take }),
+          onFailed: (problem, message) => dispatch({ type: "record-failed", problem, message }),
+        },
+        ac.signal,
+      );
     } catch (e) {
+      if (ac.signal.aborted) return; // cancelled while the prompt was open: nothing to report
       const problem = micProblem(e);
       dispatch({ type: "record-failed", problem, message: `The microphone could not be used: ${e instanceof Error ? e.message : String(e)}` });
     }
@@ -112,7 +123,7 @@ function useMedia(dispatch: (a: CloneAction) => void) {
     setTakePlaying(true);
     stopTake.current = playAudio(takeAudio(st.take), () => setTakePlaying(false));
   };
-  return { rec, record, playTake, takePlaying };
+  return { rec, record, cancelRecording, playTake, takePlaying };
 }
 
 /** A reference file: the file dialog, then the audio is decoded in this window. Cancelling the dialog is not an error. */
@@ -145,7 +156,7 @@ function ReferenceScreens({ st, dispatch, media, cancel }: Flow) {
   if (st.step === "recording") {
     const stop = () => media.rec.current?.stop();
     const abort = () => {
-      media.rec.current?.cancel();
+      media.cancelRecording();
       dispatch({ type: "back" });
     };
     return <RecordingScreen elapsedMs={st.elapsedMs} level={st.level} onStop={stop} onCancel={abort} />;

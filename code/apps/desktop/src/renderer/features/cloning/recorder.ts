@@ -32,9 +32,14 @@ const AUDIO = { echoCancellation: false, noiseSuppression: false, autoGainContro
 /**
  * Records the microphone with MediaRecorder, reports the level for the meter, stops by itself at 30 s and decodes the result into a
  * take (24 kHz mono WAV). The audio is kept in memory only; nothing is written to disk.
+ * `signal` aborts a start that is still waiting for the permission prompt: the stream that arrives late is stopped at once and the call rejects with AbortError.
  */
-export async function startRecording(events: RecorderEvents): Promise<Recording> {
+export async function startRecording(events: RecorderEvents, signal?: AbortSignal): Promise<Recording> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO });
+  if (signal?.aborted) {
+    for (const t of stream.getTracks()) t.stop();
+    throw new DOMException("Recording was cancelled before the microphone answered.", "AbortError");
+  }
   const meter = new AudioContext();
   const analyser = meter.createAnalyser();
   meter.createMediaStreamSource(stream).connect(analyser);
