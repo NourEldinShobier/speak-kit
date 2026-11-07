@@ -74,7 +74,7 @@ The installer writes the Uninstall entry, the `speakkit` URL protocol key and th
 
 ### The feed override
 
-`SPEAKKIT_UPDATE_URL=http://127.0.0.1:PORT/` switches electron-updater to the generic provider for that folder. It is read in every build (the e2e runs the packaged app), accepts only `http(s)` addresses and is ignored otherwise. Without it the feed is GitHub. An isolated `SPEAKKIT_USER_DATA` (smoke tests) keeps updates off unless this variable is set, so a smoke run never contacts GitHub. Setting an environment variable in the user's session already allows running arbitrary code as that user, so the override adds no capability; the downloaded installer is still verified against `latest.yml`'s sha512.
+`SPEAKKIT_UPDATE_URL=http://127.0.0.1:PORT/` switches electron-updater to the generic provider for that folder. It is read by a source checkout and by a packaged build that runs in an isolated `SPEAKKIT_USER_DATA` folder (the e2e runs the installed app that way); a packaged build on the user's own data ignores it (`testEnv()`). It accepts only `http(s)` addresses and is ignored otherwise. Without it the feed is GitHub. An isolated `SPEAKKIT_USER_DATA` (smoke tests) keeps updates off unless this variable is set, so a smoke run never contacts GitHub. The downloaded installer is still verified against `latest.yml`'s sha512.
 
 ## Not covered
 

@@ -5,6 +5,7 @@ import { workRunning, type UpdateState } from "../shared/updates";
 import type { ToastCenter } from "./toasts";
 import { feedOverride, githubLatestRelease, isReleaseUrl, updateMode, Updates, type UpdaterLike } from "./updates";
 import { fakeRelease } from "./updates-fake";
+import { testEnv } from "./test-env";
 
 /** First check this long after startup, then once a day while the app runs. */
 const FIRST_CHECK_MS = 30_000;
@@ -19,8 +20,9 @@ type UpdateHandlers = Pick<Api, "updateAction">;
  */
 export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => void, beforeInstall: () => void, fake?: () => UpdaterLike) {
   const env = process.env;
-  const feedUrl = feedOverride(env.SPEAKKIT_UPDATE_URL);
-  if (env.SPEAKKIT_UPDATE_URL && !feedUrl) ctx.log.warn("SPEAKKIT_UPDATE_URL is not an http(s) address; using the GitHub feed");
+  const requested = testEnv().updateUrl;
+  const feedUrl = feedOverride(requested);
+  if (requested && !feedUrl) ctx.log.warn("SPEAKKIT_UPDATE_URL is not an http(s) address; using the GitHub feed");
   const manualFake = __TEST_CODE__ && !app.isPackaged ? env.SPEAKKIT_UPDATE_MANUAL || undefined : undefined;
   const mode = updateMode({
     platform: process.platform,
