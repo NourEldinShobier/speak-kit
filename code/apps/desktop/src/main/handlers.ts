@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dirSize, measureDownloads } from "./downloads";
-import type { Activity, Api, AppState, Metrics, Method, StorageInfo } from "../shared/ipc";
+import type { Activity, Api, AppState, ExternalLink, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
 import type { Config, ConfigPatch } from "../shared/schemas";
 import type { MainWindow } from "./main-window";
@@ -42,6 +42,12 @@ function metrics(): Metrics {
 }
 
 export { metrics };
+
+/** The only addresses the renderer can make the app open. The microphone page of the OS settings exists on Windows and macOS. */
+const EXTERNAL_URLS: Record<ExternalLink, string | undefined> = {
+  webstore: "https://chromewebstore.google.com/search/SpeakKit",
+  "microphone-settings": ({ win32: "ms-settings:privacy-microphone", darwin: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" } as Partial<Record<string, string>>)[process.platform],
+};
 
 const loginItemArgs = (config: Config) => (config.startMinimized ? ["--hidden"] : []);
 
@@ -104,8 +110,8 @@ export function createAppHandlers(d: HandlerDeps) {
     preview: (voice, text, speed = 1) => d.api.speak({ text, voice, speed }),
     copy: async (text) => clipboard.writeText(text),
     openExternal: async (link) => {
-      const urls = { webstore: "https://chromewebstore.google.com/search/SpeakKit" };
-      await shell.openExternal(urls[link]);
+      const url = EXTERNAL_URLS[link];
+      if (url) await shell.openExternal(url);
     },
     openPath: async (which) => {
       const dir = which === "models" ? d.modelsDir : d.logsDir;

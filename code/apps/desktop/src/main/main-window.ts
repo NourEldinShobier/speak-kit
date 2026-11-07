@@ -116,6 +116,7 @@ export class MainWindow {
       (loaded) => {
         for (const e of this.#pendingUi.splice(0)) loaded.webContents.send(UI_EVENT, e);
       },
+      { microphone: true }, // "Record" in the voice cloning flow
     ));
     this.applyMode(true);
     if (hidden) app.dock?.hide(); // launched with --hidden: menu bar only

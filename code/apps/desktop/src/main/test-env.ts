@@ -15,5 +15,7 @@ export const testEnv = () => {
     token: on ? e.SPEAKKIT_TOKEN || undefined : undefined,
     /** Lets the library fetch pages from this machine (the e2e web server listens on loopback). */
     allowLocalUrls: on && !!e.SPEAKKIT_TEST,
+    /** `<command>|<script>`: Chatterbox runs a stand-in sidecar on a pretend GPU, so the cloning flow can be driven without Python (tests only). */
+    fakeChatterbox: on ? e.SPEAKKIT_FAKE_CHATTERBOX || undefined : undefined,
   };
 };

@@ -61,6 +61,8 @@ mac:
   extendInfo:
     # Reading the selection presses Cmd+C through System Events.
     NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
+    # Recording a voice sample for cloning. The audio stays on this computer.
+    NSMicrophoneUsageDescription: Speak Kit records a short voice sample when you clone a voice. The recording stays on this computer.
 
 dmg:
   title: Speak Kit ${version}

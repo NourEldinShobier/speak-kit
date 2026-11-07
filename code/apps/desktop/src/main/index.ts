@@ -94,6 +94,7 @@ const runtime: ServerRuntime = new ServerRuntime({
   modelsDir,
   engineWorker: await engineWorkerUrl(here),
   chatterboxScript: await chatterboxScript(),
+  ...(__TEST_CODE__ && test.fakeChatterbox ? { fakeChatterbox: test.fakeChatterbox } : {}),
   log,
   api: serverApi,
   publish,

@@ -117,7 +117,11 @@ const ExportOptionsSchema = v.object({
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
 });
 
-const EXTERNAL_LINKS = ["webstore"] as const;
+/** A WAV the renderer sends for cloning: 30 s of 24 kHz mono is 1.4 MB; the server accepts a 40 MB body, which is 30 MB of audio once base64 encoded. */
+const MAX_CLONE_BYTES = 24 * 1024 * 1024;
+const EXTERNAL_LINKS = ["webstore", "microphone-settings"] as const;
+const VoiceIdSchema = v.pipe(v.string(), v.regex(/^cb_[0-9a-f]{8}$/));
+const unit = v.pipe(v.number(), v.minValue(0), v.maxValue(1));
 const OPEN_PATHS = ["models", "logs"] as const;
 
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
@@ -156,5 +160,10 @@ export const ARGS = {
   exportCancel: v.tuple([v.pipe(v.string(), v.maxLength(64))]),
   exportReveal: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.boolean()]),
   pickFolder: v.tuple([v.pipe(v.string(), v.maxLength(1024))]),
+  pickReference: v.tuple([]),
+  cloneVoice: v.tuple([v.strictObject({ name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), consent: v.literal(true), audio: v.pipe(v.instance(Uint8Array), v.check((a) => a.byteLength <= MAX_CLONE_BYTES)) })]),
+  clonedVoices: v.tuple([]),
+  updateClonedVoice: v.tuple([VoiceIdSchema, v.strictObject({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) })]),
+  deleteClonedVoice: v.tuple([VoiceIdSchema]),
   installExtension: v.tuple([]),
 } as const;

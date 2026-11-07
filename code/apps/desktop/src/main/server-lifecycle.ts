@@ -5,7 +5,7 @@ import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
 import { createChatterbox, createServer } from "@speakkit/server";
-import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
+import { FakeEngine, KokoroEngine, type ChatterboxOptions, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
@@ -26,6 +26,8 @@ interface RuntimeDeps {
   engineWorker: URL;
   /** chatterbox_sidecar.py: resources/chatterbox when packaged, the engine package's source file in development (see chatterboxScript). */
   chatterboxScript?: string | undefined;
+  /** Tests only (`SPEAKKIT_FAKE_CHATTERBOX`, see test-env.ts): `<command>|<script>` of a stand-in sidecar. */
+  fakeChatterbox?: string | undefined;
   log: Logger;
   api: ServerApi;
   /** Sends the state to every window. */
@@ -44,6 +46,12 @@ export async function engineWorkerUrl(distDir: string): Promise<URL> {
     () => new URL("./worker.ts", import.meta.resolve("@speakkit/engine")),
   );
 }
+
+/** The options that put Chatterbox on a pretend NVIDIA GPU with a stand-in sidecar; empty for the real engine. */
+const fakeChatterboxOptions = (spec: string | undefined): Partial<ChatterboxOptions> => {
+  const [command, script] = spec?.split("|") ?? [];
+  return command && script ? { hardware: { gpu: { name: "Test GPU", vramMb: 12288 }, python: ["python"] }, sidecar: { command, args: [script] } } : {};
+};
 
 const exists = (p: string) =>
   access(p).then(
@@ -118,8 +126,8 @@ export class ServerRuntime {
     try {
       const engine = this.#engine ?? this.createEngine();
       // Same rule as the standalone server: the fake engine (tests) has no sidecar, and SPEAKKIT_CHATTERBOX=off skips the hardware probe.
-      if (!this.#chatterbox && process.env.SPEAKKIT_ENGINE !== "fake" && process.env.SPEAKKIT_CHATTERBOX !== "off")
-        this.#chatterbox = await createChatterbox(dataDir, { ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }) }).catch(
+      if (!this.#chatterbox && (process.env.SPEAKKIT_ENGINE !== "fake" || this.#d.fakeChatterbox) && process.env.SPEAKKIT_CHATTERBOX !== "off")
+        this.#chatterbox = await createChatterbox(dataDir, { ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }), ...fakeChatterboxOptions(this.#d.fakeChatterbox) }).catch(
           (e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined),
         );
       const { server, port } = await listenWithFallback(config.preferredPort, (port) =>

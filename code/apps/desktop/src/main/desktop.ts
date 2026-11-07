@@ -9,6 +9,7 @@ import type { Ctx } from "./context";
 import { desktopTestHook } from "./desktop-test-hook";
 import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
+import { cloningHandlers } from "./cloning";
 import { engineHandlers } from "./engines";
 import { createExports } from "./export/service";
 import { installExtension } from "./extension";
@@ -70,6 +71,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
 
   const handlers = {
     ...engineHandlers(ctx),
+    ...cloningHandlers(ctx, o.parent),
     ...exports.handlers,
     ...updates.handlers,
     ...shortcuts.handlers,

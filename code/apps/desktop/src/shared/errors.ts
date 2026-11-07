@@ -57,6 +57,8 @@ export interface ErrorArgs {
   "update-checksum": undefined;
   "update-interrupted": undefined;
   "update-failed": { detail: string };
+  /** The server refused the reference clip; `checks` is empty when the file was not audio it could read (`message` says why). */
+  "clip-rejected": { message: string; checks: { id: "length" | "sample-rate" | "loudness" | "silence" | "noise"; ok: boolean; message: string }[] };
 }
 
 export type DesktopErrorCode = keyof ErrorArgs;
