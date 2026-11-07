@@ -10,12 +10,10 @@ interface Props {
 
 function Group({ label, value, children }: { label: ReactNode; value: ReactNode; children: ReactNode }) {
   return (
-    <div className="rd-display__group">
-      <span className="rd-pop__row">
-        <span>{label}</span>
-        <b>{value}</b>
-      </span>
+    <div className="rd-display__row">
+      <span className="rd-display__label">{label}</span>
       {children}
+      <b className="rd-display__value">{value}</b>
     </div>
   );
 }
@@ -53,8 +51,10 @@ export function DisplayCard({ d, onChange, onClose }: Props) {
   useEffect(() => card.current?.querySelector<HTMLElement>("button")?.focus(), []);
   return (
     <div className="rd-float rd-display" role="dialog" aria-label="Display" ref={card}>
-      <Segmented label="Font" value={d.font} onChange={(v) => onChange({ font: v as Display["font"] })} items={FONTS} className="rd-display__font" />
-      <div className="rd-display__rows">
+      <div className="rd-display__row rd-display__row--between">
+        <span className="rd-display__label">Font</span>
+        <Segmented label="Font" value={d.font} onChange={(v) => onChange({ font: v as Display["font"] })} items={FONTS} />
+      </div>
         <Group label="Text size" value={`${d.size}px`}>
           <Slider min={14} max={30} step={1} value={d.size} aria-label="Text size" onChange={(v) => onChange({ size: v })} />
         </Group>
@@ -64,11 +64,10 @@ export function DisplayCard({ d, onChange, onClose }: Props) {
         <Group label="Text width" value={`${d.width}px`}>
           <Slider min={480} max={960} step={20} value={d.width} aria-label="Text width" onChange={(v) => onChange({ width: v })} />
         </Group>
-        <label className="rd-pop__row">
-          <span>Scroll along with the voice</span>
-          <Toggle checked={d.follow} onChange={(follow) => onChange({ follow })} aria-label="Scroll along with the voice" />
-        </label>
-      </div>
+      <label className="rd-display__row rd-display__row--between rd-display__row--switch">
+        <span className="rd-display__text">Scroll along with the voice</span>
+        <Toggle checked={d.follow} onChange={(follow) => onChange({ follow })} aria-label="Scroll along with the voice" />
+      </label>
     </div>
   );
 }

@@ -25,7 +25,7 @@ describe("display card", () => {
   const html = renderToStaticMarkup(<DisplayCard d={DEFAULT_DISPLAY} onChange={noop} onClose={noop} />);
   it("shows the font toggle, three labelled sliders with their values, then the follow switch", () => {
     expect(html).toContain('aria-label="Display"');
-    const at = ["Sans", "Serif", "Text size", "<b>19px</b>", "Line spacing", "<b>1.7</b>", "Text width", "<b>680px</b>", "Scroll along with the voice"].map((x) => html.indexOf(x));
+    const at = ["Sans", "Serif", "Text size", ">19px</b>", "Line spacing", ">1.7</b>", "Text width", ">680px</b>", "Scroll along with the voice"].map((x) => html.indexOf(x));
     expect(at.every((i) => i >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(html).toMatch(/role="switch"[^>]*aria-checked="true"/);

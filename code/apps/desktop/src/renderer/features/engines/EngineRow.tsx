@@ -43,9 +43,11 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
         {d.progress !== null && <ProgressBar thin value={Math.round(d.progress * 100)} label={`${e.name} progress`} />}
       </div>
       <div className="sk-row-actions">
-        <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
-          {d.pill.label}
-        </StatusPill>
+        {d.pill.tone !== "green" && ( // the sidebar engine card shows "Ready" (design 2.18)
+          <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
+            {d.pill.label}
+          </StatusPill>
+        )}
         {d.actions.map((a) => (
           <Button key={a} variant={variant(a)} loading={busy === `${e.id}:${a}`} onClick={() => onAction(a)}>
             {ACTION_LABELS[a]}
