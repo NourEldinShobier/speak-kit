@@ -131,7 +131,6 @@
 }
 
 /* Every row in a setup card has the same 14 px above and below (the token card's padding). */
-.sk-setup .lm-row,
-.sk-setup .lm-row:has(.lm-row__desc) {
+.sk-setup .lm-card .lm-row.lm-row {
   padding-block: var(--card-pad-y);
 }

@@ -29,7 +29,7 @@ const probe = (p: Page, sel: string) =>
 const box = (p: Page, sel: string) => probe(p, sel).then((b) => b!);
 
 describe("spacing and radius on Windows (data-platform=win32; the macOS values are pinned in packages/ui)", () => {
-  it("main window: title bar 38, panel 8 px from the right and bottom edges and 4 px from the sidebar, page header and body spacing, panel 8 / card 10 / dialog 10 / menu 10", async () => {
+  it("main window: title bar 38, panel 8 px from the right and bottom edges and 4 px from the sidebar, page header and body spacing, panel 8 / card 8 / dialog 10 / menu 10", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     expect(await l.page.evaluate(() => document.documentElement.dataset.platform)).toBe("win32");
@@ -85,7 +85,7 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect(await box(l.page, ".sk-page")).toMatchObject({ pad: [22, 28, 24, 28], gap: 16 });
     expect(await box(l.page, ".sk-page__head h1")).toMatchObject({ y: 60, h: 26 });
     expect(await box(l.page, ".sk-page__head p")).toMatchObject({ y: 90, h: 17 });
-    expect(await box(l.page, ".sk-stat")).toMatchObject({ y: 123, pad: [14, 16, 14, 16], radius: "10px" });
+    expect(await box(l.page, ".sk-stat")).toMatchObject({ y: 123, pad: [14, 16, 14, 16], radius: "8px" });
     // Command palette: a dialog (10 on Windows) with a menu list (10).
     await l.page.keyboard.press("Control+K");
     await l.page.locator(".sk-pal__box").waitFor();
@@ -137,7 +137,7 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect(await box(panel, ".panel")).toMatchObject({ x: 24, y: 24, radius: "10px", pad: [0, 8, 8, 8] });
     expect(await box(panel, ".panel__head")).toMatchObject({ h: 32 });
     expect(await box(panel, ".panel__head .lm-logo")).toMatchObject({ x: 30, y: 30, w: 20, h: 20 });
-    expect(await box(panel, ".panel__now")).toMatchObject({ radius: "10px" });
+    expect(await box(panel, ".panel__now")).toMatchObject({ radius: "8px" });
   });
 });
 

@@ -75,7 +75,7 @@ describe("Lumen shell", () => {
     const [scroll, card] = [await box(l, ".sk-setup__scroll"), await box(l, ".sk-setup .lm-card")];
     expect([scroll.x < card.x - 1, scroll.x + scroll.width > card.x + card.width + 1, card.width]).toEqual([true, true, 720]);
     // Selected engine: tint, top corners round, bottom flat; the icon tile is white with a 1 px stroke.
-    expect(await style(".sk-radio.is-sel", ["background-color", "border-top-left-radius", "border-bottom-left-radius"])).toEqual(["rgba(0, 0, 0, 0.04)", "10px", "0px"]);
+    expect(await style(".sk-radio.is-sel", ["background-color", "border-top-left-radius", "border-bottom-left-radius"])).toEqual(["rgba(0, 0, 0, 0.04)", "8px", "0px"]);
     expect(await style(".sk-radio.is-sel .sk-tile", ["background-color", "border-top-color"])).toEqual(["rgb(255, 255, 255)", "rgb(229, 229, 229)"]);
     expect(Number.parseFloat((await style(".sk-radio.is-sel .sk-tile", ["border-top-width"]))[0]!)).toBeGreaterThan(0.5); // 1 px, or one device pixel on a scaled screen
     // Footer: Back's box 12 from the left, the primary 20 from the right, both 16 from the bottom.

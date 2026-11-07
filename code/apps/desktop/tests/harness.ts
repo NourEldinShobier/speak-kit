@@ -20,7 +20,8 @@ if (process.env.VITEST) vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 
 // Test files run in parallel workers. Each worker gets its own block of ports, below the Windows dynamic range (49152 and up): a port taken
 // by another file's app makes the app move to the next one, and the test would talk to that other server.
 const PORTS_PER_WORKER = 30;
-const portBase = 48100 + Number(process.env.VITEST_POOL_ID ?? 0) * PORTS_PER_WORKER;
+// SPEAKKIT_TEST_PORT_OFFSET moves the whole block (a multiple of 30) so two checkouts can run their desktop tests at the same time.
+const portBase = 48100 + Number(process.env.SPEAKKIT_TEST_PORT_OFFSET ?? 0) + Number(process.env.VITEST_POOL_ID ?? 0) * PORTS_PER_WORKER;
 let portsGiven = 0;
 export const freePort = () => portBase + (portsGiven++ % PORTS_PER_WORKER);
 

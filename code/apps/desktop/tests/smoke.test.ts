@@ -25,8 +25,9 @@ describe("desktop app", () => {
     await page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
     await page.getByRole("button", { name: /Get started/ }).click();
     await page.getByRole("heading", { name: "Choose a voice engine" }).waitFor();
-    // Chatterbox is shown but cannot be selected in v1.
-    expect(await page.getByRole("button", { name: /Chatterbox/ }).isDisabled()).toBe(true);
+    // Both engines are radios; Kokoro is the choice, and Chatterbox is offered (enabled only when the computer has a suitable NVIDIA card).
+    expect(await page.getByRole("radio", { name: "Kokoro-82M" }).getAttribute("aria-checked")).toBe("true");
+    expect(await page.getByRole("radio", { name: "Chatterbox" }).getAttribute("aria-checked")).toBe("false");
     await page.getByRole("button", { name: /Download Kokoro/ }).click();
     await page.getByRole("heading", { name: "Kokoro-82M is ready" }).waitFor();
     await page.getByRole("button", { name: /^Continue/ }).click();
