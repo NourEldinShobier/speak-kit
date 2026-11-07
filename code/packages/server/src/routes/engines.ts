@@ -44,9 +44,13 @@ export const engineRoutes: Route[] = [
   {
     method: "POST",
     path: /^\/v1\/engines\/(kokoro|chatterbox)\/cancel$/,
-    handle: async ({ req, res, params }, { engines }) => {
+    handle: async ({ req, res, params }, { engines, deadlines }) => {
       req.resume();
-      await engines.get(params[0] as EngineId).cancelInstall?.(); // answers once the installer's processes are gone
+      // Deleting a multi-GB environment can outlast the control deadline: answer after the cleanup or half the deadline, whichever comes first; the status turns missing when it ends.
+      let timer: NodeJS.Timeout | undefined;
+      const grace = new Promise<void>((resolve) => (timer = setTimeout(resolve, deadlines.controlMs / 2)));
+      await Promise.race([engines.get(params[0] as EngineId).cancelInstall?.(), grace]);
+      clearTimeout(timer);
       json(res, 200, engines.list());
     },
   },

@@ -57,6 +57,24 @@ describe("POST /v1/engines/chatterbox/cancel", () => {
     expect((await list(r)).engines[1]).toEqual({ id: "chatterbox", name: "Chatterbox", state: "missing", reason: "not-installed", optional: true, cloning: true, gpu: GPU });
   });
 
+  it("answers inside the control deadline while the cleanup is still deleting the environment, and the status turns missing when it ends", async () => {
+    let running = false;
+    const slowCleanup = ({ signal }: { signal: AbortSignal }) =>
+      new Promise<void>((_, reject) => {
+        running = true;
+        signal.addEventListener("abort", () => setTimeout(() => reject(new InstallCancelledError()), 600));
+      });
+    const cb = chatterbox({ gpu: GPU, python: ["python"] }, { installer: slowCleanup });
+    ctx = await start({}, undefined, { chatterbox: cb, controlDeadlineMs: 200 });
+    await call(ctx, "POST", "/v1/engines/chatterbox/install");
+    await vi.waitFor(() => expect(running).toBe(true));
+    const r = await call(ctx, "POST", "/v1/engines/chatterbox/cancel");
+    expect(r.status).toBe(200);
+    expect((await list(r)).engines[1]!.state).toBe("installing");
+    await vi.waitFor(() => expect(cb.status().state).toBe("missing"));
+    expect((await list(await call(ctx, "GET", "/v1/engines"))).engines[1]!.state).toBe("missing");
+  });
+
   it("does nothing for an engine that is not installing, and needs the token", async () => {
     ctx = await start({}, undefined, { chatterbox: chatterbox({ gpu: GPU }, { installed: true }) });
     expect((await list(await call(ctx, "POST", "/v1/engines/chatterbox/cancel"))).engines[1]!.state).toBe("unloaded");
