@@ -9,8 +9,6 @@ export interface ButtonProps extends BtnAttrs {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   /** md = 36, sm = 28, xs = 24, xl = 40 (dialog footers); lg is the same as md. */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
-  /** Maps to the tinted destructive button (the system has no solid red). */
-  solid?: boolean;
   iconLeft?: IconName;
   iconRight?: IconName;
   /** Spinner replaces the leading icon (or is added when there is none); width stays. */
@@ -23,13 +21,13 @@ const BTN_SIZE_CLASS: Record<string, string> = { xs: "lm-btn--xs", sm: "lm-btn--
 const ICON_GLYPH: Record<number, number> = { 24: 12, 28: 14 };
 const ICON_SIZE_CLASS: Record<number, string> = { 24: "lm-btn--xs", 28: "lm-btn--sm", 40: "lm-btn--xl" };
 
-export function Button({ variant = "secondary", size = "md", solid, iconLeft, iconRight, loading, disabled, className, children, type = "button", ...rest }: ButtonProps) {
+export function Button({ variant = "secondary", size = "md", iconLeft, iconRight, loading, disabled, className, children, type = "button", ...rest }: ButtonProps) {
   const lead = loading ? "loader-2" : iconLeft;
   const glyph = BTN_GLYPH[size] ?? 16;
   return (
     <button
       type={type}
-      className={cx("lm-btn", `lm-btn--${variant}`, solid && "lm-btn--danger-solid", BTN_SIZE_CLASS[size], loading && "is-loading", className)}
+      className={cx("lm-btn", `lm-btn--${variant}`, BTN_SIZE_CLASS[size], loading && "is-loading", className)}
       disabled={disabled}
       aria-busy={loading ? "true" : undefined}
       {...rest}

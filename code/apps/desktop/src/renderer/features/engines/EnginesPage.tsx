@@ -18,7 +18,7 @@ function RemoveDialog({ engine, onCancel, onConfirm }: { engine: EngineInfo | nu
       footer={
         <>
           <Button onClick={onCancel}>Cancel</Button>
-          <Button variant="danger" solid onClick={() => onConfirm(engine!)}>
+          <Button variant="danger" onClick={() => onConfirm(engine!)}>
             Remove
           </Button>
         </>

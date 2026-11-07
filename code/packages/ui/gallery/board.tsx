@@ -497,7 +497,7 @@ export function Board() {
                 <Button variant="ghost" size="lg">
                   Cancel
                 </Button>
-                <Button variant="danger" solid size="lg">
+                <Button variant="danger" size="lg">
                   Delete forever
                 </Button>
               </>

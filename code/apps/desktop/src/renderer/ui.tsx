@@ -61,7 +61,7 @@ function RegenerateModal({ open, busy, onClose, onConfirm }: { open: boolean; bu
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="danger" solid loading={busy} onClick={onConfirm}>
+          <Button variant="danger" loading={busy} onClick={onConfirm}>
             Regenerate
           </Button>
         </>

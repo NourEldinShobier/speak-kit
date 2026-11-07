@@ -51,3 +51,33 @@ describe("a) slider", () => {
     expect(await look(bar.replace('class="lm-progress"', 'class="lm-progress is-error"'), ".lm-progress__bar", ["background-color"])).toEqual(["rgb(198, 40, 40)"]);
   });
 });
+
+describe("b) destructive button", () => {
+  const btn = '<button class="lm-btn lm-btn--danger">Delete</button>';
+  test("rest: white fill, 1px #E5E5E5 ring, shadow 0 1 2 at 6%, radius 8, text #C62828", async () => {
+    expect(await look(btn, "button", ["background-color", "border-top-color", "border-top-width", "box-shadow", "border-top-left-radius", "color"])).toEqual([
+      "rgb(255, 255, 255)",
+      "rgb(229, 229, 229)",
+      "1px",
+      "rgba(0, 0, 0, 0.06) 0px 1px 2px 0px",
+      "8px",
+      "rgb(198, 40, 40)",
+    ]);
+  });
+  test("hover #FEF2F2 with a #F2B8B8 ring, pressed #FDE4E4", async () => {
+    const hover = '<button class="lm-btn lm-btn--danger is-hover">Delete</button>';
+    expect(await look(hover, "button", ["background-color", "border-top-color"])).toEqual(["rgb(254, 242, 242)", "rgb(242, 184, 184)"]);
+    const pressed = '<button class="lm-btn lm-btn--danger is-pressed">Delete</button>';
+    expect(await look(pressed, "button", ["background-color"])).toEqual(["rgb(253, 228, 228)"]);
+  });
+  test("focus is a 2px red ring at 40% outside the button", async () => {
+    const focus = '<button class="lm-btn lm-btn--danger is-focus">Delete</button>';
+    expect(await look(focus, "button", ["outline-width", "outline-style", "outline-color", "outline-offset"])).toEqual(["2px", "solid", "color(srgb 0.776471 0.156863 0.156863 / 0.4)", "0px"]);
+  });
+  test("disabled keeps the white button and dims only the text to 40%", async () => {
+    expect(await look('<button class="lm-btn lm-btn--danger" disabled>Delete</button>', "button", ["opacity", "color", "background-color"])).toEqual(["1", "color(srgb 0.776471 0.156863 0.156863 / 0.4)", "rgb(255, 255, 255)"]);
+  });
+  test("there is no filled red button class", () => {
+    expect(css).not.toContain("danger-solid");
+  });
+});

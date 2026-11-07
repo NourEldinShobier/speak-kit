@@ -42,6 +42,9 @@
   --cta: #201e25;
   --text-on-cta: #fafafa;
   --destructive: #c62828;
+  --destructive-fill-hover: #fef2f2;
+  --destructive-ring-hover: #f2b8b8;
+  --destructive-fill-pressed: #fde4e4;
   --tag-blue: #0b5cad;
   --tag-green: #17693d;
   --tag-orange: #9a5200;
@@ -395,25 +398,36 @@
 .lm-btn--ghost:is(:active, .is-pressed) {
   background: var(--fill-pressed);
 }
-/* danger = Lockix destructive: red text on a 10% red tint; the solid variant maps to it too */
-.lm-btn--danger,
-.lm-btn--danger-solid {
-  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+/* danger = destructive action: the secondary button (white, 1 px ring, soft shadow) with red text. There is no filled red button. */
+.lm-btn--danger {
+  border-color: var(--stroke-control);
+  background: var(--surface-raised);
   color: var(--destructive);
+  box-shadow: var(--shadow-control);
 }
-.lm-btn--danger:is(.is-hover, :active, .is-pressed),
-.lm-btn--danger-solid:is(.is-hover, :active, .is-pressed) {
-  background: color-mix(in srgb, var(--destructive) 20%, transparent);
+.lm-btn--danger:is(.is-hover) {
+  border-color: var(--destructive-ring-hover);
+  background: var(--destructive-fill-hover);
 }
 @media (hover: hover) and (pointer: fine) {
-  .lm-btn--danger:hover,
-  .lm-btn--danger-solid:hover {
-    background: color-mix(in srgb, var(--destructive) 20%, transparent);
+  .lm-btn--danger:hover {
+    border-color: var(--destructive-ring-hover);
+    background: var(--destructive-fill-hover);
   }
 }
-.lm-btn--danger:is(:focus-visible, .is-focus),
-.lm-btn--danger-solid:is(:focus-visible, .is-focus) {
-  border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+.lm-btn--danger:is(:active, .is-pressed) {
+  border-color: var(--destructive-ring-hover);
+  background: var(--destructive-fill-pressed);
+}
+/* focus: a 2 px red ring outside the button, red at 40% */
+.lm .lm-btn--danger:is(:focus-visible, .is-focus) {
+  border-color: var(--stroke-control);
+  outline: 2px solid color-mix(in srgb, var(--destructive) 40%, transparent);
+  outline-offset: 0;
+}
+.lm-btn--danger:is(:disabled, .is-disabled) {
+  opacity: 1;
+  color: color-mix(in srgb, var(--destructive) 40%, transparent);
 }
 /* toggle button: selected = white card with stroke on the grey track, like a segmented item */
 .lm-btn--toggle {

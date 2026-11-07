@@ -72,7 +72,7 @@ export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null;
           <Button onClick={onClose} data-default-focus>
             Cancel
           </Button>
-          <Button variant="danger" solid onClick={onConfirm}>
+          <Button variant="danger" onClick={onConfirm}>
             Delete
           </Button>
         </>

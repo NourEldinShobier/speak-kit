@@ -59,7 +59,7 @@ export function DeleteDownloadsDialog({ phase, storage, onConfirm, onClose }: Pr
               Cancel
             </Button>
             <span style={{ flex: 1 }} />
-            <Button variant="danger" solid onClick={onConfirm} disabled={phase.step === "working"}>
+            <Button variant="danger" onClick={onConfirm} disabled={phase.step === "working"}>
               {phase.step === "working" ? "Deleting..." : "Delete"}
             </Button>
           </>

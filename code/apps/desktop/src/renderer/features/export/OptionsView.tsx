@@ -121,7 +121,7 @@ export function existsView(p: Pick<ViewProps, "dispatch" | "start"> & { target: 
       <Button onClick={rename}>Choose another name</Button>
       <span style={{ flex: 1 }} />
       <Button onClick={() => p.start("keep-both")}>Keep both</Button>
-      <Button variant="danger" solid onClick={() => p.start("replace")}>
+      <Button variant="danger" onClick={() => p.start("replace")}>
         Replace
       </Button>
     </>
