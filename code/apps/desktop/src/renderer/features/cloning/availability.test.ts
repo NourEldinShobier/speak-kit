@@ -6,8 +6,9 @@ const kokoro: EngineInfo = { id: "kokoro", name: "Kokoro", state: "ready", optio
 const list = (cb: Partial<EngineInfo>, active: EngineList["active"] = "kokoro"): EngineList => ({ active, engines: [kokoro, { id: "chatterbox", name: "Chatterbox", state: "missing", optional: true, cloning: true, ...cb }] });
 
 describe("cloningAvailability", () => {
-  it("waits for the engine list", () => {
+  it("waits for the engine list, and promises nothing when the server has no engine that clones", () => {
     expect(cloningAvailability(null)).toEqual({ kind: "unknown" });
+    expect(cloningAvailability({ active: "kokoro", engines: [kokoro] })).toEqual({ kind: "unknown" });
   });
 
   it.each(["unloaded", "loading", "ready", "downloading", "error"] as const)("is ready when Chatterbox is installed and %s, even while Kokoro is in use", (state) => {

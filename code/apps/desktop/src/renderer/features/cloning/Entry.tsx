@@ -16,6 +16,7 @@ export function CloningUnavailable({ availability, onOpenEngines }: { availabili
   return (
     <Banner
       tone="warning"
+      role="status"
       title={availability.title}
       action={
         <Button size="sm" iconRight="arrow-right" onClick={onOpenEngines}>

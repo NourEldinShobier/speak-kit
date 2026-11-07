@@ -169,6 +169,7 @@ describe("G14 cloning unavailable", () => {
 
   it("disables the button and says what is needed, with a way to the Engines page", () => {
     expect(renderToStaticMarkup(<CloneButton availability={unavailable} onClick={noop} />)).toMatch(/<button[^>]*disabled=""[^>]*>.*Clone a voice<\/button>/);
+    expect(renderToStaticMarkup(<CloningUnavailable availability={unavailable} onOpenEngines={noop} />)).toContain('role="status"');
     expect(text(renderToStaticMarkup(<CloningUnavailable availability={unavailable} onOpenEngines={noop} />))).toBe(
       "Cloning needs Chatterbox (2.4 GB) Install it on the Engines page. Found NVIDIA GeForce RTX 3060 with 8 GB of video memory. Open Engines",
     );

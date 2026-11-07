@@ -199,13 +199,15 @@ export interface BannerProps {
   children: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** A standing notice that is not an interruption (what a page needs) says "status"; default: "alert" for warning and error, "status" for info. */
+  role?: "status" | "alert";
 }
 
 const BANNER_ICON = { info: "info-circle", warning: "alert-triangle", error: "alert-circle" } as const;
 
-export function Banner({ tone = "info", icon, title, children, action, className }: BannerProps) {
+export function Banner({ tone = "info", icon, title, children, action, className, role }: BannerProps) {
   return (
-    <div role={tone === "info" ? "status" : "alert"} className={cx("lm-banner", tone !== "info" && `lm-banner--${tone}`, className)}>
+    <div role={role ?? (tone === "info" ? "status" : "alert")} className={cx("lm-banner", tone !== "info" && `lm-banner--${tone}`, className)}>
       <Icon name={icon ?? BANNER_ICON[tone]} />
       <div className="lm-banner__body">
         {title ? <div className="lm-banner__title">{title}</div> : null}

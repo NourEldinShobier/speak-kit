@@ -18,7 +18,7 @@ function reasonDetail(e: EngineInfo): string {
 export function cloningAvailability(list: EngineList | null): Availability {
   if (!list) return { kind: "unknown" };
   const e = list.engines.find((x) => x.cloning);
-  if (!e) return { kind: "unavailable", title: NEEDS, detail: "This version of Speak Kit has no engine that can clone a voice." };
+  if (!e) return { kind: "unknown" }; // a server started without Chatterbox (SPEAKKIT_CHATTERBOX=off): the button stays off and nothing is promised
   if (e.state === "installing") return { kind: "unavailable", title: "Chatterbox is installing", detail: "Cloning is available when the install finishes." };
   if (e.state === "missing" || e.state === "unavailable") return { kind: "unavailable", title: NEEDS, detail: reasonDetail(e) };
   return { kind: "ready" };
