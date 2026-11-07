@@ -24,7 +24,9 @@ export class ShadowShell implements Shell {
     shadow.adoptedStyleSheets = [sheet];
     this.root = h("div", { class: "lm sk", "data-theme": "light", "data-platform": browserPlatform() });
     shadow.append(this.root);
+    this.host.setAttribute("popover", "manual");
     document.documentElement.append(this.host);
+    this.raise();
     document.addEventListener("pointerdown", this.onDown, true);
     document.addEventListener("keydown", this.onKey, true);
     addEventListener("resize", this.onResize);
@@ -72,10 +74,20 @@ export class ShadowShell implements Shell {
     if (hadFocus && p.anchor.isConnected) p.anchor.focus({ preventScroll: true });
   }
 
+  /** The top layer is placed against the viewport whatever transform, filter or clip the page puts on <html>; a host that was moved in the DOM left it. */
+  private raise() {
+    try {
+      if (!this.host.matches(":popover-open")) this.host.showPopover();
+    } catch {
+      /* no Popover API, or the host is not connected: it stays a fixed element */
+    }
+  }
+
   placeHostAfter(node: Node | null) {
     if (document.activeElement === this.host) return; // moving it would drop focus
     if (node) node.parentNode?.insertBefore(this.host, node.nextSibling);
     else if (this.host.parentNode !== document.documentElement || this.host.nextSibling) document.documentElement.append(this.host);
+    this.raise();
   }
 
   destroy() {
