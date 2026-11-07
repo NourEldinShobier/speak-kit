@@ -11,6 +11,7 @@
       "specs": [
         "a11y.spec.ts",
         "closetab.spec.ts",
+        "final-probes.spec.ts",
         "content.spec.ts",
         "hostile.spec.ts",
         "hosts.spec.ts",
