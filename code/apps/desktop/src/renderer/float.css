@@ -48,10 +48,14 @@ body {
 }
 .mini__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 10px 8px 8px 14px;
+  padding: 12px 14px 8px;
   -webkit-app-region: drag;
+}
+/* title, time left and the two buttons share the 18 px title line; the 24 px buttons overhang it by 3 px above and below */
+.mini__head > .lm-btn {
+  margin-block: -3px;
 }
 .mini__nodrag,
 .mini__ctl {
@@ -63,6 +67,9 @@ body {
   flex-direction: column;
   min-width: 0;
 }
+.mini__title b {
+  line-height: 18px;
+}
 .mini__title b,
 .mini__title span {
   overflow: hidden;
@@ -73,6 +80,25 @@ body {
 .mini__left {
   color: var(--text-secondary);
   font-size: 12px;
+}
+.mini__left {
+  line-height: 18px;
+}
+/* progress: 4 px, the card width minus 14 px on each side */
+.mini__bar {
+  width: auto;
+  height: 4px;
+  margin-inline: 14px;
+}
+.mini__pause {
+  display: flex;
+  gap: 3px;
+}
+.mini__pause i {
+  width: 3px;
+  height: 12px;
+  border-radius: 1px;
+  background: currentColor;
 }
 .mini__ctl {
   display: flex;
