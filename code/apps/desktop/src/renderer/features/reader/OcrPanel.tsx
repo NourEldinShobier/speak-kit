@@ -10,16 +10,18 @@ const progressLine = (p: OcrProgress) => `Page ${p.page} of ${p.total}${p.leftMs
 
 function Running({ progress, onCancel }: { progress?: OcrProgress | undefined; onCancel(): void }) {
   return (
-    <div className="rd-ocr" role="status" aria-label="Recognizing text">
-      <b>Recognizing text</b>
-      <span className="rd-muted" data-testid="ocr-progress">
+    <section className="rd-ocr" aria-label="Recognizing text">
+      <div className="rd-ocr__head">
+        <b>Recognizing text</b>
+        <Button size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+      <span className="rd-ocr__status" role="status" data-testid="ocr-progress">
         {progress ? progressLine(progress) : "Getting ready"}
       </span>
       <ProgressBar value={progress ? ((progress.page - 1) / progress.total) * 100 : undefined} label="Text recognition" />
-      <Button size="sm" onClick={onCancel}>
-        Cancel
-      </Button>
-    </div>
+    </section>
   );
 }
 
