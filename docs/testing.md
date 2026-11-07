@@ -61,6 +61,17 @@ Files in `code/e2e/tests`:
 
 ## Last result
 
+Final verification before v0.4.0 (2026-11-07, Windows 11, RTX 4080 Laptop, branch `verify/final`):
+
+- `pnpm test` (root run, desktop Electron specs included): 198 files passed, 6 skipped; 1695 tests passed, 7 skipped (the opt-in real-engine files), 0 failed. `pnpm e2e:full`: 205 passed in the main phase, 8 in the perf phase. Typecheck, lint (existing warnings only), `fmt:check`, `knip`, `gen-docs --check` and `pnpm run gates` clean.
+- Packaged app (`package.mjs --platform win --version 0.4.0`): `smoke-packaged.mjs` passed with the fake engine and with `--real`; `smoke-installer.mjs` passed (install, update keeps models, uninstall removes them, no process left). `chatterbox_sidecar.py` ships in `resources/chatterbox`.
+- Real Chatterbox (`SPEAKKIT_REAL_CHATTERBOX=1`, three opt-in files): all pass. Cold first audio 21.8 s after the weights were cached (230 s while they downloaded), warm 2.3 s, VRAM 4466 MB before, 7967 MB loaded, 4475 MB after the idle unload, 4474 MB after switching to Kokoro; engine file: load 19 s, real-time factor 0.74; cloning in the app: checks and load 18.8 s, test sentence 14.7 s. The server test failed once on a styled clone whose output peaked at 379 (the reference is a generated tone and the sampled output was near silent); the next run passed.
+- Soak with the built app and real Kokoro (three full reads, 80 pause, resume, seek, speed and voice changes, all eight settings pages, the 28-voice drawer, close to tray and reopen, quit while reading, relaunch): no "Something went wrong", no page or console errors, `main.log` holds only the two `server listening` lines, no process left after either quit. First audio 1.3 s cold, 0.2 to 0.4 s warm; the 6-paragraph reading (digits, URLs, emoji, a 150-word sentence, Chinese, Arabic, Russian and Japanese text) took 56 to 59 s at 3x. Memory while reading: 1.15 GB working set in total (the model host 0.7 GB), 1.5 GB private after the first round of control changes and flat over the next three rounds.
+- Found and fixed in this pass: the root run lacked `__TEST_CODE__` (a desktop main unit test failed only from the root); `e2e/tests/reader.spec.ts` still looked for the speed pill as "2x" (it is named "Speed 2x"); the packaged smoke allowed two processes with the real engine, which runs three (app, window renderer, model host); the clone sliders were 200 px wide under full-width Calm and Dramatic labels; `docs/MODULES.md` was stale. The desktop renderer bundle stood 2 bytes under its 191000 gzip budget, so four unused CSS classes were deleted to make room (now 190977).
+- Not verified: macOS, a second machine, a real auto-update from a published release, audio heard by a person, Chatterbox installed through the packaged installer.
+
+Earlier results follow.
+
 v0.3.0 verification run (2026-11-01, Windows 11, this machine):
 
 - Unit and integration (`pnpm exec vp test run` from `code/`, root config): 99 files passed, 4 skipped; 792 tests passed, 4 skipped, 0 failed. The skipped ones are opt-in: real Kokoro (`SPEAKKIT_REAL=1`), real Chatterbox (`SPEAKKIT_REAL_CHATTERBOX=1`) and the screenshot generators.
