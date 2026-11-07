@@ -164,7 +164,7 @@ customElements.define("x-closed", class extends HTMLElement { constructor(){ sup
     expect((await extractOf(ext, page)).sentences).toEqual(["Visible heading", S("SHOWN")[0], "Summary line stays here", S("ALSOSHOWN")[0]]);
   });
 
-  test("field values are never read; editable text is read as page text", async ({ ext, app }) => {
+  test("field values are never read in a page read; a selection inside a field is read, a password field never", async ({ ext, app }) => {
     ext.fx.set(
       "/fields",
       shell(
@@ -173,6 +173,7 @@ customElements.define("x-closed", class extends HTMLElement { constructor(){ sup
 <p>${S("BEFORE")[0]}</p>
 <textarea id="ta" rows="3">TEXTAREAVALUE typed by someone in the box.</textarea>
 <input id="in" value="INPUTVALUE typed by someone else">
+<input id="pw" type="password" value="PASSWORDVALUE is never spoken aloud">
 <div id="ce" contenteditable="true"><p>${S("EDITABLE")[0]}</p></div>
 <p>${S("AFTER")[0]}</p></main>`,
       ),
@@ -185,8 +186,27 @@ customElements.define("x-closed", class extends HTMLElement { constructor(){ sup
       t.focus();
       t.setSelectionRange(0, 9);
     });
-    const sel = (await extractOf(ext, page, "selection")).sentences.join(" ");
-    expect(sel).not.toContain("TEXTAREAV");
+    const select = (id: string, from: number, to: number) =>
+      page.evaluate(
+        ([i, a, z]) => {
+          const f = document.getElementById(i as string) as HTMLInputElement;
+          f.focus();
+          f.setSelectionRange(a as number, z as number);
+        },
+        [id, from, to],
+      );
+    await select("ta", 0, 9);
+    expect((await extractOf(ext, page, "selection")).sentences).toEqual(["TEXTAREAV"]);
+    await select("ta", 14, 42);
+    expect((await extractOf(ext, page, "selection")).sentences).toEqual(["typed by someone in the box."]);
+    await select("in", 0, 32);
+    expect((await extractOf(ext, page, "selection")).sentences).toEqual(["INPUTVALUE typed by someone else"]);
+    // Nothing but spaces selected, or a password field: the read falls back to the page and never speaks the field.
+    await page.evaluate(() => ((document.getElementById("in") as HTMLInputElement).value = "   "));
+    await select("in", 0, 3);
+    expect((await extractOf(ext, page, "selection")).sentences).toEqual(["Form page", S("BEFORE")[0], S("EDITABLE")[0], S("AFTER")[0]]);
+    await select("pw", 0, 12);
+    expect((await extractOf(ext, page, "selection")).sentences).toEqual(["Form page", S("BEFORE")[0], S("EDITABLE")[0], S("AFTER")[0]]);
   });
 });
 

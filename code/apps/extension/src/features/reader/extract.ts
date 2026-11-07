@@ -93,3 +93,33 @@ export function extract(doc: Document, opts: ExtractOptions): Extraction {
   const h1 = root.querySelector("h1")?.textContent?.trim();
   return { title: (doc.title || h1 || "").trim(), root, blocks, sentences };
 }
+
+/** The text selected inside an `<input>` or `<textarea>` (selectionStart/selectionEnd), or undefined when it is only whitespace, the field hides its text (password) or the field has no text selection. */
+export function fieldSelection(active: Element | null): { el: HTMLInputElement | HTMLTextAreaElement; text: string } | undefined {
+  if (!active || !/^(INPUT|TEXTAREA)$/.test(active.tagName)) return undefined;
+  const el = active as HTMLInputElement | HTMLTextAreaElement;
+  if (el.tagName === "INPUT" && !/^(text|search|url|tel)$/.test(el.type)) return undefined;
+  const text = (el.selectionStart ?? 0) === (el.selectionEnd ?? 0) ? "" : el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0);
+  return /\S/.test(text) ? { el, text } : undefined;
+}
+
+/** An Extraction for text that is not in the page's DOM (a field's selection): one block per line, each with a detached text node so highlights and ranges stay valid and paint nothing. */
+export function extractFieldText(doc: Document, field: { el: Element; text: string }, lang = doc.documentElement.lang || "en"): Extraction {
+  const lines = field.text
+    .split(/\n+/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const splits = splitMany(lines, lang);
+  const blocks: Block[] = [];
+  const sentences: Sentence[] = [];
+  lines.forEach((text, i) => {
+    const first = sentences.length;
+    for (const s of splits[i]!) sentences.push({ text: s.text, block: blocks.length, start: s.start, end: s.end });
+    if (sentences.length === first) return;
+    const node = doc.createTextNode(text);
+    const range = doc.createRange();
+    range.selectNodeContents(node);
+    blocks.push({ el: field.el, tag: "p", text, pieces: [{ node, ns: 0, ne: text.length, ts: 0, te: text.length }], first, count: sentences.length - first, range });
+  });
+  return { title: doc.title.trim(), root: field.el, blocks, sentences };
+}

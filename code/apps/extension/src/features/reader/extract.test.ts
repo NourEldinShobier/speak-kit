@@ -142,6 +142,55 @@ describe("selection edges", () => {
   });
 });
 
+describe("selection inside a field", () => {
+  const html = `<!doctype html><html><body><textarea id="t">First line is here. Second one!
+
+Third line.</textarea><input id="i" value="  "><input id="p" type="password" value="secret words here"><input id="n" type="checkbox"></body></html>`;
+
+  test("reads the selected part of a textarea, one block per line, with ranges that stay valid", async () => {
+    const page = await s.page(html);
+    const r = await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const E = (window as any).SK.extract;
+      const t = document.getElementById("t") as HTMLTextAreaElement;
+      t.focus();
+      t.setSelectionRange(0, t.value.length);
+      const f = E.fieldSelection(document.activeElement);
+      const ex = E.extractFieldText(document, f);
+      return {
+        sentences: ex.sentences.map((x: { text: string; block: number }) => [x.text, x.block]),
+        ranges: ex.sentences.map((_: unknown, i: number) => E.sentenceRange(document, ex, i)?.toString()),
+        first: ex.blocks.map((b: { first: number }) => b.first),
+      };
+    });
+    expect(r.sentences).toEqual([
+      ["First line is here.", 0],
+      ["Second one!", 0],
+      ["Third line.", 1],
+    ]);
+    expect(r.ranges).toEqual(["First line is here.", "Second one!", "Third line."]);
+    expect(r.first).toEqual([0, 2]);
+    await page.context().close();
+  });
+
+  test("a collapsed or whitespace-only selection, a password field and a checkbox select nothing", async () => {
+    const page = await s.page(html);
+    const r = await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const E = (window as any).SK.extract;
+      const probe = (id: string, from: number, to: number) => {
+        const f = document.getElementById(id) as HTMLInputElement;
+        f.focus();
+        if (id !== "n") f.setSelectionRange(from, to);
+        return E.fieldSelection(document.activeElement)?.text ?? null;
+      };
+      return [probe("t", 3, 3), probe("i", 0, 2), probe("p", 0, 6), probe("n", 0, 0), E.fieldSelection(document.body) ?? null];
+    });
+    expect(r).toEqual([null, null, null, null, null]);
+    await page.context().close();
+  });
+});
+
 describe("messy page", () => {
   test("matches the expected reading, honouring all skips", async () => {
     const page = await s.page(MESSY_PAGE);

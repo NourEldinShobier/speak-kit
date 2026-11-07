@@ -1,5 +1,5 @@
 import type { ExtractReply, ReadDoc } from "@speakkit/protocol";
-import { extract, findMainRoot, sentenceIndexAt, type Extraction } from "../../features/reader";
+import { extract, extractFieldText, fieldSelection, findMainRoot, sentenceIndexAt, type Extraction } from "../../features/reader";
 import type { Ctx, ReadMode } from "./context";
 
 const uid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -78,8 +78,9 @@ export class Docs {
     const shown = c.reader && c.readerDoc && mode === "page" ? c.docs.get(c.readerDoc)?.doc : undefined;
     if (shown && shown.source !== "selection") return { ...shown, startIndex: 0 };
     const sel = mode === "selection" ? currentSelection() : undefined;
-    const effective = mode === "selection" && !sel ? "page" : mode;
-    const ex = this.extraction(sel);
+    const field = mode === "selection" && !sel ? fieldSelection(document.activeElement) : undefined;
+    const effective = mode === "selection" && !sel && !field ? "page" : mode;
+    const ex = field ? extractFieldText(document, field) : this.extraction(sel);
     if (!ex) return { error: "page-unreadable" };
     let startIndex = 0;
     if (effective === "from-here") {
