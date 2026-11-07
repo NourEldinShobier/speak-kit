@@ -23,7 +23,9 @@ const LEAD: Record<CloneState["step"], (s: CloneState) => string> = {
 };
 
 const clipName = (label: string) => label.replace(/\.[^.]+$/, "").slice(0, 60) || "Recording";
-const forget = (id: string) => void api.deleteClonedVoice(id).catch(() => undefined); // best effort: a voice left behind shows under Your voices, where it can be deleted
+/** A voice that could not be deleted stays listed under Your voices, where it can be deleted again: nothing more to do here. */
+const leftBehind = (): void => {};
+const forget = (id: string) => void api.deleteClonedVoice(id).catch(leftBehind);
 
 /** What the server said about a clip becomes a screen: a rejected clip is G7, anything else goes back with a message. */
 function failure(e: unknown): CloneAction {
@@ -161,8 +163,12 @@ function ResultScreens({ st, dispatch, media, progress, cancel, onClose }: Flow 
   if (st.step === "done") return <Saved name={st.name} onDone={() => onClose(st.name)} />;
   if (st.step !== "naming") return null;
   const playTest = async () => {
-    await api.updateClonedVoice(st.voice.id, { exaggeration: st.exaggeration }).catch(() => undefined); // the test uses the style on the slider
-    await player.toggle(st.voice.id, testSentence(st.name), "clone-test");
+    try {
+      await api.updateClonedVoice(st.voice.id, { exaggeration: st.exaggeration }); // the test uses the style on the slider
+      await player.toggle(st.voice.id, testSentence(st.name), "clone-test");
+    } catch (e) {
+      dispatch({ type: "save-failed", message: cleanError(e) });
+    }
   };
   const save = async () => {
     dispatch({ type: "save-start" });

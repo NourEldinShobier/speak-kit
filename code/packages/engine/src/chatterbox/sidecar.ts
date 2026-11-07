@@ -144,8 +144,8 @@ export class Sidecar {
     else this.#rejectReady(err);
   }
 
-  /** One synthesis request. `reference` is a clip path to clone from, or null for the stock voice. `style` is the cloned voice's exaggeration and pace (the model's `cfg_weight`). An abort tells the sidecar to stop generating. */
-  synth(text: string, reference: string | null, signal?: AbortSignal, style: { exaggeration?: number; pace?: number } = {}): Promise<Synthesized> {
+  /** One synthesis request. `voice.reference` is a clip path to clone from, or null for the stock voice; `exaggeration` and `pace` (sent as the model's `cfg_weight`) are the cloned voice's style. An abort tells the sidecar to stop generating. */
+  synth(text: string, voice: { reference: string | null; exaggeration?: number; pace?: number }, signal?: AbortSignal): Promise<Synthesized> {
     const stdin = this.#proc.stdin;
     if (this.#dead || !stdin?.writable) return Promise.reject(new Error("sidecar is not running"));
     const id = this.#next++;
@@ -162,7 +162,7 @@ export class Sidecar {
       this.#jobs.set(id, { resolve: done(resolve), reject: done(reject) });
       signal?.addEventListener("abort", onAbort, { once: true });
       this.#dog.arm();
-      stdin.write(JSON.stringify({ op: "synth", id, text, reference, ...(style.exaggeration !== undefined && { exaggeration: style.exaggeration }), ...(style.pace !== undefined && { cfg_weight: style.pace }) }) + "\n");
+      stdin.write(JSON.stringify({ op: "synth", id, text, reference: voice.reference, ...(voice.exaggeration !== undefined && { exaggeration: voice.exaggeration }), ...(voice.pace !== undefined && { cfg_weight: voice.pace }) }) + "\n");
     });
   }
 
