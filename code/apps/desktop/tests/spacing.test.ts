@@ -94,16 +94,27 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     await l.page.keyboard.press("Escape");
   });
 
-  it("settings rows are 42 high without a description and 58 with one", async () => {
+  it("settings rows are 42 high without a description, 58 with one and 68 with a 36 px control", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
     await l.page.locator(".lm-row").first().waitFor();
-    const rows = await l.page.evaluate(() => [...document.querySelectorAll(".lm-row")].map((r) => [r.querySelector(".lm-row__desc") ? "desc" : "plain", r.getBoundingClientRect().height] as const));
-    expect(rows.filter(([k]) => k === "plain").map(([, v]) => v)).not.toHaveLength(0);
-    for (const [k, v] of rows) expect(v, k).toBeGreaterThanOrEqual(k === "desc" ? 58 : 42);
-    expect(Math.min(...rows.filter(([k]) => k === "desc").map(([, v]) => v))).toBe(58);
-    expect(Math.min(...rows.filter(([k]) => k === "plain").map(([, v]) => v))).toBe(42);
+    const measure = () =>
+      l.page.evaluate(() =>
+        [...document.querySelectorAll(".lm-row")].map((r) => {
+          const control = !!r.querySelector(".lm-select, .lm-btn, .lm-input, .lm-seg");
+          let kind = r.querySelector(".lm-row__desc") ? "desc" : "plain";
+          if (control) kind = "control";
+          return [kind, r.getBoundingClientRect().height] as const;
+        }),
+      );
+    const rows = [...(await measure())];
+    await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Storage" }).click();
+    await l.page.getByText("Voice models").waitFor();
+    rows.push(...(await measure()));
+    for (const kind of ["plain", "desc", "control"]) expect(rows.filter(([k]) => k === kind), kind).not.toHaveLength(0);
+    const min = (kind: string) => Math.min(...rows.filter(([k]) => k === kind).map(([, v]) => v));
+    expect([min("plain"), min("desc"), min("control")]).toEqual([42, 58, 68]);
   });
 
   it("tray panel: 24 px page padding, 10 px radius, 32 px head with the 20 px logo 6 px from the top and left; mini player 10 px", async () => {
