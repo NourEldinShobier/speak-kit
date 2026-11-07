@@ -27,6 +27,8 @@
   --fill-raised-hover: #f7f8fa;
   --fill-raised-press: #f0f0f0;
   --track: #ececec;
+  --kbd-fill: #ececec;
+  --kbd-fill-on-cta: #3a3841;
   --text-primary: #1b2230;
   --text-secondary: #475467;
   --text-tertiary: #5f6a7d;
@@ -954,31 +956,30 @@
 }
 
 /* ---------- kbd, avatar, favicon ---------- */
-.lm-kbd {
+/* key chip: solid grey, no border, 16 high; inside a dark primary button it is #3A3841 with white 11 px text, 18 high */
+.lm-kbd,
+.lm-kbd--sm {
   display: inline-flex;
   align-items: center;
-  height: 19px;
-  padding: 2px 6px;
-  border: 1px solid var(--stroke-control);
-  border-radius: 4px;
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--kbd-fill);
   color: var(--text-tertiary);
   font:
-    400 11px/13px Inter,
+    500 12px/16px Inter,
     "Inter Variable",
     system-ui,
     sans-serif;
   white-space: nowrap;
 }
-/* a key chip on a primary button sits on the accent fill, so it follows the button's on-accent text */
 .lm-btn--primary .lm-kbd {
-  color: var(--text-on-cta);
-  border-color: color-mix(in srgb, var(--text-on-cta) 45%, transparent);
-}
-.lm-kbd--sm {
-  height: 16px;
-  padding: 0 4px;
-  font-size: 10px;
-  line-height: 12px;
+  height: 18px;
+  background: var(--kbd-fill-on-cta);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
 }
 .lm-kbds {
   display: inline-flex;
@@ -1505,8 +1506,8 @@
   white-space: nowrap;
 }
 .lm-tooltip .lm-kbd {
+  background: color-mix(in srgb, currentColor 18%, transparent);
   color: inherit;
-  border-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 .lm-tooltip__arrow {
   width: 10px;

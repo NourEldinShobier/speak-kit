@@ -109,7 +109,7 @@ describe("Button states (real CSS)", () => {
     expect(await shadow("lm-dialog")).toBe("rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.07) 0px 4px 12px 0px");
   });
 
-  test("a key chip inside a primary button takes the on-cta text, not the grey tertiary text", async () => {
+  test("a key chip inside a primary button is white on #3A3841, not the grey tertiary text", async () => {
     const color = await page.evaluate(() => {
       const b = document.createElement("button");
       b.className = "lm-btn lm-btn--primary";
@@ -119,7 +119,7 @@ describe("Button states (real CSS)", () => {
       b.remove();
       return c;
     });
-    expect(color).toBe("rgb(250, 250, 250)");
+    expect(color).toBe("rgb(255, 255, 255)");
   });
 
   test("primary icon button (play/pause) keeps a light icon and the primary fill on rest and hover", async () => {

@@ -19,6 +19,8 @@ const light = {
   "fill-raised-hover": "#f7f8fa",
   "fill-raised-press": "#f0f0f0",
   "track": "#ececec",
+  "kbd-fill": "#ececec",
+  "kbd-fill-on-cta": "#3a3841",
   "text-primary": "#1b2230",
   "text-secondary": "#475467",
   "text-tertiary": "#5f6a7d",

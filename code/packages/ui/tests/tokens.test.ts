@@ -33,6 +33,11 @@ describe("tokens module", () => {
     expect(tokens.light["chip-red"]).toBe("#ffe4e5");
     expect(tokens.light["disabled-thumb"]).toBe("#c9ccd2");
     expect(tokens.light["track"]).toBe("#ececec");
+    expect(tokens.light["kbd-fill"]).toBe("#ececec");
+    expect(tokens.light["kbd-fill-on-cta"]).toBe("#3a3841");
+    expect(tokens.light["destructive-fill-hover"]).toBe("#fef2f2");
+    expect(tokens.light["destructive-ring-hover"]).toBe("#f2b8b8");
+    expect(tokens.light["destructive-fill-pressed"]).toBe("#fde4e4");
   });
 
   test("native tokens are picked from the same table", () => {

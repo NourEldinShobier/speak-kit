@@ -81,3 +81,14 @@ describe("b) destructive button", () => {
     expect(css).not.toContain("danger-solid");
   });
 });
+
+describe("c) keyboard chip", () => {
+  const props = ["background-color", "border-top-width", "border-top-left-radius", "height", "padding-left", "padding-right", "color", "font-size", "font-weight"];
+  test("small chip: #ECECEC, no border, radius 4, 16 high, 6 side padding, #5F6A7D Inter Medium 12", async () => {
+    expect(await look('<kbd class="lm-kbd lm-kbd--sm">Ctrl K</kbd>', "kbd", props)).toEqual(["rgb(236, 236, 236)", "0px", "4px", "16px", "6px", "6px", "rgb(95, 106, 125)", "12px", "500"]);
+  });
+  test("inside a dark primary button: #3A3841, white 11, 18 high", async () => {
+    const html = '<button class="lm-btn lm-btn--primary">New reading <kbd class="lm-kbd lm-kbd--sm">N</kbd></button>';
+    expect(await look(html, "kbd", ["background-color", "color", "font-size", "height"])).toEqual(["rgb(58, 56, 65)", "rgb(255, 255, 255)", "11px", "18px"]);
+  });
+});
