@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
@@ -72,6 +72,17 @@ describe("ClonedVoiceStore", () => {
     expect(again.style(v.id)).toEqual({ exaggeration: 0.8 });
     expect(again.voices()[0]!.name).toBe("Maya");
     expect(await again.update("cb_00000000", { name: "x" })).toBeUndefined();
+  });
+
+  it("a failed index write during update leaves the name and the style as they were", async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    const s = new ClonedVoiceStore(dir);
+    const v = await s.create({ name: "Voice 1", wav: clip(6), durationMs: 6000, checks: [] });
+    rmSync(join(dir, "index.json"));
+    mkdirSync(join(dir, "index.json")); // renaming the index over a directory fails
+    await expect(s.update(v.id, { name: "Maya", exaggeration: 0.8, pace: 1.2 })).rejects.toThrow();
+    expect(s.style(v.id)).toEqual({});
+    expect(s.list()).toEqual([{ id: v.id, name: "Voice 1", durationMs: 6000, createdAt: v.createdAt, checks: [] }]);
   });
 
   it("keeps every voice when adds overlap", async () => {

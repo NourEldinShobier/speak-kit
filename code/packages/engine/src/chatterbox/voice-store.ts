@@ -119,14 +119,14 @@ export class ClonedVoiceStore {
   /** Changes the name or the style of a voice; undefined when there is no such voice. A failed write leaves the voice as it was. */
   update(id: string, patch: { name?: string | undefined; exaggeration?: number | undefined; pace?: number | undefined }): Promise<ClonedVoice | undefined> {
     return this.#serial(async () => {
-      const e = this.#index.find((x) => x.id === id);
-      if (!e) return undefined;
-      const before = { ...e };
-      Object.assign(e, Object.fromEntries(Object.entries(patch).filter(([, x]) => x !== undefined)));
+      const i = this.#index.findIndex((x) => x.id === id);
+      if (i < 0) return undefined;
+      const before = this.#index[i]!;
+      this.#index[i] = { ...before, ...Object.fromEntries(Object.entries(patch).filter(([, x]) => x !== undefined)) };
       try {
         await this.#save();
       } catch (err) {
-        Object.assign(e, before);
+        this.#index[i] = before; // the old object, so a key the patch added is gone again
         throw err;
       }
       return this.list().find((x) => x.id === id);
