@@ -57,11 +57,3 @@ export const previewText = (name: string): string => `Hello, I am ${name}. This 
 
 export const langLabel = (v: Voice): string => (v.lang === "en-US" ? "US English" : "UK English");
 export const genderLabel = (v: Voice): string => (v.gender === "female" ? "Female" : "Male");
-
-/** One line per grade. The grades are the Kokoro project's overall ratings (A best, F worst); the engine's list folds F into D. */
-export const GRADE_NOTE: Record<Voice["quality"], string> = {
-  A: "Best overall rating in the Kokoro project's voice grades.",
-  B: "Second-best tier of the Kokoro project's overall voice grades.",
-  C: "Middle tier of the Kokoro project's overall voice grades.",
-  D: "Lowest tier of the Kokoro project's voice grades (D and F).",
-};

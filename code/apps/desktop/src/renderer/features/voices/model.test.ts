@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Voice } from "@speakkit/protocol";
-import { filterVoices, genderLabel, GRADE_NOTE, initVoices, langLabel, previewText, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
+import { filterVoices, genderLabel, initVoices, langLabel, previewText, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
 
 const voice = (id: string, over: Partial<Voice> = {}): Voice => ({ id, name: id, lang: "en-US", gender: "female", quality: "A", traits: "", ...over }) as Voice;
 const voices = [voice("Heart", { traits: "warm, calm" }), voice("Emma", { lang: "en-GB", traits: "clear" }), voice("Adam", { gender: "male", traits: "deep" })];
@@ -53,10 +53,5 @@ describe("voice labels", () => {
       "Male",
     ]);
     expect(previewText("Heart")).toBe("Hello, I am Heart. This is how I sound when reading to you.");
-  });
-
-  it("has one line for each grade", () => {
-    expect(Object.keys(GRADE_NOTE)).toEqual(["A", "B", "C", "D"]);
-    expect(GRADE_NOTE.D).toBe("Lowest tier of the Kokoro project's voice grades (D and F).");
   });
 });

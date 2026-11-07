@@ -1,9 +1,17 @@
 import { useEffect, useId, useRef, type KeyboardEvent } from "react";
 import { Avatar, Badge, Button, IconButton, StatusPill, type Tone } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
-import { genderLabel, GRADE_NOTE, langLabel } from "./model";
+import { GRADE_TONE } from "./grade";
+import "./drawer.css";
+import { genderLabel, langLabel } from "./model";
 
-export const GRADE_TONE: Record<Voice["quality"], Tone> = { A: "green", B: "blue", C: "orange", D: "red" };
+/** One line per grade. The grades are the Kokoro project's overall ratings (A best, F worst); the engine's list folds F into D. */
+export const GRADE_NOTE: Record<Voice["quality"], string> = {
+  A: "Best overall rating in the Kokoro project's voice grades.",
+  B: "Second-best tier of the Kokoro project's overall voice grades.",
+  C: "Middle tier of the Kokoro project's overall voice grades.",
+  D: "Lowest tier of the Kokoro project's voice grades (D and F).",
+};
 
 interface Props {
   voice: Voice;
