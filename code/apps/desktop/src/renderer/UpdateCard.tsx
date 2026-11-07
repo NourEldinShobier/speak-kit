@@ -94,11 +94,6 @@ export function UpdateCard({ s }: { s: AppState }) {
           >
             {u.onQuit ? "It installs when you quit Speak Kit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
           </Banner>
-          {!u.onQuit && (
-            <Button size="sm" variant="ghost" onClick={act("remind-later")}>
-              Remind me later
-            </Button>
-          )}
         </div>
       );
     }
@@ -121,9 +116,6 @@ export function UpdateCard({ s }: { s: AppState }) {
           >
             This copy cannot replace itself. Download the new version from the release page and open it to update.
           </Banner>
-          <Button size="sm" variant="ghost" onClick={act("remind-later")}>
-            Remind me later
-          </Button>
         </div>
       );
     case "restarting":
@@ -149,9 +141,8 @@ export function UpdateCard({ s }: { s: AppState }) {
 
 /** Green pill in the title bar once an update is downloaded (H18); opens the same card in a popover. */
 export function UpdatePill({ s }: { s: AppState }) {
-  // "Remind me later" hides the pill for a day; Settings > About and the tray still show the update.
   const u = s.update;
-  if ((u.kind !== "ready" && u.kind !== "manual") || Date.now() < s.config.updateRemindAtMs) return null;
+  if (u.kind !== "ready" && u.kind !== "manual") return null;
   return (
     <Popover
       title={u.kind === "ready" ? "Update ready" : "Update available"}

@@ -77,6 +77,13 @@ describe("Quit dialog", () => {
     expect(footer.props.children.slice(1).some((c) => isValidElement(c) && (c.props as Record<string, unknown>)["data-autofocus"])).toBe(false);
   });
 
+  it("'Quit' is the destructive button and 'Keep running in tray' the plain secondary one", () => {
+    const modal = QuitDialog({ s: appState(), open: true, playing: false, onClose: noop }) as ReactElement<{ footer: ReactNode }>;
+    const [keep, , quit] = (modal.props.footer as ReactElement<{ children: ReactElement<Record<string, unknown>>[] }>).props.children;
+    expect([keep!.props["variant"], keep!.props["solid"], keep!.props.children]).toEqual([undefined, undefined, "Keep running in tray"]);
+    expect([quit!.props["variant"], quit!.props["solid"], quit!.props.children]).toEqual(["danger", undefined, "Quit"]);
+  });
+
   it("body text is --text-primary", () => {
     expect(/\.sk-modal-text \{([^}]*)\}/.exec(css("overlays.css"))![1]).toContain("color: var(--text-primary)");
   });

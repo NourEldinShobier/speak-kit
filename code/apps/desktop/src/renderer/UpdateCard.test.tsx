@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { parseConfig } from "../shared/schemas";
 import type { UpdateState } from "../shared/updates";
 import { appState } from "./app-state.fixture";
 
@@ -11,7 +10,7 @@ vi.hoisted(() => {
 import { UpdateCard, UpdatePill, UpdatingCard } from "./UpdateCard";
 
 const card = (update: UpdateState, over = {}) => renderToStaticMarkup(<UpdateCard s={appState({ update, ...over })} />);
-const pill = (update: UpdateState, config = {}) => renderToStaticMarkup(<UpdatePill s={appState({ update, config: parseConfig({ setupDone: true, ...config }) })} />);
+const pill = (update: UpdateState) => renderToStaticMarkup(<UpdatePill s={appState({ update })} />);
 
 describe("UpdateCard", () => {
   it("unsupported (portable or source copy) says it does not update itself", () => {
@@ -20,8 +19,9 @@ describe("UpdateCard", () => {
 
   it("manual (macOS) shows the version, the release notes and a Download button", () => {
     const html = card({ kind: "manual", version: "0.4.0", url: "https://github.com/NourEldinShobier/speak-kit/releases/tag/v0.4.0" });
-    for (const text of ["Speak Kit 0.4.0 is available", "Release notes", "Download", "Remind me later"]) expect(html).toContain(text);
+    for (const text of ["Speak Kit 0.4.0 is available", "Release notes", "Download"]) expect(html).toContain(text);
     expect(html).not.toContain("Restart now");
+    expect(html).not.toContain("Remind me later");
   });
 
   it.each([
@@ -42,7 +42,8 @@ describe("UpdateCard", () => {
 
   it("ready offers both install choices", () => {
     const html = card({ kind: "ready", version: "0.3.2", onQuit: false });
-    for (const text of ["Install when I quit", "Restart now", "Remind me later"]) expect(html).toContain(text);
+    for (const text of ["Install when I quit", "Restart now"]) expect(html).toContain(text);
+    expect(html).not.toContain("Remind me later");
   });
 });
 
@@ -55,7 +56,6 @@ describe("UpdateCard progress and arming", () => {
     const html = card({ kind: "ready", version: "0.3.2", onQuit: true });
     expect(html).toContain("It installs when you quit Speak Kit.");
     expect(html).not.toContain("Install when I quit</button>");
-    expect(html).not.toContain("Remind me later");
   });
 
   it("restarting shows the updating card", () => {
@@ -70,9 +70,5 @@ describe("UpdatePill", () => {
     expect(pill({ kind: "ready", version: "0.3.2", onQuit: false })).toContain("Update ready · 0.3.2");
     expect(pill({ kind: "manual", version: "0.4.0", url: "https://github.com/NourEldinShobier/speak-kit/releases/" })).toContain("Update available · 0.4.0");
     expect(pill({ kind: "available", version: "0.3.2" })).toBe("");
-  });
-
-  it("Remind me later hides it for a day", () => {
-    expect(pill({ kind: "ready", version: "0.3.2", onQuit: false }, { updateRemindAtMs: Date.now() + 60_000 })).toBe("");
   });
 });
