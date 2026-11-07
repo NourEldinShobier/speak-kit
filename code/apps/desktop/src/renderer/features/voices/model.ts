@@ -10,6 +10,11 @@ export const VOICE_FILTERS: { id: VoiceFilter; label: string }[] = [
   { id: "male", label: "Male" },
 ];
 
+const FILTER_NAME: Record<VoiceFilter, string> = { all: "all", "en-US": "US English", "en-GB": "UK English", female: "female", male: "male" };
+
+/** The text on the toolbar dropdown: "Voices: all". */
+export const voiceFilterLabel = (f: VoiceFilter): string => `Voices: ${FILTER_NAME[f]}`;
+
 interface VoicesState {
   voices: Voice[];
   /** Id of the default voice. */

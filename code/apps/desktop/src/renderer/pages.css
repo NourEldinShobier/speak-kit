@@ -144,10 +144,15 @@ code,
   display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
 }
-.sk-tools .lm-field {
-  width: 260px;
+.sk-voice-search {
+  width: 264px;
+}
+.sk-voice-filter .lm-select__trigger {
+  min-width: 176px;
+  font-weight: 500;
 }
 .sk-voices {
   display: grid;

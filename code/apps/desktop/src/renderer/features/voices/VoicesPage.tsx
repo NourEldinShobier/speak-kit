@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useReducer } from "react";
-import { Avatar, Badge, Banner, Button, EmptyState, Segmented, StatusPill, TextInput, type Tone } from "@speakkit/ui";
+import { Avatar, Badge, Banner, Button, EmptyState, Select, StatusPill, TextInput, type Tone } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { usePlayer } from "../../pages";
 import { api, cleanError, Page } from "../../ui";
-import { filterVoices, initVoices, VOICE_FILTERS, voicesReducer, type VoiceFilter } from "./model";
+import { filterVoices, initVoices, VOICE_FILTERS, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
 
 const GRADE_TONE: Record<Voice["quality"], Tone> = { A: "green", B: "blue", C: "orange", D: "red" };
 const AVATAR_TONES: Tone[] = ["blue", "orange", "green", "purple", "red", "yellow"];
@@ -65,8 +65,15 @@ export function VoicesPage({ s }: { s: AppState }) {
     <Page title="Voices" lead={`${st.voices.length} Kokoro voices. Press Preview to hear one.`} wide>
       {failure && <Banner tone="error">{failure}</Banner>}
       <div className="sk-tools">
-        <TextInput icon="search" size="sm" aria-label="Search voices" placeholder="Search voices" value={st.query} onChange={(e) => dispatch({ type: "query", query: e.target.value })} />
-        <Segmented label="Filter voices" value={st.filter} onChange={(f) => dispatch({ type: "filter", filter: f as VoiceFilter })} items={VOICE_FILTERS} />
+        <TextInput className="sk-voice-search" icon="search" aria-label="Search voices" placeholder="Search voices" value={st.query} onChange={(e) => dispatch({ type: "query", query: e.target.value })} />
+        <Select
+          className="sk-voice-filter"
+          label="Filter voices"
+          value={st.filter}
+          onChange={(f) => dispatch({ type: "filter", filter: f as VoiceFilter })}
+          options={VOICE_FILTERS.map((f) => ({ value: f.id, label: f.label }))}
+          renderValue={(o) => voiceFilterLabel((o?.value ?? "all") as VoiceFilter)}
+        />
       </div>
       {st.voices.length === 0 && !st.error ? (
         <EmptyState icon="microphone" title="No voices yet">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Voice } from "@speakkit/protocol";
-import { filterVoices, initVoices, voicesReducer } from "./model";
+import { filterVoices, initVoices, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
 
 const voice = (id: string, over: Partial<Voice> = {}): Voice => ({ id, name: id, lang: "en-US", gender: "female", quality: "A", traits: "", ...over }) as Voice;
 const voices = [voice("Heart", { traits: "warm, calm" }), voice("Emma", { lang: "en-GB", traits: "clear" }), voice("Adam", { gender: "male", traits: "deep" })];
@@ -29,5 +29,11 @@ describe("filterVoices", () => {
     ["zzz", "all", []],
   ] as const)("query %j with filter %s shows %j", (query, filter, ids) => {
     expect(filterVoices(voices, query, filter).map((v) => v.id)).toEqual(ids);
+  });
+});
+
+describe("voiceFilterLabel", () => {
+  it("names the filter the way the toolbar dropdown shows it", () => {
+    expect(["all", "en-US", "en-GB", "female", "male"].map((f) => voiceFilterLabel(f as VoiceFilter))).toEqual(["Voices: all", "Voices: US English", "Voices: UK English", "Voices: female", "Voices: male"]);
   });
 });
