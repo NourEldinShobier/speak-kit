@@ -128,7 +128,7 @@ export class ExportJobs {
       this.#patch(view, { stage: "done", progress: 1, path: file, bytes: bytes.length, durationMs: job.durationMs });
       this.#d.onDone(view);
     } catch (e) {
-      await rm(part, { force: true });
+      await rm(part, { force: true }).catch(() => {}); // force ignores only a missing file; on Linux a blocked parent gives ENOTDIR, which must not hide the error below
       if (signal.aborted || (e instanceof DOMException && e.name === "AbortError")) this.#patch(view, { stage: "cancelled" });
       else this.#patch(view, { stage: "error", error: toDesktopError(e) });
     } finally {

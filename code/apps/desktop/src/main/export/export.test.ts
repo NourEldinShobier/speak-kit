@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vite-plus/test";
@@ -177,6 +177,18 @@ describe("ExportJobs", () => {
     expect(j.views[0]!.error).toMatchObject({ code: "unexpected", args: { detail: expect.stringMatching(/ENOTDIR|EEXIST|not a directory/i) } });
     await until(() => calls.includes("delete srv1"));
     expect(readdirSync(dir)).toEqual(["blocked"]);
+  });
+
+  it("a leftover that cannot be removed does not hide the write error or the server cleanup", async () => {
+    const dir = tmp();
+    mkdirSync(path.join(dir, "reading.wav.part", "inner"), { recursive: true }); // a folder where the temporary file goes: writing fails, and so does removing it without recursion
+    const { server, calls } = fakeServer();
+    const { j } = jobs(server);
+    await j.start(opts(dir));
+    await until(() => j.views[0]!.stage === "error");
+    expect(j.views[0]!.error).toMatchObject({ code: "unexpected", args: { detail: expect.stringMatching(/EISDIR|illegal operation on a directory/i) } });
+    await until(() => calls.includes("delete srv1"));
+    expect(readdirSync(dir)).toEqual(["reading.wav.part"]);
   });
 
   it("text with nothing to say is rejected before any request", async () => {
