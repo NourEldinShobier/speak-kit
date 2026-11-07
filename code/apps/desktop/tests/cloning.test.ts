@@ -191,7 +191,8 @@ describe("cloning unavailable and the microphone", () => {
   });
 
   it("K6: when the system refuses the microphone the dialog offers settings and an upload, and the settings link is the allowlisted one", async () => {
-    const l = await start();
+    // A fake capture device must exist: a runner with no audio hardware answers NotFoundError ("No microphone found") before the permission handler is asked.
+    const l = await start({ fakeMic: wavFile(1) });
     await l.app.evaluate(({ session, shell }) => {
       session.defaultSession.setPermissionRequestHandler((_c, _p, cb) => cb(false)); // what a blocking OS looks like to the page
       (globalThis as { __opened?: string[] }).__opened = [];

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { startRecording } from "./recorder";
+import { micProblem, startRecording } from "./recorder";
 
 const events = { onTick: vi.fn(), onDone: vi.fn(), onFailed: vi.fn() };
 afterEach(() => vi.unstubAllGlobals());
@@ -23,5 +23,14 @@ describe("startRecording while the permission prompt is open", () => {
     await expect(started).rejects.toMatchObject({ name: "AbortError" });
     expect(mic.track.stop).toHaveBeenCalledTimes(1);
     expect(events.onTick).not.toHaveBeenCalled();
+  });
+});
+
+describe("micProblem", () => {
+  it("tells a refusal from a missing device; each has its own screen (K6)", () => {
+    const named = (name: string) => new DOMException("x", name);
+    expect(["NotAllowedError", "SecurityError"].map((n) => micProblem(named(n)))).toEqual(["denied", "denied"]);
+    expect(["NotFoundError", "OverconstrainedError"].map((n) => micProblem(named(n)))).toEqual(["missing", "missing"]);
+    expect([micProblem(named("AbortError")), micProblem(new Error("x")), micProblem(null)]).toEqual([null, null, null]);
   });
 });
