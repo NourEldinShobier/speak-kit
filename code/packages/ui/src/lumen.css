@@ -422,11 +422,11 @@
   border-color: var(--destructive-ring-hover);
   background: var(--destructive-fill-pressed);
 }
-/* focus: a 2 px red ring outside the button, red at 40% */
+/* focus: a 2 px solid red ring 2 px outside the button (5.6:1 on white; red at 40% was 1.97:1) */
 .lm .lm-btn--danger:is(:focus-visible, .is-focus) {
   border-color: var(--stroke-control);
-  outline: 2px solid color-mix(in srgb, var(--destructive) 40%, transparent);
-  outline-offset: 0;
+  outline: 2px solid var(--destructive);
+  outline-offset: 2px;
 }
 .lm-btn--danger:is(:disabled, .is-disabled) {
   opacity: 1;
@@ -612,9 +612,9 @@
     sans-serif;
   letter-spacing: -0.01em;
 }
-/* the frame shows the focus (only the outer ring); the field inside it has no outline of its own */
+/* the frame shows the focus (only the outer ring); the field inside it draws no outline of its own. The outline stays 1 px transparent: forced-colors mode paints it, and it is the only focus indicator there. */
 .lm .lm-input .lm-input__field:is(:focus, :focus-visible, .is-focus) {
-  outline: none;
+  outline: 1px solid transparent;
 }
 .lm-input__field::placeholder {
   color: var(--text-placeholder);

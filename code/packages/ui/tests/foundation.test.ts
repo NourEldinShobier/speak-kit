@@ -78,9 +78,9 @@ describe("b) destructive button", () => {
     const pressed = '<button class="lm-btn lm-btn--danger is-pressed">Delete</button>';
     expect(await look(pressed, "button", ["background-color"])).toEqual(["rgb(253, 228, 228)"]);
   });
-  test("focus is a 2px red ring at 40% outside the button", async () => {
+  test("focus is a 2px solid #C62828 ring 2px outside the button (5.6:1 on white; the earlier 40% red was 1.97:1)", async () => {
     const focus = '<button class="lm-btn lm-btn--danger is-focus">Delete</button>';
-    expect(await look(focus, "button", ["outline-width", "outline-style", "outline-color", "outline-offset"])).toEqual(["2px", "solid", "color(srgb 0.776471 0.156863 0.156863 / 0.4)", "0px"]);
+    expect(await look(focus, "button", ["outline-width", "outline-style", "outline-color", "outline-offset"])).toEqual(["2px", "solid", "rgb(198, 40, 40)", "2px"]);
   });
   test("disabled keeps the white button and dims only the text to 40%", async () => {
     expect(await look('<button class="lm-btn lm-btn--danger" disabled>Delete</button>', "button", ["opacity", "color", "background-color"])).toEqual([
@@ -91,6 +91,32 @@ describe("b) destructive button", () => {
   });
   test("there is no filled red button class", () => {
     expect(css).not.toContain("danger-solid");
+  });
+});
+
+describe("search field focus", () => {
+  const field = '<div class="lm-input"><input class="lm-input__field is-focus" aria-label="Search"></div>';
+  const outline = ["outline-width", "outline-style", "outline-color"];
+  test("the field inside the frame keeps a 1px transparent outline, so nothing is drawn normally", async () => {
+    expect(await look(field, ".lm-input__field", outline)).toEqual(["1px", "solid", "rgba(0, 0, 0, 0)"]);
+  });
+  test("in forced colors that outline is drawn in a system colour, so the focused field stays visible", async () => {
+    await page.emulateMedia({ forcedColors: "active" });
+    const [w, style, color] = await look(field, ".lm-input__field", outline);
+    await page.emulateMedia({ forcedColors: "none" });
+    expect([w, style]).toEqual(["1px", "solid"]);
+    expect(color).not.toBe("rgba(0, 0, 0, 0)");
+  });
+});
+
+describe("indeterminate progress", () => {
+  const bar = '<div class="lm-progress is-indeterminate" style="--p:0"><div class="lm-progress__bar"></div></div>';
+  test("moves normally and rests as a static 40% segment under reduced motion", async () => {
+    expect(await look(bar, ".lm-progress__bar", ["animation-name", "width"])).toEqual(["lm-indeterminate", "96px"]);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const still = await look(bar, ".lm-progress__bar", ["animation-name", "width", "transform"]);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    expect(still).toEqual(["none", "96px", "none"]);
   });
 });
 
@@ -169,13 +195,16 @@ describe("f) control sizing and the row helper", () => {
     await page.setContent(`<style>${css}</style><div class="lm"><button id="b" class="lm-btn lm-btn--icon"></button></div>`);
     expect(await page.evaluate(() => [document.getElementById("b")!.offsetWidth, document.getElementById("b")!.offsetHeight])).toEqual([36, 36]);
   });
-  test("the search field's inner input has no outline when focused; the frame shows the focus", async () => {
+  test("the search field's inner input draws no visible outline when focused (a transparent one remains for forced colors); the frame shows the focus", async () => {
     await page.setContent(`<style>${css}</style><div class="lm"><div class="lm-input"><input class="lm-input__field"></div></div>`);
     await page.focus("input");
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
-    const out = await page.evaluate(() => [getComputedStyle(document.querySelector("input")!).outlineStyle, getComputedStyle(document.querySelector(".lm-input")!).borderTopColor]);
-    expect(out).toEqual(["none", "rgb(23, 23, 23)"]);
+    const out = await page.evaluate(() => {
+      const f = getComputedStyle(document.querySelector("input")!);
+      return [f.outlineStyle, f.outlineColor, getComputedStyle(document.querySelector(".lm-input")!).borderTopColor];
+    });
+    expect(out).toEqual(["solid", "rgba(0, 0, 0, 0)", "rgb(23, 23, 23)"]);
   });
   test(".lm-row--control is 68 high with 16 px above, below and right, the title block centred", async () => {
     const html =
