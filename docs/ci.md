@@ -20,7 +20,7 @@ A `plan` step turns them into run flags. **Everything runs** (`full`) on a tag, 
 | Job | Runner | Runs when | What it does |
 |---|---|---|---|
 | `static` | ubuntu | always | `typecheck` (tsrs), `lint`, `fmt:check`, `knip`, `gen-docs.mjs --check`, `pnpm run gates` (deps, CSS, network, integrity, ratchet) |
-| `unit` | ubuntu | `ext`, `shared`, `e2e` or full | `vp test run --exclude "apps/desktop/**" --changed <base>` |
+| `unit` | ubuntu | `ext`, `shared`, `e2e` or full | `vp test run --changed <base>` with `SPEAKKIT_SKIP_DESKTOP=1` |
 | `e2e-extension` | ubuntu, 2 shards | `ext`, `shared`, `e2e` or full | Playwright specs in `code/e2e/tests` with the fake engine, no perf phase |
 | `desktop` | windows | `desktop`, `shared` or full | builds desktop and extension, runs the desktop package's tests (Electron) |
 | `ci-ok` | ubuntu | always | fails when any needed job failed or was cancelled; skipped jobs pass |
@@ -38,8 +38,8 @@ Pushes to `main` are never cancelled by a newer push: the next push's `--changed
 From `code/`:
 
 ```
-pnpm exec vp test run --exclude "apps/desktop/**" --changed origin/main      # unit, as on a pull request
-pnpm exec vp test run --exclude "apps/desktop/**"                             # full unit run
+SPEAKKIT_SKIP_DESKTOP=1 pnpm exec vp test run --changed origin/main            # unit, as on a pull request
+SPEAKKIT_SKIP_DESKTOP=1 pnpm exec vp test run                                   # full unit run
 pnpm --filter @speakkit/desktop exec vp test run                              # desktop (needs the builds below)
 E2E_SKIP_PERF=1 E2E_WORKERS=1 node e2e/run.mjs --shard=1/2                    # one e2e shard
 pnpm run typecheck && pnpm run lint && pnpm run fmt:check && pnpm run knip && node scripts/gen-docs.mjs --check && pnpm run gates
@@ -57,7 +57,7 @@ The runner has 2 vCPUs. Windows minutes cost double and macOS ten times on a pri
 
 ### Fonts on the runner
 
-The extension pages ask for Inter first and bundle no web font, so layout checks depend on the installed fonts. The e2e job installs `fonts-inter` (apt) so the 320 px reflow checks measure the intended font and not the runner's wider fallback.
+The extension pages ask for Inter first and bundle no web font, so layout checks depend on the installed fonts. The e2e and unit jobs install `fonts-inter` (apt) so the 320 px reflow checks and the content-script pixel sizes (the speed popover is 184 px high) measure the intended font and not the runner's fallback.
 
 ## Add a spec group
 

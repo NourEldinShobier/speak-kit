@@ -162,6 +162,9 @@ jobs:
         run: |
           pnpm exec playwright install chromium
           pnpm exec playwright install-deps chromium
+      # The extension's content-script tests measure layout in Chromium; a fallback font changes line boxes by a pixel (speed popover 185 instead of 184).
+      - name: Install the Inter font
+        run: sudo apt-get install -y --no-install-recommends fonts-inter
       # Only the tests that depend on the changed files, against the previous push (pull request: the base branch). A full run when there
       # is no usable base (first push, tag, schedule, manual run, unreachable commit) or `changes` says everything runs.
       - name: Select tests
@@ -182,7 +185,9 @@ jobs:
           echo "args=$args" | tee -a "$GITHUB_OUTPUT"
       # The desktop app's tests need Electron on Windows; the `desktop` job runs them.
       - name: Unit and integration tests
-        run: pnpm exec vp test run --exclude "apps/desktop/**" ${{ steps.select.outputs.args }}
+        run: pnpm exec vp test run ${{ steps.select.outputs.args }}
+        env:
+          SPEAKKIT_SKIP_DESKTOP: "1"
 
   e2e-extension:
     needs: changes

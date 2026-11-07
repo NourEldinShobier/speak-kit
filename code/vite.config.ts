@@ -18,7 +18,8 @@ const tests = ["**/*.test.{ts,tsx}", "**/*.spec.ts", "**/tests/**", "**/testing/
 const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**/vite.config.ts", "**/node-build.ts"];
 
 // Playwright specs in e2e/ run with `pnpm run e2e`, not under vitest.
-const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**"];
+// The ubuntu unit job sets SPEAKKIT_SKIP_DESKTOP: the desktop package needs Electron and runs in the Windows job. (A CLI --exclude does not reach projects that set their own exclude.)
+const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**", ...(process.env.SPEAKKIT_SKIP_DESKTOP ? ["apps/desktop/**"] : [])];
 
 export default defineConfig({
   // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
