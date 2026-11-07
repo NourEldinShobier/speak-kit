@@ -137,3 +137,40 @@ describe("e) floating cards", () => {
     expect(m).toEqual({ bar: "6px", endBorder: "3px", border: "1px", shadow: "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px" });
   });
 });
+
+describe("f) control sizing and the row helper", () => {
+  const heights = async (html: string, sel: string): Promise<number[]> => {
+    await page.setContent(`<style>${css}</style><div class="lm" style="padding:20px">${html}</div>`);
+    return page.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.getBoundingClientRect().height), sel);
+  };
+  test("default input, select trigger and button are 36 high; the 36 icon button is 36 x 36", async () => {
+    expect(await heights('<div class="lm-input"><input class="lm-input__field"></div><button class="lm-select__trigger">A</button><button class="lm-btn lm-btn--secondary">Go</button>', ".lm-input, .lm-select__trigger, .lm-btn")).toEqual([36, 36, 36]);
+    await page.setContent(`<style>${css}</style><div class="lm"><button id="b" class="lm-btn lm-btn--icon"></button></div>`);
+    expect(await page.evaluate(() => [document.getElementById("b")!.offsetWidth, document.getElementById("b")!.offsetHeight])).toEqual([36, 36]);
+  });
+  test("the search field's inner input has no outline when focused; the frame shows the focus", async () => {
+    await page.setContent(`<style>${css}</style><div class="lm"><div class="lm-input"><input class="lm-input__field"></div></div>`);
+    await page.focus("input");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    const out = await page.evaluate(() => [getComputedStyle(document.querySelector("input")!).outlineStyle, getComputedStyle(document.querySelector(".lm-input")!).borderTopColor]);
+    expect(out).toEqual(["none", "rgb(23, 23, 23)"]);
+  });
+  test(".lm-row--control is 68 high with 16 px above, below and right, the title block centred", async () => {
+    const html = '<div class="lm-card" style="width:600px"><div class="lm-row lm-row--control"><div class="lm-row__text"><div class="lm-row__label">Language</div></div><div class="lm-row__control"><button class="lm-btn lm-btn--secondary">English</button></div></div></div>';
+    expect(await heights(html, ".lm-row")).toEqual([68]);
+    expect(await look(html, ".lm-row", ["padding-top", "padding-bottom", "padding-right", "align-items"])).toEqual(["16px", "16px", "16px", "center"]);
+    const gaps = await page.evaluate(() => {
+      const r = document.querySelector(".lm-row")!.getBoundingClientRect();
+      const b = document.querySelector(".lm-btn")!.getBoundingClientRect();
+      const t = document.querySelector(".lm-row__text")!.getBoundingClientRect();
+      return [b.top - r.top, r.bottom - b.bottom, r.right - b.right, Math.round(t.top + t.height / 2 - (r.top + r.height / 2))];
+    });
+    expect(gaps).toEqual([16, 16, 16, 0]);
+  });
+  test("a row holding a 36 px dropdown gets the same 68 without the class; a toggle row stays 42", async () => {
+    const row = (c: string) => `<div class="lm-card" style="width:600px"><div class="lm-row"><div class="lm-row__text"><div class="lm-row__label">A</div></div><div class="lm-row__control">${c}</div></div></div>`;
+    expect(await heights(row('<div class="lm-select"><button class="lm-select__trigger">A</button></div>'), ".lm-row")).toEqual([68]);
+    expect(await heights(row('<button class="lm-toggle" role="switch" aria-checked="false"><span class="lm-toggle__knob"></span></button>'), ".lm-row")).toEqual([42]);
+  });
+});

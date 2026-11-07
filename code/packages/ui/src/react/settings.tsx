@@ -11,7 +11,7 @@ export interface SettingRowProps extends HTMLAttributes<HTMLDivElement> {
   control?: ReactNode;
 }
 
-/** Row of a settings card: pad 11/14, label 13/500, description 12 tertiary, control right. */
+/** Row of a settings card: label 13/500, description 12 tertiary, control right. 42 high (58 with a description); a row whose control is a 36 px field, dropdown, segmented control or button is 68 (16 px around the control), or add className="lm-row--control". */
 export function SettingRow({ label, description, control, className, ...rest }: SettingRowProps) {
   return (
     <div className={cx("lm-row", className)} {...rest}>

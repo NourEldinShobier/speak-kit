@@ -613,6 +613,10 @@
     sans-serif;
   letter-spacing: -0.01em;
 }
+/* the frame shows the focus (only the outer ring); the field inside it has no outline of its own */
+.lm .lm-input .lm-input__field:is(:focus, :focus-visible, .is-focus) {
+  outline: none;
+}
 .lm-input__field::placeholder {
   color: var(--text-placeholder);
   opacity: 1;
@@ -1750,6 +1754,19 @@
 .lm-row:has(.lm-row__desc) {
   min-height: 58px;
   padding-block: 11px;
+}
+/*
+ * Settings row helper. A row that holds a 36 px control (dropdown, segmented control, input, button, chips) is 68 high:
+ * 16 px above, below and to the right of the control, and the title block is centred. Add .lm-row--control to the row;
+ * rows whose control is a .lm-input, .lm-select, .lm-seg or a default-size .lm-btn get it without the class.
+ * Toggle-only rows keep the 42 / 58 height.
+ */
+.lm-row.lm-row--control,
+.lm-row:has(.lm-row__control :is(.lm-input, .lm-select, .lm-seg, .lm-btn:not(.lm-btn--sm, .lm-btn--xs, .lm-btn--xl))) {
+  align-items: center;
+  min-height: 68px;
+  padding-block: 16px;
+  padding-inline: 16px;
 }
 .lm-row__text {
   display: flex;
