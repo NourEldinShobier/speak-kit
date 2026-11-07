@@ -53,6 +53,8 @@ export interface TtsEngine {
   info?(): { reason?: EngineReason; gpu?: { name: string; vramMb: number } };
   /** Set the engine up ("installing" then "downloading" states). Resolves when installed. */
   install?(): Promise<void>;
+  /** Stop a running install: child processes are killed and the partial environment is deleted. Resolves when it has ended. */
+  cancelInstall?(): Promise<void>;
   /** Remove an installed engine and its downloads. */
   remove?(): Promise<void>;
   /** Cloned reference clips, when the engine can clone voices. */
@@ -94,5 +96,23 @@ export class StatusEmitter {
   on(cb: (s: EngineStatus) => void): () => void {
     this.#cbs.add(cb);
     return () => this.#cbs.delete(cb);
+  }
+}
+
+/** A failure with a cause the person can act on (`out-of-memory`: close programs that use the GPU; `disk-full`: free disk space). */
+export class EngineFailure extends Error {
+  reason: EngineReason;
+  constructor(message: string, reason: EngineReason) {
+    super(message);
+    this.name = "EngineFailure";
+    this.reason = reason;
+  }
+}
+
+/** Raised by an install that `cancelInstall()` stopped. */
+export class InstallCancelledError extends Error {
+  constructor() {
+    super("install cancelled");
+    this.name = "InstallCancelledError";
   }
 }

@@ -5,7 +5,7 @@
  * Does not: serve HTTP, play audio or know about the wire protocol beyond the types in @speakkit/protocol.
  * Area: engines.
  */
-export { EngineNotReadyError, EngineUnavailableError, StatusEmitter, type EngineStatus, type SynthOptions, type Synthesized, type TtsEngine } from "./types";
+export { EngineFailure, EngineNotReadyError, EngineUnavailableError, InstallCancelledError, StatusEmitter, type EngineStatus, type SynthOptions, type Synthesized, type TtsEngine } from "./types";
 export { LifecycleEngine, DEFAULT_IDLE_MS, type LifecycleOptions } from "./lifecycle";
 export { FakeEngine, type FakeEngineOptions } from "./fake";
 export { KokoroEngine, type KokoroOptions } from "./kokoro";

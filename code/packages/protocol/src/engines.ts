@@ -2,8 +2,8 @@ import type { EngineState } from "./api";
 
 export type EngineId = "kokoro" | "chatterbox";
 
-/** Why an optional engine cannot be used right now. */
-export type EngineReason = "no-gpu" | "python-missing" | "not-installed";
+/** Why an optional engine cannot be used right now. `out-of-memory`: the GPU ran out of memory (state `unloaded`, the next request retries); `disk-full`: an install needs more free disk space (state `missing`). */
+export type EngineReason = "no-gpu" | "python-missing" | "not-installed" | "out-of-memory" | "disk-full";
 
 export interface EngineInfo {
   id: EngineId;

@@ -50,7 +50,7 @@ export const engineListSchema: v.GenericSchema<unknown, EngineList> = v.object({
       state: engineState,
       progress: v.exactOptional(v.number()),
       detail: v.exactOptional(v.string()),
-      reason: v.exactOptional(v.picklist(["no-gpu", "python-missing", "not-installed"])),
+      reason: v.exactOptional(v.picklist(["no-gpu", "python-missing", "not-installed", "out-of-memory", "disk-full"])),
       optional: v.boolean(),
       cloning: v.boolean(),
       gpu: v.exactOptional(v.object({ name: v.string(), vramMb: v.number() })),

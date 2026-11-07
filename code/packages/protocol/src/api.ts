@@ -14,6 +14,7 @@ import type { EngineId } from "./engines";
  *   GET  /v1/engines                -> EngineList
  *   POST /v1/engines/select         -> body SelectEngineRequest, 200 EngineList (409 engine-unavailable when it cannot run here)
  *   POST /v1/engines/<id>/install   -> 202 EngineList; progress is the engine's state ("installing", then "downloading")
+ *   POST /v1/engines/<id>/cancel    -> 200 EngineList; stops a running install (child processes killed, partial environment deleted); no-op otherwise
  *   DELETE /v1/engines/<id>         -> 200 EngineList; removes an installed optional engine
  *   POST /v1/voices/clone           -> body CloneVoiceRequest, 201 ClonedVoice (422 clip-rejected with `checks`)
  *   DELETE /v1/voices/<id>          -> 204 (cloned voices only)

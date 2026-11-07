@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
-import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SAMPLE_RATE, type EngineReason, type EngineState, type Voice } from "@speakkit/protocol";
 import { LifecycleEngine, type LifecycleOptions } from "../lifecycle";
 import { splitLong } from "../split";
-import { EngineNotReadyError, EngineUnavailableError, type SynthOptions, type Synthesized } from "../types";
+import { EngineFailure, EngineNotReadyError, EngineUnavailableError, InstallCancelledError, type SynthOptions, type Synthesized } from "../types";
 import { detectHardware, MIN_VRAM_MB, type Hardware } from "./detect";
-import { envPython, pipInstall, type InstallContext } from "./install";
+import { envPython, isDiskFull, pipInstall, type InstallContext } from "./install";
 import { Sidecar } from "./sidecar";
 import { ClonedVoiceStore } from "./voice-store";
 
@@ -17,6 +17,13 @@ const CHATTERBOX_VOICE = "chatterbox";
 const DEFAULT_VOICE: Voice = { id: CHATTERBOX_VOICE, name: "Chatterbox", lang: "en-US", gender: "female", quality: "A" };
 const GAP_SAMPLES = Math.round(SAMPLE_RATE * 0.08);
 const MARKER = "installed";
+/** Exists from the start of an install until it ends; one found at start-up means the app died mid-install. */
+const INSTALLING = "installing";
+const GB = 1024 ** 3;
+/** CUDA torch (2.5 GB), its libraries, chatterbox-tts and the 3 GB of weights, with room for pip's temporary files. */
+const MIN_FREE_BYTES = 10 * GB;
+const RM = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 } as const;
+const gb = (bytes: number) => `${Math.round((bytes / GB) * 10) / 10} GB`;
 
 export interface ChatterboxOptions extends LifecycleOptions {
   /** `<dataDir>/chatterbox`: holds `env/` (virtualenv), `hf/` (weights), `installed`. */
@@ -27,6 +34,8 @@ export interface ChatterboxOptions extends LifecycleOptions {
   hardware?: Hardware;
   /** Replaces `<env python> chatterbox_sidecar.py`; tests point it at a fake sidecar. */
   sidecar?: { command: string; args: string[] };
+  /** Free bytes on the drive that holds `dir` (default: `statfs`); tests inject it. */
+  freeBytes?: (dir: string) => Promise<number>;
   /** Replaces the venv + pip install; tests use a fake. */
   installer?: (ctx: InstallContext) => Promise<void>;
   /** Location of chatterbox_sidecar.py (default: next to this package). */
@@ -80,10 +89,12 @@ export class ChatterboxEngine extends LifecycleEngine {
   #hw: Hardware;
   #reason: EngineReason | undefined;
   #installing: Promise<void> | undefined;
+  #cancel: AbortController | undefined;
   #sidecar: Sidecar | undefined;
 
-  /** Detects the hardware first, so the initial state is right. */
+  /** Detects the hardware first, so the initial state is right, and removes what an install killed with the app left behind. */
   static async create(o: ChatterboxOptions): Promise<ChatterboxEngine> {
+    if (await exists(join(o.dir, INSTALLING))) await Promise.all([rm(join(o.dir, "env"), RM), rm(join(o.dir, INSTALLING), RM)]);
     return new ChatterboxEngine(o, o.hardware ?? (await detectHardware()));
   }
 
@@ -104,6 +115,11 @@ export class ChatterboxEngine extends LifecycleEngine {
 
   voices(): Voice[] {
     return [DEFAULT_VOICE, ...this.clones.voices()];
+  }
+
+  /** Process id of the running sidecar, for tests and diagnostics. */
+  get sidecarPid(): number | undefined {
+    return this.#sidecar?.pid;
   }
 
   /** Re-runs the hardware check, e.g. after the user installed Python. */
@@ -132,33 +148,61 @@ export class ChatterboxEngine extends LifecycleEngine {
     }));
   }
 
+  /** Stops a running install and waits until its processes are gone and the partial environment is deleted. */
+  async cancelInstall(): Promise<void> {
+    this.#cancel?.abort(new InstallCancelledError());
+    await this.#installing?.catch(() => {}); // the install reports its own failure
+  }
+
+  async #requireDisk(): Promise<void> {
+    const dir = this.#o.dir;
+    const free = await (this.#o.freeBytes ?? ((d) => statfs(d).then((f) => Number(f.bavail) * Number(f.bsize))))(dir);
+    if (free < MIN_FREE_BYTES) throw new EngineFailure(`Chatterbox needs ${gb(MIN_FREE_BYTES)} of free disk space and ${gb(free)} is free.`, "disk-full");
+  }
+
   async #install(): Promise<void> {
     const s = this.status();
     if (s.state !== "missing") {
       if (s.state === "unavailable") throw new EngineUnavailableError(s.detail ?? "Chatterbox cannot run here", this.#reason);
       return; // already installed
     }
+    const cancel = (this.#cancel = new AbortController());
     const ctx: InstallContext = {
       dir: this.#o.dir,
       ...(this.#hw.python && { python: this.#hw.python }),
       ...(this.#hw.uv && { uv: this.#hw.uv }),
       envDir: join(this.#o.dir, "env"),
       ...(this.#o.deadlines?.installIdleMs !== undefined && { idleMs: this.#o.deadlines.installIdleMs }),
+      signal: cancel.signal,
       progress: (progress, detail) => this.setStatus({ state: "installing", progress, ...(detail !== undefined && { detail }) }),
     };
     ctx.progress(0);
     try {
       await mkdir(this.#o.dir, { recursive: true });
+      await this.#requireDisk();
+      await writeFile(join(this.#o.dir, INSTALLING), new Date().toISOString());
+      cancel.signal.throwIfAborted();
       await (this.#o.installer ?? pipInstall)(ctx);
+      cancel.signal.throwIfAborted();
       await writeFile(join(this.#o.dir, MARKER), new Date().toISOString());
     } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
-      await rm(ctx.envDir, { recursive: true, force: true });
-      this.setStatus({ state: "missing", detail });
+      await this.#abandonInstall(e, cancel.signal.aborted);
       throw e;
+    } finally {
+      this.#cancel = undefined;
     }
+    await rm(join(this.#o.dir, INSTALLING), RM);
     this.#reason = undefined;
     this.setStatus({ state: "unloaded" });
+  }
+
+  /** A failed or cancelled install leaves no environment and no marker; the engine is installable again. */
+  async #abandonInstall(e: unknown, cancelled: boolean): Promise<void> {
+    await Promise.all([rm(join(this.#o.dir, "env"), RM), rm(join(this.#o.dir, INSTALLING), RM)]);
+    const full = e instanceof EngineFailure ? e.reason === "disk-full" : isDiskFull(e);
+    this.#reason = full && !cancelled ? "disk-full" : "not-installed";
+    const detail = e instanceof Error ? e.message : String(e);
+    this.setStatus(cancelled || e instanceof InstallCancelledError ? { state: "missing" } : { state: "missing", detail });
   }
 
   /** Deletes the environment and downloaded weights; cloned voices stay. */
@@ -171,6 +215,7 @@ export class ChatterboxEngine extends LifecycleEngine {
   }
 
   protected async doLoad(): Promise<void> {
+    this.#reason = undefined;
     const { command, args } = this.#o.sidecar ?? {
       command: envPython(join(this.#o.dir, "env")),
       args: [this.#o.sidecarScript ?? (await defaultScript())],
@@ -188,8 +233,25 @@ export class ChatterboxEngine extends LifecycleEngine {
         this.#sidecar = undefined;
         this.markUnloaded(message);
       },
+    }).catch((e) => {
+      if (e instanceof EngineFailure) this.#reason = e.reason;
+      throw e;
     });
     this.#sidecar = sidecar;
+  }
+
+  /** The GPU ran out of memory: end the process (its memory goes back to the GPU) and let the next request load a fresh one. Not counted as a crash. */
+  async #outOfMemory(e: EngineFailure): Promise<void> {
+    const sidecar = this.#sidecar;
+    this.#sidecar = undefined;
+    await sidecar?.stop();
+    this.#reason = e.reason;
+    this.setStatus({ state: "unloaded", detail: e.message });
+  }
+
+  override async close(): Promise<void> {
+    await this.cancelInstall();
+    await super.close();
   }
 
   protected async doUnload(): Promise<void> {
@@ -205,12 +267,17 @@ export class ChatterboxEngine extends LifecycleEngine {
     const reference = this.clones.has(voice) ? this.clones.path(voice) : null;
     const parts: Int16Array[] = [];
     let sampleRate = SAMPLE_RATE;
-    for (const piece of splitLong(text, 250)) {
-      signal?.throwIfAborted();
-      if (parts.length) parts.push(new Int16Array(GAP_SAMPLES));
-      const r = await sidecar.synth(piece, reference, signal);
-      sampleRate = r.sampleRate;
-      parts.push(r.pcm);
+    try {
+      for (const piece of splitLong(text, 250)) {
+        signal?.throwIfAborted();
+        if (parts.length) parts.push(new Int16Array(GAP_SAMPLES));
+        const r = await sidecar.synth(piece, reference, signal);
+        sampleRate = r.sampleRate;
+        parts.push(r.pcm);
+      }
+    } catch (e) {
+      if (e instanceof EngineFailure && e.reason === "out-of-memory") await this.#outOfMemory(e);
+      throw e;
     }
     return { pcm: concat(parts), sampleRate };
   }

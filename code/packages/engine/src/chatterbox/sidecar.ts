@@ -3,7 +3,7 @@ import { createInterface } from "node:readline";
 import * as v from "valibot";
 import { childEnv } from "../child-env";
 import { killTree } from "../process-tree";
-import type { Synthesized } from "../types";
+import { EngineFailure, type Synthesized } from "../types";
 import { Watchdog } from "../watchdog";
 
 /** Silence (no message or stderr line) after which a loading sidecar is declared stalled. */
@@ -11,12 +11,13 @@ const LOAD_IDLE_MS = 120_000;
 /** Silence after which a sidecar with a synthesis request outstanding is declared stalled. */
 const REQUEST_IDLE_MS = 60_000;
 
+const Cause = v.optional(v.picklist(["out-of-memory", "disk-full"]));
 const Message = v.variant("kind", [
   v.object({ kind: v.literal("progress"), phase: v.picklist(["downloading", "loading"]), progress: v.optional(v.number()), detail: v.optional(v.string()) }),
   v.object({ kind: v.literal("ready") }),
-  v.object({ kind: v.literal("fatal"), message: v.string() }),
+  v.object({ kind: v.literal("fatal"), message: v.string(), code: Cause }),
   v.object({ kind: v.literal("audio"), id: v.number(), sampleRate: v.number(), pcm: v.string() }),
-  v.object({ kind: v.literal("error"), id: v.number(), message: v.string() }),
+  v.object({ kind: v.literal("error"), id: v.number(), message: v.string(), code: Cause }),
 ]);
 type Message = v.InferOutput<typeof Message>;
 
@@ -86,6 +87,10 @@ export class Sidecar {
     proc.on("exit", (code) => this.#fail(`chatterbox sidecar exited with code ${code}${this.#tail.length ? `: ${this.#tail.join(" | ")}` : ""}`));
   }
 
+  get pid(): number | undefined {
+    return this.#proc.pid;
+  }
+
   #newDog(ms: number): Watchdog {
     return new Watchdog(ms, () => this.#fail(`chatterbox sidecar sent nothing for ${ms / 1000} s`));
   }
@@ -107,7 +112,7 @@ export class Sidecar {
         this.#dog = this.#newDog(this.#o.requestIdleMs ?? REQUEST_IDLE_MS);
         return this.#resolveReady();
       case "fatal":
-        return this.#fail(m.message);
+        return this.#fail(m.message, m.code);
       default:
         return this.#answer(m);
     }
@@ -118,7 +123,7 @@ export class Sidecar {
     if (!j) return;
     this.#jobs.delete(m.id);
     if (this.#jobs.size === 0) this.#dog.stop();
-    if (m.kind === "error") return j.reject(new Error(m.message));
+    if (m.kind === "error") return j.reject(m.code ? new EngineFailure(m.message, m.code) : new Error(m.message));
     const b = Buffer.from(m.pcm, "base64");
     j.resolve({ pcm: new Int16Array(b.buffer, b.byteOffset, b.length >> 1), sampleRate: m.sampleRate });
   }
@@ -128,14 +133,15 @@ export class Sidecar {
     this.#jobs.clear();
   }
 
-  #fail(message: string): void {
+  #fail(message: string, cause?: EngineFailure["reason"]): void {
     if (this.#dead) return;
     this.#dead = true;
     this.#dog.stop();
-    this.#rejectJobs(new Error(message));
+    const err = cause ? new EngineFailure(message, cause) : new Error(message);
+    this.#rejectJobs(err);
     void killTree(this.#proc);
     if (this.#loaded) this.#o.onCrash(message);
-    else this.#rejectReady(new Error(message));
+    else this.#rejectReady(err);
   }
 
   /** One synthesis request. `reference` is a clip path to clone from, or null for the stock voice. An abort tells the sidecar to stop generating. */

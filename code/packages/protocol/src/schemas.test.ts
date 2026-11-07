@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseHealth, parseVoiceList } from "./schemas";
+import { engineListSchema, parseHealth, parseVoiceList } from "./schemas";
+import * as v from "valibot";
 
 const engine = { id: "chatterbox", state: "installing", progress: 0.4 };
 
@@ -20,5 +21,15 @@ describe("server response schemas", () => {
   it("keeps the cloned flag of a voice", () => {
     const v = { id: "cb_0a1b2c3d", name: "Mine", lang: "en-US", gender: "female", quality: "B", cloned: true };
     expect(parseVoiceList({ voices: [v], default: v.id })?.voices[0]).toEqual(v);
+  });
+
+  it.each(["no-gpu", "python-missing", "not-installed", "out-of-memory", "disk-full"])("accepts the engine reason %s", (reason) => {
+    const list = { active: "kokoro", engines: [{ id: "chatterbox", name: "Chatterbox", state: "missing", reason, optional: true, cloning: true }] };
+    expect(v.parse(engineListSchema, list)).toEqual(list);
+  });
+
+  it("rejects an unknown engine reason", () => {
+    const list = { active: "kokoro", engines: [{ id: "chatterbox", name: "Chatterbox", state: "missing", reason: "gremlins", optional: true, cloning: true }] };
+    expect(v.safeParse(engineListSchema, list).success).toBe(false);
   });
 });

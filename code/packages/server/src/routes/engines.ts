@@ -4,7 +4,7 @@ import { parseEngineId, parseHold } from "../config";
 import { HttpError, json, noContent, readBody, validated } from "../http";
 import type { Route } from "../router";
 
-/** Engine selection, install and removal, and the idle-hold hint. */
+/** Engine selection, install, cancel and removal, and the idle-hold hint. */
 export const engineRoutes: Route[] = [
   {
     method: "POST",
@@ -39,6 +39,15 @@ export const engineRoutes: Route[] = [
       if (engine.install) engine.install().catch(() => {}); // failure shows as state "missing" with a detail
       else if (st.state === "missing") engine.start().catch(() => {}); // failure shows in the engine status
       json(res, 202, engines.list());
+    },
+  },
+  {
+    method: "POST",
+    path: /^\/v1\/engines\/(kokoro|chatterbox)\/cancel$/,
+    handle: async ({ req, res, params }, { engines }) => {
+      req.resume();
+      await engines.get(params[0] as EngineId).cancelInstall?.(); // answers once the installer's processes are gone
+      json(res, 200, engines.list());
     },
   },
   {
