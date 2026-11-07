@@ -524,9 +524,14 @@ body {
 }
 .op-head {
   display: flex;
+  flex-wrap: wrap; /* at 320 px the buttons drop under the title instead of leaving the page */
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+.op-head > :first-child {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 .op-head h1 {
   margin: 0;
