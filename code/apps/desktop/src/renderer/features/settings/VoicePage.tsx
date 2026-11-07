@@ -18,6 +18,7 @@ export function VoicePage({ s }: { s: AppState }) {
     <Page title="Voice and playback" lead="Used for previews in this app. The extension keeps its own voice and speed.">
       <SettingsSection title="Preview">
         <SettingRow
+          className="lm-row--control"
           label="Voice"
           control={
             <Select

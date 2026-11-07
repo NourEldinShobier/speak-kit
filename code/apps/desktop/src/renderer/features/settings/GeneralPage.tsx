@@ -24,6 +24,7 @@ function Appearance({ s }: { s: AppState }) {
   return (
     <SettingsSection title="Appearance">
       <SettingRow
+        className="lm-row--control"
         label="Language"
         control={
           <Select

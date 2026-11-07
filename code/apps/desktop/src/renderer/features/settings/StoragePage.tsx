@@ -69,23 +69,25 @@ export function StoragePage() {
       <SettingsSection title="Models folder" description={st?.modelsDir}>
         <UsageRows rows={rows} total={total} />
         <SettingRow
+          className="lm-row--control"
           label="Open folder"
           control={
             <div className="sk-row-actions">
-              <Button size="sm" iconLeft="folder" onClick={() => api.openPath("models")}>
+              <Button iconLeft="folder" onClick={() => api.openPath("models")}>
                 Models
               </Button>
-              <Button size="sm" iconLeft="folder" onClick={() => api.openPath("logs")}>
+              <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
                 Logs
               </Button>
             </div>
           }
         />
         <SettingRow
+          className="lm-row--control"
           label="Delete downloaded models and engines"
           description="Frees the space. Your library, cloned voices and settings stay."
           control={
-            <Button size="sm" variant="danger" iconLeft="trash" disabled={!st} onClick={() => setPhase({ step: "confirm" })}>
+            <Button variant="danger" iconLeft="trash" disabled={!st} onClick={() => setPhase({ step: "confirm" })}>
               Delete...
             </Button>
           }

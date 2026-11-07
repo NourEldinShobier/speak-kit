@@ -66,3 +66,28 @@ describe("About", () => {
     expect(page("about")).toContain("Uninstalling Speak Kit removes the downloaded models and engines.");
   });
 });
+
+describe("control rows are 68 px high with 36 px controls", () => {
+  const rows = (html: string) => [...html.matchAll(/<div class="lm-row ([^"]*)"/g)].map((m) => m[1]);
+
+  it("General: the Language row", () => {
+    expect(page("general")).toContain('<div class="lm-row lm-row--control"><div class="lm-row__text"><div class="lm-row__label">Language</div>');
+  });
+
+  it("Voice: the Voice row; Storage: Open folder and Delete rows with default-size buttons", () => {
+    expect(rows(page("voice"))).toContain("lm-row--control");
+    const html = page("storage");
+    expect(rows(html).filter((c) => c === "lm-row--control")).toHaveLength(2);
+    expect(html).not.toContain("lm-btn--sm");
+    expect(html).toContain("lm-btn--danger");
+  });
+
+  it("Browser and Shortcuts use 36 px inputs and buttons", () => {
+    for (const sub of ["browser", "shortcuts"] as const) {
+      const html = page(sub);
+      expect(html, sub).not.toContain("lm-btn--sm");
+      expect(html, sub).not.toContain("lm-input--sm");
+      expect(rows(html), sub).toContain("lm-row--control");
+    }
+  });
+});

@@ -3,6 +3,7 @@ import type { AppState, SettingsSub } from "../shared/ipc";
 import { api, Page } from "./ui";
 import { BrowserPage, GeneralPage, MemoryPage, NotificationsPage, SETTINGS_NAV, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
 import { UpdateCard } from "./UpdateCard";
+import "./settings.css";
 
 export { SETTINGS_NAV };
 

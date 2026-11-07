@@ -42,6 +42,7 @@ function RightNow({ s }: { s: AppState }) {
   return (
     <SettingsSection title="Right now">
       <SettingRow
+        className={v.key === "unloaded" ? "lm-row--control" : undefined}
         label="Voice engine"
         description={engineNote(v, s.health?.engine.idleUnloadAtMs)}
         control={
@@ -50,7 +51,7 @@ function RightNow({ s }: { s: AppState }) {
               <EngineBadge s={s} />
             </span>
             {v.key === "unloaded" && (
-              <Button size="sm" onClick={() => api.warmEngine()}>
+              <Button onClick={() => api.warmEngine()}>
                 Load now
               </Button>
             )}
@@ -67,6 +68,7 @@ function Unloading({ s }: { s: AppState }) {
   return (
     <SettingsSection title="Unloading">
       <SettingRow
+        className="lm-row--control"
         label="Unload the model when idle"
         description="Frees its memory after the last reading. The next play loads it again in a moment."
         control={

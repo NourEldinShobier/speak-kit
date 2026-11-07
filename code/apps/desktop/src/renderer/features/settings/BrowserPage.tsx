@@ -23,12 +23,12 @@ function PortRow({ s }: { s: AppState }) {
   };
   return (
     <SettingRow
+      className="lm-row--control"
       label="Server port"
       description="The extension connects here. Default 47615. If it is busy, the next free port is used."
       control={
         <div className="sk-row-actions">
           <TextInput
-            size="sm"
             aria-label="Server port"
             inputMode="numeric"
             value={port}

@@ -69,6 +69,7 @@ function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
   return (
     <div data-shortcut={id}>
       <SettingRow
+        className="lm-row--control"
         label={label.title}
         description={label.description}
         control={
@@ -80,7 +81,7 @@ function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
             ) : (
               <Keys accelerator={s.shortcuts.bindings[id]} platform={s.platform} scope="global" />
             )}
-            <Button size="sm" aria-label={`Change ${label.title} shortcut`} onClick={onChange}>
+            <Button aria-label={`Change ${label.title} shortcut`} onClick={onChange}>
               {recording ? "Cancel" : "Change"}
             </Button>
           </div>
@@ -93,7 +94,7 @@ function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
             title={problem.text}
             action={
               problem.suggestion ? (
-                <Button size="sm" onClick={() => onUse(problem.suggestion!)}>
+                <Button onClick={() => onUse(problem.suggestion!)}>
                   Use {problem.suggestion}
                 </Button>
               ) : undefined
@@ -141,10 +142,11 @@ export function ShortcutsPage({ s }: { s: AppState }) {
           <ShortcutRow key={id} s={s} id={id} recording={recording === id} problem={problemFor(id, attempt, s.shortcuts.conflicts[id])} onChange={() => toggle(id)} onUse={(acc) => apply(id, acc)} />
         ))}
         <SettingRow
+          className="lm-row--control"
           label="Reset all"
           description={`Back to ${showAccelerator("Ctrl+Alt", s.platform, "global")}+S, Space, X and C.`}
           control={
-            <Button size="sm" onClick={() => api.resetShortcuts()}>
+            <Button onClick={() => api.resetShortcuts()}>
               Reset
             </Button>
           }
