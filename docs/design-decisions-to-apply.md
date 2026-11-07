@@ -68,7 +68,6 @@ Last reviewed 2026-11-07 after the merge of the eight feature branches. Hashes a
 5. Generator drift: `designs/gen` still draws the footer band and the 36/28 title bar; design edits are made in `designs/speakkit.figcraft`. Frames B19 and B21 (edge launcher) still show the old pause-button tab.
 6. The shell chips (2.11, 2.13) are still written locally in `shell.css` next to the shared `.lm-kbd` of `packages/ui` (2f7428e); merging them is a refactor with no visible change.
 7. The reader pane (`.rd-scroll` around `.rd-article`) can still cut the article's ring when the pane is narrower than 728 px.
-8. Screenshots named after the design frames (rule 18) come from the visual harness in `code/e2e/visual`; the state of the baselines is in `docs/visual-fidelity.md`.
 
 ## Not covered
 

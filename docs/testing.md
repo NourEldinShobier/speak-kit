@@ -13,9 +13,11 @@ From `code/`:
 | `pnpm exec tsrs --noEmit -p <dir>` | Type check (`packages/*`, `apps/extension`, `apps/desktop`, `e2e/tsconfig.check.json`). |
 | `pnpm run e2e` | Builds the extension with test hooks into `apps/extension/dist-e2e` (`SPEAKKIT_TEST=1`, own folder so a normal `dist` build cannot overwrite it), runs the fast Playwright suite, then the performance budgets alone (1 worker). |
 | `pnpm run e2e:full` | Same plus the `@slow` tests: real Kokoro model through the real server CLI, and the Electron desktop app. Also builds the desktop app. |
-| `node apps/desktop/scripts/smoke-installer.mjs` | Silent-installs `release/SpeakKit-Setup-<version>.exe` into a temp folder with an isolated user-data folder and port, runs `smoke-packaged.mjs` on the installed exe (health, voices, one sentence, bundled extension and worker, a second launch that must exit without adding processes, `--quit`, port freed), runs the uninstaller silently and checks the folder is gone. `smoke-packaged.mjs --exe <portable exe>` does the same for the portable build (set `SMOKE_WAIT_S=120`: the first start unpacks 170 MB). |
+| `node apps/desktop/scripts/smoke-installer.mjs` | Silent-installs `release/Speak-Kit-Setup-<version>.exe` into a temp folder with an isolated user-data folder and port, runs `smoke-packaged.mjs` on the installed exe (health, voices, one sentence, bundled extension and worker, a second launch that must exit without adding processes, `--quit`, port freed), runs the uninstaller silently and checks the folder is gone. `smoke-packaged.mjs --exe <portable exe>` does the same for the portable build (set `SMOKE_WAIT_S=120`: the first start unpacks 170 MB). |
 | `node e2e/run.mjs tests/popup.spec.ts -g "offline"` | Any Playwright args after the script; skips the perf phase. `--no-build` reuses `dist-e2e`. |
 | `E2E_HEADED=1` | Show the browser. Default is Chromium's new headless mode (`channel: "chromium"`, supports extensions). |
+
+`scripts/package.mjs` rebuilds `apps/desktop/dist` without the test hooks (`SPEAKKIT_PACKAGE=1`). After packaging, run `pnpm --filter @speakkit/desktop exec vp build` again before the Electron tests, `pnpm e2e:full` or the visual harness; otherwise the pretend Chatterbox GPU and the other test hooks are missing and tests that need them fail.
 
 Perf numbers from the last run are in `code/e2e/perf-results.jsonl` (one JSON object per line) and summarised in `docs/perf.md`.
 
