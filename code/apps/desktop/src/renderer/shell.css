@@ -206,7 +206,10 @@ html[data-platform="darwin"] .sk-title__r {
 .sk-new .lm-kbd {
   height: 18px;
   margin-inline-end: -1px;
-  font: 500 11px/18px Inter, system-ui, sans-serif;
+  font:
+    500 11px/18px Inter,
+    system-ui,
+    sans-serif;
 }
 /* 17 px between New reading and Home (8, 1 line that is not drawn, 8); the list's 2 px gaps are taken out so the rows are 17 apart. */
 .sk-side__sep {

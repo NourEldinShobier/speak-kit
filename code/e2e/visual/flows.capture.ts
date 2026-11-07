@@ -65,7 +65,7 @@ const flow = (slug: string, title: string, run: (f: Flow) => Promise<void>) => {
 };
 
 const ctx = (): Ctx => ({ ext, env });
-const dock = (s: any) => ({ ...s, launcher: { ...s.launcher, enabled: false }, sites: { "127.0.0.1": "always-dock" } });
+const dock = <T extends { launcher: object }>(s: T) => ({ ...s, launcher: { ...s.launcher, enabled: false }, sites: { "127.0.0.1": "always-dock" } });
 const view = { width: 1278, height: 718 };
 
 async function popup(m: Mock, f: Flow, caption: string, after?: (p: Page) => Promise<void>) {

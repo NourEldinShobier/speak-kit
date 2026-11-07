@@ -66,9 +66,9 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     const row = await box(l.page, ".sk-new");
     const chip = await box(l.page, ".sk-new .lm-kbd");
     const tile = await box(l.page, ".sk-new__tile");
-    expect([row.h, row.pad[1]!, row.pad[3]!, row.gap, chip.h, chip.y - row.y, row.y + row.h - (chip.y + chip.h), row.x + row.w - (chip.x + chip.w), tile.w, tile.h, tile.x - row.x].map(Math.round)).toEqual([
-      36, 10, 10, 10, 18, 9, 9, 9, 20, 20, 10,
-    ]);
+    expect(
+      [row.h, row.pad[1]!, row.pad[3]!, row.gap, chip.h, chip.y - row.y, row.y + row.h - (chip.y + chip.h), row.x + row.w - (chip.x + chip.w), tile.w, tile.h, tile.x - row.x].map(Math.round),
+    ).toEqual([36, 10, 10, 10, 18, 9, 9, 9, 20, 20, 10]);
     const css = (sel: string, ...props: string[]) => l.page.locator(sel).evaluate((e, ps) => ps.map((k) => getComputedStyle(e).getPropertyValue(k)), props);
     expect(await css(".sk-new", "background-color", "font-weight", "color", "font-size")).toEqual(["rgba(0, 0, 0, 0)", "600", "rgb(27, 34, 48)", "13px"]);
     expect(await css(".sk-new__tile", "background-color", "border-top-left-radius", "box-shadow")).toEqual(["rgb(32, 30, 37)", "6px", "rgba(0, 0, 0, 0.1) 0px 2px 4px 0px"]);

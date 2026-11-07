@@ -110,4 +110,3 @@ export const cornerOf =
     const wa = screen.getPrimaryDisplay().workArea;
     return { ...size, x: wa.x + wa.width - size.width - margin + FLOAT_PAD, y: wa.y + wa.height - size.height - margin + FLOAT_PAD };
   };
-
