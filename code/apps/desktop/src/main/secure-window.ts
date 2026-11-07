@@ -1,9 +1,34 @@
-import { BrowserWindow, type BrowserWindowConstructorOptions } from "electron";
+import { BrowserWindow, type BrowserWindowConstructorOptions, type Session } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { grantPermission } from "./permissions";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+/** Ids of the web contents that may use the microphone (the main window). */
+const microphoneContents = new Set<number>();
+const guarded = new WeakSet<Session>();
+
+/** Windows share the default session, so there is one handler pair per session that looks the requester up; the last window created must not decide for the others. */
+function guardSession(session: Session) {
+  if (guarded.has(session)) return;
+  guarded.add(session);
+  // Only the main window may ask for the microphone, and only for audio from the app's own page (see permissions.ts).
+  session.setPermissionRequestHandler((...[webContents, permission, callback, details]) =>
+    callback(
+      grantPermission({
+        permission,
+        mediaTypes: (details as { mediaTypes?: string[] } | undefined)?.mediaTypes ?? [],
+        url: details?.requestingUrl ?? "",
+        microphoneWindow: !!webContents && microphoneContents.has(webContents.id),
+      }),
+    ),
+  );
+  session.setPermissionCheckHandler((...[webContents, permission, , details]) => {
+    const mediaType = (details as { mediaType?: string } | undefined)?.mediaType;
+    return grantPermission({ permission, mediaTypes: mediaType ? [mediaType] : [], url: details?.requestingUrl ?? "", microphoneWindow: !!webContents && microphoneContents.has(webContents.id) });
+  });
+}
 
 /**
  * The one place that decides how a SpeakKit window is isolated: sandboxed renderer with only the preload bridge, no new
@@ -25,14 +50,12 @@ export function createSecureWindow(options: BrowserWindowConstructorOptions, onL
     },
   });
   const { session } = w.webContents;
-  // Only the main window may ask for the microphone, and only for audio from the app's own page (see permissions.ts).
-  session.setPermissionRequestHandler((...[, permission, callback, details]) =>
-    callback(grantPermission({ permission, mediaTypes: (details as { mediaTypes?: string[] } | undefined)?.mediaTypes ?? [], url: details?.requestingUrl ?? "", microphoneWindow: microphone })),
-  );
-  session.setPermissionCheckHandler((...[, permission, , details]) => {
-    const mediaType = (details as { mediaType?: string } | undefined)?.mediaType;
-    return grantPermission({ permission, mediaTypes: mediaType ? [mediaType] : [], url: details?.requestingUrl ?? "", microphoneWindow: microphone });
-  });
+  if (microphone) {
+    const id = w.webContents.id;
+    microphoneContents.add(id);
+    w.webContents.once("destroyed", () => microphoneContents.delete(id));
+  }
+  guardSession(session);
   w.setMenuBarVisibility(false);
   w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   w.webContents.on("will-navigate", (e) => e.preventDefault());
