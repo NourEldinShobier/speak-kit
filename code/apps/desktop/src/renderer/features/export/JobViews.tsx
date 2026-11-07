@@ -10,9 +10,9 @@ const STAGE_TEXT = { encoding: "Encoding the MP3", saving: "Saving the file" } a
 function RenderingBody({ job }: { job: ExportView }) {
   const text = job.stage === "rendering" ? `Rendering sentence ${Math.min(job.done + 1, job.total)} of ${job.total}` : STAGE_TEXT[job.stage as keyof typeof STAGE_TEXT];
   return (
-    <div data-testid="export-progress" data-stage={job.stage}>
+    <div className="sk-export__job" data-testid="export-progress" data-stage={job.stage}>
       <p className="sk-modal-text">{text}</p>
-      <ProgressBar value={Math.round(job.progress * 100)} label={`Export of ${job.name}`} />
+      <ProgressBar className="sk-export__bar" value={Math.round(job.progress * 100)} label={`Export of ${job.name}`} />
       <p className="sk-modal-text">You can close this window; the export keeps running and you get a notification when it is done.</p>
     </div>
   );
@@ -34,7 +34,7 @@ function DoneBody({ job }: { job: ExportView }) {
         <code className="sk-path" title={job.path}>
           {job.path}
         </code>
-        <Button size="sm" iconLeft="copy" onClick={copy}>
+        <Button iconLeft="copy" onClick={copy}>
           {copied ? "Copied" : "Copy"}
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { Banner, Button, Segmented, Select, TextInput } from "@speakkit/ui";
+import { Banner, Button, Select, TextInput } from "@speakkit/ui";
 import { estimateBytes, type ExportConflict, type ExportTarget } from "../../../shared/export";
 import type { AppState } from "../../../shared/ipc";
 import { MP3_KBPS } from "../../../shared/schemas";
@@ -19,18 +19,17 @@ function FormatField({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
     <div className="sk-field">
       <span>Format</span>
       <div className="sk-row-actions">
-        <Segmented
+        <Select
           label="Format"
           value={format}
           onChange={(v) => dispatch({ type: "edit", patch: { format: v as "wav" | "mp3" } })}
-          items={[
-            { id: "mp3", label: "MP3" },
-            { id: "wav", label: "WAV" },
+          options={[
+            { value: "mp3", label: "MP3" },
+            { value: "wav", label: "WAV" },
           ]}
         />
         {format === "mp3" && (
           <Select
-            size="sm"
             label="MP3 quality"
             value={String(kbps)}
             onChange={(v) => dispatch({ type: "edit", patch: { kbps: Number(v) } })}
@@ -52,7 +51,7 @@ function FolderField({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
         <code className="sk-path" title={dir}>
           {dir}
         </code>
-        <Button size="sm" iconLeft="folder" onClick={browse}>
+        <Button iconLeft="folder" onClick={browse}>
           Browse
         </Button>
       </div>
@@ -78,11 +77,11 @@ function OptionsBody({ s, st, dispatch }: Pick<ViewProps, "s" | "st" | "dispatch
       <FormatField st={st} dispatch={dispatch} />
       <div className="sk-field">
         <span>Voice</span>
-        <Select size="sm" label="Voice" value={voice} onChange={(v) => edit({ voice: v })} options={voiceOptions} />
+        <Select label="Voice" value={voice} onChange={(v) => edit({ voice: v })} options={voiceOptions} />
       </div>
       <label className="sk-field">
         <span>File name</span>
-        <TextInput id="export-name" size="sm" aria-label="File name" value={name} onChange={(e) => edit({ name: e.target.value })} />
+        <TextInput id="export-name" aria-label="File name" value={name} onChange={(e) => edit({ name: e.target.value })} />
       </label>
       <FolderField st={st} dispatch={dispatch} />
       <p className="sk-modal-text" data-testid="export-estimate">
