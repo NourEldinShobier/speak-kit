@@ -136,7 +136,7 @@ describe("reader: footer voice and speed", () => {
 
   it("the speed pill opens the presets", async () => {
     const { l } = await openReader();
-    await l.page.getByRole("button", { name: "1x", exact: true }).click();
+    await l.page.getByRole("button", { name: "Speed 1x", exact: true }).click();
     await l.page.getByRole("button", { name: "2x", exact: true }).click();
     expect(await l.page.getByTestId("speed-value").textContent()).toBe("2.0x");
   }, 60_000);

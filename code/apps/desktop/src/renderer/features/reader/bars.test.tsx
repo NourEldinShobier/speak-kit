@@ -64,6 +64,7 @@ describe("reader footer", () => {
       "Play",
       "Forward 10 seconds",
       "Next paragraph",
+      "Speed 1.5x",
       "Voice: Heart",
       "Sleep timer",
       "Volume",

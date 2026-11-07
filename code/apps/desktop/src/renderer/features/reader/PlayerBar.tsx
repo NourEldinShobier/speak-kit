@@ -36,9 +36,9 @@ interface BarProps {
   onShown(id: FooterId, shown: boolean): void;
 }
 
-const pillTrigger = (label: string, icon?: ReactElement) => (p: { onClick: () => void; "aria-expanded": boolean; "aria-haspopup": "dialog" }) => (
-  <button type="button" className="rd-pill" {...p}>
-    {icon}
+/** `name` is the accessible name when the visible label alone ("1.5x") does not say what the button is; it contains the visible label. */
+const pillTrigger = (label: string, name: string) => (p: { onClick: () => void; "aria-expanded": boolean; "aria-haspopup": "dialog" }) => (
+  <button type="button" className="rd-pill" aria-label={name} {...p}>
     {label}
   </button>
 );
@@ -143,7 +143,7 @@ export function PlayerBar(p: BarProps) {
   const frac = total ? Math.min(1, s.elapsedMs / total) : 0;
   const items: Record<FooterId, ReactElement> = {
     speed: (
-      <Popover side="top" align="end" width={300} title="Speed" trigger={pillTrigger(`${p.speed}x`)}>
+      <Popover side="top" align="end" width={300} title="Speed" trigger={pillTrigger(`${p.speed}x`, `Speed ${p.speed}x`)}>
         <div className="rd-pop">
           <SpeedControls speed={p.speed} onSpeed={p.onSpeed} />
         </div>
