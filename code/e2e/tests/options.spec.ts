@@ -121,6 +121,34 @@ test.describe("options page", () => {
     expect(m.card[2]).toContain("rgb(229, 229, 229) 0px 0px 0px 1px");
   });
 
+  test("a site rule row with a long host wraps at 320 px: the name keeps its width and the dropdown takes its own line", async ({ ext }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.setViewportSize({ width: 320, height: 640 });
+    await opt.goto(ext.url("options") + "#sites");
+    const host = "a-very-long-subdomain.reader-example-hosting-service.com";
+    await opt.getByLabel("Site", { exact: true }).fill(host);
+    await opt.getByRole("button", { name: "Add site", exact: true }).click();
+    await expect(opt.getByRole("list", { name: "Site rules" }).getByText(host)).toBeAttached();
+    const m = await opt.evaluate(() => {
+      const li = document.querySelector(".op-rules li")!;
+      const box = (el: Element) => el.getBoundingClientRect();
+      const name = box(li.querySelector(".sk-grow > div")!);
+      const select = box(li.querySelector(".op-rule-select")!);
+      const trash = box(li.querySelector("button[aria-label^='Remove rule']")!);
+      const row = box(li);
+      return {
+        nameWidth: Math.round(name.width),
+        nameAboveSelect: name.bottom <= select.top,
+        selectInside: select.left >= row.left && select.right <= row.right,
+        trashInside: trash.right <= row.right,
+        rowOverflows: li.scrollWidth > li.clientWidth,
+        pageScrolls: document.documentElement.scrollWidth > innerWidth,
+      };
+    });
+    expect(m.nameWidth).toBeGreaterThanOrEqual(150);
+    expect([m.nameAboveSelect, m.selectInside, m.trashInside, m.rowOverflows, m.pageScrolls]).toEqual([true, true, true, false, false]);
+  });
+
   test("control rows are 68 px with 36 px controls: site permissions, voice and speed, shortcuts", async ({ ext }) => {
     const opt = await ext.ctx.newPage();
     await opt.setViewportSize({ width: 1280, height: 800 });

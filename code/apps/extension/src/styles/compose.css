@@ -874,6 +874,22 @@ body {
   /* the divider is drawn inside the row so the row stays exactly 68 high */
   box-shadow: inset 0 1px 0 var(--stroke-divider);
 }
+.op-rules .sk-grow {
+  overflow-wrap: anywhere;
+}
+/* Narrow screens and zoom: the name and icon share the first line, the dropdown and the remove button the second. */
+@media (max-width: 559.98px) {
+  .op-rules li {
+    flex-wrap: wrap;
+  }
+  .op-rules li > .sk-grow {
+    flex: 1 1 calc(100% - 28px);
+  }
+  .op-rules li > .op-rule-select {
+    flex: 1 1 177px;
+    width: auto;
+  }
+}
 .op-rules li.empty {
   color: var(--text-tertiary);
 }
