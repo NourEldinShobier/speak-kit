@@ -247,7 +247,6 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 | F14 | Reader · voice panel (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | F12 | PDF reader · recognize text consent (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | F17 | PDF reader · recognition failed (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| G2 | Voices · detail drawer (Desktop app) | Voice detail drawer is not built; the Voices page lists voices with a preview button only. |
 | G13 | Voices · list view (Desktop app) | List/grid view toggle for voices is not built (one list layout). |
 | G17 | Engines · Chatterbox not installed (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | G9 | Engines · Chatterbox installing (Desktop app) | Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md). |

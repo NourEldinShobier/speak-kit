@@ -279,6 +279,10 @@
     "verdict": "known",
     "reason": "Voices: the design adds Your voices, voice cloning, Grid / List and a grades legend (cloning is v1.1); the product has search, filters and quality-graded cards."
   },
+  "G2-voice-drawer": {
+    "verdict": "major",
+    "reason": "Voice drawer: same card, header, 392 px width and position; the design also has a 'Try it' block with the sample sentence and a free-text description of the voice, the product shows the grade line and a full-width Preview instead (no voice descriptions exist in the data)."
+  },
   "G8-engines": {
     "verdict": "known",
     "reason": "Engines: the design shows a hardware banner, model sizes and a Chatterbox download; the product lists Kokoro and a locked Chatterbox."

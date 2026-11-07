@@ -212,6 +212,14 @@ export const desktopScenarios: Scenario[] = [
 
   // voices and engines
   home("G1", "voices", V, "Voices · library", { drive: side("Voices") }),
+  home("G2", "voice-drawer", V, "Voices · detail drawer", {
+    drive: async (p) => {
+      await side("Voices")(p);
+      await p.locator("[data-voice=af_heart] b").click();
+      await p.getByRole("dialog", { name: "Heart" }).waitFor();
+      await sleep(400);
+    },
+  }),
   home("G8", "engines", V, "Engines · overview", { drive: side("Engines") }),
   home("O2", "engines-unloaded", V, "Engines · unloaded", { env: { SPEAKKIT_FAKE_STATE: "unloaded" }, drive: side("Engines") }),
   home("O3", "engines-loading", V, "Engines · loading", { env: { SPEAKKIT_FAKE_STATE: "loading" }, drive: side("Engines") }),

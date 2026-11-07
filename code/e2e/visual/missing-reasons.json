@@ -7,7 +7,6 @@
     "W2b": "Implemented: the wizard shows the detected GPU or says none was found. The harness machine has a GPU, so the no-GPU state is not reachable without hardware detection being faked.",
     "C14": "The Open Speak Kit link (speakkit://) hands over to the operating system protocol handler; no page of the product is drawn for it.",
     "C17": "Rule card (breakpoint rules), not a screen. The collapsed layout it describes is captured as C18.",
-    "G2": "Voice detail drawer is not built; the Voices page lists voices with a preview button only.",
     "G13": "List/grid view toggle for voices is not built (one list layout).",
     "G9": "Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md).",
     "G10": "Needs an installed Chatterbox engine; the product's engine error page is captured as G10 / engines-error without a diff.",
