@@ -14,7 +14,14 @@ export function Wizard({ s }: { s: AppState }) {
     case 0:
       return <WelcomeStep onNext={() => dispatch({ type: "go", step: 1 })} />;
     case 1:
-      return <EngineStep onBack={() => dispatch({ type: "go", step: 0 })} onDownload={() => dispatch({ type: "go", step: 2 })} />;
+      return (
+        <EngineStep
+          choice={st.engine}
+          onChoose={(engine) => dispatch({ type: "choose-engine", engine })}
+          onBack={() => dispatch({ type: "go", step: 0 })}
+          onDownload={() => dispatch({ type: "go", step: 2 })}
+        />
+      );
     case 2:
       return <DownloadStep s={s} onBack={() => dispatch({ type: "go", step: 1 })} onNext={() => dispatch({ type: "go", step: 3 })} />;
     case 3:
@@ -29,7 +36,7 @@ export function Wizard({ s }: { s: AppState }) {
         />
       );
     case 4:
-      return <DoneStep s={s} skipped={st.skipped} onBack={() => dispatch({ type: "go", step: 3 })} />;
+      return <DoneStep s={s} skipped={st.skipped} chatterbox={st.engine === "chatterbox"} onBack={() => dispatch({ type: "go", step: 3 })} />;
     default: {
       const unreachable: never = st.step;
       return unreachable;

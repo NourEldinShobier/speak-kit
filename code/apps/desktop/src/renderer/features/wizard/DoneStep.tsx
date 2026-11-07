@@ -27,7 +27,12 @@ function HandyToKnow({ s }: { s: AppState }) {
   );
 }
 
-export function DoneStep({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack(): void }) {
+function doneSub(skipped: boolean, chatterbox: boolean): string {
+  const first = skipped ? "You can connect the browser extension later from Browser." : "Kokoro is ready. Press play to hear your voice.";
+  return chatterbox ? `${first} Chatterbox installs in the background; Engines shows its progress.` : first;
+}
+
+export function DoneStep({ s, skipped, chatterbox, onBack }: { s: AppState; skipped: boolean; chatterbox: boolean; onBack(): void }) {
   const [voice, setVoice] = useState("");
   const { playing, error, toggle } = usePreview();
   const engineState = s.health?.engine.state;
@@ -38,14 +43,19 @@ export function DoneStep({ s, skipped, onBack }: { s: AppState; skipped: boolean
     );
   }, [engineState]);
   const on = playing === voice && !!voice;
+  // The install runs in the server and goes on after setup; a failure shows on the Engines page (disk space, network), so it is not awaited here.
+  const open = () => {
+    if (chatterbox) void api.installEngine("chatterbox").catch(() => {});
+    void api.patchConfig({ setupDone: true, setupSkipped: skipped });
+  };
   return (
     <Frame
       at={4}
       title={skipped ? "Setup is finished" : "You're all set"}
-      sub={skipped ? "You can connect the browser extension later from Browser." : "Kokoro is ready. Press play to hear your voice."}
+      sub={doneSub(skipped, chatterbox)}
       foot={
         <Foot back={<Back onClick={onBack} />}>
-          <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => api.patchConfig({ setupDone: true, setupSkipped: skipped })}>
+          <Button variant="primary" size="lg" iconRight="arrow-right" onClick={open}>
             Open Speak Kit
           </Button>
         </Foot>
