@@ -1,9 +1,9 @@
 {
  "counts": {
-  "shots": 175,
-  "cards": 175,
+  "shots": 174,
+  "cards": 174,
   "frames": 236,
-  "missing": 119
+  "missing": 120
  },
  "perGroup": [
   {
@@ -48,8 +48,8 @@
   },
   {
    "group": "Desktop reader and export",
-   "screens": 19,
-   "images": 19
+   "screens": 18,
+   "images": 18
   },
   {
    "group": "Voices and engines",
@@ -281,6 +281,11 @@
   {
    "id": "E12",
    "title": "Library · deleted toast (Desktop app)",
+   "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
+  },
+  {
+   "id": "F14",
+   "title": "Reader · voice panel (Desktop app)",
    "reason": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet."
   },
   {
