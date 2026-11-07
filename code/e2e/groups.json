@@ -18,6 +18,7 @@
         "modes.spec.ts",
         "native.spec.ts",
         "options.spec.ts",
+        "pages.spec.ts",
         "pairing.spec.ts",
         "playback.spec.ts",
         "popup.spec.ts",

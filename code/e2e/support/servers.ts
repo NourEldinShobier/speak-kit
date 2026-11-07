@@ -22,15 +22,22 @@ export interface Fixture {
   origin: string;
   host: string;
   url(path: string): string;
+  /** The same server under another host name (127.0.0.1), which is another origin: for cross-origin frames. */
+  alt(path: string): string;
+  /** Serve `body` at `path` (a test's own page); later requests get it, so use a path no other test in the worker uses. */
+  set(path: string, body: string | Buffer, type?: string): void;
   close(): Promise<void>;
 }
 
 /** Fixture pages are served as http://localhost:<port> so the options page accepts the host in site rules. */
 export async function startFixture(): Promise<Fixture> {
   const big = new Map<string, string>();
+  const own = new Map<string, { body: string | Buffer; type: string }>();
   const srv: Server = createHttp((req, res) => {
     const path = (req.url ?? "/").split("?")[0]!;
     if (path === "/favicon.ico") return void res.writeHead(204).end();
+    const mine = own.get(path);
+    if (mine) return void res.writeHead(200, { "content-type": mine.type }).end(mine.body);
     const make = routes[path];
     if (!make) {
       res.writeHead(404).end("not found");
@@ -46,6 +53,8 @@ export async function startFixture(): Promise<Fixture> {
     origin: `http://localhost:${port}`,
     host: "localhost",
     url: (p) => `http://localhost:${port}${p}`,
+    alt: (p) => `http://127.0.0.1:${port}${p}`,
+    set: (p, body, type = "text/html; charset=utf-8") => void own.set(p, { body, type }),
     close: () => new Promise((r) => srv.close(() => r())),
   };
 }

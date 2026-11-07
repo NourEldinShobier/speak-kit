@@ -1,9 +1,9 @@
 /** HTML for the fixture web server. Sentences carry a marker (P3S2) so tests can tell exactly what was sent to the speech server. */
 
 export const sentence = (p: number, s: number) => `P${p}S${s} the quiet harbor wakes before the first ferry leaves the dock.`;
-const para = (p: number, n = 3) => Array.from({ length: n }, (_, i) => sentence(p, i + 1)).join(" ");
+export const para = (p: number, n = 3) => Array.from({ length: n }, (_, i) => sentence(p, i + 1)).join(" ");
 
-const shell = (title: string, body: string, css = "") => `<!doctype html>
+export const shell = (title: string, body: string, css = "") => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${title}</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font:18px/1.6 Georgia,serif;margin:0;color:#1e1f20;background:#fff}
