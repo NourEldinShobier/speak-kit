@@ -78,3 +78,26 @@ This page lists what the chat history of this session and its summaries record. 
 - **Display popover:** auto layout, 16 padding, 16 gap. Font segmented toggle full width (container 32 high r8 #ECECEC, 2 px padding, tabs fill, selected tab white r6 shadow 0 1 3). Each slider is a group: label left and value right on one row, slider full width below. Toggle row: label left, switch right.
 - **Find in text (F16):** floating card at the top right of the reading pane, 408×44, r10, white, 1 px #E5E5E5 ring, shadow 0 2 6 at 6%, 24 px from the right and 10 px from the top. It overlays the text; the text starts at the normal position (no band under the title). Contents: search field 240, count, previous, next, close.
 - **Destructive buttons (Delete, Remove, Restart anyway, Cancel export, Replace):** same style as the Cancel button (white, 1 px #E5E5E5 inside ring, shadow 0 1 2 at 6%, r8) with red text #C62828. No filled red button. Suggested hover: fill #FEF2F2, ring #F2B8B8; pressed: #FDE4E4; focus: 2 px outer ring red at 40%; disabled: text at 40%. Hover, pressed and focus are not drawn yet.
+
+## 2.18 Decisions since 2.17 (2026-11-07, design file edited directly; nothing here is in code yet)
+- **Voice popover (28841) vs find card (29586):** the popover had a 1 px border plus a 1 px ring in its shadow, and clipping on, so the edge looked doubled and the shadow was cut. Rule for every floating card: one 1 px #E5E5E5 border, one shadow `0 2 6` at 6%, clipping off, scrollbar at the far right edge (3 px from it). Rows: labels in one column; selected row highlight full width, radius 6, check mark at the right. Other voice popovers were not checked.
+- **"Recognizing text" (30469):** no card. Inline in the reading column (680 wide, aligned with title and subtitle): title left, Cancel button right (28 high, white, ring, r8), status line in 12 px #5F6A7D, 4 px progress bar full width (#ECECEC track, #201E25 fill). Gap 8.
+- **"Recognize text on this computer?" dialog (30299):** height hugs content, clipping off; buttons 16 px from the bottom and the right.
+- **Display card compact (53524):** values (19px, 1.7, 680px) and the switch end at the right edge of the white "Serif" tab, 2 px inside the grey track.
+- **Display card (28232):** the compact card sits right-aligned in the reading panel, 24 px from its right edge, under the header icons. The large rebuilt popover was deleted at the user's request.
+- **Voices toolbar:** search field 36 high, 264 wide on the left (ring and shadow `0 1 2` at 6%). The All, US English, UK English, Female and Male segments are replaced by a 36 px dropdown on the right ("Voices: all", 13 Medium, chevron, white, 1 px #E5E5E5, r8, shadow `0 1 2`). The dropdown menu is not drawn. Applied to the main Voices frame and three variants.
+- **List view removed:** only the grid exists. Frame G13 (Voices, list view) and the Grid/List toggle are deleted. The code has no list view.
+- **Voice drawer (31527):** spans the content panel height: y 38 to 791, 8 px from the right and the bottom. Header (arrows, "1 of 28", close) closer to the top (10 px padding); 14 px layout gap and 10 px extra below the header.
+- **"Grade D" pill:** no outline. All grade pills are a soft fill with no stroke.
+- **Library row menu button:** the kebab button from the Secrets Watchman file (node 13580 equivalent, 28×28, white, 1 px #E5E5E5, r8, shadow `0 1 2`), 16 px from the row's right edge.
+- **Library drag and drop frames:** the dashed blue container has 8 px margins on all four sides.
+- **Sort and voice dropdowns:** 36 high (was 28), label and chevron centred; same in the Paste dialog.
+- **"Add pasted text" dialog (24283):** voice dropdown at the left of the footer; Cancel, Add and Add and play grouped at the right; 16 px bottom and right margin.
+- **"New" pill text:** #1B2230 on the grey fill, in all library lists.
+- **Search fields:** the inner field has no focus outline; only the outer focus ring remains.
+- **Destructive buttons:** see 2.17.
+- **Ready pill:** removed from every frame; the sidebar engine card shows the state. The not-ready pills (Unloaded, Loading, Offline) were restyled to a grey dot plus text (7 frames) and still exist.
+- **Shell:** footer band removed; panel and sidebar end 8 px above the window's bottom; engine card and Settings at the bottom of the sidebar; title bar 38 high, search 30 (see 2.10 to 2.14).
+- **Setup window:** white background, full card borders (clipping off on wrapper frames), footer buttons 16 px from the bottom and 20 px from the right, Back arrow 26 px from the left, headline 32 px under the stepper, selected engine row is a light tint with a white icon tile (section 1).
+
+**Open questions:** inset pill or top-corner rows for the selected engine (1.4); equal left and right footer gaps in the setup window (1.9); whether the Voices dropdown needs a menu frame; whether other voice popovers share the double border.
