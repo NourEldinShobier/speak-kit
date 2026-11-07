@@ -94,7 +94,11 @@ export class ChatterboxEngine extends LifecycleEngine {
 
   /** Detects the hardware first, so the initial state is right, and removes what an install killed with the app left behind. */
   static async create(o: ChatterboxOptions): Promise<ChatterboxEngine> {
-    if (await exists(join(o.dir, INSTALLING))) await Promise.all([rm(join(o.dir, "env"), RM), rm(join(o.dir, INSTALLING), RM)]);
+    if (await exists(join(o.dir, INSTALLING))) {
+      // `installed` is written before `installing` is removed, so both present means a finished install the app died after
+      if (await exists(join(o.dir, MARKER))) await rm(join(o.dir, INSTALLING), RM);
+      else await Promise.all([rm(join(o.dir, "env"), RM), rm(join(o.dir, INSTALLING), RM)]);
+    }
     return new ChatterboxEngine(o, o.hardware ?? (await detectHardware()));
   }
 
@@ -195,7 +199,11 @@ export class ChatterboxEngine extends LifecycleEngine {
     } finally {
       this.#cancel = undefined;
     }
-    await rm(join(this.#o.dir, INSTALLING), RM);
+    try {
+      await rm(join(this.#o.dir, INSTALLING), RM);
+    } catch {
+      // the build is complete: a marker that cannot be removed now is cleaned up at the next start (see create), not a reason to fail
+    }
     this.#reason = undefined;
     this.setStatus({ state: "unloaded" });
   }

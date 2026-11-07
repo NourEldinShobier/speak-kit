@@ -140,6 +140,19 @@ describe("install cancelled", () => {
     expect(existsSync(join(dir, "installing"))).toBe(false);
   });
 
+  it("an app killed after a finished install keeps the environment and only drops the installing marker", async () => {
+    const root = mkdtempSync(join(tmpdir(), "cbf-kill2-"));
+    const dir = join(root, "chatterbox");
+    mkdirSync(join(dir, "env", "Lib"), { recursive: true });
+    writeFileSync(join(dir, "installed"), "2026-11-07T00:00:01Z");
+    writeFileSync(join(dir, "installing"), "2026-11-07T00:00:00Z");
+    const e = await ChatterboxEngine.create({ dir, voicesDir: join(root, "voices"), sidecar, hardware: installable });
+    engines.push(e);
+    expect(e.status().state).toBe("unloaded");
+    expect(existsSync(join(dir, "env", "Lib"))).toBe(true);
+    expect(existsSync(join(dir, "installing"))).toBe(false);
+  });
+
   it("a completed install leaves no installing marker", async () => {
     const { e, dir } = make(installable, { installer: async () => {} });
     await e.install();
