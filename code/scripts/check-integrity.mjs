@@ -9,6 +9,8 @@ import path from "node:path";
 import { compareCounts, flatten, isSource, isTestFile, parseArgs, readBaseline, readJson, rel, report, runsAsMain, scopeOf, scopes, walk } from "./check-lib.mjs";
 
 const skipped = /\b(?:it|test|describe|suite)\.(?:skip|todo|fixme)\s*\(|\b(?:xit|xdescribe|xtest)\s*\(|\bit\.fails\s*\(|\.skipIf\s*\(/g;
+// Opt-in GPU tests (`describe.runIf(env)`) are counted apart from skips: they run only where the env var is set, so each such file is listed in docs/ci.md.
+const gated = /\.runIf\s*\(/g;
 const focused = /\b(?:it|test|describe|suite)\.only\s*\(|\b(?:fit|fdescribe)\s*\(/g;
 const noCheck = /@ts-nocheck/g;
 
@@ -20,10 +22,11 @@ export function countIntegrity(root) {
     const scope = scopeOf(r);
     if (!scope || !isSource(r)) continue;
     const text = readFileSync(file, "utf8");
-    const b = (out[scope] ??= { skipped: 0, focused: 0, tsNocheck: 0 });
+    const b = (out[scope] ??= { skipped: 0, focused: 0, gated: 0, tsNocheck: 0 });
     if (isTestFile(r)) {
       b.skipped += [...text.matchAll(skipped)].length;
       b.focused += [...text.matchAll(focused)].length;
+      b.gated += [...text.matchAll(gated)].length;
     }
     b.tsNocheck += [...text.matchAll(noCheck)].length;
   }
@@ -31,7 +34,14 @@ export function countIntegrity(root) {
 }
 
 // Budget numbers in the three budget tests plus the extension bundle table, keyed by what they bound.
-const budgetFiles = ["apps/extension/scripts/sizes.mjs", "apps/extension/src/budget.test.ts", "apps/desktop/tests/perf.test.ts", "e2e/tests/perf.spec.ts"];
+const budgetFiles = [
+  "apps/extension/scripts/sizes.mjs",
+  "apps/extension/src/budget.test.ts",
+  "apps/desktop/tests/perf.test.ts",
+  "e2e/tests/perf.spec.ts",
+  "e2e/tests/selection.spec.ts",
+  "packages/server/tests/real-chatterbox.test.ts",
+];
 
 export function readBudgets(root) {
   const out = {};
@@ -87,7 +97,7 @@ if (runsAsMain(import.meta.url)) {
   const counts = countIntegrity(root);
   for (const s of Object.keys(scopes)) {
     const was = readBaseline(root, s).patterns ?? {};
-    problems.push(...compareCounts(`${s} test integrity`, { skipped: was.skipped, focused: was.focused, tsNocheck: was.tsNocheck }, counts[s] ?? {}));
+    problems.push(...compareCounts(`${s} test integrity`, { skipped: was.skipped, focused: was.focused, gated: was.gated, tsNocheck: was.tsNocheck }, counts[s] ?? {}));
   }
 
   for (const [s, base] of Object.entries(baseBaselines(root, baseDir))) {

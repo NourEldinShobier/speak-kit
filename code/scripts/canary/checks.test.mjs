@@ -54,6 +54,11 @@ describe("check-integrity", () => {
     expect(r.status).toBe(1);
     expect(r.out).toContain("desktop test integrity skipped: 1 > baseline 0");
   });
+  it("fails on a new env-gated (runIf) test file", () => {
+    const r = run("check-integrity.mjs", "integrity-gated", "--base", "@nobase");
+    expect(r.status).toBe(1);
+    expect(r.out).toContain("desktop test integrity gated: 1 > baseline 0");
+  });
   it("fails on a raised budget", () => {
     const r = run("check-integrity.mjs", "integrity-budget", "--base", "@nobase");
     expect(r.status).toBe(1);

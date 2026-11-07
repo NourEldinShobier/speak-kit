@@ -64,7 +64,7 @@ The extension pages ask for Inter first and bundle no web font, so layout checks
 - Extension e2e: add `code/e2e/tests/<name>.spec.ts`. Shards are balanced by Playwright over the spec files; nothing else to register. To split further, add values to `matrix.shard` in `ci.yml` (`3/3`) and extend the list.
 - Desktop: add `code/apps/desktop/tests/<name>.test.ts`; the `desktop` job runs the whole package.
 - A new area (for example a new app): add a filter in `changes`, a flag in `plan`, a job with a job-level `if:`, add the job to `ci-ok.needs`, and describe it here.
-- A test that cannot run on a hosted runner (global hotkeys, a real model) is gated behind an explicit environment variable with `skipIf`, and listed below.
+- A test that cannot run on a hosted runner (global hotkeys, a real model) is gated behind an explicit environment variable with `skipIf` or `describe.runIf`, and listed below. `check-integrity.mjs` counts `skipIf` files as `skipped` and `runIf` files as `gated` in `code/.ratchet/<scope>.json`, so a new gated file needs a row here and a baseline change.
 
 ### Tests gated off the hosted runner
 
@@ -72,6 +72,8 @@ The extension pages ask for Inter first and bundle no web font, so layout checks
 |---|---|---|
 | `packages/engine/tests/real.test.ts` | `SPEAKKIT_REAL=1` | downloads the Kokoro model |
 | `packages/engine/tests/real-chatterbox.test.ts` | `SPEAKKIT_REAL_CHATTERBOX=1` | NVIDIA GPU and Python |
+| `packages/server/tests/real-chatterbox.test.ts` (`runIf`) | `SPEAKKIT_REAL_CHATTERBOX=1` | NVIDIA GPU and Python; install, speak, export, clone, idle unload and switch back to Kokoro through the server; GPU memory budgets (opt-in) |
+| `apps/desktop/tests/cloning-real.test.ts` (`runIf`) | `SPEAKKIT_REAL_CHATTERBOX=1` | NVIDIA GPU and Python; voice cloning in the installed Electron app (opt-in) |
 | `e2e/tests/full.spec.ts`, `desktop.spec.ts` | `@slow` tag, `pnpm run e2e:full` | real model, Electron |
 | `e2e/tests/perf.spec.ts` | `E2E_SKIP_PERF=1` on CI | absolute timing budgets |
 
