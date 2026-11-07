@@ -1,27 +1,9 @@
-import type { ReactNode } from "react";
-import { Banner, Button, ProgressBar, SettingRow, SettingsSection, StatusPill } from "@speakkit/ui";
+import { Banner, Button } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
+import { ModelDownloadCard } from "../../ModelDownloadCard";
 import { api } from "../../ui";
 import { Back, Foot, Frame } from "./Frame";
 import { DOWNLOAD_TITLES, downloadSub, downloadView, MODEL_MB, type DownloadPhase } from "./model";
-
-const PILLS: Record<DownloadPhase, (s: AppState, pct: number) => ReactNode> = {
-  failed: () => (
-    <StatusPill tone="orange" icon="alert-triangle">
-      Paused
-    </StatusPill>
-  ),
-  ready: () => (
-    <StatusPill tone="green" icon="circle-check">
-      Done
-    </StatusPill>
-  ),
-  downloading: (s, pct) => (
-    <StatusPill tone="blue" icon="loader-2">
-      {s.health?.engine.state === "loading" ? "Loading" : `${Math.round(pct * 100)}%`}
-    </StatusPill>
-  ),
-};
 
 function DownloadAction({ phase, onNext }: { phase: DownloadPhase; onNext(): void }) {
   if (phase === "failed") {
@@ -40,7 +22,6 @@ function DownloadAction({ phase, onNext }: { phase: DownloadPhase; onNext(): voi
 
 export function DownloadStep({ s, onBack, onNext }: { s: AppState; onBack(): void; onNext(): void }) {
   const v = downloadView(s);
-  const description = v.phase === "ready" ? `${MODEL_MB} MB, done` : `${Math.round(v.pct * MODEL_MB)} MB of ${MODEL_MB} MB`;
   return (
     <Frame
       at={2}
@@ -53,12 +34,12 @@ export function DownloadStep({ s, onBack, onNext }: { s: AppState; onBack(): voi
       }
     >
       <div data-testid="download">
-        <SettingsSection title="Model">
-          <SettingRow label="kokoro-82m (q8)" description={description} control={PILLS[v.phase](s, v.pct)} />
-          <div style={{ padding: "0 14px 14px" }}>
-            <ProgressBar value={v.pct * 100} label="Download progress" />
-          </div>
-        </SettingsSection>
+        <section className="lm-section">
+          <header className="lm-section__head">
+            <h3 className="lm-section__title">Model</h3>
+          </header>
+          <ModelDownloadCard name="kokoro-82m (q8)" pct={v.pct} totalMb={MODEL_MB} paused={v.phase === "failed"} />
+        </section>
       </div>
       {v.phase === "failed" && (
         <Banner tone="warning" title="Lost the connection to the model server">
