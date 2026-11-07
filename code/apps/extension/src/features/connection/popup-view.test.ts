@@ -52,6 +52,13 @@ describe("deriveView", () => {
     expect(deriveView(input({ health: { ok: false, error: "token-rejected" } }))).toBe("token");
   });
 
+  it("does not keep showing offline or not paired from an old playback error once the health check passes", () => {
+    const failed = (code: "app-not-running" | "token-rejected"): PlayerState => ({ ...idle, status: "error", error: { code, message: "x" } });
+    expect(deriveView(input({ player: failed("app-not-running") }))).toBe("idle");
+    expect(deriveView(input({ player: failed("token-rejected") }))).toBe("idle");
+    expect(deriveView(input({ player: failed("app-not-running"), health: { ok: false, error: "app-not-running" } }))).toBe("offline");
+  });
+
   it("shows the PDF state for a PDF tab, also with a query string", () => {
     expect(deriveView(input({ tabUrl: "https://example.com/files/paper.pdf" }))).toBe("pdf");
     expect(deriveView(input({ tabUrl: "https://example.com/files/paper.PDF?download=1#page=2" }))).toBe("pdf");

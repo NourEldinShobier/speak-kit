@@ -78,7 +78,8 @@ function connectionView(i: PopupInputs, code: string | undefined): PopupView | u
   const h = i.health;
   if (!i.hasToken) return h?.ok ? "token" : "install";
   if (h && !h.ok) return CONNECTION_VIEW[h.error] ?? "offline";
-  return code ? CONNECTION_VIEW[code] : undefined;
+  // A playback error about the connection is old news once the health check, token included, passes.
+  return code && !(h?.ok && (code === "app-not-running" || code === "token-rejected")) ? CONNECTION_VIEW[code] : undefined;
 }
 
 const isPreparing = (i: PopupInputs) => i.player?.status === "preparing" || (!!i.starting && (!i.player || i.player.status === "idle"));
