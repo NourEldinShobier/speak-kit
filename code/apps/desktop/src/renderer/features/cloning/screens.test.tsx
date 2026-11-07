@@ -16,10 +16,17 @@ import { AnalyzingScreen, NamingScreen, RejectedScreen } from "./ResultScreens";
 const noop = () => {};
 const take = { wav: new Uint8Array(44), durationMs: 14000, label: "maya.mp3" };
 const voice: ClonedVoice = { id: "cb_0a1b2c3d", name: "maya", durationMs: 14000, createdAt: 1, checks: [] };
-const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+const text = (html: string) =>
+  html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 describe("G3 choose a reference", () => {
-  const choose = (over = {}) => renderToStaticMarkup(<ChooseScreen state={{ ...(initClone() as Extract<ReturnType<typeof initClone>, { step: "choose" }>), ...over }} onConsent={noop} onSource={noop} onContinue={noop} onCancel={noop} />);
+  const choose = (over = {}) =>
+    renderToStaticMarkup(
+      <ChooseScreen state={{ ...(initClone() as Extract<ReturnType<typeof initClone>, { step: "choose" }>), ...over }} onConsent={noop} onSource={noop} onContinue={noop} onCancel={noop} />,
+    );
 
   it("offers upload and record, the consent sentence and a disabled Continue", () => {
     const html = choose();
@@ -42,7 +49,8 @@ describe("G3 choose a reference", () => {
 });
 
 describe("K6 microphone access", () => {
-  const dialog = (problem: "denied" | "missing" | null, platform = "win32") => renderToStaticMarkup(<MicDialog problem={problem} platform={platform} onUpload={noop} onSettings={noop} onClose={noop} />);
+  const dialog = (problem: "denied" | "missing" | null, platform = "win32") =>
+    renderToStaticMarkup(<MicDialog problem={problem} platform={platform} onUpload={noop} onSettings={noop} onClose={noop} />);
 
   it("is closed without a problem", () => {
     expect(dialog(null)).toBe("");
@@ -140,9 +148,7 @@ describe("G6 name and test", () => {
 
   it("asks for a name and keeps Save voice disabled until there is one", () => {
     const html = screen();
-    expect(text(html)).toBe(
-      "Name Play test Hello, I am your new voice. This is how I sound when reading to you. Exaggeration Higher is more expressive. 0.50 Calm Dramatic Cancel Save voice",
-    );
+    expect(text(html)).toBe("Name Play test Hello, I am your new voice. This is how I sound when reading to you. Exaggeration Higher is more expressive. 0.50 Calm Dramatic Cancel Save voice");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Save voice<\/button>/);
   });
 

@@ -111,14 +111,7 @@ export function NamingScreen({ state, playing, onName, onStyle, onPlay, onSave, 
             <div className="lm-row__desc">{testSentence(state.name)}</div>
           </div>
         </div>
-        <StyleSlider
-          label="Exaggeration"
-          hint="Higher is more expressive."
-          low="Calm"
-          high="Dramatic"
-          value={state.exaggeration}
-          onChange={onStyle}
-        />
+        <StyleSlider label="Exaggeration" hint="Higher is more expressive." low="Calm" high="Dramatic" value={state.exaggeration} onChange={onStyle} />
       </div>
       <div className="sk-clone-actions">
         <Button onClick={onCancel}>Cancel</Button>

@@ -162,7 +162,16 @@ export class Sidecar {
       this.#jobs.set(id, { resolve: done(resolve), reject: done(reject) });
       signal?.addEventListener("abort", onAbort, { once: true });
       this.#dog.arm();
-      stdin.write(JSON.stringify({ op: "synth", id, text, reference: voice.reference, ...(voice.exaggeration !== undefined && { exaggeration: voice.exaggeration }), ...(voice.pace !== undefined && { cfg_weight: voice.pace }) }) + "\n");
+      stdin.write(
+        JSON.stringify({
+          op: "synth",
+          id,
+          text,
+          reference: voice.reference,
+          ...(voice.exaggeration !== undefined && { exaggeration: voice.exaggeration }),
+          ...(voice.pace !== undefined && { cfg_weight: voice.pace }),
+        }) + "\n",
+      );
     });
   }
 

@@ -48,7 +48,10 @@ export const voiceRoutes: Route[] = [
     path: /^\/v1\/voices\/(cb_[0-9a-f]{8})$/,
     handle: async ({ req, res, params }, { engines }) => {
       const raw = await readBody(req);
-      const updated = await engines.cloner()?.clones?.update(params[0]!, validated(() => parseUpdateVoice(raw)));
+      const updated = await engines.cloner()?.clones?.update(
+        params[0]!,
+        validated(() => parseUpdateVoice(raw)),
+      );
       if (!updated) throw new HttpError(404, "not-found", "no such cloned voice");
       json(res, 200, updated);
     },

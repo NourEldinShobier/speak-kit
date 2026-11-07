@@ -158,9 +158,21 @@ export const ARGS = {
   exportReveal: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.boolean()]),
   pickFolder: v.tuple([v.pipe(v.string(), v.maxLength(1024))]),
   pickReference: v.tuple([]),
-  cloneVoice: v.tuple([v.strictObject({ name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), consent: v.literal(true), audio: v.pipe(v.instance(Uint8Array), v.check((a) => a.byteLength <= MAX_CLONE_BYTES)) })]),
+  cloneVoice: v.tuple([
+    v.strictObject({
+      name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
+      consent: v.literal(true),
+      audio: v.pipe(
+        v.instance(Uint8Array),
+        v.check((a) => a.byteLength <= MAX_CLONE_BYTES),
+      ),
+    }),
+  ]),
   clonedVoices: v.tuple([]),
-  updateClonedVoice: v.tuple([VoiceIdSchema, v.strictObject({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) })]),
+  updateClonedVoice: v.tuple([
+    VoiceIdSchema,
+    v.strictObject({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) }),
+  ]),
   deleteClonedVoice: v.tuple([VoiceIdSchema]),
   installExtension: v.tuple([]),
 } as const;

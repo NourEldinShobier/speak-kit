@@ -105,7 +105,15 @@ export class ClonedVoiceStore {
   }
 
   list(): ClonedVoice[] {
-    return this.#index.map(({ id, name, durationMs, createdAt, checks, exaggeration, pace }) => ({ id, name, durationMs, createdAt, checks, ...(exaggeration !== undefined && { exaggeration }), ...(pace !== undefined && { pace }) }));
+    return this.#index.map(({ id, name, durationMs, createdAt, checks, exaggeration, pace }) => ({
+      id,
+      name,
+      durationMs,
+      createdAt,
+      checks,
+      ...(exaggeration !== undefined && { exaggeration }),
+      ...(pace !== undefined && { pace }),
+    }));
   }
 
   /** Changes the name or the style of a voice; undefined when there is no such voice. A failed write leaves the voice as it was. */

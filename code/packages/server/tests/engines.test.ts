@@ -174,7 +174,11 @@ describe("voice cloning", () => {
     expect(await r.json()).toMatchObject({ id: voice.id, name: "Maya R", exaggeration: 0.7, pace: 0.4 });
     expect(((await (await call(ctx, "GET", "/v1/voices/cloned")).json()) as { voices: ClonedVoice[] }).voices[0]).toMatchObject({ name: "Maya R", exaggeration: 0.7, pace: 0.4 });
     await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    const s = await fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }) });
+    const s = await fetch(`${ctx.base}/v1/speak`, {
+      method: "POST",
+      headers: { ...ctx.auth, "Content-Type": "application/json" },
+      body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }),
+    });
     const [first] = await readFrames(s);
     expect(first!.frame.pcm![0]).toBe(2000 + 700 + 4000); // fake sidecar: reference 2000, 1000 x exaggeration, 10 000 x pace
   });

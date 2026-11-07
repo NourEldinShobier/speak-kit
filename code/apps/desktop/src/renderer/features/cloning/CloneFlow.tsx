@@ -230,7 +230,13 @@ export function CloneFlow({ s, onClose }: { s: AppState; onClose(saved?: string)
     <Page title="Clone a voice" lead={LEAD[st.step](st)}>
       <ReferenceScreens {...flow} />
       <ResultScreens {...flow} onClose={onClose} />
-      <MicDialog problem={st.step === "choose" ? st.mic : null} platform={s.platform} onUpload={upload} onSettings={() => void api.openExternal("microphone-settings")} onClose={() => dispatch({ type: "dismiss-mic" })} />
+      <MicDialog
+        problem={st.step === "choose" ? st.mic : null}
+        platform={s.platform}
+        onUpload={upload}
+        onSettings={() => void api.openExternal("microphone-settings")}
+        onClose={() => dispatch({ type: "dismiss-mic" })}
+      />
     </Page>
   );
 }

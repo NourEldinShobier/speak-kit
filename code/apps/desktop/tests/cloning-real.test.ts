@@ -72,7 +72,9 @@ describe.runIf(process.env.SPEAKKIT_REAL_CHATTERBOX)("voice cloning in the app w
 
     await l.page.getByRole("button", { name: "Delete Generated tone" }).click();
     await l.page.getByRole("dialog", { name: "Delete Generated tone?" }).getByRole("button", { name: "Delete" }).click();
-    await expect.poll(async () => ((await (await fetch(`http://127.0.0.1:${l.port}/v1/voices/cloned`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { voices: unknown[] }).voices).toEqual([]);
+    await expect
+      .poll(async () => ((await (await fetch(`http://127.0.0.1:${l.port}/v1/voices/cloned`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { voices: unknown[] }).voices)
+      .toEqual([]);
     writeFileSync(path.join(dataDir, "ui-metrics.json"), JSON.stringify(m, null, 2));
   }, 900_000);
 });

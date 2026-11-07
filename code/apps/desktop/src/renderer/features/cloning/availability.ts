@@ -9,7 +9,8 @@ const gb = (mb: number) => Math.round(mb / 1024);
 
 function reasonDetail(e: EngineInfo): string {
   const found = e.gpu ? ` Found ${e.gpu.name} with ${gb(e.gpu.vramMb)} GB of video memory.` : "";
-  if (e.state === "unavailable") return e.reason === "python-missing" ? "Chatterbox needs Python 3.10 to 3.12 or uv, and neither was found." : (e.detail ?? "Chatterbox needs an NVIDIA graphics card with 4 GB of video memory.");
+  if (e.state === "unavailable")
+    return e.reason === "python-missing" ? "Chatterbox needs Python 3.10 to 3.12 or uv, and neither was found." : (e.detail ?? "Chatterbox needs an NVIDIA graphics card with 4 GB of video memory.");
   if (e.reason === "disk-full") return e.detail ?? "There is not enough free disk space to install it.";
   return `Install it on the Engines page.${found}`;
 }

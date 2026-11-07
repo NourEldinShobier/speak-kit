@@ -78,11 +78,7 @@ interface State {
   styling: ClonedVoice | null;
   deleting: ClonedVoice | null;
 }
-type Action =
-  | { type: "loaded"; voices: ClonedVoice[] }
-  | { type: "failed"; message: string }
-  | { type: "style"; voice: ClonedVoice | null }
-  | { type: "delete"; voice: ClonedVoice | null };
+type Action = { type: "loaded"; voices: ClonedVoice[] } | { type: "failed"; message: string } | { type: "style"; voice: ClonedVoice | null } | { type: "delete"; voice: ClonedVoice | null };
 
 function reduce(s: State, a: Action): State {
   switch (a.type) {
@@ -137,7 +133,14 @@ function Grid({ voices, playing, dispatch, preview }: { voices: ClonedVoice[]; p
   return (
     <div className="sk-voices" data-testid="cloned-voices">
       {voices.map((v) => (
-        <ClonedCard key={v.id} voice={v} playing={playing === v.id} onPreview={() => void preview(v).catch(failed)} onStyle={() => dispatch({ type: "style", voice: v })} onDelete={() => dispatch({ type: "delete", voice: v })} />
+        <ClonedCard
+          key={v.id}
+          voice={v}
+          playing={playing === v.id}
+          onPreview={() => void preview(v).catch(failed)}
+          onStyle={() => dispatch({ type: "style", voice: v })}
+          onDelete={() => dispatch({ type: "delete", voice: v })}
+        />
       ))}
     </div>
   );

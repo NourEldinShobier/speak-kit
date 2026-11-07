@@ -51,7 +51,11 @@ const choose = (over: Partial<Omit<Step<"choose">, "step">> = {}): CloneState =>
 export function lengthCheck(durationMs: number): CloneCheck {
   const sec = (ms: number) => `${Math.round(ms / 1000)} s`;
   const ok = durationMs >= CLONE_MIN_MS && durationMs <= CLONE_MAX_MS;
-  return { id: "length", ok, message: ok ? `${sec(durationMs)}, between ${sec(CLONE_MIN_MS)} and ${sec(CLONE_MAX_MS)}.` : `${sec(durationMs)}. Use a clip of ${sec(CLONE_MIN_MS)} to ${sec(CLONE_MAX_MS)}.` };
+  return {
+    id: "length",
+    ok,
+    message: ok ? `${sec(durationMs)}, between ${sec(CLONE_MIN_MS)} and ${sec(CLONE_MAX_MS)}.` : `${sec(durationMs)}. Use a clip of ${sec(CLONE_MIN_MS)} to ${sec(CLONE_MAX_MS)}.`,
+  };
 }
 
 /** The text sentence spoken by "Play test". */

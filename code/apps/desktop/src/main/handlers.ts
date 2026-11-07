@@ -46,7 +46,9 @@ export { metrics };
 /** The only addresses the renderer can make the app open. The microphone page of the OS settings exists on Windows and macOS. */
 const EXTERNAL_URLS: Record<ExternalLink, string | undefined> = {
   webstore: "https://chromewebstore.google.com/search/SpeakKit",
-  "microphone-settings": ({ win32: "ms-settings:privacy-microphone", darwin: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" } as Partial<Record<string, string>>)[process.platform],
+  "microphone-settings": ({ win32: "ms-settings:privacy-microphone", darwin: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" } as Partial<Record<string, string>>)[
+    process.platform
+  ],
 };
 
 const loginItemArgs = (config: Config) => (config.startMinimized ? ["--hidden"] : []);
