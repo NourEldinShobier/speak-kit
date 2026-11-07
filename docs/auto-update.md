@@ -20,7 +20,6 @@ When the download finishes the state is `ready` and the pill "Update ready" appe
 
 - **Install when I quit**: arms electron-updater's `autoInstallOnAppQuit`. The silent installer runs when the app exits; the app does not reopen. The quit dialog (K11) lists "Speak Kit X installs".
 - Doing nothing keeps the current version. The card has no "Remind me later" button; the pill stays until the update is installed.
-- Doing nothing keeps the current version. "Remind me later" hides the pill for a day.
 
 **Reading or export running.** Restart now would stop it, so the card asks first ("Restart to install X?": Keep working / Restart anyway). The same guard sits in `Updates.installNow()`, so the tray item "Restart to update" cannot restart over a running reading either: it brings the About page forward instead. "Install when I quit" needs no confirmation; the quit dialog already says what stops.
 

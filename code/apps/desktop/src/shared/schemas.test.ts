@@ -10,8 +10,15 @@ describe("config defaults and repair", () => {
     expect(c.notifications["export-done"]).toEqual({ toast: true, bell: true, sound: false });
     expect(c.notifications["reading-finished"]).toEqual({ toast: false, bell: false, sound: false });
     expect(c.notifications["engine-error"].sound).toBe(true);
-    expect(c).toMatchObject({ doNotDisturb: false, autoUpdate: true, updateRemindAtMs: 0, exportPrefs: { format: "mp3", mp3Kbps: 192, folder: "" } });
+    expect(c).toMatchObject({ doNotDisturb: false, autoUpdate: true, exportPrefs: { format: "mp3", mp3Kbps: 192, folder: "" } });
     expect("notifyDownload" in c).toBe(false);
+  });
+
+  it("loads a saved config that still has the removed update snooze and drops it", () => {
+    const c = parseConfig({ updateRemindAtMs: 1_800_000_000_000 });
+    expect("updateRemindAtMs" in c).toBe(false);
+    expect(v.safeParse(ARGS.updateAction, ["remind-later"]).success).toBe(false);
+    expect(v.safeParse(ARGS.updateAction, ["install-on-quit"]).success).toBe(true);
   });
 
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {

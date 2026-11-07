@@ -65,8 +65,6 @@ export const ConfigSchema = v.object({
   notifications: v.fallback(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
   autoUpdate: bool(true),
-  /** Epoch ms before which the update card stays hidden ("Remind me later"). */
-  updateRemindAtMs: v.fallback(v.pipe(v.number(), v.minValue(0)), 0),
   shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
   voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64)), DEFAULT_VOICE),
@@ -90,7 +88,6 @@ export const ConfigPatchSchema = v.partial(
     notifications: NotificationsSchema,
     doNotDisturb: v.boolean(),
     autoUpdate: v.boolean(),
-    updateRemindAtMs: v.pipe(v.number(), v.minValue(0)),
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),

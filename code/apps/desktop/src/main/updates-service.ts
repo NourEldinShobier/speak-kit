@@ -100,10 +100,6 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
         case "install-on-quit":
           await updates.installOnQuit();
           break;
-        case "remind-later":
-          ctx.config.updateRemindAtMs = Date.now() + DAILY_MS;
-          ctx.saveConfig();
-          break;
         case "open-release": {
           const s = updates.state;
           if (s.kind === "manual" && isReleaseUrl(s.url)) void shell.openExternal(s.url);

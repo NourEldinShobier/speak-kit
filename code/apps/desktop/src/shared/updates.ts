@@ -19,7 +19,7 @@ export type UpdateState =
 
 export const UPDATE_UNSUPPORTED: UpdateState = { kind: "unsupported" };
 
-export const UPDATE_ACTIONS = ["check", "download", "install-now", "install-now-anyway", "install-on-quit", "remind-later", "open-release"] as const;
+export const UPDATE_ACTIONS = ["check", "download", "install-now", "install-now-anyway", "install-on-quit", "open-release"] as const;
 export type UpdateAction = (typeof UPDATE_ACTIONS)[number];
 
 /** Maps an electron-updater / network error message to an error. Checksum and 404 are matched before the generic network codes. */
