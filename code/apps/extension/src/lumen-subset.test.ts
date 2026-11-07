@@ -8,7 +8,7 @@ const kit = lumenSubset(readFileSync(new URL("../../../packages/ui/src/lumen.css
 describe("in-page kit styles keep the per-platform radii", () => {
   test("the content subset carries the macOS defaults and the Windows override", () => {
     expect(kit).toContain(":root,:host{--radius-dialog:16px;--radius-panel:14px;--radius-tray:14px;");
-    expect(kit).toContain('[data-platform="win32"]{--radius-dialog:10px;--radius-panel:8px;--radius-tray:10px;--radius-menu:10px;--radius-window:10px;--radius-card:10px}');
+    expect(kit).toContain('[data-platform="win32"]{--radius-dialog:10px;--radius-panel:8px;--radius-tray:10px;--radius-menu:10px;--radius-window:10px;--radius-card:8px}');
   });
 
   test("browserPlatform maps the user-agent platform to the data-platform value", () => {

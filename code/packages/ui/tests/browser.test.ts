@@ -105,7 +105,7 @@ describe("Button states (real CSS)", () => {
         e.remove();
         return v;
       }, cls);
-    expect(await shadow("lm-menu")).toBe("rgba(0, 0, 0, 0.06) 0px 1px 2px 0px");
+    expect(await shadow("lm-menu")).toBe("rgba(0, 0, 0, 0.06) 0px 2px 6px 0px");
     expect(await shadow("lm-dialog")).toBe("rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.07) 0px 4px 12px 0px");
   });
 
@@ -291,7 +291,7 @@ describe("Lockix geometry", () => {
     }
     expect((await measure("win32")).palette).toEqual([10, 4]);
     expect((await measure("darwin")).palette).toEqual([16, 8]);
-    expect((await measure("darwin")).menu).toEqual([10, 5]);
+    expect((await measure("darwin")).menu).toEqual([10, 6]);
     expect((await measure("darwin")).seg).toEqual([8, 6]);
   });
 
@@ -312,9 +312,9 @@ describe("Lockix geometry", () => {
         delete root.dataset.platform;
         return { ...out, dialogBox: used };
       }, platform);
-    expect(await radii("darwin")).toEqual({ panel: "14px", tray: "14px", window: "12px", dialog: "16px", card: "10px", menu: "10px", control: "8px", dialogBox: "16px" });
+    expect(await radii("darwin")).toEqual({ panel: "14px", tray: "14px", window: "12px", dialog: "16px", card: "8px", menu: "10px", control: "8px", dialogBox: "16px" });
     expect(await radii(null)).toEqual(await radii("darwin"));
-    expect(await radii("win32")).toEqual({ panel: "8px", tray: "10px", window: "10px", dialog: "10px", card: "10px", menu: "10px", control: "8px", dialogBox: "10px" });
+    expect(await radii("win32")).toEqual({ panel: "8px", tray: "10px", window: "10px", dialog: "10px", card: "8px", menu: "10px", control: "8px", dialogBox: "10px" });
   });
 
   test("spacing follows Lockix: rows 42 / 58, list row 58, dialog padding 16 gap 14 foot gap 8, menu padding 4 item 28, toast 356 x 52, fields 36 / 28", async () => {

@@ -89,7 +89,7 @@
   --radius-tray: 14px;
   --radius-menu: 10px;
   --radius-window: 12px;
-  --radius-card: 10px;
+  --radius-card: 8px;
   --radius-control: 8px;
   --radius-track: 8px;
   --radius-item: 8px;
@@ -116,7 +116,7 @@
   --radius-tray: 10px;
   --radius-menu: 10px;
   --radius-window: 10px;
-  --radius-card: 10px;
+  --radius-card: 8px;
 }
 
 /* Concentric inner radii: a fill that sits inside a rounded container has radius = container radius - (border + padding), at least --radius-xs.
@@ -124,7 +124,7 @@
 :root,
 :host,
 [data-platform] {
-  --radius-menu-item: max(var(--radius-xs), calc(var(--radius-menu) - 1px - 4px)); /* menu: 1px border, 4px padding */
+  --radius-menu-item: 6px; /* menu rows: 6, selected row included */
   --radius-seg-opt: max(var(--radius-xs), calc(var(--radius-track) - 2px)); /* segmented track: 2px padding */
   --radius-palette-item: max(var(--radius-xs), calc(var(--radius-dialog) - 8px)); /* command palette: 8px list padding */
 }
@@ -132,12 +132,14 @@
 .lm {
   /* elevation: at most two layers, blur 12 px at most */
   --shadow-card: 0 0 4px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-card-ring: 0 0 0 1px var(--stroke-divider), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-card-ring: 0 0 0 1px var(--stroke-control), 0 1px 2px rgb(0 0 0 / 0.06);
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.06);
-  --shadow-menu: var(--shadow-control);
+  /* floating cards (menu, select list, popover): the element has its own 1 px --stroke-control border, so the shadow is the drop only */
+  --shadow-menu: 0 2px 6px rgb(0 0 0 / 0.06);
   --shadow-cta: 0 2px 4px rgb(0 0 0 / 0.1);
   --shadow-tab: 0 1px 3px rgb(0 0 0 / 0.12);
-  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
+  /* the same card for a surface without a border (toast, in-page cards): the edge is the 1 px ring */
+  --shadow-popover: 0 0 0 1px var(--stroke-control), var(--shadow-menu);
   --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.07);
   --shadow-drawer: 0 0 0 1px rgb(0 0 0 / 0.1), -4px 0 12px rgb(0 0 0 / 0.07);
   --shadow-panel: var(--shadow-card);
@@ -1127,6 +1129,10 @@
 .lm-menu__item:is(.is-hover, .is-active, [aria-selected="true"], [aria-current="true"], [data-highlighted], [data-state="open"]) {
   background: var(--fill-hover);
 }
+/* the current choice: a full-width row, radius 6, with the check mark at the right */
+.lm-menu__item:is(.is-selected, [aria-checked="true"], [data-state="checked"]) {
+  background: var(--fill-selected);
+}
 @media (hover: hover) and (pointer: fine) {
   .lm-menu__item:hover {
     background: var(--fill-hover);
@@ -1397,6 +1403,19 @@
   max-height: min(320px, var(--radix-select-content-available-height, 320px));
   overflow: auto;
   animation: lm-pop var(--dur-layout) var(--ease-layout);
+}
+/* the scrollbar is 3 px from the right edge: a 6 px bar whose thumb has a transparent 3 px end border */
+.lm-select__menu::-webkit-scrollbar {
+  width: 6px;
+}
+.lm-select__menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lm-select__menu::-webkit-scrollbar-thumb {
+  border-inline-end: 3px solid transparent;
+  border-radius: var(--radius-bar);
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
 }
 @keyframes lm-pop {
   from {

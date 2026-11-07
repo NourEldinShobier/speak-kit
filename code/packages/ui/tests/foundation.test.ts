@@ -92,3 +92,48 @@ describe("c) keyboard chip", () => {
     expect(await look(html, "kbd", ["background-color", "color", "font-size", "height"])).toEqual(["rgb(58, 56, 65)", "rgb(255, 255, 255)", "11px", "18px"]);
   });
 });
+
+describe("d) cards", () => {
+  test("white, 1px #E5E5E5 ring, shadow 0 1 2 at 6%, radius 8", async () => {
+    expect(await look('<div class="lm-card"><div class="lm-row">A</div></div>', ".lm-card", ["background-color", "box-shadow", "border-top-left-radius"])).toEqual([
+      "rgb(255, 255, 255)",
+      "rgb(229, 229, 229) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px",
+      "8px",
+    ]);
+  });
+});
+
+describe("e) floating cards", () => {
+  const props = ["border-top-width", "border-top-color", "box-shadow", "overflow-x"];
+  test("menu: one 1px #E5E5E5 border and one shadow 0 2 6 at 6%", async () => {
+    expect(await look('<div class="lm-menu"><button class="lm-menu__item">Copy</button></div>', ".lm-menu", props)).toEqual(["1px", "rgb(229, 229, 229)", "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", "visible"]);
+  });
+  test("popover has the same border and shadow", async () => {
+    expect(await look('<div class="lm-popover">A</div>', ".lm-popover", props)).toEqual(["1px", "rgb(229, 229, 229)", "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", "visible"]);
+  });
+  test("a surface without a border (toast) gets the 1px ring plus the same drop, not a second border", async () => {
+    expect(await look('<div class="lm-toast">A</div>', ".lm-toast", ["border-top-width", "box-shadow"])).toEqual(["0px", "rgb(229, 229, 229) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 2px 6px 0px"]);
+  });
+  test("the current row is full width, radius 6, with the check mark at the right", async () => {
+    const html =
+      '<div class="lm-menu" style="width:200px"><div class="lm-menu__item" data-state="checked"><span class="lm-menu__label">Serif</span><span class="lm-menu__check">x</span></div></div>';
+    expect(await look(html, ".lm-menu__item", ["background-color", "border-top-left-radius", "width"])).toEqual(["rgb(240, 240, 240)", "6px", "190px"]);
+    const check = await page.evaluate(() => {
+      const r = document.querySelector(".lm-menu__check")!.getBoundingClientRect();
+      const row = document.querySelector(".lm-menu__item")!.getBoundingClientRect();
+      return Math.round(row.right - r.right);
+    });
+    expect(check).toBe(6);
+  });
+  test("the select list scrolls with a 3px visible thumb that sits 3px from the right edge, and its border and shadow are not clipped", async () => {
+    const html = `<div class="lm-menu lm-select__menu" style="width:200px;max-height:100px">${'<div class="lm-menu__item">Row</div>'.repeat(10)}</div>`;
+    await page.setContent(`<style>${css}</style><div class="lm" style="padding:20px">${html}</div>`);
+    const m = await page.evaluate(() => {
+      const e = document.querySelector<HTMLElement>(".lm-select__menu")!;
+      const thumb = getComputedStyle(e, "::-webkit-scrollbar-thumb");
+      const bar = getComputedStyle(e, "::-webkit-scrollbar").width;
+      return { bar, endBorder: thumb.borderInlineEndWidth, border: getComputedStyle(e).borderTopWidth, shadow: getComputedStyle(e).boxShadow };
+    });
+    expect(m).toEqual({ bar: "6px", endBorder: "3px", border: "1px", shadow: "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px" });
+  });
+});
