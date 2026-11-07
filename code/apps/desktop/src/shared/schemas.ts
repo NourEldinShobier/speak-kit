@@ -148,6 +148,7 @@ export const ARGS = {
   engines: v.tuple([]),
   selectEngine: v.tuple([EngineIdSchema]),
   installEngine: v.tuple([EngineIdSchema]),
+  cancelInstall: v.tuple([EngineIdSchema]),
   removeEngine: v.tuple([EngineIdSchema]),
   updateAction: v.tuple([v.picklist(UPDATE_ACTIONS)]),
   exportCheck: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.pipe(v.string(), v.maxLength(120)), v.picklist(EXPORT_FORMATS)]),

@@ -38,12 +38,18 @@ describe("ServerApi", () => {
     expect(seen).toEqual([{ method: "GET", url: "/v1/engines", auth: "Bearer tok", body: "" }]);
   });
 
-  it("selects, installs and removes an engine on the documented routes", async () => {
+  it("selects, installs, cancels and removes an engine on the documented routes", async () => {
     const { api, seen } = await stub((_r, _b, res) => json(res, 200, LIST));
     await api.selectEngine("chatterbox");
     await api.installEngine("chatterbox");
+    await api.cancelInstall("chatterbox");
     await api.removeEngine("chatterbox");
-    expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual(['POST /v1/engines/select {"id":"chatterbox"}', "POST /v1/engines/chatterbox/install ", "DELETE /v1/engines/chatterbox "]);
+    expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual([
+      'POST /v1/engines/select {"id":"chatterbox"}',
+      "POST /v1/engines/chatterbox/install ",
+      "POST /v1/engines/chatterbox/cancel ",
+      "DELETE /v1/engines/chatterbox ",
+    ]);
   });
 
   it("turns the server's error body into a ServerError with status, code and the server's detail", async () => {

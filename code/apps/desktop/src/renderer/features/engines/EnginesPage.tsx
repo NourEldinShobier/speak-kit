@@ -74,7 +74,7 @@ export function EnginesPage({ s }: { s: AppState }) {
           {st.error}
         </Banner>
       )}
-      <div className="lm-card" data-testid="engines">
+      <div className="lm-card sk-engines" data-testid="engines">
         {shown?.engines.map((e) => (
           <EngineRow key={e.id} engine={e} active={shown.active === e.id} busy={st.busy} onAction={(a) => onAction(e, a)} />
         ))}

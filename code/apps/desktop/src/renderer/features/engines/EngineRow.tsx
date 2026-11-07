@@ -2,6 +2,10 @@ import { Button, Icon, ProgressBar, StatusPill } from "@speakkit/ui";
 import type { EngineInfo } from "@speakkit/protocol";
 import { describeEngine, type EngineAction } from "../../../shared/engines";
 import { ACTION_LABELS, ENGINE_BLURBS } from "./model";
+import "./engines.css";
+
+const PRIMARY = new Set<EngineAction>(["install", "retry"]);
+const variant = (a: EngineAction) => (a === "remove" ? "danger" : PRIMARY.has(a) ? "primary" : "secondary");
 
 interface RowProps {
   engine: EngineInfo;
@@ -30,6 +34,12 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
           </span>
         )}
         {d.note && <span data-testid={`engine-note-${e.id}`}>{d.note}</span>}
+        {d.details && (
+          <details className="sk-engine__more" data-testid={`engine-details-${e.id}`}>
+            <summary>Details</summary>
+            <code>{d.details}</code>
+          </details>
+        )}
         {d.progress !== null && <ProgressBar thin value={Math.round(d.progress * 100)} label={`${e.name} progress`} />}
       </div>
       <div className="sk-row-actions">
@@ -37,7 +47,7 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
           {d.pill.label}
         </StatusPill>
         {d.actions.map((a) => (
-          <Button key={a} size="sm" variant={a === "remove" ? "danger" : "secondary"} loading={busy === `${e.id}:${a}`} onClick={() => onAction(a)}>
+          <Button key={a} variant={variant(a)} loading={busy === `${e.id}:${a}`} onClick={() => onAction(a)}>
             {ACTION_LABELS[a]}
           </Button>
         ))}

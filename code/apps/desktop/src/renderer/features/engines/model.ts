@@ -45,7 +45,16 @@ export function enginesReducer(s: EnginesState, a: EnginesAction): EnginesState 
   }
 }
 
-export const ACTION_LABELS: Record<EngineAction, string> = { download: "Download", install: "Install", load: "Load now", retry: "Retry", use: "Use this engine", remove: "Remove" };
+export const ACTION_LABELS: Record<EngineAction, string> = {
+  download: "Download",
+  install: "Install",
+  cancel: "Cancel",
+  load: "Load now",
+  retry: "Retry",
+  use: "Use this engine",
+  fallback: "Use Kokoro instead",
+  remove: "Remove",
+};
 
 export const ENGINE_BLURBS: Record<string, string> = {
   kokoro: "Natural English voices, runs on the CPU, about one second to the first word.",

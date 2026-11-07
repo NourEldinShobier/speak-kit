@@ -86,6 +86,7 @@ export class ServerApi {
   engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
   selectEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", "/v1/engines/select", { body: { id } }));
   installEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", `/v1/engines/${id}/install`));
+  cancelInstall = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", `/v1/engines/${id}/cancel`));
   removeEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("DELETE", `/v1/engines/${id}`));
 
   startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));

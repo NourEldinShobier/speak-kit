@@ -2,7 +2,7 @@ import type { Ctx } from "./context";
 import type { Api } from "../shared/ipc";
 import { ServerError } from "./server-api";
 
-type EngineHandlers = Pick<Api, "engines" | "selectEngine" | "installEngine" | "removeEngine" | "warmEngine">;
+type EngineHandlers = Pick<Api, "engines" | "selectEngine" | "installEngine" | "cancelInstall" | "removeEngine" | "warmEngine">;
 
 /** A server that predates the engine routes answers 404; say so instead of a bare HTTP code. */
 const explain = async <T>(p: Promise<T>): Promise<T> =>
@@ -22,6 +22,7 @@ export function engineHandlers(ctx: Ctx): EngineHandlers {
     engines: () => explain(s.engines()),
     selectEngine: (id) => after(s.selectEngine(id)),
     installEngine: (id) => after(s.installEngine(id)),
+    cancelInstall: (id) => after(s.cancelInstall(id)),
     removeEngine: (id) => after(s.removeEngine(id)),
     warmEngine: () => s.warm(),
   };

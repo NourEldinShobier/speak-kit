@@ -128,6 +128,8 @@ export interface Api {
   engines(): Promise<EngineList>;
   selectEngine(id: EngineId): Promise<EngineList>;
   installEngine(id: EngineId): Promise<EngineList>;
+  /** Stops a running install of an optional engine. */
+  cancelInstall(id: EngineId): Promise<EngineList>;
   removeEngine(id: EngineId): Promise<EngineList>;
   updateAction(action: UpdateAction): Promise<AppState>;
   exportCheck(dir: string, name: string, format: "wav" | "mp3"): Promise<ExportTarget>;
@@ -169,6 +171,7 @@ export const METHODS = [
   "engines",
   "selectEngine",
   "installEngine",
+  "cancelInstall",
   "removeEngine",
   "updateAction",
   "exportCheck",

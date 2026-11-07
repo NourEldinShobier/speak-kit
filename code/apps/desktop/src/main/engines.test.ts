@@ -20,6 +20,7 @@ describe("engineHandlers", () => {
   it.each([
     ["selectEngine", "chatterbox"],
     ["installEngine", "chatterbox"],
+    ["cancelInstall", "chatterbox"],
     ["removeEngine", "chatterbox"],
   ] as const)("%s calls the server with the id and then refreshes the health pill", async (method, id) => {
     const calls: string[] = [];
