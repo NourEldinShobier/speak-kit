@@ -10,9 +10,9 @@
   gap: 10px;
   min-height: 52px;
   padding: 6px 10px 6px 12px;
-  border-radius: var(--radius-window, 12px);
+  border-radius: 12px;
   background: var(--surface-raised);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  box-shadow: var(--shadow-popover);
   white-space: nowrap;
   max-width: calc(100% - 24px);
   animation: lm-pop var(--dur-layout, 260ms) var(--ease-layout, ease);
@@ -102,7 +102,7 @@
   padding: 10px 14px;
   border-radius: var(--radius-card, 10px);
   background: var(--surface-card);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  box-shadow: var(--shadow-popover);
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-secondary);

@@ -23,7 +23,8 @@ export interface ReaderDeps {
 
 const HEADING = /^h([1-6])$/;
 
-const panelRow = (label: string, control: Node, value?: HTMLElement) => h("div", { class: "sk-prow" }, h("span", { class: "sk-plabel" }, label), h("div", { class: "sk-pctl" }, control, value));
+/** Label on the left, value or switch on the right. */
+const panelRow = (label: string, end: Node) => h("div", { class: "sk-prow" }, h("span", { class: "sk-plabel" }, label), end);
 
 /** The reader's element for a page block: headings drop below the title (h2 and lower), quotes stay, everything else is a paragraph. */
 function blockTag(tag: string): string {
@@ -261,7 +262,7 @@ export class ReaderView {
       },
       onCommit: (v) => this.change({ [o.key]: v }),
     });
-    return panelRow(o.row, sl.el, out);
+    return h("div", { class: "sk-pgroup" }, panelRow(o.row, out), sl.el);
   }
 
   private preview(patch: Partial<ReaderSettings>) {

@@ -53,7 +53,7 @@ export function voicePopover(o: VoicePopoverOptions): HTMLElement {
   let state: ListState = "loading";
   const count = h("small", { class: "sk-pop-count" }, "Loading...");
   const input = h("input", { class: "lm-input__field", placeholder: "Search voices", "aria-label": "Search voices", type: "search" });
-  const search = h("label", { class: "lm-input lm-input--sm" }, icon("search", 16, "lm-input__icon"), input);
+  const search = h("label", { class: "lm-input" }, icon("search", 16, "lm-input__icon"), input);
   const rows = h("div", { class: "sk-vlist", role: "list", "aria-label": "Voices" });
   const draw = () => {
     rows.textContent = "";

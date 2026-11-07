@@ -125,7 +125,24 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     await page.waitForSelector("[data-sk=popover-speed]");
     const pop = await box(page, "[data-sk=popover-speed]");
     const trig = await box(page, "[data-sk=dock-speed]");
-    expect(pop.width).toBe(300); // the popover surface is 300 wide
+    expect([pop.width, pop.height]).toEqual([300, 184]); // B15: 300 x 184
+    const card = await page.locator("[data-sk=popover-speed]").evaluate((el: Element) => {
+      const c = getComputedStyle(el);
+      return { border: `${c.borderTopWidth} ${c.borderTopColor}`, shadow: c.boxShadow, radius: c.borderRadius, overflow: c.overflow };
+    });
+    expect(card).toEqual({ border: "1px rgb(229, 229, 229)", shadow: "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", radius: "12px", overflow: "visible" });
+    const rows = await page.locator("[data-sk=popover-speed]").evaluate((el: Element) => {
+      const r = (s: string) => el.querySelector(s)!.getBoundingClientRect();
+      return {
+        head: [el.querySelector(".sk-pop-head")!.textContent, r(".sk-pop-head").width],
+        slider: r(".lm-slider").width,
+        scale: el.querySelector(".sk-pop-scale")!.textContent,
+        presets: el.querySelectorAll(".sk-pop-presets [role=radio]").length,
+        fill: getComputedStyle(el.querySelector(".lm-slider__range")!).backgroundColor,
+      };
+    });
+    expect(rows).toEqual({ head: ["Speed1.2x", 266], slider: 266, scale: "0.5x3x", presets: 6, fill: "rgb(32, 30, 37)" });
+    expect(await page.locator("[data-sk=speed-1\\.2]").getAttribute("aria-checked")).toBe("true");
     expect(Math.abs(pop.x + pop.width - (trig.x + trig.width))).toBeLessThan(1);
     expect(Math.abs(pop.y + pop.height - (await box(page, "[data-sk=dock]")).y + 26)).toBeLessThan(1.5);
     await page.click("[data-sk=speed-1\\.5]");
@@ -143,6 +160,20 @@ describe("floating dock (B4-B9, B15, B16)", () => {
     expect((await sent(page)).at(-1)).toEqual({ t: "player", command: { cmd: "set-speed", speed: 2.95 } });
     await page.keyboard.press("Escape");
     await page.waitForSelector("[data-sk=popover-speed]", { state: "detached" });
+    await page.context().close();
+  });
+
+  test("the dock is a floating card with one 1 px #E5E5E5 ring, shadow 0 2 6 at 6% and radius 12, and a dark progress fill", async () => {
+    const page = await open(dockSettings());
+    const doc = await startPage(page);
+    await deliver(page, { t: "state", state: st({ docId: doc.docId }) });
+    await page.waitForSelector("[data-sk=dock]");
+    const css = await page.locator("[data-sk=dock]").evaluate((el: Element) => {
+      const c = getComputedStyle(el);
+      return { shadow: c.boxShadow, radius: c.borderRadius, border: c.borderTopWidth, overflow: c.overflow };
+    });
+    expect(css).toEqual({ shadow: "rgb(229, 229, 229) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", radius: "12px", border: "0px", overflow: "visible" });
+    expect(await page.locator("[data-sk=dock] .lm-progress__bar").evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe("rgb(32, 30, 37)");
     await page.context().close();
   });
 

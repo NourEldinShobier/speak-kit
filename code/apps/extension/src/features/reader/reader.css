@@ -139,9 +139,21 @@
   color: var(--text-on-highlight);
   border-radius: 3px;
 }
+/* Reading popover: 16 padding and gap; each slider is a group (label left, value right, slider full width below). */
 .sk-pop-reading {
   position: absolute;
-  width: 320px;
+  width: 300px;
+}
+.sk-pop-reading .lm-seg {
+  width: 100%;
+}
+.sk-pgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sk-pgroup .lm-slider {
+  width: 100%;
 }
 .sk-prow {
   display: flex;
@@ -152,19 +164,10 @@
 .sk-plabel {
   color: var(--text-secondary);
 }
-.sk-pctl {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.sk-pctl .lm-slider {
-  width: 140px;
-}
 .sk-pval {
-  min-width: 44px;
-  text-align: end;
-  color: var(--text-secondary);
-  font-size: 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 .sk-reader-block.is-dup {
   display: none;

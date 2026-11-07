@@ -139,3 +139,33 @@ describe("highlight and read-along", () => {
     await page.context().close();
   });
 });
+
+describe("reader reading popover", () => {
+  test("is a 300 px floating card; Size and Width are a label and value row over a full-width dark slider; no blue ring", async () => {
+    const page = await open();
+    await page.hover("[data-sk=launcher-tab]");
+    await page.click("[data-sk=launcher-reader]");
+    await page.click("[data-sk=reader-settings]");
+    await page.waitForSelector(".sk-pop-reading");
+    const r = await page.locator(".sk-pop-reading").evaluate((el: Element) => {
+      const c = getComputedStyle(el);
+      const g = el.querySelector(".sk-pgroup")!;
+      const bx = (e: Element) => e.getBoundingClientRect();
+      return {
+        card: [bx(el).width, `${c.borderTopWidth} ${c.borderTopColor}`, c.boxShadow, c.borderRadius, c.overflow],
+        rows: [...el.querySelectorAll(".sk-pgroup")].map((x) => x.querySelector(".sk-prow")!.textContent),
+        slider: [bx(g.querySelector(".lm-slider")!).width, bx(g).width],
+        fill: getComputedStyle(g.querySelector(".lm-slider__range")!).backgroundColor,
+        seg: [...el.querySelectorAll(".lm-seg")].map((x) => bx(x).width),
+      };
+    });
+    expect(r).toEqual({
+      card: [300, "1px rgb(229, 229, 229)", "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", "12px", "visible"],
+      rows: ["Size18px", "Width680px"],
+      slider: [266, 266],
+      fill: "rgb(32, 30, 37)",
+      seg: [266, 266],
+    });
+    await page.context().close();
+  });
+});
