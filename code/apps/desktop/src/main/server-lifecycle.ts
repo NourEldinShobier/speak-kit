@@ -127,9 +127,10 @@ export class ServerRuntime {
       const engine = this.#engine ?? this.createEngine();
       // Same rule as the standalone server: the fake engine (tests) has no sidecar, and SPEAKKIT_CHATTERBOX=off skips the hardware probe.
       if (!this.#chatterbox && (process.env.SPEAKKIT_ENGINE !== "fake" || this.#d.fakeChatterbox) && process.env.SPEAKKIT_CHATTERBOX !== "off")
-        this.#chatterbox = await createChatterbox(dataDir, { ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }), ...fakeChatterboxOptions(this.#d.fakeChatterbox) }).catch(
-          (e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined),
-        );
+        this.#chatterbox = await createChatterbox(dataDir, {
+          ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }),
+          ...(__TEST_CODE__ ? fakeChatterboxOptions(this.#d.fakeChatterbox) : {}),
+        }).catch((e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined));
       const { server, port } = await listenWithFallback(config.preferredPort, (port) =>
         createServer({
           engine,

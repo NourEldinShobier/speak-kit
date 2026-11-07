@@ -22,6 +22,11 @@ describe("main bundle", () => {
     expect(shipped).not.toContain("fakeUpdater");
     expect(shipped).not.toContain('emit("update-available"');
   });
+
+  it("contains the pretend GPU for Chatterbox in the test build and not in the packaged one", async () => {
+    expect(await bundle("test", true)).toContain("Test GPU");
+    expect(await bundle("shipped", false)).not.toContain("Test GPU");
+  });
 });
 
 describe("renderer bundle", () => {
