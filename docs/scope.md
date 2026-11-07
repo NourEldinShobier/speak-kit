@@ -16,6 +16,7 @@ How to read it:
 | F1 F2 F3 F4 F5 F7 F8 F9 F15 F16 (Reader: playing, paused, preparing, finished, read from here, display settings, sleep timer, speed and voice, back to current, search in text) and F6 (outline) | `renderer/features/reader`; `e2e/tests/reader.spec.ts` |
 | F14 (voice panel dock), bookmarks in F6, export audio from the reader | `renderer/features/reader` (`Controls.tsx`, `Panels.tsx`), `DocMeta.bookmarks`; Electron specs `apps/desktop/tests/reader.test.ts` |
 | F10 F11 F13 (PDF reading, scanned page, recognizing text with consent) | `main/library/parse/pdf*.ts`, `renderer/features/reader/ocr.ts`; real OCR run is not exercised, tests use a fake recognizer |
+| G2 (Voice detail drawer; frame 31527) | `renderer/features/voices` (`VoiceDrawer.tsx`, `DrawerHost.tsx`, `drawer.ts`); opens from a voice card, steps through the filtered list, sets the default voice; tests `drawer.test.ts`, `VoiceDrawer.test.tsx`, `tests/screens.test.ts` |
 | G8 O2 O3 (Engines overview, unloaded, loading) | `renderer/EnginesPage.tsx`, `GET /v1/engines` |
 | G9 G10 G16 (Chatterbox warming up, out of GPU memory, ready) | same page (`features/engines`); covered by the real GPU run and the fake sidecar. The CUDA out-of-memory error itself was only produced by the fake. G10 has no live list of the programs using the GPU and no low-memory mode |
 | H1 H7 H15 (Settings General, appearance, startup and tray) | `renderer/settings.tsx` (one General page holds all three) |
@@ -46,7 +47,7 @@ How to read it:
 
 | Frames | out of scope: reason |
 |---|---|
-| G2 (Voice detail drawer), G13 (Voices list view) | out of scope: the Voices page lists voices with a preview button; a drawer and a second layout add no capability |
+| G13 (Voices list view) | out of scope: removed by decision (design-decisions-to-apply.md 2.18); the Voices page has the grid only |
 | H3 (Pronunciation dictionary) | out of scope: no engine API for custom pronunciations exists; kokoro-js and Chatterbox take text only |
 | H17 (Search settings) | out of scope: the title bar search opens the command palette (L2, L3), which finds every settings page |
 | I13 (Mini player storyboard: shrink to a dot) | out of scope: the mini player closes itself 6 s after finishing |
