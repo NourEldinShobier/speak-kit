@@ -30,7 +30,13 @@ describe("renderer bundle", () => {
     const read = async (name: string, testCode: boolean) => {
       const dir = path.join(out, name);
       vi.stubEnv("NODE_ENV", "production");
-      await build({ configFile: path.join(appDir, "vite.config.ts"), logLevel: "warn", mode: "production", define: { __TEST_CODE__: JSON.stringify(testCode) }, build: { outDir: dir, emptyOutDir: true } }).finally(() => vi.unstubAllEnvs());
+      await build({
+        configFile: path.join(appDir, "vite.config.ts"),
+        logLevel: "warn",
+        mode: "production",
+        define: { __TEST_CODE__: JSON.stringify(testCode) },
+        build: { outDir: dir, emptyOutDir: true },
+      }).finally(() => vi.unstubAllEnvs());
       return readdirSync(path.join(dir, "assets"))
         .filter((f) => f.endsWith(".js"))
         .map((f) => readFileSync(path.join(dir, "assets", f), "utf8"))
