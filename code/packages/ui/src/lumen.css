@@ -1238,13 +1238,13 @@
   pointer-events: none;
 }
 
-/* ---------- segmented: track 36, items 32 (sm: 28 / 24) ---------- */
+/* ---------- segmented: track 32, items 28 (lg: 36 / 32 for a 36 px settings row; sm: 28 / 24) ---------- */
 .lm-seg {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   width: fit-content;
-  height: 36px;
+  height: 32px;
   padding: 2px;
   border-radius: var(--radius-track);
   background: var(--track);
@@ -1256,7 +1256,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
+  height: 28px;
   padding: 0 12px;
   margin: 0;
   border: 1px solid transparent;
@@ -1289,11 +1289,10 @@
   }
 }
 .lm-seg__opt[aria-checked="true"] {
-  border-color: var(--stroke-control);
   background: var(--surface-card);
   color: var(--text-label-on-white);
   font-weight: 500;
-  box-shadow: var(--shadow-control);
+  box-shadow: var(--shadow-tab);
 }
 /* the label reserves the width of its selected (500) weight, so selecting does not move it */
 .lm-seg__label {
@@ -1305,6 +1304,12 @@
   line-height: 0;
   visibility: hidden;
   font-weight: 500;
+}
+.lm-seg--lg {
+  height: 36px;
+}
+.lm-seg--lg .lm-seg__opt {
+  height: 32px;
 }
 .lm-seg--sm {
   height: 28px;

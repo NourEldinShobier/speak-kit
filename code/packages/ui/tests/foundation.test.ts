@@ -174,3 +174,26 @@ describe("f) control sizing and the row helper", () => {
     expect(await heights(row('<button class="lm-toggle" role="switch" aria-checked="false"><span class="lm-toggle__knob"></span></button>'), ".lm-row")).toEqual([42]);
   });
 });
+
+describe("g) segmented control", () => {
+  const html = '<div class="lm-seg" style="width:240px"><button class="lm-seg__opt" aria-checked="true">Serif</button><button class="lm-seg__opt" aria-checked="false">Sans</button></div>';
+  test("container 32 high, radius 8, #ECECEC, 2px padding", async () => {
+    expect(await look(html, ".lm-seg", ["height", "border-top-left-radius", "background-color", "padding-top", "padding-left"])).toEqual(["32px", "8px", "rgb(236, 236, 236)", "2px", "2px"]);
+  });
+  test("tabs fill the container width and its inner height", async () => {
+    await page.setContent(`<style>${css}</style><div class="lm">${html}</div>`);
+    const m = await page.evaluate(() => [...document.querySelectorAll(".lm-seg__opt")].map((e) => [e.getBoundingClientRect().width, e.getBoundingClientRect().height]));
+    expect(m).toEqual([
+      [117, 28],
+      [117, 28],
+    ]);
+  });
+  test("selected tab is white, radius 6, shadow 0 1 3, no border colour", async () => {
+    expect(await look(html, '.lm-seg__opt[aria-checked="true"]', ["background-color", "border-top-left-radius", "box-shadow", "border-top-color"])).toEqual([
+      "rgb(255, 255, 255)",
+      "6px",
+      "rgba(0, 0, 0, 0.12) 0px 1px 3px 0px",
+      "rgba(0, 0, 0, 0)",
+    ]);
+  });
+});

@@ -229,9 +229,10 @@ describe("Lockix geometry", () => {
     expect(look).toEqual(["5px rgb(32, 30, 37)", "9999px rgb(32, 30, 37)"]);
   });
 
-  test("segmented control: track 36 with 32px items (sm 28 with 24px items)", async () => {
+  test("segmented control: track 32 with 28px items (lg 36 with 32px, sm 28 with 24px)", async () => {
     const seg = (c: string) => `<div class="lm-seg${c}"><button class="lm-seg__opt" aria-checked="true">On</button><button class="lm-seg__opt" aria-checked="false">Off</button></div>`;
-    expect(await heights(seg(""), ".lm-seg, .lm-seg__opt")).toEqual([36, 32, 32]);
+    expect(await heights(seg(""), ".lm-seg, .lm-seg__opt")).toEqual([32, 28, 28]);
+    expect(await heights(seg(" lm-seg--lg"), ".lm-seg, .lm-seg__opt")).toEqual([36, 32, 32]);
     expect(await heights(seg(" lm-seg--sm"), ".lm-seg, .lm-seg__opt")).toEqual([28, 24, 24]);
   });
 
