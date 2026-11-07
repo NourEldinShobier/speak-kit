@@ -27,6 +27,8 @@ A private text-to-speech reader. Select text in Chrome, press a key, and a natur
 | Reader with word highlighting (desktop app) | 28 voices, each with a preview |
 | ![Extension popup](docs/screenshots/popup-playing.png) | ![Shortcuts](docs/screenshots/app-shortcuts.png) |
 | Extension popup | Global shortcuts you can change |
+| ![Extension options, voice and speed](docs/screenshots/options-voice.png) | ![Voice cloning, naming the voice](docs/screenshots/app-cloning.png) |
+| Extension options: engine, default voice and speed | Cloning a voice: name it, play a test sentence, set the exaggeration |
 
 ## Install
 
