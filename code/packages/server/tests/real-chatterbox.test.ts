@@ -120,6 +120,16 @@ describe.runIf(process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the ser
       m.cloneAndSpeakMs = ms(t);
       expect(cloned.types).toEqual(["audio", "done"]);
       expect(cloned.peak).toBeGreaterThan(1000);
+
+      // Rename the voice and give it a style (the cloning screens do both): the model must accept exaggeration and cfg_weight and speak.
+      const styled = await call("PATCH", `/v1/voices/${voice.id}`, { name: "Styled tone", exaggeration: 0.9, pace: 0.2 });
+      expect(styled.status).toBe(200);
+      expect(await styled.json()).toMatchObject({ id: voice.id, name: "Styled tone", exaggeration: 0.9, pace: 0.2 });
+      const dramatic = await speak(voice.id, [SENTENCE]);
+      expect(dramatic.types).toEqual(["audio", "done"]);
+      expect(dramatic.peak).toBeGreaterThan(1000);
+      m.clonedNeutralSamples = cloned.samples;
+      m.clonedStyledSamples = dramatic.samples;
       await call("DELETE", `/v1/voices/${voice.id}`);
 
       // Idle unload: the sidecar exits and the GPU memory is returned.
