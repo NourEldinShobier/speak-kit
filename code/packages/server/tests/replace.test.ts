@@ -75,3 +75,17 @@ describe("X-SpeakKit-Replace stream groups", () => {
     });
   });
 });
+
+describe("work for a request that is already gone", () => {
+  it("a request replaced while it waits for a slot never reaches the engine", async () => {
+    ctx = await start({ latencyMs: 100 }, undefined, { maxStreams: 1, maxQueue: 4 });
+    const first = speak(ctx, ["running"], "tab-1").then(types);
+    await sleep(30);
+    const queued = speak(ctx, ["queued"], "tab-2").then(types);
+    await sleep(30);
+    expect(await types(await speak(ctx, ["winner"], "tab-2"))).toEqual(["audio", "done"]);
+    expect(await queued).toEqual([]);
+    expect(await first).toEqual(["audio", "done"]);
+    expect(ctx.engine.calls.map((c) => c.text)).toEqual(["running", "winner"]);
+  });
+});

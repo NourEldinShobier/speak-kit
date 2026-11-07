@@ -101,6 +101,7 @@ async function speak(res: ServerResponse, { engines, queue, deadlines }: Service
   try {
     const speed = Math.min(body.speed, 2);
     for (const [i, sentence] of body.sentences.entries()) {
+      if (ac.signal.aborted) return; // the client left or the stream was replaced while the last frame was being sent
       const { pcm, sampleRate } = await renderWithin(engine, sentence, { voice: body.voice, speed, signal: ac.signal, idleMs: deadlines.streamIdleMs });
       if (ac.signal.aborted) return;
       await send({ type: "audio", index: i, sampleRate, samples: pcm.length, durationMs: Math.round((pcm.length / sampleRate) * 1000) }, pcm);
