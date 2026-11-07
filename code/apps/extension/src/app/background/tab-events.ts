@@ -10,6 +10,11 @@ async function stopIfReading(tabId: number, unless?: (url: string | undefined) =
   await runPlayerCommand({ cmd: "stop" });
 }
 
+async function fragmentOfReading(tabId: number, url: string) {
+  const s = await getState();
+  return s.tabId === tabId && samePage(s.url, url);
+}
+
 export async function onTabRemoved(tabId: number): Promise<void> {
   await stopIfReading(tabId);
   await dropTab(tabId);
@@ -17,6 +22,8 @@ export async function onTabRemoved(tabId: number): Promise<void> {
 
 /** A new document is loading (navigation, reload, back/forward) or the tab was discarded: nothing of the old one survives. */
 export async function onTabUpdated(tabId: number, info: { status?: string; url?: string; discarded?: boolean }): Promise<void> {
+  // Chrome reports a fragment-only navigation as { status: "loading", url }; a reload or a new page does not carry the same url as the page being read.
+  if (info.status === "loading" && !info.discarded && info.url && (await fragmentOfReading(tabId, info.url))) return;
   if (info.status === "loading" || info.discarded) {
     await resetTab(tabId); // first, so a read that is still extracting sees the new epoch
     await stopIfReading(tabId);
