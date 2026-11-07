@@ -46,7 +46,7 @@ export const shot = async (p: PageCtx) => {
   return path;
 };
 
-const state = (p: PageCtx, docId: string, status: string, extra: object = {}) =>
+export const state = (p: PageCtx, docId: string, status: string, extra: object = {}) =>
   send(p.c.ext, p.tab, {
     t: "state",
     state: playerState({
@@ -63,7 +63,7 @@ const state = (p: PageCtx, docId: string, status: string, extra: object = {}) =>
   });
 
 /** Selects text from one sentence start to another by real mouse drag so the content script sees genuine events. */
-async function selectSentences(p: PageCtx, from: number, to: number) {
+export async function selectSentences(p: PageCtx, from: number, to: number) {
   const box = await p.page.evaluate(
     ([a, b]) => {
       const t = document.querySelector("article p")!;
@@ -97,7 +97,7 @@ async function selectSentences(p: PageCtx, from: number, to: number) {
   await sleep(500);
 }
 
-const hoverLauncher = async (p: PageCtx) => {
+export const hoverLauncher = async (p: PageCtx) => {
   const t = p.page.locator("speakkit-ui [data-sk=launcher-tab]");
   const b = (await t.boundingBox())!;
   await p.page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
@@ -105,7 +105,7 @@ const hoverLauncher = async (p: PageCtx) => {
 };
 
 // Reading highlight: sentence index 2, word about 42 % into it.
-const startReading = async (p: PageCtx, status = "playing") => {
+export const startReading = async (p: PageCtx, status = "playing") => {
   const { docId } = await armDoc(p);
   await state(p, docId, status);
   await send(p.c.ext, p.tab, { t: "sentence-start", start: { docId, index: 2, durationMs: 12_000, speed: 1 } });
@@ -238,7 +238,7 @@ export const pageScenarios: Scenario[] = [
     return shot(p);
   }),
   S(
-    "B15",
+    "B33",
     "more-menu",
     G,
     "Page · pill more menu",
@@ -260,7 +260,7 @@ export const pageScenarios: Scenario[] = [
     return shot(p);
   }),
   S(
-    "B11",
+    "B35",
     "dark-site-idle",
     G,
     "Page · pill idle on a dark site",
@@ -287,7 +287,7 @@ export const pageScenarios: Scenario[] = [
     { design: false },
   ),
   S(
-    "B21",
+    "B36",
     "dark-site-launcher-tab",
     G,
     "Page · edge launcher tab on a dark site",
@@ -396,7 +396,7 @@ export const pageScenarios: Scenario[] = [
     return shot(p);
   }),
   S(
-    "B10",
+    "B34",
     "reader-light",
     R,
     "Page · reader view (light)",

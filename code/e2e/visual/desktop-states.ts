@@ -266,7 +266,7 @@ export const stateScenarios: Scenario[] = [
     await openDoc(p, /^Open /);
     await p.getByText("This PDF has no text layer").waitFor();
   }),
-  rd("F11", "pdf-scanned-consent", "PDF reader · scanned page, consent to recognize", async (p) => {
+  rd("F12", "pdf-scanned-consent", "PDF reader · scanned page, consent to recognize", async (p) => {
     await importBytes(p, "Scan.pdf", fixture("scanned.pdf"));
     await openDoc(p, /^Open /);
     await p.getByRole("button", { name: "Recognize text" }).click();
@@ -282,7 +282,7 @@ export const stateScenarios: Scenario[] = [
     await p.getByRole("region", { name: "Recognizing text" }).waitFor();
     await sleep(1500);
   }),
-  rd("F13", "pdf-recognition-failed", "PDF reader · recognition stopped, nothing recognized", async (p) => {
+  rd("F17", "pdf-recognition-failed", "PDF reader · recognition stopped, nothing recognized", async (p) => {
     await importBytes(p, "Scan.pdf", fixture("scanned.pdf"));
     await openDoc(p, /^Open /);
     await p.getByRole("button", { name: "Recognize text" }).click();
@@ -348,7 +348,7 @@ export const stateScenarios: Scenario[] = [
   }),
 
   // system: quit variant, update variant, mini and tray panel states
-  home("K11", "quit-reading-export", SY, "Quit confirmation · a reading and an export running", {
+  home("K13", "quit-reading-export", SY, "Quit confirmation · a reading and an export running", {
     ...exportOpts("4000"),
     drive: async (p, { app }) => {
       await runExport(p, "My note");
@@ -360,7 +360,7 @@ export const stateScenarios: Scenario[] = [
       await p.getByRole("dialog").waitFor({ timeout: 5000 });
     },
   }),
-  home("H18", "update-restart-confirm", SY, "Update ready · restart while a reading is playing", {
+  home("H22", "update-restart-confirm", SY, "Update ready · restart while a reading is playing", {
     env: { SPEAKKIT_FAKE_UPDATE: "0.2.0", ...slow },
     drive: async (p, { app }) => {
       await settings("About")(p);
@@ -374,7 +374,7 @@ export const stateScenarios: Scenario[] = [
     },
   }),
   mini(
-    "I9",
+    "I21",
     "mini-error",
     "Mini player · error",
     async (w) => {

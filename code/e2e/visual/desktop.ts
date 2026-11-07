@@ -21,13 +21,15 @@ export const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
 export interface Opts {
   env?: Record<string, string>;
   config?: object;
+  userData?: string;
+  args?: string[];
   size?: { width: number; height: number };
   drive?: (p: Page, ctx: { app: import("@playwright/test").ElectronApplication }) => Promise<void>;
 }
 
 export async function desktopShot(c: Ctx, o: Opts) {
   const launch = await getLaunch();
-  const l = await launch({ env: { SPEAKKIT_TEST: "1", ...o.env }, config: { ...o.config } });
+  const l = await launch({ env: { SPEAKKIT_TEST: "1", ...o.env }, config: { ...o.config }, ...(o.userData ? { userData: o.userData } : {}), ...(o.args ? { args: o.args } : {}) });
   try {
     const size = o.size ?? WIN;
     await l.app.evaluate(({ BrowserWindow }, s) => {
@@ -171,7 +173,7 @@ export const desktopScenarios: Scenario[] = [
   }),
   home("L4", "narrow-rail", H, "Narrow window (rail)", { size: { width: 1013, height: 766 } }),
   home(
-    "L1",
+    "L6",
     "new-reading",
     H,
     "New reading dialog",
@@ -184,7 +186,7 @@ export const desktopScenarios: Scenario[] = [
     { design: false },
   ),
   home(
-    "L1",
+    "L7",
     "notifications",
     H,
     "Notifications popover",
@@ -224,7 +226,7 @@ export const desktopScenarios: Scenario[] = [
   home("O2", "engines-unloaded", V, "Engines · unloaded", { env: { SPEAKKIT_FAKE_STATE: "unloaded" }, drive: side("Engines") }),
   home("O3", "engines-loading", V, "Engines · loading", { env: { SPEAKKIT_FAKE_STATE: "loading" }, drive: side("Engines") }),
   home("G10", "engines-error", V, "Engines · engine error (design: out of GPU memory)", { env: { SPEAKKIT_FAKE_STATE: "error" }, drive: side("Engines") }, { design: false }),
-  home("H4", "browser-page", V, "Browser page", { drive: side("Browser") }, { design: false }),
+  home("H21", "browser-page", V, "Browser page", { drive: side("Browser") }, { design: false }),
 
   // settings
   home("H1", "general", ST, "Settings · General", { drive: settings("General") }),
@@ -255,5 +257,5 @@ export const desktopScenarios: Scenario[] = [
     }
   }),
   home("K1", "engine-error", E, "Error · engine could not start (home)", { env: { SPEAKKIT_FAKE_STATE: "error" } }),
-  home("H13", "home-engine-unloaded", E, "Home with the engine unloaded", { env: { SPEAKKIT_FAKE_STATE: "unloaded" } }, { design: false }),
+  home("H20", "home-engine-unloaded", E, "Home with the engine unloaded", { env: { SPEAKKIT_FAKE_STATE: "unloaded" } }, { design: false }),
 ];

@@ -256,7 +256,7 @@ export const optionsScenarios: Scenario[] = [
   }),
   S("C19", "reader-view", O, "Options · Reader view", (c) => optionsShot(c, "#reader"), { design: false }),
   S("C18", "narrow", O, "Options · Narrow layout", (c) => optionsShot(c, "#general", { w: 758, h: 718 })),
-  S("C5", "highlighting-dark-page-preview", O, "Options · Highlighting (dark page preview)", (c) => optionsShot(c, "#highlight", { after: clickText("Dark page") }), { design: false }),
+  S("C22", "highlighting-dark-page-preview", O, "Options · Highlighting (dark page preview)", (c) => optionsShot(c, "#highlight", { after: clickText("Dark page") }), { design: false }),
 ];
 
 const panelShot = async (c: Ctx, mock: Mock) => {

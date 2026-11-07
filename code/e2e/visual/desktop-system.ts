@@ -44,7 +44,7 @@ const exportTo = (latency: string): Opts => ({
 const sys = (id: string, state: string, title: string, o: Opts, extra: { design?: boolean } = {}) => home(id, state, SY, title, o, extra);
 
 export const systemScenarios: Scenario[] = [
-  sys("H18", "update-pill", "Update ready · pill", { env: UPD, drive: toReady }),
+  sys("H23", "update-pill", "Update ready · pill", { env: UPD, drive: toReady }),
   sys("H18", "update-popover", "Update ready · popover", { env: UPD, drive: openPill }),
   sys("H19", "updating", "Updating", {
     env: UPD,
@@ -66,8 +66,8 @@ export const systemScenarios: Scenario[] = [
     },
     { design: false },
   ),
-  windowShot("I9", "mini-preparing", "Mini player · preparing", "mini.html", "mini", read, { env: { SPEAKKIT_FAKE_LATENCY_MS: "6000" }, after: miniAfter("preparing") }),
-  windowShot("I9", "mini-playing", "Mini player · playing", "mini.html", "mini", read, { after: miniAfter("playing") }),
+  windowShot("I20", "mini-preparing", "Mini player · preparing", "mini.html", "mini", read, { env: { SPEAKKIT_FAKE_LATENCY_MS: "6000" }, after: miniAfter("preparing") }),
+  windowShot("I3", "mini-playing", "Mini player · playing", "mini.html", "mini", read, { after: miniAfter("playing") }),
   windowShot("I9", "mini-paused", "Mini player · paused", "mini.html", "mini", read, {
     after: miniAfter("playing", async (w) => {
       await w.getByRole("button", { name: "Pause" }).click();
