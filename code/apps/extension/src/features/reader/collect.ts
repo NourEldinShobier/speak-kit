@@ -120,32 +120,40 @@ export class Collector {
   }
 
   private walk(el: Element) {
+    // Flattened tree: a host with an open shadow root shows the root's content, and its own children only through <slot>s.
+    for (let n = (el.shadowRoot ?? el).firstChild; n; n = n.nextSibling) this.visit(n);
+  }
+
+  private visit(n: Node) {
+    if (n.nodeType === 3) {
+      this.text(n as Text);
+      return;
+    }
+    if (n.nodeType !== 1) return;
     const sel = this.o.selection;
-    for (let n = el.firstChild; n; n = n.nextSibling) {
-      if (n.nodeType === 3) {
-        this.text(n as Text);
-        continue;
+    if (sel && !sel.intersectsNode(n)) return;
+    const e = n as Element;
+    const tag = e.localName;
+    if (tag === "br" || tag === "wbr") {
+      this.space();
+      return;
+    }
+    if (this.skipEl(e, tag)) return;
+    if (tag === "slot") {
+      const assigned = (e as HTMLSlotElement).assignedNodes({ flatten: true });
+      if (assigned.length) {
+        for (const a of assigned) this.visit(a);
+        return;
       }
-      if (n.nodeType !== 1) continue;
-      if (sel && !sel.intersectsNode(n)) continue;
-      const e = n as Element;
-      const tag = e.localName;
-      if (tag === "br" || tag === "wbr") {
-        this.space();
-        continue;
-      }
-      if (this.skipEl(e, tag)) continue;
-      const isB = BOUNDARY.has(tag);
-      if (isB) {
-        this.flush();
-      }
-      const prev = this.boundary;
-      if (isB) this.boundary = e;
-      this.walk(e);
-      if (isB) {
-        this.flush();
-        this.boundary = prev;
-      }
+    }
+    const isB = BOUNDARY.has(tag);
+    if (isB) this.flush();
+    const prev = this.boundary;
+    if (isB) this.boundary = e;
+    this.walk(e);
+    if (isB) {
+      this.flush();
+      this.boundary = prev;
     }
   }
 
