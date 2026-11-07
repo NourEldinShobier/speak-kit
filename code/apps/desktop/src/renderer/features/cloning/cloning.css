@@ -1,0 +1,173 @@
+/* Voice cloning screens (G3 to G7, G11, G14, G15). Rows follow design decisions 2.19: 68 px with a 36 px control and 16 px gaps. */
+.sk-clone-sources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.sk-clone-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  text-align: start;
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border: 0;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card-ring);
+  cursor: pointer;
+}
+.sk-clone-source span {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+.sk-clone-source[aria-checked="true"] {
+  box-shadow: inset 0 0 0 2px var(--cta);
+}
+.sk-clone-source:focus-visible {
+  outline: 2px solid var(--cta);
+  outline-offset: 2px;
+}
+.sk-clone-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 17px;
+}
+.sk-clone-error {
+  margin: 0;
+  padding: 16px;
+  color: var(--destructive);
+  font-size: 13px;
+}
+.sk-clone-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+.sk-clone-card .lm-row .lm-row__control:only-child {
+  margin-inline-end: auto;
+}
+.sk-clone-timer {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sk-clone-clock {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.sk-clone-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.sk-clone-card .lm-progress,
+.sk-clone-steps .lm-progress {
+  width: 100%;
+}
+.sk-clone-meter .lm-progress__bar {
+  transition: none;
+}
+.sk-clone-checks {
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sk-clone-checks li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.sk-clone-checks span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sk-clone-checks small {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+.sk-clone-ok {
+  color: var(--tag-green);
+}
+.sk-clone-bad {
+  color: var(--destructive);
+}
+.sk-clone-steps {
+  padding: 16px;
+  gap: 12px;
+}
+.sk-clone-step {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.sk-clone-step[data-state="waiting"] {
+  color: var(--text-tertiary);
+}
+.sk-clone-name {
+  flex: 1;
+}
+.sk-clone-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.sk-clone-slider__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.sk-clone-slider__head span {
+  display: flex;
+  flex-direction: column;
+}
+.sk-clone-slider__head small,
+.sk-clone-slider__ends {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-clone-slider__head output {
+  font-variant-numeric: tabular-nums;
+}
+.sk-clone-slider__ends {
+  display: flex;
+  justify-content: space-between;
+}
+.sk-clone-style {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sk-clone-style .sk-clone-slider {
+  padding: 0;
+}
+.sk-clone-voices {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sk-clone-voices__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.sk-voice__tools {
+  display: flex;
+  gap: 4px;
+}
+.sk-clone-dot {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 50%;
+}

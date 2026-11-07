@@ -10,6 +10,12 @@
 .sk-page--wide {
   max-width: 820px;
 }
+.sk-page__bar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 .sk-page__head h1 {
   margin: 0;
   font-size: 22px;

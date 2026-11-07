@@ -121,13 +121,23 @@ export function TokenField({ token, regenerate, confirmRegenerate, onCopied }: {
   );
 }
 
-export function Page({ title, lead, wide, children }: { title: string; lead?: ReactNode; wide?: boolean; children: ReactNode }) {
+export function Page({ title, lead, wide, action, children }: { title: string; lead?: ReactNode; wide?: boolean; action?: ReactNode; children: ReactNode }) {
+  const head = (
+    <div className="sk-page__head">
+      <h1>{title}</h1>
+      {lead ? <p>{lead}</p> : null}
+    </div>
+  );
   return (
     <div className={`sk-page ${wide ? "sk-page--wide" : ""}`}>
-      <div className="sk-page__head">
-        <h1>{title}</h1>
-        {lead ? <p>{lead}</p> : null}
-      </div>
+      {action ? (
+        <div className="sk-page__bar">
+          {head}
+          {action}
+        </div>
+      ) : (
+        head
+      )}
       {children}
     </div>
   );

@@ -69,7 +69,7 @@ function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; su
         <LibraryPage s={s} onOpen={(id, autoplay) => dispatch({ type: "open-doc", doc: { id, autoplay } })} />
       );
     case "voices":
-      return <VoicesPage s={s} />;
+      return <VoicesPage s={s} onGo={go} />;
     case "engines":
       return <EnginesPage s={s} />;
     case "browser":
