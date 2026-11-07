@@ -17,11 +17,14 @@ One data folder holds everything, per OS: Windows `%APPDATA%\@speakkit\desktop`,
 | OCR language data | `<data>/IndexedDB` | about 10 MB | first OCR | no | yes |
 | Audio exports in progress or kept | `<data>/exports` | varies | Export | no | yes |
 | Library | `<data>/library` | varies | you | yes | no |
-| Cloned voice clips | `<data>/voices` | small | cloning | yes | no |
+| Cloned voice clips (the saved reference, one file per voice, and its name and style) | `<data>/voices` | small | cloning (Save voice) | yes | no |
 | Settings, engine choice, pairing token | `config.json`, `engine.json`, `token` | tiny | app | yes | no |
 | Logs | `<data>/logs` | up to 2 MB | app | no | no |
 
 Uninstalling on macOS needs the in-app Delete first (a dragged app leaves the folder). The standalone `speakkit-server` command line uses its own folder (`SPEAKKIT_DATA_DIR`, default `%APPDATA%\SpeakKit` or `~/.config/SpeakKit`) that no uninstaller touches. An update never removes anything.
+
+## The microphone
+Speak Kit uses the microphone only when you press "Record now" in the voice cloning screens, and only while the recording runs (at most 30 seconds). Only the main window may ask for it and only for audio; the camera and every other permission are denied to every window. The recording stays in the app's memory and is sent to the local server on `127.0.0.1` with the clip's checks; it is never uploaded anywhere. Nothing is written to disk except the cloned voice file you save (`<data>/voices`). The picked or recorded audio in memory is dropped when you save, cancel or leave the screen; a cancelled or abandoned clone is deleted. Before cloning you confirm that the voice is your own or that you have the right to clone it. If the system blocks the microphone, the app says so and offers to open the system's privacy settings (Windows or macOS), or you can upload an audio file instead.
 
 ## What stays on the machine
 - Page text sent by the extension goes to the app on `127.0.0.1` (loopback), never to the internet.

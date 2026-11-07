@@ -254,14 +254,14 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 | G10 | Engines · error (Desktop app) | Needs an installed Chatterbox engine; the product's engine error page is captured as G10 / engines-error without a diff. |
 | G16 | Engines · Chatterbox ready (Desktop app) | Needs an installed Chatterbox engine, which the fake-engine harness cannot show; verified by hand on a GPU (docs/perf.md). |
 | G18 | Engines · remove confirmation (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| G3 | Clone · choose reference (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G4 | Clone · recording (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G5 | Clone · analyzing (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G6 | Clone · name and test (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G7 | Clone · bad reference (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G15 | Clone · review take (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G11 | Chatterbox · voice style (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
-| G14 | Voices · cloning unavailable (Desktop app) | Voice cloning screens are not built (docs/scope.md, out of scope: the cloning API and clip checks exist, the recording and review screens come in the next release). |
+| G3 | Clone · choose reference (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G4 | Clone · recording (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G5 | Clone · analyzing (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G6 | Clone · name and test (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G7 | Clone · bad reference (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G15 | Clone · review take (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G11 | Chatterbox · voice style (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
+| G14 | Voices · cloning unavailable (Desktop app) | Built since the last harness run (docs/scope.md, ADR 0017); no screenshot baseline yet, covered by `apps/desktop/tests/cloning.test.ts`. |
 | H3 | Settings · Pronunciation (Desktop app) | Pronunciation dictionary is not built. |
 | H17 | Command palette (filtered) (Desktop app) | Settings search is not built; the title bar search opens the command palette (L2, L3). |
 | H21 | Browser · pair your browser (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |

@@ -15,7 +15,7 @@ A private text-to-speech reader. Select text in Chrome, press a key, and a natur
 
 - **Chrome extension** (Manifest V3): reads selections and whole pages, floating player, reader view, side panel queue.
 - **Desktop app** (Electron, Windows): runs the local voice server, lives in the tray, adds global shortcuts, a mini player, a library for files (PDF, EPUB, DOCX, Markdown, text) and MP3 or WAV export.
-- **Voices**: 28 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) voices out of the box, and optional [Chatterbox](https://github.com/resemble-ai/chatterbox) voice cloning on machines with a GPU.
+- **Voices**: 28 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) voices out of the box, and optional [Chatterbox](https://github.com/resemble-ai/chatterbox) voice cloning on machines with a GPU: record 5 to 30 seconds with the microphone or upload a clip, hear a test, and set the voice's style. Audio stays on your computer.
 
 <p align="center">
   <img src="docs/screenshots/page-highlight.png" alt="A web page being read aloud with the current sentence and word highlighted, and the floating player at the bottom" width="720">

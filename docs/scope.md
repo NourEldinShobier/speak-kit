@@ -37,13 +37,15 @@ How to read it:
 | C16 (Shortcut conflict) | `features/settings/ShortcutsSection.tsx`: a "Not assigned" badge and a banner for a command whose suggested key Chrome did not assign. Chrome does not say why, and a page that handles the key itself (Google Docs) is invisible to an extension, so the copy names the possible causes and does not name a program. Tests: `ShortcutsSection.test.tsx`, `e2e/tests/options.spec.ts` |
 | B22 (Pill, engine asleep) | The idle dock says "Engine asleep · wakes on play" and the edge pill tooltip "Wakes on play" when `get-health` reports the engine unloaded (checked on hover near the launcher, dock hover and the always-dock rule, at most every 5 s). Tests: `content.test.ts`, `e2e/tests/content.spec.ts` |
 | B3 (Context menu) | registered in the service worker; the native menu cannot be screenshotted |
+| G3 G4 G5 G6 G7 G15 (Clone a voice: choose reference, recording, analyzing, name and test, bad reference, review take) | `renderer/features/cloning` (`CloneFlow`, reducer `model.ts`, `audio.ts` WAV encoder, `decode.ts`, `recorder.ts`), ADR 0017. Verified: reducer, WAV bytes, screen markup (`*.test.ts(x)`), and `apps/desktop/tests/cloning.test.ts` (record from Chromium's fake microphone, upload, bad reference rows, cancel deletes the voice) against the stand-in sidecar; one real run through the real server and a real Chatterbox on the RTX 4080 (`docs/perf.md`). Not verified: a real microphone, M4A and FLAC files (only WAV and the recorder's WebM are decoded in tests), macOS |
+| G11 (Voice style) | exaggeration in the name step and exaggeration and pace in the style dialog of a cloned voice card (`ClonedVoices.tsx`); `PATCH /v1/voices/<id>`, ADR 0017. Pace is the model's `cfg_weight`, whose effect on speed was measured only on the generated clip |
+| G14 (Cloning unavailable) | disabled "Clone a voice" button and a banner with the missing requirement and "Open Engines" (`availability.ts`, `Entry.tsx`); markup tested, the Electron test reaches it with Chatterbox not installed |
+| K6 (Microphone permission) | `MicDialog` in `ChooseScreens.tsx`: "Microphone access is off" with the OS settings button (Windows `ms-settings:privacy-microphone`, macOS Privacy_Microphone; none on Linux) and an upload, or "No microphone found". Tested by making the window refuse the request; a real OS-level block was not exercised |
 
 ## Out of scope
 
 | Frames | out of scope: reason |
 |---|---|
-| G3 G4 G5 G6 G7 G15 G11 G14 (voice cloning screens: choose reference, recording, analyzing, name and test, bad reference, review take, voice style, cloning unavailable) | out of scope: the cloning API, the clip checks and the Chatterbox sidecar are built and tested (`POST /v1/voices/clone`), but the screens are not, because they were planned for after Chatterbox was verified on hardware. Chatterbox now runs here (ADR 0016), so they are next. Not built yet. |
-| K6 (Microphone permission) | out of scope: needs recording, which comes with the cloning screens |
 | G2 (Voice detail drawer), G13 (Voices list view) | out of scope: the Voices page lists voices with a preview button; a drawer and a second layout add no capability |
 | H3 (Pronunciation dictionary) | out of scope: no engine API for custom pronunciations exists; kokoro-js and Chatterbox take text only |
 | H17 (Search settings) | out of scope: the title bar search opens the command palette (L2, L3), which finds every settings page |
@@ -61,5 +63,6 @@ How to read it:
 
 - Animated "working" tray icon; the notification dot on the About item.
 - Code signing: the installer and the portable exe are unsigned.
+- Cloning: an app quit or crash at the name step leaves a voice named after its clip under Your voices. Previewing or testing a cloned voice makes Chatterbox the engine in use.
 - Not yet run: a packaged installer installing Chatterbox end to end. The smoke tests check that `chatterbox_sidecar.py` is in `resources/chatterbox`.
 - MP3 for exports is encoded in the desktop app, not in the server.

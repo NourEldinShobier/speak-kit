@@ -8,7 +8,7 @@ Wire types, frame codec, extension messages, settings schema, shared formatters.
 
 May import: no workspace package. Source files: 9, stylesheets: 0.
 
-Interface (`src/index.ts` header): Wire contract of Speak Kit: HTTP API types, streaming frame codec, extension messages, settings, engine types and response schemas. Shared by the extension, the desktop app and the server; imports no workspace package. Does not contain behaviour beyond encoding, decoding, validating and formatting; transport and storage live in the consumers. Area: packages/protocol. The exported names are pinned by src/surface.test.ts; a wire change needs an API_VERSION decision first.
+Interface (`src/index.ts` header): Wire contract of Speak Kit: HTTP API types, streaming frame codec, extension messages, settings, engine types and response schemas.Shared by the extension, the desktop app and the server; imports no workspace package.Does not contain behaviour beyond encoding, decoding, validating and formatting; transport and storage live in the consumers.Area: packages/protocol. The exported names are pinned by src/surface.test.ts; a wire change needs an API_VERSION decision first.
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
@@ -71,7 +71,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Chrome MV3 extension: content script, popup, options, side panel, service worker, offscreen player.
 
-May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 113, stylesheets: 5.
+May import: `packages/protocol`, `packages/player`, `packages/ui`. Source files: 114, stylesheets: 5.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
@@ -83,7 +83,7 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 | `app/options` | 3 | no |
 | `app/popup` | 12 | no |
 | `app/sidepanel` | 2 | no |
-| `features/connection` | 9 | yes |
+| `features/connection` | 10 | yes |
 | `features/highlight` | 4 | yes |
 | `features/launcher` | 10 | yes |
 | `features/player` | 6 | yes |
@@ -97,20 +97,20 @@ Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 Electron app: main process, preload, renderer (library, reader, settings), shared contracts.
 
-May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 180, stylesheets: 11.
+May import: `packages/protocol`, `packages/engine`, `packages/server`, `packages/player`, `packages/ui`. Source files: 195, stylesheets: 13.
 
 Interface: `src/index.ts` has no header yet (refactor plan G13).
 
 | Area under `src/` | Files | `index.ts` |
 |---|---|---|
-| `main` | 35 | yes |
+| `main` | 37 | yes |
 | `main/export` | 5 | no |
 | `main/library` | 19 | yes |
 | `main/reader` | 2 | no |
 | `main/system` | 4 | no |
 | `preload` | 2 | yes |
-| `renderer` | 22 | no |
-| `renderer/features` | 71 | yes |
+| `renderer` | 20 | no |
+| `renderer/features` | 86 | yes |
 | `shared` | 14 | no |
 | `shared/library` | 4 | no |
 
