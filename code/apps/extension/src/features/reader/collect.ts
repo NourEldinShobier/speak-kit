@@ -242,7 +242,8 @@ export class Collector {
     if (!c) return;
     while (c.text.endsWith(" ")) dropLastChar(c);
     if (!c.text || !hasWord(c.text)) return;
-    if (!SEMANTIC.has(c.tag)) {
+    // Short runs outside real text blocks are page furniture (labels, buttons); what the user selected is read however short it is.
+    if (!this.sel && !SEMANTIC.has(c.tag)) {
       const min = c.tag === "td" || c.tag === "th" ? 30 : 40;
       if (c.text.length < min || c.text.indexOf(" ") < 0) return;
     }
