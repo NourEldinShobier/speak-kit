@@ -97,6 +97,12 @@ describe("SleepTimer", () => {
     expect(t.expired(31 * 60_000)).toBe(false);
     expect(t.active).toBe(false);
   });
+  it("counts a minute as the length it is given", () => {
+    const t = new SleepTimer();
+    t.start(5, 1000, 300);
+    expect(t.remainingMs(1000)).toBe(1500);
+    expect(t.expired(2500)).toBe(true);
+  });
   it("can be cancelled", () => {
     const t = new SleepTimer();
     t.start(5, 0);

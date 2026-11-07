@@ -174,10 +174,13 @@ export class SentenceClock {
 
 // ---- sleep timer ----
 
+/** Milliseconds in one sleep-timer minute. Electron specs shorten it with localStorage "speakkit.test.msPerMinute"; the lookup is compiled out of shipped builds (tests/bundle.test.ts). */
+export const sleepMsPerMinute = (): number => (__TEST_CODE__ ? Number(localStorage.getItem("speakkit.test.msPerMinute")) || 60_000 : 60_000);
+
 export class SleepTimer {
   private endsAt: number | undefined;
-  start(minutes: number, now: number) {
-    this.endsAt = now + minutes * 60_000;
+  start(minutes: number, now: number, msPerMinute = 60_000) {
+    this.endsAt = now + minutes * msPerMinute;
   }
   cancel() {
     this.endsAt = undefined;

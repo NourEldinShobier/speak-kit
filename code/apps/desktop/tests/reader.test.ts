@@ -115,6 +115,68 @@ describe("reader: footer voice and speed", () => {
   }, 60_000);
 });
 
+const status = (l: Launched) => l.page.getByTestId("reader").getAttribute("data-status");
+const waitStatus = (l: Launched, want: string) => l.page.waitForFunction((w) => document.querySelector("[data-testid=reader]")?.getAttribute("data-status") === w, want, { timeout: 30_000 });
+
+describe("reader: footer sleep timer", () => {
+  // A sleep-timer minute lasts 300 ms here (localStorage key compiled out of shipped builds): 5 minutes are 1.5 s, 60 minutes are 18 s.
+  const startPlaying = async (l: Launched) => {
+    await l.page.evaluate(() => localStorage.setItem("speakkit.test.msPerMinute", "300"));
+    await l.page.getByRole("button", { name: "Play", exact: true }).click();
+    await waitStatus(l, "playing");
+  };
+
+  it("shows the time left, counts it down, and Off clears it without stopping the reading", async () => {
+    const { l } = await openReader();
+    await startPlaying(l);
+    await l.page.getByRole("button", { name: "Sleep timer" }).click();
+    await l.page.getByRole("button", { name: "60 minutes", exact: true }).click();
+    const left = l.page.getByTestId("sleep-left");
+    await left.waitFor();
+    expect(await left.textContent()).toMatch(/^0:(17|18)$/);
+    await l.page.waitForFunction(() => /^0:1[0-5]$/.test(document.querySelector("[data-testid=sleep-left]")?.textContent ?? ""), undefined, { timeout: 10_000 });
+    await l.page.getByRole("button", { name: "Off", exact: true }).click();
+    await left.waitFor({ state: "detached" });
+    expect(await status(l)).toBe("playing");
+  }, 60_000);
+
+  it("pauses the reading when the time is up and clears the label", async () => {
+    const { l } = await openReader();
+    await startPlaying(l);
+    await l.page.getByRole("button", { name: "Sleep timer" }).click();
+    await l.page.getByRole("button", { name: "5 minutes", exact: true }).click();
+    await l.page.getByTestId("sleep-left").waitFor();
+    await waitStatus(l, "paused");
+    expect(await l.page.getByTestId("sleep-left").count()).toBe(0);
+    expect(await l.page.getByRole("button", { name: "Play", exact: true }).count()).toBe(1);
+  }, 60_000);
+});
+
+describe("reader: playing to the end", () => {
+  it("moves through every sentence and finishes without the error screen", async () => {
+    const { l } = await openReader();
+    await l.page.getByRole("button", { name: "Play", exact: true }).click();
+    await waitStatus(l, "finished");
+    expect(await l.page.getByText("Something went wrong").count()).toBe(0);
+  }, 60_000);
+});
+
+describe("reader: footer queue button", () => {
+  it("toggles the outline panel and says whether it is open", async () => {
+    const { l } = await openReader();
+    const queue = l.page.getByRole("button", { name: "Queue", exact: true });
+    const outline = l.page.getByRole("complementary", { name: "Outline" });
+    expect(await queue.getAttribute("aria-pressed")).toBe("false");
+    expect(await outline.count()).toBe(0);
+    await queue.click();
+    await outline.waitFor();
+    expect(await queue.getAttribute("aria-pressed")).toBe("true");
+    await queue.click();
+    await outline.waitFor({ state: "detached" });
+    expect(await queue.getAttribute("aria-pressed")).toBe("false");
+  }, 60_000);
+});
+
 describe("reader: customise toolbar", () => {
   it("hides and shows a footer control from the switch list, and the choice survives a restart", async () => {
     const { l } = await openReader();
@@ -135,6 +197,23 @@ describe("reader: customise toolbar", () => {
     await again.l.page.keyboard.press("Escape");
     await again.l.page.getByRole("button", { name: "Volume", exact: true }).waitFor();
   }, 90_000);
+
+  it("keeps a hidden footer control when the window is reloaded", async () => {
+    const { l } = await openReader();
+    await l.page.getByRole("button", { name: "Customise player toolbar" }).click();
+    await l.page.getByRole("switch", { name: "Sleep timer" }).click();
+    await l.page.keyboard.press("Escape");
+    expect(await l.page.getByRole("button", { name: "Sleep timer", exact: true }).count()).toBe(0);
+
+    await l.page.reload();
+    await l.page.getByRole("link", { name: "Library" }).click();
+    await l.page.getByRole("button", { name: "Open Chapter one" }).click();
+    await l.page.getByTestId("reader").waitFor();
+    await l.page.getByRole("button", { name: "Volume", exact: true }).waitFor();
+    expect(await l.page.getByRole("button", { name: "Sleep timer", exact: true }).count()).toBe(0);
+    await l.page.getByRole("button", { name: "Customise player toolbar" }).click();
+    expect(await l.page.getByRole("switch", { name: "Sleep timer" }).getAttribute("aria-checked")).toBe("false");
+  }, 60_000);
 
   it("the header has five reading icons and no voice button", async () => {
     const { l } = await openReader();

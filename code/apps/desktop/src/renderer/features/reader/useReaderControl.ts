@@ -5,7 +5,7 @@ import type { AppState } from "../../../shared/ipc";
 import type { DocMeta } from "../../../shared/library/contract";
 import { api } from "../../ui";
 import { library } from "../library";
-import { fractionAt, SentenceClock, SleepTimer, toReadDoc, type ProgressSaver, type ReaderDoc } from "./model";
+import { fractionAt, SentenceClock, sleepMsPerMinute, SleepTimer, toReadDoc, type ProgressSaver, type ReaderDoc } from "./model";
 import type { ReaderAction, ReaderUi } from "./state";
 
 type Send = Dispatch<ReaderAction>;
@@ -94,8 +94,8 @@ export function useReaderControl(args: Args) {
   };
   const changeSleep = (min: number | null) => {
     if (min === null) refs.sleep.current.cancel();
-    else refs.sleep.current.start(min, Date.now());
-    dispatch({ type: "sleep", leftMs: min === null ? 0 : min * 60_000 });
+    else refs.sleep.current.start(min, Date.now(), sleepMsPerMinute());
+    dispatch({ type: "sleep", leftMs: min === null ? 0 : min * sleepMsPerMinute() });
   };
   const changeSpeed = (v: number) => {
     dispatch({ type: "speed", speed: v });

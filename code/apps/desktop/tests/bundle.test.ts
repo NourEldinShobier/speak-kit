@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,6 +22,23 @@ describe("main bundle", () => {
     expect(shipped).not.toContain("fakeUpdater");
     expect(shipped).not.toContain('emit("update-available"');
   });
+});
+
+describe("renderer bundle", () => {
+  it("has the sleep-timer test shortcut in the test build and not in the shipped one", async () => {
+    const key = "speakkit.test.msPerMinute";
+    const read = async (name: string, testCode: boolean) => {
+      const dir = path.join(out, name);
+      vi.stubEnv("NODE_ENV", "production");
+      await build({ configFile: path.join(appDir, "vite.config.ts"), logLevel: "warn", mode: "production", define: { __TEST_CODE__: JSON.stringify(testCode) }, build: { outDir: dir, emptyOutDir: true } }).finally(() => vi.unstubAllEnvs());
+      return readdirSync(path.join(dir, "assets"))
+        .filter((f) => f.endsWith(".js"))
+        .map((f) => readFileSync(path.join(dir, "assets", f), "utf8"))
+        .join("");
+    };
+    expect(await read("renderer-test", true)).toContain(key);
+    expect(await read("renderer-shipped", false)).not.toContain(key);
+  }, 180_000);
 });
 
 /** Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR and worker chunks are not counted). Current size plus 10 %. */
