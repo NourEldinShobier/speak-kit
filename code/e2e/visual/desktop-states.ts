@@ -279,7 +279,7 @@ export const stateScenarios: Scenario[] = [
     await openDoc(p, /^Open /);
     await p.getByRole("button", { name: "Recognize text" }).click();
     await p.getByRole("dialog", { name: "Recognize text on this computer?" }).getByRole("button", { name: "Recognize text" }).click();
-    await p.getByRole("status", { name: "Recognizing text" }).waitFor();
+    await p.getByRole("region", { name: "Recognizing text" }).waitFor();
     await sleep(1500);
   }),
   rd("F13", "pdf-recognition-failed", "PDF reader · recognition stopped, nothing recognized", async (p) => {
