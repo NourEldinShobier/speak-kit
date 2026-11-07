@@ -26,7 +26,7 @@
   --fill-selected: #f0f0f0;
   --fill-raised-hover: #f7f8fa;
   --fill-raised-press: #f0f0f0;
-  --track: #f0f0f0;
+  --track: #ececec;
   --text-primary: #1b2230;
   --text-secondary: #475467;
   --text-tertiary: #5f6a7d;
@@ -1562,7 +1562,7 @@
   position: relative;
   width: 240px;
   height: 4px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-bar);
   background: var(--track);
   overflow: hidden;
 }
@@ -1572,9 +1572,12 @@
 .lm-progress__bar {
   height: 100%;
   width: calc(var(--p) * 1%);
-  border-radius: var(--radius-pill);
-  background: var(--accent-default);
+  border-radius: var(--radius-bar);
+  background: var(--cta);
   transition: width var(--dur-gentle) var(--ease-soft);
+}
+.lm-progress.is-error .lm-progress__bar {
+  background: var(--destructive);
 }
 .lm-progress.is-indeterminate .lm-progress__bar {
   width: 40%;
@@ -1603,13 +1606,15 @@
   }
 }
 
-/* ---------- slider (Radix Slider structure): track 5, thumb 16 ---------- */
+/* ---------- slider (Radix Slider structure): track 4, thumb 18 ---------- */
+/* The track is inset by half the thumb, so the thumb (placed by Radix, or by vanilla/controls.ts) is centred on the end of the fill. */
 .lm-slider {
+  --thumb: 18px;
   position: relative;
   display: flex;
   align-items: center;
   width: 200px;
-  height: 16px;
+  height: var(--thumb);
   margin: 0;
   padding: 0;
   cursor: pointer;
@@ -1622,25 +1627,26 @@
 .lm-slider__track {
   position: relative;
   flex: 1;
-  height: 5px;
-  border-radius: var(--radius-pill);
+  height: 4px;
+  margin-inline: calc(var(--thumb) / 2);
+  border-radius: var(--radius-bar);
   background: var(--track);
 }
 .lm-slider__range {
   position: absolute;
   height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--accent-default);
+  border-radius: var(--radius-bar);
+  background: var(--cta);
 }
 .lm-slider__thumb {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: var(--thumb);
+  height: var(--thumb);
   border-radius: var(--radius-pill);
   background: #fff;
   box-shadow:
-    0 0 0 1px var(--stroke-field),
-    0 1px 2px rgb(0 0 0 / 0.12);
+    inset 0 0 0 1px var(--stroke-field),
+    0 1px 2px rgb(0 0 0 / 0.1);
 }
 .lm-slider[data-disabled] .lm-slider__track {
   background: var(--disabled-track);

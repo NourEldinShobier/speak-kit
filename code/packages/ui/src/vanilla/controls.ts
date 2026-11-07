@@ -142,7 +142,7 @@ export function slider(o: SliderOptions): SliderHandle {
     const p = ((v - o.min) / (o.max - o.min)) * 100;
     range.style.left = "0";
     range.style.right = `${100 - p}%`;
-    thumbWrap.style.left = `calc(${p}% + ${(0.5 - p / 100) * 16}px)`;
+    thumbWrap.style.left = `calc(${p}% + ${(0.5 - p / 100) * 18}px)`;
     thumb.setAttribute("aria-valuenow", String(+v.toFixed(3)));
   };
   const at = (e: PointerEvent) => {

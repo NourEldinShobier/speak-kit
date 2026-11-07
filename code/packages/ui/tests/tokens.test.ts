@@ -32,6 +32,7 @@ describe("tokens module", () => {
     expect(tokens.light["text-on-highlight"]).toBe("#1e1f20");
     expect(tokens.light["chip-red"]).toBe("#ffe4e5");
     expect(tokens.light["disabled-thumb"]).toBe("#c9ccd2");
+    expect(tokens.light["track"]).toBe("#ececec");
   });
 
   test("native tokens are picked from the same table", () => {
