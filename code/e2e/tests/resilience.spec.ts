@@ -81,12 +81,12 @@ test.describe("several tabs start reading at once", () => {
     const ids = await Promise.all(pages.map((p) => ext.tabId(p)));
     const winner = tags[ids.indexOf((await ext.bgState()).tabId!)]!;
     expect(winner).toBeDefined();
-    // Every start replaces the one before it. The server may still run a request that was queued before its tab lost (one sentence), never more.
+    // Every start replaces the one before it. A request that was queued or sending when its tab lost is dropped before its next sentence.
     const tagOf = (t: string) => tags.find((x) => t.includes(x))!;
     await expect.poll(() => app.engine.calls.filter((c) => tagOf(c.text) === winner).length, { timeout: 15_000 }).toBe(9);
     await pages[0]!.waitForTimeout(2000);
     const afterWinner = app.engine.calls.slice(app.engine.calls.findLastIndex((c) => tagOf(c.text) === winner) + 1);
-    expect(afterWinner.length, "sentences of losing tabs synthesized after the winner's last").toBeLessThanOrEqual(1);
+    expect(afterWinner.length, "sentences of losing tabs synthesized after the winner's last").toBe(0);
     expect((await ext.state()).docId).toBe((await ext.bgState()).docId);
     expect(await ext.peakRms(800)).toBeGreaterThan(0.02);
     for (let i = 0; i < pages.length; i++) expect((await highlights(pages[i]!)).sentence.length > 0, tags[i]).toBe(tags[i] === winner);
