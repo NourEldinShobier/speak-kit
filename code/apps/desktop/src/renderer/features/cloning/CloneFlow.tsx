@@ -5,6 +5,7 @@ import type { AppState } from "../../../shared/ipc";
 import { toDesktopError } from "../../../shared/errors";
 import { usePlayer } from "../../pages";
 import { api, cleanError, Page, playAudio } from "../../ui";
+import { STEP_HEADING, stepAnnouncement } from "./announce";
 import { ChooseScreen, MicDialog, RecordingScreen, ReviewScreen } from "./ChooseScreens";
 import { decodeTake, takeAudio, UnreadableAudio } from "./decode";
 import { cloneReducer, engineWait, initClone, testSentence, type CloneAction, type CloneState } from "./model";
@@ -218,6 +219,17 @@ function Saved({ name, onDone }: { name: string; onDone(): void }) {
   );
 }
 
+/** Each new screen takes focus on its heading, except while the microphone dialog (K6) opens over the first one and brings its own focus. */
+function useStepFocus(st: CloneState) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const dialog = useRef(false);
+  dialog.current = st.step === "choose" && st.mic !== null;
+  useEffect(() => {
+    if (!dialog.current) heading.current?.focus({ preventScroll: true });
+  }, [st.step]);
+  return heading;
+}
+
 /** G3 to G7, G15 and K6: the cloning flow on the Voices page. `onClose` gets the name of the voice that was saved, or nothing. */
 export function CloneFlow({ s, onClose }: { s: AppState; onClose(saved?: string): void }) {
   const [st, dispatch] = useReducer(cloneReducer, undefined, initClone);
@@ -226,6 +238,7 @@ export function CloneFlow({ s, onClose }: { s: AppState; onClose(saved?: string)
   pending.current = pendingVoice(st);
   useCloneRequest(st, dispatch);
   const progress = useEngineLoad(st, s, dispatch);
+  const heading = useStepFocus(st);
   useEffect(() => () => void (pending.current && forget(pending.current)), []);
   const cancel = () => {
     if (pending.current) forget(pending.current);
@@ -239,6 +252,12 @@ export function CloneFlow({ s, onClose }: { s: AppState; onClose(saved?: string)
   };
   return (
     <Page title="Clone a voice" lead={LEAD[st.step](st)}>
+      <h2 ref={heading} tabIndex={-1} className="sk-clone-sr">
+        {STEP_HEADING[st.step]}
+      </h2>
+      <div role="status" aria-live="polite" className="sk-clone-sr" data-testid="clone-status">
+        {stepAnnouncement(st, progress)}
+      </div>
       <ReferenceScreens {...flow} />
       <ResultScreens {...flow} onClose={onClose} />
       <MicDialog

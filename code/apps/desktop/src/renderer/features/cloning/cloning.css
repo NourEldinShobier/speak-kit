@@ -30,6 +30,16 @@
   outline: 2px solid var(--cta);
   outline-offset: 2px;
 }
+/* Read by screen readers, never drawn: the step heading that takes focus and the polite status line. */
+.sk-clone-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .sk-clone-note {
   margin: 0;
   color: var(--text-secondary);

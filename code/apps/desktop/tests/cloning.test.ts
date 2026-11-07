@@ -127,6 +127,30 @@ describe("voice cloning flow", () => {
     expect(await clonedVoices(l)).toEqual([]);
   });
 
+  it("moves focus to the heading of each step and announces a rejected clip and a saved voice in the polite status", async () => {
+    const l = await start();
+    const focused = () => l.page.evaluate(() => document.activeElement?.textContent ?? "");
+    const status = () => l.page.getByTestId("clone-status").textContent();
+    await l.page.getByRole("button", { name: "Clone a voice" }).click();
+    await expect.poll(focused).toBe("Choose a voice sample");
+    expect(await l.page.getByTestId("clone-status").getAttribute("aria-live")).toBe("polite");
+    await chooseFile(l, wavFile(3));
+    await l.page.getByRole("radio", { name: /^Upload a clip/ }).click();
+    await l.page.getByText(/the right to clone it/).click();
+    await l.page.getByRole("button", { name: "Continue" }).click();
+    await expect.poll(focused).toBe("Clip not accepted");
+    expect(await status()).toBe("The clip was not accepted. Failed: length.");
+
+    await chooseFile(l, wavFile(8));
+    await l.page.getByRole("button", { name: "Choose another file" }).click();
+    await l.page.getByLabel("Name").waitFor({ timeout: 30_000 });
+    await expect.poll(focused).toBe("Name your voice");
+    await l.page.getByLabel("Name").fill("Maya");
+    await l.page.getByRole("button", { name: "Save voice" }).click();
+    await expect.poll(focused).toBe("Voice saved");
+    expect(await status()).toBe("Voice saved: Maya.");
+  });
+
   it("uploads a good file, and cancelling the name step deletes the voice again", async () => {
     const l = await start();
     await chooseFile(l, wavFile(8));
