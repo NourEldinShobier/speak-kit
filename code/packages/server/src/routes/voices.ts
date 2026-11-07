@@ -46,8 +46,9 @@ export const voiceRoutes: Route[] = [
   {
     method: "PATCH",
     path: /^\/v1\/voices\/(cb_[0-9a-f]{8})$/,
-    handle: async ({ req, res, params }, { engines }) => {
+    handle: async ({ req, res, params, signal }, { engines }) => {
       const raw = await readBody(req);
+      signal.throwIfAborted();
       const updated = await engines.cloner()?.clones?.update(
         params[0]!,
         validated(() => parseUpdateVoice(raw)),

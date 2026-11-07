@@ -1,3 +1,4 @@
+import { request } from "node:http";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -193,6 +194,27 @@ describe("voice cloning", () => {
     expect(await patch(voice.id, {})).toEqual([400, "body: give a name, an exaggeration or a pace"]);
     expect((await patch(voice.id, { pace: 1.5 }))[0]).toBe(400);
     expect(await patch("cb_00000000", { name: "x" })).toEqual([404, "no such cloned voice"]);
+  });
+
+  it("changes nothing after the client saw 504: a rename body that arrives late is not applied", async () => {
+    const cb = chatterbox({ gpu: GPU });
+    const voice = await cb.clones.create({ name: "Voice 1", wav: clip(8), durationMs: 8000, checks: [] });
+    ctx = await start({}, undefined, { chatterbox: cb, controlDeadlineMs: 80 });
+    const body = JSON.stringify({ name: "Late name" });
+    const req = request({
+      host: "127.0.0.1",
+      port: ctx.server.port,
+      method: "PATCH",
+      path: `/v1/voices/${voice.id}`,
+      headers: { ...ctx.auth, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    });
+    req.on("error", () => {}); // the server may drop the connection once it has answered
+    const status = new Promise<number>((resolve) => req.on("response", (r) => (r.resume(), resolve(r.statusCode!))));
+    req.write(body.slice(0, 5));
+    expect(await status).toBe(504);
+    req.end(body.slice(5));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(cb.clones.list().map((v) => v.name)).toEqual(["Voice 1"]);
   });
 
   it.each([
