@@ -20,7 +20,16 @@ async function killWorker(ext: Ext, page: Page) {
   await cdp.send("ServiceWorker.stopAllWorkers");
   await cdp.detach();
   // The old instance is gone when the running one has no marker.
-  await expect.poll(async () => ext.ctx.serviceWorkers()[0]?.evaluate(() => (globalThis as { __alive?: number }).__alive).catch(() => "dead"), { timeout: 10_000 }).toBeUndefined();
+  await expect
+    .poll(
+      async () =>
+        ext.ctx
+          .serviceWorkers()[0]
+          ?.evaluate(() => (globalThis as { __alive?: number }).__alive)
+          .catch(() => "dead"),
+      { timeout: 10_000 },
+    )
+    .toBeUndefined();
 }
 
 test.describe("the service worker is killed", () => {
@@ -160,7 +169,10 @@ test.describe("rapid input", () => {
     const res = await fetch(`http://127.0.0.1:${app.port}/v1/voices`, { headers: { authorization: `Bearer ${app.token}` } });
     const ids = ((await res.json()) as { voices: { id: string }[] }).voices.map((v) => v.id);
     const speeds = [1, 1.5, 2, 1.2, 3];
-    const click = (name: string) => sk(page, name).evaluate((e: HTMLElement) => e.click()).catch(() => {});
+    const click = (name: string) =>
+      sk(page, name)
+        .evaluate((e: HTMLElement) => e.click())
+        .catch(() => {});
     const end = Date.now() + 5000;
     for (let i = 0; Date.now() < end; i++) {
       switch (i % 6) {

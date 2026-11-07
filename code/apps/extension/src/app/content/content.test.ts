@@ -74,7 +74,12 @@ describe("edge launcher (B17-B20)", () => {
     const page = await open();
     await page.hover("[data-sk=launcher-tab]");
     // The pill is rebuilt when the first state arrives and slides in; measure the one that stays, after its transition.
-    const settled = () => page.locator("[data-sk=launcher-pill]").first().evaluate((el: HTMLElement) => !el.classList.contains("is-out") && el.getAnimations().length === 0).catch(() => false);
+    const settled = () =>
+      page
+        .locator("[data-sk=launcher-pill]")
+        .first()
+        .evaluate((el: HTMLElement) => !el.classList.contains("is-out") && el.getAnimations().length === 0)
+        .catch(() => false);
     await expect.poll(settled).toBe(true);
     const p = await box(page, "[data-sk=launcher-pill]");
     expect(p.width).toBe(60);

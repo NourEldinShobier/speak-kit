@@ -32,7 +32,13 @@ test.describe("single page apps: content that changes under the reader", () => {
     await expect.poll(async () => (await highlights(page)).sentence).toBe("");
     const calls = app.engine.calls.length;
     const after = await extractOf(ext, page);
-    expect(after.sentences).toEqual(["View TWO", "TWO sentence 1 walks along the quiet harbor wall.", "TWO sentence 2 walks along the quiet harbor wall.", "TWO sentence 1 walks along the quiet harbor wall.", "TWO sentence 2 walks along the quiet harbor wall."]);
+    expect(after.sentences).toEqual([
+      "View TWO",
+      "TWO sentence 1 walks along the quiet harbor wall.",
+      "TWO sentence 2 walks along the quiet harbor wall.",
+      "TWO sentence 1 walks along the quiet harbor wall.",
+      "TWO sentence 2 walks along the quiet harbor wall.",
+    ]);
     expect((await readTab(ext, page)).ok).toBe(true);
     await ext.waitState("playing");
     await expect.poll(() => app.engine.calls.length).toBeGreaterThan(calls + 2);
@@ -123,14 +129,7 @@ customElements.define("x-closed", class extends HTMLElement { constructor(){ sup
     );
     await ext.pair(app);
     const page = await ext.open("/shadow");
-    expect((await extractOf(ext, page)).sentences).toEqual([
-      "Components",
-      S("SHADOWHEAD")[0],
-      `SLOTTED ${S("LIGHT")[0]}`,
-      S("SHADOWTAIL")[0],
-      S("NESTED")[0],
-      ...S("AFTER"),
-    ]);
+    expect((await extractOf(ext, page)).sentences).toEqual(["Components", S("SHADOWHEAD")[0], `SLOTTED ${S("LIGHT")[0]}`, S("SHADOWTAIL")[0], S("NESTED")[0], ...S("AFTER")]);
     expect((await readTab(ext, page)).ok).toBe(true);
     await ext.waitState("playing");
     await expect.poll(async () => (await highlights(page)).sentence).toContain("SHADOWHEAD");
