@@ -83,7 +83,8 @@ function Toolbar({ query, filter, dispatch }: { query: string; filter: VoiceFilt
   );
 }
 
-const lead = (n: number, engine: string | undefined) => `${engine === "chatterbox" ? plural(n, "Chatterbox voice", "Chatterbox voices") : plural(n, "Kokoro voice", "Kokoro voices")}. Press Preview to hear one.`;
+const lead = (n: number, engine: string | undefined) =>
+  `${engine === "chatterbox" ? plural(n, "Chatterbox voice", "Chatterbox voices") : plural(n, "Kokoro voice", "Kokoro voices")}. Press Preview to hear one.`;
 
 export function VoicesPage({ s, onGo }: { s: AppState; onGo?: (page: "engines") => void }) {
   const [st, dispatch] = useReducer(voicesReducer, undefined, initVoices);

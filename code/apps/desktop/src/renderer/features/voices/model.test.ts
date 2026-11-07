@@ -34,6 +34,12 @@ describe("filterVoices", () => {
 
 describe("voiceFilterLabel", () => {
   it("names the filter the way the toolbar dropdown shows it", () => {
-    expect(["all", "en-US", "en-GB", "female", "male"].map((f) => voiceFilterLabel(f as VoiceFilter))).toEqual(["Voices: all", "Voices: US English", "Voices: UK English", "Voices: female", "Voices: male"]);
+    expect(["all", "en-US", "en-GB", "female", "male"].map((f) => voiceFilterLabel(f as VoiceFilter))).toEqual([
+      "Voices: all",
+      "Voices: US English",
+      "Voices: UK English",
+      "Voices: female",
+      "Voices: male",
+    ]);
   });
 });

@@ -50,11 +50,7 @@ function RightNow({ s }: { s: AppState }) {
             <span data-testid="memory-engine">
               <EngineBadge s={s} />
             </span>
-            {v.key === "unloaded" && (
-              <Button onClick={() => api.warmEngine()}>
-                Load now
-              </Button>
-            )}
+            {v.key === "unloaded" && <Button onClick={() => api.warmEngine()}>Load now</Button>}
           </div>
         }
       />

@@ -47,7 +47,12 @@ const style = (p: Page, sel: string, prop: string, nth = 0): Promise<string> =>
 const settle = (p: Page) =>
   p.evaluate(async () => {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); // let the style of a freshly opened dialog start its animation
-    await Promise.all(document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {})));
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => {})),
+    );
   });
 /** Height of a row without its 1 px divider (a divider is 1 device pixel: 0.667 CSS px on a 150 % display). */
 const rowHeight = async (p: Page, sel: string) => (await box(p, sel)).h - Number.parseFloat(await style(p, sel, "border-top-width"));
@@ -216,7 +221,8 @@ describe("export (2.19)", () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "mp3", mp3Kbps: 128, folder: dir } } });
     await openExport(l);
-    const heights = () => l.page.evaluate(() => [...document.querySelectorAll(".sk-export .lm-select__trigger, .sk-export .lm-input, .sk-export .lm-btn")].map((e) => e.getBoundingClientRect().height));
+    const heights = () =>
+      l.page.evaluate(() => [...document.querySelectorAll(".sk-export .lm-select__trigger, .sk-export .lm-input, .sk-export .lm-btn")].map((e) => e.getBoundingClientRect().height));
     await expect.poll(heights).toEqual([36, 36, 36, 36, 36]);
   });
 

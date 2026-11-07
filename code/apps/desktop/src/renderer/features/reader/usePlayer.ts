@@ -40,36 +40,39 @@ export function useReaderPlayer(onSentence: (s: SentenceStart) => void): ReaderP
   const player = useRef<Player>(undefined);
   const { volume, attach, set: setVolume } = useVolume();
 
-  const get = useCallback((cfg: PlayerConfig) => {
-    if (!player.current) {
-      const proxy = createProxyFetch(window.speakkitLibrary);
-      const send = (path: string, init?: RequestInit) => proxy(`http://127.0.0.1${path}`, init);
-      player.current = new Player(
-        {
-          createContext: () => {
-            const ctx = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: "playback" });
-            attach(ctx);
-            return ctx as never;
+  const get = useCallback(
+    (cfg: PlayerConfig) => {
+      if (!player.current) {
+        const proxy = createProxyFetch(window.speakkitLibrary);
+        const send = (path: string, init?: RequestInit) => proxy(`http://127.0.0.1${path}`, init);
+        player.current = new Player(
+          {
+            createContext: () => {
+              const ctx = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: "playback" });
+              attach(ctx);
+              return ctx as never;
+            },
+            fetch: proxy,
+            emitState: setState,
+            emitSentence: (s) => sentence.current(s),
+            stretch: soundTouchStretch(),
+            hold: (ms) => void send("/v1/engine/hold", { method: "POST", body: JSON.stringify({ ms }) }).catch(() => {}), // a missed hold only lets the model unload sooner
+            engineState: async (): Promise<EngineState | undefined> => {
+              try {
+                return parseHealth(await (await send("/v1/health")).json())?.engine.state;
+              } catch {
+                return undefined;
+              }
+            },
           },
-          fetch: proxy,
-          emitState: setState,
-          emitSentence: (s) => sentence.current(s),
-          stretch: soundTouchStretch(),
-          hold: (ms) => void send("/v1/engine/hold", { method: "POST", body: JSON.stringify({ ms }) }).catch(() => {}), // a missed hold only lets the model unload sooner
-          engineState: async (): Promise<EngineState | undefined> => {
-            try {
-              return parseHealth(await (await send("/v1/health")).json())?.engine.state;
-            } catch {
-              return undefined;
-            }
-          },
-        },
-        cfg,
-        false,
-      );
-    }
-    return player.current;
-  }, [attach]);
+          cfg,
+          false,
+        );
+      }
+      return player.current;
+    },
+    [attach],
+  );
 
   useEffect(
     () => () => {

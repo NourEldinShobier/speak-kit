@@ -58,16 +58,7 @@ interface TopProps {
 export function ReaderTop({ meta, panel, displayOpen, bookmarked, blocked, hidden, dispatch, onBack, onBookmark, onExport, onShown }: TopProps) {
   const icons: Record<HeaderId, ReactElement> = {
     search: <IconButton name="search" label="Find in text" onClick={() => dispatch({ type: "find-open" })} />,
-    display: (
-      <IconButton
-        name="text-size"
-        label="Display settings"
-        aria-expanded={displayOpen}
-        aria-haspopup="dialog"
-        data-display-trigger=""
-        onClick={() => dispatch({ type: "toggle-display" })}
-      />
-    ),
+    display: <IconButton name="text-size" label="Display settings" aria-expanded={displayOpen} aria-haspopup="dialog" data-display-trigger="" onClick={() => dispatch({ type: "toggle-display" })} />,
     bookmark: <IconButton name="bookmark" label="Bookmark this place" aria-pressed={bookmarked} disabled={blocked} onClick={onBookmark} />,
     export: <IconButton name="download" label="Export audio" disabled={blocked} onClick={onExport} />,
     outline: <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={panel === "outline"} onClick={() => dispatch({ type: "toggle-panel", panel: "outline" })} />,

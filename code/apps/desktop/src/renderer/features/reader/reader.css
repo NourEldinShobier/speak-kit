@@ -179,7 +179,11 @@
   gap: 16px;
   width: 296px;
   padding: 16px;
-  font: 400 14px/20px "Inter Variable", Inter, system-ui, sans-serif;
+  font:
+    400 14px/20px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
 }
 .rd-find ~ .rd-display {
   inset-block-start: 64px;

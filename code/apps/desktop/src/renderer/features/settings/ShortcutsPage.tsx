@@ -89,17 +89,7 @@ function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
       />
       {problem && (
         <div className="sk-pad" data-testid="shortcut-problem">
-          <Banner
-            tone="warning"
-            title={problem.text}
-            action={
-              problem.suggestion ? (
-                <Button onClick={() => onUse(problem.suggestion!)}>
-                  Use {problem.suggestion}
-                </Button>
-              ) : undefined
-            }
-          >
+          <Banner tone="warning" title={problem.text} action={problem.suggestion ? <Button onClick={() => onUse(problem.suggestion!)}>Use {problem.suggestion}</Button> : undefined}>
             Speak Kit never takes a shortcut another app owns. Pick another combination or use the suggestion.
           </Banner>
         </div>
@@ -145,11 +135,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
           className="lm-row--control"
           label="Reset all"
           description={`Back to ${showAccelerator("Ctrl+Alt", s.platform, "global")}+S, Space, X and C.`}
-          control={
-            <Button onClick={() => api.resetShortcuts()}>
-              Reset
-            </Button>
-          }
+          control={<Button onClick={() => api.resetShortcuts()}>Reset</Button>}
         />
       </SettingsSection>
       <SettingsSection title="In this app">

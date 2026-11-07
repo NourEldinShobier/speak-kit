@@ -112,7 +112,11 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Storage" }).click();
     await l.page.getByText("Voice models").waitFor();
     rows.push(...(await measure()));
-    for (const kind of ["plain", "desc", "control"]) expect(rows.filter(([k]) => k === kind), kind).not.toHaveLength(0);
+    for (const kind of ["plain", "desc", "control"])
+      expect(
+        rows.filter(([k]) => k === kind),
+        kind,
+      ).not.toHaveLength(0);
     const min = (kind: string) => Math.min(...rows.filter(([k]) => k === kind).map(([, v]) => v));
     expect([min("plain"), min("desc"), min("control")]).toEqual([42, 58, 68]);
   });

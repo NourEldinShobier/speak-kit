@@ -19,10 +19,13 @@ afterAll(async () => {
 /** Computed values of `props` for the element `sel` inside `html` rendered under the real lumen.css. */
 const look = async (html: string, sel: string, props: string[], pseudo?: string): Promise<string[]> => {
   await page.setContent(`<style>${css}</style><div class="lm" style="padding:20px">${html}</div>`);
-  return page.evaluate(([s, p, ps]) => {
-    const c = getComputedStyle(document.querySelector(s as string)!, (ps as string) || null);
-    return (p as string[]).map((n) => c.getPropertyValue(n));
-  }, [sel, props, pseudo ?? ""] as const);
+  return page.evaluate(
+    ([s, p, ps]) => {
+      const c = getComputedStyle(document.querySelector(s as string)!, (ps as string) || null);
+      return (p as string[]).map((n) => c.getPropertyValue(n));
+    },
+    [sel, props, pseudo ?? ""] as const,
+  );
 };
 
 describe("a) slider", () => {
@@ -75,7 +78,11 @@ describe("b) destructive button", () => {
     expect(await look(focus, "button", ["outline-width", "outline-style", "outline-color", "outline-offset"])).toEqual(["2px", "solid", "color(srgb 0.776471 0.156863 0.156863 / 0.4)", "0px"]);
   });
   test("disabled keeps the white button and dims only the text to 40%", async () => {
-    expect(await look('<button class="lm-btn lm-btn--danger" disabled>Delete</button>', "button", ["opacity", "color", "background-color"])).toEqual(["1", "color(srgb 0.776471 0.156863 0.156863 / 0.4)", "rgb(255, 255, 255)"]);
+    expect(await look('<button class="lm-btn lm-btn--danger" disabled>Delete</button>', "button", ["opacity", "color", "background-color"])).toEqual([
+      "1",
+      "color(srgb 0.776471 0.156863 0.156863 / 0.4)",
+      "rgb(255, 255, 255)",
+    ]);
   });
   test("there is no filled red button class", () => {
     expect(css).not.toContain("danger-solid");
@@ -106,7 +113,12 @@ describe("d) cards", () => {
 describe("e) floating cards", () => {
   const props = ["border-top-width", "border-top-color", "box-shadow", "overflow-x"];
   test("menu: one 1px #E5E5E5 border and one shadow 0 2 6 at 6%", async () => {
-    expect(await look('<div class="lm-menu"><button class="lm-menu__item">Copy</button></div>', ".lm-menu", props)).toEqual(["1px", "rgb(229, 229, 229)", "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", "visible"]);
+    expect(await look('<div class="lm-menu"><button class="lm-menu__item">Copy</button></div>', ".lm-menu", props)).toEqual([
+      "1px",
+      "rgb(229, 229, 229)",
+      "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px",
+      "visible",
+    ]);
   });
   test("popover has the same border and shadow", async () => {
     expect(await look('<div class="lm-popover">A</div>', ".lm-popover", props)).toEqual(["1px", "rgb(229, 229, 229)", "rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", "visible"]);
@@ -115,8 +127,7 @@ describe("e) floating cards", () => {
     expect(await look('<div class="lm-toast">A</div>', ".lm-toast", ["border-top-width", "box-shadow"])).toEqual(["0px", "rgb(229, 229, 229) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 2px 6px 0px"]);
   });
   test("the current row is full width, radius 6, with the check mark at the right", async () => {
-    const html =
-      '<div class="lm-menu" style="width:200px"><div class="lm-menu__item" data-state="checked"><span class="lm-menu__label">Serif</span><span class="lm-menu__check">x</span></div></div>';
+    const html = '<div class="lm-menu" style="width:200px"><div class="lm-menu__item" data-state="checked"><span class="lm-menu__label">Serif</span><span class="lm-menu__check">x</span></div></div>';
     expect(await look(html, ".lm-menu__item", ["background-color", "border-top-left-radius", "width"])).toEqual(["rgb(240, 240, 240)", "6px", "190px"]);
     const check = await page.evaluate(() => {
       const r = document.querySelector(".lm-menu__check")!.getBoundingClientRect();
@@ -144,7 +155,12 @@ describe("f) control sizing and the row helper", () => {
     return page.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.getBoundingClientRect().height), sel);
   };
   test("default input, select trigger and button are 36 high; the 36 icon button is 36 x 36", async () => {
-    expect(await heights('<div class="lm-input"><input class="lm-input__field"></div><button class="lm-select__trigger">A</button><button class="lm-btn lm-btn--secondary">Go</button>', ".lm-input, .lm-select__trigger, .lm-btn")).toEqual([36, 36, 36]);
+    expect(
+      await heights(
+        '<div class="lm-input"><input class="lm-input__field"></div><button class="lm-select__trigger">A</button><button class="lm-btn lm-btn--secondary">Go</button>',
+        ".lm-input, .lm-select__trigger, .lm-btn",
+      ),
+    ).toEqual([36, 36, 36]);
     await page.setContent(`<style>${css}</style><div class="lm"><button id="b" class="lm-btn lm-btn--icon"></button></div>`);
     expect(await page.evaluate(() => [document.getElementById("b")!.offsetWidth, document.getElementById("b")!.offsetHeight])).toEqual([36, 36]);
   });
@@ -157,7 +173,8 @@ describe("f) control sizing and the row helper", () => {
     expect(out).toEqual(["none", "rgb(23, 23, 23)"]);
   });
   test(".lm-row--control is 68 high with 16 px above, below and right, the title block centred", async () => {
-    const html = '<div class="lm-card" style="width:600px"><div class="lm-row lm-row--control"><div class="lm-row__text"><div class="lm-row__label">Language</div></div><div class="lm-row__control"><button class="lm-btn lm-btn--secondary">English</button></div></div></div>';
+    const html =
+      '<div class="lm-card" style="width:600px"><div class="lm-row lm-row--control"><div class="lm-row__text"><div class="lm-row__label">Language</div></div><div class="lm-row__control"><button class="lm-btn lm-btn--secondary">English</button></div></div></div>';
     expect(await heights(html, ".lm-row")).toEqual([68]);
     expect(await look(html, ".lm-row", ["padding-top", "padding-bottom", "padding-right", "align-items"])).toEqual(["16px", "16px", "16px", "center"]);
     const gaps = await page.evaluate(() => {
@@ -169,7 +186,8 @@ describe("f) control sizing and the row helper", () => {
     expect(gaps).toEqual([16, 16, 16, 0]);
   });
   test("a row holding a 36 px dropdown gets the same 68 without the class; a toggle row stays 42", async () => {
-    const row = (c: string) => `<div class="lm-card" style="width:600px"><div class="lm-row"><div class="lm-row__text"><div class="lm-row__label">A</div></div><div class="lm-row__control">${c}</div></div></div>`;
+    const row = (c: string) =>
+      `<div class="lm-card" style="width:600px"><div class="lm-row"><div class="lm-row__text"><div class="lm-row__label">A</div></div><div class="lm-row__control">${c}</div></div></div>`;
     expect(await heights(row('<div class="lm-select"><button class="lm-select__trigger">A</button></div>'), ".lm-row")).toEqual([68]);
     expect(await heights(row('<button class="lm-toggle" role="switch" aria-checked="false"><span class="lm-toggle__knob"></span></button>'), ".lm-row")).toEqual([42]);
   });

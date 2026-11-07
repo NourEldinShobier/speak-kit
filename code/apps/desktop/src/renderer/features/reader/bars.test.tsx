@@ -77,7 +77,7 @@ describe("reader footer", () => {
     expect(html.indexOf('data-testid="total"')).toBeLessThan(html.indexOf(">1.5x</button>"));
   });
   it("shows the voice name on the voice button and no title block", () => {
-    expect(bar()).toContain('<span>Heart</span></button>');
+    expect(bar()).toContain("<span>Heart</span></button>");
     expect(bar()).not.toContain("rd-bar__title");
   });
   it("leaves out the items the person turned off, never the transport", () => {

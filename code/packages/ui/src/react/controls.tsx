@@ -25,13 +25,7 @@ export function Button({ variant = "secondary", size = "md", iconLeft, iconRight
   const lead = loading ? "loader-2" : iconLeft;
   const glyph = BTN_GLYPH[size] ?? 16;
   return (
-    <button
-      type={type}
-      className={cx("lm-btn", `lm-btn--${variant}`, BTN_SIZE_CLASS[size], loading && "is-loading", className)}
-      disabled={disabled}
-      aria-busy={loading ? "true" : undefined}
-      {...rest}
-    >
+    <button type={type} className={cx("lm-btn", `lm-btn--${variant}`, BTN_SIZE_CLASS[size], loading && "is-loading", className)} disabled={disabled} aria-busy={loading ? "true" : undefined} {...rest}>
       {lead ? <Icon name={lead} size={glyph} className={loading ? "lm-spin" : undefined} /> : null}
       {children}
       {iconRight ? <Icon name={iconRight} size={glyph} /> : null}

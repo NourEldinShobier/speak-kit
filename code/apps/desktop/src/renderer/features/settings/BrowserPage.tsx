@@ -28,14 +28,7 @@ function PortRow({ s }: { s: AppState }) {
       description="The extension connects here. Default 47615. If it is busy, the next free port is used."
       control={
         <div className="sk-row-actions">
-          <TextInput
-            aria-label="Server port"
-            inputMode="numeric"
-            value={port}
-            error={!valid ? "1024 to 65535" : err || undefined}
-            onChange={(e) => setPort(e.target.value)}
-            style={{ width: 96 }}
-          />
+          <TextInput aria-label="Server port" inputMode="numeric" value={port} error={!valid ? "1024 to 65535" : err || undefined} onChange={(e) => setPort(e.target.value)} style={{ width: 96 }} />
           <Button disabled={!valid || busy || n === s.config.preferredPort} loading={busy} onClick={apply}>
             Apply
           </Button>
