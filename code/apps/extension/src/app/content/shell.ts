@@ -13,6 +13,7 @@ export class ShadowShell implements Shell {
   readonly host: HTMLElement;
   readonly root: HTMLElement;
   popover: Shell["popover"] = null;
+  private popSize: ResizeObserver | null = null;
   private resizeCb?: () => void;
 
   constructor(featureCss: string[]) {
@@ -60,6 +61,11 @@ export class ShadowShell implements Shell {
     anchor.classList.add("is-open");
     this.popover = { kind, el, anchor };
     place(el, anchor.getBoundingClientRect(), this);
+    // Content that arrives later (the voice list) changes the height, so the popover is placed again to stay inside the viewport.
+    if (typeof ResizeObserver !== "undefined") {
+      this.popSize = new ResizeObserver(() => place(el, anchor.getBoundingClientRect(), this));
+      this.popSize.observe(el);
+    }
     // keyboard users land inside the popover; Escape or a second press brings focus back to the anchor
     el.querySelector<HTMLElement>("input,button,[tabindex]")?.focus({ preventScroll: true });
   }
@@ -68,6 +74,8 @@ export class ShadowShell implements Shell {
     const p = this.popover;
     if (!p || (kind && p.kind !== kind)) return;
     const hadFocus = p.el.contains((this.root.getRootNode() as ShadowRoot).activeElement);
+    this.popSize?.disconnect();
+    this.popSize = null;
     p.el.remove();
     p.anchor.classList.remove("is-open");
     this.popover = null;

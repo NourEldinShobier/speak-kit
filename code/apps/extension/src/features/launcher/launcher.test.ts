@@ -108,6 +108,19 @@ describe("edge tab and pill", () => {
     expect(calls).toEqual(["stop", "skip 10000"]);
   });
 
+  test("the open pill is centred on the viewport height within 1 px, idle and reading, whatever height the tab was saved at", () => {
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 361 });
+    for (const m of [model({ launcher: { ...settingsLauncher, y: 0.9 } }), model({ status: "playing", totalMs: 1000, launcher: { ...settingsLauncher, y: 0.1 } })]) {
+      setup(m);
+      click($("[data-sk=launcher-tab]"));
+      const pill = $("[data-sk=launcher-pill]")!;
+      expect(Math.abs(parseFloat(pill.style.top) + pill.offsetHeight / 2 - 720 / 2)).toBeLessThanOrEqual(1);
+      launcher.destroy();
+      host.remove();
+    }
+    delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+  });
+
   test("the reading rail ignores the saved height and Enter on it opens the pill with Pause focused", () => {
     setup(model({ status: "paused", elapsedMs: 10_000, totalMs: 100_000, launcher: { ...settingsLauncher, y: 0.9 } }));
     const tab = $("[data-sk=launcher-tab]")!;

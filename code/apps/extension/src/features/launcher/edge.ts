@@ -3,7 +3,7 @@ import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
 import { closeButton, focusedControl, moreMenu, readerButton, restoreFocus, speedVoiceButtons } from "./edge-parts";
-import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railPillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
+import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
 type Launcher = Settings["launcher"];
@@ -71,7 +71,7 @@ export class EdgeLauncher {
   }
 
   private pillTop(p: HTMLElement): number {
-    return (this.rail ? railPillTop : pillTop)(this.tabTop(), this.s.shell.height, p.offsetHeight);
+    return pillTop(this.s.shell.height, p.offsetHeight);
   }
 
   private renderLauncher() {
@@ -143,7 +143,7 @@ export class EdgeLauncher {
     });
   }
 
-  /** Drag up/down (tab or pill); the new height is persisted on release. */
+  /** Drag the tab up/down; the new height is persisted on release. */
   private drag(el: HTMLElement) {
     let start: { y: number; tab: number } | null = null;
     el.addEventListener("pointerdown", (e) => {
@@ -189,7 +189,6 @@ export class EdgeLauncher {
     this.pillSpeed = speed;
     this.pillVoice = avatar;
     p.append(speed, voice, this.pillLast(l, reading), closeButton(this.s.hd, this.tip));
-    this.drag(p);
     this.closeWhenAway(p);
     p.classList.add("is-out");
     this.s.shell.root.append(p);
@@ -287,6 +286,7 @@ export class EdgeLauncher {
       this.pillSpeed.setAttribute("aria-label", `Speed ${speedLabel(m.speed)}`);
     }
     if (this.pillVoice) this.pillVoice.textContent = (m.voiceName || "?").slice(0, 1).toUpperCase();
+    if (this.pill) this.pill.style.top = `${this.pillTop(this.pill)}px`; // the time text changes the height
     this.ltipPatch?.();
   }
 
