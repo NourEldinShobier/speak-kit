@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import type { EngineState, Health, VoiceList } from "./api";
-import type { EngineList, ExportJob } from "./engines";
+import type { ClonedVoice, EngineList, ExportJob } from "./engines";
 
 /** Runtime schemas for what the server answers. Responses are a trust boundary: parse them, never cast. */
 const engineState = v.picklist(["missing", "downloading", "installing", "unavailable", "unloaded", "loading", "ready", "error"] satisfies EngineState[]);
@@ -68,8 +68,23 @@ export const exportJobSchema: v.GenericSchema<unknown, ExportJob> = v.object({
   error: v.exactOptional(v.string()),
 });
 
-/** Shape of every JSON error body: { error: { code, message } }. */
-export const errorBodySchema = v.object({ error: v.object({ code: v.string(), message: v.string() }) });
+const cloneCheck = v.object({ id: v.picklist(["length", "sample-rate", "loudness", "silence", "noise"]), ok: v.boolean(), message: v.string() });
+
+/** Shape of a cloned voice (POST /v1/voices/clone, PATCH /v1/voices/<id>). */
+export const clonedVoiceSchema: v.GenericSchema<unknown, ClonedVoice> = v.object({
+  id: v.string(),
+  name: v.string(),
+  durationMs: v.number(),
+  createdAt: v.number(),
+  checks: v.array(cloneCheck),
+  exaggeration: v.exactOptional(v.number()),
+  pace: v.exactOptional(v.number()),
+});
+/** Shape of GET /v1/voices/cloned. */
+export const clonedVoiceListSchema: v.GenericSchema<unknown, { voices: ClonedVoice[] }> = v.object({ voices: v.array(clonedVoiceSchema) });
+
+/** Shape of every JSON error body: { error: { code, message } }; a 422 clip-rejected adds the per-criterion `checks`. */
+export const errorBodySchema = v.object({ error: v.object({ code: v.string(), message: v.string(), checks: v.exactOptional(v.array(cloneCheck)) }) });
 
 const parser =
   <T>(schema: v.GenericSchema<unknown, T>) =>

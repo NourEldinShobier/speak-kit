@@ -12,6 +12,8 @@ const IndexSchema = v.array(
     durationMs: v.number(),
     createdAt: v.number(),
     gender: v.picklist(["female", "male"]),
+    exaggeration: v.exactOptional(v.number()),
+    pace: v.exactOptional(v.number()),
     checks: v.array(
       v.object({
         id: v.picklist(["length", "sample-rate", "loudness", "silence", "noise"]),
@@ -103,7 +105,30 @@ export class ClonedVoiceStore {
   }
 
   list(): ClonedVoice[] {
-    return this.#index.map(({ id, name, durationMs, createdAt, checks }) => ({ id, name, durationMs, createdAt, checks }));
+    return this.#index.map(({ id, name, durationMs, createdAt, checks, exaggeration, pace }) => ({ id, name, durationMs, createdAt, checks, ...(exaggeration !== undefined && { exaggeration }), ...(pace !== undefined && { pace }) }));
+  }
+
+  /** Changes the name or the style of a voice; undefined when there is no such voice. A failed write leaves the voice as it was. */
+  update(id: string, patch: { name?: string | undefined; exaggeration?: number | undefined; pace?: number | undefined }): Promise<ClonedVoice | undefined> {
+    return this.#serial(async () => {
+      const e = this.#index.find((x) => x.id === id);
+      if (!e) return undefined;
+      const before = { ...e };
+      Object.assign(e, Object.fromEntries(Object.entries(patch).filter(([, x]) => x !== undefined)));
+      try {
+        await this.#save();
+      } catch (err) {
+        Object.assign(e, before);
+        throw err;
+      }
+      return this.list().find((x) => x.id === id);
+    });
+  }
+
+  /** The style the sidecar sends to the model for this voice; empty when the person never changed it. */
+  style(id: string): { exaggeration?: number; pace?: number } {
+    const e = this.#index.find((x) => x.id === id);
+    return { ...(e?.exaggeration !== undefined && { exaggeration: e.exaggeration }), ...(e?.pace !== undefined && { pace: e.pace }) };
   }
 
   voices(): Voice[] {

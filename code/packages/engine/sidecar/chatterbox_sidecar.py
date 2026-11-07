@@ -1,6 +1,6 @@
 """Chatterbox sidecar for SpeakKit. Line-delimited JSON on stdin/stdout; stderr is for logs.
 
-In:  {"op": "synth", "id": 1, "text": "...", "reference": "<wav path>" | null}
+In:  {"op": "synth", "id": 1, "text": "...", "reference": "<wav path>" | null, "exaggeration": 0..1 (optional), "cfg_weight": 0..1 (optional)}
      {"op": "abort", "id": 1}   stops that request (queued or running); no reply is sent for it
 Out: {"kind": "progress", "phase": "downloading" | "loading", "progress": 0..1}
      {"kind": "ready"}
@@ -139,7 +139,7 @@ def main():
             if req["id"] in aborted:
                 continue
             model.conds = conditionals(req.get("reference"))
-            wav = model.generate(req["text"])
+            wav = model.generate(req["text"], exaggeration=req.get("exaggeration", 0.5), cfg_weight=req.get("cfg_weight", 0.5))
             pcm = (wav.squeeze().cpu().numpy().clip(-1, 1) * 32767).astype(np.int16)
             send({"kind": "audio", "id": req["id"], "sampleRate": sr, "pcm": base64.b64encode(pcm.tobytes()).decode()})
         except Aborted:

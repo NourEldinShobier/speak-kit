@@ -161,6 +161,12 @@ const cloneSchema = v.object({
   gender: v.optional(v.picklist(["female", "male"])),
 });
 
+const unit = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(1));
+const updateVoiceSchema = v.pipe(
+  v.object({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) }),
+  v.check((b) => Object.keys(b).length > 0, "give a name, an exaggeration or a pace"),
+);
+
 /** Bodies of the newer endpoints: the message names the failing field. */
 function parseNamed<S extends v.GenericSchema>(schema: S, body: unknown): v.InferOutput<S> {
   const r = v.safeParse(schema, body, { abortEarly: true });
@@ -170,6 +176,7 @@ function parseNamed<S extends v.GenericSchema>(schema: S, body: unknown): v.Infe
 }
 export const parseEngineId = (body: unknown) => parseNamed(engineSchema, body).id;
 export const parseClone = (body: unknown) => parseNamed(cloneSchema, body);
+export const parseUpdateVoice = (body: unknown) => parseNamed(updateVoiceSchema, body);
 export const parseExport = (voices: Set<string>, body: unknown) => parseNamed(exportSchema(voices), body);
 
 const REPLACE_ID = /^[\w.:-]{1,64}$/;

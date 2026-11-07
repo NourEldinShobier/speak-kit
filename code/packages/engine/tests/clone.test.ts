@@ -62,6 +62,18 @@ describe("ClonedVoiceStore", () => {
     expect(new ClonedVoiceStore(dir).list()).toEqual([]);
   });
 
+  it("renames a voice and keeps its style across a restart", async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
+    const s = new ClonedVoiceStore(dir);
+    const v = await s.create({ name: "Voice 1", wav: clip(6), durationMs: 6000, checks: [] });
+    expect(s.style(v.id)).toEqual({});
+    expect(await s.update(v.id, { name: "Maya", exaggeration: 0.8 })).toMatchObject({ id: v.id, name: "Maya", exaggeration: 0.8 });
+    const again = new ClonedVoiceStore(dir);
+    expect(again.style(v.id)).toEqual({ exaggeration: 0.8 });
+    expect(again.voices()[0]!.name).toBe("Maya");
+    expect(await again.update("cb_00000000", { name: "x" })).toBeUndefined();
+  });
+
   it("keeps every voice when adds overlap", async () => {
     const dir = join(mkdtempSync(join(tmpdir(), "vs-")), "voices");
     const s = new ClonedVoiceStore(dir);

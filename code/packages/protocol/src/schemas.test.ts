@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { engineListSchema, parseHealth, parseVoiceList } from "./schemas";
+import { clonedVoiceSchema, engineListSchema, errorBodySchema, parseHealth, parseVoiceList } from "./schemas";
 import * as v from "valibot";
 
 const engine = { id: "chatterbox", state: "installing", progress: 0.4 };
@@ -31,5 +31,12 @@ describe("server response schemas", () => {
   it("rejects an unknown engine reason", () => {
     const list = { active: "kokoro", engines: [{ id: "chatterbox", name: "Chatterbox", state: "missing", reason: "gremlins", optional: true, cloning: true }] };
     expect(v.safeParse(engineListSchema, list).success).toBe(false);
+  });
+
+  it("keeps the style of a cloned voice and the checks of a rejected clip", () => {
+    const voice = { id: "cb_0a1b2c3d", name: "Maya", durationMs: 8000, createdAt: 5, checks: [], exaggeration: 0.7, pace: 0.4 };
+    expect(v.parse(clonedVoiceSchema, voice)).toEqual(voice);
+    const body = { error: { code: "clip-rejected", message: "Clip is 3.0 s; at least 5.0 s is needed.", checks: [{ id: "length", ok: false, message: "Clip is 3.0 s; at least 5.0 s is needed." }] } };
+    expect(v.parse(errorBodySchema, body)).toEqual(body);
   });
 });

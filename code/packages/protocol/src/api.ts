@@ -17,6 +17,8 @@ import type { EngineId } from "./engines";
  *   POST /v1/engines/<id>/cancel    -> 200 EngineList; stops a running install (child processes killed, partial environment deleted); no-op otherwise
  *   DELETE /v1/engines/<id>         -> 200 EngineList; removes an installed optional engine
  *   POST /v1/voices/clone           -> body CloneVoiceRequest, 201 ClonedVoice (422 clip-rejected with `checks`)
+ *   GET  /v1/voices/cloned          -> { voices: ClonedVoice[] }
+ *   PATCH /v1/voices/<id>           -> body UpdateVoiceRequest, 200 ClonedVoice (cloned voices only; name and style)
  *   DELETE /v1/voices/<id>          -> 204 (cloned voices only)
  *   POST /v1/export                 -> body ExportRequest, 202 ExportJob; render sentences to one WAV
  *   GET  /v1/export/<id>            -> ExportJob (progress); GET /v1/export/<id>/audio streams the WAV; DELETE /v1/export/<id> cancels and removes it

@@ -166,6 +166,31 @@ describe("voice cloning", () => {
     expect((await call(ctx, "DELETE", `/v1/voices/${voice.id}`)).status).toBe(404);
   });
 
+  it("renames a cloned voice, stores its style and speaks with it", async () => {
+    ctx = await startWith(chatterbox({ gpu: GPU }));
+    const voice = (await (await call(ctx, "POST", "/v1/voices/clone", body(clip(8)))).json()) as ClonedVoice;
+    const r = await call(ctx, "PATCH", `/v1/voices/${voice.id}`, { name: "Maya R", exaggeration: 0.7, pace: 0.4 });
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ id: voice.id, name: "Maya R", exaggeration: 0.7, pace: 0.4 });
+    expect(((await (await call(ctx, "GET", "/v1/voices/cloned")).json()) as { voices: ClonedVoice[] }).voices[0]).toMatchObject({ name: "Maya R", exaggeration: 0.7, pace: 0.4 });
+    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
+    const s = await fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }) });
+    const [first] = await readFrames(s);
+    expect(first!.frame.pcm![0]).toBe(2000 + 700 + 4000); // fake sidecar: reference 2000, 1000 x exaggeration, 10 000 x pace
+  });
+
+  it("refuses an empty, out-of-range or unknown update", async () => {
+    ctx = await startWith(chatterbox({ gpu: GPU }));
+    const voice = (await (await call(ctx, "POST", "/v1/voices/clone", body(clip(8)))).json()) as ClonedVoice;
+    const patch = async (id: string, b: object) => {
+      const r = await call(ctx!, "PATCH", `/v1/voices/${id}`, b);
+      return [r.status, ((await r.json()) as { error: { message: string } }).error.message];
+    };
+    expect(await patch(voice.id, {})).toEqual([400, "body: give a name, an exaggeration or a pace"]);
+    expect((await patch(voice.id, { pace: 1.5 }))[0]).toBe(400);
+    expect(await patch("cb_00000000", { name: "x" })).toEqual([404, "no such cloned voice"]);
+  });
+
   it.each([
     ["too short", clip(3), "Clip is 3.0 s; at least 5.0 s is needed.", "length"],
     ["too long", clip(31), "Clip is 31.0 s; at most 30.0 s is allowed.", "length"],

@@ -48,6 +48,16 @@ export interface ClonedVoice {
   durationMs: number;
   createdAt: number;
   checks: CloneCheck[];
+  /** Voice style, 0 to 1 (calm to dramatic). Absent until set; the engine then uses its neutral 0.5. */
+  exaggeration?: number;
+  /** Voice style, 0 to 1 (slow to fast). Absent until set; the engine then uses its neutral 0.5. */
+  pace?: number;
+}
+/** Body of PATCH /v1/voices/<id> (cloned voices only): at least one field. Answers 200 ClonedVoice. */
+export interface UpdateVoiceRequest {
+  name?: string;
+  exaggeration?: number;
+  pace?: number;
 }
 export const CLONE_MIN_MS = 5_000;
 export const CLONE_MAX_MS = 30_000;

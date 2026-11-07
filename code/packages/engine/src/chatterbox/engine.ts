@@ -275,7 +275,7 @@ export class ChatterboxEngine extends LifecycleEngine {
       for (const piece of splitLong(text, 250)) {
         signal?.throwIfAborted();
         if (parts.length) parts.push(new Int16Array(GAP_SAMPLES));
-        const r = await sidecar.synth(piece, reference, signal);
+        const r = await sidecar.synth(piece, reference, signal, this.clones.style(voice));
         sampleRate = r.sampleRate;
         parts.push(r.pcm);
       }

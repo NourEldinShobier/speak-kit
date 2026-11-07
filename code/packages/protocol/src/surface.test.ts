@@ -23,6 +23,8 @@ describe("protocol runtime surface", () => {
       "SETTINGS_KEY",
       "TOKEN_KEY",
       "clock",
+      "clonedVoiceListSchema",
+      "clonedVoiceSchema",
       "compareNames",
       "defaultSettings",
       "encodeFrame",

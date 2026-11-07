@@ -1,5 +1,5 @@
 import { EngineUnavailableError, WavError, analyzeClip, parseWav } from "@speakkit/engine";
-import { MAX_CLIP_BODY, parseClone } from "../config";
+import { MAX_CLIP_BODY, parseClone, parseUpdateVoice } from "../config";
 import type { EngineRegistry } from "../engines";
 import { HttpError, json, noContent, readBody, validated } from "../http";
 import type { Route } from "../router";
@@ -43,6 +43,16 @@ export const voiceRoutes: Route[] = [
     },
   },
   { method: "GET", path: "/v1/voices/cloned", handle: ({ res }, { engines }) => json(res, 200, { voices: engines.cloner()?.clones?.list() ?? [] }) },
+  {
+    method: "PATCH",
+    path: /^\/v1\/voices\/(cb_[0-9a-f]{8})$/,
+    handle: async ({ req, res, params }, { engines }) => {
+      const raw = await readBody(req);
+      const updated = await engines.cloner()?.clones?.update(params[0]!, validated(() => parseUpdateVoice(raw)));
+      if (!updated) throw new HttpError(404, "not-found", "no such cloned voice");
+      json(res, 200, updated);
+    },
+  },
   {
     method: "DELETE",
     path: /^\/v1\/voices\/(cb_[0-9a-f]{8})$/,
