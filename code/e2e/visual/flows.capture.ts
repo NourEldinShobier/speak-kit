@@ -12,7 +12,7 @@ import { libraryWith } from "./desktop-app";
 // FLOWS=slug,slug limits the run. Extension steps that need the background worker's broadcasts are forged the same way as in the scenarios.
 
 const ROOT = resolve(HERE, "../../../designs/review");
-// FLOWS=all or FLOWS=slug,slug (the flows only run on request)
+// FLOWS=all or FLOWS=slug,slug: vite.config.ts includes this file only when FLOWS is set, so it is a capture script, not a test of the suite
 const only = process.env.FLOWS && process.env.FLOWS !== "all" ? process.env.FLOWS.split(",").map((s) => s.trim()) : undefined;
 const done: { title: string; slug: string; steps: { caption: string; file: string }[] }[] = [];
 let ext: Ext;
@@ -55,12 +55,14 @@ class Flow {
     done.push({ title: this.title, slug: this.slug, steps: this.steps });
   }
 }
-const flow = (slug: string, title: string, run: (f: Flow) => Promise<void>) =>
-  it.runIf(!only || only.includes(slug))(slug, async () => {
+const flow = (slug: string, title: string, run: (f: Flow) => Promise<void>) => {
+  if (only && !only.includes(slug)) return;
+  it(slug, async () => {
     const f = new Flow(slug, title);
     await run(f);
     f.finish();
   });
+};
 
 const ctx = (): Ctx => ({ ext, env });
 const dock = (s: any) => ({ ...s, launcher: { ...s.launcher, enabled: false }, sites: { "127.0.0.1": "always-dock" } });
@@ -77,7 +79,7 @@ async function popup(m: Mock, f: Flow, caption: string, after?: (p: Page) => Pro
   await page.close();
 }
 
-describe.runIf(!!process.env.FLOWS)("flows", () => {
+describe("flows", () => {
   flow("extension-read-selection", "Extension: select text, Listen, read, pause, change speed, finish", async (f) => {
     const p = await openPage(ctx(), { settings: dock });
     await sleep(500);
