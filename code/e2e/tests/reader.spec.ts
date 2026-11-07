@@ -91,8 +91,10 @@ test.describe("desktop reader @slow", () => {
       await d.page.getByRole("button", { name: "Display settings" }).click();
       await d.page.getByRole("radio", { name: "Serif" }).click();
       await expect.poll(() => d.page.locator(".rd-article").evaluate((e) => getComputedStyle(e).fontFamily)).toContain("Charter");
-      await d.page.getByRole("radio", { name: "Light" }).click();
-      await expect(d.page.getByTestId("reader")).toHaveAttribute("data-theme", "light");
+      // The compact display card has no theme (light only, decision 2.8); the text size slider moves the article.
+      await d.page.getByRole("slider", { name: "Text size" }).focus();
+      await d.page.keyboard.press("End");
+      await expect.poll(() => d.page.locator(".rd-article").evaluate((e) => getComputedStyle(e).fontSize)).toBe("30px");
     } finally {
       await d.cleanup();
     }
