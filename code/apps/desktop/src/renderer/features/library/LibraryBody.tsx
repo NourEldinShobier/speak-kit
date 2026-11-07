@@ -39,7 +39,7 @@ function FilterBar({ ui, dispatch }: { ui: LibraryUi; dispatch: Dispatch<Library
           </button>
         ))}
       </div>
-      <Select label="Sort" size="sm" options={SORTS.map((o) => ({ value: o.id, label: `Sort: ${o.label}` }))} value={ui.sort} onChange={(v) => dispatch({ type: "sort", sort: v as SortId })} />
+      <Select label="Sort" options={SORTS.map((o) => ({ value: o.id, label: `Sort: ${o.label}` }))} value={ui.sort} onChange={(v) => dispatch({ type: "sort", sort: v as SortId })} />
     </div>
   );
 }

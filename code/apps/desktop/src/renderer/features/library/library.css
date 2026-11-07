@@ -1,6 +1,5 @@
 /* Library (E1-E17): Lumen tokens only. */
 .lib {
-  position: relative;
   max-width: 1000px;
   min-height: 100%;
   margin: 0 auto;
@@ -54,6 +53,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+/* footer of "Add pasted text": voice dropdown at the left, the three buttons grouped at the right */
+.lib-foot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lib-foot__actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
 }
 .lib-textarea {
   box-sizing: border-box;
@@ -165,7 +177,7 @@
 .lib-row {
   display: flex;
   align-items: center;
-  padding-inline-end: 12px;
+  padding-inline-end: 16px;
   border-top: 1px solid var(--stroke-hairline);
 }
 .lib-row:first-child {
@@ -239,7 +251,7 @@
   color: var(--tag-green);
 }
 .lib-badge--new {
-  color: var(--tag-blue);
+  color: var(--text-primary);
 }
 /* the status column stacks its children; a badge keeps its own width instead of stretching across it */
 .lib-row__status > .lib-badge {
@@ -251,6 +263,11 @@
   background: color-mix(in srgb, var(--tag-yellow) 40%, transparent);
 }
 
+/* the drop frame sits 8 px inside the content panel on all four sides: the wrapper fills the panel, .lib is the centred column */
+.lib-wrap {
+  position: relative;
+  min-height: 100%;
+}
 .lib-drop {
   position: absolute;
   inset: 8px;

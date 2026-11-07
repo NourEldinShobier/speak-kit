@@ -18,7 +18,7 @@ interface PasteProps {
   onAdded(doc: DocMeta, play: boolean): void;
 }
 
-function PasteForm({ speed, voices, st, dispatch }: Pick<PasteProps, "speed" | "voices"> & { st: ReturnType<typeof initPaste>; dispatch: (a: Parameters<typeof pasteReducer>[1]) => void }) {
+function PasteForm({ speed, st, dispatch }: Pick<PasteProps, "speed"> & { st: ReturnType<typeof initPaste>; dispatch: (a: Parameters<typeof pasteReducer>[1]) => void }) {
   const n = countWords(st.text);
   return (
     <div className="lib-form">
@@ -39,9 +39,35 @@ function PasteForm({ speed, voices, st, dispatch }: Pick<PasteProps, "speed" | "
         <span className="lib-muted" data-testid="paste-count">
           {n} words · about {n ? clock(estimateMs(n, speed)) : "0:00"} at {speed}x
         </span>
-        {voices.length > 0 && <Select label="Voice" size="sm" options={voiceOptions(voices)} value={st.voice} onChange={(v) => dispatch({ type: "voice", voice: v })} />}
       </div>
       {st.error && <Banner tone="error">{st.error}</Banner>}
+    </div>
+  );
+}
+
+interface FooterProps {
+  voices: Voice[];
+  voice: string;
+  empty: boolean;
+  onVoice(voice: string): void;
+  onClose(): void;
+  onAdd(play: boolean): void;
+}
+
+/** Voice dropdown at the left; Cancel, Add and Add and play grouped at the right. */
+export function PasteFooter({ voices, voice, empty, onVoice, onClose, onAdd }: FooterProps) {
+  return (
+    <div className="lib-foot">
+      {voices.length > 0 && <Select label="Voice" options={voiceOptions(voices)} value={voice} onChange={onVoice} />}
+      <div className="lib-foot__actions">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button disabled={empty} onClick={() => onAdd(false)}>
+          Add
+        </Button>
+        <Button variant="primary" iconLeft="player-play" disabled={empty} onClick={() => onAdd(true)}>
+          Add and play
+        </Button>
+      </div>
     </div>
   );
 }
@@ -61,19 +87,9 @@ export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdde
       onClose={onClose}
       title="Add pasted text"
       width={560}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button disabled={empty} onClick={() => void add(false)}>
-            Add
-          </Button>
-          <Button variant="primary" iconLeft="player-play" disabled={empty} onClick={() => void add(true)}>
-            Add and play
-          </Button>
-        </>
-      }
+      footer={<PasteFooter voices={voices} voice={st.voice} empty={empty} onVoice={(v) => dispatch({ type: "voice", voice: v })} onClose={onClose} onAdd={(play) => void add(play)} />}
     >
-      <PasteForm speed={speed} voices={voices} st={st} dispatch={dispatch} />
+      <PasteForm speed={speed} st={st} dispatch={dispatch} />
     </Modal>
   );
 }

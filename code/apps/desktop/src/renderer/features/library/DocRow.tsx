@@ -94,7 +94,7 @@ export function DocRow({ doc, speed, now, query, hit, actions }: { doc: DocMeta;
         <span className="lib-row__len">{doc.needsOcr ? "Scanned" : clock(estimateMs(doc.wordCount, speed))}</span>
         <span className="lib-row__day">{dayLabel(doc.openedAt ?? doc.addedAt, now)}</span>
       </button>
-      <DropdownMenu trigger={<IconButton name="dots" label={`More for ${doc.title}`} size={28} />}>
+      <DropdownMenu trigger={<IconButton name="dots" variant="secondary" label={`More for ${doc.title}`} size={28} />}>
         <RowMenuItems doc={doc} actions={actions} />
       </DropdownMenu>
     </li>

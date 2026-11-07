@@ -31,7 +31,7 @@ export function NewReading({ s, initial, onClose, onRead, onExport }: { s: AppSt
       width={560}
       footer={
         <>
-          <Select size="sm" label="Voice" value={voice} onChange={setVoice} options={options} />
+          <Select label="Voice" value={voice} onChange={setVoice} options={options} />
           <span style={{ flex: 1 }} />
           <Button iconLeft="download" disabled={!text.trim()} onClick={() => onExport(text)}>
             Export audio

@@ -59,10 +59,12 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
   const view = useMemo(() => libraryView(docs, { query: ui.query, filter: ui.filter, sort: ui.sort, hits, speed }), [docs, ui.query, ui.filter, ui.sort, hits, speed]);
   const { toast } = ui;
   return (
-    <div className="lib" {...actions.dragProps} data-testid="library">
-      <LibraryHead loaded={docs !== null} view={view} query={ui.query} dispatch={dispatch} pickFiles={actions.pickFiles} />
-      <ProblemsBanner problems={ui.problems} dispatch={dispatch} />
-      <LibraryBody loaded={docs !== null} ui={ui} view={view} hits={hits} speed={speed} now={now} dispatch={dispatch} pickFiles={actions.pickFiles} open={actions.open} refresh={refresh} />
+    <div className="lib-wrap" {...actions.dragProps}>
+      <div className="lib" data-testid="library">
+        <LibraryHead loaded={docs !== null} view={view} query={ui.query} dispatch={dispatch} pickFiles={actions.pickFiles} />
+        <ProblemsBanner problems={ui.problems} dispatch={dispatch} />
+        <LibraryBody loaded={docs !== null} ui={ui} view={view} hits={hits} speed={speed} now={now} dispatch={dispatch} pickFiles={actions.pickFiles} open={actions.open} refresh={refresh} />
+      </div>
       {ui.dragging > 0 && (
         <div className="lib-drop" data-testid="drop-overlay" aria-live="polite">
           <Icon name="upload" size={32} />

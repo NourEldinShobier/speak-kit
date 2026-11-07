@@ -46,3 +46,11 @@ describe("DocRow", () => {
     expect(html).toContain('<mark class="lib-mark">local</mark> copy');
   });
 });
+
+describe("DocRow menu button", () => {
+  it("is the 28 px secondary icon button (white, ring, shadow)", () => {
+    const html = row(doc());
+    expect(html).toContain('class="lm-btn lm-btn--icon lm-btn--secondary lm-btn--sm"');
+    expect(html).toContain('aria-label="More for Local-first software"');
+  });
+});
