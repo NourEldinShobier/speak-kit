@@ -35,8 +35,8 @@ export default defineConfig({
       "apps/desktop/src/main/icon-data.ts",
     ],
   },
-  // Extension code reads this build flag; the extension package defines it for its own tests, the root run needs it too.
-  define: { __TEST__: "false" },
+  // Extension code reads __TEST__ and desktop main code reads __TEST_CODE__ (true outside a packaged build, as in apps/desktop/vite.config.ts); the packages define them for their own tests, the root run needs both.
+  define: { __TEST__: "false", __TEST_CODE__: "true" },
   // The extension package runs its browser tests with 20 s; the root run has to allow the same when everything runs in parallel (the default is 5 s). Desktop specs set their own 60 s.
   // The desktop resource and event-loop budgets measure the whole machine, so that file runs alone, after every other file (group order 2), against the same budgets.
   test: {
