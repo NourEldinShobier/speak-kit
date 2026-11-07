@@ -109,6 +109,16 @@ describe("vanilla builders emit the markup of the React components", () => {
     expect(norm(V.progress(undefined, { label: "Working" }).el)).toBe(react(<ProgressBar label="Working" />));
   });
 
+  test("an indeterminate bar says it is busy and has no value; a determinate one has a value and is not busy", () => {
+    const working = react(<ProgressBar label="Working" />);
+    expect(working).toContain("aria-busy=true");
+    expect(working).toContain("aria-valuetext=In progress");
+    expect(working).not.toContain("aria-valuenow");
+    const half = react(<ProgressBar value={50} label="Progress" />);
+    expect(half).toContain("aria-valuenow=50");
+    expect(half).not.toMatch(/aria-busy|aria-valuetext/);
+  });
+
   test("tooltip surface carries its text and the shortcut", () => {
     const wrapped = V.tooltip(V.iconButton({ name: "settings", label: "Settings" }), "Settings", "Ctrl ,");
     expect(norm(wrapped.querySelector("[role=tooltip]")!)).toBe(react(<TooltipSurface id="x" text="Settings" shortcut="Ctrl ," />));

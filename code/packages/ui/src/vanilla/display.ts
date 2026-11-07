@@ -55,8 +55,15 @@ export function progress(value: number | undefined, o: { thin?: boolean; block?:
   const set = (v: number | undefined) => {
     el.classList.toggle("is-indeterminate", v === undefined);
     el.style.setProperty("--p", String(v ?? 0));
-    if (v === undefined) el.removeAttribute("aria-valuenow");
-    else el.setAttribute("aria-valuenow", String(Math.round(v)));
+    if (v === undefined) {
+      el.removeAttribute("aria-valuenow");
+      el.setAttribute("aria-valuetext", "In progress");
+      el.setAttribute("aria-busy", "true");
+    } else {
+      el.setAttribute("aria-valuenow", String(Math.round(v)));
+      el.removeAttribute("aria-valuetext");
+      el.removeAttribute("aria-busy");
+    }
   };
   set(value);
   return { el, set };

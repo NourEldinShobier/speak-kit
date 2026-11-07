@@ -130,6 +130,8 @@ export function ProgressBar({ value, thin, block, label, className, style }: Pro
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={det ? Math.round(value) : undefined}
+      aria-valuetext={det ? undefined : "In progress"}
+      aria-busy={det ? undefined : true}
       className={cx("lm-progress", thin && "lm-progress--thin", block && "lm-progress--block", !det && "is-indeterminate", className)}
       style={{ "--p": det ? value : 0, ...style } as CSSProperties}
     >
