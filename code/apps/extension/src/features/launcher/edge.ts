@@ -2,7 +2,7 @@ import type { Settings } from "@speakkit/protocol";
 import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
-import { closeButton, moreMenu, readerButton, speedVoiceButtons } from "./edge-parts";
+import { closeButton, focusedControl, moreMenu, readerButton, restoreFocus, speedVoiceButtons } from "./edge-parts";
 import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railPillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
@@ -41,7 +41,9 @@ export class EdgeLauncher {
 
   /** Rebuilds the tab or pill when something that changes its shape did, then updates the live values. */
   render() {
+    const focused = focusedControl(this.s.shell.root, this.tab, this.pill);
     this.renderLauncher();
+    restoreFocus(this.s.shell.root, focused, this.pill ? "launcher-play" : "launcher-tab");
     this.patch();
   }
 
@@ -81,7 +83,6 @@ export class EdgeLauncher {
     const key = l ? `${open}|${reading}|${m.status}|${l.side}|${l.idle}|${l.widerWhileReading}|${l.openOn}|${m.dark}|${m.readerOpen}` : "";
     if (key === this.key) return;
     this.key = key;
-    const focused = this.focusedControl();
     this.tab?.remove();
     this.pill?.remove();
     this.ltip?.remove();
@@ -90,20 +91,6 @@ export class EdgeLauncher {
     if (!l || m.readerOpen) return;
     if (open) this.buildPill(l, reading);
     else this.buildTab(l, reading);
-    this.restoreFocus(focused);
-  }
-
-  /** The `data-sk` of the tab or pill control that has focus, so a rebuild can give focus back to the same control. */
-  private focusedControl(): string | null {
-    const a = (this.s.shell.root.getRootNode() as Document | ShadowRoot).activeElement;
-    return a && (this.tab?.contains(a) || this.pill?.contains(a)) ? a.getAttribute("data-sk") : null;
-  }
-
-  /** Focus goes to the same control, or when the new shape lacks it, to the pill's play button or the tab. */
-  private restoreFocus(sk: string | null) {
-    if (!sk) return;
-    const to = this.s.shell.root.querySelector<HTMLElement>(`[data-sk="${sk}"]`) ?? this.s.shell.root.querySelector<HTMLElement>(this.pill ? "[data-sk=launcher-play]" : "[data-sk=launcher-tab]");
-    to?.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------ tab

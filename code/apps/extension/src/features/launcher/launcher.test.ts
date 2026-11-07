@@ -119,12 +119,12 @@ describe("edge tab and pill", () => {
 
   test("focus stays on the same control when the pill is rebuilt for a new state", () => {
     // linkedom has no focus model: track the last focused element and drop it once it leaves the page.
-    let focused: Element | null = null;
-    Object.defineProperty(document, "activeElement", { configurable: true, get: () => (focused?.isConnected ? focused : null) });
+    const focusLog: Element[] = [];
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => focusLog.findLast((e) => e.isConnected) ?? null });
     Object.defineProperty(HTMLElement.prototype, "focus", {
       configurable: true,
-      value: function (this: Element) {
-        focused = this;
+      value() {
+        focusLog.push(this);
       },
     });
     setup();

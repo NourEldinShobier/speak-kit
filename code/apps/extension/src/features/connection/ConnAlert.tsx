@@ -7,6 +7,8 @@ const ALERT_TEXT = {
   token: "Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch.",
 };
 
+const RESULT = { copied: { text: "Copied", icon: "check" }, failed: { text: "Could not copy", icon: "alert-circle" } } as const;
+
 /** The one-line diagnostic the banner's "Copy details" button puts on the clipboard. */
 const detailsText = (st: "offline" | "token", port: number, health: HealthResult | null) =>
   `${st === "offline" ? "app-not-running" : "token-rejected"} · 127.0.0.1:${port}${!health?.ok && health?.detail ? ` · ${health.detail}` : ""}`;
@@ -26,14 +28,14 @@ export function ConnAlert({ st, port, health }: { st: "offline" | "token"; port:
     clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setResult(null), 1500);
   };
-  const message = result === "copied" ? "Copied" : result === "failed" ? "Could not copy" : "";
+  const message = result ? RESULT[result].text : "";
   return (
     <div className="op-alert">
       <Banner
         tone="warning"
         icon="alert-triangle"
         action={
-          <Button iconLeft={result === "copied" ? "check" : result === "failed" ? "alert-circle" : "copy"} onClick={copy}>
+          <Button iconLeft={result ? RESULT[result].icon : "copy"} onClick={copy}>
             {message || "Copy details"}
           </Button>
         }

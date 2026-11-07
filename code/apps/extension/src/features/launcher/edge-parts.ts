@@ -89,3 +89,16 @@ export function readerButton(hd: Surface["hd"], collapse: () => void): HTMLEleme
     },
   });
 }
+
+/** The `data-sk` of the control inside `within` that has focus, so a rebuild can give focus back to the same control. */
+export function focusedControl(root: HTMLElement, ...within: (HTMLElement | null)[]): string | null {
+  const a = (root.getRootNode() as Document | ShadowRoot).activeElement;
+  return a && within.some((w) => w?.contains(a)) ? a.getAttribute("data-sk") : null;
+}
+
+/** Focus goes to the same control, or when the rebuilt shape lacks it, to the `fallback` control. */
+export function restoreFocus(root: HTMLElement, sk: string | null, fallback: string) {
+  if (!sk) return;
+  const find = (id: string) => root.querySelector<HTMLElement>(`[data-sk="${id}"]`);
+  (find(sk) ?? find(fallback))?.focus({ preventScroll: true });
+}
