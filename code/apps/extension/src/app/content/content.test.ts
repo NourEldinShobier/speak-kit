@@ -73,6 +73,8 @@ describe("edge launcher (B17-B20)", () => {
   test("hover opens the 60 px pill, play reads the page, moving away closes it after the delay", async () => {
     const page = await open();
     await page.hover("[data-sk=launcher-tab]");
+    // Enter the pill at once, as a user does: a pointer resting on the tab lets the 300 ms close timer run out when the page is slow.
+    await page.hover("[data-sk=launcher-play]");
     // The pill is rebuilt when the first state arrives and slides in; measure the one that stays, after its transition.
     const settled = () =>
       page
@@ -86,7 +88,7 @@ describe("edge launcher (B17-B20)", () => {
     expect(p.x + p.width).toBe(1280 - 14);
     const play = await box(page, "[data-sk=launcher-play]");
     expect([play.width, play.height]).toEqual([44, 44]);
-    await page.hover("[data-sk=launcher-play]");
+    await page.locator("[data-sk=launcher-play]").hover({ position: { x: 8, y: 8 } }); // a move inside the rebuilt pill raises pointerenter again
     expect(await page.locator("[data-sk=launcher-tooltip]").textContent()).toContain("Listen to this page");
     await page.click("[data-sk=launcher-play]");
     const doc = await lastPlay(page);

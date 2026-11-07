@@ -29,5 +29,6 @@ describe("icon-data.ts", () => {
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
-  });
+    // 1.5 s alone; the child process is CPU-bound and took 8 s inside the parallel root run (the root config has no desktop timeout).
+  }, 30_000);
 });

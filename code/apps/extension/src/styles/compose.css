@@ -499,7 +499,7 @@ body {
   text-decoration: none;
   cursor: pointer;
 }
-/* 5% black over the #F0F0F0 window is #E4E4E4. */
+/* 5% black over the window surface (the sidebar fill in the design). */
 .op-nav .lm-nav__item[aria-current="page"] {
   background: rgb(0 0 0 / 0.05);
 }
