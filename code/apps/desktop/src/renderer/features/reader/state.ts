@@ -6,7 +6,7 @@ import type { TextClick } from "./ReaderText";
 /** The reading while it loads: loading, gone, or ready with its text. */
 export type Load = { kind: "loading" } | { kind: "missing" } | { kind: "ready"; meta: DocMeta; doc: ReaderDoc };
 
-export type Panel = "outline" | "voice" | null;
+export type Panel = "outline" | null;
 
 export interface FindState {
   open: boolean;
@@ -23,6 +23,8 @@ export interface ReaderUi {
   speed: number;
   voiceId: string;
   panel: Panel;
+  /** The display card (font, size, spacing) is open. */
+  display: boolean;
   find: FindState;
   pick: Pick | null;
   /** The person scrolled away from the sentence being read. */
@@ -42,6 +44,8 @@ export type ReaderAction =
   | { type: "voice"; voiceId: string }
   | { type: "toggle-panel"; panel: Exclude<Panel, null> }
   | { type: "close-panel" }
+  | { type: "toggle-display" }
+  | { type: "close-display" }
   | { type: "find-open" }
   | { type: "find-query"; query: string }
   | { type: "find-at"; current: number }
@@ -59,6 +63,7 @@ export const initReader = (speed: number, voiceId: string): ReaderUi => ({
   speed,
   voiceId,
   panel: null,
+  display: false,
   find: { open: false, query: "", current: 0 },
   pick: null,
   away: false,
@@ -82,6 +87,8 @@ const HANDLERS: Handlers = {
   voice: (s, a) => ({ ...s, voiceId: a.voiceId }),
   "toggle-panel": (s, a) => ({ ...s, panel: s.panel === a.panel ? null : a.panel }),
   "close-panel": (s) => ({ ...s, panel: null }),
+  "toggle-display": (s) => ({ ...s, display: !s.display }),
+  "close-display": (s) => ({ ...s, display: false }),
   "find-open": (s) => ({ ...s, find: { ...s.find, open: true } }),
   "find-query": (s, a) => ({ ...s, find: { open: true, query: a.query, current: 0 } }),
   "find-at": (s, a) => ({ ...s, find: { ...s.find, current: a.current } }),

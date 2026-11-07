@@ -1,52 +1,24 @@
 /* Reader player bar and its popovers. */
 /* player bar */
 .rd-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 560px) minmax(0, 1fr);
+  box-sizing: content-box;
+  display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 24px 12px;
+  height: 61px;
+  padding-inline: 16px;
   border-top: 1px solid var(--stroke-hairline);
   background: var(--surface-card);
 }
-.rd-bar__now {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.rd-bar__tile {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-control);
-  background: var(--surface-well);
-  color: var(--icon-quiet);
-}
-.rd-bar__title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-}
-.rd-bar__sub {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.rd-bar__center {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .rd-bar__buttons {
   display: flex;
-  justify-content: center;
+  flex: none;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
 }
 .rd-bar__scrub {
+  flex: 1;
+  min-width: 160px;
   display: grid;
   grid-template-columns: 44px 1fr 44px;
   align-items: center;
@@ -55,12 +27,15 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.rd-bar__scrub .lm-slider {
+  width: 100%;
+}
 .rd-bar__scrub span:last-child {
   text-align: end;
 }
 .rd-bar__right {
   display: flex;
-  justify-content: flex-end;
+  flex: none;
   align-items: center;
   gap: 8px;
 }
@@ -68,7 +43,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 10px;
   border: 1px solid var(--stroke-control);
   border-radius: var(--radius-control);
   box-shadow: var(--shadow-control);
@@ -90,28 +67,49 @@
   outline-offset: -1px;
 }
 
+.rd-pill--voice {
+  max-width: 140px;
+}
+.rd-pill--voice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* popovers */
 .rd-pop {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+/* the voice list is the whole popover: one border, no clipping, scrollbar 3 px from the right edge */
+.lm-popover.rd-voicepop {
+  gap: 0;
+  padding: 0;
+}
 .rd-pop--list {
   max-height: 320px;
   overflow: auto;
-  gap: 0;
+  gap: 2px;
+  padding: 4px;
 }
-.rd-pop__row,
-.rd-pop__field > span {
+.rd-pop--list::-webkit-scrollbar {
+  width: 6px;
+}
+.rd-pop--list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rd-pop--list::-webkit-scrollbar-thumb {
+  border-inline-end: 3px solid transparent;
+  border-radius: var(--radius-bar);
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+.rd-pop__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-.rd-pop__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 .rd-presets {
   display: flex;
@@ -139,7 +137,7 @@
   align-items: center;
   gap: 8px;
   padding: 7px 8px;
-  border-radius: var(--radius-chip);
+  border-radius: var(--radius-menu-item);
   cursor: pointer;
 }
 .rd-option small {

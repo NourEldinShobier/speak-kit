@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 import type { Voice } from "@speakkit/protocol";
-import { OutlinePanel, VoicePanel } from "./Panels";
+import { VoiceList } from "./Controls";
+import { OutlinePanel } from "./Panels";
 
 const noop = () => {};
 const voices = [
@@ -48,13 +49,10 @@ describe("OutlinePanel", () => {
   });
 });
 
-describe("VoicePanel", () => {
-  const html = renderToStaticMarkup(<VoicePanel voices={voices} voiceId="bf_emma" speed={1.5} onVoice={noop} onSpeed={noop} onClose={noop} />);
-  it("shows the speed, the presets and the voices with the current one selected", () => {
-    expect(html).toContain('aria-label="Voice panel"');
-    expect(html).toContain("1.5x");
-    for (const p of ["0.8x", "1x", "1.2x", "2x", "3x"]) expect(html).toContain(`>${p}</button>`);
-    expect(html).toMatch(/aria-selected="true"[^>]*><span>Emma<\/span><small>UK · female/);
-    expect(html).toMatch(/aria-selected="false"[^>]*><span>Heart<\/span><small>US · female/);
+describe("VoiceList", () => {
+  const html = renderToStaticMarkup(<VoiceList voices={voices} voiceId="bf_emma" onVoice={noop} />);
+  it("lists the voices with the current one selected and a check at its end", () => {
+    expect(html).toMatch(/aria-selected="true"[^>]*><span>Emma<\/span><small>UK · female<\/small><svg/);
+    expect(html).toMatch(/aria-selected="false"[^>]*><span>Heart<\/span><small>US · female<\/small><\/button>/);
   });
 });

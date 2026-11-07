@@ -52,7 +52,7 @@ test.describe("desktop reader @slow", () => {
       await d.page.keyboard.press("Escape");
       await expect(d.page.getByRole("button", { name: "2x", exact: true })).toBeVisible();
 
-      await d.page.getByRole("button", { name: "Voice", exact: true }).click();
+      await d.page.getByRole("button", { name: /^Voice: / }).click();
       await expect(d.page.getByRole("option").first()).toBeVisible();
       expect(await d.page.getByRole("option").count()).toBeGreaterThan(3);
       await d.page.getByRole("option").nth(1).click();

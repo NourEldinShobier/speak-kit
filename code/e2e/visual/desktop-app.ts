@@ -134,14 +134,9 @@ export const appScenarios: Scenario[] = [
     await p.getByRole("button", { name: "Bookmark", exact: true }).click();
     await sleep(300);
   }),
-  reader("F14", "voice-panel", "Reader · voice panel", async (p) => {
-    await openReader(p);
-    await p.getByRole("button", { name: "Voice panel", exact: true }).click();
-    await sleep(400);
-  }),
   reader("F9", "voice-popover", "Reader · voice popover", async (p) => {
     await openReader(p);
-    await p.getByRole("button", { name: "Voice", exact: true }).click();
+    await p.getByRole("button", { name: /^Voice: / }).click();
     await sleep(400);
   }),
   reader("J1", "export-options", "Export · options", async (p) => {

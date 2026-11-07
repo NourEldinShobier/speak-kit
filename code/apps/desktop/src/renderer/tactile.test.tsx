@@ -27,7 +27,6 @@ const noop = () => {};
 const bar = (status: string) =>
   renderToStaticMarkup(
     <PlayerBar
-      title="Title"
       state={{ status, elapsedMs: 5000, totalMs: 60000 } as unknown as PlayerState}
       estimatedTotalMs={60000}
       speed={1}
@@ -36,6 +35,8 @@ const bar = (status: string) =>
       sleepLeftMs={0}
       disabled={false}
       panel={null}
+      volume={1}
+      hidden={[]}
       onToggle={noop}
       onSkip={noop}
       onBlock={noop}
@@ -44,6 +45,8 @@ const bar = (status: string) =>
       onVoice={noop}
       onSleep={noop}
       onOutline={noop}
+      onVolume={noop}
+      onShown={noop}
     />,
   );
 

@@ -35,11 +35,17 @@ describe("loading", () => {
 });
 
 describe("panels and find", () => {
-  it("opens a panel, switches to the other, and closes the same one again", () => {
+  it("opens the outline and closes it again", () => {
     expect(run({ type: "toggle-panel", panel: "outline" }).panel).toBe("outline");
-    expect(run({ type: "toggle-panel", panel: "outline" }, { type: "toggle-panel", panel: "voice" }).panel).toBe("voice");
-    expect(run({ type: "toggle-panel", panel: "voice" }, { type: "toggle-panel", panel: "voice" }).panel).toBeNull();
-    expect(run({ type: "toggle-panel", panel: "voice" }, { type: "close-panel" }).panel).toBeNull();
+    expect(run({ type: "toggle-panel", panel: "outline" }, { type: "toggle-panel", panel: "outline" }).panel).toBeNull();
+    expect(run({ type: "toggle-panel", panel: "outline" }, { type: "close-panel" }).panel).toBeNull();
+  });
+
+  it("opens and closes the display card, and the Aa button toggles it", () => {
+    expect(initReader(1, "af_heart").display).toBe(false);
+    expect(run({ type: "toggle-display" }).display).toBe(true);
+    expect(run({ type: "toggle-display" }, { type: "toggle-display" }).display).toBe(false);
+    expect(run({ type: "toggle-display" }, { type: "close-display" }).display).toBe(false);
   });
 
   it("find: open, a new query returns to the first match, step, close resets", () => {

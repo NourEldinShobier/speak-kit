@@ -1,13 +1,13 @@
-import type { Dispatch } from "react";
+import { Fragment, type Dispatch, type ReactElement } from "react";
 import { Banner, Button, IconButton, Spinner } from "@speakkit/ui";
 import type { PlayerState } from "@speakkit/protocol";
 import type { DocMeta } from "../../../shared/library/contract";
-import { DisplayPopover } from "./DisplayPopover";
+import { CustomiseToolbar } from "./CustomiseToolbar";
 import { OcrPanel } from "./OcrPanel";
 import { ReaderText } from "./ReaderText";
-import type { Display } from "./display";
 import { sentenceAt, type ReaderDoc } from "./model";
-import type { Pick, ReaderAction } from "./state";
+import type { Panel, Pick, ReaderAction } from "./state";
+import { HEADER_IDS, type HeaderId } from "./toolbar";
 
 type Send = Dispatch<ReaderAction>;
 
@@ -41,19 +41,37 @@ export function ReaderLoading() {
 
 interface TopProps {
   meta: DocMeta;
-  display: Display;
-  onDisplay(patch: Partial<Display>): void;
-  panel: "outline" | "voice" | null;
+  panel: Panel;
+  displayOpen: boolean;
   bookmarked: boolean;
   blocked: boolean;
+  /** Header items the person turned off. */
+  hidden: readonly HeaderId[];
   dispatch: Send;
   onBack(): void;
   onBookmark(): void;
   onExport(): void;
+  onShown(id: HeaderId, shown: boolean): void;
 }
 
-/** Back link, source, and the buttons for find, display, bookmark, export and the two side panels. */
-export function ReaderTop({ meta, display, onDisplay, panel, bookmarked, blocked, dispatch, onBack, onBookmark, onExport }: TopProps) {
+/** Back link and source, then the five reading icons (find, display, bookmark, export, outline) and the "…" button that customises them. */
+export function ReaderTop({ meta, panel, displayOpen, bookmarked, blocked, hidden, dispatch, onBack, onBookmark, onExport, onShown }: TopProps) {
+  const icons: Record<HeaderId, ReactElement> = {
+    search: <IconButton name="search" label="Find in text" onClick={() => dispatch({ type: "find-open" })} />,
+    display: (
+      <IconButton
+        name="text-size"
+        label="Display settings"
+        aria-expanded={displayOpen}
+        aria-haspopup="dialog"
+        data-display-trigger=""
+        onClick={() => dispatch({ type: "toggle-display" })}
+      />
+    ),
+    bookmark: <IconButton name="bookmark" label="Bookmark this place" aria-pressed={bookmarked} disabled={blocked} onClick={onBookmark} />,
+    export: <IconButton name="download" label="Export audio" disabled={blocked} onClick={onExport} />,
+    outline: <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={panel === "outline"} onClick={() => dispatch({ type: "toggle-panel", panel: "outline" })} />,
+  };
   return (
     <header className="rd-top">
       <IconButton name="arrow-left" label="Back to library" onClick={onBack} />
@@ -64,12 +82,12 @@ export function ReaderTop({ meta, display, onDisplay, panel, bookmarked, blocked
         {SOURCE_LABEL[meta.source]} · {meta.origin}
       </span>
       <span className="rd-spacer" />
-      <IconButton name="search" label="Find in text" onClick={() => dispatch({ type: "find-open" })} />
-      <DisplayPopover d={display} onChange={onDisplay} />
-      <IconButton name="bookmark" label="Bookmark this place" aria-pressed={bookmarked} disabled={blocked} onClick={onBookmark} />
-      <IconButton name="download" label="Export audio" disabled={blocked} onClick={onExport} />
-      <IconButton name="layout-sidebar-right" label="Outline" aria-pressed={panel === "outline"} onClick={() => dispatch({ type: "toggle-panel", panel: "outline" })} />
-      <IconButton name="microphone" label="Voice panel" aria-pressed={panel === "voice"} onClick={() => dispatch({ type: "toggle-panel", panel: "voice" })} />
+      <div className="rd-top__icons">
+        {HEADER_IDS.filter((id) => !hidden.includes(id)).map((id) => (
+          <Fragment key={id}>{icons[id]}</Fragment>
+        ))}
+      </div>
+      <CustomiseToolbar label="Customise header toolbar" ids={HEADER_IDS} hidden={hidden} side="bottom" onShown={onShown} />
     </header>
   );
 }

@@ -16,8 +16,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding-block: 8px;
+  padding-inline: 16px 22px;
   border-bottom: 1px solid var(--stroke-hairline);
+}
+/* five 36 px icon buttons at a 44 px pitch; the "…" button follows 22 px after the last one */
+.rd-top__icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-end: 22px;
 }
 .rd-crumb {
   all: unset;
@@ -47,6 +55,12 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  display: flex;
+}
+.rd-pane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
   display: flex;
 }
 .rd-scroll {
@@ -127,16 +141,66 @@
   background-color: color-mix(in srgb, var(--tag-orange) 60%, transparent);
 }
 
+/* a card over the reading pane (find, display): one 1 px border, the drop shadow only, no clipping */
+.rd-float {
+  position: absolute;
+  z-index: 7;
+  inset-block-start: 10px;
+  inset-inline-end: 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-menu);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-menu);
+}
 .rd-find {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--stroke-hairline);
-  background: var(--surface-card);
+  gap: 4px;
+  width: 408px;
+  height: 44px;
+  padding-inline: 8px;
 }
 .rd-find .lm-field {
-  width: 280px;
+  flex: none;
+  width: 240px;
+}
+.rd-find .rd-muted {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 296px;
+  padding: 16px;
+  font: 400 14px/20px "Inter Variable", Inter, system-ui, sans-serif;
+}
+.rd-find ~ .rd-display {
+  inset-block-start: 64px;
+}
+.rd-display .lm-seg {
+  width: 100%;
+}
+/* values and the switch end at the right edge of the selected tab, 2 px inside the grey track */
+.rd-display__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-inline: 2px;
+}
+.rd-display__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rd-display .lm-slider {
+  width: 100%;
 }
 .rd-chip {
   position: fixed;
@@ -253,17 +317,26 @@
   gap: 8px;
   margin-top: 8px;
 }
+/* text recognition runs inline in the reading column, no card */
 .rd-ocr {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 0 0 24px;
-  padding: 16px;
-  border-radius: var(--radius-card);
-  background: var(--surface-card);
-  box-shadow: var(--shadow-card-ring);
   font-family: system-ui, sans-serif;
   font-size: 13px;
+}
+.rd-ocr__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rd-ocr__status {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.rd-ocr .lm-progress {
+  width: 100%;
 }
 .rd-bookmarks {
   list-style: none;
@@ -277,7 +350,4 @@
 .rd-bookmarks .rd-outline__item {
   flex: 1;
   min-width: 0;
-}
-.rd-outline .rd-pop {
-  margin-bottom: 12px;
 }

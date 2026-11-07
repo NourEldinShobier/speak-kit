@@ -90,32 +90,64 @@ describe("reader: bookmarks in the outline", () => {
   }, 60_000);
 });
 
-describe("reader: voice panel dock (F14)", () => {
-  it("docks the voice list and speed beside the text; choosing a voice saves it for this reading", async () => {
+describe("reader: footer voice and speed", () => {
+  it("the voice button opens the voice list; choosing a voice saves it for this reading and shows its name", async () => {
     const { l } = await openReader();
-    await l.page.getByRole("button", { name: "Voice panel", exact: true }).click();
-    const dock = l.page.getByRole("complementary", { name: "Voice panel" });
-    await dock.getByRole("listbox", { name: "Voices" }).waitFor();
-    const voices = dock.getByRole("option");
-    expect(await voices.count()).toBeGreaterThan(1);
-    const second = voices.nth(1);
+    await l.page.getByRole("button", { name: /^Voice: / }).click();
+    const list = l.page.getByRole("listbox", { name: "Voices" });
+    await list.waitFor();
+    expect(await list.getByRole("option").count()).toBeGreaterThan(1);
+    const second = list.getByRole("option").nth(1);
+    const name = await second.locator("span").first().textContent();
     await second.click();
-    await l.page.waitForFunction(() => document.querySelectorAll("aside[aria-label='Voice panel'] [role=option]")[1]?.getAttribute("aria-selected") === "true");
-    const saved = await l.page.evaluate(async () => (await window.speakkitLibrary.list())[0]!.voice);
-    expect(saved).toBeTruthy();
-
-    await dock.getByRole("button", { name: "2x", exact: true }).click();
-    expect(await dock.getByTestId("speed-value").textContent()).toBe("2.0x");
-    await l.page.getByRole("button", { name: "Voice panel", exact: true }).click();
-    expect(await l.page.getByRole("complementary", { name: "Voice panel" }).count()).toBe(0);
+    await l.page.waitForFunction(() => document.querySelectorAll("[role=listbox][aria-label=Voices] [role=option]")[1]?.getAttribute("aria-selected") === "true");
+    expect(await l.page.evaluate(async () => (await window.speakkitLibrary.list())[0]!.voice)).toBeTruthy();
+    await l.page.keyboard.press("Escape");
+    await l.page.getByRole("button", { name: `Voice: ${name}` }).waitFor();
   }, 60_000);
 
-  it("shares the side with the outline: opening one closes the other", async () => {
+  it("the speed pill opens the presets", async () => {
     const { l } = await openReader();
-    await l.page.getByRole("button", { name: "Voice panel", exact: true }).click();
-    await l.page.getByRole("button", { name: "Outline" }).first().click();
-    expect(await l.page.getByRole("complementary", { name: "Voice panel" }).count()).toBe(0);
-    await l.page.getByRole("complementary", { name: "Outline" }).waitFor();
+    await l.page.getByRole("button", { name: "1x", exact: true }).click();
+    await l.page.getByRole("button", { name: "2x", exact: true }).click();
+    expect(await l.page.getByTestId("speed-value").textContent()).toBe("2.0x");
+  }, 60_000);
+});
+
+describe("reader: customise toolbar", () => {
+  it("hides and shows a footer control from the switch list, and the choice survives a restart", async () => {
+    const { l } = await openReader();
+    await l.page.getByRole("button", { name: "Customise player toolbar" }).click();
+    const volume = l.page.getByRole("switch", { name: "Volume" });
+    expect(await volume.getAttribute("aria-checked")).toBe("true");
+    await volume.click();
+    await l.page.keyboard.press("Escape");
+    expect(await l.page.getByRole("button", { name: "Volume", exact: true }).count()).toBe(0);
+
+    const userData = l.userData;
+    await l.app.close();
+    running.splice(running.indexOf(l), 1);
+    const again = await openReader({ userData });
+    expect(await again.l.page.getByRole("button", { name: "Volume", exact: true }).count()).toBe(0);
+    await again.l.page.getByRole("button", { name: "Customise player toolbar" }).click();
+    await again.l.page.getByRole("switch", { name: "Volume" }).click();
+    await again.l.page.keyboard.press("Escape");
+    await again.l.page.getByRole("button", { name: "Volume", exact: true }).waitFor();
+  }, 90_000);
+
+  it("the header has five reading icons and no voice button", async () => {
+    const { l } = await openReader();
+    const header = l.page.locator("header.rd-top");
+    expect(await header.getByRole("button").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? e.textContent))).toEqual([
+      "Back to library",
+      "Library",
+      "Find in text",
+      "Display settings",
+      "Bookmark this place",
+      "Export audio",
+      "Outline",
+      "Customise header toolbar",
+    ]);
   }, 60_000);
 });
 

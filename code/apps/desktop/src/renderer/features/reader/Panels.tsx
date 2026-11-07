@@ -1,7 +1,5 @@
 import { Button, Icon, IconButton, TextInput } from "@speakkit/ui";
-import type { Voice } from "@speakkit/protocol";
 import type { Bookmark } from "../../../shared/library/contract";
-import { SpeedControls, VoiceList } from "./Controls";
 import type { OutlineItem } from "./model";
 
 interface OutlineProps {
@@ -54,44 +52,15 @@ export function OutlinePanel({ items, bookmarks, current, onPick, onPickBookmark
   );
 }
 
-/** F14: the voice and speed controls docked beside the text instead of in popovers. */
-export function VoicePanel({
-  voices,
-  voiceId,
-  speed,
-  onVoice,
-  onSpeed,
-  onClose,
-}: {
-  voices: Voice[];
-  voiceId: string;
-  speed: number;
-  onVoice(id: string): void;
-  onSpeed(v: number): void;
-  onClose(): void;
-}) {
-  return (
-    <aside className="rd-outline" aria-label="Voice panel">
-      <div className="rd-outline__head">
-        <b>Voice</b>
-        <IconButton name="x" label="Close voice panel" size={28} onClick={onClose} />
-      </div>
-      <div className="rd-pop">
-        <SpeedControls speed={speed} onSpeed={onSpeed} />
-      </div>
-      <VoiceList voices={voices} voiceId={voiceId} onVoice={onVoice} />
-    </aside>
-  );
-}
-
 function findStatus(query: string, count: number, current: number): string {
   if (!query.trim()) return "";
   return count ? `${current + 1} of ${count}` : "No results";
 }
 
+/** F16: a floating card at the top right of the reading pane; it overlays the text. */
 export function FindBar({ query, count, current, onQuery, onStep, onClose }: { query: string; count: number; current: number; onQuery(q: string): void; onStep(dir: 1 | -1): void; onClose(): void }) {
   return (
-    <div className="rd-find" role="search">
+    <div className="rd-float rd-find" role="search">
       <TextInput
         size="sm"
         icon="search"

@@ -3,10 +3,11 @@ import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
 import type { DocMeta } from "../../../shared/library/contract";
 import type { AppState } from "../../../shared/ipc";
 import { estimateMs } from "../library";
-import { FinishedCard, FindBar, OutlinePanel, VoicePanel } from "./Panels";
+import { DisplayCard } from "./DisplayPopover";
+import { FinishedCard, FindBar, OutlinePanel } from "./Panels";
 import { PlayerBar } from "./PlayerBar";
 import { BackToCurrent, PickChip, PreparingNote, ReaderArticle, ReaderLoading, ReaderMissing, ReaderTop } from "./ReaderParts";
-import { FONT_STACK, useDisplay } from "./display";
+import { FONT_STACK, useDisplay, type Display } from "./display";
 import type { ReaderDoc } from "./model";
 import { initReader, readerReducer, type ReaderAction, type ReaderUi } from "./state";
 import { useHighlights } from "./useHighlights";
@@ -14,6 +15,7 @@ import { useReaderPlayer } from "./usePlayer";
 import { useFollowScroll, useProgressSaving, useReaderKeys, useReaderLoad, useSleepTimer, useWordTick } from "./useReaderEffects";
 import { sentenceClockHandler, useReaderControl, useReaderRefs } from "./useReaderControl";
 import { useReaderNav } from "./useReaderNav";
+import { useToolbar, type FooterId } from "./toolbar";
 import "./reader.css";
 import "./player.css";
 
@@ -44,7 +46,8 @@ export function Reader(props: ReaderProps) {
 function ReaderReady({ s, id, autoplay, onBack, onExport, meta, doc, ui, dispatch }: ReadyProps) {
   const [display, setDisplay] = useDisplay();
   const refs = useReaderRefs();
-  const { state: st, play, command } = useReaderPlayer(sentenceClockHandler(refs.clock));
+  const [toolbar, setToolbar] = useToolbar();
+  const { state: st, play, command, volume, setVolume } = useReaderPlayer(sentenceClockHandler(refs.clock));
   const ctl = useReaderControl({ s, autoplay, meta, doc, ui, st, refs, dispatch, play, command });
   const nav = useReaderNav({ meta, doc, ui, st, refs, active: ctl.active, dispatch, command, startAt: ctl.startAt });
 
@@ -60,41 +63,39 @@ function ReaderReady({ s, id, autoplay, onBack, onExport, meta, doc, ui, dispatc
     <div className="rd" style={style} data-testid="reader" data-status={st.status}>
       <ReaderTop
         meta={meta}
-        display={display}
-        onDisplay={setDisplay}
         panel={ui.panel}
+        displayOpen={ui.display}
+        hidden={toolbar.header}
         bookmarked={nav.bookmarks.some((b) => b.sentence === ctl.here)}
         blocked={ctl.blocked}
         dispatch={dispatch}
         onBack={onBack}
         onBookmark={() => nav.bookmarkSentence(ctl.here)}
         onExport={() => onExport(doc.blocks.map((b) => b.text).join("\n\n"), meta.title)}
+        onShown={(id, shown) => setToolbar({ bar: "header", id, shown })}
       />
-      {ui.find.open && (
-        <FindBar
-          query={ui.find.query}
-          count={nav.matches.length}
-          current={ui.find.current}
-          onQuery={(query) => dispatch({ type: "find-query", query })}
-          onStep={nav.stepFind}
-          onClose={() => dispatch({ type: "find-close" })}
-        />
-      )}
-      <ReaderMain props={{ s, meta, doc, ui, st, ctl, nav, refs, dispatch, onBack }} />
-      <ReaderBar props={{ meta, ui, st, ctl, command, dispatch }} />
+      <ReaderMain props={{ s, meta, doc, ui, st, ctl, nav, refs, dispatch, onBack, display, setDisplay }} />
+      <ReaderBar props={{ meta, ui, st, ctl, command, dispatch, volume, setVolume, hidden: toolbar.footer, onShown: (id, shown) => setToolbar({ bar: "footer", id, shown }) }} />
     </div>
   );
 }
 
 interface BarProps {
-  props: Pick<ReadyProps, "meta" | "ui" | "dispatch"> & { st: PlayerState; ctl: ReturnType<typeof useReaderControl>; command(c: PlayerCommand): void };
+  props: Pick<ReadyProps, "meta" | "ui" | "dispatch"> & {
+    st: PlayerState;
+    ctl: ReturnType<typeof useReaderControl>;
+    command(c: PlayerCommand): void;
+    volume: number;
+    setVolume(v: number): void;
+    hidden: readonly FooterId[];
+    onShown(id: FooterId, shown: boolean): void;
+  };
 }
 
 /** The bottom player bar wired to the controls. */
-function ReaderBar({ props: { meta, ui, st, ctl, command, dispatch } }: BarProps) {
+function ReaderBar({ props: { meta, ui, st, ctl, command, dispatch, volume, setVolume, hidden, onShown } }: BarProps) {
   return (
     <PlayerBar
-      title={meta.title}
       state={st}
       estimatedTotalMs={estimateMs(meta.wordCount, ui.speed)}
       speed={ui.speed}
@@ -103,6 +104,8 @@ function ReaderBar({ props: { meta, ui, st, ctl, command, dispatch } }: BarProps
       sleepLeftMs={ui.sleepLeft}
       disabled={ctl.blocked}
       panel={ui.panel}
+      volume={volume}
+      hidden={hidden}
       onToggle={ctl.toggle}
       onSkip={(d) => ctl.active && command({ cmd: "seek-ms", deltaMs: d })}
       onBlock={(d) => (ctl.active ? command({ cmd: d === 1 ? "next-block" : "prev-block" }) : ctl.toggle())}
@@ -111,6 +114,8 @@ function ReaderBar({ props: { meta, ui, st, ctl, command, dispatch } }: BarProps
       onVoice={ctl.changeVoice}
       onSleep={ctl.changeSleep}
       onOutline={() => dispatch({ type: "toggle-panel", panel: "outline" })}
+      onVolume={setVolume}
+      onShown={onShown}
     />
   );
 }
@@ -121,11 +126,13 @@ interface MainProps {
     ctl: ReturnType<typeof useReaderControl>;
     nav: ReturnType<typeof useReaderNav>;
     refs: ReturnType<typeof useReaderRefs>;
+    display: Display;
+    setDisplay(patch: Partial<Display>): void;
   };
 }
 
-/** The scrolling text with its floating pieces, the side panels and the finished card. */
-function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBack } }: MainProps) {
+/** The scrolling text with the cards that float over it (find, display), the outline panel and the finished card. */
+function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBack, display, setDisplay } }: MainProps) {
   const { pick } = ui;
   const bookmarkPick = (sentence: number) => {
     nav.bookmarkSentence(sentence);
@@ -133,9 +140,22 @@ function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBa
   };
   return (
     <div className="rd-main">
-      <div className="rd-scroll" ref={refs.scroller} onWheel={nav.leaveFollow} onPointerDown={nav.leaveFollow} data-testid="reader-scroll">
-        <ReaderArticle meta={meta} doc={doc} error={st.error} textRef={refs.textRoot} dispatch={dispatch} onRetry={ctl.toggle} onOcrDone={() => void nav.reload()} />
-        {pick && <PickChip pick={pick} onRead={() => nav.readFrom(pick.sentence)} onBookmark={() => bookmarkPick(pick.sentence)} onCopy={() => nav.copySentence(pick.sentence)} />}
+      <div className="rd-pane">
+        <div className="rd-scroll" ref={refs.scroller} onWheel={nav.leaveFollow} onPointerDown={nav.leaveFollow} data-testid="reader-scroll">
+          <ReaderArticle meta={meta} doc={doc} error={st.error} textRef={refs.textRoot} dispatch={dispatch} onRetry={ctl.toggle} onOcrDone={() => void nav.reload()} />
+          {pick && <PickChip pick={pick} onRead={() => nav.readFrom(pick.sentence)} onBookmark={() => bookmarkPick(pick.sentence)} onCopy={() => nav.copySentence(pick.sentence)} />}
+        </div>
+        {ui.find.open && (
+          <FindBar
+            query={ui.find.query}
+            count={nav.matches.length}
+            current={ui.find.current}
+            onQuery={(query) => dispatch({ type: "find-query", query })}
+            onStep={nav.stepFind}
+            onClose={() => dispatch({ type: "find-close" })}
+          />
+        )}
+        {ui.display && <DisplayCard d={display} onChange={setDisplay} onClose={() => dispatch({ type: "close-display" })} />}
       </div>
       {ui.panel === "outline" && (
         <OutlinePanel
@@ -147,9 +167,6 @@ function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBa
           onRemoveBookmark={(i) => nav.saveBookmarks(nav.bookmarks.filter((b) => b.sentence !== i))}
           onClose={() => dispatch({ type: "close-panel" })}
         />
-      )}
-      {ui.panel === "voice" && (
-        <VoicePanel voices={ui.voices} voiceId={ui.voiceId} speed={ui.speed} onVoice={ctl.changeVoice} onSpeed={ctl.changeSpeed} onClose={() => dispatch({ type: "close-panel" })} />
       )}
       {ui.away && st.status === "playing" && <BackToCurrent onClick={nav.followAgain} />}
       {st.status === "preparing" && st.elapsedMs > 0 && <PreparingNote />}
