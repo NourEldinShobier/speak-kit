@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Voice } from "@speakkit/protocol";
-import { filterVoices, initVoices, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
+import { filterVoices, genderLabel, GRADE_NOTE, initVoices, langLabel, previewText, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
 
 const voice = (id: string, over: Partial<Voice> = {}): Voice => ({ id, name: id, lang: "en-US", gender: "female", quality: "A", traits: "", ...over }) as Voice;
 const voices = [voice("Heart", { traits: "warm, calm" }), voice("Emma", { lang: "en-GB", traits: "clear" }), voice("Adam", { gender: "male", traits: "deep" })];
 
 describe("voicesReducer", () => {
-  it("loads the list with its default and clears an earlier error", () => {
-    const s = voicesReducer(voicesReducer(initVoices(), { type: "failed", message: "offline" }), { type: "loaded", voices, def: "Heart" });
-    expect(s).toMatchObject({ def: "Heart", error: "" });
+  it("loads the list and clears an earlier error", () => {
+    const s = voicesReducer(voicesReducer(initVoices(), { type: "failed", message: "offline" }), { type: "loaded", voices });
+    expect(s.error).toBe("");
     expect(s.voices).toHaveLength(3);
   });
 
@@ -41,5 +41,22 @@ describe("voiceFilterLabel", () => {
       "Voices: female",
       "Voices: male",
     ]);
+  });
+});
+
+describe("voice labels", () => {
+  it("names the language, the gender and the preview sentence", () => {
+    expect([langLabel(voice("a")), langLabel(voice("b", { lang: "en-GB" })), genderLabel(voice("c")), genderLabel(voice("d", { gender: "male" }))]).toEqual([
+      "US English",
+      "UK English",
+      "Female",
+      "Male",
+    ]);
+    expect(previewText("Heart")).toBe("Hello, I am Heart. This is how I sound when reading to you.");
+  });
+
+  it("has one line for each grade", () => {
+    expect(Object.keys(GRADE_NOTE)).toEqual(["A", "B", "C", "D"]);
+    expect(GRADE_NOTE.D).toBe("Lowest tier of the Kokoro project's voice grades (D and F).");
   });
 });

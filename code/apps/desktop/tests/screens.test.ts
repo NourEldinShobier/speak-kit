@@ -132,6 +132,99 @@ describe("voices toolbar (2.18)", () => {
   });
 });
 
+describe("voice drawer (2.18, frame 31527)", () => {
+  const openVoices = async (l: Launched) => {
+    await l.page.getByRole("link", { name: "Voices" }).click();
+    await l.page.getByTestId("voices").locator("[data-voice=af_heart]").waitFor();
+  };
+  const count = (l: Launched) => l.page.locator(".sk-vdrawer__count").textContent();
+  const configVoice = (l: Launched) => l.page.evaluate(async () => (await window.speakkit.state()).config.voice);
+
+  it("opens from a card as a non-modal dialog on the content panel's height, 8 px from the window's right and bottom, with the card's border, shadow and radius", async () => {
+    const l = await start({ config: DONE });
+    await openVoices(l);
+    await l.page.locator("[data-voice=af_heart] b").click();
+    const drawer = l.page.getByRole("dialog", { name: "Heart" });
+    await drawer.waitFor();
+    await settle(l.page);
+    const d = await box(l.page, ".sk-vdrawer");
+    const win = await l.page.evaluate(() => [innerWidth, innerHeight]);
+    expect([d.w, d.y, win[0]! - d.r, win[1]! - d.b]).toEqual([392, 38, 8, 8]);
+    expect(await drawer.getAttribute("aria-modal")).toBeNull();
+    expect(await style(l.page, ".sk-vdrawer", "border-top-color")).toBe("rgb(229, 229, 229)");
+    expect(Number.parseFloat(await style(l.page, ".sk-vdrawer", "border-top-width"))).toBeCloseTo(await hairline(l.page), 3);
+    expect(await style(l.page, ".sk-vdrawer", "box-shadow")).toBe("rgba(0, 0, 0, 0.06) 0px 2px 6px 0px");
+    expect(await style(l.page, ".sk-vdrawer", "border-top-left-radius")).toBe("8px");
+    expect(await style(l.page, ".sk-vdrawer", "background-color")).toBe("rgb(255, 255, 255)");
+    expect(await style(l.page, ".sk-vdrawer", "row-gap")).toBe("14px");
+    expect(await style(l.page, ".sk-vdrawer__bar", "padding-top")).toBe("10px");
+    expect(await style(l.page, ".sk-vdrawer__bar", "margin-bottom")).toBe("10px");
+    const heights = await l.page.locator(".sk-vdrawer button").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
+    expect(heights).toEqual([36, 36, 36, 36, 36]);
+    expect(await count(l)).toBe("1 of 28");
+    expect(await drawer.locator(".sk-vdrawer__meta").textContent()).toBe("US English · Female");
+    expect(await drawer.getByText("Grade A").count()).toBe(1);
+  });
+
+  it("steps to the next and previous voice with the buttons and the arrow keys, and counts within the filtered list", async () => {
+    const l = await start({ config: DONE });
+    await openVoices(l);
+    await l.page.locator("[data-voice=af_heart] b").click();
+    const drawer = l.page.getByRole("dialog", { name: "Heart" });
+    await drawer.waitFor();
+    expect(await drawer.getByRole("button", { name: "Previous voice" }).isDisabled()).toBe(true);
+    await drawer.getByRole("button", { name: "Next voice" }).click();
+    await l.page.getByRole("dialog", { name: "Bella" }).waitFor();
+    expect(await count(l)).toBe("2 of 28");
+    await l.page.getByRole("button", { name: "Previous voice" }).click();
+    await l.page.getByRole("dialog", { name: "Heart" }).waitFor();
+    expect(await count(l)).toBe("1 of 28");
+    await l.page.locator(".sk-vdrawer").focus();
+    await l.page.keyboard.press("ArrowRight");
+    await l.page.keyboard.press("ArrowRight");
+    await l.page.getByRole("dialog", { name: "Nicole" }).waitFor();
+    await l.page.keyboard.press("ArrowLeft");
+    await l.page.getByRole("dialog", { name: "Bella" }).waitFor();
+    expect(await count(l)).toBe("2 of 28");
+
+    await l.page.keyboard.press("Escape");
+    await l.page.getByRole("combobox", { name: "Filter voices" }).click();
+    await l.page.getByRole("option", { name: "UK English" }).click();
+    await l.page.locator("[data-voice=bf_emma] b").click();
+    await l.page.getByRole("dialog", { name: "Emma" }).waitFor();
+    expect(await count(l)).toBe("1 of 8");
+  });
+
+  it("makes the voice the default (the setting of Settings, Voice) and shows the Default voice state", async () => {
+    const l = await start({ config: DONE });
+    await openVoices(l);
+    await l.page.locator("[data-voice=af_bella] b").click();
+    const drawer = l.page.getByRole("dialog", { name: "Bella" });
+    await drawer.getByRole("button", { name: "Make default" }).click();
+    await drawer.getByRole("button", { name: "Default voice" }).waitFor();
+    expect(await drawer.getByRole("button", { name: "Default voice" }).isDisabled()).toBe(true);
+    expect(await configVoice(l)).toBe("af_bella");
+    expect(await l.page.locator("[data-voice=af_bella] .lm-badge").textContent()).toBe("Default");
+  });
+
+  it("previews the voice from the drawer, and Escape closes it and puts focus back on the card", async () => {
+    const l = await start({ config: DONE });
+    await openVoices(l);
+    await l.page.locator("[data-voice=af_bella] b").click();
+    const drawer = l.page.getByRole("dialog", { name: "Bella" });
+    await drawer.getByRole("button", { name: "Preview Bella" }).click();
+    await drawer.getByRole("button", { name: "Stop Bella" }).waitFor();
+    await drawer.getByRole("button", { name: "Stop Bella" }).click();
+    await drawer.getByRole("button", { name: "Preview Bella" }).waitFor();
+    await l.page.locator(".sk-vdrawer").focus();
+    await l.page.keyboard.press("Escape");
+    await drawer.waitFor({ state: "detached" });
+    expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe("af_bella");
+    await l.page.keyboard.press("Enter");
+    await l.page.getByRole("dialog", { name: "Bella" }).waitFor();
+  });
+});
+
 const openLibrary = async (l: Launched) => {
   await l.page.getByRole("heading", { name: "Home" }).waitFor();
   await l.page.getByRole("link", { name: "Library" }).click();

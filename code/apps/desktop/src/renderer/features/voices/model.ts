@@ -17,21 +17,19 @@ export const voiceFilterLabel = (f: VoiceFilter): string => `Voices: ${FILTER_NA
 
 interface VoicesState {
   voices: Voice[];
-  /** Id of the default voice. */
-  def: string;
   error: string;
   query: string;
   filter: VoiceFilter;
 }
 
-type VoicesAction = { type: "loaded"; voices: Voice[]; def: string } | { type: "failed"; message: string } | { type: "query"; query: string } | { type: "filter"; filter: VoiceFilter };
+type VoicesAction = { type: "loaded"; voices: Voice[] } | { type: "failed"; message: string } | { type: "query"; query: string } | { type: "filter"; filter: VoiceFilter };
 
-export const initVoices = (): VoicesState => ({ voices: [], def: "", error: "", query: "", filter: "all" });
+export const initVoices = (): VoicesState => ({ voices: [], error: "", query: "", filter: "all" });
 
 export function voicesReducer(s: VoicesState, a: VoicesAction): VoicesState {
   switch (a.type) {
     case "loaded":
-      return { ...s, voices: a.voices, def: a.def, error: "" };
+      return { ...s, voices: a.voices, error: "" };
     case "failed":
       return { ...s, error: a.message };
     case "query":
@@ -53,3 +51,17 @@ export function filterVoices(voices: Voice[], query: string, filter: VoiceFilter
     return filter === "all" || filter === v.lang || filter === v.gender;
   });
 }
+
+/** What a voice says when previewed. */
+export const previewText = (name: string): string => `Hello, I am ${name}. This is how I sound when reading to you.`;
+
+export const langLabel = (v: Voice): string => (v.lang === "en-US" ? "US English" : "UK English");
+export const genderLabel = (v: Voice): string => (v.gender === "female" ? "Female" : "Male");
+
+/** One line per grade. The grades are the Kokoro project's overall ratings (A best, F worst); the engine's list folds F into D. */
+export const GRADE_NOTE: Record<Voice["quality"], string> = {
+  A: "Best overall rating in the Kokoro project's voice grades.",
+  B: "Second-best tier of the Kokoro project's overall voice grades.",
+  C: "Middle tier of the Kokoro project's overall voice grades.",
+  D: "Lowest tier of the Kokoro project's voice grades (D and F).",
+};

@@ -16,6 +16,12 @@ const page = () =>
     </PreviewCtx.Provider>,
   );
 
+describe("VoicesPage", () => {
+  it("has no drawer until a voice is chosen", () => {
+    expect(page()).not.toContain('role="dialog"');
+  });
+});
+
 describe("VoicesPage toolbar", () => {
   it("has the 36 px search field on the left and one filter dropdown on the right, no segmented control", () => {
     const html = page();
