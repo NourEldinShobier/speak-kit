@@ -28,7 +28,11 @@ const FONTS = [
 /** Closes on Escape and on a press outside the card and outside the button that opens it. */
 function useDismiss(card: React.RefObject<HTMLElement | null>, onClose: () => void) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      onClose();
+      document.querySelector<HTMLElement>("[data-display-trigger]")?.focus(); // the card was opened from this button
+    };
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element;
       if (!card.current?.contains(t) && !t.closest("[data-display-trigger]")) onClose();
@@ -46,6 +50,7 @@ function useDismiss(card: React.RefObject<HTMLElement | null>, onClose: () => vo
 export function DisplayCard({ d, onChange, onClose }: Props) {
   const card = useRef<HTMLDivElement>(null);
   useDismiss(card, onClose);
+  useEffect(() => card.current?.querySelector<HTMLElement>("button")?.focus(), []);
   return (
     <div className="rd-float rd-display" role="dialog" aria-label="Display" ref={card}>
       <Segmented label="Font" value={d.font} onChange={(v) => onChange({ font: v as Display["font"] })} items={FONTS} className="rd-display__font" />

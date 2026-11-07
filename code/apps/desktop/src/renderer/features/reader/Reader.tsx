@@ -152,7 +152,10 @@ function ReaderMain({ props: { meta, doc, ui, st, ctl, nav, refs, dispatch, onBa
             current={ui.find.current}
             onQuery={(query) => dispatch({ type: "find-query", query })}
             onStep={nav.stepFind}
-            onClose={() => dispatch({ type: "find-close" })}
+            onClose={() => {
+              dispatch({ type: "find-close" });
+              document.querySelector<HTMLElement>("[data-find-trigger]")?.focus(); // opened from this header button
+            }}
           />
         )}
         {ui.display && <DisplayCard d={display} onChange={setDisplay} onClose={() => dispatch({ type: "close-display" })} />}

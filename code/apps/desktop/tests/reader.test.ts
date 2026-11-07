@@ -91,6 +91,33 @@ describe("reader: bookmarks in the outline", () => {
   }, 60_000);
 });
 
+describe("reader: focus in the floating cards", () => {
+  const active = (l: Launched) => l.page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent ?? "");
+
+  it("the display card takes focus on its first control and gives it back to the header button on Escape", async () => {
+    const { l } = await openReader();
+    await l.page.getByRole("button", { name: "Display settings" }).click();
+    await l.page.getByRole("dialog", { name: "Display" }).waitFor();
+    await expect.poll(() => l.page.evaluate(() => document.activeElement?.closest('[role="dialog"]')?.getAttribute("aria-label") + ":" + document.activeElement?.textContent)).toBe("Display:Sans");
+    await l.page.keyboard.press("Escape");
+    await l.page.getByRole("dialog", { name: "Display" }).waitFor({ state: "detached" });
+    expect(await active(l)).toBe("Display settings");
+  }, 60_000);
+
+  it("closing the find card, by its button or Escape, gives focus back to the header Find button", async () => {
+    const { l } = await openReader();
+    await l.page.getByRole("button", { name: "Find in text" }).click();
+    await expect.poll(() => active(l)).toBe("Find in text"); // the field
+    await l.page.getByRole("button", { name: "Close find" }).click();
+    await l.page.getByRole("search").waitFor({ state: "detached" });
+    expect(await l.page.evaluate(() => document.activeElement?.tagName + ":" + document.activeElement?.getAttribute("aria-label"))).toBe("BUTTON:Find in text");
+    await l.page.getByRole("button", { name: "Find in text" }).click();
+    await l.page.getByRole("textbox", { name: "Find in text" }).press("Escape");
+    await l.page.getByRole("search").waitFor({ state: "detached" });
+    expect(await l.page.evaluate(() => document.activeElement?.tagName + ":" + document.activeElement?.getAttribute("aria-label"))).toBe("BUTTON:Find in text");
+  }, 60_000);
+});
+
 describe("reader: footer voice and speed", () => {
   it("the voice button opens the voice list; choosing a voice saves it for this reading and shows its name", async () => {
     const { l } = await openReader();
