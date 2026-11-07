@@ -13,6 +13,7 @@
         "closetab.spec.ts",
         "content.spec.ts",
         "hostile.spec.ts",
+        "hosts.spec.ts",
         "keyboard.spec.ts",
         "lifecycle.spec.ts",
         "modes.spec.ts",
