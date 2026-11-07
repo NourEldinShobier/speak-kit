@@ -22,7 +22,7 @@ export function ModelDownloadCard({ name, pct, totalMb, paused }: ModelDownloadC
         <b className="mdc__name">{name}</b>
         <span className="mdc__line">{downloadLine(pct, totalMb, paused)}</span>
       </div>
-      <ProgressBar className="mdc__bar" value={Math.round(pct * 100)} label="Download progress" />
+      <ProgressBar block className="mdc__bar" value={Math.round(pct * 100)} label="Download progress" />
     </div>
   );
 }

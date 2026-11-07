@@ -53,6 +53,11 @@ describe("a) slider", () => {
     expect(await look(bar, ".lm-progress__bar", ["background-color"])).toEqual(["rgb(32, 30, 37)"]);
     expect(await look(bar.replace('class="lm-progress"', 'class="lm-progress is-error"'), ".lm-progress__bar", ["background-color"])).toEqual(["rgb(198, 40, 40)"]);
   });
+  test("the track is 240 wide by default and fills its container with lm-progress--block", async () => {
+    const wrap = (cls: string) => `<div style="width:500px"><div class="${cls}"><div class="lm-progress__bar"></div></div></div>`;
+    expect(await look(wrap("lm-progress"), ".lm-progress", ["width"])).toEqual(["240px"]);
+    expect(await look(wrap("lm-progress lm-progress--block"), ".lm-progress", ["width"])).toEqual(["500px"]);
+  });
 });
 
 describe("b) destructive button", () => {
@@ -184,6 +189,13 @@ describe("f) control sizing and the row helper", () => {
       return [b.top - r.top, r.bottom - b.bottom, r.right - b.right, Math.round(t.top + t.height / 2 - (r.top + r.height / 2))];
     });
     expect(gaps).toEqual([16, 16, 16, 0]);
+  });
+  test("control rows after the first measure 68 including the divider, with the control 16 px from the row top", async () => {
+    const row = `<div class="lm-row lm-row--control"><div class="lm-row__text"><div class="lm-row__label">A</div></div><div class="lm-row__control"><button class="lm-btn lm-btn--secondary">English</button></div></div>`;
+    const html = `<div class="lm-card" style="width:600px">${row}${row}${row}</div>`;
+    expect(await heights(html, ".lm-row")).toEqual([68, 68, 68]);
+    const tops = await page.evaluate(() => [...document.querySelectorAll(".lm-row")].map((r) => Math.round(r.querySelector(".lm-btn")!.getBoundingClientRect().top - r.getBoundingClientRect().top)));
+    expect(tops).toEqual([16, 16, 16]);
   });
   test("a row holding a 36 px dropdown gets the same 68 without the class; a toggle row stays 42", async () => {
     const row = (c: string) =>

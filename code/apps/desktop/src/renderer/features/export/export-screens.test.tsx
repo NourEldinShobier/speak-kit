@@ -35,7 +35,7 @@ describe("Export rendering view", () => {
 
   it("has a full-width 4 px progress bar between the status line and the hint", () => {
     const body = html(v.body);
-    expect(body).toContain('class="lm-progress sk-export__bar"');
+    expect(body).toContain('class="lm-progress lm-progress--block sk-export__bar"');
     expect(body).toContain('aria-valuenow="25"');
     expect(body.indexOf("Rendering sentence 2 of 4")).toBeLessThan(body.indexOf("sk-export__bar"));
     expect(body.indexOf("sk-export__bar")).toBeLessThan(body.indexOf("You can close this window"));

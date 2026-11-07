@@ -11,7 +11,7 @@ export function ExportPill({ s, onOpen }: { s: AppState; onOpen(jobId: string): 
       {running.map((e) => (
         <button key={e.id} type="button" className="sk-exportpill__row" onClick={() => onOpen(e.id)} aria-label={`Exporting ${e.name}, ${Math.round(e.progress * 100)}%`}>
           <span>{e.name}</span>
-          <ProgressBar thin value={Math.round(e.progress * 100)} label={`Export of ${e.name}`} />
+          <ProgressBar thin block value={Math.round(e.progress * 100)} label={`Export of ${e.name}`} />
         </button>
       ))}
     </div>

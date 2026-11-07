@@ -339,9 +339,6 @@
   color: var(--text-tertiary);
   font-size: 12px;
 }
-.rd-ocr .lm-progress {
-  width: 100%;
-}
 .rd-bookmarks {
   list-style: none;
   margin: 0;

@@ -21,7 +21,7 @@ describe("ModelDownloadCard", () => {
     const html = card(0.62);
     expect(html).toContain('<b class="mdc__name">kokoro-82m (q8)</b>');
     expect(html).toContain('<span class="mdc__line">62% · 110 MB of 177 MB</span>');
-    expect(html).toContain('class="lm-progress mdc__bar"');
+    expect(html).toContain('class="lm-progress lm-progress--block mdc__bar"');
     expect(html).toContain('aria-valuenow="62"');
     expect(html).not.toContain("lm-pill");
     expect(html).not.toContain("lm-row");

@@ -16,7 +16,7 @@ describe("DownloadStep model card", () => {
     const html = step({ state: "downloading", progress: 0.62 });
     expect(html).toContain("kokoro-82m (q8)");
     expect(html).toContain("62% · 110 MB of 177 MB");
-    expect(html).toContain('class="lm-progress mdc__bar"');
+    expect(html).toContain('class="lm-progress lm-progress--block mdc__bar"');
     expect(html).not.toContain("lm-pill");
   });
 

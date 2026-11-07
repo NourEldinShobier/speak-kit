@@ -88,7 +88,7 @@ function Busy({ m }: { m: PopupModel }) {
   const { label, value, text } = busyInfo(m);
   return (
     <div className="pp-prog">
-      <ProgressBar label={label} value={value} />
+      <ProgressBar block label={label} value={value} />
       <p>{text}</p>
     </div>
   );

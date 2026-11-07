@@ -51,9 +51,6 @@
   cursor: pointer;
   touch-action: none;
 }
-.sk-seek .lm-progress {
-  width: 100%;
-}
 .sk-dock .sk-speed {
   min-width: 44px;
   justify-content: center;

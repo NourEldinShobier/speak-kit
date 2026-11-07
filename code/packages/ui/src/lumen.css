@@ -226,9 +226,9 @@
   fill: currentColor;
   stroke-width: calc(54 / var(--s));
 }
-/* The pause bars are narrow, so they take a heavier stroke than play and stop. */
+/* The pause bars are drawn to size with their own rounded corners, so they take no stroke (3 px bars, 3 px gap at 16 px). */
 .lm-icon--player-pause {
-  stroke-width: calc(66 / var(--s));
+  stroke: none;
 }
 .lm-spin {
   animation: lm-spin var(--lm-dur-spin) linear infinite;
@@ -1610,6 +1610,10 @@
 .lm-progress--thin {
   height: 3px;
 }
+/* Fills its container instead of the 240 px default. */
+.lm-progress--block {
+  width: 100%;
+}
 .lm-progress__bar {
   height: 100%;
   width: calc(var(--p) * 1%);
@@ -1770,6 +1774,11 @@
   min-height: 68px;
   padding-block: 16px;
   padding-inline: 16px;
+}
+/* A control row after the first has a 1 px divider on top: 15 px padding plus the divider keeps the control 16 px from the row edge and the row 68 high. */
+.lm-card > .lm-row + .lm-row.lm-row--control,
+.lm-card > .lm-row + .lm-row:has(.lm-row__control :is(.lm-input, .lm-select, .lm-seg, .lm-btn:not(.lm-btn--sm, .lm-btn--xs, .lm-btn--xl))) {
+  padding-top: 15px;
 }
 .lm-row__text {
   display: flex;

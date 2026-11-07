@@ -196,9 +196,6 @@ body {
   font-size: 12px;
   text-align: center;
 }
-.pp-prog .lm-progress {
-  width: 100%;
-}
 .pp-vs {
   display: flex;
   gap: 8px;

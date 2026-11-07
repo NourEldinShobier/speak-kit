@@ -251,7 +251,7 @@ export class Dock {
 
   /** Thin progress bar (Lumen progress) with click and drag to seek. */
   private seekBar(enabled: boolean) {
-    const pr = progress(0, { thin: true, label: "Progress" });
+    const pr = progress(0, { thin: true, block: true, label: "Progress" });
     const el = h("div", { class: "sk-seek", "data-sk": "seek" }, pr.el);
     let drag: number | null = null;
     const frac = () => (this.m.totalMs > 0 ? Math.min(1, Math.max(0, this.m.elapsedMs / this.m.totalMs)) : 0);

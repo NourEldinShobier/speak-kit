@@ -114,12 +114,14 @@ export interface ProgressBarProps {
   /** 0-100; omit for indeterminate. */
   value?: number | undefined;
   thin?: boolean;
+  /** Full width of the container (default 240 px). */
+  block?: boolean;
   label?: string;
   className?: string;
   style?: CSSProperties;
 }
 
-export function ProgressBar({ value, thin, label, className, style }: ProgressBarProps) {
+export function ProgressBar({ value, thin, block, label, className, style }: ProgressBarProps) {
   const det = value !== undefined;
   return (
     <div
@@ -128,7 +130,7 @@ export function ProgressBar({ value, thin, label, className, style }: ProgressBa
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={det ? Math.round(value) : undefined}
-      className={cx("lm-progress", thin && "lm-progress--thin", !det && "is-indeterminate", className)}
+      className={cx("lm-progress", thin && "lm-progress--thin", block && "lm-progress--block", !det && "is-indeterminate", className)}
       style={{ "--p": det ? value : 0, ...style } as CSSProperties}
     >
       <div className="lm-progress__bar" />

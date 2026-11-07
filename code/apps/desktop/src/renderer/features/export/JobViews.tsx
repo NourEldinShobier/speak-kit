@@ -12,7 +12,7 @@ function RenderingBody({ job }: { job: ExportView }) {
   return (
     <div className="sk-export__job" data-testid="export-progress" data-stage={job.stage}>
       <p className="sk-modal-text">{text}</p>
-      <ProgressBar className="sk-export__bar" value={Math.round(job.progress * 100)} label={`Export of ${job.name}`} />
+      <ProgressBar block className="sk-export__bar" value={Math.round(job.progress * 100)} label={`Export of ${job.name}`} />
       <p className="sk-modal-text">You can close this window; the export keeps running and you get a notification when it is done.</p>
     </div>
   );

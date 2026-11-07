@@ -82,9 +82,6 @@
   text-align: start;
   cursor: pointer;
 }
-.sk-exportpill__row .lm-progress {
-  width: 100%;
-}
 .sk-exportpill__row span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,7 +103,6 @@
   margin: 0;
 }
 .sk-export__bar {
-  width: 100%;
   height: 4px;
 }
 .sk-field {

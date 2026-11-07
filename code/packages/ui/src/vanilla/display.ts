@@ -46,10 +46,10 @@ export interface ProgressHandle {
   set(value: number | undefined): void;
 }
 /** Same markup as <ProgressBar>. */
-export function progress(value: number | undefined, o: { thin?: boolean; label?: string } = {}): ProgressHandle {
+export function progress(value: number | undefined, o: { thin?: boolean; block?: boolean; label?: string } = {}): ProgressHandle {
   const el = h(
     "div",
-    { role: "progressbar", "aria-label": o.label, "aria-valuemin": 0, "aria-valuemax": 100, class: cx("lm-progress", o.thin && "lm-progress--thin") },
+    { role: "progressbar", "aria-label": o.label, "aria-valuemin": 0, "aria-valuemax": 100, class: cx("lm-progress", o.thin && "lm-progress--thin", o.block && "lm-progress--block") },
     h("div", { class: "lm-progress__bar" }),
   );
   const set = (v: number | undefined) => {

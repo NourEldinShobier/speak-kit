@@ -20,7 +20,7 @@ function Running({ progress, onCancel }: { progress?: OcrProgress | undefined; o
       <span className="rd-ocr__status" role="status" data-testid="ocr-progress">
         {progress ? progressLine(progress) : "Getting ready"}
       </span>
-      <ProgressBar value={progress ? ((progress.page - 1) / progress.total) * 100 : undefined} label="Text recognition" />
+      <ProgressBar block value={progress ? ((progress.page - 1) / progress.total) * 100 : undefined} label="Text recognition" />
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { chromium, type Browser, type Page } from "@playwright/test";
 import { build } from "vite-plus";
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 import { serveDir } from "../scripts/serve.ts";
+import { ICON_DATA } from "../src/icon-data.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let browser: Browser;
@@ -93,6 +94,20 @@ describe("Button states (real CSS)", () => {
       }),
     );
     expect(styles).toEqual(Array(3).fill(["rgb(255, 255, 255)", "round"]));
+  });
+
+  test("the pause glyph is two 3 px bars 3 px apart, 12 px high, at the default 16 px size", async () => {
+    const m = await page.evaluate((markup) => {
+      const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      s.setAttribute("class", "lm-icon lm-icon--player-pause");
+      s.setAttribute("viewBox", "0 0 24 24");
+      s.innerHTML = markup;
+      document.querySelector('[data-panel="light"]')!.prepend(s);
+      const [a, b] = [...s.querySelectorAll("rect")].map((r) => r.getBoundingClientRect());
+      s.remove();
+      return [a!.width, b!.width, b!.height, b!.x - a!.right].map((v) => Math.round(v * 10) / 10);
+    }, ICON_DATA["player-pause"]);
+    expect(m).toEqual([3, 3, 12, 3]);
   });
 
   test("floating surfaces use the Lockix shadows (ring plus a soft drop, two layers at most)", async () => {
