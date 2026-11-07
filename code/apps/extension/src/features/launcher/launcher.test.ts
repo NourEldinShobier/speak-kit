@@ -83,20 +83,43 @@ describe("edge tab and pill", () => {
     expect($("[data-sk=launcher-tab]")!.className).toBe("sk-tab sk-left");
   });
 
-  test("while reading the tab widens with a pause button, and the pill shows time left, speed and Stop", () => {
+  test("an idle tab is a focusable button with a name", () => {
+    setup();
+    const tab = $("[data-sk=launcher-tab]")!;
+    expect([tab.getAttribute("role"), tab.getAttribute("tabindex"), tab.getAttribute("aria-label")]).toEqual(["button", "0", "Open Speak Kit controls"]);
+  });
+
+  test("while reading the tab is only a progress rail, centred on the viewport height, and the pill shows time left, speed and Stop", () => {
     const reading = model({ status: "playing", elapsedMs: 30_000, totalMs: 120_000, speed: 1.5 });
     setup(reading);
-    expect($("[data-sk=launcher-tab]")!.className).toBe("sk-tab is-reading");
-    click($("[data-sk=launcher-toggle]"));
-    expect(calls).toEqual(["toggle"]);
-    click($("[data-sk=launcher-tab]"));
+    const tab = $("[data-sk=launcher-tab]")!;
+    expect(tab.className).toBe("sk-tab is-reading");
+    expect(tab.querySelector("button")).toBeNull();
+    expect(tab.style.top).toBe("312px");
+    expect($(".sk-rail i")!.style.height).toBe("25%");
+    expect([tab.getAttribute("role"), tab.getAttribute("tabindex"), tab.getAttribute("aria-label")]).toEqual(["button", "0", "Open reading controls"]);
+    click(tab);
     expect($("[data-sk=launcher-pill]")!.getAttribute("data-state")).toBe("playing");
     expect($(".sk-time")!.textContent).toBe("1:30");
     expect($("[data-sk=launcher-speed]")!.textContent).toBe("1.5x");
     expect($(".sk-vrail i")!.style.height).toBe("25%");
     click($("[data-sk=launcher-stop]"));
     click($("[data-sk=launcher-fwd]"));
-    expect(calls).toEqual(["toggle", "stop", "skip 10000"]);
+    expect(calls).toEqual(["stop", "skip 10000"]);
+  });
+
+  test("the reading rail ignores the saved height and Enter on it opens the pill with Pause focused", () => {
+    setup(model({ status: "paused", elapsedMs: 10_000, totalMs: 100_000, launcher: { ...settingsLauncher, y: 0.9 } }));
+    const tab = $("[data-sk=launcher-tab]")!;
+    expect(tab.style.top).toBe("312px");
+    tab.dispatchEvent(Object.assign(new Event("keydown", { bubbles: true }), { key: "Enter" }));
+    expect($("[data-sk=launcher-tab]")).toBeNull();
+    expect($("[data-sk=launcher-play]")!.getAttribute("aria-label")).toBe("Resume");
+  });
+
+  test("with the widening off, reading keeps the plain tab at its saved height", () => {
+    setup(model({ status: "playing", totalMs: 100_000, launcher: { ...settingsLauncher, widerWhileReading: false } }));
+    expect([$("[data-sk=launcher-tab]")!.className, $("[data-sk=launcher-tab]")!.style.top, $(".sk-rail")]).toEqual(["sk-tab", "360px", null]);
   });
 
   test("progress and speed update in place on a new model", () => {

@@ -42,7 +42,7 @@ export class SelectionBubble {
     const set = iconButton({
       name: "adjustments",
       label: "Voice and speed",
-      size: 28,
+      size: 32,
       data: { sk: "bubble-settings" },
       onClick: () => {
         if (!this.el) return;
@@ -60,7 +60,7 @@ export class SelectionBubble {
     const copy = iconButton({
       name: "copy",
       label: "Copy selection",
-      size: 28,
+      size: 32,
       data: { sk: "bubble-copy" },
       onClick: () => {
         hd.copySelection();
@@ -77,9 +77,9 @@ export class SelectionBubble {
 
   private place(b: HTMLElement, r: DOMRect) {
     const { shell } = this.s;
-    const bw = b.offsetWidth || 164;
-    let top = r.top - 8 - 40;
-    if (top < 8) top = Math.min(r.bottom + 8, shell.height - 48);
+    const bw = b.offsetWidth || 172;
+    let top = r.top - 8 - 44;
+    if (top < 8) top = Math.min(r.bottom + 8, shell.height - 52);
     b.style.top = `${top}px`;
     b.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - bw / 2), shell.width - bw - 8)}px`;
   }

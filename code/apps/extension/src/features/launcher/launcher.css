@@ -3,15 +3,22 @@
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 40px;
-  padding: 0 4px;
-  border-radius: var(--radius-window, 12px);
+  gap: 6px;
+  height: 44px;
+  padding: 6px;
+  border-radius: 12px;
   background: var(--surface-raised);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  box-shadow: var(--shadow-popover);
 }
-.sk-listen {
+.sk-bubble .sk-listen {
   height: 32px;
+  padding-inline: 14px;
+}
+/* settings and copy: 32 x 32, radius 8 */
+.sk-bubble .lm-btn--icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 .sk-tint {
   position: absolute;
@@ -41,7 +48,7 @@
   height: 76px;
   border-radius: var(--radius-card, 10px) 0 0 var(--radius-card, 10px);
   background: var(--surface-raised);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  box-shadow: var(--shadow-popover);
   clip-path: inset(-12px 0 -12px -12px);
   display: flex;
   align-items: center;
@@ -59,8 +66,18 @@
   border-radius: 0 var(--radius-card, 10px) var(--radius-card, 10px) 0;
   clip-path: inset(-12px -12px -12px 0);
 }
+/* Reading (B19-V2): the tab is only a progress rail, 12 x 96, centred on the viewport height by edge.ts. */
 .sk-tab.is-reading {
-  width: 44px;
+  width: 12px;
+  height: 96px;
+  border-radius: 6px 0 0 6px;
+}
+.sk-tab.sk-left.is-reading {
+  border-radius: 0 6px 6px 0;
+}
+.sk-tab:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
 }
 .sk-tab.is-ghost {
   opacity: 0;
@@ -72,27 +89,18 @@
 }
 .sk-rail {
   position: absolute;
-  left: 5px;
-  top: 12px;
-  width: 3px;
-  height: 52px;
+  inset-inline-start: 4px;
+  top: 8px;
+  width: 4px;
+  height: 80px;
   border-radius: 2px;
   background: var(--track);
   overflow: hidden;
 }
-.sk-tab.sk-left .sk-rail {
-  left: auto;
-  right: 5px;
-}
 .sk-rail i {
   display: block;
   width: 100%;
-  background: var(--dot-green);
-}
-.sk .sk-tpb {
-  width: 26px;
-  height: 26px;
-  padding: 0;
+  background: var(--cta);
 }
 .sk-pill {
   position: absolute;
@@ -103,9 +111,9 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  border-radius: var(--radius-window, 12px);
+  border-radius: 12px;
   background: var(--surface-raised);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  box-shadow: var(--shadow-popover);
   touch-action: none;
   transition:
     opacity var(--dur-fade-in, 167ms) ease-out,
@@ -151,7 +159,7 @@
   inset-inline-start: 0;
   top: 0;
   width: 100%;
-  background: var(--dot-green);
+  background: var(--cta);
 }
 .sk-time {
   color: var(--text-secondary);
@@ -194,8 +202,8 @@
   top: 16px;
   transform: translateX(-50%);
   height: 36px;
-  border-radius: var(--radius-window, 12px);
-  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  border-radius: 12px;
+  box-shadow: var(--shadow-popover);
 }
 .sk-back.is-down .lm-icon {
   transform: rotate(180deg);
@@ -203,12 +211,10 @@
 
 /* Touch: small icon buttons get an invisible 44 px hit area. */
 @media (pointer: coarse) {
-  .sk .sk-tpb,
   .sk-pill .sk-vc {
     position: relative;
   }
   .sk .sk-gbtn::after,
-  .sk .sk-tpb::after,
   .sk-pill .sk-vc::after {
     content: "";
     position: absolute;

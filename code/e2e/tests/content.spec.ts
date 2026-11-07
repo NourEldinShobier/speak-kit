@@ -100,8 +100,7 @@ test.describe("edge launcher", () => {
     const page = await ext.open("/article");
     const tab = sk(page, "launcher-tab");
     await expect(tab).toBeVisible({ timeout: 8000 });
-    const w0 = (await tab.boundingBox())!.width;
-    expect(w0).toBeLessThan(30);
+    expect((await tab.boundingBox())!.width).toBeLessThan(30);
     await tab.hover();
     await expect(sk(page, "launcher-pill")).toBeVisible();
     await sk(page, "launcher-play").click();
@@ -117,11 +116,13 @@ test.describe("edge launcher", () => {
       )
       .toBe(1);
     await expect(sk(page, "launcher-tab")).toHaveClass(/reading/, { timeout: 6000 });
-    expect((await sk(page, "launcher-tab").boundingBox())!.width).toBeGreaterThan(w0 + 15);
-    // The wide reading tab has its own play/pause button.
-    await sk(page, "launcher-toggle").click();
+    // Reading: the tab is only a slim progress rail; the pill (hover or Enter) has the play/pause button.
+    const rail = (await sk(page, "launcher-tab").boundingBox())!;
+    expect([rail.width, rail.height]).toEqual([12, 96]);
+    await sk(page, "launcher-tab").hover();
+    await sk(page, "launcher-play").click();
     await ext.waitState("paused");
-    await sk(page, "launcher-toggle").click();
+    await sk(page, "launcher-play").click();
     await ext.waitState("playing");
   });
 

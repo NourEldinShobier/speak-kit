@@ -122,17 +122,51 @@ describe("edge launcher (B17-B20)", () => {
     await page.context().close();
   });
 
-  test("while reading the tab widens to 44 px with a pause button and a progress rail; click pauses", async () => {
+  test("while reading the tab is a 12 x 96 progress rail centred vertically, with a dark fill and no button", async () => {
     const page = await open();
     const doc = await startPage(page);
     await deliver(page, { t: "state", state: st({ docId: doc.docId }) });
-    await page.waitForSelector("[data-sk=launcher-toggle]");
+    await page.waitForSelector("[data-sk=launcher-tab].is-reading");
     const b = await box(page, "[data-sk=launcher-tab]");
-    expect([b.width, b.height]).toEqual([44, 76]);
-    const rail = await page.locator("[data-sk=launcher-tab] .sk-rail i").evaluate((el: HTMLElement) => el.style.height);
-    expect(parseFloat(rail)).toBeCloseTo((147000 / 408000) * 100, 2);
-    await page.click("[data-sk=launcher-toggle]");
+    expect([b.width, b.height, b.x + b.width]).toEqual([12, 96, 1280]);
+    expect(Math.abs(b.y + b.height / 2 - 360)).toBeLessThan(1);
+    expect(await page.locator("[data-sk=launcher-tab] button").count()).toBe(0);
+    const track = await box(page, "[data-sk=launcher-tab] .sk-rail");
+    expect([track.width, track.height]).toEqual([4, 80]);
+    const fill = page.locator("[data-sk=launcher-tab] .sk-rail i");
+    expect(parseFloat(await fill.evaluate((el: HTMLElement) => el.style.height))).toBeCloseTo((147000 / 408000) * 100, 2);
+    expect(await fill.evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe("rgb(32, 30, 37)");
+    await page.context().close();
+  });
+
+  test("the reading rail is reachable by keyboard: Tab focuses it, Enter opens the pill with Pause focused, Pause toggles", async () => {
+    const page = await open();
+    const doc = await startPage(page);
+    await deliver(page, { t: "state", state: st({ docId: doc.docId }) });
+    await page.waitForSelector("[data-sk=launcher-tab].is-reading");
+    const tab = page.locator("[data-sk=launcher-tab]");
+    expect(await tab.getAttribute("aria-label")).toBe("Open reading controls");
+    await tab.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("[data-sk=launcher-pill]");
+    expect(await page.locator("[data-sk=launcher-play]").evaluate((el: Element) => el.getRootNode() instanceof ShadowRoot && (el.getRootNode() as ShadowRoot).activeElement === el)).toBe(true);
+    await page.keyboard.press("Enter");
     expect((await sent(page)).at(-1)).toEqual({ t: "player", command: { cmd: "toggle" } });
+    await page.context().close();
+  });
+
+  test("the pill is a floating card: one 1 px #E5E5E5 ring, shadow 0 2 6 at 6%, radius 12, dark progress rail", async () => {
+    const page = await open();
+    const doc = await startPage(page);
+    await deliver(page, { t: "state", state: st({ docId: doc.docId }) });
+    await page.hover("[data-sk=launcher-tab]");
+    await page.waitForSelector("[data-sk=launcher-pill]");
+    const css = await page.locator("[data-sk=launcher-pill]").evaluate((el: Element) => {
+      const c = getComputedStyle(el);
+      return { shadow: c.boxShadow, radius: c.borderRadius, border: c.borderTopWidth };
+    });
+    expect(css).toEqual({ shadow: "rgb(229, 229, 229) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 2px 6px 0px", radius: "12px", border: "0px" });
+    expect(await page.locator("[data-sk=launcher-rail] i").evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe("rgb(32, 30, 37)");
     await page.context().close();
   });
 

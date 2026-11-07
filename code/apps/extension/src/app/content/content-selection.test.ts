@@ -23,7 +23,20 @@ describe("selection bubble (B1)", () => {
     });
     await page.waitForSelector("[data-sk=bubble]");
     const b = await box(page, "[data-sk=bubble]");
-    expect(b.height).toBe(40);
+    expect(b.height).toBe(44);
+    const parts = await page.evaluate(() => {
+      const root = document.querySelector("speakkit-ui")!.shadowRoot!;
+      const r = (sel: string) => root.querySelector(sel)!.getBoundingClientRect();
+      const bubble = getComputedStyle(root.querySelector("[data-sk=bubble]")!);
+      return {
+        pad: bubble.padding,
+        gap: bubble.columnGap,
+        listen: [r("[data-sk=bubble-listen]").height, getComputedStyle(root.querySelector("[data-sk=bubble-listen]")!).paddingLeft],
+        settings: [r("[data-sk=bubble-settings]").width, r("[data-sk=bubble-settings]").height, getComputedStyle(root.querySelector("[data-sk=bubble-settings]")!).borderTopLeftRadius],
+        copy: [r("[data-sk=bubble-copy]").width, r("[data-sk=bubble-copy]").height],
+      };
+    });
+    expect(parts).toEqual({ pad: "6px", gap: "6px", listen: [32, "14px"], settings: [32, 32, "8px"], copy: [32, 32] });
     expect(Math.abs(b.y + b.height - (target.top - 8))).toBeLessThan(1);
     expect(Math.abs(b.x + b.width / 2 - target.cx)).toBeLessThan(2);
     await page.hover("[data-sk=bubble-listen]");

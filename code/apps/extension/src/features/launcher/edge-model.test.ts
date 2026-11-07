@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { UiModel } from "../../shared/ui-types";
-import { PLAY_VIEW, pillTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
+import { PLAY_VIEW, pillTop, railPillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 
 const launcher = { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 } as const;
 const model = (over: Partial<UiModel> = {}): UiModel => ({
@@ -45,6 +45,16 @@ describe("tab and pill placement", () => {
     expect(pillTop(400, 800, 300)).toBe(400 + 38 - 108);
     expect(pillTop(10, 800, 300)).toBe(8);
     expect(pillTop(716, 800, 300)).toBe(492);
+  });
+
+  test("the reading rail is 96 px high and centred on the viewport height, 8 px inside a short one", () => {
+    expect(railTop(800)).toBe(352);
+    expect(railTop(720)).toBe(312);
+    expect(railTop(100)).toBe(8);
+  });
+
+  test("the pill lines its play button up with the middle of the rail", () => {
+    expect(railPillTop(352, 800, 300)).toBe(352 + 48 - 108);
   });
 });
 

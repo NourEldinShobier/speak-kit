@@ -3,12 +3,12 @@ import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
 import { closeButton, moreMenu, readerButton, speedVoiceButtons } from "./edge-parts";
-import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
+import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railPillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
 type Launcher = Settings["launcher"];
 
-/** The edge launcher (B17 to B21): a thin tab at the page edge that opens into a vertical pill with play, progress, skip, speed, voice and stop. */
+/** The edge launcher (B17 to B21): a thin tab at the page edge that opens into a vertical pill with play, progress, skip, speed, voice and stop. While reading, the tab is a slim progress rail centred on the viewport height. */
 export class EdgeLauncher {
   private tab: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
@@ -58,12 +58,18 @@ export class EdgeLauncher {
     if (this.pill) this.pill.style.top = `${this.pillTop(this.pill)}px`;
   }
 
+  /** Reading with the widened tab on: the tab is the progress rail, which stays centred and is not dragged. */
+  private get rail() {
+    return this.reading && !!this.m.launcher?.widerWhileReading;
+  }
+
   private tabTop(): number {
+    if (this.rail) return railTop(this.s.shell.height);
     return tabTop(this.tabY ?? this.m.launcher!.y, this.s.shell.height);
   }
 
   private pillTop(p: HTMLElement): number {
-    return pillTop(this.tabTop(), this.s.shell.height, p.offsetHeight);
+    return (this.rail ? railPillTop : pillTop)(this.tabTop(), this.s.shell.height, p.offsetHeight);
   }
 
   private renderLauncher() {
@@ -88,31 +94,29 @@ export class EdgeLauncher {
   // ------------------------------------------------------------ tab
 
   private buildTab(l: Launcher, reading: boolean) {
-    const t = h("div", { class: tabClass(l, reading), "data-sk": "launcher-tab", "data-state": this.m.status });
+    const rail = reading && l.widerWhileReading;
+    const t = h("div", {
+      class: tabClass(l, reading),
+      "data-sk": "launcher-tab",
+      "data-state": this.m.status,
+      role: "button",
+      tabindex: 0,
+      "aria-label": reading ? "Open reading controls" : "Open Speak Kit controls",
+    });
     t.style.top = `${this.tabTop()}px`;
-    if (reading && l.widerWhileReading) t.append(...this.tabProgress());
+    if (rail) t.append(this.tabRail());
     else t.append(icon(l.side === "right" ? "chevron-left" : "chevron-right", 10));
-    this.drag(t);
+    if (!rail) this.drag(t);
     this.openOnIntent(t, l);
     this.s.shell.root.append(t);
     this.tab = t;
   }
 
-  /** The widened tab while reading: a progress rail and a pause or resume button. */
-  private tabProgress(): HTMLElement[] {
+  /** The collapsed reading state: a thin track with a dark fill that shows how far the reading has got. */
+  private tabRail(): HTMLElement {
     const rail = h("div", { class: "sk-rail" }, h("i"));
     this.railFill = rail.firstElementChild as HTMLElement;
-    const view = PLAY_VIEW[this.m.status];
-    const pb = h(
-      "button",
-      { type: "button", class: "lm-btn lm-btn--primary lm-btn--icon lm-btn--xs lm-btn--round sk-tpb", "aria-label": view.label, "data-sk": "launcher-toggle" },
-      icon(view.icon, 11, view.icon === "loader-2" ? "lm-spin" : undefined),
-    );
-    pb.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.s.hd.toggle();
-    });
-    return [rail, pb];
+    return rail;
   }
 
   /** Hover intent: a short dwell opens the pill (and wakes the model); pressing first (to drag) cancels it. */
@@ -128,13 +132,20 @@ export class EdgeLauncher {
     t.addEventListener("click", () => {
       if (!this.dragged) this.setPill(true);
     });
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.setPill(true);
+      this.pill?.querySelector<HTMLElement>("[data-sk=launcher-play]")?.focus({ preventScroll: true });
+    });
   }
 
   /** Drag up/down (tab or pill); the new height is persisted on release. */
   private drag(el: HTMLElement) {
     let start: { y: number; tab: number } | null = null;
     el.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button") || e.button !== 0) return;
+      if ((e.target as Element).closest("button") || e.button !== 0 || this.rail) return;
       start = { y: e.clientY, tab: this.tabTop() };
       this.dragged = false;
       el.setPointerCapture(e.pointerId);
