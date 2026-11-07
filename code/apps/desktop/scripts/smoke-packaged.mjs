@@ -103,9 +103,9 @@ try {
   const bytes = speak?.ok ? (await speak.arrayBuffer()).byteLength : 0;
   check("speaks a sentence", bytes > (real ? 20_000 : 1_000), `${bytes} bytes in ${Date.now() - t0} ms${real ? " (real engine)" : ""}`);
 
-  // The app process plus the engine worker (forked from the same executable); a third would be a leak.
+  // The app process and its window renderer (the window is created hidden), plus the engine worker (forked from the same executable) once a real engine has loaded; one more would be a leak.
   const started = running();
-  check("runs the app and its engine worker, no more", started >= 1 && started <= 2, `${started} processes`);
+  check("runs the app and its engine worker, no more", started >= 1 && started <= (real ? 3 : 2), `${started} processes`);
 
   // A second launch hands over to the running instance and exits; it must not leave a second process tree.
   const before = started;
