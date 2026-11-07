@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vite-plus/test";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { ImportError, parseFile } from ".";
 import { parseInWorker } from "./parse-runner";
 
@@ -36,6 +36,9 @@ const reasonOf = async (run: () => Promise<unknown>) => {
 const fixture = (name: string) => new Uint8Array(readFileSync(fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))));
 
 describe("hostile documents", () => {
+  // The first PDF parse imports pdfjs, which takes seconds on a loaded machine; the test below checks the refusal, not the import.
+  beforeAll(() => import("pdfjs-dist/legacy/build/pdf.mjs"), 60_000);
+
   it.each(["docx", "epub"])("refuses a %s that unpacks to 150 MB from 1 MB (ratio 150)", async (ext) => {
     expect(await reasonOf(() => parseFile(`bomb.${ext}`, zipOf([{ name: "word/document.xml", packed: 1_000_000, unpacked: 150_000_000 }])))).toBe("too-large");
   });

@@ -73,8 +73,9 @@ describe("edge launcher (B17-B20)", () => {
   test("hover opens the 60 px pill, play reads the page, moving away closes it after the delay", async () => {
     const page = await open();
     await page.hover("[data-sk=launcher-tab]");
-    await page.waitForSelector("[data-sk=launcher-pill]");
-    await page.waitForTimeout(250);
+    // The pill is rebuilt when the first state arrives and slides in; measure the one that stays, after its transition.
+    const settled = () => page.locator("[data-sk=launcher-pill]").first().evaluate((el) => !el.classList.contains("is-out") && el.getAnimations().length === 0).catch(() => false);
+    await expect.poll(settled).toBe(true);
     const p = await box(page, "[data-sk=launcher-pill]");
     expect(p.width).toBe(60);
     expect(p.x + p.width).toBe(1280 - 14);

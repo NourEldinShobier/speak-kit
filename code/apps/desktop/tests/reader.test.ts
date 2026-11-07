@@ -27,7 +27,8 @@ async function openReader(opts: { userData?: string; exportDir?: string } = {}) 
   await l.page.getByRole("link", { name: "Library" }).click();
   await l.page.getByRole("heading", { name: "Library" }).waitFor();
   if (!(await l.page.getByTestId("doc-row").count())) {
-    await l.page.evaluate((t) => window.speakkitLibrary.importBytes("notes.md", new TextEncoder().encode(t)), TEXT);
+    const imported = await l.page.evaluate((t) => window.speakkitLibrary.importBytes("notes.md", new TextEncoder().encode(t)), TEXT);
+    expect(imported.ok, "the import that fills the library").toBe(true);
     // The list reads the library when the page opens, so go away and come back.
     await l.page.getByRole("link", { name: "Home" }).click();
     await l.page.getByRole("link", { name: "Library" }).click();
