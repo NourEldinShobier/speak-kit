@@ -24,5 +24,9 @@
   "e2e/tests/perf.spec.ts#worst#2": 300,
   "e2e/tests/perf.spec.ts#after - before": 25,
   "e2e/tests/perf.spec.ts#cold": 3000,
-  "e2e/tests/perf.spec.ts#warm": 1000
+  "e2e/tests/perf.spec.ts#warm": 1000,
+  "e2e/tests/selection.spec.ts#ms": 5000,
+  "packages/server/tests/real-chatterbox.test.ts#residualBeforeLoadMb": 300,
+  "packages/server/tests/real-chatterbox.test.ts#m.vramAfterIdleMb - m.vramBaseMb": 400,
+  "packages/server/tests/real-chatterbox.test.ts#m.vramAfterSwitchMb - m.vramBaseMb": 400
 }

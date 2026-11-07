@@ -28,6 +28,8 @@ Perf numbers from the last run are in `code/e2e/perf-results.jsonl` (one JSON ob
 - The popup is opened as a normal tab (`popup.html?tab=<id>`); test builds honour `?tab=` because a popup opened as a tab would otherwise see itself as the active tab.
 - Test-only hooks exist only when built with `SPEAKKIT_TEST=1` (`__TEST__`): open Shadow DOM in the content script, `window.__speakkit` in the offscreen page, `globalThis.__speakkit` in the service worker (`command(name, tabId)`, `menu(id, tabId, selectionText)`, `menus()`), and `?tab=` in popup and side panel.
 
+The root `vite.config.ts` sets `testTimeout: 20_000` (the Vitest default is 5 s). The extension package already runs its browser tests with 20 s, and the root run starts all packages in parallel on a loaded machine, where a Chromium or Electron start or a server-with-engine test can pass 5 s without anything being wrong. The value is a ceiling for hangs, not a performance budget: budgets are asserted inside the tests (`docs/performance-contract.md`). Desktop specs set their own 60 s.
+
 ## What is covered
 
 Files in `code/e2e/tests`:

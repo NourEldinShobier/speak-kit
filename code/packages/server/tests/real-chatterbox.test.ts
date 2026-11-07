@@ -82,7 +82,8 @@ describe.runIf(process.env.SPEAKKIT_REAL_CHATTERBOX)("Chatterbox through the ser
       const sel = (await (await call("POST", "/v1/engines/select", { id: "chatterbox" })).json()) as EngineList;
       expect(sel.active).toBe("chatterbox");
       expect(cb.sidecarPid).toBeUndefined();
-      expect(vramMb() - m.vramBaseMb).toBeLessThan(300);
+      const residualBeforeLoadMb = vramMb() - m.vramBaseMb;
+      expect(residualBeforeLoadMb).toBeLessThan(300);
 
       // Cold request: spawn, import, weights to the GPU, then audio.
       const cold = await speak("chatterbox", [SENTENCE]);

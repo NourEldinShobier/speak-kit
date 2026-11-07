@@ -66,7 +66,8 @@ test.describe("what a selection reads", () => {
     });
     const t0 = Date.now();
     const got = await extractOf(ext, page, "selection");
-    expect(Date.now() - t0, "ms to extract a selection of 5000 paragraphs").toBeLessThan(5000);
+    const ms = Date.now() - t0;
+    expect(ms, "ms to extract a selection of 5000 paragraphs").toBeLessThan(5000);
     expect(got.sentences).toHaveLength(10_001);
     expect(got.sentences.slice(0, 3)).toEqual(["Big", sentence(1, 1), sentence(1, 2)]);
     expect(got.sentences.at(-1)).toBe(sentence(5000, 2));
