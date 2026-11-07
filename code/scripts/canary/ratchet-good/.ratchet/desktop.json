@@ -1,0 +1,1 @@
+{ "lint": { "code": { "complexity": 1 } }, "patterns": { "asAny": 0, "swallowingCatch": 1 } }

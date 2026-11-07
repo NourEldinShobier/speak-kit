@@ -1,0 +1,16 @@
+{
+  "lint": {
+    "tests": {
+      "complexity": 1,
+      "no-explicit-any": 6
+    },
+    "code": {}
+  },
+  "patterns": {
+    "physicalCss": 0,
+    "skipped": 0,
+    "focused": 0,
+    "gated": 0,
+    "tsNocheck": 0
+  }
+}

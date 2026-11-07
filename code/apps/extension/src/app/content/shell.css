@@ -1,0 +1,197 @@
+/* Shadow DOM shell: the container and the popover layer. Components come from the kit stylesheet. */
+:host {
+  all: initial;
+}
+* {
+  box-sizing: border-box;
+}
+.sk {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.sk > * {
+  pointer-events: auto;
+}
+.sk button {
+  font-family: inherit;
+}
+.sk-grow {
+  flex: 1;
+  min-width: 0;
+}
+.sk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.sk-sep {
+  width: 28px;
+  height: 1px;
+  background: var(--stroke-divider);
+  flex: none;
+}
+/* Floating cards (popover, menu): one 1 px border from the kit (--stroke-control), the kit's drop shadow 0 2 6 at 6%, radius 12, no clipping. The border is the only edge, so no ring is added to the shadow. */
+.sk .lm-popover {
+  position: absolute;
+  z-index: 3;
+  width: 300px;
+  padding: 16px;
+  gap: 16px;
+  border-radius: 12px;
+}
+.sk .lm-popover.sk-pop-voice {
+  width: 320px;
+  padding: 12px;
+  gap: 10px;
+}
+.sk .lm-menu.sk-menu {
+  position: absolute;
+  z-index: 3;
+  min-width: 200px;
+  border-radius: 12px;
+}
+/* Speed popover (300 x 184): title and value on one row, full-width slider, scale under its ends, segmented presets, reset. */
+.sk .lm-popover.sk-pop-speed {
+  gap: 12px;
+}
+.sk-pop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.sk-pop-speed .lm-slider {
+  width: 100%;
+}
+.sk-pop-val {
+  font:
+    600 13px/20px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.sk-pop-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -10px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 14px;
+}
+.sk-pop-presets {
+  width: 100%;
+}
+.sk-pop-foot {
+  display: flex;
+}
+.sk-pop-count {
+  margin-top: -6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-vlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow: auto;
+  margin-inline-end: -6px;
+  padding-inline-end: 6px;
+  scrollbar-width: thin;
+}
+/* The voice rows sit inside the popover: its radius minus 1px border and 12px padding, at least --radius-xs. */
+.sk {
+  --radius-pop-row: max(var(--radius-xs, 4px), calc(var(--radius-menu, 10px) - 1px - 12px));
+}
+.sk-vrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: var(--radius-pop-row);
+  cursor: pointer;
+  flex: none;
+}
+.sk-vrow:has(.sk-vopt:focus-visible) {
+  background: var(--fill-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-vrow:hover {
+    background: var(--fill-hover);
+  }
+}
+.sk-vopt {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  min-width: 0;
+}
+.sk-vopt:focus-visible {
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+  border-radius: var(--radius-pop-row);
+}
+.sk-vrow.is-selected {
+  background: var(--fill-selected);
+  font-weight: 500;
+}
+.sk-vname {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.sk-vname b {
+  font-weight: 600;
+}
+.sk-vname span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sk-vcheck {
+  color: var(--cta);
+}
+.sk-vnone {
+  padding: 12px 8px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+@media (forced-colors: active) {
+  .sk-vopt:focus-visible,
+  .sk-vrow.is-selected {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .sk-tint {
+    outline: 1px dashed CanvasText;
+  }
+}
+/* Dark host page: a white surface is already readable; the dock, pill and bubble ring turns light so its edge stays visible. */
+.sk[data-theme="dark"] {
+  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.18), 0 2px 8px rgb(0 0 0 / 0.35);
+}

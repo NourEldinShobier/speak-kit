@@ -1,0 +1,76 @@
+html,
+body {
+  margin: 0;
+  background: var(--surface-editor);
+  font-family: Inter, system-ui, sans-serif;
+}
+.g-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 40px;
+  background: var(--surface-editor);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--stroke-divider);
+}
+.g-head h1 {
+  margin: 0;
+  font:
+    600 15px/18px Inter,
+    system-ui;
+}
+.g-panel {
+  display: block;
+  padding: 40px;
+  background: var(--surface-window);
+}
+.g-title {
+  margin: 0 0 24px;
+  font:
+    600 24px/29px Inter,
+    system-ui;
+}
+.g-group {
+  margin-bottom: 36px;
+}
+.g-group > h3 {
+  margin: 0 0 14px;
+  font:
+    600 11px/13px Inter,
+    system-ui;
+  color: var(--text-tertiary);
+}
+.g-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 28px 36px;
+}
+.g-cell {
+  margin: 0;
+}
+.g-box {
+  display: flex;
+  width: fit-content;
+}
+.g-cell figcaption {
+  margin-top: 8px;
+  font:
+    400 10px/12px Inter,
+    system-ui;
+  color: var(--text-tertiary);
+}
+.g-inline {
+  display: flex;
+  align-items: center;
+}
+.g-switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 20px;
+  color: var(--text-primary);
+  font:
+    400 13px/16px Inter,
+    system-ui;
+}

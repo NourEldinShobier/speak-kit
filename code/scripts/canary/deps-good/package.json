@@ -1,0 +1,1 @@
+{ "name": "canary", "private": true, "packageManager": "pnpm@12.4.1", "scripts": { "knip": "knip" }, "devDependencies": { "left-pad": "catalog:" } }

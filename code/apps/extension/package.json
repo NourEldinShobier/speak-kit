@@ -1,0 +1,29 @@
+{
+  "name": "@speakkit/extension",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "./src/app/**"
+  ],
+  "scripts": {
+    "pack:store": "node scripts/pack-store.mjs"
+  },
+  "dependencies": {
+    "@speakkit/player": "workspace:*",
+    "@speakkit/protocol": "workspace:*",
+    "@speakkit/ui": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "valibot": "catalog:"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "catalog:",
+    "@types/chrome": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "linkedom": "catalog:"
+  }
+}

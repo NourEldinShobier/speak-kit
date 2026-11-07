@@ -1,0 +1,391 @@
+/* The reading pane is white; the display popover can switch it to the paper theme. */
+.rd {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-editor);
+  color: var(--text-primary);
+}
+.rd--empty {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.rd-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 8px;
+  padding-inline: 16px 22px;
+  border-bottom: 1px solid var(--stroke-hairline);
+}
+.rd-top__icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-end: 22px;
+}
+.rd-crumb {
+  all: unset;
+  cursor: pointer;
+  font-weight: 500;
+}
+.rd-crumb:focus-visible {
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+}
+.rd-source {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--chip-gray);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.rd-spacer {
+  flex: 1;
+}
+.rd-muted {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0;
+}
+.rd-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.rd-pane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.rd-scroll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+.rd-article {
+  box-sizing: border-box;
+  max-width: calc(var(--rd-width) + 48px);
+  margin: 0 auto;
+  padding: 40px 24px 96px;
+  font-family: var(--rd-font);
+  font-size: var(--rd-size);
+  line-height: var(--rd-line);
+}
+.rd-title {
+  margin: 0 0 8px;
+  font-size: 2em;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.rd-meta {
+  margin: 0 0 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.rd-text p,
+.rd-text blockquote,
+.rd-text h2 {
+  margin: 0 0 1em;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}
+.rd-h {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.4em;
+}
+.rd-h--1 {
+  font-size: 1.5em;
+}
+.rd-h--2 {
+  font-size: 1.25em;
+}
+.rd-h--3 {
+  font-size: 1.1em;
+}
+.rd-quote {
+  padding-inline-start: 1em;
+  border-inline-start: 3px solid var(--stroke-control);
+  color: var(--text-secondary);
+}
+.rd-item {
+  padding-inline-start: 1.2em;
+  position: relative;
+}
+.rd-item::before {
+  content: "•";
+  position: absolute;
+  inset-inline-start: 0.3em;
+}
+.rd-text ::selection {
+  background: var(--accent-subtle);
+}
+::highlight(sk-sentence) {
+  background-color: color-mix(in srgb, var(--tag-yellow) 28%, transparent);
+}
+::highlight(sk-word) {
+  background-color: color-mix(in srgb, var(--tag-yellow) 75%, transparent);
+  color: var(--text-primary);
+}
+::highlight(sk-find) {
+  background-color: color-mix(in srgb, var(--accent-default) 28%, transparent);
+}
+::highlight(sk-find-current) {
+  background-color: color-mix(in srgb, var(--tag-orange) 60%, transparent);
+}
+
+/* a card over the reading pane (find, display): one 1 px border, the drop shadow only, no clipping */
+.rd-float {
+  position: absolute;
+  z-index: 7;
+  inset-block-start: 10px;
+  inset-inline-end: 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--stroke-control);
+  border-radius: var(--radius-menu);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-menu);
+}
+.rd-find {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 408px;
+  height: 44px;
+  padding-inline: 8px;
+}
+.rd-find .lm-field {
+  flex: none;
+  width: 240px;
+}
+.rd-find .rd-muted {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* compact card: 264 wide, 10 padding, 2 gap, 28 px rows; the 1 px border adds 2 to the width */
+.rd-display {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 266px;
+  padding: 10px;
+  font:
+    400 13px/16px "Inter Variable",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.rd-find ~ .rd-display {
+  inset-block-start: 64px;
+}
+.rd-display__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+.rd-display__row--between {
+  justify-content: space-between;
+}
+/* values and the switch end at the right edge of the selected tab, 2 px inside the grey track */
+.rd-display__row--switch {
+  padding-inline-end: 2px;
+}
+.rd-display__label {
+  flex: none;
+  width: 80px;
+  color: var(--text-secondary);
+}
+.rd-display__text {
+  color: var(--text-primary);
+}
+.rd-display__value {
+  flex: none;
+  width: 42px;
+  margin-inline-end: 2px;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: end;
+}
+.rd-display .lm-seg {
+  width: 120px;
+  height: 24px;
+  border-radius: 6px;
+}
+.rd-display .lm-seg__opt {
+  height: 20px;
+  padding: 0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 15px;
+}
+.rd-display .lm-slider {
+  --thumb: 14px;
+  flex: none;
+  width: 104px;
+}
+.rd-display .lm-toggle {
+  width: 28px;
+  height: 16px;
+}
+.rd-display .lm-toggle__knob {
+  width: 12px;
+  height: 12px;
+}
+.rd-chip {
+  position: fixed;
+  z-index: 6;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-popover);
+  transform: translateX(-50%);
+}
+/* the look comes from the shared primary Button; only the position is local */
+.rd-back {
+  position: absolute;
+  /* physical: centred with translateX, mirrored only by the transform */
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+}
+.rd-prepare {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-popover);
+}
+.rd-outline {
+  width: 280px;
+  flex: none;
+  overflow: auto;
+  padding: 12px;
+  border-inline-start: 1px solid var(--stroke-hairline);
+  background: var(--surface-card);
+}
+.rd-outline__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.rd-outline nav {
+  display: flex;
+  flex-direction: column;
+}
+.rd-outline__item {
+  all: unset;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-outline__item[data-level="0"] {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.rd-outline__item[data-level="3"],
+.rd-outline__item[data-level="4"] {
+  padding-inline-start: 20px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rd-outline__item:hover {
+    background: var(--fill-hover);
+  }
+}
+.rd-outline__item[aria-current="true"] {
+  background: var(--fill-selected);
+  font-weight: 500;
+}
+.rd-outline__item:focus-visible {
+  outline: 1px solid var(--accent-default);
+  outline-offset: -1px;
+}
+
+.rd-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  background: var(--scrim);
+}
+.rd-finished {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 32px;
+  border-radius: var(--radius-window);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-popover);
+}
+.rd-finished h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.rd-finished__tile {
+  color: var(--tag-green);
+}
+.rd-finished__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+/* text recognition runs inline in the reading column, no card */
+.rd-ocr {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 24px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+}
+.rd-ocr__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rd-ocr__status {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.rd-bookmarks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rd-bookmarks li {
+  display: flex;
+  align-items: center;
+}
+.rd-bookmarks .rd-outline__item {
+  flex: 1;
+  min-width: 0;
+}

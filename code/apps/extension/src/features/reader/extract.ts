@@ -1,0 +1,121 @@
+import { splitMany } from "@speakkit/player/sentences";
+import { Collector } from "./collect";
+import type { Block, Extraction, ExtractOptions, Sentence } from "./types";
+
+/** Page extraction: main-content detection, blocks with live Ranges, sentence splitting. */
+export type { Extraction } from "./types";
+export { sentenceIndexAt, sentenceRange, wordRange } from "./ranges";
+
+const SEMANTIC_ROOT = "article,main,[role=main]";
+
+const NOT_CONTENT = /^(NAV|ASIDE|FOOTER|HEADER)$/;
+
+/** Every ancestor of a readable paragraph scores the paragraph's weight (list items count less). */
+function scoreParagraphs(doc: Document, body: Element): Map<Element, number> {
+  const scores = new Map<Element, number>();
+  const ps = body.querySelectorAll("p,pre,blockquote,li");
+  for (let i = 0; i < ps.length; i++) {
+    const p = ps[i]!;
+    const len = (p.textContent ?? "").length;
+    if (len < 25) continue;
+    const tag = p.tagName;
+    if (tag === "LI" && p.querySelector("p")) continue;
+    const s = (tag === "LI" ? 0.4 : 1) * (1 + Math.min(len / 100, 3));
+    for (let a: Element | null = p.parentElement; a && a !== doc.documentElement; a = a.parentElement) scores.set(a, (scores.get(a) ?? 0) + s);
+  }
+  return scores;
+}
+
+/** The child of `cur` that holds at least 70% of `total` (nav, aside, footer and header never count), with its score. */
+function dominantChild(cur: Element, scores: Map<Element, number>, total: number): [Element, number] | null {
+  let best: Element | null = null;
+  let bs = 0;
+  for (let c = cur.firstElementChild; c; c = c.nextElementSibling) {
+    const s = scores.get(c) ?? 0;
+    if (s > bs && !NOT_CONTENT.test(c.tagName)) {
+      bs = s;
+      best = c;
+    }
+  }
+  return best && bs >= total * 0.7 ? [best, bs] : null;
+}
+
+/** Dominant-subtree detection: score paragraphs, descend while one child holds >= 70% of the score. */
+export function findMainRoot(doc: Document): Element {
+  const body = doc.body;
+  if (!body) return doc.documentElement;
+  const scores = scoreParagraphs(doc, body);
+  let cur: Element = body;
+  let total = scores.get(body) ?? 0;
+  if (total === 0) return doc.querySelector(SEMANTIC_ROOT) ?? body;
+  for (let next = dominantChild(cur, scores, total); next; next = dominantChild(cur, scores, total)) [cur, total] = next;
+  // a semantic wrapper just above the dominant node usually includes the title and byline
+  const wrap = cur.closest(SEMANTIC_ROOT);
+  if (wrap && wrap !== cur && wrap !== body && (scores.get(wrap) ?? 0) <= total * 1.6) return wrap;
+  return cur;
+}
+
+export function extract(doc: Document, opts: ExtractOptions): Extraction {
+  const sel = opts.selection;
+  let root: Element;
+  if (sel) {
+    const c = sel.commonAncestorContainer;
+    root = c.nodeType === 1 ? (c as Element) : (c.parentElement ?? doc.body);
+  } else root = findMainRoot(doc);
+  const lang = opts.lang ?? (doc.documentElement.lang || "en");
+  const t0 = performance.now();
+  const runs = new Collector(root, opts).run(root);
+  const t1 = performance.now();
+  const blocks: Block[] = [];
+  const sentences: Sentence[] = [];
+  const splits = splitMany(
+    runs.map((r) => r.text),
+    lang,
+  );
+  const t2 = performance.now();
+  for (let ri = 0; ri < runs.length; ri++) {
+    const r = runs[ri]!;
+    const first = sentences.length;
+    for (const s of splits[ri]!) sentences.push({ text: s.text, block: blocks.length, start: s.start, end: s.end });
+    if (sentences.length === first) continue;
+    const range = doc.createRange();
+    const a = r.pieces[0]!;
+    const z = r.pieces[r.pieces.length - 1]!;
+    range.setStart(a.node, a.ns);
+    range.setEnd(z.node, z.ne);
+    blocks.push({ el: r.el, tag: r.tag, text: r.text, pieces: r.pieces, first, count: sentences.length - first, range });
+  }
+  if (opts.timing) Object.assign(opts.timing, { collect: t1 - t0, split: t2 - t1, ranges: performance.now() - t2 });
+  const h1 = root.querySelector("h1")?.textContent?.trim();
+  return { title: (doc.title || h1 || "").trim(), root, blocks, sentences };
+}
+
+/** The text selected inside an `<input>` or `<textarea>` (selectionStart/selectionEnd), or undefined when it is only whitespace, the field hides its text (password) or the field has no text selection. */
+export function fieldSelection(active: Element | null): { el: HTMLInputElement | HTMLTextAreaElement; text: string } | undefined {
+  if (!active || !/^(INPUT|TEXTAREA)$/.test(active.tagName)) return undefined;
+  const el = active as HTMLInputElement | HTMLTextAreaElement;
+  if (el.tagName === "INPUT" && !/^(text|search|url|tel)$/.test(el.type)) return undefined;
+  const text = (el.selectionStart ?? 0) === (el.selectionEnd ?? 0) ? "" : el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0);
+  return /\S/.test(text) ? { el, text } : undefined;
+}
+
+/** An Extraction for text that is not in the page's DOM (a field's selection): one block per line, each with a detached text node so highlights and ranges stay valid and paint nothing. */
+export function extractFieldText(doc: Document, field: { el: Element; text: string }, lang = doc.documentElement.lang || "en"): Extraction {
+  const lines = field.text
+    .split(/\n+/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const splits = splitMany(lines, lang);
+  const blocks: Block[] = [];
+  const sentences: Sentence[] = [];
+  lines.forEach((text, i) => {
+    const first = sentences.length;
+    for (const s of splits[i]!) sentences.push({ text: s.text, block: blocks.length, start: s.start, end: s.end });
+    if (sentences.length === first) return;
+    const node = doc.createTextNode(text);
+    const range = doc.createRange();
+    range.selectNodeContents(node);
+    blocks.push({ el: field.el, tag: "p", text, pieces: [{ node, ns: 0, ne: text.length, ts: 0, te: text.length }], first, count: sentences.length - first, range });
+  });
+  return { title: doc.title.trim(), root: field.el, blocks, sentences };
+}

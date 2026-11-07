@@ -1,0 +1,23 @@
+{
+  "lint": {
+    "code": {
+      "max-params": 3,
+      "complexity": 1
+    },
+    "tests": {}
+  },
+  "patterns": {
+    "asAny": 0,
+    "asUnknownAs": 5,
+    "tsDirective": 0,
+    "atomicsWait": 0,
+    "sendSync": 0,
+    "shortInterval": 0,
+    "oxlintDisable": 0,
+    "swallowingCatch": 6,
+    "physicalCss": 0,
+    "skipped": 0,
+    "focused": 0,
+    "tsNocheck": 0
+  }
+}

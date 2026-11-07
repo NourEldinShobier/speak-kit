@@ -1,0 +1,30 @@
+/* Model download card: 16 px inside the card on every side, text above a full-width 6 px bar (track and fill come from .lm-progress). */
+.mdc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.mdc__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mdc__name {
+  font:
+    500 13.5px/16px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.mdc__line {
+  color: var(--text-tertiary);
+  font:
+    400 12.5px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+.mdc__bar {
+  height: 6px;
+}

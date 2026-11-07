@@ -1,0 +1,4 @@
+/* Settings pages: a card that holds only toggles gets 4 px more room under its last row. */
+.sk-page .lm-card:has(.lm-toggle):not(:has(.lm-input, .lm-select, .lm-seg, .lm-btn, .lm-row--control)) {
+  padding-block-end: 4px;
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"], "paths": { "@playwright/test": ["../../e2e/node_modules/@playwright/test"] } },
+  "include": ["src", "tests", "*.ts"]
+}

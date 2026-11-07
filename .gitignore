@@ -1,0 +1,16 @@
+node_modules/
+.cache/
+dist/
+dist-*/
+out/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+code/e2e/visual/out/
+code/e2e/results-*.json
+code/e2e/perf-results.jsonl
+code/apps/extension/test-results/
+
+# desktop packaging output
+code/apps/desktop/release/

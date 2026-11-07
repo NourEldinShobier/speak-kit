@@ -1,0 +1,89 @@
+/* Floating window: a transparent OS window whose page is padded --float-pad (FLOAT_PAD in main/windows.ts) around a white card with a 1 px ring and the popover shadow. */
+:root {
+  --float-pad: 24px;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: transparent;
+  color: var(--text-primary);
+  font:
+    13px/1.4 Inter,
+    "Segoe UI Variable Text",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.mini {
+  margin: var(--float-pad);
+  height: calc(100% - 2 * var(--float-pad));
+  box-sizing: border-box;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-popover, 0 0 0 1px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06));
+  overflow: hidden;
+}
+.mini {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  border-radius: var(--radius-window);
+}
+.mini__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px 8px;
+  -webkit-app-region: drag;
+}
+/* title, time left and the two buttons share the 18 px title line; the 24 px buttons overhang it by 3 px above and below */
+.mini__head > .lm-btn {
+  margin-block: -3px;
+}
+.mini__nodrag,
+.mini__ctl {
+  -webkit-app-region: no-drag;
+}
+.mini__title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.mini__title b {
+  line-height: 18px;
+}
+.mini__title b,
+.mini__title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini__title span,
+.mini__left {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.mini__left {
+  line-height: 18px;
+}
+.mini__bar {
+  width: auto;
+  height: 4px;
+  margin-inline: 14px;
+}
+.mini__ctl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mini[data-status="error"] .mini__title span {
+  color: var(--tag-red);
+}

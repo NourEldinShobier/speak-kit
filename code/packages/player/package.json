@@ -1,0 +1,20 @@
+{
+  "name": "@speakkit/player",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gapless streaming playback core shared by the extension offscreen document and the desktop reader.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sentences": "./src/sentences.ts",
+    "./rate": "./src/rate.ts"
+  },
+  "scripts": {
+    "test": "vp test run",
+    "typecheck": "tsrs --noEmit -p ."
+  },
+  "dependencies": {
+    "@soundtouchjs/audio-worklet": "catalog:",
+    "@speakkit/protocol": "workspace:*"
+  }
+}
