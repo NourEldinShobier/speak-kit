@@ -8,9 +8,9 @@
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  border: 1px solid var(--accent-default);
+  border: 1px solid var(--text-primary);
   border-radius: var(--radius-control);
-  color: var(--accent-default);
+  color: var(--text-primary);
   white-space: nowrap;
 }
 .sk-notify {
@@ -54,7 +54,7 @@
   flex-direction: column;
   gap: 10px;
   width: 356px;
-  padding: 14px;
+  padding: 16px;
   border-radius: var(--radius-window);
   background: var(--surface-raised);
   box-shadow: var(--shadow-popover);
@@ -74,6 +74,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
+  border: 0;
   box-shadow: var(--shadow-card-ring);
   border-radius: var(--radius-control);
   background: var(--surface-card);

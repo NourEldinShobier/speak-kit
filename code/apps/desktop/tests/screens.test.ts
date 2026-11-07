@@ -83,7 +83,7 @@ describe("settings control rows (2.19)", () => {
     const l = await start({ config: DONE });
     await openSettings(l, "Storage");
     for (const name of ["Models", "Logs"]) expect((await l.page.getByRole("button", { name }).boundingBox())!.height).toBe(36);
-    const del = l.page.getByRole("button", { name: "Delete..." });
+    const del = l.page.getByRole("button", { name: "Delete", exact: true });
     await expect.poll(() => del.isEnabled()).toBe(true); // disabled until the sizes are measured
     await settle(l.page);
     expect((await del.boundingBox())!.height).toBe(36);
@@ -140,7 +140,7 @@ describe("voice drawer (2.18, frame 31527)", () => {
   const count = (l: Launched) => l.page.locator(".sk-vdrawer__count").textContent();
   const configVoice = (l: Launched) => l.page.evaluate(async () => (await window.speakkit.state()).config.voice);
 
-  it("opens from a card as a non-modal dialog on the content panel's height, 8 px from the window's right and bottom, with the card's border, shadow and radius", async () => {
+  it("opens from a card as a non-modal dialog on the content panel's height, docked to the window's right and bottom, with a left border only, the card's shadow and no radius", async () => {
     const l = await start({ config: DONE });
     await openVoices(l);
     await l.page.locator("[data-voice=af_heart] b").click();
@@ -149,12 +149,13 @@ describe("voice drawer (2.18, frame 31527)", () => {
     await settle(l.page);
     const d = await box(l.page, ".sk-vdrawer");
     const win = await l.page.evaluate(() => [innerWidth, innerHeight]);
-    expect([d.w, d.y, win[0]! - d.r, win[1]! - d.b]).toEqual([392, 38, 8, 8]);
+    expect([d.w, d.y, win[0]! - d.r, win[1]! - d.b]).toEqual([392, 38, 0, 0]);
     expect(await drawer.getAttribute("aria-modal")).toBeNull();
-    expect(await style(l.page, ".sk-vdrawer", "border-top-color")).toBe("rgb(229, 229, 229)");
-    expect(Number.parseFloat(await style(l.page, ".sk-vdrawer", "border-top-width"))).toBeCloseTo(await hairline(l.page), 3);
+    expect(await style(l.page, ".sk-vdrawer", "border-left-color")).toBe("rgb(229, 229, 229)");
+    expect(Number.parseFloat(await style(l.page, ".sk-vdrawer", "border-left-width"))).toBeCloseTo(await hairline(l.page), 3);
+    for (const side of ["top", "right", "bottom"]) expect(await style(l.page, ".sk-vdrawer", `border-${side}-width`)).toBe("0px");
     expect(await style(l.page, ".sk-vdrawer", "box-shadow")).toBe("rgba(0, 0, 0, 0.06) 0px 2px 6px 0px");
-    expect(await style(l.page, ".sk-vdrawer", "border-top-left-radius")).toBe("8px");
+    expect(await style(l.page, ".sk-vdrawer", "border-top-left-radius")).toBe("0px");
     expect(await style(l.page, ".sk-vdrawer", "background-color")).toBe("rgb(255, 255, 255)");
     expect(await style(l.page, ".sk-vdrawer", "row-gap")).toBe("14px");
     expect(await style(l.page, ".sk-vdrawer__bar", "padding-top")).toBe("10px");
@@ -336,6 +337,7 @@ describe("export (2.19)", () => {
     expect(dlg.b - foot.b).toBe(16);
     await l.page.getByRole("button", { name: "Run in background" }).click();
     await l.page.getByTestId("export-pill").waitFor();
+    expect(await style(l.page, ".sk-exportpill__row", "border-top-width")).toBe("0px");
     expect(await style(l.page, ".sk-exportpill__row", "box-shadow")).toContain("rgb(229, 229, 229) 0px 0px 0px 1px");
     expect(await style(l.page, ".sk-exportpill__row .lm-progress__bar", "background-color")).toBe("rgb(32, 30, 37)");
   });

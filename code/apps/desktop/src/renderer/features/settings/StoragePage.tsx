@@ -88,7 +88,7 @@ export function StoragePage() {
           description="Frees the space. Your library, cloned voices and settings stay."
           control={
             <Button variant="danger" iconLeft="trash" disabled={!st} onClick={() => setPhase({ step: "confirm" })}>
-              Delete...
+              Delete
             </Button>
           }
         />

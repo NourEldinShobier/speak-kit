@@ -1,16 +1,17 @@
-/* voice drawer (design 31527): the content panel's height, 8 px from the window's right and bottom edges; one border, one shadow, no clipping */
+/* voice drawer: docked to the window's right edge at the content panel's height; a 1 px left border only, no radius, no clipping */
 .sk-vdrawer {
   position: fixed;
   z-index: 40;
-  inset-block: var(--bar-h) var(--panel-inset-end);
-  inset-inline-end: var(--panel-inset-end);
+  inset-block: var(--bar-h) 0;
+  inset-inline-end: 0;
   box-sizing: border-box;
   width: 392px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  border: 1px solid var(--stroke-control);
-  border-radius: var(--radius-card);
+  border: 0;
+  border-inline-start: 1px solid var(--stroke-control);
+  border-radius: 0;
   background: var(--surface-card);
   box-shadow: var(--shadow-menu);
   outline: none;

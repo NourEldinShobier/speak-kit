@@ -101,7 +101,6 @@ export const systemScenarios: Scenario[] = [
       await startExport(p);
       await p.getByRole("button", { name: "Run in background" }).click();
       await p.getByTestId("export-pill").waitFor();
-      await new Promise((r) => setTimeout(r, 800)); (await import("node:fs")).writeFileSync("C:/Users/noure/AppData/Local/Temp/dbg.txt", String(await p.evaluate(() => { const a = document.activeElement as HTMLElement; const r = document.querySelector(".sk-exportpill__row") as HTMLElement; const c = getComputedStyle(r); return a.tagName + "." + a.className + " fv=" + a.matches(":focus-visible") + " rowOutline=" + c.outline + " shadow=" + c.boxShadow + " hover=" + r.matches(":hover"); })));
     },
   }),
   home(
