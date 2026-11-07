@@ -42,7 +42,7 @@ export function formatBytes(n: number): string {
   return n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`;
 }
 
-/** The play button of the mini player and the tray panel: replay when finished, pause while it speaks, else play. */
+/** The play button of the mini player: replay when finished, pause while it speaks, else play. */
 export function playButton(status: string): { name: "refresh" | "player-pause" | "player-play"; label: string } {
   if (status === "finished") return { name: "refresh", label: "Read again" };
   if (status === "playing" || status === "preparing") return { name: "player-pause", label: "Pause" };

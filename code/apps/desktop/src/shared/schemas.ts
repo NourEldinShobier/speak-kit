@@ -97,7 +97,7 @@ export type ConfigPatch = v.InferOutput<typeof ConfigPatchSchema>;
 
 const ShortcutIdSchema = v.picklist(SHORTCUT_IDS);
 const ReaderCommandSchema = v.variant("type", [
-  v.object({ type: v.picklist(["toggle", "pause", "resume", "stop", "replay", "open-app"]) }),
+  v.object({ type: v.picklist(["toggle", "pause", "resume", "stop", "replay"]) }),
   v.object({ type: v.literal("step"), by: v.picklist([-1, 1]) }),
   v.object({ type: v.literal("skip"), ms: v.picklist([-10_000, 10_000]) }),
   v.object({ type: v.literal("keep-on-top"), on: v.boolean() }),

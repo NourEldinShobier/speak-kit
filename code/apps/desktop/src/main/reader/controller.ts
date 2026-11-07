@@ -10,7 +10,7 @@ interface ReaderDeps {
   synth(req: { text: string; voice: string; speed: number }, signal: AbortSignal): Promise<PreviewAudio>;
   voice(): string;
   speed(): number;
-  /** State changed; every view (mini player, tray panel, main window) renders from it. */
+  /** State changed; every view (mini player, main window) renders from it. */
   emit(state: ReaderState): void;
   /** The audio side. `epoch` changes on every seek so late callbacks can be ignored. */
   player: {
@@ -124,8 +124,7 @@ export class ReaderController {
         this.#reset();
         break;
       case "keep-on-top":
-      case "open-app":
-        return; // window commands, handled by the reading service
+        return; // a window command, handled by the reading service
       case "replay":
       case "step":
       case "skip":

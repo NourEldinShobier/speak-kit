@@ -27,7 +27,7 @@ const GROUPS = [
   ["Desktop reader and export", "The reader playing and paused, the outline with bookmarks, the voice panel and popover, and the export dialog."],
   ["Voices and engines", "Voices library and the engines pages in their states (ready, unloaded, loading, error)."],
   ["Desktop settings", "Settings pages: general, voice and playback, shortcuts, notifications, memory (ready and unloaded), storage, browser integration, about."],
-  ["Tray, notifications and system states", "Mini player, tray panel and quit confirmation. The native tray menu, tray icons and OS toasts cannot be screenshotted (see Not captured)."],
+  ["Tray, notifications and system states", "Mini player and quit confirmation. The native tray menu, tray icons and OS toasts cannot be screenshotted (see Not captured)."],
   ["Errors and edge states", "Engine error and engine asleep on the desktop home."],
 ].map(([name, blurb], i) => ({ key: String(i + 1), n: i + 1, name, blurb }));
 const gkey = Object.fromEntries(GROUPS.map((g) => [g.name, g.key]));

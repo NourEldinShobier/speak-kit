@@ -105,7 +105,6 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
     readSelection,
     command(c) {
       if (c.type === "keep-on-top") mini.window?.setAlwaysOnTop(c.on, "floating");
-      else if (c.type === "open-app") ctx.showWindow();
       else controller.command(c);
     },
     started: (epoch, index) => controller.started(epoch, index),

@@ -6,20 +6,13 @@ import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ip
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-type FloatPage = "mini" | "panel";
+type FloatPage = "mini";
 
 /** Transparent room around the card for its shadow (Lockix: tray window page padding 24). The renderer pads its page by the same amount (float.css `--float-pad`). */
 export const FLOAT_PAD = 24;
 
-let lastFloatChange = 0;
 /**
- * Was a mini player or panel created or destroyed in the last `ms`? Windows moves the active window around when one of ours appears or
- * goes away, which blurs a panel the user never left; the panel uses this to tell that blur from a click elsewhere.
- */
-export const floatChangedWithin = (ms: number): boolean => Date.now() - lastFloatChange < ms;
-
-/**
- * A small frameless window (mini player, tray panel). It exists only while it is in use: opening creates it, closing destroys
+ * A small frameless window (mini player). It exists only while it is in use: opening creates it, closing destroys
  * it, so a hidden SpeakKit holds no renderer for them. Messages sent before the page has loaded wait in a queue.
  */
 export class FloatWindow {
@@ -46,7 +39,6 @@ export class FloatWindow {
     let w = this.window;
     if (!w) {
       this.#loaded = false;
-      lastFloatChange = Date.now();
       w = this.#win = createSecureWindow(
         {
           frame: false,
@@ -68,7 +60,7 @@ export class FloatWindow {
         },
       );
       w.on("closed", () => (this.#win = null));
-      // macOS: a read can start in a full-screen app on another Space; the mini player and the panel must show up there too.
+      // macOS: a read can start in a full-screen app on another Space; the mini player must show up there too.
       if (process.platform === "darwin") {
         w.setAlwaysOnTop(true, "floating");
         w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
@@ -85,7 +77,6 @@ export class FloatWindow {
   }
 
   close(): void {
-    if (this.window) lastFloatChange = Date.now();
     this.window?.destroy();
     this.#win = null;
     this.#pending = [];
@@ -120,13 +111,3 @@ export const cornerOf =
     return { ...size, x: wa.x + wa.width - size.width - margin + FLOAT_PAD, y: wa.y + wa.height - size.height - margin + FLOAT_PAD };
   };
 
-/** Above (or beside) the tray icon, kept inside the work area of the display that holds it. */
-export const aboveTray =
-  (tray: Rectangle) =>
-  (size: { width: number; height: number }): Rectangle => {
-    const wa = screen.getDisplayNearestPoint({ x: tray.x, y: tray.y }).workArea;
-    const x = Math.min(Math.max(wa.x + 8 - FLOAT_PAD, Math.round(tray.x + tray.width / 2 - size.width / 2)), wa.x + wa.width - size.width - 8 + FLOAT_PAD);
-    const above = tray.y - size.height - 12 + FLOAT_PAD;
-    const y = above >= wa.y - FLOAT_PAD ? above : Math.min(tray.y + tray.height + 12 - FLOAT_PAD, wa.y + wa.height - size.height - 8 + FLOAT_PAD);
-    return { ...size, x, y };
-  };

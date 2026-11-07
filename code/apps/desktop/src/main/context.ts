@@ -15,7 +15,7 @@ export interface Ctx {
   saveConfig(): void;
   /** Sends the state to every open window and returns it. */
   publish(): AppState;
-  /** Extra windows (mini player, tray panel) register here to get every published state. */
+  /** Extra windows (mini player) register here to get every published state. */
   sinks: Set<(state: AppState) => void>;
   /** Brings the main window forward. */
   showWindow(): void;

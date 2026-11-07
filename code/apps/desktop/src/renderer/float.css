@@ -1,4 +1,4 @@
-/* Small always-on-top windows: the mini player and the tray panel. Components come from @speakkit/ui; this only places them.
+/* Small always-on-top windows: the mini player. Components come from @speakkit/ui; this only places them.
    Lockix floating window: a transparent OS window whose page is padded --float-pad (FLOAT_PAD in main/windows.ts) around a white card with a 1 px ring and the popover shadow. */
 :root {
   --float-pad: 24px;
@@ -22,17 +22,8 @@ body {
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
-.sk-caps {
-  margin: 0 0 6px;
-  color: var(--text-tertiary);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
-}
-
 /* ---- mini player: draggable header, progress, controls ---- */
-.mini,
-.panel {
+.mini {
   margin: var(--float-pad);
   height: calc(100% - 2 * var(--float-pad));
   box-sizing: border-box;
@@ -100,72 +91,3 @@ body {
   color: var(--tag-red);
 }
 
-/* ---- tray panel ---- */
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 8px 8px;
-  border-radius: var(--radius-tray);
-}
-.panel__head {
-  height: 32px;
-  margin-inline: -2px; /* the 20 px logo is 6 px from the left edge as from the top */
-  padding: 0;
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 500;
-}
-.panel__head,
-.panel__row,
-.panel__foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.panel__sec {
-  display: flex;
-  flex-direction: column;
-}
-.panel__now {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: var(--radius-card);
-  background: var(--surface-well, var(--surface-window));
-}
-.panel__txt {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-.panel__txt b,
-.panel__next,
-.panel__exp span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.panel__txt span,
-.panel__sub,
-.panel__empty {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.panel__empty,
-.panel__next {
-  margin: 0;
-}
-.panel__exp {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.panel__foot {
-  margin-top: auto;
-}
-.panel__foot .lm-btn {
-  flex: 1;
-}

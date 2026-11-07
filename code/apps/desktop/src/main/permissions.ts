@@ -9,7 +9,7 @@ export interface PermissionAsk {
   mediaTypes: readonly string[];
   /** URL of the page that asks. */
   url: string;
-  /** The window may use the microphone (the main window; the mini player and the tray panel may not). */
+  /** The window may use the microphone (the main window; the mini player may not). */
   microphoneWindow: boolean;
 }
 

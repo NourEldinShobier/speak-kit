@@ -270,13 +270,6 @@ Diff % is pixelmatch (threshold 0.2) of the built screenshot against the design 
 | H23 | Settings · Update ready (pill) (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | H22 | Update ready · restart confirm (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | O1 | Engine states · board (Desktop app) | Board of all engine states side by side (1920 px wide), not a product screen; its states are captured as O2, O3 and H12 and H13. |
-| I10 | Tray panel · reading (Desktop app) | The left-click panel is captured as I10 / tray-panel in the app (no diff). The native tray menu is an Electron menu and cannot be screenshotted. |
-| I14 | Tray panel · idle (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| I15 | Tray panel · paused (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| I16 | Tray panel · engine unloaded (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| I17 | Tray panel · engine loading (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| I18 | Tray panel · model downloading (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
-| I19 | Tray panel · engine error (Desktop app) | Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. |
 | I11 | Tray right-click menu (Desktop app) | Tray icon states are drawn into the operating system tray and are not part of any window. |
 | I3 | Mini player · playing (Desktop app) | Captured as I3 / mini-player in the app (the mini window), compared by eye: it is a small always-on-top window, not a design-sized frame. |
 | I9 | Mini player · paused (Desktop app) | The mini player states other than reading are not captured; the sleep-timer overflow menu is not built. |

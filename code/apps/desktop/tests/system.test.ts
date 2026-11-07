@@ -123,24 +123,6 @@ describe("mini player and tray", () => {
     expect(await hook<string>(l, "trayState")).toMatch(/^normal\|/);
   }, 90_000);
 
-  it("the tray panel shows the reading and its controls; clicking elsewhere closes it", async () => {
-    const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_LATENCY_MS: "150" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await hook(l, "readText", TEXT);
-    const panelWin = newWindow(l, "panel.html");
-    await hook(l, "togglePanel");
-    const p = await panelWin;
-    await p.getByTestId("tray-panel").waitFor();
-    await p.getByText("Now playing").waitFor();
-    await p
-      .getByText(/One short sentence here\./)
-      .first()
-      .waitFor();
-    await p.getByText("Next in queue").waitFor();
-    await p.getByRole("button", { name: "Stop" }).click();
-    await p.getByText(/Nothing is playing/).waitFor();
-  }, 60_000);
-
   it("the tray menu has the short model: Do not disturb toggles, wake appears when the engine sleeps", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();

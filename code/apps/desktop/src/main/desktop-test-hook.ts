@@ -28,7 +28,6 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, install
       item.click();
     },
     trayState: () => tray.summary(),
-    togglePanel: tray.togglePanel,
     readText: (text: string) => reading.readText(text, "text"),
     /** Main-process event-loop delay since the app started, in ms (nanoseconds from the histogram). */
     loopDelay: () => ({ p50Ms: loop.percentile(50) / 1e6, p99Ms: loop.percentile(99) / 1e6, maxMs: loop.max / 1e6 }),

@@ -118,23 +118,14 @@ describe("spacing and radius on Windows (data-platform=win32; the macOS values a
     expect([min("plain"), min("desc"), min("control")]).toEqual([42, 58, 68]);
   });
 
-  it("tray panel: 24 px page padding, 10 px radius, 32 px head with the 20 px logo 6 px from the top and left; mini player 10 px", async () => {
+  it("mini player: 24 px page padding, 10 px radius", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_LATENCY_MS: "250" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const open = async (part: string, hookFn: string) => {
-      const win = l.app.waitForEvent("window", { predicate: (w) => w.url().includes(part), timeout: 15_000 });
-      await hook(l.app, hookFn, ...(hookFn === "readText" ? ["One short sentence here. A second sentence follows it."] : []));
-      return win;
-    };
-    const mini = await open("mini.html", "readText");
+    const win = l.app.waitForEvent("window", { predicate: (w) => w.url().includes("mini.html"), timeout: 15_000 });
+    await hook(l.app, "readText", "One short sentence here. A second sentence follows it.");
+    const mini = await win;
     await mini.getByTestId("mini").waitFor();
     expect(await box(mini, ".mini")).toMatchObject({ x: 24, y: 24, radius: "10px" });
-    const panel = await open("panel.html", "togglePanel");
-    await panel.getByTestId("tray-panel").waitFor();
-    expect(await box(panel, ".panel")).toMatchObject({ x: 24, y: 24, radius: "10px", pad: [0, 8, 8, 8] });
-    expect(await box(panel, ".panel__head")).toMatchObject({ h: 32 });
-    expect(await box(panel, ".panel__head .lm-logo")).toMatchObject({ x: 30, y: 30, w: 20, h: 20 });
-    expect(await box(panel, ".panel__now")).toMatchObject({ radius: "8px" });
   });
 });
 

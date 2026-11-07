@@ -1,13 +1,13 @@
 import type { DesktopError } from "./errors";
 
-/** What the reader (mini player, tray panel, palette) shares: state shape, commands, and text to sentences. */
+/** What the reader (mini player, palette) shares: state shape, commands, and text to sentences. */
 export type ReaderStatus = "idle" | "preparing" | "playing" | "paused" | "finished" | "error";
 export type ReaderSource = "selection" | "text";
 
 export interface ReaderState {
   status: ReaderStatus;
   source: ReaderSource | null;
-  /** First words of the text, for the panel and the mini player. */
+  /** First words of the text, for the mini player. */
   title: string;
   /** Index of the sentence playing (or preparing) and the count. */
   index: number;
@@ -22,7 +22,7 @@ export interface ReaderState {
 
 export const IDLE_READER: ReaderState = { status: "idle", source: null, title: "", index: 0, total: 0, elapsedMs: 0, totalMs: 0, next: null, error: null };
 
-/** Everything the mini player and tray panel can ask for. */
+/** Everything the mini player can ask for. */
 export type ReaderCommand =
   | { type: "toggle" }
   | { type: "pause" }
@@ -31,9 +31,7 @@ export type ReaderCommand =
   | { type: "replay" }
   | { type: "step"; by: -1 | 1 }
   | { type: "skip"; ms: -10_000 | 10_000 }
-  | { type: "keep-on-top"; on: boolean }
-  /** From the tray panel: bring the main window forward. */
-  | { type: "open-app" };
+  | { type: "keep-on-top"; on: boolean };
 
 /** Speaking speed for time estimates when a sentence has no audio yet (characters per second at 1x). */
 const CHARS_PER_SECOND = 15;

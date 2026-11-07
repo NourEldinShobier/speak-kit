@@ -3,10 +3,9 @@ import { IDLE_READER, type ReaderState } from "../shared/reader";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import type { TrayContext } from "../shared/tray";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
-import type { Ctx } from "./context";
 
 const mocks = vi.hoisted(() => {
-  const state = { trays: [] as FakeTray[], panels: [] as FakePanel[], ownClose: false };
+  const state = { trays: [] as FakeTray[] };
   class FakeTray {
     image: unknown;
     tip = "";
@@ -40,32 +39,7 @@ const mocks = vi.hoisted(() => {
       this.destroyed = true;
     }
   }
-  class FakePanel {
-    visible = false;
-    closed = 0;
-    blur: (() => void) | undefined;
-    focus: (() => void) | undefined;
-    window = { isVisible: () => this.visible };
-    page: string;
-    options: unknown;
-    constructor(page: string, options: unknown) {
-      this.page = page;
-      this.options = options;
-      state.panels.push(this);
-    }
-    open() {
-      this.visible = true;
-      const win = { once: (e: string, f: () => void) => (e === "focus" ? ((this.focus = f), win) : ((this.blur = f), win)) };
-      return win;
-    }
-    close() {
-      this.visible = false;
-      this.closed++;
-    }
-    sendState = vi.fn();
-    owns = (c: unknown) => c === "panel-contents";
-  }
-  return { state, FakeTray, FakePanel };
+  return { state, FakeTray };
 });
 
 vi.mock("electron", () => ({
@@ -76,7 +50,6 @@ vi.mock("electron", () => ({
     }),
   },
 }));
-vi.mock("./windows", () => ({ FloatWindow: mocks.FakePanel, aboveTray: (b: unknown) => ({ above: b }), floatChangedWithin: () => mocks.state.ownClose }));
 vi.mock("./icon", () => ({ trayIcon: (state: string) => `icon:${state}` }));
 
 import { createTray } from "./tray";
@@ -96,19 +69,16 @@ const reading = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READE
 
 function setup(initial: TrayContext = base()) {
   let context = initial;
-  const sinks = new Set<(s: unknown) => void>();
   const run = Object.fromEntries(
     ["open", "pause", "resume", "stop", "wake", "restart-engine", "dnd", "settings", "check-updates", "restart-update", "quit"].map((a) => [a, vi.fn()]),
   ) as never as Record<string, ReturnType<typeof vi.fn>>;
-  const tray = createTray({ state: { id: "state" }, sinks } as unknown as Ctx, () => context, run as never);
-  return { tray, sinks, run, fake: mocks.state.trays.at(-1)!, panel: mocks.state.panels.at(-1)!, set: (c: TrayContext) => (context = c) };
+  const tray = createTray(() => context, run as never);
+  return { tray, run, fake: mocks.state.trays.at(-1)!, set: (c: TrayContext) => (context = c) };
 }
 const labels = (t: ReturnType<typeof setup>) => t.fake.menu!.items.filter((i) => i.type !== "separator").map((i) => i.label);
 
 beforeEach(() => {
   mocks.state.trays.length = 0;
-  mocks.state.panels.length = 0;
-  mocks.state.ownClose = false;
 });
 
 describe("tray wiring", () => {
@@ -126,7 +96,7 @@ describe("tray wiring", () => {
     expect(t.fake.menu!.items.find((i) => i.label === "Do not disturb")).toMatchObject({ type: "checkbox", checked: true });
   });
 
-  it("on macOS the menu opens on right click only, so the plain click can open the panel", () => {
+  it("on macOS the menu opens on right click only, so the plain click can show the window", () => {
     const original = process.platform;
     Object.defineProperty(process, "platform", { value: "darwin" });
     try {
@@ -185,58 +155,17 @@ describe("tray wiring", () => {
   });
 });
 
-describe("tray panel", () => {
-  it("sends every published state to the panel", () => {
+describe("tray left click", () => {
+  it("shows the main window, on every platform, without opening the menu", () => {
     const t = setup();
-    [...t.sinks][0]!({ any: 1 });
-    expect(t.panel.sendState).toHaveBeenCalledWith({ any: 1 });
+    t.fake.handlers.get("click")!();
+    expect(t.run.open).toHaveBeenCalledTimes(1);
+    expect(t.fake.popped).toHaveLength(0);
   });
 
-  it("left click opens the panel above the icon and closes it again; losing focus closes it", () => {
+  it("dispose removes the icon", () => {
     const t = setup();
-    t.fake.handlers.get("click")!();
-    expect(t.panel.visible).toBe(true);
-    t.fake.handlers.get("click")!();
-    expect(t.panel.visible).toBe(false);
-    t.fake.handlers.get("click")!();
-    t.panel.focus!();
-    t.panel.blur!();
-    expect(t.panel.visible).toBe(false);
-  });
-
-  it("a blur before the panel ever had focus does not close it", () => {
-    const t = setup();
-    t.fake.handlers.get("click")!();
-    expect(t.panel.blur).toBeUndefined();
-    expect(t.panel.visible).toBe(true);
-  });
-
-  it("a blur right after a float window opened or closed (Windows reassigns the active window) keeps the panel; the next blur closes it", () => {
-    const t = setup();
-    t.fake.handlers.get("click")!();
-    t.panel.focus!();
-    mocks.state.ownClose = true;
-    t.panel.blur!();
-    expect(t.panel.visible).toBe(true);
-    mocks.state.ownClose = false;
-    t.panel.blur!();
-    expect(t.panel.visible).toBe(false);
-  });
-
-  it("opening the panel wakes the model so a read from it starts warm; closing it does not", () => {
-    const t = setup();
-    t.fake.handlers.get("click")!();
-    expect(t.run.wake).toHaveBeenCalledTimes(1);
-    t.fake.handlers.get("click")!();
-    expect(t.run.wake).toHaveBeenCalledTimes(1);
-  });
-
-  it("owns only the panel's contents; dispose closes the panel and removes the icon", () => {
-    const t = setup();
-    expect(t.tray.owns("panel-contents" as never)).toBe(true);
-    expect(t.tray.owns("other" as never)).toBe(false);
     t.tray.dispose();
-    expect(t.panel.visible).toBe(false);
     expect(t.fake.destroyed).toBe(true);
   });
 });

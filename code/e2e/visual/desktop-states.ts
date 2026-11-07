@@ -11,7 +11,7 @@ import { READ, hook, libraryWith, slow, windowShot } from "./desktop-app";
 import { clickTrayQuit, sleep } from "./support";
 
 // Desktop states that came after the first harness pass: library add / drag / menu / toasts, reader sub-states, PDF reader, shortcut recording,
-// update available, tray panel and quit variants, bell with entries. Design ids follow the design set.
+// update available, quit variants, bell with entries. Design ids follow the design set.
 
 const LIB = GROUPS.library;
 const RD = GROUPS.readerApp;
@@ -109,19 +109,6 @@ const url = (id: string, state: string, title: string, hang: boolean, after: (p:
 
 const mini = (id: string, state: string, title: string, after: (w: Page) => Promise<void>, env: Record<string, string> = {}) =>
   windowShot(id, state, title, "mini.html", "mini", async (app) => void (await hook(app, "readText", READ)), { env, after });
-const panel = (state: string, title: string, o: { env?: Record<string, string>; read?: boolean; after?: (w: Page) => Promise<void> }) =>
-  windowShot(
-    "I10",
-    state,
-    title,
-    "panel.html",
-    "tray-panel",
-    async (app) => {
-      if (o.read) await hook(app, "readText", READ);
-      await hook(app, "togglePanel");
-    },
-    { ...(o.env ? { env: o.env } : {}), ...(o.after ? { after: o.after } : {}) },
-  );
 
 const exportOpts = (latency: string): Opts => ({
   env: { SPEAKKIT_FAKE_LATENCY_MS: latency },
@@ -347,7 +334,7 @@ export const stateScenarios: Scenario[] = [
     },
   }),
 
-  // system: quit variant, update variant, mini and tray panel states
+  // system: quit variant, update variant, mini states
   home("K13", "quit-reading-export", SY, "Quit confirmation · a reading and an export running", {
     ...exportOpts("4000"),
     drive: async (p, { app }) => {
@@ -382,8 +369,4 @@ export const stateScenarios: Scenario[] = [
     },
     { SPEAKKIT_FAKE_STATE: "error" },
   ),
-  panel("tray-panel-engine-error", "Tray panel · engine error", { env: { SPEAKKIT_FAKE_STATE: "error" } }),
-  panel("tray-panel-engine-loading", "Tray panel · engine loading", { env: { SPEAKKIT_FAKE_STATE: "loading" } }),
-  panel("tray-panel-engine-unloaded", "Tray panel · engine asleep", { env: { SPEAKKIT_FAKE_STATE: "unloaded" } }),
-  panel("tray-panel-engine-downloading", "Tray panel · downloading the model", { env: { SPEAKKIT_FAKE_STATE: "downloading" } }),
 ];

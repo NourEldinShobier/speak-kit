@@ -20,7 +20,7 @@
     "H17": "Settings search is not built; the title bar search opens the command palette (L2, L3).",
     "H18": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE).",
     "H19": "Implemented in v0.3.0 (docs/scope.md) but not captured by the harness yet. It needs the fake updater (SPEAKKIT_FAKE_UPDATE).",
-    "I10": "The left-click panel is captured as I10 / tray-panel in the app (no diff). The native tray menu is an Electron menu and cannot be screenshotted.",
+    "I10": "Removed from the product (decision 2.22): the tray keeps its native right-click menu, which is an Electron menu and cannot be screenshotted; a left click shows the main window.",
     "I11": "Tray icon states are drawn into the operating system tray and are not part of any window.",
     "I12": "Windows toasts are shown by the operating system; Playwright cannot capture them (notification content is unit-tested in notify-rules.test.ts).",
     "I3": "Captured as I3 / mini-player in the app (the mini window), compared by eye: it is a small always-on-top window, not a design-sized frame.",

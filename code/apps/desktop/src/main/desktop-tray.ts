@@ -44,7 +44,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, requestQuit, re
     "restart-update": () => void updates.updates.installNow(),
     quit: requestQuit,
   };
-  const tray = createTray(ctx, context, actions);
+  const tray = createTray(context, actions);
   ctx.sinks.add(() => tray.refresh());
   return tray;
 }

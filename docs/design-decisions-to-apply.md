@@ -62,7 +62,7 @@ Last reviewed 2026-11-07 after the merge of the eight feature branches. Hashes a
 ## Still to do in code
 
 1. Reader: the Queue button opens the outline panel, there is no reading queue behind it. Reorder in "Customise toolbar" is not in v1. The sleep timer has the choices 5, 15, 30, 45 and 60 minutes and Off; "End of article" is not offered, because nothing follows an article (no queue), so reading ends there anyway. The sleep timer, the Queue button and the toolbar after a window reload have Electron specs (`tests/reader.test.ts`, a sleep-timer minute lasts 300 ms there through a test-only `localStorage` key that `tests/bundle.test.ts` checks is absent from the shipped renderer).
-2. Tray: the decision is a native menu only (see 2.20), but `tray.ts` still opens the HTML panel window on a left click (`panel.html`, `tests/spacing.test.ts` "tray panel"). Removing it is a deletion of a working feature and waits for the user.
+2. Tray: done, see 2.22 (the HTML panel is removed).
 3. Voice detail drawer (frame 31527): built (see 2.18). The filter dropdown's open menu and the other voice popovers' borders have no design frame.
 4. macOS: title bar (2.4), bell alignment (2.14), per-platform radii (2.6) and the Dock behaviour (2.9) are implemented from the design and checked in Windows tests only (`data-platform` values are pinned in `packages/ui`); nothing was run on macOS.
 5. Generator drift: `designs/gen` still draws the footer band and the 36/28 title bar; design edits are made in `designs/speakkit.figcraft`. Frames B19 and B21 (edge launcher) still show the old pause-button tab.
@@ -126,7 +126,7 @@ This page lists what the chat history of this session and its summaries record. 
 - **Setup footer (1.9):** as drawn, the left and right gaps stay unequal. **Applied (a9de8af).**
 - **Setup rows:** keep the 14 px token-card padding; the 68 px control-row rule (2.19) covers settings pages only. **Applied (this pass).**
 - **Card radius on Windows is 8** (settings cards, stat cards, tray panel card); 2.6 is corrected to match the code and `foundation.test.ts`.
-- **Tray:** the decision is a native menu only. The left-click HTML panel is still in code; removing it needs the user's go-ahead (Still to do 2).
+- **Tray:** the decision is a native menu only. The left-click HTML panel was removed in 2.22.
 - **Chatterbox in the setup wizard (943bdb2, ADR 0016):** Kokoro is the default and always installs. Chatterbox is selectable only when the server's hardware probe says it can be installed; otherwise it is shown disabled with the real reason (no NVIDIA card, card under 4 GB, no Python or uv). Choosing it installs it in the background after setup; the Engines page shows the progress (1193e38). The Home engine row says Kokoro is the default and Chatterbox optional.
 - **Reader toolbar customisation** is stored in `localStorage` (`speakkit.reader.toolbar`, like the display settings), not in `config.json`.
 - **Shared UI:** `player-pause` is drawn by `gen-icons.mjs` (3 px bars, 3 px gap at 16 px, no stroke); `lm-progress--block` fills its container instead of the 240 px default; `--footer-h` is gone.
@@ -136,3 +136,7 @@ This page lists what the chat history of this session and its summaries record. 
 - The dark "New reading" button is gone. The first sidebar row is **New reading**: a 20 px dark tile (`#201E25`, radius 6, shadow `0 2 4` at 10%) with a white "+", a semibold label (`#1B2230`, 13), and a grey shortcut chip on the right (`#ECECEC`, text `#5F6A7D`). The row has no fill; padding 10, gap 10, 36 high.
 - A transparent separator (17 px: 8 above, 1 line, 8 below, line not drawn) sits between this row and Home. In frames where nav rows are absolutely positioned, Home and the rows below moved down by 5 px so the gap is the same.
 - Applied to all 78 sidebars in the design file (shell, library, voices, reader, settings, export, setup-adjacent screens, macOS frames). The four variations were deleted.
+
+## 2.22 Tray panel removed, left click shows the window (2026-11-08)
+- The tray panel window (I10, all 7 states) is removed from the product and from the design file. "We agreed to remove this window" (owner). `panel.html`, `panel.tsx`, its CSS, the panel window in `tray.ts`, the `open-app` reader command, `aboveTray` and `floatChangedWithin`, the panel entry of the bundle budget and the panel specs and visual scenarios are deleted.
+- The tray keeps its native right-click menu (2.20). A left click on the icon shows and focuses the main window (`ctx.showWindow`, as a second launch does).

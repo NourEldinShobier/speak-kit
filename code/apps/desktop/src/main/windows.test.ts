@@ -26,7 +26,7 @@ import { FloatWindow } from "./windows";
 
 const open = (platform: NodeJS.Platform) => {
   vi.stubGlobal("process", { ...process, platform });
-  new FloatWindow("panel", { width: 340, height: 330 }, () => ({}) as never).open({ x: 0, y: 0, width: 340, height: 330 }, true);
+  new FloatWindow("mini", { width: 340, height: 330 }, () => ({}) as never).open({ x: 0, y: 0, width: 340, height: 330 }, true);
   return made.calls;
 };
 
@@ -42,24 +42,5 @@ describe("FloatWindow on macOS", () => {
 
   it("leaves other platforms alone", () => {
     expect(open("win32")).toEqual([]);
-  });
-});
-
-describe("floatChangedWithin", () => {
-  afterEach(() => vi.useRealTimers());
-
-  it("is true for a moment after a float window was created or destroyed, then false", async () => {
-    vi.useFakeTimers();
-    const { floatChangedWithin } = await import("./windows");
-    vi.setSystemTime(Date.now() + 100_000);
-    const w = new FloatWindow("mini", { width: 360, height: 112 }, () => ({}) as never);
-    w.open({ x: 0, y: 0, width: 360, height: 112 }, false);
-    expect(floatChangedWithin(400)).toBe(true);
-    vi.advanceTimersByTime(401);
-    expect(floatChangedWithin(400)).toBe(false);
-    w.close();
-    expect(floatChangedWithin(400)).toBe(true);
-    vi.advanceTimersByTime(401);
-    expect(floatChangedWithin(400)).toBe(false);
   });
 });

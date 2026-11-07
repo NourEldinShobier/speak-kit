@@ -144,12 +144,10 @@ describe("createReading", () => {
     expect(t.ctx.state.reader.title).toBe("Done.");
   });
 
-  it("keep-on-top and open-app are handled here; playback commands go to the controller", () => {
+  it("keep-on-top is handled here; playback commands go to the controller", () => {
     const t = setup();
     t.reading.command({ type: "keep-on-top", on: true });
     expect(mocks.mini.alwaysOnTop).toEqual([[true, "floating"]]);
-    t.reading.command({ type: "open-app" });
-    expect(t.ctx.showWindow).toHaveBeenCalledTimes(1);
     t.reading.readText("One. Two.", "text");
     t.reading.command({ type: "pause" });
     expect(t.ctx.state.reader.status).toBe("paused");

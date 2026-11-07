@@ -1,7 +1,7 @@
 import type { ReaderState } from "../shared/reader";
 import { errorText } from "./error-text";
 
-/** One line under the title in the mini player and the tray panel. */
+/** One line under the title in the mini player. */
 export const statusLine = (r: ReaderState): string => {
   switch (r.status) {
     case "preparing":

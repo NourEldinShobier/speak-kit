@@ -3,7 +3,7 @@ import { GROUPS, S, builtPath, type Scenario } from "./scenarios";
 import { DONE, home, settings, type Opts } from "./desktop";
 import { sleep } from "./support";
 
-// The desktop screens that came after the shell: library, reader, export, tray panel, mini player and the remaining settings pages.
+// The desktop screens that came after the shell: library, reader, export, mini player and the remaining settings pages.
 // Design ids follow the design set (E library, F reader, J export, I system, H settings).
 
 const LIB = GROUPS.library;
@@ -68,7 +68,7 @@ const reader = (id: string, state: string, title: string, drive: NonNullable<Opt
 export const hook = (app: ElectronApplication, fn: string, ...a: unknown[]) => app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])), [fn, a] as const);
 export const READ = "One short sentence here. A second sentence follows it. And a third to finish the paragraph.";
 
-/** The mini player and the tray panel are windows of their own: capture the window, not the main page. */
+/** The mini player is a window of its own: capture the window, not the main page. */
 export const windowShot = (
   id: string,
   state: string,
@@ -145,10 +145,6 @@ export const appScenarios: Scenario[] = [
     await p.getByRole("dialog", { name: "Export audio" }).waitFor();
   }),
   windowShot("I3", "mini-player", "Mini player · reading", "mini.html", "mini", async (app) => void (await hook(app, "readText", READ))),
-  windowShot("I10", "tray-panel", "Tray panel · now playing", "panel.html", "tray-panel", async (app) => {
-    await hook(app, "readText", READ);
-    await hook(app, "togglePanel");
-  }),
   home("H5", "shortcuts", ST, "Settings · Shortcuts", { drive: settings("Shortcuts") }),
   home("H14", "notifications", ST, "Settings · Notifications", { drive: settings("Notifications") }),
 ];

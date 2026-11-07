@@ -118,7 +118,7 @@ export interface Api {
   quit(): Promise<void>;
   setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
   resetShortcuts(): Promise<AppState>;
-  /** Controls the current reading (mini player, tray panel, palette). */
+  /** Controls the current reading (mini player, palette). */
   reader(cmd: ReaderCommand): Promise<void>;
   /** The mini player reports what its audio output is doing. */
   readerStarted(epoch: number, index: number): Promise<void>;

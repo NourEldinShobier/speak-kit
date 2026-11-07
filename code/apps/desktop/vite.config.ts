@@ -27,9 +27,9 @@ export default defineConfig({
     outDir: path.join(root, "dist/renderer"),
     emptyOutDir: true,
     target: "chrome140",
-    // Three windows: the app, the always-on-top mini player and the tray panel.
+    // Two windows: the app and the always-on-top mini player.
     rollupOptions: {
-      input: Object.fromEntries(["index", "mini", "panel"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
+      input: Object.fromEntries(["index", "mini"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
     },
   },
   test: {

@@ -81,8 +81,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
 
   return {
     handlers,
-    /** Called by the IPC layer: is this webContents one of our small windows? */
-    ownsWindow: (c: Electron.WebContents) => reading.owns(c) || tray.owns(c),
+    /** Called by the IPC layer: is this webContents our mini player? */
+    ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
