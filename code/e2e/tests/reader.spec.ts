@@ -50,7 +50,7 @@ test.describe("desktop reader @slow", () => {
       await d.page.getByRole("button", { name: "2x", exact: true }).click();
       await expect(d.page.getByTestId("speed-value")).toHaveText("2.0x");
       await d.page.keyboard.press("Escape");
-      await expect(d.page.getByRole("button", { name: "2x", exact: true })).toBeVisible();
+      await expect(d.page.getByRole("button", { name: "Speed 2x", exact: true })).toBeVisible();
 
       await d.page.getByRole("button", { name: /^Voice: / }).click();
       await expect(d.page.getByRole("option").first()).toBeVisible();
@@ -64,7 +64,7 @@ test.describe("desktop reader @slow", () => {
       await d.page.keyboard.press("Escape");
       await d.page.getByRole("button", { name: "Back to library" }).first().click();
       await d.page.getByRole("button", { name: "Open Settings doc" }).click();
-      await expect(d.page.getByRole("button", { name: "2x", exact: true })).toBeVisible();
+      await expect(d.page.getByRole("button", { name: "Speed 2x", exact: true })).toBeVisible();
     } finally {
       await d.cleanup();
     }
