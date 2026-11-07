@@ -131,3 +131,9 @@ This page lists what the chat history of this session and its summaries record. 
 - **Reader toolbar customisation** is stored in `localStorage` (`speakkit.reader.toolbar`, like the display settings), not in `config.json`.
 - **Shared UI:** `player-pause` is drawn by `gen-icons.mjs` (3 px bars, 3 px gap at 16 px, no stroke); `lm-progress--block` fills its container instead of the 240 px default; `--footer-h` is gone.
 - **Text selected in an input or textarea** is read as a selection (password and non-text inputs excluded); see `testing.md`.
+
+## 2.21 Sidebar "New reading" row (2026-11-08, design file edited directly; not in code yet)
+- The dark "New reading" button is gone. The first sidebar row is **New reading**: a 20 px dark tile (`#201E25`, radius 6, shadow `0 2 4` at 10%) with a white "+", a semibold label (`#1B2230`, 13), and a grey shortcut chip on the right (`#ECECEC`, text `#5F6A7D`). The row has no fill; padding 10, gap 10, 36 high.
+- A transparent separator (17 px: 8 above, 1 line, 8 below, line not drawn) sits between this row and Home. In frames where nav rows are absolutely positioned, Home and the rows below moved down by 5 px so the gap is the same.
+- Applied to all 78 sidebars in the design file (shell, library, voices, reader, settings, export, setup-adjacent screens, macOS frames). The four variations were deleted.
+- Code: `Sidebar.tsx` `MainNav` and `shell.css` still render the dark button with the solid chip (2.13); update them to this row and to the 17 px spacing.
