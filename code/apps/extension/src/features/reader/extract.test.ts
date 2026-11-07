@@ -142,6 +142,27 @@ describe("selection edges", () => {
   });
 });
 
+describe("selection across a shadow root", () => {
+  const html = `<!doctype html><html><body><main><p id="a">Alpha one.</p><lit-card id="host"></lit-card><p id="b">Bravo one.</p></main><script>
+    customElements.define("lit-card", class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: "open" }).append("Shadow text here, direct child."); } });
+  </script></body></html>`;
+  const skip = { navigation: true, citations: true, code: true, urls: true, captions: false };
+
+  test("a selection from paragraph to paragraph reads the open shadow root text between them", async () => {
+    const page = await s.page(html);
+    const r = await page.evaluate((skip: Record<string, boolean>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const E = (window as any).SK.extract;
+      const range = document.createRange();
+      range.setStart(document.getElementById("a")!.firstChild!, 0);
+      range.setEnd(document.getElementById("b")!.firstChild!, 5);
+      return E.extract(document, { skip, selection: range }).sentences.map((x: { text: string }) => x.text) as string[];
+    }, skip);
+    expect(r).toEqual(["Alpha one.", "Shadow text here, direct child.", "Bravo"]);
+    await page.context().close();
+  });
+});
+
 describe("selection inside a field", () => {
   const html = `<!doctype html><html><body><textarea id="t">First line is here. Second one!
 

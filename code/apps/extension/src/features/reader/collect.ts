@@ -131,7 +131,7 @@ export class Collector {
     }
     if (n.nodeType !== 1) return;
     const sel = this.o.selection;
-    if (sel && !sel.intersectsNode(n)) return;
+    if (sel && this.inSelTree(n) && !sel.intersectsNode(n)) return;
     const e = n as Element;
     const tag = e.localName;
     if (tag === "br" || tag === "wbr") {
@@ -185,11 +185,16 @@ export class Collector {
     addPiece(c, { node, ns, ne, ts, te: ts + s.length }, ne - ns === s.length);
   }
 
+  /** Range methods throw for nodes of another tree. The walk only enters a shadow root through a host that intersects the selection, so its content counts as selected. */
+  private inSelTree(n: Node): boolean {
+    return n.getRootNode() === this.o.selection!.commonAncestorContainer.getRootNode();
+  }
+
   /** The part of `node` inside the selection as [from, to), the whole node when nothing is selected, or null when it is outside. */
   private clip(node: Text): [number, number] | null {
     const r = this.o.selection;
     const len = node.data.length;
-    if (!r) return [0, len];
+    if (!r || !this.inSelTree(node)) return [0, len];
     // Siblings of the start/end node inside an intersecting element, and the block a triple-click spills into, are outside the range.
     if (node !== r.startContainer && r.comparePoint(node, 0) > 0) return null;
     if (node !== r.endContainer && r.comparePoint(node, len) < 0) return null;
