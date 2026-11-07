@@ -53,6 +53,19 @@ describe("GPU out of memory", () => {
     expect(e.info()).toEqual({ gpu: GPU });
   });
 
+  it("an out-of-memory request says unloaded before the sidecar is stopped, so nothing sees a ready engine without a process", async () => {
+    const root = mkdtempSync(join(tmpdir(), "cbf-pid-"));
+    process.env.SPEAKKIT_FAKE_PID_FILE = join(root, "pid");
+    const { e } = make({ gpu: GPU }, {}, true);
+    await e.start();
+    const pid = Number(readFileSync(join(root, "pid"), "utf8"));
+    const aliveWhenUnloaded: boolean[] = [];
+    e.onStatus((s) => s.state === "unloaded" && aliveWhenUnloaded.push(alive(pid)));
+    await expect(speak(e, "this one is oom")).rejects.toThrow("CUDA out of memory");
+    expect(aliveWhenUnloaded).toEqual([true]);
+    await vi.waitFor(() => expect(alive(pid)).toBe(false));
+  });
+
   it("a load that runs out of GPU memory is an error with the reason; start() is the retry", async () => {
     process.env.SPEAKKIT_FAKE_LOAD_FATAL = "out-of-memory";
     const { e } = make({ gpu: GPU }, {}, true);

@@ -224,6 +224,18 @@ export abstract class LifecycleEngine implements TtsEngine {
     return true;
   }
 
+  /**
+   * For subclasses: ends the loaded model after a fault in a request. The status says unloaded before the model is stopped, and a reload waits
+   * for the stop (like unload(), which only runs while ready and idle).
+   */
+  protected unloadNow(detail?: string): Promise<void> {
+    if (this.#unloading) return this.#unloading;
+    this.setStatus({ state: "unloaded", ...(detail !== undefined && { detail }) });
+    return (this.#unloading = this.doUnload().finally(() => {
+      this.#unloading = undefined;
+    }));
+  }
+
   async release(): Promise<void> {
     await this.#loading?.catch(() => {}); // a failed load is reported through the status; release only waits for it to end
     for (let i = 0; this.#busy() && i < 400; i++) await new Promise((r) => setTimeout(r, 25));

@@ -252,13 +252,14 @@ export class ChatterboxEngine extends LifecycleEngine {
     this.#sidecar = sidecar;
   }
 
-  /** The GPU ran out of memory: end the process (its memory goes back to the GPU) and let the next request load a fresh one. Not counted as a crash. */
-  async #outOfMemory(e: EngineFailure): Promise<void> {
-    const sidecar = this.#sidecar;
-    this.#sidecar = undefined;
-    await sidecar?.stop();
+  /**
+   * The GPU ran out of memory: end the process (its memory goes back to the GPU) and let the next request load a fresh one. Not counted as a crash.
+   * Another request may already have replaced or ended that sidecar; only the one that failed is stopped.
+   */
+  async #outOfMemory(e: EngineFailure, failed: Sidecar): Promise<void> {
+    if (this.#sidecar !== failed) return;
     this.#reason = e.reason;
-    this.setStatus({ state: "unloaded", detail: e.message });
+    await this.unloadNow(e.message);
   }
 
   override async close(): Promise<void> {
@@ -288,7 +289,7 @@ export class ChatterboxEngine extends LifecycleEngine {
         parts.push(r.pcm);
       }
     } catch (e) {
-      if (e instanceof EngineFailure && e.reason === "out-of-memory") await this.#outOfMemory(e);
+      if (e instanceof EngineFailure && e.reason === "out-of-memory") await this.#outOfMemory(e, sidecar);
       throw e;
     }
     return { pcm: concat(parts), sampleRate };
