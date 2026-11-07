@@ -1,7 +1,15 @@
-# Speak Kit
+<p align="center">
+  <img src="docs/assets/speakkit-logo.svg" alt="Speak Kit logo" width="120">
+</p>
 
-[![CI](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+<h1 align="center">Speak Kit</h1>
+
+<p align="center">A private, local text-to-speech reader for Chrome and Windows.</p>
+
+<p align="center">
+  <a href="https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml"><img src="https://github.com/NourEldinShobier/speak-kit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+</p>
 
 A private text-to-speech reader. Select text in Chrome, press a key, and a natural voice reads it aloud while the sentence and word being spoken are highlighted. The voice model runs on your computer: no account, no cloud, nothing uploaded.
 
