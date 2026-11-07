@@ -54,7 +54,7 @@ test.describe("dark host pages with CSS resets and overflow traps", () => {
       await ext.bg({ t: "player", command: { cmd: "pause" } });
       await ext.waitState("paused");
       const rect = await page.evaluate(() => {
-        const r = [...(CSS.highlights.get("speakkit-sentence") ?? [])][0]!.getBoundingClientRect();
+        const r = (([...(CSS.highlights.get("speakkit-sentence") ?? [])][0]) as Range).getBoundingClientRect();
         return { x: Math.max(0, r.x), y: Math.max(0, r.y), width: Math.max(1, r.width), height: Math.max(1, r.height) };
       });
       expect(rect.y + rect.height, "the highlighted sentence is on screen").toBeLessThan(vp.height);
@@ -86,7 +86,7 @@ test.describe("right-to-left pages", () => {
     await ext.waitState("playing");
     await expect.poll(async () => (await highlights(ar)).sentence).toBe(AR[0]);
     const box = await ar.evaluate(() => {
-      const r = [...(CSS.highlights.get("speakkit-sentence") ?? [])][0]!.getBoundingClientRect();
+      const r = (([...(CSS.highlights.get("speakkit-sentence") ?? [])][0]) as Range).getBoundingClientRect();
       const m = document.querySelector("main")!.getBoundingClientRect();
       return { right: r.right, left: r.left, mainRight: m.right, mainLeft: m.left };
     });

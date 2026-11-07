@@ -24,6 +24,7 @@
         "playback.spec.ts",
         "popup.spec.ts",
         "resilience.spec.ts",
+        "selection.spec.ts",
         "restricted.spec.ts",
         "system.spec.ts",
         "tabs.spec.ts",
