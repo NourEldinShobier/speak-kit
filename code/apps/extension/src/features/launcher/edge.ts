@@ -81,6 +81,7 @@ export class EdgeLauncher {
     const key = l ? `${open}|${reading}|${m.status}|${l.side}|${l.idle}|${l.widerWhileReading}|${l.openOn}|${m.dark}|${m.readerOpen}` : "";
     if (key === this.key) return;
     this.key = key;
+    const focused = this.focusedControl();
     this.tab?.remove();
     this.pill?.remove();
     this.ltip?.remove();
@@ -89,6 +90,20 @@ export class EdgeLauncher {
     if (!l || m.readerOpen) return;
     if (open) this.buildPill(l, reading);
     else this.buildTab(l, reading);
+    this.restoreFocus(focused);
+  }
+
+  /** The `data-sk` of the tab or pill control that has focus, so a rebuild can give focus back to the same control. */
+  private focusedControl(): string | null {
+    const a = (this.s.shell.root.getRootNode() as Document | ShadowRoot).activeElement;
+    return a && (this.tab?.contains(a) || this.pill?.contains(a)) ? a.getAttribute("data-sk") : null;
+  }
+
+  /** Focus goes to the same control, or when the new shape lacks it, to the pill's play button or the tab. */
+  private restoreFocus(sk: string | null) {
+    if (!sk) return;
+    const to = this.s.shell.root.querySelector<HTMLElement>(`[data-sk="${sk}"]`) ?? this.s.shell.root.querySelector<HTMLElement>(this.pill ? "[data-sk=launcher-play]" : "[data-sk=launcher-tab]");
+    to?.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------ tab

@@ -117,6 +117,27 @@ describe("edge tab and pill", () => {
     expect($("[data-sk=launcher-play]")!.getAttribute("aria-label")).toBe("Resume");
   });
 
+  test("focus stays on the same control when the pill is rebuilt for a new state", () => {
+    // linkedom has no focus model: track the last focused element and drop it once it leaves the page.
+    let focused: Element | null = null;
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => (focused?.isConnected ? focused : null) });
+    Object.defineProperty(HTMLElement.prototype, "focus", {
+      configurable: true,
+      value: function (this: Element) {
+        focused = this;
+      },
+    });
+    setup();
+    click($("[data-sk=launcher-tab]"));
+    $("[data-sk=launcher-speed]")!.focus();
+    launcher.render(model({ status: "playing", totalMs: 100_000, elapsedMs: 10_000 }));
+    expect($("[data-sk=launcher-pill]")!.getAttribute("data-state")).toBe("playing");
+    expect(document.activeElement?.getAttribute("data-sk")).toBe("launcher-speed");
+    $("[data-sk=launcher-play]")!.focus();
+    launcher.render(model({ status: "paused", totalMs: 100_000, elapsedMs: 10_000 }));
+    expect(document.activeElement?.getAttribute("data-sk")).toBe("launcher-play");
+  });
+
   test("with the widening off, reading keeps the plain tab at its saved height", () => {
     setup(model({ status: "playing", totalMs: 100_000, launcher: { ...settingsLauncher, widerWhileReading: false } }));
     expect([$("[data-sk=launcher-tab]")!.className, $("[data-sk=launcher-tab]")!.style.top, $(".sk-rail")]).toEqual(["sk-tab", "360px", null]);
