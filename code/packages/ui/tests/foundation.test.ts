@@ -197,3 +197,11 @@ describe("g) segmented control", () => {
     ]);
   });
 });
+
+describe("h) status and grade pills", () => {
+  test.each(["green", "blue", "orange", "red", "purple", "yellow", "neutral"])("%s pill has a soft fill and no stroke", async (tone) => {
+    const [shadow, border, bg] = await look(`<span class="lm-pill lm-pill--${tone}">Grade D</span>`, ".lm-pill", ["box-shadow", "border-top-width", "background-color"]);
+    expect([shadow, border]).toEqual(["none", "0px"]);
+    expect(bg).not.toBe("rgba(0, 0, 0, 0)");
+  });
+});
