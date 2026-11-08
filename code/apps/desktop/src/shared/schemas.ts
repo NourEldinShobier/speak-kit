@@ -67,7 +67,8 @@ export const ConfigSchema = v.object({
   autoUpdate: bool(true),
   shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
-  voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64)), DEFAULT_VOICE),
+  // The ids of the cloned voices of earlier versions (`cb_` and 8 hex digits) no longer exist and become the default voice.
+  voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
@@ -102,7 +103,6 @@ const ReaderCommandSchema = v.variant("type", [
   v.object({ type: v.literal("skip"), ms: v.picklist([-10_000, 10_000]) }),
   v.object({ type: v.literal("keep-on-top"), on: v.boolean() }),
 ]);
-const EngineIdSchema = v.picklist(["kokoro", "chatterbox"]);
 const ExportOptionsSchema = v.object({
   text: v.pipe(v.string(), v.minLength(1), v.maxLength(200_000)),
   voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
@@ -114,11 +114,7 @@ const ExportOptionsSchema = v.object({
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
 });
 
-/** A WAV the renderer sends for cloning: 30 s of 24 kHz mono is 1.4 MB; the server accepts a 40 MB body, which is 30 MB of audio once base64 encoded. */
-const MAX_CLONE_BYTES = 24 * 1024 * 1024;
-const EXTERNAL_LINKS = ["webstore", "microphone-settings"] as const;
-const VoiceIdSchema = v.pipe(v.string(), v.regex(/^cb_[0-9a-f]{8}$/));
-const unit = v.pipe(v.number(), v.minValue(0), v.maxValue(1));
+const EXTERNAL_LINKS = ["webstore"] as const;
 const OPEN_PATHS = ["models", "logs"] as const;
 
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
@@ -147,32 +143,11 @@ export const ARGS = {
   readerDone: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
   warmEngine: v.tuple([]),
   engines: v.tuple([]),
-  selectEngine: v.tuple([EngineIdSchema]),
-  installEngine: v.tuple([EngineIdSchema]),
-  cancelInstall: v.tuple([EngineIdSchema]),
-  removeEngine: v.tuple([EngineIdSchema]),
   updateAction: v.tuple([v.picklist(UPDATE_ACTIONS)]),
   exportCheck: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.pipe(v.string(), v.maxLength(120)), v.picklist(EXPORT_FORMATS)]),
   exportStart: v.tuple([ExportOptionsSchema]),
   exportCancel: v.tuple([v.pipe(v.string(), v.maxLength(64))]),
   exportReveal: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.boolean()]),
   pickFolder: v.tuple([v.pipe(v.string(), v.maxLength(1024))]),
-  pickReference: v.tuple([]),
-  cloneVoice: v.tuple([
-    v.strictObject({
-      name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
-      consent: v.literal(true),
-      audio: v.pipe(
-        v.instance(Uint8Array),
-        v.check((a) => a.byteLength <= MAX_CLONE_BYTES),
-      ),
-    }),
-  ]),
-  clonedVoices: v.tuple([]),
-  updateClonedVoice: v.tuple([
-    VoiceIdSchema,
-    v.strictObject({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) }),
-  ]),
-  deleteClonedVoice: v.tuple([VoiceIdSchema]),
   installExtension: v.tuple([]),
 } as const;

@@ -22,10 +22,6 @@ export function engineView(health: Health | null, serverError: DesktopError | nu
   switch (e.state) {
     case "missing":
       return { key: "missing", label: "Not downloaded", tone: "orange", spinner: false };
-    case "installing":
-      return { key: "downloading", label: "Installing", tone: "blue", spinner: true };
-    case "unavailable":
-      return { key: "error", label: "Unavailable", tone: "orange", spinner: false };
     case "downloading":
       return {
         key: "downloading",
@@ -52,12 +48,10 @@ export function trayState(health: Health | null, serverError: DesktopError | nul
     case "error":
       return "error";
     case "downloading":
-    case "installing":
     case "loading":
       return "working";
     case "unloaded":
     case "missing":
-    case "unavailable":
       return "asleep";
     case "ready":
       return "normal";

@@ -44,12 +44,9 @@ function metrics(): Metrics {
 
 export { metrics };
 
-/** The only addresses the renderer can make the app open. The microphone page of the OS settings exists on Windows and macOS. */
-const EXTERNAL_URLS: Record<ExternalLink, string | undefined> = {
+/** The only addresses the renderer can make the app open. */
+const EXTERNAL_URLS: Record<ExternalLink, string> = {
   webstore: "https://chromewebstore.google.com/search/SpeakKit",
-  "microphone-settings": ({ win32: "ms-settings:privacy-microphone", darwin: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" } as Partial<Record<string, string>>)[
-    process.platform
-  ],
 };
 
 async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
@@ -75,10 +72,10 @@ async function regenerateToken(d: HandlerDeps) {
 
 async function storageInfo(d: HandlerDeps): Promise<StorageInfo> {
   const [sizes, logsBytes, all] = await Promise.all([measureDownloads(d.dataDir, d.modelsDir), dirSize(d.logsDir), dirSize(d.dataDir)]);
-  const { modelsBytes, enginesBytes, cacheBytes } = sizes;
+  const { modelsBytes, cacheBytes } = sizes;
   // A models folder set by SPEAKKIT_MODELS_DIR lies outside the data folder and is not part of its total.
-  const inside = (d.modelsDir.startsWith(d.dataDir) ? modelsBytes : 0) + enginesBytes + cacheBytes;
-  return { modelsDir: d.modelsDir, logsDir: d.logsDir, modelsBytes, enginesBytes, cacheBytes, logsBytes, otherBytes: Math.max(0, all - inside - logsBytes) };
+  const inside = (d.modelsDir.startsWith(d.dataDir) ? modelsBytes : 0) + cacheBytes;
+  return { modelsDir: d.modelsDir, logsDir: d.logsDir, modelsBytes, cacheBytes, logsBytes, otherBytes: Math.max(0, all - inside - logsBytes) };
 }
 
 /** The IPC methods of the app shell: settings, server and engine control, storage. The desktop features add their own. */
@@ -121,7 +118,7 @@ export function createAppHandlers(d: HandlerDeps) {
     storage: () => storageInfo(d),
     deleteDownloads: async () => {
       const report = await runtime.removeDownloads();
-      d.addActivity("info", "Downloaded models removed", report.failed.length ? "Some files could not be removed." : "Voice models and engines were deleted from this computer.");
+      d.addActivity("info", "Downloaded models removed", report.failed.length ? "Some files could not be removed." : "The voice model was deleted from this computer.");
       return report;
     },
     metrics: async () => metrics(),

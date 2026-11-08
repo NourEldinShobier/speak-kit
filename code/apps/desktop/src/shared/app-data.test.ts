@@ -7,7 +7,7 @@ const nsis = readFileSync(new URL("../../build/installer.nsh", import.meta.url),
 describe("Windows uninstaller", () => {
   it("removes exactly the download entries", () => {
     const removed = [...nsis.matchAll(/!insertmacro skRemoveDownload "\$R8" "([^"]+)"/g)].map((m) => m[1]);
-    expect(removed).toEqual(["models", "engines", "chatterbox", "exports", "IndexedDB"]);
+    expect(removed).toEqual(["models", "exports", "IndexedDB"]);
     expect(removed).toEqual(Object.values(DOWNLOAD_ENTRIES));
   });
 

@@ -1,6 +1,6 @@
 // Installs the NSIS installer silently into a temp folder, runs smoke-packaged.mjs against the installed exe (health, speech, bundled files,
 // single instance, quit), installs the same version over it (an update must keep downloaded models), then runs the uninstaller silently and
-// checks that the folder is gone, the downloaded models and engines are removed and the library, cloned voices and token stay.
+// checks that the folder is gone, the downloaded model is removed and the library and token stay.
 // Everything runs with an isolated user-data folder and port.
 //   node scripts/smoke-installer.mjs [--installer release/Speak-Kit-Setup-<version>.exe]
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -56,8 +56,8 @@ const put = (rel, text) => {
   mkdirSync(path.dirname(path.join(userData, rel)), { recursive: true });
   writeFileSync(path.join(userData, rel), text);
 };
-const downloaded = ["models/onnx/model.onnx", "engines/chatterbox/installed", "chatterbox/installed", "exports/a.wav", "IndexedDB/ocr/eng.traineddata"];
-const own = { "library/library.json": '{"docs":1}', "voices/me.wav": "clone", token: "secret", "config.json": JSON.stringify({ setupDone: true }) };
+const downloaded = ["models/onnx/model.onnx", "exports/a.wav", "IndexedDB/ocr/eng.traineddata"];
+const own = { "library/library.json": '{"docs":1}', token: "secret", "config.json": JSON.stringify({ setupDone: true }) };
 
 try {
   const t0 = Date.now();
@@ -65,7 +65,6 @@ try {
   const code = await run(installer, ["/S", `/D=${dir}`], env);
   check("silent install exits 0", code === 0, `exit ${code} in ${Date.now() - t0} ms`);
   check("installs the app", existsSync(exe) && existsSync(path.join(dir, "resources/extension/manifest.json")), dir);
-  check("installs the Chatterbox sidecar script", existsSync(path.join(dir, "resources/chatterbox/chatterbox_sidecar.py")));
   const uninstaller = path.join(dir, "Uninstall Speak Kit.exe");
   check("writes an uninstaller", existsSync(uninstaller));
 
@@ -86,7 +85,7 @@ try {
   const again = await run(installer, ["/S", `/D=${dir}`], env);
   check("silent update over an existing install exits 0", again === 0, `exit ${again}`);
   check(
-    "an update keeps the downloaded models and engines",
+    "an update keeps the downloaded models",
     downloaded.every((f) => existsSync(path.join(userData, f))),
   );
   if (running()) await run(exe, ["--quit"], env);
@@ -98,12 +97,12 @@ try {
   for (let i = 0; i < 100 && existsSync(dir); i++) await sleep(300);
   check("uninstall removes the folder", !existsSync(dir));
   check(
-    "uninstall removes the downloaded models, engines, exports and OCR data",
+    "uninstall removes the downloaded models, exports and OCR data",
     downloaded.every((f) => !existsSync(path.join(userData, path.dirname(f)))),
     downloaded.filter((f) => existsSync(path.join(userData, f))).join(", "),
   );
   check(
-    "uninstall keeps the library, cloned voices, token and settings",
+    "uninstall keeps the library, token and settings",
     Object.entries(own).every(([f, text]) => existsSync(path.join(userData, f)) && readFileSync(path.join(userData, f), "utf8") === text),
   );
   for (let i = 0; i < 25 && leftovers(); i++) await sleep(200);

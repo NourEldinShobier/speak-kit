@@ -63,11 +63,9 @@ describe("IPC argument tuples", () => {
     expect(ok("reader", [{ type: "keep-on-top", on: true }])).toBe(true);
     expect(ok("reader", [{ type: "delete-everything" }])).toBe(false);
   });
-  it("shortcuts, engines, updates and exports", () => {
+  it("shortcuts, updates and exports", () => {
     expect(ok("setShortcut", ["stop", "Ctrl+Alt+Q"])).toBe(true);
     expect(ok("setShortcut", ["quit-everything", "Ctrl+Alt+Q"])).toBe(false);
-    expect(ok("selectEngine", ["chatterbox"])).toBe(true);
-    expect(ok("selectEngine", ["../etc"])).toBe(false);
     expect(ok("updateAction", ["install-now"])).toBe(true);
     expect(ok("updateAction", ["format-disk"])).toBe(false);
     const job = { text: "Hello.", voice: "af_heart", speed: 1, format: "mp3", mp3Kbps: 192, dir: "C:/x", name: "a" };

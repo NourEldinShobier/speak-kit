@@ -28,10 +28,6 @@ extraResources:
   - from: ../extension/dist-pack
     to: extension
     filter: ["**/*", "!**/*.map"]
-  # The Chatterbox sidecar runs in the engine's own Python virtualenv, so it must be a real file on disk (resources/chatterbox).
-  - from: ../../packages/engine/sidecar
-    to: chatterbox
-    filter: ["*.py"]
 
 protocols:
   - name: Speak Kit
@@ -60,8 +56,6 @@ mac:
   extendInfo:
     # Reading the selection presses Cmd+C through System Events.
     NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
-    # Recording a voice sample for cloning. The audio stays on this computer.
-    NSMicrophoneUsageDescription: Speak Kit records a short voice sample when you clone a voice. The recording stays on this computer.
 
 dmg:
   title: Speak Kit ${version}
@@ -76,7 +70,7 @@ nsis:
   shortcutName: Speak Kit
   runAfterFinish: true
   # Not electron-builder's switch: it removes %APPDATA%\Speak Kit, a folder this app does not use, and would take the library with it.
-  # build/installer.nsh removes only the downloaded models and engines (not on an update).
+  # build/installer.nsh removes only the downloaded model (not on an update).
   deleteAppDataOnUninstall: false
   include: build/installer.nsh
   artifactName: Speak-Kit-Setup-${version}.${ext}

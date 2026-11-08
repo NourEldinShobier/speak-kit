@@ -1,22 +1,15 @@
 import * as v from "valibot";
 import {
   FrameDecoder,
-  clonedVoiceListSchema,
-  clonedVoiceSchema,
   engineListSchema,
   errorBodySchema,
   exportJobSchema,
   healthSchema,
   voiceListSchema,
-  type CloneCheck,
-  type CloneVoiceRequest,
-  type ClonedVoice,
-  type EngineId,
   type EngineList,
   type ExportJob,
   type ExportRequest,
   type Health,
-  type UpdateVoiceRequest,
   type VoiceList,
 } from "@speakkit/protocol";
 import { DesktopFault } from "../shared/errors";
@@ -27,8 +20,6 @@ import { APP_CLIENT_HEADER } from "./pairing";
 export class ServerError extends DesktopFault {
   readonly status: number;
   readonly code: string;
-  /** The per-criterion results of a rejected reference clip (422 clip-rejected). */
-  checks: CloneCheck[] | undefined;
   /** `detail` is the diagnostic of the server's error body; without a body the renderer words the HTTP status itself. */
   constructor(status: number, code: string, detail: string | null) {
     super({ code: "server-error", args: { status, detail } });
@@ -57,8 +48,8 @@ export class ServerApi {
     if (res.ok) return res;
     const parsed = v.safeParse(errorBodySchema, await res.json().catch(() => null));
     if (!parsed.success) throw new ServerError(res.status, "internal", null);
-    const { code, message, checks } = parsed.output.error;
-    throw Object.assign(new ServerError(res.status, code, message), { checks });
+    const { code, message } = parsed.output.error;
+    throw new ServerError(res.status, code, message);
   }
 
   async #json<T>(schema: v.GenericSchema<unknown, T>, res: Promise<Response>): Promise<T> {
@@ -94,17 +85,6 @@ export class ServerApi {
   health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", { signal }));
   voices = (): Promise<VoiceList> => this.#json(voiceListSchema, this.#call("GET", "/v1/voices"));
   engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
-  selectEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", "/v1/engines/select", { body: { id } }));
-  installEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", `/v1/engines/${id}/install`));
-  cancelInstall = (id: EngineId) => this.#json(engineListSchema, this.#call("POST", `/v1/engines/${id}/cancel`));
-  removeEngine = (id: EngineId) => this.#json(engineListSchema, this.#call("DELETE", `/v1/engines/${id}`));
-
-  cloneVoice = (req: CloneVoiceRequest): Promise<ClonedVoice> => this.#json(clonedVoiceSchema, this.#call("POST", "/v1/voices/clone", { body: req }));
-  clonedVoices = async (): Promise<ClonedVoice[]> => (await this.#json(clonedVoiceListSchema, this.#call("GET", "/v1/voices/cloned"))).voices;
-  updateVoice = (id: string, patch: UpdateVoiceRequest): Promise<ClonedVoice> => this.#json(clonedVoiceSchema, this.#call("PATCH", `/v1/voices/${id}`, { body: patch }));
-  async deleteVoice(id: string): Promise<void> {
-    await this.#call("DELETE", `/v1/voices/${id}`);
-  }
 
   startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));
   exportStatus = (id: string): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("GET", `/v1/export/${id}`));

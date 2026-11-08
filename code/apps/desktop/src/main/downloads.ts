@@ -36,11 +36,11 @@ export function downloadDirs(root: string, modelsDir = path.join(root, DOWNLOAD_
   return dirs;
 }
 
-/** Sizes in bytes for the Storage page and the confirmation: models, engines (both folders) and caches (exports, OCR data). */
+/** Sizes in bytes for the Storage page and the confirmation: models and caches (exports, OCR data). */
 export async function measureDownloads(root: string, modelsDir?: string) {
   const d = downloadDirs(root, modelsDir);
-  const [models, engines, legacy, exports, ocr] = await Promise.all([d.models, d.engines, d.legacyChatterbox, d.exports, d.ocr].map(dirSize));
-  return { modelsBytes: models!, enginesBytes: engines! + legacy!, cacheBytes: exports! + ocr! };
+  const [models, exports, ocr] = await Promise.all([d.models, d.exports, d.ocr].map(dirSize));
+  return { modelsBytes: models!, cacheBytes: exports! + ocr! };
 }
 
 /**

@@ -43,6 +43,13 @@ describe("openConfig", () => {
     expect((await openConfig(dir)).config).toMatchObject({ setupDone: true, preferredPort: 47615, speed: 1.5 });
   });
 
+  it("loads a config of an earlier version that uses a cloned voice and starts with the default voice, without an error", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, voice: "cb_0a1b2c3d", speed: 1.5, engine: "chatterbox" }));
+    const c = await openConfig(dir);
+    expect(c.recovered).toBeNull();
+    expect(c.config).toMatchObject({ setupDone: true, voice: "af_heart", speed: 1.5 });
+  });
+
   it("saves changes so the next start sees them", async () => {
     const c = await openConfig(dir);
     c.config.setupDone = true;

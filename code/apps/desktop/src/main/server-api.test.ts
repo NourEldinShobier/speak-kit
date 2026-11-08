@@ -29,7 +29,7 @@ const json = (res: http.ServerResponse, status: number, body: unknown) => {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 };
-const LIST = { active: "kokoro", engines: [{ id: "kokoro", name: "Kokoro", state: "ready", optional: false, cloning: false }] };
+const LIST = { active: "kokoro", engines: [{ id: "kokoro", name: "Kokoro", state: "ready" }] };
 
 describe("ServerApi", () => {
   it("lists engines with the bearer token and validates the answer", async () => {
@@ -38,24 +38,10 @@ describe("ServerApi", () => {
     expect(seen).toEqual([{ method: "GET", url: "/v1/engines", auth: "Bearer tok", body: "" }]);
   });
 
-  it("selects, installs, cancels and removes an engine on the documented routes", async () => {
-    const { api, seen } = await stub((_r, _b, res) => json(res, 200, LIST));
-    await api.selectEngine("chatterbox");
-    await api.installEngine("chatterbox");
-    await api.cancelInstall("chatterbox");
-    await api.removeEngine("chatterbox");
-    expect(seen.map((s) => `${s.method} ${s.url} ${s.body}`)).toEqual([
-      'POST /v1/engines/select {"id":"chatterbox"}',
-      "POST /v1/engines/chatterbox/install ",
-      "POST /v1/engines/chatterbox/cancel ",
-      "DELETE /v1/engines/chatterbox ",
-    ]);
-  });
-
   it("turns the server's error body into a ServerError with status, code and the server's detail", async () => {
-    const { api } = await stub((_r, _b, res) => json(res, 409, { error: { code: "engine-unavailable", message: "needs a GPU" } }));
-    await expect(api.selectEngine("chatterbox")).rejects.toMatchObject({ status: 409, code: "engine-unavailable", error: { code: "server-error", args: { status: 409, detail: "needs a GPU" } } });
-    await expect(api.selectEngine("chatterbox")).rejects.toBeInstanceOf(ServerError);
+    const { api } = await stub((_r, _b, res) => json(res, 404, { error: { code: "not-found", message: "no such endpoint" } }));
+    await expect(api.engines()).rejects.toMatchObject({ status: 404, code: "not-found", error: { code: "server-error", args: { status: 404, detail: "no such endpoint" } } });
+    await expect(api.engines()).rejects.toBeInstanceOf(ServerError);
   });
 
   it("reports a non-JSON failure by its status", async () => {

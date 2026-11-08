@@ -6,10 +6,6 @@
 export const DOWNLOAD_ENTRIES = {
   /** Kokoro voice model (Hugging Face cache layout). */
   models: "models",
-  /** Optional engines: the Chatterbox virtualenv and weights. */
-  engines: "engines",
-  /** Chatterbox folder of installs made before `engines/`; a virtualenv cannot be moved, so it stays where it is. */
-  legacyChatterbox: "chatterbox",
   /** Finished and partial audio exports. */
   exports: "exports",
   /** Chromium's IndexedDB, where tesseract.js keeps the OCR language data. */
@@ -17,7 +13,7 @@ export const DOWNLOAD_ENTRIES = {
 } as const;
 
 /** Never removed: the person's own data. */
-export const KEPT_ENTRIES = ["library", "voices", "config.json", "token", "engine.json", "logs"] as const;
+export const KEPT_ENTRIES = ["library", "config.json", "token", "logs"] as const;
 
 export type DownloadKind = keyof typeof DOWNLOAD_ENTRIES;
 

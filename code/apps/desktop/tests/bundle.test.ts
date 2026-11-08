@@ -22,11 +22,6 @@ describe("main bundle", () => {
     expect(shipped).not.toContain("fakeUpdater");
     expect(shipped).not.toContain('emit("update-available"');
   });
-
-  it("contains the pretend GPU for Chatterbox in the test build and not in the packaged one", async () => {
-    expect(await bundle("test", true)).toContain("Test GPU");
-    expect(await bundle("shipped", false)).not.toContain("Test GPU");
-  });
 });
 
 describe("renderer bundle", () => {
@@ -53,7 +48,7 @@ describe("renderer bundle", () => {
 });
 
 /** Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR and worker chunks are not counted). Current size plus 10 %. */
-const RENDERER_BUDGET_BYTES = { index: 191_100, mini: 133_000 };
+const RENDERER_BUDGET_BYTES = { index: 185_500, mini: 133_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

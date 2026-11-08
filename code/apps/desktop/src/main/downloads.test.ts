@@ -15,15 +15,11 @@ function dataRoot() {
     writeFileSync(path.join(root, rel), text);
   };
   put("models/onnx/model.onnx", "x".repeat(100));
-  put("engines/chatterbox/env/python.exe", "x".repeat(50));
-  put("chatterbox/installed", "x".repeat(5));
   put("exports/a.wav", "x".repeat(20));
   put("IndexedDB/ocr/eng.traineddata", "x".repeat(10));
   put("library/library.json", '{"docs":1}');
-  put("voices/me.wav", "clone");
   put("config.json", '{"setupDone":true}');
   put("token", "secret");
-  put("engine.json", "{}");
   return { root, put };
 }
 afterEach(() => {
@@ -31,12 +27,10 @@ afterEach(() => {
 });
 
 describe("downloadDirs", () => {
-  it("puts every entry under the data root, models and engines in their own folders", () => {
+  it("puts every entry under the data root, the models in their own folder", () => {
     const root = path.join(path.sep, "data", "desktop");
     expect(downloadDirs(root)).toEqual({
       models: path.join(root, "models"),
-      engines: path.join(root, "engines"),
-      legacyChatterbox: path.join(root, "chatterbox"),
       exports: path.join(root, "exports"),
       ocr: path.join(root, "IndexedDB"),
     });
@@ -44,32 +38,28 @@ describe("downloadDirs", () => {
 });
 
 describe("measureDownloads", () => {
-  it("adds up models, both engine folders and the caches", async () => {
+  it("adds up the models and the caches", async () => {
     const { root } = dataRoot();
-    expect(await measureDownloads(root)).toEqual({ modelsBytes: 100, enginesBytes: 55, cacheBytes: 30 });
+    expect(await measureDownloads(root)).toEqual({ modelsBytes: 100, cacheBytes: 30 });
   });
 });
 
 describe("removeDownloads", () => {
-  it("deletes models, engines, exports and OCR data and keeps the library, voices, settings and token", async () => {
+  it("deletes models, exports and OCR data and keeps the library, settings and token", async () => {
     const { root } = dataRoot();
     const report = await removeDownloads(root);
-    for (const gone of ["models", "engines", "chatterbox", "exports", "IndexedDB"]) expect(existsSync(path.join(root, gone))).toBe(false);
+    for (const gone of ["models", "exports", "IndexedDB"]) expect(existsSync(path.join(root, gone))).toBe(false);
     expect(readFileSync(path.join(root, "library/library.json"), "utf8")).toBe('{"docs":1}');
-    expect(readFileSync(path.join(root, "voices/me.wav"), "utf8")).toBe("clone");
     expect(readFileSync(path.join(root, "config.json"), "utf8")).toBe('{"setupDone":true}');
     expect(readFileSync(path.join(root, "token"), "utf8")).toBe("secret");
-    expect(existsSync(path.join(root, "engine.json"))).toBe(true);
     expect(report).toEqual({
       removed: [
         { kind: "models", bytes: 100 },
-        { kind: "engines", bytes: 50 },
-        { kind: "legacyChatterbox", bytes: 5 },
         { kind: "exports", bytes: 20 },
         { kind: "ocr", bytes: 10 },
       ],
       failed: [],
-      freedBytes: 185,
+      freedBytes: 130,
     });
   });
 
@@ -87,7 +77,7 @@ describe("removeDownloads", () => {
     const report = await removeDownloads(root, outside);
     expect(report.failed).toEqual([{ kind: "models", reason: "outside" }]);
     expect(existsSync(path.join(outside, "model.onnx"))).toBe(true);
-    expect(existsSync(path.join(root, "engines"))).toBe(false); // the other entries are still removed
+    expect(existsSync(path.join(root, "exports"))).toBe(false); // the other entries are still removed
   });
 
   it("refuses the data root itself", async () => {
@@ -99,11 +89,11 @@ describe("removeDownloads", () => {
   it("reports a folder it cannot delete and still removes the others", async () => {
     const { root } = dataRoot();
     // A locked folder cannot be produced portably (Node opens files with delete sharing on Windows), so rm fails on demand.
-    const locked: typeof rm = (p, o) => (path.basename(String(p)) === "engines" ? Promise.reject(Object.assign(new Error("busy"), { code: "EBUSY" })) : rm(p, o));
+    const locked: typeof rm = (p, o) => (path.basename(String(p)) === "exports" ? Promise.reject(Object.assign(new Error("busy"), { code: "EBUSY" })) : rm(p, o));
     const report = await removeDownloads(root, undefined, locked);
-    expect(report.failed).toEqual([{ kind: "engines", reason: "busy" }]);
-    expect(existsSync(path.join(root, "engines"))).toBe(true);
+    expect(report.failed).toEqual([{ kind: "exports", reason: "busy" }]);
+    expect(existsSync(path.join(root, "exports"))).toBe(true);
     expect(existsSync(path.join(root, "models"))).toBe(false);
-    expect(report.freedBytes).toBe(135);
+    expect(report.freedBytes).toBe(110);
   });
 });

@@ -1,11 +1,11 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
-import { createChatterbox, createServer } from "@speakkit/server";
-import { FakeEngine, KokoroEngine, type ChatterboxOptions, type TtsEngine } from "@speakkit/engine";
+import { createServer } from "@speakkit/server";
+import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
@@ -24,10 +24,6 @@ interface RuntimeDeps {
   modelsDir: string;
   /** The model host: dist/worker/worker.js when built, the engine package's source file in development (see engineWorkerUrl). */
   engineWorker: URL;
-  /** chatterbox_sidecar.py: resources/chatterbox when packaged, the engine package's source file in development (see chatterboxScript). */
-  chatterboxScript?: string | undefined;
-  /** Tests only (`SPEAKKIT_FAKE_CHATTERBOX`, see test-env.ts): `<command>|<script>` of a stand-in sidecar. */
-  fakeChatterbox?: string | undefined;
   log: Logger;
   api: ServerApi;
   /** Sends the state to every window. */
@@ -47,36 +43,11 @@ export async function engineWorkerUrl(distDir: string): Promise<URL> {
   );
 }
 
-/** The options that put Chatterbox on a pretend NVIDIA GPU with a stand-in sidecar; empty for the real engine. */
-const fakeChatterboxOptions = (spec: string | undefined): Partial<ChatterboxOptions> => {
-  const [command, script] = spec?.split("|") ?? [];
-  return command && script ? { hardware: { gpu: { name: "Test GPU", vramMb: 12288 }, python: ["python"] }, sidecar: { command, args: [script] } } : {};
-};
-
-const exists = (p: string) =>
-  access(p).then(
-    () => true,
-    () => false,
-  );
-
-/** The Chatterbox sidecar script: shipped in `resources/chatterbox` by electron-builder, or the engine package's own file in development. Undefined when neither exists. */
-export async function chatterboxScript(resources: string | undefined = process.resourcesPath): Promise<string | undefined> {
-  const shipped = resources ? path.join(resources, "chatterbox", "chatterbox_sidecar.py") : undefined;
-  if (shipped && (await exists(shipped))) return shipped;
-  try {
-    const source = fileURLToPath(new URL("../sidecar/chatterbox_sidecar.py", import.meta.resolve("@speakkit/engine")));
-    return (await exists(source)) ? source : undefined;
-  } catch {
-    return undefined; // a bundle without the workspace packages on disk (packaged app) has no development file to fall back to
-  }
-}
-
 /** The local server and its engines: creation, restart, shutdown, and the health state the UI shows. */
 export class ServerRuntime {
   #d: RuntimeDeps;
   #server: Srv | null = null;
   #engine: TtsEngine | null = null; // outlives token/port changes; recreated on retry
-  #chatterbox: TtsEngine | undefined; // optional second engine (needs a GPU); created once, installed from the Engines page
   #firstEngine = true;
   #keepMissing = false; // after the person deleted the models, do not fetch them again until asked
   #unsubEngine: (() => void) | null = null;
@@ -125,16 +96,9 @@ export class ServerRuntime {
     state.serverError = null;
     try {
       const engine = this.#engine ?? this.createEngine();
-      // Same rule as the standalone server: the fake engine (tests) has no sidecar, and SPEAKKIT_CHATTERBOX=off skips the hardware probe.
-      if (!this.#chatterbox && (process.env.SPEAKKIT_ENGINE !== "fake" || this.#d.fakeChatterbox) && process.env.SPEAKKIT_CHATTERBOX !== "off")
-        this.#chatterbox = await createChatterbox(dataDir, {
-          ...(this.#d.chatterboxScript && { sidecarScript: this.#d.chatterboxScript }),
-          ...(__TEST_CODE__ ? fakeChatterboxOptions(this.#d.fakeChatterbox) : {}),
-        }).catch((e) => (log.warn("chatterbox unavailable", e instanceof Error ? e.message : e), undefined));
       const { server, port } = await listenWithFallback(config.preferredPort, (port) =>
         createServer({
           engine,
-          ...(this.#chatterbox ? { chatterbox: this.#chatterbox } : {}),
           dataDir,
           port,
           version: state.version,
@@ -175,14 +139,13 @@ export class ServerRuntime {
   }
 
   /**
-   * Settings > Storage > Delete downloaded models: stops the server and both engines (their files are open while they run), deletes the
-   * downloads, then starts again with the engine in the "missing" state. Cloned voices, the library and settings stay.
+   * Settings > Storage > Delete downloaded models: stops the server and the engine (its files are open while it runs), deletes the
+   * downloads, then starts again with the engine in the "missing" state. The library and settings stay.
    */
   async removeDownloads(): Promise<DownloadsReport> {
     await this.stop();
-    await Promise.all([this.#engine?.close(), this.#chatterbox?.close()]).catch((e) => this.#d.log.warn("engine close failed", e instanceof Error ? e.message : e));
+    await this.#engine?.close().catch((e) => this.#d.log.warn("engine close failed", e instanceof Error ? e.message : e));
     this.#engine = null;
-    this.#chatterbox = undefined;
     const report = await removeDownloads(this.#d.dataDir, this.#d.modelsDir);
     this.#keepMissing = true;
     await this.start(this.#d.state.token || undefined);
@@ -192,7 +155,7 @@ export class ServerRuntime {
 
   async shutdown(): Promise<void> {
     await this.stop();
-    await Promise.all([this.#engine?.close(), this.#chatterbox?.close()]);
+    await this.#engine?.close();
   }
 
   /** Health is fetched on engine events and, while the window is visible, on a timer; never polled while hidden. */

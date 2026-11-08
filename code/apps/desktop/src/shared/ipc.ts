@@ -1,4 +1,4 @@
-import type { ClonedVoice, EngineId, EngineList, Health, UpdateVoiceRequest, VoiceList } from "@speakkit/protocol";
+import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
@@ -63,8 +63,6 @@ export interface StorageInfo {
   modelsDir: string;
   logsDir: string;
   modelsBytes: number;
-  /** Optional engines (Chatterbox). */
-  enginesBytes: number;
   /** Exports and OCR language data. */
   cacheBytes: number;
   logsBytes: number;
@@ -81,7 +79,7 @@ export interface Metrics {
 
 export type ShortcutResult = { ok: true } | { ok: false; error: DesktopError; conflict?: ShortcutConflict };
 
-export type ExternalLink = "webstore" | "microphone-settings";
+export type ExternalLink = "webstore";
 export type OpenPath = "models" | "logs";
 
 /** Main to renderer, besides the state stream. */
@@ -110,7 +108,7 @@ export interface Api {
   openExternal(link: ExternalLink): Promise<void>;
   openPath(which: OpenPath): Promise<void>;
   storage(): Promise<StorageInfo>;
-  /** Stops the engines and deletes the downloaded models, engines, OCR data and exports. The library, cloned voices and settings stay. */
+  /** Stops the engine and deletes the downloaded model, OCR data and exports. The library and settings stay. */
   deleteDownloads(): Promise<DownloadsReport>;
   metrics(): Promise<Metrics>;
   hideWindow(): Promise<void>;
@@ -126,11 +124,6 @@ export interface Api {
   /** Loads the voice engine now (Memory: Load now). */
   warmEngine(): Promise<void>;
   engines(): Promise<EngineList>;
-  selectEngine(id: EngineId): Promise<EngineList>;
-  installEngine(id: EngineId): Promise<EngineList>;
-  /** Stops a running install of an optional engine. */
-  cancelInstall(id: EngineId): Promise<EngineList>;
-  removeEngine(id: EngineId): Promise<EngineList>;
   updateAction(action: UpdateAction): Promise<AppState>;
   exportCheck(dir: string, name: string, format: "wav" | "mp3"): Promise<ExportTarget>;
   exportStart(options: ExportOptions): Promise<ExportView>;
@@ -138,13 +131,6 @@ export interface Api {
   /** Opens the folder of a finished export, or the file itself. Only paths of exports from this session are accepted. */
   exportReveal(path: string, open: boolean): Promise<void>;
   pickFolder(current: string): Promise<string | null>;
-  /** Opens the file dialog for a reference clip (WAV, MP3, M4A or FLAC) and returns its bytes, or null when cancelled. */
-  pickReference(): Promise<{ name: string; bytes: Uint8Array } | null>;
-  /** Sends a 16-bit mono WAV to the server for cloning; `consent` is the person's confirmation that they may clone this voice. Rejects with a `clip-rejected` DesktopError (with the per-criterion checks) when the clip is not usable. */
-  cloneVoice(req: { name: string; consent: true; audio: Uint8Array }): Promise<ClonedVoice>;
-  clonedVoices(): Promise<ClonedVoice[]>;
-  updateClonedVoice(id: string, patch: UpdateVoiceRequest): Promise<ClonedVoice>;
-  deleteClonedVoice(id: string): Promise<void>;
   /** Reveals the bundled extension folder and opens the browser extensions page. Returns the folder, or null when not packaged. */
   installExtension(): Promise<string | null>;
   onState(cb: (s: AppState) => void): () => void;
@@ -176,21 +162,12 @@ export const METHODS = [
   "readerDone",
   "warmEngine",
   "engines",
-  "selectEngine",
-  "installEngine",
-  "cancelInstall",
-  "removeEngine",
   "updateAction",
   "exportCheck",
   "exportStart",
   "exportCancel",
   "exportReveal",
   "pickFolder",
-  "pickReference",
-  "cloneVoice",
-  "clonedVoices",
-  "updateClonedVoice",
-  "deleteClonedVoice",
   "installExtension",
 ] as const;
 export type Method = (typeof METHODS)[number];

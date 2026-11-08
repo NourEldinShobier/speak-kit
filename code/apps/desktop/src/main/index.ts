@@ -21,7 +21,7 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
-import { chatterboxScript, engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
+import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -94,8 +94,6 @@ const runtime: ServerRuntime = new ServerRuntime({
   dataDir,
   modelsDir,
   engineWorker: await engineWorkerUrl(here),
-  chatterboxScript: await chatterboxScript(),
-  ...(__TEST_CODE__ && test.fakeChatterbox ? { fakeChatterbox: test.fakeChatterbox } : {}),
   log,
   api: serverApi,
   publish,

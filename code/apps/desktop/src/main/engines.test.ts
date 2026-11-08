@@ -17,34 +17,15 @@ describe("engineHandlers", () => {
     expect(t.publish).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["selectEngine", "chatterbox"],
-    ["installEngine", "chatterbox"],
-    ["cancelInstall", "chatterbox"],
-    ["removeEngine", "chatterbox"],
-  ] as const)("%s calls the server with the id and then refreshes the health pill", async (method, id) => {
-    const calls: string[] = [];
-    const t = setup({ [method]: async (x: string) => (calls.push(x), list) });
-    expect(await t.handlers[method](id)).toBe(list);
-    expect(calls).toEqual([id]);
-    expect(t.publish).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not publish when the server call fails", async () => {
-    const t = setup({ selectEngine: async () => Promise.reject(new Error("busy")) });
-    await expect(t.handlers.selectEngine("kokoro")).rejects.toThrow("busy");
-    expect(t.publish).not.toHaveBeenCalled();
-  });
-
   it("explains a 404 from an older server in plain words", async () => {
     const t = setup({ engines: async () => Promise.reject(new ServerError(404, "not-found", "no route")) });
     await expect(t.handlers.engines()).rejects.toThrow("This version of the voice server has no engine list.");
   });
 
   it("passes other server errors through unchanged", async () => {
-    const err = new ServerError(409, "engine-unavailable", "No GPU");
-    const t = setup({ installEngine: async () => Promise.reject(err) });
-    await expect(t.handlers.installEngine("chatterbox")).rejects.toBe(err);
+    const err = new ServerError(500, "internal", "boom");
+    const t = setup({ engines: async () => Promise.reject(err) });
+    await expect(t.handlers.engines()).rejects.toBe(err);
   });
 
   it("warms the engine", async () => {
