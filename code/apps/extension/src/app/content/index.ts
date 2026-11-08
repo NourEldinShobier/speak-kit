@@ -94,6 +94,8 @@ if (!old?.alive()) {
   old?.stop();
   window.__speakkitContent = slot;
   chrome.runtime.onMessage.addListener(onMessage);
-  if (isFrame) void chrome.runtime.sendMessage({ t: "frame" }).catch(retryLater);
-  else void chrome.storage.sync.get(SETTINGS_KEY).then((r) => schedule(withDefaults(r[SETTINGS_KEY] as Partial<Settings> | undefined)), retryLater);
+  if (isFrame) {
+    void chrome.runtime.sendMessage({ t: "frame" }).catch(retryLater);
+    document.addEventListener("selectionchange", start, { once: true }); // a selection in a frame loads its selection bubble
+  } else void chrome.storage.sync.get(SETTINGS_KEY).then((r) => schedule(withDefaults(r[SETTINGS_KEY] as Partial<Settings> | undefined)), retryLater);
 }

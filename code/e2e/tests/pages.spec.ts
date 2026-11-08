@@ -1,4 +1,5 @@
-import { test, expect, highlights } from "../support/ext";
+import type { Page } from "@playwright/test";
+import { test, expect, highlights, type Ext } from "../support/ext";
 import { shell } from "../support/pages";
 import { extractOf, readTab, stateOf, spoken } from "../support/probe";
 
@@ -117,6 +118,50 @@ test.describe("frames, shadow DOM, hidden text and fields", () => {
     await ext.waitState("playing");
     await expect.poll(() => spoken(app)[0]).toBe("Artifact heading");
     expect((await ext.bgState()).url).toBe(page.url());
+  });
+
+  const threeLevel = (ext: Ext) => {
+    const content = shell("Artifact", `<main><h1>Artifact heading</h1><p id="one">${S("FIRST").join(" ")}</p><p id="two">${S("SECOND").join(" ")}</p></main>`);
+    ext.fx.set("/artifact3-content", content);
+    const attrs = 'sandbox="allow-scripts allow-same-origin allow-forms allow-popups"';
+    ext.fx.set(
+      "/artifact3-shell",
+      shell(
+        "Shell",
+        `<iframe id="frame-content" ${attrs} src="/artifact3-content" style="width:100%;height:600px;border:0"></iframe><iframe sandbox="" src="/artifact3-content" style="display:none"></iframe>`,
+      ),
+    );
+    ext.fx.set(
+      "/artifact3",
+      shell("Claude", `<div id="app"><nav>Chats Projects</nav><iframe title="artifact" ${attrs} src="${ext.fx.alt("/artifact3-shell")}" style="width:100%;height:700px;border:0"></iframe></div>`),
+    );
+    return (page: Page) => page.frameLocator("iframe[title=artifact]").frameLocator("#frame-content");
+  };
+
+  test("the on-page Listen button reads an article nested two iframes deep", async ({ ext, app }) => {
+    const inner = threeLevel(ext);
+    await ext.pair(app);
+    const page = await ext.open("/artifact3");
+    await expect(inner(page).locator("h1")).toBeVisible();
+    await page.locator('[data-sk="launcher-tab"]').hover();
+    await page.locator('[data-sk="launcher-play"]').click();
+    await ext.waitState("playing");
+    await expect.poll(() => spoken(app)[0]).toBe("Artifact heading");
+    expect((await stateOf(ext)).status).toBe("playing");
+  });
+
+  test("a selection inside a nested iframe shows the bubble in that frame and Listen reads exactly the selection", async ({ ext, app }) => {
+    const inner = threeLevel(ext);
+    await ext.pair(app);
+    const page = await ext.open("/artifact3");
+    await inner(page).locator("#two").click({ clickCount: 3 });
+    const bubble = inner(page).locator('[data-sk="bubble"]');
+    await expect(bubble).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-sk="bubble"]')).toHaveCount(0);
+    await inner(page).locator('[data-sk="bubble-listen"]').click();
+    await ext.waitState("playing");
+    await expect.poll(() => spoken(app).length).toBeGreaterThanOrEqual(2);
+    expect(spoken(app)).toEqual(S("SECOND"));
   });
 
   test("a page whose only iframe has no readable text reports that it cannot be read, in the player state", async ({ ext, app }) => {

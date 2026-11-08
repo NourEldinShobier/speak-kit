@@ -6,6 +6,8 @@ const BLOCK_SEL = "p,li,blockquote,h1,h2,h3,h4,h5,h6,dd,figcaption";
 const LAUNCHER_EDGE_PX = 80;
 const CHECK_DELAY_MS = 10;
 const MIN_PARAGRAPH_CHARS = 20;
+const MIN_FRAME_W = 100;
+const MIN_FRAME_H = 40;
 
 /** What a reading shortcut does. */
 type KeyEffect = { cmd: PlayerCommand } | { speed: number } | { closePopover: true };
@@ -15,6 +17,9 @@ const editable = (t: EventTarget | null) => {
   const e = t as HTMLElement | null;
   return !!e && (e.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(e.tagName) || e.getAttribute?.("role") === "button");
 };
+
+/** A frame too small to show a bubble (tracking pixels, hidden warm-up frames) never offers one. */
+const framePaintable = () => innerWidth >= MIN_FRAME_W && innerHeight >= MIN_FRAME_H;
 
 const step = (speed: number, delta: number) => Math.round((speed + delta) * 20) / 20;
 const command = (c: PlayerCommand) => () => ({ cmd: c });
@@ -54,6 +59,18 @@ export class PageInput {
     document.documentElement.addEventListener("pointerleave", () => this.c.alive() && this.c.ui?.scheduleGutterHide(), { signal });
   }
 
+  /** A sub-frame only offers the selection bubble: it goes away with the selection, a click elsewhere, a scroll or Escape. */
+  listenFrame(signal: AbortSignal) {
+    const on = <E extends Event>(type: string, fn: (e: E) => void, o: AddEventListenerOptions = {}) => document.addEventListener(type, (e) => this.c.alive() && fn(e as E), { ...o, signal });
+    on<PointerEvent>("pointerup", this.onPointerUp, { capture: true });
+    on<KeyboardEvent>("keyup", this.onKeyUp, { capture: true });
+    on("selectionchange", this.onSelChange);
+    on<PointerEvent>("pointerdown", (e) => !this.inUi(e) && this.c.ui?.hideBubble(), { capture: true });
+    on("scroll", () => this.c.ui?.hideBubble(), { capture: true, passive: true });
+    on<KeyboardEvent>("keydown", (e) => e.key === "Escape" && this.c.ui?.hideBubble(), { capture: true });
+    this.checkSelection(); // the selection that woke this script was made before the listeners existed
+  }
+
   private inUi = (e: Event) => !!this.c.ui && e.composedPath().includes(this.c.ui.host);
 
   private onPointerUp = (e: PointerEvent) => {
@@ -68,7 +85,7 @@ export class PageInput {
 
   private checkSelection() {
     const c = this.c;
-    if (!c.model().showBubble || c.reader) return;
+    if (!c.model().showBubble || c.reader || (c.frame && !framePaintable())) return;
     const r = currentSelection();
     if (!r) {
       c.ui?.hideBubble();

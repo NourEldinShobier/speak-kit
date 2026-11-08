@@ -37,7 +37,7 @@ class Controller implements Ctx {
   private engaged = false;
   private tabUi: TabUi = OPEN;
   private pageUrl = pageKey();
-  /** A sub-frame holds text to read and highlights it, but has no page UI, input handling or handshake: those belong to the top frame. */
+  /** A sub-frame holds text to read, highlights it and offers the selection bubble; the rest of the page UI, input handling and the handshake belong to the top frame. */
   readonly frame = window !== window.top;
   private gone = false;
   private onGone: () => void = () => {};
@@ -62,7 +62,8 @@ class Controller implements Ctx {
     await this.reloadSettings();
     const { signal } = this.ac;
     chrome.storage.onChanged.addListener(this.onStorage);
-    if (!this.frame) this.input.listen(signal);
+    if (this.frame) this.input.listenFrame(signal);
+    else this.input.listen(signal);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.refresh(), { signal });
     // same-document navigation (pushState, back/forward in a single-page app): the new page starts without the old reading
     (globalThis as { navigation?: EventTarget }).navigation?.addEventListener("currententrychange", () => this.onNavigate(), { signal });
@@ -186,6 +187,7 @@ class Controller implements Ctx {
   private surfaces(rule: SiteRule | undefined) {
     const s = this.settings;
     const off = rule === "hide-controls" || rule === "never-read" || this.dismissed;
+    if (this.frame) return { showDock: false, alwaysDock: false, launcher: null, showBubble: s.show.bubble && !off, showGutter: false };
     return {
       showDock: s.show.dock && !off,
       alwaysDock: rule === "always-dock" && !this.dismissed,
@@ -197,7 +199,7 @@ class Controller implements Ctx {
 
   model(): UiModel {
     const rule = this.rule();
-    const st = rule === "never-read" || this.dismissed ? null : this.state;
+    const st = rule === "never-read" || this.dismissed || this.frame ? null : this.state;
     return {
       ...this.view.of(st),
       ...this.surfaces(rule),
@@ -214,8 +216,12 @@ class Controller implements Ctx {
 
   /** Create the UI on demand and push the current model. */
   refresh() {
-    if (this.gone || this.frame) return;
+    if (this.gone) return;
     const m = this.model();
+    if (this.frame) {
+      if (!m.showBubble) this.ui?.hideBubble();
+      return;
+    }
     if (!this.ui) {
       if (!this.wantsUi(m)) return;
       this.ui = this.makeUi(m);
@@ -229,7 +235,9 @@ class Controller implements Ctx {
   /** The UI lives in content-ui.js (loaded now, on first need); the returned handle queues calls until it has arrived. */
   private makeUi(m: UiModel): Deferred<Ui> {
     if (m.alwaysDock) this.wake.check();
-    return defer(loadUi(chrome.runtime.getURL("content-ui.js"), this.handlers, m), ["render"]);
+    // A tab left open across an extension reload holds an address that no longer exists; loading it only logs a browser error.
+    const load = this.alive() ? loadUi(chrome.runtime.getURL("content-ui.js"), this.handlers, m) : Promise.reject(new Error("extension reloaded"));
+    return defer(load, ["render"]);
   }
 
   post(msg: ContentToBg | ExtraToBg, cb?: (r: unknown) => void) {

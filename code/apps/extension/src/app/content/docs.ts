@@ -15,6 +15,9 @@ export function currentSelection(): Range | undefined {
   return /\S/.test(r.toString()) ? r : undefined;
 }
 
+/** The top frame reads its own text first (and falls back to the service worker, which asks every frame, when it has none); a sub-frame always lets the worker pick the frame, so the selection there is found like the toolbar button finds it. */
+export const readsHere = (frame: boolean) => !frame;
+
 interface Point {
   node: Node;
   offset: number;
@@ -113,12 +116,16 @@ export class Docs {
   }
 
   play(mode: ReadMode, el?: Element) {
-    const r = this.build(mode, el);
-    if ("error" in r) {
-      this.c.ensureUi().toast("Speak Kit can't read this page", "err");
-      return;
+    if (readsHere(this.c.frame)) {
+      const r = this.build(mode, el);
+      if (!("error" in r)) {
+        this.c.lastDoc = r;
+        this.c.cmd({ cmd: "play", doc: r });
+        return;
+      }
     }
-    this.c.lastDoc = r;
-    this.c.cmd({ cmd: "play", doc: r });
+    this.c.post({ t: "read", mode }, (reply) => {
+      if (!(reply as { ok?: boolean } | undefined)?.ok && !this.c.frame) this.c.ensureUi().toast("Speak Kit can't read this page", "err");
+    });
   }
 }
