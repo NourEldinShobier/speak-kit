@@ -27,6 +27,11 @@ describe("normalizeSettings", () => {
     expect(normalizeSettings({ reader: { theme: "dark", size: 20 } }).reader).toEqual({ ...defaultSettings().reader, size: 20 });
   });
 
+  it("replaces the id of a cloned voice of an earlier version with the default voice", () => {
+    expect(normalizeSettings({ voice: "cb_0a1b2c3d" }).voice).toBe(defaultSettings().voice);
+    expect(normalizeSettings({ voice: "cb_0a1b2c3d4" }).voice).toBe("cb_0a1b2c3d4");
+  });
+
   it("keeps valid values, clamps numbers and rejects wrong types and enums", () => {
     const s = normalizeSettings({
       port: 70000,

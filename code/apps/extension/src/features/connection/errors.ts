@@ -11,8 +11,6 @@ export const ERROR_TEXT: Record<ErrorCode, string> = {
   "invalid-request": "The Speak Kit app could not understand the request. Update the extension and the app.",
   forbidden: "The Speak Kit app refused the request from this browser.",
   busy: "Speak Kit is busy reading something else. Try again in a moment.",
-  "engine-unavailable": "That voice engine cannot run on this computer. Pick another engine in the Speak Kit app.",
-  "clip-rejected": "The voice sample was not accepted. Record it again in the Speak Kit app.",
   "not-found": "Speak Kit could not find what it asked for. Update the extension and the app.",
 };
 

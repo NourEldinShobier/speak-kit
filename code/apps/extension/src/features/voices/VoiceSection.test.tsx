@@ -21,10 +21,9 @@ describe("VoiceSection", () => {
     await m.unmount();
   });
 
-  test("Chatterbox install is a 36 px button and Reset section restores voice, speed and pause", async () => {
+  test("the Engine card lists Kokoro only, and Reset section restores voice, speed and pause", async () => {
     const { m, upd } = await setup();
-    const install = [...m.root.querySelectorAll(".op-engine button")].find((b) => text(b) === "Install in the app")!;
-    expect(install.className).toBe("lm-btn lm-btn--secondary");
+    expect([...m.root.querySelectorAll(".op-engine b")].map((b) => text(b))).toEqual(["Kokoro-82M"]);
     await click([...m.root.querySelectorAll(".op-head-r button")].find((b) => text(b) === "Reset section") ?? null);
     const next = upd.mock.calls[0]![0](defaultSettings());
     expect([next.speed, next.pauseBetweenParagraphs]).toEqual([defaultSettings().speed, defaultSettings().pauseBetweenParagraphs]);

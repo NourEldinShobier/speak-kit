@@ -9,7 +9,7 @@ export interface VoicesState {
   default?: string;
 }
 
-/** The list changes when the engine is switched or a voice is cloned, so a cached copy is only trusted for a short while. */
+/** The list can change while the app loads or unloads its model, so a cached copy is only trusted for a short while. */
 export const VOICES_TTL_MS = 10_000;
 export const isFresh = (c: { at: number } | undefined, now: number): boolean => !!c && now - c.at < VOICES_TTL_MS;
 

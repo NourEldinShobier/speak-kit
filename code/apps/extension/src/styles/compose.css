@@ -675,9 +675,6 @@ body {
     sans-serif;
 }
 .op-engines {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
   padding: 16px;
 }
 .op-engine {
@@ -1215,7 +1212,6 @@ body {
     flex-wrap: wrap;
     min-width: 0;
   }
-  .op-engines,
   .op-grid2 {
     grid-template-columns: minmax(0, 1fr);
   }

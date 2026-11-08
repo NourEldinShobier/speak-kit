@@ -2,7 +2,7 @@ import { useState } from "react";
 import { plural, type Voice } from "@speakkit/protocol";
 import { Avatar, Button, SettingRow, Segmented, Select, Slider, StatusPill, TextInput } from "@speakkit/ui";
 import { defaultSettings, type SectionProps } from "../settings";
-import { previewVoice, send } from "../../shared/client";
+import { previewVoice } from "../../shared/client";
 import { clampSpeed, speedLabel, wordsPerMinute } from "../../shared/format";
 import { Card, PageHead } from "../../shared/ui";
 import { langLabel, qualityLabel, voiceName } from "./catalog";
@@ -26,16 +26,6 @@ function EngineCard({ count }: { count: number }) {
             <StatusPill tone="green">Installed</StatusPill>
           </div>
           <p>Fast, runs on any computer. {count ? `${plural(count, "voice", "voices")}.` : "Voices from the app."} The model loads when you press play and is released when idle.</p>
-        </div>
-        <div className="op-engine">
-          <div className="op-engine-h">
-            <b>Chatterbox</b>
-            <StatusPill>Not installed</StatusPill>
-          </div>
-          <p>Expressive voices and voice cloning. Needs an NVIDIA GPU.</p>
-          <Button iconLeft="external-link" onClick={() => void send({ t: "launch-app" })}>
-            Install in the app
-          </Button>
         </div>
       </div>
     </Card>
