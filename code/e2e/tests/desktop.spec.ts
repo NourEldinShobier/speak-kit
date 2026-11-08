@@ -47,7 +47,6 @@ test.describe("desktop companion, setup and memory @slow", () => {
     const d = await launch({ env: { SPEAKKIT_TEST: "1" } });
     try {
       await d.page.getByRole("button", { name: /Get started/ }).click();
-      await d.page.getByRole("button", { name: /Download Kokoro/ }).click();
       await d.page.getByRole("button", { name: /^Continue/ }).click();
       await d.page.getByRole("heading", { name: "Connect your browser" }).waitFor();
       await d.page.getByRole("button", { name: "Reveal" }).click();

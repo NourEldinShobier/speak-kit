@@ -34,14 +34,7 @@ export function countIntegrity(root) {
 }
 
 // Budget numbers in the three budget tests plus the extension bundle table, keyed by what they bound.
-const budgetFiles = [
-  "apps/extension/scripts/sizes.mjs",
-  "apps/extension/src/budget.test.ts",
-  "apps/desktop/tests/perf.test.ts",
-  "e2e/tests/perf.spec.ts",
-  "e2e/tests/selection.spec.ts",
-  "packages/server/tests/real-chatterbox.test.ts",
-];
+const budgetFiles = ["apps/extension/scripts/sizes.mjs", "apps/extension/src/budget.test.ts", "apps/desktop/tests/perf.test.ts", "e2e/tests/perf.spec.ts", "e2e/tests/selection.spec.ts"];
 
 export function readBudgets(root) {
   const out = {};

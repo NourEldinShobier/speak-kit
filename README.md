@@ -14,7 +14,7 @@ Select text in Chrome, press a key, and a natural voice reads it aloud while the
 
 - **Chrome extension**: reads selections and whole pages, with a floating player, reader view and a side panel queue.
 - **Desktop app**: runs the local voice server, adds global shortcuts, a mini player, a library for PDF, EPUB, DOCX, Markdown and text files, and MP3 or WAV export.
-- **Voices**: 28 Kokoro voices out of the box, plus optional Chatterbox voice cloning on computers with an NVIDIA GPU.
+- **Voices**: 28 Kokoro voices, running on the CPU of any computer.
 
 <p align="center">
   <img src="docs/screenshots/page-highlight.png" alt="A web page being read aloud with the current sentence and word highlighted, and the floating player at the bottom" width="720">
@@ -26,8 +26,8 @@ Select text in Chrome, press a key, and a natural voice reads it aloud while the
 | Reader with word highlighting | 28 voices, each with a preview |
 | ![Extension popup](docs/screenshots/popup-playing.png) | ![Shortcuts](docs/screenshots/app-shortcuts.png) |
 | Extension popup | Global shortcuts you can change |
-| ![Extension options](docs/screenshots/options-voice.png) | ![Voice cloning](docs/screenshots/app-cloning.png) |
-| Extension options | Cloning a voice |
+| ![Extension options](docs/screenshots/options-voice.png) | |
+| Extension options | |
 
 ## Install
 

@@ -22,7 +22,7 @@
     "physicalCss": 1,
     "skipped": 0,
     "focused": 0,
-    "gated": 1,
+    "gated": 0,
     "tsNocheck": 0
   }
 }

@@ -194,9 +194,6 @@ catalogs:
     '@types/node':
       specifier: 26.6.6
       version: 26.6.6
-    '@types/number-to-words':
-      specifier: 1.2.3
-      version: 1.2.3
     '@types/react':
       specifier: 19.3.0
       version: 19.3.0
@@ -245,9 +242,6 @@ catalogs:
     marked:
       specifier: 18.1.2
       version: 18.1.2
-    number-to-words:
-      specifier: 1.2.5
-      version: 1.2.5
     pdfjs-dist:
       specifier: 6.4.299
       version: 6.4.299
@@ -460,16 +454,9 @@ importers:
       kokoro-js:
         specifier: 'catalog:'
         version: 1.2.1
-      number-to-words:
-        specifier: 'catalog:'
-        version: 1.2.5
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@7.0.2)
-    devDependencies:
-      '@types/number-to-words':
-        specifier: 'catalog:'
-        version: 1.2.3
 
   packages/player:
     dependencies:
@@ -2582,9 +2569,6 @@ packages:
   '@types/node@26.6.6':
     resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
 
-  '@types/number-to-words@1.2.3':
-    resolution: {integrity: sha512-ruSA/QZ6JQofoEEN2zKmN9oihZmrCBgcw0zEzN0UA9Mw0pU5remTddZmrbHjsa99qz12Uxl82x+XkVpHu87oXw==}
-
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
     peerDependencies:
@@ -3933,9 +3917,6 @@ packages:
   nth-check@3.0.1:
     resolution: {integrity: sha512-GX0gsdbGVCgnRgbeGaubfjpBXyYRWOOCVeYh08bSQvDZqxz5ndXs1OTfAt/h36G1xvI94YIspsI0sVFqAV9+RQ==}
     engines: {node: '>=20.19.0'}
-
-  number-to-words@1.2.5:
-    resolution: {integrity: sha512-AuqAoOgs43P+bw2gccDCcFyu5FIHn6ArbrAFEwP+QjYcV6WvceWr0B0UAjiSIH9MNshephlmWqsKqwUjfs4OLQ==}
 
   object-keys@1.1.1:
     resolution: {integrity: sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==}
@@ -6429,8 +6410,6 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
-  '@types/number-to-words@1.2.3': {}
-
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
       '@types/react': 19.3.0
@@ -7701,8 +7680,6 @@ snapshots:
   nth-check@3.0.1:
     dependencies:
       boolbase: 2.0.0
-
-  number-to-words@1.2.5: {}
 
   object-keys@1.1.1: {}
 

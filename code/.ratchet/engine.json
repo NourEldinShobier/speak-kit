@@ -12,10 +12,10 @@
     "atomicsWait": 0,
     "sendSync": 0,
     "shortInterval": 0,
-    "oxlintDisable": 3,
-    "swallowingCatch": 4,
+    "oxlintDisable": 1,
+    "swallowingCatch": 2,
     "physicalCss": 0,
-    "skipped": 3,
+    "skipped": 2,
     "focused": 0,
     "tsNocheck": 0
   }

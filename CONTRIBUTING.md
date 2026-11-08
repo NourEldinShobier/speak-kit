@@ -53,7 +53,7 @@ A bug fix starts with a failing test. Do not loosen a test or lint limit to get 
 | `code/apps/extension` | Chrome extension |
 | `code/apps/desktop` | Electron app |
 | `code/packages/server` | Loopback HTTP server and CLI |
-| `code/packages/engine` | Engine interface, Kokoro in a child process, Chatterbox sidecar |
+| `code/packages/engine` | Engine interface, Kokoro in a child process |
 | `code/packages/player` | Shared gapless playback |
 | `code/packages/protocol` | API types, audio frame codec, extension messages |
 | `code/packages/ui` | Component kit shared by the extension and the app |

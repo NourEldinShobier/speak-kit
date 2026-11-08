@@ -14,12 +14,12 @@
     "atomicsWait": 0,
     "sendSync": 0,
     "shortInterval": 0,
-    "oxlintDisable": 7,
-    "swallowingCatch": 4,
+    "oxlintDisable": 5,
+    "swallowingCatch": 3,
     "physicalCss": 0,
     "skipped": 2,
     "focused": 0,
-    "gated": 1,
+    "gated": 0,
     "tsNocheck": 0
   }
 }
