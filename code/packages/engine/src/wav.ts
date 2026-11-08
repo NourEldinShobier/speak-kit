@@ -1,4 +1,4 @@
-export class WavError extends Error {}
+class WavError extends Error {}
 
 export interface Wav {
   sampleRate: number;
@@ -78,8 +78,4 @@ export function wavHeader(sampleRate: number, dataBytes: number): Buffer {
   h.write("data", 36);
   h.writeUInt32LE(dataBytes, 40);
   return h;
-}
-
-export function encodeWav(pcm: Int16Array, sampleRate: number): Buffer {
-  return Buffer.concat([wavHeader(sampleRate, pcm.byteLength), Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)]);
 }

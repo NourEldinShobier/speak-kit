@@ -1,5 +1,5 @@
 /**
- * Environment for child processes (model host, Chatterbox installer and sidecar).
+ * Environment for child processes (the model host).
  * Does: copies an allowlist of the parent environment, then the caller's extra variables.
  * Does not: pass secrets or unrelated variables (tokens, API keys) through to children.
  */
@@ -41,7 +41,7 @@ const EXACT = new Set([
   "CURL_CA_BUNDLE",
   "NODE_EXTRA_CA_CERTS",
 ]);
-const PREFIXES = ["CUDA_", "HF_", "PYTHON", "UV_", "PIP_", "SPEAKKIT_"];
+const PREFIXES = ["HF_", "SPEAKKIT_"];
 
 /** Names compare case-insensitively (Windows environment names are), and the original spelling is kept. */
 function allowed(name: string): boolean {

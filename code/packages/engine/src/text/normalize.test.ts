@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { normalizeText } from "./normalize";
 
-describe("normalizeText (default: leaves digits to the phonemizer)", () => {
+describe("normalizeText (leaves digits to the phonemizer)", () => {
   it.each([
     ["The price is $5M and $2.5 billion.", "The price is 5 million dollars and 2.5 billion dollars."],
     ["It costs €20 or £15.", "It costs 20 euros or 15 pounds."],
@@ -15,16 +15,4 @@ describe("normalizeText (default: leaves digits to the phonemizer)", () => {
     ["Growth was 50% on 1st place in 1999.", "Growth was 50% on 1st place in 1999."],
     ["Plain text stays.", "Plain text stays."],
   ])("%s", (input, expected) => expect(normalizeText(input)).toBe(expected));
-});
-
-describe("normalizeText({ numbers: true })", () => {
-  it.each([
-    ["He was the 1st and 23rd.", "He was the first and twenty-third."],
-    ["Growth was 50% and 3.5%.", "Growth was fifty percent and three point five percent."],
-    ["In 1999 and 2005 and 1850s.", "In nineteen ninety-nine and two thousand five and eighteen fifties."],
-    ["Meet at 3:30pm or 9:00.", "Meet at three thirty p m or nine o'clock."],
-    ["It is -5 degrees, 10,000 people.", "It is minus five degrees, ten thousand people."],
-    ["Cost $1,250.50.", "Cost one thousand two hundred fifty dollars and fifty cents."],
-    ["Room 101.", "Room one hundred one."],
-  ])("%s", (input, expected) => expect(normalizeText(input, { numbers: true })).toBe(expected));
 });
