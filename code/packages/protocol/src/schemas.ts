@@ -63,6 +63,9 @@ export const exportJobSchema: v.GenericSchema<unknown, ExportJob> = v.object({
   error: v.exactOptional(v.string()),
 });
 
+/** Shape of every JSON error body: { error: { code, message } }. */
+export const errorBodySchema = v.object({ error: v.object({ code: v.string(), message: v.string() }) });
+
 const parser =
   <T>(schema: v.GenericSchema<unknown, T>) =>
   (x: unknown): T | undefined => {

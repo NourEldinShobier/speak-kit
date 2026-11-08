@@ -110,7 +110,7 @@ function sendError(res: ServerResponse, e: unknown): void {
   if (res.headersSent) return void res.destroy();
   const h = toHttp(e);
   for (const [k, v] of Object.entries(h.headers ?? {})) res.setHeader(k, v);
-  json(res, h.status, { error: { code: h.code, message: h.message, ...h.extra } });
+  json(res, h.status, { error: { code: h.code, message: h.message } });
 }
 
 /** The node server for `handle`; every connection is kept in `sockets` so close() can drop it. */

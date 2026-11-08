@@ -12,7 +12,6 @@ import type { EngineId } from "./engines";
  *   POST /v1/engine/warm   -> 202, loads the model ahead of the first request (idempotent)
  *   POST /v1/engine/hold   -> body HoldRequest, 204; keeps a ready model loaded for at least `ms` more (0 clears). Sent while paused.
  *   GET  /v1/engines                -> EngineList
- *   POST /v1/engines/<id>/install   -> 202 EngineList; downloads the model when it is missing
  *   POST /v1/export                 -> body ExportRequest, 202 ExportJob; render sentences to one WAV
  *   GET  /v1/export/<id>            -> ExportJob (progress); GET /v1/export/<id>/audio streams the WAV; DELETE /v1/export/<id> cancels and removes it
  *

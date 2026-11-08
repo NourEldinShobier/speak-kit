@@ -31,24 +31,17 @@ describe("GET /v1/engines", () => {
     expect((await fetch(`${ctx.base}/v1/engines`)).status).toBe(401);
   });
 
-  it("has no routes for choosing, cancelling or removing an engine, or for cloning a voice", async () => {
+  it("has no routes for choosing, installing, cancelling or removing an engine, or for cloning a voice", async () => {
     ctx = await start();
     for (const [method, path] of [
       ["POST", "/v1/engines/select"],
+      ["POST", "/v1/engines/kokoro/install"],
       ["POST", "/v1/engines/kokoro/cancel"],
       ["DELETE", "/v1/engines/kokoro"],
       ["POST", "/v1/voices/clone"],
       ["GET", "/v1/voices/cloned"],
     ] as const)
       expect((await call(ctx, method, path)).status, `${method} ${path}`).toBe(404);
-  });
-});
-
-describe("POST /v1/engines/kokoro/install", () => {
-  it("starts the model download when the model is missing", async () => {
-    ctx = await start({ state: "missing" });
-    expect((await list(await call(ctx, "POST", "/v1/engines/kokoro/install"))).engines[0]!.state).toBe("missing");
-    await vi.waitFor(async () => expect((await health(ctx!)).state).toBe("ready"));
   });
 });
 
