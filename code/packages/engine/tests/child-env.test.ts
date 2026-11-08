@@ -7,26 +7,20 @@ describe("childEnv", () => {
       Path: "C:/bin",
       SystemRoot: "C:/Windows",
       TEMP: "C:/tmp",
-      CUDA_VISIBLE_DEVICES: "0",
       HF_HOME: "D:/hf",
-      PYTHONPATH: "x",
-      UV_CACHE_DIR: "u",
-      PIP_INDEX_URL: "https://pypi.example",
       SPEAKKIT_TOKEN: "t",
       ELECTRON_RUN_AS_NODE: "1",
       GITHUB_TOKEN: "secret",
       AWS_SECRET_ACCESS_KEY: "secret",
       NODE_OPTIONS: "--inspect",
+      CUDA_VISIBLE_DEVICES: "0",
+      PYTHONPATH: "x",
     };
     expect(childEnv({}, source)).toEqual({
       Path: "C:/bin",
       SystemRoot: "C:/Windows",
       TEMP: "C:/tmp",
-      CUDA_VISIBLE_DEVICES: "0",
       HF_HOME: "D:/hf",
-      PYTHONPATH: "x",
-      UV_CACHE_DIR: "u",
-      PIP_INDEX_URL: "https://pypi.example",
       SPEAKKIT_TOKEN: "t",
       ELECTRON_RUN_AS_NODE: "1",
     });
@@ -37,7 +31,7 @@ describe("childEnv", () => {
   });
 
   it("adds the extra variables, which win over inherited ones", () => {
-    expect(childEnv({ HF_HOME: "new", PYTHONUNBUFFERED: "1" }, { HF_HOME: "old", PATH: "p" })).toEqual({ HF_HOME: "new", PYTHONUNBUFFERED: "1", PATH: "p" });
+    expect(childEnv({ HF_HOME: "new", EXTRA: "1" }, { HF_HOME: "old", PATH: "p" })).toEqual({ HF_HOME: "new", EXTRA: "1", PATH: "p" });
   });
 
   it("reads this process's environment by default", () => {
