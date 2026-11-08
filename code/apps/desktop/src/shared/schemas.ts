@@ -67,7 +67,7 @@ export const ConfigSchema = v.object({
   autoUpdate: bool(true),
   shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
-  // The ids of the cloned voices of earlier versions (`cb_` and 8 hex digits) no longer exist and become the default voice.
+  // Saved ids of the form `cb_` plus 8 hex digits name voices that no longer exist; they become the default voice.
   voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
 });

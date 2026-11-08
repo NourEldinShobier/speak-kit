@@ -20,7 +20,7 @@ const clamped = ([min, max]: readonly [number, number], fallback: number, round 
 const flag = (fallback: boolean) => v.fallback(v.boolean(), fallback);
 const pick = <const T extends readonly [string, ...string[]]>(all: T, fallback: T[number]) => v.fallback(v.picklist(all), fallback);
 const text = (fallback: string) => v.fallback(v.pipe(v.string(), v.minLength(1)), fallback);
-/** A voice id; the ids of the cloned voices of earlier versions (`cb_` and 8 hex digits) no longer exist and become the default. */
+/** A voice id; a saved id of the form `cb_` plus 8 hex digits names a voice that no longer exists and becomes the default. */
 const voiceId = (fallback: string) => v.fallback(v.pipe(v.string(), v.minLength(1), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), fallback);
 const group = <E extends v.ObjectEntries>(entries: E, fallback: v.InferOutput<v.ObjectSchema<E, undefined>>) => v.fallback(v.object(entries), fallback);
 
