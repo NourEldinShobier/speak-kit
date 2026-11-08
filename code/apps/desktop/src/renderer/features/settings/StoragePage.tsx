@@ -9,7 +9,6 @@ const share = (n: number, total: number) => (total ? `${(n / total) * 100}%` : "
 function usageRows(st: StorageInfo): [string, number, string][] {
   return [
     ["Voice models", st.modelsBytes, "var(--tag-blue)"],
-    ["Optional engines", st.enginesBytes, "var(--tag-green)"],
     ["OCR data and exports", st.cacheBytes, "var(--tag-yellow)"],
     ["Logs", st.logsBytes, "var(--tag-orange)"],
     ["Settings and token", st.otherBytes, "var(--tag-purple)"],
@@ -62,7 +61,7 @@ export function StoragePage() {
   const load = useCallback(() => api.storage().then(setSt, () => {}), []);
   useEffect(() => void load(), [load]);
   const { phase, setPhase, remove } = useDeleteFlow(load);
-  const total = st ? st.modelsBytes + st.enginesBytes + st.cacheBytes + st.logsBytes + st.otherBytes : 0;
+  const total = st ? st.modelsBytes + st.cacheBytes + st.logsBytes + st.otherBytes : 0;
   const rows = st ? usageRows(st) : [];
   return (
     <Page title="Storage" lead={st ? `On this computer: ${formatBytes(total)}` : "Measuring..."}>
@@ -84,8 +83,8 @@ export function StoragePage() {
         />
         <SettingRow
           className="lm-row--control"
-          label="Delete downloaded models and engines"
-          description="Frees the space. Your library, cloned voices and settings stay."
+          label="Delete downloaded models"
+          description="Frees the space. Your library and settings stay."
           control={
             <Button variant="danger" iconLeft="trash" disabled={!st} onClick={() => setPhase({ step: "confirm" })}>
               Delete

@@ -97,7 +97,7 @@ function InstallSection({ s, go }: { s: AppState; go: (p: "engines" | "browser")
       />
       <SettingRow
         label="Engines"
-        description="Kokoro-82M is the default voice. Chatterbox, an optional second voice for NVIDIA graphics cards, can be added here."
+        description="Kokoro-82M is the voice engine. Manage its download and memory here."
         control={
           <Button size="sm" onClick={() => go("engines")}>
             Manage

@@ -17,11 +17,11 @@ function About({ s }: { s: AppState }) {
       </SettingsSection>
       <SettingsSection title="Uninstalling">
         <SettingRow
-          label="Downloaded models and engines"
+          label="Downloaded models"
           description={
             s.platform === "darwin"
-              ? "Before you drag Speak Kit to the Trash, use Settings > Storage > Delete downloaded models and engines. Otherwise remove ~/Library/Application Support/@speakkit/desktop yourself."
-              : "Uninstalling Speak Kit removes the downloaded models and engines. Your library, cloned voices and settings stay in the data folder."
+              ? "Before you drag Speak Kit to the Trash, use Settings > Storage > Delete downloaded models. Otherwise remove ~/Library/Application Support/@speakkit/desktop yourself."
+              : "Uninstalling Speak Kit removes the downloaded models. Your library and settings stay in the data folder."
           }
         />
       </SettingsSection>

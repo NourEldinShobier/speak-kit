@@ -4,14 +4,6 @@ import type { AppState } from "../../../shared/ipc";
 import { api, usePreview } from "../../ui";
 import { Back, Foot, Frame } from "./Frame";
 
-async function startInstall(): Promise<void> {
-  try {
-    await api.installEngine("chatterbox");
-  } catch {
-    // setup goes on: the Engines page shows why the install could not start (no disk space, no network)
-  }
-}
-
 const SAMPLE = "Notes, documents and even voices lived on someone else's server, rented back to us by the month.";
 
 function HandyToKnow({ s }: { s: AppState }) {
@@ -35,12 +27,7 @@ function HandyToKnow({ s }: { s: AppState }) {
   );
 }
 
-function doneSub(skipped: boolean, chatterbox: boolean): string {
-  const first = skipped ? "You can connect the browser extension later from Browser." : "Kokoro is ready. Press play to hear your voice.";
-  return chatterbox ? `${first} Chatterbox installs in the background; Engines shows its progress.` : first;
-}
-
-export function DoneStep({ s, skipped, chatterbox, onBack }: { s: AppState; skipped: boolean; chatterbox: boolean; onBack(): void }) {
+export function DoneStep({ s, skipped, onBack }: { s: AppState; skipped: boolean; onBack(): void }) {
   const [voice, setVoice] = useState("");
   const { playing, error, toggle } = usePreview();
   const engineState = s.health?.engine.state;
@@ -51,16 +38,12 @@ export function DoneStep({ s, skipped, chatterbox, onBack }: { s: AppState; skip
     );
   }, [engineState]);
   const on = playing === voice && !!voice;
-  // The install runs in the server and goes on after setup; a failure shows on the Engines page (disk space, network), so it is not awaited here.
-  const open = async () => {
-    if (chatterbox) await startInstall();
-    await api.patchConfig({ setupDone: true, setupSkipped: skipped });
-  };
+  const open = () => api.patchConfig({ setupDone: true, setupSkipped: skipped });
   return (
     <Frame
-      at={4}
+      at={3}
       title={skipped ? "Setup is finished" : "You're all set"}
-      sub={doneSub(skipped, chatterbox)}
+      sub={skipped ? "You can connect the browser extension later from Browser." : "Kokoro is ready. Press play to hear your voice."}
       foot={
         <Foot back={<Back onClick={onBack} />}>
           <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => void open()}>

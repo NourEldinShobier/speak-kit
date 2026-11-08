@@ -7,7 +7,7 @@ export type DeletePhase = { step: "closed" } | { step: "confirm" } | { step: "wo
 
 interface Props {
   phase: DeletePhase;
-  storage: Pick<StorageInfo, "modelsBytes" | "enginesBytes" | "cacheBytes">;
+  storage: Pick<StorageInfo, "modelsBytes" | "cacheBytes">;
   onConfirm(): void;
   onClose(): void;
 }
@@ -28,7 +28,7 @@ export function DeleteDownloadsBody({ phase, storage }: Pick<Props, "phase" | "s
     );
   return (
     <>
-      <p className="sk-modal-text">These files are deleted from this computer. Your library, cloned voices and settings stay.</p>
+      <p className="sk-modal-text">These files are deleted from this computer. Your library and settings stay.</p>
       <div className="sk-quit" data-testid="delete-downloads-list">
         {downloadRows(storage).map(([a, b]) => (
           <div key={a}>
@@ -41,14 +41,14 @@ export function DeleteDownloadsBody({ phase, storage }: Pick<Props, "phase" | "s
   );
 }
 
-/** Confirmation for Settings > Storage > Delete downloaded models and engines: sizes first, then the result. */
+/** Confirmation for Settings > Storage > Delete downloaded models: sizes first, then the result. */
 export function DeleteDownloadsDialog({ phase, storage, onConfirm, onClose }: Props) {
   const finished = phase.step === "done" || phase.step === "failed";
   return (
     <Modal
       open={phase.step !== "closed"}
       onClose={phase.step === "working" ? () => {} : onClose}
-      title={finished ? "Downloads removed" : "Delete downloaded models and engines?"}
+      title={finished ? "Downloads removed" : "Delete downloaded models?"}
       width={480}
       footer={
         finished ? (

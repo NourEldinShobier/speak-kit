@@ -57,7 +57,6 @@ const CASES: [DesktopError, string][] = [
   [{ code: "update-checksum" }, "The downloaded file did not match its checksum, so it was discarded. Try again; nothing was installed."],
   [{ code: "update-interrupted" }, "The connection dropped during the download. Try again to fetch the update again; nothing was installed."],
   [{ code: "update-failed", args: { detail: "weird" } }, "weird"],
-  [{ code: "clip-rejected", args: { message: "Clip is 3.0 s; at least 5.0 s is needed.", checks: [] } }, "Clip is 3.0 s; at least 5.0 s is needed."],
 ];
 
 describe("errorText", () => {

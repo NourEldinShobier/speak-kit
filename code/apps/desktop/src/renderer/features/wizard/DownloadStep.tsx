@@ -24,7 +24,7 @@ export function DownloadStep({ s, onBack, onNext }: { s: AppState; onBack(): voi
   const v = downloadView(s);
   return (
     <Frame
-      at={2}
+      at={1}
       title={DOWNLOAD_TITLES[v.phase]}
       sub={downloadSub(v)}
       foot={

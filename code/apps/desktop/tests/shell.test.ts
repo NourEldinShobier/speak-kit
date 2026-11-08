@@ -53,10 +53,10 @@ describe("shell", () => {
     expect((await box(l, ".sk-setup__stepper")).height).toBe(52);
     expect((await box(l, ".sk-setup__col")).width).toBe(720);
     expect((await box(l, ".sk-setup__foot")).height).toBe(64);
-    expect(await l.page.locator(".lm-step").count()).toBe(5);
+    expect(await l.page.locator(".lm-step").count()).toBe(4);
   });
 
-  it("setup window: white page, 20 px under the stepper, unclipped card rings, 16 px footer buttons, faint selected engine row", async () => {
+  it("setup window: white page, 20 px under the stepper, unclipped card rings, 16 px footer buttons", async () => {
     const l = await start();
     await l.page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
     const style = (sel: string, props: string[]) =>
@@ -66,7 +66,7 @@ describe("shell", () => {
         .evaluate((e, ps) => ps.map((p) => getComputedStyle(e).getPropertyValue(p)), props);
     expect(await style(".sk-setup", ["background-color"])).toEqual(["rgb(255, 255, 255)"]);
     await l.page.getByRole("button", { name: /Get started/ }).click();
-    await l.page.getByRole("heading", { name: "Choose a voice engine" }).waitFor();
+    await l.page.getByRole("heading", { name: /Kokoro-82M/ }).waitFor();
     // Headline 20 px under the stepper (stepper ends at 84).
     expect((await box(l, ".sk-setup__col h1")).y).toBe(104);
     // The scroller spans the window and the column does not clip, so the ring of a card (1 px outside it) shows at both sides.
@@ -74,10 +74,6 @@ describe("shell", () => {
     expect(await style(".sk-setup__col", ["overflow-x", "overflow-y"])).toEqual(["visible", "visible"]);
     const [scroll, card] = [await box(l, ".sk-setup__scroll"), await box(l, ".sk-setup .lm-card")];
     expect([scroll.x < card.x - 1, scroll.x + scroll.width > card.x + card.width + 1, card.width]).toEqual([true, true, 720]);
-    // Selected engine: tint, top corners round, bottom flat; the icon tile is white with a 1 px stroke.
-    expect(await style(".sk-radio.is-sel", ["background-color", "border-top-left-radius", "border-bottom-left-radius"])).toEqual(["rgba(0, 0, 0, 0.04)", "8px", "0px"]);
-    expect(await style(".sk-radio.is-sel .sk-tile", ["background-color", "border-top-color"])).toEqual(["rgb(255, 255, 255)", "rgb(229, 229, 229)"]);
-    expect(Number.parseFloat((await style(".sk-radio.is-sel .sk-tile", ["border-top-width"]))[0]!)).toBeGreaterThan(0.5); // 1 px, or one device pixel on a scaled screen
     // Footer: Back's box 12 from the left, the primary 20 from the right, both 16 from the bottom.
     const [h, w] = await l.page.evaluate(() => [innerHeight, innerWidth] as const);
     const back = await box(l, ".sk-setup__foot .lm-btn--ghost");
@@ -88,7 +84,6 @@ describe("shell", () => {
   it("test connection waits for the extension's first authenticated call", async () => {
     const l = await start();
     await l.page.getByRole("button", { name: /Get started/ }).click();
-    await l.page.getByRole("button", { name: /Download Kokoro/ }).click();
     await l.page.getByRole("button", { name: /^Continue/ }).click();
     await l.page.getByRole("heading", { name: "Connect your browser" }).waitFor();
     await l.page.getByRole("button", { name: "Test connection" }).click();
@@ -219,7 +214,7 @@ describe("settings", () => {
     for (const n of ["Launch at login", "Start minimized to tray"]) expect(await l.page.getByRole("switch", { name: n }).count()).toBe(1);
   });
 
-  it("Engines page: Kokoro unloaded wakes on play, Chatterbox is listed as not available", async () => {
+  it("Engines page: Kokoro unloaded wakes on play", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("link", { name: "Engines" }).click();
     await l.page.getByRole("heading", { name: "Engines", level: 1 }).waitFor();

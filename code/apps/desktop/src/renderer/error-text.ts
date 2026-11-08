@@ -55,7 +55,6 @@ export const ERROR_TEXT: Table = {
   "update-checksum": () => "The downloaded file did not match its checksum, so it was discarded. Try again; nothing was installed.",
   "update-interrupted": () => "The connection dropped during the download. Try again to fetch the update again; nothing was installed.",
   "update-failed": (a) => a.detail,
-  "clip-rejected": (a) => a.message,
 };
 
 /** The sentence for an error. A code from a newer main process that this table lacks falls back to its name. */

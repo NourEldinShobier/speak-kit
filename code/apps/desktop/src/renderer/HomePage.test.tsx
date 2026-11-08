@@ -9,9 +9,9 @@ vi.hoisted(() => {
 import { Home } from "./HomePage";
 
 describe("Home", () => {
-  it("describes the engines as they are: Kokoro by default, Chatterbox optional", () => {
+  it("describes the engine as it is: Kokoro", () => {
     const html = renderToStaticMarkup(<Home s={appState()} go={() => {}} />);
-    expect(html).toContain("Kokoro-82M is the default voice. Chatterbox, an optional second voice for NVIDIA graphics cards, can be added here.");
+    expect(html).toContain("Kokoro-82M is the voice engine. Manage its download and memory here.");
     expect(html).not.toContain("comes later");
   });
 });

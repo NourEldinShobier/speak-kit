@@ -35,7 +35,7 @@ export function ConnectStep({ s, copied, onCopied, onBack, onSkip, onNext }: Con
   const paired = !!s.pairing.lastSeenMs;
   return (
     <Frame
-      at={3}
+      at={2}
       title="Connect your browser"
       sub="Install the extension, paste the token, then test the connection."
       foot={

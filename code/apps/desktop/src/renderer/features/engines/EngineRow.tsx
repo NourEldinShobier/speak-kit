@@ -4,29 +4,25 @@ import { describeEngine, type EngineAction } from "../../../shared/engines";
 import { ACTION_LABELS, ENGINE_BLURBS } from "./model";
 import "./engines.css";
 
-const VARIANTS: Partial<Record<EngineAction, "primary" | "danger">> = { install: "primary", retry: "primary", remove: "danger" };
+const VARIANTS: Partial<Record<EngineAction, "primary">> = { retry: "primary" };
 const variant = (a: EngineAction) => VARIANTS[a] ?? "secondary";
 
 interface RowProps {
   engine: EngineInfo;
-  active: boolean;
   busy: string | null;
   onAction(a: EngineAction): void;
 }
 
-export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
-  const d = describeEngine(e, active);
+export function EngineRow({ engine: e, busy, onAction }: RowProps) {
+  const d = describeEngine(e);
   return (
     <div className="sk-engine" data-engine={e.id} data-state={e.state}>
       <span className="sk-tile">
-        <Icon name={e.id === "kokoro" ? "cpu" : "sparkles"} size={18} />
+        <Icon name="cpu" size={18} />
       </span>
       <div className="sk-engine__body">
         <div className="sk-engine__head">
-          <b>
-            {e.name}
-            {active && <span className="sk-active"> · In use</span>}
-          </b>
+          <b>{e.name}</b>
           {d.pill.tone !== "green" && ( // the sidebar engine card already shows "Ready"
             <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
               {d.pill.label}
@@ -34,18 +30,7 @@ export function EngineRow({ engine: e, active, busy, onAction }: RowProps) {
           )}
         </div>
         <span>{ENGINE_BLURBS[e.id]}</span>
-        {e.gpu && (
-          <span>
-            Found {e.gpu.name}, {Math.round(e.gpu.vramMb / 1024)} GB
-          </span>
-        )}
         {d.note && <span data-testid={`engine-note-${e.id}`}>{d.note}</span>}
-        {d.details && (
-          <details className="sk-engine__more" data-testid={`engine-details-${e.id}`}>
-            <summary>Details</summary>
-            <code>{d.details}</code>
-          </details>
-        )}
         {d.progress !== null && <ProgressBar thin value={Math.round(d.progress * 100)} label={`${e.name} progress`} />}
         {d.actions.length > 0 && (
           <div className="sk-row-actions">

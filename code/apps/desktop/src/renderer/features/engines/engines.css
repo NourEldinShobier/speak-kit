@@ -24,17 +24,3 @@
 .sk-engines .sk-engine__body {
   min-width: 0;
 }
-.sk-engine__more {
-  color: var(--text-secondary);
-}
-.sk-engine__more summary {
-  cursor: pointer;
-  width: max-content;
-}
-.sk-engine__more code {
-  display: block;
-  margin-block-start: 4px;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-  user-select: text;
-}

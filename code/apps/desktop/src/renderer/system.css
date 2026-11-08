@@ -132,10 +132,6 @@
   border-radius: var(--radius-card);
   background: var(--surface-card);
 }
-.sk-active {
-  color: var(--tag-green);
-  font-weight: 400;
-}
 
 /* The update card inside the title-bar popover: the text takes the full width and the buttons wrap below it. */
 .lm-popover .lm-banner {

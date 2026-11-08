@@ -32,7 +32,7 @@ type NavRow = [id: string, group: PaletteGroup, title: string, icon: IconName, p
 const NAV_ROWS: NavRow[] = [
   ["p-home", "Pages", "Home", "home", "home"],
   ["p-voices", "Pages", "Voices", "microphone", "voices"],
-  ["p-engines", "Pages", "Engines", "cpu", "engines", undefined, "kokoro chatterbox model"],
+  ["p-engines", "Pages", "Engines", "cpu", "engines", undefined, "kokoro model"],
   ["p-browser", "Pages", "Browser", "world", "browser", undefined, "extension pair chrome"],
   ["s-general", "Settings", "Settings: General", "settings", "settings", "general", "launch login tray language"],
   ["s-voice", "Settings", "Settings: Voice and playback", "volume", "settings", "voice", "speed default"],

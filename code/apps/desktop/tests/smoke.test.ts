@@ -24,11 +24,6 @@ describe("desktop app", () => {
 
     await page.getByRole("heading", { name: "Read anything out loud." }).waitFor();
     await page.getByRole("button", { name: /Get started/ }).click();
-    await page.getByRole("heading", { name: "Choose a voice engine" }).waitFor();
-    // Both engines are radios; Kokoro is the choice, and Chatterbox is offered (enabled only when the computer has a suitable NVIDIA card).
-    expect(await page.getByRole("radio", { name: "Kokoro-82M" }).getAttribute("aria-checked")).toBe("true");
-    expect(await page.getByRole("radio", { name: "Chatterbox" }).getAttribute("aria-checked")).toBe("false");
-    await page.getByRole("button", { name: /Download Kokoro/ }).click();
     await page.getByRole("heading", { name: "Kokoro-82M is ready" }).waitFor();
     await page.getByRole("button", { name: /^Continue/ }).click();
 
@@ -143,7 +138,6 @@ describe("desktop app", () => {
   it("download failure shows the paused screen and retry recovers", async () => {
     const { page } = await start({ env: { SPEAKKIT_FAKE_STATE: "error" } });
     await page.getByRole("button", { name: /Get started/ }).click();
-    await page.getByRole("button", { name: /Download Kokoro/ }).click();
     await page.getByRole("heading", { name: "Download paused" }).waitFor();
     expect(await page.getByRole("alert").textContent()).toContain("ECONNRESET");
     await page.getByRole("button", { name: /Retry download/ }).click();

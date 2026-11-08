@@ -1,12 +1,10 @@
-import type { EngineList } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { errorText } from "../../error-text";
 
-export const STEPS = ["Welcome", "Voice engine", "Download", "Connect browser", "Done"] as const;
+export const STEPS = ["Welcome", "Download", "Connect browser", "Done"] as const;
 export const MODEL_MB = 177;
 
-export type WizardStep = 0 | 1 | 2 | 3 | 4;
-export type WizardChoice = "kokoro" | "chatterbox";
+export type WizardStep = 0 | 1 | 2 | 3;
 
 interface WizardState {
   step: WizardStep;
@@ -14,13 +12,11 @@ interface WizardState {
   copied: boolean;
   /** The browser step was skipped. */
   skipped: boolean;
-  /** The engine the person wants. Kokoro is installed either way; Chatterbox installs in the background after setup. */
-  engine: WizardChoice;
 }
 
-export type WizardAction = { type: "go"; step: WizardStep } | { type: "copied" } | { type: "finish-connect"; skipped: boolean } | { type: "choose-engine"; engine: WizardChoice };
+export type WizardAction = { type: "go"; step: WizardStep } | { type: "copied" } | { type: "finish-connect"; skipped: boolean };
 
-export const initWizard = (): WizardState => ({ step: 0, copied: false, skipped: false, engine: "kokoro" });
+export const initWizard = (): WizardState => ({ step: 0, copied: false, skipped: false });
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
@@ -29,35 +25,12 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "copied":
       return { ...state, copied: true };
     case "finish-connect":
-      return { ...state, skipped: action.skipped, step: 4 };
-    case "choose-engine":
-      return { ...state, engine: action.engine };
+      return { ...state, skipped: action.skipped, step: 3 };
     default: {
       const unreachable: never = action;
       return unreachable;
     }
   }
-}
-
-interface ChatterboxOffer {
-  selectable: boolean;
-  /** One sentence under the engine's name: what the choice costs, or the real reason it is not offered. */
-  note: string;
-}
-
-const INSTALLED = new Set(["unloaded", "loading", "ready"]);
-
-/** Whether the engine step can offer Chatterbox, from the server's engine list (`undefined` while it is still loading). */
-export function chatterboxOffer(list: EngineList | null | undefined): ChatterboxOffer {
-  if (list === undefined) return { selectable: false, note: "Checking this computer." };
-  const e = list?.engines.find((x) => x.id === "chatterbox");
-  if (!e) return { selectable: false, note: "This computer cannot run it." };
-  if (e.state === "unavailable" && e.reason === "python-missing") return { selectable: false, note: "Installing it needs Python 3.10 to 3.12 or uv, and neither was found." };
-  if (e.state === "unavailable" && e.gpu) return { selectable: false, note: `${e.gpu.name} has ${Math.round(e.gpu.vramMb / 1024)} GB. Chatterbox needs 4 GB or more.` };
-  if (e.state === "unavailable") return { selectable: false, note: "No NVIDIA graphics card was found. Chatterbox needs one with 4 GB or more." };
-  if (INSTALLED.has(e.state)) return { selectable: true, note: "Already installed on this computer." };
-  const found = e.gpu ? ` Found ${e.gpu.name}, ${Math.round(e.gpu.vramMb / 1024)} GB.` : "";
-  return { selectable: true, note: `Installs in the background after setup. About 2.4 GB.${found}` };
 }
 
 export type DownloadPhase = "failed" | "ready" | "downloading";
