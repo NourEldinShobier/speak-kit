@@ -21,8 +21,6 @@ const SOURCE: Record<ErrorCode, "http" | "frame" | "client"> = {
   "invalid-request": "http",
   forbidden: "http",
   busy: "http",
-  "engine-unavailable": "http",
-  "clip-rejected": "http",
   "not-found": "http",
 };
 
@@ -30,9 +28,6 @@ class BrokenVoices extends FakeEngine {
   override voices(): never {
     throw new Error("disk on fire");
   }
-}
-class Cloner extends FakeEngine {
-  readonly clones = { create: () => Promise.reject(new Error("unused")), list: () => [], delete: () => Promise.resolve(false) } as never;
 }
 
 const json = { "Content-Type": "application/json" };
@@ -56,7 +51,6 @@ const HTTP_CASES: Case[] = [
   ["method-not-allowed", 405, (c) => send(c, "DELETE", "/v1/voices")],
   ["invalid-request", 400, (c) => send(c, "POST", "/v1/speak", { sentences: [], voice: "af_heart", speed: 1 })],
   ["invalid-request", 413, (c) => fetch(`${c.base}/v1/speak`, { method: "POST", headers: { ...c.auth, ...json }, body: "x".repeat(2 * 1024 * 1024 + 1) })],
-  ["engine-unavailable", 409, (c) => send(c, "POST", "/v1/voices/clone", { name: "n", consent: true, audio: "AA==" })],
   [
     "busy",
     409,
@@ -86,13 +80,6 @@ describe("every HTTP error code has a request that produces it", () => {
     expect(await errorOf(r)).toBe(code);
   });
 
-  it("clip-rejected (422)", async () => {
-    ctx = await start({}, undefined, { chatterbox: new Cloner() });
-    const r = await send(ctx, "POST", "/v1/voices/clone", { name: "n", consent: true, audio: Buffer.from("not a wav").toString("base64") });
-    expect(r.status).toBe(422);
-    expect(await errorOf(r)).toBe("clip-rejected");
-  });
-
   it("internal (500) hides the cause", async () => {
     const engine = new BrokenVoices();
     ctx = await start({}, undefined, { engine });
@@ -117,7 +104,7 @@ describe("error frames", () => {
 });
 
 it("every code the server can produce is covered above", () => {
-  const covered = new Set<string>([...HTTP_CASES.map((c) => c[0]), "clip-rejected", "internal", "engine-not-ready", "synthesis-failed"]);
+  const covered = new Set<string>([...HTTP_CASES.map((c) => c[0]), "internal", "engine-not-ready", "synthesis-failed"]);
   const missing = Object.entries(SOURCE).filter(([code, from]) => from !== "client" && !covered.has(code));
   expect(missing).toEqual([]);
 });

@@ -6,9 +6,6 @@ describe("protocol runtime surface", () => {
     expect(Object.keys(protocol).sort()).toEqual([
       "API_VERSION",
       "APP_ID",
-      "CLONE_MAX_MS",
-      "CLONE_MIN_MS",
-      "CLONE_MIN_RATE",
       "DEFAULT_PORT",
       "DEFAULT_SENTENCE_COLOR",
       "DEFAULT_VOICE",
@@ -23,8 +20,6 @@ describe("protocol runtime surface", () => {
       "SETTINGS_KEY",
       "TOKEN_KEY",
       "clock",
-      "clonedVoiceListSchema",
-      "clonedVoiceSchema",
       "compareNames",
       "defaultSettings",
       "encodeFrame",

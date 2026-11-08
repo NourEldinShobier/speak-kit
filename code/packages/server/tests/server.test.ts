@@ -128,8 +128,8 @@ describe("auth, Origin and Host", () => {
 
   it("lists every method the API uses in the preflight answer", async () => {
     ctx = await start();
-    const pre = await raw(ctx, "OPTIONS", "/v1/voices/cb_00000000", { Host: `127.0.0.1:${ctx.server.port}`, Origin: "chrome-extension://abcdefghijklmnop", "Access-Control-Request-Method": "PATCH" });
-    expect(pre.headers["access-control-allow-methods"]).toBe("GET, POST, PATCH, DELETE, OPTIONS");
+    const pre = await raw(ctx, "OPTIONS", "/v1/export/abc", { Host: `127.0.0.1:${ctx.server.port}`, Origin: "chrome-extension://abcdefghijklmnop", "Access-Control-Request-Method": "DELETE" });
+    expect(pre.headers["access-control-allow-methods"]).toBe("GET, POST, DELETE, OPTIONS");
   });
 
   it("pins the allowed extensions when asked: another extension id is refused even with the token", async () => {

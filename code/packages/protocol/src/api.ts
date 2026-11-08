@@ -12,14 +12,7 @@ import type { EngineId } from "./engines";
  *   POST /v1/engine/warm   -> 202, loads the model ahead of the first request (idempotent)
  *   POST /v1/engine/hold   -> body HoldRequest, 204; keeps a ready model loaded for at least `ms` more (0 clears). Sent while paused.
  *   GET  /v1/engines                -> EngineList
- *   POST /v1/engines/select         -> body SelectEngineRequest, 200 EngineList (409 engine-unavailable when it cannot run here)
- *   POST /v1/engines/<id>/install   -> 202 EngineList; progress is the engine's state ("installing", then "downloading")
- *   POST /v1/engines/<id>/cancel    -> 200 EngineList; stops a running install (child processes killed, partial environment deleted); no-op otherwise
- *   DELETE /v1/engines/<id>         -> 200 EngineList; removes an installed optional engine
- *   POST /v1/voices/clone           -> body CloneVoiceRequest, 201 ClonedVoice (422 clip-rejected with `checks`)
- *   GET  /v1/voices/cloned          -> { voices: ClonedVoice[] }
- *   PATCH /v1/voices/<id>           -> body UpdateVoiceRequest, 200 ClonedVoice (cloned voices only; name and style)
- *   DELETE /v1/voices/<id>          -> 204 (cloned voices only)
+ *   POST /v1/engines/<id>/install   -> 202 EngineList; downloads the model when it is missing
  *   POST /v1/export                 -> body ExportRequest, 202 ExportJob; render sentences to one WAV
  *   GET  /v1/export/<id>            -> ExportJob (progress); GET /v1/export/<id>/audio streams the WAV; DELETE /v1/export/<id> cancels and removes it
  *
@@ -28,10 +21,9 @@ import type { EngineId } from "./engines";
  * More than the server's concurrent-stream limit queue FIFO; beyond the queue limit the response is HTTP 429 with code "busy".
  */
 /**
- * `installing`: an optional engine is being set up (Python environment); `downloading`: weights are being fetched.
- * `unavailable`: cannot run on this machine (see EngineInfo.reason); `missing` on an optional engine means installable.
+ * `downloading`: weights are being fetched.
  * `unloaded`: model files are present but nothing is in RAM; the next /v1/speak (or POST /v1/engine/warm) loads it. Not an error. */
-export type EngineState = "missing" | "downloading" | "installing" | "unavailable" | "unloaded" | "loading" | "ready" | "error";
+export type EngineState = "missing" | "downloading" | "unloaded" | "loading" | "ready" | "error";
 
 export interface Health {
   app: "speakkit";
@@ -47,8 +39,6 @@ export interface Voice {
   gender: "female" | "male";
   quality: "A" | "B" | "C" | "D";
   traits?: string;
-  /** Present on voices the user cloned from a reference clip (Chatterbox). */
-  cloned?: true;
 }
 export interface VoiceList {
   voices: Voice[];
@@ -84,10 +74,6 @@ export const ERROR_CODES = [
   "forbidden",
   /** HTTP 429: too many concurrent /v1/speak streams. */
   "busy",
-  /** HTTP 409: the engine cannot run here or is not installed. */
-  "engine-unavailable",
-  /** HTTP 422: the reference clip failed its quality checks, or consent is missing. */
-  "clip-rejected",
   "not-found",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

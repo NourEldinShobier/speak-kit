@@ -1,35 +1,15 @@
-import { request } from "node:http";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import type { ClonedVoice, EngineList, ExportJob, Health, VoiceList } from "@speakkit/protocol";
-import { ChatterboxEngine, FakeEngine, type Hardware } from "@speakkit/engine";
-import { clip } from "../../engine/tests/clip-fixture";
-import { readFrames, speakBody, start, type Ctx } from "./harness";
-
-const sidecar = { command: process.execPath, args: [join(import.meta.dirname, "../../engine/tests/fake-sidecar.mjs")] };
-const GPU = { name: "RTX 4080", vramMb: 12282 };
+import type { EngineList, ExportJob, Health } from "@speakkit/protocol";
+import { readFrames, start, type Ctx } from "./harness";
 
 let ctx: Ctx | undefined;
-const toClose: { close(): Promise<void> }[] = [];
 afterEach(async () => {
   await ctx?.server.close();
   ctx = undefined;
-  await Promise.all(toClose.splice(0).map((e) => e.close()));
 });
-
-function chatterbox(hw: Hardware, installed = true, installer?: () => Promise<void>) {
-  const root = mkdtempSync(join(tmpdir(), "cbs-"));
-  if (installed) {
-    mkdirSync(join(root, "chatterbox"));
-    writeFileSync(join(root, "chatterbox", "installed"), "x");
-  }
-  const e = new ChatterboxEngine({ dir: join(root, "chatterbox"), voicesDir: join(root, "voices"), sidecar, idleUnloadMs: 0, ...(installer && { installer }) }, hw);
-  toClose.push(e);
-  return e;
-}
-const startWith = (cb: ChatterboxEngine, opts: ConstructorParameters<typeof FakeEngine>[0] = {}) => start(opts, undefined, { chatterbox: cb });
 
 const call = (c: Ctx, method: string, path: string, body?: unknown) =>
   fetch(`${c.base}${path}`, {
@@ -41,217 +21,34 @@ const list = async (r: Response) => (await r.json()) as EngineList;
 const health = async (c: Ctx) => ((await (await fetch(`${c.base}/v1/health`)).json()) as Health).engine;
 
 describe("GET /v1/engines", () => {
-  it("lists Kokoro alone when there is no second engine", async () => {
+  it("lists Kokoro alone", async () => {
     ctx = await start();
-    expect(await list(await call(ctx, "GET", "/v1/engines"))).toEqual({
-      active: "kokoro",
-      engines: [{ id: "kokoro", name: "Kokoro", state: "ready", optional: false, cloning: false }],
-    });
-  });
-
-  it("reports why Chatterbox is unavailable, and refuses to select or install it", async () => {
-    ctx = await startWith(chatterbox({ python: ["python"] }, false));
-    const l = await list(await call(ctx, "GET", "/v1/engines"));
-    expect(l.engines[1]).toMatchObject({ id: "chatterbox", state: "unavailable", reason: "no-gpu", optional: true, cloning: true });
-    for (const [method, path, body] of [
-      ["POST", "/v1/engines/select", { id: "chatterbox" }],
-      ["POST", "/v1/engines/chatterbox/install"],
-    ] as const) {
-      const r = await call(ctx, method, path, body);
-      expect(r.status).toBe(409);
-      expect(((await r.json()) as { error: { code: string } }).error.code).toBe("engine-unavailable");
-    }
+    expect(await list(await call(ctx, "GET", "/v1/engines"))).toEqual({ active: "kokoro", engines: [{ id: "kokoro", name: "Kokoro", state: "ready" }] });
   });
 
   it("requires the token", async () => {
     ctx = await start();
     expect((await fetch(`${ctx.base}/v1/engines`)).status).toBe(401);
   });
-});
 
-describe("install, select, remove", () => {
-  it("installs with progress, selects (persisted), speaks with Chatterbox and unloads Kokoro", async () => {
-    let finish!: () => void;
-    const cb = chatterbox({ gpu: GPU, python: ["python"] }, false, () => new Promise<void>((r) => (finish = r)));
-    ctx = await startWith(cb, { state: "ready" });
-    const accepted = await call(ctx, "POST", "/v1/engines/chatterbox/install");
-    expect(accepted.status).toBe(202);
-    expect((await list(accepted)).engines[1]!.state).toBe("installing");
-    expect((await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" })).status).toBe(409); // still installing
-    await vi.waitFor(() => expect(finish).toBeDefined()); // the installer starts after the disk-space check
-    finish();
-    while ((await list(await call(ctx, "GET", "/v1/engines"))).engines[1]!.state === "installing") await new Promise((r) => setTimeout(r, 10));
-
-    const sel = await list(await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" }));
-    expect(sel.active).toBe("chatterbox");
-    expect(ctx.engine.status().state).toBe("unloaded"); // only one heavy engine loaded
-    expect((await health(ctx)).id).toBe("chatterbox");
-    const voices = (await (await call(ctx, "GET", "/v1/voices")).json()) as VoiceList;
-    expect(voices).toMatchObject({ default: "chatterbox", voices: [{ id: "chatterbox" }] });
-
-    const r = await fetch(`${ctx.base}/v1/speak`, {
-      method: "POST",
-      headers: { ...ctx.auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ sentences: ["hello"], voice: "chatterbox", speed: 1 }),
-    });
-    const frames = await readFrames(r);
-    expect(frames.map((f) => f.frame.header.type)).toEqual(["audio", "done"]);
-    expect(cb.status().state).toBe("ready");
-    expect(ctx.engine.calls).toEqual([]);
-
-    const back = await list(await call(ctx, "POST", "/v1/engines/select", { id: "kokoro" }));
-    expect(back.active).toBe("kokoro");
-    expect(cb.status().state).toBe("unloaded"); // Chatterbox unloaded when Kokoro takes over
-  });
-
-  it("cancels running streams when the engine is switched", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }), { latencyMs: 200 });
-    const stream = fetch(`${ctx.base}/v1/speak`, { method: "POST", headers: { ...ctx.auth, "Content-Type": "application/json" }, body: speakBody(["a", "b", "c", "d"]) }).then(readFrames);
-    await new Promise((r) => setTimeout(r, 80));
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    expect((await stream).map((f) => f.frame.header.type)).not.toContain("done");
-  });
-
-  it("removes Chatterbox, falling back to Kokoro; Kokoro cannot be removed", async () => {
-    const cb = chatterbox({ gpu: GPU, python: ["python"] });
-    ctx = await startWith(cb);
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    const l = await list(await call(ctx, "DELETE", "/v1/engines/chatterbox"));
-    expect(l.active).toBe("kokoro");
-    expect(l.engines[1]).toMatchObject({ state: "missing", reason: "not-installed" });
-    const k = await call(ctx, "DELETE", "/v1/engines/kokoro");
-    expect(k.status).toBe(400);
-  });
-});
-
-describe("persisted selection", () => {
-  it("is restored by the next server on the same data directory", async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "persist-"));
-    const make = () => start({}, undefined, { chatterbox: chatterbox({ gpu: GPU }), dataDir });
-    ctx = await make();
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    await ctx.server.close();
-    ctx = await make();
-    expect((await list(await call(ctx, "GET", "/v1/engines"))).active).toBe("chatterbox");
-    await ctx.server.close();
-    ctx = await start({}, undefined, { chatterbox: chatterbox({}, false), dataDir }); // GPU gone
-    expect((await list(await call(ctx, "GET", "/v1/engines"))).active).toBe("kokoro");
-  });
-});
-
-describe("voice cloning", () => {
-  const body = (wav: Buffer, extra: object = {}) => ({ name: "Maya", consent: true, audio: wav.toString("base64"), ...extra });
-
-  it("clones a good clip, lists it as a voice, speaks with it and deletes it", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const r = await call(ctx, "POST", "/v1/voices/clone", body(clip(8)));
-    expect(r.status).toBe(201);
-    const voice = (await r.json()) as ClonedVoice;
-    expect(voice).toMatchObject({ name: "Maya", durationMs: 8000 });
-    expect(voice.id).toMatch(/^cb_[0-9a-f]{8}$/);
-    expect(voice.checks.every((c) => c.ok)).toBe(true);
-    expect(((await (await call(ctx, "GET", "/v1/voices/cloned")).json()) as { voices: ClonedVoice[] }).voices.map((v) => v.id)).toEqual([voice.id]);
-
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    const voices = (await (await call(ctx, "GET", "/v1/voices")).json()) as VoiceList;
-    expect(voices.voices.map((v) => v.id)).toEqual(["chatterbox", voice.id]);
-    expect(voices.voices[1]).toMatchObject({ cloned: true });
-    const s = await fetch(`${ctx.base}/v1/speak`, {
-      method: "POST",
-      headers: { ...ctx.auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }),
-    });
-    expect((await readFrames(s)).map((f) => f.frame.header.type)).toEqual(["audio", "done"]);
-
-    expect((await call(ctx, "DELETE", `/v1/voices/${voice.id}`)).status).toBe(204);
-    expect((await call(ctx, "DELETE", `/v1/voices/${voice.id}`)).status).toBe(404);
-  });
-
-  it("renames a cloned voice, stores its style and speaks with it", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const voice = (await (await call(ctx, "POST", "/v1/voices/clone", body(clip(8)))).json()) as ClonedVoice;
-    const r = await call(ctx, "PATCH", `/v1/voices/${voice.id}`, { name: "Maya R", exaggeration: 0.7, pace: 0.4 });
-    expect(r.status).toBe(200);
-    expect(await r.json()).toMatchObject({ id: voice.id, name: "Maya R", exaggeration: 0.7, pace: 0.4 });
-    expect(((await (await call(ctx, "GET", "/v1/voices/cloned")).json()) as { voices: ClonedVoice[] }).voices[0]).toMatchObject({ name: "Maya R", exaggeration: 0.7, pace: 0.4 });
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    const s = await fetch(`${ctx.base}/v1/speak`, {
-      method: "POST",
-      headers: { ...ctx.auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ sentences: ["hi"], voice: voice.id, speed: 1 }),
-    });
-    const [first] = await readFrames(s);
-    expect(first!.frame.pcm![0]).toBe(2000 + 700 + 4000); // fake sidecar: reference 2000, 1000 x exaggeration, 10 000 x pace
-  });
-
-  it("refuses an empty, out-of-range or unknown update", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const voice = (await (await call(ctx, "POST", "/v1/voices/clone", body(clip(8)))).json()) as ClonedVoice;
-    const patch = async (id: string, b: object) => {
-      const r = await call(ctx!, "PATCH", `/v1/voices/${id}`, b);
-      return [r.status, ((await r.json()) as { error: { message: string } }).error.message];
-    };
-    expect(await patch(voice.id, {})).toEqual([400, "body: give a name, an exaggeration or a pace"]);
-    expect((await patch(voice.id, { pace: 1.5 }))[0]).toBe(400);
-    expect(await patch("cb_00000000", { name: "x" })).toEqual([404, "no such cloned voice"]);
-  });
-
-  it("changes nothing after the client saw 504: a rename body that arrives late is not applied", async () => {
-    const cb = chatterbox({ gpu: GPU });
-    const voice = await cb.clones.create({ name: "Voice 1", wav: clip(8), durationMs: 8000, checks: [] });
-    ctx = await start({}, undefined, { chatterbox: cb, controlDeadlineMs: 80 });
-    const body = JSON.stringify({ name: "Late name" });
-    const req = request({
-      host: "127.0.0.1",
-      port: ctx.server.port,
-      method: "PATCH",
-      path: `/v1/voices/${voice.id}`,
-      headers: { ...ctx.auth, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    });
-    req.on("error", () => {}); // the server may drop the connection once it has answered
-    const status = new Promise<number>((resolve) => req.on("response", (r) => (r.resume(), resolve(r.statusCode!))));
-    req.write(body.slice(0, 5));
-    expect(await status).toBe(504);
-    req.end(body.slice(5));
-    await new Promise((r) => setTimeout(r, 200));
-    expect(cb.clones.list().map((v) => v.name)).toEqual(["Voice 1"]);
-  });
-
-  it.each([
-    ["too short", clip(3), "Clip is 3.0 s; at least 5.0 s is needed.", "length"],
-    ["too long", clip(31), "Clip is 31.0 s; at most 30.0 s is allowed.", "length"],
-    ["low sample rate", clip(8, 8000), "Sample rate is 8000 Hz; at least 16000 Hz is needed.", "sample-rate"],
-  ])("rejects a clip that is %s with the failing check", async (_, wav, message, id) => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const r = await call(ctx, "POST", "/v1/voices/clone", body(wav));
-    expect(r.status).toBe(422);
-    const e = (await r.json()) as { error: { code: string; message: string; checks: { id: string; ok: boolean }[] } };
-    expect(e.error).toMatchObject({ code: "clip-rejected", message });
-    expect(e.error.checks.filter((c) => !c.ok).map((c) => c.id)).toEqual([id]);
-  });
-
-  it("rejects silence, noise and files that are not WAV", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const fail = async (b: object) => ((await (await call(ctx!, "POST", "/v1/voices/clone", b)).json()) as { error: { message: string; checks?: { id: string; ok: boolean }[] } }).error;
-    expect((await fail(body(clip(8, 24000, { amp: 0, floor: 0 })))).checks!.filter((c) => !c.ok).map((c) => c.id)).toEqual(["loudness", "silence", "noise"]);
-    expect((await fail(body(clip(8, 24000, { floor: 0.12, speechShare: 1 })))).checks!.find((c) => c.id === "noise")!.ok).toBe(false);
-    expect((await fail(body(Buffer.from("ID3".padEnd(100, "x"))))).message).toBe("not a WAV file");
-  });
-
-  it("needs consent, a name and an installed engine", async () => {
-    ctx = await startWith(chatterbox({ gpu: GPU }));
-    const bad = async (b: object) => {
-      const r = await call(ctx!, "POST", "/v1/voices/clone", b);
-      return [r.status, ((await r.json()) as { error: { message: string } }).error.message];
-    };
-    expect(await bad(body(clip(8), { consent: false }))).toEqual([400, "consent: consent must be true: the speaker has to agree to being cloned"]);
-    expect((await bad(body(clip(8), { name: "  " })))[0]).toBe(400);
-    await ctx.server.close();
-    ctx = await startWith(chatterbox({ gpu: GPU }, false));
-    expect(await bad(body(clip(8)))).toEqual([409, "Install Chatterbox to clone voices"]);
-    await ctx.server.close();
+  it("has no routes for choosing, cancelling or removing an engine, or for cloning a voice", async () => {
     ctx = await start();
-    expect((await bad(body(clip(8))))[0]).toBe(409);
+    for (const [method, path] of [
+      ["POST", "/v1/engines/select"],
+      ["POST", "/v1/engines/kokoro/cancel"],
+      ["DELETE", "/v1/engines/kokoro"],
+      ["POST", "/v1/voices/clone"],
+      ["GET", "/v1/voices/cloned"],
+    ] as const)
+      expect((await call(ctx, method, path)).status, `${method} ${path}`).toBe(404);
+  });
+});
+
+describe("POST /v1/engines/kokoro/install", () => {
+  it("starts the model download when the model is missing", async () => {
+    ctx = await start({ state: "missing" });
+    expect((await list(await call(ctx, "POST", "/v1/engines/kokoro/install"))).engines[0]!.state).toBe("missing");
+    await vi.waitFor(async () => expect((await health(ctx!)).state).toBe("ready"));
   });
 });
 
@@ -333,36 +130,36 @@ describe("text normalization before synthesis", () => {
   });
 });
 
-describe("engine.json that cannot be read", () => {
-  const dataDir = (content?: string) => {
-    const dir = mkdtempSync(join(tmpdir(), "speakkit-engine-json-"));
-    if (content !== undefined) writeFileSync(join(dir, "engine.json"), content);
-    return dir;
-  };
+describe("leftovers of removed engines", () => {
+  const dataDir = () => mkdtempSync(join(tmpdir(), "speakkit-leftovers-"));
 
-  it.each([
-    ["is not JSON", "{not json"],
-    ["has the wrong shape", '{"active":"piper"}'],
-    ["is empty", ""],
-  ])("a file that %s is moved to engine.json.bad and Kokoro stays active", async (_, content) => {
-    const dir = dataDir(content);
-    ctx = await start({}, undefined, { dataDir: dir });
-    expect((await list(await call(ctx, "GET", "/v1/engines"))).active).toBe("kokoro");
-    expect(readFileSync(join(dir, "engine.json.bad"), "utf8")).toBe(content);
-    expect(existsSync(join(dir, "engine.json"))).toBe(false);
+  it("an engine.json that selects Chatterbox, or is not valid, loads as Kokoro without an error and is deleted", async () => {
+    for (const content of ['{"active":"chatterbox"}', "{not json", ""]) {
+      const dir = dataDir();
+      writeFileSync(join(dir, "engine.json"), content);
+      ctx = await start({}, undefined, { dataDir: dir });
+      expect((await list(await call(ctx, "GET", "/v1/engines"))).active).toBe("kokoro");
+      expect((await health(ctx)).id).toBe("kokoro");
+      await vi.waitFor(() => expect(existsSync(join(dir, "engine.json"))).toBe(false));
+      expect(existsSync(join(dir, "engine.json.bad"))).toBe(false);
+      await ctx.server.close();
+      ctx = undefined;
+    }
   });
 
-  it("a missing file leaves no .bad file", async () => {
+  it("the engine folder and the cloned voices of earlier versions are deleted at start, the rest of the data folder stays", async () => {
     const dir = dataDir();
+    for (const [folder, file] of [
+      ["engines/chatterbox", "installed"],
+      ["chatterbox", "installed"],
+      ["voices", "cb_0a1b2c3d.wav"],
+      ["library", "library.json"],
+    ] as const) {
+      mkdirSync(join(dir, folder), { recursive: true });
+      writeFileSync(join(dir, folder, file), "x");
+    }
     ctx = await start({}, undefined, { dataDir: dir });
-    expect(existsSync(join(dir, "engine.json.bad"))).toBe(false);
-  });
-
-  it("selecting an engine afterwards writes a fresh engine.json", async () => {
-    const dir = dataDir("{not json");
-    ctx = await start({}, undefined, { dataDir: dir, chatterbox: chatterbox({ gpu: GPU }) });
-    await call(ctx, "POST", "/v1/engines/select", { id: "chatterbox" });
-    expect(JSON.parse(readFileSync(join(dir, "engine.json"), "utf8"))).toEqual({ active: "chatterbox" });
-    expect(readFileSync(join(dir, "engine.json.bad"), "utf8")).toBe("{not json");
+    await vi.waitFor(() => expect(["engines/chatterbox", "chatterbox", "voices"].map((p) => existsSync(join(dir, p)))).toEqual([false, false, false]));
+    expect(existsSync(join(dir, "library", "library.json"))).toBe(true);
   });
 });

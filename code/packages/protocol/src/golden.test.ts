@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { CloneVoiceRequest, ExportRequest, HoldRequest, SelectEngineRequest, SpeakRequest, UpdateVoiceRequest } from "./index";
+import type { ExportRequest, HoldRequest, SpeakRequest } from "./index";
 import { FrameDecoder, encodeFrame, type FrameHeader } from "./frames";
 
 const fromHex = (h: string) => Uint8Array.from(h.match(/../g) ?? [], (b) => parseInt(b, 16));
@@ -43,17 +43,11 @@ describe("golden frames", () => {
 describe("golden request bodies", () => {
   const speak: SpeakRequest = { sentences: ["Hello there.", "Second one."], voice: "af_heart", speed: 1.2 };
   const hold: HoldRequest = { ms: 600000 };
-  const select: SelectEngineRequest = { id: "chatterbox" };
-  const clone: CloneVoiceRequest = { name: "Mine", consent: true, gender: "female", audio: "UklGRg==" };
-  const update: UpdateVoiceRequest = { name: "Maya", exaggeration: 0.7, pace: 0.4 };
   const exportReq: ExportRequest = { sentences: ["One."], voice: "af_heart", speed: 1, gapMs: 250 };
 
   it.each([
     ["POST /v1/speak", speak, '{"sentences":["Hello there.","Second one."],"voice":"af_heart","speed":1.2}'],
     ["POST /v1/engine/hold", hold, '{"ms":600000}'],
-    ["POST /v1/engines/select", select, '{"id":"chatterbox"}'],
-    ["POST /v1/voices/clone", clone, '{"name":"Mine","consent":true,"gender":"female","audio":"UklGRg=="}'],
-    ["PATCH /v1/voices/<id>", update, '{"name":"Maya","exaggeration":0.7,"pace":0.4}'],
     ["POST /v1/export", exportReq, '{"sentences":["One."],"voice":"af_heart","speed":1,"gapMs":250}'],
   ])("%s", (_route, body, json) => {
     expect(JSON.stringify(body)).toBe(json);

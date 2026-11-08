@@ -57,9 +57,6 @@ const EnvSchema = v.partial(
     ),
     SPEAKKIT_LOAD_AT_START: envBool,
     SPEAKKIT_ENGINE: v.picklist(["kokoro", "fake"]),
-    SPEAKKIT_CHATTERBOX: v.picklist(["auto", "off"]),
-    /** Path of chatterbox_sidecar.py when the package layout does not keep it next to the engine (packed app). */
-    SPEAKKIT_CHATTERBOX_SCRIPT: v.string(),
     SPEAKKIT_DTYPE: v.picklist(["fp32", "fp16", "q8", "uint8", "q4", "q4f16"]),
     SPEAKKIT_DEVICE: v.picklist(["cpu", "dml"]),
     SPEAKKIT_ISOLATION: v.picklist(["process", "thread"]),
@@ -150,21 +147,6 @@ function exportSchema(voices: Set<string>) {
   });
 }
 
-const engineSchema = v.object({ id: v.picklist(["kokoro", "chatterbox"]) });
-export const MAX_CLIP_BODY = 40 * 1024 * 1024;
-const cloneSchema = v.object({
-  name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
-  consent: v.literal(true, "consent must be true: the speaker has to agree to being cloned"),
-  audio: v.pipe(v.string(), v.minLength(1)),
-  gender: v.optional(v.picklist(["female", "male"])),
-});
-
-const unit = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(1));
-const updateVoiceSchema = v.pipe(
-  v.object({ name: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), exaggeration: v.optional(unit), pace: v.optional(unit) }),
-  v.check((b) => Object.keys(b).length > 0, "give a name, an exaggeration or a pace"),
-);
-
 /** Bodies of the newer endpoints: the message names the failing field. */
 function parseNamed<S extends v.GenericSchema>(schema: S, body: unknown): v.InferOutput<S> {
   const r = v.safeParse(schema, body, { abortEarly: true });
@@ -172,9 +154,6 @@ function parseNamed<S extends v.GenericSchema>(schema: S, body: unknown): v.Infe
   const i = r.issues[0]!;
   throw new RequestError(`${v.getDotPath(i) ?? "body"}: ${i.message}`);
 }
-export const parseEngineId = (body: unknown) => parseNamed(engineSchema, body).id;
-export const parseClone = (body: unknown) => parseNamed(cloneSchema, body);
-export const parseUpdateVoice = (body: unknown) => parseNamed(updateVoiceSchema, body);
 export const parseExport = (voices: Set<string>, body: unknown) => parseNamed(exportSchema(voices), body);
 
 const REPLACE_ID = /^[\w.:-]{1,64}$/;

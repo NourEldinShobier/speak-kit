@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { clonedVoiceSchema, engineListSchema, errorBodySchema, parseHealth, parseVoiceList } from "./schemas";
+import { engineListSchema, errorBodySchema, parseHealth, parseVoiceList } from "./schemas";
 import * as v from "valibot";
 
-const engine = { id: "chatterbox", state: "installing", progress: 0.4 };
+const engine = { id: "kokoro", state: "downloading", progress: 0.4 };
 
 describe("server response schemas", () => {
-  it("accepts a health answer while an optional engine installs", () => {
+  it("accepts a health answer while the model downloads", () => {
     expect(parseHealth({ app: "speakkit", version: "1.0.0", apiVersion: 1, engine })?.engine).toEqual(engine);
   });
 
@@ -18,25 +18,20 @@ describe("server response schemas", () => {
     expect(parseHealth({ app: "other", version: "1", apiVersion: 1, engine })).toBeUndefined();
   });
 
-  it("keeps the cloned flag of a voice", () => {
-    const v = { id: "cb_0a1b2c3d", name: "Mine", lang: "en-US", gender: "female", quality: "B", cloned: true };
-    expect(parseVoiceList({ voices: [v], default: v.id })?.voices[0]).toEqual(v);
-  });
-
-  it.each(["no-gpu", "python-missing", "not-installed", "out-of-memory", "disk-full"])("accepts the engine reason %s", (reason) => {
-    const list = { active: "kokoro", engines: [{ id: "chatterbox", name: "Chatterbox", state: "missing", reason, optional: true, cloning: true }] };
+  it("accepts the engine list", () => {
+    const list = { active: "kokoro", engines: [{ id: "kokoro", name: "Kokoro", state: "downloading", progress: 0.4 }] };
     expect(v.parse(engineListSchema, list)).toEqual(list);
   });
 
-  it("rejects an unknown engine reason", () => {
-    const list = { active: "kokoro", engines: [{ id: "chatterbox", name: "Chatterbox", state: "missing", reason: "gremlins", optional: true, cloning: true }] };
+  it("rejects an engine id that does not exist", () => {
+    const list = { active: "kokoro", engines: [{ id: "gremlin", name: "Gremlin", state: "ready" }] };
     expect(v.safeParse(engineListSchema, list).success).toBe(false);
   });
 
-  it("keeps the style of a cloned voice and the checks of a rejected clip", () => {
-    const voice = { id: "cb_0a1b2c3d", name: "Maya", durationMs: 8000, createdAt: 5, checks: [], exaggeration: 0.7, pace: 0.4 };
-    expect(v.parse(clonedVoiceSchema, voice)).toEqual(voice);
-    const body = { error: { code: "clip-rejected", message: "Clip is 3.0 s; at least 5.0 s is needed.", checks: [{ id: "length", ok: false, message: "Clip is 3.0 s; at least 5.0 s is needed." }] } };
+  it("parses a voice list and an error body", () => {
+    const voice = { id: "af_heart", name: "Heart", lang: "en-US", gender: "female", quality: "A" };
+    expect(parseVoiceList({ voices: [voice], default: voice.id })?.voices[0]).toEqual(voice);
+    const body = { error: { code: "invalid-request", message: "sentences: required" } };
     expect(v.parse(errorBodySchema, body)).toEqual(body);
   });
 });

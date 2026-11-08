@@ -1,9 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ErrorCode } from "@speakkit/protocol";
-import { EngineUnavailableError } from "@speakkit/engine";
 import { RequestError } from "./config";
-import { UnknownEngineError } from "./engines";
 import { ExportFullError } from "./export";
 
 const MAX_BODY = 2 * 1024 * 1024;
@@ -11,8 +9,6 @@ const MAX_BODY = 2 * 1024 * 1024;
 export class HttpError extends Error {
   status: number;
   code: ErrorCode | "method-not-allowed" | "internal";
-  /** Extra fields of the error body (clip checks). */
-  extra?: object | undefined;
   /** Response headers to send with the error (Allow on a 405, Retry-After on a 429). */
   headers?: Record<string, string> | undefined;
   constructor(status: number, code: HttpError["code"], message: string) {
@@ -21,16 +17,14 @@ export class HttpError extends Error {
     this.code = code;
   }
 
-  /** Adds the extra body fields and response headers. */
-  with(more: { extra?: object; headers?: Record<string, string> }): this {
+  /** Adds response headers. */
+  with(more: { headers?: Record<string, string> }): this {
     return Object.assign(this, more);
   }
 }
 
 export function toHttp(e: unknown): HttpError {
   if (e instanceof HttpError) return e;
-  if (e instanceof EngineUnavailableError) return new HttpError(409, "engine-unavailable", e.message);
-  if (e instanceof UnknownEngineError) return new HttpError(404, "not-found", e.message);
   if (e instanceof ExportFullError) return new HttpError(429, "busy", e.message);
   return new HttpError(500, "internal", "internal error");
 }
@@ -131,7 +125,7 @@ export function guardRequest(req: IncomingMessage, res: ServerResponse, o: Guard
 export function preflight(res: ServerResponse, origin: string | undefined): void {
   if (!origin) throw new HttpError(403, "forbidden", "preflight needs an extension origin");
   res.writeHead(204, {
-    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-SpeakKit-Replace",
     "Access-Control-Max-Age": "600",
   });

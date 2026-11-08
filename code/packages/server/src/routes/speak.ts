@@ -6,7 +6,7 @@ import { HttpError, readBody, validated } from "../http";
 import { render } from "../render";
 import type { Route, Services } from "../router";
 import type { Stream, StreamQueue } from "../stream-queue";
-import { voiceIds } from "./voices";
+import { voiceIds } from "./voice-ids";
 
 type Body = ReturnType<typeof parseSpeak>;
 type Replace = ReturnType<typeof parseReplace>;

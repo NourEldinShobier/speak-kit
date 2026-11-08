@@ -7,6 +7,7 @@ import type { TtsEngine } from "@speakkit/engine";
 import { DEFAULT_CONTROL_DEADLINE_MS, DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, DEFAULT_STREAM_IDLE_MS, parseEnv, parseOptions } from "./config";
 import { EngineRegistry } from "./engines";
 import { ExportManager } from "./export";
+import { removeLeftovers } from "./leftovers";
 import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDeadline, type GuardOptions } from "./http";
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
@@ -14,14 +15,11 @@ import { engineRoutes } from "./routes/engines";
 import { exportRoutes } from "./routes/export";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
-import { voiceRoutes } from "./routes/voices";
-import { REPLACED, StreamQueue } from "./stream-queue";
+import { StreamQueue } from "./stream-queue";
 
 export interface ServerOptions {
-  /** The default engine (Kokoro, or the fake engine in tests). */
+  /** The engine (Kokoro, or the fake engine in tests). */
   engine: TtsEngine;
-  /** Optional second engine; only one of the two is ever loaded. See ChatterboxEngine. */
-  chatterbox?: TtsEngine;
   dataDir: string;
   /** 0 picks a free port (tests). Default 47615. */
   port?: number;
@@ -78,7 +76,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...voiceRoutes, ...exportRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -87,10 +85,7 @@ type Env = ReturnType<typeof parseEnv>;
 function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Services {
   const queue = new StreamQueue(plain.maxStreams ?? env.SPEAKKIT_MAX_STREAMS ?? DEFAULT_MAX_STREAMS, plain.maxQueue ?? env.SPEAKKIT_MAX_QUEUE ?? DEFAULT_MAX_QUEUE);
   const exporter = new ExportManager(join(opts.dataDir, "exports"), { acquireSlot: (ac) => queue.slot(ac), render });
-  const engines = new EngineRegistry({ kokoro: opts.engine, ...(opts.chatterbox && { chatterbox: opts.chatterbox }) }, opts.dataDir, () => {
-    queue.abortAll(REPLACED);
-    exporter.abortAll();
-  });
+  const engines = new EngineRegistry(opts.engine);
   const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
   const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
@@ -183,6 +178,7 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
     setOnBattery: (b) => engines.all().forEach((e) => e.setOnBattery?.(b)),
     listen: async () => {
       boundPort = await listenOn(server, { port: boundPort, host }, onError);
+      void removeLeftovers(dataDir); // multi-GB folders: not awaited, and a failure is not the server's
       if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
     },
     close: async () => {

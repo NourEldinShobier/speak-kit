@@ -23,7 +23,7 @@ export interface Exchange {
 }
 
 export interface Route {
-  method: "GET" | "POST" | "PATCH" | "DELETE";
+  method: "GET" | "POST" | "DELETE";
   path: string | RegExp;
   /** Everything but /v1/health needs the bearer token. Default true. */
   auth?: boolean;

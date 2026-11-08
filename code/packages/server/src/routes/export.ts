@@ -1,7 +1,7 @@
 import { parseExport } from "../config";
 import { HttpError, json, noContent, readBody, validated } from "../http";
 import type { Route } from "../router";
-import { voiceIds } from "./voices";
+import { voiceIds } from "./voice-ids";
 
 const ID = "([0-9a-f]{16})";
 

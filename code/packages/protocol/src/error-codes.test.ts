@@ -14,8 +14,6 @@ describe("ERROR_CODES", () => {
       "invalid-request",
       "forbidden",
       "busy",
-      "engine-unavailable",
-      "clip-rejected",
       "not-found",
     ]);
     expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
