@@ -52,6 +52,14 @@ function afterSave(s: CardState, result: VoiceChatSaveResult): CardState {
   return { ...s, busy: null, status, notice: { tone: "error", text: SAVE_TEXT[result.code] } };
 }
 
+function afterTest(s: CardState, result: VoiceChatTestResult): CardState {
+  return { ...s, busy: null, notice: result.ok ? { tone: "ok", text: "OpenAI accepted this key" } : { tone: "error", text: TEST_TEXT[result.code] } };
+}
+
+function afterRemove(s: CardState, status: VoiceChatKeyStatus): CardState {
+  return { ...s, busy: null, status, draft: "", reveal: false, notice: { tone: "info", text: "Key removed" } };
+}
+
 export function cardReducer(s: CardState, a: CardAction): CardState {
   switch (a.type) {
     case "loaded":
@@ -67,11 +75,9 @@ export function cardReducer(s: CardState, a: CardAction): CardState {
     case "saved":
       return s.busy === "save" ? afterSave(s, a.result) : s;
     case "tested":
-      if (s.busy !== "test") return s;
-      return { ...s, busy: null, notice: a.result.ok ? { tone: "ok", text: "OpenAI accepted this key" } : { tone: "error", text: TEST_TEXT[a.result.code] } };
+      return s.busy === "test" ? afterTest(s, a.result) : s;
     case "removed":
-      if (s.busy !== "remove") return s;
-      return { ...s, busy: null, status: a.status, draft: "", reveal: false, notice: { tone: "info", text: "Key removed" } };
+      return s.busy === "remove" ? afterRemove(s, a.status) : s;
     case "failed":
       return { ...s, busy: null, notice: { tone: "error", text: "Speak Kit could not do that. Try again." } };
     default: {
