@@ -96,7 +96,7 @@
 }
 /* Error and notice pills hug their content: 44 high, 14 left, 13 right, gap 12. */
 .sk-vp.sk-vp--notice {
-  width: auto;
+  width: fit-content;
   max-width: calc(100vw - 24px);
   padding: 6px 13px 6px 14px;
   gap: 12px;

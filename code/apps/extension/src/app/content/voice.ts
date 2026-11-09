@@ -1,7 +1,6 @@
 import { VOICE_PORT, type ContentToBg, type VoiceDown, type VoicePage, type VoiceProblem, type VoiceUp, type VoiceView } from "@speakkit/protocol";
 import { VOICE_CSS, VoicePill, askConsent, type PillAction } from "../../features/voicechat";
 import type { ExtraToBg } from "../../shared/internal";
-import { LINKS } from "../../shared/links";
 import { ShadowShell } from "./shell";
 import shellCss from "./shell.css?inline";
 
@@ -15,6 +14,8 @@ export interface VoiceDeps {
   openReader(): void;
 }
 
+/** Where a user adds credit to an OpenAI account; opened in their browser. */
+const BILLING_URL = "https://platform.openai.com/settings/organization/billing/overview";
 const CONSENT_KEY = "speakkit.voiceConsent";
 const HINT = "Just talk. Click the mic to mute.";
 const HINT_MS = 5000;
@@ -188,7 +189,7 @@ export class Voice {
       this.dismiss();
       return void this.start();
     }
-    if (a === "manage-plan") window.open(LINKS.billing, "_blank", "noopener");
+    if (a === "manage-plan") window.open(BILLING_URL, "_blank", "noopener");
     else if (a === "allow-mic") post({ t: "open-options", section: "voicechat" });
     else if (a === "settings") post({ t: "open-options" });
     else if (a === "reader") this.d.openReader();

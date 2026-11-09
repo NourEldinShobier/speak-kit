@@ -25,6 +25,8 @@ describe("mintSession", () => {
     expect(await mintSession(deps(json(409, { code: "no-key" })))).toEqual({ ok: false, problem: "no-key" });
     expect(await mintSession(deps(json(402, { code: "no-credit" })))).toEqual({ ok: false, problem: "no-credit" });
     expect(await mintSession(deps(json(502, { code: "offline" })))).toEqual({ ok: false, problem: "offline" });
+    // a 401 with a voice chat code is the OpenAI key being rejected, not the pairing token
+    expect(await mintSession(deps(json(401, { code: "key-rejected" })))).toEqual({ ok: false, problem: "key-rejected" });
   });
 
   it("reports an app that is down, a rejected token, an unpaired extension and a body it cannot read", async () => {
