@@ -50,6 +50,13 @@ async function connected(page: Page) {
   await phase(page, "idle");
 }
 const closed = (ext: Ext) => expect.poll(() => ext.offscreenCount()).toBe(0);
+/** Stops the extension's service worker the way Chrome does when it is idle; it starts again on the next event. */
+async function killWorker(ext: Ext, page: Page) {
+  const cdp = await ext.ctx.newCDPSession(page);
+  await cdp.send("ServiceWorker.enable");
+  await cdp.send("ServiceWorker.stopAllWorkers");
+  await cdp.detach();
+}
 const lastUpdate = async (ai: FakeOpenAi) => (await ai.received()).filter((e) => e.type === "session.update").at(-1)?.session;
 
 test.describe("starting a conversation", () => {
@@ -60,6 +67,9 @@ test.describe("starting a conversation", () => {
     const card = sk(page, "voice-consent");
     await expect(card).toBeVisible();
     await expect(card).toContainText("Your voice and the page text go to your provider, OpenAI");
+    await expect(card).toContainText("The page address (without its query) is included");
+    await expect(card).toContainText("sent again if the connection is restored");
+    await expect(card).toContainText("OpenAI bills conversations to your account");
     await shot(card, "consent-card");
     await sk(page, "voice-consent-start").click();
     await expect(pill(page)).toBeVisible();
@@ -82,6 +92,15 @@ test.describe("starting a conversation", () => {
     await expect(sk(page, "launcher-talk")).toHaveAttribute("aria-pressed", "true");
   });
 
+  test("the model gets the page address without its query and fragment", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article?token=SECRETVALUE&q=private#section-2");
+    await connected(page);
+    const instructions = (await lastUpdate(ai))?.instructions ?? "";
+    expect(instructions).toContain(`Page address: ${new URL(page.url()).origin}/article
+`);
+    expect(instructions).not.toMatch(/SECRETVALUE|private|section-2/);
+  });
+
   test("declining the consent card starts nothing", async ({ vc: { ext, app } }) => {
     await ext.sw.evaluate(() => chrome.storage.local.remove("speakkit.voiceConsent"));
     const page = await ext.open("/article");
@@ -100,13 +119,23 @@ test.describe("starting a conversation", () => {
     await says(page, "Conversation ended");
   });
 
-  test("the pill is a live region with labelled buttons", async ({ vc: { ext } }) => {
+  test("one live region outside the pill announces every change; the buttons are labelled", async ({ vc: { ext, ai } }) => {
     const page = await ext.open("/article");
     await connected(page);
-    await expect(pill(page)).toHaveAttribute("role", "status");
+    const live = sk(page, "voice-live");
+    await expect(live).toHaveAttribute("role", "status");
+    await expect(live).toHaveText("Ready. Say something.");
+    await expect(pill(page).locator("[data-sk=voice-live]")).toHaveCount(0);
     await expect(sk(page, "voice-mute")).toHaveAttribute("aria-label", "Mute microphone");
     await expect(sk(page, "voice-end")).toHaveAttribute("aria-label", "End conversation");
-    await expect(pill(page).locator(".sk-sr")).toHaveText("Ready. Say something.");
+    const region = await live.elementHandle();
+    await ext.voiceTest({ retry: "1500" });
+    await ai.drop(); // the pill is rebuilt as the reconnecting notice, and the same region says so
+    await expect(live).toHaveText(/^Reconnecting/);
+    await phase(page, "idle");
+    await sk(page, "voice-end").click();
+    await expect(live).toHaveText("Conversation ended");
+    expect(await live.elementHandle().then((h) => h!.evaluate((a, b) => a === b, region))).toBe(true);
   });
 });
 
@@ -256,8 +285,22 @@ test.describe("ending", () => {
     await connected(page);
     ext.resetCdp();
     await ext.off("window.__speakkitVoice.unplug()");
-    await says(page, "Microphone blocked");
+    await says(page, "No microphone found");
+    await expect(sk(page, "voice-action")).toHaveText("Retry");
+    await shot(pill(page), "error-mic-missing");
     await closed(ext);
+  });
+
+  test("no microphone at all shows No microphone found with Retry, and a retry works once one is there", async ({ vc: { ext } }) => {
+    await ext.voiceTest({ mic: "missing" });
+    const page = await ext.open("/article");
+    await talk(page);
+    await says(page, "No microphone found");
+    await expect(sk(page, "voice-action")).toHaveText("Retry");
+    expect(ext.ctx.pages().some((p) => p.url().includes("/mic.html"))).toBe(false); // nothing to ask permission for
+    await ext.voiceTest({ mic: null });
+    await sk(page, "voice-action").click();
+    await phase(page, "idle");
   });
 });
 
@@ -347,7 +390,7 @@ test.describe("microphone", () => {
     await talk(page);
     await says(page, "Microphone blocked");
     await shot(pill(page), "error-mic-blocked");
-    const win = ext.ctx.pages().find((p) => p.url().endsWith("/mic.html"));
+    const win = ext.ctx.pages().find((p) => p.url().includes("/mic.html"));
     await expect(win!.getByRole("heading")).toHaveText("Microphone blocked");
     await win!.close();
     await sk(page, "voice-action").click();
@@ -355,13 +398,28 @@ test.describe("microphone", () => {
     await closed(ext);
   });
 
+  test("a second attempt after a denial opens a fresh permission window instead of reusing the answered one", async ({ vc: { ext } }) => {
+    await ext.voiceTest({ mic: "denied" });
+    const page = await ext.open("/article");
+    await talk(page);
+    await says(page, "Microphone blocked");
+    const old = ext.ctx.pages().find((p) => p.url().includes("/mic.html"))!;
+    await expect(old.getByRole("heading")).toHaveText("Microphone blocked"); // the window stays open, answered
+    await sk(page, "voice-end").click(); // dismisses the pill
+    await ext.voiceTest({ mic: "prompt" }); // the user fixed the setting
+    await talk(page);
+    await phase(page, "idle");
+    await expect.poll(() => old.isClosed()).toBe(true);
+    await expect.poll(() => ext.ctx.pages().some((p) => p.url().includes("/mic.html"))).toBe(false);
+  });
+
   test("closing the permission window without an answer counts as blocked", async ({ vc: { ext } }) => {
     await ext.voiceTest({ mic: "hang" });
     const page = await ext.open("/article");
     await talk(page);
-    await expect.poll(() => ext.ctx.pages().some((p) => p.url().endsWith("/mic.html"))).toBe(true);
+    await expect.poll(() => ext.ctx.pages().some((p) => p.url().includes("/mic.html"))).toBe(true);
     await ext.sw.evaluate(async () => {
-      for (const w of await chrome.windows.getAll({ populate: true })) if (w.tabs?.some((t: { url?: string }) => t.url?.endsWith("/mic.html"))) await chrome.windows.remove(w.id!);
+      for (const w of await chrome.windows.getAll({ populate: true })) if (w.tabs?.some((t: { url?: string }) => t.url?.includes("/mic.html"))) await chrome.windows.remove(w.id!);
     });
     await says(page, "Microphone blocked");
   });
@@ -371,7 +429,7 @@ test.describe("microphone", () => {
     const page = await ext.open("/article");
     await talk(page);
     await phase(page, "idle");
-    await expect.poll(() => ext.ctx.pages().some((p) => p.url().endsWith("/mic.html"))).toBe(false);
+    await expect.poll(() => ext.ctx.pages().some((p) => p.url().includes("/mic.html"))).toBe(false);
   });
 });
 
@@ -407,6 +465,60 @@ test.describe("while talking", () => {
     await phase(page, "idle");
   });
 
+  test("the conversation ends after the hard cap however much the model hears, and needs a new start", async ({ vc: { ext, ai, app } }) => {
+    await ext.voiceTest({ idle: "1200,3,2500" });
+    const page = await ext.open("/article");
+    await connected(page);
+    for (let i = 0; i < 5; i++) {
+      await ai.send({ type: "input_audio_buffer.speech_started" }); // noise: restarts the quiet time, never the cap
+      await ai.send({ type: "input_audio_buffer.speech_stopped" });
+      await ai.send({ type: "response.done" });
+      await page.waitForTimeout(400);
+    }
+    await says(page, "Conversation ended");
+    await expect(sk(page, "voice-action")).toHaveText("Talk again");
+    await closed(ext);
+    await ext.voiceTest({ idle: null });
+    await sk(page, "voice-action").click();
+    await phase(page, "idle");
+    expect(app.secrets).toHaveLength(2);
+  });
+
+  test("a clock that ticks and a script that arrives are not a page change; a new article is", async ({ vc: { ext } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await page.evaluate(() => {
+      const clock = document.createElement("span");
+      document.body.append(clock);
+      let n = 0;
+      (window as unknown as { tick: ReturnType<typeof setInterval> }).tick = setInterval(() => (clock.textContent = `12:00:${String(n++ % 60).padStart(2, "0")}`), 150);
+      const script = document.createElement("script");
+      script.type = "application/json";
+      script.textContent = "x".repeat(6000);
+      document.body.append(script);
+    });
+    await page.waitForTimeout(3500);
+    await phase(page, "idle");
+    await page.evaluate(() => {
+      const p = document.createElement("p");
+      p.textContent = `SWAPPED ${"another article takes the place of the first one. ".repeat(60)}`;
+      document.querySelector("article")!.append(p);
+    });
+    await says(page, "Page changed"); // found although the clock keeps ticking
+  });
+
+  test("the page-changed notice does not cover the Still there? warning, and comes back after it", async ({ vc: { ext } }) => {
+    await ext.voiceTest({ idle: "2500,20" });
+    const page = await ext.open("/article");
+    await connected(page);
+    await page.evaluate(() => history.pushState({}, "", "/article?next"));
+    await says(page, "Page changed");
+    await expect(sk(page, "voice-text")).toHaveText(/^Still there\?/);
+    await expect(sk(page, "voice-action")).toHaveText("Keep going");
+    await sk(page, "voice-action").click();
+    await says(page, "Page changed");
+  });
+
   test("a page that changes offers Update, and Update sends the new text", async ({ vc: { ext, ai } }) => {
     const page = await ext.open("/article");
     await connected(page);
@@ -430,6 +542,24 @@ test.describe("while talking", () => {
     await says(page, "Page changed");
   });
 
+  test("a rejected session.update ends the conversation visibly instead of leaving the model without the page", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "error", error: { type: "invalid_request_error", code: "unknown_parameter", message: "Unknown parameter: session.reasoning" } });
+    await says(page, "Voice chat is unavailable");
+    await expect(sk(page, "voice-action")).toHaveText("Retry");
+    await expect(pill(page)).not.toContainText("Unknown parameter");
+    await closed(ext);
+  });
+
+  test("an empty audio commit error is harmless", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "error", error: { type: "invalid_request_error", code: "input_audio_buffer_commit_empty" } });
+    await page.waitForTimeout(300);
+    await phase(page, "idle");
+  });
+
   test("a lost connection reconnects with a fresh secret, showing the attempts", async ({ vc: { ext, app, ai } }) => {
     await ext.voiceTest({ retry: "500" });
     const page = await ext.open("/article");
@@ -440,6 +570,7 @@ test.describe("while talking", () => {
     await shot(pill(page), "pill-reconnecting");
     await says(page, "Reconnecting, 2 of 5");
     await phase(page, "idle");
+    await expect(page.locator(".sk-vp-hint")).toHaveText("Reconnected. The model lost what was said before.");
     expect(app.secrets.length).toBeGreaterThanOrEqual(4);
     expect(new Set(app.secrets).size).toBe(app.secrets.length);
     const session = await lastUpdate(ai);
@@ -457,6 +588,40 @@ test.describe("while talking", () => {
   });
 });
 
+test.describe("the service worker", () => {
+  test("the voice document keeps the worker awake with a heartbeat while the conversation lasts, and stops when it ends", async ({ vc: { ext } }) => {
+    await ext.voiceTest({ beat: "250" });
+    const page = await ext.open("/article");
+    await connected(page);
+    ext.resetCdp();
+    const beats = () => ext.off<number>("window.__speakkitVoice.beats()");
+    await expect.poll(beats).toBeGreaterThanOrEqual(3);
+    const before = await beats();
+    await sk(page, "voice-end").click();
+    await closed(ext);
+    expect(before).toBeGreaterThanOrEqual(3);
+  });
+
+  test("when the worker is stopped in the middle of a conversation, the microphone is released and the pill says the conversation ended", async ({ vc: { ext } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    expect(await ext.offscreenCount()).toBe(1);
+    await killWorker(ext, page);
+    await says(page, "Conversation ended");
+    // The worker is a new instance now (ext.sw is the dead one): ask the live one. The document closed itself with the microphone and the connection.
+    const documents = () =>
+      ext.ctx
+        .serviceWorkers()[0]
+        ?.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"] })).length)
+        .catch(() => -1);
+    await expect.poll(documents, { timeout: 15_000 }).toBe(0);
+    await sk(page, "voice-action").click(); // Talk again: a new conversation starts on the restarted worker
+    await phase(page, "idle");
+    ext.resetCdp();
+    expect(await ext.off<number>("window.__speakkitVoice.micLive()")).toBeGreaterThan(0);
+  });
+});
+
 test.describe("options", () => {
   test("the Voice chat card shows the key state from the app and the microphone", async ({ vc: { ext, app } }) => {
     const opt = await ext.ctx.newPage();
@@ -471,5 +636,18 @@ test.describe("options", () => {
     await opt.reload();
     await expect(sk(opt, "voicechat-key")).toHaveText("No key");
     expect(app.auth.length).toBeGreaterThan(0);
+  });
+
+  test("Forget voice chat consent takes the first-use agreement back: the card shows again", async ({ vc: { ext } }) => {
+    const opt = await ext.ctx.newPage();
+    await opt.goto(`${ext.url("options")}#voicechat`);
+    await expect(sk(opt, "voicechat-consent")).toHaveText("Agreed");
+    await opt.getByRole("button", { name: "Forget voice chat consent" }).click();
+    await expect(sk(opt, "voicechat-consent")).toHaveText("Not asked yet");
+    await expect(opt.getByRole("button", { name: "Forget voice chat consent" })).toBeDisabled();
+    expect(await ext.sw.evaluate(async () => (await chrome.storage.local.get("speakkit.voiceConsent"))["speakkit.voiceConsent"])).toBeUndefined();
+    const page = await ext.open("/article");
+    await talk(page);
+    await expect(sk(page, "voice-consent")).toBeVisible();
   });
 });
