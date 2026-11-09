@@ -6,16 +6,21 @@
     "apps/desktop/src/main/voice-chat/openai.ts": "voice chat: tests the OpenAI key and mints short-lived Realtime client secrets with it; the key goes to api.openai.com only",
     "apps/extension/src/app/background/connection.ts": "extension talks to the desktop app on 127.0.0.1",
     "apps/extension/src/app/offscreen/main.ts": "offscreen document streams speech from 127.0.0.1",
+    "apps/extension/src/app/offscreen/voice.ts": "voice chat: the offscreen session posts the WebRTC offer to OpenAI (api.openai.com, or the test server in test builds) and asks the app on 127.0.0.1 for a client secret",
     "apps/extension/src/features/connection/health.ts": "health and pairing calls to 127.0.0.1",
     "apps/extension/src/features/connection/lifecycle.ts": "engine lifecycle calls to 127.0.0.1",
+    "apps/extension/src/features/voicechat/VoiceChatSection.tsx": "the options card asks the app on 127.0.0.1 whether an OpenAI key is set",
+    "apps/extension/src/features/voicechat/mint.ts": "voice chat: asks the Speak Kit app on 127.0.0.1 for a short-lived OpenAI client secret and for whether a key is set",
+    "apps/extension/src/features/voicechat/realtime.ts": "voice chat: trades the WebRTC offer for the answer at OpenAI, authorised by the client secret only",
     "packages/engine/src/worker.ts": "kokoro-js downloads the model files from Hugging Face on first use",
     "packages/player/src/chunk.ts": "player requests speech chunks from 127.0.0.1"
   },
   "hosts": {
     "api.github.com": "update check reads the latest release (electron-updater feed and the manual check)",
-    "api.openai.com": "voice chat: key test and Realtime client secrets (the key is sent nowhere else)",
+    "api.openai.com": "voice chat: the desktop app tests the OpenAI key and mints short-lived Realtime client secrets with it (the key goes nowhere else); the extension connects to the Realtime API with that secret only",
     "chromewebstore.google.com": "link opened in the user's browser to install the extension",
     "github.com": "release page opened in the user's browser",
+    "platform.openai.com": "link opened in the user's browser to add credit to their OpenAI account",
     "speakkit.app": "links to the product site opened in the user's browser"
   }
 }

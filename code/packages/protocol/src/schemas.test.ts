@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { engineListSchema, errorBodySchema, parseHealth, parseVoiceList } from "./schemas";
+import { parseVoiceChatError, parseVoiceChatSession, parseVoiceChatStatus } from "./voice-chat-app";
 import * as v from "valibot";
 
 const engine = { id: "kokoro", state: "downloading", progress: 0.4 };
@@ -33,5 +34,24 @@ describe("server response schemas", () => {
     expect(parseVoiceList({ voices: [voice], default: voice.id })?.voices[0]).toEqual(voice);
     const body = { error: { code: "invalid-request", message: "sentences: required" } };
     expect(v.parse(errorBodySchema, body)).toEqual(body);
+  });
+});
+
+describe("voice chat schemas", () => {
+  it("parses the status and the session of the app", () => {
+    expect(parseVoiceChatStatus({ hasKey: true })).toEqual({ hasKey: true });
+    expect(parseVoiceChatStatus({ hasKey: "yes" })).toBeUndefined();
+    const ok = { clientSecret: "ek_1", expiresAt: 1_900_000_000, model: "gpt-realtime-2.1", voice: "marin" };
+    expect(parseVoiceChatSession(ok)).toEqual(ok);
+    expect(parseVoiceChatSession({ ...ok, model: "gpt-realtime" })).toBeUndefined();
+    expect(parseVoiceChatSession({ ...ok, clientSecret: "" })).toBeUndefined();
+    expect(parseVoiceChatSession({ ...ok, voice: "nope" })).toBeUndefined();
+  });
+
+  it("reads the code of an error body and rejects an unknown code", () => {
+    expect(parseVoiceChatError({ code: "no-credit" })).toBe("no-credit");
+    expect(parseVoiceChatError({ code: "no-key", error: { code: "no-key", message: "m" } })).toBe("no-key");
+    expect(parseVoiceChatError({ code: "boom" })).toBeUndefined();
+    expect(parseVoiceChatError({ error: { code: "no-key", message: "" } })).toBeUndefined();
   });
 });

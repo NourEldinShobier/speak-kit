@@ -51,3 +51,21 @@ export const voiceChatErrorSchema: v.GenericSchema<unknown, VoiceChatError> = v.
   code: errorCode,
   error: v.object({ code: errorCode, message: v.string() }),
 });
+
+const parser =
+  <T>(schema: v.GenericSchema<unknown, T>) =>
+  (x: unknown): T | undefined => {
+    const r = v.safeParse(schema, x);
+    return r.success ? r.output : undefined;
+  };
+/** Returns the parsed answer of GET /v1/voice-chat/status, or undefined when it does not match. */
+export const parseVoiceChatStatus = parser(voiceChatStatusSchema);
+/** Returns the parsed answer of POST /v1/voice-chat/session, or undefined when it does not match. */
+export const parseVoiceChatSession = parser(voiceChatSessionSchema);
+/** Returns the code of an error body on any HTTP status: `{ code }` alone or the full VoiceChatError. Anything else is undefined. */
+export const parseVoiceChatError = parser(
+  v.pipe(
+    v.object({ code: errorCode }),
+    v.transform((b) => b.code),
+  ),
+);

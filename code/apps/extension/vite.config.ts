@@ -38,37 +38,25 @@ function extensionPlugin(): Plugin {
         logLevel: "warn" as const,
         plugins: [contentAssets(() => listSources(resolve(root, "src")))],
       };
-      // content.js: extraction, highlight and the controller, as one classic script (MV3 content scripts cannot be modules).
-      await build({
-        ...common,
-        build: {
-          outDir,
-          emptyOutDir: false,
-          minify: !test,
-          sourcemap: test,
-          lib: {
-            entry: resolve(root, "src/app/content/index.ts"),
-            formats: ["iife"],
-            name: "SpeakKitContent",
-            fileName: () => "content.js",
+      // Each file below is a separate build: content.js is one classic script (MV3 content scripts cannot be modules); the others are ES modules
+      // that content.js imports on first need (the UI: kit builders, CSS, launcher, dock, reader; the voice pill, first-use card and port to the worker).
+      const libs = [
+        { entry: "content/index.ts", file: "content.js", format: "iife" as const, name: "SpeakKitContent" },
+        { entry: "content/ui-entry.ts", file: "content-ui.js", format: "es" as const },
+        { entry: "content/voice.ts", file: "content-voice.js", format: "es" as const },
+      ];
+      for (const { entry, file, format, ...rest } of libs) {
+        await build({
+          ...common,
+          build: {
+            outDir,
+            emptyOutDir: false,
+            minify: !test,
+            sourcemap: test,
+            lib: { entry: resolve(root, "src/app", entry), formats: [format], fileName: () => file, ...rest },
           },
-        },
-      });
-      // content-ui.js: the kit builders, CSS, launcher, dock and reader. An ES module that content.js imports on first need.
-      await build({
-        ...common,
-        build: {
-          outDir,
-          emptyOutDir: false,
-          minify: !test,
-          sourcemap: test,
-          lib: {
-            entry: resolve(root, "src/app/content/ui-entry.ts"),
-            formats: ["es"],
-            fileName: () => "content-ui.js",
-          },
-        },
-      });
+        });
+      }
     },
   };
 }
@@ -98,6 +86,7 @@ export default defineConfig({
         options: resolve(root, "options.html"),
         sidepanel: resolve(root, "sidepanel.html"),
         offscreen: resolve(root, "offscreen.html"),
+        mic: resolve(root, "mic.html"),
       },
       output: {
         entryFileNames: (c) => (c.name === "background" ? "background.js" : "assets/[name]-[hash].js"),
