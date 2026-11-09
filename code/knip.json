@@ -6,7 +6,7 @@
       "ignore": ["scripts/canary/*/**"]
     },
     "e2e": {
-      "entry": ["tests/**/*.spec.ts", "visual/*.{ts,mjs}", "**/*.test.{ts,tsx}"],
+      "entry": ["tests/**/*.spec.ts", "visual/*.{ts,mjs}", "live/*.mjs", "**/*.test.{ts,tsx}"],
       "project": ["**/*.{ts,mjs}"]
     },
     "apps/desktop": {
@@ -24,7 +24,16 @@
       "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "apps/extension": {
-      "entry": ["src/app/*/index.{ts,tsx}", "src/app/*/main.{ts,tsx}", "src/testing/entry.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}", "src/app/content/ui-entry.ts"],
+      "entry": [
+        "src/app/*/index.{ts,tsx}",
+        "src/app/*/main.{ts,tsx}",
+        "src/testing/entry.ts",
+        "scripts/*.mjs",
+        "**/*.test.{ts,tsx}",
+        "src/app/content/ui-entry.ts",
+        "src/app/content/voice.ts",
+        "src/app/offscreen/voice.ts"
+      ],
       "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "packages/server": {
