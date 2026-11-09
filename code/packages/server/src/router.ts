@@ -3,6 +3,7 @@ import type { EngineRegistry } from "./engines";
 import type { ExportManager } from "./export";
 import { HttpError } from "./http";
 import type { StreamQueue } from "./stream-queue";
+import type { MintLimiter, VoiceChatService } from "./voice-chat";
 
 /** What every route handler can reach. */
 export interface Services {
@@ -10,6 +11,9 @@ export interface Services {
   exporter: ExportManager;
   queue: StreamQueue;
   version: string;
+  /** Absent when the host app has no voice chat. */
+  voiceChat: VoiceChatService | undefined;
+  mintLimiter: MintLimiter;
   deadlines: { controlMs: number; streamIdleMs: number };
 }
 

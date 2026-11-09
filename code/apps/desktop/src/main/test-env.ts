@@ -16,6 +16,8 @@ export const testEnv = () => {
     token: on ? e.SPEAKKIT_TOKEN || undefined : undefined,
     /** Lets the library fetch pages from this machine (the e2e web server listens on loopback). */
     allowLocalUrls: on && !!e.SPEAKKIT_TEST,
+    /** Fake OpenAI address for the voice chat end-to-end run; the key is sent there, so a normal or packaged build never reads it. */
+    openaiBaseUrl: on && e.SPEAKKIT_TEST ? e.SPEAKKIT_OPENAI_BASE_URL || undefined : undefined,
     /** Feed address that replaces GitHub Releases; never read by a packaged build on the user's own data. */
     updateUrl: on || e.SPEAKKIT_USER_DATA ? e.SPEAKKIT_UPDATE_URL || undefined : undefined,
   };
