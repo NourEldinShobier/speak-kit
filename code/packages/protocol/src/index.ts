@@ -13,5 +13,18 @@ export type { BgToContent, ContentToBg, ExtractReply, HelloReply, PlayerCommand,
 export { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, SETTINGS_KEY, TOKEN_KEY, defaultSettings } from "./settings";
 export type { Settings, SiteDefault, SiteRule } from "./settings";
 export type { EngineId, EngineInfo, EngineList, ExportJob, ExportRequest, ExportState } from "./engines";
-export { engineListSchema, errorBodySchema, exportJobSchema, healthSchema, parseHealth, parseVoiceList, voiceListSchema } from "./schemas";
+export {
+  engineListSchema,
+  errorBodySchema,
+  exportJobSchema,
+  healthSchema,
+  parseHealth,
+  parseVoiceChatError,
+  parseVoiceChatSession,
+  parseVoiceChatStatus,
+  parseVoiceList,
+  voiceListSchema,
+} from "./schemas";
+export { VOICE_CHAT_ERRORS, VOICE_CHAT_MODEL, VOICE_PORT } from "./voice-chat";
+export type { VoiceChatError, VoiceChatSession, VoiceChatStatus, VoiceDown, VoicePage, VoicePhase, VoiceProblem, VoiceUp, VoiceView } from "./voice-chat";
 export { clock, compareNames, plural } from "./format";

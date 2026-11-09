@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import type { EngineState, Health, VoiceList } from "./api";
 import type { EngineList, ExportJob } from "./engines";
+import { VOICE_CHAT_ERRORS, VOICE_CHAT_MODEL, type VoiceChatError, type VoiceChatSession, type VoiceChatStatus } from "./voice-chat";
 
 /** Runtime schemas for what the server answers. Responses are a trust boundary: parse them, never cast. */
 const engineState = v.picklist(["missing", "downloading", "unloaded", "loading", "ready", "error"] satisfies EngineState[]);
@@ -76,3 +77,23 @@ const parser =
 export const parseHealth = parser(healthSchema);
 /** Returns the parsed answer of GET /v1/voices, or undefined when it does not match. */
 export const parseVoiceList = parser(voiceListSchema);
+
+/** Shape of GET /v1/voice-chat/status. */
+const voiceChatStatusSchema: v.GenericSchema<unknown, VoiceChatStatus> = v.object({ hasKey: v.boolean() });
+/** Shape of a successful POST /v1/voice-chat/session. */
+const voiceChatSessionSchema: v.GenericSchema<unknown, VoiceChatSession> = v.object({
+  clientSecret: v.pipe(v.string(), v.minLength(1)),
+  expiresAt: v.number(),
+  model: v.literal(VOICE_CHAT_MODEL),
+  voice: v.pipe(v.string(), v.minLength(1)),
+});
+const voiceChatErrorSchema: v.GenericSchema<unknown, VoiceChatError> = v.pipe(
+  v.object({ code: v.picklist(VOICE_CHAT_ERRORS) }),
+  v.transform((b) => b.code),
+);
+/** Returns the parsed answer of GET /v1/voice-chat/status, or undefined when it does not match. */
+export const parseVoiceChatStatus = parser(voiceChatStatusSchema);
+/** Returns the parsed answer of POST /v1/voice-chat/session, or undefined when it does not match. */
+export const parseVoiceChatSession = parser(voiceChatSessionSchema);
+/** Returns the code of a voice chat error body { code }, or undefined when the body is something else. */
+export const parseVoiceChatError = parser(voiceChatErrorSchema);
