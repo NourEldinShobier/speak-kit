@@ -24,7 +24,13 @@ export const voiceChatRoutes: Route[] = [
     method: "GET",
     path: "/v1/voice-chat/status",
     handle: async ({ res }, { voiceChat }) => {
-      const status: VoiceChatStatus = { hasKey: (await voiceChat?.hasKey().catch(() => false)) ?? false };
+      let hasKey = false;
+      try {
+        hasKey = (await voiceChat?.hasKey()) ?? false;
+      } catch {
+        hasKey = false; // an unreadable key store counts as no key
+      }
+      const status: VoiceChatStatus = { hasKey };
       json(res, 200, status);
     },
   },
