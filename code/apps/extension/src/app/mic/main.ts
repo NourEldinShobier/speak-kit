@@ -9,6 +9,8 @@ import { ignore } from "../../shared/ignore";
  */
 const root = document.getElementById("root")!;
 let answered = false;
+/** The conversation that asked, from the address the worker opened this window with: an answer to an older one is ignored. */
+const sid = Number(new URLSearchParams(location.search).get("sid"));
 
 function say(title: string, text: string, close = false) {
   root.replaceChildren();
@@ -29,7 +31,7 @@ function say(title: string, text: string, close = false) {
 function answer(ok: boolean) {
   if (answered) return;
   answered = true;
-  chrome.runtime.sendMessage({ to: "offscreen", voice: { t: "mic", ok }, tabId: 0, sid: 0 } satisfies ToOffscreen).catch(ignore); // no session is waiting any more
+  chrome.runtime.sendMessage({ to: "offscreen", voice: { t: "mic", ok }, tabId: 0, sid } satisfies ToOffscreen).catch(ignore); // no session is waiting any more
 }
 
 async function ask() {

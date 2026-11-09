@@ -7,6 +7,8 @@ export const OPENAI_BASE = "https://api.openai.com";
 const MAX_OUTPUT_TOKENS = 700;
 const CONNECT_TIMEOUT_MS = 15_000;
 const DISCONNECT_GRACE_MS = 4000;
+/** A session.update over this is not sent: the instructions at their cap, the session fields around them and the JSON escaping of the page text fit with room to spare. */
+const MAX_UPDATE_BYTES = 262_144;
 
 /** A server event of the data channel that the session reacts to. */
 export type RealtimeEvent = { type: string; error?: { code?: string; type?: string }; transcript?: string };
@@ -122,7 +124,10 @@ export class Realtime {
     void this.ctx.resume().catch(ignore);
   }
 
-  /** Cost control: low reasoning, short answers, server VAD (the model hears turns, nothing is sent while the track is off). */
+  /**
+   * Cost control: low reasoning, short answers, server VAD (the model hears turns, nothing is sent while the track is off).
+   * Throws a RealtimeFailure when the update is over the size cap ("too-long") or the channel refuses it ("unavailable"): the model must not run without the page.
+   */
   setInstructions(instructions: string, voice?: string) {
     const session = {
       type: "realtime",
@@ -131,7 +136,14 @@ export class Realtime {
       reasoning: { effort: "low" },
       audio: { input: { turn_detection: { type: "server_vad", silence_duration_ms: 600, create_response: true, interrupt_response: true } }, ...(voice ? { output: { voice } } : {}) },
     };
-    if (this.dc.readyState === "open") this.dc.send(JSON.stringify({ type: "session.update", session }));
+    if (this.dc.readyState !== "open") return;
+    const payload = JSON.stringify({ type: "session.update", session });
+    if (new TextEncoder().encode(payload).length > MAX_UPDATE_BYTES) throw new RealtimeFailure("too-long");
+    try {
+      this.dc.send(payload);
+    } catch {
+      throw new RealtimeFailure("unavailable");
+    }
   }
 
   /** Mute and idle switch the microphone off: the track is disabled and detached from the connection, so no audio packets leave the page. */

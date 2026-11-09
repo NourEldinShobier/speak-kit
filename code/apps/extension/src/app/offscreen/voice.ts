@@ -16,6 +16,8 @@ import {
 } from "../../features/voicechat";
 import type { FromOffscreen, ToOffscreen, VoiceCommand } from "../../shared/internal";
 import { ignore } from "../../shared/ignore";
+import { holdWorker } from "./link";
+import { openMicrophone } from "./mic";
 
 /**
  * The voice session of the extension. It lives in the offscreen document because that page can hold the microphone and play the
@@ -25,6 +27,8 @@ import { ignore } from "../../shared/ignore";
 const RECONNECT_MS = [800, 1500, 3000, 5000, 8000];
 const LEVEL_MS = 70;
 const MIC_WAIT_MS = 120_000;
+/** Chrome stops an idle service worker after 30 s; a message from here every 20 s keeps it, and so the page's port to it, alive for the whole conversation. */
+const BEAT_MS = 20_000;
 /** Problems a reconnect attempt may recover from; the rest end the conversation. */
 const RETRYABLE = new Set<VoiceProblem>(["offline", "unavailable", "rate-limited", "app-not-running"]);
 
@@ -37,11 +41,18 @@ const testValue = (key: string) => {
   }
 };
 
+/** Tests: "missing" is a computer without a microphone, any other value a refusal. */
+const simulatedMicError = () => {
+  const v = testValue("mic");
+  if (!v) return null;
+  return v === "missing" ? "NotFoundError" : "NotAllowedError";
+};
+
 const post = (tabId: number, sid: number, msg: Extract<FromOffscreen, { kind: "voice" }>["msg"]) => {
   chrome.runtime.sendMessage({ from: "offscreen", kind: "voice", tabId, sid, msg } satisfies FromOffscreen).catch(ignore); // the worker is restarting; it ends orphans itself
 };
 
-/** Tests shorten the quiet time (ms) and the warning (s): "600,3". */
+/** Tests shorten the quiet time (ms), the warning (s) and the hard cap (ms): "600,3,5000". */
 const quiet = testValue("idle")?.split(",").map(Number);
 
 class Session {
@@ -62,9 +73,11 @@ class Session {
       },
       end: () => this.finish({ t: "end" }),
     },
-    quiet?.[0],
-    quiet?.[1],
+    { idleMs: quiet?.[0], warnS: quiet?.[1], capMs: quiet?.[2] },
   );
+  /** Holds the port to the worker (its heartbeat keeps the worker awake; if it goes away anyway the microphone is released at once). */
+  private letGo: (() => void) | undefined;
+  beats = 0;
 
   readonly tabId: number;
   readonly sid: number;
@@ -100,6 +113,11 @@ class Session {
   }
 
   async start(page: VoicePage) {
+    this.letGo = holdWorker(
+      Number(testValue("beat")) || BEAT_MS,
+      () => this.teardown(),
+      () => this.beats++,
+    );
     this.emit({ t: "view", view: this.view });
     const ctx = buildInstructions(page);
     if (!ctx.ok) return this.fail(ctx.problem);
@@ -110,13 +128,20 @@ class Session {
     const stream = await this.microphone();
     if (!stream || this.dead) return stream?.getTracks().forEach((t) => t.stop());
     this.stream = stream;
-    for (const t of stream.getAudioTracks()) t.addEventListener("ended", () => !this.dead && this.fail("mic-blocked")); // unplugged
+    for (const t of stream.getAudioTracks()) t.addEventListener("ended", () => void this.micEnded()); // unplugged, or the permission was taken back
     if (minted.expiresAt * 1000 < Date.now() + 5000) minted = await this.mint(); // the permission window took its time
     if (this.dead) return;
     const problem = typeof minted === "string" ? minted : await this.connect(minted.clientSecret);
     if (this.dead) return;
     if (problem) this.fail(problem);
     else this.ready();
+  }
+
+  /** The microphone stopped by itself: Chrome's permission says whether it was taken back ("blocked") or the device went away ("missing"). */
+  private async micEnded() {
+    if (this.dead) return;
+    const state = await navigator.permissions.query({ name: "microphone" as PermissionName }).then((p) => p.state, ignore);
+    this.fail(state === "denied" ? "mic-blocked" : "mic-missing");
   }
 
   /** A fresh client secret from the app, or the problem to show. Each connection uses its own. */
@@ -214,26 +239,20 @@ class Session {
     this.emit({ t: "level", v });
   }
 
-  /** The microphone: the browser's, else the answer of the permission window. */
   private async microphone(): Promise<MediaStream | undefined> {
-    const grab = async () => {
-      if (testValue("mic")) throw new DOMException("denied", "NotAllowedError");
-      return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    };
-    try {
-      return await grab();
-    } catch (e) {
-      if ((e as DOMException).name !== "NotAllowedError") return void this.fail("mic-blocked");
-    }
+    const got = await openMicrophone({ fake: simulatedMicError, askWindow: () => this.askMicWindow() });
+    if (typeof got !== "string") return got;
+    if (!this.dead) this.fail(got);
+    return undefined;
+  }
+
+  /** Opens the permission window (the worker does) and waits for its answer, which is "blocked" when it never comes or the session ends first. */
+  private askMicWindow() {
     post(this.tabId, this.sid, { t: "need-mic" });
-    const ok = await new Promise<boolean>((res) => {
+    return new Promise<boolean>((res) => {
       this.micAnswer = res;
       setTimeout(() => res(false), MIC_WAIT_MS);
-    });
-    this.micAnswer = undefined;
-    if (this.dead) return undefined;
-    if (!ok) return void this.fail("mic-blocked");
-    return grab().catch(() => void this.fail("mic-blocked"));
+    }).finally(() => (this.micAnswer = undefined));
   }
 
   command(c: VoiceCommand) {
@@ -249,7 +268,11 @@ class Session {
       const ctx = buildInstructions(c.page);
       if (!ctx.ok) return this.fail(ctx.problem);
       this.instructions = ctx.instructions;
-      this.rt?.setInstructions(ctx.instructions);
+      try {
+        this.rt?.setInstructions(ctx.instructions);
+      } catch (e) {
+        this.fail(e instanceof RealtimeFailure ? e.problem : "unavailable");
+      }
     } else if (c.t === "end") this.finish({ t: "end" });
   }
 
@@ -271,6 +294,7 @@ class Session {
     this.dead = true;
     this.idle.stop();
     clearInterval(this.levels);
+    this.letGo?.();
     this.micAnswer?.(false);
     this.rt?.close();
     this.stream?.getTracks().forEach((t) => t.stop());
@@ -302,7 +326,7 @@ export function onVoice(msg: Extract<ToOffscreen, { voice: VoiceCommand }>) {
     });
     current = last = s;
     void s.start(c.page);
-  } else if (current && (c.t === "mic" || (current.tabId === tabId && current.sid === msg.sid))) current.command(c);
+  } else if (current && current.sid === msg.sid && (c.t === "mic" || current.tabId === tabId)) current.command(c); // the microphone window names the conversation that asked
   else if (c.t === "end") post(tabId, msg.sid, { t: "closed" });
 }
 
@@ -315,6 +339,7 @@ if (__TEST__) {
       unplug: () => void setTimeout(() => current?.unplug(), 50), // the document closes, so the call must return first
       trace: () => (current ?? last)?.trace,
       micLive: () => current?.micLive() ?? 0,
+      beats: () => (current ?? last)?.beats ?? 0,
       bytesSent: () => current?.bytesSent() ?? 0,
     },
   });

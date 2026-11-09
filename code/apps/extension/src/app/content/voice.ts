@@ -1,6 +1,7 @@
 import { VOICE_PORT, type ContentToBg, type VoiceDown, type VoicePage, type VoiceProblem, type VoiceUp, type VoiceView } from "@speakkit/protocol";
-import { VOICE_CSS, VoicePill, askConsent, type PillAction } from "../../features/voicechat";
+import { VOICE_CSS, VoicePill, askConsent, mayHaveChangedContent, pageChanged, type PillAction } from "../../features/voicechat";
 import type { ExtraToBg } from "../../shared/internal";
+import { giveVoiceConsent, hasVoiceConsent } from "../../shared/voice-consent";
 import { ShadowShell } from "./shell";
 import shellCss from "./shell.css?inline";
 
@@ -16,12 +17,11 @@ export interface VoiceDeps {
 
 /** Where a user adds credit to an OpenAI account; opened in their browser. */
 const BILLING_URL = "https://platform.openai.com/settings/organization/billing/overview";
-const CONSENT_KEY = "speakkit.voiceConsent";
 const HINT = "Just talk. Click the mic to mute.";
+const RECONNECTED = "Reconnected. The model lost what was said before.";
 const HINT_MS = 5000;
+/** How soon after a content change the page is measured again (at most once per period, so a ticking page costs little). */
 const CHURN_MS = 1500;
-/** Added text, in characters, that makes the page "changed": a quarter of what the conversation started with, at least this much. */
-const CHURN_MIN = 1500;
 
 export class Voice {
   private shell: ShadowShell | null = null;
@@ -30,8 +30,8 @@ export class Voice {
   private view: VoiceView = { phase: "connecting", muted: false };
   private notice: VoiceProblem | undefined;
   private starting = false;
+  private consent: AbortController | null = null;
   private watch: MutationObserver | null = null;
-  private churn = 0;
   private baseline = 0;
   private churnTimer: ReturnType<typeof setTimeout> | undefined;
   private hintTimer: ReturnType<typeof setTimeout> | undefined;
@@ -55,11 +55,14 @@ export class Voice {
     if (this.open || this.starting) return;
     this.starting = true;
     try {
-      const first = !(await chrome.storage.local.get(CONSENT_KEY))[CONSENT_KEY];
+      const first = !(await hasVoiceConsent());
       this.dismiss();
       if (first) {
-        if (!(await askConsent(this.ensureShell()))) return void this.dismiss();
-        void chrome.storage.local.set({ [CONSENT_KEY]: true });
+        const asking = (this.consent = new AbortController()); // ending the conversation while the card is open declines it
+        const agreed = await askConsent(this.ensureShell(), asking.signal);
+        if (this.consent === asking) this.consent = null;
+        if (!agreed) return void this.dismiss();
+        void giveVoiceConsent();
       }
       this.connect(first);
     } catch {
@@ -89,22 +92,20 @@ export class Voice {
     this.notice = undefined;
     this.pill = new VoicePill(this.ensureShell(), { mute: (on) => this.mute(on), end: () => this.end(), act: (a) => this.act(a) });
     this.show();
-    if (first) {
-      this.pill.showHint(HINT);
-      this.hintTimer = setTimeout(() => this.pill?.hideHint(), HINT_MS);
-    }
+    if (first) this.hint(HINT);
     this.send({ t: "start", page });
     this.d.onOpen(true);
     this.baseline = page.text.length;
-    this.churn = 0;
     this.watch = new MutationObserver((records) => this.onMutations(records));
     if (document.body) this.watch.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
   private onDown(m: VoiceDown) {
     if (m.t === "level") return this.pill?.level(m.v);
+    const reconnected = this.view.phase === "reconnecting" && m.view.phase === "idle";
     this.view = m.view;
     if (m.view.phase === "listening") this.pill?.hideHint();
+    else if (reconnected) this.hint(RECONNECTED);
     if (m.view.phase === "ended") this.finished(m.view);
     else this.show();
   }
@@ -153,13 +154,19 @@ export class Voice {
     if (this.port) this.setNotice();
   }
 
+  private hint(text: string) {
+    clearTimeout(this.hintTimer);
+    this.pill?.showHint(text);
+    this.hintTimer = setTimeout(() => this.pill?.hideHint(), HINT_MS);
+  }
+
+  /** Content changed (not a script, a style or a ticking clock): measure the main text once, soon, and compare it with what the conversation started with. */
   private onMutations(records: MutationRecord[]) {
-    for (const r of records) {
-      if (r.type === "characterData") this.churn += (r.target.textContent ?? "").length;
-      else for (const n of r.addedNodes) this.churn += (n.textContent ?? "").length;
-    }
-    clearTimeout(this.churnTimer);
-    this.churnTimer = setTimeout(() => this.churn > Math.max(CHURN_MIN, this.baseline / 4) && this.setNotice(), CHURN_MS);
+    if (this.notice || this.churnTimer || !mayHaveChangedContent(records)) return;
+    this.churnTimer = setTimeout(() => {
+      this.churnTimer = undefined;
+      if (this.port && pageChanged(this.baseline, this.d.page().text.length)) this.setNotice();
+    }, CHURN_MS);
   }
 
   private setNotice() {
@@ -172,6 +179,7 @@ export class Voice {
     this.watch?.disconnect();
     this.watch = null;
     clearTimeout(this.churnTimer);
+    this.churnTimer = undefined;
   }
 
   private act(a: PillAction | "keep-going" | "talk-again") {
@@ -181,7 +189,6 @@ export class Voice {
       const page = this.d.page();
       this.send({ t: "update", page });
       this.baseline = page.text.length;
-      this.churn = 0;
       this.notice = undefined;
       return this.show();
     }
@@ -199,6 +206,8 @@ export class Voice {
 
   /** Removes the pill, the card and the shell. */
   dismiss() {
+    this.consent?.abort();
+    this.consent = null;
     clearTimeout(this.hintTimer);
     this.stopWatching();
     this.pill?.destroy();
