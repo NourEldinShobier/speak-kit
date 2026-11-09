@@ -128,10 +128,11 @@ test.describe("states", () => {
     await expect.poll(() => dots(page, 2).count()).toBeGreaterThan(0);
     await shot(pill(page), "pill-thinking");
 
-    await ai.speak(0.7);
+    await ai.speak(1);
     await ai.send({ type: "output_audio_buffer.started" });
     await phase(page, "speaking");
     await expect.poll(() => dots(page, 3).count()).toBeGreaterThan(8); // columns follow the model's voice
+    await expect.poll(() => dots(page, 3).count()).toBeGreaterThan(20);
     await shot(pill(page), "pill-speaking");
 
     await ai.send({ type: "input_audio_buffer.speech_started" }); // interruption: speaking flips to listening

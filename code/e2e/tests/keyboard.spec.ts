@@ -76,8 +76,8 @@ test.describe("options and side panel, keyboard only", () => {
     const opt = await ext.pair(app);
     await opt.goto(ext.url("options"));
     await opt.locator("main h1").waitFor();
-    const stops = await tabThrough(opt, 7);
-    expect(stops.map((s) => s.name)).toEqual(["General", "Edge launcher", "Voice and speed", "Highlighting", "Reader view", "Shortcuts", "Sites and filters"]);
+    const stops = await tabThrough(opt, 8);
+    expect(stops.map((s) => s.name)).toEqual(["General", "Edge launcher", "Voice and speed", "Voice chat", "Highlighting", "Reader view", "Shortcuts", "Sites and filters"]);
     for (const s of stops) expect(s.outline || s.shadow, `${s.name} shows focus`).toBe(true);
     await opt.keyboard.press("Enter");
     await expect(opt.getByRole("heading", { level: 1, name: "Sites and filters" })).toBeVisible();
