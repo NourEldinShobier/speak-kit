@@ -195,6 +195,22 @@ export class Ext {
     await (await this.helperPage()).evaluate((v) => localStorage.setItem("speakkit.idleclose", String(v)), ms);
   }
 
+  /** Voice chat test settings (test builds only): `base` aims the OpenAI calls at a fake server, `mic: "denied"` blocks the microphone, `idle` is "quiet ms,warning s", `retry` the reconnect delay in ms. null clears a key. */
+  async voiceTest(values: Record<string, string | null>) {
+    await (
+      await this.helperPage()
+    ).evaluate((v) => {
+      for (const [k, x] of Object.entries(v)) {
+        if (x === null) localStorage.removeItem(`speakkit.voice.${k}`);
+        else localStorage.setItem(`speakkit.voice.${k}`, x);
+      }
+    }, values);
+  }
+  /** Offscreen documents of the extension right now: 0 when no conversation (or player) holds one. */
+  offscreenCount(): Promise<number> {
+    return this.sw.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"] })).length);
+  }
+
   menuTitles(): Promise<string[]> {
     return this.sw.evaluate(() => (globalThis as any).__speakkit.menus());
   }
@@ -206,7 +222,7 @@ export class Ext {
     const deadline = Date.now() + 10_000;
     for (;;) {
       const list = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()) as { url: string; webSocketDebuggerUrl: string }[];
-      const t = list.find((x) => x.url.endsWith("/offscreen.html"));
+      const t = list.find((x) => /\/offscreen\.html(\?voice)?$/.test(x.url));
       if (t) {
         const c = await Cdp.open(t.webSocketDebuggerUrl, this.errors);
         // The target is listed before main.ts has run.
@@ -280,7 +296,16 @@ export const test = base.extend<Fx, Wx>({
       channel: "chromium",
       headless: !headed,
       viewport: { width: 1100, height: 800 },
-      args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`, "--autoplay-policy=no-user-gesture-required", "--remote-debugging-port=0", "--no-first-run"],
+      args: [
+        `--disable-extensions-except=${DIST}`,
+        `--load-extension=${DIST}`,
+        "--autoplay-policy=no-user-gesture-required",
+        "--remote-debugging-port=0",
+        "--no-first-run",
+        "--use-fake-ui-for-media-stream",
+        "--use-fake-device-for-media-stream",
+        "--disable-features=WebRtcHideLocalIpsWithMdns",
+      ],
     });
     const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker"));
     const id = new URL(sw.url()).host;
