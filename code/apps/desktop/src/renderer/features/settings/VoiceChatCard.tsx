@@ -21,16 +21,22 @@ async function attempt(dispatch: Dispatch, run: () => Promise<CardAction>): Prom
 function useKeyActions(st: CardState, dispatch: Dispatch) {
   return {
     save: async () => {
+      if (st.busy) return;
       const key = normalizeApiKey(st.draft);
       if (!key) return dispatch({ type: "invalid" });
       dispatch({ type: "busy", what: "save" });
       await attempt(dispatch, async () => ({ type: "saved", result: await api.voiceChatSetKey(key) }));
     },
     test: async () => {
+      if (st.busy) return;
       dispatch({ type: "busy", what: "test" });
       await attempt(dispatch, async () => ({ type: "tested", result: await api.voiceChatTestKey() }));
     },
-    remove: () => attempt(dispatch, async () => ({ type: "removed", status: await api.voiceChatRemoveKey() })),
+    remove: async () => {
+      if (st.busy) return;
+      dispatch({ type: "busy", what: "remove" });
+      await attempt(dispatch, async () => ({ type: "removed", status: await api.voiceChatRemoveKey() }));
+    },
   };
 }
 
@@ -50,11 +56,11 @@ function KeyRow({ st, dispatch, save }: { st: CardState; dispatch: Dispatch; sav
             type={st.reveal ? "text" : "password"}
             value={st.draft}
             placeholder={st.status?.hasKey ? "Saved" : "sk-..."}
-            disabled={!canEncrypt || st.busy === "save"}
+            disabled={!canEncrypt || st.busy !== null}
             autoComplete="off"
             spellCheck={false}
             onChange={(e) => dispatch({ type: "draft", text: e.target.value })}
-            onKeyDown={(e) => e.key === "Enter" && st.draft && void save()}
+            onKeyDown={(e) => e.key === "Enter" && st.draft && st.busy === null && void save()}
           />
           {st.draft ? <IconButton name={st.reveal ? "eye-off" : "eye"} label={st.reveal ? "Hide key" : "Show key"} aria-pressed={st.reveal} onClick={() => dispatch({ type: "reveal" })} /> : null}
         </div>
@@ -88,7 +94,7 @@ export function VoiceChatKeyRows({ st, dispatch }: { st: CardState; dispatch: Di
             <Button loading={st.busy === "test"} disabled={!hasKey || !idle} onClick={() => void test()}>
               Test key
             </Button>
-            <Button disabled={!hasKey || !idle} onClick={() => void remove()}>
+            <Button loading={st.busy === "remove"} disabled={!hasKey || !idle} onClick={() => void remove()}>
               Remove key
             </Button>
           </>

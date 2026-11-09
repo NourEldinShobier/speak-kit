@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
@@ -54,6 +54,16 @@ describe("KeyStore", () => {
     expect(await s.has()).toBe(false);
     expect(await s.read()).toBeNull();
     await s.remove(); // nothing left: still fine
+  });
+
+  it("leaves no temp file when the rename fails, and remove deletes a stray one", async () => {
+    await mkdir(file()); // a directory in the way makes the rename fail
+    await expect(new KeyStore(file(), fakeSafe()).save(KEY)).rejects.toThrow();
+    expect(await readdir(dir)).toEqual(["voice-chat-key.bin"]);
+    await rm(file(), { recursive: true });
+    await writeFile(`${file()}.tmp`, "stray");
+    await new KeyStore(file(), fakeSafe()).remove();
+    expect(await readdir(dir)).toEqual([]);
   });
 
   it("refuses to save and writes nothing when the OS cannot encrypt", async () => {

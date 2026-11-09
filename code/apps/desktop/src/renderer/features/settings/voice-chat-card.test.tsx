@@ -43,13 +43,14 @@ describe("card state", () => {
     ["rate-limited", "OpenAI is limiting requests right now. Try again in a minute."],
     ["offline", "Speak Kit could not reach OpenAI. Check your internet connection."],
   ] as const)("a test that fails with %s says %s", (code, text) => {
-    expect(run([{ type: "tested", result: { ok: false, code } }]).notice).toEqual({ tone: "error", text });
+    expect(run([{ type: "busy", what: "test" }, { type: "tested", result: { ok: false, code } }]).notice).toEqual({ tone: "error", text });
   });
 
   it("a computer that cannot encrypt is remembered, and the key stays unsaved", () => {
     const st = run([
       { type: "loaded", status: NO_KEY },
       { type: "draft", text: KEY },
+      { type: "busy", what: "save" },
       { type: "saved", result: { ok: false, code: "encryption-unavailable" } },
     ]);
     expect(st.status).toEqual({ hasKey: false, canEncrypt: false });
@@ -60,6 +61,7 @@ describe("card state", () => {
     expect(
       run([
         { type: "draft", text: "sk-x" },
+        { type: "busy", what: "remove" },
         { type: "removed", status: NO_KEY },
       ]),
     ).toMatchObject({ status: NO_KEY, draft: "", notice: { text: "Key removed" } });
@@ -67,6 +69,22 @@ describe("card state", () => {
 
   it("the show button goes away with the typed text", () => {
     expect(run([{ type: "draft", text: "sk-x" }, { type: "reveal" }, { type: "draft", text: "" }]).reveal).toBe(false);
+  });
+});
+
+describe("one operation at a time", () => {
+  it("a result that does not belong to the operation in flight is ignored", () => {
+    const testing = run([{ type: "loaded", status: SAVED }, { type: "busy", what: "test" }]);
+    expect(run([{ type: "saved", result: { ok: true } }], testing)).toBe(testing);
+    expect(run([{ type: "removed", status: NO_KEY }], testing)).toBe(testing);
+    const idle = run([{ type: "tested", result: { ok: true } }], testing);
+    expect(run([{ type: "tested", result: { ok: false, code: "key-rejected" } }], idle)).toBe(idle); // a late second answer
+  });
+
+  it("while busy the field and every button are disabled", () => {
+    const html = rows(run([{ type: "loaded", status: SAVED }, { type: "draft", text: KEY }, { type: "busy", what: "save" }]));
+    expect(html).toMatch(/<input[^>]*disabled/);
+    expect((html.match(/<button[^>]*disabled/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -118,6 +136,7 @@ describe("card markup", () => {
       rows(
         run([
           { type: "loaded", status: SAVED },
+          { type: "busy", what: "test" },
           { type: "tested", result: { ok: false, code: "key-rejected" } },
         ]),
       ),
@@ -126,6 +145,7 @@ describe("card markup", () => {
       rows(
         run([
           { type: "loaded", status: SAVED },
+          { type: "busy", what: "test" },
           { type: "tested", result: { ok: false, code: "no-credit" } },
         ]),
       ),
