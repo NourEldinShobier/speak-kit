@@ -9,6 +9,7 @@ describe("protocol runtime surface", () => {
       "DEFAULT_PORT",
       "DEFAULT_SENTENCE_COLOR",
       "DEFAULT_VOICE",
+      "DEFAULT_VOICE_CHAT_VOICE",
       "DEFAULT_WORD_COLOR",
       "ERROR_CODES",
       "FRAMES_CONTENT_TYPE",
@@ -19,6 +20,9 @@ describe("protocol runtime surface", () => {
       "SAMPLE_RATE",
       "SETTINGS_KEY",
       "TOKEN_KEY",
+      "VOICE_CHAT_ERROR_CODES",
+      "VOICE_CHAT_MODEL",
+      "VOICE_CHAT_VOICES",
       "clock",
       "compareNames",
       "defaultSettings",
@@ -31,6 +35,9 @@ describe("protocol runtime surface", () => {
       "parseHealth",
       "parseVoiceList",
       "plural",
+      "voiceChatErrorSchema",
+      "voiceChatSessionSchema",
+      "voiceChatStatusSchema",
       "voiceListSchema",
     ]);
   });
