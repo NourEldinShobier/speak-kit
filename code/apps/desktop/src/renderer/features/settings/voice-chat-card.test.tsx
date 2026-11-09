@@ -43,7 +43,12 @@ describe("card state", () => {
     ["rate-limited", "OpenAI is limiting requests right now. Try again in a minute."],
     ["offline", "Speak Kit could not reach OpenAI. Check your internet connection."],
   ] as const)("a test that fails with %s says %s", (code, text) => {
-    expect(run([{ type: "busy", what: "test" }, { type: "tested", result: { ok: false, code } }]).notice).toEqual({ tone: "error", text });
+    expect(
+      run([
+        { type: "busy", what: "test" },
+        { type: "tested", result: { ok: false, code } },
+      ]).notice,
+    ).toEqual({ tone: "error", text });
   });
 
   it("a computer that cannot encrypt is remembered, and the key stays unsaved", () => {
@@ -74,7 +79,10 @@ describe("card state", () => {
 
 describe("one operation at a time", () => {
   it("a result that does not belong to the operation in flight is ignored", () => {
-    const testing = run([{ type: "loaded", status: SAVED }, { type: "busy", what: "test" }]);
+    const testing = run([
+      { type: "loaded", status: SAVED },
+      { type: "busy", what: "test" },
+    ]);
     expect(run([{ type: "saved", result: { ok: true } }], testing)).toBe(testing);
     expect(run([{ type: "removed", status: NO_KEY }], testing)).toBe(testing);
     const idle = run([{ type: "tested", result: { ok: true } }], testing);
@@ -82,7 +90,13 @@ describe("one operation at a time", () => {
   });
 
   it("while busy the field and every button are disabled", () => {
-    const html = rows(run([{ type: "loaded", status: SAVED }, { type: "draft", text: KEY }, { type: "busy", what: "save" }]));
+    const html = rows(
+      run([
+        { type: "loaded", status: SAVED },
+        { type: "draft", text: KEY },
+        { type: "busy", what: "save" },
+      ]),
+    );
     expect(html).toMatch(/<input[^>]*disabled/);
     expect((html.match(/<button[^>]*disabled/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
