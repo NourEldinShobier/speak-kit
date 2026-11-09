@@ -3,6 +3,7 @@
     "apps/desktop/src/main/library/public-fetch.ts": "URL import: fetches the page the user typed, public addresses only (undici with a lookup that refuses private ranges)",
     "apps/desktop/src/main/server-api.ts": "desktop main talks to its own loopback server on 127.0.0.1",
     "apps/desktop/src/main/updates-service.ts": "electron-updater checks GitHub Releases for a new version",
+    "apps/desktop/src/main/voice-chat/openai.ts": "voice chat: tests the OpenAI key and mints short-lived Realtime client secrets with it; the key goes to api.openai.com only",
     "apps/extension/src/app/background/connection.ts": "extension talks to the desktop app on 127.0.0.1",
     "apps/extension/src/app/offscreen/main.ts": "offscreen document streams speech from 127.0.0.1",
     "apps/extension/src/features/connection/health.ts": "health and pairing calls to 127.0.0.1",
@@ -12,6 +13,7 @@
   },
   "hosts": {
     "api.github.com": "update check reads the latest release (electron-updater feed and the manual check)",
+    "api.openai.com": "voice chat: key test and Realtime client secrets (the key is sent nowhere else)",
     "chromewebstore.google.com": "link opened in the user's browser to install the extension",
     "github.com": "release page opened in the user's browser",
     "speakkit.app": "links to the product site opened in the user's browser"

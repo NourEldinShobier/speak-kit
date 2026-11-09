@@ -1,4 +1,4 @@
-import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
+import type { EngineList, Health, VoiceChatVoice, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
@@ -6,6 +6,7 @@ import type { ExportOptions, ExportTarget, ExportView } from "./export";
 import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
+import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
 export type { Config, ConfigPatch } from "./schemas";
 export const PAGES = ["home", "library", "voices", "engines", "browser", "settings"] as const;
@@ -133,6 +134,14 @@ export interface Api {
   pickFolder(current: string): Promise<string | null>;
   /** Reveals the bundled extension folder and opens the browser extensions page. Returns the folder, or null when not packaged. */
   installExtension(): Promise<string | null>;
+  /** Voice chat key: only whether one is saved. The key itself never comes back to the renderer. */
+  voiceChatStatus(): Promise<VoiceChatKeyStatus>;
+  /** Encrypts the key with the operating system and stores it; refused when the computer cannot encrypt. */
+  voiceChatSetKey(key: string): Promise<VoiceChatSaveResult>;
+  voiceChatRemoveKey(): Promise<VoiceChatKeyStatus>;
+  /** Asks OpenAI whether the saved key is accepted. */
+  voiceChatTestKey(): Promise<VoiceChatTestResult>;
+  voiceChatSetVoice(voice: VoiceChatVoice): Promise<AppState>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -169,6 +178,11 @@ export const METHODS = [
   "exportReveal",
   "pickFolder",
   "installExtension",
+  "voiceChatStatus",
+  "voiceChatSetKey",
+  "voiceChatRemoveKey",
+  "voiceChatTestKey",
+  "voiceChatSetVoice",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

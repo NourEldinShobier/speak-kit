@@ -2,3 +2,19 @@
 .sk-page .lm-card:has(.lm-toggle):not(:has(.lm-input, .lm-select, .lm-seg, .lm-btn, .lm-row--control)) {
   padding-block-end: 4px;
 }
+
+/* Voice chat: the key field and its status line. */
+.sk-vckey__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sk-vckey__input {
+  inline-size: 280px;
+}
+.sk-vckey__notice {
+  color: var(--text-secondary);
+}
+.sk-vckey__notice[data-tone="error"] {
+  color: var(--tag-red);
+}

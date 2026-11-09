@@ -1,4 +1,4 @@
-import { app, ipcMain, Menu, nativeTheme, powerMonitor } from "electron";
+import { app, ipcMain, Menu, nativeTheme, powerMonitor, safeStorage } from "electron";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +23,8 @@ import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
+import { KeyStore } from "./voice-chat/key-store";
+import { createVoiceChat } from "./voice-chat/service";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const test = testEnv();
@@ -88,6 +90,13 @@ const mainWindow: MainWindow = new MainWindow(config, {
   },
   onHidden: () => runtime.stopPolling(),
 });
+const voiceChat = createVoiceChat({
+  store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
+  config,
+  saveConfig: store.save,
+  log,
+  baseUrl: test.openaiBaseUrl,
+});
 const runtime: ServerRuntime = new ServerRuntime({
   state,
   config,
@@ -96,6 +105,7 @@ const runtime: ServerRuntime = new ServerRuntime({
   engineWorker: await engineWorkerUrl(here),
   log,
   api: serverApi,
+  voiceChat: voiceChat.server,
   publish,
   isVisible: () => mainWindow.isVisible(),
   onEngineState: (prev, next, detail) => desktop?.onEngineState(prev, next, detail),
@@ -163,6 +173,7 @@ function createHandlers() {
     runtime,
     mainWindow,
     api: serverApi,
+    voiceChat,
     dataDir,
     modelsDir,
     logsDir,

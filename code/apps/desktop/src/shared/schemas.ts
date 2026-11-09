@@ -1,5 +1,6 @@
 import * as v from "valibot";
-import { DEFAULT_PORT, DEFAULT_VOICE } from "@speakkit/protocol";
+import { DEFAULT_PORT, DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICES } from "@speakkit/protocol";
+import { normalizeApiKey } from "./voice-chat";
 import { UPDATE_ACTIONS } from "./updates";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
@@ -70,6 +71,7 @@ export const ConfigSchema = v.object({
   // Saved ids of the form `cb_` plus 8 hex digits name voices that no longer exist; they become the default voice.
   voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
+  voiceChatVoice: v.fallback(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 
@@ -150,4 +152,17 @@ export const ARGS = {
   exportReveal: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.boolean()]),
   pickFolder: v.tuple([v.pipe(v.string(), v.maxLength(1024))]),
   installExtension: v.tuple([]),
+  voiceChatStatus: v.tuple([]),
+  // The key is trimmed and checked for its shape here; a call with anything else is refused before a handler runs, and the error never repeats it.
+  voiceChatSetKey: v.tuple([
+    v.pipe(
+      v.string(),
+      v.maxLength(1000),
+      v.trim(),
+      v.check((k) => normalizeApiKey(k) !== null),
+    ),
+  ]),
+  voiceChatRemoveKey: v.tuple([]),
+  voiceChatTestKey: v.tuple([]),
+  voiceChatSetVoice: v.tuple([v.picklist(VOICE_CHAT_VOICES)]),
 } as const;

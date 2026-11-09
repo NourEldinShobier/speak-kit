@@ -11,6 +11,8 @@ import type { MainWindow } from "./main-window";
 import { emptyPairing } from "./pairing";
 import type { ServerApi } from "./server-api";
 import type { ServerRuntime } from "./server-lifecycle";
+import { voiceChatHandlers } from "./voice-chat/handlers";
+import type { VoiceChat } from "./voice-chat/service";
 
 interface HandlerDeps {
   state: AppState;
@@ -20,6 +22,7 @@ interface HandlerDeps {
   runtime: ServerRuntime;
   mainWindow: MainWindow;
   api: ServerApi;
+  voiceChat: VoiceChat;
   dataDir: string;
   modelsDir: string;
   logsDir: string;
@@ -122,6 +125,7 @@ export function createAppHandlers(d: HandlerDeps) {
       return report;
     },
     metrics: async () => metrics(),
+    ...voiceChatHandlers(d.voiceChat, d.publish),
     hideWindow: async () => mainWindow.hide(),
     quit: async () => mainWindow.quit(),
   } satisfies Partial<{ [K in Method]: Api[K] }>;
