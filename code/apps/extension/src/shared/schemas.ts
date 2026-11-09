@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import type { ContentToBg } from "@speakkit/protocol";
+import type { ContentToBg, VoiceUp } from "@speakkit/protocol";
 import type { ExtraToBg } from "./internal";
 
 /**
@@ -45,7 +45,7 @@ const tabMode = v.picklist(["page", "selection"]);
 export const inboundSchema = v.variant("t", [
   v.object({ t: v.literal("player"), command: playerCommandSchema }),
   v.object({ t: v.literal("get-state") }),
-  v.object({ t: v.literal("open-options") }),
+  v.object({ t: v.literal("open-options"), section: v.optional(v.literal("voicechat")) }),
   v.object({ t: v.literal("hello"), url: v.pipe(v.string(), v.maxLength(4000)) }),
   v.object({ t: v.literal("dismiss"), on: v.boolean() }),
   v.object({ t: v.literal("frame") }),
@@ -71,4 +71,24 @@ export type Inbound = ContentToBg | ExtraToBg;
 export function parseInbound(msg: unknown): Inbound | undefined {
   const r = v.safeParse(inboundSchema, msg);
   return r.success ? r.output : undefined; // a schema that drifts from Inbound fails to compile here
+}
+
+const voicePage = v.object({
+  url: v.pipe(v.string(), v.maxLength(4000)),
+  title: v.pipe(v.string(), v.maxLength(1000)),
+  text: v.pipe(v.string(), v.maxLength(1_000_000)),
+  selection: v.optional(v.pipe(v.string(), v.maxLength(200_000))),
+});
+const voiceUpSchema = v.variant("t", [
+  v.object({ t: v.literal("start"), page: voicePage }),
+  v.object({ t: v.literal("update"), page: voicePage }),
+  v.object({ t: v.literal("mute"), on: v.boolean() }),
+  v.object({ t: v.literal("keep-going") }),
+  v.object({ t: v.literal("end") }),
+]);
+
+/** Returns the parsed message of a page on the voice port, or undefined when it is not one. */
+export function parseVoiceUp(msg: unknown): VoiceUp | undefined {
+  const r = v.safeParse(voiceUpSchema, msg);
+  return r.success ? r.output : undefined;
 }
