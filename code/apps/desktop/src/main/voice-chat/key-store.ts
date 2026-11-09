@@ -36,9 +36,14 @@ export class KeyStore {
   async save(key: string): Promise<boolean> {
     if (!this.canEncrypt()) return false;
     const tmp = `${this.#file}.tmp`;
-    await writeFile(tmp, this.#safe.encryptString(key), { mode: 0o600 });
-    await chmod(tmp, 0o600);
-    await rename(tmp, this.#file);
+    try {
+      await writeFile(tmp, this.#safe.encryptString(key), { mode: 0o600 });
+      await chmod(tmp, 0o600);
+      await rename(tmp, this.#file);
+    } catch (e) {
+      await rm(tmp, { force: true }); // an encrypted key must not stay behind half-saved
+      throw e;
+    }
     return true;
   }
 
@@ -54,5 +59,6 @@ export class KeyStore {
 
   async remove(): Promise<void> {
     await rm(this.#file, { force: true });
+    await rm(`${this.#file}.tmp`, { force: true });
   }
 }

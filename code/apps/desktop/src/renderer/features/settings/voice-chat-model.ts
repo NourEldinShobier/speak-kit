@@ -11,7 +11,8 @@ export interface CardState {
   /** What is being typed. The only place the renderer ever holds a key; cleared on save. */
   draft: string;
   reveal: boolean;
-  busy: "save" | "test" | null;
+  /** The one operation in flight; its result is the only one the card accepts. */
+  busy: "save" | "test" | "remove" | null;
   notice: Notice | null;
 }
 
@@ -20,7 +21,7 @@ export type CardAction =
   | { type: "draft"; text: string }
   | { type: "reveal" }
   | { type: "invalid" }
-  | { type: "busy"; what: "save" | "test" }
+  | { type: "busy"; what: "save" | "test" | "remove" }
   | { type: "saved"; result: VoiceChatSaveResult }
   | { type: "tested"; result: VoiceChatTestResult }
   | { type: "removed"; status: VoiceChatKeyStatus }
@@ -64,11 +65,13 @@ export function cardReducer(s: CardState, a: CardAction): CardState {
     case "busy":
       return { ...s, busy: a.what, notice: a.what === "test" ? { tone: "info", text: "Checking the key with OpenAI" } : null };
     case "saved":
-      return afterSave(s, a.result);
+      return s.busy === "save" ? afterSave(s, a.result) : s;
     case "tested":
+      if (s.busy !== "test") return s;
       return { ...s, busy: null, notice: a.result.ok ? { tone: "ok", text: "OpenAI accepted this key" } : { tone: "error", text: TEST_TEXT[a.result.code] } };
     case "removed":
-      return { ...s, status: a.status, draft: "", reveal: false, notice: { tone: "info", text: "Key removed" } };
+      if (s.busy !== "remove") return s;
+      return { ...s, busy: null, status: a.status, draft: "", reveal: false, notice: { tone: "info", text: "Key removed" } };
     case "failed":
       return { ...s, busy: null, notice: { tone: "error", text: "Speak Kit could not do that. Try again." } };
     default: {
