@@ -16,6 +16,8 @@ import { exportRoutes } from "./routes/export";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
 import { StreamQueue } from "./stream-queue";
+import { MintLimiter, type VoiceChatService } from "./voice-chat";
+import { voiceChatRoutes } from "./routes/voice-chat";
 
 export interface ServerOptions {
   /** The engine (Kokoro, or the fake engine in tests). */
@@ -43,6 +45,8 @@ export interface ServerOptions {
   allowedExtensions?: string[];
   /** Called with an error the node server raises after it started listening (for example EMFILE on accept). Default: one line on stderr. */
   onError?: (e: Error) => void;
+  /** Voice chat (the OpenAI key and the minting of Realtime client secrets) lives in the host app. Without it the voice chat routes answer "unavailable". */
+  voiceChat?: VoiceChatService;
 }
 
 export interface SpeakKitServer {
@@ -76,7 +80,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -89,7 +93,7 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
   const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
   const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
-  return { engines, exporter, queue, version: opts.version ?? "0.0.0", deadlines };
+  return { engines, exporter, queue, version: opts.version ?? "0.0.0", voiceChat: opts.voiceChat, mintLimiter: new MintLimiter(), deadlines };
 }
 
 /** Guard, route, authorize, then run the handler; control routes under their deadline, the speak stream under none. */
