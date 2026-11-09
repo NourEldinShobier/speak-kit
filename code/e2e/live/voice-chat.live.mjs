@@ -96,13 +96,14 @@ async function mint() {
     body: JSON.stringify({ expires_after: { anchor: "created_at", seconds: 300 }, session: { type: "realtime", model: "gpt-realtime-2.1", audio: { output: { voice: "marin" } } } }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) return { status: res.status, body: { code: { 401: "key-rejected", 429: "no-credit" }[res.status] ?? "unavailable" } };
+  if (!res.ok) return { status: 502, body: { code: { 401: "key-rejected", 429: "no-credit" }[res.status] ?? "unavailable" } };
   mints++;
   return { status: 200, body: { clientSecret: body.value, expiresAt: body.expires_at, model: "gpt-realtime-2.1", voice: "marin" } };
 }
 const app = createServer(async (req, res) => {
   const send = (status, body) => res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify(body));
   const path = (req.url ?? "").split("?")[0];
+  if (process.env.LIVE_DEBUG) log(`app ${req.method} ${path} auth ${req.headers.authorization === `Bearer ${TOKEN}` ? "ok" : "missing or wrong"}`);
   if (path === "/v1/health") return send(200, { app: "speakkit", version: "live", apiVersion: 1, engine: { id: "kokoro", state: "ready" } });
   if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(401, { error: { code: "token-rejected", message: "no" } });
   if (path === "/v1/auth/check") return void res.writeHead(204).end();
@@ -158,6 +159,11 @@ try {
   await new Promise((r) => setTimeout(r, 300));
 
   const page = await ctx.newPage();
+  if (process.env.LIVE_DEBUG) {
+    page.on("console", (m) => log(`page ${m.type()}: ${m.text()}`));
+    page.on("pageerror", (e) => log(`page error: ${e.message}`));
+    sw.on("console", (m) => log(`worker ${m.type()}: ${m.text()}`));
+  }
   await page.goto(`http://localhost:${sitePort}/`);
   const sk = (name) => page.locator(`[data-sk="${name}"]`);
   const phase = () => sk("voice-pill").getAttribute("data-phase");
@@ -193,6 +199,11 @@ try {
   await sk("launcher-tab").hover();
   await sk("launcher-talk").click();
 
+  if (process.env.LIVE_DEBUG) {
+    await page.waitForTimeout(3000);
+    log(`shadow: ${await page.evaluate(() => document.querySelector("speakkit-ui")?.shadowRoot?.querySelector(".sk")?.innerHTML.slice(0, 600))}`);
+    await page.screenshot({ path: join(work, "debug.png") });
+  }
   const first = await waitPhase(["idle", "listening", "thinking", "speaking"], 30000);
   check("connected to gpt-realtime-2.1 over WebRTC", !!first, `phase ${first}`);
   check("one client secret was minted, and the page never saw it", mints === 1 && !(await page.evaluate(() => document.documentElement.outerHTML)).includes("ek_"), `${mints} mint`);
