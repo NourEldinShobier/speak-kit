@@ -18,3 +18,6 @@ export async function openUrl(url: string): Promise<void> {
     /* blocked scheme */
   }
 }
+
+/** Chrome's page for the permissions of this extension (microphone among them). */
+export const siteSettingsUrl = () => `chrome://settings/content/siteDetails?site=${encodeURIComponent(`chrome-extension://${chrome.runtime.id}`)}`;

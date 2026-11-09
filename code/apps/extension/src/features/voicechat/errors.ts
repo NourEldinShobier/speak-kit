@@ -37,7 +37,7 @@ export function openAiProblem(f: OpenAiFailure): VoiceProblem {
 /** Reads the code of an OpenAI error body ({ error: { code, type } }), or undefined. Message text is dropped on purpose: it can echo a key. */
 export function openAiCode(body: unknown): string | undefined {
   const e = (body as { error?: { code?: unknown; type?: unknown } } | null)?.error;
-  const c = typeof e?.code === "string" ? e.code : typeof e?.type === "string" ? e.type : undefined;
+  const c = [e?.code, e?.type].find((x) => typeof x === "string") as string | undefined;
   return c?.slice(0, 80);
 }
 

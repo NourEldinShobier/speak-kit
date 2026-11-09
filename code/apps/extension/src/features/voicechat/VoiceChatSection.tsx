@@ -2,9 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, SettingRow, StatusPill } from "@speakkit/ui";
 import { useToken, type SectionProps } from "../settings";
 import { send } from "../../shared/client";
-import { openUrl } from "../../shared/links";
+import { openUrl, siteSettingsUrl } from "../../shared/links";
 import { Card, PageHead } from "../../shared/ui";
 import { voiceStatus } from "./mint";
+
+const keyStateOf = (r: Awaited<ReturnType<typeof voiceStatus>>): KeyState => {
+  if (r.ok) return r.hasKey ? "key" : "no-key";
+  return r.problem === "unpaired" ? "unpaired" : "down";
+};
 
 type KeyState = "checking" | "key" | "no-key" | "down" | "unpaired";
 type MicState = "granted" | "prompt" | "denied" | "unknown";
@@ -14,7 +19,7 @@ function useKeyState(port: number, token: string): KeyState {
   const [state, setState] = useState<KeyState>("checking");
   const check = useCallback(async () => {
     const r = await voiceStatus({ fetch: (i, init) => fetch(i, init), port, token });
-    setState(r.ok ? (r.hasKey ? "key" : "no-key") : r.problem === "unpaired" ? "unpaired" : "down");
+    setState(keyStateOf(r));
   }, [port, token]);
   useEffect(() => {
     void check();
@@ -63,6 +68,12 @@ const KEY_TEXT: Record<KeyState, string> = {
   down: "Start the Speak Kit app to see whether a key is added.",
   unpaired: "Pair the extension with the app on the General page first.",
 };
+const MIC_PILL: Record<MicState, { tone: "green" | "red" | "neutral"; text: string }> = {
+  granted: { tone: "green", text: "Allowed" },
+  denied: { tone: "red", text: "Blocked" },
+  prompt: { tone: "neutral", text: "Not asked yet" },
+  unknown: { tone: "neutral", text: "Not asked yet" },
+};
 const MIC_TEXT: Record<MicState, string> = {
   granted: "Allowed. Speak Kit listens only while a conversation is open.",
   prompt: "Chrome asks the first time you talk to a page.",
@@ -99,15 +110,15 @@ export function VoiceChatSection({ s, saved }: SectionProps) {
           description={MIC_TEXT[mic]}
           control={
             <>
-              <StatusPill tone={mic === "granted" ? "green" : mic === "denied" ? "red" : "neutral"} data-sk="voicechat-mic">
-                {mic === "granted" ? "Allowed" : mic === "denied" ? "Blocked" : "Not asked yet"}
+              <StatusPill tone={MIC_PILL[mic].tone} data-sk="voicechat-mic">
+                {MIC_PILL[mic].text}
               </StatusPill>
               {mic === "prompt" && (
                 <Button variant="secondary" onClick={() => void allow()}>
                   Allow microphone
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void openUrl(`chrome://settings/content/siteDetails?site=${encodeURIComponent(`chrome-extension://${chrome.runtime.id}`)}`)}>
+              <Button variant="secondary" onClick={() => void openUrl(siteSettingsUrl())}>
                 Manage in Chrome
               </Button>
             </>
