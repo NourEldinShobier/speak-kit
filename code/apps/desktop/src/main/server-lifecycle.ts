@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
-import { createServer } from "@speakkit/server";
+import { createServer, type VoiceChatService } from "@speakkit/server";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
@@ -26,6 +26,8 @@ interface RuntimeDeps {
   engineWorker: URL;
   log: Logger;
   api: ServerApi;
+  /** The OpenAI key and the minting of Realtime client secrets; the server only calls it. */
+  voiceChat: VoiceChatService;
   /** Sends the state to every window. */
   publish(): AppState;
   /** Health is polled only while the main window is visible. */
@@ -102,6 +104,7 @@ export class ServerRuntime {
           dataDir,
           port,
           version: state.version,
+          voiceChat: this.#d.voiceChat,
           ...(token ? { token } : {}),
           onError: (e) => this.#onServerError(e),
           // Lazy-load options of the server build; extra keys are ignored by a build that predates them.
