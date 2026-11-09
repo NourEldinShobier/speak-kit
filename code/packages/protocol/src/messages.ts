@@ -64,7 +64,7 @@ export type PlayerCommand =
 export type ContentToBg =
   | { t: "player"; command: PlayerCommand }
   | { t: "get-state" }
-  | { t: "open-options" }
+  | { t: "open-options"; section?: "voicechat" | undefined }
   /** Handshake: sent when a content script starts, again on a bfcache restore (pageshow persisted) and after a re-injection. Reply: HelloReply. */
   | { t: "hello"; url: string }
   /** A content script started in a sub-frame of the page: the worker remembers its frame id so a read can ask it for text. Reply: { ok: true }. */
@@ -86,6 +86,8 @@ export type BgToContent =
   | { t: "toast"; message: string; kind?: "ok" | "info" | "err"; action?: "open-sidepanel" | "open-options"; actionLabel?: string }
   /** open or close the reader view */
   | { t: "reader"; open: boolean }
+  /** Start or end a voice conversation about the page (the keyboard command). */
+  | { t: "voice-toggle" }
   /** The tab's dismissed flag changed outside the page (an explicit read from the popup, the keyboard or the menu clears it). */
   | { t: "dismissed"; on: boolean };
 
