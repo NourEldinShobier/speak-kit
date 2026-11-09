@@ -6,8 +6,9 @@ export const CMD_LABEL: Record<string, string> = {
   "play-pause": "Play / pause",
   stop: "Stop and close dock",
   "read-page": "Read page from the top",
+  "voice-chat": "Talk to this page",
 };
-export const CMD_ORDER = ["read-selection", "play-pause", "read-page", "stop"];
+export const CMD_ORDER = ["read-selection", "play-pause", "read-page", "voice-chat", "stop"];
 export const splitShortcut = (sc?: string) => (sc ? sc.split(/\s*\+\s*/).filter(Boolean) : []);
 
 /**

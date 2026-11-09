@@ -27,6 +27,8 @@ export interface UiModel {
   /** settings.show.bubble / gutter, already combined with the site rule */
   showBubble: boolean;
   showGutter: boolean;
+  /** a voice conversation is open: the Talk button is filled */
+  voiceOpen: boolean;
   /** a reader view is open (the launcher then stays out of the way) */
   readerOpen: boolean;
   /** the user closed the in-page UI for this tab: every surface is off until reading is asked for again or the page reloads */
@@ -61,6 +63,8 @@ export interface UiHandlers {
   /** hover / open intent: ask the app to load the model ahead of the click */
   warm(reason: "hover" | "selection" | "dock"): void;
   openReader(): void;
+  /** start a voice conversation about the page, or end the one that is open */
+  talk(): void;
 }
 
 export type Placement = (el: HTMLElement, anchor: DOMRect, shell: Shell) => void;
