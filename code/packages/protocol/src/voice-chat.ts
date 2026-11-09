@@ -16,7 +16,7 @@ export interface VoicePage {
 /** What the voice pill shows when it is not an error. */
 export type VoicePhase = "connecting" | "idle" | "listening" | "thinking" | "speaking" | "reconnecting" | "idle-warning" | "ended";
 /** One pill per way a conversation can fail. `unreadable`, `too-long` and `page-changed` come from the page, `app-not-running` and `unpaired` from the local app, the rest from the connection. */
-export type VoiceProblem = VoiceChatErrorCode | "app-not-running" | "unpaired" | "mic-blocked" | "unreadable" | "too-long" | "page-changed";
+export type VoiceProblem = VoiceChatErrorCode | "app-not-running" | "unpaired" | "mic-blocked" | "mic-missing" | "unreadable" | "too-long" | "page-changed";
 
 export interface VoiceView {
   phase: VoicePhase;
