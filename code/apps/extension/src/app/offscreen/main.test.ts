@@ -8,7 +8,7 @@ vi.hoisted(() => {
 });
 
 /** Records what the offscreen document asks of the browser, then loads it fresh as Chrome does when it opens the document. */
-async function open() {
+async function open(search = "") {
   const sent: { from?: string; kind?: string }[] = [];
   let listener!: (msg: unknown, sender: unknown, reply: (r: unknown) => void) => boolean;
   const contexts: { closed: boolean }[] = [];
@@ -29,6 +29,7 @@ async function open() {
   const pageListeners: Record<string, () => void> = {};
   vi.stubGlobal("addEventListener", (type: string, fn: () => void) => void (pageListeners[type] = fn));
   vi.stubGlobal("AudioContext", Ctx);
+  vi.stubGlobal("location", { search });
   vi.stubGlobal("chrome", {
     runtime: {
       sendMessage: async (m: { from?: string; kind?: string }) => void sent.push(m),
@@ -51,7 +52,12 @@ async function open() {
   await import("./main");
   const cfg = { port: 47615, token: "tok", voice: "af_heart", speed: 1, pause: "none" as const };
   const send = (command: object) => listener({ to: "offscreen", command, cfg }, {}, () => {});
-  return { sent, send, contexts, pageListeners };
+  const ask = (query: string) => {
+    let answer: unknown = "no answer";
+    listener({ to: "offscreen", query }, {}, (r) => (answer = r));
+    return answer;
+  };
+  return { sent, send, contexts, pageListeners, ask };
 }
 
 afterEach(() => {
@@ -61,6 +67,16 @@ afterEach(() => {
 });
 
 describe("offscreen document lifecycle", () => {
+  it("the player's document announces its state and answers queries; a conversation's document (?voice) does neither, so a paused read-aloud stays paused", async () => {
+    const player = await open();
+    expect(player.sent.map((m) => m.kind)).toEqual(["state"]);
+    expect(player.ask("state")).toMatchObject({ status: "idle" });
+    vi.resetModules();
+    const voice = await open("?voice");
+    expect(voice.sent).toEqual([]);
+    expect(voice.ask("state")).toBe("no answer");
+  });
+
   it("after playback stops it asks to be closed once idle, and holds no timer, interval or audio context by then", async () => {
     vi.useFakeTimers();
     const { sent, send, contexts } = await open();

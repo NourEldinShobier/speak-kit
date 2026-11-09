@@ -5,8 +5,6 @@ export const LINKS = {
   download: "https://speakkit.app/download",
   learn: "https://speakkit.app",
   help: "https://speakkit.app/help",
-  /** Where a user adds credit to an OpenAI account; opened in their browser. */
-  billing: "https://platform.openai.com/settings/organization/billing/overview",
   shortcuts: "chrome://extensions/shortcuts",
 };
 export const extensionSettingsUrl = () => `chrome://extensions/?id=${typeof chrome !== "undefined" ? chrome.runtime.id : ""}`;
