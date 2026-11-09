@@ -111,6 +111,21 @@ test.describe("starting a conversation", () => {
     expect([app.secrets.length, await ext.offscreenCount()]).toEqual([0, 0]);
   });
 
+  test("pressing Talk again while the consent card is open closes the card and leaves nothing stuck", async ({ vc: { ext, app } }) => {
+    await ext.sw.evaluate(() => chrome.storage.local.remove("speakkit.voiceConsent"));
+    const page = await ext.open("/article");
+    await ext.cmd("voice-chat", page);
+    await expect(sk(page, "voice-consent")).toBeVisible();
+    await ext.cmd("voice-chat", page); // toggles: the open card is declined
+    await expect(sk(page, "voice-consent")).toHaveCount(0);
+    await expect(pill(page)).toHaveCount(0);
+    expect(app.secrets).toHaveLength(0);
+    await ext.cmd("voice-chat", page); // and the next press asks again instead of doing nothing
+    await expect(sk(page, "voice-consent")).toBeVisible();
+    await sk(page, "voice-consent-start").click();
+    await phase(page, "idle");
+  });
+
   test("the keyboard command starts and ends a conversation", async ({ vc: { ext } }) => {
     const page = await ext.open("/article");
     await ext.cmd("voice-chat", page);
