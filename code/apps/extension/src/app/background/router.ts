@@ -1,4 +1,5 @@
 import { toInfo } from "../../features/voices";
+import { openUrl } from "../../shared/links";
 import { inboundSchema, type Inbound } from "../../shared/schemas";
 import type { WorkerFailure } from "../../shared/internal";
 import { engine, getHealthResult, health, startApp } from "./connection";
@@ -85,8 +86,9 @@ const handlers: { [T in Inbound["t"]]: Handler<T> } = {
     }
     return OK;
   },
-  "open-options": async () => {
-    await chrome.runtime.openOptionsPage();
+  "open-options": async (msg) => {
+    if (msg.section) await openUrl(chrome.runtime.getURL(`options.html#${msg.section}`));
+    else await chrome.runtime.openOptionsPage();
     return OK;
   },
   "get-health": (msg) => getHealthResult(msg.force),

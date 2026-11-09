@@ -2,6 +2,7 @@ import type { VoiceProblem, VoiceView } from "@speakkit/protocol";
 import { button, h, icon } from "@speakkit/ui/vanilla";
 import type { Shell } from "../../shared/ui-types";
 import { PROBLEMS, type PillAction } from "./errors";
+import { announcement, dotLevel, pillText } from "./pill-text";
 import { COLS, COLS_NARROW, ROWS, gridPattern } from "./grid";
 
 /** What the pill's buttons ask for. */
@@ -16,17 +17,6 @@ const NARROW_PX = 400;
 const TICK_MS = 100;
 /** How long "Conversation ended" stays. Problems stay until the user acts. */
 const ENDED_MS = 8000;
-const SPOKEN: Record<VoiceView["phase"], string> = {
-  connecting: "Connecting",
-  idle: "Ready. Say something.",
-  listening: "Listening",
-  thinking: "Thinking",
-  speaking: "Speaking",
-  reconnecting: "Reconnecting",
-  "idle-warning": "Still there?",
-  ended: "Conversation ended",
-};
-
 /** The voice pill at the top centre of the page: mute, a 15 x 4 dot grid and the end button; error and notice pills take its place. */
 export class VoicePill {
   private el: HTMLElement | null = null;
@@ -58,7 +48,7 @@ export class VoicePill {
   render(view: VoiceView, notice?: VoiceProblem) {
     this.view = view;
     const problem = view.problem ?? notice;
-    const key = problem ? `p:${problem}` : view.phase === "reconnecting" || view.phase === "idle-warning" || view.phase === "ended" ? view.phase : `grid:${this.cols}`;
+    const key = problem ? `p:${problem}` : this.shape(view);
     if (key !== this.key || !this.el) this.build(key, problem);
     if (view.phase === "ended") this.endedTimer ??= setTimeout(() => this.hd.end(), ENDED_MS);
     else {
@@ -66,6 +56,11 @@ export class VoicePill {
       this.endedTimer = undefined;
     }
     this.patch(problem);
+  }
+
+  /** Which pill the phase gets: the notice phases have their own, every other phase is the grid. */
+  private shape(v: VoiceView) {
+    return v.phase === "reconnecting" || v.phase === "idle-warning" || v.phase === "ended" ? v.phase : `grid:${this.cols}`;
   }
 
   /** The microphone or voice level, 0 to 1. */
@@ -146,26 +141,16 @@ export class VoicePill {
         tag(button({ variant: "secondary", size: "sm", label: "End", onClick: () => this.hd.end() }), "voice-end"),
       );
     else if (v.phase === "ended") el.append(tag(button({ variant: "primary", size: "sm", label: "Talk again", onClick: act("talk-again") }), "voice-action"));
-    if (v.phase !== "ended" && v.phase !== "idle-warning") el.append(this.endButton("End conversation"));
+    if (p || (v.phase !== "ended" && v.phase !== "idle-warning")) el.append(this.endButton("End conversation"));
   }
 
   private patch(problem: VoiceProblem | undefined) {
     const v = this.view;
-    const text = problem
-      ? PROBLEMS[problem].text
-      : v.phase === "reconnecting"
-        ? `Reconnecting, ${v.attempt ?? 1} of 5`
-        : v.phase === "idle-warning"
-          ? `Still there? ${v.secondsLeft ?? 30} s`
-          : v.phase === "ended"
-            ? "Conversation ended"
-            : "";
+    const text = pillText(v, problem);
     const t = this.el?.querySelector<HTMLElement>("[data-sk=voice-text]");
     if (t && t.textContent !== text) t.textContent = text;
-    const said = problem || !this.key.startsWith("grid") ? text : v.muted ? "Microphone muted" : SPOKEN[v.phase];
-    // The live region announces state changes only: not every second of the idle countdown.
-    const announce = v.phase === "idle-warning" ? "Still there?" : said;
-    if (this.live.textContent !== announce) this.live.textContent = announce;
+    const said = announcement(v, problem, this.key.startsWith("grid"));
+    if (this.live.textContent !== said) this.live.textContent = said;
     if (this.el) this.el.dataset.phase = problem ? "problem" : v.phase;
     if (this.mute) {
       this.mute.setAttribute("aria-pressed", String(v.muted));
@@ -184,8 +169,7 @@ export class VoicePill {
   private draw() {
     if (!this.dots.length || !this.key.startsWith("grid")) return;
     const still = this.still.matches;
-    const level = still ? (this.view.phase === "listening" || this.view.phase === "speaking" ? 0.5 : 0) : this.lvl;
-    const tones = gridPattern({ phase: this.view.phase, muted: this.view.muted, level, tick: still ? 0 : this.tick, cols: this.cols });
+    const tones = gridPattern({ phase: this.view.phase, muted: this.view.muted, level: dotLevel(this.view, still, this.lvl), tick: still ? 0 : this.tick, cols: this.cols });
     tones.forEach((t, i) => {
       if (this.tones[i] === t) return;
       this.tones[i] = t;

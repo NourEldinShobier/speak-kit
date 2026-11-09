@@ -2,7 +2,7 @@ import type { Settings } from "@speakkit/protocol";
 import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
 import { beside } from "../../shared/placement";
-import { closeButton, focusedControl, moreMenu, readerButton, restoreFocus, speedVoiceButtons } from "./edge-parts";
+import { closeButton, focusedControl, talkButton, moreMenu, readerButton, restoreFocus, speedVoiceButtons } from "./edge-parts";
 import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
 
@@ -80,7 +80,7 @@ export class EdgeLauncher {
     const reading = this.reading;
     const idleOpen = !!l && l.idle === "open" && !reading;
     const open = !!l && !m.readerOpen && (this.pillOpen || idleOpen);
-    const key = l ? `${open}|${reading}|${m.status}|${l.side}|${l.idle}|${l.widerWhileReading}|${l.openOn}|${m.dark}|${m.readerOpen}` : "";
+    const key = l ? `${open}|${reading}|${m.status}|${l.side}|${l.idle}|${l.widerWhileReading}|${l.openOn}|${m.dark}|${m.readerOpen}|${m.voiceOpen}` : "";
     if (key === this.key) return;
     this.key = key;
     this.tab?.remove();
@@ -180,7 +180,7 @@ export class EdgeLauncher {
       data: { sk: "launcher-collapse" },
       onClick: () => this.setPill(false, true),
     });
-    p.append(collapse, logo(32), this.pillPlay(reading), ...(reading ? this.pillProgress() : this.pillReader()));
+    p.append(collapse, logo(32), this.pillPlay(reading), talkButton(this.s, this.tip), ...(reading ? this.pillProgress() : this.pillReader()));
     const { speed, voice, avatar } = speedVoiceButtons(this.s, l);
     this.pillSpeed = speed;
     this.pillVoice = avatar;

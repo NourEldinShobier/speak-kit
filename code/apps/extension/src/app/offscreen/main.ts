@@ -4,6 +4,8 @@ import { IDLE_CLOSE_MS, Player, soundTouchStretch } from "@speakkit/player";
 import type { FromOffscreen, ToOffscreen } from "../../shared/internal";
 import { withDeadline } from "./deadline";
 
+/** The conversation's document (offscreen.html?voice) holds the microphone and the model's voice, not the player: it reports no player state, so a paused read-aloud stays paused. */
+const voiceOnly = location.search === "?voice";
 const testHook = __TEST__ || safeStorage("speakkit.test") !== null;
 const fastIdle = __TEST__ ? Number(safeStorage("speakkit.idleclose")) || 0 : 0;
 
@@ -51,16 +53,24 @@ const player = new Player(
 );
 
 // The document is closing (the worker closed it, or the browser did): release the audio context, the timers and the model hold.
-addEventListener("pagehide", () => player.dispose());
+let voiceModule: typeof import("./voice") | undefined;
+addEventListener("pagehide", () => {
+  player.dispose();
+  voiceModule?.endVoice(); // releases the microphone and the peer connection
+});
 
 chrome.runtime.onMessage.addListener((msg: ToOffscreen, _sender, sendResponse) => {
   if (!msg || msg.to !== "offscreen") return false;
+  if ("voice" in msg) {
+    void import("./voice").then((v) => (voiceModule = v).onVoice(msg)); // loaded on the first conversation
+    return false;
+  }
   if ("autoPlay" in msg) {
     player.autoPlay = msg.autoPlay;
     return false;
   }
   if ("query" in msg) {
-    sendResponse(msg.query === "state" ? player.state() : player.queueItems());
+    if (!voiceOnly) sendResponse(msg.query === "state" ? player.state() : player.queueItems());
     return false;
   }
   cfg = { port: msg.cfg.port, token: msg.cfg.token };
@@ -101,4 +111,4 @@ if (testHook) {
   });
 }
 
-post({ from: "offscreen", kind: "state", state: player.state() });
+if (!voiceOnly) post({ from: "offscreen", kind: "state", state: player.state() });

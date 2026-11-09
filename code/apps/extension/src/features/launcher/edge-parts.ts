@@ -102,3 +102,14 @@ export function restoreFocus(root: HTMLElement, sk: string | null, fallback: str
   const find = (id: string) => root.querySelector<HTMLElement>(`[data-sk="${id}"]`);
   (find(sk) ?? find(fallback))?.focus({ preventScroll: true });
 }
+
+/** Talk about this page: a mic button under play, filled while a conversation is open. */
+export function talkButton(s: Surface, tip: Tip): HTMLElement {
+  const on = s.model().voiceOpen;
+  const label = on ? "End the conversation" : "Talk about this page";
+  const b = iconButton({ name: "microphone", label, size: 36, className: on ? "sk-talk is-open" : "sk-talk", data: { sk: "launcher-talk" }, onClick: () => s.hd.talk() });
+  b.setAttribute("aria-pressed", String(on));
+  for (const ev of ["pointerenter", "focus"]) b.addEventListener(ev, () => tip.show(b, `${label} (Alt+Shift+V)`));
+  for (const ev of ["pointerleave", "blur"]) b.addEventListener(ev, () => tip.hide());
+  return b;
+}

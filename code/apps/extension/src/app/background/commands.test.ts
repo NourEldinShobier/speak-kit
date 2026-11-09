@@ -5,7 +5,7 @@ let status = "idle";
 vi.mock("./connection", () => ({ engine: { warm: async () => void calls.push("warm") } }));
 vi.mock("./player", () => ({ runPlayerCommand: async (c: { cmd: string }) => void calls.push(`player:${c.cmd}`) }));
 vi.mock("./reading", () => ({ activeTabId: async () => 7, startRead: async (_t: number, mode: string) => void calls.push(`read:${mode}`) }));
-vi.mock("./state", () => ({ getState: async () => ({ status }) }));
+vi.mock("./state", () => ({ getState: async () => ({ status }), sendToTab: (id: number, m: { t: string }) => void calls.push(`tab${id}:${m.t}`) }));
 
 const { onCommand } = await import("./commands");
 
@@ -27,6 +27,11 @@ describe("keyboard commands", () => {
     status = "playing";
     await onCommand("play-pause");
     expect(calls).toEqual(["player:toggle"]);
+  });
+
+  it("voice-chat asks the page to start or end a conversation, and touches neither the player nor the model", async () => {
+    await onCommand("voice-chat", { id: 3 } as chrome.tabs.Tab);
+    expect(calls).toEqual(["tab3:voice-toggle"]);
   });
 
   it("stop never wakes the model", async () => {

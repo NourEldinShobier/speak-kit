@@ -1,5 +1,6 @@
 import type { VoiceProblem } from "@speakkit/protocol";
 import { openAiCode, openAiProblem } from "./errors";
+import { ignore } from "../../shared/ignore";
 
 /** The Realtime API over WebRTC, in a page that owns the microphone. Authenticates with a client secret only. */
 export const OPENAI_BASE = "https://api.openai.com";
@@ -8,7 +9,7 @@ const CONNECT_TIMEOUT_MS = 15_000;
 const DISCONNECT_GRACE_MS = 4000;
 
 /** A server event of the data channel that the session reacts to. */
-export type RealtimeEvent = { type: string; error?: { code?: string; type?: string } };
+export type RealtimeEvent = { type: string; error?: { code?: string; type?: string }; transcript?: string };
 
 export class RealtimeFailure extends Error {
   readonly problem: VoiceProblem;
@@ -101,7 +102,7 @@ export class Realtime {
       this.dc.onopen = () => res();
       setTimeout(() => rej(new RealtimeFailure("offline")), CONNECT_TIMEOUT_MS);
     });
-    open.catch(() => {}); // a failure before it is awaited is reported by the step that failed
+    open.catch(ignore); // a failure before it is awaited is reported by the step that failed
     await this.pc.setLocalDescription(await this.pc.createOffer());
     let res: Response;
     try {
@@ -114,11 +115,11 @@ export class Realtime {
     } catch {
       throw new RealtimeFailure("offline");
     }
-    if (!res.ok) throw new RealtimeFailure(openAiProblem({ status: res.status, code: openAiCode(await res.json().catch(() => undefined)) }));
+    if (!res.ok) throw new RealtimeFailure(openAiProblem({ status: res.status, code: openAiCode(await res.json().catch(ignore)) }));
     await this.pc.setRemoteDescription({ type: "answer", sdp: await res.text() });
     await open;
     this.setInstructions(this.o.instructions, this.o.voice);
-    void this.ctx.resume().catch(() => {});
+    void this.ctx.resume().catch(ignore);
   }
 
   /** Cost control: low reasoning, short answers, server VAD (the model hears turns, nothing is sent while the track is off). */
@@ -133,9 +134,17 @@ export class Realtime {
     if (this.dc.readyState === "open") this.dc.send(JSON.stringify({ type: "session.update", session }));
   }
 
-  /** Mute and idle switch the microphone track off: no audio leaves the page. */
+  /** Mute and idle switch the microphone off: the track is disabled and detached from the connection, so no audio packets leave the page. */
   send(on: boolean) {
     for (const t of this.o.stream.getAudioTracks()) t.enabled = on;
+    for (const s of this.pc.getSenders()) if (s.track?.kind === "audio" || !s.track) void s.replaceTrack(on ? (this.o.stream.getAudioTracks()[0] ?? null) : null).catch(ignore);
+  }
+
+  /** Audio bytes sent so far (tests check that nothing is sent while muted). */
+  async bytesSent(): Promise<number> {
+    let n = 0;
+    for (const s of (await this.pc.getStats()).values()) if (s.type === "outbound-rtp" && s.kind === "audio") n += s.bytesSent as number;
+    return n;
   }
 
   level(which: "mic" | "out"): number {
@@ -150,6 +159,6 @@ export class Realtime {
     this.dc.close();
     this.pc.close();
     this.audio.srcObject = null;
-    void this.ctx.close().catch(() => {});
+    void this.ctx.close().catch(ignore);
   }
 }

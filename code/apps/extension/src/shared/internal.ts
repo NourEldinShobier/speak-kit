@@ -9,7 +9,7 @@ export type { PlayerConfig, QueueItem };
 export type VoiceCommand = VoiceUp | { t: "mic"; ok: boolean };
 
 export type ToOffscreen =
-  | { to: "offscreen"; voice: VoiceCommand; tabId: number; cfg?: { port: number; token: string } }
+  | { to: "offscreen"; voice: VoiceCommand; tabId: number; sid: number; cfg?: { port: number; token: string } }
   | { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig }
   | { to: "offscreen"; query: "queue" | "state" }
   | { to: "offscreen"; autoPlay: boolean };
@@ -18,8 +18,8 @@ export type FromOffscreen =
   | { from: "offscreen"; kind: "state"; state: PlayerState }
   | { from: "offscreen"; kind: "sentence-start"; start: SentenceStart; tabId?: number }
   | { from: "offscreen"; kind: "queue"; queue: QueueItem[] }
-  /** the voice session of `tabId`: what its page shows, that the microphone window is needed, or that the session is over */
-  | { from: "offscreen"; kind: "voice"; tabId: number; msg: VoiceDown | { t: "need-mic" } | { t: "closed" } }
+  /** the voice session `sid` of `tabId` (the worker numbers sessions, so a late message of a dead one is ignored): what its page shows, that the microphone window is needed, or that the session is over */
+  | { from: "offscreen"; kind: "voice"; tabId: number; sid: number; msg: VoiceDown | { t: "need-mic" } | { t: "closed" } }
   /** playback has been stopped for 60 s and nothing is queued: the worker may close the document */
   | { from: "offscreen"; kind: "idle" };
 

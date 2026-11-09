@@ -221,3 +221,9 @@
     inset: min(0px, calc((100% - 44px) / 2));
   }
 }
+
+/* Talk: filled while a voice conversation is open. */
+.sk .sk-talk.is-open {
+  background: #201e25;
+  color: #fff;
+}

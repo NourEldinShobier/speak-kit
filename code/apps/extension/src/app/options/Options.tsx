@@ -13,6 +13,7 @@ const NAV: [id: string, label: string, icon: IconName][] = [
   ["general", "General", "adjustments"],
   ["launcher", "Edge launcher", "layout-sidebar-right"],
   ["voice", "Voice and speed", "microphone"],
+  ["voicechat", "Voice chat", "volume"],
   ["highlight", "Highlighting", "highlight"],
   ["reader", "Reader view", "book"],
   ["shortcuts", "Shortcuts", "keyboard"],

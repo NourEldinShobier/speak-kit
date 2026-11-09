@@ -4,6 +4,7 @@ import type { Ctx } from "./context";
 import type { Docs } from "./docs";
 import type { Follow } from "./playback";
 import type { ReaderSession } from "./reader-session";
+import type { VoiceLink } from "./voice-link";
 
 const VOICES_WAIT_MS = 1500;
 
@@ -12,6 +13,7 @@ interface Parts {
   docs: Docs;
   follow: Follow;
   reader: ReaderSession;
+  voice: VoiceLink;
 }
 
 /** The voice list: cached after the first answer; resolves with whatever it has after 1.5 s so a slow worker never blocks the popover. */
@@ -115,5 +117,6 @@ export function makeHandlers(c: Ctx, p: Parts): UiHandlers {
     backToCurrent: () => p.follow.back(),
     warm: (reason) => c.warm(reason),
     openReader: () => p.reader.open(),
+    talk: () => p.voice.toggle(),
   };
 }

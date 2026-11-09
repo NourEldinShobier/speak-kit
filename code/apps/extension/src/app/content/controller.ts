@@ -16,6 +16,7 @@ import { ACTIVE, asHello } from "./player-state";
 import { PlayerView } from "./player-view";
 import { ReaderSession } from "./reader-session";
 import type { Ui } from "./ui";
+import { VoiceLink } from "./voice-link";
 
 /** The lazy half of the content script: settings, extraction, highlight and the Shadow DOM UI. Loaded by index.ts. */
 
@@ -53,7 +54,8 @@ class Controller implements Ctx {
     (msg, cb) => this.post(msg, cb),
     () => this.refresh(),
   );
-  private readonly handlers = makeHandlers(this, { docs: this.docsPart, follow: this.follow, reader: this.session });
+  private readonly voice = new VoiceLink(this, this.docsPart);
+  private readonly handlers = makeHandlers(this, { docs: this.docsPart, follow: this.follow, reader: this.session, voice: this.voice });
   private readonly onStorage = (ch: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area === "sync" && ch[SETTINGS_KEY]) void this.reloadSettings().then(() => this.refresh());
   };
@@ -110,6 +112,7 @@ class Controller implements Ctx {
   /** The extension was reloaded or updated under this page: remove every listener and element, quietly. */
   private teardown() {
     this.gone = true;
+    this.voice.ifLoaded((v) => v.destroy());
     this.ac.abort();
     this.session.close();
     this.playback.stopHighlight();
@@ -152,6 +155,7 @@ class Controller implements Ctx {
   /** Clears the page and hides every surface of this tab. */
   private closeLocal() {
     const st = this.state;
+    this.voice.ifLoaded((v) => v.end());
     this.tabEvent({ t: "close", docId: st?.docId });
     this.session.close();
     this.playback.stopHighlight();
@@ -205,6 +209,7 @@ class Controller implements Ctx {
       ...this.surfaces(rule),
       dark: this.playback.dark,
       engineAsleep: this.wake.asleep && (st?.status ?? "idle") === "idle",
+      voiceOpen: this.voice.open,
       readerOpen: !!this.reader,
       dismissed: this.dismissed,
     };
@@ -290,6 +295,9 @@ class Controller implements Ctx {
       case "dismissed":
         if (msg.on) this.closeLocal();
         else this.restoreTab();
+        break;
+      case "voice-toggle":
+        this.voice.toggle();
         break;
       case "reader":
         if (msg.open) {

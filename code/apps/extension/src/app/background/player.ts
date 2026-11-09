@@ -2,7 +2,10 @@ import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
 import { getToken, loadSettings, saveSettings } from "../../features/settings";
 import type { FromOffscreen, PlayerConfig } from "../../shared/internal";
 import { closeOffscreenIfIdle, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
+import { endVoice } from "./voice-state";
 import { getState, idle, lastDoc, publishState, rememberDoc, sendToPages, sendToTab, setQueue } from "./state";
+
+const SOUNDS = new Set<PlayerCommand["cmd"]>(["play", "resume", "toggle", "queue-play"]);
 
 async function playerConfig(): Promise<PlayerConfig> {
   const s = await loadSettings();
@@ -10,6 +13,7 @@ async function playerConfig(): Promise<PlayerConfig> {
 }
 
 export async function runPlayerCommand(command: PlayerCommand, senderTabId?: number, cfgOverride?: Partial<PlayerConfig>): Promise<void> {
+  if (SOUNDS.has(command.cmd)) await endVoice(); // a read-aloud and a conversation never talk at once
   if ((command.cmd === "play" || command.cmd === "queue-add") && senderTabId !== undefined) command = { ...command, doc: { ...command.doc, tabId: senderTabId } };
   if (command.cmd === "set-speed") await saveSettings({ speed: command.speed });
   if (command.cmd === "set-voice") await saveSettings({ voice: command.voice });
@@ -31,7 +35,7 @@ export async function runPlayerCommand(command: PlayerCommand, senderTabId?: num
 }
 
 /** What the offscreen player reports: state, the sentence being heard, the queue, or that it has been idle long enough to close. */
-export async function handleOffscreen(m: FromOffscreen): Promise<void> {
+export async function handleOffscreen(m: Exclude<FromOffscreen, { kind: "voice" }>): Promise<void> {
   if (m.kind === "state") publishState(m.state);
   else if (m.kind === "sentence-start") {
     sendToPages({ t: "sentence-start", start: m.start });
