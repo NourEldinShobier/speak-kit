@@ -1,20 +1,24 @@
 import { button, h, icon } from "@speakkit/ui/vanilla";
 import type { Shell } from "../../shared/ui-types";
 
-const POINTS: [icon: "user" | "shield-check" | "circle-check", text: string][] = [
+const POINTS: [icon: "user" | "link" | "wallet" | "shield-check" | "circle-check", text: string][] = [
   ["user", "Your voice and the page text go to your provider, OpenAI. They need an API key, which you add in the Speak Kit app."],
+  ["link", "The page address (without its query) is included. The page text counts again with every answer and is sent again if the connection is restored."],
+  ["wallet", "OpenAI bills conversations to your account."],
   ["shield-check", "Speak Kit has no server and stores nothing."],
   ["circle-check", "You can end the conversation any time."],
 ];
 
-/** The first-use card: what leaves the computer and where it goes. Resolves true on "Start talking", false on "Not now", Escape or the close button. */
-export function askConsent(shell: Shell): Promise<boolean> {
+/** The first-use card: what leaves the computer and where it goes. Resolves true on "Start talking", false on "Not now", Escape, the close button or when `cancel` aborts. */
+export function askConsent(shell: Shell, cancel: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
     const done = (ok: boolean) => {
       card.remove();
       document.removeEventListener("keydown", onKey, true);
+      cancel.removeEventListener("abort", onAbort);
       resolve(ok);
     };
+    const onAbort = () => done(false);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.stopImmediatePropagation();
@@ -39,6 +43,8 @@ export function askConsent(shell: Shell): Promise<boolean> {
       h("div", { class: "sk-vc-foot" }, later, start),
     );
     document.addEventListener("keydown", onKey, true);
+    if (cancel.aborted) return done(false);
+    cancel.addEventListener("abort", onAbort);
     shell.root.append(card);
     start.focus({ preventScroll: true });
   });

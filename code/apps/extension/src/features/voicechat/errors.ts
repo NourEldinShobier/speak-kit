@@ -13,6 +13,7 @@ export const PROBLEMS: Record<VoiceProblem, { text: string; label: string; actio
   "app-not-running": { text: "Speak Kit isn't running", label: "Open Speak Kit", action: "open-app" },
   unpaired: { text: "Pair Speak Kit first", label: "Settings", action: "settings" },
   "mic-blocked": { text: "Microphone blocked", label: "How to allow", action: "allow-mic" },
+  "mic-missing": { text: "No microphone found", label: "Retry", action: "retry" },
   unreadable: { text: "Cannot read this page", label: "Reader view", action: "reader" },
   "too-long": { text: "Page is too long", label: "Use selection", action: "use-selection" },
   "page-changed": { text: "Page changed", label: "Update", action: "update" },
@@ -41,8 +42,19 @@ export function openAiCode(body: unknown): string | undefined {
   return c?.slice(0, 80);
 }
 
-/** An `error` event of the data channel ends the conversation only when it names one of these codes; the rest (an empty audio commit, say) are ignored. */
+/** The pill for a failed getUserMedia: no device, one another program holds, or no usable one is "missing"; everything else (the user said no, a policy) is "blocked". */
+export function micProblem(error: unknown): VoiceProblem {
+  const name = (error as { name?: unknown } | null)?.name;
+  return name === "NotFoundError" || name === "NotReadableError" || name === "OverconstrainedError" ? "mic-missing" : "mic-blocked";
+}
+
+/** Errors of the data channel that change nothing for the conversation (an empty audio commit, a cancel with nothing to cancel). */
+const HARMLESS = new Set(["input_audio_buffer_commit_empty", "response_cancel_not_active", "conversation_already_has_active_response"]);
+const ACCOUNT = new Set(["insufficient_quota", "billing_hard_limit_reached", "invalid_api_key", "invalid_ephemeral_key", "rate_limit_exceeded"]);
+
+/** An `error` event of the data channel ends the conversation unless its code is known to be harmless: an unknown one, a rejected session.update among them, means the model may not have the page, so it ends as unavailable. Only the code is read, never the message. */
 export function eventProblem(event: unknown): VoiceProblem | undefined {
   const code = openAiCode(event);
-  return code === "insufficient_quota" || code === "billing_hard_limit_reached" || code === "invalid_api_key" || code === "rate_limit_exceeded" ? openAiProblem({ code }) : undefined;
+  if (code && HARMLESS.has(code)) return undefined;
+  return code && ACCOUNT.has(code) ? openAiProblem({ code }) : "unavailable";
 }

@@ -8,6 +8,9 @@ export type { PlayerConfig, QueueItem };
 /** A voice chat command for the voice session in the offscreen document: what the page asked, or the result of the microphone window. */
 export type VoiceCommand = VoiceUp | { t: "mic"; ok: boolean };
 
+/** The port the voice document holds open to the worker: its heartbeat keeps the worker awake, and a closed port tells the document the worker is gone. */
+export const VOICE_DOC_PORT = "speakkit-voice-doc";
+
 export type ToOffscreen =
   | { to: "offscreen"; voice: VoiceCommand; tabId: number; sid: number; cfg?: { port: number; token: string } }
   | { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig }

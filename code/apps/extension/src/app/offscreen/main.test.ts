@@ -2,6 +2,9 @@ import { encodeFrame } from "@speakkit/protocol";
 import { IDLE_CLOSE_MS } from "@speakkit/player";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
+const voice = vi.hoisted(() => ({ onVoice: vi.fn(), endVoice: vi.fn() }));
+vi.mock("./voice", () => voice);
+
 // The player package imports the SoundTouch worklet, which extends this browser class when it loads.
 vi.hoisted(() => {
   (globalThis as { AudioWorkletNode?: unknown }).AudioWorkletNode = class {};
@@ -32,6 +35,8 @@ async function open(search = "") {
   vi.stubGlobal("location", { search });
   vi.stubGlobal("chrome", {
     runtime: {
+      id: "ext-id",
+      getURL: (path: string) => `chrome-extension://ext-id/${path}`,
       sendMessage: async (m: { from?: string; kind?: string }) => void sent.push(m),
       onMessage: { addListener: (l: typeof listener) => (listener = l) },
     },
@@ -51,19 +56,56 @@ async function open(search = "") {
   );
   await import("./main");
   const cfg = { port: 47615, token: "tok", voice: "af_heart", speed: 1, pause: "none" as const };
-  const send = (command: object) => listener({ to: "offscreen", command, cfg }, {}, () => {});
-  const ask = (query: string) => {
+  const worker = { id: "ext-id", url: "chrome-extension://ext-id/background.js" };
+  const send = (command: object, sender: object = worker) => listener({ to: "offscreen", command, cfg }, sender, () => {});
+  const ask = (query: string, sender: object = worker) => {
     let answer: unknown = "no answer";
-    listener({ to: "offscreen", query }, {}, (r) => (answer = r));
+    listener({ to: "offscreen", query }, sender, (r) => (answer = r));
     return answer;
   };
-  return { sent, send, contexts, pageListeners, ask };
+  return { sent, send, contexts, pageListeners, ask, listener };
 }
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.resetModules();
+});
+
+describe("who may command the document", () => {
+  const doc = { docId: "d", tabId: 1, url: "", title: "t", sentences: [{ text: "Hello there.", block: 0 }], startIndex: 0, source: "page" };
+  const contentScript = { id: "ext-id", url: "https://evil.example/", tab: { id: 7 } };
+
+  it("answers the service worker and ignores a content script, another extension and a page of the extension that is not the worker", async () => {
+    const { send, ask, sent } = await open();
+    expect(ask("state", contentScript)).toBe("no answer");
+    expect(ask("state", { id: "other-ext", url: "chrome-extension://other-ext/background.js" })).toBe("no answer");
+    expect(ask("state", { id: "ext-id", url: "chrome-extension://ext-id/options.html" })).toBe("no answer");
+    expect(ask("state", {})).toBe("no answer");
+    expect(ask("state")).toMatchObject({ status: "idle" });
+    send({ cmd: "play", doc }, contentScript);
+    expect(sent.some((m) => m.kind === "state" && (m as { state?: { status?: string } }).state?.status === "preparing")).toBe(false);
+  });
+
+  it("takes voice commands from the worker, and the microphone's answer also from the permission page", async () => {
+    const { listener } = await open("?voice");
+    const start = { to: "offscreen", voice: { t: "end" }, tabId: 1, sid: 1 };
+    const mic = { to: "offscreen", voice: { t: "mic", ok: true }, tabId: 0, sid: 1 };
+    const micPage = { id: "ext-id", url: "chrome-extension://ext-id/mic.html?sid=1", tab: { id: 9 } }; // a popup window is a tab
+    const called = async (msg: object, sender: object) => {
+      voice.onVoice.mockClear();
+      listener(msg, sender, () => {});
+      await new Promise((r) => setTimeout(r, 0));
+      return voice.onVoice.mock.calls.length;
+    };
+    expect(await called(start, { id: "ext-id", url: "chrome-extension://ext-id/background.js" })).toBe(1);
+    expect(await called(mic, { id: "ext-id", url: "chrome-extension://ext-id/background.js" })).toBe(1);
+    expect(await called(mic, micPage)).toBe(1);
+    expect(await called(start, micPage)).toBe(0); // the permission page may answer, not command
+    expect(await called(mic, contentScript)).toBe(0);
+    expect(await called(start, contentScript)).toBe(0);
+    expect(await called(mic, { id: "ext-id", url: "https://evil.example/mic.html", tab: { id: 3 } })).toBe(0);
+  });
 });
 
 describe("offscreen document lifecycle", () => {

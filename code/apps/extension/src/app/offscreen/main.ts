@@ -59,8 +59,15 @@ addEventListener("pagehide", () => {
   voiceModule?.endVoice(); // releases the microphone and the peer connection
 });
 
-chrome.runtime.onMessage.addListener((msg: ToOffscreen, _sender, sendResponse) => {
-  if (!msg || msg.to !== "offscreen") return false;
+/** Who may command this document: the extension's own service worker and, for the microphone's answer, its permission page. A content script never (its url is the web page's). The permission page is a window, so a tab does not rule a sender out. */
+function trusted(sender: chrome.runtime.MessageSender, msg: ToOffscreen): boolean {
+  if (!sender.id || sender.id !== chrome.runtime.id) return false; // a content script has the extension's id too: its url, a web page's, is what tells it apart
+  if (sender.url === chrome.runtime.getURL("background.js")) return true;
+  return "voice" in msg && msg.voice.t === "mic" && !!sender.url?.startsWith(chrome.runtime.getURL("mic.html")); // the permission page answers for the session that opened it
+}
+
+chrome.runtime.onMessage.addListener((msg: ToOffscreen, sender, sendResponse) => {
+  if (!msg || msg.to !== "offscreen" || !trusted(sender, msg)) return false;
   if ("voice" in msg) {
     void import("./voice").then((v) => (voiceModule = v).onVoice(msg)); // loaded on the first conversation
     return false;

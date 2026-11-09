@@ -3,6 +3,7 @@ import { Button, SettingRow, StatusPill } from "@speakkit/ui";
 import { useToken, type SectionProps } from "../settings";
 import { send } from "../../shared/client";
 import { openUrl, siteSettingsUrl } from "../../shared/links";
+import { forgetVoiceConsent, hasVoiceConsent, onVoiceConsent } from "../../shared/voice-consent";
 import { Card, PageHead } from "../../shared/ui";
 import { voiceStatus } from "./mint";
 
@@ -54,6 +55,16 @@ function useMic(): [MicState, () => Promise<void>] {
   return [state, ask];
 }
 
+/** Whether the user agreed to the first-use card; follows changes made on a page while this one is open. */
+function useConsent(): boolean {
+  const [given, setGiven] = useState(false);
+  useEffect(() => {
+    void hasVoiceConsent().then(setGiven, () => setGiven(false));
+    return onVoiceConsent(setGiven);
+  }, []);
+  return given;
+}
+
 const KEY_PILL: Record<KeyState, { tone: "green" | "orange" | "red" | "neutral"; text: string }> = {
   checking: { tone: "neutral", text: "Checking" },
   key: { tone: "green", text: "Key added" },
@@ -81,6 +92,33 @@ const MIC_TEXT: Record<MicState, string> = {
   unknown: "Chrome asks the first time you talk to a page.",
 };
 
+/** The first-use agreement of the conversation card: shown while it stands, with the way to take it back. */
+function ConsentCard() {
+  const consent = useConsent();
+  return (
+    <Card title="Consent" id="vc-consent-h">
+      <SettingRow
+        label="First-use agreement"
+        description={
+          consent
+            ? "You agreed to send your voice, the page address and the page text to OpenAI. Forgetting it shows the first-use card again before the next conversation."
+            : "Not given yet. A card explains what is sent before your first conversation."
+        }
+        control={
+          <>
+            <StatusPill tone={consent ? "green" : "neutral"} data-sk="voicechat-consent">
+              {consent ? "Agreed" : "Not asked yet"}
+            </StatusPill>
+            <Button variant="secondary" disabled={!consent} onClick={() => void forgetVoiceConsent()}>
+              Forget voice chat consent
+            </Button>
+          </>
+        }
+      />
+    </Card>
+  );
+}
+
 export function VoiceChatSection({ s, saved }: SectionProps) {
   const { token } = useToken();
   const key = useKeyState(s.port, token);
@@ -104,6 +142,7 @@ export function VoiceChatSection({ s, saved }: SectionProps) {
           }
         />
       </Card>
+      <ConsentCard />
       <Card title="Microphone" id="vc-mic-h">
         <SettingRow
           label="Microphone access"

@@ -1,6 +1,6 @@
 import { VOICE_PORT, type VoiceUp } from "@speakkit/protocol";
 import { getToken, loadSettings } from "../../features/settings";
-import type { FromOffscreen, VoiceCommand } from "../../shared/internal";
+import { VOICE_DOC_PORT, type FromOffscreen, type VoiceCommand } from "../../shared/internal";
 import { parseVoiceUp } from "../../shared/schemas";
 import { OFFSCREEN_URL, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
 import { runPlayerCommand } from "./player";
@@ -49,7 +49,15 @@ async function begin(tabId: number, up: Extract<VoiceUp, { t: "start" }>) {
   }
 }
 
+/** The voice document's port: its heartbeat is what keeps this worker awake, so there is nothing to do with a message but receive it. Anything else that connects under that name is refused. */
+function onVoiceDocPort(port: chrome.runtime.Port) {
+  const s = port.sender;
+  if (s?.id !== chrome.runtime.id || s.tab || !s.url?.startsWith(chrome.runtime.getURL(OFFSCREEN_URL))) return port.disconnect();
+  port.onMessage.addListener(ignore);
+}
+
 export function onVoicePort(port: chrome.runtime.Port) {
+  if (port.name === VOICE_DOC_PORT) return onVoiceDocPort(port);
   const tabId = port.sender?.tab?.id;
   if (port.name !== VOICE_PORT || tabId === undefined || port.sender?.id !== chrome.runtime.id) return;
   voicePorts.set(tabId, port);
@@ -67,23 +75,30 @@ export function onVoicePort(port: chrome.runtime.Port) {
   });
 }
 
-let micWindow: number | undefined;
+/** The permission window and the conversation (`sid`) that asked for it: its answer counts only for that conversation. */
+let micWindow: { id: number; sid: number } | undefined;
 // Closing the permission window without answering is an answer: blocked. (The page says so too; whichever arrives first counts.)
 chrome.windows.onRemoved.addListener((id) => {
-  if (id !== micWindow) return;
+  if (id !== micWindow?.id) return;
+  const { sid: asked } = micWindow;
   micWindow = undefined;
-  void toVoiceDoc(0, { t: "mic", ok: false }).catch(ignore);
+  void toVoiceDoc(0, { t: "mic", ok: false }, { sid: asked }).catch(ignore);
 });
-async function openMicWindow() {
-  if (micWindow !== undefined && (await chrome.windows.get(micWindow).catch(ignore))) return void chrome.windows.update(micWindow, { focused: true });
-  micWindow = (await chrome.windows.create({ url: "mic.html", type: "popup", width: 460, height: 340, focused: true }))?.id;
+/** A window left from an earlier attempt has already answered (usually "blocked") and would never ask again: it is closed, and a fresh one asks. */
+async function openMicWindow(asked: number) {
+  const stale = micWindow;
+  micWindow = undefined; // before the removal, so its onRemoved is not taken for a "blocked" answer
+  if (stale) await chrome.windows.remove(stale.id).catch(ignore);
+  const win = await chrome.windows.create({ url: `mic.html?sid=${asked}`, type: "popup", width: 460, height: 340, focused: true });
+  if (win?.id !== undefined) micWindow = { id: win.id, sid: asked };
 }
 
 /** What the voice session reports. A tab without a port is a page that is gone (or a worker that restarted): its session is ended. */
 export function onVoiceFromOffscreen({ tabId, sid: from, msg }: Extract<FromOffscreen, { kind: "voice" }>) {
-  if (msg.t === "need-mic") return void openMicWindow();
+  if (msg.t === "need-mic") return void openMicWindow(from);
   if (from !== sid) {
-    if (sid === 0) void toVoiceDoc(tabId, { t: "end" }, { sid: from }).catch(ignore); // the worker restarted: nobody is listening to that conversation
+    // The worker restarted: nobody is listening to that conversation. The document is told to end it, and closed once it has.
+    if (sid === 0) void (msg.t === "closed" ? closeVoiceDoc() : toVoiceDoc(tabId, { t: "end" }, { sid: from }).catch(ignore));
     return;
   }
   if (msg.t === "closed") {

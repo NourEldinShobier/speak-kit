@@ -7,11 +7,12 @@ import css from "./pill.css?inline";
  */
 export { VoiceChatSection } from "./VoiceChatSection";
 export { askConsent } from "./consent";
-export { eventProblem, type PillAction } from "./errors";
+export { mayHaveChangedContent, pageChanged } from "./churn";
+export { eventProblem, micProblem, type PillAction } from "./errors";
 export { IdleTimer } from "./idle";
 export { initialView, isLive, reduceVoice, type VoiceEvent } from "./machine";
 export { mintSession } from "./mint";
-export { MAX_PAGE_CHARS, buildInstructions } from "./page";
+export { MAX_PAGE_CHARS, buildInstructions, pageAddress } from "./page";
 export { VoicePill } from "./pill";
 export { OPENAI_BASE, Realtime, RealtimeFailure, type RealtimeEvent } from "./realtime";
 export { SingleSession } from "./single";

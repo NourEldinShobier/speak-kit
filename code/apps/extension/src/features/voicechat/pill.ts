@@ -14,13 +14,15 @@ export interface PillHandlers {
 }
 
 const NARROW_PX = 400;
+const NOTICE_PHASES = new Set<VoiceView["phase"]>(["listening", "idle", "thinking", "speaking"]);
 const TICK_MS = 100;
 /** How long "Conversation ended" stays. Problems stay until the user acts. */
 const ENDED_MS = 8000;
 /** The voice pill at the top centre of the page: mute, a 15 x 4 dot grid and the end button; error and notice pills take its place. */
 export class VoicePill {
   private el: HTMLElement | null = null;
-  private live = h("span", { class: "sk-sr" });
+  /** The one live region of the pill: it outlives every rebuild of the pill, so a screen reader hears each change ("Conversation ended", an error, "Reconnecting", "Still there?"). */
+  private readonly live = h("div", { class: "sk-sr", role: "status", "aria-live": "polite", "data-sk": "voice-live" });
   private dots: HTMLElement[] = [];
   private tones: number[] = [];
   private mute: HTMLButtonElement | null = null;
@@ -38,16 +40,17 @@ export class VoicePill {
   constructor(shell: Shell, hd: PillHandlers) {
     this.shell = shell;
     this.hd = hd;
+    shell.root.append(this.live);
   }
 
   private get cols() {
     return this.shell.width < NARROW_PX ? COLS_NARROW : COLS;
   }
 
-  /** `notice` is a problem of the page (it changed) shown over a conversation that is still open. */
+  /** `notice` is a problem of the page (it changed) shown over a conversation that is still open: only over the grid phases, never over a warning, a reconnect or an error. */
   render(view: VoiceView, notice?: VoiceProblem) {
     this.view = view;
-    const problem = view.problem ?? notice;
+    const problem = view.problem ?? (NOTICE_PHASES.has(view.phase) ? notice : undefined);
     const key = problem ? `p:${problem}` : this.shape(view);
     if (key !== this.key || !this.el) this.build(key, problem);
     if (view.phase === "ended") this.endedTimer ??= setTimeout(() => this.hd.end(), ENDED_MS);
@@ -84,6 +87,7 @@ export class VoicePill {
     clearInterval(this.timer);
     clearTimeout(this.endedTimer);
     this.el?.remove();
+    this.live.remove();
     this.hint?.remove();
     this.el = this.hint = null;
   }
@@ -91,10 +95,9 @@ export class VoicePill {
   private build(key: string, problem: VoiceProblem | undefined) {
     this.key = key;
     const hadFocus = !!this.el && (this.shell.root.getRootNode() as ShadowRoot).activeElement?.closest(".sk-vp") === this.el;
-    const el = h("div", { class: "sk-vp", role: "status", "aria-live": "polite", "data-sk": "voice-pill" });
+    const el = h("div", { class: "sk-vp", "data-sk": "voice-pill" });
     if (key.startsWith("grid")) this.buildGrid(el);
     else this.buildNotice(el, problem);
-    el.append(this.live);
     this.el?.replaceWith(el);
     if (!this.el) this.shell.root.append(el);
     this.el = el;

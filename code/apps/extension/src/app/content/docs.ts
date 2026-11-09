@@ -1,6 +1,6 @@
 import type { ExtractReply, ReadDoc, VoicePage } from "@speakkit/protocol";
 import { extract, extractFieldText, fieldSelection, findMainRoot, sentenceIndexAt, type Extraction } from "../../features/reader";
-import { MAX_PAGE_CHARS } from "../../features/voicechat";
+import { MAX_PAGE_CHARS, pageAddress } from "../../features/voicechat";
 import type { Ctx, ReadMode } from "./context";
 
 const uid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -110,7 +110,7 @@ export class Docs {
     return doc;
   }
 
-  /** The page and the selection as the text of a voice conversation: paragraphs apart by a blank line. */
+  /** The page and the selection as the text of a voice conversation: paragraphs apart by a blank line. The address has no query or fragment. */
   voicePage(): VoicePage {
     const text = (ex: Extraction | undefined) => {
       const out: string[] = [];
@@ -120,7 +120,7 @@ export class Docs {
     const range = currentSelection();
     const whole = this.extraction(undefined);
     const selection = text(range && this.extraction(range));
-    return { url: location.href, title: whole?.title ?? document.title, text: text(whole).slice(0, MAX_PAGE_CHARS + 1000), ...(selection ? { selection } : {}) };
+    return { url: pageAddress(location.href), title: whole?.title ?? document.title, text: text(whole).slice(0, MAX_PAGE_CHARS + 1000), ...(selection ? { selection } : {}) };
   }
 
   /** Reply to a background 'extract' request. */
