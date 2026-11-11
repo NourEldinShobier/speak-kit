@@ -52,6 +52,11 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 beforeEach(() => void (current.status = null));
 
 describe("Settings > Dictation", () => {
+  it("says when the hotkey could not start, and stays quiet otherwise", () => {
+    expect(text(page(status({ hotkeyFailed: true })))).toContain("The hotkey could not start Dictation does not hear the hotkey");
+    expect(text(page(status()))).not.toContain("The hotkey could not start");
+  });
+
   it("shows the title before the status has arrived", () => {
     expect(text(page(null))).toContain("Dictation Hold a key, speak");
   });
