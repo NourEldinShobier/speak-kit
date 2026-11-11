@@ -36,10 +36,10 @@
     "desktop": {
       "description": "Electron app (@slow tests): shell, library and reader against the built desktop app.",
       "tier": "ci",
-      "command": "node e2e/run.mjs --full desktop.spec.ts library.spec.ts reader.spec.ts",
+      "command": "node e2e/run.mjs --full desktop.spec.ts library.spec.ts reader.spec.ts dictation.spec.ts",
       "needs": ["chromium", "electron", "desktop build"],
       "shardable": false,
-      "specs": ["desktop.spec.ts", "library.spec.ts", "reader.spec.ts"]
+      "specs": ["desktop.spec.ts", "library.spec.ts", "reader.spec.ts", "dictation.spec.ts"]
     },
     "slow": {
       "description": "Real Kokoro model from code/.cache/models; not run on hosted runners.",
