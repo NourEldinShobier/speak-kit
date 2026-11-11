@@ -8,9 +8,12 @@ describe("screen look schemas", () => {
     expect(parseLookRequest({ session: "s1", scope: "screen" })).toEqual({ session: "s1", scope: "screen" });
   });
 
-  it.each([{}, { session: "", scope: "window" }, { session: "s", scope: "desktop" }, { session: "x".repeat(65), scope: "window" }, { session: 1, scope: "window" }, null])("rejects the request %j", (body) => {
-    expect(parseLookRequest(body)).toBeUndefined();
-  });
+  it.each([{}, { session: "", scope: "window" }, { session: "s", scope: "desktop" }, { session: "x".repeat(65), scope: "window" }, { session: 1, scope: "window" }, null])(
+    "rejects the request %j",
+    (body) => {
+      expect(parseLookRequest(body)).toBeUndefined();
+    },
+  );
 
   it("accepts a look, with or without the black flag", () => {
     expect(parseScreenLook(look)).toEqual(look);

@@ -38,7 +38,7 @@ export interface ScreenLook {
   target: string;
   scope: LookScope;
   /** "black": nothing visible (protected video, locked screen); "partly": a large black area, possibly protected video */
-  black?: "black" | "partly";
+  black?: "black" | "partly" | undefined;
 }
 
 /** `code` is repeated inside `error` so the generic `{ error: { code, message } }` parser also reads it. */
