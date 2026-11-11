@@ -15,6 +15,6 @@ export type { Settings, SiteDefault, SiteRule } from "./settings";
 export type { EngineId, EngineInfo, EngineList, ExportJob, ExportRequest, ExportState } from "./engines";
 export { engineListSchema, errorBodySchema, exportJobSchema, healthSchema, parseHealth, parseVoiceList, voiceListSchema } from "./schemas";
 export { VOICE_PORT } from "./voice-chat";
-export type { VoiceDown, VoicePage, VoicePhase, VoiceProblem, VoiceUp, VoiceView } from "./voice-chat";
+export type { VoiceDown, VoicePage, VoicePhase, VoiceProblem, VoiceUp, VoiceUsage, VoiceView } from "./voice-chat";
 export { clock, compareNames, plural } from "./format";
 export * from "./voice-chat-app";
