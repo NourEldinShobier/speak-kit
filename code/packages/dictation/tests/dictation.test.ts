@@ -366,11 +366,14 @@ describe("recording problems", () => {
     await r.time.advance(400);
     r.release();
     expect(r.dictation.state()).toEqual({ status: "transcribing" });
+    const seen: DictationState[] = [];
+    r.dictation.subscribe((s) => seen.push(s));
     open();
     await r.time.advance(1000);
     expect(r.rec.log).toEqual(["start:450"]);
     expect(r.stt.calls).toEqual([]);
     expect(r.dictation.state()).toEqual({ status: "error", code: "mic-busy" });
+    expect(seen.at(-1)).toEqual({ status: "error", code: "mic-busy" });
   });
 
   it("a short tap that came before the microphone failed to open does not discard what never started", async () => {

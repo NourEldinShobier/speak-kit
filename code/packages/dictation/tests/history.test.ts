@@ -151,11 +151,11 @@ describe("retention", () => {
     expect(MAX_ENTRIES).toBe(500);
     const { history, time, store } = setup("forever");
     for (let i = 0; i < 503; i++) await history.add(entry(time.clock.now() + i, `t${i}`));
+    expect((store.state.value as unknown[]).length).toBe(500);
     const all = await history.list();
     expect(all).toHaveLength(500);
     expect(all[0]?.text).toBe("t502");
     expect(all.at(-1)?.text).toBe("t3");
-    expect((store.state.value as unknown[]).length).toBe(500);
   });
 
   it("only what the retention allows survives, for any ages and any retention", async () => {
