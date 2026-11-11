@@ -2,6 +2,7 @@ import { plural, type Health } from "@speakkit/protocol";
 import { trayState as engineTrayState, trayTooltip, type TrayState } from "./engine-view";
 import type { DesktopError } from "./errors";
 import type { ReaderState } from "./reader";
+import { hotkeyText } from "./dictation/keys";
 import type { Bindings } from "./shortcuts";
 import type { UpdateState } from "./updates";
 
@@ -14,6 +15,8 @@ export interface TrayContext {
   exportsRunning: number;
   doNotDisturb: boolean;
   shortcuts: Bindings;
+  /** Absent where dictation cannot run (no key hook on this platform yet). */
+  dictation?: { enabled: boolean; hotkey: string };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -35,7 +38,21 @@ export function trayTooltipFor(c: TrayContext): string {
   return trayTooltip(c.health, c.serverError);
 }
 
-export type TrayAction = "open" | "pause" | "resume" | "stop" | "wake" | "restart-engine" | "dnd" | "settings" | "check-updates" | "restart-update" | "quit";
+export type TrayAction =
+  | "dictation"
+  | "dictation-history"
+  | "dictation-settings"
+  | "open"
+  | "pause"
+  | "resume"
+  | "stop"
+  | "wake"
+  | "restart-engine"
+  | "dnd"
+  | "settings"
+  | "check-updates"
+  | "restart-update"
+  | "quit";
 
 type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
 
@@ -47,6 +64,13 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const reading = c.reader.status === "playing" || c.reader.status === "preparing";
   const paused = c.reader.status === "paused";
   const rows: TrayItem[] = [item("open", "Open Speak Kit")];
+  if (c.dictation) {
+    const d = c.dictation;
+    rows.push(item("dictation", "Dictation", { checked: d.enabled }));
+    // A caption, not a command: disabled and without an action of its own.
+    if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey)} to dictate`, { enabled: false }));
+    rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
+  }
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));
