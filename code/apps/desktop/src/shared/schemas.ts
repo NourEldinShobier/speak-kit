@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { DEFAULT_PORT, DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICES } from "@speakkit/protocol";
 import { normalizeApiKey } from "./voice-chat";
 import { UPDATE_ACTIONS } from "./updates";
+import { DictationConfigSchema } from "./dictation/settings";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
@@ -72,6 +73,7 @@ export const ConfigSchema = v.object({
   voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
   voiceChatVoice: v.fallback(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
+  dictation: v.fallback(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 

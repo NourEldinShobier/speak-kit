@@ -10,7 +10,7 @@ import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } fro
 
 export type { Config, ConfigPatch } from "./schemas";
 export const PAGES = ["home", "library", "voices", "engines", "browser", "settings"] as const;
-export const SETTINGS_SUBS = ["general", "voice", "shortcuts", "notifications", "memory", "browser", "storage", "about"] as const;
+export const SETTINGS_SUBS = ["general", "voice", "dictation", "dictation-history", "shortcuts", "notifications", "memory", "browser", "storage", "about"] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
