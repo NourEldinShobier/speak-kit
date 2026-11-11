@@ -15,7 +15,8 @@
     "oxlintDisable": 1,
     "swallowingCatch": 2,
     "physicalCss": 0,
-    "skipped": 2,
+    "skipped": 1,
+    "gated": 2,
     "focused": 0,
     "tsNocheck": 0
   }
