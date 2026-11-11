@@ -109,6 +109,10 @@
   color: #c62828;
   flex: none;
 }
+.sk-vp-usage {
+  white-space: nowrap;
+  opacity: 0.7;
+}
 .sk-vp-text {
   white-space: nowrap;
   overflow: hidden;

@@ -71,3 +71,24 @@ describe("the live region", () => {
     expect(live()).toBeNull();
   });
 });
+
+describe("the usage line", () => {
+  const text = (sk: string) => root.querySelector(`[data-sk=${sk}]`)?.textContent;
+
+  test("is a second line of the ended pill, said by the live region, and absent without usage or after a problem", () => {
+    pill.render(view("ended", { usage: { costUsd: 0.1234, seconds: 250 } }));
+    expect([text("voice-text"), text("voice-usage"), live()?.textContent]).toEqual(["Conversation ended", "about $0.12 · 4 min", "Conversation ended. about $0.12 · 4 min"]);
+    pill.render(view("ended"));
+    expect(root.querySelector("[data-sk=voice-usage]")).toBeNull();
+    pill.render(view("ended", { problem: "offline", usage: { costUsd: 1 } }));
+    expect(root.querySelector("[data-sk=voice-usage]")).toBeNull();
+  });
+
+  test("the cost warning is a notice with an end button, and the capped end says so", () => {
+    pill.render(view("cost-warning"));
+    expect([shown(), text("voice-text")]).toEqual(["cost-warning", "Cost limit reached. Ending soon"]);
+    expect(root.querySelector("[data-sk=voice-end]")).not.toBeNull();
+    pill.render(view("ended", { usage: { costUsd: 0.5, capped: true } }));
+    expect(text("voice-text")).toBe("Cost limit reached. Conversation ended");
+  });
+});

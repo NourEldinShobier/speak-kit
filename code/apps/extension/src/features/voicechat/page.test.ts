@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { MAX_INSTRUCTION_BYTES, MAX_PAGE_CHARS, MAX_SELECTION_CHARS, buildInstructions, pageAddress } from "./page";
+import { INLINE_PAGE_BYTES, MAX_INSTRUCTION_BYTES, MAX_PAGE_CHARS, MAX_SELECTION_CHARS, buildInstructions, pageAddress } from "./page";
+import { PageIndex } from "./search";
 
 const page = { url: "https://example.com/a", title: "The Long Harbor", text: "The harbor wakes before the first ferry." };
 
@@ -74,11 +75,51 @@ describe("buildInstructions", () => {
     expect(buildInstructions({ ...big, selection: "s".repeat(MAX_SELECTION_CHARS + 1) })).toEqual({ ok: false, problem: "too-long" });
   });
 
-  it("measures the size in bytes: a page of 3-byte characters under the character cap is still too long", () => {
-    const wide = { ...page, text: "\u8a9e".repeat(MAX_PAGE_CHARS) };
-    expect(buildInstructions(wide)).toEqual({ ok: false, problem: "too-long" });
-    const r = buildInstructions({ ...wide, selection: "this" });
-    expect(r.ok && r.instructions).toContain("only the selected text above is available");
+  it("measures the size in bytes: a page of 3-byte characters over 15 000 tokens is outlined, not sent whole", () => {
+    const wide = { ...page, text: "語".repeat(30_000) };
+    const r = buildInstructions(wide);
+    expect(r.ok && r.index).toBeDefined();
+    expect(r.ok && r.instructions).toContain("this is only its outline");
     expect(new TextEncoder().encode(r.ok ? r.instructions : "").length).toBeLessThanOrEqual(MAX_INSTRUCTION_BYTES);
+  });
+
+  it("a page of 3-byte characters at the character cap is searchable, and does not need a selection", () => {
+    expect(buildInstructions({ ...page, text: "語".repeat(MAX_PAGE_CHARS) }).ok).toBe(true);
+  });
+});
+
+const section = (title: string, body: string) => `${title}\n\n${body}`;
+
+describe("main content and the page cap", () => {
+  it("drops addresses, repeated spaces and a paragraph that repeats, and keeps the rest", () => {
+    const text = "Read more at https://example.com/x?utm_source=a&id=3 or www.example.org/y today.\n\nMenu\n\nMenu\n\nThe  harbor \t wakes.";
+    const r = buildInstructions({ ...page, text });
+    expect(r.ok && r.instructions).toContain('Page text:\n"""\nRead more at or today.\n\nMenu\n\nThe harbor wakes.\n"""');
+  });
+
+  it("sends a page of exactly 15 000 tokens whole and one byte more as an outline with a search index", () => {
+    const whole = buildInstructions({ ...page, text: "a".repeat(INLINE_PAGE_BYTES) });
+    expect(whole.ok && whole.index).toBeUndefined();
+    expect(whole.ok && whole.instructions).toContain("Page text:");
+    const long = buildInstructions({ ...page, text: "a".repeat(INLINE_PAGE_BYTES + 1) });
+    expect(long.ok && long.index).toBeInstanceOf(PageIndex);
+    expect(long.ok && long.instructions).not.toContain("Page text:");
+    expect(long.ok && long.instructions).toContain("call search_page");
+  });
+
+  it("an outlined page lists its headings with their first sentence, and the index finds the passage a question needs", () => {
+    const filler = "Ferries cross the bay. ".repeat(400);
+    const text = [
+      section("Tides", `Tides rise twice a day. ${filler}`),
+      section("Tolls", `The toll is four coins. ${filler}`),
+      section("Lights", `Lanterns burn all night. ${filler}`),
+      `The secret code word is pelican. ${filler}`,
+      filler.repeat(5),
+    ].join("\n\n");
+    const r = buildInstructions({ ...page, text });
+    expect(r.ok && r.instructions).toContain("Tolls: The toll is four coins.");
+    expect(r.ok && r.instructions).not.toContain("pelican");
+    const hit = r.ok ? r.index?.search("code word") : undefined;
+    expect(hit?.[0]).toContain("pelican");
   });
 });

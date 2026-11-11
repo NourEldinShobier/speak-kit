@@ -14,6 +14,19 @@ export const VOICE_CHAT_VOICES = ["marin", "cedar", "alloy", "ash", "ballad", "c
 export type VoiceChatVoice = (typeof VOICE_CHAT_VOICES)[number];
 export const DEFAULT_VOICE_CHAT_VOICE: VoiceChatVoice = "marin";
 
+/** Token saving defaults of every voice session: short answers, and the oldest turns dropped (20 percent at a time, so the cached prefix survives between drops) once the turns after the instructions pass the limit. */
+export const VOICE_CHAT_LIMITS = {
+  maxOutputTokens: 400,
+  retentionRatio: 0.8,
+  postInstructionTokens: 6000,
+} as const;
+
+/** The session fields of those limits, as the Realtime API names them (a client secret and a session.update take the same). */
+export const voiceChatSessionLimits = () => ({
+  max_output_tokens: VOICE_CHAT_LIMITS.maxOutputTokens,
+  truncation: { type: "retention_ratio", retention_ratio: VOICE_CHAT_LIMITS.retentionRatio, token_limits: { post_instructions: VOICE_CHAT_LIMITS.postInstructionTokens } },
+});
+
 export const VOICE_CHAT_ERROR_CODES = ["no-key", "key-rejected", "no-credit", "rate-limited", "offline", "unavailable"] as const;
 export type VoiceChatErrorCode = (typeof VOICE_CHAT_ERROR_CODES)[number];
 

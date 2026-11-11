@@ -14,9 +14,17 @@ export interface VoicePage {
 }
 
 /** What the voice pill shows when it is not an error. */
-export type VoicePhase = "connecting" | "idle" | "listening" | "thinking" | "speaking" | "reconnecting" | "idle-warning" | "ended";
+export type VoicePhase = "connecting" | "idle" | "listening" | "thinking" | "speaking" | "reconnecting" | "idle-warning" | "cost-warning" | "ended";
 /** One pill per way a conversation can fail. `unreadable`, `too-long` and `page-changed` come from the page, `app-not-running` and `unpaired` from the local app, the rest from the connection. */
 export type VoiceProblem = VoiceChatErrorCode | "app-not-running" | "unpaired" | "mic-blocked" | "mic-missing" | "unreadable" | "too-long" | "page-changed";
+
+/** The per-session usage line of the ended pill: estimated cost from the model's usage reports, length of the conversation, and whether the cost cap ended it. */
+export interface VoiceUsage {
+  costUsd: number;
+  /** filled in by the page, which times the conversation */
+  seconds?: number;
+  capped?: boolean;
+}
 
 export interface VoiceView {
   phase: VoicePhase;
@@ -25,6 +33,8 @@ export interface VoiceView {
   attempt?: number;
   /** seconds left of the idle warning */
   secondsLeft?: number;
+  /** what the conversation cost, set once it ended without a problem */
+  usage?: VoiceUsage | undefined;
   /** an error or notice pill replaces the grid; the conversation is over unless the problem is `page-changed` */
   problem?: VoiceProblem;
 }

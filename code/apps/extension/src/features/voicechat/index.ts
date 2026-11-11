@@ -7,14 +7,16 @@ import css from "./pill.css?inline";
  */
 export { VoiceChatSection } from "./VoiceChatSection";
 export { askConsent } from "./consent";
+export { SESSION_CAP_USD } from "./cost";
 export { mayHaveChangedContent, pageChanged } from "./churn";
 export { eventProblem, micProblem, type PillAction } from "./errors";
 export { IdleTimer } from "./idle";
-export { initialView, isLive, reduceVoice, type VoiceEvent } from "./machine";
+export { REALTIME_EVENTS, initialView, isLive, reduceVoice, type VoiceEvent } from "./machine";
 export { mintSession } from "./mint";
 export { MAX_PAGE_CHARS, buildInstructions, pageAddress } from "./page";
 export { VoicePill } from "./pill";
 export { OPENAI_BASE, Realtime, RealtimeFailure, type RealtimeEvent } from "./realtime";
 export { SingleSession } from "./single";
+export { Turns } from "./turns";
 /** Stylesheet of the voice pill and the first-use card, injected into the Shadow DOM. */
 export const VOICE_CSS: string = css;
