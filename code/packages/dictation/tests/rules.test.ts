@@ -95,6 +95,8 @@ describe("spoken symbols", () => {
     ["a schrägstrich b", "a/b"],
     ["a schragstrich b", "a/b"],
     ["a SCHRÄGSTRICH b", "a/b"],
+    ["hashtag python", "#python"],
+    ["eins strichpunkt zwei", "eins; zwei"],
     ["a bindestrich b", "a-b"],
     ["a unterstrich b", "a_b"],
     ["raute eins", "#eins"],
@@ -103,6 +105,15 @@ describe("spoken symbols", () => {
     ["eins semikolon zwei", "eins; zwei"],
     ["hinweis doppelpunkt text", "hinweis: text"],
   ]);
+
+  it("does not read a symbol word from another language's table", () => {
+    expect(run("a komma b", { spokenSymbols: true, language: "en" })).toBe("a komma b");
+    expect(run("a comma b", { spokenSymbols: true, language: "de" })).toBe("a comma b");
+  });
+
+  it("a language code named like an object property finds no table", () => {
+    expect(run("a comma b", { spokenSymbols: true, spokenFormatting: true, language: "constructor" })).toBe("a comma b");
+  });
 
   it("leaves languages without a table alone", () => {
     expect(run("مرحبا comma", { spokenSymbols: true, language: "ar" })).toBe("مرحبا comma");
@@ -141,6 +152,10 @@ describe("spoken formatting", () => {
 
   it("does nothing when switched off", () => {
     expect(run("a new line b", { spokenFormatting: false })).toBe("a new line b");
+  });
+
+  it("pairs quote and unquote in English only", () => {
+    expect(run("quote hi unquote", { spokenFormatting: true, language: "de" })).toBe("quote hi unquote");
   });
 });
 
@@ -222,6 +237,26 @@ describe("replacements", () => {
     expect(run("one\nbasically two", { ...del, autoCapitalize: false })).toBe("one\nTwo");
   });
 
+  it("a phrase that starts or ends with a symbol needs no word edge on that side", () => {
+    expect(run("a++c", { replacements: [rule("++c", "X")] })).toBe("aX");
+    expect(run("c++x", { replacements: [rule("c++", "C")] })).toBe("Cx");
+  });
+
+  it("a shorter match next to a longer one is kept", () => {
+    expect(run("a-++b", { replacements: [rule("++", "P"), rule("-", "M")] })).toBe("aMPb");
+  });
+
+  it("a replacement right after a deletion still gets the sentence capital", () => {
+    expect(run("Done. Basically x", { replacements: [rule("basically", ""), rule("x", "y")] })).toBe("Done. Y");
+  });
+
+  it("a comma before the end of the text or a sentence end goes with the deleted phrase", () => {
+    const del = { replacements: [rule("basically", "")], autoCapitalize: false };
+    expect(run("yes, basically", del)).toBe("yes");
+    expect(run("a, b, basically.", del)).toBe("a, b.");
+    expect(run("yes,basically fine", del)).toBe("yes,fine");
+  });
+
   it("does not match at the start of a longer word either", () => {
     expect(run("bobcat cat", { replacements: [rule("cat", "dog")] })).toBe("bobcat dog");
     expect(run("a13d b 3d", { replacements: [rule("3d", "three d")] })).toBe("a13d b three d");
@@ -257,12 +292,13 @@ describe("replacements", () => {
   });
 
   it("matches the reference selection for any text and rules", () => {
-    const rulesArb = fc.array(fc.record({ from: fc.constantFrom("a", "b", "ab", "ba", "a b", "b a", "aba", "bab", "aa"), to: fc.constantFrom("X", "Y", "Z") }), { minLength: 1, maxLength: 5 });
+    const rulesArb = fc.array(fc.record({ from: fc.constantFrom("a", "b", "a b", "b a", "a b a", "b a b", "a a", "b b"), to: fc.constantFrom("X", "Y", "Z") }), { minLength: 1, maxLength: 6 });
+    const textArb = fc.array(fc.constantFrom("a", "b", "A", "B"), { maxLength: 8 }).map((tokens) => tokens.join(" "));
     fc.assert(
-      fc.property(fc.stringMatching(/^[aAbB ]{0,14}$/), rulesArb, (text, rules) => {
-        expect(run(text, { replacements: rules })).toBe(referenceReplace(text.trim(), rules));
+      fc.property(textArb, rulesArb, (text, rules) => {
+        expect(run(text, { replacements: rules })).toBe(referenceReplace(text, rules));
       }),
-      { numRuns: 500 },
+      { numRuns: 1000 },
     );
   });
 

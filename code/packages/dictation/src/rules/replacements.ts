@@ -56,14 +56,15 @@ export function applyReplacements(text: string, rules: Replacement[]): string {
       continue;
     }
     cursor = skipSpaces(text, cursor);
-    const next = text[cursor];
+    // "" is the end of the text; String.includes("") is true, so the end counts as a line end and a sentence end.
+    const ahead = text.charAt(cursor);
     const sentenceStart = atSentenceStart(out);
-    if (next === "," && (out === "" || sentenceStart)) {
+    if (ahead === "," && sentenceStart) {
       cursor = skipSpaces(text, cursor + 1); // a comma left at the start of a sentence goes with the phrase
     } else {
-      if (next === undefined || next === "\n" || ",.;:!?".includes(next)) out = out.replace(/[ \t]+$/, "");
-      if (next !== undefined && ".!?".includes(next)) out = out.replace(/,$/, "");
-      if (next === "," && out.endsWith(",")) cursor++;
+      if (",.;:!?\n".includes(ahead)) out = out.replace(/[ \t]+$/, "");
+      if (".!?".includes(ahead)) out = out.replace(/,$/, "");
+      if (ahead === "," && out.endsWith(",")) cursor++;
     }
     capitalNext = sentenceStart;
   }

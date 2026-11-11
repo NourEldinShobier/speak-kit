@@ -1,6 +1,6 @@
 import { apply, compile, type Compiled, type Phrase } from "./phrases";
 
-const SYMBOLS: Record<string, Phrase[]> = {
+const symbolTables: Record<string, Phrase[]> = {
   en: [
     { words: ["hashtag", "hash sign"], out: "#", join: "next" },
     { words: ["at sign"], out: "@", join: "both" },
@@ -24,7 +24,7 @@ const SYMBOLS: Record<string, Phrase[]> = {
   ],
 };
 
-const FORMATTING: Record<string, Phrase[]> = {
+const formattingTables: Record<string, Phrase[]> = {
   en: [
     { words: ["new paragraph"], out: "\n\n", join: "both" },
     { words: ["new line", "line break"], out: "\n", join: "both" },
@@ -37,22 +37,19 @@ const FORMATTING: Record<string, Phrase[]> = {
   ],
 };
 
-const compiled = new Map<string, Compiled>();
-function tableFor(kind: "symbols" | "formatting", lang: string): Compiled | undefined {
-  const key = `${kind}:${lang}`;
-  const table = (kind === "symbols" ? SYMBOLS : FORMATTING)[lang];
-  if (table && !compiled.has(key)) compiled.set(key, compile(table, kind === "formatting"));
-  return compiled.get(key);
-}
+// Compiled once at load; a Map, so a language code such as "constructor" finds nothing.
+const compileAll = (tables: Record<string, Phrase[]>, attached: boolean): Map<string, Compiled> => new Map(Object.entries(tables).map(([lang, table]) => [lang, compile(table, attached)]));
+const SYMBOLS = compileAll(symbolTables, false);
+const FORMATTING = compileAll(formattingTables, true);
 
 /** A language without a table keeps its text: only English and German have spoken symbols so far. */
 export function spokenSymbols(text: string, lang: string): string {
-  const table = tableFor("symbols", lang);
+  const table = SYMBOLS.get(lang);
   return table ? apply(text, table) : text;
 }
 
 export function spokenFormatting(text: string, lang: string): string {
-  const table = tableFor("formatting", lang);
+  const table = FORMATTING.get(lang);
   const paired = lang === "en" ? text.replace(/(?<![\p{L}\p{N}])quote[ \t]+([^\n]+?)[ \t]+unquote(?![\p{L}\p{N}])/giu, '"$1"') : text;
   return table ? apply(paired, table) : paired;
 }

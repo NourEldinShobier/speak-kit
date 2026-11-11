@@ -37,7 +37,15 @@ export function apply(text: string, { re, byWords }: Compiled): string {
   return text.replace(re, (_match: string, ...groups: string[]) => {
     const [lead, said, trail] = groups as [string, string, string];
     const p = byWords.get(plain(said)) as Phrase; // the pattern only matches phrases from the table
-    if (p.join === "next") return (lead && " ") + p.out;
-    return p.join === "prev" ? p.out + (trail && " ") : p.out;
+    switch (p.join) {
+      case "next":
+        return (lead && " ") + p.out;
+      case "prev":
+        return p.out + (trail && " ");
+      case "both":
+        return p.out;
+      default:
+        return p.join satisfies never;
+    }
   });
 }

@@ -181,6 +181,7 @@ describe("what the keyboard hook must swallow", () => {
     expect(play("D0 K10 E20", hold).consumed).toEqual([true, false, false]);
     expect(play("D0 U10 E20 K30", toggle).consumed).toEqual([true, true, true, false]);
     expect(play("D0 U10 X20", toggle).consumed).toEqual([true, true, false]);
+    expect(play("D0 U100 K150").consumed).toEqual([true, true, false]);
   });
 });
 
