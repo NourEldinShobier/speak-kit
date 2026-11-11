@@ -41,6 +41,16 @@ describe("reduceVoice", () => {
     expect(reduceVoice(w, { t: "keep-going" })).toEqual({ phase: "idle", muted: false });
   });
 
+  it("the cost limit warns while the conversation is live, and a lost connection then ends it instead of reconnecting", () => {
+    const w = run([{ t: "connected" }, { t: "speech-start" }, { t: "speech-stop" }, { t: "audio-start" }, { t: "cost-limit" }]);
+    expect(w).toEqual({ phase: "cost-warning", muted: false });
+    expect(reduceVoice(w, { t: "speech-start" })).toBe(w);
+    expect(reduceVoice(w, { t: "audio-stop" })).toBe(w);
+    expect(reduceVoice(w, { t: "lost" })).toEqual({ phase: "ended", muted: false });
+    expect(reduceVoice(w, { t: "end" }).phase).toBe("ended");
+    expect(run([{ t: "cost-limit" }]).phase).toBe("connecting");
+  });
+
   it("a problem ends the conversation and nothing revives it", () => {
     const dead = run([{ t: "connected" }, { t: "problem", problem: "no-credit" }]);
     expect(dead).toEqual({ phase: "ended", muted: false, problem: "no-credit" });

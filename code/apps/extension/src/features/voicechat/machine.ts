@@ -12,9 +12,19 @@ export type VoiceEvent =
   | { t: "mute"; on: boolean }
   | { t: "lost" }
   | { t: "idle-warning"; secondsLeft: number }
+  | { t: "cost-limit" }
   | { t: "keep-going" }
   | { t: "problem"; problem: VoiceProblem }
   | { t: "end" };
+
+/** The server events of the Realtime API that move the conversation state. */
+export const REALTIME_EVENTS: Record<string, VoiceEvent> = {
+  "input_audio_buffer.speech_started": { t: "speech-start" },
+  "input_audio_buffer.speech_stopped": { t: "speech-stop" },
+  "output_audio_buffer.started": { t: "audio-start" },
+  "output_audio_buffer.stopped": { t: "audio-stop" },
+  "output_audio_buffer.cleared": { t: "audio-stop" },
+};
 
 export const initialView = (): VoiceView => ({ phase: "connecting", muted: false });
 
@@ -34,12 +44,14 @@ const HANDLERS: { [T in VoiceEvent["t"]]: Handler<T> } = {
   mute: (v, e) => ({ ...v, muted: e.on, phase: e.on && v.phase === "listening" ? "idle" : v.phase }),
   lost: (v) => {
     const attempt = v.phase === "reconnecting" ? (v.attempt ?? 0) + 1 : 1;
+    if (v.phase === "cost-warning") return { phase: "ended", muted: v.muted }; // the conversation was about to end anyway
     return attempt > MAX_RECONNECTS ? { phase: "ended", muted: v.muted, problem: "offline" } : { phase: "reconnecting", muted: v.muted, attempt };
   },
   "idle-warning": (v, e) => {
     if (isLive(v)) return { phase: "idle-warning", muted: v.muted, secondsLeft: e.secondsLeft };
     return v.phase === "idle-warning" ? { ...v, secondsLeft: e.secondsLeft } : v;
   },
+  "cost-limit": (v) => (isLive(v) || v.phase === "idle-warning" ? { phase: "cost-warning", muted: v.muted } : v),
   "keep-going": (v) => (v.phase === "idle-warning" ? { phase: "idle", muted: v.muted } : v),
   problem: (v, e) => ({ phase: "ended", muted: v.muted, problem: e.problem }),
   end: (v) => ({ phase: "ended", muted: v.muted }),

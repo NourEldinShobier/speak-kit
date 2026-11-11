@@ -1,17 +1,18 @@
-import type { VoiceProblem } from "@speakkit/protocol";
+import { voiceChatSessionLimits, type VoiceProblem } from "@speakkit/protocol";
+import type { RealtimeUsage } from "./cost";
 import { openAiCode, openAiProblem } from "./errors";
+import { SEARCH_TOOL, type ToolEvent } from "./search-tool";
 import { ignore } from "../../shared/ignore";
 
 /** The Realtime API over WebRTC, in a page that owns the microphone. Authenticates with a client secret only. */
 export const OPENAI_BASE = "https://api.openai.com";
-const MAX_OUTPUT_TOKENS = 700;
 const CONNECT_TIMEOUT_MS = 15_000;
 const DISCONNECT_GRACE_MS = 4000;
 /** A session.update over this is not sent: the instructions at their cap, the session fields around them and the JSON escaping of the page text fit with room to spare. */
 const MAX_UPDATE_BYTES = 262_144;
 
 /** A server event of the data channel that the session reacts to. */
-export type RealtimeEvent = { type: string; error?: { code?: string; type?: string }; transcript?: string };
+export type RealtimeEvent = ToolEvent & { type: string; error?: { code?: string; type?: string }; transcript?: string; response?: ToolEvent["response"] & { usage?: RealtimeUsage } };
 
 export class RealtimeFailure extends Error {
   readonly problem: VoiceProblem;
@@ -26,6 +27,8 @@ export interface RealtimeOptions {
   secret: string;
   voice: string;
   instructions: string;
+  /** the page is only outlined in the instructions: the session gets the search_page tool */
+  search?: boolean;
   stream: MediaStream;
   fetch: typeof fetch;
   onEvent(e: RealtimeEvent): void;
@@ -120,19 +123,21 @@ export class Realtime {
     if (!res.ok) throw new RealtimeFailure(openAiProblem({ status: res.status, code: openAiCode(await res.json().catch(ignore)) }));
     await this.pc.setRemoteDescription({ type: "answer", sdp: await res.text() });
     await open;
-    this.setInstructions(this.o.instructions, this.o.voice);
+    this.setInstructions(this.o.instructions, this.o.voice, this.o.search);
     void this.ctx.resume().catch(ignore);
   }
 
   /**
-   * Cost control: low reasoning, short answers, server VAD (the model hears turns, nothing is sent while the track is off).
+   * Cost control: low reasoning, short answers, old turns dropped at a token limit, server VAD (the model hears turns, nothing is sent while the track is off).
    * Throws a RealtimeFailure when the update is over the size cap ("too-long") or the channel refuses it ("unavailable"): the model must not run without the page.
    */
-  setInstructions(instructions: string, voice?: string) {
+  setInstructions(instructions: string, voice?: string, search = false) {
     const session = {
       type: "realtime",
       instructions,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
+      ...voiceChatSessionLimits(),
+      tools: search ? [SEARCH_TOOL] : [],
+      tool_choice: "auto",
       reasoning: { effort: "low" },
       audio: { input: { turn_detection: { type: "server_vad", silence_duration_ms: 600, create_response: true, interrupt_response: true } }, ...(voice ? { output: { voice } } : {}) },
     };
@@ -143,6 +148,17 @@ export class Realtime {
       this.dc.send(payload);
     } catch {
       throw new RealtimeFailure("unavailable");
+    }
+  }
+
+  /** Sends one client event (tool answers, item deletes). False when the channel is not open. */
+  sendEvent(ev: object): boolean {
+    if (this.dc.readyState !== "open") return false;
+    try {
+      this.dc.send(JSON.stringify(ev));
+      return true;
+    } catch {
+      return false;
     }
   }
 
