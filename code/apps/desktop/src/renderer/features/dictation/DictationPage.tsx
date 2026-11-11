@@ -161,6 +161,11 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
           Dictation needs a system-wide key hook, which exists on Windows only for now. The settings are kept for when it arrives.
         </Banner>
       )}
+      {s.hotkeyFailed && (
+        <Banner tone="error" title="The hotkey could not start">
+          Dictation does not hear the hotkey. Turn Dictation off and on again; if that does not help, restart Speak Kit.
+        </Banner>
+      )}
       {!settingUp && s.modelError && (
         <Banner tone="error" title="The speech model could not be set up">
           {s.modelError}

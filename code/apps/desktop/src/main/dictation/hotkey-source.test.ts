@@ -30,16 +30,23 @@ function fakeOs() {
     },
     resync() {},
   };
-  return { os, log, push: (e: Parameters<HotkeyHandlers["onEvent"]>[0]) => handlers?.onEvent(e), chord: () => chord, grabbed: () => grabbed };
+  // The real hook is already inactive when it reports a fault.
+  const fault = (e: unknown) => {
+    const h = handlers;
+    handlers = undefined;
+    h?.onFault?.(e);
+  };
+  return { os, log, push: (e: Parameters<HotkeyHandlers["onEvent"]>[0]) => handlers?.onEvent(e), chord: () => chord, grabbed: () => grabbed, fault, handlers: () => handlers };
 }
 
 const setup = () => {
   const f = fakeOs();
   const events: KeyEvent[] = [];
+  const faults: [unknown, boolean][] = [];
   let t = 1000;
-  const hk = createHotkeys({ os: f.os, now: () => (t += 10) });
+  const hk = createHotkeys({ os: f.os, now: () => (t += 10), onFault: (e, recovered) => faults.push([e, recovered]) });
   hk.setHotkey("ControlLeft+AltLeft+Space");
-  return { ...f, hk, events, subscribe: () => hk.subscribe((e) => (events.push(e), true)) };
+  return { ...f, hk, events, faults, later: (ms: number) => (t += ms), subscribe: () => hk.subscribe((e) => (events.push(e), true)) };
 };
 
 describe("hotkey source", () => {
@@ -122,6 +129,45 @@ describe("hotkey source", () => {
     const off = await s.subscribe();
     s.hk.enable(true);
     off();
+    expect(s.hk.active).toBe(false);
+  });
+
+  it("reinstalls a hook that died and says it recovered; the keys work again", async () => {
+    const s = setup();
+    await s.subscribe();
+    s.hk.enable(true);
+    const boom = new Error("decode");
+    s.fault(boom);
+    expect(s.faults).toEqual([[boom, true]]);
+    expect(s.hk.active).toBe(true);
+    s.push({ kind: "down" });
+    expect(s.events).toHaveLength(1);
+  });
+
+  it("does not reinstall a hook that dies again within ten seconds, and reports it as not recovered", async () => {
+    const s = setup();
+    await s.subscribe();
+    s.hk.enable(true);
+    s.fault(new Error("a"));
+    s.later(5000);
+    s.fault(new Error("b"));
+    expect(s.faults.map(([, recovered]) => recovered)).toEqual([true, false]);
+    expect(s.hk.active).toBe(false);
+    s.later(11_000);
+    s.hk.enable(true);
+    s.fault(new Error("c"));
+    expect(s.faults.map(([, recovered]) => recovered)).toEqual([true, false, true]);
+  });
+
+  it("does not bring a hook back that was switched off", async () => {
+    const s = setup();
+    await s.subscribe();
+    s.hk.enable(true);
+    const handlers = s.handlers();
+    s.hk.enable(false);
+    const late = new Error("late");
+    handlers?.onFault?.(late);
+    expect(s.faults).toEqual([[late, false]]);
     expect(s.hk.active).toBe(false);
   });
 

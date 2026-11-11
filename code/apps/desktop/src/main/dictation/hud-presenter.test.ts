@@ -90,6 +90,16 @@ describe("HUD presenter", () => {
     expect(shown.at(-1)).toBe("hide");
   });
 
+  it("alert shows the hotkey failure, keeps it past an idle state, and lets it go after twelve seconds", () => {
+    const { p, shown } = setup();
+    p.alert("hotkey-failed");
+    expect(shown.at(-1)).toEqual({ kind: "error", text: "The hotkey could not start", icon: "alert-triangle" });
+    p.onState(state({ status: "idle" }));
+    expect(shown.at(-1)).toMatchObject({ kind: "error" });
+    vi.advanceTimersByTime(12_100);
+    expect(shown.at(-1)).toBe("hide");
+  });
+
   it("flashes Dictation ready for two seconds, with the hotkey", () => {
     const { p, shown } = setup();
     p.flashReady();

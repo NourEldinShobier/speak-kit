@@ -75,7 +75,7 @@ export class DictationService {
   #recorder: RecorderHost | undefined;
   #replay: ReplayRecorder | undefined;
   #hudWindow: HudWindow | undefined;
-  #hotkeyReady = false;
+  #hotkeyFailed = false;
   #count = 0;
   #lastInsert: InsertResult | undefined;
   #lastFailed: Clip | undefined;
@@ -102,7 +102,10 @@ export class DictationService {
       canRetry: () => !!this.#lastFailed,
       insertedAsCopy: () => this.#lastInsert?.status === "copied",
     });
-    this.ready = this.#init().catch((e) => this.#ctx.log.error("dictation could not start", String(e)));
+    this.ready = this.#init().catch((e) => {
+      this.#ctx.log.error("dictation could not start", String(e));
+      this.#hotkeyFailed = true; // no key hook was ever built: turning dictation on cannot work either
+    });
   }
 
   get #cfg(): DictationConfig {
@@ -118,7 +121,7 @@ export class DictationService {
   async #init(): Promise<void> {
     const page = (name: string) => pathToFileURL(path.join(this.#o.distDir, "../renderer", name)).href;
     const os = (this.os = this.#o.os ?? (await createDictationOs({ hud: { page: page("hud.html"), width: 560, height: 64, bridge: true }, onHudWindow: (w) => (this.#hudWindow = w) })));
-    this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e) => this.#ctx.log.warn("dictation hook failed", String(e)) });
+    this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered) });
     this.#recorder = createRecorderHost({
       ipcMain,
       onLevel: (n) => this.presenter.setLevel(n),
@@ -167,7 +170,8 @@ export class DictationService {
     return {
       supported: this.supported,
       enabled: c.enabled,
-      hotkeyReady: this.#hotkeyReady,
+      hotkeyReady: this.hotkeyActive,
+      ...(this.#hotkeyFailed && { hotkeyFailed: true }),
       phase: this.state.status,
       ...(this.state.status === "error" && { error: this.state.code }),
       settings: c,
@@ -221,9 +225,24 @@ export class DictationService {
     return this.status();
   }
 
+  #onHookFault(e: unknown, recovered: boolean): void {
+    this.#ctx.log.warn("dictation hook failed", `${String(e)} (${recovered ? "reinstalled" : "not reinstalled"})`);
+    if (!this.#cfg.enabled) return; // switched off meanwhile: nothing to report
+    this.#hotkeyFailed = !recovered;
+    if (!recovered) this.presenter.alert("hotkey-failed");
+    this.#push(true);
+  }
+
   async setEnabled(on: boolean): Promise<DictationStatus> {
     await this.ready;
     if (on && !this.supported) return this.status();
+    if (on && !this.core) {
+      // The key hook could not be built at start-up: saying "on" would only save a setting that does nothing.
+      this.#hotkeyFailed = true;
+      this.presenter.alert("hotkey-failed");
+      this.#push(true);
+      return this.status();
+    }
     this.#cfg.enabled = on;
     this.#ctx.saveConfig();
     await this.#enable(on, false);
@@ -241,18 +260,20 @@ export class DictationService {
     if (!this.supported || !this.core || !this.#hotkeys) return;
     this.core.configure(coreSettings(this.#cfg));
     this.#hotkeys.setHotkey(this.#cfg.hotkey);
-    this.#hotkeyReady = this.#hotkeys.enable(true);
+    const ready = this.#hotkeys.enable(true);
+    this.#hotkeyFailed = !ready;
+    if (!ready) this.presenter.alert("hotkey-failed");
     void this.#recorder?.prepare();
     await this.models.refresh();
     if (this.models.installed) this.models.warm();
     else void this.models.download(this.#cfg.model);
-    if (!quiet && this.#hotkeyReady) this.presenter.flashReady();
+    if (!quiet && ready) this.presenter.flashReady();
   }
 
   async #stop(): Promise<void> {
     this.core?.cancel();
     this.#hotkeys?.enable(false);
-    this.#hotkeyReady = false;
+    this.#hotkeyFailed = false;
     this.#recorder?.close();
     this.presenter.dismiss();
     this.os?.hud.dispose(); // the HUD window goes now; the next recording makes a new one

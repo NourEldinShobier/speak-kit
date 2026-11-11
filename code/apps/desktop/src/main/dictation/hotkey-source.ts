@@ -12,10 +12,14 @@ export interface SwitchableHotkeys extends CoreHotkeys {
   readonly active: boolean;
 }
 
+/** A hook that dies again within this time after a reinstall is not reinstalled again (a callback that always throws would loop). */
+const REINSTALL_GAP_MS = 10_000;
+
 interface Deps {
   os: OsHotkeys;
   now(): number;
-  onFault?(e: unknown): void;
+  /** The hook died. `recovered` is true when it was reinstalled and runs again; false means the hotkey is dead until dictation is switched off and on. */
+  onFault?(e: unknown, recovered: boolean): void;
 }
 
 /**
@@ -27,6 +31,7 @@ export function createHotkeys({ os, now, onFault }: Deps): SwitchableHotkeys {
   let hotkey = "";
   let enabled = false;
   let grab = false;
+  let lastFault = -Infinity;
 
   const emit = (key: string, down: boolean) => handler?.({ key, down, at: now() });
   const onEvent = (e: HotkeyEvent) => {
@@ -34,11 +39,17 @@ export function createHotkeys({ os, now, onFault }: Deps): SwitchableHotkeys {
     else if (e.kind === "up") emit(hotkey, false);
     else if (e.kind === "other" || e.kind === "grabbed") emit(e.vk === VK.escape ? CANCEL_KEY : keyOfVk(e.vk), true);
   };
-  const run = () => {
+  const fault = (e: unknown) => {
+    const at = now();
+    const retry = enabled && at - lastFault > REINSTALL_GAP_MS;
+    lastFault = at;
+    onFault?.(e, retry && run());
+  };
+  const run = (): boolean => {
     os.stop();
     if (!enabled || !handler || !hotkey) return false;
     os.grab(grab ? [VK.escape] : []);
-    return os.start({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) }, { onEvent, ...(onFault && { onFault }) }).ok;
+    return os.start({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) }, { onEvent, onFault: fault }).ok;
   };
 
   return {
