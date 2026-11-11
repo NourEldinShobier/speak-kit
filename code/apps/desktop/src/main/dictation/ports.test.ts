@@ -28,7 +28,7 @@ describe("inserter port", () => {
 
   it.each(["paste", "type", "copy"] as const)("passes the plan method %s on", async (method) => {
     const { os, inserted } = fakeOs();
-    const plan = { paste: { method, keys: "ctrl-v", delayMs: 0, restoreMs: 500 }, copy: { method, reason: "manual" }, type: { method } }[method];
+    const plan = { paste: { method }, copy: { method, reason: "manual" }, type: { method } }[method];
     expect(await createInserterPort(os, () => undefined).insert({ text: "hi", plan: plan as never })).toEqual({ ok: true });
     expect(inserted).toEqual([{ text: "hi", options: { mode: method } }]);
   });

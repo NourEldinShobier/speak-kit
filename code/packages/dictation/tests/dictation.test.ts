@@ -11,7 +11,6 @@ describe("defaults", () => {
       language: "auto",
       duck: false,
       insertMode: "paste",
-      terminalPaste: true,
       appModes: {},
       fillers: true,
       spokenSymbols: true,
@@ -42,7 +41,7 @@ describe("hold to talk", () => {
     await r.time.advance(200);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.stt.calls).toEqual([{ language: "auto", samples: 16000 }]);
-    expect(r.ins.inserted).toEqual([{ text: "Hello world ", plan: { method: "paste", keys: "ctrl-v", delayMs: 0, restoreMs: 500 } }]);
+    expect(r.ins.inserted).toEqual([{ text: "Hello world ", plan: { method: "paste" } }]);
     expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
     expect(r.states).toEqual(["recording", "transcribing", "pasting", "idle"]);
   });
@@ -574,7 +573,7 @@ describe("where the text goes", () => {
     r.ins.state.current = target({ id: "win-1", exe: "WindowsTerminal.exe" });
     r.release();
     await r.time.advance(200);
-    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste", keys: "ctrl-shift-v", delayMs: 0, restoreMs: 500 });
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste" });
   });
 
   it("refuses a password field: nothing is inserted and nothing is saved", async () => {
