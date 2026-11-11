@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import type { VoiceChatErrorCode, VoiceChatVoice } from "@speakkit/protocol";
+import { voiceChatSessionLimits, type VoiceChatErrorCode, type VoiceChatVoice } from "@speakkit/protocol";
 
 export const OPENAI_BASE_URL = "https://api.openai.com";
 const SECRET_LIFETIME_SECONDS = 600;
@@ -67,7 +67,10 @@ export interface MintOptions extends OpenAiOptions {
 
 /** POST /v1/realtime/client_secrets: a client secret that expires after 10 minutes, for a realtime session with the model and voice. */
 export async function mintClientSecret(key: string, o: MintOptions): Promise<OpenAiResult<{ clientSecret: string; expiresAt: number }>> {
-  const body = { expires_after: { anchor: "created_at", seconds: SECRET_LIFETIME_SECONDS }, session: { type: "realtime", model: o.model, audio: { output: { voice: o.voice } } } };
+  const body = {
+    expires_after: { anchor: "created_at", seconds: SECRET_LIFETIME_SECONDS },
+    session: { type: "realtime", model: o.model, ...voiceChatSessionLimits(), audio: { output: { voice: o.voice } } },
+  };
   const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
   const r = await call({ ...o, key, path: "/v1/realtime/client_secrets", init, defaultTimeoutMs: 6000 });
   if (!r.ok) return r;

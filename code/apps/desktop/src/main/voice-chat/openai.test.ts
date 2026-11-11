@@ -64,7 +64,16 @@ describe("mintClientSecret", () => {
     expect(sent).toEqual({
       url: "http://x/v1/realtime/client_secrets",
       auth: `Bearer ${KEY}`,
-      body: { expires_after: { anchor: "created_at", seconds: 600 }, session: { type: "realtime", model: "gpt-realtime-2.1", audio: { output: { voice: "cedar" } } } },
+      body: {
+        expires_after: { anchor: "created_at", seconds: 600 },
+        session: {
+          type: "realtime",
+          model: "gpt-realtime-2.1",
+          max_output_tokens: 400,
+          truncation: { type: "retention_ratio", retention_ratio: 0.8, token_limits: { post_instructions: 6000 } },
+          audio: { output: { voice: "cedar" } },
+        },
+      },
     });
   });
 
