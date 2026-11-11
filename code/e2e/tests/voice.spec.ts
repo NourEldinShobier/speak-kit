@@ -84,7 +84,7 @@ test.describe("starting a conversation", () => {
     expect(session?.instructions).not.toContain("HOMENAV");
     expect([session?.reasoning?.effort, session?.max_output_tokens, session?.audio?.output?.voice]).toEqual(["low", 400, "marin"]);
     expect(session?.truncation).toEqual({ type: "retention_ratio", retention_ratio: 0.8, token_limits: { post_instructions: 6000 } });
-    expect(session?.tools).toEqual([]); // a page that fits needs no search tool
+    expect(session?.tools?.map((t) => t.name)).toEqual(["look_at_screen"]); // a page that fits needs no search tool
     expect(ai.calls).toEqual([{ bearer: app.secrets[0]!, type: "application/sdp" }]);
     expect(app.secrets[0]).not.toBe(app.token);
     const html = await page.evaluate(() => document.documentElement.outerHTML);
@@ -459,7 +459,7 @@ test.describe("token saving", () => {
     const session = await lastUpdate(ai);
     expect(session?.instructions).toContain("this is only its outline");
     expect(session?.instructions).not.toContain("P777S2");
-    expect(session?.tools?.map((t) => t.name)).toEqual(["search_page"]);
+    expect(session?.tools?.map((t) => t.name)).toEqual(["search_page", "look_at_screen"]);
 
     const call = { type: "function_call", id: "item_fc1", name: "search_page", call_id: "call_1", arguments: JSON.stringify({ query: "P777S2" }) };
     await ai.send({ type: "response.done", response: { output: [call] } });
@@ -476,11 +476,11 @@ test.describe("token saving", () => {
     ext.fx.set("/long-voice", bigPage(1000));
     const page = await ext.open("/long-voice");
     await connected(page);
-    expect((await lastUpdate(ai))?.tools).toHaveLength(1);
+    expect((await lastUpdate(ai))?.tools).toHaveLength(2);
     await page.evaluate(() => (document.querySelector("article")!.innerHTML = `<h1>Short</h1><p>${"The harbor is quiet today. ".repeat(10)}</p>`));
     await says(page, "Page changed");
     await sk(page, "voice-action").click();
-    await expect.poll(async () => (await lastUpdate(ai))?.tools).toEqual([]);
+    await expect.poll(async () => (await lastUpdate(ai))?.tools?.map((t) => t.name)).toEqual(["look_at_screen"]);
   });
 
   test("a response's usage is metered: the cost cap warns, then ends the conversation politely with its cost", async ({ vc: { ext, ai } }) => {
@@ -733,5 +733,125 @@ test.describe("options", () => {
     const page = await ext.open("/article");
     await talk(page);
     await expect(sk(page, "voice-consent")).toBeVisible();
+  });
+});
+
+test.describe("screen vision", () => {
+  const lookCall = (n: number, args: object = { scope: "window", want: "describe" }) => ({
+    type: "function_call",
+    id: `item_look${n}`,
+    name: "look_at_screen",
+    call_id: `call_look${n}`,
+    arguments: JSON.stringify(args),
+  });
+  const types = async (ai: FakeOpenAi) => (await ai.received()).map((e) => e.type);
+  const created = async (ai: FakeOpenAi) => (await ai.received()).filter((e) => e.type === "conversation.item.create").map((e) => e.item!);
+  const resumed = (n: number) => async (ai: FakeOpenAi) => (await types(ai)).filter((t) => t === "response.create").length >= n;
+
+  test("the model gets the look tool; a call is answered by the app: the text as the function output, the picture as a user message, then the model goes on", async ({ vc: { ext, app, ai } }) => {
+    app.lookDelayMs = 700;
+    const page = await ext.open("/article");
+    await connected(page);
+    expect((await lastUpdate(ai))?.tools?.map((t) => t.name)).toContain("look_at_screen");
+
+    await ai.send({ type: "response.done", response: { output: [lookCall(1, { scope: "screen", want: "read" })] } });
+    await phase(page, "looking");
+    expect(await sk(page, "voice-live").textContent()).toBe("Looking at your screen");
+    await expect(dots(page, 3)).toHaveCount(15); // the scanner row
+    await shot(pill(page), "pill-looking");
+    await expect.poll(() => resumed(1)(ai)).toBe(true);
+    await phase(page, "thinking");
+
+    expect(app.looks).toEqual([{ session: expect.stringMatching(/^[0-9a-f-]{36}$/), scope: "screen", auth: `Bearer ${app.token}` }]);
+    const [output, image] = await created(ai);
+    expect(output).toMatchObject({ type: "function_call_output", call_id: "call_look1" });
+    expect(output?.output).toContain('the window "Report.docx - Word"');
+    expect(output?.output).toContain("Invoice 48213\nTotal 129.50 EUR");
+    expect(output?.output).toContain("do not rephrase numbers, names or code"); // want: read
+    expect(image).toMatchObject({ type: "message", role: "user" });
+    expect(image?.content?.map((c) => c.type)).toEqual(["input_text", "input_image"]);
+    expect(image?.content?.[1]?.image_url).toBe("data:image/jpeg;base64,/9j/4AAQSkZJRg==");
+    // the order the model needs: output, picture, response.create
+    expect((await ai.received()).filter((e) => e.type === "conversation.item.create" || e.type === "response.create").map((e) => e.item?.type ?? e.type)).toEqual([
+      "function_call_output",
+      "message",
+      "response.create",
+    ]);
+
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }] } });
+    await phase(page, "idle");
+  });
+
+  test("a conversation is named to the app once, and a new conversation gets a new name", async ({ vc: { ext, app, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "response.done", response: { output: [lookCall(1)] } });
+    await expect.poll(() => app.looks.length).toBe(1);
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }] } });
+    await phase(page, "idle");
+    await ai.send({ type: "response.done", response: { output: [lookCall(2)] } });
+    await expect.poll(() => app.looks.length).toBe(2);
+    expect(app.looks[1]!.session).toBe(app.looks[0]!.session);
+    expect(app.looks.map((l) => l.scope)).toEqual(["window", "window"]);
+    await sk(page, "voice-end").click();
+    await sk(page, "voice-action").click(); // Talk again
+    await phase(page, "idle");
+    await ai.send({ type: "response.done", response: { output: [lookCall(3)] } });
+    await expect.poll(() => app.looks.length).toBe(3);
+    expect(app.looks[2]!.session).not.toBe(app.looks[0]!.session);
+  });
+
+  test("only the newest two looks stay in the context: the oldest look loses its call, output and picture", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    for (const n of [1, 2, 3]) {
+      await ai.send({ type: "response.done", response: { output: [lookCall(n)] } });
+      await expect.poll(() => resumed(n)(ai)).toBe(true);
+    }
+    await expect.poll(async () => (await ai.received()).filter((e) => e.type === "conversation.item.delete").map((e) => e.item_id)).toEqual(["item_look1", "sk_look_1", "sk_img_1"]);
+    expect((await created(ai)).filter((i) => i.type === "message")).toHaveLength(3);
+  });
+
+  test("a look the user did not allow is told to the model in words, with no picture", async ({ vc: { ext, app, ai } }) => {
+    app.look = "declined";
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "response.done", response: { output: [lookCall(1)] } });
+    await expect.poll(() => resumed(1)(ai)).toBe(true);
+    const items = await created(ai);
+    expect(items.map((i) => i.type)).toEqual(["function_call_output"]);
+    expect(items[0]?.output).toContain("did not allow looking at the screen");
+    await phase(page, "thinking");
+  });
+
+  test("a black capture is explained and sends no picture", async ({ vc: { ext, app, ai } }) => {
+    app.look = { image: "", width: 0, height: 0, text: "", ocr: "empty", target: "screen", scope: "screen", black: "black" };
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "response.done", response: { output: [lookCall(1, { scope: "screen" })] } });
+    await expect.poll(() => resumed(1)(ai)).toBe(true);
+    const items = await created(ai);
+    expect(items.map((i) => i.type)).toEqual(["function_call_output"]);
+    expect(items[0]?.output).toContain("completely black");
+  });
+
+  test("an app that went away is told to the model, and the conversation goes on", async ({ vc: { ext, app, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await app.stop();
+    await ai.send({ type: "response.done", response: { output: [lookCall(1)] } });
+    await expect.poll(() => resumed(1)(ai)).toBe(true);
+    expect((await created(ai))[0]?.output).toContain("Speak Kit app did not answer");
+    await phase(page, "thinking");
+  });
+
+  test("the tokens of a picture are billed at the image rate in the usage line of the ended pill", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }], usage: { input_tokens: 40_000, input_token_details: { image_tokens: 40_000 } } } });
+    await expect.poll(async () => (await ai.received()).length).toBeGreaterThan(0);
+    await sk(page, "voice-end").click();
+    await says(page, "Conversation ended");
+    await expect(sk(page, "voice-usage")).toContainText(/^about \$0\.20 · \d+ s$/); // 40000 tokens at $5 per million
   });
 });
