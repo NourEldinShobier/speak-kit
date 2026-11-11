@@ -1,12 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { fork, type ChildProcess } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
 import { DEFAULT_VOICE, SAMPLE_RATE, type Voice } from "@speakkit/protocol";
 import { splitLong } from "./split";
 import { KOKORO_VOICES } from "./voices";
-import { childEnv } from "./child-env";
+import { processChannel, threadChannel, type Channel } from "./channel";
 import { LifecycleEngine, type LifecycleOptions } from "./lifecycle";
 import type { SynthOptions, Synthesized } from "./types";
 import type { FromWorker, ToWorker, WorkerInit } from "./worker-protocol";
@@ -50,44 +47,6 @@ function modelPresent(o: KokoroOptions): boolean {
   return existsSync(join(o.modelsDir, o.modelId ?? DEFAULT_MODEL, "onnx", MODEL_FILE[o.dtype ?? "uint8"]));
 }
 
-/** What KokoroEngine needs from a worker thread or a child process. */
-interface Channel {
-  post(m: ToWorker): void;
-  on(ev: "message", cb: (m: FromWorker) => void): void;
-  on(ev: "error", cb: (e: Error) => void): void;
-  on(ev: "exit", cb: (code: number | null) => void): void;
-  terminate(): Promise<void>;
-  pid?: number | undefined;
-}
-function threadChannel(url: URL | string, workerData: WorkerInit): Channel {
-  const w = new Worker(url, { workerData });
-  return {
-    post: (m) => w.postMessage(m),
-    on: (ev: string, cb: (x: never) => void) => void w.on(ev, cb as never),
-    terminate: async () => void (await w.terminate()),
-  };
-}
-function processChannel(url: URL | string, init: WorkerInit): Channel {
-  const file = typeof url === "string" && !url.startsWith("file:") ? url : fileURLToPath(url);
-  const c: ChildProcess = fork(file, [], {
-    serialization: "advanced",
-    execArgv: [],
-    stdio: ["ignore", "ignore", "inherit", "ipc"],
-    env: childEnv({ SPEAKKIT_WORKER_INIT: JSON.stringify(init) }),
-  });
-  return {
-    pid: c.pid,
-    post: (m) => void c.send(m),
-    on: (ev: string, cb: (x: never) => void) => void c.on(ev, cb as never),
-    terminate: () =>
-      new Promise((resolve) => {
-        if (c.exitCode !== null || c.signalCode !== null) return resolve();
-        c.once("exit", () => resolve());
-        c.kill();
-      }),
-  };
-}
-
 type Resolved = Required<Omit<KokoroOptions, "workerUrl" | "isolation" | keyof LifecycleOptions>> & {
   workerUrl?: URL | string;
   isolation: "process" | "thread";
@@ -100,7 +59,7 @@ type Resolved = Required<Omit<KokoroOptions, "workerUrl" | "isolation" | keyof L
  */
 export class KokoroEngine extends LifecycleEngine {
   #o: Resolved;
-  #worker: Channel | undefined;
+  #worker: Channel<ToWorker, FromWorker> | undefined;
   #next = 1;
   #jobs = new Map<number, { resolve: (r: Synthesized | null) => void; reject: (e: Error) => void }>();
 
@@ -127,7 +86,7 @@ export class KokoroEngine extends LifecycleEngine {
     return this.#worker?.pid;
   }
 
-  #channel(): Channel {
+  #channel(): Channel<ToWorker, FromWorker> {
     const o = this.#o;
     const url = o.workerUrl ?? new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url);
     const workerData: WorkerInit = {
