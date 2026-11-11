@@ -36,10 +36,10 @@ function setup(o: { platform?: Partial<ScreenPlatform>; ocr?: OcrResult; allow?:
     recognize: async () => o.ocr ?? { ok: true, lang: "en-US", lines: [{ t: "Quarterly revenue", x: 0, y: 0, w: 100, h: 20 }] },
     dispose() {},
   };
-  const cards: number[] = [];
+  const cards: string[] = [];
   const card: ConsentCard = {
-    ask: async () => {
-      cards.push(1);
+    ask: async (_signal, scope) => {
+      cards.push(scope);
       return typeof o.allow === "function" ? o.allow() : (o.allow ?? true);
     },
   };
@@ -94,6 +94,30 @@ describe("look", () => {
       await look(ask, live);
       await look({ session: "s2", scope: "screen" }, live);
       expect(cards).toHaveLength(2);
+    });
+
+    it("asks again for the whole screen after a window was allowed, and says which one it asks about", async () => {
+      const { look, cards, log } = setup();
+      await look(ask, live);
+      expect(await look({ session: "s1", scope: "screen" }, live)).toMatchObject({ ok: true });
+      expect(cards).toEqual(["window", "screen"]);
+      expect(log.filter((l) => l === "grab")).toHaveLength(2);
+    });
+
+    it("captures nothing of the screen when the user only allowed the window and says no to the screen", async () => {
+      const answers = [true, false];
+      const { look, log } = setup({ allow: async () => answers.shift()! });
+      await look(ask, live);
+      log.length = 0;
+      expect(await look({ session: "s1", scope: "screen" }, live)).toEqual({ ok: false, code: "declined" });
+      expect(log).toEqual([]);
+    });
+
+    it("a screen consent covers later window looks without asking", async () => {
+      const { look, cards } = setup();
+      await look({ session: "s1", scope: "screen" }, live);
+      await look(ask, live);
+      expect(cards).toEqual(["screen"]);
     });
 
     it("captures nothing when the user says no, and asks again at the next look", async () => {

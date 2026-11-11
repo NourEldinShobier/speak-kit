@@ -16,9 +16,9 @@ function build() {
   const realCard = createConsentCard();
   const state = { real: false, answer: true, asked: 0 };
   const card = {
-    ask: (signal: AbortSignal) => {
+    ask: (signal: AbortSignal, scope: LookRequest["scope"]) => {
       state.asked++;
-      return state.real ? realCard.ask(signal) : Promise.resolve(state.answer);
+      return state.real ? realCard.ask(signal, scope) : Promise.resolve(state.answer);
     },
   };
   const { look } = createLook({ platform, ocr, card, indicator: createIndicator(), settleMs: 50 });

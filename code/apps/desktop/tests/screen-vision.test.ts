@@ -138,7 +138,7 @@ function visionSpec() {
         const before = await call.asked();
         await start("card-yes");
         const page = await cardPage();
-        expect(await page.locator("h1").textContent()).toBe("Let the voice chat look at your screen?");
+        expect(await page.locator("h1").textContent()).toBe("Let the voice chat look at your whole screen?");
         expect(await page.evaluate(() => document.activeElement?.getAttribute("data-choice"))).toBe("yes");
         await page.locator("button[data-choice=yes]").click();
         expect(await call.result()).toMatchObject({ ok: true, target: "screen" });
