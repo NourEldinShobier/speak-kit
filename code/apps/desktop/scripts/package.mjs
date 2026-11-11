@@ -56,7 +56,13 @@ const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/in
 const needed = new Set(built.flatMap((f) => importedPackages(readFileSync(path.join(stage, f), "utf8"))));
 const engineDir = path.join(code, "packages/engine");
 const dependencies = {};
-for (const name of [...needed].sort()) dependencies[name] = installedVersion(name, name === "kokoro-js" ? engineDir : desktop);
+for (const name of [...needed].sort()) {
+  try {
+    dependencies[name] = installedVersion(name, desktop);
+  } catch {
+    dependencies[name] = installedVersion(name, engineDir); // packages only the engine workers import (kokoro-js, whisper.node)
+  }
+}
 // kokoro-js pulls transformers.js and onnxruntime; pin what was tested instead of whatever npm finds today.
 const kokoroDir = path.dirname(realpathSync(path.join(engineDir, "node_modules/kokoro-js")));
 const tfVersion = installedVersion("@huggingface/transformers", kokoroDir);
