@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vite-plus/test";
+import type { ModelView } from "../../../shared/dictation/contract";
+import { appName, dayLabel, downloadText, emptyHint, entriesText, etaText, groupByDay, historyFooter, historyLead, mb, modelLine, timeText } from "./model";
+
+const model = (over: Partial<ModelView> = {}): ModelView => ({
+  id: "large-v3-turbo-q5_0",
+  name: "Whisper Large v3 Turbo",
+  tag: "Accurate",
+  description: "Best accuracy.",
+  bytes: 809_000_000,
+  installed: false,
+  selected: false,
+  languages: ["auto", "en"],
+  ...over,
+});
+
+describe("model text", () => {
+  it("rounds sizes to whole megabytes", () => {
+    expect(mb(574_041_195)).toBe("574 MB");
+    expect(modelLine(model({ bytes: 466_000_000, description: "Fast on any computer." }))).toBe("466 MB. Fast on any computer.");
+  });
+
+  it("says how long a download has left", () => {
+    expect(etaText(undefined)).toBe("");
+    expect(etaText(20)).toBe("Less than a minute left.");
+    expect(etaText(60)).toBe("About 1 minute left.");
+    expect(etaText(125)).toBe("About 2 minutes left.");
+  });
+
+  it("describes a download in progress", () => {
+    expect(downloadText(model({ progress: { kind: "downloading", fraction: 0.38, etaSeconds: 120 } }))).toBe("Downloading 38%, 307 of 809 MB. About 2 minutes left.");
+    expect(downloadText(model({ progress: { kind: "downloading", fraction: 0.5 } }))).toBe("Downloading 50%, 405 of 809 MB.");
+    expect(downloadText(model())).toBe("Downloading 0%, 0 of 809 MB.");
+  });
+});
+
+describe("history text", () => {
+  const noon = new Date(2026, 10, 11, 12, 0, 0).getTime();
+  const at = (daysAgo: number, h = 9, m = 41) => new Date(2026, 10, 11 - daysAgo, h, m).getTime();
+
+  it("formats the time of day", () => {
+    expect(timeText(at(0, 21, 41))).toBe("9:41 PM");
+    expect(timeText(at(0, 8, 5))).toBe("8:05 AM");
+  });
+
+  it("names today and yesterday, and dates the rest", () => {
+    expect(dayLabel(at(0, 0, 1), noon)).toBe("Today");
+    expect(dayLabel(at(1, 23, 59), noon)).toBe("Yesterday");
+    expect(dayLabel(at(3), noon)).toBe("Sunday, November 8");
+  });
+
+  it("groups entries that are already newest first by day, keeping their order", () => {
+    const e = (id: string, when: number) => ({ id, at: when, text: id });
+    const groups = groupByDay([e("a", at(0, 11)), e("b", at(0, 8)), e("c", at(1)), e("d", at(5))], noon);
+    expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
+      ["Today", ["a", "b"]],
+      ["Yesterday", ["c"]],
+      ["Friday, November 6", ["d"]],
+    ]);
+    expect(groupByDay([], noon)).toEqual([]);
+  });
+
+  it("names the program from its file name", () => {
+    expect(appName("notepad.exe")).toBe("Notepad");
+    expect(appName("WindowsTerminal.EXE")).toBe("WindowsTerminal");
+    expect(appName(undefined)).toBe("");
+    expect(appName("")).toBe("");
+  });
+
+  it("says how long entries are kept", () => {
+    expect(historyLead("7d")).toBe("What you dictated, saved on this computer for 7 days.");
+    expect(historyLead("24h")).toBe("What you dictated, saved on this computer for 24 hours.");
+    expect(historyLead("forever")).toBe("What you dictated, saved on this computer until you delete it.");
+    expect(historyLead("off")).toBe("History is off. New dictations are not saved.");
+  });
+
+  it("closes the list with a count and the removal rule", () => {
+    expect(historyFooter(5, 128, "7d")).toBe("Showing 5 of 128. Entries older than 7 days are removed.");
+    expect(historyFooter(3, 3, "30d")).toBe("3 entries. Entries older than 30 days are removed.");
+    expect(historyFooter(1, 1, "forever")).toBe("1 entry.");
+    expect(historyFooter(2, 9, "24h")).toBe("Showing 2 of 9. Entries older than 24 hours are removed.");
+  });
+
+  it("explains an empty history for each setting", () => {
+    expect(emptyHint("7d")).toBe("Hold the hotkey in any app and speak. What you dictate shows up here for 7 days.");
+    expect(emptyHint("forever")).toBe("Hold the hotkey in any app and speak. What you dictate shows up here.");
+    expect(emptyHint("off")).toBe("Hold the hotkey in any app and speak. History is off, so nothing is saved.");
+    expect(entriesText(1)).toBe("1 entry");
+    expect(entriesText(128)).toBe("128 entries");
+  });
+});

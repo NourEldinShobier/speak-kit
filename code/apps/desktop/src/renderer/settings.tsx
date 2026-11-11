@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Button, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState, SettingsSub } from "../shared/ipc";
 import { api, Page } from "./ui";
@@ -6,6 +7,10 @@ import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
 
 export { SETTINGS_NAV };
+
+// Dictation is rarely opened: its pages, its styles and the code behind them load on first use.
+const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
+const DictationHistoryPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationHistoryPage })));
 
 function About({ s }: { s: AppState }) {
   return (
@@ -51,8 +56,20 @@ function About({ s }: { s: AppState }) {
   );
 }
 
-export function Settings({ s, sub }: { s: AppState; sub: SettingsSub }) {
+export function Settings({ s, sub, go }: { s: AppState; sub: SettingsSub; go?: (sub: SettingsSub) => void }) {
   switch (sub) {
+    case "dictation":
+      return (
+        <Suspense fallback={null}>
+          <DictationPage openHistory={() => go?.("dictation-history")} />
+        </Suspense>
+      );
+    case "dictation-history":
+      return (
+        <Suspense fallback={null}>
+          <DictationHistoryPage back={() => go?.("dictation")} />
+        </Suspense>
+      );
     case "voice":
       return <VoicePage s={s} />;
     case "shortcuts":
