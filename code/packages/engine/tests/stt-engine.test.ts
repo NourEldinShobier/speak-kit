@@ -1,4 +1,4 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -58,6 +58,7 @@ async function make(opts: { dir?: string; models?: SttModel[]; fetch?: typeof fe
   engines.push(e);
   return { e, modelsDir };
 }
+const starts = async (log: string) => (await readFile(log, "utf8")).trim().split(String.fromCharCode(10));
 const speech = (n = 16000) => new Int16Array(n).fill(300);
 
 afterEach(async () => {
@@ -187,6 +188,38 @@ describe("WhisperStt", () => {
     const { e: f } = await make();
     await f.warm("large-v3-turbo-q5_0");
     expect(f.status().state).toBe("error");
+  });
+
+  it("on a machine with an integrated and a discrete GPU it pins the host to the discrete one and remembers it", async () => {
+    const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "starts");
+    dirs.push(join(log, ".."));
+    process.env.SPEAKKIT_FAKE_LOG = log;
+    try {
+      const { e } = await make();
+      await e.load("large-v3-turbo-q5_0");
+      expect(e.gpuDevice).toBe("1");
+      expect(e.backend).toBe("gpu");
+      await e.unload();
+      await e.load("large-v3-turbo-q5_0");
+      expect(await starts(log)).toEqual(["vk=", "vk=1", "vk=1"]);
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_LOG;
+    }
+  });
+
+  it("keeps the default device when no other one is discrete", async () => {
+    const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "starts");
+    dirs.push(join(log, ".."));
+    process.env.SPEAKKIT_FAKE_LOG = log;
+    try {
+      const { e } = await make({ models: models.map((m) => (m.engine === "whisper" ? { ...m, file: "igpu.bin" } : m)) });
+      await e.load("large-v3-turbo-q5_0");
+      expect(e.gpuDevice).toBe("");
+      expect(e.status().state).toBe("ready");
+      expect(await starts(log)).toEqual(["vk=", "vk=1", "vk="]);
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_LOG;
+    }
   });
 
   it("gpu: false runs the worker on the cpu", async () => {

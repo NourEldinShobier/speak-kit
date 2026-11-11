@@ -40,7 +40,7 @@
       "entry": ["bench/*.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}"]
     },
     "packages/engine": {
-      "entry": ["src/worker.ts", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}"]
+      "entry": ["src/worker.ts", "src/stt/worker.ts", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}"]
     },
     "packages/ui": {
       "entry": ["scripts/*", "**/*.test.{ts,tsx}"]

@@ -8,11 +8,14 @@ import { STT_MODELS, WhisperStt, type SttLanguage, type SttModelId } from "../sr
 //   SPEAKKIT_MODELS_DIR  a folder whose stt/ subfolder holds (or receives) the model files,
 //   SPEAKKIT_STT_AUDIO   a folder of 16 kHz mono 16-bit WAVs with a matching .txt reference each,
 //   SPEAKKIT_STT_MODEL   large-v3-turbo-q5_0 (default) or parakeet-tdt-0.6b-v3-q4_0,
-//   SPEAKKIT_STT_GPU=0   to measure the CPU fallback.
+//   SPEAKKIT_STT_GPU=0   to measure the CPU fallback,
+//   SPEAKKIT_STT_RUNS    transcriptions per clip (default 5, at least 2),
+//   SPEAKKIT_STT_REPORT  a file that receives the timings as JSON.
 const env = process.env;
 const modelId = (env.SPEAKKIT_STT_MODEL ?? "large-v3-turbo-q5_0") as SttModelId;
 const gpu = env.SPEAKKIT_STT_GPU !== "0";
 const audio = env.SPEAKKIT_STT_AUDIO ?? "";
+const runs = Number(env.SPEAKKIT_STT_RUNS ?? 5); // the first run of a clip is dropped from the median
 
 const norm = (s: string) =>
   s
@@ -55,6 +58,7 @@ describe.runIf(env.SPEAKKIT_REAL_STT)("WhisperStt (real model)", () => {
     await e.load(modelId);
     report.firstLoadMs = Math.round(performance.now() - t);
     report.backend = e.backend;
+    report.vulkanDevice = e.gpuDevice;
     await e.unload();
     t = performance.now();
     await e.load(modelId);
@@ -67,20 +71,21 @@ describe.runIf(env.SPEAKKIT_REAL_STT)("WhisperStt (real model)", () => {
       ["en-sapi-15s", "en", 0.2],
       ["en-real-0", "en", 0.3],
       ["de-0", "de", 0.3],
+      ["de-0", "auto", 0.3],
       ["ar-0", "ar", 0.3],
     ] as [string, SttLanguage, number][]) {
       if (!model.languages.includes(language)) continue;
       const c = await clip(id);
       const times: number[] = [];
       let text = "";
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < runs; i++) {
         t = performance.now();
         text = (await e.transcribe(c.pcm, language)).text;
         times.push(performance.now() - t);
       }
-      latency[`${id} (${c.seconds.toFixed(1)} s)`] = Math.round(median(times.slice(1)));
-      werByClip[id] = Number(wer(c.reference, text).toFixed(3));
-      expect(werByClip[id], `${id}: ${text}`).toBeLessThan(max);
+      latency[`${id} ${language} (${c.seconds.toFixed(1)} s)`] = Math.round(median(times.slice(1)));
+      werByClip[`${id} ${language}`] = Number(wer(c.reference, text).toFixed(3));
+      expect(werByClip[`${id} ${language}`], `${id} ${language}: ${text}`).toBeLessThan(max);
     }
     report.medianMs = latency;
     report.wer = werByClip;
@@ -92,5 +97,5 @@ describe.runIf(env.SPEAKKIT_REAL_STT)("WhisperStt (real model)", () => {
 
     if (env.SPEAKKIT_STT_REPORT) await writeFile(env.SPEAKKIT_STT_REPORT, JSON.stringify(report, null, 1));
     await e.unload();
-  }, 900_000);
+  }, 3_600_000);
 });

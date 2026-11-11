@@ -22,14 +22,14 @@ export function threadChannel<To, From>(url: URL | string, workerData: unknown):
   };
 }
 
-/** The init object travels in SPEAKKIT_WORKER_INIT; the child is a plain node process (see childEnv). */
-export function processChannel<To, From>(url: URL | string, init: unknown): Channel<To, From> {
+/** The init object travels in SPEAKKIT_WORKER_INIT; the child is a plain node process (see childEnv). `env` adds variables the child must have before it starts. */
+export function processChannel<To, From>(url: URL | string, init: unknown, env: Record<string, string> = {}): Channel<To, From> {
   const file = typeof url === "string" && !url.startsWith("file:") ? url : fileURLToPath(url);
   const c: ChildProcess = fork(file, [], {
     serialization: "advanced",
     execArgv: [],
     stdio: ["ignore", "ignore", "inherit", "ipc"],
-    env: childEnv({ SPEAKKIT_WORKER_INIT: JSON.stringify(init) }),
+    env: childEnv({ ...env, SPEAKKIT_WORKER_INIT: JSON.stringify(init) }),
   });
   return {
     pid: c.pid,
