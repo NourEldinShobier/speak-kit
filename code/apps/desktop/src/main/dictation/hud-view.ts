@@ -35,7 +35,9 @@ export function errorView(code: string, canRetry: boolean): HudView {
     case "model-missing":
       return E("Speech model missing", "download", { label: "Download", id: "download" });
     case "model-loading":
-      return E("The speech model is still loading, try again in a moment", "download");
+      return E("The speech model is still loading, try again in a moment", "download", canRetry ? { label: "Try again", id: "retry" } : undefined);
+    case "model-failed":
+      return E("The speech model could not be loaded", "alert-triangle", canRetry ? { label: "Try again", id: "retry" } : undefined);
     case "transcribe-failed":
       return E("Could not transcribe", "alert-triangle", canRetry ? { label: "Try again", id: "retry" } : undefined);
     case "password-field":

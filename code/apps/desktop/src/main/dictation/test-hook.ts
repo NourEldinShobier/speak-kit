@@ -15,7 +15,7 @@ export const dictationTestHook = (d: DictationService) => ({
   finishDownload: () => d.fake?.finishDownload(),
   denyMic: (on: boolean) => void (d.micDenied = on),
   /** What each transcription was given: language, samples and loudest sample. */
-  calls: () => d.fake?.calls() ?? [],
+  calls: () => d.fake?.calls().map(({ language, samples, peak }) => ({ language, samples, peak })) ?? [],
   status: () => d.status(),
   hud: () => d.presenter.shown,
   /** Puts any pill on the HUD (design check). */
