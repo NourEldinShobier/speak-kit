@@ -11,6 +11,7 @@ import {
   buildInstructions,
   eventProblem,
   initialView,
+  Looker,
   isLive,
   mintSession,
   reduceVoice,
@@ -47,6 +48,7 @@ class Session {
   view: VoiceView = initialView();
   /** The bill and the context of the conversation: usage metering with the soft cost cap, and the answers to the model's page searches. */
   private readonly turns = new Turns(Number(testValue("cap")) || SESSION_CAP_USD, {
+    look: (args) => this.looker.look(args),
     send: (ev) => {
       if (__TEST__) this.trace.sent.push((ev as { type: string }).type);
       this.rt?.sendEvent(ev);
@@ -59,6 +61,8 @@ class Session {
     },
     end: () => this.finish({ t: "end" }),
   });
+  /** The looks of this conversation at the screen, named to the app once. */
+  private readonly looker = new Looker({ app: () => this.cfg, dispatch: (e) => this.dispatch(e), touch: () => this.idle.touch(), phase: () => this.view.phase });
   private rt: Realtime | undefined;
   private stream: MediaStream | undefined;
   private instructions = "";
@@ -279,12 +283,8 @@ class Session {
   }
 
   /** Test hooks. */
-  micLive() {
-    return this.stream?.getAudioTracks().filter((t) => t.readyState === "live").length ?? 0;
-  }
-  bytesSent() {
-    return this.rt?.bytesSent() ?? Promise.resolve(0);
-  }
+  micLive = () => this.stream?.getAudioTracks().filter((t) => t.readyState === "live").length ?? 0;
+  bytesSent = () => this.rt?.bytesSent() ?? Promise.resolve(0);
   /** Test hook: the microphone device went away. */
   unplug() {
     this.stream?.getAudioTracks().forEach((t) => t.dispatchEvent(new Event("ended")));

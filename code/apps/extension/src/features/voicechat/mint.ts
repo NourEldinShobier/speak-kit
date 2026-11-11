@@ -6,16 +6,22 @@ export interface LocalDeps {
   fetch: typeof fetch;
   port: number;
   token: string;
+  /** per call; default 15 s */
+  timeoutMs?: number;
 }
 
 export type Minted = { ok: true; session: VoiceChatSession } | { ok: false; problem: VoiceProblem };
 
 const TIMEOUT_MS = 15_000;
 
-async function call(d: LocalDeps, path: string, init: RequestInit): Promise<Response | VoiceProblem> {
+export async function call(d: LocalDeps, path: string, init: RequestInit): Promise<Response | VoiceProblem> {
   if (!d.token) return "unpaired";
   try {
-    const res = await d.fetch(`http://127.0.0.1:${d.port}${path}`, { ...init, headers: { ...init.headers, Authorization: `Bearer ${d.token}` }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const res = await d.fetch(`http://127.0.0.1:${d.port}${path}`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${d.token}` },
+      signal: AbortSignal.timeout(d.timeoutMs ?? TIMEOUT_MS),
+    });
     return res;
   } catch {
     return "app-not-running";

@@ -7,6 +7,7 @@ const SPOKEN: Record<VoiceView["phase"], string> = {
   listening: "Listening",
   thinking: "Thinking",
   speaking: "Speaking",
+  looking: "Looking at your screen",
   reconnecting: "Reconnecting",
   "idle-warning": "Still there?",
   "cost-warning": "Cost limit reached",
@@ -38,6 +39,7 @@ export function pillText(v: VoiceView, problem?: VoiceProblem): string {
 export function announcement(v: VoiceView, problem: VoiceProblem | undefined, grid: boolean): string {
   if (problem || (!grid && v.phase !== "idle-warning")) return [pillText(v, problem), v.phase === "ended" ? usageLine(v) : ""].filter(Boolean).join(". ");
   if (v.phase === "idle-warning") return SPOKEN["idle-warning"];
+  if (v.phase === "looking") return SPOKEN.looking;
   return v.muted ? "Microphone muted" : SPOKEN[v.phase];
 }
 

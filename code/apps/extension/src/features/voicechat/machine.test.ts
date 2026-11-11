@@ -51,6 +51,36 @@ describe("reduceVoice", () => {
     expect(run([{ t: "cost-limit" }]).phase).toBe("connecting");
   });
 
+  it("a look shows from the model's turn until the picture is on its way, then the model thinks again", () => {
+    const thinking = run([{ t: "connected" }, { t: "speech-start" }, { t: "speech-stop" }]);
+    const looking = reduceVoice(thinking, { t: "look-start" });
+    expect(looking).toEqual({ phase: "looking", muted: false });
+    expect(reduceVoice(looking, { t: "look-end" }).phase).toBe("thinking");
+    expect(reduceVoice(reduceVoice(looking, { t: "look-end" }), { t: "response-done" }).phase).toBe("idle");
+  });
+
+  it("a look can start while the model is still speaking or the conversation is idle, not before it is connected or while the user talks", () => {
+    expect(run([{ t: "connected" }, { t: "audio-start" }, { t: "look-start" }]).phase).toBe("looking");
+    expect(run([{ t: "connected" }, { t: "look-start" }]).phase).toBe("looking");
+    expect(run([{ t: "connected" }, { t: "speech-start" }, { t: "look-start" }]).phase).toBe("listening");
+    expect(run([{ t: "look-start" }]).phase).toBe("connecting");
+  });
+
+  it("speaking during a look is listening; the end of the look then changes nothing", () => {
+    const talking = run([{ t: "connected" }, { t: "look-start" }, { t: "speech-start" }]);
+    expect(talking.phase).toBe("listening");
+    expect(reduceVoice(talking, { t: "look-end" })).toBe(talking);
+  });
+
+  it("audio events leave a look alone, and the cost limit and a lost connection still apply to it", () => {
+    const looking = run([{ t: "connected" }, { t: "look-start" }]);
+    expect(reduceVoice(looking, { t: "audio-start" })).toBe(looking);
+    expect(reduceVoice(looking, { t: "audio-stop" })).toBe(looking);
+    expect(reduceVoice(looking, { t: "cost-limit" }).phase).toBe("cost-warning");
+    expect(reduceVoice(looking, { t: "lost" }).phase).toBe("reconnecting");
+    expect(reduceVoice(looking, { t: "mute", on: true })).toEqual({ phase: "looking", muted: true });
+  });
+
   it("a problem ends the conversation and nothing revives it", () => {
     const dead = run([{ t: "connected" }, { t: "problem", problem: "no-credit" }]);
     expect(dead).toEqual({ phase: "ended", muted: false, problem: "no-credit" });

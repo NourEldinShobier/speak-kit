@@ -1,6 +1,7 @@
 import { voiceChatSessionLimits, type VoiceProblem } from "@speakkit/protocol";
 import type { RealtimeUsage } from "./cost";
 import { openAiCode, openAiProblem } from "./errors";
+import { LOOK_TOOL } from "./look-tool";
 import { SEARCH_TOOL, type ToolEvent } from "./search-tool";
 import { ignore } from "../../shared/ignore";
 
@@ -136,7 +137,7 @@ export class Realtime {
       type: "realtime",
       instructions,
       ...voiceChatSessionLimits(),
-      tools: search ? [SEARCH_TOOL] : [],
+      tools: search ? [SEARCH_TOOL, LOOK_TOOL] : [LOOK_TOOL],
       tool_choice: "auto",
       reasoning: { effort: "low" },
       audio: { input: { turn_detection: { type: "server_vad", silence_duration_ms: 600, create_response: true, interrupt_response: true } }, ...(voice ? { output: { voice } } : {}) },

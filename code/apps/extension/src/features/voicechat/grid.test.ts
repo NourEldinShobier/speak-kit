@@ -49,4 +49,18 @@ describe("gridPattern", () => {
     expect(mirrored(loud)).toBe(true);
     expect(gridPattern({ ...base, phase: "speaking", level: 0 }).every((t) => t === 0)).toBe(true);
   });
+
+  it("looking is a bright row that sweeps down and back up with a dim row on each side, symmetrical", () => {
+    const at = (tick: number) => gridPattern({ ...base, phase: "looking", tick });
+    expect(show(at(0))).toEqual(["###############", "---------------", "...............", "..............."]);
+    expect(show(at(2))).toEqual(["...............", "---------------", "###############", "---------------"]);
+    expect(show(at(3))).toEqual(["...............", "...............", "---------------", "###############"]);
+    expect(show(at(4))).toEqual(["...............", "---------------", "###############", "---------------"]); // on its way back up
+    expect(show(at(6))).toEqual(show(at(0))); // and around again
+    expect([0, 1, 2, 3, 4, 5].every((t) => mirrored(at(t)))).toBe(true);
+  });
+
+  it("looking stays visible while the microphone is muted", () => {
+    expect(gridPattern({ ...base, phase: "looking", muted: true, tick: 0 }).some((t) => t === 3)).toBe(true);
+  });
 });

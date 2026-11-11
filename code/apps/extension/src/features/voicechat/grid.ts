@@ -69,15 +69,28 @@ function speaking(g: Dots, level: number, tick: number) {
   }
 }
 
+/** A bright row that sweeps down the whole grid and back up, with a dim row on each side: a scanner. */
+function looking(g: Dots, tick: number) {
+  const period = ROWS * 2 - 2;
+  const k = tick % period;
+  const r = k < ROWS ? k : period - k;
+  for (let c = 0; c < g.cols; c++) {
+    g.set(r - 1, c, 1);
+    g.set(r + 1, c, 1);
+    g.set(r, c, 3);
+  }
+}
+
 /** Dot tones row by row (ROWS x cols). Every pattern except `thinking` is symmetrical about the centre column. */
 export function gridPattern({ phase, muted, level, tick, cols = COLS }: GridInput): Tone[] {
   const g = new Dots(cols);
   const lv = Math.min(1, Math.max(0, level));
-  if (muted) return g.tones;
+  if (muted && phase !== "looking") return g.tones; // looking is shown whatever the microphone does: it is the sign that the screen is being captured
   if (phase === "connecting" || phase === "reconnecting") connecting(g, tick);
   else if (phase === "listening") listening(g, lv);
   else if (phase === "thinking") thinking(g, tick);
   else if (phase === "speaking") speaking(g, lv, tick);
+  else if (phase === "looking") looking(g, tick);
   else if (phase === "idle") for (let c = 0; c < cols; c++) g.set(2, c, 1);
   return g.tones;
 }

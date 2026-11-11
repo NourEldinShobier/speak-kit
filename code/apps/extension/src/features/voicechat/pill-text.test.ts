@@ -36,6 +36,11 @@ describe("announcement", () => {
     expect(announcement({ phase: "idle", muted: true }, undefined, true)).toBe("Microphone muted");
   });
 
+  it("says the screen is being looked at, also while muted", () => {
+    expect(announcement({ phase: "looking", muted: false }, undefined, true)).toBe("Looking at your screen");
+    expect(announcement({ phase: "looking", muted: true }, undefined, true)).toBe("Looking at your screen");
+  });
+
   it("announces the idle warning once, not every second", () => {
     expect(announcement({ phase: "idle-warning", muted: false, secondsLeft: 29 }, undefined, false)).toBe("Still there?");
     expect(announcement({ phase: "idle-warning", muted: false, secondsLeft: 3 }, undefined, false)).toBe("Still there?");
