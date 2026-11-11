@@ -10,8 +10,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export const appDir = path.resolve(here, "..");
 // Playwright lives in the e2e workspace package; desktop does not depend on it.
 const e2eRequire = createRequire(path.resolve(appDir, "../../e2e/package.json"));
-const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwright/test");
-const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
+export const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwright/test");
+export const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
 
 // The root `vp test run` does not read this package's vite config: say here what starting a whole Electron app (and what follows) needs.
 // The e2e specs import this file too, outside vitest.
