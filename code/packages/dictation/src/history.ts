@@ -61,11 +61,7 @@ function freshId(entries: HistoryEntry[], at: number): string {
 
 function matches(e: HistoryEntry, search: string): boolean {
   const hay = `${e.text}\n${e.app ?? ""}`.toLowerCase();
-  return search
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => hay.includes(word));
+  return (search.toLowerCase().match(/\S+/g) ?? []).every((word) => hay.includes(word));
 }
 
 interface Deps {
@@ -90,7 +86,7 @@ class Store implements History {
       try {
         this.entries = parse(await this.deps.storage.load());
       } catch {
-        this.entries = []; // unreadable storage starts an empty history; the next save replaces it
+        // Unreadable storage leaves the history empty; the next save replaces it.
       }
     })());
   }
@@ -124,7 +120,7 @@ class Store implements History {
 
   async list(query: HistoryQuery = {}): Promise<HistoryEntry[]> {
     await this.prune();
-    const search = query.search?.trim();
+    const { search } = query;
     const found = search ? this.entries.filter((e) => matches(e, search)) : this.entries;
     return found.slice(0, query.limit ?? found.length);
   }

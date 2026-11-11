@@ -149,12 +149,13 @@ describe("retention", () => {
 
   it("holds at most 500 entries, newest first", async () => {
     expect(MAX_ENTRIES).toBe(500);
-    const { history, time } = setup("forever");
+    const { history, time, store } = setup("forever");
     for (let i = 0; i < 503; i++) await history.add(entry(time.clock.now() + i, `t${i}`));
     const all = await history.list();
     expect(all).toHaveLength(500);
     expect(all[0]?.text).toBe("t502");
     expect(all.at(-1)?.text).toBe("t3");
+    expect((store.state.value as unknown[]).length).toBe(500);
   });
 
   it("only what the retention allows survives, for any ages and any retention", async () => {
@@ -183,6 +184,14 @@ describe("storage", () => {
     expect(await history.list()).toEqual(saved);
   });
 
+  it("keeps at most 500 stored entries", async () => {
+    const stored = Array.from({ length: 520 }, (_, i) => ({ id: `e${i}`, at: 100 * DAY - i, text: "t", raw: "t", durationMs: 1 }));
+    const { history } = setup("7d", stored);
+    const all = await history.list();
+    expect(all).toHaveLength(500);
+    expect(all[0]?.id).toBe("e0");
+  });
+
   it("sorts what it loads newest first", async () => {
     const mk = (id: string, at: number) => ({ id, at: 100 * DAY - at, text: id, raw: id, durationMs: 1 });
     const { history } = setup("7d", [mk("old", 2000), mk("new", 1000)]);
@@ -191,8 +200,8 @@ describe("storage", () => {
 
   it("keeps only well-formed entries from stored data", async () => {
     const good = { id: "ok", at: 100 * DAY, text: "t", raw: "r", durationMs: 1 };
-    const bad = [null, 5, "x", {}, { ...good, id: 1 }, { ...good, at: "1" }, { ...good, text: 2 }, { ...good, raw: undefined }, { ...good, durationMs: "1" }];
-    const { history } = setup("7d", [...bad, good]);
+    const bad = [undefined, null, 5, "x", {}, { ...good, id: 1 }, { ...good, at: "1" }, { ...good, text: 2 }, { ...good, raw: undefined }, { ...good, durationMs: "1" }];
+    const { history } = setup("forever", [...bad, good]);
     expect(await history.list()).toEqual([good]);
   });
 

@@ -1,6 +1,36 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createDictation } from "../src";
+import { createDictation, defaultSettings, type DictationState } from "../src";
 import { fakeClock, fakeInserter, fakeKeyboard, fakeRecorder, fakeStorage, fakeTranscriber, flush, loud, rig, target } from "./fakes";
+
+describe("defaults", () => {
+  it("are Right Ctrl held to talk, Escape to cancel, automatic language and every text rule on", () => {
+    expect(defaultSettings).toEqual({
+      hotkey: "ControlRight",
+      cancelKey: "Escape",
+      mode: "hold",
+      language: "auto",
+      duck: false,
+      insertMode: "paste",
+      terminalPaste: true,
+      appModes: {},
+      fillers: true,
+      spokenSymbols: true,
+      spokenFormatting: true,
+      autoCapitalize: true,
+      trailingSpace: true,
+      replacements: [],
+      retention: "7d",
+    });
+  });
+
+  it("clean up a spoken sentence without any configuration", async () => {
+    const r = await rig();
+    r.stt.state.result = { ok: true, text: "um hello comma new line world" };
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("Hello,\nWorld ");
+  });
+});
 
 describe("hold to talk", () => {
   it("inserts the transcript into the window the user was in", async () => {
@@ -21,7 +51,15 @@ describe("hold to talk", () => {
     const r = await rig();
     await r.hold(1000);
     await r.time.advance(200);
-    expect(await r.dictation.history.list()).toEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000 }]);
+    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000 }]);
+  });
+
+  it("leaves out what it does not know: no program, no language, no model", async () => {
+    const r = await rig();
+    r.ins.state.targetThrows = true;
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", durationMs: 1000 }]);
   });
 
   it("records the language and model the engine reports", async () => {
@@ -317,6 +355,34 @@ describe("recording problems", () => {
     open();
     await r.time.advance(10);
     expect(r.rec.log).toEqual(["start:450", "discard"]);
+  });
+
+  it("a release that came before the microphone failed to open leaves nothing queued and shows the error", async () => {
+    const r = await rig();
+    let open = () => {};
+    r.rec.state.startGate = new Promise<void>((resolve) => (open = resolve));
+    r.rec.state.startResult = { ok: false, code: "mic-busy" };
+    r.press();
+    await r.time.advance(400);
+    r.release();
+    expect(r.dictation.state()).toEqual({ status: "transcribing" });
+    open();
+    await r.time.advance(1000);
+    expect(r.rec.log).toEqual(["start:450"]);
+    expect(r.stt.calls).toEqual([]);
+    expect(r.dictation.state()).toEqual({ status: "error", code: "mic-busy" });
+  });
+
+  it("a short tap that came before the microphone failed to open does not discard what never started", async () => {
+    const r = await rig();
+    let open = () => {};
+    r.rec.state.startGate = new Promise<void>((resolve) => (open = resolve));
+    r.rec.state.startResult = { ok: false, code: "mic-busy" };
+    await r.hold(100);
+    open();
+    await r.time.advance(10);
+    expect(r.rec.log).toEqual(["start:450"]);
+    expect(r.dictation.state()).toEqual({ status: "error", code: "mic-busy" });
   });
 
   it("a microphone that delivers only digital silence is reported, not pasted as nothing", async () => {
@@ -664,14 +730,17 @@ describe("state notifications", () => {
     expect(seen).toEqual(["recording", "transcribing"]);
   });
 
-  it("the notice disappears after 1.2 seconds", async () => {
+  it("the notice disappears after 1.2 seconds, and listeners hear it", async () => {
     const r = await rig();
+    const seen: DictationState[] = [];
+    r.dictation.subscribe((s) => seen.push(s));
     await r.hold(1000);
     await r.time.advance(200);
     await r.time.advance(1199);
     expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
     await r.time.advance(1);
     expect(r.dictation.state()).toEqual({ status: "idle" });
+    expect(seen.at(-1)).toEqual({ status: "idle" });
   });
 
   it("starting a recording clears the previous notice at once", async () => {
@@ -703,6 +772,37 @@ describe("disposing", () => {
     await r.time.advance(5000);
     expect(r.rec.log).toEqual(["start:450", "discard"]);
     expect(r.time.pending()).toBe(0);
+  });
+
+  it("detaches the hotkey only once when disposed twice", async () => {
+    const time = fakeClock();
+    let detached = 0;
+    const d = createDictation({
+      clock: time.clock,
+      recorder: fakeRecorder().recorder,
+      transcriber: fakeTranscriber().transcriber,
+      inserter: fakeInserter().inserter,
+      hotkeys: { subscribe: async () => () => void detached++ },
+      storage: fakeStorage().storage,
+    });
+    await d.ready();
+    d.dispose();
+    d.dispose();
+    expect(detached).toBe(1);
+  });
+
+  it("tells no listener about a transcription that finishes after dispose", async () => {
+    const r = await rig();
+    let open = () => {};
+    r.stt.state.gate = new Promise<void>((resolve) => (open = resolve));
+    await r.hold(1000);
+    await r.time.advance(200);
+    const seen: DictationState[] = [];
+    r.dictation.subscribe((s) => seen.push(s));
+    r.dictation.dispose();
+    open();
+    await r.time.advance(10);
+    expect(seen).toEqual([]);
   });
 
   it("does not deliver key events after dispose even if the source still calls", async () => {
@@ -765,8 +865,8 @@ describe("history through the dictation", () => {
     expect(await r.dictation.history.list()).toHaveLength(1);
     r.dictation.configure({ retention: "off" });
     await r.time.advance(0);
-    expect(await r.dictation.history.list()).toEqual([]);
     expect(r.storage.state.value).toEqual([]);
+    expect(await r.dictation.history.list()).toEqual([]);
     await r.hold(1000);
     await r.time.advance(200);
     expect(await r.dictation.history.list()).toEqual([]);

@@ -12,8 +12,8 @@ const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") has no such edge.
 function pattern(from: string): RegExp {
-  const before = WORD.test(from[0] ?? "") ? "(?<![\\p{L}\\p{N}_])" : "";
-  const after = WORD.test(from.at(-1) ?? "") ? "(?![\\p{L}\\p{N}_])" : "";
+  const before = WORD.test(from.charAt(0)) ? "(?<![\\p{L}\\p{N}_])" : "";
+  const after = WORD.test(from.charAt(from.length - 1)) ? "(?![\\p{L}\\p{N}_])" : "";
   return new RegExp(`${before}${escape(from)}${after}`, "giu");
 }
 
@@ -57,10 +57,15 @@ export function applyReplacements(text: string, rules: Replacement[]): string {
     }
     cursor = skipSpaces(text, cursor);
     const next = text[cursor];
-    if (next === undefined || next === "\n" || ",.;:!?".includes(next)) out = out.replace(/[ \t]+$/, "");
-    if (next === "," && out.endsWith(",")) cursor++;
-    else if (next === "," && (out === "" || atSentenceStart(out))) cursor = skipSpaces(text, cursor + 1);
-    capitalNext = atSentenceStart(out);
+    const sentenceStart = atSentenceStart(out);
+    if (next === "," && (out === "" || sentenceStart)) {
+      cursor = skipSpaces(text, cursor + 1); // a comma left at the start of a sentence goes with the phrase
+    } else {
+      if (next === undefined || next === "\n" || ",.;:!?".includes(next)) out = out.replace(/[ \t]+$/, "");
+      if (next !== undefined && ".!?".includes(next)) out = out.replace(/,$/, "");
+      if (next === "," && out.endsWith(",")) cursor++;
+    }
+    capitalNext = sentenceStart;
   }
   add(text.slice(cursor));
   return out;

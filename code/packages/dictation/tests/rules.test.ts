@@ -25,6 +25,16 @@ describe("fillers", () => {
     ["line one um\nline two uh", "line one\nline two"],
     ["um, uh, yes", "yes"],
     ["Hmm okay", "Hmm okay"],
+    ["Um,   hello", "Hello"],
+    ["This is, uh !", "This is !"],
+    ["uh,  hello", "hello"],
+    ["line one\nuh, line two", "line one\nline two"],
+    ["Er hello", "Hello"],
+  ]);
+  // Text without a filler is not touched, not even its trailing commas or indentation.
+  table({ fillers: true }, [
+    ["one,\n  two,", "one,\n  two,"],
+    ["wait, . no", "wait, . no"],
   ]);
   table({ fillers: true }, [
     ["umbrella", "umbrella"],
@@ -75,6 +85,10 @@ describe("spoken symbols", () => {
     ["a recomma b", "a recomma b"],
     ["slashing", "slashing"],
     ["hashtags", "hashtags"],
+    ["hello comma", "hello,"],
+    ["type slash. then", "type/. then"],
+    ["x  slash  y", "x/y"],
+    ["x\tslash\ty", "x/y"],
   ]);
   table({ spokenSymbols: true, language: "de" }, [
     ["hallo komma welt", "hallo, welt"],
@@ -110,6 +124,14 @@ describe("spoken formatting", () => {
     ["the quote of the day", "the quote of the day"],
     ["newline", "newline"],
     ["a new lines b", "a new lines b"],
+    ["Hello NEW   PARAGRAPH next", "Hello\n\nnext"],
+    ["new line", ""],
+    ["new paragraph", ""],
+    ["Hello new line", "Hello\n"],
+    ["quote one two unquote", '"one two"'],
+    ["QUOTE   one   UNQUOTE", '"one"'],
+    ["quote one\ntwo unquote", "quote one\ntwo unquote"],
+    ["unquoted quote", "unquoted quote"],
   ]);
   table({ spokenFormatting: true, language: "de" }, [
     ["Hallo neue Zeile Welt", "Hallo\nWelt"],
@@ -121,6 +143,41 @@ describe("spoken formatting", () => {
     expect(run("a new line b", { spokenFormatting: false })).toBe("a new line b");
   });
 });
+
+// A plain re-statement of the selection rule: every non-overlapping match of each rule is a candidate, the longest wins, ties go to the earlier start and then the earlier rule, losers that overlap a winner are dropped.
+function referenceReplace(text: string, rules: { from: string; to: string }[]): string {
+  const isLetter = (c: string | undefined): boolean => c !== undefined && /[a-z]/i.test(c);
+  const pool: { start: number; end: number; to: string; order: number }[] = [];
+  rules.forEach((rule, order) => {
+    const n = rule.from.length;
+    for (let i = 0; i + n <= text.length; i++) {
+      if (text.slice(i, i + n).toLowerCase() === rule.from && !isLetter(text[i - 1]) && !isLetter(text[i + n])) {
+        pool.push({ start: i, end: i + n, to: rule.to, order });
+        i += n - 1;
+      }
+    }
+  });
+  const chosen: typeof pool = [];
+  while (pool.length > 0) {
+    let best = 0;
+    pool.forEach((h, i) => {
+      const b = pool[best]!;
+      const better = h.end - h.start > b.end - b.start || (h.end - h.start === b.end - b.start && (h.start < b.start || (h.start === b.start && h.order < b.order)));
+      if (better) best = i;
+    });
+    const win = pool[best]!;
+    chosen.push(win);
+    for (let i = pool.length - 1; i >= 0; i--) if (pool[i]!.start < win.end && win.start < pool[i]!.end) pool.splice(i, 1);
+  }
+  chosen.sort((a, b) => a.start - b.start);
+  let out = "";
+  let at = 0;
+  for (const h of chosen) {
+    out += text.slice(at, h.start) + h.to;
+    at = h.end;
+  }
+  return out + text.slice(at);
+}
 
 describe("replacements", () => {
   const rule = (from: string, to: string) => ({ from, to });
@@ -165,6 +222,50 @@ describe("replacements", () => {
     expect(run("one\nbasically two", { ...del, autoCapitalize: false })).toBe("one\nTwo");
   });
 
+  it("does not match at the start of a longer word either", () => {
+    expect(run("bobcat cat", { replacements: [rule("cat", "dog")] })).toBe("bobcat dog");
+    expect(run("a13d b 3d", { replacements: [rule("3d", "three d")] })).toBe("a13d b three d");
+  });
+
+  it("adjacent matches next to each other both apply", () => {
+    expect(run("a+-b", { replacements: [rule("+", "P"), rule("-", "M")] })).toBe("aPMb");
+  });
+
+  it("a blank phrase does not match runs of spaces", () => {
+    expect(run("a  b", { replacements: [rule("  ", "X")] })).toBe("a  b");
+  });
+
+  it("deleting closes the gap around tabs, double spaces and sentence ends", () => {
+    const del = { replacements: [rule("basically", "")], autoCapitalize: false };
+    expect(run("this is basically\tfine", del)).toBe("this is fine");
+    expect(run("one  basically\ntwo", del)).toBe("one\ntwo");
+    expect(run("yes, basically.", del)).toBe("yes.");
+    expect(run("a basically, b", del)).toBe("a, b");
+    expect(run("Done. Basically, it works", del)).toBe("Done. It works");
+    expect(run("Done.  Basically it works", del)).toBe("Done.  It works");
+    expect(run("one\n  basically two", del)).toBe("one\n  Two");
+    expect(run("Done. Basically 1st place", del)).toBe("Done. 1st place");
+  });
+
+  it("a deletion keeps its capital for the next text even when two deletions meet", () => {
+    const del = { replacements: [rule("basically", ""), rule("really", "")] };
+    expect(run("Done. Basically really it works", del)).toBe("Done. It works");
+  });
+
+  it("the capital from a deletion is used once", () => {
+    expect(run("Basically hello x", { replacements: [rule("basically", ""), rule("x", "y")] })).toBe("Hello y");
+  });
+
+  it("matches the reference selection for any text and rules", () => {
+    const rulesArb = fc.array(fc.record({ from: fc.constantFrom("a", "b", "ab", "ba", "a b", "b a", "aba", "bab", "aa"), to: fc.constantFrom("X", "Y", "Z") }), { minLength: 1, maxLength: 5 });
+    fc.assert(
+      fc.property(fc.stringMatching(/^[aAbB ]{0,14}$/), rulesArb, (text, rules) => {
+        expect(run(text, { replacements: rules })).toBe(referenceReplace(text.trim(), rules));
+      }),
+      { numRuns: 500 },
+    );
+  });
+
   it("ignores rules with an empty phrase", () => {
     expect(run("hello", { replacements: [rule("", "x"), rule("  ", "y")] })).toBe("hello");
   });
@@ -190,6 +291,10 @@ describe("capitalisation and spacing", () => {
     ["#python rocks", "#python rocks"],
     ["already Fine. also fine", "Already Fine. Also fine"],
     ["مرحبا. بكم", "مرحبا. بكم"],
+    ["is it a! then", "Is it a! Then"],
+    ["one.  two", "One.  Two"],
+    ["one.\ttwo", "One.\tTwo"],
+    ["one\n\ttwo", "One\n\tTwo"],
   ]);
 
   it("adds one trailing space when asked, never two, and none after a line break", () => {

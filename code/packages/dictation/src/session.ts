@@ -15,8 +15,8 @@ export type Capture =
   | { kind: "idle" }
   /** A short tap was discarded; a press before `until` locks. */
   | { kind: "armed"; until: number }
-  /** The key is down. `lockUntil` is set when this press follows a short tap. */
-  | { kind: "hold"; id: number; key: string; pressedAt: number; lockUntil: number | undefined }
+  /** The key is down. A release before `lockUntil` locks; it is -Infinity unless this press follows a short tap. */
+  | { kind: "hold"; id: number; key: string; pressedAt: number; lockUntil: number }
   /** A chord discarded the recording; `key` is still down and its release means nothing. */
   | { kind: "ignoring"; key: string }
   | { kind: "toggle"; id: number; down: boolean }
@@ -55,14 +55,14 @@ const idle: Capture = { kind: "idle" };
 
 function begin(session: Session, cfg: Config, at: number): Out {
   const id = session.seq + 1;
-  const lockUntil = session.capture.kind === "armed" && at <= session.capture.until ? session.capture.until : undefined;
+  const lockUntil = session.capture.kind === "armed" ? session.capture.until : -Infinity;
   const capture: Capture = cfg.mode === "toggle" ? { kind: "toggle", id, down: true } : { kind: "hold", id, key: cfg.hotkey, pressedAt: at, lockUntil };
   return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: cfg.duck ? 0 : PREROLL_MS }] };
 }
 
 function release(session: Session, c: Extract<Capture, { kind: "hold" }>, at: number): Out {
   if (at - c.pressedAt >= HOLD_MS) return to(session, idle, { type: "finish-recording", id: c.id });
-  if (c.lockUntil !== undefined && at <= c.lockUntil) return to(session, { kind: "locked", id: c.id });
+  if (at <= c.lockUntil) return to(session, { kind: "locked", id: c.id });
   return to(session, { kind: "armed", until: at + DOUBLE_TAP_MS }, { type: "discard-recording", id: c.id, cancelled: false });
 }
 
@@ -79,19 +79,20 @@ function hotkey(session: Session, cfg: Config, event: KeyEvent): Out {
 }
 
 // Another key: a chord during a short hold discards, a long hold ignores it, Escape cancels only a toggled recording.
-function otherKey(session: Session, cfg: Config, event: KeyEvent): Out {
+function otherKey(session: Session, cfg: Config, event: KeyEvent): Step {
   const c = session.capture;
-  if (c.kind === "armed") return to(session, idle);
-  if (c.kind === "hold" && event.at - c.pressedAt < HOLD_MS) return to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false });
-  if (c.kind === "toggle" && event.key === cfg.cancelKey) return to(session, idle, { type: "discard-recording", id: c.id, cancelled: true });
-  return same(session);
+  if (c.kind === "toggle" && event.key === cfg.cancelKey) return { ...to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }), consumed: true };
+  if (c.kind === "armed") return { ...to(session, idle), consumed: false };
+  if (c.kind === "hold" && event.at - c.pressedAt < HOLD_MS) return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false }), consumed: false };
+  return { ...same(session), consumed: false };
 }
 
 function control(session: Session, cfg: Config, event: Extract<SessionEvent, { type: "start" | "stop" | "cancel" }>): Out {
   const c = session.capture;
   if (event.type === "start") return c.kind === "idle" || c.kind === "armed" ? begin(session, { ...cfg, mode: "toggle" }, event.at) : same(session);
   if (c.kind !== "hold" && c.kind !== "toggle" && c.kind !== "locked") return same(session);
-  return to(session, idle, event.type === "stop" ? { type: "finish-recording", id: c.id } : { type: "discard-recording", id: c.id, cancelled: true });
+  if (event.type === "stop") return to(session, idle, { type: "finish-recording", id: c.id });
+  return event.type === "cancel" ? to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }) : same(session);
 }
 
 function key(session: Session, cfg: Config, event: KeyEvent): Step {
@@ -100,8 +101,7 @@ function key(session: Session, cfg: Config, event: KeyEvent): Step {
   const owner = c.kind === "hold" || c.kind === "ignoring" ? c.key : cfg.hotkey;
   if (event.key === owner) return { ...hotkey(session, cfg, event), consumed: true };
   if (!event.down) return { ...same(session), consumed: false };
-  const out = otherKey(session, cfg, event);
-  return { ...out, consumed: out.effects.some((e) => e.type === "discard-recording" && e.cancelled) };
+  return otherKey(session, cfg, event);
 }
 
 /** The capture state machine. Pure: time arrives with each event. */
