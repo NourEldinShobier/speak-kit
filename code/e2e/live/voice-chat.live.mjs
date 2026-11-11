@@ -38,12 +38,16 @@ const check = (name, ok, detail = "") => {
   log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
 };
 
-const ARTICLE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>The Harbor Light Bulletin</title></head><body><main><article>
+// LIVE_LONG=1: the same facts in the middle of a page of about 70 000 characters, so the page is outlined and the model must call search_page
+const FILLER = (from, to) =>
+  Array.from({ length: to - from }, (_, i) => `<p>Item ${from + i + 1} of the harbour ledger records the weather and the tide for that day in plain words and nothing else of note.</p>`).join("");
+const ARTICLE_LONG = (html) => html.replace("<p>The crossing", `${FILLER(0, 300)}<p>The crossing`).replace("<p>Next spring", `${FILLER(300, 600)}<p>Next spring`);
+const ARTICLE = (process.env.LIVE_LONG ? ARTICLE_LONG : (h) => h)(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>The Harbor Light Bulletin</title></head><body><main><article>
 <h1>The Harbor Light Bulletin</h1>
 <p>Captain Imara Okonkwo has run the morning ferry between Saltmere and Greywick for twenty-one years. She knows every sandbank on the crossing.</p>
 <p>The crossing takes forty minutes, and the ferry carries sixty passengers and eight cars. Last winter the whole ferry was repainted bright orange, so that fishing boats can see it in the fog.</p>
 <p>Next spring the town council will vote on a second ferry, which would run in the afternoon.</p>
-</article></main></body></html>`;
+</article></main></body></html>`);
 
 // ---- the spoken question: Windows speech synthesis, or the OpenAI speech endpoint when that is not available (once, then cached) ----
 function wavParts(buf) {
@@ -299,6 +303,19 @@ try {
   log(`model said: ${String(trace.transcript ?? "").trim()}`);
   if (trace.errors?.length) log(`error events: ${trace.errors.join(", ")}`);
   if (process.env.LIVE_DEBUG) log(`event types: ${[...new Set(trace.events ?? [])].join(" ")}`);
+  for (const u of trace.usage ?? []) {
+    const i = u?.input_token_details ?? {};
+    const o = u?.output_token_details ?? {};
+    log(`usage: in ${u?.input_tokens} (text ${i.text_tokens}, audio ${i.audio_tokens}, cached ${i.cached_tokens}) out ${u?.output_tokens} (text ${o.text_tokens}, audio ${o.audio_tokens})`);
+  }
+  if (process.env.LIVE_LONG) {
+    log(`client events sent: ${(trace.sent ?? []).join(" ")}`);
+    check(
+      "the model searched the page and the search items were deleted afterwards",
+      (trace.events ?? []).includes("response.function_call_arguments.done") && (trace.sent ?? []).includes("conversation.item.delete"),
+    );
+  }
+  check("no error events", !trace.errors?.length, (trace.errors ?? []).join(", "));
   check("the reply finished and the output level rose above the threshold", done && trace.outPeak > 0.05, `peak ${trace.outPeak}`);
   check("the reply is about the article (Captain Imara Okonkwo, orange)", /imara|okonkwo/i.test(trace.transcript ?? "") && /orange/i.test(trace.transcript ?? ""));
   const order = ["connecting", "listening", "thinking", "speaking"];
@@ -323,8 +340,13 @@ try {
   const muted = (await sent()) - b;
   check("mute stops audio being sent", unmuted > 300 && muted < 100, `unmuted ${unmuted} bytes, muted ${muted} bytes in 1.5 s`);
 
-  // end: the peer connection closes and the document holding the microphone goes away
+  // end: the pill shows what the conversation cost, and the peer connection closes and the document holding the microphone goes away
   await sk("voice-end").click();
+  const usageLine = await sk("voice-usage")
+    .textContent({ timeout: 4000 })
+    .catch(() => "");
+  log(`ended pill usage line: ${usageLine}`);
+  check("the ended pill shows the cost of the conversation", /^about \$|^under \$/.test(usageLine ?? ""), usageLine ?? "");
   let gone = false;
   for (let i = 0; i < 40 && !gone; i++) {
     gone = (await sw.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"] })).length)) === 0;
