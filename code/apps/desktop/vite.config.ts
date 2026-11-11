@@ -27,9 +27,9 @@ export default defineConfig({
     outDir: path.join(root, "dist/renderer"),
     emptyOutDir: true,
     target: "chrome140",
-    // Two windows: the app and the always-on-top mini player.
+    // The app, the always-on-top mini player, and the two dictation windows (the HUD pill and the hidden microphone page).
     rollupOptions: {
-      input: Object.fromEntries(["index", "mini"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
+      input: Object.fromEntries(["index", "mini", "hud", "recorder"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
     },
   },
   test: {

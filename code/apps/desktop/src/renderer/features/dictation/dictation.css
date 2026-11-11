@@ -1,0 +1,292 @@
+/* Settings > Dictation and the dictation history. Rows and cards come from @speakkit/ui; this file only adds what those do not have. */
+
+/* Hotkey: keycaps, then Change. */
+.dict-hotkey {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dict-hotkey .lm-kbd {
+  block-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+.dict-hotkey__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 240px;
+  block-size: 36px;
+  box-sizing: border-box;
+  padding-inline: 12px;
+  border: 2px solid var(--text-primary);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.dict-hotkey__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--text-primary);
+}
+.dict-hotkey__problem {
+  position: absolute;
+  inset-inline-end: 16px;
+  inset-block-end: 2px;
+  color: var(--tag-red);
+  font-size: 12px;
+}
+
+/* Speech model rows: radio, text, then the state on the right. */
+.dict-model {
+  align-items: flex-start;
+  padding-block: 13px;
+}
+.dict-model .lm-radio {
+  margin-block-start: 1px;
+}
+.dict-model .lm-row__text {
+  flex: 1;
+  min-inline-size: 0;
+}
+.dict-model .lm-row__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dict-model .lm-row__control {
+  align-self: center;
+}
+.dict-model__bar {
+  margin-block: 8px 6px;
+  max-inline-size: 380px;
+}
+.dict-installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Replacements. */
+.dict-repl {
+  gap: 12px;
+  min-block-size: 43px;
+}
+.dict-repl__from {
+  inline-size: 122px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: 6px;
+  background: var(--surface-well);
+  font-size: 12px;
+}
+.dict-repl__arrow {
+  color: var(--icon-quiet);
+  flex: none;
+}
+.dict-repl__to {
+  flex: 1;
+  font-size: 13px;
+}
+.dict-repl__del {
+  margin-inline-start: auto;
+}
+.dict-repl--add {
+  background: var(--surface-well);
+  padding-block: 10px;
+}
+.dict-repl__field {
+  inline-size: 162px;
+}
+.dict-repl__field--wide {
+  inline-size: 236px;
+}
+
+/* Test field. */
+.dict-test {
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 78px;
+  padding: 12px;
+  border: 1px solid var(--stroke-field);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  resize: vertical;
+}
+.dict-test::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* First run: one card with a title block, the explanation, and a progress bar. */
+.dict-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-inline-size: 520px;
+  padding: 16px;
+}
+.dict-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dict-card__tile {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.dict-card__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.dict-card__step,
+.dict-card__sub,
+.dict-card__hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-card__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+.dict-card__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-card__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.dict-card__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dict-card__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* History. */
+.dict-back {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dict-back:focus-visible {
+  outline: 2px solid var(--accent-default);
+  outline-offset: 2px;
+}
+.dict-hist__bar {
+  padding-inline-end: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dict-hist__search {
+  inline-size: 480px;
+}
+.dict-clear {
+  color: var(--tag-red);
+}
+.dict-hist__day {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.dict-hist__row {
+  align-items: flex-start;
+  gap: 24px;
+  padding-block: 14px;
+}
+.dict-hist__when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  inline-size: 76px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+.dict-hist__app {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-size: 11px;
+}
+.dict-hist__text {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.dict-hist__acts {
+  display: flex;
+  gap: 8px;
+  inline-size: 72px;
+  justify-content: flex-end;
+  align-items: center;
+  flex: none;
+}
+/* With a mouse the buttons appear on hover or focus; with touch they are always there. */
+@media (hover: hover) and (pointer: fine) {
+  .dict-hist__acts {
+    opacity: 0;
+  }
+  .dict-hist__row:hover .dict-hist__acts,
+  .dict-hist__row:focus-within .dict-hist__acts,
+  .dict-hist__acts:has(.dict-hist__copied) {
+    opacity: 1;
+  }
+  .dict-hist__row:hover {
+    background: var(--surface-well);
+  }
+}
+.dict-hist__acts .lm-btn--icon {
+  inline-size: 28px;
+  block-size: 28px;
+}
+.dict-hist__copied {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.dict-hist__foot,
+.dict-hist__none {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-keys {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-block-start: 12px;
+}

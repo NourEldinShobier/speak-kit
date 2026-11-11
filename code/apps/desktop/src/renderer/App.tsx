@@ -75,7 +75,7 @@ function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; su
     case "browser":
       return <BrowserPage s={s} />;
     case "settings":
-      return <Settings s={s} sub={sub} />;
+      return <Settings s={s} sub={sub} go={(sb) => dispatch({ type: "go", page: "settings", sub: sb })} />;
     default: {
       const unreachable: never = page;
       return unreachable;

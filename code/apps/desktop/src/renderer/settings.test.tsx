@@ -14,7 +14,7 @@ const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => render
 describe("settings navigation", () => {
   it("lists the pages in three groups", () => {
     expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.id)])).toEqual([
-      ["General", ["general", "voice", "shortcuts", "notifications"]],
+      ["General", ["general", "voice", "dictation", "shortcuts", "notifications"]],
       ["Device", ["memory", "storage"]],
       ["App", ["browser", "about"]],
     ]);

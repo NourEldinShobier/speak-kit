@@ -7,6 +7,7 @@ export const SETTINGS_NAV: { group: string; items: { id: SettingsSub; label: str
     items: [
       { id: "general", label: "General", icon: "settings" },
       { id: "voice", label: "Voice and playback", icon: "volume" },
+      { id: "dictation", label: "Dictation", icon: "microphone" },
       { id: "shortcuts", label: "Shortcuts", icon: "keyboard" },
       { id: "notifications", label: "Notifications", icon: "bell" },
     ],
