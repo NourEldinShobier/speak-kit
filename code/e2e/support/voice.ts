@@ -88,7 +88,16 @@ export class FakeVoiceApp {
 
 export interface PeerEvent {
   type: string;
-  session?: { instructions?: string; max_output_tokens?: number; reasoning?: { effort?: string }; audio?: { output?: { voice?: string } } };
+  item?: { id?: string; type?: string; call_id?: string; output?: string };
+  item_id?: string;
+  session?: {
+    instructions?: string;
+    max_output_tokens?: number;
+    truncation?: { type?: string; retention_ratio?: number; token_limits?: { post_instructions?: number } };
+    tools?: { name?: string }[];
+    reasoning?: { effort?: string };
+    audio?: { output?: { voice?: string } };
+  };
 }
 
 /** Page that plays the model: answers the offer, keeps the data channel and can speak (a tone on the audio track). */

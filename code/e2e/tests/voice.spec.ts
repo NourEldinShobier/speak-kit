@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { test as base, expect, type Ext } from "../support/ext";
+import { bigPage } from "../support/pages";
 import { FakeOpenAi, FakeVoiceApp } from "../support/voice";
 
 /**
@@ -81,7 +82,9 @@ test.describe("starting a conversation", () => {
     expect(session?.instructions).toContain("Page title: The Long Harbor");
     expect(session?.instructions).toContain("P3S1 the quiet harbor wakes");
     expect(session?.instructions).not.toContain("HOMENAV");
-    expect([session?.reasoning?.effort, session?.max_output_tokens, session?.audio?.output?.voice]).toEqual(["low", 700, "marin"]);
+    expect([session?.reasoning?.effort, session?.max_output_tokens, session?.audio?.output?.voice]).toEqual(["low", 400, "marin"]);
+    expect(session?.truncation).toEqual({ type: "retention_ratio", retention_ratio: 0.8, token_limits: { post_instructions: 6000 } });
+    expect(session?.tools).toEqual([]); // a page that fits needs no search tool
     expect(ai.calls).toEqual([{ bearer: app.secrets[0]!, type: "application/sdp" }]);
     expect(app.secrets[0]).not.toBe(app.token);
     const html = await page.evaluate(() => document.documentElement.outerHTML);
@@ -445,6 +448,72 @@ test.describe("microphone", () => {
     await talk(page);
     await phase(page, "idle");
     await expect.poll(() => ext.ctx.pages().some((p) => p.url().includes("/mic.html"))).toBe(false);
+  });
+});
+
+test.describe("token saving", () => {
+  test("a long page is outlined, the model gets a search tool, a search is answered from the page and its items are deleted afterwards", async ({ vc: { ext, ai } }) => {
+    ext.fx.set("/long-voice", bigPage(1000));
+    const page = await ext.open("/long-voice");
+    await connected(page);
+    const session = await lastUpdate(ai);
+    expect(session?.instructions).toContain("this is only its outline");
+    expect(session?.instructions).not.toContain("P777S2");
+    expect(session?.tools?.map((t) => t.name)).toEqual(["search_page"]);
+
+    const call = { type: "function_call", id: "item_fc1", name: "search_page", call_id: "call_1", arguments: JSON.stringify({ query: "P777S2" }) };
+    await ai.send({ type: "response.done", response: { output: [call] } });
+    await expect.poll(async () => (await ai.received()).filter((e) => e.type === "response.create").length).toBe(1);
+    const answer = (await ai.received()).find((e) => e.item?.type === "function_call_output");
+    expect([answer?.item?.call_id, answer?.item?.output]).toEqual(["call_1", expect.stringContaining("P777S2 the quiet harbor wakes")]);
+    expect((await ai.received()).some((e) => e.type === "conversation.item.delete")).toBe(false); // still needed for the answer
+
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }] } });
+    await expect.poll(async () => (await ai.received()).filter((e) => e.type === "conversation.item.delete").map((e) => e.item_id)).toEqual([answer?.item?.id, "item_fc1"]);
+  });
+
+  test("updating the page to a short one removes the search tool", async ({ vc: { ext, ai } }) => {
+    ext.fx.set("/long-voice", bigPage(1000));
+    const page = await ext.open("/long-voice");
+    await connected(page);
+    expect((await lastUpdate(ai))?.tools).toHaveLength(1);
+    await page.evaluate(() => (document.querySelector("article")!.innerHTML = `<h1>Short</h1><p>${"The harbor is quiet today. ".repeat(10)}</p>`));
+    await says(page, "Page changed");
+    await sk(page, "voice-action").click();
+    await expect.poll(async () => (await lastUpdate(ai))?.tools).toEqual([]);
+  });
+
+  test("a response's usage is metered: the cost cap warns, then ends the conversation politely with its cost", async ({ vc: { ext, ai } }) => {
+    await ext.voiceTest({ cap: "0.01" });
+    const page = await ext.open("/article");
+    await connected(page);
+    // 1000 audio tokens in ($0.032) and 200 out ($0.0128)
+    const usage = { input_tokens: 1000, output_tokens: 200, input_token_details: { audio_tokens: 1000 }, output_token_details: { audio_tokens: 200 } };
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }], usage } });
+    await says(page, "Cost limit reached. Ending soon");
+    await phase(page, "cost-warning");
+    await shot(pill(page), "pill-cost-warning");
+    await expect(sk(page, "voice-text")).toHaveText("Cost limit reached. Conversation ended", { timeout: 10_000 });
+    await expect(sk(page, "voice-usage")).toContainText("about $0.04");
+    await shot(pill(page), "pill-ended-capped");
+    await expect(sk(page, "voice-action")).toHaveText("Talk again");
+    await closed(ext);
+  });
+
+  test("the ended pill shows what the conversation cost, and nothing when no response was billed", async ({ vc: { ext, ai } }) => {
+    const page = await ext.open("/article");
+    await connected(page);
+    await sk(page, "voice-end").click();
+    await says(page, "Conversation ended");
+    await expect(sk(page, "voice-usage")).toHaveCount(0);
+    await sk(page, "voice-action").click(); // Talk again
+    await phase(page, "idle");
+    await ai.send({ type: "response.done", response: { output: [{ type: "message" }], usage: { input_token_details: { audio_tokens: 1000 } } } });
+    await expect.poll(async () => (await ai.received()).length).toBeGreaterThan(0);
+    await sk(page, "voice-end").click();
+    await says(page, "Conversation ended");
+    await expect(sk(page, "voice-usage")).toContainText(/^about \$0\.03 · \d+ s$/);
+    await shot(pill(page), "pill-ended-usage");
   });
 });
 
