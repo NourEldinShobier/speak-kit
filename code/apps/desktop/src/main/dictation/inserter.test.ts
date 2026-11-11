@@ -5,7 +5,9 @@ import type { AppOverride, ForegroundInfo, InputPort } from "./types";
 
 const notepad: ForegroundInfo = { hwnd: "100", pid: 1, exe: "notepad.exe", className: "Notepad", elevated: false };
 
-function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void } = {}) {
+function setup(
+  opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void } = {},
+) {
   let content: string | null = "old";
   let seq = 1;
   const clip: ClipboardPort = {
@@ -204,7 +206,16 @@ describe("unsupported platform", () => {
   it("only copies, with its own reason", async () => {
     const clip = { snapshot: async () => [], writeText: async (t: string) => void (written = t), restore: async () => {}, sequence: () => 0 };
     let written = "";
-    const input = { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: async () => false };
+    const input = {
+      foreground: () => null,
+      passwordFocused: () => false,
+      heldModifiers: () => [],
+      pressPaste: () => false,
+      type: () => false,
+      clipboardSequence: () => 0,
+      clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
+      markClipboard: async () => false,
+    };
     const ins = createInserter({ input, clip, supported: false });
     expect(await ins.insert("x")).toEqual({ status: "copied", reason: "unsupported-platform" });
     expect(written).toBe("x");

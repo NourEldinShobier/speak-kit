@@ -12,11 +12,7 @@ export interface Target {
 export type CopyReason = "setting" | "elevated" | "focus-changed" | "interrupted" | "no-target" | "manual";
 
 /** Which way the text goes in. The keys, waits and clipboard restore of a paste belong to the operating system layer, which knows the program (terminals, remote desktop). */
-export type PastePlan =
-  | { method: "paste" }
-  | { method: "type" }
-  | { method: "copy"; reason: CopyReason }
-  | { method: "refuse"; reason: "password-field" };
+export type PastePlan = { method: "paste" } | { method: "type" } | { method: "copy"; reason: CopyReason } | { method: "refuse"; reason: "password-field" };
 
 export interface PlanInput {
   /** Foreground window when the key was pressed. */

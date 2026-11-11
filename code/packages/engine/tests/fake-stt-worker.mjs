@@ -14,7 +14,14 @@ if (process.env.SPEAKKIT_FAKE_LOG) appendFileSync(process.env.SPEAKKIT_FAKE_LOG,
 process.send({ type: "status", state: "loading" });
 if (init.modelPath.includes("bad")) process.send({ type: "fatal", message: "cannot open model" });
 else if (!init.gpu) process.send({ type: "status", state: "ready", backend: "cpu" });
-else process.send({ type: "status", state: "ready", backend: "gpu", devices: DEVICES.find(([tag]) => init.modelPath.includes(tag))?.[1] ?? 3, gpuKind: vk === "1" && !init.modelPath.includes("igpu") ? "discrete" : "integrated" });
+else
+  process.send({
+    type: "status",
+    state: "ready",
+    backend: "gpu",
+    devices: DEVICES.find(([tag]) => init.modelPath.includes(tag))?.[1] ?? 3,
+    gpuKind: vk === "1" && !init.modelPath.includes("igpu") ? "discrete" : "integrated",
+  });
 process.on("message", (m) => {
   if (m.pcm[0] === 999) return;
   if (m.pcm.every((s) => s === 0)) return process.send({ type: "result", id: m.id, text: "", speech: false });
