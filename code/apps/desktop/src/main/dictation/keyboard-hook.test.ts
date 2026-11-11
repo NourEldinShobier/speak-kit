@@ -4,6 +4,7 @@ import { VK, type HotkeyEvent } from "./types";
 
 const MARKER = 0x53504b54;
 const INJECTED = 0x10;
+const F9 = 0x78;
 
 function setup(opts: { refuse?: boolean; pollMs?: number } = {}) {
   let onKey: ((k: HookKey) => boolean) | null = null;
@@ -46,15 +47,25 @@ afterEach(() => vi.useRealTimers());
 describe("keyboard hook", () => {
   it("answers swallow or pass at once and delivers events on a later turn", async () => {
     const t = setup();
-    expect(t.hook.start({ keys: [VK.rightCtrl] }, t.handlers)).toEqual({ ok: true });
-    expect(t.stroke(VK.rightCtrl, true)).toBe(true);
+    expect(t.hook.start({ keys: [F9] }, t.handlers)).toEqual({ ok: true });
+    expect(t.stroke(F9, true)).toBe(true);
     expect(t.stroke(0x41, true)).toBe(false);
     expect(t.events).toEqual([]);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "other", vk: 0x41 }]);
-    expect(t.stroke(VK.rightCtrl, false)).toBe(true);
+    expect(t.stroke(F9, false)).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events.at(-1)).toEqual({ kind: "up" });
+  });
+
+  it("lets a modifier hotkey reach the app, so Right Ctrl shortcuts keep working", async () => {
+    const t = setup();
+    t.hook.start({ keys: [VK.rightCtrl] }, t.handlers);
+    expect(t.stroke(VK.rightCtrl, true)).toBe(false);
+    expect(t.stroke(0x43, true)).toBe(false);
+    expect(t.stroke(VK.rightCtrl, false)).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "other", vk: 0x43 }, { kind: "up" }]);
   });
 
   it("ignores key events this app injected itself, but not other programs' injected keys", async () => {
@@ -63,7 +74,10 @@ describe("keyboard hook", () => {
     expect(t.stroke(VK.rightCtrl, true, INJECTED, MARKER)).toBe(false);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([]);
-    expect(t.stroke(VK.rightCtrl, true, INJECTED, 0)).toBe(true);
+    t.hook.stop();
+    t.hook.start({ keys: [F9] }, t.handlers);
+    expect(t.stroke(F9, true, INJECTED, MARKER)).toBe(false);
+    expect(t.stroke(F9, true, INJECTED, 0)).toBe(true);
   });
 
   it("reports a refused hook and a second start", () => {
@@ -127,16 +141,28 @@ describe("safety timer", () => {
 
   it("does not treat a swallowed key as stuck, because the system never records it as down", async () => {
     const t = setup();
-    t.hook.start({ keys: [VK.rightCtrl] }, t.handlers);
-    t.stroke(VK.rightCtrl, true);
+    t.hook.start({ keys: [F9] }, t.handlers);
+    t.stroke(F9, true);
     await vi.advanceTimersByTimeAsync(1000);
     expect(t.events).toEqual([{ kind: "down" }]);
   });
 
-  it("reinstalls the hook after the event loop was blocked longer than the stall limit, and reports up for a chord whose release may have been lost", async () => {
+  it("releases a modifier hotkey that is up on the keyboard although the hook never saw the release", async () => {
     const t = setup();
     t.hook.start({ keys: [VK.rightCtrl] }, t.handlers);
     t.stroke(VK.rightCtrl, true);
+    t.down.add(VK.rightCtrl);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(t.events).toEqual([{ kind: "down" }]);
+    t.down.delete(VK.rightCtrl);
+    await vi.advanceTimersByTimeAsync(101);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+
+  it("reinstalls the hook after the event loop was blocked longer than the stall limit, and reports up for a chord whose release may have been lost", async () => {
+    const t = setup();
+    t.hook.start({ keys: [F9] }, t.handlers);
+    t.stroke(F9, true);
     await vi.advanceTimersByTimeAsync(100);
     expect(t.stats()).toEqual({ installs: 1, removed: 0 });
     t.advanceClock(600);
@@ -146,17 +172,17 @@ describe("safety timer", () => {
     t.advanceClock(100);
     await vi.advanceTimersByTimeAsync(100);
     expect(t.stats()).toEqual({ installs: 2, removed: 1 });
-    expect(t.stroke(VK.rightCtrl, true)).toBe(true);
+    expect(t.stroke(F9, true)).toBe(true);
   });
 
   it("resync reports up for a chord that was down and forgets it", async () => {
     const t = setup();
-    t.hook.start({ keys: [VK.rightCtrl] }, t.handlers);
-    t.stroke(VK.rightCtrl, true);
+    t.hook.start({ keys: [F9] }, t.handlers);
+    t.stroke(F9, true);
     t.hook.resync();
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
-    expect(t.stroke(VK.rightCtrl, true)).toBe(true);
+    expect(t.stroke(F9, true)).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events.at(-1)).toEqual({ kind: "down" });
   });
