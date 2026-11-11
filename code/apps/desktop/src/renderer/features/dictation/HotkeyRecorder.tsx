@@ -46,9 +46,10 @@ function useKeyCapture(active: boolean, handlers: Handlers): void {
 }
 
 /** The hotkey as keycaps and a Change button; while changing, the keys held together become the hotkey when they are released. Escape cancels. */
-export function HotkeyRecorder({ value, onChange }: { value: string; onChange: (hotkey: string) => void }) {
-  const [recording, setRecording] = useState(false);
+export function HotkeyRecorder({ value, onChange, onRecording }: { value: string; onChange: (hotkey: string) => void; onRecording?: (on: boolean) => void }) {
+  const [recording, setRecordingState] = useState(false);
   const [problem, setProblem] = useState(false);
+  const setRecording = (on: boolean) => (setRecordingState(on), onRecording?.(on));
   const stop = () => (setRecording(false), setProblem(false));
   useKeyCapture(recording, { keys: (hotkey) => (stop(), onChange(hotkey)), problem: setProblem, stop });
   if (!recording)

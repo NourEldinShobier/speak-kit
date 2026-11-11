@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ModelView } from "../../../shared/dictation/contract";
-import { appName, dayLabel, downloadText, emptyHint, entriesText, etaText, groupByDay, historyFooter, historyLead, mb, modelLine, timeText } from "./model";
+import { appName, dayLabel, downloadText, emptyHint, entriesText, entryLabel, etaText, focusAfterDelete, groupByDay, historyFooter, historyLead, hotkeyHelp, mb, modelLine, timeText } from "./model";
 
 const model = (over: Partial<ModelView> = {}): ModelView => ({
   id: "large-v3-turbo-q5_0",
@@ -87,5 +87,28 @@ describe("history text", () => {
     expect(emptyHint("off")).toBe("Hold the hotkey in any app and speak. History is off, so nothing is saved.");
     expect(entriesText(1)).toBe("1 entry");
     expect(entriesText(128)).toBe("128 entries");
+  });
+});
+
+describe("hotkey help", () => {
+  it("says how to leave while the keys are captured, and what the hotkey does otherwise", () => {
+    expect(hotkeyHelp(true)).toBe("Press the keys you want to use. Esc cancels.");
+    expect(hotkeyHelp(false)).toBe("Works while any app is in front.");
+  });
+});
+
+describe("history focus and names", () => {
+  it("focus goes to the next entry after a delete, else the one above, else nowhere", () => {
+    expect(focusAfterDelete(["a", "b", "c"], "a")).toBe("b");
+    expect(focusAfterDelete(["a", "b", "c"], "b")).toBe("c");
+    expect(focusAfterDelete(["a", "b", "c"], "c")).toBe("b");
+    expect(focusAfterDelete(["a"], "a")).toBeUndefined();
+    expect(focusAfterDelete(["a", "b"], "x")).toBeUndefined();
+  });
+
+  it("names an entry by its first words, on one line, cut at 40 characters", () => {
+    expect(entryLabel("  Send   the\nreport  ")).toBe("Send the report");
+    expect(entryLabel("a".repeat(40))).toBe("a".repeat(40));
+    expect(entryLabel("a".repeat(41))).toBe(`${"a".repeat(39)}…`);
   });
 });
