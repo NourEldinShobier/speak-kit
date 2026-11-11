@@ -48,6 +48,30 @@ describe("tray tooltip", () => {
   });
 });
 
+describe("tray menu, dictation", () => {
+  const dictation = (enabled: boolean) => ctx({ dictation: { enabled, hotkey: "ControlLeft+AltLeft+Space" } });
+
+  it("has no dictation rows where dictation cannot run", () => {
+    expect(labels(ctx()).filter((l) => /dictat/i.test(l))).toEqual([]);
+  });
+
+  it("puts the switch, a hint with the hotkey, the history and the settings under Open Speak Kit", () => {
+    expect(labels(dictation(true)).slice(0, 5)).toEqual(["Open Speak Kit", "Dictation", "Hold Ctrl Alt Space to dictate", "Dictation history", "Dictation settings"]);
+  });
+
+  it("shows the switch state, and leaves the hint out while dictation is off", () => {
+    const row = (c: TrayContext) => trayMenuModel(c).find((i) => i.type === "item" && i.action === "dictation");
+    expect(row(dictation(true))).toMatchObject({ checked: true, enabled: true });
+    expect(row(dictation(false))).toMatchObject({ checked: false });
+    expect(labels(dictation(false))).not.toContain("Hold Ctrl Alt Space to dictate");
+  });
+
+  it("the hint is not clickable", () => {
+    const hint = trayMenuModel(dictation(true)).find((i) => i.type === "item" && i.label.startsWith("Hold "));
+    expect(hint).toMatchObject({ enabled: false });
+  });
+});
+
 describe("tray menu", () => {
   it("idle: short menu", () => {
     expect(labels(ctx())).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);

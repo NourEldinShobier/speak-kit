@@ -4,17 +4,19 @@ import type { createExports } from "./export/service";
 import type { createReading } from "./reader/service";
 import { createTray } from "./tray";
 import type { createUpdates } from "./updates-service";
+import type { DictationService } from "./dictation/service";
 
 interface TrayParts {
   reading: ReturnType<typeof createReading>;
   exports: ReturnType<typeof createExports>;
   updates: ReturnType<typeof createUpdates>;
+  dictation: DictationService;
   requestQuit(): void;
   retryEngine(): Promise<unknown>;
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, requestQuit, retryEngine }: TrayParts) {
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requestQuit, retryEngine }: TrayParts) {
   const context = (): TrayContext => ({
     health: ctx.state.health,
     serverError: ctx.state.serverError,
@@ -23,8 +25,16 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, requestQuit, re
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
+    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
   });
+  const openDictation = (sub: "dictation" | "dictation-history") => () => {
+    ctx.showWindow();
+    ctx.sendUi({ type: "nav", page: "settings", sub });
+  };
   const actions: Record<TrayAction, () => void> = {
+    dictation: dictation.toggle,
+    "dictation-history": openDictation("dictation-history"),
+    "dictation-settings": openDictation("dictation"),
     open: ctx.showWindow,
     pause: () => reading.controller.command({ type: "pause" }),
     resume: () => reading.controller.command({ type: "resume" }),
