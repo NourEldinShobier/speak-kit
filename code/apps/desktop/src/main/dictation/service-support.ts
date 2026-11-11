@@ -24,7 +24,6 @@ export const clock = {
 };
 export const coreSettings = (c: DictationConfig): Partial<Settings> => ({ hotkey: c.hotkey, mode: c.mode, language: c.language, retention: c.retention, replacements: c.replacements });
 
-
 interface StatusParts {
   supported: boolean;
   config: DictationConfig;

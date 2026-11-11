@@ -61,7 +61,17 @@ export interface HistoryStorage {
   save(value: unknown): Promise<void>;
 }
 
-export type DictationErrorCode = MicErrorCode | "mic-silent" | "model-missing" | "model-loading" | "model-failed" | "transcribe-failed" | "insert-failed" | "password-field" | "hotkey-failed" | "failed";
+export type DictationErrorCode =
+  | MicErrorCode
+  | "mic-silent"
+  | "model-missing"
+  | "model-loading"
+  | "model-failed"
+  | "transcribe-failed"
+  | "insert-failed"
+  | "password-field"
+  | "hotkey-failed"
+  | "failed";
 
 export type Notice = { kind: "inserted" } | { kind: "copied"; reason: CopyReason } | { kind: "cancelled" } | { kind: "no-speech" };
 

@@ -152,7 +152,15 @@ export class DictationService {
   // ---- status ------------------------------------------------------------------------------------------------
 
   status(): DictationStatus {
-    return dictationStatus({ supported: this.supported, config: this.#cfg, hotkeyReady: this.hotkeyActive, hotkeyFailed: this.#hotkeyFailed, state: this.state, models: this.models, historyCount: this.#count });
+    return dictationStatus({
+      supported: this.supported,
+      config: this.#cfg,
+      hotkeyReady: this.hotkeyActive,
+      hotkeyFailed: this.#hotkeyFailed,
+      state: this.state,
+      models: this.models,
+      historyCount: this.#count,
+    });
   }
 
   #send(): void {

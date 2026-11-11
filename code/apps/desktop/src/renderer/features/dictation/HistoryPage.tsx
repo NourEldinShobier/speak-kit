@@ -89,10 +89,11 @@ function Groups({ items, load }: { items: HistoryItem[]; load: () => void }) {
     setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500);
   };
   const remove = async (id: string) => {
-    focusNext.current = focusAfterDelete(
-      items.map((i) => i.id),
-      id,
-    ) ?? null;
+    focusNext.current =
+      focusAfterDelete(
+        items.map((i) => i.id),
+        id,
+      ) ?? null;
     await dictation.historyRemove(id);
     load();
   };

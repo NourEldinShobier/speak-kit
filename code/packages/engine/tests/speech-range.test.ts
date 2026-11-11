@@ -4,7 +4,15 @@ import { speechRange } from "../src/stt/speech-range";
 // The VAD speaks in centiseconds (100 per second); the audio is 16 kHz, so one centisecond is 160 samples and the margin of 0.2 s is 3200 samples.
 describe("speech range", () => {
   it("runs from the first speech to the last, with 0.2 s of room on each side", () => {
-    expect(speechRange([{ t0: 100, t1: 150 }, { t0: 300, t1: 400 }], 16000 * 10)).toEqual({ from: 100 * 160 - 3200, to: 400 * 160 + 3200 });
+    expect(
+      speechRange(
+        [
+          { t0: 100, t1: 150 },
+          { t0: 300, t1: 400 },
+        ],
+        16000 * 10,
+      ),
+    ).toEqual({ from: 100 * 160 - 3200, to: 400 * 160 + 3200 });
   });
 
   it("does not start before the audio does", () => {
@@ -29,6 +37,15 @@ describe("speech range", () => {
 
   it("uses only the outer edges when there are several segments", () => {
     const one = speechRange([{ t0: 100, t1: 400 }], 16000 * 10);
-    expect(speechRange([{ t0: 100, t1: 120 }, { t0: 200, t1: 220 }, { t0: 390, t1: 400 }], 16000 * 10)).toEqual(one);
+    expect(
+      speechRange(
+        [
+          { t0: 100, t1: 120 },
+          { t0: 200, t1: 220 },
+          { t0: 390, t1: 400 },
+        ],
+        16000 * 10,
+      ),
+    ).toEqual(one);
   });
 });
