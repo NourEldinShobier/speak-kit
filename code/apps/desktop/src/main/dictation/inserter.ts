@@ -80,7 +80,7 @@ export class Inserter {
 
   async #send(text: string, fg: ForegroundInfo, opts: InsertOptions): Promise<InsertResult> {
     const profile = profileFor(fg, this.#overrides);
-    const typing = profile.shortcut === "type";
+    const typing = opts.mode === "type" || profile.shortcut === "type";
     if (!(await this.#releaseModifiers())) return this.#copyOnly(text, "modifiers-held");
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);

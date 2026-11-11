@@ -80,8 +80,8 @@ export interface AppOverride {
 export interface InsertOptions {
   /** `hwnd` from `foreground()` when the key was pressed. A different foreground window at insert time means the text is only copied. */
   target?: string;
-  /** "paste" (default) puts the old clipboard back; "keep" leaves the text on the clipboard after pasting; "copy" only copies. */
-  mode?: "paste" | "keep" | "copy";
+  /** "paste" (default) puts the old clipboard back; "keep" leaves the text on the clipboard after pasting; "copy" only copies; "type" types it as key events. */
+  mode?: "paste" | "keep" | "copy" | "type";
 }
 
 export type CopyReason = "copy-only" | "elevated-target" | "foreground-changed" | "keys-rejected" | "modifiers-held" | "no-foreground" | "unsupported-platform";

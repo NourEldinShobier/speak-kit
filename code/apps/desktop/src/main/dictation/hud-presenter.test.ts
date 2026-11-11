@@ -1,0 +1,106 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import type { DictationState } from "@speakkit/dictation";
+import type { HudView } from "../../shared/dictation/contract";
+import type { Hud, HudState } from "./hud";
+import { HudPresenter } from "./hud-presenter";
+
+function setup(over: { canRetry?: boolean; copied?: boolean } = {}) {
+  const shown: (HudView | "hide")[] = [];
+  const updates: HudView[] = [];
+  const hud = {
+    show: (s: HudState) => s.kind === "view" && shown.push(s.view),
+    update: (s: HudState) => s.kind === "view" && updates.push(s.view),
+    hide: () => shown.push("hide"),
+  } as unknown as Hud;
+  const p = new HudPresenter({ hud: () => hud, hotkey: () => "ControlLeft+AltLeft+Space", canRetry: () => over.canRetry ?? false, insertedAsCopy: () => over.copied ?? false });
+  return { p, shown, updates };
+}
+const state = (s: DictationState) => s;
+
+describe("HUD presenter", () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(() => void vi.useRealTimers());
+
+  it("does not flash the HUD for a recording that ends within the settle time (a discarded tap)", () => {
+    const { p, shown } = setup();
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(100);
+    p.onState(state({ status: "idle" }));
+    vi.advanceTimersByTime(500);
+    expect(shown.filter((v) => v !== "hide")).toEqual([]);
+  });
+
+  it("shows a recording after the settle time, with the time it started", () => {
+    const { p, shown } = setup();
+    vi.setSystemTime(10_000);
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(200);
+    expect(shown).toEqual([{ kind: "recording", locked: false, startedAt: 10_000, level: 0, hotkey: "Ctrl Alt Space" }]);
+  });
+
+  it("passes the microphone level on while recording, and not otherwise", () => {
+    const { p, updates } = setup();
+    p.setLevel(0.5);
+    expect(updates).toEqual([]);
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(200);
+    p.setLevel(0.7);
+    expect(updates).toEqual([expect.objectContaining({ kind: "recording", level: 0.7 })]);
+  });
+
+  it("goes from recording to transcribing to Pasted and hides when idle again", () => {
+    const { p, shown } = setup();
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(200);
+    p.onState(state({ status: "transcribing" }));
+    p.onState(state({ status: "idle", notice: { kind: "inserted" } }));
+    p.onState(state({ status: "idle" }));
+    expect(shown.map((v) => (v === "hide" ? v : v.kind))).toEqual(["recording", "transcribing", "pasted", "hide"]);
+  });
+
+  it("keeps a failure with a button on screen after the core has cleared it, then lets it go", () => {
+    const { p, shown } = setup({ canRetry: true });
+    p.onState(state({ status: "error", code: "transcribe-failed" }));
+    p.onState(state({ status: "idle" }));
+    expect(shown.at(-1)).toMatchObject({ kind: "error", action: { id: "retry" } });
+    vi.advanceTimersByTime(12_100);
+    expect(shown.at(-1)).toBe("hide");
+  });
+
+  it("does not keep a failure that has nothing to press", () => {
+    const { p, shown } = setup();
+    p.onState(state({ status: "error", code: "mic-busy" }));
+    p.onState(state({ status: "idle" }));
+    expect(shown.at(-1)).toBe("hide");
+  });
+
+  it("a new recording replaces a kept failure", () => {
+    const { p, shown } = setup();
+    p.onState(state({ status: "error", code: "model-missing" }));
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(200);
+    expect(shown.at(-1)).toMatchObject({ kind: "recording" });
+  });
+
+  it("dismiss hides a kept failure at once", () => {
+    const { p, shown } = setup();
+    p.onState(state({ status: "error", code: "model-missing" }));
+    p.dismiss();
+    p.onState(state({ status: "idle" }));
+    expect(shown.at(-1)).toBe("hide");
+  });
+
+  it("flashes Dictation ready for two seconds, with the hotkey", () => {
+    const { p, shown } = setup();
+    p.flashReady();
+    expect(shown).toEqual([{ kind: "ready", hotkey: "Ctrl Alt Space" }]);
+    vi.advanceTimersByTime(2100);
+    expect(shown.at(-1)).toBe("hide");
+  });
+
+  it("says Copied when the text only reached the clipboard", () => {
+    const { p, shown } = setup({ copied: true });
+    p.onState(state({ status: "idle", notice: { kind: "inserted" } }));
+    expect(shown.at(-1)).toEqual({ kind: "copied", reason: "clipboard" });
+  });
+});
