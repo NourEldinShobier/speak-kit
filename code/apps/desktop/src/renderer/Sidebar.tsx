@@ -50,7 +50,13 @@ function SettingsNav(p: SidebarProps) {
         <div key={g.group} style={{ display: "contents" }}>
           <NavSection>{g.group}</NavSection>
           {g.items.map((it) => (
-            <Link key={it.id} icon={it.icon} href={`#settings-${it.id}`} selected={p.sub === it.id} onActivate={() => p.go("settings", it.id)}>
+            <Link
+              key={it.id}
+              icon={it.icon}
+              href={`#settings-${it.id}`}
+              selected={p.sub === it.id || (it.id === "dictation" && p.sub === "dictation-history")}
+              onActivate={() => p.go("settings", it.id)}
+            >
               {it.label}
             </Link>
           ))}

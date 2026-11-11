@@ -18,6 +18,7 @@
         "src/main/library/parse/worker.ts",
         "src/renderer/*.html",
         "src/renderer/*.tsx",
+        "src/renderer/features/dictation/{hud-main.tsx,recorder-main.ts}",
         "scripts/*.mjs",
         "tests/*.ts",
         "**/*.test.{ts,tsx}"

@@ -47,8 +47,11 @@ describe("renderer bundle", () => {
   }, 180_000);
 });
 
-/** Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR and worker chunks are not counted). Current size plus 10 %. */
-const RENDERER_BUDGET_BYTES = { index: 185_500, mini: 133_000 };
+/**
+ * Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR, dictation and worker chunks are not counted). Current size plus 10 %.
+ * index: 185,500 to 191,000 for dictation's entry in Settings, its config schema and the shared-chunk split of its lazy page (3.2 KB; main was already 1.4 KB over).
+ */
+const RENDERER_BUDGET_BYTES = { index: 191_000, mini: 133_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

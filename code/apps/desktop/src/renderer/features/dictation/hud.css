@@ -1,0 +1,80 @@
+/* The HUD pill: 40 high, dark, level bars and a timer while recording. The page is transparent; the window is a little larger than the pill so its shadow is not cut off. */
+html,
+body,
+#root {
+  block-size: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#root {
+  display: grid;
+  place-items: center;
+}
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  block-size: 40px;
+  box-sizing: border-box;
+  padding-inline: 16px;
+  border-radius: 20px;
+  background: #201e25;
+  color: #fafafa;
+  font: 500 13px/16px var(--font-sans, Inter, system-ui, sans-serif);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.22);
+  white-space: nowrap;
+  user-select: none;
+}
+.hud b {
+  font-weight: 500;
+}
+.hud__hint {
+  color: #b8b8bd;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 15px;
+}
+.hud__icon {
+  flex: none;
+}
+.hud__icon--error {
+  color: #fda29b;
+}
+.hud__dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 4px;
+  background: #f97066;
+}
+.hud__bars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  block-size: 22px;
+}
+.hud__bars i {
+  inline-size: 3px;
+  border-radius: 2px;
+  background: #fafafa;
+  transition: block-size 80ms linear;
+}
+.hud__time {
+  font-variant-numeric: tabular-nums;
+}
+.hud__act {
+  all: unset;
+  box-sizing: border-box;
+  block-size: 26px;
+  padding-inline: 10px;
+  border-radius: 13px;
+  background: #fafafa;
+  color: #201e25;
+  font: 600 12px/26px var(--font-sans, Inter, system-ui, sans-serif);
+  cursor: pointer;
+}
+.hud__act:focus-visible {
+  outline: 2px solid #fda29b;
+  outline-offset: 2px;
+}

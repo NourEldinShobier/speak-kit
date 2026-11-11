@@ -1,4 +1,8 @@
+import type { HudView } from "../../shared/dictation/contract";
+
 export type HudState =
+  /** The app's own HUD page draws this; the built-in page shows it as an empty pill. */
+  | { kind: "view"; view: HudView }
   /** `level` is the microphone level, 0 to 1. */
   | { kind: "recording"; level: number }
   | { kind: "transcribing" }
@@ -11,6 +15,8 @@ export interface HudWindow {
   readonly ready: Promise<void>;
   readonly destroyed: boolean;
   push(state: HudState): void;
+  /** True when `contents` is this window's page (the HUD buttons report through it). */
+  owns?(contents: Electron.WebContents): boolean;
   /** Moves the window to its place on the screen and shows it without taking focus. */
   showInactive(): void;
   hide(): void;
