@@ -87,7 +87,7 @@ class Runtime implements Dictation {
 
   configure(patch: Partial<Settings>): void {
     this.settings = { ...this.settings, ...patch };
-    if (patch.retention !== undefined) void this.store.prune();
+    void this.store.prune();
   }
 
   start(): void {
@@ -95,11 +95,11 @@ class Runtime implements Dictation {
   }
 
   stop(): void {
-    if (!this.disposed) this.dispatch({ type: "stop" });
+    this.dispatch({ type: "stop" });
   }
 
   cancel(): void {
-    if (!this.disposed) this.dispatch({ type: "cancel" });
+    this.dispatch({ type: "cancel" });
   }
 
   dispose(): void {
@@ -120,9 +120,16 @@ class Runtime implements Dictation {
   }
 
   private run(effect: Effect): void {
-    if (effect.type === "start-recording") this.startRecording(effect.id, effect.prerollMs);
-    else if (effect.type === "finish-recording") this.finishRecording(effect.id);
-    else this.discardRecording(effect.id, effect.cancelled);
+    switch (effect.type) {
+      case "start-recording":
+        return this.startRecording(effect.id, effect.prerollMs);
+      case "finish-recording":
+        return this.finishRecording(effect.id);
+      case "discard-recording":
+        return this.discardRecording(effect.id, effect.cancelled);
+      default:
+        return effect satisfies never;
+    }
   }
 
   // Recorder calls run one after another, so a press during the release tail waits for the old clip and a late release waits for a cold microphone.
@@ -162,7 +169,6 @@ class Runtime implements Dictation {
   }
 
   private finishRecording(id: number): void {
-    if (this.pending === 0) this.phase = "transcribing";
     this.pending++;
     const clip: Promise<Clip | undefined> = this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return undefined;
@@ -214,8 +220,9 @@ class Runtime implements Dictation {
   private async copy(id: string): Promise<boolean> {
     const entry = await this.store.get(id);
     if (!entry) return false;
+    const req = { text: entry.text, plan: { method: "copy", reason: "manual" } } as const;
     try {
-      return (await this.deps.inserter.insert({ text: entry.text, plan: { method: "copy", reason: "manual" } })).ok;
+      return (await this.deps.inserter.insert(req)).ok;
     } catch {
       return false; // the clipboard could not be written
     }

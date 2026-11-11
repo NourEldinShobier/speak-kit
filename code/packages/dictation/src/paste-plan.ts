@@ -28,8 +28,6 @@ export interface PlanInput {
 }
 
 const TERMINALS = new Set(["windowsterminal", "wt", "cmd", "powershell", "pwsh", "conhost", "openconsole", "mintty", "alacritty", "wezterm-gui", "kitty", "putty"]);
-// These games and tools read raw keys and ignore Ctrl+Shift+V.
-const JAVA = new Set(["java", "javaw"]);
 // The remote clipboard syncs late, so the key press and the restore both wait longer.
 const REMOTE = new Set(["mstsc", "msrdc", "msrdcw"]);
 
@@ -45,7 +43,7 @@ function pastePlan(exe: string, terminalPaste: boolean): PastePlan {
   const terminal = TERMINALS.has(exe) && terminalPaste;
   return {
     method: "paste",
-    keys: terminal && !JAVA.has(exe) ? "ctrl-shift-v" : "ctrl-v",
+    keys: terminal ? "ctrl-shift-v" : "ctrl-v",
     delayMs: remote ? REMOTE_DELAY_MS : PASTE_DELAY_MS,
     restoreMs: remote ? REMOTE_RESTORE_MS : PASTE_RESTORE_MS,
   };

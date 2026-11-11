@@ -7,7 +7,7 @@ export function capitalize(text: string): string {
   let out = "";
   let last = 0;
   for (const m of text.matchAll(SENTENCE_START)) {
-    const [match, lead = "", quote = "", letter = ""] = m;
+    const [match, lead, quote, letter] = m as unknown as [string, string, string, string];
     if (lead.startsWith(".") && ABBREVIATION.test(text.slice(0, m.index))) continue;
     out += text.slice(last, m.index) + lead + quote + letter.toUpperCase();
     last = m.index + match.length;
