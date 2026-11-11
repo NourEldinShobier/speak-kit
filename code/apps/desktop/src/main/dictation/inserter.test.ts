@@ -205,6 +205,13 @@ describe("typing rule", () => {
     expect(t.clipboard).toBe("old");
   });
 
+  it("types when the caller asks for it, in a program with no typing rule", async () => {
+    const t = setup();
+    expect(await t.ins.insert("héllo", { mode: "type" })).toEqual({ status: "typed" });
+    expect(t.sent).toEqual(["type héllo"]);
+    expect(t.clipboard).toBe("old");
+  });
+
   it("copies the text when typing is refused", async () => {
     const t = setup({ overrides: rule, accept: false });
     expect(await t.ins.insert("x")).toEqual({ status: "copied", reason: "keys-rejected" });

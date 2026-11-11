@@ -1,4 +1,5 @@
 import { screen } from "electron";
+import { HUD_EVENT } from "../../shared/dictation/channels";
 import { createSecureWindow } from "../secure-window";
 import type { HudState, HudWindow } from "./hud";
 
@@ -7,6 +8,8 @@ export interface HudWindowOptions {
   page?: string | undefined;
   width?: number | undefined;
   height?: number | undefined;
+  /** The page talks to the app through the preload bridge (the app's own HUD page); the built-in page needs none. */
+  bridge?: boolean | undefined;
 }
 
 // Logical properties only (check-css); colours stay literal because this page is outside the app's stylesheet.
@@ -28,6 +31,7 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 
 
 /** The script that puts a state on the page: attributes and one CSS variable, so a page needs no code of its own to show it. */
 export function stateScript(state: HudState): string {
+  if (state.kind === "view") return "void 0";
   const level = state.kind === "recording" ? clamp01(state.level) : 0;
   const tone = state.kind === "notice" ? state.tone : "";
   const text = state.kind === "notice" ? state.text : "";
@@ -44,7 +48,7 @@ export function stateScript(state: HudState): string {
  * A small always-on-top window that ignores the mouse and cannot take focus: `focusable: false` keeps it from being activated, `showInactive` keeps
  * the foreground window foreground, and the "screen-saver" level keeps it above full-screen windowed apps.
  */
-export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56 }: HudWindowOptions = {}): HudWindow {
+export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, bridge = false }: HudWindowOptions = {}): HudWindow {
   let settle!: { resolve(): void; reject(e: unknown): void };
   const ready = new Promise<void>((resolve, reject) => (settle = { resolve, reject }));
   const w = createSecureWindow(
@@ -61,7 +65,7 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56 }:
       resizable: false,
       backgroundColor: "#00000000",
       // The HUD page needs no bridge to the app.
-      webPreferences: { backgroundThrottling: false, preload: "" },
+      webPreferences: { backgroundThrottling: false, ...(bridge ? {} : { preload: "" }) },
     },
     () => settle.resolve(),
   );
@@ -74,7 +78,14 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56 }:
     get destroyed() {
       return w.isDestroyed();
     },
+    owns: (contents) => contents === w.webContents,
     push(state) {
+      if (state.kind === "view") {
+        // Buttons in the pill need the mouse; everything else lets clicks fall through to the app underneath.
+        w.setIgnoreMouseEvents(!(state.view.kind === "error" && state.view.action));
+        w.webContents.send(HUD_EVENT, state.view);
+        return;
+      }
       w.webContents.executeJavaScript(stateScript(state)).catch(() => {
         // The page can be gone by the time the script runs (window destroyed right after a show).
       });
