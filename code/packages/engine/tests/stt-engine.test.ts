@@ -201,7 +201,7 @@ describe("WhisperStt", () => {
       expect(e.backend).toBe("gpu");
       await e.unload();
       await e.load("large-v3-turbo-q5_0");
-      expect(await starts(log)).toEqual(["vk=", "vk=1", "vk=1"]);
+      expect(await starts(log)).toEqual(["vk= warmup=true", "vk=1 warmup=false", "vk=1 warmup=true"]);
     } finally {
       delete process.env.SPEAKKIT_FAKE_LOG;
     }
@@ -216,10 +216,51 @@ describe("WhisperStt", () => {
       await e.load("large-v3-turbo-q5_0");
       expect(e.gpuDevice).toBe("");
       expect(e.status().state).toBe("ready");
-      expect(await starts(log)).toEqual(["vk=", "vk=1", "vk="]);
+      expect(await starts(log)).toEqual(["vk= warmup=true", "vk=1 warmup=false", "vk= warmup=true"]);
     } finally {
       delete process.env.SPEAKKIT_FAKE_LOG;
     }
+  });
+
+  /** Loads a model on a fake machine whose every GPU is integrated, with this many Vulkan devices, and returns the worker starts. */
+  async function startsOn(devices: "dev2" | "dev4" | "", loads = 1) {
+    const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "starts");
+    dirs.push(join(log, ".."));
+    process.env.SPEAKKIT_FAKE_LOG = log;
+    try {
+      const { e } = await make({ models: models.map((m) => (m.engine === "whisper" ? { ...m, file: `igpu${devices}.bin` } : m)) });
+      for (let i = 0; i < loads; i++) {
+        await e.load("large-v3-turbo-q5_0");
+        if (i < loads - 1) await e.unload();
+      }
+      expect(e.status().state).toBe("ready");
+      return await starts(log);
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_LOG;
+    }
+  }
+
+  it("one GPU plus the CPU backend (2 devices) is left alone: no probe, no restart", async () => {
+    expect(await startsOn("dev2")).toEqual(["vk= warmup=true"]);
+  });
+
+  it("probes every other device on a machine with 4 and goes back to the default when none is discrete", async () => {
+    expect(await startsOn("dev4")).toEqual(["vk= warmup=true", "vk=1 warmup=false", "vk=2 warmup=false", "vk= warmup=true"]);
+  });
+
+  it("remembers that there is no discrete GPU: a later load starts once and does not probe again", async () => {
+    expect(await startsOn("", 2)).toEqual(["vk= warmup=true", "vk=1 warmup=false", "vk= warmup=true", "vk= warmup=true"]);
+  });
+
+  it("a host replaced while probing leaves the new host's status, backend and jobs alone when the old one exits", async () => {
+    const { e } = await make();
+    await e.load("large-v3-turbo-q5_0");
+    const pid = e.workerPid;
+    await new Promise((r) => setTimeout(r, 300)); // the exits of the probed-away hosts arrive after the load has resolved
+    expect(e.status()).toEqual({ state: "ready", detail: "gpu" });
+    expect(e.backend).toBe("gpu");
+    expect(e.workerPid).toBe(pid);
+    expect((await e.transcribe(speech(100), "en")).text).toBe("whisper:100:en");
   });
 
   it("gpu: false runs the worker on the cpu", async () => {

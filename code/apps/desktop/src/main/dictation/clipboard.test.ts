@@ -30,7 +30,7 @@ function setup(traits: Partial<ReturnType<InputPort["clipboardTraits"]>> = {}) {
   const port = createElectronClipboard({
     clipboardSequence: () => 7,
     clipboardTraits: () => ({ files: false, formats: 0, marks: [], ...traits }),
-    markClipboard: (marks) => (electron.state.log.push(`marks ${marks.length}`), marked.push(marks), true),
+    markClipboard: async (marks) => (electron.state.log.push(`marks ${marks.length}`), marked.push(marks), true),
   });
   return { port, marked };
 }

@@ -1,8 +1,7 @@
 import { ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
-import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createDictation, type Clip, type Dictation, type DictationState, type Settings } from "@speakkit/dictation";
+import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
 import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
@@ -16,6 +15,7 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
+import { clock, coreSettings, dictationStatus } from "./service-support";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
@@ -35,25 +35,7 @@ export interface DictationServiceOptions {
   stt?: Stt;
 }
 
-/** The speech worker is the built file (packaged) or the source file in the engine package (development), like the voice worker. */
-export async function sttWorkerUrl(distDir: string): Promise<URL> {
-  const built = path.join(distDir, "../worker/stt-worker.js");
-  return access(built).then(
-    () => pathToFileURL(built),
-    () => new URL("./stt/worker.ts", import.meta.resolve("@speakkit/engine")),
-  );
-}
-
 const PUSH_MS = 200;
-const clock = {
-  now: () => Date.now(),
-  after(ms: number, fn: () => void) {
-    const t = setTimeout(fn, ms);
-    return () => clearTimeout(t);
-  },
-};
-const coreSettings = (c: DictationConfig): Partial<Settings> => ({ hotkey: c.hotkey, mode: c.mode, language: c.language, retention: c.retention, replacements: c.replacements });
-
 /**
  * Dictation in the desktop app: the key hook, the microphone window, the speech engine, the HUD and the history, wired to the core and shown to
  * the Settings pages. Nothing runs (no hook, no microphone window, no model in memory) until the person turns dictation on.
@@ -104,9 +86,10 @@ export class DictationService {
       canRetry: () => !!this.#lastFailed,
       insertedAsCopy: () => this.#lastInsert?.status === "copied",
     });
+    // No key hook was ever built when this fails: turning dictation on cannot work either.
     this.ready = this.#init().catch((e) => {
       this.#ctx.log.error("dictation could not start", String(e));
-      this.#hotkeyFailed = true; // no key hook was ever built: turning dictation on cannot work either
+      this.#hotkeyFailed = true;
     });
   }
 
@@ -169,21 +152,7 @@ export class DictationService {
   // ---- status ------------------------------------------------------------------------------------------------
 
   status(): DictationStatus {
-    const c = this.#cfg;
-    return {
-      supported: this.supported,
-      enabled: c.enabled,
-      hotkeyReady: this.hotkeyActive,
-      ...(this.#hotkeyFailed && { hotkeyFailed: true }),
-      phase: this.state.status,
-      ...(this.state.status === "error" && { error: this.state.code }),
-      settings: c,
-      models: this.models.views(),
-      modelInstalled: this.models.installed,
-      modelReady: this.models.ready,
-      ...(this.models.error && { modelError: this.models.error }),
-      historyCount: this.#count,
-    };
+    return dictationStatus({ supported: this.supported, config: this.#cfg, hotkeyReady: this.hotkeyActive, hotkeyFailed: this.#hotkeyFailed, state: this.state, models: this.models, historyCount: this.#count });
   }
 
   #send(): void {
@@ -231,9 +200,13 @@ export class DictationService {
   #onHookFault(e: unknown, recovered: boolean): void {
     this.#ctx.log.warn("dictation hook failed", `${String(e)} (${recovered ? "reinstalled" : "not reinstalled"})`);
     if (!this.#cfg.enabled) return; // switched off meanwhile: nothing to report
-    this.#hotkeyFailed = !recovered;
-    if (!recovered) this.presenter.alert("hotkey-failed");
+    this.#setHotkeyFailed(!recovered);
     this.#push(true);
+  }
+
+  #setHotkeyFailed(failed: boolean): void {
+    this.#hotkeyFailed = failed;
+    if (failed) this.presenter.alert("hotkey-failed");
   }
 
   async setEnabled(on: boolean): Promise<DictationStatus> {
@@ -241,8 +214,7 @@ export class DictationService {
     if (on && !this.supported) return this.status();
     if (on && !this.core) {
       // The key hook could not be built at start-up: saying "on" would only save a setting that does nothing.
-      this.#hotkeyFailed = true;
-      this.presenter.alert("hotkey-failed");
+      this.#setHotkeyFailed(true);
       this.#push(true);
       return this.status();
     }
@@ -264,8 +236,7 @@ export class DictationService {
     this.core.configure(coreSettings(this.#cfg));
     this.#hotkeys.setHotkey(this.#cfg.hotkey);
     const ready = this.#hotkeys.enable(true);
-    this.#hotkeyFailed = !ready;
-    if (!ready) this.presenter.alert("hotkey-failed");
+    this.#setHotkeyFailed(!ready);
     void this.#recorder?.prepare();
     await this.models.refresh();
     if (this.models.installed) this.models.warm();
@@ -276,7 +247,7 @@ export class DictationService {
   async #stop(): Promise<void> {
     this.core?.cancel();
     this.#hotkeys?.enable(false);
-    this.#hotkeyFailed = false;
+    this.#setHotkeyFailed(false);
     this.#recorder?.close();
     this.presenter.dismiss();
     this.os?.hud.dispose(); // the HUD window goes now; the next recording makes a new one

@@ -118,7 +118,7 @@ export interface InputPort {
   /** What the clipboard holds now: `files` (a file list, which a copy through Electron cannot keep), how many `formats` it has, and which privacy marks its owner put on it. */
   clipboardTraits(): { files: boolean; formats: number; marks: readonly string[] };
   /** Adds privacy marks to the content now on the clipboard. False when the clipboard could not be opened. */
-  markClipboard(marks: readonly string[]): boolean;
+  markClipboard(marks: readonly string[]): Promise<boolean>;
 }
 
 export interface DictationPlatform {

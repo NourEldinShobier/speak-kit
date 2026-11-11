@@ -39,7 +39,7 @@ function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; he
     },
     clipboardSequence: () => seq,
     clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
-    markClipboard: () => true,
+    markClipboard: async () => true,
   };
   const slept: number[] = [];
   const ins = createInserter({
@@ -204,7 +204,7 @@ describe("unsupported platform", () => {
   it("only copies, with its own reason", async () => {
     const clip = { snapshot: async () => [], writeText: async (t: string) => void (written = t), restore: async () => {}, sequence: () => 0 };
     let written = "";
-    const input = { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: () => false };
+    const input = { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: async () => false };
     const ins = createInserter({ input, clip, supported: false });
     expect(await ins.insert("x")).toEqual({ status: "copied", reason: "unsupported-platform" });
     expect(written).toBe("x");

@@ -26,6 +26,15 @@ interface Press {
   up: boolean;
 }
 
+/** Another program may hold the clipboard open for a moment: try a few times, 10 ms apart. */
+async function addWhenFree(w: Win32, marks: readonly string[]): Promise<boolean> {
+  for (let tries = 0; tries < 5; tries++) {
+    if (w.clipboardAdd(marks)) return true;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  return false;
+}
+
 export function createInput(w: Win32, fg: Foreground): InputPort {
   const event = (flags: number, vk: number, scan: number): KeyInput => ({ type: 1, u: { ki: { wVk: vk, wScan: scan, dwFlags: flags, time: 0, dwExtraInfo: OWN_INPUT_MARKER } } });
 
@@ -77,6 +86,6 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
     },
     clipboardSequence: () => w.clipboardSequence(),
     clipboardTraits: () => ({ files: FILE_FORMATS.some((f) => w.clipboardHas(f)), formats: w.clipboardFormatCount(), marks: CLIPBOARD_PRIVACY_MARKS.filter((m) => w.clipboardHas(m)) }),
-    markClipboard: (marks) => w.clipboardAdd(marks),
+    markClipboard: (marks) => addWhenFree(w, marks),
   };
 }

@@ -1,6 +1,7 @@
 // Runs as a child process (see channel.ts). Plain Node-runnable TS (type stripping): no enums, no extensionless relative value imports.
 import * as v from "valibot";
 import type { ParakeetContext, WhisperContext, WhisperVadContext } from "@fugood/whisper.node";
+import { speechRange } from "./speech-range.ts"; // the extension is what node needs to run this file as it is, without a build
 import type { SttFromWorker, SttToWorker, SttWorkerInit } from "./worker-protocol";
 
 const initSchema: v.GenericSchema<unknown, SttWorkerInit> = v.object({
@@ -17,9 +18,6 @@ const send = (m: SttFromWorker) => void process.send!(m);
 const SAMPLE_RATE = 16000;
 // Whisper invents text on silence and a loudness gate does not stop it; Silero decides whether there is speech at all.
 const VAD = { threshold: 0.4, minSpeechDurationMs: 160 };
-// Speech edges from the VAD are tight; Whisper drops the first and last word without a little room around them.
-const MARGIN = Math.round(SAMPLE_RATE * 0.2);
-const CS_TO_SAMPLES = SAMPLE_RATE / 100;
 
 let model: WhisperContext | ParakeetContext | undefined;
 let vad: WhisperVadContext;
@@ -70,10 +68,9 @@ async function load(): Promise<void> {
 async function run(m: SttToWorker): Promise<void> {
   try {
     const segs = await vad.detectSpeechData(ab(m.pcm), VAD);
-    if (!segs.length) return send({ type: "result", id: m.id, text: "", speech: false });
-    const from = Math.max(0, segs[0]!.t0 * CS_TO_SAMPLES - MARGIN);
-    const to = Math.min(m.pcm.length, segs[segs.length - 1]!.t1 * CS_TO_SAMPLES + MARGIN);
-    const text = await recognize(m.pcm.subarray(Math.floor(from), Math.ceil(to)), m.language);
+    const range = speechRange(segs, m.pcm.length);
+    if (!range) return send({ type: "result", id: m.id, text: "", speech: false });
+    const text = await recognize(m.pcm.subarray(range.from, range.to), m.language);
     send({ type: "result", id: m.id, text, speech: true });
   } catch (e) {
     send({ type: "error", id: m.id, message: e instanceof Error ? e.message : String(e) });

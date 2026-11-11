@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 const css = readFileSync(new URL("./dictation.css", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 /** The declarations of the rule that starts with exactly this selector. */
-const rule = (selector: string): string => css.split("\n").join("\n").split(/\n(?=[.@])/).find((block) => block.startsWith(`${selector} {`)) ?? "";
+const rule = (selector: string): string => css.split(/\n(?=[.@])/).find((block) => block.startsWith(`${selector} {`)) ?? "";
 
 describe("dictation styles", () => {
   it("shows the invalid-hotkey message in the Hotkey row, not pinned to a distant ancestor", () => {
