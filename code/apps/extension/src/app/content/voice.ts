@@ -33,6 +33,7 @@ export class Voice {
   private consent: AbortController | null = null;
   private watch: MutationObserver | null = null;
   private baseline = 0;
+  private startedAt = 0;
   private churnTimer: ReturnType<typeof setTimeout> | undefined;
   private hintTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -89,6 +90,7 @@ export class Voice {
       if (this.port === port) this.finished({ phase: "ended", muted: this.view.muted });
     });
     this.view = { phase: "connecting", muted: false };
+    this.startedAt = Date.now();
     this.notice = undefined;
     this.pill = new VoicePill(this.ensureShell(), { mute: (on) => this.mute(on), end: () => this.end(), act: (a) => this.act(a) });
     this.show();
@@ -116,7 +118,8 @@ export class Voice {
 
   /** The conversation is over (ended by the user, the session or the page): the pill stays as "Conversation ended" or the problem. */
   private finished(view: VoiceView) {
-    this.view = view;
+    const usage = view.usage ?? this.view.usage; // an ending from this side (the End button, a lost port) has not heard the final cost yet
+    this.view = usage && !view.problem ? { ...view, usage: { ...usage, seconds: Math.round((Date.now() - this.startedAt) / 1000) } } : view;
     this.stopWatching();
     const port = this.port;
     this.port = null;
