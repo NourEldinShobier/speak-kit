@@ -264,6 +264,54 @@ describe("toggle mode", () => {
   });
 });
 
+describe("recording limit", () => {
+  it("finishes a toggled recording nobody stopped after five minutes and transcribes it", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.press();
+    r.release();
+    await r.time.advance(299_000);
+    expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
+    await r.time.advance(2000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+    expect(r.ins.inserted).toHaveLength(1);
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
+  });
+
+  it("finishes a hold whose key release was lost, and the later release changes nothing", async () => {
+    const r = await rig();
+    r.press();
+    await r.time.advance(301_000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+    expect(r.ins.inserted).toHaveLength(1);
+    r.release();
+    await r.time.advance(1000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+  });
+
+  it("measures the five minutes from each recording's own start", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.press();
+    r.release();
+    await r.time.advance(200_000);
+    r.press();
+    r.release();
+    await r.time.advance(1000);
+    r.press();
+    r.release();
+    await r.time.advance(200_000);
+    expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
+    expect(r.rec.log).toEqual(["start:450", "stop", "start:450"]);
+  });
+
+  it("leaves no timer behind when the recording ends in time", async () => {
+    const r = await rig();
+    await r.hold(1000);
+    await r.time.advance(200);
+    r.dictation.dispose();
+    expect(r.time.pending()).toBe(0);
+  });
+});
+
 describe("controls without the hotkey", () => {
   it("start, stop and cancel work like a toggled recording", async () => {
     const r = await rig();

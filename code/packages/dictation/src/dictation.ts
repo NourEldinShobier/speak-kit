@@ -1,7 +1,7 @@
 import { createHistory, type History } from "./history";
 import type { Target } from "./paste-plan";
 import { foreground, runJob, type Job, type Outcome } from "./pipeline";
-import { initialSession, reduce, TAIL_MS, type Effect, type Session, type SessionEvent } from "./session";
+import { initialSession, MAX_RECORDING_MS, reduce, TAIL_MS, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
 import type { Clip, Dictation, DictationDeps, DictationErrorCode, DictationState, Notice, Unsubscribe } from "./types";
 
@@ -30,6 +30,7 @@ class Runtime implements Dictation {
   private phase: "transcribing" | "pasting" = "transcribing";
   private flashed: Flash | undefined;
   private cancelFlash: Unsubscribe | undefined;
+  private cancelLimit: Unsubscribe | undefined;
   private readonly listeners = new Set<(state: DictationState) => void>();
   private lastState: string;
   private unsubscribe: Unsubscribe | undefined;
@@ -114,6 +115,7 @@ class Runtime implements Dictation {
   private dispatch(event: SessionEvent): boolean {
     const step = reduce(this.session, event, this.settings);
     this.session = step.session;
+    if (!("id" in step.session.capture)) this.endLimit();
     for (const effect of step.effects) this.run(effect);
     this.emit();
     return step.consumed;
@@ -142,9 +144,16 @@ class Runtime implements Dictation {
     return result;
   }
 
+  private endLimit(): void {
+    this.cancelLimit?.();
+    this.cancelLimit = undefined;
+  }
+
   private startRecording(id: number, prerollMs: number): void {
     this.flashed = undefined;
     this.cancelFlash?.();
+    this.endLimit();
+    this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
     void this.inRecorderOrder(async () => {
       const failure = await tryStart(this.deps, prerollMs);

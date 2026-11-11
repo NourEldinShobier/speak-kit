@@ -1,4 +1,4 @@
-import { ipcMain, shell, type BrowserWindow, type WebContents } from "electron";
+import { ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -14,6 +14,7 @@ import { HudPresenter } from "./hud-presenter";
 import { createDictationOs, type DictationOs, type HudWindow, type InsertResult } from "./index";
 import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
+import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
@@ -82,6 +83,7 @@ export class DictationService {
   #lastError = "";
   #lastPush = 0;
   #pushTimer: NodeJS.Timeout | undefined;
+  #stopPower: (() => void) | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
     this.#ctx = ctx;
@@ -121,6 +123,7 @@ export class DictationService {
   async #init(): Promise<void> {
     const page = (name: string) => pathToFileURL(path.join(this.#o.distDir, "../renderer", name)).href;
     const os = (this.os = this.#o.os ?? (await createDictationOs({ hud: { page: page("hud.html"), width: 560, height: 64, bridge: true }, onHudWindow: (w) => (this.#hudWindow = w) })));
+    this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered) });
     this.#recorder = createRecorderHost({
       ipcMain,
@@ -362,6 +365,7 @@ export class DictationService {
 
   async dispose(): Promise<void> {
     clearTimeout(this.#pushTimer);
+    this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;
     this.core?.dispose();

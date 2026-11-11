@@ -8,6 +8,8 @@ export const DOUBLE_TAP_MS = 300;
 export const PREROLL_MS = 450;
 /** Recording continues this long after the key is released. */
 export const TAIL_MS = 200;
+/** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
+export const MAX_RECORDING_MS = 5 * 60_000;
 
 type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck">;
 
@@ -36,7 +38,9 @@ export type SessionEvent =
   | { type: "stop" }
   | { type: "cancel" }
   /** The recorder could not start recording `id`. */
-  | { type: "failed"; id: number };
+  | { type: "failed"; id: number }
+  /** Recording `id` reached `MAX_RECORDING_MS`. */
+  | { type: "limit"; id: number };
 
 export type Effect = { type: "start-recording"; id: number; prerollMs: number } | { type: "finish-recording"; id: number } | { type: "discard-recording"; id: number; cancelled: boolean };
 
@@ -107,6 +111,10 @@ function key(session: Session, cfg: Config, event: KeyEvent): Step {
 /** The capture state machine. Pure: time arrives with each event. */
 export function reduce(session: Session, event: SessionEvent, cfg: Config): Step {
   if (event.type === "key") return key(session, cfg, event);
+  if (event.type === "limit") {
+    const c = session.capture;
+    return { ...("id" in c && c.id === event.id ? to(session, idle, { type: "finish-recording", id: c.id }) : same(session)), consumed: false };
+  }
   if (event.type === "failed") {
     const c = session.capture;
     return { ...("id" in c && c.id === event.id ? to(session, idle) : same(session)), consumed: false };

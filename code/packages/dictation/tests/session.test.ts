@@ -33,6 +33,8 @@ function parse(token: string): SessionEvent {
       return { type: "stop" };
     case "C":
       return { type: "cancel" };
+    case "L":
+      return { type: "limit", id: n };
     default:
       return { type: "failed", id: n };
   }
@@ -125,6 +127,20 @@ describe("toggle mode", () => {
     expect(play("D0 U10", toggle).capture).toEqual({ kind: "toggle", id: 1, down: false });
     expect(play("D0", toggle).capture).toEqual({ kind: "toggle", id: 1, down: true });
   });
+});
+
+describe("recording limit", () => {
+  const rows: [string, Cfg, string[], string][] = [
+    ["D0 L1", hold, ["start:450#1", "finish#1"], "idle"],
+    ["D0 L1 U400000", hold, ["start:450#1", "finish#1"], "idle"],
+    ["D0 U10 L1", toggle, ["start:450#1", "finish#1"], "idle"],
+    ["D0 U100 D200 U300 L2", hold, ["start:450#1", "discard#1", "start:450#2", "finish#2"], "idle"],
+    ["D0 U700 L1", hold, ["start:450#1", "finish#1"], "idle"],
+    ["D0 U100 L1", hold, ["start:450#1", "discard#1"], "armed"],
+    ["D0 L2", hold, ["start:450#1"], "hold"],
+    ["L1", hold, [], "idle"],
+  ];
+  for (const [script, cfg, effects, kind] of rows) it(`${script} -> ${kind}`, () => expect(play(script, cfg)).toMatchObject({ effects, capture: { kind } }));
 });
 
 describe("pre-roll", () => {
