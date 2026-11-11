@@ -98,20 +98,11 @@ function clipboardApi(koffi: Koffi): ClipboardApi {
   const GlobalAlloc = kernel32.func("void *__stdcall GlobalAlloc(uint32 flags, uintptr size)");
   const GlobalFree = kernel32.func("void *__stdcall GlobalFree(void *memory)");
   const GMEM_MOVEABLE_ZEROED = 0x42;
-  const pause = new Int32Array(new SharedArrayBuffer(4));
-  // Another program may hold the clipboard open for a moment.
-  const open = (): boolean => {
-    for (let i = 0; i < 5; i++) {
-      if (OpenClipboard(null)) return true;
-      Atomics.wait(pause, 0, 0, 10);
-    }
-    return false;
-  };
   return {
     clipboardHas: (format) => IsClipboardFormatAvailable(typeof format === "string" ? RegisterClipboardFormatW(format) : format) !== 0,
     clipboardFormatCount: () => CountClipboardFormats(),
     clipboardAdd: (names) => {
-      if (!open()) return false;
+      if (!OpenClipboard(null)) return false;
       try {
         return names.every((name) => {
           const memory = GlobalAlloc(GMEM_MOVEABLE_ZEROED, 4);

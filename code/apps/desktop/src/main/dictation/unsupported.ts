@@ -5,7 +5,7 @@ export function createUnsupportedPlatform(): DictationPlatform {
   return {
     supported: false,
     hotkey: { active: false, start: () => ({ ok: false, reason: "unsupported-platform" }), stop() {}, grab() {}, resync() {} },
-    input: { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: () => false },
+    input: { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: async () => false },
     dispose() {},
   };
 }

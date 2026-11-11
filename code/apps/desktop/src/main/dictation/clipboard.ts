@@ -42,13 +42,13 @@ export function createElectronClipboard(native: Native): ClipboardPort {
     },
     writeText: async (text) => {
       clipboard.writeText(text);
-      native.markClipboard(CLIPBOARD_PRIVACY_MARKS);
+      await native.markClipboard(CLIPBOARD_PRIVACY_MARKS);
     },
     restore: async (snapshot) => {
       const { items, marks } = snapshot as Snapshot;
       if (!items.length) return clipboard.clear();
       await clipboard.write(items.map((parts) => new ClipboardItem(parts)));
-      if (marks.length) native.markClipboard(marks);
+      if (marks.length) await native.markClipboard(marks);
     },
     restorable: async () => {
       const t = native.clipboardTraits();

@@ -26,9 +26,20 @@ describe("clipboard traits", () => {
     expect(t).toEqual({ files: false, formats: 5, marks: ["CanIncludeInClipboardHistory", "ExcludeClipboardContentFromMonitorProcessing"] });
   });
 
-  it("marks the clipboard through the system", () => {
+  it("marks the clipboard through the system", async () => {
     const { input: i, added } = input([]);
-    expect(i.markClipboard(["CanUploadToCloudClipboard"])).toBe(true);
+    expect(await i.markClipboard(["CanUploadToCloudClipboard"])).toBe(true);
     expect(added).toEqual([["CanUploadToCloudClipboard"]]);
+  });
+
+  it("tries again while another program holds the clipboard, and gives up after five tries", async () => {
+    const tries: number[] = [];
+    const w = { clipboardAdd: () => (tries.push(1), tries.length >= 3) } as unknown as Win32;
+    expect(await createInput(w, {} as Foreground).markClipboard(["x"])).toBe(true);
+    expect(tries).toHaveLength(3);
+    tries.length = 0;
+    const never = { clipboardAdd: () => (tries.push(1), false) } as unknown as Win32;
+    expect(await createInput(never, {} as Foreground).markClipboard(["x"])).toBe(false);
+    expect(tries).toHaveLength(5);
   });
 });
