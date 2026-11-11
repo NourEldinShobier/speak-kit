@@ -48,37 +48,79 @@ const to16 = (pcm: Float32Array): Int16Array => {
   return out;
 };
 
+/** Time a transcription may take before the engine is taken to be hung: generous for a CPU-only machine (measured up to 6x real time), far above a GPU's. */
+export const transcribeDeadlineMs = (clipSeconds: number): number => 20_000 + Math.ceil(clipSeconds) * 6_000;
+
 interface TranscriberDeps {
   stt: Stt;
   model(): DictationModelId;
   /** The audio of a recording that could not be transcribed, kept for one retry. */
   onFailedClip(clip: Clip): void;
+  /** Why the model cannot be used, when loading it failed (the engine's own message). */
+  onModelError?(detail: string): void;
+  /** How long a clip of this many seconds may take. */
+  deadlineMs?(clipSeconds: number): number;
+}
+
+type Waiting = "model-loading" | "model-failed" | "model-missing";
+
+/** Why the engine cannot take a recording now; undefined when it can. Starts loading a model that is on disk but not loaded. */
+async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promise<Waiting | undefined> {
+  const status = stt.status();
+  if (status.state === "ready") return undefined;
+  if (status.state === "downloading" || status.state === "loading") return "model-loading";
+  const id = model();
+  if (!(await stt.downloaded(id))) return "model-missing";
+  if (status.state === "error") {
+    // Loading again on every press would only hide the reason behind "still loading"; a new attempt happens when dictation is switched on again.
+    onModelError?.(status.detail ?? "The speech model could not be loaded.");
+    return "model-failed";
+  }
+  void stt.warm(id);
+  return "model-loading";
+}
+
+/** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
+async function heard({ stt, model, deadlineMs = transcribeDeadlineMs }: TranscriberDeps, clip: Clip, language: string): Promise<TranscribeResult> {
+  const id = model();
+  const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
+  const lang = (supported.includes(language) ? language : "auto") as SttLanguage;
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(new Error("transcription timed out")), deadlineMs(clip.pcm.length / clip.sampleRate));
+  try {
+    const t = await stt.transcribe(to16(clip.pcm), lang, stop.signal);
+    return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
+  } catch (e) {
+    if (stop.signal.aborted) {
+      try {
+        await stt.unload(); // kills the hung worker
+      } catch {
+        // Nothing is left to kill when unloading itself fails; the load below starts a new worker either way.
+      }
+      void stt.warm(id);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
  * The `Transcriber` port. Says why it cannot transcribe instead of throwing: a model that is still loading is "model-loading", one that is not on disk
- * "model-missing", anything else "failed" (and the clip is kept for a retry). A language the model lacks falls back to detection.
+ * "model-missing", one whose load failed "model-failed" (with the engine's reason sent to `onModelError`), anything else "failed". Every failure except
+ * a missing model keeps the clip for a retry. A language the model lacks falls back to detection. A transcription that outlives its deadline means the
+ * engine hangs: the worker is killed and loaded again, and the clip is kept.
  */
-export function createTranscriber({ stt, model, onFailedClip }: TranscriberDeps): Transcriber {
+export function createTranscriber(deps: TranscriberDeps): Transcriber {
   return {
     async transcribe({ clip, language }): Promise<TranscribeResult> {
-      const id = model();
-      const state = stt.status().state;
-      if (state === "downloading" || state === "loading") return { ok: false, code: "model-loading" };
-      if (state !== "ready") {
-        if (!(await stt.downloaded(id))) return { ok: false, code: "model-missing" };
-        void stt.warm(id);
-        return { ok: false, code: "model-loading" };
-      }
-      const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
-      const lang = (supported.includes(language) ? language : "auto") as SttLanguage;
+      const keep = (code: "model-loading" | "model-failed" | "failed"): TranscribeResult => (deps.onFailedClip(clip), { ok: false, code });
+      const waiting = await whyNotReady(deps);
+      if (waiting) return waiting === "model-missing" ? { ok: false, code: waiting } : keep(waiting);
       try {
-        const t = await stt.transcribe(to16(clip.pcm), lang);
-        return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
+        return await heard(deps, clip, language);
       } catch (e) {
-        if (e instanceof EngineNotReadyError) return { ok: false, code: "model-loading" };
-        onFailedClip(clip);
-        return { ok: false, code: "failed" };
+        return keep(e instanceof EngineNotReadyError ? "model-loading" : "failed");
       }
     },
   };

@@ -48,6 +48,24 @@ const exists = (p: string) =>
     () => false,
   );
 
+/** A fetch that answers with the given chunks, one stream read each, and records what it was asked. */
+function scripted(chunks: Buffer[], status = 200) {
+  const calls: { url: string; init: RequestInit | undefined }[] = [];
+  const fetch = (async (url: string, init?: RequestInit) => {
+    calls.push({ url, init });
+    return new Response(
+      new ReadableStream({
+        start(c) {
+          for (const chunk of chunks) c.enqueue(new Uint8Array(chunk));
+          c.close();
+        },
+      }),
+      { status },
+    );
+  }) as typeof globalThis.fetch;
+  return { fetch, calls };
+}
+
 describe("downloadModel", () => {
   it("downloads, reports progress up to 1 and leaves only the finished file", async () => {
     const seen: number[] = [];
@@ -100,5 +118,91 @@ describe("downloadModel", () => {
     const ac = new AbortController();
     ac.abort(new Error("stop"));
     await expect(downloadModel({ ...file, url: base }, join(dir, "b.bin"), { signal: ac.signal })).rejects.toThrow("stop");
+  });
+
+  describe("partial files", () => {
+    it("deletes a partial file larger than the catalog size and starts over without a Range header", async () => {
+      await writeFile(join(dir, "m.bin.part"), Buffer.alloc(1500, 1));
+      await downloadModel({ ...file, url: base }, join(dir, "m.bin"));
+      expect(requests).toEqual([{ range: undefined }]);
+      expect((await readFile(join(dir, "m.bin"))).equals(BODY)).toBe(true);
+    });
+
+    it("does not fetch again when the partial file already has every byte, and finishes it after the checksum", async () => {
+      await writeFile(join(dir, "m.bin.part"), BODY);
+      await downloadModel({ ...file, url: base }, join(dir, "m.bin"));
+      expect(requests).toEqual([]);
+      expect((await readFile(join(dir, "m.bin"))).equals(BODY)).toBe(true);
+      expect(await exists(join(dir, "m.bin.part"))).toBe(false);
+    });
+
+    it("a complete partial file with the wrong content is deleted, not installed", async () => {
+      await writeFile(join(dir, "m.bin.part"), Buffer.alloc(1000, 7));
+      await expect(downloadModel({ ...file, url: base }, join(dir, "m.bin"))).rejects.toThrow(/checksum mismatch/);
+      expect(requests).toEqual([]);
+      expect(await exists(join(dir, "m.bin.part"))).toBe(false);
+    });
+  });
+
+  describe("request", () => {
+    it("asks for the rest of a partial file with a Range header and passes the abort signal on", async () => {
+      await writeFile(join(dir, "m.bin.part"), BODY.subarray(0, 400));
+      const ac = new AbortController();
+      const { fetch, calls } = scripted([BODY.subarray(400)], 206);
+      await downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch, signal: ac.signal });
+      expect(calls).toHaveLength(1);
+      expect(calls[0]!.url).toBe("http://models.test/m");
+      expect(calls[0]!.init?.headers).toEqual({ Range: "bytes=400-" });
+      expect(calls[0]!.init?.signal).toBe(ac.signal);
+    });
+
+    it("sends no Range header for a fresh download, and no signal when none was given", async () => {
+      const { fetch, calls } = scripted([BODY]);
+      await downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch });
+      expect(calls[0]!.init?.headers).toEqual({});
+      expect(calls[0]!.init).not.toHaveProperty("signal");
+    });
+  });
+
+  describe("progress", () => {
+    it("reports every step of a few big chunks, and 1 for the last even when it moved less than half a percent", async () => {
+      const seen: number[] = [];
+      const { fetch } = scripted([BODY.subarray(0, 997), BODY.subarray(997)]);
+      await downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch, onProgress: (p) => seen.push(p) });
+      expect(seen).toEqual([0.997, 1]);
+    });
+
+    it("counts from where a resumed download continues", async () => {
+      await writeFile(join(dir, "m.bin.part"), BODY.subarray(0, 400));
+      const seen: number[] = [];
+      const { fetch } = scripted([BODY.subarray(400, 700), BODY.subarray(700)], 206);
+      await downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch, onProgress: (p) => seen.push(p) });
+      expect(seen).toEqual([0.7, 1]);
+    });
+
+    it("holds back steps smaller than half a percent, and never goes past 1", async () => {
+      const seen: number[] = [];
+      const { fetch } = scripted(Array.from({ length: 1000 }, (_, i) => BODY.subarray(i, i + 1)));
+      await downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch, onProgress: (p) => seen.push(p) });
+      expect(seen.length).toBeGreaterThan(100);
+      expect(seen.length).toBeLessThan(250);
+      for (let i = 1; i < seen.length - 1; i++) expect(seen[i]! - seen[i - 1]!).toBeGreaterThanOrEqual(0.005 - 1e-9);
+      expect(seen.at(-1)).toBe(1);
+      expect(Math.max(...seen)).toBe(1);
+    });
+
+    it("caps the fraction at 1 when the server sends more than the catalog says", async () => {
+      const seen: number[] = [];
+      const { fetch } = scripted([Buffer.alloc(500, 1), Buffer.alloc(600, 1)]);
+      await expect(downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch, onProgress: (p) => seen.push(p) })).rejects.toThrow(/incomplete/);
+      expect(seen).toEqual([0.5, 1]);
+    });
+
+    it("reports 1 at once for a model that is already complete", async () => {
+      await writeFile(join(dir, "m.bin"), BODY);
+      const seen: number[] = [];
+      await downloadModel({ ...file, url: base }, join(dir, "m.bin"), { onProgress: (p) => seen.push(p) });
+      expect(seen).toEqual([1]);
+    });
   });
 });

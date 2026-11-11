@@ -1,4 +1,4 @@
-import { VK, type InputPort } from "../types";
+import { CLIPBOARD_PRIVACY_MARKS, VK, type InputPort } from "../types";
 import type { Foreground } from "./foreground";
 import type { KeyInput, Win32 } from "./native";
 
@@ -10,6 +10,9 @@ const UNICODE = 0x4;
 const SCANCODE = 0x8;
 const VK_RETURN = 0x0d;
 const TYPE_CHUNK = 128;
+const CF_HDROP = 15;
+// A copied file list: Explorer's, and virtual files (mail attachments) that have no CF_HDROP.
+const FILE_FORMATS: readonly (number | string)[] = [CF_HDROP, "Shell IDList Array", "FileGroupDescriptorW"];
 
 const MODIFIERS: ReadonlyArray<[name: string, vk: number]> = [
   ["shift", 0x10],
@@ -21,6 +24,15 @@ const MODIFIERS: ReadonlyArray<[name: string, vk: number]> = [
 interface Press {
   vk: number;
   up: boolean;
+}
+
+/** Another program may hold the clipboard open for a moment: try a few times, 10 ms apart. */
+async function addWhenFree(w: Win32, marks: readonly string[]): Promise<boolean> {
+  for (let tries = 0; tries < 5; tries++) {
+    if (w.clipboardAdd(marks)) return true;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  return false;
 }
 
 export function createInput(w: Win32, fg: Foreground): InputPort {
@@ -73,5 +85,7 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
       return true;
     },
     clipboardSequence: () => w.clipboardSequence(),
+    clipboardTraits: () => ({ files: FILE_FORMATS.some((f) => w.clipboardHas(f)), formats: w.clipboardFormatCount(), marks: CLIPBOARD_PRIVACY_MARKS.filter((m) => w.clipboardHas(m)) }),
+    markClipboard: (marks) => addWhenFree(w, marks),
   };
 }

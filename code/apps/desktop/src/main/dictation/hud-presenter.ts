@@ -1,7 +1,7 @@
 import type { DictationState } from "@speakkit/dictation";
 import type { HudView } from "../../shared/dictation/contract";
 import { hotkeyText } from "../../shared/dictation/keys";
-import { hudViewFor } from "./hud-view";
+import { errorView, hudViewFor } from "./hud-view";
 import type { Hud } from "./hud";
 
 const SETTLE_MS = 150;
@@ -60,6 +60,13 @@ export class HudPresenter {
   flashReady(): void {
     this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey()) });
     this.#ready = setTimeout(() => this.#shown?.kind === "ready" && this.#show(null), READY_MS);
+  }
+
+  /** A failure that is not a dictation's own (the key hook died): shown like a failed dictation, for as long as one with a button. */
+  alert(code: string): void {
+    const view = errorView(code, false);
+    this.#stick(view);
+    this.#show(view);
   }
 
   dismiss(): void {

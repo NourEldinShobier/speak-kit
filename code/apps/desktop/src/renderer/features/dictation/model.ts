@@ -90,3 +90,18 @@ export function historyFooter(shown: number, total: number, r: DictationConfig["
 }
 
 export const entriesText = (n: number) => `${n} ${n === 1 ? "entry" : "entries"}`;
+
+/** The description of the Hotkey row: while the keys are being captured it says how to get out, because every key is taken by the capture. */
+export const hotkeyHelp = (capturing: boolean) => (capturing ? "Press the keys you want to use. Esc cancels." : "Works while any app is in front.");
+
+/** The entry that should get keyboard focus after `removed` is deleted: the next one down, else the one above it, else none. */
+export function focusAfterDelete(ids: readonly string[], removed: string): string | undefined {
+  const i = ids.indexOf(removed);
+  return i < 0 ? undefined : (ids[i + 1] ?? ids[i - 1]);
+}
+
+/** Part of an entry's text, for the name of its buttons, so a screen reader can tell the rows apart. */
+export const entryLabel = (text: string, max = 40): string => {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}\u2026` : flat;
+};

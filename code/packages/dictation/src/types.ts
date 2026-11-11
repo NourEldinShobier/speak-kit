@@ -42,7 +42,7 @@ export interface Recorder {
   discard(): Promise<void>;
 }
 
-export type TranscribeFailure = "model-missing" | "model-loading" | "failed";
+export type TranscribeFailure = "model-missing" | "model-loading" | "model-failed" | "failed";
 export type TranscribeResult = { ok: true; text: string; language?: string; model?: string } | { ok: false; code: TranscribeFailure };
 
 export interface Transcriber {
@@ -61,7 +61,17 @@ export interface HistoryStorage {
   save(value: unknown): Promise<void>;
 }
 
-export type DictationErrorCode = MicErrorCode | "mic-silent" | "model-missing" | "model-loading" | "transcribe-failed" | "insert-failed" | "password-field" | "hotkey-failed" | "failed";
+export type DictationErrorCode =
+  | MicErrorCode
+  | "mic-silent"
+  | "model-missing"
+  | "model-loading"
+  | "model-failed"
+  | "transcribe-failed"
+  | "insert-failed"
+  | "password-field"
+  | "hotkey-failed"
+  | "failed";
 
 export type Notice = { kind: "inserted" } | { kind: "copied"; reason: CopyReason } | { kind: "cancelled" } | { kind: "no-speech" };
 

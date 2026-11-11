@@ -11,7 +11,7 @@ vi.mock("./useDictation", () => ({ useDictation: () => current.status }));
 
 import { DictationPage } from "./DictationPage";
 import { FirstRunCard } from "./FirstRunCard";
-import { DictationHistoryPage } from "./HistoryPage";
+import { DictationHistoryPage, HistoryRow } from "./HistoryPage";
 
 const turbo: ModelView = {
   id: "large-v3-turbo-q5_0",
@@ -52,6 +52,11 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 beforeEach(() => void (current.status = null));
 
 describe("Settings > Dictation", () => {
+  it("says when the hotkey could not start, and stays quiet otherwise", () => {
+    expect(text(page(status({ hotkeyFailed: true })))).toContain("The hotkey could not start Dictation does not hear the hotkey");
+    expect(text(page(status()))).not.toContain("The hotkey could not start");
+  });
+
   it("shows the title before the status has arrived", () => {
     expect(text(page(null))).toContain("Dictation Hold a key, speak");
   });
@@ -180,5 +185,34 @@ describe("history page", () => {
     expect(t).toContain("What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
     expect(t).toContain("Clear all");
+  });
+});
+
+describe("history rows", () => {
+  const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", app: "chrome.exe" };
+  const row = (copied: boolean) => renderToStaticMarkup(<HistoryRow item={item} copied={copied} onCopy={() => undefined} onDelete={() => undefined} />);
+
+  it("names both buttons after the entry, so a screen reader can tell the rows apart", () => {
+    const html = row(false);
+    expect(html).toContain('aria-label="Copy: Send the report to Dana by Friday"');
+    expect(html).toContain('aria-label="Delete: Send the report to Dana by Friday"');
+  });
+
+  it("keeps both buttons after a copy and announces it in a status region", () => {
+    const html = row(true);
+    expect(html).toContain('aria-label="Copy: Send the report to Dana by Friday"');
+    expect(html).toContain('aria-label="Delete: Send the report to Dana by Friday"');
+    expect(html).toContain('<span class="dict-hist__sr" role="status">Copied</span>');
+    expect(html).toContain("data-copied");
+    expect(row(false)).toContain('<span class="dict-hist__sr" role="status"></span>');
+    expect(row(false)).not.toContain("data-copied");
+  });
+});
+
+describe("replacement rows", () => {
+  it("use the full-size icon button, not the small one", () => {
+    const html = page(status());
+    expect(html).toContain('class="lm-btn lm-btn--icon dict-repl__del"');
+    expect(html).not.toContain("lm-btn--sm dict-repl__del");
   });
 });

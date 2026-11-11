@@ -75,15 +75,70 @@ describe("model manager", () => {
     expect(stt.status().state).toBe("ready");
   });
 
-  it("a cancelled download ends quietly and leaves nothing installed", async () => {
-    const { stt, m } = setup();
+  it("a cancelled download ends quietly, leaves nothing installed and loads the model in use again", async () => {
+    const { stt, state, m } = setup();
     await stt.setInstalled(PARAKEET, false);
+    await m.refresh();
+    await stt.load(TURBO);
     const done = m.download(PARAKEET);
     await until(() => m.busy);
+    expect(stt.status().state).toBe("downloading"); // loading the other model took the loaded one away
     await m.cancel();
     await done;
     expect(m.error).toBeUndefined();
     expect(m.isInstalled(PARAKEET)).toBe(false);
+    expect(state.selected).toBe(TURBO);
+    await until(() => stt.status().state === "ready");
+  });
+
+  it("a failed download shows its reason and still loads the model in use again", async () => {
+    const { stt, m } = setup();
+    await stt.setInstalled(PARAKEET, false);
+    await m.refresh();
+    await stt.load(TURBO);
+    const real = stt.load.bind(stt);
+    let first = true;
+    stt.load = async (id, progress) => {
+      if (!first) return real(id, progress);
+      first = false;
+      await stt.unload();
+      throw new Error("The download was cut off.");
+    };
+    await m.download(PARAKEET);
+    await until(() => stt.status().state === "ready");
+    expect(m.error).toBe("The download was cut off.");
+  });
+
+  it("does not load a model again after dictation was switched off during a download", async () => {
+    const { stt, m } = setup();
+    await stt.setInstalled(PARAKEET, false);
+    await m.refresh();
+    await stt.load(TURBO);
+    const done = m.download(PARAKEET);
+    await until(() => m.busy);
+    await m.unload();
+    await done;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(stt.status().state).toBe("unloaded");
+  });
+
+  it("shows the engine's reason when the model cannot be loaded, and clears it when a later load works", async () => {
+    const { stt, m } = setup();
+    await m.refresh();
+    stt.say({ loadError: "the whisper addon crashed" });
+    m.warm();
+    await until(() => m.error !== undefined);
+    expect(m.error).toBe("the whisper addon crashed");
+    m.warm();
+    await until(() => m.error === undefined);
+    expect(m.ready).toBe(true);
+  });
+
+  it("report puts a reason on the page", () => {
+    const { state, m } = setup();
+    m.report("could not load");
+    expect(m.error).toBe("could not load");
+    expect(state.changes).toBe(1);
   });
 
   it("cancel does nothing to a model that is loaded and idle", async () => {

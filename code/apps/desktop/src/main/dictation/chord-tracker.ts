@@ -1,4 +1,4 @@
-import type { Chord, HotkeyEvent, VirtualKey } from "./types";
+import { VK, type Chord, type HotkeyEvent, type VirtualKey } from "./types";
 
 export interface Stroke {
   vk: VirtualKey;
@@ -13,11 +13,13 @@ export interface Decision {
 
 const PASS: Decision = { swallow: false, events: [] };
 const SWALLOW: Decision = { swallow: true, events: [] };
+// A modifier is never swallowed: an app that never sees Right Ctrl go down loses every Ctrl+key shortcut typed with it.
+const MODIFIERS: ReadonlySet<VirtualKey> = new Set([VK.leftShift, VK.rightShift, VK.leftCtrl, VK.rightCtrl, VK.leftAlt, VK.rightAlt, VK.leftWin, VK.rightWin]);
 
 /**
  * Turns raw key strokes into hotkey events and says which strokes to swallow. Pure: the low-level hook feeds it and obeys the answer.
- * A key is swallowed only when it completes the chord or was grabbed, and its release is swallowed exactly when its press was, so an app never
- * sees a release without a press or a key that stays down.
+ * A key is swallowed only when it completes the chord (and is not a modifier) or was grabbed, and its release is swallowed exactly when its press was,
+ * so an app never sees a release without a press or a key that stays down.
  */
 export class ChordTracker {
   readonly #chord: Chord;
@@ -68,6 +70,7 @@ export class ChordTracker {
       if (repeat) return this.#swallowedDown.has(vk) ? SWALLOW : PASS;
       if (this.#active || !this.#chord.keys.every((k) => this.#held.has(k))) return PASS;
       this.#active = true;
+      if (MODIFIERS.has(vk)) return { swallow: false, events: [{ kind: "down" }] };
       this.#swallowedDown.add(vk);
       return { swallow: true, events: [{ kind: "down" }] };
     }

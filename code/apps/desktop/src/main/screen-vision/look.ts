@@ -31,9 +31,9 @@ export interface ScreenPlatform {
   hideOwnWindows<T>(run: () => Promise<T>): Promise<T>;
 }
 
-/** The question of the first look of a conversation. Resolves false on "Not now", on closing the card, on its own timeout and when `signal` aborts. */
+/** The question of the first look of a conversation, and of the first look at the whole screen. Resolves false on "Not now", on closing the card, on its own timeout and when `signal` aborts. */
 export interface ConsentCard {
-  ask(signal: AbortSignal): Promise<boolean>;
+  ask(signal: AbortSignal, scope: LookRequest["scope"]): Promise<boolean>;
 }
 
 /** The visible sign that Speak Kit is looking: shown for the whole look, hidden a moment after. */
@@ -81,7 +81,7 @@ async function capture({ platform, ocr }: LookDeps, scope: LookRequest["scope"])
 }
 
 /**
- * One look at the screen for the voice chat: consent once per conversation, a capture of the window or screen at its native resolution,
+ * One look at the screen for the voice chat: consent once per conversation and scope, a capture of the window or screen at its native resolution,
  * the text read from that full-size picture, and a JPEG small enough for the model's data channel. Nothing is written to disk.
  */
 export function createLook(deps: LookDeps) {
@@ -94,9 +94,9 @@ export function createLook(deps: LookDeps) {
       if (busy) return fail("busy");
       busy = true;
       try {
-        if (!consent.has(session)) {
-          if (!(await card.ask(signal))) return fail(signal.aborted ? "capture-failed" : "declined");
-          consent.grant(session);
+        if (!consent.has(session, scope)) {
+          if (!(await card.ask(signal, scope))) return fail(signal.aborted ? "capture-failed" : "declined");
+          consent.grant(session, scope);
           await sleep(settleMs);
         }
         if (signal.aborted) return fail("capture-failed");

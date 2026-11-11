@@ -11,7 +11,6 @@ describe("defaults", () => {
       language: "auto",
       duck: false,
       insertMode: "paste",
-      terminalPaste: true,
       appModes: {},
       fillers: true,
       spokenSymbols: true,
@@ -42,7 +41,7 @@ describe("hold to talk", () => {
     await r.time.advance(200);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.stt.calls).toEqual([{ language: "auto", samples: 16000 }]);
-    expect(r.ins.inserted).toEqual([{ text: "Hello world ", plan: { method: "paste", keys: "ctrl-v", delayMs: 0, restoreMs: 500 } }]);
+    expect(r.ins.inserted).toEqual([{ text: "Hello world ", plan: { method: "paste" } }]);
     expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
     expect(r.states).toEqual(["recording", "transcribing", "pasting", "idle"]);
   });
@@ -261,6 +260,54 @@ describe("toggle mode", () => {
   it("Escape while idle is not swallowed", async () => {
     const r = await rig({ mode: "toggle" });
     expect(r.keys.send("Escape", true, 1)).toBe(false);
+  });
+});
+
+describe("recording limit", () => {
+  it("finishes a toggled recording nobody stopped after five minutes and transcribes it", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.press();
+    r.release();
+    await r.time.advance(299_000);
+    expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
+    await r.time.advance(2000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+    expect(r.ins.inserted).toHaveLength(1);
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
+  });
+
+  it("finishes a hold whose key release was lost, and the later release changes nothing", async () => {
+    const r = await rig();
+    r.press();
+    await r.time.advance(301_000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+    expect(r.ins.inserted).toHaveLength(1);
+    r.release();
+    await r.time.advance(1000);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+  });
+
+  it("measures the five minutes from each recording's own start", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.press();
+    r.release();
+    await r.time.advance(200_000);
+    r.press();
+    r.release();
+    await r.time.advance(1000);
+    r.press();
+    r.release();
+    await r.time.advance(200_000);
+    expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
+    expect(r.rec.log).toEqual(["start:450", "stop", "start:450"]);
+  });
+
+  it("leaves no timer behind when the recording ends in time", async () => {
+    const r = await rig();
+    await r.hold(1000);
+    await r.time.advance(200);
+    r.dictation.dispose();
+    expect(r.time.pending()).toBe(0);
   });
 });
 
@@ -526,7 +573,7 @@ describe("where the text goes", () => {
     r.ins.state.current = target({ id: "win-1", exe: "WindowsTerminal.exe" });
     r.release();
     await r.time.advance(200);
-    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste", keys: "ctrl-shift-v", delayMs: 0, restoreMs: 500 });
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste" });
   });
 
   it("refuses a password field: nothing is inserted and nothing is saved", async () => {

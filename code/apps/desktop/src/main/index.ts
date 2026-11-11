@@ -21,7 +21,7 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
-import { sttWorkerUrl } from "./dictation/service";
+import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 import { createScreenVision } from "./screen-vision";

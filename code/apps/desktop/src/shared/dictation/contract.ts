@@ -30,6 +30,8 @@ export interface DictationStatus {
   enabled: boolean;
   /** The hotkey is live. */
   hotkeyReady: boolean;
+  /** The hotkey could not start or stopped working and could not be reinstalled: the Settings page says so. */
+  hotkeyFailed?: boolean;
   phase: DictationPhase;
   /** Error code while `phase` is "error". */
   error?: string;

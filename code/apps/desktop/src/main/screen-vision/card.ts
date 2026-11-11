@@ -1,4 +1,5 @@
 import { app, screen, type BrowserWindow } from "electron";
+import type { LookRequest } from "@speakkit/protocol";
 import { createSecureWindow } from "../secure-window";
 import type { ConsentCard } from "./look";
 import { keepProtected } from "./platform";
@@ -8,17 +9,34 @@ const ANSWER_MS = 60_000;
 const WIDTH = 460;
 const HEIGHT = 330;
 
-const POINTS = [
-  "When you ask, Speak Kit takes a picture of your window, or of the whole screen when you say so, and reads the text in it.",
-  "The picture and the text go to your provider, OpenAI, to answer you. OpenAI bills them to your account.",
-  "Nothing is saved. Speak Kit's own windows are not in the picture, and a notice shows while it looks.",
-  "This lasts until the conversation ends.",
-];
+type Scope = LookRequest["scope"];
+
+/** What the card says depends on how much is looked at: it never promises less than the look will take. */
+const TEXT: Record<Scope, { title: string; points: string[] }> = {
+  window: {
+    title: "Let the voice chat look at your screen?",
+    points: [
+      "When you ask, Speak Kit takes a picture of the window you are using and reads the text in it.",
+      "The picture and the text go to your provider, OpenAI, to answer you. OpenAI bills them to your account.",
+      "Nothing is saved. Speak Kit's own windows are not in the picture, and a notice shows while it looks.",
+      "This lasts until the conversation ends. A look at your whole screen asks you again.",
+    ],
+  },
+  screen: {
+    title: "Let the voice chat look at your whole screen?",
+    points: [
+      "The voice chat wants a picture of your whole screen: every window and app on it, not only the one you are using. Speak Kit reads the text in it.",
+      "The picture and the text go to your provider, OpenAI, to answer you. OpenAI bills them to your account.",
+      "Nothing is saved. Speak Kit's own windows are not in the picture, and a notice shows while it looks.",
+      "This lasts until the conversation ends.",
+    ],
+  },
+};
 
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
 // Logical properties only (check-css); the page is outside the app's stylesheet, so colours are literal.
-const PAGE = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+const page = (scope: Scope) => `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
 <title>Speak Kit</title>
 <style>
 html{background:rgb(255 255 255);color:rgb(24 24 27);font:14px/1.45 system-ui,sans-serif}
@@ -30,17 +48,17 @@ button{block-size:36px;padding-inline:16px;border-radius:8px;font:inherit;font-w
 button.primary{background:rgb(24 24 27);border-color:rgb(24 24 27);color:rgb(255 255 255)}
 button:focus-visible{outline:2px solid rgb(59 130 246);outline-offset:2px}
 </style>
-<h1>Let the voice chat look at your screen?</h1>
-<ul>${POINTS.map((p) => `<li>${escape(p)}</li>`).join("")}</ul>
+<h1>${escape(TEXT[scope].title)}</h1>
+<ul>${TEXT[scope].points.map((p) => `<li>${escape(p)}</li>`).join("")}</ul>
 <div class="row"><button type="button" data-choice="no">Not now</button><button type="button" class="primary" data-choice="yes" autofocus>Allow for this conversation</button></div>`;
 
-const PAGE_URL = `data:text/html;charset=utf-8,${encodeURIComponent(PAGE)}`;
+const pageUrl = (scope: Scope) => `data:text/html;charset=utf-8,${encodeURIComponent(page(scope))}`;
 
 /** The page reports the button through its title: no bridge and no script of its own (its policy allows none). */
 const WIRE = `document.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { document.title = "choice:" + b.dataset.choice; }));`;
 
 /** Opens the card window in front of everything, centred in the upper part of the display the cursor is on, kept out of captures like the indicator. */
-function openCard(): BrowserWindow {
+function openCard(scope: Scope): BrowserWindow {
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   const w = createSecureWindow(
     {
@@ -67,17 +85,17 @@ function openCard(): BrowserWindow {
   );
   keepProtected.add(w);
   w.setContentProtection(true);
-  w.loadURL(PAGE_URL).catch(() => w.close());
+  w.loadURL(pageUrl(scope)).catch(() => w.close());
   return w;
 }
 
-/** The consent card: asks once and closes. A button, Escape, closing the window, the timeout and an abort each end it; only "Allow" says yes. */
+/** The consent card: asks once (for the window, or for the whole screen) and closes. A button, Escape, closing the window, the timeout and an abort each end it; only "Allow" says yes. */
 export function createConsentCard(): ConsentCard {
   return {
-    ask: (signal) =>
+    ask: (signal, scope) =>
       new Promise<boolean>((resolve) => {
         if (signal.aborted) return resolve(false);
-        const w = openCard();
+        const w = openCard(scope);
         let answered = false;
         const onAbort = () => done(false);
         const timer = setTimeout(() => done(false), ANSWER_MS);

@@ -31,6 +31,8 @@ export class ModelManager {
   #job: ModelProgress | null = null;
   #started = 0;
   #cancelled = false;
+  /** Dictation was switched off: nothing may load a model again until it is switched on. */
+  #stopped = false;
   error: string | undefined;
 
   constructor(deps: Deps) {
@@ -57,21 +59,34 @@ export class ModelManager {
     for (const id of DICTATION_MODELS) this.#installed[id] = await this.#d.stt.downloaded(id as SttModelId).catch(() => false);
   }
 
-  /** Loads the selected model in the background when it is on disk. */
-  warm(): void {
+  /** Loads the selected model in the background when it is on disk. `keepError` leaves a failure shown for something else (a download) in place. */
+  warm(keepError = false): void {
+    this.#stopped = false;
+    this.#reload(keepError);
+  }
+
+  #reload(keepError: boolean): void {
     const id = this.#d.selected();
     if (!this.#installed[id] || this.#d.stt.status().state === "ready") return;
     void this.#d.stt.warm(id as SttModelId).then(() => {
       const s = this.#d.stt.status();
-      this.error = s.state === "error" ? (s.detail ?? "The speech model could not be loaded.") : undefined;
+      if (s.state === "error") this.error = s.detail ?? "The speech model could not be loaded.";
+      else if (!keepError) this.error = undefined;
       this.#d.changed(true);
     });
+  }
+
+  /** A model failed to load when dictation tried it: the Settings page shows the engine's reason. */
+  report(detail: string): void {
+    this.error = detail;
+    this.#d.changed(true);
   }
 
   /** Downloads (if needed) and loads the model, and makes it the one dictation uses. */
   async download(id: DictationModelId): Promise<void> {
     if (this.#job) return;
     this.#cancelled = false;
+    this.#stopped = false;
     this.error = undefined;
     this.#job = { id, kind: "downloading", fraction: 0 };
     this.#started = Date.now();
@@ -87,6 +102,8 @@ export class ModelManager {
     } finally {
       off();
       this.#job = null;
+      // Loading another model unloaded the one dictation uses; a failed or cancelled download must not leave it that way.
+      if (!this.#stopped) this.#reload(true);
       this.#d.changed(true);
     }
   }
@@ -101,6 +118,7 @@ export class ModelManager {
   /** Frees the model (dictation turned off); a download in progress is stopped without an error. */
   async unload(): Promise<void> {
     this.#cancelled = true;
+    this.#stopped = true;
     await settle(this.#d.stt.unload());
   }
 

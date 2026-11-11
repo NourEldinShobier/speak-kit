@@ -5,19 +5,36 @@ import { VK } from "./types";
 const down = (vk: number) => ({ vk, down: true });
 const up = (vk: number) => ({ vk, down: false });
 const A = 0x41;
+const F9 = 0x78;
 
 describe("single-key chord (Right Ctrl)", () => {
-  it("swallows the press and the release, and reports down then up", () => {
+  it("lets the modifier through, so shortcuts typed with it keep working, and reports down then up", () => {
     const t = createChordTracker({ keys: [VK.rightCtrl] });
-    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: true, events: [{ kind: "down" }] });
-    expect(t.feed(up(VK.rightCtrl))).toEqual({ swallow: true, events: [{ kind: "up" }] });
+    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: false, events: [{ kind: "down" }] });
+    expect(t.feed(down(A))).toEqual({ swallow: false, events: [{ kind: "other", vk: A }] });
+    expect(t.feed(up(VK.rightCtrl))).toEqual({ swallow: false, events: [{ kind: "up" }] });
   });
 
-  it("swallows key repeat without new events", () => {
+  it("passes key repeat without new events", () => {
     const t = createChordTracker({ keys: [VK.rightCtrl] });
     t.feed(down(VK.rightCtrl));
-    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: true, events: [] });
-    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: true, events: [] });
+    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: false, events: [] });
+    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: false, events: [] });
+  });
+
+  it("offers the modifier for the keyboard-state check, because the app saw it go down", () => {
+    const t = createChordTracker({ keys: [VK.rightCtrl] });
+    t.feed(down(VK.rightCtrl));
+    expect(t.visibleHeld()).toEqual([VK.rightCtrl]);
+  });
+});
+
+describe("single-key chord (F9)", () => {
+  it("swallows the press, its repeats and its release, and reports down then up", () => {
+    const t = createChordTracker({ keys: [F9] });
+    expect(t.feed(down(F9))).toEqual({ swallow: true, events: [{ kind: "down" }] });
+    expect(t.feed(down(F9))).toEqual({ swallow: true, events: [] });
+    expect(t.feed(up(F9))).toEqual({ swallow: true, events: [{ kind: "up" }] });
   });
 
   it("does not touch other keys while idle", () => {
@@ -28,8 +45,8 @@ describe("single-key chord (Right Ctrl)", () => {
   });
 
   it("reports another key pressed during the hold once, and lets the app have it", () => {
-    const t = createChordTracker({ keys: [VK.rightCtrl] });
-    t.feed(down(VK.rightCtrl));
+    const t = createChordTracker({ keys: [F9] });
+    t.feed(down(F9));
     expect(t.feed(down(A))).toEqual({ swallow: false, events: [{ kind: "other", vk: A }] });
     expect(t.feed(down(A))).toEqual({ swallow: false, events: [] });
     expect(t.feed(up(A))).toEqual({ swallow: false, events: [] });
@@ -94,7 +111,7 @@ describe("stuck keys", () => {
     t.feed(down(VK.rightCtrl));
     expect(t.reset()).toEqual([{ kind: "up" }]);
     expect(t.reset()).toEqual([]);
-    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: true, events: [{ kind: "down" }] });
+    expect(t.feed(down(VK.rightCtrl))).toEqual({ swallow: false, events: [{ kind: "down" }] });
   });
 
   it("offers only keys the app saw go down for the keyboard-state check", () => {

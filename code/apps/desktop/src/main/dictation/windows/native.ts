@@ -24,6 +24,11 @@ export interface Win32 {
   sendInput(events: KeyInput[]): number;
   keyIsDown(vk: number): boolean;
   clipboardSequence(): number;
+  /** Whether the clipboard holds this format: a standard format number or a registered format's name. Needs no open clipboard. */
+  clipboardHas(format: number | string): boolean;
+  clipboardFormatCount(): number;
+  /** Adds each registered format (by name) to the open-for-us clipboard as a zeroed DWORD, which is what the privacy marks are. False when the clipboard could not be opened or a format was refused. */
+  clipboardAdd(names: readonly string[]): boolean;
   keyboardLayout(tid: number): Handle;
   mapVirtualKey(vk: number, layout: Handle): number;
   foregroundWindow(): Handle;
@@ -56,10 +61,11 @@ export function loadWin32(): Promise<Win32> {
 
 async function bind(): Promise<Win32> {
   const koffi = (await import("koffi")).default;
-  return { koffi, ...keyboardApi(koffi), ...windowApi(koffi), ...processApi(koffi), hook: hookApi(koffi) };
+  return { koffi, ...keyboardApi(koffi), ...clipboardApi(koffi), ...windowApi(koffi), ...processApi(koffi), hook: hookApi(koffi) };
 }
 
 type KeyboardApi = Pick<Win32, "sendInput" | "keyIsDown" | "clipboardSequence" | "keyboardLayout" | "mapVirtualKey">;
+type ClipboardApi = Pick<Win32, "clipboardHas" | "clipboardFormatCount" | "clipboardAdd">;
 
 function keyboardApi(koffi: Koffi): KeyboardApi {
   const user32 = koffi.load("user32.dll");
@@ -77,6 +83,38 @@ function keyboardApi(koffi: Koffi): KeyboardApi {
     clipboardSequence: () => GetClipboardSequenceNumber(),
     keyboardLayout: (tid) => GetKeyboardLayout(tid),
     mapVirtualKey: (vk, layout) => MapVirtualKeyExW(vk, 0, layout),
+  };
+}
+
+function clipboardApi(koffi: Koffi): ClipboardApi {
+  const user32 = koffi.load("user32.dll");
+  const kernel32 = koffi.load("kernel32.dll");
+  const OpenClipboard = user32.func("int __stdcall OpenClipboard(void *owner)");
+  const CloseClipboard = user32.func("int __stdcall CloseClipboard()");
+  const RegisterClipboardFormatW = user32.func("uint32 __stdcall RegisterClipboardFormatW(str16 name)");
+  const IsClipboardFormatAvailable = user32.func("int __stdcall IsClipboardFormatAvailable(uint32 format)");
+  const CountClipboardFormats = user32.func("int __stdcall CountClipboardFormats()");
+  const SetClipboardData = user32.func("void *__stdcall SetClipboardData(uint32 format, void *memory)");
+  const GlobalAlloc = kernel32.func("void *__stdcall GlobalAlloc(uint32 flags, uintptr size)");
+  const GlobalFree = kernel32.func("void *__stdcall GlobalFree(void *memory)");
+  const GMEM_MOVEABLE_ZEROED = 0x42;
+  return {
+    clipboardHas: (format) => IsClipboardFormatAvailable(typeof format === "string" ? RegisterClipboardFormatW(format) : format) !== 0,
+    clipboardFormatCount: () => CountClipboardFormats(),
+    clipboardAdd: (names) => {
+      if (!OpenClipboard(null)) return false;
+      try {
+        return names.every((name) => {
+          const memory = GlobalAlloc(GMEM_MOVEABLE_ZEROED, 4);
+          if (!memory) return false;
+          if (SetClipboardData(RegisterClipboardFormatW(name), memory)) return true; // the clipboard owns the memory now
+          GlobalFree(memory);
+          return false;
+        });
+      } finally {
+        CloseClipboard();
+      }
+    },
   };
 }
 

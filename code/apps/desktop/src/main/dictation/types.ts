@@ -96,6 +96,12 @@ export type InsertResult =
   /** Another program holds the clipboard, so the text could not even be copied. */
   | { status: "failed"; reason: "clipboard-unavailable" };
 
+/**
+ * Clipboard formats that tell clipboard history, cloud sync and clipboard monitors to leave the content alone. Dictated text carries them, and a
+ * clipboard that had them (a password manager's copy) gets them back when it is restored.
+ */
+export const CLIPBOARD_PRIVACY_MARKS = ["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard", "ExcludeClipboardContentFromMonitorProcessing"] as const;
+
 /** What the paste path needs from the operating system. */
 export interface InputPort {
   foreground(): ForegroundInfo | null;
@@ -109,6 +115,10 @@ export interface InputPort {
   type(text: string): boolean;
   /** Changes whenever any program writes the clipboard. */
   clipboardSequence(): number;
+  /** What the clipboard holds now: `files` (a file list, which a copy through Electron cannot keep), how many `formats` it has, and which privacy marks its owner put on it. */
+  clipboardTraits(): { files: boolean; formats: number; marks: readonly string[] };
+  /** Adds privacy marks to the content now on the clipboard. False when the clipboard could not be opened. */
+  markClipboard(marks: readonly string[]): Promise<boolean>;
 }
 
 export interface DictationPlatform {
