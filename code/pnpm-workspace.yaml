@@ -11,6 +11,7 @@ allowBuilds:
   onnxruntime-node: true
   protobufjs: true
   sharp: true
+  "@fugood/whisper.node": false
   tesseract.js: false
 
 # Exact pins live here only; package.json files say "catalog:". A release must be 7 days old (minutes).
@@ -18,6 +19,22 @@ minimumReleaseAge: 10080
 # Versions in the lockfile that were younger than 7 days when it was first pinned (2026-11-01); delete the entry once the version is a week old.
 minimumReleaseAgeExclude:
   - "@electron-internal/extract-zip@1.0.8"
+  - "@fugood/whisper.node@1.2.0-rc.2"
+  - "@fugood/node-whisper-darwin-arm64@1.2.0-rc.2"
+  - "@fugood/node-whisper-darwin-x64@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-arm64@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-arm64-snapdragon@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-arm64-cuda@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-arm64-vulkan@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-x64@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-x64-cuda@1.2.0-rc.2"
+  - "@fugood/node-whisper-linux-x64-vulkan@1.2.0-rc.2"
+  - "@fugood/node-whisper-wasm@1.2.0-rc.2"
+  - "@fugood/node-whisper-win32-arm64@1.2.0-rc.2"
+  - "@fugood/node-whisper-win32-arm64-vulkan@1.2.0-rc.2"
+  - "@fugood/node-whisper-win32-x64@1.2.0-rc.2"
+  - "@fugood/node-whisper-win32-x64-cuda@1.2.0-rc.2"
+  - "@fugood/node-whisper-win32-x64-vulkan@1.2.0-rc.2"
   - "@huggingface/jinja@0.5.11"
   - "@koromix/koffi-android-arm64@3.3.6"
   - "@koromix/koffi-android-x64@3.3.6"
@@ -92,6 +109,7 @@ minimumReleaseAgeExclude:
 catalog:
   "@axe-core/playwright": "4.14.0"
   "@electron/fuses": "2.1.3"
+  "@fugood/whisper.node": "1.2.0-rc.2"
   "@lingo-reader/epub-parser": "0.4.6"
   "@mozilla/readability": "0.6.0"
   "@playwright/test": "1.64.1"

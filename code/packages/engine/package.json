@@ -10,6 +10,7 @@
     "build": "vp pack"
   },
   "dependencies": {
+    "@fugood/whisper.node": "catalog:",
     "@speakkit/protocol": "workspace:*",
     "kokoro-js": "catalog:",
     "valibot": "catalog:"
