@@ -3,7 +3,9 @@
 /* Hotkey: keycaps, then Change. */
 .dict-hotkey {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 .dict-hotkey .lm-kbd {
@@ -34,9 +36,8 @@
   background: var(--text-primary);
 }
 .dict-hotkey__problem {
-  position: absolute;
-  inset-inline-end: 16px;
-  inset-block-end: 2px;
+  flex-basis: 100%;
+  text-align: end;
   color: var(--tag-red);
   font-size: 12px;
 }
@@ -97,6 +98,7 @@
 }
 .dict-repl__del {
   margin-inline-start: auto;
+  flex: none;
 }
 .dict-repl--add {
   background: var(--surface-well);
@@ -246,9 +248,10 @@
   overflow-wrap: anywhere;
 }
 .dict-hist__acts {
+  position: relative;
   display: flex;
   gap: 8px;
-  inline-size: 72px;
+  inline-size: 80px;
   justify-content: flex-end;
   align-items: center;
   flex: none;
@@ -260,23 +263,21 @@
   }
   .dict-hist__row:hover .dict-hist__acts,
   .dict-hist__row:focus-within .dict-hist__acts,
-  .dict-hist__acts:has(.dict-hist__copied) {
+  .dict-hist__acts[data-copied] {
     opacity: 1;
   }
   .dict-hist__row:hover {
     background: var(--surface-well);
   }
 }
-.dict-hist__acts .lm-btn--icon {
-  inline-size: 28px;
-  block-size: 28px;
-}
-.dict-hist__copied {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
+/* Read out by screen readers, not shown. */
+.dict-hist__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .dict-hist__foot,
 .dict-hist__none {

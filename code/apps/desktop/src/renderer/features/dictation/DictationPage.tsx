@@ -7,7 +7,7 @@ import { Page } from "../../ui";
 import { dictation } from "./api";
 import { FirstRunCard } from "./FirstRunCard";
 import { HotkeyRecorder } from "./HotkeyRecorder";
-import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
+import { entriesText, hotkeyHelp, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
 import { ModelList } from "./ModelList";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
@@ -16,6 +16,7 @@ const LEAD = "Hold a key, speak, and Speak Kit types what you said into the app 
 
 function General({ s }: { s: DictationStatus }) {
   const c = s.settings;
+  const [capturing, setCapturing] = useState(false);
   const model = s.models.find((m) => m.selected);
   const languages = LANGUAGE_OPTIONS.filter((l) => l.value === "auto" || !model || model.languages.includes(l.value));
   return (
@@ -28,8 +29,8 @@ function General({ s }: { s: DictationStatus }) {
       <SettingRow
         className="lm-row--control"
         label="Hotkey"
-        description="Works while any app is in front."
-        control={<HotkeyRecorder value={c.hotkey} onChange={(hotkey) => void dictation.patchSettings({ hotkey })} />}
+        description={hotkeyHelp(capturing)}
+        control={<HotkeyRecorder value={c.hotkey} onRecording={setCapturing} onChange={(hotkey) => void dictation.patchSettings({ hotkey })} />}
       />
       <SettingRow
         className="lm-row--control"
@@ -63,7 +64,7 @@ function ReplacementRow({ r, onDelete }: { r: Replacement; onDelete: () => void 
       <span className="dict-repl__from">{r.from}</span>
       <Icon name="arrow-right" size={14} className="dict-repl__arrow" />
       <span className="dict-repl__to">{r.to}</span>
-      <button type="button" className="lm-btn lm-btn--icon lm-btn--sm dict-repl__del" aria-label={`Delete replacement ${r.from}`} onClick={onDelete}>
+      <button type="button" className="lm-btn lm-btn--icon dict-repl__del" aria-label={`Delete replacement ${r.from}`} onClick={onDelete}>
         <Icon name="trash" size={14} />
       </button>
     </div>
