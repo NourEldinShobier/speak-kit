@@ -14,6 +14,7 @@ export interface Services {
   /** Absent when the host app has no voice chat. */
   voiceChat: VoiceChatService | undefined;
   mintLimiter: MintLimiter;
+  lookLimiter: MintLimiter;
   deadlines: { controlMs: number; streamIdleMs: number };
 }
 
