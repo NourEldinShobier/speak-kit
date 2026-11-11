@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { app, BrowserWindow, clipboard, ClipboardItem, nativeImage } from "electron";
 import { createDictationOs, VK, type HotkeyEvent, type HudState, type InsertOptions } from "../../src/main/dictation";
 import { createKeyboardHook } from "../../src/main/dictation/keyboard-hook";
+import { CLIPBOARD_PRIVACY_MARKS } from "../../src/main/dictation/types";
 import { installKeyboardHook } from "../../src/main/dictation/windows/hook";
 import { OWN_INPUT_MARKER } from "../../src/main/dictation/windows/input";
 import { loadWin32 } from "../../src/main/dictation/windows/native";
@@ -94,6 +96,13 @@ async function build() {
       const png = nativeImage.createFromBitmap(PIXELS, { width: 2, height: 2 }).toPNG();
       return clipboard.write([new ClipboardItem({ "image/png": new Blob([new Uint8Array(png)], { type: "image/png" }) })]);
     },
+    /** Which of the clipboard-history privacy marks the clipboard carries. */
+    clipboardMarks: () => CLIPBOARD_PRIVACY_MARKS.filter((m) => w.clipboardHas(m)),
+    /** A copy the way a password manager makes it: text, marked as not for clipboard history. */
+    setMarkedClipboard: () => (clipboard.writeText("the secret"), w.clipboardAdd(["CanIncludeInClipboardHistory"])),
+    /** Copies a file the way Explorer does (a file list, which Electron cannot read back). */
+    setClipboardFiles: (file: string) => void execFileSync("powershell", ["-NoProfile", "-Command", `Set-Clipboard -Path '${file}'`]),
+    clipboardHasFiles: () => w.clipboardHas(15),
     /** What is on the clipboard, in a form that can be compared. */
     clipboardNow: async () => {
       const items = await clipboard.read();

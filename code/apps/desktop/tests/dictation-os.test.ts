@@ -21,6 +21,7 @@ const SCANCODE = 0x8;
 const EXTENDED = 0x1;
 const VK_SHIFT = 0x10;
 const KEY_X = 0x58;
+const KEY_F9 = 0x78;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (f: () => Promise<boolean> | boolean, ms = 10_000) => {
@@ -140,11 +141,10 @@ function dictationOsSpec() {
     });
 
     describe("hotkey", () => {
-      it("reports press and release of the chord and keeps the chord away from the focused window, while other keys get through", async () => {
+      it("reports press and release of a key chord and keeps the chord away from the focused window, while other keys get through", async () => {
         await focusTarget();
-        expect(await call.start()).toEqual({ ok: true });
-        press(VK.rightCtrl, true);
-        release(VK.rightCtrl, true);
+        expect(await call.startChord([KEY_F9])).toEqual({ ok: true });
+        tap(KEY_F9);
         expect(await events(2)).toEqual([{ kind: "down" }, { kind: "up" }]);
         tap(KEY_X);
         await until(async () => (await typed()) === "x");
@@ -154,15 +154,30 @@ function dictationOsSpec() {
 
       it("reports another key pressed during the hold and still delivers it", async () => {
         await focusTarget();
+        await call.startChord([KEY_F9]);
+        await call.takeEvents();
+        press(KEY_F9);
+        await sleep(50);
+        tap(KEY_X);
+        await until(async () => (await typed()) === "x");
+        release(KEY_F9);
+        expect(await events(3)).toEqual([{ kind: "down" }, { kind: "other", vk: KEY_X }, { kind: "up" }]);
+        expect((await keysSeen()).map((k) => k.code)).toEqual(["KeyX"]);
+        await call.stop();
+      });
+
+      it("lets a modifier hotkey through, so a shortcut typed with Right Ctrl reaches the window with its Ctrl", async () => {
+        await focusTarget();
         await call.start();
         await call.takeEvents();
         press(VK.rightCtrl, true);
         await sleep(50);
         tap(KEY_X);
-        await until(async () => (await typed()) === "x");
+        await until(async () => (await keysSeen()).some((k) => k.code === "KeyX"));
         release(VK.rightCtrl, true);
         expect(await events(3)).toEqual([{ kind: "down" }, { kind: "other", vk: KEY_X }, { kind: "up" }]);
-        expect((await keysSeen()).map((k) => k.code)).toEqual(["KeyX"]);
+        expect((await keysSeen()).map((k) => k.key)).toEqual(["Control", "x"]);
+        expect(await typed()).toBe("");
         await call.stop();
       });
 
@@ -308,6 +323,32 @@ function dictationOsSpec() {
         await until(async () => (await typed()) === "kept");
         await sleep(800);
         expect((await call.clipboardNow()).text).toBe("kept");
+      });
+
+      it("marks the text it puts on the clipboard as private, and gives a clipboard that had a mark its mark back", async () => {
+        await focusTarget();
+        await call.setClipboard("text");
+        await call.insert("dictated", { mode: "keep" });
+        await until(async () => (await typed()) === "dictated");
+        expect(await call.clipboardMarks()).toEqual(["CanIncludeInClipboardHistory", "CanUploadToCloudClipboard", "ExcludeClipboardContentFromMonitorProcessing"]);
+        await resetTarget();
+        expect(await call.setMarkedClipboard()).toBe(true);
+        expect(await call.clipboardMarks()).toEqual(["CanIncludeInClipboardHistory"]);
+        expect(await call.insert("second")).toEqual({ status: "pasted" });
+        await call.settled();
+        expect((await call.clipboardNow()).text).toBe("the secret");
+        expect(await call.clipboardMarks()).toEqual(["CanIncludeInClipboardHistory"]);
+      });
+
+      it("types instead of pasting when files are copied, and leaves the files on the clipboard", async () => {
+        await focusTarget();
+        await call.setClipboardFiles(process.execPath);
+        expect(await call.clipboardHasFiles()).toBe(true);
+        expect(await call.insert("typed over files")).toEqual({ status: "typed" });
+        await until(async () => (await typed()) === "typed over files");
+        await call.settled();
+        expect(await call.clipboardHasFiles()).toBe(true);
+        await call.setClipboard("empty");
       });
 
       it("types Unicode without touching the clipboard when a rule says so", async () => {
