@@ -96,7 +96,7 @@ export default defineConfig({
       { files: ["apps/extension/src/**"], rules: restrict(noElectron, noNode) },
       { files: ["apps/extension/src/app/**"], rules: restrict(noElectron, noNode, noDeepFeature) },
       { files: ["apps/extension/src/features/**"], rules: restrict(noElectron, noNode, noDeepSibling) },
-      { files: ["packages/ui/src/**", "packages/player/src/**", "packages/protocol/src/**"], rules: restrict(noElectron, noNode) },
+      { files: ["packages/ui/src/**", "packages/player/src/**", "packages/dictation/src/**", "packages/protocol/src/**"], rules: restrict(noElectron, noNode) },
       // The global chrome object: extension app/, shared/ and one port file for settings.
       {
         files: ["apps/extension/src/features/**", "apps/extension/src/styles/**"],

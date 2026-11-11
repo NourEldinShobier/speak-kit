@@ -11,6 +11,7 @@ export const scopes = {
   extension: "apps/extension",
   ui: "packages/ui",
   player: "packages/player",
+  dictation: "packages/dictation",
   server: "packages/server",
   engine: "packages/engine",
   protocol: "packages/protocol",
