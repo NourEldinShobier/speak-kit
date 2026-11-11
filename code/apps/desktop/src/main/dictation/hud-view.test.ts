@@ -68,6 +68,10 @@ describe("errors", () => {
     expect(errorView("insert-failed", false)).toMatchObject({ text: "Could not insert the text" });
     expect(errorView("hotkey-failed", false)).toMatchObject({ text: "The hotkey could not start" });
     expect(errorView("model-loading", false)).toMatchObject({ icon: "download" });
+    expect(errorView("model-loading", false)).not.toHaveProperty("action");
+    expect(errorView("model-loading", true)).toMatchObject({ action: { label: "Try again", id: "retry" } });
+    expect(errorView("model-failed", true)).toMatchObject({ text: "The speech model could not be loaded", icon: "alert-triangle", action: { id: "retry" } });
+    expect(errorView("model-failed", false)).not.toHaveProperty("action");
     expect(errorView("something-new", false)).toMatchObject({ text: "Dictation stopped working" });
   });
 
