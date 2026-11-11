@@ -9,6 +9,9 @@ export type VoiceEvent =
   | { t: "audio-start" }
   | { t: "audio-stop" }
   | { t: "response-done" }
+  /** the model asked to look at the screen: the app is asking the user, capturing, reading */
+  | { t: "look-start" }
+  | { t: "look-end" }
   | { t: "mute"; on: boolean }
   | { t: "lost" }
   | { t: "idle-warning"; secondsLeft: number }
@@ -29,7 +32,7 @@ export const REALTIME_EVENTS: Record<string, VoiceEvent> = {
 export const initialView = (): VoiceView => ({ phase: "connecting", muted: false });
 
 /** True while the conversation is open and the model can be heard or can hear. */
-export const isLive = (v: VoiceView) => v.phase === "idle" || v.phase === "listening" || v.phase === "thinking" || v.phase === "speaking";
+export const isLive = (v: VoiceView) => v.phase === "idle" || v.phase === "listening" || v.phase === "thinking" || v.phase === "speaking" || v.phase === "looking";
 
 type Handler<T extends VoiceEvent["t"]> = (v: VoiceView, e: Extract<VoiceEvent, { t: T }>) => VoiceView;
 const phaseIf = (v: VoiceView, from: VoiceView["phase"][], to: VoiceView["phase"]): VoiceView => (from.includes(v.phase) ? { ...v, phase: to } : v);
@@ -41,6 +44,9 @@ const HANDLERS: { [T in VoiceEvent["t"]]: Handler<T> } = {
   "audio-start": (v) => phaseIf(v, ["thinking", "idle", "speaking"], "speaking"),
   "audio-stop": (v) => phaseIf(v, ["speaking"], "idle"),
   "response-done": (v) => phaseIf(v, ["thinking"], "idle"),
+  // speech in between wins: the user talking is "listening" whatever the app is doing
+  "look-start": (v) => phaseIf(v, ["thinking", "idle", "speaking"], "looking"),
+  "look-end": (v) => phaseIf(v, ["looking"], "thinking"),
   mute: (v, e) => ({ ...v, muted: e.on, phase: e.on && v.phase === "listening" ? "idle" : v.phase }),
   lost: (v) => {
     const attempt = v.phase === "reconnecting" ? (v.attempt ?? 0) + 1 : 1;

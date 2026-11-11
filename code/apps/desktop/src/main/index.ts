@@ -24,6 +24,7 @@ import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
+import { createScreenVision } from "./screen-vision";
 import { KeyStore } from "./voice-chat/key-store";
 import { createVoiceChat } from "./voice-chat/service";
 
@@ -98,12 +99,14 @@ const mainWindow: MainWindow = new MainWindow(config, {
   },
   onHidden: () => runtime.stopPolling(),
 });
+const screenVision = createScreenVision();
 const voiceChat = createVoiceChat({
   store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
   config,
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
+  look: screenVision.look,
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -252,6 +255,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   });
   app.on("will-quit", () => {
     desktop?.dispose();
+    screenVision.dispose();
     void runtime.shutdown();
   });
 

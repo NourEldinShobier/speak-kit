@@ -18,6 +18,16 @@ describe("responseCost", () => {
     expect(responseCost({ input_token_details: { text_tokens: 10_000, cached_tokens: 9000 } })).toBeCloseTo(0.0076, 6);
   });
 
+  it("prices the tokens of a picture at the image rate, fresh and cached", () => {
+    // 1100 image tokens fresh: $0.0055; with 1000 of them cached: 100 fresh ($0.0005) + 1000 cached ($0.0004)
+    expect(responseCost({ input_token_details: { image_tokens: 1100 } })).toBeCloseTo(0.0055, 6);
+    expect(responseCost({ input_token_details: { image_tokens: 1100, cached_tokens: 1000, cached_tokens_details: { image_tokens: 1000 } } })).toBeCloseTo(0.0009, 6);
+  });
+
+  it("does not take the cache of the text for the picture's when the report gives no split", () => {
+    expect(responseCost({ input_token_details: { text_tokens: 1000, image_tokens: 1000, cached_tokens: 1000 } })).toBeCloseTo(0.0004 + 0.005, 6);
+  });
+
   it("ignores missing and nonsense numbers", () => {
     expect(responseCost({})).toBe(0);
     expect(responseCost({ output_token_details: { audio_tokens: -5, text_tokens: Number.NaN } })).toBe(0);
@@ -36,6 +46,15 @@ describe("CostMeter", () => {
     m.add(turn);
     expect(m.usage()?.costUsd).toBeCloseTo(0.0768, 6);
     expect([m.responses, m.inputTokens, m.outputTokens]).toEqual([2, 2000, 200]);
+  });
+
+  it("counts the tokens of pictures", () => {
+    const m = new CostMeter(0.5);
+    m.add({ input_token_details: { image_tokens: 1100 } });
+    m.add({ input_token_details: { image_tokens: 1100 } });
+    m.add({ input_token_details: { text_tokens: 5 } });
+    expect(m.imageTokens).toBe(2200);
+    expect(m.usd).toBeCloseTo(0.011 + 0.00002, 6);
   });
 
   it("goes over its cap at the response that reaches it, not before", () => {

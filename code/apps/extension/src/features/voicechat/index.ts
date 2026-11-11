@@ -12,6 +12,7 @@ export { mayHaveChangedContent, pageChanged } from "./churn";
 export { eventProblem, micProblem, type PillAction } from "./errors";
 export { IdleTimer } from "./idle";
 export { REALTIME_EVENTS, initialView, isLive, reduceVoice, type VoiceEvent } from "./machine";
+export { Looker } from "./look";
 export { mintSession } from "./mint";
 export { MAX_PAGE_CHARS, buildInstructions, pageAddress } from "./page";
 export { VoicePill } from "./pill";
