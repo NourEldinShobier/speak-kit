@@ -50,8 +50,9 @@ rmSync(stage, { recursive: true, force: true });
 mkdirSync(path.join(stage, "dist/worker"), { recursive: true });
 for (const d of ["main", "preload", "renderer"]) cpSync(path.join(desktop, "dist", d), path.join(stage, "dist", d), { recursive: true });
 cpSync(path.join(code, "packages/engine/dist/worker.js"), path.join(stage, "dist/worker/worker.js"));
+cpSync(path.join(code, "packages/engine/dist/stt-worker.js"), path.join(stage, "dist/worker/stt-worker.js"));
 
-const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js"];
+const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
 const needed = new Set(built.flatMap((f) => importedPackages(readFileSync(path.join(stage, f), "utf8"))));
 const engineDir = path.join(code, "packages/engine");
 const dependencies = {};
@@ -116,6 +117,10 @@ if (existsSync(ort)) {
   for (const os of readdirSync(ort)) if (os !== keepOs) rm(path.join(ort, os));
   if (!mac && existsSync(path.join(ort, "win32"))) for (const arch of readdirSync(path.join(ort, "win32"))) if (arch !== "x64") rm(path.join(ort, "win32", arch));
 }
+// whisper.node: the speech worker loads the Vulkan addon on Windows (falling back to the plain CPU one) and the Metal one on macOS; the CUDA addon (125 MB), the WASM build and other CPUs are never loaded.
+const fugood = path.join(stage, "node_modules/@fugood");
+const keepFugood = (d) => d === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(d);
+if (existsSync(fugood)) for (const d of readdirSync(fugood)) if (!keepFugood(d)) rm(path.join(fugood, d));
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
 if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ? d.startsWith("darwin_") : d === "win32_x64")) rm(path.join(koffiBuild, d));
 
