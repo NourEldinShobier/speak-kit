@@ -6,7 +6,7 @@ directories:
   output: release
   buildResources: dist-app-res
 
-# No asar: the engine worker runs as its own Node process and loads kokoro-js, onnxruntime and koffi from disk, so the files
+# No asar: the engine and speech workers run as their own Node processes and load kokoro-js, onnxruntime, koffi and the whisper.cpp addon from disk, so the files
 # stay unpacked next to the app (resources/app). Start-up cost is a few hundred more file reads.
 asar: false
 npmRebuild: false

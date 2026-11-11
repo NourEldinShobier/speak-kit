@@ -33,7 +33,7 @@ exports.default = async function afterPack(context) {
   const other = arch === "arm64" ? "x64" : "arm64";
 
   rmSync(path.join(modules, "onnxruntime-node/bin/napi-v3/darwin", other), { recursive: true, force: true });
-  for (const dir of [path.join(modules, "@koromix"), path.join(modules, "@img")]) {
+  for (const dir of [path.join(modules, "@koromix"), path.join(modules, "@img"), path.join(modules, "@fugood")]) {
     if (existsSync(dir)) for (const d of readdirSync(dir)) if (foreignMacArch(d, arch)) rmSync(path.join(dir, d), { recursive: true, force: true });
   }
 

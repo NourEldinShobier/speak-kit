@@ -4,7 +4,7 @@
 //   node scripts/smoke-packaged.mjs [--exe path-to-Speak Kit.exe or Speak Kit.app/Contents/MacOS/Speak Kit] [--real]
 // --real uses the real Kokoro engine and the shared model cache (code/.cache/models); otherwise the fake engine runs.
 import { FuseV1Options, getCurrentFuseWire } from "@electron/fuses";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import { tmpdir } from "node:os";
@@ -121,6 +121,11 @@ try {
     const resources = mac ? path.join(path.dirname(exe), "../Resources") : path.join(path.dirname(exe), "resources");
     check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
     check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
+    check("bundles the speech worker next to the app", existsSync(path.join(resources, "app/dist/worker/stt-worker.js")));
+    // The speech worker runs from this same executable as plain Node (RunAsNode); its native whisper.cpp addon has to load there. No model needed.
+    const addonScript = `require("@fugood/whisper.node").loadWhisperModule(process.platform === "darwin" ? "default" : "vulkan").then(() => process.exit(0), (e) => (console.error(e), process.exit(1)))`;
+    const addon = spawnSync(exe, ["-e", addonScript], { cwd: path.join(resources, "app"), env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, encoding: "utf8", timeout: 60_000 });
+    check("loads the speech addon in the packaged runtime", addon.status === 0, addon.status === 0 ? "" : `${addon.stderr}`.trim().split(String.fromCharCode(10))[0]);
   }
 
   const q = spawn(exe, ["--quit"], { env, stdio: "ignore" });
