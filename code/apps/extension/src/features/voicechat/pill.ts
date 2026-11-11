@@ -2,7 +2,7 @@ import type { VoiceProblem, VoiceView } from "@speakkit/protocol";
 import { button, h, icon } from "@speakkit/ui/vanilla";
 import type { Shell } from "../../shared/ui-types";
 import { PROBLEMS, type PillAction } from "./errors";
-import { announcement, dotLevel, pillText } from "./pill-text";
+import { announcement, dotLevel, pillText, usageLine } from "./pill-text";
 import { COLS, COLS_NARROW, ROWS, gridPattern } from "./grid";
 
 /** What the pill's buttons ask for. */
@@ -63,7 +63,8 @@ export class VoicePill {
 
   /** Which pill the phase gets: the notice phases have their own, every other phase is the grid. */
   private shape(v: VoiceView) {
-    return v.phase === "reconnecting" || v.phase === "idle-warning" || v.phase === "ended" ? v.phase : `grid:${this.cols}`;
+    if (v.phase === "ended") return usageLine(v) ? "ended:usage" : "ended";
+    return v.phase === "reconnecting" || v.phase === "idle-warning" || v.phase === "cost-warning" ? v.phase : `grid:${this.cols}`;
   }
 
   /** The microphone or voice level, 0 to 1. */
@@ -137,6 +138,7 @@ export class VoicePill {
     const tag = (b: HTMLButtonElement, sk: string) => ((b.dataset.sk = sk), b);
     if (p) el.append(h("span", { class: "sk-vp-alert" }, icon("alert-triangle", 16)));
     el.append(h("span", { class: "sk-vp-text", "data-sk": "voice-text" }));
+    if (this.key === "ended:usage") el.append(h("span", { class: "sk-vp-usage", "data-sk": "voice-usage" }));
     if (p) el.append(tag(button({ variant: "primary", size: "sm", label: p.label, onClick: act(p.action) }), "voice-action"));
     else if (v.phase === "idle-warning")
       el.append(
@@ -152,6 +154,8 @@ export class VoicePill {
     const text = pillText(v, problem);
     const t = this.el?.querySelector<HTMLElement>("[data-sk=voice-text]");
     if (t && t.textContent !== text) t.textContent = text;
+    const u = this.el?.querySelector<HTMLElement>("[data-sk=voice-usage]");
+    if (u && u.textContent !== usageLine(v)) u.textContent = usageLine(v);
     const said = announcement(v, problem, this.key.startsWith("grid"));
     if (this.live.textContent !== said) this.live.textContent = said;
     if (this.el) this.el.dataset.phase = problem ? "problem" : v.phase;
