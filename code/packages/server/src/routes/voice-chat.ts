@@ -1,6 +1,6 @@
 import type { ServerResponse } from "node:http";
-import { VOICE_CHAT_MODEL, type VoiceChatError, type VoiceChatErrorCode, type VoiceChatStatus } from "@speakkit/protocol";
-import { json } from "../http";
+import { VOICE_CHAT_MODEL, parseLookRequest, type LookError, type LookErrorCode, type VoiceChatError, type VoiceChatErrorCode, type VoiceChatStatus } from "@speakkit/protocol";
+import { HttpError, json, readBody } from "../http";
 import type { Route } from "../router";
 
 const STATUS: Record<VoiceChatErrorCode, number> = { "no-key": 409, "key-rejected": 424, "no-credit": 402, "rate-limited": 429, offline: 503, unavailable: 502 };
@@ -12,6 +12,22 @@ const MESSAGE: Record<VoiceChatErrorCode, string> = {
   offline: "OpenAI could not be reached",
   unavailable: "voice chat is not available",
 };
+
+const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503 };
+const LOOK_MESSAGE: Record<LookErrorCode, string> = {
+  declined: "the user did not allow looking at the screen",
+  "no-window": "there is no window to look at",
+  busy: "another look is in progress",
+  "rate-limited": "too many looks",
+  unsupported: "looking at the screen is not supported on this computer yet",
+  "capture-failed": "the screen could not be captured",
+  unavailable: "looking at the screen is not available",
+};
+
+function failLook(res: ServerResponse, code: LookErrorCode): void {
+  const body: LookError = { code, error: { code, message: LOOK_MESSAGE[code] } };
+  json(res, LOOK_STATUS[code], body);
+}
 
 function fail(res: ServerResponse, code: VoiceChatErrorCode, status = STATUS[code]): void {
   const body: VoiceChatError = { code, error: { code, message: MESSAGE[code] } };
@@ -50,6 +66,28 @@ export const voiceChatRoutes: Route[] = [
       if (!r.ok) return fail(res, r.code);
       const { clientSecret, expiresAt, voice } = r.session;
       json(res, 200, { clientSecret, expiresAt, model: VOICE_CHAT_MODEL, voice });
+    },
+  },
+  {
+    method: "POST",
+    path: "/v1/voice-chat/look",
+    // The user may take a while to answer the consent card: no control deadline, the client giving up ends the look instead.
+    stream: true,
+    handle: async ({ req, res }, { voiceChat, lookLimiter }) => {
+      const request = parseLookRequest(await readBody(req, 4096));
+      if (!request) throw new HttpError(400, "invalid-request", "expected { session, scope }");
+      if (!voiceChat?.look) return failLook(res, "unavailable");
+      const wait = lookLimiter.take();
+      if (wait) {
+        res.setHeader("Retry-After", String(wait));
+        return failLook(res, "rate-limited");
+      }
+      const ac = new AbortController();
+      res.on("close", () => !res.writableFinished && ac.abort());
+      const r = await voiceChat.look(request, ac.signal).catch(() => ({ ok: false as const, code: "capture-failed" as const }));
+      if (ac.signal.aborted) return;
+      if (!r.ok) return failLook(res, r.code);
+      json(res, 200, r.look);
     },
   },
 ];

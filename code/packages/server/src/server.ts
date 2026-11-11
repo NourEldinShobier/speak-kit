@@ -16,7 +16,7 @@ import { exportRoutes } from "./routes/export";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
 import { StreamQueue } from "./stream-queue";
-import { MintLimiter, type VoiceChatService } from "./voice-chat";
+import { LOOKS_PER_WINDOW, MintLimiter, type VoiceChatService } from "./voice-chat";
 import { voiceChatRoutes } from "./routes/voice-chat";
 
 export interface ServerOptions {
@@ -93,7 +93,7 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
   const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
   const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
-  return { engines, exporter, queue, version: opts.version ?? "0.0.0", voiceChat: opts.voiceChat, mintLimiter: new MintLimiter(), deadlines };
+  return { engines, exporter, queue, version: opts.version ?? "0.0.0", voiceChat: opts.voiceChat, mintLimiter: new MintLimiter(), lookLimiter: new MintLimiter(LOOKS_PER_WINDOW), deadlines };
 }
 
 /** Guard, route, authorize, then run the handler; control routes under their deadline, the speak stream under none. */
