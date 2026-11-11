@@ -209,12 +209,12 @@ export class DictationService {
     this.#ctx.log.warn("dictation hook failed", `${String(e)} (${recovered ? "reinstalled" : "not reinstalled"})`);
     if (!this.#cfg.enabled) return; // switched off meanwhile: nothing to report
     this.#setHotkeyFailed(!recovered);
-    this.#push(true);
   }
 
   #setHotkeyFailed(failed: boolean): void {
     this.#hotkeyFailed = failed;
     if (failed) this.presenter.alert("hotkey-failed");
+    this.#push(true);
   }
 
   async setEnabled(on: boolean): Promise<DictationStatus> {
@@ -223,7 +223,6 @@ export class DictationService {
     if (on && !this.core) {
       // The key hook could not be built at start-up: saying "on" would only save a setting that does nothing.
       this.#setHotkeyFailed(true);
-      this.#push(true);
       return this.status();
     }
     this.#cfg.enabled = on;
