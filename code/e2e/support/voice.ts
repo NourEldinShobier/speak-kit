@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { Page } from "@playwright/test";
-import type { VoiceChatErrorCode } from "@speakkit/protocol";
+import type { LookErrorCode, LookRequest, ScreenLook, VoiceChatErrorCode } from "@speakkit/protocol";
 
 /**
  * Stand-ins for the two servers a voice conversation talks to:
@@ -23,6 +23,7 @@ const listen = async (srv: Server) => {
 };
 
 const STATUS: Record<string, number> = { offline: 502, "no-key": 409, "no-credit": 402 };
+const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503 };
 
 export class FakeVoiceApp {
   readonly token = "e2e-token-" + Math.random().toString(16).slice(2).padEnd(24, "0");
@@ -31,6 +32,12 @@ export class FakeVoiceApp {
   mode: "ok" | VoiceChatErrorCode = "ok";
   hasKey = true;
   voice = "marin";
+  /** What POST /v1/voice-chat/look answers: a look, or one of the app's look error codes. */
+  look: ScreenLook | LookErrorCode = { image: "/9j/4AAQSkZJRg==", width: 1280, height: 720, text: "Invoice 48213\nTotal 129.50 EUR", ocr: "ok", target: "Report.docx - Word", scope: "window" };
+  /** How long the app takes to answer a look (the user answering the consent card, the capture). */
+  lookDelayMs = 0;
+  /** The requests to the look route, with the Authorization header they carried. */
+  readonly looks: (LookRequest & { auth: string })[] = [];
   /** Client secrets handed out, in order. */
   readonly secrets: string[] = [];
   /** The Authorization headers of every request to the voice routes. */
@@ -59,12 +66,20 @@ export class FakeVoiceApp {
       this.auth.push(req.headers.authorization);
       return json(res, 200, { hasKey: this.hasKey });
     }
+    if (path === "/v1/voice-chat/look" && req.method === "POST") return this.answerLook(req, res);
     if (path === "/v1/voice-chat/session" && req.method === "POST") {
       await read(req);
       this.auth.push(req.headers.authorization);
       return this.mint(res);
     }
     return this.forward(req, res);
+  }
+
+  private async answerLook(req: IncomingMessage, res: ServerResponse) {
+    this.looks.push({ ...(JSON.parse(await read(req)) as LookRequest), auth: String(req.headers.authorization) });
+    if (this.lookDelayMs) await new Promise((r) => setTimeout(r, this.lookDelayMs));
+    if (typeof this.look === "string") return json(res, LOOK_STATUS[this.look], { code: this.look, error: { code: this.look, message: "no" } });
+    return json(res, 200, this.look);
   }
 
   private mint(res: ServerResponse) {
@@ -88,7 +103,7 @@ export class FakeVoiceApp {
 
 export interface PeerEvent {
   type: string;
-  item?: { id?: string; type?: string; call_id?: string; output?: string };
+  item?: { id?: string; type?: string; role?: string; call_id?: string; output?: string; content?: { type?: string; text?: string; image_url?: string }[] };
   item_id?: string;
   session?: {
     instructions?: string;
