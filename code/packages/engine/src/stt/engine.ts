@@ -40,6 +40,7 @@ export interface SpeechToText {
 }
 
 type Host = Channel<SttToWorker, SttFromWorker>;
+type HostSpec = Pick<SttWorkerInit, "engine" | "modelPath" | "vadPath">;
 const defaultWorker = () => new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./stt-worker.js", import.meta.url);
 
 /** whisper.cpp (Whisper and Parakeet models) in a child process, so a native crash cannot take the app down and unloading returns all memory. */
@@ -51,6 +52,8 @@ export class WhisperStt implements SpeechToText {
   #host: Host | undefined;
   #model: SttModel | undefined;
   #backend: "gpu" | "cpu" | undefined;
+  /** Vulkan device index passed to the host: undefined until decided, "" for the default device. */
+  #vk: string | undefined;
   #next = 1;
   #jobs = new Map<number, { resolve: (t: Transcript) => void; reject: (e: Error) => void }>();
   #abort: AbortController | undefined;
@@ -75,6 +78,10 @@ export class WhisperStt implements SpeechToText {
   /** Process id of the model host while one runs (for memory measurements and tests). */
   get workerPid(): number | undefined {
     return this.#host?.pid;
+  }
+  /** Vulkan device the host was pinned to ("" for the default one); undefined until a model has loaded. */
+  get gpuDevice(): string | undefined {
+    return this.#vk;
   }
   /** Where the loaded model runs; undefined until ready. */
   get backend(): "gpu" | "cpu" | undefined {
@@ -155,7 +162,7 @@ export class WhisperStt implements SpeechToText {
       };
       await downloadModel(m, join(dir, m.file), { ...dl, onProgress });
       this.#em.set({ state: "loading" });
-      await this.#start(m, join(dir, m.file), join(dir, this.#vad.file));
+      await this.#bringUp({ engine: m.engine, modelPath: join(dir, m.file), vadPath: join(dir, this.#vad.file) });
       this.#model = m;
       this.#em.set({ state: "ready", detail: this.#backend! });
     } catch (e) {
@@ -167,10 +174,36 @@ export class WhisperStt implements SpeechToText {
     }
   }
 
-  #start(m: SttModel, modelPath: string, vadPath: string): Promise<void> {
-    const init: SttWorkerInit = { engine: m.engine, modelPath, vadPath, gpu: this.#o.gpu ?? true, threads: Math.min(8, availableParallelism()) };
-    const w = (this.#host = processChannel<SttToWorker, SttFromWorker>(this.#o.workerUrl ?? defaultWorker(), init));
-    return new Promise<void>((resolve, reject) => {
+  /**
+   * Starts the host and, on a machine with an integrated and a discrete GPU, makes sure it runs on the discrete one. The binding has no device
+   * option and whisper.cpp takes the first Vulkan device, which is the integrated GPU there (10x slower, measured), so the host is restarted with
+   * GGML_VK_VISIBLE_DEVICES set to each other device until one reports itself discrete. The answer is kept for later loads.
+   */
+  async #bringUp(spec: HostSpec): Promise<void> {
+    const first = await this.#start(spec, this.#vk ?? "");
+    if (this.#vk !== undefined || first.gpuKind !== "integrated") return void (this.#vk ??= "");
+    for (let i = 1; i < (first.devices ?? 0) - 1; i++) {
+      await this.#stopHost();
+      const probe = await this.#start(spec, String(i), false);
+      if (probe.gpuKind === "discrete") return void (this.#vk = String(i));
+    }
+    this.#vk = ""; // no discrete GPU after all: the default device it is
+    if (first.devices && first.devices > 2) {
+      await this.#stopHost();
+      await this.#start(spec, "");
+    }
+  }
+
+  async #stopHost(): Promise<void> {
+    const w = this.#host;
+    this.#host = undefined;
+    if (w) await w.terminate();
+  }
+
+  #start(spec: HostSpec, vk: string, warmup = true): Promise<Extract<SttFromWorker, { state: "ready" }>> {
+    const init: SttWorkerInit = { ...spec, gpu: this.#o.gpu ?? true, threads: Math.min(8, availableParallelism()), warmup };
+    const w = (this.#host = processChannel<SttToWorker, SttFromWorker>(this.#o.workerUrl ?? defaultWorker(), init, vk ? { GGML_VK_VISIBLE_DEVICES: vk } : {}));
+    return new Promise((resolve, reject) => {
       let loaded = false;
       const fail = (message: string) => {
         const err = new Error(message);
@@ -188,7 +221,7 @@ export class WhisperStt implements SpeechToText {
           if (r.state === "ready") {
             loaded = true;
             this.#backend = r.backend;
-            resolve();
+            resolve(r);
           }
           return;
         }
