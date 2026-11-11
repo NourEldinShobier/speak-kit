@@ -80,7 +80,8 @@ export class Inserter {
 
   async #send(text: string, fg: ForegroundInfo, opts: InsertOptions): Promise<InsertResult> {
     const profile = profileFor(fg, this.#overrides);
-    const typing = opts.mode === "type" || profile.shortcut === "type";
+    // A clipboard that cannot be put back (copied files) is left alone: the text is typed instead of pasted.
+    const typing = opts.mode === "type" || profile.shortcut === "type" || (opts.mode !== "keep" && (await this.#clip.restorable?.()) === false);
     if (!(await this.#releaseModifiers())) return this.#copyOnly(text, "modifiers-held");
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);

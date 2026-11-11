@@ -39,7 +39,7 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
   const platform = process.platform === "win32" ? await (await import("./windows")).createWindowsPlatform() : createUnsupportedPlatform();
   const inserter = createInserter({
     input: platform.input,
-    clip: createElectronClipboard(platform.input.clipboardSequence),
+    clip: createElectronClipboard(platform.input),
     overrides: options.overrides,
     supported: platform.supported,
   });

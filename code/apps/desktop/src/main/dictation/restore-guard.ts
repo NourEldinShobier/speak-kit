@@ -6,6 +6,8 @@ export interface ClipboardPort {
   snapshot(): Promise<ClipboardSnapshot | null>;
   writeText(text: string): Promise<void>;
   restore(snapshot: ClipboardSnapshot): Promise<void>;
+  /** False when a snapshot would lose what is on the clipboard now (a copied file list): the text must then not go through the clipboard at all. */
+  restorable?(): Promise<boolean>;
   /** Changes whenever any program writes the clipboard. */
   sequence(): number;
 }

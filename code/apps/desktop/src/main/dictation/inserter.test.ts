@@ -5,7 +5,7 @@ import type { AppOverride, ForegroundInfo, InputPort } from "./types";
 
 const notepad: ForegroundInfo = { hwnd: "100", pid: 1, exe: "notepad.exe", className: "Notepad", elevated: false };
 
-function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; onSleep?: () => void } = {}) {
+function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void } = {}) {
   let content: string | null = "old";
   let seq = 1;
   const clip: ClipboardPort = {
@@ -20,6 +20,7 @@ function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; he
       seq++;
     },
     sequence: () => seq,
+    ...(opts.restorable !== undefined && { restorable: async () => opts.restorable! }),
   };
   const sent: string[] = [];
   const held = [...(opts.held ?? [])];
@@ -37,6 +38,8 @@ function setup(opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; he
       return opts.accept ?? true;
     },
     clipboardSequence: () => seq,
+    clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
+    markClipboard: () => true,
   };
   const slept: number[] = [];
   const ins = createInserter({
@@ -109,6 +112,19 @@ describe("pasting", () => {
     const t = setup();
     expect(await t.ins.insert("x", { mode: "keep" })).toEqual({ status: "pasted" });
     await vi.advanceTimersByTimeAsync(5000);
+    expect(t.clipboard).toBe("x");
+  });
+
+  it("types instead of pasting when the clipboard holds something that cannot be put back, and leaves it alone", async () => {
+    const t = setup({ restorable: false });
+    expect(await t.ins.insert("héllo")).toEqual({ status: "typed" });
+    expect(t.sent).toEqual(["type héllo"]);
+    expect(t.clipboard).toBe("old");
+  });
+
+  it("keep mode pastes even then, because the text is meant to replace the clipboard", async () => {
+    const t = setup({ restorable: false });
+    expect(await t.ins.insert("x", { mode: "keep" })).toEqual({ status: "pasted" });
     expect(t.clipboard).toBe("x");
   });
 
@@ -188,7 +204,7 @@ describe("unsupported platform", () => {
   it("only copies, with its own reason", async () => {
     const clip = { snapshot: async () => [], writeText: async (t: string) => void (written = t), restore: async () => {}, sequence: () => 0 };
     let written = "";
-    const input = { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0 };
+    const input = { foreground: () => null, passwordFocused: () => false, heldModifiers: () => [], pressPaste: () => false, type: () => false, clipboardSequence: () => 0, clipboardTraits: () => ({ files: false, formats: 0, marks: [] }), markClipboard: () => false };
     const ins = createInserter({ input, clip, supported: false });
     expect(await ins.insert("x")).toEqual({ status: "copied", reason: "unsupported-platform" });
     expect(written).toBe("x");

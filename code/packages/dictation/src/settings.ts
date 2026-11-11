@@ -14,8 +14,6 @@ export interface Settings {
   /** Other audio is being ducked, so the recorder must not capture the moments before the press. */
   duck: boolean;
   insertMode: InsertMode;
-  /** Ctrl+Shift+V in terminals. */
-  terminalPaste: boolean;
   /** Insert mode per program, keyed by executable name such as "putty". */
   appModes: Record<string, InsertMode>;
   fillers: boolean;
@@ -34,7 +32,6 @@ export const defaultSettings: Readonly<Settings> = {
   language: "auto",
   duck: false,
   insertMode: "paste",
-  terminalPaste: true,
   appModes: {},
   fillers: true,
   spokenSymbols: true,
