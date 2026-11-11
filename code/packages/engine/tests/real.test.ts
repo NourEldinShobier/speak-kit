@@ -4,7 +4,7 @@ import { KokoroEngine } from "../src";
 // Opt-in: SPEAKKIT_REAL=1 (downloads ~90 MB on first run into SPEAKKIT_MODELS_DIR).
 const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? "../../.cache/models";
 
-describe.skipIf(!process.env.SPEAKKIT_REAL)("KokoroEngine (real model)", () => {
+describe.runIf(process.env.SPEAKKIT_REAL)("KokoroEngine (real model)", () => {
   it("loads, speaks, splits long sentences and aborts", async () => {
     const e = new KokoroEngine({ modelsDir });
     expect(e.status().state).toBe("unloaded"); // cached on disk, nothing in RAM

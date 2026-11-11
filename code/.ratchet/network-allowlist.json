@@ -20,6 +20,7 @@
     "api.openai.com": "voice chat: the desktop app tests the OpenAI key and mints short-lived Realtime client secrets with it (the key goes nowhere else); the extension connects to the Realtime API with that secret only",
     "chromewebstore.google.com": "link opened in the user's browser to install the extension",
     "github.com": "release page opened in the user's browser",
+    "huggingface.co": "dictation: packages/engine/src/stt/download.ts fetches the speech model and the voice-gate model on first use, resumable and checked against a SHA-256; nothing else is sent",
     "platform.openai.com": "link opened in the user's browser to add credit to their OpenAI account",
     "speakkit.app": "links to the product site opened in the user's browser"
   }
