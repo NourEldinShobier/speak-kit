@@ -14,6 +14,8 @@ interface Deps {
   /** Tests point this at a fake OpenAI; the app uses OpenAI itself. */
   baseUrl?: string | undefined;
   fetch?: typeof fetch;
+  /** One look at the screen for the model (screen vision); the local server offers it as POST /v1/voice-chat/look. */
+  look?: VoiceChatService["look"];
 }
 
 /** The voice chat of the app: the saved key, its test, the voice, and the minting the local server calls. The key goes only to OpenAI. */
@@ -36,6 +38,7 @@ export function createVoiceChat(d: Deps) {
       }
       return { ok: true, session: { ...r.value, model: VOICE_CHAT_MODEL, voice } };
     },
+    ...(d.look && { look: d.look }),
   };
 
   return {
