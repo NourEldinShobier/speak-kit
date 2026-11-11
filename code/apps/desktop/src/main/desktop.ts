@@ -15,6 +15,8 @@ import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { createUpdates } from "./updates-service";
+import { registerDictationIpc } from "./dictation/ipc";
+import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -27,6 +29,8 @@ interface DesktopOptions {
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
   fakeUpdate?: string | undefined;
+  /** Where dictation keeps its history and models, and its speech worker. */
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -62,9 +66,13 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
 
   const announceEngine = engineAnnouncer(ctx, toasts);
-  const tray = setupTray(ctx, { reading, exports, updates, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  // The dictation service reaches the tray only through this callback, so the tray can be built after it.
+  const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   ctx.state.reader = IDLE_READER;
   ctx.state.update ??= UPDATE_UNSUPPORTED;
+
+  registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -92,7 +100,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       exports.dispose();
       updates.dispose();
       tray.dispose();
+      void dictation.dispose();
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
   };
 }

@@ -21,6 +21,7 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
+import { sttWorkerUrl } from "./dictation/service";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 import { KeyStore } from "./voice-chat/key-store";
@@ -36,12 +37,19 @@ app.setPath("userData", process.env.SPEAKKIT_USER_DATA ?? path.join(app.getPath(
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
+// A wav file the microphone window records instead of a device (dictation end-to-end run).
+const fakeMic = test.hook ? process.env.SPEAKKIT_FAKE_MIC : undefined;
+if (fakeMic) {
+  app.commandLine.appendSwitch("use-fake-device-for-media-stream");
+  app.commandLine.appendSwitch("use-file-for-fake-audio-capture", fakeMic);
+}
 const dataDir = app.getPath("userData");
 await mkdir(dataDir, { recursive: true });
 const log = initLog(dataDir);
 const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? path.join(dataDir, "models");
 const logsDir = path.join(dataDir, "logs");
 
+const sttWorker = await sttWorkerUrl(here);
 const store = await openConfig(dataDir);
 const config = store.config;
 
@@ -207,6 +215,7 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
+      dictation: { dataDir, modelsDir, sttWorker },
     },
   );
 }

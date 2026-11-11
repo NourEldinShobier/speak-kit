@@ -1,0 +1,25 @@
+import type { HudView } from "../../shared/dictation/contract";
+import type { DictationModelId } from "../../shared/dictation/settings";
+import type { DictationService } from "./service";
+
+/** SPEAKKIT_TEST hooks for dictation: what the scripted speech engine answers, whether the microphone is allowed, and what the HUD shows. */
+export const dictationTestHook = (d: DictationService) => ({
+  /** The next recordings transcribe to this text. */
+  say: (text: string) => d.fake?.say({ text }),
+  failTranscription: (on: boolean) => d.fake?.say({ fail: on }),
+  setInstalled: async (id: DictationModelId, on: boolean) => {
+    await d.fake?.setInstalled(id, on);
+    await d.models.refresh();
+    await d.ready;
+  },
+  finishDownload: () => d.fake?.finishDownload(),
+  denyMic: (on: boolean) => void (d.micDenied = on),
+  /** What each transcription was given: language, samples and loudest sample. */
+  calls: () => d.fake?.calls() ?? [],
+  status: () => d.status(),
+  hud: () => d.presenter.shown,
+  /** Puts any pill on the HUD (design check). */
+  showHud: (view: HudView) => d.os?.hud.show({ kind: "view", view }),
+  hotkeyActive: () => d.hotkeyActive,
+  state: () => d.state,
+});
