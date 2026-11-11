@@ -328,6 +328,9 @@ importers:
       '@mozilla/readability':
         specifier: 'catalog:'
         version: 0.6.0
+      '@speakkit/dictation':
+        specifier: workspace:*
+        version: link:../../packages/dictation
       '@speakkit/engine':
         specifier: workspace:*
         version: link:../../packages/engine
