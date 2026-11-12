@@ -43,3 +43,13 @@ describe("createTrayNotices", () => {
     expect(n.current()).toBeUndefined();
   });
 });
+
+describe("tray notices, edges", () => {
+  it("ten minutes is the default life", () => expect(NOTICE_TTL_MS).toBe(600_000));
+  it("trims a cut title before the ellipsis", () => {
+    expect(noticeText({ kind: "error", title: `${"x".repeat(58)} yyyy` })).toBe(`${"x".repeat(58)}…`);
+  });
+  it("keeps a title of exactly 60 characters", () => {
+    expect(noticeText({ kind: "error", title: "x".repeat(60) })).toBe("x".repeat(60));
+  });
+});
