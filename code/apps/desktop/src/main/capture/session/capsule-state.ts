@@ -1,8 +1,9 @@
 import type { CapsuleState, StepState } from "../../../shared/capture/capsule";
-import type { Notice } from "../../../shared/capture/notices";
 import type { SessionState } from "./index";
 
-export type AfterState = { kind: "saved"; what: string } | { kind: "shot"; what: string } | { kind: "failed"; notice: Notice };
+type Shown = Extract<CapsuleState, { kind: "saved" | "shot" | "failed" | "countdown" | "sent" | "undone" }>;
+/** What stays after the session went idle: the target chip is added when it is drawn. */
+export type AfterState = Shown extends infer S ? (S extends unknown ? Omit<S, "target"> : never) : never;
 
 export interface CapsuleInputs {
   session: SessionState;
@@ -44,5 +45,5 @@ export function capsuleFor(i: CapsuleInputs): CapsuleState | null {
     };
   if (s.phase === "finishing") return { kind: "finishing", target, steps: stepsFor(s.step) };
   if (s.phase === "picking" || !i.after) return null;
-  return { ...i.after, target };
+  return { ...i.after, target } as CapsuleState;
 }

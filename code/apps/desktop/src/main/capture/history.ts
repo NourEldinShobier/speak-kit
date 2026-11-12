@@ -1,6 +1,7 @@
 import { shell } from "electron";
 import path from "node:path";
-import type { CaptureDetail, CaptureItem, CopyWhat, RecoveryView } from "../../shared/capture/contract";
+import type { CaptureDetail, EditSource, CaptureItem, CopyWhat, RecoveryView } from "../../shared/capture/contract";
+import { canEditFile, editedName, refuseEdit, shownFile } from "./edits";
 import { createBundle, type Bundle } from "./bundle";
 import { writeCapture, writeText } from "./clipboard-out";
 import { nativeImage } from "electron";
@@ -8,6 +9,7 @@ import { journalFs, storeFs } from "./fs-adapters";
 import { toDetail, toItem } from "./items";
 import { createJournal, type Journal, type JournalEntry } from "./journal";
 import { pickKeyframes } from "./keyframes";
+import { framesIn, trimRange, wordsIn } from "./trim";
 import { sweepCaptures, type SweepResult } from "./retention";
 import { createStore, type CaptureStore } from "./store";
 
@@ -18,6 +20,10 @@ export interface HistoryDeps {
   now(): number;
   /** Moves a folder to the Recycle Bin (Trash on macOS); defaults to the system call. Tests replace it so nothing lands in the real bin. */
   trash?: ((dir: string) => Promise<void>) | undefined;
+  /** Builds the contact sheet of a capture from these picture files and writes it as sheet.jpg; undefined when it could not be made. */
+  sheet?(id: string, files: readonly string[]): Promise<Buffer | undefined>;
+  /** Cuts a recorded video to a range; undefined when it could not be cut. */
+  trim?(video: Uint8Array, startMs: number, endMs: number): Promise<Uint8Array | undefined>;
 }
 
 /** The saved captures: the index, the folders on disk, the journal that finishes interrupted ones, and what can be done with one (copy, reveal, remove, clean up). */
@@ -110,12 +116,98 @@ export class History {
     if (what === "path") await writeText(this.bundle.dir(r.dir));
     else if (what === "text") await writeText(r.words?.map((w) => w.text).join(" ") ?? "");
     else {
-      const cover = await this.bundle.readFile(r.dir, r.kind === "screenshot" ? r.media : (r.sheet ?? ""));
+      const cover = await this.bundle.readFile(r.dir, r.kind === "screenshot" ? shownFile(r, r.media) : (r.sheet ?? ""));
       if (!cover) return false;
       await writeCapture("", nativeImage.createFromBuffer(cover));
     }
     if (!r.chips.includes("copied")) await this.store.update(id, { chips: [...r.chips, "copied"] });
     return true;
+  }
+
+  /** A picture of a capture at full size, to edit. */
+  async source(id: string, file: string): Promise<EditSource | null> {
+    const r = await this.store.get(id);
+    if (!canEditFile(r, file)) return null;
+    const buf = await this.bundle.readFile(r.dir, shownFile(r, file));
+    const image = buf && nativeImage.createFromBuffer(buf);
+    if (!image || image.isEmpty()) return null;
+    const { width, height } = image.getSize();
+    return { src: image.toDataURL(), width, height };
+  }
+
+  /** Saves the edited copy next to the original and points the record at it. For a recording the contact sheet is built again from the shown pictures, so a copy or a send never carries what was blurred out. */
+  async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
+    const r = await this.store.get(id);
+    if (refuseEdit(r, file, png) || !r) return false;
+    const name = editedName(file);
+    await this.bundle.writeFile(r.dir, name, png);
+    // the record is read again inside the store's queue: an edit of another picture saved meanwhile stays
+    const saved = await this.store.mutate(id, (cur) => ({ edits: { ...cur.edits, [file]: name } }));
+    if (!saved) {
+      await this.bundle.remove(r.dir);
+      return false;
+    }
+    if (saved.kind === "recording") await this.#rebuildSheet(id);
+    await this.store.update(id, { bytes: await this.bundle.bytes(r.dir) });
+    return true;
+  }
+
+  #sheets: Promise<unknown> = Promise.resolve();
+
+  /** One rebuild at a time, each from the record as it is then, so the last one always shows every edit. */
+  #rebuildSheet(id: string): Promise<unknown> {
+    const run = async () => {
+      const cur = await this.store.get(id);
+      if (!cur?.sheet || !this.#d.sheet) return;
+      try {
+        await this.#d.sheet(
+          cur.dir,
+          cur.frames.map((f) => shownFile(cur, f)),
+        );
+      } catch (e) {
+        this.#d.log(`capture ${id}: the contact sheet could not be rebuilt (${String(e)})`);
+      }
+    };
+    return (this.#sheets = this.#sheets.then(run, run));
+  }
+
+  /** Cuts the video of a recording to a range and keeps the cut next to the original. The keyframes, the contact sheet and the words are reduced to what is kept, so nothing cut away is copied or sent. */
+  async trim(id: string, startMs: number, endMs: number): Promise<boolean> {
+    const r = await this.store.get(id);
+    const range = r && trimRange(startMs, endMs, r.durationMs);
+    if (!r || !range || r.finishing || r.kind !== "recording" || !this.#d.trim) return false;
+    // a recording that followed a switch has more than one video file: it is not cut
+    if (await this.bundle.readFile(r.dir, "video-2.webm")) return false;
+    const video = await this.bundle.readFile(r.dir, "video.webm");
+    if (!video?.length) return false;
+    let cut: Uint8Array | undefined;
+    try {
+      cut = await this.#d.trim(new Uint8Array(video), range.startMs, range.endMs);
+    } catch (e) {
+      this.#d.log(`capture ${id}: the video could not be cut (${String(e)})`);
+    }
+    if (!cut?.length) return false;
+    await this.bundle.writeFile(r.dir, "video-trim.webm", cut);
+    const kept = framesIn(await this.bundle.frames(r.dir), r.words ?? [], range).map((f) => f.file);
+    const saved = await this.store.mutate(id, (cur) => ({ media: "video-trim.webm", trim: range, frames: kept, ...(cur.words && { words: wordsIn(cur.words, range) }) }));
+    if (!saved) {
+      await this.bundle.remove(r.dir);
+      return false;
+    }
+    await this.#rebuildSheet(id);
+    await this.store.update(id, { bytes: await this.bundle.bytes(r.dir) });
+    return true;
+  }
+
+  /** The capture was handed to the voice chat: the list shows it. */
+  async markSent(id: string): Promise<void> {
+    const r = await this.store.get(id);
+    if (r && !r.chips.includes("sent")) await this.store.update(id, { chips: [...r.chips, "sent"] });
+  }
+
+  /** The capture was taken back from the voice chat. */
+  async unmarkSent(id: string): Promise<void> {
+    await this.store.mutate(id, (r) => ({ chips: r.chips.filter((c) => c !== "sent") }));
   }
 
   async reveal(id: string): Promise<void> {

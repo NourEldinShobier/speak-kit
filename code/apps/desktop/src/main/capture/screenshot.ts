@@ -1,3 +1,6 @@
+import { noticeFor, noticeOfError, type Notice } from "../../shared/capture/notices";
+import { writeCapture } from "./clipboard-out";
+import { titleOfTarget } from "./target-display";
 import { randomBytes } from "node:crypto";
 import { nativeImage, type NativeImage } from "electron";
 import type { Bundle } from "./bundle";
@@ -35,4 +38,33 @@ export async function takeScreenshot(d: ShotDeps, target: Target): Promise<ShotR
   };
   await d.store.add(record);
   return { ok: true, record, image: nativeImage.createFromBuffer(still.png) };
+}
+
+export interface ShootDeps {
+  platform: CapturePlatform;
+  history: { bundle: Bundle; store: CaptureStore };
+  pick(): Promise<Target | null>;
+  /** False once the capture session was replaced: nothing more is shown. */
+  current(): boolean;
+  notify(n: Notice): void;
+  log(line: string): void;
+  shown(record: CaptureRecord): void;
+}
+
+/** Pick, take one picture, copy it, and hand the record over for the corner card. Every failure becomes a notice. */
+export async function shootFlow(d: ShootDeps): Promise<void> {
+  const p = d.platform;
+  if (p.screenPermission() === "denied") return d.notify(noticeFor("permission-denied", { os: p.os }));
+  try {
+    const target = await d.pick();
+    if (!target || !d.current()) return;
+    const shot = await takeScreenshot({ platform: p, bundle: d.history.bundle, store: d.history.store, title: (t) => titleOfTarget(t, p.displays()), now: Date.now }, target);
+    if (!d.current()) return;
+    if (!shot.ok) return d.notify(noticeFor("nothing-recorded"));
+    await writeCapture("", shot.image);
+    d.shown(shot.record);
+  } catch (e) {
+    d.log(`screenshot failed: ${String(e)}`);
+    d.notify(noticeOfError(e, { os: p.os }));
+  }
 }

@@ -1,13 +1,33 @@
 import { useState } from "react";
 import { Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { CaptureStatus } from "../../../shared/capture/contract";
-import { INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
+import { AUTO_SEND, INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
 import { HotkeyRecorder } from "../dictation";
 import { capture } from "./api";
 import { INK_LABEL, RETENTION_LABEL } from "./format";
 
 const WHERE: Record<(typeof TARGET_KINDS)[number], string> = { ask: "Ask each time", screen: "Whole screen", window: "A window", area: "An area" };
 const opts = <T extends string | number>(values: readonly T[], label: (v: T) => string) => values.map((v) => ({ value: String(v), label: label(v) }));
+
+/** The key of the screen recording experiment. */
+function RecordingKey({ s, onRecording }: { s: CaptureStatus; onRecording(on: boolean): void }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Screen recording key"
+      description="Press to start a recording of the screen without narration, press again to stop."
+      control={
+        <HotkeyRecorder
+          label="Screen recording hotkey"
+          value={s.settings.recordingHotkey}
+          restore="F7"
+          onRecording={onRecording}
+          save={async (recordingHotkey) => void (await capture.patchSettings({ recordingHotkey }))}
+        />
+      }
+    />
+  );
+}
 
 function General({ s }: { s: CaptureStatus }) {
   const [recording, setRecording] = useState(false);
@@ -29,6 +49,7 @@ function General({ s }: { s: CaptureStatus }) {
         }
         control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await capture.patchSettings({ hotkey }))} />}
       />
+      {c.experiments.recording ? <RecordingKey s={s} onRecording={setRecording} /> : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
           {s.hotkeyNote} <Button onClick={() => void capture.patchSettings({ hotkey: "F9" })}>Restore F9</Button>
@@ -42,12 +63,58 @@ function General({ s }: { s: CaptureStatus }) {
           <Select label="Where to record" value={c.target} onChange={(target) => void capture.patchSettings({ target: target as typeof c.target })} options={opts(TARGET_KINDS, (k) => WHERE[k])} />
         }
       />
+      {c.experiments.speechEngines ? <Engine s={s} /> : null}
       <SettingRow
         label="Talk while you record"
         description="Uses the dictation microphone and speech model. Quiet speech is kept, and a silent microphone is reopened. Nothing is sent anywhere."
         control={<Toggle aria-label="Talk while you record" checked={c.narration} onChange={(narration) => void capture.patchSettings({ narration })} />}
       />
     </SettingsSection>
+  );
+}
+
+/** The speech engine of the narration: the dictation model, or a command of your own. Shown only when the speech engines experiment is on. */
+function Engine({ s }: { s: CaptureStatus }) {
+  const c = s.settings;
+  const [command, setCommand] = useState(c.narrationCommand);
+  return (
+    <>
+      <SettingRow
+        className="lm-row--control"
+        label="Speech engine"
+        description="Dictation model uses the model Speak Kit already loads. Command starts a program of your own for each stretch of speech."
+        control={
+          <Select
+            label="Speech engine"
+            value={c.narrationEngine}
+            onChange={(narrationEngine) => void capture.patchSettings({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
+            options={[
+              { value: "dictation", label: "Dictation model" },
+              { value: "command", label: "Command" },
+            ]}
+          />
+        }
+      />
+      {c.narrationEngine === "command" ? (
+        <SettingRow
+          className="lm-row--control"
+          label="Command"
+          description="The program and its options, with {audio} where the WAV file goes (at the end when you leave it out). It is started directly, not through a shell, and may run for two minutes."
+          control={
+            <input
+              className="lm-input"
+              aria-label="Speech command"
+              value={command}
+              maxLength={500}
+              spellCheck={false}
+              placeholder="whisper-cli -m model.bin -f {audio} -nt"
+              onChange={(e) => setCommand(e.target.value)}
+              onBlur={() => command !== c.narrationCommand && void capture.patchSettings({ narrationCommand: command })}
+            />
+          }
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -73,8 +140,13 @@ function Recording({ s }: { s: CaptureStatus }) {
       />
       <SettingRow
         label="Pointer trail"
-        description="Hold Shift while recording and a glowing trail follows the pointer. Shift alone draws ink. If Windows offers Sticky Keys after five Shift presses, choose No."
+        description="Hold Shift while recording and a glowing trail follows the pointer. If Windows offers Sticky Keys after five Shift presses, choose No."
         control={<Toggle aria-label="Pointer trail" checked={c.pointerTrail} onChange={(pointerTrail) => void capture.patchSettings({ pointerTrail })} />}
+      />
+      <SettingRow
+        label="Draw with Shift"
+        description="Hold Shift alone for a moment while recording to draw, and let go to stop. Shift with a letter or a click never draws. Off by default because it can start drawing before a shift-click."
+        control={<Toggle aria-label="Draw with Shift" checked={c.shiftInk} onChange={(shiftInk) => void capture.patchSettings({ shiftInk })} />}
       />
       <SettingRow
         className="lm-row--control"
@@ -99,6 +171,19 @@ function Saving({ s }: { s: CaptureStatus }) {
   return (
     <SettingsSection title="Saving">
       <SettingRow className="lm-row--control" label="Save captures in" description={s.folder} control={<Button onClick={() => void capture.chooseFolder()}>Choose folder</Button>} />
+      <SettingRow
+        className="lm-row--control"
+        label="Send to Voice chat"
+        description="After a recording is saved, the capsule counts down and then lets Voice chat read it. Hold or Undo until it is read."
+        control={
+          <Select
+            label="Send to Voice chat"
+            value={c.autoSend}
+            onChange={(autoSend) => void capture.patchSettings({ autoSend: autoSend as (typeof AUTO_SEND)[number] })}
+            options={opts(AUTO_SEND, (a) => (a === "off" ? "Off" : `After ${a.replace("s", " seconds")}`))}
+          />
+        }
+      />
       <SettingRow
         className="lm-row--control"
         label="Keep captures"

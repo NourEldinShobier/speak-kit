@@ -2,10 +2,26 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { capsuleView, clock } from "./capsule";
 import { noticeFor, noticeOfError } from "./notices";
-import { CAPTURE_HOTKEY, CaptureConfigSchema, CapturePatchSchema } from "./settings";
+import { AUTO_SEND, autoSendSeconds, CAPTURE_HOTKEY, CaptureConfigSchema, CapturePatchSchema } from "./settings";
 import { parseConfig } from "../schemas";
 
 describe("capture settings", () => {
+  it("send to Voice chat is off by default, keeps the old 3 second value, and falls back on a bad one", () => {
+    expect(parseConfig({ setupDone: true }).capture.autoSend).toBe("off");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "3s" }).autoSend).toBe("3s");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "10s" }).autoSend).toBe("10s");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "2m" }).autoSend).toBe("off");
+  });
+  it("Shift ink and the speech command are off by default and an old config loads", () => {
+    const c = parseConfig({ setupDone: true, capture: { enabled: true } }).capture;
+    expect([c.shiftInk, c.narrationEngine, c.narrationCommand]).toEqual([false, "dictation", ""]);
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "cloud", narrationCommand: 5, shiftInk: "yes" })).toMatchObject({ shiftInk: false, narrationEngine: "dictation", narrationCommand: "" });
+    expect(v.safeParse(CapturePatchSchema, { narrationCommand: "x".repeat(501) }).success).toBe(false);
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "command", narrationCommand: "stt {audio}", shiftInk: true }).success).toBe(true);
+  });
+  it("turns the setting into seconds", () => {
+    expect(AUTO_SEND.map(autoSendSeconds)).toEqual([0, 3, 5, 10]);
+  });
   it("an old config without a capture section loads with defaults (off, F9, 30 days)", () => {
     const c = parseConfig({ setupDone: true }).capture;
     expect(c).toMatchObject({ enabled: false, hotkey: "F9", screenshotHotkey: "F10", target: "ask", narration: true, retentionDays: 30, inputLog: "events", consented: false, lastTargets: {} });
@@ -50,12 +66,18 @@ describe("capsule view", () => {
   it("shows target, timer, pen, stop and discard while recording", () => {
     const v = capsuleView({ kind: "recording", target: "Figma · Pricing page", elapsedMs: 65_400, pen: false });
     expect(v).toMatchObject({ chip: "Figma · Pricing page", text: "Recording", timer: "1:05", live: true });
-    expect(v.buttons.map((b) => b.id)).toEqual(["pen", "stop", "discard"]);
+    expect(v.buttons.map((b) => b.id)).toEqual(["pen", "switch", "stop", "discard"]);
   });
   it("marks the pen pressed, and says when the microphone is missing or dictation paused", () => {
     expect(capsuleView({ kind: "recording", target: "t", elapsedMs: 0, pen: true }).buttons[0]).toMatchObject({ pressed: true });
     expect(capsuleView({ kind: "recording", target: "t", elapsedMs: 0, pen: false, micMissing: true })).toMatchObject({ text: "No microphone. Recording the screen only.", tone: "warning" });
     expect(capsuleView({ kind: "recording", target: "t", elapsedMs: 0, pen: false, dictationPaused: true }).text).toBe("Dictation is paused while recording");
+  });
+  it("offers Switch, and while choosing says so and disables it", () => {
+    expect(capsuleView({ kind: "recording", target: "t", elapsedMs: 0, pen: false }).buttons[1]).toEqual({ id: "switch", label: "Switch", disabled: false });
+    const v = capsuleView({ kind: "recording", target: "t", elapsedMs: 4000, pen: false, switching: true });
+    expect(v).toMatchObject({ text: "Choose what to record", timer: "0:04", live: true });
+    expect(v.buttons[1]).toMatchObject({ id: "switch", disabled: true });
   });
   it("asks before discarding", () => {
     expect(capsuleView({ kind: "recording", target: "t", elapsedMs: 5, pen: false, confirmDiscard: true })).toMatchObject({ text: "Discard this recording?", live: false });
@@ -88,6 +110,13 @@ describe("capsule view", () => {
       tone: "error",
       buttons: [{ id: "retry", label: "Try again" }],
     });
+  });
+  it("sent and undone states can be closed", () => {
+    expect(capsuleView({ kind: "sent", target: "t", destination: "Voice chat", canUndo: true }).buttons.map((b) => [b.id, !!b.disabled])).toEqual([
+      ["undo", false],
+      ["dismiss", false],
+    ]);
+    expect(capsuleView({ kind: "undone", target: "t" }).buttons.map((b) => b.id)).toEqual(["open", "dismiss"]);
   });
   it("formats the timer", () => {
     expect([clock(0), clock(59_999), clock(600_000), clock(-5)]).toEqual(["0:00", "0:59", "10:00", "0:00"]);

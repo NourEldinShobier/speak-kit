@@ -1,3 +1,4 @@
+import { nativeImage } from "electron";
 import type { RecorderCommand, RecorderData, RecorderResult } from "../../shared/capture/contract";
 import type { RecorderHost } from "./recorder-host";
 
@@ -5,6 +6,9 @@ type Omit2<T> = T extends unknown ? Omit<T, "id"> : never;
 
 /** A tiny but valid JPEG header-less blob: only the bytes matter to the bundle, nothing decodes it. */
 const BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+
+/** A real small JPEG, for the contact sheet: what is sent to the voice chat is decoded, so it must be a picture. */
+const sheetJpeg = () => new Uint8Array(nativeImage.createFromBitmap(Buffer.alloc(16 * 16 * 4, 200), { width: 16, height: 16 }).toJPEG(80));
 
 export interface FakeRecorderOptions {
   /** Frames to make during a recording. 0 makes a recording that fails with no pictures. */
@@ -14,13 +18,16 @@ export interface FakeRecorderOptions {
 }
 
 /** The recorder window replaced by a scripted one, for tests: it streams frames and video bytes the way the page does and answers every command. */
-export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { options: FakeRecorderOptions; commands: string[] } {
+export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { options: FakeRecorderOptions; commands: string[]; starts: boolean[] } {
   let sink: ((d: RecorderData) => void) | undefined;
   let startedAt = 0;
+  let gen = 0;
   const commands: string[] = [];
+  const starts: boolean[] = [];
   const host = {
     options: o,
     commands,
+    starts,
     prepare: async () => true,
     onData: (cb: (d: RecorderData) => void) => {
       sink = cb;
@@ -31,15 +38,18 @@ export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { opti
     async call(cmd: Omit2<RecorderCommand>): Promise<RecorderResult> {
       commands.push(cmd.op);
       if (cmd.op === "start") {
+        gen = cmd.gen;
+        starts.push(cmd.narration);
         startedAt = Date.now();
         const n = host.options.frames ?? 3;
-        for (let i = 0; i < n; i++) sink?.({ kind: "frame", atMs: i * 1000, jpeg: BYTES });
-        if (n > 0) sink?.({ kind: "video", segment: 1, chunk: BYTES });
-        if (!host.options.noMic) sink?.({ kind: "audio", chunk: new Int16Array(1600) });
+        for (let i = 0; i < n; i++) sink?.({ gen, kind: "frame", atMs: i * 1000, jpeg: BYTES });
+        if (n > 0) sink?.({ gen, kind: "video", segment: 1, chunk: BYTES });
+        if (!host.options.noMic) sink?.({ gen, kind: "audio", chunk: new Int16Array(1600) });
         return { ok: true, micOk: !host.options.noMic };
       }
       if (cmd.op === "stop") return { ok: true, durationMs: Math.max(1000, Date.now() - startedAt), frames: host.options.frames ?? 3 };
-      if (cmd.op === "sheet") return { ok: true, jpeg: BYTES };
+      if (cmd.op === "sheet") return { ok: true, jpeg: sheetJpeg() };
+      if (cmd.op === "trim") return { ok: true, video: BYTES, durationMs: cmd.endMs - cmd.startMs };
       return { ok: true };
     },
   };

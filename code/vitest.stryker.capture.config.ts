@@ -5,7 +5,12 @@ export default defineConfig({
   define: { __TEST__: "false", __TEST_CODE__: "true" },
   test: {
     testTimeout: 20_000,
-    include: ["apps/desktop/src/main/capture/**/*.test.ts", "apps/desktop/src/shared/capture/**/*.test.ts", "apps/desktop/src/renderer/features/capture/*.test.ts"],
+    include: [
+      "apps/desktop/src/main/capture/**/*.test.ts",
+      "apps/desktop/src/shared/capture/**/*.test.ts",
+      "apps/desktop/src/renderer/features/capture/**/*.test.ts",
+      "apps/desktop/src/main/voice-chat/capture-inbox.test.ts",
+    ],
     exclude: ["apps/desktop/src/main/capture/platform/**"],
   },
 });

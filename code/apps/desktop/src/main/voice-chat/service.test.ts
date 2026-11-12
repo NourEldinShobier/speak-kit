@@ -111,3 +111,23 @@ describe("voice chat service", () => {
     expect(await vc.testKey()).toEqual({ ok: false, code: "key-rejected" });
   });
 });
+
+describe("capture waiting for the voice chat", () => {
+  it("is read through the look call of the server, once", async () => {
+    const vc = createVoiceChat({
+      store: { has: async () => true, read: async () => "k", canEncrypt: () => true } as never,
+      config: {} as never,
+      saveConfig: () => {},
+      log: { info() {}, warn() {}, error() {} } as never,
+    });
+    vc.captureInbox.offer("c1", { image: "QUJD", width: 1, height: 1, text: "hi", ocr: "ok", target: "Screen", scope: "capture" });
+    const first = await vc.server.look?.({ session: "s", scope: "capture" }, new AbortController().signal);
+    expect(first).toMatchObject({ ok: true, look: { target: "Screen" } });
+    expect(await vc.server.look?.({ session: "s", scope: "capture" }, new AbortController().signal)).toEqual({ ok: false, code: "no-capture" });
+  });
+
+  it("answers a screen look as unavailable when the app cannot look", async () => {
+    const vc = createVoiceChat({ store: { has: async () => true } as never, config: {} as never, saveConfig: () => {}, log: { info() {}, warn() {}, error() {} } as never });
+    expect(await vc.server.look?.({ session: "s", scope: "screen" }, new AbortController().signal)).toEqual({ ok: false, code: "unavailable" });
+  });
+});

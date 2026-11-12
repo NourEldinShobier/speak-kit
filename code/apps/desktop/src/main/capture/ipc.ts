@@ -22,6 +22,9 @@ const handlersOf = (c: CaptureService): Handlers => ({
   dismissNotice: async () => c.dismissNotice(),
   dismissRecovery: async () => c.dismissRecovery(),
   chooseFolder: () => c.chooseFolder(),
+  source: (id, file) => c.source(id, file),
+  saveEdit: (id, file, png) => c.saveEdit(id, file, png),
+  trim: (id, startMs, endMs) => c.trim(id, startMs, endMs),
 });
 
 /** The Capture pages of the app window call these (only the app window may). Arguments are checked before any handler runs. */

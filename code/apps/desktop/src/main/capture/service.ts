@@ -12,7 +12,8 @@ import { History } from "./history";
 import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
-import type { Narrator } from "./recording";
+import { makeSheet, type Narrator } from "./recording";
+import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { CaptureRuntime } from "./runtime";
 import { createMicClaim } from "./mic-claim";
 import { applyPatch } from "./settings-patch";
@@ -26,6 +27,7 @@ export interface CaptureServiceOptions {
   platform: CapturePlatform;
   hotkeySource?: (() => Promise<HotkeySource>) | undefined;
   narrator: Narrator;
+  inbox: CaptureInbox;
   /** The chord dictation uses, so capture never takes it. */
   dictationHotkey(): string | undefined;
   /** Tests only: a recorder that makes pictures up. */
@@ -55,12 +57,23 @@ export class CaptureService {
   constructor(ctx: Ctx, o: CaptureServiceOptions) {
     this.#ctx = ctx;
     this.#o = o;
-    this.history = new History({ folder: () => this.folder, log: (l) => ctx.log.info(l), now: () => Date.now(), trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined });
+    this.history = new History({
+      folder: () => this.folder,
+      log: (l) => ctx.log.info(l),
+      now: () => Date.now(),
+      sheet: (id, files) => makeSheet({ bundle: this.history.bundle, host: this.runtime.recorder.host, log: (l) => ctx.log.warn(l) }, id, files),
+      trim: async (video, startMs, endMs) => {
+        const r = await this.runtime.recorder.host.call({ op: "trim", video, startMs, endMs }, 10 * 60_000);
+        return r.ok ? r.video : undefined;
+      },
+      trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined,
+    });
     this.runtime = new CaptureRuntime({
       ctx,
       history: this.history,
       platform: o.platform,
       narrator: o.narrator,
+      inbox: o.inbox,
       distDir: o.distDir,
       recorder: o.recorder,
       publish: () => void this.#publish(),
@@ -71,6 +84,7 @@ export class CaptureService {
       recording: () => this.runtime.phase === "recording",
       onAction: (a) => this.runtime.act(a),
       onShot: () => void this.runtime.shoot(),
+      onRecord: () => void this.runtime.toggleScreenRecording(),
       log: (l) => ctx.log.warn(l),
     });
     this.#stopPower = resyncOnPower(powerMonitor, () => this.keys.resync());
@@ -104,7 +118,12 @@ export class CaptureService {
   async #applyEnabled() {
     const s = this.#settings;
     const on = s.enabled && this.#o.platform.supported;
-    const ok = await this.keys.apply(on, { capture: s.hotkey, screenshot: s.experiments.screenshots ? s.screenshotHotkey : undefined });
+    const ok = await this.keys.apply(on, {
+      capture: s.hotkey,
+      screenshot: s.experiments.screenshots ? s.screenshotHotkey : undefined,
+      recording: s.experiments.recording ? s.recordingHotkey : undefined,
+      shiftInk: s.shiftInk,
+    });
     this.#hotkeyFailed = !ok;
     if (!on) {
       this.runtime.discard();
@@ -238,9 +257,30 @@ export class CaptureService {
     return this.history.reveal(id);
   }
 
+  source(id: string, file: string) {
+    return this.history.source(id, file);
+  }
+
+  async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
+    const ok = await this.history.saveEdit(id, file, png);
+    if (ok) void this.#refresh();
+    return ok;
+  }
+
+  async trim(id: string, startMs: number, endMs: number): Promise<boolean> {
+    const ok = await this.history.trim(id, startMs, endMs);
+    if (ok) void this.#refresh();
+    return ok;
+  }
+
   async remove(id: string): Promise<void> {
     await this.history.remove(id);
     void this.#refresh();
+  }
+
+  /** Tests only: the inbox of captures sent to the voice chat. */
+  testInbox() {
+    return this.#o.inbox;
   }
 
   /** Whether this webContents is the capsule page. */

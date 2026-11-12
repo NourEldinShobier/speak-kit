@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { deflateSync } from "node:zlib";
 import { launch, removeDir, type Launched } from "./harness";
 
 const running: Launched[] = [];
@@ -204,5 +205,372 @@ describe("experiments", () => {
     await until(async () => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture?.experiments?.screenshots === true);
     await card.getByRole("button", { name: /Turn off/ }).click();
     await card.getByRole("button", { name: /Turn on/ }).waitFor();
+  });
+});
+
+/** A small PNG made here: a grey picture with a lighter band, so an edit is easy to tell from the original. */
+function makePng(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (b: Buffer) => {
+    let c = 0xffffffff;
+    for (const x of b) c = crcTable[(c ^ x) & 0xff]! ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc(body), body.length + 4);
+    return out;
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8);
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width * 3; x++) rows[y * (width * 3 + 1) + 1 + x] = y > height / 3 && y < (2 * height) / 3 ? 220 : 120;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", header), chunk("IDAT", deflateSync(rows)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+describe("editing a screenshot", () => {
+  const seed = () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
+    dirs.push(userData);
+    const dir = path.join(userData, "captures", "s1");
+    mkdirSync(dir, { recursive: true });
+    const png = makePng(320, 200);
+    writeFileSync(path.join(dir, "shot.png"), png);
+    const record = { id: "s1", kind: "screenshot", title: "Screenshot - Display 1", at: Date.now(), dir: "s1", bytes: png.length, media: "shot.png", frames: [], chips: ["saved", "copied"] };
+    writeFileSync(path.join(userData, "captures", "index.json"), JSON.stringify([record]));
+    return { userData, dir };
+  };
+  const openEditor = async (l: Launched) => {
+    await open(l);
+    await l.page.getByRole("button", { name: /^Open Screenshot/ }).click();
+    await l.page.getByTestId("capture-detail").waitFor();
+    await l.page.getByRole("button", { name: /^Edit picture at/ }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor();
+  };
+
+  it("draws a rectangle with the mouse, saves a copy next to the original, and shows it as edited", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    const save = l.page.getByRole("button", { name: "Save a copy" });
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.getByRole("button", { name: "Rectangle" }).click();
+    const canvas = l.page.getByLabel(/^Picture, 320 by 200/);
+    const box = (await canvas.boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 4 });
+    await l.page.mouse.up();
+    expect(await save.isDisabled()).toBe(false);
+    await l.page.getByRole("button", { name: "Undo" }).click();
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.getByRole("button", { name: "Redo" }).click();
+    await save.click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    await l.page.getByText("Picture (edited)").waitFor();
+    const edited = readFileSync(path.join(dir, "edit-shot.png"));
+    expect([...edited.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(edited.equals(readFileSync(path.join(dir, "shot.png")))).toBe(false);
+    expect(JSON.parse(readFileSync(path.join(userData, "captures", "index.json"), "utf8"))[0].edits).toEqual({ "shot.png": "edit-shot.png" });
+  });
+
+  it("draws with the keyboard alone: arrows move, Space marks the two corners", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    await l.page.getByRole("button", { name: "Highlight" }).click();
+    await l.page.getByLabel(/^Picture, 320 by 200/).focus();
+    await l.page.keyboard.press("Space");
+    for (let i = 0; i < 5; i++) await l.page.keyboard.press("ArrowRight");
+    for (let i = 0; i < 4; i++) await l.page.keyboard.press("ArrowDown");
+    await l.page.keyboard.press("Space");
+    const save = l.page.getByRole("button", { name: "Save a copy" });
+    expect(await save.isDisabled()).toBe(false);
+    await l.page.keyboard.press("Control+z");
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.keyboard.press("Control+y");
+    await save.click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    expect(existsSync(path.join(dir, "edit-shot.png"))).toBe(true);
+  });
+
+  it("cropping saves a smaller picture and Cancel leaves the original alone", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    await l.page.getByRole("button", { name: "Cancel" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    expect(existsSync(path.join(dir, "edit-shot.png"))).toBe(false);
+    await l.page.getByRole("button", { name: /^Edit picture at/ }).click();
+    await l.page.getByRole("button", { name: "Crop" }).click();
+    const box = (await l.page.getByLabel(/^Picture, 320 by 200/).boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.25);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.75, { steps: 3 });
+    await l.page.mouse.up();
+    await l.page.getByText(/^Crop 160 by 100/).waitFor();
+    await l.page.getByRole("button", { name: "Save a copy" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    const edited = readFileSync(path.join(dir, "edit-shot.png"));
+    expect([edited.readUInt32BE(16), edited.readUInt32BE(20)]).toEqual([160, 100]);
+  });
+});
+
+describe("editing and trimming a recording", () => {
+  const seed = () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
+    dirs.push(userData);
+    const dir = path.join(userData, "captures", "r1");
+    mkdirSync(path.join(dir, "frames"), { recursive: true });
+    const png = makePng(320, 200);
+    const frames = [0, 2000, 4000].map((ms) => path.join("frames", `f-${String(ms).padStart(8, "0")}.jpg`));
+    for (const f of frames) writeFileSync(path.join(dir, f), png);
+    writeFileSync(path.join(dir, "video.webm"), "video");
+    writeFileSync(path.join(dir, "sheet.jpg"), png);
+    const words = [
+      { text: "before", startMs: 100, endMs: 300 },
+      { text: "kept", startMs: 2500, endMs: 2700 },
+    ];
+    const record = {
+      id: "r1",
+      kind: "recording",
+      title: "Pricing page",
+      at: Date.now(),
+      dir: "r1",
+      durationMs: 6000,
+      bytes: png.length,
+      media: "video.webm",
+      frames,
+      sheet: "sheet.jpg",
+      words,
+      chips: ["saved"],
+    };
+    writeFileSync(path.join(userData, "captures", "index.json"), JSON.stringify([record]));
+    return { userData, dir };
+  };
+  const index = (userData: string) => JSON.parse(readFileSync(path.join(userData, "captures", "index.json"), "utf8"))[0];
+  const openDetail = async (l: Launched) => {
+    await open(l);
+    await l.page.getByRole("button", { name: /^Open Pricing page/ }).click();
+    await l.page.getByTestId("capture-detail").waitFor();
+  };
+
+  it("editing a frame saves a copy and builds the contact sheet again", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByText(/nothing in the video file/).waitFor();
+    await l.page.getByRole("button", { name: "Edit picture at 0:02" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor();
+    await l.page.getByRole("button", { name: "Rectangle" }).click();
+    const box = (await l.page.getByLabel(/^Picture, 320 by 200/).boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 4 });
+    await l.page.mouse.up();
+    await l.page.getByRole("button", { name: "Save a copy" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    await l.page.getByText("0:02 (edited)").waitFor();
+    expect(existsSync(path.join(dir, "edit-f-00002000.png"))).toBe(true);
+    expect(Object.values(index(userData).edits)).toEqual(["edit-f-00002000.png"]);
+    // the scripted recorder builds a different sheet than the one that was seeded
+    expect(readFileSync(path.join(dir, "sheet.jpg")).equals(makePng(320, 200))).toBe(false);
+  });
+
+  it("trims the video, keeps the original, and reduces the frames and words to what is kept", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Trim video" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor();
+    const start1 = l.page.getByRole("slider", { name: "Start" });
+    await start1.focus();
+    for (let i = 0; i < 3; i++) await l.page.keyboard.press("ArrowRight");
+    await l.page.getByText("Start 0:02").waitFor();
+    await l.page.getByRole("button", { name: "Save trimmed video" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor({ state: "detached" });
+    await until(async () => index(userData).media === "video-trim.webm");
+    expect(index(userData)).toMatchObject({ trim: { startMs: 1500, endMs: 6000 }, frames: [path.join("frames", "f-00002000.jpg"), path.join("frames", "f-00004000.jpg")], words: [{ text: "kept" }] });
+    expect(readFileSync(path.join(dir, "video.webm"), "utf8")).toBe("video");
+    expect(existsSync(path.join(dir, "video-trim.webm"))).toBe(true);
+  });
+
+  it("Cancel leaves the video alone", async () => {
+    const { userData } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Trim video" }).click();
+    await l.page.getByRole("button", { name: "Cancel" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor({ state: "detached" });
+    expect(index(userData).media).toBe("video.webm");
+  });
+});
+
+describe("send to Voice chat", () => {
+  const SEND = { ...ON, capture: { ...ON.capture, autoSend: "3s" } };
+  const capsule = async (l: Launched) => (await hook<{ capsule: { kind: string; held?: boolean; canUndo?: boolean } | null }>(l, "state")).capsule;
+  const startSend = async (l: Launched) => {
+    await open(l);
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await hook(l, "stop");
+    await until(async () => (await capsule(l))?.kind === "countdown");
+  };
+
+  it("counts down, sends, and Undo takes the capture back before Voice chat read it", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await until(async () => (await capsule(l))?.kind === "sent", 10_000);
+    expect(await capsule(l)).toMatchObject({ kind: "sent", canUndo: true });
+    await hook(l, "capsule", "undo");
+    expect((await capsule(l))?.kind).toBe("undone");
+    expect(await hook(l, "readSent")).toEqual({ ok: false, code: "no-capture" });
+  });
+
+  it("Hold stops the countdown, Send now sends it, and a read capture cannot be undone", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await hook(l, "capsule", "hold");
+    expect(await capsule(l)).toMatchObject({ kind: "countdown", held: true });
+    await new Promise((r) => setTimeout(r, 3500));
+    expect(await capsule(l)).toMatchObject({ kind: "countdown", held: true });
+    await hook(l, "capsule", "send-now");
+    await until(async () => (await capsule(l))?.kind === "sent");
+    const read = await hook<{ ok: boolean; look?: { scope: string; image: string } }>(l, "readSent");
+    expect(read.ok).toBe(true);
+    expect(read.look?.scope).toBe("capture");
+    expect(read.look?.image.length).toBeGreaterThan(0);
+    await until(async () => (await capsule(l))?.canUndo === false);
+    await hook(l, "capsule", "undo");
+    expect((await capsule(l))?.kind).toBe("sent");
+    expect((await hook<{ items: { chips: string[] }[] }>(l, "state")).items[0]!.chips).toContain("sent");
+  });
+
+  it("Undo inside the countdown sends nothing", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await hook(l, "capsule", "undo");
+    await new Promise((r) => setTimeout(r, 3500));
+    expect((await capsule(l))?.kind).toBe("undone");
+    expect(await hook(l, "readSent")).toEqual({ ok: false, code: "no-capture" });
+  });
+});
+
+describe("screen recording key", () => {
+  const REC = { ...ON, capture: { ...ON.capture, experiments: { recording: true } } };
+
+  it("starts a recording without narration and the next press stops and saves it", async () => {
+    const l = await start({ config: REC });
+    await open(l);
+    await hook(l, "record");
+    await until(async () => (await phase(l)) === "recording");
+    expect(await hook(l, "narrationFlags")).toEqual([false]);
+    await hook(l, "record");
+    await until(async () => (await phase(l)) === "idle" && (await hook<{ items: unknown[] }>(l, "state")).items.length > 0);
+    // the next capture with the capture key narrates again
+    await record(l);
+    expect(await hook(l, "narrationFlags")).toEqual([false, true]);
+  });
+
+  it("does nothing while the experiment is off", async () => {
+    const l = await start({ config: ON });
+    await open(l);
+    await hook(l, "record");
+    expect(await phase(l)).toBe("idle");
+  });
+});
+
+describe("input log", () => {
+  const withPen = async (l: Launched) => {
+    await open(l);
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await hook(l, "capsule", "pen");
+    await hook(l, "capsule", "pen");
+    await hook(l, "stop");
+    await until(async () => (await phase(l)) === "idle" && (await hook<{ items: unknown[] }>(l, "state")).items.length > 0);
+    return (await hook<{ items: { dir: string }[] }>(l, "state")).items[0]!.dir;
+  };
+
+  it("keeps the pen events with their times next to the capture, and nothing else", async () => {
+    const l = await start({ config: ON });
+    const dir = await withPen(l);
+    const events = JSON.parse(readFileSync(path.join(l.userData, "captures", dir, "events.json"), "utf8")) as { atMs: number; kind: string }[];
+    expect(events.map((e) => e.kind)).toEqual(["pen-on", "pen-off"]);
+    expect(events.every((e) => Object.keys(e).sort().join() === "atMs,kind" && e.atMs >= 0)).toBe(true);
+  });
+
+  it("writes no file when the input log is off", async () => {
+    const l = await start({ config: { ...ON, capture: { ...ON.capture, inputLog: "off" } } });
+    const dir = await withPen(l);
+    expect(existsSync(path.join(l.userData, "captures", dir, "events.json"))).toBe(false);
+  });
+});
+
+describe("own windows and real screen capture", () => {
+  it("the app window is absent from a real capture of the screen while recording, and present again after", async (t) => {
+    // macOS lets the app read the screen only after the person allowed it in System Settings: no such answer exists in a test run
+    if (process.platform !== "win32") t.skip();
+    const l = await start({ config: ON });
+    await l.app.evaluate(({ BrowserWindow }) => {
+      const w = BrowserWindow.getAllWindows()[0]!;
+      w.setBounds({ x: 80, y: 80, width: 640, height: 480 });
+      w.setAlwaysOnTop(true, "screen-saver");
+      w.show();
+      w.focus();
+    });
+    await l.page.evaluate(() => {
+      const d = document.createElement("div");
+      d.style.cssText = "position:fixed;inset:0;background:#00ff00;z-index:2147483647";
+      document.body.append(d);
+    });
+    await new Promise((r) => setTimeout(r, 1200));
+    // the share of the middle of the window in the real capture that is the vivid green of the page
+    const greenShare = () =>
+      l.app.evaluate(async ({ BrowserWindow, desktopCapturer, screen }) => {
+        const b = BrowserWindow.getAllWindows()[0]!.getBounds();
+        const d = screen.getDisplayMatching(b);
+        const sf = d.scaleFactor;
+        const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: Math.round(d.size.width * sf), height: Math.round(d.size.height * sf) } });
+        const src = sources.find((s) => s.display_id === String(d.id)) ?? sources[0]!;
+        const img = src.thumbnail;
+        const { width } = img.getSize();
+        const bmp = img.toBitmap();
+        let green = 0;
+        let total = 0;
+        const x0 = Math.round((b.x - d.bounds.x + b.width / 2 - 100) * sf);
+        const y0 = Math.round((b.y - d.bounds.y + b.height / 2 - 100) * sf);
+        for (let y = y0; y < y0 + 200; y += 4)
+          for (let x = x0; x < x0 + 200; x += 4) {
+            const i = (y * width + x) * 4;
+            total++;
+            if (bmp[i + 1]! > 200 && bmp[i]! < 60 && bmp[i + 2]! < 60) green++;
+          }
+        return green / total;
+      });
+    // the real screen takes a moment to show a change: wait for it
+    const seen: string[] = [];
+    const untilShare = (step: string, ok: (n: number) => boolean) =>
+      until(async () => {
+        const n = await greenShare();
+        seen.push(`${step}:${n.toFixed(2)}`);
+        return ok(n);
+      }, 8000).catch((e: unknown) => {
+        throw new Error(`${String(e)} ${seen.slice(-6).join(" ")}`);
+      });
+    await untilShare("visible", (n) => n > 0.9);
+    await hook(l, "hideOwnWindows", true);
+    await untilShare("hidden", (n) => n < 0.05);
+    await hook(l, "hideOwnWindows", false);
+    await untilShare("visible again", (n) => n > 0.9);
   });
 });

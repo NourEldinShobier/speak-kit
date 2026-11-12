@@ -131,6 +131,23 @@
   max-inline-size: 640px;
   line-height: 1.6;
 }
+.cap-trim {
+  display: grid;
+  gap: 12px;
+  max-inline-size: 480px;
+  padding: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 12px;
+}
+.cap-trim__title {
+  margin: 0;
+  font-size: 15px;
+}
+.cap-trim__row {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
 .cap-actions {
   display: flex;
   flex-wrap: wrap;
@@ -155,4 +172,45 @@
   margin: 0 0 8px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.cap-frames figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.cap-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cap-editor__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cap-editor__on {
+  background: #201e25;
+  border-color: #201e25;
+  color: #fff;
+}
+.cap-editor__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.cap-editor__canvas {
+  inline-size: 100%;
+  max-block-size: 60vh;
+  object-fit: contain;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+}
+.cap-editor__canvas:focus-visible {
+  outline: 2px solid #201e25;
+  outline-offset: 2px;
 }

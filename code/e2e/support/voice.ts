@@ -23,7 +23,7 @@ const listen = async (srv: Server) => {
 };
 
 const STATUS: Record<string, number> = { offline: 502, "no-key": 409, "no-credit": 402 };
-const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503 };
+const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503, "no-capture": 404 };
 
 export class FakeVoiceApp {
   readonly token = "e2e-token-" + Math.random().toString(16).slice(2).padEnd(24, "0");

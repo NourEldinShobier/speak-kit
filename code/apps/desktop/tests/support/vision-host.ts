@@ -1,6 +1,6 @@
 import { app, BrowserWindow, nativeImage, screen } from "electron";
 import { loadWin32 } from "../../src/main/dictation/windows/native";
-import type { LookRequest } from "@speakkit/protocol";
+import type { LookRequest, LookScope } from "@speakkit/protocol";
 import { createConsentCard } from "../../src/main/screen-vision/card";
 import { createIndicator } from "../../src/main/screen-vision/indicator";
 import { createLook } from "../../src/main/screen-vision/look";
@@ -16,7 +16,7 @@ function build() {
   const realCard = createConsentCard();
   const state = { real: false, answer: true, asked: 0 };
   const card = {
-    ask: (signal: AbortSignal, scope: LookRequest["scope"]) => {
+    ask: (signal: AbortSignal, scope: LookScope) => {
       state.asked++;
       return state.real ? realCard.ask(signal, scope) : Promise.resolve(state.answer);
     },

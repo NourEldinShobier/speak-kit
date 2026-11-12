@@ -1,9 +1,11 @@
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
 import type { CaptureConfig } from "../../shared/capture/settings";
+import type { InputEvent } from "./events";
+import type { Fence } from "./fence";
 import type { Bundle } from "./bundle";
 import type { Journal } from "./journal";
-import { contactSheetPlan, MAX_SIDE_PX, pickKeyframes, type Frame } from "./keyframes";
+import { contactSheetPlan, MAX_SIDE_PX, pickKeyframes } from "./keyframes";
 import { correctLag, findSegments, wordsOf, type Word } from "./narration";
 import type { CapturePlatform, Resolved } from "./platform/types";
 import type { Media, SessionPorts, SessionState, Target } from "./session";
@@ -31,6 +33,8 @@ export interface Delivery {
 export interface RecordingDeps {
   platform: CapturePlatform;
   host: RecorderHost;
+  /** Which recording the streamed data belongs to. */
+  fence: Fence;
   bundle: Bundle;
   store: CaptureStore;
   journal: Journal;
@@ -48,6 +52,10 @@ export interface RecordingDeps {
   /** The recorder could not open the microphone: the capsule says so. */
   micMissing(): void;
   noticeParams(): NoticeParams;
+  /** The agent context text, or undefined when the experiment is off. */
+  context?(sourceId?: string): Promise<string | undefined>;
+  /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
+  events?(): InputEvent[];
 }
 
 const REASON: Record<Extract<RecorderResult, { ok: false }>["code"], string> = { source: "no frames from the source", encoder: "encoder failed", denied: "permission denied" };
@@ -81,6 +89,7 @@ class RecorderPorts {
     d.hideOwnWindows(true);
     const start = {
       op: "start",
+      gen: d.fence.open(),
       sourceId: resolved.sourceId,
       ...(resolved.crop && { crop: resolved.crop }),
       narration: d.settings().narration,
@@ -88,7 +97,10 @@ class RecorderPorts {
       maxSide: MAX_SIDE_PX,
     } as const;
     const r = await d.host.call(start, 15_000);
-    if (!r.ok) throw new Error(REASON[r.code]);
+    if (!r.ok) {
+      d.fence.close();
+      throw new Error(REASON[r.code]);
+    }
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
   }
@@ -102,7 +114,11 @@ class RecorderPorts {
 
   async stop(id: string): Promise<Media> {
     const d = this.#d;
+    // read first: stopping the recorder can change which window is in front
+    const context = await d.context?.(this.#current?.resolved.sourceId);
     const r = await d.host.call({ op: "stop" }, 60_000);
+    // the recorder sends the last chunk before it answers, so nothing valid arrives after this
+    d.fence.close();
     d.hideOwnWindows(false);
     if (!r.ok) throw new Error(REASON[r.code]);
     const hasVideo = !!(await d.bundle.readFile(id, "video.webm"))?.length;
@@ -113,11 +129,14 @@ class RecorderPorts {
       videoFile: hasVideo ? "video.webm" : undefined,
       pcm: cur?.micOk ? await d.bundle.pcm(id) : undefined,
       ...(r.softwareEncoder && { softwareEncoder: true }),
+      ...(context && { context }),
       ...(cur?.resolved.windowRect && { windowRect: cur.resolved.windowRect }),
     };
   }
 
   async abort(id: string): Promise<void> {
+    // a capture that began meanwhile has a newer generation and keeps it
+    if (!this.#current || this.#current.id === id) this.#d.fence.close();
     await this.#d.host.call({ op: "abort" });
     // A capture that began meanwhile is not this one's to clear.
     if (this.#current && this.#current.id !== id) return;
@@ -173,12 +192,11 @@ export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log">
   return words.length ? correctLag(words, AUDIO_LAG_MS) : null;
 }
 
-const aspectOf = (frames: readonly Frame[]) => (frames.length ? 16 / 9 : 1);
-
-async function makeSheet(d: Pick<RecordingDeps, "bundle" | "host" | "log">, id: string, chosen: readonly Frame[]): Promise<Buffer | undefined> {
-  const jpegs = (await Promise.all(chosen.map((f) => d.bundle.readFile(id, f.file)))).filter((b): b is Buffer => !!b);
+/** Builds sheet.jpg from these picture files of the capture (the edited copies when the person edited them). */
+export async function makeSheet(d: Pick<RecordingDeps, "bundle" | "host" | "log">, id: string, files: readonly string[]): Promise<Buffer | undefined> {
+  const jpegs = (await Promise.all(files.map((f) => d.bundle.readFile(id, f)))).filter((b): b is Buffer => !!b);
   if (!jpegs.length) return undefined;
-  const plan = contactSheetPlan(jpegs.length, aspectOf(chosen));
+  const plan = contactSheetPlan(jpegs.length, 16 / 9);
   const r = await d.host.call({ op: "sheet", jpegs: jpegs.map((b) => new Uint8Array(b)), columns: plan.columns, cellWidth: plan.cellWidth, cellHeight: plan.cellHeight }, 20_000);
   if (!r.ok || !r.jpeg) {
     d.log("capture: the contact sheet could not be made");
@@ -197,11 +215,22 @@ export interface Finished {
   at: number;
 }
 
+/** The input events of the recording, next to its pictures; no file when there were none. */
+async function writeEvents(d: Pick<RecordingDeps, "events" | "bundle">, id: string) {
+  const events = d.events?.() ?? [];
+  if (events.length) await d.bundle.writeFile(id, "events.json", JSON.stringify(events));
+}
+
 export async function saveBundle(d: RecordingDeps, f: Finished): Promise<CaptureRecord> {
   const { id, media, words, title, at } = f;
   const plan = pickKeyframes(media.frames, words ?? []);
   if (words?.length) await d.bundle.words(id, words);
-  const sheet = await makeSheet(d, id, plan.frames);
+  await writeEvents(d, id);
+  const sheet = await makeSheet(
+    d,
+    id,
+    plan.frames.map((f) => f.file),
+  );
   const record: CaptureRecord = {
     id,
     kind: "recording",
@@ -214,6 +243,7 @@ export async function saveBundle(d: RecordingDeps, f: Finished): Promise<Capture
     media: media.videoFile ?? media.frames[0]?.file ?? "",
     frames: plan.frames.map((f) => f.file),
     ...(sheet && { sheet: "sheet.jpg" }),
+    ...(media.context && { context: media.context }),
     chips: ["saved", "copied"],
   };
   await d.store.add(record);

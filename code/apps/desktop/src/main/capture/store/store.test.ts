@@ -126,4 +126,11 @@ describe("capture store with a damaged index", () => {
     await expect(store.list()).rejects.toThrow("EACCES");
     await expect(store.add(rec("a", 1))).rejects.toThrow("EACCES");
   });
+  it("mutate works out the patch from the record as it is when it runs", async () => {
+    const s = createStore(memory(), "i.json");
+    await s.add(rec("a", 1, { edits: {} }));
+    await Promise.all([s.mutate("a", (r) => ({ edits: { ...r.edits, x: "1" } })), s.mutate("a", (r) => ({ edits: { ...r.edits, y: "2" } }))]);
+    expect((await s.get("a"))?.edits).toEqual({ x: "1", y: "2" });
+    expect(await s.mutate("none", () => ({}))).toBeUndefined();
+  });
 });

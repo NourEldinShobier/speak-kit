@@ -45,6 +45,36 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-recording",
+    title: "Screen recording key",
+    description: "A key that starts a recording of the screen with no narration. Press it again to stop. The recording is saved with your captures.",
+    badges: ["New", "Experimental"],
+    guard: "The capture key keeps working as before. Narration, the pen and the capsule are the same.",
+    useState: () => useCaptureExperiment("recording"),
+  });
+
+  registerExperiment({
+    ...GROUP,
+    id: "capture-agent-context",
+    title: "Agent context text",
+    description: "When a recording ends, Speak Kit lists the names of the buttons, menus and fields in the window in front and sends them with the capture to Voice chat.",
+    badges: ["Experimental"],
+    guard: "Names only, never what is typed in a field. Password fields are skipped. Off until you turn it on; on a Mac, Speak Kit asks for Accessibility access first.",
+    useState: () => useCaptureExperiment("agentContext"),
+  });
+
+  registerExperiment({
+    ...GROUP,
+    id: "capture-speech-engines",
+    title: "Your own speech engine for narration",
+    description: "Make the words of a capture with a command you choose instead of the dictation model. Pick it under Capture settings.",
+    badges: ["Experimental"],
+    guard: "The recorded speech is written to a temporary file and handed to that program, nothing else. It is removed afterwards.",
+    useState: () => useCaptureExperiment("speechEngines"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-playground",
     title: "Playground",
     description: "A page in Capture that shows every capsule state with sample data, for people building on Speak Kit.",
