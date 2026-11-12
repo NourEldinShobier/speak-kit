@@ -52,6 +52,9 @@ describe("macLayoutCode", () => {
     expect(macLayoutCode("com.apple.keylayout.Arabic-QWERTY")).toBe("ar");
     expect(macLayoutCode("com.apple.keylayout.Ukrainian-PC")).toBe("uk");
     expect(macLayoutCode("com.apple.keylayout.Brazilian")).toBe("pt");
+    expect(macLayoutCode("com.apple.keylayout.CanadianFrench-PC")).toBe("fr");
+    expect(macLayoutCode("com.apple.keylayout.Canadian")).toBe("en");
+    expect(macLayoutCode("com.apple.keylayout.SwissFrench")).toBe("fr");
   });
   it("reads input methods by their name", () => {
     expect(macLayoutCode("com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese")).toBe("ja");

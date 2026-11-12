@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
@@ -186,37 +187,38 @@ describe("About: Run setup again", () => {
   });
 });
 
-/** A proxy that answers every plain request with the host it was asked for, and a server for the PAC script that points at it. */
+/** A proxy that refuses every tunnel but records the host asked for, and a server for the PAC script that points at it. */
 async function proxyAndPac() {
-  const proxy = http.createServer((req, res) => res.end(`via proxy: ${req.url}`));
+  const connects: string[] = [];
+  const proxy = http.createServer((_req, res) => res.end());
+  proxy.on("connect", (req, socket) => (connects.push(req.url ?? ""), socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n")));
   await new Promise<void>((r) => proxy.listen(0, "127.0.0.1", r));
   const proxyPort = (proxy.address() as AddressInfo).port;
   const pac = http.createServer((_req, res) => res.end(`function FindProxyForURL() { return "PROXY 127.0.0.1:${proxyPort}"; }`));
   await new Promise<void>((r) => pac.listen(0, "127.0.0.1", r));
   const pacPort = (pac.address() as AddressInfo).port;
-  return { proxyPort, pacPort, close: () => (proxy.close(), pac.close()) };
+  return { proxyPort, pacPort, connects, close: () => (proxy.close(), pac.close()) };
 }
 
 describe("Model downloads use the system proxy", () => {
-  const through = (l: Launched) => l.app.evaluate(({ net }) => net.fetch("http://models.proxy-test.invalid/ggml.bin").then((r) => r.text()));
-
-  it("goes through a manual proxy", async () => {
+  /** Starts the real engine, presses Download on the first card and returns the hosts the proxy was asked to connect to. */
+  async function downloadVia(proxyArgs: (p: Awaited<ReturnType<typeof proxyAndPac>>) => string[]) {
     const p = await proxyAndPac();
     try {
-      const l = await start({ config: DONE, args: [`--proxy-server=127.0.0.1:${p.proxyPort}`] });
-      expect(await through(l)).toBe("via proxy: http://models.proxy-test.invalid/ggml.bin");
+      const l = await start({ config: DONE, args: proxyArgs(p), env: { SPEAKKIT_REAL_STT: "1", SPEAKKIT_MODELS_DIR: mkdtempSync(path.join(tmpdir(), "speakkit-models-")) } });
+      await open(l);
+      await l.page
+        .locator("[data-testid^=model-card-]")
+        .first()
+        .getByRole("button", { name: /^Download / })
+        .click();
+      await expect.poll(() => p.connects, { timeout: 20_000 }).toContain("huggingface.co:443");
     } finally {
       p.close();
     }
-  });
+  }
 
-  it("goes through the proxy a PAC script names", async () => {
-    const p = await proxyAndPac();
-    try {
-      const l = await start({ config: DONE, args: [`--proxy-pac-url=http://127.0.0.1:${p.pacPort}/proxy.pac`] });
-      expect(await through(l)).toBe("via proxy: http://models.proxy-test.invalid/ggml.bin");
-    } finally {
-      p.close();
-    }
-  });
+  it("goes through a manual proxy", () => downloadVia((p) => [`--proxy-server=127.0.0.1:${p.proxyPort}`]));
+
+  it("goes through the proxy a PAC script names", () => downloadVia((p) => [`--proxy-pac-url=http://127.0.0.1:${p.pacPort}/proxy.pac`]));
 });

@@ -29,10 +29,10 @@ interface LaunchItem {
 
 const same = (a: string, b: string) => path.win32.normalize(a).toLowerCase() === path.win32.normalize(b).toLowerCase();
 
-/** Entries for this program that point at another copy of it: what an update that moved the install folder leaves behind. */
+/** Entries for this program that point at another copy of it and that the person has not switched off in Windows Startup apps: what an update that moved the install folder leaves behind. */
 export function staleEntries(items: readonly LaunchItem[], running: string): LaunchItem[] {
   const name = path.win32.basename(running).toLowerCase();
-  return items.filter((i) => path.win32.basename(i.path).toLowerCase() === name && !same(i.path, running));
+  return items.filter((i) => path.win32.basename(i.path).toLowerCase() === name && !same(i.path, running) && i.enabled !== false);
 }
 
 /** Windows starts whatever path the entry holds. When an update put the program somewhere else, this points the entry at the copy that is running (Windows only; returns whether it did). */

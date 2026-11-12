@@ -363,4 +363,21 @@ describe("SpeechModels: small settings", () => {
     speech.setAutoSwitch({ enabled: true, rules: [{ id: "a", layout: "de", model: TURBO, language: "de" }] });
     expect(cfg.engines.autoSwitch).toEqual({ enabled: true, rules: [{ id: "a", layout: "de", model: TURBO, language: "de" }] });
   });
+
+  it("asks for the keyboard layout only while a rule uses it", () => {
+    const { speech } = setup();
+    expect(speech.wantsLayout()).toBe(false);
+    speech.setAutoSwitch({ enabled: true, rules: [{ id: "a", app: "chat.exe", model: TURBO }] });
+    expect(speech.wantsLayout()).toBe(false);
+    speech.setAutoSwitch({
+      enabled: true,
+      rules: [
+        { id: "a", app: "chat.exe", model: TURBO },
+        { id: "b", layout: "de", model: TURBO },
+      ],
+    });
+    expect(speech.wantsLayout()).toBe(true);
+    speech.setAutoSwitch({ enabled: false, rules: [{ id: "b", layout: "de", model: TURBO }] });
+    expect(speech.wantsLayout()).toBe(false);
+  });
 });

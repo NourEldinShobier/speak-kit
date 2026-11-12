@@ -356,6 +356,10 @@ describe("History page", () => {
     await hook(l, "say", "Remind the team that the release is on Thursday.");
     await panel.getByRole("combobox", { name: "Model for transcribing again" }).click();
     await l.page.getByRole("option", { name: "Parakeet v3" }).click();
+    const again = panel.getByRole("combobox", { name: "Language for transcribing again" });
+    expect(Math.round((await again.boundingBox())!.height)).toBe(36);
+    await again.click();
+    await l.page.getByRole("option", { name: "German" }).click();
     await panel.getByRole("button", { name: "Transcribe again" }).click();
     await panel.getByText("1 of 2").waitFor();
     await panel.getByRole("button", { name: "Use this text" }).click();

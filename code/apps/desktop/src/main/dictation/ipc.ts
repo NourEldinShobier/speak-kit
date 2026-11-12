@@ -24,6 +24,17 @@ const handlersOf = (d: DictationService): Handlers => ({
   undoCancel: async () => (await d.ready, d.controls.undoCancel()),
   openSoundSettings: () => d.openSoundSettings(),
   openMicrophoneSettings: () => openMicrophoneSettings(),
+  historyStats: () => d.records.stats(),
+  historyRecent: (n) => d.records.recent(n),
+  historyUseVersion: (id, vid) => d.records.useVersion(id, vid),
+  historyRetranscribe: (id, model, language) => d.records.retranscribe(id, model, language),
+  historyCancelRetranscribe: () => d.records.cancelRetranscribe(),
+  historyAudio: (id) => d.records.audio(id),
+  historyDeleteRecording: (id) => d.records.deleteRecording(id),
+  historyExport: () => d.records.export(),
+  historyDismissNotice: () => d.records.dismissNotice(),
+  vocabImport: () => d.records.vocabImport(),
+  vocabExport: (format, text) => d.records.vocabExport(format, text),
 });
 
 /** The Settings pages call these (only the app window may); the HUD page may only press its own buttons. Arguments are checked before any handler runs. */

@@ -128,7 +128,8 @@ export const CLIPBOARD_PRIVACY_MARKS = ["CanIncludeInClipboardHistory", "CanUplo
 
 /** What the paste path needs from the operating system. */
 export interface InputPort {
-  foreground(): ForegroundInfo | null;
+  /** `layout: false` lets a platform skip a costly keyboard layout reading nobody will use. */
+  foreground(want?: { layout: boolean }): ForegroundInfo | null;
   /** True when the focused control is a password field this platform can recognise. */
   passwordFocused(): boolean;
   /** True while the system blocks synthesized keys for secure input (macOS password fields and secure keyboard entry): the text is only copied. Absent where there is no such state. */
