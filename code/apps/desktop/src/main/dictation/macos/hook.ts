@@ -1,4 +1,4 @@
-import type { HookKey, InstalledHook } from "../keyboard-hook";
+import type { HookClick, HookKey, InstalledHook } from "../keyboard-hook";
 import { modifierDown, OWN_EVENT_MARKER, vkOfMacKey } from "./keymap";
 import type { MacNative } from "./native";
 
@@ -36,6 +36,49 @@ export function installTapHook(native: MacNative, onKey: (key: HookKey) => boole
       return false;
     }
   });
+  return {
+    uninstall() {
+      dead = true;
+      tap.remove();
+    },
+  };
+}
+
+// CGEventType of the mouse buttons: left 1 and 2, right 3 and 4, any other button 25 and 26 (button number 2 is the middle one, 3 and 4 the side buttons).
+const BUTTON_TYPES: Readonly<Record<number, { down: boolean; vk?: number }>> = {
+  1: { down: true, vk: 0x01 },
+  2: { down: false, vk: 0x01 },
+  3: { down: true, vk: 0x02 },
+  4: { down: false, vk: 0x02 },
+  25: { down: true },
+  26: { down: false },
+};
+
+/** The code of a mouse event as the chord tracker knows buttons (same numbers as on Windows), or undefined for a button it has no code for. */
+export function mouseButtonOf(type: number, button: number): { vk: number; down: boolean } | undefined {
+  const t = BUTTON_TYPES[type];
+  if (!t) return undefined;
+  const vk = t.vk ?? (button >= 2 && button <= 4 ? 0x02 + button : undefined);
+  return vk === undefined ? undefined : { vk, down: t.down };
+}
+
+/** Mouse button tap with the same contract as the key tap: `onClick` only decides, a throw removes the tap and reports the fault afterwards. */
+export function installMouseTap(native: MacNative, onClick: (click: HookClick) => boolean, onFault: (error: unknown) => void): InstalledHook {
+  let dead = false;
+  const tap = native.createTap((e) => {
+    if (dead) return false;
+    try {
+      const b = mouseButtonOf(e.type, e.keycode);
+      return b ? onClick({ ...b, extra: 0, flags: 0 }) : false;
+    } catch (error) {
+      dead = true;
+      setImmediate(() => {
+        tap.remove();
+        onFault(error);
+      });
+      return false;
+    }
+  }, "mouse");
   return {
     uninstall() {
       dead = true;

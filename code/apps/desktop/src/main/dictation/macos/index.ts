@@ -1,6 +1,6 @@
 import { createKeyboardHook } from "../keyboard-hook";
 import type { DictationPlatform } from "../types";
-import { installTapHook } from "./hook";
+import { installMouseTap, installTapHook } from "./hook";
 import { createMacInput } from "./input";
 import { macKeyOfVk, OWN_EVENT_MARKER } from "./keymap";
 import { loadMacNative, type MacNative } from "./native";
@@ -10,6 +10,7 @@ export function createMacPlatformWith(native: MacNative): DictationPlatform {
   const hotkey = createKeyboardHook(
     {
       install: (onKey, onFault) => installTapHook(native, onKey, onFault),
+      installMouse: (onClick, onFault) => installMouseTap(native, onClick, onFault),
       keyIsDown: (vk) => {
         const code = macKeyOfVk(vk);
         return code !== undefined && native.keyIsDown(code);
