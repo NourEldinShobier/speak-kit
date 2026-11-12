@@ -144,7 +144,7 @@ type Crop = { x: number; y: number; width: number; height: number };
 
 /** Commands to the hidden recorder window. */
 export type RecorderCommand =
-  | { id: number; op: "start"; sourceId: string; crop?: Crop; narration: boolean; frameEveryMs: number; maxSide: number }
+  | { id: number; op: "start"; gen: number; sourceId: string; crop?: Crop; narration: boolean; frameEveryMs: number; maxSide: number }
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
   | { id: number; op: "abort" }
@@ -165,7 +165,7 @@ export type RecorderResult =
   | { ok: false; code: "source" | "encoder" | "denied" };
 
 /** What the recorder streams to main while it runs, so nothing waits in memory and a crash loses at most a second. */
-export type RecorderData = { kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; segment: number; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array };
+export type RecorderData = { gen: number } & ({ kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; segment: number; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array });
 
 const bytes = v.instance(Uint8Array);
 const count = v.pipe(v.number(), v.finite());
@@ -188,8 +188,9 @@ export const RecorderReplySchema = v.tuple([
   ]),
 ]);
 
+const gen = v.pipe(v.number(), v.integer(), v.minValue(0));
 export const RecorderDataSchema = v.variant("kind", [
-  v.object({ kind: v.literal("frame"), atMs: count, jpeg: bytes }),
-  v.object({ kind: v.literal("video"), segment: v.pipe(v.number(), v.integer(), v.minValue(1)), chunk: bytes }),
-  v.object({ kind: v.literal("audio"), chunk: v.instance(Int16Array) }),
+  v.object({ gen, kind: v.literal("frame"), atMs: count, jpeg: bytes }),
+  v.object({ gen, kind: v.literal("video"), segment: v.pipe(v.number(), v.integer(), v.minValue(1)), chunk: bytes }),
+  v.object({ gen, kind: v.literal("audio"), chunk: v.instance(Int16Array) }),
 ]);

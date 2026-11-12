@@ -10,6 +10,7 @@ import { writeStreamed } from "./bundle";
 import { capsuleHandlers } from "./capsule-actions";
 import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
+import { createFence, type Fence } from "./fence";
 import { NoticeBoard } from "./notice-board";
 import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
@@ -53,6 +54,9 @@ export class CaptureRuntime {
   #host: RecorderHost | undefined;
   #picker: PickerFlow | undefined;
   readonly #board: NoticeBoard;
+  readonly #fence: Fence = createFence();
+  /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
+  #epoch = 0;
   #title = "Screen";
   #bounds: Electron.Rectangle | undefined;
   #last: CaptureRecord | undefined;
@@ -109,9 +113,11 @@ export class CaptureRuntime {
   #makeSession(): Session {
     const d = this.#d;
     const host = () => (this.#host ??= this.#openHost());
+    const epoch = this.#epoch;
     return createSession(
       createSessionPorts({
         platform: d.platform,
+        fence: this.#fence,
         get host() {
           return host();
         },
@@ -128,7 +134,7 @@ export class CaptureRuntime {
         narrator: d.narrator,
         settings: () => this.#settings,
         hideOwnWindows: hideOwnWindows,
-        delivery: { copy: (text, sheet) => void writeCapture(text, sheet && nativeImage.createFromBuffer(sheet)), saved: (r) => this.#saved(r) },
+        delivery: { copy: (text, sheet) => epoch === this.#epoch && void writeCapture(text, sheet && nativeImage.createFromBuffer(sheet)), saved: (r) => epoch === this.#epoch && this.#saved(r) },
         now,
         newId,
         log: (line) => d.ctx.log.warn(line),
@@ -148,6 +154,11 @@ export class CaptureRuntime {
     const host = this.#d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
     host.onData((data) => {
       const id = this.#session.state.id;
+      if (!this.#fence.accepts(data.gen)) {
+        this.#fence.refuse();
+        if (this.#fence.refused === 1) this.#d.ctx.log.warn("capture: data of an earlier recording was refused");
+        return;
+      }
       // while the disk is refusing writes nothing more is queued
       if (id && this.#guards.writes.failures === 0) this.#guards.writes.watch(writeStreamed(this.#d.history.bundle, id, data));
     });
@@ -162,6 +173,7 @@ export class CaptureRuntime {
 
   /** The folder changed: a new session on the new files. */
   rebind() {
+    this.#epoch++;
     this.#session.discard();
     this.#session = this.#makeSession();
   }
@@ -260,10 +272,12 @@ export class CaptureRuntime {
     const s = this.#settings;
     if (!s.enabled || !s.experiments.screenshots || this.#session.state.phase !== "idle") return;
     if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
+    const epoch = this.#epoch;
     try {
       const target = await this.#pick(new AbortController().signal);
-      if (!target) return;
+      if (!target || epoch !== this.#epoch) return;
       const shot = await takeScreenshot({ platform: p, bundle: history.bundle, store: history.store, title: (t) => titleOfTarget(t, p.displays()), now }, target);
+      if (epoch !== this.#epoch) return;
       if (!shot.ok) return this.notify(noticeFor("nothing-recorded"));
       await writeCapture("", shot.image);
       this.#last = shot.record;

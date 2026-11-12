@@ -10,7 +10,10 @@ import { Run } from "./recorder-run";
  */
 const bridge = window.speakkitCapture.recorder;
 const FIRST_FRAME_MS = 4000;
-const send = (d: RecorderData) => bridge.data(d);
+/** The generation of the recording in progress; the main process refuses data that carries another one. */
+let gen = 0;
+const send = (d: DistributiveOmit<RecorderData, "gen">) => bridge.data({ ...d, gen } as RecorderData);
+type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
 
 const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
 let run: Run | undefined;
@@ -24,6 +27,7 @@ function failureCode(text: string): "encoder" | "denied" | "source" {
 
 async function start(c: Extract<RecorderCommand, { op: "start" }>): Promise<RecorderResult> {
   run?.stop();
+  gen = c.gen;
   const r = (run = new Run(c.maxSide, send));
   try {
     await withTimeout(r.source(c.sourceId, c.crop), FIRST_FRAME_MS);
