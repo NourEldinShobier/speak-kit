@@ -2,9 +2,9 @@ import * as v from "valibot";
 import { normalizeSite } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { appRules, AppRule, exeName, MAX_APP_RULES } from "./app-rules";
-export { MAX_APP_RULES, PASTE_METHODS, type AppRule, type PasteMethod } from "./app-rules";
+export { MAX_APP_RULES, type AppRule, type PasteMethod } from "./app-rules";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
-export { AUDIO_CAPS_MB, INDICATORS, type Indicator } from "./feedback";
+export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
 
 import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";

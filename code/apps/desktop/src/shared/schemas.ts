@@ -77,7 +77,6 @@ const WhatsNewSchema = v.object({
   version: fb(v.pipe(v.string(), v.maxLength(64)), ""),
   notes: fb(v.array(v.pipe(v.string(), v.maxLength(200))), []),
 });
-export type WhatsNew = v.InferOutput<typeof WhatsNewSchema>;
 
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
