@@ -18,16 +18,28 @@ interface TrayParts {
   transcripts: TranscriptsFeature;
   /** Built after the tray (it reaches the tray only through a callback), so it is read when the menu is built. */
   meetings(): MeetingsFeature | undefined;
+  /** The notice to show in the menu, if any. */
+  notice(): string | undefined;
   requestQuit(): void;
   retryEngine(): Promise<unknown>;
 }
 
-type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "meetings">;
+/** The downloaded speech models for the tray quick switch; nothing when none is downloaded. */
+function speechModelsContext(dictation: DictationService): Pick<TrayContext, "speechModels"> {
+  const v = dictation.speech.view();
+  const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
+  if (models.length === 0) return {};
+  return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
+}
+
+type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "meetings" | "notice">;
 
 /** What the menu is built from: the shared state plus the live counts of the features. */
-function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings }: TrayStateParts): TrayContext {
+function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, notice }: TrayStateParts): TrayContext {
   const m = ctx.config.meetings;
+  const note = notice();
   return {
+    ...(note && { notice: note }),
     health: ctx.state.health,
     serverError: ctx.state.serverError,
     reader: ctx.state.reader,
@@ -45,8 +57,8 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings }: Tr
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, requestQuit, retryEngine }: TrayParts) {
-  const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings });
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, notice, requestQuit, retryEngine }: TrayParts) {
+  const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings, notice });
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
     ctx.sendUi({ type: "nav", page });

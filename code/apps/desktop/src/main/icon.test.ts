@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-const images = vi.hoisted(() => [] as { scaleFactor?: number | undefined; template: boolean }[]);
+const images = vi.hoisted(() => [] as { scaleFactor?: number | undefined; template: boolean; data: string }[]);
 vi.mock("electron", () => ({
   nativeImage: {
-    createFromBuffer: (_b: Buffer, o?: { scaleFactor?: number }) => {
-      const img = { scaleFactor: o?.scaleFactor, template: false, setTemplateImage: (t: boolean) => void (img.template = t) };
+    createFromBuffer: (b: Buffer, o?: { scaleFactor?: number }) => {
+      const img = { scaleFactor: o?.scaleFactor, template: false, data: b.toString("base64"), setTemplateImage: (t: boolean) => void (img.template = t) };
       images.push(img);
       return img;
     },
@@ -44,5 +44,25 @@ describe("trayIcon", () => {
     const trayIcon = await load("darwin");
     expect(trayIcon("normal")).toBe(trayIcon("normal"));
     expect(images).toHaveLength(1);
+  });
+});
+
+describe("trayIcon dark taskbar variant", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("on Windows is a different image from the light one, built once each", async () => {
+    const trayIcon = await load("win32");
+    trayIcon("normal");
+    trayIcon("normal", true);
+    trayIcon("normal", true);
+    trayIcon("normal");
+    expect(images).toHaveLength(2);
+    expect(images[0]!.data).not.toBe(images[1]!.data);
+  });
+
+  it("covers every state", async () => {
+    const trayIcon = await load("win32");
+    for (const s of ["normal", "asleep", "working", "error", "paused", "attention"] as const) trayIcon(s, true);
+    expect(new Set(images.map((i) => i.data)).size).toBe(6);
   });
 });
