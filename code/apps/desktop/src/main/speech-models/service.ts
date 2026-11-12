@@ -156,6 +156,10 @@ export class SpeechModels {
   onGpuFallback(message: string): void {
     this.#device.onGpuFallback(message);
   }
+  /** A recording ended: an automatic switch that was held back during it happens now. */
+  recordingEnded(): void {
+    this.auto.recordingEnded();
+  }
   /** A model is ready or was just used: the idle wait starts over. */
   used(id?: string): void {
     this.idle.touch();
@@ -183,6 +187,7 @@ export class SpeechModels {
       transfers: this.#d.models.transfers.list(),
       preparing: this.#d.models.views().find((v) => v.progress?.kind === "preparing")?.id,
       failure: this.#d.models.failure,
+      queued: this.#d.models.queued,
       diskPerModel: this.#lib.disk.per,
       diskTotal: this.#lib.disk.total,
       folder: this.#lib.folder,
@@ -216,7 +221,8 @@ export class SpeechModels {
     return this.view();
   }
   async cancelDownload(id: string): Promise<SpeechModelsView> {
-    if (this.#d.models.transfers.get(id)) this.#d.models.transfers.cancel(id);
+    if (this.#d.models.queued === id) this.#d.models.unqueue();
+    else if (this.#d.models.transfers.get(id)) this.#d.models.transfers.cancel(id);
     else await this.#d.models.cancel();
     await this.#d.models.refresh();
     return this.view();

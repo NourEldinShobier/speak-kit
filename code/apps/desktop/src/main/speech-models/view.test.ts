@@ -18,6 +18,7 @@ function input(over: Partial<ViewInput> = {}): ViewInput {
     transfers: [],
     preparing: undefined,
     failure: undefined,
+    queued: undefined,
     diskPerModel: { [TURBO]: 574_041_195 },
     diskTotal: 574_041_195,
     folder: "C:/models/stt",

@@ -18,6 +18,8 @@ export interface ViewInput {
   /** A model is being loaded after a download. */
   preparing: string | undefined;
   failure: { id: string; error: DownloadError } | undefined;
+  /** A download that waits for the running one to end. */
+  queued: string | undefined;
   diskPerModel: Readonly<Record<string, number>>;
   diskTotal: number;
   folder: string;
@@ -88,6 +90,7 @@ function stateOf(m: SttModel, i: ViewInput, installed: boolean): Partial<ModelCa
     ...(transfer && { transfer }),
     ...(failed && { failure: { kind: failed.kind, message: failed.message, host: failed.host, keptBytes: failed.keptBytes, advice: failed.advice } }),
     ...(blocked && { blocked }),
+    ...(i.queued === m.id && { queuedBehind: true }),
     ...(m.origin === "custom" && i.missingFiles.has(m.id) && { fileMissing: true }),
   };
 }

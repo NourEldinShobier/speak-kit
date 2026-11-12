@@ -12,6 +12,7 @@ export const DICTATION_METHODS = [
   "historyClear",
   "retry",
   "openSoundSettings",
+  "openMicrophoneSettings",
 ] as const;
 export type DictationMethod = (typeof DICTATION_METHODS)[number];
 export const dictationChannel = (m: string) => `speakkit:dictation:${m}`;

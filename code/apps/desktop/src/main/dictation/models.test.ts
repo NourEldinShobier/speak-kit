@@ -66,12 +66,14 @@ describe("model manager", () => {
     expect(m.error).toBeUndefined();
   });
 
-  it("ignores a second download while one runs", async () => {
+  it("a download asked for while another runs does not start a second transfer", async () => {
     const { stt, m } = setup();
     await stt.setInstalled(PARAKEET, false);
     const first = m.download(PARAKEET);
     await until(() => m.busy);
     await m.download(TURBO);
+    expect(m.queued).toBe(TURBO);
+    m.unqueue();
     stt.finishDownload();
     await first;
     expect(stt.status().state).toBe("ready");
@@ -309,15 +311,50 @@ describe("model manager downloads", () => {
     expect(m.isInstalled(PARAKEET)).toBe(false);
   });
 
-  it("downloading another model while one downloads is ignored", async () => {
+  it("another model asked for during a download waits, then starts when the first one ends", async () => {
     const { stt, starts, finish } = scripted();
-    const { m } = make(stt);
+    const { m, state } = make(stt);
     const first = m.download(PARAKEET);
     await until(() => starts.length === 1);
     await m.download(TURBO);
     expect(starts).toHaveLength(1);
+    expect(m.queued).toBe(TURBO);
     finish();
     await first;
+    await until(() => starts.length === 2);
+    expect(m.queued).toBeUndefined();
+    expect(state.selected).toBe(PARAKEET);
+    finish();
+    await until(() => state.selected === TURBO);
+  });
+
+  it("cancelling the running download drops the one that waited", async () => {
+    const { stt, starts } = scripted();
+    const { m } = make(stt);
+    const first = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    await m.download(TURBO);
+    await m.cancel();
+    await first;
+    expect(m.queued).toBeUndefined();
+    expect(starts).toHaveLength(1);
+  });
+
+  it("a finished download does not load or choose its model while a switch to another model runs", async () => {
+    const { stt, starts, finish } = scripted();
+    const loads: string[] = [];
+    const real = stt.load;
+    stt.load = async (id: string) => (loads.push(id), real(id));
+    const state = { selected: TURBO as DictationModelId, switching: false };
+    const m = new ModelManager({ stt, selected: () => state.selected, select: (id) => (state.selected = id), changed: () => {}, switching: () => state.switching });
+    const done = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    state.switching = true;
+    finish();
+    await done;
+    expect(state.selected).toBe(TURBO);
+    expect(loads).not.toContain(PARAKEET);
+    expect(m.isInstalled(PARAKEET)).toBe(true);
   });
 });
 

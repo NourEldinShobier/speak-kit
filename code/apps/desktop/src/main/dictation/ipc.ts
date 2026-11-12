@@ -1,3 +1,4 @@
+import { openMicrophoneSettings } from "./mic-settings";
 import { ipcMain } from "electron";
 import * as v from "valibot";
 import { DICTATION_METHODS, dictationChannel, HUD_ACTION, type DictationMethod } from "../../shared/dictation/channels";
@@ -19,6 +20,7 @@ const handlersOf = (d: DictationService): Handlers => ({
   historyClear: () => d.history.clear(),
   retry: () => d.retry(),
   openSoundSettings: () => d.openSoundSettings(),
+  openMicrophoneSettings: () => openMicrophoneSettings(),
 });
 
 /** The Settings pages call these (only the app window may); the HUD page may only press its own buttons. Arguments are checked before any handler runs. */

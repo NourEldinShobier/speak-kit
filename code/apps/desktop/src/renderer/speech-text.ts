@@ -15,6 +15,12 @@ export function accuracyText(c: ModelCard): string {
   return `About 1 wrong word in ${c.accuracy.oneIn} (${languageName(c.accuracy.testLanguage)} test)`;
 }
 
+/** Share of words heard right, from "1 wrong word in N": the length of the accuracy bar. */
+export const accuracyPercent = (c: ModelCard): number | undefined => (c.accuracy ? Math.round((1 - 1 / c.accuracy.oneIn) * 100) : undefined);
+
+/** Share of a ten second sentence's time that is saved: the length of the speed bar (2 seconds is 80, 10 or more is 0). */
+export const speedPercent = (c: ModelCard): number | undefined => (c.speedSeconds === undefined ? undefined : Math.round(Math.min(1, Math.max(0, 1 - c.speedSeconds / 10)) * 100));
+
 /** "Under a second" / "About 2 seconds". */
 export function speedText(c: ModelCard): string {
   if (c.speedSeconds === undefined) return "Not measured";

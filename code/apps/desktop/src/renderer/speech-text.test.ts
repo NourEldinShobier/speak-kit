@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
 import {
+  accuracyPercent,
   accuracyText,
   deleteConfirm,
   deviceLine,
@@ -13,6 +14,7 @@ import {
   recommendationText,
   recommendedText,
   sizeText,
+  speedPercent,
   speedText,
   transferText,
   visibleModels,
@@ -175,5 +177,21 @@ describe("recommendation, device and hardware lines", () => {
   it("lists the detected hardware", () => {
     expect(hardwareLine(base({ device: { ...base().device, gpuName: "RTX 3060", driver: "31.0", cores: 16, memoryGb: 32 } }))).toBe("RTX 3060, driver 31.0. 16 processor threads. 32 GB memory");
     expect(hardwareLine(base())).toBe("No graphics card found");
+  });
+});
+
+describe("bars", () => {
+  it("accuracy is the share of words heard right", () => {
+    expect(accuracyPercent(card())).toBe(96);
+    expect(accuracyPercent(card({ accuracy: { oneIn: 18, testLanguage: "en", source: "x" } }))).toBe(94);
+    expect(accuracyPercent(omit(card(), "accuracy"))).toBeUndefined();
+  });
+  it("speed is the share of a ten second sentence that is saved, between 0 and 100", () => {
+    expect(speedPercent(card({ speedSeconds: 2 }))).toBe(80);
+    expect(speedPercent(card({ speedSeconds: 0.5 }))).toBe(95);
+    expect(speedPercent(card({ speedSeconds: 10 }))).toBe(0);
+    expect(speedPercent(card({ speedSeconds: 40 }))).toBe(0);
+    expect(speedPercent(card({ speedSeconds: 0 }))).toBe(100);
+    expect(speedPercent(omit(card(), "speedSeconds"))).toBeUndefined();
   });
 });

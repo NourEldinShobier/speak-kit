@@ -18,7 +18,7 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus, Throttle } from "./service-support";
+import { clock, coreSettings, dictationStatus, isRecording, Throttle } from "./service-support";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
@@ -83,12 +83,10 @@ export class DictationService {
       select: (id) => this.#choose(id),
       push: (soon) => this.#push(soon),
       supported: () => this.supported,
-      recording: () => this.state.status === "recording" || this.state.status === "locked",
+      recording: () => isRecording(this.state),
       configure: () => this.core?.configure(coreSettings(this.#cfg)),
     });
-    this.stt = parts.stt;
-    this.models = parts.models;
-    this.speech = parts.speech;
+    ({ stt: this.stt, models: this.models, speech: this.speech } = parts);
     this.presenter = new HudPresenter({
       hud: () => this.os?.hud,
       hotkey: () => this.#cfg.hotkey,
@@ -161,6 +159,7 @@ export class DictationService {
   }
 
   #onState(s: DictationState): void {
+    if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     this.state = s;
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
     this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");

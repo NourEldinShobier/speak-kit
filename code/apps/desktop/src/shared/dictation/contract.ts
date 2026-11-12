@@ -81,6 +81,8 @@ export interface DictationBridge {
   retry(): Promise<void>;
   /** Opens the operating system's sound input settings. */
   openSoundSettings(): Promise<void>;
+  /** Opens the operating system's microphone permission page. */
+  openMicrophoneSettings(): Promise<void>;
   onStatus(cb: (s: DictationStatus) => void): () => void;
   /** HUD page and microphone window. */
   onHud(cb: (v: HudView) => void): () => void;
@@ -111,6 +113,7 @@ export const DICTATION_ARGS = {
   historyClear: v.tuple([]),
   retry: v.tuple([]),
   openSoundSettings: v.tuple([]),
+  openMicrophoneSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);
