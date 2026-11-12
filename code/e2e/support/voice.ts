@@ -22,6 +22,13 @@ const listen = async (srv: Server) => {
   return (srv.address() as { port: number }).port;
 };
 
+/** Closes the server and drops its connections: close() alone waits for every request still open (a proxied stream the extension has not finished reading), and a test would then hang in its teardown. */
+const stopServer = (srv: Server) =>
+  new Promise<void>((r) => {
+    srv.close(() => r());
+    srv.closeAllConnections();
+  });
+
 const STATUS: Record<string, number> = { offline: 502, "no-key": 409, "no-credit": 402 };
 const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503, "no-capture": 404 };
 
@@ -55,7 +62,7 @@ export class FakeVoiceApp {
     this.port = await listen(this.srv);
     return this;
   }
-  stop = () => new Promise<void>((r) => this.srv.close(() => r()));
+  stop = () => stopServer(this.srv);
 
   private async route(req: IncomingMessage, res: ServerResponse) {
     const path = (req.url ?? "").split("?")[0];
@@ -94,9 +101,12 @@ export class FakeVoiceApp {
     const body = req.method === "GET" || req.method === "HEAD" ? undefined : await read(req);
     const headers: Record<string, string> = { Authorization: `Bearer ${this.backend.token}` };
     for (const h of ["content-type", "x-speakkit-replace"]) if (req.headers[h]) headers[h] = String(req.headers[h]);
-    const r = await fetch(`http://127.0.0.1:${this.backend.port}${req.url}`, { method: req.method ?? "GET", headers, ...(body === undefined ? {} : { body }) });
+    const upstream = new AbortController();
+    res.on("close", () => upstream.abort());
+    const r = await fetch(`http://127.0.0.1:${this.backend.port}${req.url}`, { method: req.method ?? "GET", headers, signal: upstream.signal, ...(body === undefined ? {} : { body }) }).catch(() => undefined);
+    if (!r) return void res.destroy(); // the client left first
     res.writeHead(r.status, Object.fromEntries(r.headers));
-    if (r.body) Readable.fromWeb(r.body as never).pipe(res);
+    if (r.body) Readable.fromWeb(r.body as never).on("error", () => res.destroy()).pipe(res);
     else res.end();
   }
 }
@@ -187,7 +197,7 @@ export class FakeOpenAi {
   get base() {
     return `http://127.0.0.1:${this.port}`;
   }
-  stop = () => new Promise<void>((r) => this.srv.close(() => r()));
+  stop = () => stopServer(this.srv);
 
   /** The data channel messages the extension sent. */
   received = () => this.peer.evaluate(() => (window as unknown as { peer: { received: PeerEvent[] } }).peer.received);
