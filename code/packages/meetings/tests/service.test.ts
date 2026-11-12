@@ -187,7 +187,7 @@ describe("files", () => {
     if (!r.ok) throw new Error();
     expect(r.paths.map((p) => p.replaceAll("\\", "/"))).toEqual(["/out/Release plan.txt", "/out/Release plan notes.txt"]);
     expect(t.fs.text("/out/Release plan.txt")).toBe("You 0:00: hello there\nThem 0:00: good morning");
-    expect(t.fs.text("/out/Release plan notes.txt")).toBe("Release plan\n\nThey planned it.\n\nPlan\nhello there good morning\n");
+    expect(t.fs.text("/out/Release plan notes.txt")).toBe("Release plan\n\nThey planned it.\n\nPlan\nhello there good morning\n\nSummary written by GPT.\n");
     t.fs.failOn = /\/out\//;
     expect(await m.writeFiles(id)).toMatchObject({ ok: false });
     expect(await m.writeFiles("nope")).toMatchObject({ ok: false });

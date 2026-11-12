@@ -275,6 +275,23 @@ describe("notes", () => {
   });
 });
 
+describe("the notes file after the vocabulary was applied", () => {
+  it("still names the model that wrote the summary, never Vocabulary", async () => {
+    const good = JSON.stringify({ title: "Release plan", summary: "They planned it. They shipped it.", chapters: [{ start: 0, title: "Plan" }] });
+    const vocab = [{ from: "wazoo", to: "Wazuh" }];
+    const t = setup({ texts: ["a b c", "d e f"], notes: () => ({ writer: "GPT", complete: async () => ({ ok: true, text: good.replace("Plan", "Wazoo") }) }), vocabulary: () => vocab });
+    const m = await t.open();
+    const { id } = await record(m, t.c);
+    await settled(m, id);
+    expect((await m.get(id))!.versions.at(-1)!.kind).toBe("vocabulary");
+    const r = await m.writeFiles(id);
+    if (!r.ok) throw new Error();
+    const text = t.fs.text(r.paths[1]!)!;
+    expect(text).toContain("Wazuh");
+    expect(text.endsWith("Summary written by GPT.\n")).toBe(true);
+  });
+});
+
 describe("list, search, copy and files", () => {
   async function two() {
     const t = setup({ texts: ["kubernetes migration plan", "sounds good to me", "pricing feedback today", "thanks for the call"] });
