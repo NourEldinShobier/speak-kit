@@ -1,4 +1,5 @@
 import type { HelloReply, PlayerState } from "@speakkit/protocol";
+import { session } from "./session";
 
 /**
  * What the worker keeps per browser tab. One key per tab in chrome.storage.session, so a suspended worker loses nothing and
@@ -20,27 +21,18 @@ export interface TabInfo {
 export const MAX_FRAMES = 16;
 const FRESH: TabInfo = { dismissed: false, alive: false, frames: [], epoch: 0 };
 const key = (tabId: number) => `speakkit.tab.${tabId}`;
-
-const area = () => chrome.storage.session;
 /** Writes to one tab queue behind each other, so two patches made in a row both land. */
 const writes = new Map<number, Promise<unknown>>();
 
 export async function getTab(tabId: number): Promise<TabInfo> {
-  try {
-    return { ...FRESH, ...((await area().get(key(tabId)))[key(tabId)] as Partial<TabInfo> | undefined) };
-  } catch {
-    return { ...FRESH }; // session storage unavailable: behave as a tab nobody dismissed
-  }
+  return { ...FRESH, ...(await session.get<Partial<TabInfo>>(key(tabId))) }; // storage unavailable: behave as a tab nobody dismissed
 }
 
 export function patchTab(tabId: number, patch: Partial<TabInfo> | ((t: TabInfo) => Partial<TabInfo>)): Promise<TabInfo> {
   const run = async () => {
-    const next = { ...(await getTab(tabId)), ...(typeof patch === "function" ? patch(await getTab(tabId)) : patch) };
-    try {
-      await area().set({ [key(tabId)]: next });
-    } catch {
-      /* losing the mirror only forgets the flags after a worker restart */
-    }
+    const tab = await getTab(tabId);
+    const next = { ...tab, ...(typeof patch === "function" ? patch(tab) : patch) };
+    await session.set(key(tabId), next);
     return next;
   };
   const p = (writes.get(tabId) ?? Promise.resolve()).then(run, run);
@@ -53,11 +45,7 @@ export const resetTab = (tabId: number) => patchTab(tabId, (t) => ({ ...FRESH, e
 
 export async function dropTab(tabId: number): Promise<void> {
   writes.delete(tabId);
-  try {
-    await area().remove(key(tabId));
-  } catch {
-    /* nothing was stored */
-  }
+  await session.remove(key(tabId));
 }
 
 /** Two URLs are the same page when they differ at most in the fragment. */

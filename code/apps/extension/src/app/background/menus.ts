@@ -9,17 +9,17 @@ const MENU = {
 } as const;
 
 let built: boolean | undefined;
-/** The menu entries currently registered (chrome.contextMenus has no getAll; tests read this log). */
+/** The menu entries currently registered (chrome.contextMenus has no getAll; test builds keep this log for the e2e hooks). */
 export const menuLog: chrome.contextMenus.CreateProperties[] = [];
 const addMenu = (p: chrome.contextMenus.CreateProperties) => {
-  menuLog.push(p);
+  if (__TEST__) menuLog.push(p);
   chrome.contextMenus.create(p);
 };
 
 export async function rebuildMenus(): Promise<void> {
   built = (await loadSettings()).show.contextMenu;
   await chrome.contextMenus.removeAll();
-  menuLog.length = 0;
+  if (__TEST__) menuLog.length = 0;
   if (!built) return;
   addMenu({ id: MENU.parent, title: "Speak Kit", contexts: ["all"] });
   addMenu({ id: MENU.selection, parentId: MENU.parent, title: "Read selection", contexts: ["selection"] });

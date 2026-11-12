@@ -1,3 +1,5 @@
+import { postToApp } from "./lifecycle";
+
 /**
  * Tells the app which website is in front so dictation can use that site's mode. Only the host name is sent, to the app on this computer.
  * The app drops a report that is not renewed, so the same host is sent again after RENEW_MS.
@@ -29,18 +31,4 @@ export function createPageReporter(deps: PageReporterDeps) {
 }
 
 /** Posts one report to the app with the saved token; false when there is no token, the app is not running or it refused. */
-export async function postPage(d: { fetch: typeof fetch; port: () => Promise<number>; token: () => Promise<string> }, host: string): Promise<boolean> {
-  try {
-    const token = await d.token();
-    if (!token) return false;
-    const res = await d.fetch(`http://127.0.0.1:${await d.port()}/v1/page-context`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ host }),
-      signal: AbortSignal.timeout(2500),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+export const postPage = (d: Parameters<typeof postToApp>[0], host: string) => postToApp(d, "/v1/page-context", { host });

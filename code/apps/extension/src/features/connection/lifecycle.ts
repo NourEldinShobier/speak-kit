@@ -5,6 +5,23 @@
  */
 const WARM_DEBOUNCE_MS = 5000;
 
+/** Posts to the app on this computer with the saved token; false when there is no token, the app is not running or it refused. */
+export async function postToApp(d: { fetch: typeof fetch; port: () => Promise<number>; token: () => Promise<string> }, path: string, body?: unknown): Promise<boolean> {
+  try {
+    const token = await d.token();
+    if (!token) return false;
+    const res = await d.fetch(`http://127.0.0.1:${await d.port()}${path}`, {
+      method: "POST",
+      headers: body === undefined ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(2500),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 interface EngineClientDeps {
   fetch: typeof fetch;
   port: () => Promise<number>;
@@ -16,21 +33,7 @@ export function createEngineClient(deps: EngineClientDeps) {
   const now = deps.now ?? Date.now;
   let lastWarm = -Infinity;
 
-  async function post(path: string, body?: unknown): Promise<boolean> {
-    try {
-      const token = await deps.token();
-      if (!token) return false;
-      const res = await deps.fetch(`http://127.0.0.1:${await deps.port()}${path}`, {
-        method: "POST",
-        headers: body === undefined ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(2500),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }
+  const post = (path: string, body?: unknown) => postToApp(deps, path, body);
 
   return {
     /** POST /v1/engine/warm. Skipped when called again within WARM_DEBOUNCE_MS (hover and selection events are noisy). */

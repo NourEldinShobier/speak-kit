@@ -1,5 +1,6 @@
+import { ignore, sleep } from "../../shared/ignore";
 import type { ToOffscreen } from "../../shared/internal";
-import { getQueue, getState } from "./state";
+import { getQueue, getState, isSettled } from "./state";
 import { voiceTabs } from "./voice-state";
 
 export const OFFSCREEN_URL = "offscreen.html";
@@ -27,9 +28,14 @@ export async function sendOffscreen(msg: ToOffscreen): Promise<unknown> {
       return await chrome.runtime.sendMessage(msg);
     } catch (e) {
       if (i >= 40) throw e;
-      await new Promise((r) => setTimeout(r, 50));
+      await sleep(50);
     }
   }
+}
+
+/** Closes the document if there is one; a failure means someone else closed it first. */
+export async function closeOffscreen(): Promise<void> {
+  if (await hasOffscreen()) await chrome.offscreen.closeDocument().catch(ignore);
 }
 
 export async function sendOffscreenIfOpen(msg: ToOffscreen): Promise<void> {
@@ -40,7 +46,7 @@ export async function sendOffscreenIfOpen(msg: ToOffscreen): Promise<void> {
 export async function closeOffscreenIfIdle(): Promise<void> {
   if (voiceTabs.size) return; // a conversation is open in it
   const s = await getState();
-  if (s.status !== "idle" && s.status !== "finished" && s.status !== "error") return;
+  if (!isSettled(s)) return;
   if ((await getQueue()).length) return;
-  if (await hasOffscreen()) await chrome.offscreen.closeDocument().catch(() => {}); // already closed by someone else
+  await closeOffscreen();
 }

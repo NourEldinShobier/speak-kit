@@ -1,20 +1,15 @@
 import type { Health } from "@speakkit/protocol";
 import { createEngineClient, createHealthClient, launchApp } from "../../features/connection";
 import { getToken, loadSettings } from "../../features/settings";
+import { sleep } from "../../shared/ignore";
 import { LINKS } from "../../shared/links";
 
-export const health = createHealthClient({
-  fetch: (i, init) => fetch(i, init),
-  now: Date.now,
-  port: async () => (await loadSettings()).port,
-  token: getToken,
-});
+/** What the app clients need to reach the app: the fetch, the saved port and the saved token. */
+export const net = { fetch: (i: RequestInfo | URL, init?: RequestInit) => fetch(i, init), port: async () => (await loadSettings()).port, token: getToken };
 
-export const engine = createEngineClient({
-  fetch: (i, init) => fetch(i, init),
-  port: async () => (await loadSettings()).port,
-  token: getToken,
-});
+export const health = createHealthClient({ ...net, now: Date.now });
+
+export const engine = createEngineClient(net);
 
 // The UI wants HealthResult ({ ok, health, ms } | { ok: false, error }); /v1/health needs no token, so the token is checked separately.
 type HealthResult = { ok: true; health: Health; ms: number } | { ok: false; error: "app-not-running" | "token-rejected" | "version-mismatch"; detail?: string };
@@ -48,7 +43,7 @@ export async function startApp() {
     openTab: async () => (await chrome.tabs.create({ url: LINKS.launch, active: false })).id,
     closeTab: (id) => chrome.tabs.remove(id),
     isRunning: async () => (await getHealthResult(true)).ok,
-    sleep: (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+    sleep,
   });
   clearHealth();
   return r;

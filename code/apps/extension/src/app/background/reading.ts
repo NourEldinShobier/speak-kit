@@ -82,6 +82,9 @@ function outcome(r: ExtractReply | undefined): ExtractReply {
   return "error" in r || r.doc.sentences.length ? r : { error: "page-unreadable" };
 }
 
+/** The frame has no text to read. */
+const empty = (r: FrameReply | undefined) => "error" in outcome(r?.reply);
+
 export async function startRead(tabId: number, mode: ReadMode, opts: { queue?: boolean; fallbackToPage?: boolean } = {}): Promise<boolean> {
   const tab = await chrome.tabs.get(tabId);
   if (siteRule(await loadSettings(), tab.url) === "never-read") return false;
@@ -99,7 +102,6 @@ export async function startRead(tabId: number, mode: ReadMode, opts: { queue?: b
     return pickFrame([{ frameId: 0, reply: top }, ...frames]);
   };
   let picked = await extract(mode);
-  const empty = (r: FrameReply | undefined) => !r?.reply || "error" in r.reply || !r.reply.doc.sentences.length;
   if (opts.fallbackToPage && mode === "selection" && empty(picked)) picked = await extract("page");
   const reply = outcome(picked?.reply);
   if ("error" in reply) {

@@ -13,7 +13,7 @@
     "sendSync": 0,
     "shortInterval": 0,
     "oxlintDisable": 0,
-    "swallowingCatch": 8,
+    "swallowingCatch": 3,
     "physicalCss": 20,
     "skipped": 0,
     "focused": 0,
