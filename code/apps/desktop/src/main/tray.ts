@@ -47,12 +47,20 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   let shown = "";
   let summary = "";
 
+  /** The system refused to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
+  let failed = false;
   const build = () => {
-    const t = new Tray(trayIcon("asleep"));
-    t.on("click", () => run.open());
-    // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
-    if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
-    tray = t;
+    try {
+      const t = new Tray(trayIcon("asleep"));
+      t.on("click", () => run.open());
+      // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
+      if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
+      tray = t;
+      failed = false;
+    } catch {
+      tray = null;
+      failed = true;
+    }
     shown = "";
   };
 
@@ -76,13 +84,16 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   refresh();
   return {
     refresh,
+    /** The icon was wanted and could not be created: nothing can reopen a hidden window. */
+    failed: () => failed,
     /** The icon can be hidden in Settings; showing it again rebuilds it from the current state. */
     setVisible: (on: boolean) => {
       if (on && !tray) {
         build();
         refresh();
-      } else if (!on && tray) {
-        tray.destroy();
+      } else if (!on) {
+        failed = false;
+        tray?.destroy();
         tray = null;
       }
     },

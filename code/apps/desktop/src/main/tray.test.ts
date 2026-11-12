@@ -5,7 +5,7 @@ import type { TrayContext } from "../shared/tray";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 
 const mocks = vi.hoisted(() => {
-  const state = { trays: [] as FakeTray[] };
+  const state = { trays: [] as FakeTray[], fail: false };
   class FakeTray {
     image: unknown;
     tip = "";
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
     destroyed = false;
     popped: { items: Record<string, unknown>[] }[] = [];
     constructor(image: unknown) {
+      if (state.fail) throw new Error("no notification area");
       this.image = image;
       state.trays.push(this);
     }
@@ -79,6 +80,7 @@ const labels = (t: ReturnType<typeof setup>) => t.fake.menu!.items.filter((i) =>
 
 beforeEach(() => {
   mocks.state.trays.length = 0;
+  mocks.state.fail = false;
 });
 
 describe("tray wiring", () => {
@@ -162,5 +164,32 @@ describe("tray left click", () => {
     const t = setup();
     t.tray.dispose();
     expect(t.fake.destroyed).toBe(true);
+  });
+});
+
+describe("tray that cannot be created", () => {
+  it("does not throw, reports the failure and keeps refreshing without an icon", () => {
+    mocks.state.fail = true;
+    const tray = createTray(() => base(), {} as never);
+    expect(tray.failed()).toBe(true);
+    expect(() => tray.refresh()).not.toThrow();
+    expect(tray.summary()).toBe("");
+    expect(mocks.state.trays).toHaveLength(0);
+  });
+
+  it("tries again when the icon is switched on, and stops reporting once it exists", () => {
+    mocks.state.fail = true;
+    const tray = createTray(() => base(), {} as never);
+    mocks.state.fail = false;
+    tray.setVisible(true);
+    expect(tray.failed()).toBe(false);
+    expect(mocks.state.trays).toHaveLength(1);
+  });
+
+  it("is not a failure when the person hid the icon", () => {
+    mocks.state.fail = true;
+    const tray = createTray(() => base(), {} as never);
+    tray.setVisible(false);
+    expect(tray.failed()).toBe(false);
   });
 });
