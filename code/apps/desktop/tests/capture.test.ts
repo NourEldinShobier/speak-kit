@@ -19,9 +19,12 @@ afterEach(async () => {
 const ON = { setupDone: true, setupSkipped: false, preferredPort: 0, capture: { enabled: true, consented: true, target: "screen" } };
 type Hook = { [k: string]: (...a: unknown[]) => Promise<unknown> };
 const hook = <T>(l: Launched, fn: string, ...args: unknown[]) =>
-  l.app.evaluate((_, [f, a]) => ((globalThis as unknown as { __speakkit: { capture: Hook } }).__speakkit.capture[f as string] as (...x: unknown[]) => unknown)(...(a as unknown[])) as T, [fn, args] as const);
+  l.app.evaluate((_, [f, a]) => ((globalThis as unknown as { __speakkit: { capture: Hook } }).__speakkit.capture[f as string] as (...x: unknown[]) => unknown)(...(a as unknown[])) as T, [
+    fn,
+    args,
+  ] as const);
 const until = async (f: () => Promise<boolean>, ms = 15_000) => {
-  for (const end = Date.now() + ms; Date.now() < end; ) {
+  for (const end = Date.now() + ms; Date.now() < end;) {
     if (await f()) return;
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -48,7 +51,6 @@ describe("capture page", () => {
     await l.page.getByText("No captures yet").waitFor();
     expect(await l.page.getByRole("tab").allTextContents()).toEqual(["Captures", "Settings", "Privacy"]);
     expect(await l.page.getByRole("button", { name: /Take a capture/ }).isEnabled()).toBe(true);
-    await l.page.screenshot({ path: path.join(l.userData, "capture-empty.png") });
   });
 
   it("records, lists the capture, opens it, searches, and deletes it after a confirm", async () => {
@@ -58,16 +60,15 @@ describe("capture page", () => {
     const row = l.page.getByTestId("capture-row");
     await row.first().waitFor();
     expect(await row.count()).toBe(1);
-    expect(await l.page.getByText("Saved").first().isVisible() || (await l.page.getByText("Copied").first().isVisible())).toBe(true);
+    expect((await l.page.getByText("Saved").first().isVisible()) || (await l.page.getByText("Copied").first().isVisible())).toBe(true);
     // no microphone words in a scripted capture: the page says so
     await l.page.getByText("No words were saved").first().waitFor();
-    await l.page.screenshot({ path: path.join(l.userData, "capture-list.png") });
 
     await l.page.getByRole("textbox", { name: "Search captures" }).fill("zzzz");
     await l.page.getByText("No captures match").waitFor();
     await l.page.getByRole("textbox", { name: "Search captures" }).fill("");
 
-    await l.page.getByRole("button", { name: /^Open / }).click();
+    await l.page.getByRole("button", { name: /^Open Display/ }).click();
     await l.page.getByTestId("capture-detail").waitFor();
     await l.page.getByText("No narration was saved for this capture.").waitFor();
     await l.page.getByRole("button", { name: "Delete" }).click();
@@ -114,7 +115,6 @@ describe("capture page", () => {
     await l.page.getByRole("combobox", { name: "Keep captures" }).click();
     await l.page.getByRole("option", { name: "7 days" }).click();
     await until(async () => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture?.retentionDays === 7);
-    await l.page.screenshot({ path: path.join(l.userData, "capture-settings.png") });
   });
 
   it("privacy tab says what is hidden and recorded", async () => {
@@ -128,7 +128,7 @@ describe("capture page", () => {
 
   it("first capture asks for consent", async () => {
     const l = await start({ config: { ...ON, capture: { ...ON.capture, consented: false } } });
-    await open(l);
+    await l.page.getByRole("link", { name: "Capture" }).click();
     await l.page.getByRole("dialog", { name: "Record your screen?" }).waitFor();
     await l.page.getByRole("button", { name: "Allow capture" }).click();
     await l.page.getByRole("dialog").waitFor({ state: "detached" });
@@ -141,7 +141,10 @@ describe("recovery after a crash", () => {
     const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
     dirs.push(userData);
     const root = path.join(userData, "captures");
-    for (const [id, stage, media] of [["cdone", "media-saved", "video.webm"], ["cempty", "recording", undefined]] as const) {
+    for (const [id, stage, media] of [
+      ["cdone", "media-saved", "video.webm"],
+      ["cempty", "recording", undefined],
+    ] as const) {
       mkdirSync(path.join(root, id, "frames"), { recursive: true });
       writeFileSync(path.join(root, id, "journal.json"), JSON.stringify({ id, stage, startedAt: Date.now() - 5000, ...(media && { media }) }));
       if (media) writeFileSync(path.join(root, id, media), "x");
@@ -168,6 +171,5 @@ describe("experiments", () => {
     await until(async () => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture?.experiments?.screenshots === true);
     await card.getByRole("button", { name: /Turn off/ }).click();
     await card.getByRole("button", { name: /Turn on/ }).waitFor();
-    await l.page.screenshot({ path: path.join(l.userData, "capture-experiments.png") });
   });
 });

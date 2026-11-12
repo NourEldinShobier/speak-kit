@@ -8,7 +8,7 @@ import type { CapturePlatform, Resolved, ScreenPermission, Still } from "./types
 
 const SCREEN_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
 
-const geometry = (d: Display): DisplayGeometry => ({ id: String(d.id), name: d.label || `Display ${d.id}`, bounds: d.bounds, scaleFactor: d.scaleFactor });
+const geometry = (d: Display, i: number): DisplayGeometry => ({ id: String(d.id), name: d.label || `Display ${i + 1}`, bounds: d.bounds, scaleFactor: d.scaleFactor });
 const displays = () => screen.getAllDisplays().map(geometry);
 const ownIds = () => BrowserWindow.getAllWindows().map((b) => ({ id: b.getMediaSourceId() }));
 
