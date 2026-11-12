@@ -8,7 +8,10 @@ vi.hoisted(() => {
 
 const current = vi.hoisted(() => ({ status: null as unknown }));
 vi.mock("./useDictation", () => ({ useDictation: () => current.status }));
+const perms = vi.hoisted(() => ({ status: null as unknown }));
+vi.mock("./usePermissions", () => ({ usePermissions: () => perms.status }));
 
+import { guideFor } from "../../../shared/permissions/guide";
 import { DictationPage } from "./DictationPage";
 import { FirstRunCard } from "./FirstRunCard";
 import { DictationHistoryPage, HistoryRow } from "./HistoryPage";
@@ -49,12 +52,21 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
-beforeEach(() => void (current.status = null));
+beforeEach(() => void ((current.status = null), (perms.status = null)));
 
 describe("Settings > Dictation", () => {
   it("says when the hotkey could not start, and stays quiet otherwise", () => {
     expect(text(page(status({ hotkeyFailed: true })))).toContain("The hotkey could not start Dictation does not hear the hotkey");
     expect(text(page(status()))).not.toContain("The hotkey could not start");
+  });
+
+  it("shows the permission guide and points the failed hotkey at the permission that is missing", () => {
+    const states = { accessibility: "denied", "input-monitoring": "granted", microphone: "granted", "screen-recording": "not-needed" } as const;
+    perms.status = { platform: "darwin", states, guides: { dictation: guideFor(states, "dictation"), "screen-reading": guideFor(states, "screen-reading") } };
+    const out = text(page(status({ hotkeyFailed: true })));
+    expect(out).toContain("Allow dictation");
+    expect(out).toContain("Accessibility");
+    expect(out).toContain("The hotkey could not start"); // Windows test run: no Mac platform on the document
   });
 
   it("shows the title before the status has arrived", () => {

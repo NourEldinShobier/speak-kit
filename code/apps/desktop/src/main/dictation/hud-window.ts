@@ -1,6 +1,7 @@
 import { screen } from "electron";
 import { HUD_EVENT } from "../../shared/dictation/channels";
 import { createSecureWindow } from "../secure-window";
+import { hudChrome, raiseAboveEverything } from "./hud-chrome";
 import type { HudState, HudWindow } from "./hud";
 
 export interface HudWindowOptions {
@@ -46,7 +47,7 @@ export function stateScript(state: HudState): string {
 
 /**
  * A small always-on-top window that ignores the mouse and cannot take focus: `focusable: false` keeps it from being activated, `showInactive` keeps
- * the foreground window foreground, and the "screen-saver" level keeps it above full-screen windowed apps.
+ * the foreground window foreground, and the "screen-saver" level keeps it above full-screen windowed apps (on macOS also a panel on every Space).
  */
 export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, bridge = false }: HudWindowOptions = {}): HudWindow {
   let settle!: { resolve(): void; reject(e: unknown): void };
@@ -63,13 +64,14 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
       alwaysOnTop: true,
       hasShadow: false,
       resizable: false,
+      ...hudChrome(process.platform).window,
       backgroundColor: "#00000000",
       // The HUD page needs no bridge to the app.
       webPreferences: { backgroundThrottling: false, ...(bridge ? {} : { preload: "" }) },
     },
     () => settle.resolve(),
   );
-  w.setAlwaysOnTop(true, "screen-saver");
+  raiseAboveEverything(w, hudChrome(process.platform));
   w.setIgnoreMouseEvents(true);
   w.loadURL(page).catch(settle.reject);
 

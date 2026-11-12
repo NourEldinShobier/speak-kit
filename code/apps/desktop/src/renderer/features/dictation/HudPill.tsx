@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Spinner, type IconName } from "@speakkit/ui";
 import type { HudView } from "../../../shared/dictation/contract";
-import { dictation } from "./api";
+import { dictation, platformName } from "./api";
 import "./hud.css";
 
 // Heights of the level bars at full volume; each bar follows the microphone level but never collapses entirely.
@@ -43,7 +43,16 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
   );
 }
 
-function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
+function Copied({ reason }: { reason: "clipboard" | "elevated" | "secure-input" }) {
+  const paste = <Hint>Press {platformName() === "darwin" ? "Cmd" : "Ctrl"} V to paste</Hint>;
+  if (reason === "secure-input")
+    return (
+      <>
+        <Lead name="lock" tone="error" />
+        <b>Copied, a password field or Secure Keyboard Entry is on</b>
+        {paste}
+      </>
+    );
   if (reason === "elevated")
     return (
       <>
@@ -55,7 +64,7 @@ function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
     <>
       <Lead name="copy" />
       <b>Copied</b>
-      <Hint>Press Ctrl V to paste</Hint>
+      {paste}
     </>
   );
 }

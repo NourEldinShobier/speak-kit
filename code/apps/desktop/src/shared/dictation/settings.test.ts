@@ -3,7 +3,15 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "auto", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
+const DEFAULTS = {
+  enabled: false,
+  hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
+  mode: "hold",
+  language: "auto",
+  model: "large-v3-turbo-q5_0",
+  retention: "7d",
+  replacements: [],
+};
 
 describe("dictation config", () => {
   it("is off, on Right Ctrl, hold to talk, for 7 days, until the person turns it on", () => {

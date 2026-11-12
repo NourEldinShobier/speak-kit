@@ -35,6 +35,9 @@ interface StatusParts {
 }
 
 /** What the Settings page and the tray are told about dictation. */
+/** Try the hotkey again only when it failed, dictation is on, and the permissions it needs were just allowed. */
+export const shouldRetryHotkey = (s: { failed: boolean; enabled: boolean; permitted: boolean }): boolean => s.failed && s.enabled && s.permitted;
+
 export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
@@ -49,3 +52,12 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   ...(models.error && { modelError: models.error }),
   historyCount,
 });
+
+const MAC_MIC_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
+
+/** The settings page to open for a sound problem: the microphone's privacy switch when the system blocked it, the sound input page otherwise. Null where there is none. */
+export function soundSettingsUrl(platform: string, micBlocked: boolean): string | null {
+  if (platform === "win32") return micBlocked ? "ms-settings:privacy-microphone" : "ms-settings:sound";
+  if (platform === "darwin") return micBlocked ? MAC_MIC_PANE : "x-apple.systempreferences:com.apple.Sound-Settings.extension";
+  return null;
+}

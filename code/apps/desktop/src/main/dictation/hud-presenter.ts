@@ -14,6 +14,7 @@ interface Deps {
   canRetry(): boolean;
   /** The last insert ended with the text on the clipboard only. */
   insertedAsCopy(): boolean;
+  secureInput?(): boolean;
 }
 
 const busy = (s: DictationState) => s.status === "recording" || s.status === "locked" || s.status === "transcribing" || s.status === "pasting";
@@ -58,7 +59,7 @@ export class HudPresenter {
 
   /** The "Dictation ready" pill after dictation is turned on; it goes away by itself. */
   flashReady(): void {
-    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey()) });
+    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey(), process.platform) });
     this.#ready = setTimeout(() => this.#shown?.kind === "ready" && this.#show(null), READY_MS);
   }
 
@@ -81,7 +82,15 @@ export class HudPresenter {
 
   #render(): void {
     clearTimeout(this.#ready);
-    const next = hudViewFor({ state: this.#state, hotkey: this.#d.hotkey(), startedAt: this.#startedAt, level: this.#level, insertedAsCopy: this.#d.insertedAsCopy(), canRetry: this.#d.canRetry() });
+    const next = hudViewFor({
+      state: this.#state,
+      hotkey: this.#d.hotkey(),
+      startedAt: this.#startedAt,
+      level: this.#level,
+      insertedAsCopy: this.#d.insertedAsCopy(),
+      secureInput: this.#d.secureInput?.() ?? false,
+      canRetry: this.#d.canRetry(),
+    });
     if (busy(this.#state)) this.#clearSticky();
     if (next?.kind === "error" && next.action) this.#stick(next);
     const view = this.#sticky ?? next;

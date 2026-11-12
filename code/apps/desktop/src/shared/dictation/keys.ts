@@ -14,7 +14,9 @@ const build = () => {
 export const KEY_VK: Readonly<Record<string, number>> = build();
 const VK_KEY = new Map(Object.entries(KEY_VK).map(([k, v]) => [v, k]));
 
-export const DEFAULT_HOTKEY = "ControlRight";
+/** Right Control does not exist on a MacBook keyboard; Right Option does. */
+export const defaultHotkey = (platform: string): string => (platform === "darwin" ? "AltRight" : "ControlRight");
+export const DEFAULT_HOTKEY = defaultHotkey(typeof process === "undefined" ? "win32" : process.platform);
 export const MAX_CHORD_KEYS = 3;
 export const CANCEL_KEY = "Escape";
 
@@ -32,6 +34,14 @@ export function validHotkey(hotkey: string): boolean {
   return keys.length <= MAX_CHORD_KEYS && new Set(keys).size === keys.length && keys.every((k) => k in KEY_VK) && keys.some(standsAlone) && (keys.length > 1 || standsAlone(keys[0]!));
 }
 
+const MAC_LABELS: Record<string, string> = {
+  ControlLeft: "Control",
+  ControlRight: "Right Control",
+  AltLeft: "Option",
+  AltRight: "Right Option",
+  MetaLeft: "Command",
+  MetaRight: "Right Command",
+};
 const LABELS: Record<string, string> = {
   ControlLeft: "Ctrl",
   ControlRight: "Right Ctrl",
@@ -45,18 +55,18 @@ const LABELS: Record<string, string> = {
 };
 const ORDER = ["ControlLeft", "ControlRight", "AltLeft", "AltRight", "ShiftLeft", "ShiftRight", "MetaLeft", "MetaRight"];
 
-export const keyLabel = (code: string): string => LABELS[code] ?? code.replace(/^Key|^Digit/, "");
+export const keyLabel = (code: string, platform = "win32"): string => (platform === "darwin" ? MAC_LABELS[code] : undefined) ?? LABELS[code] ?? code.replace(/^Key|^Digit/, "");
 
 /** The hotkey as chips: modifiers first (Ctrl, Alt, Shift, Win), then the rest. */
-export function hotkeyLabels(hotkey: string): string[] {
+export function hotkeyLabels(hotkey: string, platform = "win32"): string[] {
   const rank = (k: string) => (ORDER.includes(k) ? ORDER.indexOf(k) : ORDER.length);
   return hotkeyKeys(hotkey)
     .sort((a, b) => rank(a) - rank(b))
-    .map(keyLabel);
+    .map((k) => keyLabel(k, platform));
 }
 
 /** "Ctrl Alt Space", for sentences. */
-export const hotkeyText = (hotkey: string): string => hotkeyLabels(hotkey).join(" ");
+export const hotkeyText = (hotkey: string, platform = "win32"): string => hotkeyLabels(hotkey, platform).join(" ");
 
 /** Stores a set of pressed key codes as a hotkey, or null when it is not an allowed one. */
 export function hotkeyFrom(codes: readonly string[]): string | null {

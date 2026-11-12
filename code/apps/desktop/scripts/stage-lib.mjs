@@ -44,3 +44,21 @@ export function foreignMacArch(name, arch) {
   const m = /darwin[-_](arm64|x64)$/.exec(name);
   return !!m && m[1] !== arch;
 }
+
+/**
+ * Which directory of node_modules/@fugood to keep in the app: the addon loader, and the native build for the target. macOS keeps the Metal builds of both
+ * architectures (after-pack drops the one an app does not run on); Windows keeps the Vulkan build and the plain CPU one it falls back to. CUDA, WASM and
+ * other systems are never loaded.
+ */
+export function keepWhisperPackage(name, mac) {
+  return name === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(name);
+}
+
+/**
+ * The codesign calls that seal a macOS app, in order. Nested helper apps and frameworks get the inherited entitlements and the main bundle the full set,
+ * the way electron-builder signs a release, so an ad-hoc build carries the same entitlements per executable. No --deep: it would stamp the main set on every helper.
+ */
+export function macSigningPlan({ app, nested, entitlements, inherit }) {
+  const sign = (target, plist) => ["--force", "--sign", "-", "--options", "runtime", ...(plist ? ["--entitlements", plist] : []), target];
+  return [...nested.map((n) => sign(n, /\.(framework|dylib)$/.test(n) ? null : inherit)), sign(app, entitlements)];
+}

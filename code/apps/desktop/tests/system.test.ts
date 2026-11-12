@@ -308,6 +308,22 @@ describe("palette, engines and the extension", () => {
   });
 });
 
+describe("permissions bridge", () => {
+  it("answers through the preload bridge: Windows has a microphone switch and no other permission, and a bad id is refused", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    const status = await l.page.evaluate(() => (window as any).speakkitPermissions.status());
+    expect(status.platform).toBe(process.platform === "darwin" ? "darwin" : "win32");
+    if (process.platform === "win32") {
+      expect(status.states).toMatchObject({ accessibility: "not-needed", "input-monitoring": "not-needed", "screen-recording": "not-needed" });
+      expect(status.states.microphone).toMatch(/^(granted|denied|not-determined|restricted|unknown)$/);
+      expect(await l.page.evaluate(() => (window as any).speakkitPermissions.openSettings("accessibility"))).toBe(false);
+    }
+    expect(status.guides.dictation.steps.map((x: { id: string }) => x.id)).toEqual(["microphone", "input-monitoring", "accessibility"]);
+    await expect(l.page.evaluate(() => (window as any).speakkitPermissions.request("camera"))).rejects.toThrow(/Invalid arguments/);
+  }, 60_000);
+});
+
 describe("shutdown", () => {
   it("Speak Kit.exe --quit asks the running instance to exit and the port closes", async () => {
     const first = await start({ config: DONE });

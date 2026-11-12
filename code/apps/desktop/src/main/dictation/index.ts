@@ -19,7 +19,7 @@ export interface DictationOsOptions {
 
 /** Everything dictation needs from the operating system, behind one object. */
 export interface DictationOs {
-  /** False where key hook and key injection are not implemented yet: the hotkey will not start and `insert` only copies. */
+  /** False where key hook and key injection are not implemented (Linux): the hotkey will not start and `insert` only copies. */
   readonly supported: boolean;
   readonly hotkey: HotkeySource;
   readonly hud: Hud;
@@ -35,8 +35,15 @@ export interface DictationOs {
   dispose(): Promise<void>;
 }
 
+/** Each OS implementation is imported only on its own platform, so a build never loads the other one's native bindings. */
+async function loadPlatform() {
+  if (process.platform === "win32") return (await import("./windows")).createWindowsPlatform();
+  if (process.platform === "darwin") return (await import("./macos")).createMacPlatform();
+  return createUnsupportedPlatform();
+}
+
 export async function createDictationOs(options: DictationOsOptions = {}): Promise<DictationOs> {
-  const platform = process.platform === "win32" ? await (await import("./windows")).createWindowsPlatform() : createUnsupportedPlatform();
+  const platform = await loadPlatform();
   const inserter = createInserter({
     input: platform.input,
     clip: createElectronClipboard(platform.input),

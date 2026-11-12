@@ -48,14 +48,20 @@ mac:
   icon: dist-app-res/icon.png
   category: public.app-category.utilities
   artifactName: Speak-Kit-${version}-mac-${arch}.${ext}
-  # Not signed with a Developer ID and not notarized: no Apple Developer account yet. afterPack gives the app an ad-hoc signature,
-  # which Apple Silicon needs to run it at all. Gatekeeper still asks the user to approve the first launch.
+  # Not signed with a Developer ID and not notarized: no Apple Developer account yet. afterPack gives the app an ad-hoc signature (with the
+  # hardened runtime and these entitlements, so a Developer ID signature later changes nothing else), which Apple Silicon needs to run it at all.
+  # Gatekeeper still asks the user to approve the first launch.
   identity: null
-  hardenedRuntime: false
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
   gatekeeperAssess: false
   extendInfo:
     # Reading the selection presses Cmd+C through System Events.
     NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
+    NSMicrophoneUsageDescription: Speak Kit listens to your microphone while you hold the dictation key, and turns what you say into text.
+    # Dictation's key listener and paste keys are granted under Input Monitoring and Accessibility; macOS shows its own prompt for those.
+    NSScreenCaptureUsageDescription: Speak Kit reads the text on your screen when you ask it to read what you are looking at.
 
 dmg:
   title: Speak Kit ${version}

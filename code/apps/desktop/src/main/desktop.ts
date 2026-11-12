@@ -1,4 +1,4 @@
-import type { BrowserWindow } from "electron";
+import { app, type BrowserWindow } from "electron";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -16,6 +16,8 @@ import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { createUpdates } from "./updates-service";
 import { registerDictationIpc } from "./dictation/ipc";
+import { hotkeyPermissionsReady } from "../shared/permissions/guide";
+import { setupPermissions } from "./system/permissions";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { fakeUpdater } from "./updates-fake";
 
@@ -73,6 +75,12 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
+  const permissions = setupPermissions(
+    () => o.parent()?.webContents,
+    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
+  );
+  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
+  app.on("browser-window-focus", permissions.refresh);
 
   const handlers = {
     ...engineHandlers(ctx),

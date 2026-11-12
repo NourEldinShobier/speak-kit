@@ -20,6 +20,6 @@ export const dictationTestHook = (d: DictationService) => ({
   hud: () => d.presenter.shown,
   /** Puts any pill on the HUD (design check). */
   showHud: (view: HudView) => d.os?.hud.show({ kind: "view", view }),
-  hotkeyActive: () => d.hotkeyActive,
+  hotkeyActive: () => d.status().hotkeyReady,
   state: () => d.state,
 });
