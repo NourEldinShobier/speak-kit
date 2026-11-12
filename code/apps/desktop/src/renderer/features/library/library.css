@@ -1,8 +1,8 @@
 .lib {
-  max-width: 1000px;
+  max-width: 760px;
   min-height: 100%;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -16,7 +16,7 @@
 .lib-head h1 {
   margin: 0;
   font-size: 22px;
-  line-height: 28px;
+  line-height: 26px;
   font-weight: 600;
 }
 .lib-head p {
