@@ -28,3 +28,49 @@ export function layoutCode(handle: string): string | undefined {
     return undefined;
   }
 }
+
+/** Names macOS gives keyboard layouts (the last part of "com.apple.keylayout.German"), by the start of the name, and the language each one means. */
+const MAC_LAYOUTS: ReadonlyArray<readonly [string, string]> = [
+  ["abc", "en"],
+  ["us", "en"],
+  ["british", "en"],
+  ["australian", "en"],
+  ["canadian", "en"],
+  ["irish", "en"],
+  ["dvorak", "en"],
+  ["colemak", "en"],
+  ["german", "de"],
+  ["austrian", "de"],
+  ["swissgerman", "de"],
+  ["arabic", "ar"],
+  ["french", "fr"],
+  ["spanish", "es"],
+  ["italian", "it"],
+  ["dutch", "nl"],
+  ["polish", "pl"],
+  ["portuguese", "pt"],
+  ["brazilian", "pt"],
+  ["russian", "ru"],
+  ["swedish", "sv"],
+  ["turkish", "tr"],
+  ["ukrainian", "uk"],
+  ["lithuanian", "lt"],
+  ["hindi", "hi"],
+  ["kotoeri", "ja"],
+  ["japanese", "ja"],
+  ["korean", "ko"],
+  ["scim", "zh"],
+  ["tcim", "zh"],
+  ["pinyin", "zh"],
+];
+
+/** The language code of a macOS input source id such as "com.apple.keylayout.German", or undefined for one we have no code for. */
+export function macLayoutCode(sourceId: string): string | undefined {
+  const parts = sourceId.toLowerCase().split(".");
+  const at = parts.findIndex((p) => p === "keylayout" || p === "inputmethod");
+  const name = parts
+    .slice(at >= 0 ? at + 1 : 2)
+    .join(".")
+    .replaceAll(/[^a-z]/g, "");
+  return MAC_LAYOUTS.find(([prefix]) => name.startsWith(prefix))?.[1];
+}

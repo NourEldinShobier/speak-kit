@@ -46,13 +46,14 @@ async function focusApp(native: MacNative, pid: number): Promise<boolean> {
   return false;
 }
 
-export function createMacInput(native: MacNative): InputPort {
+export function createMacInput(native: MacNative, layout?: { current(): string | undefined }): InputPort {
   const press = (code: number, flags: number) => native.postKey(code, true, flags) && native.postKey(code, false, flags);
   return {
     foreground(): ForegroundInfo | null {
       const f = native.frontmost();
       // The window is not told apart from its app: a window switch inside one app goes unnoticed, an app switch does not.
-      return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", elevated: false } : null;
+      const code = layout?.current();
+      return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", ...(code && { layout: code }), elevated: false } : null;
     },
     // Which control has focus needs Accessibility queries; secure input is the signal password fields give without them.
     passwordFocused: () => false,

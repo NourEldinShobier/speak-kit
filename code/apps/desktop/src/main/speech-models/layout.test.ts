@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { layoutCode } from "./layout";
+import { layoutCode, macLayoutCode } from "./layout";
 
 describe("layoutCode", () => {
   it("reads the language from the low word of the layout handle, whatever the region and device bits", () => {
@@ -40,5 +40,27 @@ describe("every language of the table", () => {
   ])("primary language %i is %s", (id, code) => {
     expect(layoutCode(String(0x04000000 + id))).toBe(code);
     expect(layoutCode(String(0xf0000000 + (0x0800 | id)))).toBe(code); // a sub-language and a different device word do not matter
+  });
+});
+
+describe("macLayoutCode", () => {
+  it("reads the language from the name of a layout", () => {
+    expect(macLayoutCode("com.apple.keylayout.German")).toBe("de");
+    expect(macLayoutCode("com.apple.keylayout.German-DIN-2137")).toBe("de");
+    expect(macLayoutCode("com.apple.keylayout.ABC")).toBe("en");
+    expect(macLayoutCode("com.apple.keylayout.US")).toBe("en");
+    expect(macLayoutCode("com.apple.keylayout.Arabic-QWERTY")).toBe("ar");
+    expect(macLayoutCode("com.apple.keylayout.Ukrainian-PC")).toBe("uk");
+    expect(macLayoutCode("com.apple.keylayout.Brazilian")).toBe("pt");
+  });
+  it("reads input methods by their name", () => {
+    expect(macLayoutCode("com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese")).toBe("ja");
+    expect(macLayoutCode("com.apple.inputmethod.Korean.2SetKorean")).toBe("ko");
+    expect(macLayoutCode("com.apple.inputmethod.SCIM.ITABC")).toBe("zh");
+  });
+  it("has no code for an unknown layout or for garbage", () => {
+    expect(macLayoutCode("com.apple.keylayout.Klingon")).toBeUndefined();
+    expect(macLayoutCode("")).toBeUndefined();
+    expect(macLayoutCode("garbage")).toBeUndefined();
   });
 });
