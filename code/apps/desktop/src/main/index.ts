@@ -13,7 +13,8 @@ import { appMenuTemplate } from "./app-menu";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { createAppHandlers, metrics } from "./handlers";
+import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { watchConfigFile } from "./config-watch";
 import { isLaunchAtLogin, openedAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
@@ -183,8 +184,8 @@ function watchPairingActivity() {
   });
 }
 
-function createHandlers() {
-  return createAppHandlers({
+function handlerDeps(): HandlerDeps {
+  return {
     state,
     config,
     saveConfig: store.save,
@@ -198,6 +199,20 @@ function createHandlers() {
     logsDir,
     addActivity,
     onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
+  };
+}
+
+function watchSettingsFile() {
+  return watchConfigFile({
+    file: store.path,
+    current: () => config,
+    keep: process.env.SPEAKKIT_PORT ? ["preferredPort"] : [],
+    onEdit: (edit) => {
+      if (edit.kind === "newer") return;
+      applyExternalConfig(handlerDeps(), edit.patch);
+      addActivity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);
+    },
+    onUnreadable: () => addActivity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has."),
   });
 }
 
@@ -299,7 +314,9 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     });
     watchPower();
     watchPairingActivity();
-    const appHandlers = createHandlers();
+    const appHandlers = createAppHandlers(handlerDeps());
+    const settingsWatch = watchSettingsFile();
+    app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     runtime.automation.attach(desktop.automation);
     const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;

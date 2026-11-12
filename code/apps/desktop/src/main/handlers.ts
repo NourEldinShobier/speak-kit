@@ -15,7 +15,7 @@ import type { ServerRuntime } from "./server-lifecycle";
 import { voiceChatHandlers } from "./voice-chat/handlers";
 import type { VoiceChat } from "./voice-chat/service";
 
-interface HandlerDeps {
+export interface HandlerDeps {
   state: AppState;
   config: Config;
   saveConfig(): void;
@@ -54,17 +54,29 @@ const EXTERNAL_URLS: Record<ExternalLink, string> = {
   ...SETTINGS_LINKS,
 };
 
-async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
+/** What a changed setting does besides being stored: login item, memory rules, the feature that owns it, the window mode. */
+function applyConfigChange(d: HandlerDeps, patch: ConfigPatch, setupWas: boolean) {
   const { state, config, runtime, mainWindow } = d;
-  const setupWas = config.setupDone;
-  Object.assign(config, patch);
-  d.saveConfig();
   if (patch.startMinimized !== undefined && isLaunchAtLogin(!config.startMinimized)) setLaunchAtLogin(true, config.startMinimized);
   if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);
   if (patch.loadAtStart && runtime.engine?.status().state === "unloaded") runtime.startEngine();
   d.onConfigPatch(patch);
   if (config.setupDone !== setupWas) mainWindow.applyMode();
   return d.publish();
+}
+
+async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
+  const setupWas = d.config.setupDone;
+  Object.assign(d.config, patch);
+  d.saveConfig();
+  return applyConfigChange(d, patch, setupWas);
+}
+
+/** The settings file was edited outside the app: take the new values (they are already in the file, so nothing is saved). */
+export function applyExternalConfig(d: HandlerDeps, patch: Partial<Config>) {
+  const setupWas = d.config.setupDone;
+  Object.assign(d.config, patch);
+  return applyConfigChange(d, patch as ConfigPatch, setupWas);
 }
 
 async function regenerateToken(d: HandlerDeps) {
