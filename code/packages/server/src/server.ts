@@ -9,6 +9,7 @@ import { DEFAULT_CONTROL_DEADLINE_MS, DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, DE
 import type { AutomationHost } from "./automation";
 import { EngineRegistry } from "./engines";
 import { ExportManager } from "./export";
+import type { PageContextHost } from "./page-context";
 import { removeLeftovers } from "./leftovers";
 import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDeadline, type GuardOptions } from "./http";
 import { render } from "./render";
@@ -16,6 +17,7 @@ import { resolveRoute, type Route, type Services } from "./router";
 import { automationRoutes } from "./routes/automation";
 import { engineRoutes } from "./routes/engines";
 import { exportRoutes } from "./routes/export";
+import { pageContextRoutes } from "./routes/page-context";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
 import { StreamQueue } from "./stream-queue";
@@ -52,6 +54,8 @@ export interface ServerOptions {
   voiceChat?: VoiceChatService;
   /** The reader, queue and exports for scripts and AI apps. Without it the automation routes answer "unsupported". */
   automation?: AutomationHost;
+  /** Keeps the address of the page in front, reported by the browser extension. Without it the report is accepted and dropped. */
+  pageContext?: PageContextHost;
   /** Heartbeat of the event stream in ms. Default 15000. */
   heartbeatMs?: number;
 }
@@ -87,7 +91,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -107,6 +111,7 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
     version: opts.version ?? "0.0.0",
     voiceChat: opts.voiceChat,
     automation: opts.automation,
+    pageContext: opts.pageContext,
     events: { open: 0 },
     heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
     mintLimiter: new MintLimiter(),

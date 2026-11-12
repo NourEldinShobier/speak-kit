@@ -4,6 +4,7 @@ import type { EngineRegistry } from "./engines";
 import type { ExportManager } from "./export";
 import { HttpError } from "./http";
 import type { StreamQueue } from "./stream-queue";
+import type { PageContextHost } from "./page-context";
 import type { MintLimiter, VoiceChatService } from "./voice-chat";
 
 /** What every route handler can reach. */
@@ -16,6 +17,8 @@ export interface Services {
   voiceChat: VoiceChatService | undefined;
   /** Absent when the host app lends no reader; the automation routes answer "unsupported". */
   automation: AutomationHost | undefined;
+  /** Absent when the host app uses no page address; the route accepts the report and drops it. */
+  pageContext: PageContextHost | undefined;
   /** Open event streams. */
   events: { open: number };
   heartbeatMs: number;

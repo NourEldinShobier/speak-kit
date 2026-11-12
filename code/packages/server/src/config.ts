@@ -166,6 +166,10 @@ export function parseReplace(header: string | string[] | undefined): Replace | u
   throw new RequestError("X-SpeakKit-Replace must be 1 or an id of 1 to 64 letters, digits, . _ : -");
 }
 
+const MAX_HOST = 253;
+/** The host name of the page in front, or "" when no page is (the browser lost focus). */
+const pageContextSchema = v.object({ host: v.pipe(v.string(), v.maxLength(MAX_HOST), v.regex(/^[a-z0-9.-]*$/, "host must be a lower-case host name")) });
+
 const holdSchema = v.object({ ms: int(0, MAX_HOLD_MS) });
 
 function parseBody<S extends v.GenericSchema>(schema: S, body: unknown): v.InferOutput<S> {
@@ -178,6 +182,12 @@ export const parseSpeak = (schema: ReturnType<typeof speakSchema>, body: unknown
   if (typeof body !== "object" || body === null || Array.isArray(body)) throw new RequestError(BAD_BODY);
   return parseBody(schema, body);
 };
+
+export function parsePageContext(body: unknown): { host: string } {
+  const r = v.safeParse(pageContextSchema, body, { abortEarly: true });
+  if (r.success) return r.output;
+  throw new RequestError(`${v.getDotPath(r.issues[0]!) ?? "body"}: ${r.issues[0]!.message}`);
+}
 
 export function parseHold(body: unknown): { ms: number } {
   const r = v.safeParse(holdSchema, body);
