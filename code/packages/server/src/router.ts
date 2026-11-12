@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { AutomationHost } from "./automation";
 import type { EngineRegistry } from "./engines";
 import type { ExportManager } from "./export";
 import { HttpError } from "./http";
@@ -13,6 +14,11 @@ export interface Services {
   version: string;
   /** Absent when the host app has no voice chat. */
   voiceChat: VoiceChatService | undefined;
+  /** Absent when the host app lends no reader; the automation routes answer "unsupported". */
+  automation: AutomationHost | undefined;
+  /** Open event streams. */
+  events: { open: number };
+  heartbeatMs: number;
   mintLimiter: MintLimiter;
   lookLimiter: MintLimiter;
   deadlines: { controlMs: number; streamIdleMs: number };

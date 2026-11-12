@@ -4,13 +4,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AddressInfo, Socket } from "node:net";
 import type { TtsEngine } from "@speakkit/engine";
+import { AUTOMATION_LIMITS } from "@speakkit/protocol";
 import { DEFAULT_CONTROL_DEADLINE_MS, DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, DEFAULT_STREAM_IDLE_MS, parseEnv, parseOptions } from "./config";
+import type { AutomationHost } from "./automation";
 import { EngineRegistry } from "./engines";
 import { ExportManager } from "./export";
 import { removeLeftovers } from "./leftovers";
 import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDeadline, type GuardOptions } from "./http";
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
+import { automationRoutes } from "./routes/automation";
 import { engineRoutes } from "./routes/engines";
 import { exportRoutes } from "./routes/export";
 import { speakRoutes } from "./routes/speak";
@@ -47,6 +50,10 @@ export interface ServerOptions {
   onError?: (e: Error) => void;
   /** Voice chat (the OpenAI key and the minting of Realtime client secrets) lives in the host app. Without it the voice chat routes answer "unavailable". */
   voiceChat?: VoiceChatService;
+  /** The reader, queue and exports for scripts and AI apps. Without it the automation routes answer "unsupported". */
+  automation?: AutomationHost;
+  /** Heartbeat of the event stream in ms. Default 15000. */
+  heartbeatMs?: number;
 }
 
 export interface SpeakKitServer {
@@ -80,7 +87,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -93,7 +100,19 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
   const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
   const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
-  return { engines, exporter, queue, version: opts.version ?? "0.0.0", voiceChat: opts.voiceChat, mintLimiter: new MintLimiter(), lookLimiter: new MintLimiter(LOOKS_PER_WINDOW), deadlines };
+  return {
+    engines,
+    exporter,
+    queue,
+    version: opts.version ?? "0.0.0",
+    voiceChat: opts.voiceChat,
+    automation: opts.automation,
+    events: { open: 0 },
+    heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
+    mintLimiter: new MintLimiter(),
+    lookLimiter: new MintLimiter(LOOKS_PER_WINDOW),
+    deadlines,
+  };
 }
 
 /** Guard, route, authorize, then run the handler; control routes under their deadline, the speak stream under none. */
