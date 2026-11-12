@@ -192,8 +192,10 @@ export class KeyboardHook implements HotkeySource {
     }
   }
 
-  #mouseFault(r: Run, _error: unknown): void {
+  /** The mouse hook died: the owner decides about a full reinstall (and tells the person when that fails), and the health check retries the mouse hook meanwhile. */
+  #mouseFault(r: Run, error: unknown): void {
     r.mouse = null;
+    if (this.#run === r) r.handlers.onFault?.(error);
   }
 
   #emit(r: Run, id: string, events: HotkeyEvent[]): void {
@@ -264,6 +266,12 @@ export class KeyboardHook implements HotkeySource {
     r.beat = t;
     if (stalled) {
       if (!this.#reinstall(r)) return;
+      // The mouse hook may have been dropped in the same stall.
+      if (r.mouse) {
+        r.mouse.uninstall();
+        r.mouse = null;
+      }
+      this.#syncMouse(r);
       // Key events that arrived during the stall may have been dropped, including the release of the chord.
       for (const [id, tracker] of r.trackers) this.#emit(r, id, tracker.reset());
     }
@@ -277,6 +285,7 @@ export class KeyboardHook implements HotkeySource {
 
   /** A chord key that is down on the real keyboard but unknown to the hook means the hook has stopped seeing keys: install it again. */
   #health(r: Run): void {
+    if (!r.mouse && this.#usesMouse()) this.#syncMouse(r);
     const blind = [...r.trackers.values()].some((tracker) => tracker.unseenDown((vk) => this.#backend.keyIsDown(vk)));
     if (blind) this.#reinstall(r);
   }

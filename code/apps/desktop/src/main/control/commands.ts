@@ -31,10 +31,14 @@ export interface ControlDeps {
   history: { list(q: { search?: string; limit?: number }): Promise<HistoryRow[]> };
   settings: {
     snapshot(): Record<string, unknown>;
-    apply(change: Extract<SettingsChange, { ok: true }>): Promise<void>;
+    /** Resolves to the message of a refusal (a clashing shortcut), or nothing when the change was saved. */
+    apply(change: Extract<SettingsChange, { ok: true }>): Promise<string | void>;
     busy(): boolean;
-    whenIdle(fn: () => void): void;
+    /** Runs `fn` once dictation is idle; `giveUp` runs instead when that takes too long. */
+    whenIdle(fn: () => void, giveUp: () => void): void;
   };
+  /** Anything a command does after its reply was sent and that failed. */
+  warn(message: string, detail: string): void;
 }
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
@@ -116,11 +120,18 @@ function createSettings(d: ControlDeps): Handler {
     if (!change.ok) return fail("refused", change.message);
     // A change made during a recording waits, so it cannot change the shortcut or the model under it.
     if (d.settings.busy()) {
-      d.settings.whenIdle(() => void d.settings.apply(change));
+      d.settings.whenIdle(
+        () =>
+          void Promise.resolve(d.settings.apply(change)).then(
+            (refused) => refused && d.warn("queued setting refused", refused),
+            (e) => d.warn("queued setting failed", String(e)),
+          ),
+        () => d.warn("queued setting dropped", "dictation stayed busy"),
+      );
       return ok({ queued: true });
     }
-    await d.settings.apply(change);
-    return ok({ applied: true });
+    const refused = await d.settings.apply(change);
+    return refused ? fail("refused", refused) : ok({ applied: true });
   };
 }
 

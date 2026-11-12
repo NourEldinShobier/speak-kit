@@ -1,4 +1,6 @@
-import { chmod, readFile, rm, writeFile } from "node:fs/promises";
+import { readFileSync, rmSync } from "node:fs";
+import { chmod, readFile, writeFile } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import * as v from "valibot";
 
@@ -40,7 +42,7 @@ export async function writeDiscovery(file: string, d: Discovery): Promise<void> 
 }
 
 /** The file content, or null when it is missing, damaged or names a process that is gone (a crash leaves the file behind). Read again on every call, never cached. */
-export async function readDiscovery(file: string, alive: (pid: number) => boolean = processAlive): Promise<Discovery | null> {
+export async function readDiscovery(file: string, alive: (pid: number) => boolean = processAlive, listening?: (port: number) => Promise<boolean>): Promise<Discovery | null> {
   let raw: unknown;
   try {
     raw = JSON.parse(await readFile(file, "utf8"));
@@ -48,11 +50,26 @@ export async function readDiscovery(file: string, alive: (pid: number) => boolea
     return null;
   }
   const parsed = v.safeParse(Schema, raw);
-  return parsed.success && alive(parsed.output.pid) ? parsed.output : null;
+  if (!parsed.success || !alive(parsed.output.pid)) return null;
+  // A reused process id keeps a stale file alive; nothing listening on the port gives it away before the token is sent anywhere.
+  return listening && !(await listening(parsed.output.port)) ? null : parsed.output;
 }
 
-/** Removes the file on quit, but only while it still belongs to this process: a newer instance may have replaced it. */
-export async function removeDiscovery(file: string, pid: number): Promise<void> {
-  const d = await readDiscovery(file, () => true);
-  if (d?.pid === pid) await rm(file, { force: true });
+/** True when something accepts a connection on the loopback port. */
+export const portOpen = (port: number, timeoutMs = 500): Promise<boolean> =>
+  new Promise((resolve) => {
+    const s = net.connect({ port, host: "127.0.0.1" });
+    const done = (open: boolean): void => (s.destroy(), resolve(open));
+    s.setTimeout(timeoutMs, () => done(false));
+    s.once("connect", () => done(true));
+    s.once("error", () => done(false));
+  });
+
+/** Removes the file on quit, but only while it still belongs to this process: a newer instance may have replaced it. Synchronous, so a quit in progress cannot skip it. */
+export function removeDiscovery(file: string, pid: number): void {
+  try {
+    if ((JSON.parse(readFileSync(file, "utf8")) as Partial<Discovery>).pid === pid) rmSync(file, { force: true });
+  } catch {
+    // Missing or damaged: nothing of ours to remove.
+  }
 }

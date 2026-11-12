@@ -69,6 +69,8 @@ class Hotkeys implements SwitchableHotkeys {
   #pasteLast: (() => void) | undefined;
   #waiting: (() => void) | undefined;
   #generation = 0;
+  /** Shortcuts the session saw go down and not up yet. */
+  readonly #held = new Set<string>();
 
   constructor(d: Deps) {
     this.#d = { ...d, after: d.after ?? defaultAfter };
@@ -116,6 +118,9 @@ class Hotkeys implements SwitchableHotkeys {
       this.#waiting = undefined;
       this.#paused = true;
       this.#d.os.stop();
+      // The release will never arrive through the removed hook: report it, so the session does not wait for a key that is up.
+      for (const key of this.#held) this.#emit(key, false);
+      this.#held.clear();
     } else if (this.#paused) this.#resume();
   }
 
@@ -141,7 +146,11 @@ class Hotkeys implements SwitchableHotkeys {
     }
     if (e.kind === "down" || e.kind === "up") {
       const name = this.#nameOf(e.chord);
-      if (name) this.#emit(name, e.kind === "down");
+      if (name) {
+        if (e.kind === "down") this.#held.add(name);
+        else this.#held.delete(name);
+        this.#emit(name, e.kind === "down");
+      }
     } else if (!e.chord) this.#emit(e.vk === cancelVk(this.#layout.cancelKey) ? this.#layout.cancelKey : keyOfVk(e.vk), true);
   };
 

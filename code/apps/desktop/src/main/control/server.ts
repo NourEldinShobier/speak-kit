@@ -104,7 +104,7 @@ export function createControlServer(o: Options): ControlServer {
     async stop() {
       const s = server;
       server = undefined;
-      await removeDiscovery(discoveryFile(o.dataDir), process.pid);
+      removeDiscovery(discoveryFile(o.dataDir), process.pid);
       if (s) await new Promise<void>((resolve) => (s.closeAllConnections(), s.close(() => resolve())));
     },
   };

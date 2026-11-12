@@ -1,5 +1,6 @@
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -8,7 +9,7 @@ import { CAPABILITIES, CONTROL_VERSION, ERROR_CODES, EXIT, exitFor, fail, LIMITS
 import { skillText } from "../../shared/control/skill";
 import { COMMAND_LINE_KEYS, sortKeys, validateChange } from "../../shared/control/settings-registry";
 import { createCommands, type ControlDeps } from "./commands";
-import { discoveryFile, processAlive, readDiscovery, removeDiscovery, writeDiscovery } from "./discovery";
+import { discoveryFile, portOpen, processAlive, readDiscovery, removeDiscovery, writeDiscovery } from "./discovery";
 import { createControlServer } from "./server";
 
 const dirs: string[] = [];
@@ -72,6 +73,34 @@ describe("discovery file", () => {
     expect(await readDiscovery(file, () => true)).toBeNull();
   });
 
+  it("is gone the moment stop returns, and a file whose port nothing listens on is not trusted", async () => {
+    const dir = tmp();
+    const file = discoveryFile(dir);
+    await writeDiscovery(file, { port: 5000, token: "a".repeat(32), pid: 111, version: "1" });
+    expect(
+      await readDiscovery(
+        file,
+        () => true,
+        async () => false,
+      ),
+    ).toBeNull();
+    expect(
+      await readDiscovery(
+        file,
+        () => true,
+        async (p) => p === 5000,
+      ),
+    ).toMatchObject({ port: 5000 });
+    const server = net.createServer().listen(0, "127.0.0.1");
+    await new Promise((r) => server.once("listening", r));
+    const { port } = server.address() as net.AddressInfo;
+    expect(await portOpen(port)).toBe(true);
+    await new Promise((r) => server.close(r));
+    expect(await portOpen(port)).toBe(false);
+    removeDiscovery(file, 111);
+    expect(existsSync(file)).toBe(false);
+  });
+
   it("knows this process is alive and an impossible one is not", () => {
     expect(processAlive(process.pid)).toBe(true);
     expect(processAlive(2 ** 22 - 3)).toBe(false);
@@ -102,6 +131,9 @@ function deps(over: Partial<ControlDeps> = {}) {
   const config: Record<string, unknown> = { voice: "af_heart", speed: 1 };
   let phase = "idle";
   const idle: (() => void)[] = [];
+  const giveUps: (() => void)[] = [];
+  const warnings: string[] = [];
+  const refuse: { message?: string; error?: Error } = {};
   const d: ControlDeps = {
     version: "0.5.3",
     status: () => ({ dictation: { supported: true, enabled: true, phase, paused: false }, reader: { status: "idle" }, voice: String(config.voice) }),
@@ -119,13 +151,19 @@ function deps(over: Partial<ControlDeps> = {}) {
     history: { list: async (q) => (log.push(`history:${q.search ?? ""}:${q.limit}`), [{ id: "1", at: 1, text: "one" }]) },
     settings: {
       snapshot: () => ({ ...config }),
-      apply: async (c) => void Object.assign(config, c.app),
+      apply: async (c) => {
+        if (refuse.error) throw refuse.error;
+        if (refuse.message) return refuse.message;
+        Object.assign(config, c.app);
+        return undefined;
+      },
       busy: () => phase !== "idle",
-      whenIdle: (fn) => void idle.push(fn),
+      whenIdle: (fn, giveUp) => void (idle.push(fn), giveUps.push(giveUp)),
     },
+    warn: (m, detail) => void warnings.push(`${m}: ${detail}`),
     ...over,
   };
-  return { d, log, config, setPhase: (p: string) => (phase = p), idle, run: createCommands(d) };
+  return { d, log, config, setPhase: (p: string) => (phase = p), idle, giveUps, warnings, refuse, run: createCommands(d) };
 }
 const call = (run: (r: ControlRequest) => Promise<Reply>, command: ControlRequest["command"], args: Record<string, unknown> = {}) => run({ command, args });
 
@@ -291,6 +329,28 @@ describe("settings through the commands", () => {
     t.idle.forEach((f) => f());
     await Promise.resolve();
     expect(t.config.speed).toBe(2);
+  });
+
+  it("tells the caller when a setting was refused instead of saying it was applied", async () => {
+    const t = deps();
+    t.refuse.message = "That shortcut is already used by Raw.";
+    expect(await call(t.run, "settings", { set: { speed: 2 } })).toEqual({ ok: false, version: expect.any(Number), error: { code: "refused", message: "That shortcut is already used by Raw." } });
+  });
+
+  it("logs a queued change that is refused or throws, and one that waited too long", async () => {
+    const t = deps();
+    t.setPhase("recording");
+    t.refuse.message = "clash";
+    await call(t.run, "settings", { set: { speed: 2 } });
+    t.idle[0]!();
+    await new Promise((r) => setTimeout(r, 0));
+    delete t.refuse.message;
+    t.refuse.error = new Error("model switch failed");
+    await call(t.run, "settings", { set: { speed: 3 } });
+    t.idle[1]!();
+    await new Promise((r) => setTimeout(r, 0));
+    t.giveUps[1]!();
+    expect(t.warnings).toEqual(["queued setting refused: clash", "queued setting failed: Error: model switch failed", "queued setting dropped: dictation stayed busy"]);
   });
 
   it("uses the same validator as the Settings pages for dictation keys", () => {

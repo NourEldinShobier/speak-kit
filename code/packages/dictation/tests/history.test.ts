@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
-import { createHistory, MAX_ENTRIES, type HistoryEntry, type NewEntry } from "../src/history";
+import { createHistory, MAX_ENTRIES, readStoredHistory, type HistoryEntry, type NewEntry } from "../src/history";
 import type { Retention } from "../src/settings";
 import { fakeClock, fakeStorage } from "./fakes";
 
@@ -259,5 +259,31 @@ describe("storage", () => {
     });
     await Promise.all([history.add(entry(time.clock.now(), "a")), history.add(entry(time.clock.now() + 1, "b")), history.add(entry(time.clock.now() + 2, "c"))]);
     expect(saved).toEqual([1, 2, 3]);
+  });
+});
+
+describe("reading stored history without the app", () => {
+  const e = (id: string, at: number, text: string, app?: string) => ({ id, at, text, raw: text, durationMs: 1, ...(app && { app }) });
+  const now = 100 * DAY;
+
+  it("applies the shape check, newest first, search over text and program name, and the limit", () => {
+    const stored = [e("a", now - 3000, "buy milk"), { id: "bad", text: 5 }, e("b", now - 1000, "call Ann", "Slack.exe"), e("c", now - 2000, "milk run")];
+    expect(readStoredHistory(stored, { now, retention: "7d" }).map((x) => x.id)).toEqual(["b", "c", "a"]);
+    expect(readStoredHistory(stored, { now, retention: "7d", search: "milk" }).map((x) => x.id)).toEqual(["c", "a"]);
+    expect(readStoredHistory(stored, { now, retention: "7d", search: "slack" }).map((x) => x.id)).toEqual(["b"]);
+    expect(readStoredHistory(stored, { now, retention: "7d", limit: 1 }).map((x) => x.id)).toEqual(["b"]);
+  });
+
+  it("drops expired entries and returns nothing when retention is off", () => {
+    const stored = [e("old", now - 8 * DAY, "old"), e("new", now - DAY, "new")];
+    expect(readStoredHistory(stored, { now, retention: "7d" }).map((x) => x.id)).toEqual(["new"]);
+    expect(readStoredHistory(stored, { now, retention: "forever" })).toHaveLength(2);
+    expect(readStoredHistory(stored, { now, retention: "off" })).toEqual([]);
+  });
+
+  it("treats an unknown retention as 7 days and anything but an array as empty", () => {
+    expect(readStoredHistory([e("old", now - 8 * DAY, "x")], { now, retention: "soon" })).toEqual([]);
+    expect(readStoredHistory([e("new", now - DAY, "x")], { now, retention: undefined })).toHaveLength(1);
+    expect(readStoredHistory({ not: "a list" }, { now, retention: "7d" })).toEqual([]);
   });
 });
