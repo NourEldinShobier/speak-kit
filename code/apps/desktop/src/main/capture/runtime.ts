@@ -71,7 +71,10 @@ export class CaptureRuntime {
   constructor(deps: RuntimeDeps) {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
-    this.#writes = createWriteGuard({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }),
+    this.#writes = createWriteGuard({
+      notify: (n) => this.notify(n),
+      log: (l) => deps.ctx.log.warn(l),
+      params: () => ({ os: deps.platform.os }),
       onFirstFailure: () => this.#session.state.phase === "recording" && this.#session.stop(),
     });
     this.#session = this.#makeSession();

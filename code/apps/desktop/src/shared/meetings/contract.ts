@@ -198,5 +198,3 @@ export const CapsuleActionSchema = v.variant("type", [
   v.object({ type: v.literal("show-folder"), id }),
   v.object({ type: v.literal("open"), id }),
 ]);
-
-

@@ -59,7 +59,16 @@ export function AutomationPage({ s }: { s: AppState }) {
         />
       </SettingsSection>
       <SettingsSection title="Command-line tool">
-        <SettingRow label="Try it" description="Prints what Speak Kit is doing right now." control={<div className="sk-row-actions">{code(TRY_COMMAND)}<CopyButton text={TRY_COMMAND} label="Copy the command" /></div>} />
+        <SettingRow
+          label="Try it"
+          description="Prints what Speak Kit is doing right now."
+          control={
+            <div className="sk-row-actions">
+              {code(TRY_COMMAND)}
+              <CopyButton text={TRY_COMMAND} label="Copy the command" />
+            </div>
+          }
+        />
         <div className="sk-pad">
           <b>JSON output and exit codes</b>
           <p>Add --json to any command for output a script can read. The exit code says what happened.</p>
