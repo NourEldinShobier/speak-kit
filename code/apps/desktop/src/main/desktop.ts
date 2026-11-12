@@ -22,6 +22,7 @@ import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
+import { setupTranscripts } from "./transcripts";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -75,36 +76,31 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
  */
 export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const { toasts, shown: shownToasts } = createDesktopToasts(ctx, o.test);
-
   const reading = createReading(ctx, toasts, () => tray.refresh());
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
   const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
-
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
-  ctx.state.reader = IDLE_READER;
-  ctx.state.update ??= UPDATE_UNSUPPORTED;
-
+  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
   watchPermissions(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
-  const handlers = {
-    ...engineHandlers(ctx),
-    ...exports.handlers,
-    ...updates.handlers,
-    ...shortcuts.handlers,
-    ...readerHandlers(reading),
-    installExtension: () => installExtension(!o.test),
-  } satisfies Partial<Api>;
-
   return {
-    handlers,
+    handlers: {
+      ...engineHandlers(ctx),
+      ...exports.handlers,
+      ...updates.handlers,
+      ...shortcuts.handlers,
+      ...readerHandlers(reading),
+      installExtension: () => installExtension(!o.test),
+    } satisfies Partial<Api>,
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */
@@ -128,8 +124,9 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       tray.dispose();
       void dictation.dispose();
       capture.dispose();
+      void transcripts.dispose();
       return controlDown;
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, installs: () => installedByTest }),
   };
 }

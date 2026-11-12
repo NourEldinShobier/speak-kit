@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { StorageInfo } from "../../../shared/ipc";
 import { api, cleanError, formatBytes, Page } from "../../ui";
 import { DeleteDownloadsDialog, type DeletePhase } from "./DeleteDownloadsDialog";
+
+// Transcript settings load with the transcripts feature, which is rarely needed.
+const TranscriptSettings = lazy(() => import("../transcripts").then((m) => ({ default: m.TranscriptSettings })));
 
 const share = (n: number, total: number) => (total ? `${(n / total) * 100}%` : "0%");
 
@@ -92,6 +95,9 @@ export function StoragePage() {
           }
         />
       </SettingsSection>
+      <Suspense fallback={null}>
+        <TranscriptSettings />
+      </Suspense>
       {st ? <DeleteDownloadsDialog phase={phase} storage={st} onConfirm={remove} onClose={() => setPhase({ step: "closed" })} /> : null}
     </Page>
   );

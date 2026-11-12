@@ -94,6 +94,37 @@ describe("tray menu, dictation", () => {
   });
 });
 
+describe("tray menu, recorder", () => {
+  const row = (phase: NonNullable<TrayContext["recorder"]>["phase"]) =>
+    trayMenuModel(ctx({ recorder: { phase } })).find((i) => i.type === "item" && (i.action === "record-start" || i.action === "record-stop"));
+
+  it("has no recorder row where the recorder is not offered", () => {
+    expect(labels(ctx())).not.toContain("Record a conversation");
+  });
+
+  it("starts a recording when ready, stops it while recording", () => {
+    expect(row("ready")).toEqual({ type: "item", action: "record-start", label: "Record a conversation", enabled: true });
+    expect(row("recording")).toEqual({ type: "item", action: "record-stop", label: "Stop recording", enabled: true });
+  });
+
+  it("says Done for a moment after a transcript finishes and still starts a new recording", () => {
+    expect(row("done")).toEqual({ type: "item", action: "record-start", label: "Done. Record a conversation", enabled: true });
+  });
+
+  it("waits, disabled, while it starts, saves and transcribes, so it never stays greyed once that is over", () => {
+    expect(row("starting")).toMatchObject({ label: "Starting recording...", enabled: false });
+    expect(row("saving")).toMatchObject({ label: "Saving recording...", enabled: false });
+    expect(row("transcribing")).toMatchObject({ label: "Transcribing...", enabled: false });
+    expect(row("ready")).toMatchObject({ enabled: true });
+  });
+
+  it("sits under Open Speak Kit, before the reading rows", () => {
+    const all = labels(ctx({ recorder: { phase: "ready" }, reader: reader("playing") }));
+    expect(all.indexOf("Record a conversation")).toBe(1);
+    expect(all.indexOf("Pause")).toBeGreaterThan(1);
+  });
+});
+
 describe("tray menu", () => {
   it("idle: short menu", () => {
     expect(labels(ctx())).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);

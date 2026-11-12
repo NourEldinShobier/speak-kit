@@ -1,8 +1,9 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { captureBridge } from "../shared/capture/preload-api";
 import { dictationBridge } from "../shared/dictation/preload-api";
 import { permissionsBridge } from "../shared/permissions/preload-api";
 import { libraryBridge } from "../shared/library/preload-api";
+import { transcriptsBridge } from "../shared/transcripts/preload-api";
 import { setPlatformEarly } from "./platform-attr";
 import { channel, METHODS, STATE_EVENT, UI_EVENT, type Api, type AppState, type UiEvent } from "../shared/ipc";
 
@@ -21,5 +22,9 @@ contextBridge.exposeInMainWorld("speakkitDictation", dictationBridge(ipcRenderer
 contextBridge.exposeInMainWorld("speakkitCapture", captureBridge(ipcRenderer));
 
 contextBridge.exposeInMainWorld("speakkitPermissions", permissionsBridge(ipcRenderer));
+contextBridge.exposeInMainWorld(
+  "speakkitTranscripts",
+  transcriptsBridge(ipcRenderer, (f) => webUtils.getPathForFile(f)),
+);
 
 setPlatformEarly(document, process.platform);

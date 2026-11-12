@@ -4,5 +4,5 @@
  * their own entry files next to this one). Loaded on demand: the shell imports this module with import().
  */
 export { DictationPage } from "./DictationPage";
-export { DictationHistoryPage } from "./HistoryPage";
+export { DictationHistoryPage, historyLeadNow } from "./HistoryPage";
 export { HotkeyRecorder } from "./HotkeyRecorder";
