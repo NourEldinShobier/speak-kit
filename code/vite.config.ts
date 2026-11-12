@@ -22,6 +22,8 @@ const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**
 // The ubuntu unit job sets SPEAKKIT_SKIP_DESKTOP: the desktop package needs Electron and runs in the Windows job. (A CLI --exclude does not reach projects that set their own exclude.)
 const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**", ...(process.env.SPEAKKIT_SKIP_DESKTOP ? ["apps/desktop/**"] : [])];
 
+const ALONE = ["apps/desktop/tests/dictation-os.test.ts", "apps/desktop/tests/capture.test.ts", "apps/desktop/tests/perf.test.ts"];
+
 export default defineConfig({
   // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
   fmt: {
@@ -40,18 +42,19 @@ export default defineConfig({
   // Extension code reads __TEST__ and desktop main code reads __TEST_CODE__ (true outside a packaged build, as in apps/desktop/vite.config.ts); the packages define them for their own tests, the root run needs both.
   define: { __TEST__: "false", __TEST_CODE__: "true" },
   // The extension package runs its browser tests with 20 s; the root run has to allow the same when everything runs in parallel (the default is 5 s). Desktop specs set their own 60 s.
-  // The desktop resource and event-loop budgets measure the whole machine, so that file runs alone, after every other file (group order 2), against the same budgets.
+  // The desktop resource and event-loop budgets measure the whole machine, and dictation-os and capture use the clipboard, the keyboard, the window in front and the real screen,
+  // so those files run alone, after every other file (group order 2), against the same budgets.
   test: {
     testTimeout: 20_000,
     projects: [
       { extends: true, test: { name: "main", exclude: [...EXCLUDE, "apps/desktop/tests/**"] } },
       // Every Electron spec starts whole apps; eleven at once starve each other (a window took over 30 s to appear), so three at a time.
-      { extends: true, test: { name: "desktop", include: ["apps/desktop/tests/**/*.test.ts"], exclude: [...EXCLUDE, "apps/desktop/tests/perf.test.ts"], maxWorkers: 3, sequence: { groupOrder: 1 } } },
+      { extends: true, test: { name: "desktop", include: ["apps/desktop/tests/**/*.test.ts"], exclude: [...EXCLUDE, ...ALONE], maxWorkers: 3, sequence: { groupOrder: 1 } } },
       {
         extends: true,
         test: {
-          name: "perf",
-          include: ["apps/desktop/tests/perf.test.ts"],
+          name: "alone",
+          include: ALONE,
           exclude: EXCLUDE,
           fileParallelism: false,
           sequence: { groupOrder: 2 },

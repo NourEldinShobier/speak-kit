@@ -63,7 +63,19 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
     userData,
     port,
     cleanup: async () => {
-      await app.close().catch(() => {});
+      // A quit that does not finish must not hold the next test for the length of a hook timeout: say so, then end the process.
+      const proc = app.process();
+      const closed = await Promise.race([
+        app.close().then(
+          () => true,
+          () => true,
+        ),
+        new Promise<boolean>((r) => setTimeout(() => r(false), 20_000)),
+      ]);
+      if (!closed) {
+        console.warn(`the app did not quit within 20 s (port ${port}): ended it`);
+        proc.kill();
+      }
       if (!opts.userData) await removeDir(userData);
     },
   };
