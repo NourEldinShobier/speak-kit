@@ -1,7 +1,7 @@
 import { Button, Icon, Kbd, ProgressBar } from "@speakkit/ui";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
 import { hotkeyLabels } from "../../../shared/dictation/keys";
-import { dictation } from "./api";
+import { dictation, platformName } from "./api";
 import { etaText, mb } from "./model";
 
 function Head({ title, step }: { title: string; step: string }) {
@@ -68,7 +68,7 @@ function Preparing({ model, hotkey }: { model: ModelView; hotkey: string }) {
       <ProgressBar block thin label="Preparing the speech model" />
       <div className="dict-card__hint">
         When it is ready, hold{" "}
-        {hotkeyLabels(hotkey).map((k) => (
+        {hotkeyLabels(hotkey, platformName()).map((k) => (
           <Kbd key={k} small>
             {k}
           </Kbd>

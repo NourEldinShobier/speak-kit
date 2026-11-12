@@ -58,7 +58,7 @@ export class HudPresenter {
 
   /** The "Dictation ready" pill after dictation is turned on; it goes away by itself. */
   flashReady(): void {
-    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey()) });
+    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey(), process.platform) });
     this.#ready = setTimeout(() => this.#shown?.kind === "ready" && this.#show(null), READY_MS);
   }
 

@@ -7,7 +7,7 @@ interface Options {
 
 /** A stand-in for the Windows Run key: the entry reads back as enabled only when the path and args match what was registered. */
 const fake = vi.hoisted(() => {
-  const s = { entry: null as { path: string; args: string[] } | null, approved: true };
+  const s = { entry: null as { path: string; args: string[] } | null, approved: true, status: undefined as string | undefined };
   const key = (o: Options) => ({ path: o.path ?? "C:/electron/electron.exe", args: o.args ?? [] });
   return {
     s,
@@ -18,7 +18,7 @@ const fake = vi.hoisted(() => {
       getLoginItemSettings: (o: Options = {}) => {
         const want = key(o);
         const on = !!s.entry && s.entry.path === want.path && s.entry.args.join(" ") === want.args.join(" ");
-        return { openAtLogin: on, executableWillLaunchAtLogin: on && s.approved };
+        return { openAtLogin: on, executableWillLaunchAtLogin: on && s.approved, status: s.status };
       },
     },
   };
@@ -33,6 +33,7 @@ const original = { platform: process.platform, portable: process.env.PORTABLE_EX
 beforeEach(() => {
   fake.s.entry = null;
   fake.s.approved = true;
+  fake.s.status = undefined;
   Object.defineProperty(process, "platform", { value: "win32" });
   delete process.env.PORTABLE_EXECUTABLE_FILE;
 });
@@ -72,5 +73,14 @@ describe("launch at login", () => {
     setLaunchAtLogin(true, false);
     fake.s.approved = false;
     expect(isLaunchAtLogin(false)).toBe(false);
+  });
+
+  it("reads off on macOS while the login item waits for approval in System Settings, and on once approved", () => {
+    Object.defineProperty(process, "platform", { value: "darwin" });
+    setLaunchAtLogin(true, false);
+    fake.s.status = "requires-approval";
+    expect(isLaunchAtLogin(false)).toBe(false);
+    fake.s.status = "enabled";
+    expect(isLaunchAtLogin(false)).toBe(true);
   });
 });

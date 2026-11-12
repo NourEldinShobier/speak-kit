@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { hotkeyFrom, hotkeyKeys, hotkeyLabels, hotkeyText, KEY_VK, keyOfVk, validHotkey } from "./keys";
+import { defaultHotkey, hotkeyFrom, hotkeyKeys, hotkeyLabels, hotkeyText, KEY_VK, keyOfVk, validHotkey } from "./keys";
 
 describe("validHotkey", () => {
   it.each(["ControlRight", "AltRight", "F9", "F24", "CapsLock", "Pause", "ControlLeft+AltLeft+Space", "ControlLeft+KeyD", "ShiftLeft+ControlLeft+AltLeft"])("accepts %s", (h) => {
@@ -57,5 +57,24 @@ describe("virtual keys", () => {
     expect(keyOfVk(0xa3)).toBe("ControlRight");
     expect(keyOfVk(0xe7)).toBe("Vk231");
     expect(hotkeyKeys("ControlLeft+Space")).toEqual(["ControlLeft", "Space"]);
+  });
+});
+
+describe("macOS key names", () => {
+  it("names modifiers the way the Mac keyboard does", () => {
+    expect(hotkeyLabels("MetaLeft+AltLeft+ControlLeft+ShiftLeft+KeyD", "darwin")).toEqual(["Control", "Option", "Shift", "Command", "D"]);
+    expect(hotkeyText("AltRight", "darwin")).toBe("Right Option");
+    expect(hotkeyText("MetaRight", "darwin")).toBe("Right Command");
+  });
+
+  it("keeps the Windows names when no platform is given or it is not macOS", () => {
+    expect(hotkeyText("MetaLeft+KeyD")).toBe("Win D");
+    expect(hotkeyText("AltRight", "linux")).toBe("Right Alt");
+  });
+
+  it("defaults to Right Option on a Mac, where there is no Right Control, and keeps Right Control elsewhere", () => {
+    expect(defaultHotkey("darwin")).toBe("AltRight");
+    expect(defaultHotkey("win32")).toBe("ControlRight");
+    expect(validHotkey(defaultHotkey("darwin"))).toBe(true);
   });
 });

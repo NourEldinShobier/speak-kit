@@ -15,6 +15,8 @@ export interface TrayContext {
   exportsRunning: number;
   doNotDisturb: boolean;
   shortcuts: Bindings;
+  /** `process.platform`, for how keys are named in menu text. */
+  platform?: string;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
   dictation?: { enabled: boolean; hotkey: string };
 }
@@ -68,7 +70,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     const d = c.dictation;
     rows.push(item("dictation", "Dictation", { checked: d.enabled }));
     // A caption, not a command: disabled and without an action of its own.
-    if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey)} to dictate`, { enabled: false }));
+    if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey, c.platform)} to dictate`, { enabled: false }));
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));

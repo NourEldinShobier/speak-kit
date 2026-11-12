@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { Button, Kbd } from "@speakkit/ui";
 import { hotkeyFrom, hotkeyLabels } from "../../../shared/dictation/keys";
+import { platformName } from "./api";
 
 interface Handlers {
   /** The keys were released as an allowed hotkey. */
@@ -55,7 +56,7 @@ export function HotkeyRecorder({ value, onChange, onRecording }: { value: string
   if (!recording)
     return (
       <div className="dict-hotkey">
-        {hotkeyLabels(value).map((k) => (
+        {hotkeyLabels(value, platformName()).map((k) => (
           <Kbd key={k}>{k}</Kbd>
         ))}
         <Button onClick={() => setRecording(true)}>Change</Button>
@@ -70,7 +71,7 @@ export function HotkeyRecorder({ value, onChange, onRecording }: { value: string
       <Button onClick={stop}>Cancel</Button>
       {problem && (
         <span className="dict-hotkey__problem" role="alert">
-          Use a modifier such as Ctrl, or a key such as F9.
+          Use a modifier such as {platformName() === "darwin" ? "Command" : "Ctrl"}, or a key such as F9.
         </span>
       )}
     </div>
