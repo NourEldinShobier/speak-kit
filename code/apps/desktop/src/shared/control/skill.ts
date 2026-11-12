@@ -19,6 +19,7 @@ export function skillText(controlVersion: number, appVersion: string): string {
     "- `speakkit status` shows dictation and reading state.",
     "- `speakkit read <text>` reads text aloud now. `speakkit pause` and `speakkit resume` control the reading.",
     "- `speakkit speak <text | file | ->` reads text or a file aloud. `--queue` waits behind what is playing, `--wait` returns when the reading is over, `--print` prints the sentences without speaking, `--out file.mp3` or `file.wav` saves audio instead.",
+    "- `speakkit transcribe <file> [--language auto|en|de|ar]` transcribes an audio file, waits until it is done and prints the text. The transcript also appears in the History page.",
     "- `speakkit queue` shows what plays and what waits. `speakkit stop` stops and clears the waiting list; `--keep-queue` starts the next one. `speakkit voices` lists the voices.",
     "- `speakkit voice [id]` shows or sets the voice.",
     "- `speakkit dictate --print` records and prints the text to stdout instead of pasting it. Add `--raw` to skip text clean-up.",

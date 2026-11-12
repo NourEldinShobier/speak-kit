@@ -37,7 +37,7 @@ export const LIMITS = {
   speakFileBytes: 64 * 1024 * 1024,
 } as const;
 
-export const COMMANDS = ["capabilities", "status", "read", "pause", "resume", "stop", "voice", "voices", "queue", "speak", "dictate", "settings", "labs", "history", "skill"] as const;
+export const COMMANDS = ["capabilities", "status", "read", "pause", "resume", "stop", "voice", "voices", "queue", "speak", "dictate", "settings", "labs", "history", "skill", "transcribe"] as const;
 export type Command = (typeof COMMANDS)[number];
 
 /** Commands the command line answers from the files in the data folder, so they work with the app closed and never start it. */
@@ -46,7 +46,7 @@ export const LOCAL_COMMANDS = ["meetings", "capture"] as const;
 /** What this version can do, so a script or the browser extension asks instead of comparing version numbers. */
 export const CAPABILITIES = {
   commands: [...COMMANDS, ...LOCAL_COMMANDS],
-  features: { print: true, raw: true, settings: true, history: true, meetings: true, capture: true, speak: true, queue: true, labs: true, liveStream: true, mcp: true },
+  features: { print: true, raw: true, settings: true, history: true, meetings: true, capture: true, speak: true, queue: true, labs: true, transcribe: true, liveStream: true, mcp: true },
   errors: [...ERROR_CODES],
   limits: LIMITS,
 } as const;

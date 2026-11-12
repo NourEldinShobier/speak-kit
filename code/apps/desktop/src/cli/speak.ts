@@ -43,3 +43,18 @@ export async function followReading(io: Io, d: Discovery, started: Reply): Promi
   }
   return fail("timeout", "The reading was still going after an hour. It continues in Speak Kit.");
 }
+
+/** Longest a transcription is followed: 6 hours of polling every second. */
+const MAX_TRANSCRIBE_POLLS = 21_600;
+
+/** A transcription runs in the app; ask for its progress until it is done. The app answers a job that did not finish with its failure. */
+export async function followTranscription(io: Io, d: Discovery, first: Reply): Promise<Reply> {
+  let reply = first;
+  for (let i = 0; i < MAX_TRANSCRIBE_POLLS && reply.ok; i++) {
+    const job = (reply.data as { transcript?: { id: string; status: string } }).transcript;
+    if (!job || job.status === "done") return reply;
+    await io.sleep(1000);
+    reply = await io.post(d, { command: "transcribe", args: { jobId: job.id } }, LIMITS.printWaitMs);
+  }
+  return reply.ok ? fail("timeout", "The transcription was still running after 6 hours. It continues in Speak Kit.") : reply;
+}
