@@ -6,6 +6,7 @@ type Koffi = (typeof import("koffi"))["default"];
 /** What an event tap reports for one key event. `type` is a CGEventType; `flags` the CGEventFlags including device-dependent bits. */
 export interface TapEvent {
   type: number;
+  /** For mouse events the button number (0 left, 1 right, 2 middle, 3 and up the side buttons). */
   keycode: number;
   flags: number;
   userData: number;
@@ -26,7 +27,7 @@ export type AccessState = "granted" | "denied" | "unknown";
 /** The macOS calls dictation needs, typed. Every other macOS file takes this as its only dependency, which is also how tests replace it. */
 export interface MacNative {
   /** Installs an active (able to swallow) session event tap on the main run loop. `onEvent` returns true to swallow. Throws when macOS refuses the tap (no Accessibility or Input Monitoring permission). */
-  createTap(onEvent: (e: TapEvent) => boolean): MacTap;
+  createTap(onEvent: (e: TapEvent) => boolean, events?: "keys" | "mouse"): MacTap;
   /** Whether the physical key is down right now (HID state, so events this app swallowed still count). */
   keyIsDown(keycode: number): boolean;
   /** CGEventFlags of the modifiers held right now. */
@@ -59,6 +60,9 @@ const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
 const TAP_MASK = (1n << 10n) | (1n << 11n) | (1n << 12n); // key down, key up, flags changed
+// left, right and other mouse button down and up; moves, drags and the wheel are not in the mask, so they are never read
+const MOUSE_MASK = (1n << 1n) | (1n << 2n) | (1n << 3n) | (1n << 4n) | (1n << 25n) | (1n << 26n);
+const MOUSE_BUTTON_FIELD = 3;
 const IOHID_LISTEN_EVENT = 1;
 const IOHID_GRANTED = 0;
 const IOHID_DENIED = 1;
@@ -109,7 +113,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
   const CGEventGetIntegerValueField = cg.func("int64 CGEventGetIntegerValueField(void *event, uint32 field)");
   const CGEventGetFlags = cg.func("uint64 CGEventGetFlags(void *event)");
   return {
-    createTap(onEvent) {
+    createTap(onEvent, events = "keys") {
       let tap: unknown = null;
       let removed = false;
       const callback = koffi.register(
@@ -119,7 +123,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
             reenable: () => tap && !removed && CGEventTapEnable(tap, true),
             read: (e, t) => ({
               type: t,
-              keycode: Number(CGEventGetIntegerValueField(e, KEYBOARD_KEYCODE_FIELD)),
+              keycode: Number(CGEventGetIntegerValueField(e, events === "mouse" ? MOUSE_BUTTON_FIELD : KEYBOARD_KEYCODE_FIELD)),
               flags: Number(CGEventGetFlags(e)),
               userData: Number(CGEventGetIntegerValueField(e, USER_DATA_FIELD)),
             }),
@@ -127,7 +131,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
           }),
         koffi.pointer(TapProc),
       );
-      tap = CGEventTapCreate(SESSION_TAP, 0, 0, TAP_MASK, callback, null);
+      tap = CGEventTapCreate(SESSION_TAP, 0, 0, events === "mouse" ? MOUSE_MASK : TAP_MASK, callback, null);
       if (!tap) {
         koffi.unregister(callback);
         throw new Error("CGEventTapCreate refused the event tap");

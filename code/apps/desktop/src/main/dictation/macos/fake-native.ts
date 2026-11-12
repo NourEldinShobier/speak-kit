@@ -18,15 +18,17 @@ const initialState = () => ({
   running: new Map<number, Frontmost>(),
 });
 
-export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
+export function fakeMacNative(opts: { refuseTap?: boolean; refuseMouseTap?: boolean } = {}) {
   let handler: ((e: TapEvent) => boolean) | undefined;
+  let mouseHandler: ((e: TapEvent) => boolean) | undefined;
   const calls = { taps: 0, removed: 0 };
   const state = initialState();
   const native: MacNative = {
-    createTap(onEvent) {
-      if (opts.refuseTap) throw new Error("tap refused");
+    createTap(onEvent, events = "keys") {
+      if (opts.refuseTap || (opts.refuseMouseTap && events === "mouse")) throw new Error("tap refused");
       calls.taps++;
-      handler = onEvent;
+      if (events === "mouse") mouseHandler = onEvent;
+      else handler = onEvent;
       return { remove: () => void calls.removed++ };
     },
     keyIsDown: (code) => state.down.has(code),
@@ -65,5 +67,7 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
     calls,
     /** Delivers one event to the installed tap and returns whether it was swallowed. */
     send: (e: Partial<TapEvent> & { keycode: number }) => handler!({ type: 10, flags: 0, userData: 0, ...e }),
+    /** Delivers one mouse button event (type 3 right down, 4 right up, 25 other down, 26 other up) to the mouse tap. */
+    sendMouse: (e: Partial<TapEvent> & { type: number; keycode: number }) => mouseHandler!({ flags: 0, userData: 0, ...e }),
   };
 }
