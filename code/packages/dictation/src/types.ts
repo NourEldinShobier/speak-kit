@@ -41,7 +41,8 @@ export type MicErrorCode = "mic-denied" | "mic-missing" | "mic-busy" | "mic-fail
 export interface Recorder {
   /** Opens the microphone and keeps the last `prerollMs` before now. */
   start(req: { prerollMs: number }): Promise<{ ok: true } | { ok: false; code: MicErrorCode }>;
-  stop(): Promise<Clip>;
+  /** `cancelled`: the take is kept only for the undo minute, so a recorder that keeps audio on disk must not bring it back after a restart. */
+  stop(opts?: { cancelled?: boolean }): Promise<Clip>;
   discard(): Promise<void>;
   /** True while speech is coming in right now; lets the recording run on a little after the key is released. Absent when the recorder cannot tell. */
   speaking?(): boolean;

@@ -24,8 +24,8 @@ export function createFixtureRecorder(mic: Recorder, file: string, read: (file: 
       live = true;
       return { ok: true };
     },
-    async stop() {
-      if (!live) return mic.stop();
+    async stop(opts) {
+      if (!live) return mic.stop(opts);
       live = false;
       const clip = await read(file);
       if (!clip) throw new Error("the fixture file cannot be read");

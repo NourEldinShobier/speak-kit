@@ -75,8 +75,8 @@ export function fakeRecorder() {
       await state.startGate;
       return state.startResult;
     },
-    async stop() {
-      log.push("stop");
+    async stop(opts) {
+      log.push(opts?.cancelled ? "stop:cancelled" : "stop");
       return state.clip;
     },
     async discard() {

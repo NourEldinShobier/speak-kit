@@ -6,7 +6,8 @@ import type { Spool } from "./spool";
 const clip = (): Clip => ({ pcm: new Float32Array(10), sampleRate: 16_000, peak: 0.5 });
 const flush = () => new Promise<void>((r) => setImmediate(r));
 
-function rig(o: { startOk?: boolean; stopThrows?: boolean } = {}) {
+function rig(o: { startOk?: boolean; stopThrows?: boolean; lastPiece?: number } = {}) {
+  let rec!: ReturnType<typeof createSpooledRecorder>;
   const log: string[] = [];
   let n = 0;
   const spool: Spool = {
@@ -18,8 +19,8 @@ function rig(o: { startOk?: boolean; stopThrows?: boolean } = {}) {
     async append(id, pcm) {
       log.push(`append:${id}:${pcm.length}`);
     },
-    async seal(id) {
-      log.push(`seal:${id}`);
+    async seal(id, state) {
+      log.push(state === "cancelled" ? `seal:${id}:cancelled` : `seal:${id}`);
     },
     async finish(id) {
       log.push(`finish:${id}`);
@@ -27,12 +28,15 @@ function rig(o: { startOk?: boolean; stopThrows?: boolean } = {}) {
     async recover() {
       return [];
     },
+    async sweep() {},
+    async clear() {},
   };
   const mic: Recorder = {
     async start() {
       return o.startOk === false ? { ok: false, code: "mic-denied" } : { ok: true };
     },
     async stop() {
+      if (o.lastPiece) rec.chunk(new Float32Array(o.lastPiece));
       if (o.stopThrows) throw new Error("no audio");
       return clip();
     },
@@ -41,7 +45,8 @@ function rig(o: { startOk?: boolean; stopThrows?: boolean } = {}) {
     },
     speaking: () => true,
   };
-  return { log, rec: createSpooledRecorder(mic, spool, { rate: 16_000, now: () => 7 }) };
+  rec = createSpooledRecorder(mic, spool, { rate: 16_000, now: () => 7 });
+  return { log, rec, spool };
 }
 
 describe("spooled recorder", () => {
@@ -68,6 +73,29 @@ describe("spooled recorder", () => {
     rec.settled(c, true);
     await flush();
     expect(log.filter((l) => l.startsWith("finish"))).toEqual(["finish:t0"]);
+  });
+
+  it("keeps the last piece the microphone window sends while it answers the stop", async () => {
+    const { rec, log } = rig({ lastPiece: 4 });
+    await rec.start({ prerollMs: 0 });
+    await rec.stop();
+    await flush();
+    expect(log).toEqual(["begin:t0:16000:7", "append:t0:4", "seal:t0"]);
+  });
+
+  it("marks the take cancelled when the stop is a cancel, and opens none while keeping is off", async () => {
+    const { rec, log } = rig();
+    await rec.start({ prerollMs: 0 });
+    await rec.stop({ cancelled: true });
+    await flush();
+    expect(log).toEqual(["begin:t0:16000:7", "seal:t0:cancelled"]);
+    const off = rig();
+    const rec2 = createSpooledRecorder({ start: async () => ({ ok: true }), stop: async () => clip(), discard: async () => undefined }, { ...off.spool }, { rate: 16_000, enabled: () => false });
+    await rec2.start({ prerollMs: 0 });
+    rec2.chunk(new Float32Array(3));
+    await rec2.stop();
+    await flush();
+    expect(off.log).toEqual([]);
   });
 
   it("opens no take when the microphone does not start", async () => {

@@ -21,7 +21,7 @@ import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRec
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
-import { cleanField, createRecovery, onStateChange, prepareModel, sleepBlock, warmCaret } from "./service-extras";
+import { cancelGrab, cleanField, createRecovery, onStateChange, prepareModel, sleepBlock, warmCaret } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import type { Stt } from "./stt";
@@ -73,6 +73,8 @@ export class DictationService {
     (why) => this.#ctx.log.warn("dictation sleep block", why),
   );
   #audio: AudioStore | undefined;
+  #spool: Spool | undefined;
+  #typing = false;
   #recover: (() => void) | undefined;
   /** Tests only: what the scripted writer does with the next dictation. */
   fakeRewrite: "ok" | "hang" | "fail" = "ok";
@@ -110,6 +112,7 @@ export class DictationService {
       catalog: () => this.speech.catalog(),
       files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),
       warn: (title, detail) => this.#ctx.log.warn(title, detail),
+      cleared: () => void this.#spool?.clear(),
       key: o,
     });
     ({ controls: this.controls, history: this.history, records: this.records, actions: this.actions } = parts);
@@ -135,6 +138,10 @@ export class DictationService {
         overrides: () => appOverrides(this.#cfg.appRules),
         hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, place: () => (this.#cfg.indicator === "top" ? "top" : "bottom") },
         onHudWindow: (w) => (this.#hudWindow = w),
+        onTyping: (on) => {
+          this.#typing = on;
+          this.#hotkeys?.setCancelGrab(cancelGrab(this.state, on));
+        },
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#hook.onFault(e, recovered), changed: () => this.#push(true) });
@@ -153,6 +160,8 @@ export class DictationService {
       onPromptDropped: () => this.records.setPromptDropped(true),
     });
     ({ recorder: this.#recorder, core: this.core, audio: this.#audio } = built);
+    this.#spool = built.spool;
+    void (this.#cfg.retention === "off" ? built.spool.clear() : built.spool.sweep());
     this.#recover = createRecovery({ spool: built, core: () => this.core, presenter: this.presenter, warn: (t, d) => this.#ctx.log.warn(t, d) });
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
@@ -164,7 +173,7 @@ export class DictationService {
 
   #onState(s: DictationState): void {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
-    onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, now: Date.now() });
+    onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, typing: this.#typing, now: Date.now() });
     this.state = s;
     this.#sleep(s.status === "recording" || s.status === "locked");
     if (s.status === "idle" && s.notice) void this.history.refresh();

@@ -42,10 +42,10 @@ export class ReplayRecorder implements Recorder {
     return this.#clip ? ({ ok: true } as const) : this.#mic.start(req);
   }
 
-  async stop(): Promise<Clip> {
+  async stop(opts?: { cancelled?: boolean }): Promise<Clip> {
     const clip = this.#clip;
     this.#clip = undefined;
-    return clip ?? this.#mic.stop();
+    return clip ?? this.#mic.stop(opts);
   }
 
   speaking(): boolean {

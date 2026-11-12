@@ -195,7 +195,7 @@ class Runtime implements Dictation {
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
       try {
-        if (cancelled && !this.noUndo) return this.cancelled.keep(await this.deps.recorder.stop());
+        if (cancelled && !this.noUndo) return this.cancelled.keep(await this.deps.recorder.stop({ cancelled: true }));
         await this.deps.recorder.discard();
       } catch {
         // Nothing is left to discard if the recorder already stopped.

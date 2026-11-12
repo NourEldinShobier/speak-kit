@@ -16,24 +16,28 @@ export interface SpooledRecorder extends Recorder {
  * quit or a crash anywhere in between leaves the audio for the next start. A take that cannot be written to disk is simply not kept; the dictation
  * itself never waits for the disk.
  */
-export function createSpooledRecorder(inner: Recorder, spool: Spool, o: { rate: number; now?: () => number }): SpooledRecorder {
-  const { rate, now = Date.now } = o;
+export function createSpooledRecorder(inner: Recorder, spool: Spool, o: { rate: number; now?: () => number; /** False while nothing may be kept on disk (History is off). Read at each start. */ enabled?: () => boolean }): SpooledRecorder {
+  const { rate, now = Date.now, enabled = () => true } = o;
   let current: Promise<string> | undefined;
   const ids = new WeakMap<Clip, Promise<string>>();
   const quietly = <T>(p: Promise<T>) => p.catch(ignore);
   return {
     async start(req) {
       const r = await inner.start(req);
-      if (r.ok) current = spool.begin(rate, now());
+      if (r.ok && enabled()) current = spool.begin(rate, now());
       return r;
     },
-    async stop() {
+    async stop(opts) {
       const take = current;
-      current = undefined;
-      const clip = await inner.stop(); // when this throws, the take stays on disk as it was: the next start finds it
+      let clip: Clip;
+      try {
+        clip = await inner.stop(opts); // the microphone window sends its last piece while this runs, so the take stays open until it answers
+      } finally {
+        current = undefined; // when this throws, the take stays on disk as it was: the next start finds it
+      }
       if (take) {
         ids.set(clip, take);
-        void quietly(take.then((id) => spool.seal(id)));
+        void quietly(take.then((id) => spool.seal(id, opts?.cancelled ? "cancelled" : "pending")));
       }
       return clip;
     },
