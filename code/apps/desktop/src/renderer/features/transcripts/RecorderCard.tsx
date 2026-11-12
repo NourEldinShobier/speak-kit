@@ -64,15 +64,30 @@ function Active({ rec }: { rec: RecordingView }) {
   );
 }
 
-/** Before recording: the consent reminder, the microphone, and Start recording. Nothing is saved until Start. */
-function Ready({ starting, settings, onClose }: { starting: boolean; settings: SettingsView | null; onClose(): void }) {
-  const [error, setError] = useState<string | null>(null);
+function LanguageRow({ settings, disabled }: { settings: SettingsView | null; disabled: boolean }) {
   const [language, setLanguage] = useState<string | null>(null);
-  const shown = language ?? settings?.config.language ?? "auto";
   const pick = (l: string) => {
     setLanguage(l);
     void attempt(transcripts.patchSettings({ language: l as (typeof TRANSCRIPT_LANGUAGES)[number] }));
   };
+  return (
+    <div className="tr-rec__row">
+      <span className="tr-rec__label">Language</span>
+      <Select
+        label="Language"
+        size="md"
+        value={language ?? settings?.config.language ?? "auto"}
+        onChange={pick}
+        options={TRANSCRIPT_LANGUAGES.map((l) => ({ value: l, label: LANGUAGES[l]! }))}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
+/** Before recording: the consent reminder, the microphone, and Start recording. Nothing is saved until Start. */
+function Ready({ starting, settings, onClose }: { starting: boolean; settings: SettingsView | null; onClose(): void }) {
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const start = async () => {
     setError(null);
@@ -95,10 +110,7 @@ function Ready({ starting, settings, onClose }: { starting: boolean; settings: S
         <span className="tr-rec__label">Microphone</span>
         <span className="tr-rec__device">Default microphone</span>
       </div>
-      <div className="tr-rec__row">
-        <span className="tr-rec__label">Language</span>
-        <Select label="Language" size="md" value={shown} onChange={pick} options={TRANSCRIPT_LANGUAGES.map((l) => ({ value: l, label: LANGUAGES[l]! }))} disabled={busy || starting} />
-      </div>
+      <LanguageRow settings={settings} disabled={busy || starting} />
       <p className="tr-rec__note">Only the microphone is recorded here. Nothing is saved until you press Start.</p>
       <Problem text={error} />
       <div className="tr-rec__foot">
