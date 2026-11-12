@@ -85,6 +85,11 @@ class AutoSendImpl {
     this.#stopTick();
     this.#phase = "sending";
     const ok = await this.#d.sender.send();
+    if (this.#phase !== "sending") {
+      // the capsule was closed or a new capture began while it was handed over: it is taken back, nothing is shown
+      if (ok) this.#d.sender.undo();
+      return;
+    }
     if (!ok) {
       this.#phase = "idle";
       this.#d.failed();

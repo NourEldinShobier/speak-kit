@@ -9,7 +9,8 @@ const nodes = [
 describe("agent context text", () => {
   it("is the labels of the window in front, without password fields", async () => {
     const read = vi.fn(async () => nodes);
-    expect(await createAgentContext({ enabled: () => true, reader: { read }, os: "win32" })()).toBe("button: Save");
+    expect(await createAgentContext({ enabled: () => true, reader: { read }, os: "win32", pid: 7 })("window:55:0")).toBe("button: Save");
+    expect(read).toHaveBeenCalledWith({ windowHandle: "55", ownPid: 7 });
   });
 
   it("is off by default: the system is not asked", async () => {

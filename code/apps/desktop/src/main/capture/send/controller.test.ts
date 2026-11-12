@@ -23,16 +23,18 @@ function setup(pic: { base64: string; width: number; height: number } | null = {
   const timers: (() => void)[] = [];
   const inbox = createCaptureInbox({ now: () => 1 });
   const markSent = vi.fn();
+  const unmarkSent = vi.fn();
   const failed = vi.fn();
   const c = new SendController({
     inbox,
     picture: async () => pic ?? undefined,
     markSent,
+    unmarkSent,
     show: (v) => views.push(v),
     failed,
     schedule: (fn) => (timers.push(fn), () => void timers.splice(timers.indexOf(fn), 1)),
   });
-  return { c, inbox, views, markSent, failed, timers };
+  return { c, inbox, views, markSent, unmarkSent, failed, timers };
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -62,6 +64,36 @@ describe("send controller", () => {
     t.c.undo();
     expect(t.inbox.waiting("c1")).toBe(false);
     expect(t.views.at(-1)).toEqual({ kind: "undone" });
+  });
+
+  it("removes the sent mark when Undo takes the capture back", async () => {
+    const t = setup();
+    t.c.begin(record("c1"), 0);
+    await flush();
+    t.c.undo();
+    expect(t.unmarkSent).toHaveBeenCalledWith("c1");
+  });
+
+  it("a new capture beginning while the picture is read means the old one is not sent", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const t = setup();
+    const c = new SendController({
+      inbox: t.inbox,
+      picture: async () => (await gate, { base64: "QUJD", width: 4, height: 3 }),
+      markSent: t.markSent,
+      unmarkSent: t.unmarkSent,
+      show: (v) => t.views.push(v),
+      failed: t.failed,
+      schedule: () => () => undefined,
+    });
+    c.begin(record("c1"), 0);
+    c.cancel();
+    release();
+    await flush();
+    expect(t.inbox.waiting("c1")).toBe(false);
+    expect(t.unmarkSent).toHaveBeenCalledWith("c1");
+    expect(t.views).toEqual([]);
   });
 
   it("does not offer anything when Undo comes inside the countdown", async () => {

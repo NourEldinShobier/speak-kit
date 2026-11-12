@@ -36,6 +36,8 @@ export interface CaptureStore {
   get(id: string): Promise<CaptureRecord | undefined>;
   add(r: CaptureRecord): Promise<void>;
   update(id: string, patch: Partial<CaptureRecord>): Promise<CaptureRecord | undefined>;
+  /** Like update, but the patch is worked out from the record as it is when the change runs, so a change made meanwhile is not lost. */
+  mutate(id: string, patch: (current: CaptureRecord) => Partial<CaptureRecord>): Promise<CaptureRecord | undefined>;
   /** Removes these ids from the index. Always works on the index as it is now, never on a copy read earlier. Returns the records removed. */
   remove(ids: readonly string[]): Promise<CaptureRecord[]>;
 }
@@ -77,6 +79,16 @@ export function createStore(fs: StoreFs, file: string): CaptureStore {
   const load = () => loadAll(fs, file);
   const save = (items: CaptureRecord[]) => fs.write(file, JSON.stringify(items));
 
+  const mutate: CaptureStore["mutate"] = (id, patch) =>
+    exclusive(async () => {
+      const items = await load();
+      const i = items.findIndex((x) => x.id === id);
+      if (i < 0) return undefined;
+      items[i] = { ...items[i]!, ...patch(items[i]!), id };
+      await save(items);
+      return items[i];
+    });
+
   return {
     async list(search) {
       const all = (await load()).sort((a, b) => b.at - a.at);
@@ -91,15 +103,8 @@ export function createStore(fs: StoreFs, file: string): CaptureStore {
         const items = (await load()).filter((x) => x.id !== r.id);
         await save([...items, r]);
       }),
-    update: (id, patch) =>
-      exclusive(async () => {
-        const items = await load();
-        const i = items.findIndex((x) => x.id === id);
-        if (i < 0) return undefined;
-        items[i] = { ...items[i]!, ...patch, id };
-        await save(items);
-        return items[i];
-      }),
+    mutate,
+    update: (id, patch) => mutate(id, () => patch),
     remove: (ids) =>
       exclusive(async () => {
         const set = new Set(ids);

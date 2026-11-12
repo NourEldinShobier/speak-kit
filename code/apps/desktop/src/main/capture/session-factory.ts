@@ -23,7 +23,7 @@ export interface SessionWiring {
   fence: Fence;
   recorder: RecorderHolder;
   settings(): CaptureConfig;
-  context(): Promise<string | undefined>;
+  context(sourceId?: string): Promise<string | undefined>;
   events(): InputEvent[];
   /** False once the session this was made for was replaced: what it finishes later is not shown or copied. */
   current(): boolean;

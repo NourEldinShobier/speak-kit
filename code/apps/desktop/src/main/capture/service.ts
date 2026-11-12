@@ -12,7 +12,7 @@ import { History } from "./history";
 import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
-import type { Narrator } from "./recording";
+import { makeSheet, type Narrator } from "./recording";
 import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { CaptureRuntime } from "./runtime";
 import { applyPatch } from "./settings-patch";
@@ -54,7 +54,13 @@ export class CaptureService {
   constructor(ctx: Ctx, o: CaptureServiceOptions) {
     this.#ctx = ctx;
     this.#o = o;
-    this.history = new History({ folder: () => this.folder, log: (l) => ctx.log.info(l), now: () => Date.now(), trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined });
+    this.history = new History({
+      folder: () => this.folder,
+      log: (l) => ctx.log.info(l),
+      now: () => Date.now(),
+      sheet: (id, files) => makeSheet({ bundle: this.history.bundle, host: this.runtime.recorder.host, log: (l) => ctx.log.warn(l) }, id, files),
+      trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined,
+    });
     this.runtime = new CaptureRuntime({
       ctx,
       history: this.history,

@@ -19,6 +19,8 @@ export interface HistoryDeps {
   now(): number;
   /** Moves a folder to the Recycle Bin (Trash on macOS); defaults to the system call. Tests replace it so nothing lands in the real bin. */
   trash?: ((dir: string) => Promise<void>) | undefined;
+  /** Builds the contact sheet of a capture from these picture files and writes it as sheet.jpg; undefined when it could not be made. */
+  sheet?(id: string, files: readonly string[]): Promise<Buffer | undefined>;
 }
 
 /** The saved captures: the index, the folders on disk, the journal that finishes interrupted ones, and what can be done with one (copy, reveal, remove, clean up). */
@@ -130,20 +132,51 @@ export class History {
     return { src: image.toDataURL(), width, height };
   }
 
-  /** Saves the edited copy next to the original and points the record at it. */
+  /** Saves the edited copy next to the original and points the record at it. For a recording the contact sheet is built again from the shown pictures, so a copy or a send never carries what was blurred out. */
   async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
     const r = await this.store.get(id);
     if (refuseEdit(r, file, png) || !r) return false;
     const name = editedName(file);
     await this.bundle.writeFile(r.dir, name, png);
-    await this.store.update(id, { edits: { ...r.edits, [file]: name }, bytes: await this.bundle.bytes(r.dir) });
+    // the record is read again inside the store's queue: an edit of another picture saved meanwhile stays
+    const saved = await this.store.mutate(id, (cur) => ({ edits: { ...cur.edits, [file]: name } }));
+    if (!saved) {
+      await this.bundle.remove(r.dir);
+      return false;
+    }
+    if (saved.kind === "recording") await this.#rebuildSheet(id);
+    await this.store.update(id, { bytes: await this.bundle.bytes(r.dir) });
     return true;
+  }
+
+  #sheets: Promise<unknown> = Promise.resolve();
+
+  /** One rebuild at a time, each from the record as it is then, so the last one always shows every edit. */
+  #rebuildSheet(id: string): Promise<unknown> {
+    const run = async () => {
+      const cur = await this.store.get(id);
+      if (!cur?.sheet || !this.#d.sheet) return;
+      try {
+        await this.#d.sheet(
+          cur.dir,
+          cur.frames.map((f) => shownFile(cur, f)),
+        );
+      } catch (e) {
+        this.#d.log(`capture ${id}: the contact sheet could not be rebuilt (${String(e)})`);
+      }
+    };
+    return (this.#sheets = this.#sheets.then(run, run));
   }
 
   /** The capture was handed to the voice chat: the list shows it. */
   async markSent(id: string): Promise<void> {
     const r = await this.store.get(id);
     if (r && !r.chips.includes("sent")) await this.store.update(id, { chips: [...r.chips, "sent"] });
+  }
+
+  /** The capture was taken back from the voice chat. */
+  async unmarkSent(id: string): Promise<void> {
+    await this.store.mutate(id, (r) => ({ chips: r.chips.filter((c) => c !== "sent") }));
   }
 
   async reveal(id: string): Promise<void> {

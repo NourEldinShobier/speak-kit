@@ -9,6 +9,8 @@ export interface SendControllerDeps {
   picture(record: CaptureRecord): Promise<Picture | undefined>;
   /** The capture was handed over: the list shows it. */
   markSent(id: string): void;
+  /** The capture was taken back from the voice chat: the list no longer shows it as sent. */
+  unmarkSent(id: string): void;
   show(view: SendView | undefined): void;
   failed(): void;
   schedule(fn: () => void, ms: number): () => void;
@@ -37,7 +39,11 @@ export class SendController {
         return true;
       },
       canUndo: () => inbox.waiting(record.id),
-      undo: () => inbox.retract(record.id),
+      undo: () => {
+        const taken = inbox.retract(record.id);
+        if (taken) this.#d.unmarkSent(record.id);
+        return taken;
+      },
       onChange: (cb) => inbox.onChange(cb),
     };
   }
