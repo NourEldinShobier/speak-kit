@@ -1,8 +1,8 @@
 import type { IpcMain, IpcMainEvent, WebContents } from "electron";
 import * as v from "valibot";
 import type { Clip, MicErrorCode, Recorder } from "@speakkit/dictation";
-import { REC_COMMAND, REC_LEVEL, REC_READY, REC_REPLY } from "../../shared/dictation/channels";
-import { RecorderReplySchema, type RecorderCommand, type RecorderResult } from "../../shared/dictation/contract";
+import { REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY } from "../../shared/dictation/channels";
+import { RecorderEventSchema, RecorderReplySchema, type RecorderCommand, type RecorderEvent, type RecorderMicConfig, type RecorderResult } from "../../shared/dictation/contract";
 
 /** What the recorder host needs of its window: a page it can send commands to. */
 export interface RecorderPage {
@@ -16,6 +16,10 @@ interface Deps {
   open(): RecorderPage;
   /** Level 0..1 while recording, for the HUD. */
   onLevel(level: number): void;
+  /** Which microphone to use and how long to keep it open; read at every start. */
+  mic(): RecorderMicConfig;
+  /** The microphone itself went silent, was lost, or came back. */
+  onEvent(e: RecorderEvent): void;
   /** How long to wait for the page to load and for an answer. */
   timeoutMs?: number;
 }
@@ -26,10 +30,16 @@ export interface RecorderHost extends Recorder {
   /** Destroys the window (the microphone closes with it). */
   close(): void;
   owns(contents: WebContents): boolean;
+  /** The microphone chosen at the last start, as the page reported it. */
+  readonly device: { label: string; bluetooth: boolean } | undefined;
+  /** True while the last block of audio was speech-loud: lets a recording run on a little after the key is released. */
+  speaking(): boolean;
   dispose(): void;
 }
 
 type Command = RecorderCommand extends infer C ? (C extends { id: number } ? Omit<C, "id"> : never) : never;
+/** A block this loud (see `levelOf`) is speech, not room noise. */
+const SPEECH_LEVEL = 0.12;
 const FAILED: RecorderResult = { ok: false, code: "mic-failed" };
 const fail = (code: MicErrorCode): { ok: false; code: MicErrorCode } => ({ ok: false, code });
 
@@ -46,6 +56,9 @@ class Host implements RecorderHost {
   #ready: Promise<boolean> | undefined;
   #markReady: (() => void) | undefined;
   #next = 1;
+  #lastLevel = 0;
+  #lastLevelAt = 0;
+  device: { label: string; bluetooth: boolean } | undefined;
 
   constructor(deps: Deps) {
     this.#d = deps;
@@ -53,13 +66,29 @@ class Host implements RecorderHost {
     this.#listeners = [
       [REC_READY, (e) => this.#mine(e) && this.#markReady?.()],
       [REC_REPLY, (e, ...args) => this.#onReply(e, args)],
-      [REC_LEVEL, (e, level) => this.#mine(e) && typeof level === "number" && Number.isFinite(level) && this.#d.onLevel(Math.min(1, Math.max(0, level)))],
+      [REC_LEVEL, (e, level) => this.#mine(e) && typeof level === "number" && Number.isFinite(level) && this.#onLevel(Math.min(1, Math.max(0, level)))],
+      [REC_EVENT, (e, event) => this.#mine(e) && this.#onEvent(event)],
     ];
     for (const [channel, fn] of this.#listeners) deps.ipcMain.on(channel, fn);
   }
 
   #mine(e: IpcMainEvent): boolean {
     return !!this.#page && !this.#page.destroyed && e.sender === this.#page.contents;
+  }
+
+  #onLevel(level: number): void {
+    this.#lastLevel = level;
+    this.#lastLevelAt = Date.now();
+    this.#d.onLevel(level);
+  }
+
+  #onEvent(event: unknown): void {
+    const parsed = v.safeParse(RecorderEventSchema, event);
+    if (parsed.success) this.#d.onEvent(parsed.output);
+  }
+
+  speaking(): boolean {
+    return this.#lastLevel > SPEECH_LEVEL && Date.now() - this.#lastLevelAt < 200;
   }
 
   #onReply(e: IpcMainEvent, args: unknown[]): void {
@@ -107,7 +136,8 @@ class Host implements RecorderHost {
   }
 
   async start({ prerollMs }: { prerollMs: number }) {
-    const r = await this.#call({ op: "start", prerollMs });
+    const r = await this.#call({ op: "start", prerollMs, mic: this.#d.mic() });
+    if (r.ok) this.device = r.device;
     return r.ok ? ({ ok: true } as const) : fail(r.code);
   }
 

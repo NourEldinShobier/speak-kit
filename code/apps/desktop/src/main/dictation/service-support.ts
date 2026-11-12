@@ -1,12 +1,10 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { DictationState, Settings } from "@speakkit/dictation";
+import type { DictationState, InsertMode, MicStatus, Settings } from "@speakkit/dictation";
 import type { DictationStatus } from "../../shared/dictation/contract";
-import type { DictationConfig } from "../../shared/dictation/settings";
-import { firstClash, type Shortcuts } from "../../shared/dictation/conflicts";
-import type { DictationConfig as Config } from "../../shared/dictation/settings";
-import { hotkeySlots, type DictationPatch } from "../../shared/dictation/settings";
+import type { AppRule, DictationConfig } from "../../shared/dictation/settings";
+import type { AppOverride } from "./types";
 import type { ModelManager } from "./models";
 import type { HotkeyLayout } from "./hotkey-source";
 
@@ -26,30 +24,26 @@ export const clock = {
     return () => clearTimeout(t);
   },
 };
+const insertModeOf = (method: AppRule["method"]): InsertMode => (method === "type" || method === "copy" ? method : "paste");
+
 export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   hotkey: c.hotkey,
   mode: c.mode,
-  holdMs: c.holdMs,
-  secondKey: c.secondHotkey,
-  mouseKey: c.mouseButton,
-  rawKey: c.rawHotkey,
-  pasteLastKey: c.pasteLastHotkey,
-  cancelKey: c.cancelKey,
   language: c.language,
   retention: c.retention,
   replacements: c.replacements,
+  keepReady: c.keepReady,
+  keepOnClipboard: c.output === "keep",
+  insertMode: c.output === "copy" ? "copy" : "paste",
+  returnToApp: c.returnToApp,
+  appModes: Object.fromEntries(Object.entries(c.appRules).map(([exe, r]) => [exe, insertModeOf(r.method)])),
 });
 
-/** What the key hook listens for. Sharing the keys with other programs is only offered in Hold mode, because a hands-free mode cannot keep the other program's key held. */
-export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
-  hotkey: c.hotkey,
-  second: c.secondHotkey,
-  mouse: c.mouseButton,
-  raw: c.rawHotkey,
-  pasteLast: c.pasteLastHotkey,
-  cancelKey: c.cancelKey,
-  share: c.shareHotkey && c.mode === "hold-only",
-});
+/** The per-program table as paste rules for the operating system layer: which keys, and how long to wait before them. */
+export const appOverrides = (rules: Readonly<Record<string, AppRule>>): AppOverride[] => Object.entries(rules).map(([exe, r]) => ({ exe, profile: { shortcut: r.method, preDelayMs: r.delayMs } }));
+
+/** How long an idle open microphone stays open: nothing when it is released when idle, forever (-1) or for the set number of minutes when kept ready. */
+export const keepOpenMs = (c: Pick<DictationConfig, "keepReady" | "keepReadyMinutes">): number => (!c.keepReady ? 0 : c.keepReadyMinutes === 0 ? -1 : c.keepReadyMinutes * 60_000);
 
 interface StatusParts {
   supported: boolean;
@@ -59,28 +53,11 @@ interface StatusParts {
   state: DictationState;
   models: ModelManager;
   historyCount: number;
-  paused: boolean;
-  mouseButtons: boolean;
-  readerShortcuts: Record<string, string>;
-  rejected: DictationStatus["rejected"];
-  micOwner: string | undefined;
+  mic: MicStatus;
 }
 
 /** What the Settings page and the tray are told about dictation. */
-export const dictationStatus = ({
-  supported,
-  config,
-  hotkeyReady,
-  hotkeyFailed,
-  state,
-  models,
-  historyCount,
-  paused,
-  readerShortcuts,
-  rejected,
-  micOwner,
-  mouseButtons,
-}: StatusParts): DictationStatus => ({
+export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, mic }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
   hotkeyReady,
@@ -93,13 +70,7 @@ export const dictationStatus = ({
   modelReady: models.ready,
   ...(models.error && { modelError: models.error }),
   historyCount,
-  paused,
-  mouseButtons,
-  platform: process.platform,
-  readerShortcuts,
-  ...(rejected && { rejected }),
-  ...(micOwner && { micOwner }),
-  ...(state.status === "error" && state.owner && { errorOwner: state.owner }),
+  mic,
 });
 
 const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;

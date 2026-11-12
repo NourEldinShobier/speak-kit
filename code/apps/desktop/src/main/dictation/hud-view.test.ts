@@ -31,7 +31,7 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "pasting" }))).toEqual({ kind: "transcribing" });
   });
 
-  it("says Pasted after an insert, unless the system only managed to copy", () => {
+  it("says Sent after an insert, unless the system only managed to copy", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }))).toEqual({ kind: "pasted" });
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: true }))).toEqual({ kind: "copied", reason: "clipboard" });
   });
@@ -46,6 +46,10 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "copied", reason: "focus-changed" } }))).toEqual({ kind: "copied", reason: "clipboard" });
   });
 
+  it("offers Restore on a cancel that can still be brought back", () => {
+    expect(hudViewFor(input({ status: "idle", notice: { kind: "cancelled", restorable: true } }))).toEqual({ kind: "notice", text: "Cancelled", action: { label: "Restore", id: "restore" } });
+  });
+
   it("says Cancelled and No speech heard", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "cancelled" } }))).toEqual({ kind: "notice", text: "Cancelled" });
     expect(hudViewFor(input({ status: "idle", notice: { kind: "no-speech" } }))).toEqual({ kind: "notice", text: "No speech heard" });
@@ -56,7 +60,8 @@ describe("errors", () => {
   it.each([
     ["mic-denied", "Microphone access is blocked", "sound-settings"],
     ["mic-missing", "No microphone found", "sound-settings"],
-    ["mic-silent", "The microphone sent no sound", "sound-settings"],
+    ["mic-silent", "Microphone is muted or too quiet", "sound-settings"],
+    ["focus-failed", "Could not return to the app. The text is in History", "copy-last"],
     ["model-missing", "Speech model missing", "download"],
   ])("%s says %s and offers %s", (code, text, action) => {
     expect(errorView(code, false)).toMatchObject({ kind: "error", text, action: { id: action } });

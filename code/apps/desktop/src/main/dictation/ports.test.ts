@@ -17,7 +17,7 @@ function fakeOs(over: { fg?: object | null; password?: boolean; result?: InsertR
 describe("inserter port", () => {
   it("describes the window in front, with whether a password field has focus", async () => {
     const { os } = fakeOs({ password: true });
-    expect(await createInserterPort(os, () => undefined).target()).toEqual({ id: "42", exe: "notepad.exe", elevated: false, passwordField: true });
+    expect(await createInserterPort(os, () => undefined).target()).toEqual({ id: "42", exe: "notepad.exe", name: "Notepad", elevated: false, passwordField: true });
   });
 
   it("has no target when no window is in front, and an empty program name when it cannot be read", async () => {
@@ -91,5 +91,21 @@ describe("replay recorder", () => {
     expect(calls).toEqual([]);
     await r.start({ prerollMs: 1 });
     expect(calls).toEqual(["start 1"]);
+  });
+});
+
+describe("inserter port keep and focus", () => {
+  it("passes the keep-on-clipboard plan as the keep mode", async () => {
+    const { os, inserted } = fakeOs();
+    await createInserterPort(os, () => undefined).insert({ text: "hi", plan: { method: "paste", keep: true } });
+    expect(inserted).toEqual([{ text: "hi", options: { mode: "keep" } }]);
+  });
+
+  it("brings the window back through the system layer by its id", async () => {
+    const calls: string[] = [];
+    const { os } = fakeOs();
+    os.focus = async (hwnd) => (calls.push(hwnd), true);
+    expect(await createInserterPort(os, () => undefined).focus!({ id: "42", exe: "x.exe", elevated: false, passwordField: false })).toBe(true);
+    expect(calls).toEqual(["42"]);
   });
 });

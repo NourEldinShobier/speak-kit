@@ -31,8 +31,8 @@ function setup(
     foreground: () => fg,
     passwordFocused: () => opts.password ?? false,
     heldModifiers: () => held.shift() ?? [],
-    pressPaste: (shift) => {
-      sent.push(`${shift ? "ctrl+shift+v" : "ctrl+v"} while clipboard=${content}`);
+    pressPaste: (key) => {
+      sent.push(`${key.replaceAll("-", "+")} while clipboard=${content}`);
       return opts.accept ?? true;
     },
     type: (text) => {
@@ -42,6 +42,7 @@ function setup(
     clipboardSequence: () => seq,
     clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
     markClipboard: async () => true,
+    focus: async () => true,
   };
   const slept: number[] = [];
   const ins = createInserter({
@@ -215,6 +216,7 @@ describe("unsupported platform", () => {
       clipboardSequence: () => 0,
       clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
       markClipboard: async () => false,
+      focus: async () => false,
     };
     const ins = createInserter({ input, clip, supported: false });
     expect(await ins.insert("x")).toEqual({ status: "copied", reason: "unsupported-platform" });

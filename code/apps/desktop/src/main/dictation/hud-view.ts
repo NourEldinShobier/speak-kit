@@ -38,7 +38,9 @@ export function errorView(code: string, canRetry: boolean, owner?: string): HudV
     case "mic-in-use":
       return E(`${owner ?? "Another feature"} is using the microphone`, "microphone-off");
     case "mic-silent":
-      return E("The microphone sent no sound", "microphone-off", { label: "Sound settings", id: "sound-settings" });
+      return E("Microphone is muted or too quiet", "microphone-off", { label: "Sound settings", id: "sound-settings" });
+    case "focus-failed":
+      return E("Could not return to the app. The text is in History", "alert-triangle", { label: "Copy", id: "copy-last" });
     case "model-missing":
       return E("Speech model missing", "download", { label: "Download", id: "download" });
     case "model-loading":
@@ -88,7 +90,11 @@ export function hudViewFor(i: HudInput): HudView | null {
     case "error":
       return errorView(s.code, i.canRetry, s.owner);
     case "idle":
-      return idleView(s.notice, i.insertedAsCopy);
+      if (!s.notice) return null;
+      if (s.notice.kind === "inserted") return i.insertedAsCopy ? { kind: "copied", reason: "clipboard" } : { kind: "pasted" };
+      if (s.notice.kind === "copied") return { kind: "copied", reason: s.notice.reason === "elevated" ? "elevated" : "clipboard" };
+      if (s.notice.kind === "cancelled") return s.notice.restorable ? { kind: "notice", text: "Cancelled", action: { label: "Restore", id: "restore" } } : { kind: "notice", text: "Cancelled" };
+      return { kind: "notice", text: "No speech heard" };
     default:
       return s satisfies never;
   }

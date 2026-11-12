@@ -5,6 +5,8 @@ export interface Target {
   id: string;
   /** Executable name, for example "WindowsTerminal.exe". */
   exe: string;
+  /** Friendly name of the program, when the system has one. */
+  name?: string;
   elevated: boolean;
   passwordField: boolean;
 }

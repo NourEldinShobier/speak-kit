@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { IpcMain, WebContents } from "electron";
-import { REC_COMMAND, REC_LEVEL, REC_READY, REC_REPLY } from "../../shared/dictation/channels";
+import { REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY } from "../../shared/dictation/channels";
 import type { RecorderCommand } from "../../shared/dictation/contract";
 import { createRecorderHost, type RecorderPage } from "./recorder";
 
@@ -23,10 +23,18 @@ function setup(timeoutMs = 200) {
     return page;
   };
   const levels: number[] = [];
-  const host = createRecorderHost({ ipcMain: ipc as unknown as IpcMain, open, onLevel: (n) => levels.push(n), timeoutMs });
+  const events: unknown[] = [];
+  const host = createRecorderHost({
+    ipcMain: ipc as unknown as IpcMain,
+    open,
+    onLevel: (n) => levels.push(n),
+    mic: () => ({ saved: "dev-1", exclusions: ["yeti"], avoidBluetooth: true, keepMs: -1 }),
+    onEvent: (e) => events.push(e),
+    timeoutMs,
+  });
   const from = (channel: string, ...args: unknown[]) => ipc.emit(channel, { sender: contents }, ...args);
   const reset = () => ((destroyed = false), (contents.sent.length = 0));
-  return { host, contents, from, levels, pages, ipc, reset, isDestroyed: () => destroyed };
+  return { host, contents, from, levels, events, pages, ipc, reset, isDestroyed: () => destroyed };
 }
 
 describe("recorder host", () => {
@@ -140,5 +148,53 @@ describe("recorder host", () => {
     s.from(REC_READY);
     void s.host.discard();
     await vi.waitFor(() => expect(spy).toHaveBeenCalledWith(REC_COMMAND, expect.objectContaining({ op: "discard" })));
+  });
+});
+
+describe("recorder host microphone settings and events", () => {
+  it("sends the chosen microphone and how long to keep it open with every start", async () => {
+    const s = setup();
+    const started = s.host.start({ prerollMs: 450 });
+    s.from(REC_READY);
+    await vi.waitFor(() => expect(s.contents.sent).toHaveLength(1));
+    expect(s.contents.sent[0]).toMatchObject({ mic: { saved: "dev-1", exclusions: ["yeti"], avoidBluetooth: true, keepMs: -1 } });
+    s.from(REC_REPLY, s.contents.sent[0]!.id, { ok: true, device: { label: "Blue Yeti", bluetooth: false } });
+    await started;
+    expect(s.host.device).toEqual({ label: "Blue Yeti", bluetooth: false });
+  });
+
+  it("passes on microphone events from its own page and ignores malformed ones", () => {
+    const s = setup();
+    void s.host.prepare();
+    s.from(REC_EVENT, { type: "silent" });
+    s.from(REC_EVENT, { type: "reopening", attempt: 2 });
+    s.from(REC_EVENT, { type: "reopening", attempt: 0 });
+    s.from(REC_EVENT, { type: "format-disk" });
+    s.from(REC_EVENT, "nope");
+    expect(s.events).toEqual([{ type: "silent" }, { type: "reopening", attempt: 2 }]);
+  });
+
+  it("ignores events from any other page", () => {
+    const s = setup();
+    void s.host.prepare();
+    s.ipc.emit(REC_EVENT, { sender: {} }, { type: "silent" });
+    expect(s.events).toEqual([]);
+  });
+
+  it("is speaking only while a loud block arrived in the last 200 ms", () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      void s.host.prepare();
+      expect(s.host.speaking()).toBe(false);
+      s.from(REC_LEVEL, 0.5);
+      expect(s.host.speaking()).toBe(true);
+      vi.advanceTimersByTime(250);
+      expect(s.host.speaking()).toBe(false);
+      s.from(REC_LEVEL, 0.05);
+      expect(s.host.speaking()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

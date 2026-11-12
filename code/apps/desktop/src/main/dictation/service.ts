@@ -1,10 +1,10 @@
-import { ipcMain, powerMonitor, type BrowserWindow, type WebContents } from "electron";
+import { ipcMain, powerMonitor, powerSaveBlocker, shell, type BrowserWindow, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createDictation, type Dictation, type DictationState } from "@speakkit/dictation";
+import { createDictation, micStatus, type Clip, type Dictation, type DictationState, type MicEvent, type MicStatus } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
-import type { DictationStatus } from "../../shared/dictation/contract";
+import type { DictationStatus, HistoryItem, RecorderEvent } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
@@ -15,9 +15,8 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus, hotkeyLayout, shortcutClash } from "./service-support";
-import { keyLabel } from "../../shared/dictation/keys";
-import { createParts, type Failure, type Parts } from "./service-parts";
+import { appOverrides, clock, coreSettings, dictationStatus, keepOpenMs } from "./service-support";
+import { friendlyAppName } from "./app-name";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
@@ -68,6 +67,8 @@ export class DictationService {
   #recorder: RecorderHost | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
+  #mic: MicStatus = { kind: "none" };
+  #sleepBlock: number | undefined;
   #count = 0;
   #lastInsert: InsertResult | undefined;
   #lastPush = 0;
@@ -130,13 +131,21 @@ export class DictationService {
 
   async #init(): Promise<void> {
     const page = (name: string) => pathToFileURL(path.join(this.#o.distDir, "../renderer", name)).href;
-    const os = (this.os = this.#o.os ?? (await createDictationOs({ hud: { page: page("hud.html"), width: 560, height: 64, bridge: true }, onHudWindow: (w) => (this.#hudWindow = w) })));
+    const os = (this.os =
+      this.#o.os ??
+      (await createDictationOs({
+        overrides: () => appOverrides(this.#cfg.appRules),
+        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true },
+        onHudWindow: (w) => (this.#hudWindow = w),
+      })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered), changed: () => this.#push(true) });
     this.#hotkeys.onPasteLast(() => void this.controls.pasteLast());
     this.#recorder = createRecorderHost({
       ipcMain,
       onLevel: (n) => this.presenter.setLevel(n),
+      mic: () => ({ saved: this.#cfg.microphone, exclusions: this.#cfg.micExclusions, avoidBluetooth: this.#cfg.avoidBluetooth, keepMs: keepOpenMs(this.#cfg) }),
+      onEvent: (e) => this.#onMicEvent(e),
       open: () => {
         const w = openRecorderWindow({ page: page("recorder.html"), micAllowed: () => !this.micDenied });
         return {
@@ -151,8 +160,17 @@ export class DictationService {
     this.#failure.replay = new ReplayRecorder(this.#recorder);
     this.core = createDictation({
       clock,
-      recorder: this.#failure.replay,
-      transcriber: createTranscriber({ stt: this.stt, model: () => this.#cfg.model, onFailedClip: (c) => (this.#failure.clip = c), onModelError: (d) => this.models.report(d) }),
+      recorder: this.#replay,
+      transcriber: createTranscriber({
+        stt: this.stt,
+        model: () => this.#cfg.model,
+        sentencePause: () => this.#cfg.sentencePause,
+        onFailedClip: (c) => (this.#lastFailed = c),
+        onModelError: (d) => this.models.report(d),
+      }),
+      keepClip: (clip) => (this.#lastFailed = clip),
+      // Only the stage name and a reason: spoken text never reaches a log.
+      log: (stage, why) => this.#ctx.log.warn(`dictation stage ${stage}`, why),
       inserter: createInserterPort(os, (r) => (this.#lastInsert = r)),
       hotkeys: this.#hotkeys,
       storage: createHistoryStorage(path.join(this.#o.dataDir, "dictation-history.json")),
@@ -170,7 +188,8 @@ export class DictationService {
     this.state = s;
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
     this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
-    if (s.status === "error") this.#failure.error = s.code;
+    if (s.status === "error") this.#lastError = s.code;
+    this.#blockSleep(s.status === "recording" || s.status === "locked");
     if (s.status === "idle" && s.notice) void this.#refreshCount();
     this.presenter.onState(s);
     this.#push(true);
@@ -187,12 +206,42 @@ export class DictationService {
       state: this.state,
       models: this.models,
       historyCount: this.#count,
-      paused: this.controls.paused,
-      mouseButtons: this.os?.hotkey.mouse === true,
-      readerShortcuts: { ...this.#ctx.config.shortcuts },
-      rejected: this.#rejected,
-      micOwner: this.#o.micOwner?.(),
+      mic: this.#mic,
     });
+  }
+
+  #onMicEvent(e: RecorderEvent): void {
+    const map: Record<RecorderEvent["type"], MicEvent | undefined> = {
+      silent: { type: "silent" },
+      lost: { type: "reopening", attempt: 1 },
+      "gave-up": { type: "gave-up" },
+      reopening: e.type === "reopening" ? { type: "reopening", attempt: e.attempt } : undefined,
+      opened: e.type === "opened" ? { type: "chosen", label: e.label, bluetooth: e.bluetooth } : undefined,
+      "no-device": e.type === "no-device" ? { type: "no-device", builtInOff: e.builtInOff } : undefined,
+    };
+    const event = map[e.type];
+    if (!event) return;
+    this.#mic = micStatus(this.#mic, event, process.platform === "win32");
+    if (e.type === "silent") this.#lastError = "mic-silent";
+    this.#push(true);
+  }
+
+  /** The computer must not go to sleep in the middle of a recording; a failure to ask is logged and the recording goes on. */
+  #blockSleep(recording: boolean): void {
+    if (recording && this.#cfg.blockSleep && this.#sleepBlock === undefined) {
+      try {
+        this.#sleepBlock = powerSaveBlocker.start("prevent-app-suspension");
+      } catch (e) {
+        this.#ctx.log.warn("dictation could not block sleep", String(e));
+      }
+    } else if (!recording && this.#sleepBlock !== undefined) {
+      try {
+        powerSaveBlocker.stop(this.#sleepBlock);
+      } catch {
+        // A blocker that is already gone needs no release.
+      }
+      this.#sleepBlock = undefined;
+    }
   }
 
   #send(): void {
@@ -319,9 +368,82 @@ export class DictationService {
 
   // ---- history, retry, HUD buttons ---------------------------------------------------------------------------
 
+  async historyList(search?: string): Promise<HistoryItem[]> {
+    await this.ready;
+    const items = (await this.core?.history.list(search ? { search } : undefined)) ?? [];
+    return items.map((e) => ({
+      id: e.id,
+      at: e.at,
+      text: e.text,
+      durationMs: e.durationMs,
+      ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
+      ...(e.kind && { kind: e.kind }),
+      ...(e.outcome && { outcome: e.outcome }),
+    }));
+  }
+
+  async historyCopy(id: string): Promise<boolean> {
+    await this.ready;
+    return (await this.core?.history.copy(id)) ?? false;
+  }
+
+  async historyRemove(id: string): Promise<void> {
+    await this.ready;
+    await this.core?.history.remove(id);
+    await this.#refreshCount();
+  }
+
+  async historyRemoveMany(ids: string[]): Promise<void> {
+    await this.ready;
+    await this.core?.history.removeMany(ids);
+    await this.#refreshCount();
+  }
+
+  async historyStats() {
+    await this.ready;
+    return (await this.core?.history.stats()) ?? { dictations: 0, words: 0, listeningMs: 0, topApps: [] };
+  }
+
+  async historyClear(): Promise<void> {
+    await this.ready;
+    await this.core?.history.clear();
+    await this.#refreshCount();
+  }
+
+  /** Runs the last recording that could not be transcribed once more, through the same pipeline as a live one. */
+  async retry(): Promise<void> {
+    await this.ready;
+    const clip = this.#lastFailed;
+    if (!clip || !this.core || (this.state.status !== "idle" && this.state.status !== "error")) return;
+    this.#lastFailed = undefined;
+    this.#replay?.replay(clip);
+    this.core.start();
+    setTimeout(() => this.core?.stop(), 0);
+  }
+
+  async openSoundSettings(): Promise<void> {
+    if (process.platform !== "win32") return;
+    const blocked = this.#lastError === "mic-denied" || this.#lastError === "mic-silent";
+    await shell.openExternal(blocked ? "ms-settings:privacy-microphone" : "ms-settings:sound");
+  }
+
+  async #copyLast(): Promise<void> {
+    const [last] = (await this.core?.history.list({ limit: 1 })) ?? [];
+    if (last) await this.core?.history.copy(last.id);
+  }
+
   /** True when `contents` is the HUD page: only it may press the HUD buttons. */
   ownsHud(contents: WebContents): boolean {
     return !!this.#hudWindow?.owns?.(contents);
+  }
+
+  hudAction(a: HudAction): void {
+    this.presenter.dismiss();
+    if (a === "retry") void this.retry();
+    else if (a === "download") this.#downloadFromHud();
+    else if (a === "sound-settings") void this.openSoundSettings();
+    else if (a === "restore") this.core?.restore();
+    else if (a === "copy-last") void this.#copyLast();
   }
 
   #downloadFromHud(): void {
@@ -342,8 +464,7 @@ export class DictationService {
 
   async dispose(): Promise<void> {
     clearTimeout(this.#pushTimer);
-    this.controls.dispose();
-    this.#hotkeys?.dispose();
+    this.#blockSleep(false);
     this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;
