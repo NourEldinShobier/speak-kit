@@ -1,22 +1,37 @@
 import { markOf } from "./model";
 
-// Original outline glyphs, one per call app; they only hint at the app and are not its logo.
-const GLYPHS: Record<string, string> = {
-  teams: "M5 5h9a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-9z M8.5 9h4 M10.5 9v6 M18 9h1a2 2 0 0 1 2 2v3a3 3 0 0 1 -3 3",
-  zoom: "M3 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-11z M16 11l5 -3v8l-5 -3",
-  meet: "M4 6h12v5h5v7h-17z M16 11v7",
-  slack: "M9 4l-2 16 M17 4l-2 16 M4 9h16 M3.5 15h16",
-  discord: "M6 6h12a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-6a3 3 0 0 1 3 -3z M9 11v2 M15 11v2",
-  manual: "M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1 -6 0z M6 11a6 6 0 0 0 12 0 M12 17v3",
+type Category = "video" | "chat" | "browser" | "unknown" | "manual";
+
+// Original 16 px outline glyphs, one per kind of call app; none of them is an app's logo.
+const GLYPHS: Record<Category, string> = {
+  video: "M3 4h6.5A1.5 1.5 0 0 1 11 5.5v5A1.5 1.5 0 0 1 9.5 12H3A1.5 1.5 0 0 1 1.5 10.5v-5A1.5 1.5 0 0 1 3 4z M11 7l3.5 -2v6l-3.5 -2",
+  chat: "M3 3h10a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 13 11H8l-3 2.5V11H3a1.5 1.5 0 0 1 -1.5 -1.5v-5A1.5 1.5 0 0 1 3 3z",
+  browser: "M2.5 2.5h11a1 1 0 0 1 1 1v9a1 1 0 0 1 -1 1h-11a1 1 0 0 1 -1 -1v-9a1 1 0 0 1 1 -1z M1.5 6h13 M5 2.5V6",
+  unknown: "M2.5 2.5h11v11h-11z M6.2 6.4a1.9 1.9 0 1 1 2.9 1.6c-.7.4 -1.1.8 -1.1 1.5 M8 11.6v.1",
+  manual: "M6 3a2 2 0 0 1 4 0v4a2 2 0 0 1 -4 0z M3.5 7.5a4.5 4.5 0 0 0 9 0 M8 12v2.5",
 };
 
-/** The app's glyph in a row, or its two-letter mark for an app that has no glyph. */
+const CATEGORY: Record<string, Category> = { teams: "video", zoom: "video", meet: "browser", slack: "chat", discord: "chat", manual: "manual", unknown: "unknown", "": "unknown" };
+
+/** The glyph of the kind of app a meeting came from (video call, chat app, browser tab, unknown), or the two-letter mark of an app the user added. */
 export function ProviderMark({ providerId, name }: { providerId: string; name: string }) {
-  const d = GLYPHS[providerId];
-  if (!d) return <>{markOf(name)}</>;
+  const category = CATEGORY[providerId];
+  if (!category) return <>{markOf(name)}</>;
   return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" data-provider={providerId} focusable="false">
-      <path d={d} />
+    <svg
+      viewBox="0 0 16 16"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      data-provider={providerId}
+      data-category={category}
+      focusable="false"
+    >
+      <path d={GLYPHS[category]} />
     </svg>
   );
 }
