@@ -9,6 +9,7 @@ import {
   entriesText,
   entryLabel,
   etaText,
+  versionsCapNote,
   expiryText,
   focusAfterDelete,
   groupByDay,
@@ -188,5 +189,27 @@ describe("expiry text", () => {
     expect(expiryText(86_400_000)).toBe("Removed in 1 day");
     expect(expiryText(86_400_001)).toBe("Removed in 2 days");
     expect(expiryText(3 * 3_600_000, "Audio removed")).toBe("Audio removed in 3 hours");
+  });
+});
+
+describe("timingTags", () => {
+  it("says how long the model took, in milliseconds under a second and seconds above", () => {
+    expect(timingTags({ timings: { transcribeMs: 420 } })).toEqual(["Transcribed in 420 ms"]);
+    expect(timingTags({ timings: { transcribeMs: 1234 } })).toEqual(["Transcribed in 1.2 s"]);
+  });
+  it("adds the silence that was skipped, only when some was", () => {
+    expect(timingTags({ timings: { transcribeMs: 2000, pausesDroppedMs: 3400 } })).toEqual(["Transcribed in 2.0 s", "3.4 s of silence skipped"]);
+    expect(timingTags({ timings: { transcribeMs: 2000, pausesDroppedMs: 0 } })).toEqual(["Transcribed in 2.0 s"]);
+  });
+  it("has nothing for an entry from before timings were stored", () => {
+    expect(timingTags({})).toEqual([]);
+    expect(timingTags({ timings: {} })).toEqual([]);
+  });
+});
+
+describe("versionsCapNote", () => {
+  it("is empty below five versions and warns at five", () => {
+    expect(versionsCapNote(4)).toBe("");
+    expect(versionsCapNote(5)).toBe("Oldest other version is replaced.");
   });
 });
