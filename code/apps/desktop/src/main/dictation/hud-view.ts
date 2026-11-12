@@ -10,6 +10,8 @@ export interface HudInput {
   level: number;
   /** The last insert ended with the text on the clipboard only, whatever the plan said. */
   insertedAsCopy: boolean;
+  /** That copy was forced by secure keyboard input (a password field, or an app that left Secure Keyboard Entry on), which blocks synthesized keys. */
+  secureInput?: boolean;
   /** A failed recording is kept, so "Try again" can work. */
   canRetry: boolean;
 }
@@ -66,7 +68,7 @@ export function hudViewFor(i: HudInput): HudView | null {
       return errorView(s.code, i.canRetry);
     case "idle":
       if (!s.notice) return null;
-      if (s.notice.kind === "inserted") return i.insertedAsCopy ? { kind: "copied", reason: "clipboard" } : { kind: "pasted" };
+      if (s.notice.kind === "inserted") return i.insertedAsCopy ? { kind: "copied", reason: i.secureInput ? "secure-input" : "clipboard" } : { kind: "pasted" };
       if (s.notice.kind === "copied") return { kind: "copied", reason: s.notice.reason === "elevated" ? "elevated" : "clipboard" };
       return { kind: "notice", text: s.notice.kind === "cancelled" ? "Cancelled" : "No speech heard" };
     default:

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { PermissionId, PermissionState } from "../../../shared/permissions/channels";
 import type { PermissionsStatus } from "../../../shared/permissions/contract";
-import { guideFor } from "../../../shared/permissions/guide";
+import { guideFor, hotkeyPermissionsReady } from "../../../shared/permissions/guide";
 import { macAdapter, noPermissionsAdapter, windowsAdapter, type Prefs } from "./adapters";
 import { createPermissions, type PermissionsAdapter } from "./service";
 
@@ -51,6 +51,21 @@ describe("macOS permissions adapter", () => {
     expect(await a.prompt("screen-recording")).toBe(false);
     expect(log).toEqual(["trusted(true)", "askMic"]);
     expect(requested).toBe(1);
+  });
+
+  it("treats Accessibility as refused once the prompt was shown and the app is still not trusted, so the next request opens settings", async () => {
+    const { prefs, s } = fakePrefs();
+    const a = macAdapter(prefs, async () => ({ status: () => "granted", request: () => true }));
+    expect(await a.read("accessibility")).toBe("not-determined");
+    await a.prompt("accessibility");
+    expect(await a.read("accessibility")).toBe("denied");
+    expect(guideFor({ ...all("granted"), accessibility: "denied" }, "dictation").next?.action).toBe("open-settings");
+    const opened: string[] = [];
+    const p = createPermissions({ adapter: a, openUrl: async (u) => void opened.push(u) });
+    await p.request("accessibility");
+    expect(opened).toEqual(["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]);
+    s.trusted = true;
+    expect(await a.read("accessibility")).toBe("granted");
   });
 
   it("opens the Privacy pane of each permission", () => {
@@ -181,5 +196,14 @@ describe("first-use guide", () => {
 
   it("sends Screen Recording to settings even before it was asked", () => {
     expect(guideFor(all("not-determined"), "screen-reading").next).toEqual({ id: "screen-recording", state: "not-determined", action: "open-settings" });
+  });
+});
+
+describe("hotkey permissions", () => {
+  it("are ready when Input Monitoring and Accessibility are granted or not needed, whatever the microphone says", () => {
+    expect(hotkeyPermissionsReady({ ...all("granted"), microphone: "denied" })).toBe(true);
+    expect(hotkeyPermissionsReady({ ...all("not-needed"), microphone: "granted" })).toBe(true);
+    expect(hotkeyPermissionsReady({ ...all("granted"), accessibility: "denied" })).toBe(false);
+    expect(hotkeyPermissionsReady({ ...all("granted"), "input-monitoring": "unknown" })).toBe(false);
   });
 });

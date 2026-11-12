@@ -43,7 +43,16 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
   );
 }
 
-function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
+function Copied({ reason }: { reason: "clipboard" | "elevated" | "secure-input" }) {
+  const paste = <Hint>Press {platformName() === "darwin" ? "Cmd" : "Ctrl"} V to paste</Hint>;
+  if (reason === "secure-input")
+    return (
+      <>
+        <Lead name="lock" tone="error" />
+        <b>Copied, a password field or Secure Keyboard Entry is on</b>
+        {paste}
+      </>
+    );
   if (reason === "elevated")
     return (
       <>
@@ -55,7 +64,7 @@ function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
     <>
       <Lead name="copy" />
       <b>Copied</b>
-      <Hint>Press {platformName() === "darwin" ? "Cmd" : "Ctrl"} V to paste</Hint>
+      {paste}
     </>
   );
 }

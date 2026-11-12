@@ -59,7 +59,7 @@ export type HudView =
   | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string }
   | { kind: "transcribing" }
   | { kind: "pasted" }
-  | { kind: "copied"; reason: "clipboard" | "elevated" }
+  | { kind: "copied"; reason: "clipboard" | "elevated" | "secure-input" }
   | { kind: "notice"; text: string }
   | { kind: "error"; text: string; icon: "microphone-off" | "download" | "alert-triangle" | "shield-check" | "lock"; action?: { label: string; id: HudAction } };
 

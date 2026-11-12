@@ -25,7 +25,7 @@ async function setFuses(context) {
 exports.default = async function afterPack(context) {
   await setFuses(context);
   if (context.electronPlatformName !== "darwin") return;
-  const { foreignMacArch } = await import("./stage-lib.mjs");
+  const { foreignMacArch, macSigningPlan } = await import("./stage-lib.mjs");
   const arch = ARCHS[context.arch];
   if (!arch) throw new Error(`unsupported macOS architecture ${context.arch}`);
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
@@ -40,8 +40,20 @@ exports.default = async function afterPack(context) {
   // Loose native libraries are not covered by --deep: sign each before sealing the bundle.
   const natives = readdirSync(modules, { recursive: true }).filter((f) => /\.(node|dylib)$/.test(f));
   for (const f of natives) execFileSync("codesign", ["--force", "--sign", "-", "--options", "runtime", path.join(modules, f)], { stdio: "inherit" });
-  // The same hardened runtime and entitlements a Developer ID signature will carry (see electron-builder.yml), so ad-hoc builds behave the same way.
-  const entitlements = path.join(__dirname, "../build/entitlements.mac.plist");
-  execFileSync("codesign", ["--force", "--deep", "--sign", "-", "--options", "runtime", "--entitlements", entitlements, app], { stdio: "inherit" });
+  // Helpers and frameworks first (inner before outer), then the main bundle, each with its own entitlements (see electron-builder.yml).
+  const frameworks = path.join(app, "Contents/Frameworks");
+  const top = existsSync(frameworks) ? readdirSync(frameworks).filter((f) => /\.(app|framework)$/.test(f)) : [];
+  // Libraries inside a framework are sealed by the framework only if they are signed first.
+  const libs = top.flatMap((f) =>
+    f.endsWith(".framework")
+      ? readdirSync(path.join(frameworks, f), { recursive: true })
+          .filter((x) => x.endsWith(".dylib"))
+          .map((x) => path.join(frameworks, f, x))
+      : [],
+  );
+  const nested = [...libs, ...top.map((f) => path.join(frameworks, f))];
+  const build = path.join(__dirname, "../build");
+  const plan = macSigningPlan({ app, nested, entitlements: path.join(build, "entitlements.mac.plist"), inherit: path.join(build, "entitlements.mac.inherit.plist") });
+  for (const args of plan) execFileSync("codesign", args, { stdio: "inherit" });
   execFileSync("codesign", ["--verify", "--deep", "--strict", app], { stdio: "inherit" });
 };

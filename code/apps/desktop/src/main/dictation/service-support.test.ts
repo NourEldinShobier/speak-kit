@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { soundSettingsUrl } from "./service-support";
+import { shouldRetryHotkey, soundSettingsUrl } from "./service-support";
 
 describe("soundSettingsUrl", () => {
   it("opens the microphone privacy pane when the system blocked the microphone, the sound page otherwise", () => {
@@ -11,5 +11,16 @@ describe("soundSettingsUrl", () => {
 
   it("has no page on other systems", () => {
     expect(soundSettingsUrl("linux", true)).toBeNull();
+  });
+});
+
+describe("shouldRetryHotkey", () => {
+  it.each([
+    [{ failed: true, enabled: true, permitted: true }, true],
+    [{ failed: false, enabled: true, permitted: true }, false],
+    [{ failed: true, enabled: false, permitted: true }, false],
+    [{ failed: true, enabled: true, permitted: false }, false],
+  ])("%j gives %s", (input, expected) => {
+    expect(shouldRetryHotkey(input)).toBe(expected);
   });
 });

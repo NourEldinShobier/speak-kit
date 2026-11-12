@@ -36,6 +36,11 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: true }))).toEqual({ kind: "copied", reason: "clipboard" });
   });
 
+  it("says why a copy happened when secure keyboard input blocked the paste", () => {
+    expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: true, secureInput: true }))).toEqual({ kind: "copied", reason: "secure-input" });
+    expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: false, secureInput: true }))).toEqual({ kind: "pasted" });
+  });
+
   it("tells copying because of admin rights from other copying", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "copied", reason: "elevated" } }))).toEqual({ kind: "copied", reason: "elevated" });
     expect(hudViewFor(input({ status: "idle", notice: { kind: "copied", reason: "focus-changed" } }))).toEqual({ kind: "copied", reason: "clipboard" });

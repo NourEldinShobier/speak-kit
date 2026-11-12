@@ -53,3 +53,12 @@ export function foreignMacArch(name, arch) {
 export function keepWhisperPackage(name, mac) {
   return name === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(name);
 }
+
+/**
+ * The codesign calls that seal a macOS app, in order. Nested helper apps and frameworks get the inherited entitlements and the main bundle the full set,
+ * the way electron-builder signs a release, so an ad-hoc build carries the same entitlements per executable. No --deep: it would stamp the main set on every helper.
+ */
+export function macSigningPlan({ app, nested, entitlements, inherit }) {
+  const sign = (target, plist) => ["--force", "--sign", "-", "--options", "runtime", ...(plist ? ["--entitlements", plist] : []), target];
+  return [...nested.map((n) => sign(n, /\.(framework|dylib)$/.test(n) ? null : inherit)), sign(app, entitlements)];
+}

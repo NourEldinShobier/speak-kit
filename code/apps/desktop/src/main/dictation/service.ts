@@ -15,7 +15,7 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus, soundSettingsUrl } from "./service-support";
+import { clock, coreSettings, dictationStatus, shouldRetryHotkey, soundSettingsUrl } from "./service-support";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
@@ -85,6 +85,7 @@ export class DictationService {
       hotkey: () => this.#cfg.hotkey,
       canRetry: () => !!this.#lastFailed,
       insertedAsCopy: () => this.#lastInsert?.status === "copied",
+      secureInput: () => this.#lastInsert?.status === "copied" && this.#lastInsert.reason === "secure-input",
     });
     // No key hook was ever built when this fails: turning dictation on cannot work either.
     this.ready = this.#init().catch((e) => {
@@ -98,9 +99,6 @@ export class DictationService {
   }
   get supported(): boolean {
     return this.os?.supported ?? (process.platform === "win32" || process.platform === "darwin");
-  }
-  get hotkeyActive(): boolean {
-    return this.#hotkeys?.active ?? false;
   }
 
   async #init(): Promise<void> {
@@ -155,7 +153,7 @@ export class DictationService {
     return dictationStatus({
       supported: this.supported,
       config: this.#cfg,
-      hotkeyReady: this.hotkeyActive,
+      hotkeyReady: this.#hotkeys?.active ?? false,
       hotkeyFailed: this.#hotkeyFailed,
       state: this.state,
       models: this.models,
@@ -215,6 +213,12 @@ export class DictationService {
     this.#hotkeyFailed = failed;
     if (failed) this.presenter.alert("hotkey-failed");
     this.#push(true);
+  }
+
+  /** Starts the hotkey again after what blocked it was fixed (a permission was allowed). */
+  async retryHotkey(permitted: boolean): Promise<void> {
+    await this.ready;
+    if (shouldRetryHotkey({ failed: this.#hotkeyFailed, enabled: this.#cfg.enabled, permitted })) await this.#start(false);
   }
 
   async setEnabled(on: boolean): Promise<DictationStatus> {
@@ -309,8 +313,7 @@ export class DictationService {
   }
 
   async openSoundSettings(): Promise<void> {
-    const blocked = this.#lastError === "mic-denied" || this.#lastError === "mic-silent";
-    const url = soundSettingsUrl(process.platform, blocked);
+    const url = soundSettingsUrl(process.platform, this.#lastError === "mic-denied" || this.#lastError === "mic-silent");
     if (url) await shell.openExternal(url);
   }
 
@@ -322,14 +325,11 @@ export class DictationService {
   hudAction(a: HudAction): void {
     this.presenter.dismiss();
     if (a === "retry") void this.retry();
-    else if (a === "download") this.#downloadFromHud();
-    else if (a === "sound-settings") void this.openSoundSettings();
-  }
-
-  #downloadFromHud(): void {
-    this.#ctx.showWindow();
-    this.#ctx.sendUi({ type: "nav", page: "settings", sub: "dictation" });
-    void this.download(this.#cfg.model);
+    else if (a === "download") {
+      this.#ctx.showWindow();
+      this.#ctx.sendUi({ type: "nav", page: "settings", sub: "dictation" });
+      void this.download(this.#cfg.model);
+    } else if (a === "sound-settings") void this.openSoundSettings();
   }
 
   /** Key releases may have gone to another desktop while the screen was locked or the computer slept. */

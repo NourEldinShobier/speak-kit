@@ -10,4 +10,4 @@ declare global {
 export const dictation: DictationBridge = window.speakkitDictation;
 
 /** The platform the preload put on the document root ("darwin", "win32"), for labels that name keys. */
-export const platformName = (): string => document.documentElement.dataset.platform ?? "win32";
+export const platformName = (): string => (typeof document === "undefined" ? undefined : document.documentElement.dataset.platform) ?? "win32";

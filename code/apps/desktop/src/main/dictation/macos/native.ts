@@ -1,4 +1,5 @@
 import { OWN_EVENT_MARKER } from "./keymap";
+import { handleTapEvent } from "./tap-callback";
 
 type Koffi = (typeof import("koffi"))["default"];
 
@@ -11,8 +12,6 @@ export interface TapEvent {
 }
 
 export interface MacTap {
-  /** Turns the tap back on after macOS switched it off. */
-  enable(): void;
   remove(): void;
 }
 
@@ -56,7 +55,6 @@ const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
 const TAP_MASK = (1n << 10n) | (1n << 11n) | (1n << 12n); // key down, key up, flags changed
-const TAP_DISABLED = 0xfffffffe; // and 0xffffffff: macOS switched the tap off (slow callback, user input timeout)
 const IOHID_LISTEN_EVENT = 1;
 const IOHID_GRANTED = 0;
 const IOHID_DENIED = 1;
@@ -109,19 +107,22 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
   return {
     createTap(onEvent) {
       let tap: unknown = null;
-      const callback = koffi.register((_proxy: unknown, type: number, event: unknown) => {
-        if (type >= TAP_DISABLED) {
-          if (tap) CGEventTapEnable(tap, true);
-          return event;
-        }
-        const swallow = onEvent({
-          type,
-          keycode: Number(CGEventGetIntegerValueField(event, KEYBOARD_KEYCODE_FIELD)),
-          flags: Number(CGEventGetFlags(event)),
-          userData: Number(CGEventGetIntegerValueField(event, USER_DATA_FIELD)),
-        });
-        return swallow ? null : event;
-      }, koffi.pointer(TapProc));
+      let removed = false;
+      const callback = koffi.register(
+        (_proxy: unknown, type: number, event: unknown) =>
+          handleTapEvent(type, event, {
+            // A tap that was removed may still get one last callback: it must not be turned on again.
+            reenable: () => tap && !removed && CGEventTapEnable(tap, true),
+            read: (e, t) => ({
+              type: t,
+              keycode: Number(CGEventGetIntegerValueField(e, KEYBOARD_KEYCODE_FIELD)),
+              flags: Number(CGEventGetFlags(e)),
+              userData: Number(CGEventGetIntegerValueField(e, USER_DATA_FIELD)),
+            }),
+            onEvent,
+          }),
+        koffi.pointer(TapProc),
+      );
       tap = CGEventTapCreate(SESSION_TAP, 0, 0, TAP_MASK, callback, null);
       if (!tap) {
         koffi.unregister(callback);
@@ -129,9 +130,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
       }
       const detach = loop.attach(tap);
       CGEventTapEnable(tap, true);
-      let removed = false;
       return {
-        enable: () => CGEventTapEnable(tap, true),
         remove() {
           if (removed) return;
           removed = true;
