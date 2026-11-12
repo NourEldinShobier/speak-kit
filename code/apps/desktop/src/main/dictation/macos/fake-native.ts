@@ -6,6 +6,8 @@ const initialState = () => ({
   flags: 0,
   secure: false,
   front: { pid: 501, bundleId: "com.apple.TextEdit", name: "TextEdit" } as Frontmost | null,
+  /** Window bounds by process id; a process not listed has no window on screen. */
+  windows: new Map<number, { x: number; y: number; width: number; height: number }>(),
   seq: 1,
   types: [] as string[],
   posted: [] as Array<{ keycode: number; down: boolean; flags: number } | { units: number[] }>,
@@ -43,6 +45,7 @@ export function fakeMacNative(opts: { refuseTap?: boolean; refuseMouseTap?: bool
     },
     secureInput: () => state.secure,
     frontmost: () => state.front,
+    windowBounds: (pid) => state.windows.get(pid) ?? null,
     activate(pid) {
       state.activated.push(pid);
       const app = state.running.get(pid);

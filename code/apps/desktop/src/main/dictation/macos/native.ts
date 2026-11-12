@@ -39,6 +39,8 @@ export interface MacNative {
   /** True while a password field (or anything else) has switched on secure keyboard input. */
   secureInput(): boolean;
   frontmost(): Frontmost | null;
+  /** Bounds (in points, top-left origin) of the front-most normal window of this process, or null when it has none on screen. */
+  windowBounds(pid: number): { x: number; y: number; width: number; height: number } | null;
   /** Brings the app with this process id to the front. False when it is gone or refuses. */
   activate(pid: number): boolean;
   pasteboard: {
@@ -76,7 +78,7 @@ export async function loadMacNative(): Promise<MacNative> {
 }
 
 function bind(koffi: Koffi): MacNative {
-  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
+  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...windowApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
 }
 
 /** Attaching a mach port to the main run loop, and taking it off and freeing it again. */
@@ -202,6 +204,49 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
   return {
     secureInput: () => IsSecureEventInputEnabled(),
     inputMonitoring: { status: () => states[IOHIDCheckAccess(IOHID_LISTEN_EVENT)] ?? "unknown", request: () => IOHIDRequestAccess(IOHID_LISTEN_EVENT) },
+  };
+}
+
+/** Window list from CoreGraphics: the windows come front to back, so the first normal one (layer 0) owned by the process is the one in view. */
+function windowApi(koffi: Koffi): Pick<MacNative, "windowBounds"> {
+  const cf = koffi.load(FW("CoreFoundation"));
+  const cg = koffi.load(FW("CoreGraphics"));
+  koffi.struct("SpeakKitRect", { x: "double", y: "double", width: "double", height: "double" });
+  const CFStringCreateWithCString = cf.func("void *CFStringCreateWithCString(void *alloc, const char *text, uint32 encoding)");
+  const CFArrayGetCount = cf.func("int64 CFArrayGetCount(void *array)");
+  const CFArrayGetValueAtIndex = cf.func("void *CFArrayGetValueAtIndex(void *array, int64 index)");
+  const CFDictionaryGetValue = cf.func("void *CFDictionaryGetValue(void *dict, void *key)");
+  const CFNumberGetValue = cf.func("bool CFNumberGetValue(void *number, int32 type, _Out_ int64 *out)");
+  const CFRelease = cf.func("void CFRelease(void *object)");
+  const CGWindowListCopyWindowInfo = cg.func("void *CGWindowListCopyWindowInfo(uint32 option, uint32 relativeTo)");
+  const CGRectMakeWithDictionaryRepresentation = cg.func("bool CGRectMakeWithDictionaryRepresentation(void *dict, _Out_ SpeakKitRect *rect)");
+  const ON_SCREEN_ONLY = 1;
+  const EXCLUDE_DESKTOP_ELEMENTS = 16;
+  const SINT64 = 4;
+  return {
+    windowBounds(pid) {
+      const key = (name: string) => CFStringCreateWithCString(null, name, UTF8);
+      const keys = { pid: key("kCGWindowOwnerPID"), layer: key("kCGWindowLayer"), bounds: key("kCGWindowBounds") };
+      const list = CGWindowListCopyWindowInfo(ON_SCREEN_ONLY | EXCLUDE_DESKTOP_ELEMENTS, 0);
+      try {
+        const number = (info: unknown, k: unknown) => {
+          const out = [0];
+          const value = CFDictionaryGetValue(info, k);
+          return value && CFNumberGetValue(value, SINT64, out) ? Number(out[0]) : undefined;
+        };
+        for (let i = 0, n = list ? Number(CFArrayGetCount(list)) : 0; i < n; i++) {
+          const info = CFArrayGetValueAtIndex(list, i);
+          if (number(info, keys.pid) !== pid || number(info, keys.layer) !== 0) continue;
+          const dict = CFDictionaryGetValue(info, keys.bounds);
+          const rect = { x: 0, y: 0, width: 0, height: 0 };
+          if (dict && CGRectMakeWithDictionaryRepresentation(dict, rect)) return rect;
+        }
+        return null;
+      } finally {
+        if (list) CFRelease(list);
+        for (const k of Object.values(keys)) CFRelease(k);
+      }
+    },
   };
 }
 

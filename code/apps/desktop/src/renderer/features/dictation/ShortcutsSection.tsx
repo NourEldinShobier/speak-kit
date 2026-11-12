@@ -5,7 +5,7 @@ import { hotkeyText } from "../../../shared/dictation/keys";
 import type { DictationPatch } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
-import { explainerFrames, fullscreenPause, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, parseApps, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
+import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, parseApps, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
 
 const patch = (p: DictationPatch) => dictation.patchSettings(p);
 
@@ -92,7 +92,6 @@ function PauseApps({ rules, save, mac }: { rules: DictationStatus["settings"]["p
 function PauseRules({ s }: { s: DictationStatus }) {
   const r = s.settings.pauseRules;
   const mac = s.platform === "darwin";
-  const full = fullscreenPause(s.platform);
   const save = (next: Partial<typeof r>) => void patch({ pauseRules: { ...r, ...next } });
   return (
     <>
@@ -105,8 +104,8 @@ function PauseRules({ s }: { s: DictationStatus }) {
       {r.mode !== "off" && <PauseApps rules={r} save={save} mac={mac} />}
       <SettingRow
         label="Pause in full-screen programs (experimental)"
-        description={full.description}
-        control={<Toggle aria-label="Pause in full-screen programs" checked={r.fullscreen && full.ok} disabled={!full.ok} onChange={(fullscreen) => save({ fullscreen })} />}
+        description="A program that covers the whole screen gets every key."
+        control={<Toggle aria-label="Pause in full-screen programs" checked={r.fullscreen} onChange={(fullscreen) => save({ fullscreen })} />}
       />
     </>
   );

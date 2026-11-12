@@ -52,7 +52,9 @@ export function createMacInput(native: MacNative): InputPort {
     foreground(): ForegroundInfo | null {
       const f = native.frontmost();
       // The window is not told apart from its app: a window switch inside one app goes unnoticed, an app switch does not.
-      return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", elevated: false } : null;
+      if (!f) return null;
+      const bounds = native.windowBounds(f.pid);
+      return { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", elevated: false, ...(bounds && { bounds }) };
     },
     // Which control has focus needs Accessibility queries; secure input is the signal password fields give without them.
     passwordFocused: () => false,
