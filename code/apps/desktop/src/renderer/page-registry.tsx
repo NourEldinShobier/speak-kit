@@ -1,6 +1,6 @@
 /**
  * Page registry: ONE line per route id. To mount a feature page, build it under renderer/features/<name>/ (public interface in index.ts)
- * and replace that route's `StubPage` line below. Nothing else in the shell changes. Settings pages have their own registry in settings.tsx.
+ * and add its line below. Nothing else in the shell changes. Settings pages have their own registry in settings.tsx.
  */
 import { lazy, Suspense, type ComponentType, type Dispatch } from "react";
 import type { AppState } from "../shared/ipc";

@@ -11,6 +11,7 @@ export { StoragePage } from "./StoragePage";
 export { AboutPage } from "./AboutPage";
 export { AccessibilityPage } from "./AccessibilityPage";
 export { PrivacyPage } from "./PrivacyPage";
+export { AutomationPage } from "./AutomationPage";
 export { ExperimentsPage } from "./ExperimentsPage";
 export { DiagnosticsPage } from "./DiagnosticsPage";
 export { SettingsFrame } from "./SettingsFrame";

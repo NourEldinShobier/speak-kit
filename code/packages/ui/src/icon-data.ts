@@ -101,5 +101,8 @@ export const ICON_DATA = {
   "bug": "<path d=\"M9 9v-1a3 3 0 0 1 6 0v1\"/><path d=\"M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1 -10 0v-3a6 6 0 0 1 1 -3\"/><path d=\"M3 13l4 0\"/><path d=\"M17 13l4 0\"/><path d=\"M12 20l0 -6\"/><path d=\"M4 19l3.35 -2\"/><path d=\"M20 19l-3.35 -2\"/><path d=\"M4 7l3.75 2.4\"/><path d=\"M20 7l-3.75 2.4\"/>",
   "users": "<path d=\"M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\"/><path d=\"M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/><path d=\"M21 21v-2a4 4 0 0 0 -3 -3.85\"/>",
   "device-floppy": "<path d=\"M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2\"/><path d=\"M10 14a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"/><path d=\"M14 4l0 4l-6 0l0 -4\"/>",
+  "video": "<path d=\"M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4\"/><path d=\"M3 8a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -8\"/>",
+  "terminal": "<path d=\"M5 7l5 5l-5 5\"/><path d=\"M12 19l7 0\"/>",
+  "activity": "<path d=\"M3 12h4l3 8l4 -16l3 8h4\"/>",
 } as const;
 export type IconName = keyof typeof ICON_DATA;
