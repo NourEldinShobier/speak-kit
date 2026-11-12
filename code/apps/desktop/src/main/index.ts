@@ -301,6 +301,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     watchPairingActivity();
     const appHandlers = createHandlers();
     desktop = startDesktop();
+    runtime.automation.attach(desktop.automation);
     const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
     registerValidatedIpc<Method>(ipcMain, {
       methods: METHODS,

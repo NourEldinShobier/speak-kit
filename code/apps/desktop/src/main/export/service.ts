@@ -11,6 +11,17 @@ import { mp3InWorker } from "./mp3-runner";
 
 type ExportHandlers = Pick<Api, "exportCheck" | "exportStart" | "exportCancel" | "exportReveal" | "pickFolder">;
 
+/** What the automation host needs of the exports: a job from an explicit path, which replaces a file that is already there, and a look at a job. */
+function automationJobs(ctx: Ctx, jobs: ExportJobs) {
+  return {
+    start: async (o: { text: string; dir: string; name: string; format: "wav" | "mp3" }) => {
+      await mkdir(o.dir, { recursive: true });
+      return jobs.start({ ...o, voice: ctx.config.voice, speed: ctx.config.speed, mp3Kbps: ctx.config.exportPrefs.mp3Kbps, conflict: "replace" });
+    },
+    view: (id: string) => jobs.views.find((v) => v.id === id),
+  };
+}
+
 /** Exports for the app: the job runner wired to the server, the state stream, toasts and the folder picker. */
 export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => BrowserWindow | null; workerFile: URL; onChange: () => void }) {
   const jobs = new ExportJobs({
@@ -60,6 +71,7 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => 
 
   return {
     handlers,
+    ...automationJobs(ctx, jobs),
     runningCount: () => ctx.state.exports.filter(exportRunning).length,
     dispose: () => jobs.cancelAll(),
   };

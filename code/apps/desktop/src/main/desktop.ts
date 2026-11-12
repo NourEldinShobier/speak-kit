@@ -10,6 +10,7 @@ import { desktopTestHook } from "./desktop-test-hook";
 import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
 import { engineHandlers } from "./engines";
+import { desktopAutomation } from "./automation";
 import { createExports } from "./export/service";
 import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
@@ -129,8 +130,12 @@ function disposeAll(p: {
  */
 export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const { toasts, shown: shownToasts } = createDesktopToasts(ctx, o.test);
-  const reading = createReading(ctx, toasts, () => tray.refresh());
+  const reading = createReading(ctx, toasts, (r) => {
+    tray.refresh();
+    automation.onReader(r);
+  });
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
+  const automation = desktopAutomation(ctx, { reading, exports, dictation: () => dictation });
   let installedByTest = 0;
   const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
@@ -148,6 +153,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
+    /** What scripts and AI apps may do; the server calls it. */
+    automation: automation.host,
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */
