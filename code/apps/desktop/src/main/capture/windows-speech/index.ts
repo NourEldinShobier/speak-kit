@@ -1,7 +1,5 @@
-import { MAX_REPLY_CHARS, SAMPLE_RATE, TIMEOUT_MS, wavOf, type CommandNarratorDeps } from "../command-narrator";
+import { MAX_REPLY_CHARS, TIMEOUT_MS, wavOf, type CommandNarratorDeps } from "../command-narrator";
 import type { Narrator } from "../recording";
-
-export { SAMPLE_RATE };
 
 /** Reads a WAV file with the speech recognizer that comes with Windows (dictation grammar) and prints the words. */
 export const SCRIPT = `param([string]$Wav)
