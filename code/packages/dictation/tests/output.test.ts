@@ -147,6 +147,7 @@ describe("cancel and restore", () => {
     await r.time.advance(300);
     expect(r.ins.inserted).toHaveLength(1);
     expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
+    expect(await r.dictation.history.list()).toMatchObject([{ kind: "restored", outcome: "sent" }]);
   });
 
   it("a restore after ten seconds does nothing", async () => {
@@ -232,7 +233,7 @@ describe("return to app", () => {
     await r.time.advance(300);
     expect(r.ins.inserted).toEqual([]);
     expect(r.dictation.state()).toMatchObject({ status: "error", code: "focus-failed" });
-    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world " }]);
+    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world ", outcome: "failed" }]);
   });
 
   it("a stuck focus call passes after the stage deadline", async () => {

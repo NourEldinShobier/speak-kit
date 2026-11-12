@@ -50,6 +50,7 @@ export interface DuckerDeps {
  */
 export function createDucker(deps: DuckerDeps): { begin(): Promise<void>; end(): Promise<void> } {
   let undo: (() => Promise<void>) | undefined;
+  let starting: Promise<void> | undefined;
   const apply = async (mode: DuckMode): Promise<void> => {
     const { media, volume } = deps;
     if (mode === "pause" && media) {
@@ -68,22 +69,13 @@ export function createDucker(deps: DuckerDeps): { begin(): Promise<void>; end():
   };
   return {
     async begin() {
-      if (undo) return;
-      const mode = deps.mode();
-      let output: OutputKind = "unknown";
-      try {
-        output = await deps.output();
-      } catch {
-        // Unknown output counts as speakers.
-      }
-      if (!shouldDuck(mode, output)) return;
-      try {
-        await apply(mode);
-      } catch {
-        // The system refused: recording goes on, other audio stays as it is.
-      }
+      if (undo || starting) return starting;
+      starting = run();
+      return starting.finally(() => (starting = undefined));
     },
     async end() {
+      // A release that arrives while begin is still waiting on the system must undo what begin is about to do.
+      await starting;
       const fn = undo;
       undo = undefined;
       try {
@@ -93,4 +85,19 @@ export function createDucker(deps: DuckerDeps): { begin(): Promise<void>; end():
       }
     },
   };
+  async function run(): Promise<void> {
+    const mode = deps.mode();
+    let output: OutputKind = "unknown";
+    try {
+      output = await deps.output();
+    } catch {
+      // Unknown output counts as speakers.
+    }
+    if (!shouldDuck(mode, output)) return;
+    try {
+      await apply(mode);
+    } catch {
+      // The system refused: recording goes on, other audio stays as it is.
+    }
+  }
 }
