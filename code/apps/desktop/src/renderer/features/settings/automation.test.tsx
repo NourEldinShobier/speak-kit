@@ -13,7 +13,7 @@ const state = (controlServer: boolean, platform = "win32") => ({ platform, confi
 
 describe("automation model", () => {
   it("names the discovery file the way each system writes it", () => {
-    expect(discoveryPath("win32")).toBe("%APPDATA%\Speak Kit\control.json");
+    expect(discoveryPath("win32")).toBe("%APPDATA%\\Speak Kit\\control.json");
     expect(discoveryPath("darwin")).toBe("~/Library/Application Support/Speak Kit/control.json");
   });
 

@@ -49,7 +49,11 @@ async function loadAll(fs: StoreFs, file: string): Promise<CaptureRecord[]> {
     // falls through to the same handling as a wrong shape
   }
   // Damaged or empty (a power cut can leave a zero-length file): keep it for a look instead of replacing it with a one-record index.
-  await fs.moveAside?.(file).catch(() => undefined);
+  try {
+    await fs.moveAside?.(file);
+  } catch {
+    // it cannot be moved either: the index is read as empty and the next write is the only way forward
+  }
   return [];
 }
 

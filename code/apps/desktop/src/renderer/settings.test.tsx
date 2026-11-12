@@ -10,6 +10,7 @@ vi.hoisted(() => {
 
 import { Settings } from "./settings";
 import { SETTINGS_NAV } from "./routes";
+import { SETTINGS_SUBS } from "../shared/ipc";
 
 const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => renderToStaticMarkup(<Settings s={appState({ config: parseConfig({ setupDone: true, ...config }) })} sub={sub} />);
 
@@ -27,10 +28,8 @@ describe("settings navigation", () => {
     for (const g of SETTINGS_NAV) for (const i of g.items.filter((x) => x.id !== "performance")) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
   });
 
-  it("shows a placeholder with an empty state for a page that is not built yet", () => {
-    const html = page("automation");
-    expect(html).toContain("Coming soon");
-    expect(html).toContain("Let other tools control Speak Kit.");
+  it("builds every settings page: none is a placeholder", () => {
+    for (const sub of SETTINGS_SUBS) expect(page(sub)).not.toContain("Coming soon");
   });
 });
 
