@@ -21,6 +21,7 @@ const DEFAULTS = {
   returnToApp: true,
   appRules: {},
   blockSleep: true,
+  skipPauses: false,
 };
 
 describe("dictation config", () => {
@@ -98,6 +99,17 @@ describe("audio and output settings", () => {
       },
     }).dictation;
     expect(c.appRules).toEqual({ putty: { method: "shift-insert", delayMs: 50 }, code: { method: "type", delayMs: 0 }, mstsc: { method: "ctrl-v", delayMs: 0 } });
+  });
+
+  it("keeps program names that merely end in the letters exe", () => {
+    const c = parseConfig({ dictation: { appRules: { complexe: { method: "type" }, nexe: { method: "copy" }, "putty.exe": { method: "type" } } } }).dictation;
+    expect(Object.keys(c.appRules).sort()).toEqual(["complexe", "nexe", "putty"]);
+  });
+
+  it("loads a config from before skip pauses existed with it off, and keeps it on when set", () => {
+    expect(parseConfig({ dictation: { keepReady: true } }).dictation.skipPauses).toBe(false);
+    expect(parseConfig({ dictation: { skipPauses: true } }).dictation.skipPauses).toBe(true);
+    expect(parseConfig({ dictation: { skipPauses: "yes" } }).dictation.skipPauses).toBe(false);
   });
 
   it("stops at 50 rules", () => {

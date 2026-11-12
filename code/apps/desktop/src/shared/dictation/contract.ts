@@ -62,7 +62,7 @@ export interface HistoryItem {
   durationMs?: number;
   /** "interrupted": the recording was cut short; "restored": brought back after a cancel. */
   kind?: "interrupted" | "restored";
-  outcome?: "sent" | "copied";
+  outcome?: "sent" | "copied" | "failed";
 }
 
 /** What the HUD page draws. */
@@ -137,7 +137,8 @@ export type RecorderCommand =
   | { id: number; op: "discard" }
   | { id: number; op: "close" }
   | { id: number; op: "devices" }
-  | { id: number; op: "meter"; on: boolean; mic: RecorderMicConfig };
+  /** Applies the microphone settings at once: opens the microphone when it is to be kept ready or the level meter is on, lets it go otherwise. */
+  | { id: number; op: "configure"; meter: boolean; mic: RecorderMicConfig };
 export type RecorderResult =
   | {
       ok: true;

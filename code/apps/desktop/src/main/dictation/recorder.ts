@@ -28,8 +28,8 @@ export interface RecorderHost extends Recorder {
   /** Creates the window and waits for its page; later `start` calls open the microphone only. Safe to call again. */
   prepare(): Promise<boolean>;
   devices(): Promise<void>;
-  /** Opens the microphone for the level meter (on) or lets it go (off). */
-  meter(on: boolean): Promise<void>;
+  /** Applies the microphone settings now: the microphone is opened for the level meter or a kept-ready setting, and released when neither applies. */
+  configure(meter: boolean): Promise<void>;
   /** Destroys the window (the microphone closes with it). */
   close(): void;
   owns(contents: WebContents): boolean;
@@ -59,6 +59,7 @@ class Host implements RecorderHost {
   #ready: Promise<boolean> | undefined;
   #markReady: (() => void) | undefined;
   #next = 1;
+  #disposed = false;
   #lastLevel = 0;
   #lastLevelAt = 0;
   device: { label: string; bluetooth: boolean } | undefined;
@@ -102,6 +103,7 @@ class Host implements RecorderHost {
   }
 
   prepare(): Promise<boolean> {
+    if (this.#disposed) return Promise.resolve(false);
     if (this.#ready && this.#page && !this.#page.destroyed) return this.#ready;
     const page = (this.#page = this.#d.open());
     const ready = (this.#ready = new Promise<boolean>((resolve) => {
@@ -123,7 +125,7 @@ class Host implements RecorderHost {
   }
 
   async #call(cmd: Command): Promise<RecorderResult> {
-    if (!(await this.prepare()) || !this.#page || this.#page.destroyed) return FAILED;
+    if (this.#disposed || !(await this.prepare()) || !this.#page || this.#page.destroyed) return FAILED;
     const page = this.#page;
     const id = this.#next++;
     return new Promise<RecorderResult>((resolve) => {
@@ -155,8 +157,10 @@ class Host implements RecorderHost {
     await this.#call({ op: "devices" });
   }
 
-  async meter(on: boolean): Promise<void> {
-    await this.#call({ op: "meter", on, mic: this.#d.mic() });
+  async configure(meter: boolean): Promise<void> {
+    // Releasing needs no window: opening one just to say "let go" would also keep the app from quitting.
+    if (!meter && (!this.#page || this.#page.destroyed)) return;
+    await this.#call({ op: "configure", meter, mic: this.#d.mic() });
   }
 
   async discard(): Promise<void> {
@@ -174,6 +178,7 @@ class Host implements RecorderHost {
   }
 
   dispose(): void {
+    this.#disposed = true;
     for (const [channel, fn] of this.#listeners) this.#d.ipcMain.off(channel, fn);
     this.close();
   }

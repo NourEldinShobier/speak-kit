@@ -43,7 +43,7 @@ const appRules = v.fallback(
     v.transform((all) => {
       const out: Record<string, AppRule> = {};
       for (const [name, rule] of Object.entries(all)) {
-        const key = v.safeParse(exeName, name.replace(/.exe$/i, ""));
+        const key = v.safeParse(exeName, name.replace(/\.exe$/i, ""));
         const parsed = v.safeParse(AppRule, rule);
         if (key.success && parsed.success && Object.keys(out).length < MAX_APP_RULES) out[key.output] = parsed.output;
       }
@@ -78,6 +78,7 @@ export const DictationConfigSchema = v.object({
   appRules,
   /** Stop the computer from sleeping while a recording runs. */
   blockSleep: v.fallback(v.boolean(), true),
+  skipPauses: v.fallback(v.boolean(), false),
 });
 export type DictationConfig = v.InferOutput<typeof DictationConfigSchema>;
 
@@ -103,6 +104,7 @@ export const DictationPatchSchema = v.partial(
       v.check((r) => Object.keys(r).length <= MAX_APP_RULES),
     ),
     blockSleep: v.boolean(),
+    skipPauses: v.boolean(),
   }),
 );
 export type DictationPatch = v.InferOutput<typeof DictationPatchSchema>;

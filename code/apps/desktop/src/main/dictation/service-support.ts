@@ -32,6 +32,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   retention: c.retention,
   replacements: c.replacements,
   keepReady: c.keepReady,
+  skipPauses: c.skipPauses,
   keepOnClipboard: c.output === "keep",
   insertMode: c.output === "copy" ? "copy" : "paste",
   returnToApp: c.returnToApp,

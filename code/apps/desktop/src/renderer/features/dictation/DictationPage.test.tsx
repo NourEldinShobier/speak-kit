@@ -75,6 +75,8 @@ describe("Settings > Dictation", () => {
       "Change",
       "Hold to talk",
       "Press to toggle",
+      "Skipped microphones",
+      "Nothing is skipped by name.",
       "Speech model",
       "Whisper Large v3 Turbo",
       "Replacements",

@@ -322,3 +322,6 @@
 .dict-rule__field {
   flex: 1;
 }
+.dict-rule__empty {
+  color: var(--text-secondary);
+}
