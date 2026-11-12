@@ -6,6 +6,8 @@ import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
 import { createAgentContext } from "./context";
+import { createLiveSession, type LiveSession } from "./live-narrator";
+import { engineOf } from "./narration/engine";
 import { createEventLog } from "./events";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
@@ -61,6 +63,7 @@ export class CaptureRuntime {
   readonly #place: Placement;
   readonly #context: (sourceId?: string) => Promise<string | undefined>;
   readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
+  readonly #live: LiveSession;
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   #after!: AfterCapture;
@@ -77,6 +80,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
+    this.#live = createLiveSession({ enabled: () => engineOf(this.#settings) === "live", narrator: deps.narrator, log: (l) => deps.ctx.log.warn(l) });
     this.recorder = new RecorderHolder({
       recorder: deps.recorder,
       distDir: deps.distDir,
@@ -86,6 +90,7 @@ export class CaptureRuntime {
       bundle: () => deps.history.bundle,
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
+      audio: (c) => this.#live.push(c),
     });
     this.#context = createAgentContext({ enabled: () => this.#settings.experiments.agentContext, os: deps.platform.os });
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
@@ -162,6 +167,7 @@ export class CaptureRuntime {
       settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
       context: this.#context,
       events: () => this.#events.take(),
+      live: this.#live,
       current: () => epoch === this.#epoch,
       saved: (r) => this.#after.saved(r),
       pick: (signal) => this.#pick(signal),

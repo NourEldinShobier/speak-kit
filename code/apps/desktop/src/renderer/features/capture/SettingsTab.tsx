@@ -80,7 +80,7 @@ function Engine({ s }: { s: CaptureStatus }) {
       <SettingRow
         className="lm-row--control"
         label="Speech engine"
-        description="Dictation model uses the model Speak Kit already loads. Command starts a program of your own for each stretch of speech."
+        description="Dictation model and Live use the model Speak Kit already loads: Live works while you record, so the words are ready sooner. Windows speech uses the recognizer that comes with Windows. Command starts a program of your own for each stretch of speech."
         control={
           <Select
             label="Speech engine"
@@ -88,6 +88,8 @@ function Engine({ s }: { s: CaptureStatus }) {
             onChange={(narrationEngine) => void patchCapture({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
             options={[
               { value: "dictation", label: "Dictation model" },
+              { value: "live", label: "Dictation model, live" },
+              ...(s.platform === "win32" ? [{ value: "windows", label: "Windows speech" }] : []),
               { value: "command", label: "Command" },
             ]}
           />

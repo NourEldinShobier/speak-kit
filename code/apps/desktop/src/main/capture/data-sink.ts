@@ -10,6 +10,8 @@ export interface DataSinkDeps {
   /** The capture that is on now. */
   id(): string | undefined;
   log(line: string): void;
+  /** Gets each piece of the microphone track as it arrives (the live narration). */
+  audio?(chunk: Int16Array): void;
 }
 
 /** What the recorder window streams back goes to the files of the capture that is on, unless it belongs to another recording or the disk is already refusing writes. */
@@ -20,6 +22,7 @@ export function createDataSink(d: DataSinkDeps): (data: RecorderData) => void {
       if (d.fence.refused === 1) d.log("capture: data of an earlier recording was refused");
       return;
     }
+    if (data.kind === "audio") d.audio?.(data.chunk);
     const id = d.id();
     // while the disk is refusing writes nothing more is queued
     if (id && d.writes.failures === 0) d.writes.watch(writeStreamed(d.bundle(), id, data));

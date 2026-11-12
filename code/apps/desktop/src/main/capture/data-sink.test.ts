@@ -4,7 +4,7 @@ import { createDataSink } from "./data-sink";
 import type { Bundle } from "./bundle";
 import type { RecorderData } from "../../shared/capture/contract";
 
-function setup(failures = 0) {
+function setup(failures = 0, heard: Int16Array[] = []) {
   const fence = createFence();
   const written: string[] = [];
   const logs: string[] = [];
@@ -14,7 +14,7 @@ function setup(failures = 0) {
     audio: async (id: string) => void written.push(`audio:${id}`),
   } as unknown as Bundle;
   let id: string | undefined = "c1";
-  const sink = createDataSink({ fence, writes: { failures, watch: (p) => void p }, bundle: () => bundle, id: () => id, log: (l) => logs.push(l) });
+  const sink = createDataSink({ fence, writes: { failures, watch: (p) => void p }, bundle: () => bundle, id: () => id, log: (l) => logs.push(l), audio: (c) => heard.push(c) });
   return { fence, sink, written, logs, setId: (v: string | undefined) => (id = v) };
 }
 const frame = (gen: number): RecorderData => ({ gen, kind: "frame", atMs: 0, jpeg: new Uint8Array(2) });
@@ -50,5 +50,15 @@ describe("recorder data sink", () => {
     b.sink(frame(1));
     expect(a.written).toEqual([]);
     expect(b.written).toEqual([]);
+  });
+
+  it("gives the microphone pieces of the open generation to the live narration, and no others", () => {
+    const heard: Int16Array[] = [];
+    const s = setup(0, heard);
+    s.fence.open();
+    s.sink({ gen: 1, kind: "audio", chunk: Int16Array.of(1, 2) });
+    s.sink({ gen: 1, kind: "frame", atMs: 0, jpeg: new Uint8Array(1) });
+    s.sink({ gen: 7, kind: "audio", chunk: Int16Array.of(9) });
+    expect(heard.map((c) => [...c])).toEqual([[1, 2]]);
   });
 });
