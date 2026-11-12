@@ -32,7 +32,7 @@ describe("Engines page", () => {
     const l = await start({ config: DONE, env: WITH_CARD });
     await open(l);
     const cards = l.page.locator("[data-testid^=model-card-]");
-    expect(await cards.count()).toBe(16);
+    expect(await cards.count()).toBe(17);
     expect(await cards.first().getAttribute("data-model")).toBe("large-v3-turbo-q5_0");
     const first = cards.first();
     expect(await first.getByText("In use").count()).toBe(1);
@@ -105,6 +105,7 @@ describe("Engines page", () => {
     const l = await start({ config: DONE, env: WITH_CARD });
     await open(l);
     const row = (language: string) => l.page.getByRole("row", { name: new RegExp(`^${language} `) });
+    await row("French").waitFor();
     expect(await row("English").getByRole("cell").allTextContents()).toEqual([
       "Whisper Large v3 (5-bit)",
       "About 1 wrong word in 11 (English test)",
@@ -123,7 +124,7 @@ describe("Engines page", () => {
     const l = await start({ config: DONE, env: CPU_ONLY });
     await open(l);
     const first = l.page.locator("[data-testid^=model-card-]").first();
-    expect(await first.getByText("About 90 seconds").count()).toBe(1);
+    await first.getByText("About 90 seconds").waitFor();
     expect(
       await l.page
         .getByRole("row", { name: /^English / })
@@ -222,7 +223,7 @@ describe("Setup: dictation step", () => {
     expect(await l.page.getByRole("radio", { name: "German" }).isChecked()).toBe(true);
     await l.page.getByRole("button", { name: "Continue" }).click();
     await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor();
-    expect(configOf(l).dictation.language).toBe("de");
+    await expect.poll(() => configOf(l).dictation.language).toBe("de");
   });
 
   it("Skip dictation goes on to the browser step and remembers that no model was chosen", async () => {
@@ -253,7 +254,7 @@ describe("About: Run setup again", () => {
       .first()
       .waitFor();
     await expect.poll(() => configOf(l).setupDone).toBe(false);
-    expect(configOf(l).dictation.language).toBe("de");
+    await expect.poll(() => configOf(l).dictation.language).toBe("de");
   });
 });
 

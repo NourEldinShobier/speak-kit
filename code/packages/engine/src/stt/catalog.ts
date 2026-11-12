@@ -19,7 +19,8 @@ export type BuiltinSttModelId =
   | "large-v3-turbo-q8_0"
   | "large-v3-turbo"
   | "distil-large-v3"
-  | "parakeet-tdt-0.6b-v3-q8_0";
+  | "parakeet-tdt-0.6b-v3-q8_0"
+  | "parakeet-ultra-q8_0";
 /** A model the person added from a file: "custom-" and the first twelve hex digits of its SHA-256. */
 export type CustomSttModelId = `custom-${string}`;
 export type SttModelId = BuiltinSttModelId | CustomSttModelId;
@@ -252,6 +253,23 @@ export const STT_MODELS: readonly SttModel[] = [
     detects: false,
     license: { name: "CC BY 4.0", url: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3" },
     measured: MEASURED["parakeet-tdt-0.6b-v3-q8_0"],
+    origin: "builtin",
+  },
+  {
+    id: "parakeet-ultra-q8_0",
+    engine: "parakeet",
+    name: "Parakeet Ultra (8-bit)",
+    label: "Fast (English and German)",
+    tag: "Fast",
+    description: "A retrained Parakeet v3 from Moondream, as fast as Parakeet v3 and as accurate on our recordings. English and German only.",
+    file: "ggml-parakeet-ultra-q8_0.bin",
+    url: "https://huggingface.co/s1lvrn0/parakeet-ultra-ggml/resolve/main/ggml-parakeet-ultra-q8_0.bin",
+    sha256: "0ec111f8124874c0ec43fe263ae84043e3ee7b2049fd37539ab55be6e1cf8b7b",
+    bytes: 668757119,
+    languages: ["en", "de"],
+    detects: false,
+    license: { name: "CC BY 4.0", url: "https://huggingface.co/moondream/parakeet-ultra" },
+    measured: MEASURED["parakeet-ultra-q8_0"],
     origin: "builtin",
   },
 ];

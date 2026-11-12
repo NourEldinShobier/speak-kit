@@ -32,4 +32,5 @@ export const MEASURED = {
   "distil-large-v3": { wrong: { en: { wrong: 13, of: 79 } }, ms: { gpu: { short: 212, long: 267 }, cpu: { short: 113957, long: 110914 } } },
   "parakeet-tdt-0.6b-v3-q4_0": { wrong: { en: { wrong: 10, of: 79 }, de: { wrong: 2, of: 90 } }, ms: { gpu: { short: 45, long: 99 }, cpu: { short: 1067, long: 3989 } } },
   "parakeet-tdt-0.6b-v3-q8_0": { wrong: { en: { wrong: 11, of: 79 }, de: { wrong: 2, of: 90 } }, ms: { gpu: { short: 50, long: 112 }, cpu: { short: 710, long: 2679 } } },
+  "parakeet-ultra-q8_0": { wrong: { en: { wrong: 10, of: 79 }, de: { wrong: 2, of: 90 } }, ms: { gpu: { short: 42, long: 90 }, cpu: { short: 661, long: 2720 } } },
 } as const satisfies Record<string, Measured>;

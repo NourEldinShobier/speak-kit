@@ -28,7 +28,7 @@ describe("model manager", () => {
     const { m } = setup();
     await m.refresh();
     const views = m.views();
-    expect(views).toHaveLength(16);
+    expect(views).toHaveLength(17);
     expect(views.slice(0, 3).map((v) => [v.name, v.selected, v.installed])).toEqual([
       ["Whisper Large v3 Turbo", true, true],
       ["Parakeet v3", false, true],

@@ -33,7 +33,7 @@ describe("catalog entries", () => {
     }
   });
 
-  it("offers Whisper in every size and precision of the official repository's multilingual set, and Distil-Whisper for English", () => {
+  it("offers Whisper in every size and precision of the official repository's multilingual set, Distil-Whisper for English and the Parakeet variants the binding runs", () => {
     const ids = STT_MODELS.map((m) => m.id);
     for (const id of [
       "tiny",
@@ -49,6 +49,7 @@ describe("catalog entries", () => {
       "large-v3-q5_0",
       "large-v3-turbo-q8_0",
       "distil-large-v3",
+      "parakeet-ultra-q8_0",
     ])
       expect(ids).toContain(id);
     expect(STT_MODELS.find((m) => m.id === "distil-large-v3")).toMatchObject({ languages: ["en"], detects: false });
