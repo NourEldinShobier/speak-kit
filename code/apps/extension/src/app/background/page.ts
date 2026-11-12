@@ -22,6 +22,7 @@ export function watchFrontPage(): void {
   chrome.tabs.onActivated.addListener(send);
   chrome.tabs.onUpdated.addListener((_id, info) => info.url && send());
   chrome.windows.onFocusChanged.addListener(send);
+  for (const e of [chrome.permissions.onAdded, chrome.permissions.onRemoved]) e.addListener(send); // the user allowed or withdrew reading tabs
   chrome.alarms.onAlarm.addListener(send); // this is the only alarm
   chrome.alarms.create(ALARM, { periodInMinutes: 0.5 }); // same name: replaces the earlier one
   send();
