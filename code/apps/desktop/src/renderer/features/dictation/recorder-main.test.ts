@@ -18,6 +18,7 @@ vi.mock("./api", () => ({
       },
       reply: (id: number, r: RecorderResult) => void h.replies.set(id, r),
       level: () => undefined,
+      chunk: () => undefined,
       ready: () => undefined,
       event: (e: RecorderEvent) => void h.events.push(e),
     },

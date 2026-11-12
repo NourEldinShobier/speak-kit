@@ -16,8 +16,12 @@ export interface Job {
   clip: Promise<Clip | undefined>;
   /** The window the key was pressed in. */
   target: Promise<Target | undefined>;
-  /** Brought back after a cancel. */
+  /** Dictated without text clean-up or replacements. */
+  raw?: boolean;
+  /** A take found on disk after the app stopped in the middle of it; there is no window to paste into. */
   restored?: boolean;
+  /** The text goes here and not into a window; it is saved in the history as printed. */
+  print?: (result: CaptureResult) => void;
 }
 
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
@@ -113,10 +117,30 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
   }
 }
 
-async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; settings: Settings; rewrite?: RewriteOutcome }): Promise<Outcome> {
-  const { clip, heard, text } = said;
-  const target = await job.target;
-  const current = await foreground(ctx.deps.inserter);
+const windowNow = (ctx: Context) => within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => foreground(ctx.deps.inserter));
+
+/** The window the key was pressed in and the one in front now. With "return to the app" on, a different window in front is replaced by the first; `lost` says that did not work. */
+async function windows(ctx: Context, job: Job, settings: Settings): Promise<{ target: Target | undefined; current: Target | undefined; lost: boolean }> {
+  const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
+  const current = await windowNow(ctx);
+  const focus = ctx.deps.inserter.focus;
+  const moved = !!target && !!current && current.id !== target.id && !current.passwordField;
+  if (!settings.returnToApp || !moved || !focus) return { target, current, lost: false };
+  const back = await within(ctx, { name: "return-to-app", ms: STAGE_MS, fallback: false }, () => focus(target));
+  return { target, current: back ? await windowNow(ctx) : current, lost: !back };
+}
+
+function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | "restored" | undefined {
+  if (job.restored) return "restored";
+  if (clip.interrupted) return "interrupted";
+  return job.raw ? "raw" : undefined;
+}
+
+type Said = { clip: Clip; heard: Heard; text: string; rewrite?: RewriteOutcome };
+
+async function insert(ctx: Context, job: Job, said: Said & { settings: Settings; transcribeMs: number; droppedMs: number | undefined }): Promise<Outcome> {
+  const { clip, heard, text, transcribeMs, droppedMs } = said;
+  const { target, current, lost } = await windows(ctx, job, said.settings);
   const plan = planPaste({ target, current, settings: said.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
   // The text is in History before anything is sent, so an insertion that fails or a window that cannot be reached loses nothing.
