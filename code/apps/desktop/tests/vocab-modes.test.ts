@@ -424,3 +424,56 @@ describe("History page", () => {
     expect(await l.page.getByRole("list", { name: "Recent dictations" }).locator("li").count()).toBe(2);
   });
 });
+
+describe("Installed-app picker", () => {
+  const APPS = JSON.stringify([
+    { key: "slack", name: "Slack" },
+    { key: "putty", name: "PuTTY" },
+    { key: "code", name: "Visual Studio Code" },
+  ]);
+
+  it("offers installed programs in the mode's Add app dialog, narrows them as you type and skips the ones already added", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
+    await open(l, "Modes");
+    await l.page.getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("dialog", { name: "Add a mode" }).getByLabel("Name").fill("Chat");
+    await l.page.getByRole("dialog", { name: "Add a mode" }).getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("heading", { name: "Chat", exact: true, level: 1 }).waitFor();
+    await l.page.getByRole("button", { name: "Add app" }).first().click();
+    const dialog = l.page.getByRole("dialog", { name: "Add an app to Chat" });
+    const list = dialog.getByRole("group", { name: "Installed apps" });
+    await list.getByRole("button", { name: "Use PuTTY" }).waitFor();
+    expect(await list.getByRole("button").count()).toBe(3);
+    await dialog.getByLabel("Program name").fill("sla");
+    await list.getByRole("button", { name: "Use Slack" }).waitFor();
+    expect(await list.getByRole("button").count()).toBe(1);
+    await dialog.getByLabel("Program name").fill("zzz");
+    await dialog.getByText('No installed app matches "zzz". You can still add the name you typed.').waitFor();
+    await dialog.getByLabel("Program name").fill("sla");
+    await list.getByRole("button", { name: "Use Slack" }).click();
+    expect(await dialog.getByLabel("Program name").inputValue()).toBe("slack");
+    await dialog.getByRole("button", { name: "Add app" }).click();
+    await expect.poll(async () => (await settings(l)).modes[0]?.apps).toEqual(["slack"]);
+
+    await l.page.getByRole("button", { name: "Add app" }).first().click();
+    await l.page.getByRole("dialog", { name: "Add an app to Chat" }).getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use Slack" }).waitFor({ state: "detached" });
+  });
+
+  it("adds a program to the insert-method table with one click on an installed app", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
+    await open(l, "Dictation");
+    await l.page.getByRole("textbox", { name: "Program name" }).focus();
+    await l.page.getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use PuTTY" }).click();
+    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("putty");
+  });
+
+  it("says so and still lets the name be typed when no list can be made", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: "not json" } });
+    await open(l, "Dictation");
+    await l.page.getByRole("textbox", { name: "Program name" }).focus();
+    await l.page.getByText("No installed apps found.").waitFor();
+    await l.page.getByRole("textbox", { name: "Program name" }).fill("wezterm");
+    await l.page.getByRole("textbox", { name: "Program name" }).press("Enter");
+    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("wezterm");
+  });
+});

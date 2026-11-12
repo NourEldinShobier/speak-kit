@@ -3,10 +3,11 @@ import { DEFAULT_MODE_ID, overridesShared, type WritingMode as Mode, type Term }
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
+import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
-function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
+function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
   const key = name
     .trim()
     .toLowerCase()
@@ -37,6 +38,7 @@ function AppFields({ mode, others, name, setName }: { mode: Mode; others: readon
           </button>
         ))}
       </div>
+      <AppSuggestions query={name} skip={mode.apps} active={open} onPick={(a) => setName(a.key)} />
     </>
   );
 }
@@ -71,7 +73,7 @@ function AddAppDialog({ open, mode, others, onClose, onSave }: { open: boolean; 
           submit();
         }}
       >
-        <AppFields mode={mode} others={others} name={name} setName={setName} />
+        <AppFields mode={mode} others={others} name={name} setName={setName} open={open} />
         <button type="submit" hidden />
       </form>
     </Modal>
