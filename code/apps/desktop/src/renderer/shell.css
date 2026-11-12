@@ -51,6 +51,7 @@ html[data-hidden] *::after {
   grid-template-columns: 1fr 420px 1fr;
   align-items: center;
   padding: 0 0 0 8px;
+  direction: ltr; /* physical: the native window controls keep their side in every language, so the bar does not mirror */
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -168,7 +169,8 @@ html[data-platform="darwin"] .sk-title__r {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 2px 4px 2px 8px;
+  padding-block: 2px;
+  padding-inline: 8px 4px;
   margin-block-end: var(--panel-inset-end);
   overflow-y: auto;
 }
@@ -289,7 +291,9 @@ html[data-platform="darwin"] .sk-title__r {
 .sk-main {
   flex: 1;
   min-width: 0;
-  margin: 0 var(--panel-inset-end) var(--panel-inset-end) var(--panel-inset);
+  margin: 0;
+  margin-inline: var(--panel-inset) var(--panel-inset-end);
+  margin-block-end: var(--panel-inset-end);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
   background: var(--surface-editor);

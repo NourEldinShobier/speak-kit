@@ -1,6 +1,8 @@
 /** Every interface string the translated screens use, in English; other languages must carry exactly these keys. */
 export const EN = {
   "nav.menu": "Menu",
+  "nav.main": "Main",
+  "nav.onDevice": "100% on this device",
   "nav.recent": "Recent",
   "nav.settings": "Settings",
   "nav.closeSettings": "Close settings",

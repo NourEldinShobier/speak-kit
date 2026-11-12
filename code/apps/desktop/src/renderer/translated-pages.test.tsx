@@ -18,6 +18,15 @@ const es = (node: ReactNode) => renderToStaticMarkup(<LocaleProvider choice="es"
 const settings = (sub: Parameters<typeof Settings>[0]["sub"], config = {}, over = {}) =>
   es(<Settings s={appState({ config: parseConfig({ setupDone: true, language: "es", ...config }), ...over })} sub={sub} />);
 
+describe("language choice", () => {
+  it("shows the Home page in French and Arabic", () => {
+    const home = (choice: string) =>
+      renderToStaticMarkup(<LocaleProvider choice={choice}>{<Home s={appState({ port: 48999, health: { engine: { state: "ready" } } as never })} go={() => {}} />}</LocaleProvider>);
+    expect(home("fr")).toContain("Moteur vocal");
+    expect(home("ar")).toContain("محرك الصوت");
+  });
+});
+
 describe("pages in Spanish", () => {
   it("Home", () => {
     const html = es(<Home s={appState({ port: 48999, health: { engine: { state: "ready" } } as never })} go={() => {}} />);

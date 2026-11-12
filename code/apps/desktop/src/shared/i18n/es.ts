@@ -2,6 +2,8 @@ import type { StringKey } from "./en";
 
 export const ES: Record<StringKey, string> = {
   "nav.menu": "Menú",
+  "nav.main": "Principal",
+  "nav.onDevice": "100 % en este dispositivo",
   "nav.recent": "Recientes",
   "nav.settings": "Ajustes",
   "nav.closeSettings": "Cerrar ajustes",

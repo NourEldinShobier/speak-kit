@@ -87,6 +87,7 @@ function SettingsNav(p: SidebarProps) {
 }
 
 function EngineCard({ s }: { s: AppState }) {
+  const { t } = useT();
   const v = engineView(s.health, s.serverError);
   return (
     <div className="sk-engcard">
@@ -94,7 +95,7 @@ function EngineCard({ s }: { s: AppState }) {
       {v.hint && <span>{v.hint}</span>}
       <span className="sk-engcard__ok">
         <Icon name="lock" size={13} />
-        100% on this device
+        {t("nav.onDevice")}
       </span>
     </div>
   );
@@ -117,7 +118,7 @@ function RecentList({ recent, onPick }: { recent: RecentReading[]; onPick(id: st
 function MainNav(p: SidebarProps) {
   const { t, label } = useT();
   return (
-    <SidebarNav label="Main">
+    <SidebarNav label={t("nav.main")}>
       <div className="sk-side__title">{t("nav.menu")}</div>
       {MENU.map((g) => (
         <div key={g.group} style={{ display: "contents" }}>

@@ -23,8 +23,8 @@ function ServerAlerts({ s }: { s: AppState }) {
         </Banner>
       )}
       {s.portFallback && (
-        <Banner tone="warning" title={t("home.portBusy", { port: s.config.preferredPort })}>
-          {t("home.portBusyBody", { actual: s.port })}
+        <Banner tone="warning" title={t("home.portBusy", { port: String(s.config.preferredPort) })}>
+          {t("home.portBusyBody", { actual: String(s.port) })}
         </Banner>
       )}
     </>
