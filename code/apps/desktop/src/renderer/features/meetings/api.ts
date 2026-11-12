@@ -1,4 +1,6 @@
-import type { MeetingsBridge } from "../../../shared/meetings/contract";
+import type { MeetingsBridge, SettingsView } from "../../../shared/meetings/contract";
+import type { MeetingsPatch } from "../../../shared/meetings/settings";
+import { patchViaRegistry } from "../../registry-patch";
 
 declare global {
   interface Window {
@@ -15,3 +17,6 @@ export const attempt = <T>(call: Promise<T>): Promise<T | null> =>
 
 /** The preload's meetings bridge (window.speakkitMeetings). */
 export const meetings: MeetingsBridge = window.speakkitMeetings;
+
+/** Changes call recording settings through the settings registry and returns the settings as they are now. */
+export const patchMeetings = (patch: MeetingsPatch): Promise<SettingsView> => patchViaRegistry("meetings", patch, { status: () => meetings.settings() });

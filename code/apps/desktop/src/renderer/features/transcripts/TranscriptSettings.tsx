@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Banner, Button, Modal, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { SettingsView } from "../../../shared/transcripts/contract";
 import { AUDIO_CAP_BYTES, AUDIO_DAYS, TEXT_DAYS, TRASH_DAYS, type TranscriptsPatch } from "../../../shared/transcripts/settings";
-import { transcripts } from "./api";
+import { patchTranscripts, transcripts } from "./api";
 import { sizeText } from "./model";
 import { usePush, useSettingsView } from "./useTranscripts";
 import "./transcripts.css";
@@ -141,7 +141,7 @@ export function TranscriptSettings() {
   return (
     <>
       <SettingsSection {...SECTION}>
-        <Retention view={view} patch={(p) => void transcripts.patchSettings(p).then(set)} />
+        <Retention view={view} patch={(p) => void patchTranscripts(p).then(set)} />
         <Where view={view} set={set} />
         <InUse view={view} onDeleteAudio={() => setAsking(true)} />
       </SettingsSection>

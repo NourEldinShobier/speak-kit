@@ -6,7 +6,7 @@ import type { ProviderView, SettingsView } from "../../../shared/meetings/contra
 import { AUDIO_HOURS, MEETING_TEXT_DAYS, MEETING_TRASH_DAYS, type MeetingsPatch } from "../../../shared/meetings/settings";
 import { Page } from "../../ui";
 import { AddAppDialog } from "./AddAppDialog";
-import { meetings } from "./api";
+import { meetings, patchMeetings } from "./api";
 import { sizeText } from "./model";
 import { permissionName, permissionWhy, stepButton, stepStatus, usePermissions } from "./permissions";
 import { ShortcutRow } from "./ShortcutRow";
@@ -240,7 +240,7 @@ export function MeetingsPage({ s }: { s: AppState }) {
       </Page>
     );
   }
-  const patch = (p: MeetingsPatch) => void meetings.patchSettings(p).then(set);
+  const patch = (p: MeetingsPatch) => void patchMeetings(p).then(set);
   return (
     <Page title="Meetings" lead={lead}>
       {!view.config.enabled ? (

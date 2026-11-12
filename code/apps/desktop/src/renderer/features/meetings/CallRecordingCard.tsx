@@ -4,7 +4,7 @@ import { rankOutputs } from "@speakkit/meetings/pure";
 import { Banner, Button, Select, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { Device, SettingsView } from "../../../shared/meetings/contract";
 import type { MeetingsPatch } from "../../../shared/meetings/settings";
-import { attempt, meetings } from "./api";
+import { attempt, meetings, patchMeetings } from "./api";
 import { sizeText } from "./model";
 import { micChoice, recordChoice } from "./callRecordingChoices";
 import { usePush, useSettingsView } from "./useMeetings";
@@ -111,7 +111,7 @@ export function CallRecordingCard() {
   useEffect(() => void attempt(meetings.devices()).then((d) => d && setDevices(d)), []);
   useEffect(() => void attempt(meetings.list()).then((r) => setRows((r ?? []).filter((x) => x.status === "failed"))), [tick, n]);
   if (!view) return failed ? <Banner tone="error">The call recording settings could not be loaded.</Banner> : null;
-  const patch = (p: MeetingsPatch) => void meetings.patchSettings(p).then(set);
+  const patch = (p: MeetingsPatch) => void patchMeetings(p).then(set);
   return (
     <>
       <CallRows view={view} devices={devices} patch={patch} />
