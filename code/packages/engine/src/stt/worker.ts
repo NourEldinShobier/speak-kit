@@ -2,6 +2,7 @@
 import * as v from "valibot";
 import type { ParakeetContext, WhisperContext, WhisperVadContext } from "@fugood/whisper.node";
 import { speechRange } from "./speech-range.ts"; // the extension is what node needs to run this file as it is, without a build
+import { hostPort } from "../host-port.ts";
 import type { SttFromWorker, SttToWorker, SttWorkerInit } from "./worker-protocol";
 
 const initSchema: v.GenericSchema<unknown, SttWorkerInit> = v.object({
@@ -13,7 +14,8 @@ const initSchema: v.GenericSchema<unknown, SttWorkerInit> = v.object({
   warmup: v.boolean(),
 });
 const init = v.parse(initSchema, JSON.parse(process.env.SPEAKKIT_WORKER_INIT ?? "null"));
-const send = (m: SttFromWorker) => void process.send!(m);
+const port = hostPort();
+const send = (m: SttFromWorker) => port.send(m);
 
 const SAMPLE_RATE = 16000;
 // Whisper invents text on silence and a loudness gate does not stop it; Silero decides whether there is speech at all.
@@ -94,7 +96,7 @@ async function run(m: SttToWorker): Promise<void> {
 let chain: Promise<void> = load().catch((e) => {
   send({ type: "fatal", message: e instanceof Error ? e.message : String(e) });
 });
-process.on("message", (m: SttToWorker) => {
+port.onMessage((m: SttToWorker) => {
   chain = chain.then(() => (model ? run(m) : send({ type: "error", id: m.id, message: "speech model failed to load" })));
 });
 process.on("disconnect", () => process.exit(0)); // the app went away

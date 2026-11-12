@@ -22,15 +22,11 @@ export function threadChannel<To, From>(url: URL | string, workerData: unknown):
   };
 }
 
-/** The init object travels in SPEAKKIT_WORKER_INIT; the child is a plain node process (see childEnv). `env` adds variables the child must have before it starts. */
-export function processChannel<To, From>(url: URL | string, init: unknown, env: Record<string, string> = {}): Channel<To, From> {
-  const file = typeof url === "string" && !url.startsWith("file:") ? url : fileURLToPath(url);
-  const c: ChildProcess = fork(file, [], {
-    serialization: "advanced",
-    execArgv: [],
-    stdio: ["ignore", "ignore", "inherit", "ipc"],
-    env: childEnv({ ...env, SPEAKKIT_WORKER_INIT: JSON.stringify(init) }),
-  });
+/** Starts a model host from a script file with this environment. */
+export type ProcessSpawner = (file: string, env: Record<string, string>) => Channel<unknown, unknown>;
+
+function forkHost(file: string, env: Record<string, string>): Channel<unknown, unknown> {
+  const c: ChildProcess = fork(file, [], { serialization: "advanced", execArgv: [], stdio: ["ignore", "ignore", "inherit", "ipc"], env });
   return {
     pid: c.pid,
     post: (m) => void c.send(m as never),
@@ -42,4 +38,14 @@ export function processChannel<To, From>(url: URL | string, init: unknown, env: 
         c.kill();
       }),
   };
+}
+
+let spawner: ProcessSpawner = forkHost;
+/** The desktop app starts model hosts as Electron utility processes, so the packaged app can ship with the run-as-node fuse off. Default: node's fork. */
+export const setProcessSpawner = (s: ProcessSpawner = forkHost): void => void (spawner = s);
+
+/** The init object travels in SPEAKKIT_WORKER_INIT; the child is a plain node process (see childEnv). `env` adds variables the child must have before it starts. */
+export function processChannel<To, From>(url: URL | string, init: unknown, env: Record<string, string> = {}): Channel<To, From> {
+  const file = typeof url === "string" && !url.startsWith("file:") ? url : fileURLToPath(url);
+  return spawner(file, childEnv({ ...env, SPEAKKIT_WORKER_INIT: JSON.stringify(init) })) as Channel<To, From>;
 }

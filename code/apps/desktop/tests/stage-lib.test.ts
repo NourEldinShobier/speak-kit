@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { foreignMacArch, icoFromPngs, importedPackages, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, fusePlan, icoFromPngs, importedPackages, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -116,5 +116,18 @@ describe("macSigningPlan", () => {
 
   it("signs only the app when there is nothing nested", () => {
     expect(macSigningPlan({ app: "a.app", nested: [], entitlements: "m", inherit: "i" })).toHaveLength(1);
+  });
+});
+
+describe("fusePlan", () => {
+  it("turns RunAsNode off on macOS only and hardens the other fuses everywhere", () => {
+    expect(fusePlan(true)).toEqual({ RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableCookieEncryption: true });
+    expect(fusePlan(false)).toEqual({ ...fusePlan(true), RunAsNode: true });
+  });
+
+  it("runs the macOS command line inside the app binary instead of as plain Node", () => {
+    const shim = readFileSync(new URL("../cli-shim/speakkit", import.meta.url), "utf8");
+    expect(shim).toContain("--speakkit-cli");
+    expect(shim).not.toContain("ELECTRON_RUN_AS_NODE");
   });
 });

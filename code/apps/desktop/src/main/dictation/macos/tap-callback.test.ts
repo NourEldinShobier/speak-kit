@@ -5,7 +5,7 @@ const setup = (swallow = false) => {
   const log: string[] = [];
   const deps = {
     reenable: () => void log.push("enable"),
-    read: (e: string, type: number) => (log.push(`read:${e}`), { type, keycode: 1, flags: 2, userData: 3 }),
+    read: (e: string, type: number) => (log.push(`read:${e}`), { type, keycode: 1, flags: 2, userData: 3, button: 0 }),
     onEvent: () => (log.push("event"), swallow),
   };
   return { log, run: (type: number) => handleTapEvent(type, "ev", deps) };

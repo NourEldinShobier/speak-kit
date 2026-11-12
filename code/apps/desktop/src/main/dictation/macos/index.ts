@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createKeyboardHook } from "../keyboard-hook";
 import type { DictationPlatform } from "../types";
-import { installMouseTap, installTapHook } from "./hook";
+import { installMouseTapHook, installTapHook } from "./hook";
 import { createMacInput } from "./input";
 import { createMacLayoutReader, type RunText } from "./layout-reader";
 import { macKeyOfVk, OWN_EVENT_MARKER } from "./keymap";
@@ -13,7 +13,7 @@ export function createMacPlatformWith(native: MacNative, layout?: { current(): s
   const hotkey = createKeyboardHook(
     {
       install: (onKey, onFault) => installTapHook(native, onKey, onFault),
-      installMouse: (onClick, onFault) => installMouseTap(native, onClick, onFault),
+      installMouse: (onClick, onFault) => installMouseTapHook(native, onClick, onFault),
       keyIsDown: (vk) => {
         const code = macKeyOfVk(vk);
         return code !== undefined && native.keyIsDown(code);
