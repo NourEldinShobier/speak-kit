@@ -46,6 +46,7 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   modelReady: true,
   historyCount: 128,
   mic: { kind: "ready", label: "Microphone Array" },
+  devices: [],
   ...over,
 });
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));

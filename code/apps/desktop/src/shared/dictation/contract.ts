@@ -47,6 +47,8 @@ export interface DictationStatus {
   historyCount: number;
   /** The state of the microphone the Audio card shows. */
   mic: MicStatus;
+  /** Microphones the system lists, for the picker; empty until the list was asked for. */
+  devices: MicDeviceView[];
 }
 
 export interface HistoryItem {
@@ -86,6 +88,11 @@ export interface DictationBridge {
   historyClear(): Promise<void>;
   historyRemoveMany(ids: string[]): Promise<void>;
   historyStats(): Promise<HistoryStats>;
+  /** Asks the microphone window to list the inputs; the answer arrives in the status. */
+  micDevices(): Promise<DictationStatus>;
+  /** Starts or stops the level meter of the Audio card; the microphone is open only while it is on. */
+  micMeter(on: boolean): Promise<void>;
+  onMicLevel(cb: (n: number) => void): () => void;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
   /** Opens the operating system's sound input settings. */
@@ -112,13 +119,25 @@ export interface RecorderMicConfig {
   keepMs: number;
 }
 
+export interface MicDeviceView {
+  id: string;
+  label: string;
+}
+
 export type RecorderEvent =
+  | { type: "devices"; devices: MicDeviceView[] }
   | { type: "silent" | "lost" | "gave-up" }
   | { type: "reopening"; attempt: number }
   | { type: "opened"; label: string; bluetooth: boolean }
   | { type: "no-device"; builtInOff: boolean };
 
-export type RecorderCommand = { id: number; op: "start"; prerollMs: number; mic: RecorderMicConfig } | { id: number; op: "stop" } | { id: number; op: "discard" } | { id: number; op: "close" };
+export type RecorderCommand =
+  | { id: number; op: "start"; prerollMs: number; mic: RecorderMicConfig }
+  | { id: number; op: "stop" }
+  | { id: number; op: "discard" }
+  | { id: number; op: "close" }
+  | { id: number; op: "devices" }
+  | { id: number; op: "meter"; on: boolean; mic: RecorderMicConfig };
 export type RecorderResult =
   | {
       ok: true;
@@ -143,6 +162,8 @@ export const DICTATION_ARGS = {
   historyClear: v.tuple([]),
   historyRemoveMany: v.tuple([v.pipe(v.array(v.pipe(v.string(), v.minLength(1), v.maxLength(64))), v.maxLength(500))]),
   historyStats: v.tuple([]),
+  micDevices: v.tuple([]),
+  micMeter: v.tuple([v.boolean()]),
   retry: v.tuple([]),
   openSoundSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
@@ -168,4 +189,8 @@ export const RecorderEventSchema = v.variant("type", [
   v.object({ type: v.literal("reopening"), attempt: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)) }),
   v.object({ type: v.literal("opened"), label: v.pipe(v.string(), v.maxLength(300)), bluetooth: v.boolean() }),
   v.object({ type: v.literal("no-device"), builtInOff: v.boolean() }),
+  v.object({
+    type: v.literal("devices"),
+    devices: v.pipe(v.array(v.object({ id: v.pipe(v.string(), v.maxLength(300)), label: v.pipe(v.string(), v.maxLength(300)) })), v.maxLength(50)),
+  }),
 ]);

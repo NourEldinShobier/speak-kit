@@ -5,6 +5,7 @@ import type { Replacement } from "../../../shared/dictation/settings";
 import { MAX_REPLACEMENTS } from "../../../shared/dictation/settings";
 import { Page } from "../../ui";
 import { dictation } from "./api";
+import { AppRulesCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { FirstRunCard } from "./FirstRunCard";
 import { HotkeyRecorder } from "./HotkeyRecorder";
 import { entriesText, hotkeyHelp, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
@@ -177,6 +178,9 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
       ) : (
         <>
           <General s={s} />
+          <MicrophoneCard s={s} />
+          <OutputCard s={s} />
+          <AppRulesCard s={s} />
           <ModelList status={s} />
           <Replacements list={s.settings.replacements} />
           <TestField />

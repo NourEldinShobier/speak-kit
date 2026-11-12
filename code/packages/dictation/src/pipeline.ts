@@ -31,14 +31,15 @@ export const STAGE_MS = 2000;
  * Runs one optional stage with a deadline. When it fails or runs out of time the caller gets `fallback` (the input it already had) and one log line
  * naming the stage; the text is never held back by a stage that is not needed to produce it.
  */
-export function within<T>(ctx: Pick<Context, "deps">, stage: string, ms: number, work: () => Promise<T>, fallback: T): Promise<T> {
+export function within<T>(ctx: Pick<Context, "deps">, stage: { name: string; ms: number; fallback: T }, work: () => Promise<T>): Promise<T> {
+  const { name, ms, fallback } = stage;
   return new Promise<T>((resolve) => {
     let done = false;
     const settle = (value: T, why?: string) => {
       if (done) return;
       done = true;
       cancel();
-      if (why) ctx.deps.log?.(stage, why);
+      if (why) ctx.deps.log?.(name, why);
       resolve(value);
     };
     const cancel = ctx.deps.clock.after(ms, () => settle(fallback, "timeout"));
@@ -86,41 +87,42 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
   }
 }
 
+const windowNow = (ctx: Context) => within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => foreground(ctx.deps.inserter));
+
+/** The window the key was pressed in and the one in front now. With "return to the app" on, a different window in front is replaced by the first; `lost` says that did not work. */
+async function windows(ctx: Context, job: Job): Promise<{ target: Target | undefined; current: Target | undefined; lost: boolean }> {
+  const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
+  const current = await windowNow(ctx);
+  const focus = ctx.deps.inserter.focus;
+  const moved = !!target && !!current && current.id !== target.id && !current.passwordField;
+  if (!ctx.settings.returnToApp || !moved || !focus) return { target, current, lost: false };
+  const back = await within(ctx, { name: "return-to-app", ms: STAGE_MS, fallback: false }, () => focus(target));
+  return { target, current: back ? await windowNow(ctx) : current, lost: !back };
+}
+
 async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number }): Promise<Outcome> {
   const { clip, heard, text, transcribeMs } = said;
-  const target = await job.target;
-  let current = await within(ctx, "window", STAGE_MS, () => foreground(ctx.deps.inserter), undefined);
-  const refocus = ctx.settings.returnToApp && !!target && !!current && current.id !== target.id && !current.passwordField && !!ctx.deps.inserter.focus;
-  let lost = false;
-  if (refocus && target) {
-    const back = await within(ctx, "return-to-app", STAGE_MS, () => ctx.deps.inserter.focus!(target), false);
-    if (back) current = await within(ctx, "window", STAGE_MS, () => foreground(ctx.deps.inserter), undefined);
-    lost = !back;
-  }
+  const { target, current, lost } = await windows(ctx, job);
   const plan = planPaste({ target, current, settings: ctx.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
   // The text is in History before anything is sent, so an insertion that fails or a window that cannot be reached loses nothing.
   const app = (current ?? target)?.exe;
   // Saved before inserting, so the text survives an insertion that fails.
-  await within(
-    ctx,
-    "history",
-    STAGE_MS,
-    () =>
-      ctx.history.add({
-        at: ctx.deps.clock.now(),
-        text,
-        raw: heard.text,
-        durationMs: Math.round((clip.pcm.length / clip.sampleRate) * 1000),
-        ...(app !== undefined && { app }),
-        ...(heard.language !== undefined && { language: heard.language }),
-        ...(heard.model !== undefined && { model: heard.model }),
-        ...(clip.interrupted && { kind: "interrupted" as const }),
-        ...((current ?? target)?.name !== undefined && { displayName: (current ?? target)!.name! }),
-        timings: { transcribeMs },
-        outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
-      }),
-    undefined,
+  const name = (current ?? target)?.name;
+  await within(ctx, { name: "history", ms: STAGE_MS, fallback: undefined }, () =>
+    ctx.history.add({
+      at: ctx.deps.clock.now(),
+      text,
+      raw: heard.text,
+      durationMs: Math.round((clip.pcm.length / clip.sampleRate) * 1000),
+      ...(app !== undefined && { app }),
+      ...(heard.language !== undefined && { language: heard.language }),
+      ...(heard.model !== undefined && { model: heard.model }),
+      ...(clip.interrupted && { kind: "interrupted" as const }),
+      ...(name !== undefined && { displayName: name }),
+      timings: { transcribeMs },
+      outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
+    }),
   );
   if (lost) return { error: "focus-failed" };
   const done = await ctx.deps.inserter.insert({ text, plan });

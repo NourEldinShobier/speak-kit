@@ -12,6 +12,8 @@ export const DICTATION_METHODS = [
   "historyClear",
   "historyRemoveMany",
   "historyStats",
+  "micDevices",
+  "micMeter",
   "retry",
   "openSoundSettings",
 ] as const;
@@ -35,4 +37,6 @@ export const REC_REPLY = "speakkit:dictation:rec-reply";
 export const REC_LEVEL = "speakkit:dictation:rec-level";
 export const REC_READY = "speakkit:dictation:rec-ready";
 /** The microphone window reports what happened to the microphone itself: silent, lost, reopening, back. */
+/** Main to the app window: the microphone level while the Audio card is open. */
+export const MIC_LEVEL_EVENT = "speakkit:dictation:mic-level";
 export const REC_EVENT = "speakkit:dictation:rec-event";

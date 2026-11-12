@@ -291,3 +291,34 @@
   gap: 6px;
   margin-block-start: 12px;
 }
+.dict-meter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  block-size: 36px;
+}
+.dict-meter i {
+  inline-size: 4px;
+  block-size: 14px;
+  border-radius: 2px;
+  background: #e5e5e5;
+}
+.dict-meter i[data-on] {
+  background: #201e25;
+}
+.dict-rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dict-rule__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.dict-rule__delay {
+  inline-size: 72px;
+}
+.dict-rule__field {
+  flex: 1;
+}

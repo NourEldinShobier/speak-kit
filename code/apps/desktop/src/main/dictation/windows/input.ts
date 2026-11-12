@@ -42,6 +42,17 @@ async function addWhenFree(w: Win32, marks: readonly string[]): Promise<boolean>
   return false;
 }
 
+/** Brings a window to the front and waits up to half a second for Windows to agree. */
+async function focusWindow(w: Win32, hwnd: string): Promise<boolean> {
+  if (w.address(w.foregroundWindow()) === hwnd) return true;
+  if (!w.setForeground(hwnd)) return false;
+  for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
+    await new Promise((r) => setTimeout(r, FOCUS_POLL_MS));
+    if (w.address(w.foregroundWindow()) === hwnd) return true;
+  }
+  return false;
+}
+
 export function createInput(w: Win32, fg: Foreground): InputPort {
   const event = (flags: number, vk: number, scan: number): KeyInput => ({ type: 1, u: { ki: { wVk: vk, wScan: scan, dwFlags: flags, time: 0, dwExtraInfo: OWN_INPUT_MARKER } } });
 
@@ -85,15 +96,7 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
       const main = insert ? { vk: VK_INSERT, extended: true } : { vk: VK.v };
       return sendAll([...ctrl, ...shift, { ...main, up: false }, { ...main, up: true }, ...ups]);
     },
-    async focus(hwnd) {
-      if (w.foregroundWindow() && w.address(w.foregroundWindow()) === hwnd) return true;
-      if (!w.setForeground(hwnd)) return false;
-      for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
-        await new Promise((r) => setTimeout(r, FOCUS_POLL_MS));
-        if (w.address(w.foregroundWindow()) === hwnd) return true;
-      }
-      return false;
-    },
+    focus: (hwnd) => focusWindow(w, hwnd),
     type(text) {
       const events = unicode(text);
       for (let i = 0; i < events.length; i += TYPE_CHUNK * 2) {

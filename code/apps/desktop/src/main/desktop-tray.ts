@@ -25,7 +25,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
-    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
+    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, recent: dictation.history.recent() } }),
   });
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
@@ -35,6 +35,11 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     dictation: dictation.toggle,
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
+    "dictation-copy-0": () => dictation.history.copyRecent(0),
+    "dictation-copy-1": () => dictation.history.copyRecent(1),
+    "dictation-copy-2": () => dictation.history.copyRecent(2),
+    "dictation-copy-3": () => dictation.history.copyRecent(3),
+    "dictation-copy-4": () => dictation.history.copyRecent(4),
     open: ctx.showWindow,
     pause: () => reading.controller.command({ type: "pause" }),
     resume: () => reading.controller.command({ type: "resume" }),

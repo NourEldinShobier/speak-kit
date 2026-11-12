@@ -28,7 +28,7 @@ const clipboardFailed: InsertResult = { status: "failed", reason: "clipboard-una
 export class Inserter {
   readonly #input: InputPort;
   readonly #clip: ClipboardPort;
-  readonly #overrides: (() => readonly AppOverride[]) | undefined;
+  readonly #overrides: () => readonly AppOverride[];
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #supported: boolean;
   readonly #guard: RestoreGuard;
@@ -37,7 +37,7 @@ export class Inserter {
   constructor({ input, clip, overrides, supported = true, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
     this.#clip = clip;
-    this.#overrides = typeof overrides === "function" ? overrides : overrides && (() => overrides);
+    this.#overrides = typeof overrides === "function" ? overrides : () => overrides ?? [];
     this.#sleep = sleep;
     this.#supported = supported;
     this.#guard = createRestoreGuard(clip);
@@ -65,7 +65,7 @@ export class Inserter {
   async #run(text: string, opts: InsertOptions): Promise<InsertResult> {
     if (!this.#supported) return this.#copyOnly(text, "unsupported-platform");
     const fg = this.#input.foreground();
-    if (opts.mode === "copy" || profileFor(fg, this.#overrides?.()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
+    if (opts.mode === "copy" || profileFor(fg, this.#overrides()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
     const blocked = this.#veto(fg, opts.target);
     if (blocked === "password-field") return { status: "refused", reason: blocked };
     if (blocked || !fg) return this.#copyOnly(text, blocked ?? "no-foreground");
@@ -81,7 +81,7 @@ export class Inserter {
   }
 
   async #send(text: string, fg: ForegroundInfo, opts: InsertOptions): Promise<InsertResult> {
-    const profile = profileFor(fg, this.#overrides?.());
+    const profile = profileFor(fg, this.#overrides());
     // A clipboard that cannot be put back (copied files) is left alone: the text is typed instead of pasted.
     const typing = opts.mode === "type" || profile.shortcut === "type" || (opts.mode !== "keep" && (await this.#clip.restorable?.()) === false);
     if (!(await this.#releaseModifiers())) return this.#copyOnly(text, "modifiers-held");

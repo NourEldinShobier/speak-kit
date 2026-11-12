@@ -1,10 +1,10 @@
 import { ipcMain, powerMonitor, powerSaveBlocker, shell, type BrowserWindow, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createDictation, micStatus, type Clip, type Dictation, type DictationState, type MicEvent, type MicStatus } from "@speakkit/dictation";
+import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
-import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
-import type { DictationStatus, HistoryItem, RecorderEvent } from "../../shared/dictation/contract";
+import { MIC_LEVEL_EVENT, STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
+import type { DictationStatus, RecorderEvent } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
@@ -16,8 +16,11 @@ import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
 import { appOverrides, clock, coreSettings, dictationStatus, keepOpenMs } from "./service-support";
-import { friendlyAppName } from "./app-name";
-import { openRecorderWindow } from "./recorder-window";
+import { MicState } from "./mic-state";
+import { createThrottle } from "./throttle";
+import { createSleepBlock } from "./sleep-block";
+import { HistoryFacade } from "./history-facade";
+import { openRecorderPage } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
@@ -50,6 +53,7 @@ export class DictationService {
   readonly models: ModelManager;
   readonly presenter: HudPresenter;
   readonly ready: Promise<void>;
+  readonly history = new HistoryFacade({ core: () => this.core, ready: () => this.ready, changed: () => this.#push(true) });
   /** Tests only: the microphone window refuses the microphone while this is set. */
   micDenied = false;
   os: DictationOs | undefined;
@@ -60,14 +64,16 @@ export class DictationService {
   #replay: ReplayRecorder | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
-  #mic: MicStatus = { kind: "none" };
-  #sleepBlock: number | undefined;
-  #count = 0;
+  readonly mic = new MicState(process.platform === "win32", () => this.#recorder);
+  readonly #sleep = createSleepBlock(
+    powerSaveBlocker,
+    () => this.#cfg.blockSleep,
+    (why) => this.#ctx.log.warn("dictation sleep block", why),
+  );
   #lastInsert: InsertResult | undefined;
   #lastFailed: Clip | undefined;
   #lastError = "";
-  #lastPush = 0;
-  #pushTimer: NodeJS.Timeout | undefined;
+  readonly #throttle = createThrottle(() => this.#send(), PUSH_MS);
   #stopPower: (() => void) | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
@@ -119,18 +125,14 @@ export class DictationService {
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered) });
     this.#recorder = createRecorderHost({
       ipcMain,
-      onLevel: (n) => this.presenter.setLevel(n),
+      onLevel: (n) => {
+        this.presenter.setLevel(n);
+        if (this.mic.meter) this.#o.parent()?.webContents.send(MIC_LEVEL_EVENT, n);
+      },
       mic: () => ({ saved: this.#cfg.microphone, exclusions: this.#cfg.micExclusions, avoidBluetooth: this.#cfg.avoidBluetooth, keepMs: keepOpenMs(this.#cfg) }),
       onEvent: (e) => this.#onMicEvent(e),
       open: () => {
-        const w = openRecorderWindow({ page: page("recorder.html"), micAllowed: () => !this.micDenied });
-        return {
-          contents: w.webContents,
-          destroy: () => !w.isDestroyed() && w.destroy(),
-          get destroyed() {
-            return w.isDestroyed();
-          },
-        };
+        return openRecorderPage({ page: page("recorder.html"), micAllowed: () => !this.micDenied });
       },
     });
     this.#replay = new ReplayRecorder(this.#recorder);
@@ -155,7 +157,7 @@ export class DictationService {
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await this.models.refresh();
-    await this.#refreshCount();
+    await this.history.refresh();
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
@@ -164,8 +166,8 @@ export class DictationService {
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
     this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
     if (s.status === "error") this.#lastError = s.code;
-    this.#blockSleep(s.status === "recording" || s.status === "locked");
-    if (s.status === "idle" && s.notice) void this.#refreshCount();
+    this.#sleep(s.status === "recording" || s.status === "locked");
+    if (s.status === "idle" && s.notice) void this.history.refresh();
     this.presenter.onState(s);
     this.#push(true);
   }
@@ -180,64 +182,26 @@ export class DictationService {
       hotkeyFailed: this.#hotkeyFailed,
       state: this.state,
       models: this.models,
-      historyCount: this.#count,
-      mic: this.#mic,
+      historyCount: this.history.count,
+      mic: this.mic.status,
+      devices: this.mic.devices,
     });
   }
 
   #onMicEvent(e: RecorderEvent): void {
-    const map: Record<RecorderEvent["type"], MicEvent | undefined> = {
-      silent: { type: "silent" },
-      lost: { type: "reopening", attempt: 1 },
-      "gave-up": { type: "gave-up" },
-      reopening: e.type === "reopening" ? { type: "reopening", attempt: e.attempt } : undefined,
-      opened: e.type === "opened" ? { type: "chosen", label: e.label, bluetooth: e.bluetooth } : undefined,
-      "no-device": e.type === "no-device" ? { type: "no-device", builtInOff: e.builtInOff } : undefined,
-    };
-    const event = map[e.type];
-    if (!event) return;
-    this.#mic = micStatus(this.#mic, event, process.platform === "win32");
-    if (e.type === "silent") this.#lastError = "mic-silent";
-    this.#push(true);
-  }
-
-  /** The computer must not go to sleep in the middle of a recording; a failure to ask is logged and the recording goes on. */
-  #blockSleep(recording: boolean): void {
-    if (recording && this.#cfg.blockSleep && this.#sleepBlock === undefined) {
-      try {
-        this.#sleepBlock = powerSaveBlocker.start("prevent-app-suspension");
-      } catch (e) {
-        this.#ctx.log.warn("dictation could not block sleep", String(e));
-      }
-    } else if (!recording && this.#sleepBlock !== undefined) {
-      try {
-        powerSaveBlocker.stop(this.#sleepBlock);
-      } catch {
-        // A blocker that is already gone needs no release.
-      }
-      this.#sleepBlock = undefined;
-    }
+    const { changed, silent } = this.mic.handle(e);
+    if (silent) this.#lastError = "mic-silent";
+    if (changed) this.#push(true);
   }
 
   #send(): void {
-    clearTimeout(this.#pushTimer);
-    this.#pushTimer = undefined;
-    this.#lastPush = Date.now();
     const contents = this.#o.parent()?.webContents;
     if (contents && !contents.isDestroyed()) contents.send(STATUS_EVENT, this.status());
     this.#onChange();
   }
 
   /** Download progress arrives many times a second; the window gets a few updates a second. */
-  #push(soon = false): void {
-    if (soon || Date.now() - this.#lastPush >= PUSH_MS) this.#send();
-    else this.#pushTimer ??= setTimeout(() => this.#send(), PUSH_MS);
-  }
-
-  async #refreshCount(): Promise<void> {
-    this.#count = ((await this.core?.history.list().catch(() => [])) ?? []).length;
-    this.#push(true);
-  }
+  #push = (soon = false): void => this.#throttle.push(soon);
 
   // ---- settings, enabling, models ----------------------------------------------------------------------------
 
@@ -256,7 +220,7 @@ export class DictationService {
     this.#ctx.saveConfig();
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.setHotkey(this.#cfg.hotkey);
-    if (patch.retention !== undefined) void this.#refreshCount();
+    if (patch.retention !== undefined) void this.history.refresh();
     this.#push(true);
     return this.status();
   }
@@ -330,48 +294,6 @@ export class DictationService {
 
   // ---- history, retry, HUD buttons ---------------------------------------------------------------------------
 
-  async historyList(search?: string): Promise<HistoryItem[]> {
-    await this.ready;
-    const items = (await this.core?.history.list(search ? { search } : undefined)) ?? [];
-    return items.map((e) => ({
-      id: e.id,
-      at: e.at,
-      text: e.text,
-      durationMs: e.durationMs,
-      ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
-      ...(e.kind && { kind: e.kind }),
-      ...(e.outcome && { outcome: e.outcome }),
-    }));
-  }
-
-  async historyCopy(id: string): Promise<boolean> {
-    await this.ready;
-    return (await this.core?.history.copy(id)) ?? false;
-  }
-
-  async historyRemove(id: string): Promise<void> {
-    await this.ready;
-    await this.core?.history.remove(id);
-    await this.#refreshCount();
-  }
-
-  async historyRemoveMany(ids: string[]): Promise<void> {
-    await this.ready;
-    await this.core?.history.removeMany(ids);
-    await this.#refreshCount();
-  }
-
-  async historyStats() {
-    await this.ready;
-    return (await this.core?.history.stats()) ?? { dictations: 0, words: 0, listeningMs: 0, topApps: [] };
-  }
-
-  async historyClear(): Promise<void> {
-    await this.ready;
-    await this.core?.history.clear();
-    await this.#refreshCount();
-  }
-
   /** Runs the last recording that could not be transcribed once more, through the same pipeline as a live one. */
   async retry(): Promise<void> {
     await this.ready;
@@ -389,43 +311,31 @@ export class DictationService {
     await shell.openExternal(blocked ? "ms-settings:privacy-microphone" : "ms-settings:sound");
   }
 
-  async #copyLast(): Promise<void> {
-    const [last] = (await this.core?.history.list({ limit: 1 })) ?? [];
-    if (last) await this.core?.history.copy(last.id);
-  }
-
   /** True when `contents` is the HUD page: only it may press the HUD buttons. */
-  ownsHud(contents: WebContents): boolean {
-    return !!this.#hudWindow?.owns?.(contents);
-  }
+  ownsHud = (contents: WebContents): boolean => !!this.#hudWindow?.owns?.(contents);
 
   hudAction(a: HudAction): void {
     this.presenter.dismiss();
     if (a === "retry") void this.retry();
-    else if (a === "download") this.#downloadFromHud();
-    else if (a === "sound-settings") void this.openSoundSettings();
+    else if (a === "download") {
+      this.#ctx.showWindow();
+      this.#ctx.sendUi({ type: "nav", page: "dictation" });
+      void this.download(this.#cfg.model);
+    } else if (a === "sound-settings") void this.openSoundSettings();
     else if (a === "restore") this.core?.restore();
-    else if (a === "copy-last") void this.#copyLast();
-  }
-
-  #downloadFromHud(): void {
-    this.#ctx.showWindow();
-    this.#ctx.sendUi({ type: "nav", page: "dictation" });
-    void this.download(this.#cfg.model);
+    else if (a === "copy-last") void this.history.copyLast();
   }
 
   /** Key releases may have gone to another desktop while the screen was locked or the computer slept. */
-  resync(): void {
-    this.os?.hotkey.resync();
-  }
+  resync = (): void => this.os?.hotkey.resync();
 
   toggle(): void {
     void this.setEnabled(!this.#cfg.enabled);
   }
 
   async dispose(): Promise<void> {
-    clearTimeout(this.#pushTimer);
-    this.#blockSleep(false);
+    this.#throttle.dispose();
+    this.#sleep(false);
     this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;

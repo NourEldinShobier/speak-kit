@@ -85,6 +85,41 @@ function dictationSpec() {
       expect((await rig.hook("calls")).length).toBe(before);
     });
 
+    test("paste and keep leaves the dictated text on the clipboard", async () => {
+      await rig.bridge("patchSettings", { output: "keep" });
+      try {
+        await rig.setClipboard("my own clipboard");
+        await rig.tap(700);
+        await until(async () => (await rig.typed()) === "Hello there ", "the pasted text");
+        await sleep(1200);
+        expect(await rig.clipboard()).toBe("Hello there ");
+      } finally {
+        await rig.bridge("patchSettings", { output: "restore" });
+      }
+    });
+
+    test("copy only puts the text on the clipboard and sends no keys", async () => {
+      await rig.bridge("patchSettings", { output: "copy" });
+      try {
+        await rig.tap(700);
+        await until(async () => (await rig.clipboard()) === "Hello there ", "the copied text");
+        expect(await rig.typed()).toBe("");
+      } finally {
+        await rig.bridge("patchSettings", { output: "restore" });
+      }
+    });
+
+    test("the Audio and Output settings are saved and the microphone list comes back", async () => {
+      const status = await rig.bridge("patchSettings", { keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+      try {
+        expect(status.settings).toMatchObject({ keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+        await rig.bridge("micDevices");
+        await until(async () => (await rig.bridge("status")).devices.length > 0, "the microphone list", 8000);
+      } finally {
+        await rig.bridge("patchSettings", { keepReady: false, keepReadyMinutes: 0, avoidBluetooth: true, appRules: {} });
+      }
+    });
+
     test("a short tap is discarded: nothing is transcribed or pasted", async () => {
       const before = (await rig.hook("calls")).length;
       await rig.tap(80);

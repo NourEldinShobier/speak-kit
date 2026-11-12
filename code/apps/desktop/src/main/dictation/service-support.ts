@@ -1,8 +1,8 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { DictationState, InsertMode, MicStatus, Settings } from "@speakkit/dictation";
-import type { DictationStatus } from "../../shared/dictation/contract";
+import type { DictationState, InsertMode, MicEvent, MicStatus, Settings } from "@speakkit/dictation";
+import type { DictationStatus, MicDeviceView, RecorderEvent } from "../../shared/dictation/contract";
 import type { AppRule, DictationConfig } from "../../shared/dictation/settings";
 import type { AppOverride } from "./types";
 import type { ModelManager } from "./models";
@@ -42,7 +42,30 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
 export const appOverrides = (rules: Readonly<Record<string, AppRule>>): AppOverride[] => Object.entries(rules).map(([exe, r]) => ({ exe, profile: { shortcut: r.method, preDelayMs: r.delayMs } }));
 
 /** How long an idle open microphone stays open: nothing when it is released when idle, forever (-1) or for the set number of minutes when kept ready. */
-export const keepOpenMs = (c: Pick<DictationConfig, "keepReady" | "keepReadyMinutes">): number => (!c.keepReady ? 0 : c.keepReadyMinutes === 0 ? -1 : c.keepReadyMinutes * 60_000);
+export function keepOpenMs(c: Pick<DictationConfig, "keepReady" | "keepReadyMinutes">): number {
+  if (!c.keepReady) return 0;
+  return c.keepReadyMinutes === 0 ? -1 : c.keepReadyMinutes * 60_000;
+}
+
+/** What the microphone window reported, as an event of the microphone status; the device list is not one. */
+export function micEventOf(e: RecorderEvent): MicEvent | undefined {
+  switch (e.type) {
+    case "silent":
+      return { type: "silent" };
+    case "lost":
+      return { type: "reopening", attempt: 1 };
+    case "gave-up":
+      return { type: "gave-up" };
+    case "reopening":
+      return { type: "reopening", attempt: e.attempt };
+    case "opened":
+      return { type: "chosen", label: e.label, bluetooth: e.bluetooth };
+    case "no-device":
+      return { type: "no-device", builtInOff: e.builtInOff };
+    case "devices":
+      return undefined;
+  }
+}
 
 interface StatusParts {
   supported: boolean;
@@ -53,10 +76,11 @@ interface StatusParts {
   models: ModelManager;
   historyCount: number;
   mic: MicStatus;
+  devices: MicDeviceView[];
 }
 
 /** What the Settings page and the tray are told about dictation. */
-export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, mic }: StatusParts): DictationStatus => ({
+export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, mic, devices }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
   hotkeyReady,
@@ -70,4 +94,5 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   ...(models.error && { modelError: models.error }),
   historyCount,
   mic,
+  devices,
 });

@@ -1,13 +1,10 @@
-import { MAX_TAKE_MS, PREROLL_MS, prerollMs, TAIL_MIN_MS } from "./capture/policy";
+import { MAX_TAKE_MS, prerollMs } from "./capture/policy";
 import type { Settings } from "./settings";
 
 /** Release before this is a short tap: nothing is kept. */
 export const HOLD_MS = 300;
 /** A second tap this soon after a short tap locks the recording. */
 export const DOUBLE_TAP_MS = 300;
-export { PREROLL_MS };
-/** Recording continues at least this long after the key is released. */
-export const TAIL_MS = TAIL_MIN_MS;
 /** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
 export const MAX_RECORDING_MS = MAX_TAKE_MS;
 
