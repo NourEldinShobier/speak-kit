@@ -230,3 +230,34 @@ describe("live transcription over the local API", () => {
     expect(caps.commands["live-stream"]).toBe("available");
   });
 });
+
+describe("every control in the main menu pages has a name", () => {
+  it("visits each page and finds no button, switch, link or field without an accessible name", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    const pages = ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture"];
+    const problems: string[] = [];
+    for (const name of pages) {
+      await l.page.getByRole("link", { name, exact: true }).first().click();
+      await l.page.getByRole("heading", { level: 1 }).first().waitFor();
+      await l.page.waitForTimeout(300);
+      const unnamed = await l.page.evaluate(() =>
+        [...document.querySelectorAll("button, [role=switch], [role=checkbox], a[href], input, select, textarea")]
+          .filter(
+            (e) =>
+              !(
+                e.getAttribute("aria-label") ||
+                e.getAttribute("aria-labelledby") ||
+                e.textContent?.trim() ||
+                (e as HTMLInputElement).labels?.length ||
+                e.getAttribute("title") ||
+                e.getAttribute("placeholder")
+              ),
+          )
+          .map((e) => e.outerHTML.slice(0, 90)),
+      );
+      problems.push(...unnamed.map((u) => `${name}: ${u}`));
+    }
+    expect(problems).toEqual([]);
+  });
+});

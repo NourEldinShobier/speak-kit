@@ -16,6 +16,13 @@ describe("PATH list editing", () => {
     expect(hasEntry("/usr/bin:/opt/x", "/OPT/x", ":")).toBe(false);
     expect(hasEntry("/usr/bin:/opt/x/", "/opt/x", ":")).toBe(true);
   });
+  it("trims entries, ignores empty ones, and compares POSIX paths exactly", () => {
+    expect(addEntry(" C:\\a ;; ;C:\\b", "C:\\c", ";")).toBe(" C:\\a ;C:\\b;C:\\c");
+    expect(hasEntry("C:\\a;  c:\\X\\ ", "C:\\x", ";")).toBe(true);
+    expect(removeEntry("/a: /b/ :/c", "/b", ":")).toBe("/a:/c");
+    expect(removeEntry("/a:/b//", "/b", ":")).toBe("/a");
+    expect(hasEntry("/a:/B", "/b", ":")).toBe(false);
+  });
   it("reads the Path value from reg query output", () => {
     expect(parseRegQuery("\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    REG_EXPAND_SZ    C:\\a;%USERPROFILE%\\b\r\n\r\n")).toBe("C:\\a;%USERPROFILE%\\b");
     expect(parseRegQuery("    Path    REG_SZ    C:\\a")).toBe("C:\\a");

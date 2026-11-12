@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { readStoredHistory } from "@speakkit/dictation";
@@ -10,6 +10,8 @@ import { diskSources, runRead } from "./reads";
 import { userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
 
+/** Where Claude Code looks for a personal skill. */
+const skillFile = path.join(os.homedir(), ".claude", "skills", "speakkit", "SKILL.md");
 const dir = userDataDir(process.env, process.platform, os.homedir());
 
 const io: Io = {
@@ -64,6 +66,18 @@ const io: Io = {
     } catch {
       return { kind: "none" }; // not a path (a sentence, a name too long for the system): the words are the text
     }
+  },
+  async readSkill() {
+    try {
+      return await readFile(skillFile, "utf8");
+    } catch {
+      return undefined; // not installed
+    }
+  },
+  async writeSkill(text) {
+    await mkdir(path.dirname(skillFile), { recursive: true });
+    await writeFile(skillFile, text);
+    return skillFile;
   },
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   async post(d, req, timeoutMs): Promise<Reply> {

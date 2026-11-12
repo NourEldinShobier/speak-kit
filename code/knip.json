@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vitest.stryker.config.ts", "vitest.stryker.capture.config.ts"],
+      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vitest.stryker.config.ts", "vitest.stryker.capture.config.ts", "vitest.stryker.cli.config.ts"],
       "ignore": ["scripts/canary/*/**"]
     },
     "e2e": {
