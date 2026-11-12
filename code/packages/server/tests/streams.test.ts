@@ -53,6 +53,19 @@ describe("live transcription routes", () => {
     await reader.cancel();
   });
 
+  it("ends the event stream after done, and after a cancel, instead of leaving it open", async () => {
+    const c = await open(host);
+    const finished = await create(c);
+    const res = await call(c, `/v1/streams/${finished.id}/events`, { owner: finished.owner });
+    await call(c, `/v1/streams/${finished.id}/audio`, { method: "POST", owner: finished.owner, body: phrase() });
+    await call(c, `/v1/streams/${finished.id}/finish`, { method: "POST", owner: finished.owner });
+    expect(await res.text()).toBe('event: segment\ndata: {"n":1,"text":"hello there"}\n\nevent: done\ndata: {"text":"hello there","segments":[{"n":1,"text":"hello there"}]}\n\n');
+    const cancelled = await create(c);
+    const open2 = await call(c, `/v1/streams/${cancelled.id}/events`, { owner: cancelled.owner });
+    await call(c, `/v1/streams/${cancelled.id}`, { method: "DELETE", owner: cancelled.owner });
+    expect(await open2.text()).toBe("");
+  });
+
   it("refuses another program, a wrong chunk, an oversized body and a third stream, with typed errors", async () => {
     const c = await open(host);
     const made = await create(c);

@@ -29,21 +29,30 @@ function payload(e: StreamEvent): unknown {
 function events(x: Exchange, s: Services): Promise<void> {
   const { res } = x;
   const live = sessions(s);
-  const send = (e: StreamEvent) =>
-    void res.write(`event: ${e.type}
+  const queued: StreamEvent[] = [];
+  let ready = false;
+  const send = (e: StreamEvent) => {
+    res.write(`event: ${e.type}
 data: ${JSON.stringify(payload(e))}
 
 `);
-  const off = live.subscribe(x.params[0]!, owner(x.req), send);
+    if (e.type !== "segment") res.end(); // nothing follows a done or a failed
+  };
+  // Subscribing first keeps a wrong stream or owner an ordinary error reply; what it replays waits until the headers are out.
+  const off = live.subscribe(x.params[0]!, owner(x.req), { event: (e) => (ready ? send(e) : void queued.push(e)), end: () => res.end() });
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store", Connection: "keep-alive", "X-Content-Type-Options": "nosniff" });
   res.flushHeaders();
-  const beat = setInterval(() => void res.write(": hb\n\n"), s.heartbeatMs);
+  ready = true;
+  for (const e of queued) send(e);
+  const beat = setInterval(() => void (!res.writableEnded && res.write(": hb\n\n")), s.heartbeatMs);
   return new Promise<void>((resolve) => {
-    res.on("close", () => {
+    const stop = () => {
       clearInterval(beat);
       off();
       resolve();
-    });
+    };
+    if (res.writableEnded) return stop();
+    res.on("close", stop);
   });
 }
 

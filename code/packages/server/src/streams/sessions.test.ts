@@ -207,3 +207,50 @@ describe("ownership and limits", () => {
     expect(sessions.open).toBe(0);
   });
 });
+
+describe("a stream that is closed or kept waiting", () => {
+  it("is not dropped by the sweep while finish waits for the engine, and finish still returns the text", async () => {
+    let clock = 1000;
+    let release: (h: Heard) => void = () => {};
+    const host: StreamsHost = { transcribe: () => new Promise<Heard>((r) => (release = r)), process: (t) => t };
+    const sessions = new StreamSessions(host, { now: () => clock, retryMs: 1 });
+    const { id, owner } = sessions.create({});
+    sessions.audio(id, owner, phrase());
+    const done = sessions.finish(id, owner);
+    clock += STREAM_LIMITS.leaseMs + 1;
+    expect(sessions.sweep()).toBe(0);
+    await new Promise((r) => setTimeout(r, 0));
+    release({ ok: true, text: "late words", speech: true });
+    expect((await done).text).toBe("late words");
+  });
+
+  it("fails a finish that was cancelled while it waited, instead of answering with partial text", async () => {
+    let release: (h: Heard) => void = () => {};
+    const host: StreamsHost = { transcribe: () => new Promise<Heard>((r) => (release = r)), process: (t) => t };
+    const sessions = new StreamSessions(host, { now: () => 0, retryMs: 1 });
+    const { id, owner } = sessions.create({});
+    sessions.audio(id, owner, phrase());
+    const outcome = code(() => sessions.finish(id, owner));
+    sessions.cancel(id, owner);
+    await new Promise((r) => setTimeout(r, 0));
+    release({ ok: true, text: "partial", speech: true });
+    expect(await outcome).toBe("failed");
+  });
+
+  it("tells a listener when the stream is over, whether it finished, was cancelled or was dropped", async () => {
+    const { sessions, tick } = rig();
+    const ends: string[] = [];
+    const a = sessions.create({});
+    sessions.subscribe(a.id, a.owner, { event: () => {}, end: () => ends.push("finished") });
+    sessions.audio(a.id, a.owner, phrase());
+    await sessions.finish(a.id, a.owner);
+    const b = sessions.create({});
+    sessions.subscribe(b.id, b.owner, { event: () => {}, end: () => ends.push("cancelled") });
+    sessions.cancel(b.id, b.owner);
+    const c = sessions.create({});
+    sessions.subscribe(c.id, c.owner, { event: () => {}, end: () => ends.push("dropped") });
+    tick(STREAM_LIMITS.leaseMs + 1);
+    sessions.sweep();
+    expect(ends).toEqual(["finished", "cancelled", "dropped"]);
+  });
+});

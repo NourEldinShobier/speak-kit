@@ -32,12 +32,15 @@ class Session {
   readonly #seg = new Segmenter();
   readonly #segments: StreamSegment[] = [];
   readonly #listeners = new Set<(e: StreamEvent) => void>();
+  readonly #enders = new Set<() => void>();
   readonly #abort = new AbortController();
   #work: Promise<void> = Promise.resolve();
   #bytes = 0;
   #n = 0;
   #failed: { code: string; message: string } | undefined;
   #closed = false;
+  /** True while finish waits for the engine: the stream is in use, so the lease does not apply. */
+  finishing = false;
   seenAt: number;
 
   readonly create: StreamCreate;
@@ -59,16 +62,23 @@ class Session {
     for (const s of this.#seg.push(pcm)) this.#queue(s);
   }
 
-  on(listener: (e: StreamEvent) => void): () => void {
+  /** `ended` runs once when the stream is closed (finished, cancelled or dropped), so a connection that listens can be closed too. */
+  on(listener: (e: StreamEvent) => void, ended?: () => void): () => void {
     for (const segment of this.#segments) listener({ type: "segment", segment });
     if (this.#failed) listener({ type: "failed", ...this.#failed });
     this.#listeners.add(listener);
-    return () => void this.#listeners.delete(listener);
+    if (ended) this.#enders.add(ended);
+    return () => {
+      this.#listeners.delete(listener);
+      if (ended) this.#enders.delete(ended);
+    };
   }
 
   async finish(): Promise<StreamResult> {
+    this.finishing = true;
     for (const s of this.#seg.flush()) this.#queue(s);
     await this.#work;
+    if (this.#closed) throw new AutomationFault("failed", "The stream was closed before it finished.");
     if (this.#failed) throw new AutomationFault("failed", this.#failed.message);
     const language = this.create.language ?? "auto";
     const text = this.#segments.map((s) => s.text).join(" ");
@@ -82,6 +92,9 @@ class Session {
     this.#closed = true;
     this.#abort.abort();
     this.#listeners.clear();
+    const enders = [...this.#enders];
+    this.#enders.clear();
+    for (const end of enders) end();
   }
 
   #emit(e: StreamEvent): void {
@@ -164,8 +177,14 @@ export class StreamSessions {
     this.#get(id, owner).seenAt = this.#o.now();
   }
 
-  subscribe(id: string, owner: string | undefined, listener: (e: StreamEvent) => void): () => void {
-    return this.#get(id, owner).on(listener);
+  /** `listener` gets each event; given as an object, `end` also runs once when the stream is over. */
+  subscribe(id: string, owner: string | undefined, listener: ((e: StreamEvent) => void) | { event(e: StreamEvent): void; end(): void }): () => void {
+    return typeof listener === "function"
+      ? this.#get(id, owner).on(listener)
+      : this.#get(id, owner).on(
+          (e) => listener.event(e),
+          () => listener.end(),
+        );
   }
 
   async finish(id: string, owner: string | undefined): Promise<StreamResult> {
@@ -187,7 +206,7 @@ export class StreamSessions {
   sweep(): number {
     let n = 0;
     for (const [id, s] of this.#open) {
-      if (this.#o.now() - s.seenAt <= STREAM_LIMITS.leaseMs) continue;
+      if (s.finishing || this.#o.now() - s.seenAt <= STREAM_LIMITS.leaseMs) continue;
       s.close();
       this.#open.delete(id);
       n++;
