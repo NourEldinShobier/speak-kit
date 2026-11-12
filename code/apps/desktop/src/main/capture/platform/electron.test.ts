@@ -138,7 +138,11 @@ describe("resolve", () => {
   };
   it("points a screen at its capture source", async () => {
     screens();
-    expect(await createElectronCapturePlatform("darwin").resolve({ kind: "screen", displayId: "2" })).toEqual({ sourceId: "screen:1:0", title: "Display 2", bounds: { x: 1000, y: 0, width: 1000, height: 800 } });
+    expect(await createElectronCapturePlatform("darwin").resolve({ kind: "screen", displayId: "2" })).toEqual({
+      sourceId: "screen:1:0",
+      title: "Display 2",
+      bounds: { x: 1000, y: 0, width: 1000, height: 800 },
+    });
   });
   it("cuts an area in the pixels of its display (device scale applied)", async () => {
     screens();
