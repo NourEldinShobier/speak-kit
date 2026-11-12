@@ -220,6 +220,7 @@ export class DictationService {
     this.#rejected = clash;
     if (clash) return this.status();
     Object.assign(this.#cfg, rest);
+    delete this.#cfg.resetNotice; // any change dismisses the notice about a reset shortcut
     if (model && model !== this.#cfg.model) await this.models.switchTo(model); // only an installed model can be chosen
     if (!supportsLanguage(this.#cfg.model, this.#cfg.language)) this.#cfg.language = "auto";
     this.#ctx.saveConfig();

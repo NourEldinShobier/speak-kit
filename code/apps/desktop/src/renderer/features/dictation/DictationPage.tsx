@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Icon, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import type { Replacement } from "../../../shared/dictation/settings";
 import { MAX_REPLACEMENTS } from "../../../shared/dictation/settings";
 import { Page } from "../../ui";
 import { dictation } from "./api";
 import { FirstRunCard } from "./FirstRunCard";
-import { HotkeyRecorder } from "./HotkeyRecorder";
-import { entriesText, hotkeyHelp, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
+import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
 import { ModelList } from "./ModelList";
+import { ShortcutsSections } from "./ShortcutsSection";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
@@ -16,7 +16,6 @@ const LEAD = "Hold a key, speak, and Speak Kit types what you said into the app 
 
 function General({ s }: { s: DictationStatus }) {
   const c = s.settings;
-  const [capturing, setCapturing] = useState(false);
   const model = s.models.find((m) => m.selected);
   const languages = LANGUAGE_OPTIONS.filter((l) => l.value === "auto" || !model || model.languages.includes(l.value));
   return (
@@ -25,28 +24,6 @@ function General({ s }: { s: DictationStatus }) {
         label="Dictation"
         description="Turn on to use the hotkey in any app."
         control={<Toggle aria-label="Dictation" checked={c.enabled} disabled={!s.supported} onChange={(on) => void dictation.setEnabled(on)} />}
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Hotkey"
-        description={hotkeyHelp(capturing)}
-        control={<HotkeyRecorder value={c.hotkey} onRecording={setCapturing} onChange={(hotkey) => void dictation.patchSettings({ hotkey })} />}
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Mode"
-        description="Hold to talk, or press once to start and again to stop."
-        control={
-          <Segmented
-            label="Mode"
-            value={c.mode}
-            onChange={(mode) => void dictation.patchSettings({ mode: mode as "hold" | "toggle" })}
-            items={[
-              { id: "hold", label: "Hold to talk" },
-              { id: "toggle", label: "Press to toggle" },
-            ]}
-          />
-        }
       />
       <SettingRow
         className="lm-row--control"
@@ -177,6 +154,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
       ) : (
         <>
           <General s={s} />
+          <ShortcutsSections s={s} />
           <ModelList status={s} />
           <Replacements list={s.settings.replacements} />
           <TestField />
