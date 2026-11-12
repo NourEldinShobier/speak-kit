@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vite-plus/test";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
+import { loadLocale } from "../i18n";
 import { importMessage } from "./import-text";
+
+beforeAll(() => loadLocale("es"));
 
 describe("importMessage", () => {
   it("names the settings that changed", () => {
