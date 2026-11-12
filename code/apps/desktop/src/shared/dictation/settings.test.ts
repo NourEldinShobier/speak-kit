@@ -101,6 +101,13 @@ describe("settings added after the first release", () => {
     expect(ok({ duckAudio: "silence" })).toBe(false);
   });
 
+  it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
+    const m = { id: "chat", name: "Chat", apps: ["slack"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
+    expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [] });
+    const got = parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }, { from: "", to: "x" }, 5, { from: "a", to: "b", matchCase: true }] }] } }).dictation.modes[0]!.replacements;
+    expect(got).toEqual([{ from: "ship it", to: "deploy" }, { from: "a", to: "b", matchCase: true }]);
+  });
+
   it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
     const got = parseConfig({ dictation: { hotkey: "ControlLeft+AltLeft+KeyT", transformHotkey: "ControlLeft+AltLeft+KeyT" } }).dictation;
     expect(got).toMatchObject({ transformHotkey: "", resetNotice: "clash" });

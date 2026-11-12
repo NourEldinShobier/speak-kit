@@ -6,4 +6,5 @@ export { VocabularyPage } from "./VocabularyPage";
 import "./vocabulary.css";
 export { Cleanup } from "./Cleanup";
 export { WordDialog } from "./WordDialog";
+export { ReplacementRules } from "./HeardAs";
 export { useLive } from "./useLive";

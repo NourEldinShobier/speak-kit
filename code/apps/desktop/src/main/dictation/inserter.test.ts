@@ -6,7 +6,19 @@ import type { AppOverride, ForegroundInfo, InputPort } from "./types";
 const notepad: ForegroundInfo = { hwnd: "100", pid: 1, exe: "notepad.exe", className: "Notepad", elevated: false };
 
 function setup(
-  opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void; onType?: () => void } = {},
+  opts: {
+    fg?: ForegroundInfo | null;
+    overrides?: AppOverride[];
+    held?: string[][];
+    password?: boolean;
+    accept?: boolean;
+    failWrite?: boolean;
+    restorable?: boolean;
+    onSleep?: () => void;
+    onType?: () => void;
+    onTyping?: (on: boolean) => void;
+    version?: string;
+  } = {},
 ) {
   let content: string | null = "old";
   let seq = 1;
@@ -51,6 +63,8 @@ function setup(
     input,
     clip,
     overrides: opts.overrides,
+    onTyping: opts.onTyping,
+    versions: { lookup: async () => opts.version },
     sleep: async (ms) => {
       slept.push(ms);
       opts.onSleep?.();
@@ -251,6 +265,30 @@ describe("typing rule", () => {
     expect(t.clipboard).toBe("long text");
     stop = false;
     expect(await t.ins.insert("again")).toEqual({ status: "typed" });
+  });
+
+  it("stops typing when the stop request came while the clipboard was being staged or the delay ran", async () => {
+    let t!: ReturnType<typeof setup>;
+    t = setup({ overrides: [{ exe: "notepad", profile: { shortcut: "type", preDelayMs: 30 } }], onSleep: () => t.ins.cancelTyping() });
+    expect(await t.ins.insert("long text")).toEqual({ status: "copied", reason: "typing-stopped" });
+    expect(t.clipboard).toBe("long text");
+  });
+
+  it("reports when typing starts and ends, also when the typing throws, and not for a paste", async () => {
+    const seen: boolean[] = [];
+    const t = setup({ overrides: rule, onTyping: (on) => seen.push(on) });
+    await t.ins.insert("x");
+    await setup({ onTyping: (on) => seen.push(on) }).ins.insert("pasted");
+    expect(seen).toEqual([true, false]);
+  });
+
+  it("types into a browser on Chromium 155 and pastes into one on 157", async () => {
+    const chrome = { ...notepad, exe: "chrome.exe" };
+    const broken = setup({ fg: chrome, version: "155.0.7000.1" });
+    expect(await broken.ins.insert("hello")).toEqual({ status: "typed" });
+    expect(broken.sent).toEqual(["type hello"]);
+    const fine = setup({ fg: chrome, version: "157.0.1" });
+    expect(await fine.ins.insert("hello")).toEqual({ status: "pasted" });
   });
 
   it("ignores a stop request when nothing is being typed", async () => {
