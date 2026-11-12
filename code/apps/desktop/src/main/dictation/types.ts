@@ -60,6 +60,8 @@ export interface HotkeySource {
   anyKeyDown?(): boolean;
   /** The mouse hook is needed for mouse buttons in a chord and for clicks that end a hold. Absent where the platform has none. */
   readonly mouse?: boolean;
+  /** Calls back at each left click, on a later turn, without ever holding one back; gives the function that stops it. Undefined where there is no mouse hook or it was refused. */
+  watchClicks?(onClick: () => void): (() => void) | undefined;
   start(chord: Chord, handlers: HotkeyHandlers): HotkeyStart;
   stop(): void;
   /** Swallows these keys (and reports them as "grabbed") until the list is replaced; an empty list releases them. Used for Escape while a toggled recording runs. */

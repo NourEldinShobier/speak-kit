@@ -83,6 +83,20 @@ function createStore() {
   };
 }
 
+/** Runs jobs one after the other, so a piece is never closed while another job closes or starts one. */
+function serial() {
+  let last: Promise<unknown> = Promise.resolve();
+  return <T>(job: () => Promise<T>): Promise<T> => {
+    const result = last.then(job);
+    // a failed job is the caller's to handle; the queue goes on
+    last = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
+}
+
 export interface ReplayBufferDeps {
   now(): number;
   segmentMs?: number;
@@ -101,7 +115,7 @@ export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
   let run: PieceRecorder | undefined;
   let frameEveryMs = 1000;
   let timer: unknown;
-  let rotating: Promise<void> = Promise.resolve();
+  const queued = serial();
   const begin = () => {
     run!.startSegment(frameEveryMs);
     store.begin(d.now() - run!.startedAt);
@@ -111,11 +125,11 @@ export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
     store.end(d.now() - run!.startedAt);
   };
   const rotate = () =>
-    (rotating = rotating.then(async () => {
+    queued(async () => {
       await close();
       store.prune();
       begin();
-    }));
+    });
   return {
     attach: (r) => void (run = r),
     onPayload(p) {
@@ -128,13 +142,14 @@ export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
       begin();
       timer = set(() => void rotate(), d.segmentMs ?? REPLAY.segmentMs);
     },
-    async save() {
-      await rotating;
-      await close();
-      const clip = store.clip();
-      begin();
-      return clip;
-    },
+    // Same queue as the rotation, so a rotation due while the piece closes cannot start a second recorder.
+    save: () =>
+      queued(async () => {
+        await close();
+        const clip = store.clip();
+        begin();
+        return clip;
+      }),
     stop() {
       if (timer !== undefined) clear(timer);
       timer = undefined;

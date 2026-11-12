@@ -42,6 +42,8 @@ export interface RuntimeDeps {
   inbox: CaptureInbox;
   /** Tests only: a recorder that makes pictures up. */
   recorder?: RecorderHost | undefined;
+  /** Left clicks while a recording runs (for suggested zooms); missing where the mouse cannot be hooked. */
+  clicks?: ((onClick: () => void) => () => void) | undefined;
   /** Sends the status to the app window. */
   publish(): void;
   /** Re-reads the number of captures, then publishes. */
@@ -80,7 +82,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
-    this.#extras = createRecordingExtras(deps.ctx, deps.platform, deps.narrator);
+    this.#extras = createRecordingExtras(deps);
     this.recorder = new RecorderHolder({
       recorder: deps.recorder,
       distDir: deps.distDir,
@@ -91,6 +93,7 @@ export class CaptureRuntime {
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
       live: this.#extras.live,
+      lost: () => void this.replay.rearm(),
     });
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
@@ -214,6 +217,7 @@ export class CaptureRuntime {
 
   /** A screen that is being recorded was unplugged: the capture so far is saved. */
   #displaysChanged() {
+    void this.replay.rearm(true);
     if (!this.#place.recordedDisplayLost()) return;
     this.notify(noticeFor("display-lost"));
     this.#session.stop();

@@ -138,6 +138,22 @@ export class KeyboardHook implements HotkeySource {
     r.mouse?.uninstall();
   }
 
+  watchClicks(onClick: () => void): (() => void) | undefined {
+    if (!this.#backend.installMouse) return undefined;
+    try {
+      const hook = this.#backend.installMouse(
+        (c) => {
+          if (c.vk === 0x01 && c.down && !(c.extra === this.#marker && (c.flags & LLKHF_INJECTED) !== 0)) setImmediate(onClick);
+          return false;
+        },
+        () => undefined,
+      );
+      return () => hook.uninstall();
+    } catch {
+      return undefined;
+    }
+  }
+
   grab(keys: readonly VirtualKey[]): void {
     this.#grabbed = keys;
     this.#run?.trackers.get(PRIMARY)?.grab(keys);

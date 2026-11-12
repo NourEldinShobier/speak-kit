@@ -2,6 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 import { createPointerTrack } from ".";
 
 function setup(enabled = true) {
+  let click: (() => void) | undefined;
+  let clickStops = 0;
   let now = 10_000;
   let cursor = { x: 150, y: 100 };
   let tick: (() => void) | undefined;
@@ -11,6 +13,7 @@ function setup(enabled = true) {
     cursor: () => cursor,
     now: () => now,
     enabled: () => enabled,
+    clicks: (fn) => ((click = fn), () => void clickStops++),
     setInterval: (fn, ms) => ((tick = fn), intervals.push(ms), "timer"),
     clearInterval: (h) => cleared.push(h),
   });
@@ -18,6 +21,8 @@ function setup(enabled = true) {
     track,
     cleared,
     intervals,
+    click: () => click?.(),
+    clickStops: () => clickStops,
     at: (ms: number, x: number, y: number) => {
       now = 10_000 + ms;
       cursor = { x, y };
@@ -89,5 +94,31 @@ describe("pointer track", () => {
     t.track.start(undefined);
     t.at(200, 150, 100);
     expect(t.track.take()).toEqual([]);
+  });
+
+  it("notes a click with its place and time, and nothing else", () => {
+    const t = setup();
+    t.track.start(rect);
+    t.at(300, 250, 125);
+    t.click();
+    expect(t.track.take()).toEqual([
+      { atMs: 0, x: 0.25, y: 0.5 },
+      { atMs: 300, x: 0.75, y: 0.75 },
+      { atMs: 300, x: 0.75, y: 0.75, click: true },
+    ]);
+  });
+
+  it("notes no click outside the recorded rectangle, and watches clicks only while it runs and the input log is on", () => {
+    const t = setup();
+    t.track.start(rect);
+    t.at(300, 900, 900);
+    t.click();
+    t.track.stop();
+    expect(t.clickStops()).toBe(1);
+    expect(t.track.take().some((p) => p.click)).toBe(false);
+    const off = setup(false);
+    off.track.start(rect);
+    off.click();
+    expect(off.track.take()).toEqual([]);
   });
 });

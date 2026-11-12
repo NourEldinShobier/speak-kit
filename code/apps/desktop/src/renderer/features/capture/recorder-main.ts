@@ -4,6 +4,7 @@ import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
 import { trimVideo } from "./trim-video";
 import { zoomVideo } from "./zoom-video";
+import { joinVideos } from "./join-video";
 import { createReplayBuffer, type ReplayBuffer } from "./replay-buffer";
 import { inPixels } from "../../../shared/capture/zoom";
 
@@ -95,7 +96,8 @@ let replay: ReplayBuffer | undefined;
 async function replayStart(c: Extract<RecorderCommand, { op: "replay-start" }>): Promise<RecorderResult> {
   replay?.stop();
   const buffer = (replay = createReplayBuffer({ now: () => performance.now(), segmentMs: c.segmentMs }));
-  const r = new Run(c.maxSide, buffer.onPayload);
+  // the buffer keeps video and pictures itself; that its screen went away is for the main process
+  const r = new Run(c.maxSide, (d) => (d.kind === "lost" ? send(d) : buffer.onPayload(d)));
   buffer.attach(r);
   try {
     await withTimeout(r.source(c.sourceId, c.crop), FIRST_FRAME_MS);
@@ -110,7 +112,16 @@ async function replayStart(c: Extract<RecorderCommand, { op: "replay-start" }>):
 
 async function replaySave(): Promise<RecorderResult> {
   const clip = await replay?.save();
-  return clip ? { ok: true, clip, durationMs: clip.durationMs } : { ok: false, code: "source" };
+  if (!clip) return { ok: false, code: "source" };
+  // One file plays, trims and zooms like any recording; if the pieces cannot be joined they are kept as they are.
+  const videos =
+    clip.videos.length > 1
+      ? await joinVideos(clip.videos).then(
+          (v) => (v.length ? [v] : clip.videos),
+          () => clip.videos,
+        )
+      : clip.videos;
+  return { ok: true, clip: { ...clip, videos }, durationMs: clip.durationMs };
 }
 
 async function zoom(c: Extract<RecorderCommand, { op: "zoom" }>): Promise<RecorderResult> {

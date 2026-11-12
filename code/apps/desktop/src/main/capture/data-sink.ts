@@ -12,11 +12,14 @@ export interface DataSinkDeps {
   log(line: string): void;
   /** Gets each piece of the microphone track as it arrives (the live narration). */
   audio?(chunk: Int16Array): void;
+  /** The recorded screen went away. */
+  lost?(): void;
 }
 
 /** What the recorder window streams back goes to the files of the capture that is on, unless it belongs to another recording or the disk is already refusing writes. */
 export function createDataSink(d: DataSinkDeps): (data: RecorderData) => void {
   return (data) => {
+    if (data.kind === "lost") return d.lost?.();
     if (!d.fence.accepts(data.gen)) {
       d.fence.refuse();
       if (d.fence.refused === 1) d.log("capture: data of an earlier recording was refused");

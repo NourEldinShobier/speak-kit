@@ -165,7 +165,26 @@ describe("recorder run: the last chunk", () => {
   });
 });
 
+describe("recorder run: a source that goes away", () => {
+  it("says so when the video track ends, and not when the run itself stops it", async () => {
+    const track: { stop(): void; onended?: () => void } = { stop: () => {} };
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [track] }) } });
+    const { run, sent } = setup();
+    await run.source("screen:0", undefined);
+    track.onended?.();
+    expect(sent).toEqual([{ kind: "lost" }]);
+  });
+});
+
 describe("recorder run: encoder", () => {
+  it("lets one encoder run at a time: a new piece stops the one still going", async () => {
+    const { run } = setup();
+    await run.source("screen:0", undefined);
+    run.startSegment(1000);
+    run.startSegment(1000);
+    expect(world.recorders.map((r) => r.state)).toEqual(["inactive", "recording"]);
+    run.stop();
+  });
   it("uses the hardware encoder when it starts", async () => {
     const { run } = setup();
     await run.source("screen:0", undefined);

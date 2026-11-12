@@ -19,12 +19,49 @@ function setup() {
     buffer.onPayload({ kind: "frame", atMs: endMs - 1000, jpeg: Uint8Array.of(endMs / 1000) });
     now = endMs;
     tick?.();
-    await buffer.save.length;
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
   };
   return { buffer, run, cleared, piece, at: (ms: number) => void (now = ms) };
 }
+
+describe("replay buffer: a rotation due while a save closes the piece", () => {
+  it("never has two recorders running at once and loses no piece", async () => {
+    let tick: (() => void) | undefined;
+    const closing: (() => void)[] = [];
+    // like the real recorder: ending a piece ends the one that was started last, and starting another does not end the first
+    const running = new Set<number>();
+    let current: number | undefined;
+    let maxRunning = 0;
+    let n = 0;
+    const run = {
+      startedAt: 0,
+      startSegment: () => {
+        current = ++n;
+        running.add(current);
+        maxRunning = Math.max(maxRunning, running.size);
+      },
+      endSegment: () => {
+        const ending = current;
+        current = undefined;
+        return ending === undefined ? Promise.resolve() : new Promise<void>((resolve) => closing.push(() => (running.delete(ending), resolve())));
+      },
+      stop: () => {},
+    };
+    const buffer = createReplayBuffer({ now: () => 0, setInterval: (fn) => ((tick = fn), 1) });
+    buffer.attach(run);
+    buffer.start(1000);
+    buffer.onPayload({ kind: "video", segment: 1, chunk: Uint8Array.of(1) });
+    const saved = buffer.save();
+    tick?.();
+    for (let i = 0; i < 10; i++) {
+      closing.splice(0).forEach((f) => f());
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect((await saved)?.videos.length).toBe(1);
+    expect(maxRunning).toBe(1);
+    expect(running.size).toBe(1);
+  });
+});
 
 describe("replay buffer", () => {
   it("gives the newest 15 seconds as video pieces with the pictures moved to the start of the clip, and goes on recording", async () => {
