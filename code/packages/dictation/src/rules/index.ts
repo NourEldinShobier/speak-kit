@@ -4,6 +4,7 @@ import { stripFillers, FILLER_LANGUAGES } from "./fillers";
 import { applyReplacements } from "./replacements";
 import { spokenFormatting, spokenSymbols, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES } from "./spoken";
 
+export { applyReplacements } from "./replacements";
 export { FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES };
 
 export type RulesOptions = Pick<Settings, "fillers" | "spokenSymbols" | "spokenFormatting" | "autoCapitalize" | "trailingSpace" | "replacements"> &

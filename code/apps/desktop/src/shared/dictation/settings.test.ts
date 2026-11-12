@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { DictationConfigSchema, DictationPatchSchema } from "./settings";
 
+const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
 const DEFAULTS = {
   enabled: false,
   hotkey: "ControlRight",
@@ -11,17 +12,13 @@ const DEFAULTS = {
   model: "large-v3-turbo-q5_0",
   retention: "7d",
   replacements: [],
-  microphone: "",
-  micExclusions: [],
-  avoidBluetooth: true,
-  keepReady: false,
-  keepReadyMinutes: 0,
-  sentencePause: true,
-  output: "restore",
-  returnToApp: true,
-  appRules: {},
-  blockSleep: true,
-  skipPauses: false,
+  terms: [],
+  readAs: [],
+  prompt: true,
+  cleanup: CLEANUP,
+  modes: [],
+  rewrite: { enabled: false, deadlineMs: 4000 },
+  keepRecordings: false,
 };
 
 describe("dictation config", () => {
@@ -75,52 +72,39 @@ describe("what the renderer may change", () => {
   });
 });
 
-describe("audio and output settings", () => {
-  it("fall back to release-when-idle, restore the clipboard and avoid headset microphones", () => {
-    const c = parseConfig({ dictation: { keepReady: "yes", output: "paste-all", keepReadyMinutes: -3, avoidBluetooth: null } }).dictation;
-    expect(c).toMatchObject({ keepReady: false, output: "restore", keepReadyMinutes: 0, avoidBluetooth: true });
+describe("vocabulary, modes and rewrite in the config", () => {
+  it("loads a dictation section from before they existed with every new field at its default", () => {
+    const old = parseConfig({ dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] } }).dictation;
+    expect(old).toEqual({ ...DEFAULTS, enabled: true, language: "de", retention: "30d", replacements: [{ from: "a", to: "b" }] });
   });
 
-  it("keeps good audio and output values", () => {
-    const c = parseConfig({
-      dictation: { microphone: "abc", micExclusions: ["yeti", "", "x".repeat(61), "cable"], keepReady: true, keepReadyMinutes: 30, output: "keep", sentencePause: false, blockSleep: false },
-    }).dictation;
-    expect(c).toMatchObject({ microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep", sentencePause: false, blockSleep: false });
+  it("keeps good words and drops each bad one, trimming and capping at 500", () => {
+    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "" , soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
+    expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([{ id: "a", word: "Kubernetes", soundsLike: ["cooper netties"] }]);
+    const many = Array.from({ length: 600 }, (_, i) => ({ id: `i${i}`, word: `w${i}`, soundsLike: [] }));
+    expect(v.parse(DictationConfigSchema, { terms: many }).terms).toHaveLength(500);
+    expect(v.parse(DictationConfigSchema, { terms: "no" }).terms).toEqual([]);
   });
 
-  it("drops the whole exclusion list when it has a bad entry, rather than guess", () => {
-    expect(parseConfig({ dictation: { micExclusions: ["yeti", 4] } }).dictation.micExclusions).toEqual([]);
+  it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
+    const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
+    const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"] }]);
   });
 
-  it("keeps good per-program rules, drops bad ones, and stores names without .exe in lower case", () => {
-    const c = parseConfig({
-      dictation: {
-        appRules: { "PuTTY.exe": { method: "shift-insert", delayMs: 50 }, code: { method: "type" }, bad: { method: "fly" }, "": { method: "copy" }, mstsc: { method: "ctrl-v", delayMs: 99999 } },
-      },
-    }).dictation;
-    expect(c.appRules).toEqual({ putty: { method: "shift-insert", delayMs: 50 }, code: { method: "type", delayMs: 0 }, mstsc: { method: "ctrl-v", delayMs: 0 } });
+  it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
+    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false, lowercase: true });
+    expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
   });
 
-  it("keeps program names that merely end in the letters exe", () => {
-    const c = parseConfig({ dictation: { appRules: { complexe: { method: "type" }, nexe: { method: "copy" }, "putty.exe": { method: "type" } } } }).dictation;
-    expect(Object.keys(c.appRules).sort()).toEqual(["complexe", "nexe", "putty"]);
-  });
-
-  it("loads a config from before skip pauses existed with it off, and keeps it on when set", () => {
-    expect(parseConfig({ dictation: { keepReady: true } }).dictation.skipPauses).toBe(false);
-    expect(parseConfig({ dictation: { skipPauses: true } }).dictation.skipPauses).toBe(true);
-    expect(parseConfig({ dictation: { skipPauses: "yes" } }).dictation.skipPauses).toBe(false);
-  });
-
-  it("stops at 50 rules", () => {
-    const many = Object.fromEntries(Array.from({ length: 80 }, (_, i) => [`app${i}`, { method: "copy" }]));
-    expect(Object.keys(parseConfig({ dictation: { appRules: many } }).dictation.appRules)).toHaveLength(50);
-  });
-
-  it("accepts them in a patch and refuses bad ones", () => {
-    expect(v.safeParse(DictationPatchSchema, { keepReady: true, output: "copy", appRules: { putty: { method: "type", delayMs: 10 } } }).success).toBe(true);
-    expect(v.safeParse(DictationPatchSchema, { output: "paste" }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { keepReadyMinutes: 500 }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { appRules: { "bad/name": { method: "type", delayMs: 0 } } }).success).toBe(false);
+  it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {
+    const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
+    expect(ok({ terms: [{ id: "a", word: "w", soundsLike: [] }], prompt: false, keepRecordings: true })).toBe(true);
+    expect(ok({ terms: Array.from({ length: 501 }, (_, i) => ({ id: `i${i}`, word: "w", soundsLike: [] })) })).toBe(false);
+    expect(ok({ rewrite: { enabled: true, deadlineMs: 20_000 } })).toBe(false);
+    expect(ok({ cleanup: { fillers: true } })).toBe(false);
+    expect(ok({ unknown: 1 })).toBe(false);
   });
 });

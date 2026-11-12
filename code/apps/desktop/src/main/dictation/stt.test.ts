@@ -158,20 +158,23 @@ describe("model views", () => {
   });
 });
 
-describe("end-of-sentence pause", () => {
-  async function paused(model: string, on: boolean) {
-    const stt = new FakeStt();
-    await stt.load(model as never);
-    const t = createTranscriber({ stt, model: () => model as never, onFailedClip: () => undefined, sentencePause: () => on });
-    await t.transcribe({ clip: clip([0.5, 0.5], 1000), language: "en" });
-    return stt.calls()[0]!.samples;
-  }
-
-  it("adds 400 ms of silence for Parakeet when on", async () => {
-    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", true)).toBe(402);
+describe("transcriber and the word list", () => {
+  it("sends the words to a model that reads them", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes, Grafana" });
+    expect(stt.calls()[0]!.prompt).toBe("Kubernetes, Grafana");
   });
-  it("adds nothing when off, or for Whisper", async () => {
-    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", false)).toBe(2);
-    expect(await paused("large-v3-turbo-q5_0", true)).toBe(2);
+
+  it("drops the words for a model that cannot read them, says so once per dictation, and still transcribes", async () => {
+    const stt = new FakeStt();
+    await stt.load("parakeet-tdt-0.6b-v3-q4_0");
+    let dropped = 0;
+    const t = createTranscriber({ stt, model: () => "parakeet-tdt-0.6b-v3-q4_0", onFailedClip: () => undefined, onPromptDropped: () => dropped++ });
+    stt.say({ text: "kept working" });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes" })).toMatchObject({ ok: true, text: "kept working" });
+    expect(stt.calls()[0]).not.toHaveProperty("prompt");
+    expect(dropped).toBe(1);
+    await t.transcribe({ clip: clip([0.1]), language: "en" });
+    expect(dropped).toBe(1);
   });
 });

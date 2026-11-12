@@ -31,6 +31,13 @@ describe("replacement edge rules", () => {
     expect(run("مكعبكيوب", { replacements: [rule("كيوب", "K")] })).toBe("مكعبكيوب");
   });
 
+  it("matches capitals exactly when the rule says so, and ignores them otherwise", () => {
+    const strict = [{ from: "gonna", to: "going to", matchCase: true }];
+    expect(run("Gonna go", { replacements: strict })).toBe("Gonna go");
+    expect(run("gonna go", { replacements: strict })).toBe("going to go");
+    expect(run("Gonna go", { replacements: [rule("gonna", "going to")] })).toBe("going to go");
+  });
+
   it("deleting a phrase closes the gap", () => {
     expect(run("so um you know it works", { replacements: [rule("um", ""), rule("you know", "")] })).toBe("so it works");
     expect(run("hello, um, world", { replacements: [rule("um", "")] })).toBe("hello, world");
