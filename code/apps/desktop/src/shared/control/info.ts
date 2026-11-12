@@ -15,6 +15,18 @@ export interface AutomationInfo {
   /** Where scripts find its port and token. */
   discoveryFile: string;
   commandLine: CommandLineState;
+  skill: AgentSkillState;
+  /** One command a person can paste to do what Install does, or null where there is nothing to install. */
+  manualInstall: string | null;
+}
+
+/** The agent skill file that teaches an AI agent the command line. `unreadable`: the file is there but could not be read. */
+export interface AgentSkillState {
+  state: "not-installed" | "up-to-date" | "out-of-date" | "unreadable";
+  where: string;
 }
 
 export type CommandLineAction = "install" | "remove";
+
+/** The command the Automation page offers to try, and the terminal it opens runs. */
+export const TRY_COMMAND = "speakkit status --json";

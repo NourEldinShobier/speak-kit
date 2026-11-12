@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { appDir, launch, type Launched } from "./harness";
@@ -72,7 +73,7 @@ describe("Automation page", () => {
     const l = await start({ config: DONE });
     await openAutomation(l);
     await l.page.getByText("Not available").waitFor();
-    expect(await l.page.getByRole("button", { name: "Install" }).count()).toBe(0);
+    expect(await l.page.getByText("Puts a speakkit command on your PATH").count()).toBe(0);
   });
 
   it("Reset token gives the discovery file a new token and the old one is refused", async () => {
@@ -259,5 +260,78 @@ describe("every control in the main menu pages has a name", () => {
       problems.push(...unnamed.map((u) => `${name}: ${u}`));
     }
     expect(problems).toEqual([]);
+  });
+});
+
+const axeSource = readFileSync(createRequire(createRequire(import.meta.url).resolve("@axe-core/playwright")).resolve("axe-core/axe.min.js"), "utf8");
+/** The accessibility rules of WCAG A and AA, run by the axe engine inside the page; what it finds, serious and critical first. */
+const axeViolations = async (l: Launched) => {
+  await l.page.evaluate(axeSource);
+  return l.page.evaluate(async () => {
+    const run = (window as unknown as { axe: { run(c: Document, o: object): Promise<{ violations: { id: string; impact: string; nodes: { target: string[] }[] }[] }> } }).axe;
+    const r = await run.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] } });
+    return r.violations.map(
+      (v) =>
+        `${v.impact} ${v.id} ${v.nodes
+          .slice(0, 3)
+          .map((n) => n.target.join(" "))
+          .join(" | ")}`,
+    );
+  });
+};
+
+describe("the agent skill row and the try-it terminal", () => {
+  it("installs the skill into the test folder, shows it as installed, and keeps Test in terminal off while the tool is not installed", async () => {
+    const l = await start({ config: DONE });
+    await openAutomation(l);
+    await l.page.getByText("Agent skill").waitFor();
+    await l.page.getByText("Not installed").first().waitFor();
+    await l.page.getByRole("button", { name: "Install", exact: true }).click();
+    await l.page.getByText("Up to date.").waitFor();
+    expect(readFileSync(path.join(l.userData, "agent-skill", "SKILL.md"), "utf8")).toContain("name: speakkit");
+    expect(await l.page.getByRole("button", { name: "Install", exact: true }).count()).toBe(0);
+    expect(await l.page.getByRole("button", { name: "Copy the skill install command" }).isVisible()).toBe(true);
+    expect(await l.page.getByRole("button", { name: "Test in terminal" }).isDisabled()).toBe(true);
+  });
+
+  it("shows an Update when the file was written by another version", async () => {
+    const l = await start({ config: DONE });
+    const file = path.join(l.userData, "agent-skill", "SKILL.md");
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, "an older skill");
+    await openAutomation(l);
+    await l.page.getByText("Update available").waitFor();
+    await l.page.getByRole("button", { name: "Update", exact: true }).click();
+    await l.page.getByText("Up to date.").waitFor();
+    expect(readFileSync(file, "utf8")).toContain("name: speakkit");
+  });
+
+  it("shows the real discovery file path, not a made-up one", async () => {
+    const l = await start({ config: DONE });
+    await openAutomation(l);
+    await l.page.getByText(path.join(l.userData, "control.json"), { exact: true }).waitFor();
+  });
+});
+
+describe("accessibility scan with axe", () => {
+  it("finds no serious or critical violation on the Automation page at 960 px", async () => {
+    const l = await start({ config: DONE });
+    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 800));
+    await openAutomation(l);
+    await l.page.getByText("Agent skill").waitFor();
+    expect((await axeViolations(l)).filter((v) => /^(serious|critical)/.test(v))).toEqual([]);
+  });
+
+  it("finds no serious or critical violation on the main pages", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    const found: string[] = [];
+    for (const name of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture"]) {
+      await l.page.getByRole("link", { name, exact: true }).first().click();
+      await l.page.getByRole("heading", { level: 1 }).first().waitFor();
+      await l.page.waitForTimeout(300);
+      found.push(...(await axeViolations(l)).filter((v) => /^(serious|critical)/.test(v)).map((v) => `${name}: ${v}`));
+    }
+    expect(found).toEqual([]);
   });
 });
