@@ -45,7 +45,7 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "pageSite" | "readKey" | "hasKey">;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
   voiceChat: Pick<VoiceChat, "complete" | "status">;
 }

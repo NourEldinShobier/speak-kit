@@ -20,6 +20,7 @@ import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
+import { createActivePage } from "./page-context";
 import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
@@ -104,6 +105,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
   busy: () => desktop?.busy() ?? false,
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
+const activePage = createActivePage({ now: Date.now });
 const screenVision = createScreenVision();
 const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
@@ -125,6 +127,7 @@ const runtime: ServerRuntime = new ServerRuntime({
   log,
   api: serverApi,
   voiceChat: voiceChat.server,
+  pageContext: activePage,
   publish,
   isVisible: () => mainWindow.isVisible(),
   onEngineState: (prev, next, detail) => desktop?.onEngineState(prev, next, detail),
@@ -227,7 +230,7 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, pageSite: activePage.current, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
       voiceChat,
     },
   );

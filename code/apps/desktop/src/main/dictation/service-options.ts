@@ -19,6 +19,8 @@ export interface DictationServiceOptions {
   hasKey?(): Promise<boolean>;
   /** The feature that holds the microphone now (screen look, voice chat), or undefined. Dictation waits for it. */
   micOwner?: () => string | undefined;
+  /** Host name of the page the browser extension reported lately; modes by website use it when a browser is in front. */
+  pageSite?: () => string | undefined;
   /** Tests only. */
   os?: DictationOs;
   stt?: Stt;
