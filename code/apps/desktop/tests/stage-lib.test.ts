@@ -29,6 +29,11 @@ describe("importedPackages", () => {
     `;
     expect(importedPackages(src)).toEqual(["electron-store", "electron-updater", "koffi", "valibot", "zod"]);
   });
+
+  it("does not take a string that is the word from for an import", () => {
+    const src = `const [a, b] = [Number(q.get("from") ?? 0), Number(q.get("to") ?? 1)]; import x from "valibot"; Array.from("ab");`;
+    expect(importedPackages(src)).toEqual(["valibot"]);
+  });
 });
 
 describe("icoFromPngs", () => {

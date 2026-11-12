@@ -13,7 +13,7 @@ export function packageOf(specifier) {
 /** Every package a built JavaScript file imports (static, dynamic and require). */
 export function importedPackages(source) {
   const found = new Set();
-  const re = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)(["'])([^"'\n]+)\1/g;
+  const re = /(?:(?<![\w"'.])from\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)(["'])([^"'\n]+)\1/g;
   for (let m; (m = re.exec(source));) {
     const name = packageOf(m[2]);
     if (name) found.add(name);
