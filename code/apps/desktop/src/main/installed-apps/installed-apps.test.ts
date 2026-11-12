@@ -9,6 +9,7 @@ const win = (links: Record<string, string>, dirs: Record<string, string[]>, root
   roots: () => roots,
   list: async (dir) => (await tree(dirs)(dir)).map((name) => ({ name, directory: !name.includes(".") })),
   target: (s) => links[s] ?? "",
+  pause: async () => {},
   join: (a, b) => `${a}/${b}`,
 });
 
@@ -60,6 +61,27 @@ describe("installed apps on Windows", () => {
         { key: "slack", name: "Slack" },
       ],
     });
+  });
+});
+
+describe("installed apps on Windows, large Start Menus", () => {
+  const many = (n: number) => {
+    const names = Array.from({ length: n }, (_, i) => `App${i}.lnk`);
+    const links = Object.fromEntries(names.map((nm, i) => [`P/${nm}`, `C:/x/app${i}.exe`]));
+    return { names, links };
+  };
+  it("pauses between batches of shortcut reads so the main thread is not held for the whole scan", async () => {
+    const { names, links } = many(60);
+    let pauses = 0;
+    const host: WindowsHost = { ...win(links, { P: names }), pause: async () => void pauses++ };
+    const result = await createInstalledApps(deps({ windows: host })).list();
+    expect(result.apps).toHaveLength(60);
+    expect(pauses).toBe(3);
+  });
+  it("reads at most 1500 shortcuts", async () => {
+    const { names, links } = many(1600);
+    const result = await createInstalledApps(deps({ windows: win(links, { P: names }) })).list();
+    expect(result.apps).toHaveLength(1500);
   });
 });
 
@@ -117,6 +139,18 @@ describe("the lazy list", () => {
     const apps = createInstalledApps(deps({ windows: flaky }));
     expect(await apps.list()).toEqual({ apps: [], available: false });
     fail = false;
+    expect(await apps.list()).toEqual({ apps: [{ key: "a", name: "A" }], available: true });
+  });
+});
+
+describe("a scan that hangs", () => {
+  it("gives up after the deadline, reports not available and lets the next ask scan again", async () => {
+    let hang = true;
+    const windows = win({ "P/A.lnk": "a.exe" }, { P: ["A.lnk"] });
+    const stuck: WindowsHost = { ...windows, list: (d) => (hang ? new Promise(() => {}) : windows.list(d)) };
+    const apps = createInstalledApps(deps({ windows: stuck, scanTimeoutMs: 20 }));
+    expect(await apps.list()).toEqual({ apps: [], available: false });
+    hang = false;
     expect(await apps.list()).toEqual({ apps: [{ key: "a", name: "A" }], available: true });
   });
 });
