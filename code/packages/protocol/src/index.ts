@@ -55,3 +55,7 @@ export type {
   CommandState,
   ReadingStatus,
 } from "./automation";
+export { STREAM_LIMITS, streamCreateSchema, streamResultSchema } from "./streams";
+export type { StreamCreate, StreamCreated, StreamResult, StreamSegment } from "./streams";
+export { PAGE_CONTEXT_LIMITS, pageContextPostSchema } from "./page-context";
+export type { PageContextPost, PageEvent } from "./page-context";

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AutomationStatus } from "@speakkit/protocol";
-import { AutomationFault, type AutomationHost } from "@speakkit/server";
+import { AutomationFault, type AutomationHost, type StreamsHost } from "@speakkit/server";
 import { estimateMs, splitSentences } from "../../shared/reader";
 import type { Ctx } from "../context";
 import type { createExports } from "../export/service";
@@ -57,6 +57,18 @@ export function lateAutomation(): { host: AutomationHost; attach(h: AutomationHo
       startExport: async (r) => need().startExport(r),
       exportStatus: (id) => target?.exportStatus(id),
       subscribe: (l) => (target ? target.subscribe(l) : () => {}),
+    },
+  };
+}
+
+/** The streams host for a server that is created before the speech engine exists: segments say "failed" until `attach` supplies the real one. */
+export function lateStreams(): { host: StreamsHost; attach(h: StreamsHost): void } {
+  let target: StreamsHost | null = null;
+  return {
+    attach: (h) => void (target = h),
+    host: {
+      transcribe: async (pcm, language, signal) => (target ? target.transcribe(pcm, language, signal) : { ok: false, code: "failed" }),
+      process: (text, language) => (target ? target.process(text, language) : text),
     },
   };
 }

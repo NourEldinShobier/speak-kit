@@ -33,15 +33,26 @@ describe("automation model", () => {
 
   it("says what the command-line row shows and offers in each state", () => {
     expect(commandLineView({ kind: "not-installed" }, "1.2.3")).toMatchObject({ pill: { text: "Not installed" }, action: { label: "Install", do: "install" } });
-    expect(commandLineView({ kind: "installed", where: "x" }, "1.2.3")).toEqual({ pill: { tone: "green", text: "Installed" }, text: "Version 1.2.3 · on your PATH for new terminals", action: { label: "Remove", do: "remove" } });
-    expect(commandLineView({ kind: "needs-repair", why: "The launcher file is missing." }, "1")).toMatchObject({ text: "The launcher file is missing. Repair puts it back.", action: { label: "Repair", do: "install" } });
+    expect(commandLineView({ kind: "installed", where: "x" }, "1.2.3")).toEqual({
+      pill: { tone: "green", text: "Installed" },
+      text: "Version 1.2.3 · on your PATH for new terminals",
+      action: { label: "Remove", do: "remove" },
+    });
+    expect(commandLineView({ kind: "needs-repair", why: "The launcher file is missing." }, "1")).toMatchObject({
+      text: "The launcher file is missing. Repair puts it back.",
+      action: { label: "Repair", do: "install" },
+    });
     expect(commandLineView({ kind: "needs-path", where: "/h/.local/bin/speakkit", folder: "/h/.local/bin" }, "1").text).toContain("/h/.local/bin, which is not on your PATH");
     expect(commandLineView({ kind: "unavailable", reason: "Only the installed app." }, "1")).toMatchObject({ pill: { text: "Not available" }, text: "Only the installed app.", action: null });
   });
 
   it("lists every tool with its switch: reading tools on, tools that read your words off, until chosen", () => {
     expect(toolRows({}).map((t) => [t.name, t.on])).toEqual(MCP_TOOLS.map((t) => [t.name, !t.private]));
-    expect(toolRows({ history_search: true, read_aloud: false }).filter((t) => ["history_search", "read_aloud"].includes(t.name)).map((t) => t.on)).toEqual([false, true]);
+    expect(
+      toolRows({ history_search: true, read_aloud: false })
+        .filter((t) => ["history_search", "read_aloud"].includes(t.name))
+        .map((t) => t.on),
+    ).toEqual([false, true]);
   });
 });
 

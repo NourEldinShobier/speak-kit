@@ -4,12 +4,12 @@ import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
-import { createServer, type VoiceChatService } from "@speakkit/server";
+import { createServer, type AutomationHost, type StreamsHost, type VoiceChatService } from "@speakkit/server";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
-import { lateAutomation } from "./automation";
+import { lateAutomation, lateStreams } from "./automation";
 import type { Logger } from "./context";
 import { removeDownloads } from "./downloads";
 import { listenWithFallback } from "./ports";
@@ -51,6 +51,8 @@ export class ServerRuntime {
   #d: RuntimeDeps;
   /** What scripts and AI apps may do; the server is created before the reader, which is attached later. */
   readonly automation = lateAutomation();
+  /** Live transcription for other apps; the speech engine is attached later, like the reader. */
+  readonly streams = lateStreams();
   #server: Srv | null = null;
   #engine: TtsEngine | null = null; // outlives token/port changes; recreated on retry
   #firstEngine = true;
@@ -61,6 +63,12 @@ export class ServerRuntime {
 
   constructor(deps: RuntimeDeps) {
     this.#d = deps;
+  }
+
+  /** Connects what the desktop features lend the server: the reader, and the speech engine for live transcription. */
+  attachDesktop(d: { automation: AutomationHost; streams: StreamsHost }): void {
+    this.automation.attach(d.automation);
+    this.streams.attach(d.streams);
   }
 
   get server(): Srv | null {
@@ -109,6 +117,7 @@ export class ServerRuntime {
           version: state.version,
           voiceChat: this.#d.voiceChat,
           automation: this.automation.host,
+          streams: this.streams.host,
           ...(token ? { token } : {}),
           onError: (e) => this.#onServerError(e),
           // Lazy-load options of the server build; extra keys are ignored by a build that predates them.

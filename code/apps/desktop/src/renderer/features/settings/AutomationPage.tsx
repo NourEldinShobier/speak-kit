@@ -76,25 +76,10 @@ function CommandLineRow({ info, version, busy, onAction }: { info: AutomationInf
   );
 }
 
-function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppState; info: AutomationInfo | null; onAction(a: CommandLineAction): void; onReset(): void; failed: string | null }) {
+/** What the tool can do, how it ends and which errors it names: the reference a script author reads. */
+function Reference() {
   return (
-    <SettingsSection title="Command-line tool">
-      {failed && (
-        <Banner tone="error" title="That did not work" action={<Button onClick={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")}>Try again</Button>}>
-          {failed}
-        </Banner>
-      )}
-      {info && <CommandLineRow info={info} version={s.version} busy={false} onAction={onAction} />}
-      <SettingRow
-        label="Try it"
-        description="Prints what Speak Kit is doing right now."
-        control={
-          <div className="sk-row-actions">
-            {code(TRY_COMMAND)}
-            <CopyButton text={TRY_COMMAND} label="Copy the command" />
-          </div>
-        }
-      />
+    <>
       <div className="sk-pad" data-testid="automation-commands">
         <b>What it can do</b>
         <ul className="sk-exit">
@@ -127,6 +112,30 @@ function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppStat
           ))}
         </ul>
       </div>
+    </>
+  );
+}
+
+function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppState; info: AutomationInfo | null; onAction(a: CommandLineAction): void; onReset(): void; failed: string | null }) {
+  return (
+    <SettingsSection title="Command-line tool">
+      {failed && (
+        <Banner tone="error" title="That did not work" action={<Button onClick={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")}>Try again</Button>}>
+          {failed}
+        </Banner>
+      )}
+      {info && <CommandLineRow info={info} version={s.version} busy={false} onAction={onAction} />}
+      <SettingRow
+        label="Try it"
+        description="Prints what Speak Kit is doing right now."
+        control={
+          <div className="sk-row-actions">
+            {code(TRY_COMMAND)}
+            <CopyButton text={TRY_COMMAND} label="Copy the command" />
+          </div>
+        }
+      />
+      <Reference />
       <SettingRow
         label="Discovery file"
         description="Scripts find the local server here. It holds a port and a private token, so keep it out of shared folders."

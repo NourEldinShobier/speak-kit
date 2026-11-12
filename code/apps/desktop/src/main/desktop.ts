@@ -12,6 +12,7 @@ import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
 import { engineHandlers } from "./engines";
 import { desktopAutomation } from "./automation";
+import { desktopStreams } from "./automation/streams";
 import { createExports } from "./export/service";
 import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
@@ -88,7 +89,14 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
 /** The IPC methods the desktop features add. */
 function desktopHandlers(
   ctx: Ctx,
-  f: { reading: ReturnType<typeof createReading>; exports: ReturnType<typeof createExports>; updates: ReturnType<typeof createUpdates>; shortcuts: ReturnType<typeof setupShortcuts>; control: ReturnType<typeof setupControl>; test: boolean },
+  f: {
+    reading: ReturnType<typeof createReading>;
+    exports: ReturnType<typeof createExports>;
+    updates: ReturnType<typeof createUpdates>;
+    shortcuts: ReturnType<typeof setupShortcuts>;
+    control: ReturnType<typeof setupControl>;
+    test: boolean;
+  },
 ) {
   return {
     ...engineHandlers(ctx),
@@ -153,7 +161,11 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const control = setupControl(ctx, {
     reading,
     automation: automation.host,
-    commandLine: realCommandLine({ platform: process.platform, shippedDir: app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined, userData: o.dictation.dataDir, home: os.homedir() }), dictation, dataDir: o.dictation.dataDir, version: o.version });
+    commandLine: realCommandLine({ platform: process.platform, shippedDir: app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined, userData: o.dictation.dataDir, home: os.homedir() }),
+    dictation,
+    dataDir: o.dictation.dataDir,
+    version: o.version,
+  });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
@@ -161,6 +173,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
+    /** Live transcription for other apps on the engine dictation holds. */
+    streams: desktopStreams(ctx, { stt: dictation.stt, dictation: () => dictation }),
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */

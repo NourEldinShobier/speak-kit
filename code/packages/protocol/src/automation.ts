@@ -88,7 +88,7 @@ export const AUTOMATION_COMMANDS = {
   dictate: "parked",
   history: "parked",
   meetings: "parked",
-  "live-stream": "parked",
+  "live-stream": "available",
 } as const;
 export type AutomationCommand = keyof typeof AUTOMATION_COMMANDS;
 export type CommandState = (typeof AUTOMATION_COMMANDS)[AutomationCommand];
