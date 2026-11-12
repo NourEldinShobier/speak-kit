@@ -5,7 +5,7 @@ import { daysLeft, type Policy } from "./retention";
 import type { Entry } from "./types";
 
 /** One row of the list: the manifest entry with its place in the waiting line, the days it has left and, for a search, the words around the match. */
-export function toRow(e: Entry, o: { queue: JobQueue; spooled: ReadonlyMap<string, number>; now: number; policy: Policy; snippet: string | undefined }): Row {
+export function toRow(e: Entry, o: { queue: JobQueue; spooled: ReadonlyMap<string, number>; writing: ReadonlySet<string>; now: number; policy: Policy; snippet: string | undefined }): Row {
   const q = o.queue.running === e.id ? 0 : o.queue.waiting.indexOf(e.id) + 1;
   return {
     id: e.id,
@@ -25,5 +25,6 @@ export function toRow(e: Entry, o: { queue: JobQueue; spooled: ReadonlyMap<strin
     daysLeft: daysLeft(e, o.now, o.policy),
     ...(q > 0 || o.queue.running === e.id ? { queued: q } : {}),
     ...(o.snippet && { snippet: o.snippet }),
+    ...((o.writing.has(e.id) || e.notes) && { notesState: o.writing.has(e.id) ? ("writing" as const) : e.notes! }),
   };
 }

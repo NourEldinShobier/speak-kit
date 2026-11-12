@@ -43,6 +43,8 @@ export interface Entry {
   audioBytes: number;
   audioRemovedAt?: number;
   trashedAt?: number;
+  /** The last notes pass: written, or failed. */
+  notes?: "ready" | "failed";
   exports: ExportedFile[];
 }
 

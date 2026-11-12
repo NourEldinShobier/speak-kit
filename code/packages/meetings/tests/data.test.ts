@@ -235,6 +235,16 @@ describe("notes", () => {
     expect(promptText([line(3725, "You", "hi")])).toBe("[1:02:05] You: hi");
   });
 
+  it("a transcript with one speaker is read without names and the writer is told nothing about You and Them", async () => {
+    expect(promptText([{ start: 5, text: "hello" }])).toBe("[0:05] hello");
+    const seen: string[] = [];
+    const complete = async (system: string) => (seen.push(system), { ok: false as const, code: "offline" as const });
+    await writeNotes({ writer: "w", complete }, [{ start: 0, text: "hello" }]);
+    await writeNotes({ writer: "w", complete }, [line(0, "You", "hello")]);
+    expect(seen[0]).not.toContain("Them");
+    expect(seen[1]).toContain('"Them"');
+  });
+
   it("applies vocabulary to whole words, longest first, without chains", () => {
     const v = [
       { from: "wazoo", to: "Wazuh" },

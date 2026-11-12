@@ -10,6 +10,7 @@ import { createGate, JobQueue, QueueFullError } from "./queue";
 import { sweep, audioTotal } from "./retention";
 import { SearchIndex } from "./search";
 import { recordingApi } from "./recording";
+import { viewOf, type NoteDoc } from "./notes";
 import { openStore, type Store } from "./store";
 import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
@@ -23,6 +24,8 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
   const queue = new JobQueue();
   const clear = createGate({ busy: d.busy, sleep: d.sleep });
   const spooled = new Map<string, number>();
+  const writing = new Set<string>();
+  let notesIdle: Promise<unknown> = Promise.resolve();
   let idle: Promise<unknown> = Promise.resolve();
 
   const indexOne = async (e: Entry) => {
@@ -47,7 +50,40 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     }
   };
 
-  const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, now: d.now(), policy: d.policy(), snippet });
+  const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, writing, now: d.now(), policy: d.policy(), snippet });
+
+  const NOTES_OFF: Failure = { code: "failed", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." };
+  const NOTHING_TO_SUMMARISE: Failure = { code: "failed", message: "There is nothing to write notes from: no words were heard." };
+
+  /** One notes pass. The words and the audio are never an output: a failure is saved next to the last good notes and the transcript stays as it was. */
+  async function notesPass(id: string): Promise<Outcome> {
+    const summarise = d.notes?.();
+    const e = store.get(id);
+    if (!summarise) return { ok: false, failure: NOTES_OFF };
+    if (!e || e.status !== "done" || writing.has(id)) return { ok: false, failure: failures.failed() };
+    const segments = await store.segments(id);
+    if (!segments.some((s) => s.text.trim())) return { ok: false, failure: NOTHING_TO_SUMMARISE };
+    writing.add(id);
+    d.changed();
+    try {
+      let r: Awaited<ReturnType<typeof summarise>>;
+      try {
+        r = await summarise(segments, new AbortController().signal);
+      } catch {
+        r = { ok: false, failure: { code: "failed", message: "The notes could not be written. The transcript is unchanged." } };
+      }
+      const prev = await store.notes(id);
+      const doc: NoteDoc | undefined = r.ok ? { ...r.notes, writer: r.writer, at: d.now() } : prev?.doc;
+      await store.saveNotes(id, { ...(doc && { doc }), ...(!r.ok && { failure: r.failure }) });
+      await settle(id, { notes: r.ok ? "ready" : "failed" });
+      return r.ok ? { ok: true } : r;
+    } catch (err) {
+      return { ok: false, failure: failure(err) };
+    } finally {
+      writing.delete(id);
+      d.changed();
+    }
+  }
 
   async function job(id: string, signal: AbortSignal): Promise<void> {
     const e = store.get(id);
@@ -93,6 +129,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         await store.dropAudio(id).catch(() => {});
         next = store.get(id);
       }
+      if (r.status === "done" && saved && d.notes?.()) notesIdle = Promise.all([notesIdle, notesPass(id)]);
     } catch (err) {
       await settle(id, { status: "failed", failure: failure(err) });
     } finally {
@@ -171,7 +208,9 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     },
     async get(id) {
       const e = store.get(id);
-      return e ? { ...row(e), segments: await store.segments(id), exports: e.exports } : undefined;
+      if (!e) return undefined;
+      const notes = viewOf(await store.notes(id), writing.has(id));
+      return { ...row(e), segments: await store.segments(id), exports: e.exports, ...(notes && { notes }) };
     },
     importAudio: ({ name, pcm, language }) =>
       run(async () => {
@@ -227,6 +266,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         const wasWaiting = queue.waiting.includes(id);
         if (queue.cancel(id, "cancel") && wasWaiting) await settle(id, { status: "cancelled" });
       }),
+    writeNotes: (id) => run(() => notesPass(id)),
     rename: (id, title) =>
       run(async () => {
         const t = title.trim();
@@ -261,7 +301,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     async text(id, format) {
       const e = store.get(id);
       if (!e) return undefined;
-      return { name: e.title, text: render(format, { ...e, segments: await store.segments(id) }) };
+      return { name: e.title, text: render(format, { ...e, segments: await store.segments(id), notes: (await store.notes(id))?.doc }) };
     },
     save: (id, format) =>
       run(async () => {
@@ -270,7 +310,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         const ext: string = format;
         const previous = e.exports.find((f) => f.path.toLowerCase().endsWith(`.${ext}`));
         try {
-          const saved = await saveExport(d.fs, d.exportDir(), e.title, ext, render(format, { ...e, segments: await store.segments(id) }), previous);
+          const saved = await saveExport(d.fs, d.exportDir(), e.title, ext, render(format, { ...e, segments: await store.segments(id), notes: (await store.notes(id))?.doc }), previous);
           const exports = [...e.exports.filter((f) => f !== previous), { path: saved.path, sha256: saved.sha256 }];
           await store.update(id, { exports });
           return { ok: true, ...saved };
@@ -298,6 +338,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     async dispose() {
       queue.stopAll("quit");
       await idle;
+      await notesIdle;
     },
   };
 }
