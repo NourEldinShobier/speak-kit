@@ -103,7 +103,10 @@ describe("Setup: dictation step", () => {
 
   it("asks for a language first, pre-selects the system language and downloads nothing when it is chosen", async () => {
     const l = await start({ config: { setupDone: false, setupStep: 1, preferredPort: 0 } });
-    await l.page.getByRole("button", { name: /Continue/ }).first().click();
+    await l.page
+      .getByRole("button", { name: /Continue/ })
+      .first()
+      .click();
     await l.page.getByRole("heading", { name: "Choose your language" }).waitFor();
     expect(await l.page.getByRole("radio", { name: "English" }).isChecked()).toBe(true);
     expect(await l.page.getByText(/Uses Parakeet v3, 356 MB/).count()).toBe(1);
@@ -118,8 +121,14 @@ describe("Setup: dictation step", () => {
 
   it("Skip dictation goes on to the browser step and remembers that no model was chosen", async () => {
     const l = await start({ config: { setupDone: false, setupStep: 0, preferredPort: 0 } });
-    await l.page.getByRole("button", { name: /Get started|Continue/ }).first().click();
-    await l.page.getByRole("button", { name: /Continue/ }).first().click();
+    await l.page
+      .getByRole("button", { name: /Get started|Continue/ })
+      .first()
+      .click();
+    await l.page
+      .getByRole("button", { name: /Continue/ })
+      .first()
+      .click();
     await l.page.getByRole("heading", { name: "Choose your language" }).waitFor();
     await l.page.getByRole("button", { name: "Skip dictation" }).click();
     await l.page.getByRole("heading", { name: /Connect/ }).waitFor();

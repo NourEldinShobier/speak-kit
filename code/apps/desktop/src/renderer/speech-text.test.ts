@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
-import { accuracyText, deleteConfirm, deviceLine, etaText, failureText, hardwareLine, hiddenLine, languagesText, memoryText, recommendationText, recommendedText, sizeText, speedText, transferText, visibleModels, DEFAULT_FILTER } from "./speech-text";
+import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
+import {
+  accuracyText,
+  deleteConfirm,
+  deviceLine,
+  etaText,
+  failureText,
+  hardwareLine,
+  hiddenLine,
+  languagesText,
+  memoryText,
+  recommendationText,
+  recommendedText,
+  sizeText,
+  speedText,
+  transferText,
+  visibleModels,
+  DEFAULT_FILTER,
+} from "./speech-text";
 
 const card = (over: Partial<ModelCard> = {}): ModelCard => ({
   id: "large-v3-turbo-q5_0",
@@ -83,13 +100,18 @@ const view = (models: ModelCard[]): Pick<SpeechModelsView, "models"> => ({ model
 
 describe("delete confirmation", () => {
   it("says how much disk it frees and that dictation stops when it was the last model in use", () => {
-    expect(deleteConfirm(card({ inUse: true }), view([card({ inUse: true })]))).toEqual({ title: "Delete Whisper Large v3 Turbo?", body: "This frees 574 MB of disk space. Dictation stops until a model is downloaded." });
+    expect(deleteConfirm(card({ inUse: true }), view([card({ inUse: true })]))).toEqual({
+      title: "Delete Whisper Large v3 Turbo?",
+      body: "This frees 574 MB of disk space. Dictation stops until a model is downloaded.",
+    });
   });
   it("does not warn when another model is installed", () => {
     expect(deleteConfirm(card({ inUse: true }), view([card({ inUse: true }), { ...parakeet, installed: true }])).body).toBe("This frees 574 MB of disk space.");
   });
   it("says the original of an added model is not touched", () => {
-    expect(deleteConfirm(card({ origin: "custom", name: "Mine", diskBytes: 100_000_000 }), view([card(), card()])).body).toBe("This frees 574 MB of disk space. The file you added it from is not touched.");
+    expect(deleteConfirm(card({ origin: "custom", name: "Mine", diskBytes: 100_000_000 }), view([card(), card()])).body).toBe(
+      "This frees 574 MB of disk space. The file you added it from is not touched.",
+    );
   });
 });
 
@@ -146,7 +168,9 @@ describe("recommendation, device and hardware lines", () => {
   it("says where speech runs and why", () => {
     expect(deviceLine(base())).toBe("Nothing is loaded now.");
     expect(deviceLine(base({ device: { ...base().device, backend: "gpu", gpuName: "RTX 3060" } }))).toBe("Running on RTX 3060.");
-    expect(deviceLine(base({ device: { ...base().device, backend: "cpu", movedToCpuByMemory: true } }))).toBe("Running on the CPU. The graphics card ran out of memory, so speech moved to the CPU while idle. Only one copy is in memory, and the card is not marked as failed.");
+    expect(deviceLine(base({ device: { ...base().device, backend: "cpu", movedToCpuByMemory: true } }))).toBe(
+      "Running on the CPU. The graphics card ran out of memory, so speech moved to the CPU while idle. Only one copy is in memory, and the card is not marked as failed.",
+    );
   });
   it("lists the detected hardware", () => {
     expect(hardwareLine(base({ device: { ...base().device, gpuName: "RTX 3060", driver: "31.0", cores: 16, memoryGb: 32 } }))).toBe("RTX 3060, driver 31.0. 16 processor threads. 32 GB memory");

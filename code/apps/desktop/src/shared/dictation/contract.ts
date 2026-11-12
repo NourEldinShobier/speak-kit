@@ -76,21 +76,9 @@ export interface HistoryItem {
   text: string;
   /** Executable name of the program the text went to. */
   app?: string;
-  /** What the speech model heard, before the clean-up. */
-  raw: string;
+  /** Name of the speech model that heard it, and the language it was told (a label); absent for entries from before these were stored. */
   model?: string;
-  durationMs: number;
-  rewrite?: RewriteOutcome;
-  /** Milliseconds until the entry is removed; null when it is kept for ever. */
-  expiresInMs: number | null;
-  /** The entry has a kept recording. */
-  recording?: boolean;
-  recordingRemoved?: boolean;
-  versions?: HistoryVersion[];
-  /** The version in use. */
-  version?: string;
-  /** The search matched this vocabulary word through one of its sounds-like spellings. */
-  via?: { word: string; heard: string };
+  language?: string;
 }
 
 export type { HistoryStats };

@@ -30,31 +30,15 @@ type DayProps = {
 
 function Day({ g, view, s, copied, open, setOpen, copy, remove, openDictation }: DayProps) {
   return (
-    <section className="dict-hist__group">
-      <h3 className="dict-hist__day">{g.label}</h3>
-      <div className={`lm-card${view === "side" ? " dict-hist__side" : ""}`}>
-        {view === "side" ? (
-          <div className="dict-hist__thead" aria-hidden="true">
-            {THEAD.map((h, i) => (
-              <span key={i}>{h}</span>
-            ))}
-          </div>
-        ) : null}
-        {g.items.map((item) => (
-          <div key={item.id}>
-            <HistoryRow
-              item={item}
-              view={view}
-              copied={copied === item.id}
-              open={open === item.id}
-              rewriteDeadlineMs={s.settings.rewrite.deadlineMs}
-              onToggle={() => setOpen((o) => (o === item.id ? null : item.id))}
-              onCopy={() => copy(item.id)}
-              onDelete={() => remove(item.id)}
-            />
-            {open === item.id && item.recording ? <RecordingPanel item={item} s={s} kept={expiryText(item.expiresInMs, "Kept for")} openDictation={openDictation} /> : null}
-          </div>
-        ))}
+    <div className="lm-row dict-hist__row" data-testid="history-row" data-row={item.id}>
+      <div className="dict-hist__when">
+        <span>{timeText(item.at)}</span>
+        <span className="dict-hist__app">{appName(item.app)}</span>
+        {item.model && (
+          <span className="dict-hist__app" data-testid="history-model">
+            {[item.model, item.language].filter(Boolean).join(", ")}
+          </span>
+        )}
       </div>
     </section>
   );

@@ -46,7 +46,7 @@ export function parseWindowsProbe(stdout: string): { avx2: boolean | undefined; 
   } catch {
     return { avx2: undefined, gpu: undefined };
   }
-  const gpus = (Array.isArray(raw.gpus) ? raw.gpus : raw.gpus ? [raw.gpus] : []) as WinGpu[];
+  const gpus = [raw.gpus ?? []].flat() as WinGpu[]; // one card arrives as an object, several as a list
   const list = gpus.map((g) => ({ name: typeof g.Name === "string" ? g.Name.trim() : "", driver: typeof g.DriverVersion === "string" ? g.DriverVersion.trim() : "" }));
   return { avx2: typeof raw.avx2 === "boolean" ? raw.avx2 : undefined, gpu: pickGpu(list) };
 }
@@ -64,9 +64,16 @@ export function parseMacGraphics(stdout: string, osRelease: string, arch: string
   }
 }
 
+const platformOf = (p: NodeJS.Platform): Hardware["platform"] => (p === "darwin" || p === "win32" ? p : "linux");
+
 /** What this computer offers. A step that fails leaves its fields unknown, which never blocks anything. */
 export async function probeHardware(env: ProbeEnv): Promise<Hardware> {
-  const base: Hardware = { platform: env.platform === "darwin" ? "darwin" : env.platform === "win32" ? "win32" : "linux", arch: env.arch, cores: env.cores, memoryGb: Math.round((env.memoryBytes / GB) * 10) / 10 };
+  const base: Hardware = {
+    platform: platformOf(env.platform),
+    arch: env.arch,
+    cores: env.cores,
+    memoryGb: Math.round((env.memoryBytes / GB) * 10) / 10,
+  };
   try {
     if (env.platform === "win32") {
       const r = parseWindowsProbe(await env.run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_SCRIPT], 15_000));

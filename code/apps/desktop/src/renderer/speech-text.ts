@@ -1,5 +1,5 @@
-import { SPOKEN_LANGUAGE_LABELS } from "../../../shared/speech-models/config";
-import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
+import { SPOKEN_LANGUAGE_LABELS } from "../shared/speech-models/config";
+import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
 
 export const languageName = (code: string): string => SPOKEN_LANGUAGE_LABELS[code] ?? code;
 
@@ -104,7 +104,8 @@ export const DEFAULT_FILTER: Filter = { downloadedOnly: false, language: "all", 
 export function visibleModels(models: readonly ModelCard[], f: Filter): { shown: ModelCard[]; hidden: number } {
   const byLanguage = models.filter((m) => f.language === "all" || m.languages.includes(f.language));
   const filtered = f.downloadedOnly ? byLanguage.filter((m) => m.installed) : byLanguage;
-  const key = (m: ModelCard) => (f.sort === "size" ? m.bytes : f.sort === "speed" ? (m.speedSeconds ?? Infinity) : 0);
+  const keys: Record<Filter["sort"], (m: ModelCard) => number> = { recommended: () => 0, size: (m) => m.bytes, speed: (m) => m.speedSeconds ?? Infinity };
+  const key = keys[f.sort];
   const shown = filtered
     .map((m, i) => ({ m, i }))
     .sort((a, b) => Number(b.m.inUse) - Number(a.m.inUse) || key(a.m) - key(b.m) || a.i - b.i)
@@ -114,7 +115,8 @@ export function visibleModels(models: readonly ModelCard[], f: Filter): { shown:
 
 /** The line under the downloaded filter: how many models are hidden. */
 export function hiddenLine(hidden: number): string {
-  return hidden === 0 ? "" : hidden === 1 ? "1 model that is not downloaded is hidden." : `${hidden} models that are not downloaded are hidden.`;
+  if (hidden === 0) return "";
+  return hidden === 1 ? "1 model that is not downloaded is hidden." : `${hidden} models that are not downloaded are hidden.`;
 }
 
 export function recommendationText(v: SpeechModelsView): { title: string; body: string; model: string } | undefined {
@@ -131,13 +133,18 @@ export const IDLE_LABELS: Record<number, string> = { 5: "After 5 minutes", 15: "
 /** What the device row says: what runs where, and why, in plain words. */
 export function deviceLine(v: SpeechModelsView): string {
   const d = v.device;
-  const parts = [d.backend === "gpu" ? `Running on ${d.gpuName ?? "the graphics card"}.` : d.backend === "cpu" ? "Running on the CPU." : "Nothing is loaded now."];
+  const where = { gpu: `Running on ${d.gpuName ?? "the graphics card"}.`, cpu: "Running on the CPU." };
+  const parts = [d.backend ? where[d.backend] : "Nothing is loaded now."];
   if (d.movedToCpuByMemory) parts.push("The graphics card ran out of memory, so speech moved to the CPU while idle. Only one copy is in memory, and the card is not marked as failed.");
   return parts.join(" ");
 }
 
 export function hardwareLine(v: SpeechModelsView): string {
   const d = v.device;
-  const bits = [d.gpuName ? `${d.gpuName}${d.driver ? `, driver ${d.driver}` : ""}` : "No graphics card found", d.cores ? `${d.cores} processor threads` : "", d.memoryGb ? `${d.memoryGb} GB memory` : ""].filter(Boolean);
+  const bits = [
+    d.gpuName ? `${d.gpuName}${d.driver ? `, driver ${d.driver}` : ""}` : "No graphics card found",
+    d.cores ? `${d.cores} processor threads` : "",
+    d.memoryGb ? `${d.memoryGb} GB memory` : "",
+  ].filter(Boolean);
   return bits.join(". ");
 }

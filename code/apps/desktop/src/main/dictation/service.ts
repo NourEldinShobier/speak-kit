@@ -1,15 +1,15 @@
-import { ipcMain, net, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
+import { ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
-import { Transfers, WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
 import { SPEECH_MODELS_EVENT } from "../../shared/speech-models/channels";
-import { SpeechModels } from "../speech-models/service";
-import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "../speech-models/ports";
-import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
+import type { SpeechModels } from "../speech-models/service";
+import { createSpeechParts, startSpeech } from "../speech-models/wiring";
+import type { DictationStatus } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
+import { HistoryApi } from "./history-api";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
 import { HudPresenter } from "./hud-presenter";
 import { createDictationOs, type DictationOs, type HudWindow, type InsertResult } from "./index";
@@ -17,14 +17,13 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus, soundSettingsUrl } from "./service-support";
-import { historyFiles, Pusher, recorderWindow, scriptedRewriter, trashViaShell } from "./service-wiring";
+import { clock, coreSettings, dictationStatus, Throttle } from "./service-support";
+import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
 export type { DictationServiceOptions } from "./service-options";
 
-const PUSH_MS = 200;
 /**
  * Dictation in the desktop app: the key hook, the microphone window, the speech engine, the HUD and the history, wired to the core and shown to
  * the Settings pages. Nothing runs (no hook, no microphone window, no model in memory) until the person turns dictation on.
@@ -37,6 +36,7 @@ export class DictationService {
   readonly fake: FakeStt | undefined;
   readonly models: ModelManager;
   readonly speech: SpeechModels;
+  readonly history = new HistoryApi({ core: () => this.core, ready: () => this.ready, catalog: () => this.speech.catalog(), changed: () => this.#push(true) });
   readonly presenter: HudPresenter;
   readonly history: HistoryApi;
   readonly ready: Promise<void>;
@@ -50,22 +50,12 @@ export class DictationService {
   #recorder: RecorderHost | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
-  #promptDropped = false;
-  #hasKey = false;
-  #audio: AudioStore | undefined;
-  /** Tests only: what the scripted writer does with the next dictation. */
-  fakeRewrite: "ok" | "hang" | "fail" = "ok";
-  /** Tests only: the files the pickers return (null is a cancelled dialog). */
-  readonly scriptedFiles: { open: string | null; save: string | null } = { open: null, save: null };
-  readonly #files: FilePickers;
-  #count = 0;
   #lastInsert: InsertResult | undefined;
   #lastFailed: Clip | undefined;
   #lastError = "";
-  readonly #pusher = new Pusher(PUSH_MS, () => this.#send());
-  readonly #push = (soon = false): void => this.#pusher.push(soon);
+  readonly #pusher = new Throttle(() => this.#send());
   #stopPower: (() => void) | undefined;
-  #watch: NodeJS.Timeout | undefined;
+  #stopSpeech: (() => void) | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
     this.#ctx = ctx;
@@ -73,55 +63,19 @@ export class DictationService {
     this.#onChange = onChange;
     // SPEAKKIT_REAL_STT keeps the real engine in a test run (a manual check against the models on this computer).
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
-    // The browser engine's fetch follows the system proxy (manual and PAC scripts) and trusts the system certificate store, so a network that
-    // inspects secure traffic works once its certificate is installed; the plain Node fetch would ignore both.
-    const systemFetch = __TEST_CODE__ && o.test ? undefined : (net.fetch as unknown as typeof fetch);
-    this.stt =
-      o.stt ??
-      this.fake ??
-      new WhisperStt({
-        modelsDir: o.modelsDir,
-        workerUrl: o.sttWorker,
-        gpu: () => this.speech.gpuWanted(),
-        extraModels: () => this.speech.catalog().filter((m) => m.origin === "custom"),
-        onGpuFallback: (m) => this.speech.onGpuFallback(m),
-        timeIntegrated: () => this.speech.timeIntegrated(),
-        onTimed: (w) => this.speech.onTimed(w),
-        ...(systemFetch && { fetch: systemFetch }),
-      });
-    this.models = new ModelManager({
-      stt: this.stt,
-      selected: () => this.#cfg.model,
+    const parts = createSpeechParts({
+      ctx,
+      o,
+      stt: o.stt ?? this.fake,
       select: (id) => this.#choose(id),
-      changed: (soon) => this.#push(soon),
-      models: () => this.speech.catalog(),
-      transfers: new Transfers(),
-      blocked: () => this.speech.floorMessage(),
-    });
-    this.speech = new SpeechModels({
-      modelsDir: o.modelsDir,
-      stt: this.stt,
-      models: this.models,
-      config: () => ({ dictation: this.#ctx.config.dictation, engines: this.#ctx.config.engines }),
-      save: () => this.#ctx.saveConfig(),
-      choose: (id, language) => {
-        this.#cfg.model = id;
-        this.#cfg.language = language as DictationConfig["language"];
-        this.#ctx.saveConfig();
-        this.core?.configure(coreSettings(this.#cfg));
-      },
+      push: (soon) => this.#push(soon),
+      supported: () => this.supported,
       recording: () => this.state.status === "recording" || this.state.status === "locked",
-      dictationSupported: () => this.supported,
-      hardware: probeThisComputer,
-      pickFile: (title) => pickModelFile(this.#o.parent(), title),
-      openFolder,
-      openProxySettings,
-      memoryOf,
-      scanDirs,
-      changed: () => this.#push(true),
-      platform: process.platform,
+      configure: () => this.core?.configure(coreSettings(this.#cfg)),
     });
-    this.stt.onStatus((s) => s.state === "ready" && this.speech.used());
+    this.stt = parts.stt;
+    this.models = parts.models;
+    this.speech = parts.speech;
     this.presenter = new HudPresenter({
       hud: () => this.os?.hud,
       hotkey: () => this.#cfg.hotkey,
@@ -185,7 +139,14 @@ export class DictationService {
     this.core = createDictation({
       clock,
       recorder: this.#replay,
-      transcriber: createTranscriber({ stt: this.stt, model: () => this.#cfg.model, models: () => this.speech.catalog(), onUsed: (id) => this.speech.used(id), onFailedClip: (c) => (this.#lastFailed = c), onModelError: (d) => this.models.report(d) }),
+      transcriber: createTranscriber({
+        stt: this.stt,
+        model: () => this.#cfg.model,
+        models: () => this.speech.catalog(),
+        onUsed: (id) => this.speech.used(id),
+        onFailedClip: (c) => (this.#lastFailed = c),
+        onModelError: (d) => this.models.report(d),
+      }),
       inserter: createInserterPort(os, (r) => (this.#lastInsert = r)),
       hotkeys: this.#hotkeys,
       storage: files.storage,
@@ -197,8 +158,12 @@ export class DictationService {
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await this.models.refresh();
-    await this.#refreshCount();
-    this.#hasKey = (await this.#o.hasKey?.()) ?? false;
+    await this.history.refresh();
+    this.#stopSpeech = startSpeech(
+      this.speech,
+      () => this.os?.foreground() ?? null,
+      () => this.#cfg.enabled,
+    );
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
@@ -218,7 +183,6 @@ export class DictationService {
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
     this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
     if (s.status === "error") this.#lastError = s.code;
-    this.#sleep(s.status === "recording" || s.status === "locked");
     if (s.status === "idle" && s.notice) void this.history.refresh();
     this.presenter.onState(s);
     this.#push(true);
@@ -234,11 +198,7 @@ export class DictationService {
       hotkeyFailed: this.#hotkeyFailed,
       state: this.state,
       models: this.models,
-      historyCount: this.#count,
-      historyStatus: this.core?.history.status() ?? "ok",
-      ...this.history.parts(),
-      rewriteKey: this.#hasKey || (__TEST_CODE__ && this.#o.test),
-      promptDropped: this.#promptDropped,
+      historyCount: this.history.count,
     });
   }
 
@@ -257,26 +217,9 @@ export class DictationService {
     this.#onChange();
   }
 
-  async #refreshCount(): Promise<void> {
-    this.#count = ((await this.core?.history.list().catch(() => [])) ?? []).length;
-    void this.speech.init();
-    this.#autoSwitchWatch();
-    this.#push(true);
-  }
-
-  /** While dictation is on, the program in front and its keyboard layout feed the automatic switching rules; the rules wait 300 ms for them to settle. */
-  #autoSwitchWatch(): void {
-    let last = "";
-    this.#watch = setInterval(() => {
-      if (!this.#cfg.enabled || !this.#ctx.config.engines.autoSwitch.enabled) return;
-      const info = this.os?.foreground();
-      const ctx = { app: info?.exe ?? undefined, layout: info?.layout };
-      const key = `${ctx.app}|${ctx.layout}`;
-      if (key === last) return;
-      last = key;
-      this.speech.auto.update(ctx);
-    }, 400);
-    this.#watch.unref();
+  /** Download progress arrives many times a second; the window gets a few updates a second. */
+  #push(soon = false): void {
+    this.#pusher.push(soon);
   }
 
   // ---- settings, enabling, models ----------------------------------------------------------------------------
@@ -301,7 +244,6 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.setHotkey(this.#cfg.hotkey);
     if (patch.retention !== undefined) void this.history.refresh();
-    if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
     this.#push(true);
     return this.status();
   }
@@ -355,8 +297,9 @@ export class DictationService {
     void this.#recorder?.prepare().then(() => this.mic.refresh());
     await this.models.refresh();
     // At launch (quiet) with release-when-idle on, the model stays on disk: the first dictation loads it (the page says that takes longer).
-    if (this.models.installed) (!quiet || this.#ctx.config.engines.idleMinutes === 0) && this.models.warm();
-    else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
+    if (this.models.installed) {
+      if (!quiet || this.#ctx.config.engines.idleMinutes === 0) this.models.warm();
+    } else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
     if (!quiet && ready) this.presenter.flashReady();
   }
 
@@ -424,9 +367,9 @@ export class DictationService {
   }
 
   async dispose(): Promise<void> {
-    clearInterval(this.#watch);
+    this.#stopSpeech?.();
     this.speech.dispose();
-    clearTimeout(this.#pushTimer);
+    this.#pusher.dispose();
     this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;

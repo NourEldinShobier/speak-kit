@@ -57,9 +57,9 @@ export function onGpuFailure(message: string): { markFailed: boolean; runOnCpu: 
 }
 
 /** The list after a failure: replaces an earlier entry for the same card and driver, ignores out-of-memory failures. */
-export function recordFailure(list: readonly FailedDevice[], gpu: GpuInfo, message: string, at: number): FailedDevice[] {
-  if (isOutOfMemory(message)) return [...list];
-  return [...list.filter((f) => !sameDevice(f, gpu)), { name: gpu.name, driver: gpu.driver, reason: message.slice(0, 300), at }];
+export function recordFailure(list: readonly FailedDevice[], gpu: GpuInfo, failure: { message: string; at: number }): FailedDevice[] {
+  if (isOutOfMemory(failure.message)) return [...list];
+  return [...list.filter((f) => !sameDevice(f, gpu)), { name: gpu.name, driver: gpu.driver, reason: failure.message.slice(0, 300), at: failure.at }];
 }
 
 /** Forgets the failure of this card (the "try the graphics card again" button), or every failure when no card is given. */

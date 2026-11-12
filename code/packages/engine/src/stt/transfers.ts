@@ -57,7 +57,9 @@ export class Transfers {
     if (existing) return existing.promise;
     const e = { info: { id, state: "running", fraction: 0 }, ac: new AbortController(), run } as Entry;
     e.promise = new Promise<void>((resolve, reject) => (e.settle = { resolve, reject }));
-    e.promise.catch(() => undefined); // a caller that joined late still gets the rejection; this one only keeps it from being unhandled
+    e.promise.catch(() => {
+      // a caller that joined late still gets the rejection; this handler only keeps it from being reported as unhandled
+    });
     this.#entries.set(id, e);
     this.#go(e);
     this.#emit();

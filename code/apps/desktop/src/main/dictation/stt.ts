@@ -29,14 +29,35 @@ export interface ModelProgress {
   etaSeconds?: number;
 }
 
-export function modelViews(models: readonly SttModel[], selected: DictationModelId, isInstalled: (id: string) => boolean, job: ModelProgress | null, transfers: readonly TransferInfo[] = []): ModelView[] {
+interface ViewState {
+  isInstalled(id: string): boolean;
+  job: ModelProgress | null;
+  transfers?: readonly TransferInfo[];
+}
+
+function progressOf(id: string, { job, transfers = [] }: ViewState): ModelView["progress"] {
+  const paused = transfers.find((t) => t.id === id && t.state === "paused");
+  if (paused) return { kind: "paused", fraction: paused.fraction };
+  if (job?.id !== id) return undefined;
+  if (job.kind === "preparing") return { kind: "preparing" };
+  return { kind: "downloading", fraction: job.fraction, ...(job.etaSeconds !== undefined && { etaSeconds: job.etaSeconds }) };
+}
+
+export function modelViews(models: readonly SttModel[], selected: DictationModelId, state: ViewState): ModelView[] {
   return models.map((m) => {
     const id = m.id as DictationModelId;
-    const view: ModelView = { id, name: m.name, tag: m.tag, description: m.description, bytes: m.bytes, installed: isInstalled(id), selected: id === selected, languages: [...m.languages] };
-    const paused = transfers.find((t) => t.id === id && t.state === "paused");
-    if (paused) view.progress = { kind: "paused", fraction: paused.fraction };
-    else if (job?.id === id) view.progress = job.kind === "preparing" ? { kind: "preparing" } : { kind: "downloading", fraction: job.fraction, ...(job.etaSeconds !== undefined && { etaSeconds: job.etaSeconds }) };
-    return view;
+    const progress = progressOf(id, state);
+    return {
+      id,
+      name: m.name,
+      tag: m.tag,
+      description: m.description,
+      bytes: m.bytes,
+      installed: state.isInstalled(id),
+      selected: id === selected,
+      languages: [...m.languages],
+      ...(progress && { progress }),
+    };
   });
 }
 

@@ -82,7 +82,7 @@ export const STT_MODELS: readonly SttModel[] = [
     bytes: 355615679,
     languages: ["en", "de"],
     detects: false,
-    license: { name: "CC BY 4.0", url: "https://creativecommons.org/licenses/by/4.0/" },
+    license: { name: "CC BY 4.0", url: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3" },
     accuracy: { wrongWordOneIn: 18, testLanguage: "en", source: "published English benchmark" },
     speedSeconds: 1,
     origin: "builtin",

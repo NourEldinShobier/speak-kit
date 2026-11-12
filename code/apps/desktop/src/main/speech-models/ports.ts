@@ -48,7 +48,14 @@ export const scanDirs = (): string[] => {
 };
 
 export const pickModelFile = async (parent: BrowserWindow | null, title: string): Promise<string | undefined> => {
-  const options: Electron.OpenDialogOptions = { title, properties: ["openFile"], filters: [{ name: "Speech model", extensions: ["bin", "gguf"] }, { name: "All files", extensions: ["*"] }] };
+  const options: Electron.OpenDialogOptions = {
+    title,
+    properties: ["openFile"],
+    filters: [
+      { name: "Speech model", extensions: ["bin", "gguf"] },
+      { name: "All files", extensions: ["*"] },
+    ],
+  };
   const r = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
   return r.canceled ? undefined : r.filePaths[0];
 };

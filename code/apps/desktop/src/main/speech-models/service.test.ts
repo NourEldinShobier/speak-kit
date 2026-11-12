@@ -25,7 +25,13 @@ function setup(over: Partial<SpeechModelsDeps> = {}, hw: Hardware = { platform: 
   const stt = Object.assign(fake, { backend: "gpu" as "gpu" | "cpu" | undefined, workerPid: 4242 as number | undefined, busy: false });
   // The real engine looks for the file on disk; the scripted one knows only the catalog, so added models are looked up in the folder here.
   const known = fake.downloaded.bind(fake);
-  fake.downloaded = async (id: string) => (id.startsWith("custom-") ? stat(join(dir, "stt", `${id}.bin`)).then(() => true, () => false) : known(id));
+  fake.downloaded = async (id: string) =>
+    id.startsWith("custom-")
+      ? stat(join(dir, "stt", `${id}.bin`)).then(
+          () => true,
+          () => false,
+        )
+      : known(id);
   const cfg = { dictation: v.parse(DictationConfigSchema, {}) as DictationConfig, engines: parseEnginesConfig({}) };
   const state = { recording: false, saves: 0, changes: 0 };
   const speechRef: { current?: SpeechModels } = {};

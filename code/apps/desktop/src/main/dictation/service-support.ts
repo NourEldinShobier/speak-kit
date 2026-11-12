@@ -1,10 +1,10 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { DictationState, InsertMode, MicEvent, MicStatus, Settings } from "@speakkit/dictation";
-import type { DictationStatus, MicDeviceView, RecorderEvent } from "../../shared/dictation/contract";
-import type { AppRule, DictationConfig } from "../../shared/dictation/settings";
-import type { AppOverride } from "./types";
+import type { DictationState, HistoryEntry, Settings } from "@speakkit/dictation";
+import { languageLabel, type SttLanguage } from "@speakkit/engine";
+import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
+import type { DictationConfig } from "../../shared/dictation/settings";
 import type { ModelManager } from "./models";
 import type { HotkeyLayout } from "./hotkey-source";
 
@@ -93,8 +93,38 @@ export const dictationStatus = ({
   ...(redo && { redo }),
 });
 
-/** The system page for the microphone (when access is the problem) or for sound in general. */
-export function soundSettingsUrl(micBlocked: boolean, platform: string = process.platform): string {
-  if (platform === "darwin") return micBlocked ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" : "x-apple.systempreferences:com.apple.preference.sound";
-  return micBlocked ? "ms-settings:privacy-microphone" : "ms-settings:sound";
+/** The history entries as the page lists them: with the name of the model that heard each one and the language it was told. */
+export const historyItems = (entries: readonly HistoryEntry[], catalog: readonly { id: string; name: string }[]): HistoryItem[] =>
+  entries.map((e) => {
+    const model = e.model ? (catalog.find((m) => m.id === e.model)?.name ?? e.model) : undefined;
+    return { id: e.id, at: e.at, text: e.text, ...(e.app && { app: e.app }), ...(model && { model }), ...(e.language && { language: languageLabel(e.language as SttLanguage) }) };
+  });
+
+/** Calls `run` at most once per `ms` for updates that arrive often (download progress); `push(true)` runs it now. */
+export class Throttle {
+  #last = 0;
+  #timer: NodeJS.Timeout | undefined;
+  readonly #run: () => void;
+  readonly #ms: number;
+
+  constructor(run: () => void, ms = 200) {
+    this.#run = run;
+    this.#ms = ms;
+  }
+
+  push(now = false): void {
+    if (now || Date.now() - this.#last >= this.#ms) return this.#fire();
+    this.#timer ??= setTimeout(() => this.#fire(), this.#ms);
+  }
+
+  #fire(): void {
+    clearTimeout(this.#timer);
+    this.#timer = undefined;
+    this.#last = Date.now();
+    this.#run();
+  }
+
+  dispose(): void {
+    clearTimeout(this.#timer);
+  }
 }

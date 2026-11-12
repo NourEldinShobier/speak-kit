@@ -51,17 +51,17 @@ describe("graphics failures", () => {
     expect(onGpuFailure("no Vulkan device")).toEqual({ markFailed: true, runOnCpu: true });
   });
   it("records a failure per card and driver, replacing the earlier one", () => {
-    let list = recordFailure([], rtx, "device lost", 1);
-    list = recordFailure(list, rtx, "device lost again", 2);
-    list = recordFailure(list, { ...rtx, driver: "2" }, "device lost", 3);
+    let list = recordFailure([], rtx, { message: "device lost", at: 1 });
+    list = recordFailure(list, rtx, { message: "device lost again", at: 2 });
+    list = recordFailure(list, { ...rtx, driver: "2" }, { message: "device lost", at: 3 });
     expect(list).toEqual([
       { ...rtx, reason: "device lost again", at: 2 },
       { name: rtx.name, driver: "2", reason: "device lost", at: 3 },
     ]);
   });
   it("does not record an out-of-memory failure, and truncates long reasons", () => {
-    expect(recordFailure([], rtx, "out of memory", 1)).toEqual([]);
-    expect(recordFailure([], rtx, "x".repeat(1000), 1)[0]!.reason).toHaveLength(300);
+    expect(recordFailure([], rtx, { message: "out of memory", at: 1 })).toEqual([]);
+    expect(recordFailure([], rtx, { message: "x".repeat(1000), at: 1 })[0]!.reason).toHaveLength(300);
   });
   it("forgets one card or every card", () => {
     const list: FailedDevice[] = [
@@ -123,7 +123,11 @@ function clock() {
   };
   const advance = async (ms: number) => {
     now += ms;
-    for (const [id, t] of [...timers]) if (t.at <= now) (timers.delete(id), t.fn());
+    const due = Array.from(timers.entries()).filter(([, t]) => t.at <= now);
+    for (const [id, t] of due) {
+      timers.delete(id);
+      t.fn();
+    }
     await Promise.resolve();
     await Promise.resolve();
   };

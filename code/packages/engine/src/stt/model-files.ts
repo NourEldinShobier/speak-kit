@@ -40,16 +40,26 @@ const FAIL = {
   "not-a-model": "That file is not a Whisper model (its header is wrong). Nothing was copied.",
 } as const;
 
+/** Size in bytes of a regular file; `missing` (default -1) when it is absent or cannot be read, which is a normal answer here. */
+const sizeOf = (p: string, missing = -1): Promise<number> =>
+  stat(p).then(
+    (s) => (s.isFile() ? s.size : missing),
+    () => missing,
+  );
+
 /** Checks the header and fingerprints the whole file; the fingerprint, not the name, is what identifies the model. */
 export async function inspectModelFile(path: string): Promise<Inspection> {
   const fail = (reason: keyof typeof FAIL): Inspection => ({ ok: false, reason, message: FAIL[reason] });
-  const s = await stat(path).catch(() => undefined);
-  if (!s?.isFile()) return fail("not-found");
-  if (s.size < MIN_MODEL_BYTES) return fail("too-small");
-  const header = await readHeader(path).catch(() => undefined);
+  const bytes = await sizeOf(path);
+  if (bytes < 0) return fail("not-found");
+  if (bytes < MIN_MODEL_BYTES) return fail("too-small");
+  const header = await readHeader(path).then(
+    (h) => h,
+    () => undefined,
+  );
   if (!header) return fail("not-a-model");
   const sha256 = await sha256File(path);
-  return { ok: true, header, bytes: s.size, sha256, id: `custom-${sha256.slice(0, 12)}`, name: basename(path).replace(/\.(bin|gguf)$/i, "") };
+  return { ok: true, header, bytes, sha256, id: `custom-${sha256.slice(0, 12)}`, name: basename(path).replace(/\.(bin|gguf)$/i, "") };
 }
 
 /** A model the person added from a file. The file lives in our folder under its fingerprint; the original is never touched. */
@@ -121,35 +131,24 @@ export interface ImportOptions {
   now?: () => number;
 }
 
-/** Validates then copies. Nothing is copied unless the header is right; copying goes through a .part file so a half copy never counts. */
-export async function importModelFile(o: ImportOptions): Promise<ImportResult> {
-  const check = await inspectModelFile(o.source);
-  if (!check.ok) return check;
-  if (o.expectSha256 && check.sha256 !== o.expectSha256) return { ok: false, reason: "different-file", message: "That is not the same file: its fingerprint is different." };
-  const list = await loadImported(o.modelsDir);
-  const file = `${check.id}.bin`;
-  const dest = join(sttDir(o.modelsDir), file);
-  const known = list.find((m) => m.id === check.id);
-  const present =
-    (await stat(dest).then(
-      (s) => s.size,
-      () => -1,
-    )) === check.bytes;
-  if (known && present) return { ok: true, model: known, alreadyThere: true };
+/** Copies `source` to `dest` through a .part file, so a half copy never counts. Returns the failure message, or undefined when it worked. */
+async function copyInto(source: string, dest: string): Promise<string | undefined> {
   try {
-    if (!present) {
-      await mkdir(dirname(dest), { recursive: true });
-      await copyFile(o.source, `${dest}.part`);
-      await rename(`${dest}.part`, dest);
-    }
+    await mkdir(dirname(dest), { recursive: true });
+    await copyFile(source, `${dest}.part`);
+    await rename(`${dest}.part`, dest);
+    return undefined;
   } catch (e) {
     await rm(`${dest}.part`, { force: true });
-    return { ok: false, reason: "disk", message: `The file could not be copied: ${e instanceof Error ? e.message : String(e)}` };
+    return `The file could not be copied: ${e instanceof Error ? e.message : String(e)}`;
   }
-  const model: ImportedModel = {
+}
+
+function registryEntry(check: Extract<Inspection, { ok: true }>, known: ImportedModel | undefined, o: ImportOptions): ImportedModel {
+  return {
     id: check.id,
     name: (o.name ?? known?.name ?? check.name).slice(0, 60) || check.id,
-    file,
+    file: `${check.id}.bin`,
     sha256: check.sha256,
     bytes: check.bytes,
     engine: known?.engine ?? "whisper",
@@ -157,6 +156,21 @@ export async function importModelFile(o: ImportOptions): Promise<ImportResult> {
     addedAt: known?.addedAt ?? (o.now ?? Date.now)(),
     sourcePath: o.source,
   };
+}
+
+/** Validates then copies. Nothing is copied unless the header is right; copying goes through a .part file so a half copy never counts. */
+export async function importModelFile(o: ImportOptions): Promise<ImportResult> {
+  const check = await inspectModelFile(o.source);
+  if (!check.ok) return check;
+  if (o.expectSha256 && check.sha256 !== o.expectSha256) return { ok: false, reason: "different-file", message: "That is not the same file: its fingerprint is different." };
+  const list = await loadImported(o.modelsDir);
+  const dest = join(sttDir(o.modelsDir), `${check.id}.bin`);
+  const known = list.find((m) => m.id === check.id);
+  const present = (await sizeOf(dest)) === check.bytes;
+  if (known && present) return { ok: true, model: known, alreadyThere: true };
+  const failure = present ? undefined : await copyInto(o.source, dest);
+  if (failure) return { ok: false, reason: "disk", message: failure };
+  const model = registryEntry(check, known, o);
   await saveImported(o.modelsDir, [...list.filter((m) => m.id !== model.id), model]);
   return { ok: true, model, alreadyThere: false };
 }
@@ -164,14 +178,7 @@ export async function importModelFile(o: ImportOptions): Promise<ImportResult> {
 /** Imported models whose copy in our folder is gone or has the wrong size. */
 export async function missingImported(modelsDir: string, list: readonly ImportedModel[]): Promise<ImportedModel[]> {
   const out: ImportedModel[] = [];
-  for (const m of list)
-    if (
-      (await stat(join(sttDir(modelsDir), m.file)).then(
-        (s) => s.size,
-        () => -1,
-      )) !== m.bytes
-    )
-      out.push(m);
+  for (const m of list) if ((await sizeOf(join(sttDir(modelsDir), m.file))) !== m.bytes) out.push(m);
   return out;
 }
 
@@ -199,10 +206,7 @@ export async function findModelsOnDisk(dirs: readonly string[], catalog: readonl
     const names = await readdir(dir).catch(() => [] as string[]);
     for (const name of names) {
       const path = join(dir, name);
-      const size = await stat(path).then(
-        (s) => (s.isFile() ? s.size : -1),
-        () => -1,
-      );
+      const size = await sizeOf(path);
       for (const m of catalog) {
         if (size !== m.bytes || found.has(m.id)) continue;
         if ((await sha256File(path).catch(() => "")) === m.sha256) found.set(m.id, { id: m.id, path });
@@ -233,15 +237,7 @@ export async function diskUse(modelsDir: string, models: readonly Pick<SttModel,
   let total = 0;
   for (const m of models) {
     const base = join(sttDir(modelsDir), m.file);
-    const n =
-      (await stat(base).then(
-        (s) => s.size,
-        () => 0,
-      )) +
-      (await stat(`${base}.part`).then(
-        (s) => s.size,
-        () => 0,
-      ));
+    const n = (await sizeOf(base, 0)) + (await sizeOf(`${base}.part`, 0));
     if (n > 0) perModel[m.id] = n;
     total += n;
   }
@@ -259,10 +255,7 @@ export async function deleteModelFiles(modelsDir: string, m: Pick<ModelFile, "fi
   if (!inside(sttDir(modelsDir), base)) throw new Error("refusing to delete a file outside the models folder");
   let freed = 0;
   for (const p of [base, `${base}.part`]) {
-    freed += await stat(p).then(
-      (s) => s.size,
-      () => 0,
-    );
+    freed += await sizeOf(p, 0);
     await rm(p, { force: true });
   }
   return freed;

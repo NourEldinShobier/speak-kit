@@ -25,6 +25,24 @@ import { ExperimentsPage } from "./features/experiments";
 import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
 
+/** Run setup again: downloaded models and settings stay, the first-run steps are shown again from the model step. */
+function SetupSection() {
+  return (
+    <SettingsSection title="Setup" description="Go through the first-run steps again, from the model step: voice model, dictation language, practice and the browser extension.">
+      <SettingRow
+        className="lm-row--control"
+        label="Run setup again"
+        description="Downloaded models and your settings are kept."
+        control={
+          <Button aria-label="Run setup again" onClick={() => void api.patchConfig({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
+            Run setup again
+          </Button>
+        }
+      />
+    </SettingsSection>
+  );
+}
+
 function About({ s }: { s: AppState }) {
   return (
     <Page title="About" lead="Speak Kit reads text out loud on your own computer.">
@@ -33,18 +51,7 @@ function About({ s }: { s: AppState }) {
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
-      <SettingsSection title="Setup" description="Go through the first-run steps again: language, speech model, practice and the browser extension.">
-        <SettingRow
-          className="lm-row--control"
-          label="Run setup again"
-          description="Downloaded models and your settings are kept."
-          control={
-            <Button aria-label="Run setup again" onClick={() => void api.patchConfig({ setupDone: false, setupSkipped: false, setupStep: 0 })}>
-              Run setup again
-            </Button>
-          }
-        />
-      </SettingsSection>
+      <SetupSection />
       <SettingsSection title="Uninstalling">
         <SettingRow
           label="Downloaded models"
