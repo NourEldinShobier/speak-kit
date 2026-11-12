@@ -3,6 +3,10 @@ import type { RecorderCommand, RecorderPayload, RecorderResult } from "../../../
 import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
 import { trimVideo } from "./trim-video";
+import { zoomVideo } from "./zoom-video";
+import { joinVideos } from "./join-video";
+import { createReplayBuffer, type ReplayBuffer } from "./replay-buffer";
+import { inPixels } from "../../../shared/capture/zoom";
 
 /**
  * The page of the hidden recorder window. The screen source is drawn onto a canvas (cut to the area or window, scaled to the size limit); the canvas
@@ -72,7 +76,10 @@ async function sheet(c: Extract<RecorderCommand, { op: "sheet" }>): Promise<Reco
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (const [i, jpeg] of c.jpegs.entries()) {
     const bmp = await createImageBitmap(new Blob([jpeg as BlobPart], { type: "image/jpeg" }));
-    ctx.drawImage(bmp, (i % c.columns) * c.cellWidth, Math.floor(i / c.columns) * c.cellHeight, c.cellWidth, c.cellHeight);
+    const at = [(i % c.columns) * c.cellWidth, Math.floor(i / c.columns) * c.cellHeight] as const;
+    const part = c.crops?.[i] && inPixels(c.crops[i], bmp.width, bmp.height);
+    if (part) ctx.drawImage(bmp, part.x, part.y, part.width, part.height, ...at, c.cellWidth, c.cellHeight);
+    else ctx.drawImage(bmp, ...at, c.cellWidth, c.cellHeight);
     bmp.close();
   }
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
@@ -84,6 +91,44 @@ async function trim(c: Extract<RecorderCommand, { op: "trim" }>): Promise<Record
   return video.length ? { ok: true, video, durationMs: c.endMs - c.startMs } : { ok: false, code: "encoder" };
 }
 
+let replay: ReplayBuffer | undefined;
+
+async function replayStart(c: Extract<RecorderCommand, { op: "replay-start" }>): Promise<RecorderResult> {
+  replay?.stop();
+  const buffer = (replay = createReplayBuffer({ now: () => performance.now(), segmentMs: c.segmentMs }));
+  // the buffer keeps video and pictures itself; that its screen went away is for the main process
+  const r = new Run(c.maxSide, (d) => (d.kind === "lost" ? send(d) : buffer.onPayload(d)));
+  buffer.attach(r);
+  try {
+    await withTimeout(r.source(c.sourceId, c.crop), FIRST_FRAME_MS);
+    buffer.start(c.frameEveryMs);
+    return { ok: true };
+  } catch (e) {
+    r.stop();
+    replay = undefined;
+    return { ok: false, code: failureCode(String(e)) };
+  }
+}
+
+async function replaySave(): Promise<RecorderResult> {
+  const clip = await replay?.save();
+  if (!clip) return { ok: false, code: "source" };
+  // One file plays, trims and zooms like any recording; if the pieces cannot be joined they are kept as they are.
+  const videos =
+    clip.videos.length > 1
+      ? await joinVideos(clip.videos).then(
+          (v) => (v.length ? [v] : clip.videos),
+          () => clip.videos,
+        )
+      : clip.videos;
+  return { ok: true, clip: { ...clip, videos }, durationMs: clip.durationMs };
+}
+
+async function zoom(c: Extract<RecorderCommand, { op: "zoom" }>): Promise<RecorderResult> {
+  const video = await zoomVideo(c.video, c.regions);
+  return video.length ? { ok: true, video } : { ok: false, code: "encoder" };
+}
+
 bridge.onCommand((c: RecorderCommand) => {
   void (async () => {
     let result: RecorderResult = { ok: true };
@@ -93,7 +138,13 @@ bridge.onCommand((c: RecorderCommand) => {
       else if (c.op === "switch") result = await swap(c);
       else if (c.op === "sheet") result = await sheet(c);
       else if (c.op === "trim") result = await trim(c);
-      else {
+      else if (c.op === "zoom") result = await zoom(c);
+      else if (c.op === "replay-start") result = await replayStart(c);
+      else if (c.op === "replay-save") result = await replaySave();
+      else if (c.op === "replay-stop") {
+        replay?.stop();
+        replay = undefined;
+      } else {
         run?.stop();
         run = undefined;
       }

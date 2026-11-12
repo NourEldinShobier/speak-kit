@@ -9,6 +9,8 @@ export interface Resolved {
   title: string;
   /** Desktop rectangle in device-independent pixels, for the cropped window. */
   windowRect?: Rect;
+  /** The part of the desktop the recording shows, in device-independent pixels: where the pointer is found in the picture. */
+  bounds?: Rect;
 }
 
 export interface Still {

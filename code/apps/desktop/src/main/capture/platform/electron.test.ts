@@ -138,7 +138,11 @@ describe("resolve", () => {
   };
   it("points a screen at its capture source", async () => {
     screens();
-    expect(await createElectronCapturePlatform("darwin").resolve({ kind: "screen", displayId: "2" })).toEqual({ sourceId: "screen:1:0", title: "Display 2" });
+    expect(await createElectronCapturePlatform("darwin").resolve({ kind: "screen", displayId: "2" })).toEqual({
+      sourceId: "screen:1:0",
+      title: "Display 2",
+      bounds: { x: 1000, y: 0, width: 1000, height: 800 },
+    });
   });
   it("cuts an area in the pixels of its display (device scale applied)", async () => {
     screens();
@@ -146,6 +150,7 @@ describe("resolve", () => {
       sourceId: "screen:0:0",
       title: "Left · Area",
       crop: { x: 200, y: 100, width: 400, height: 200 },
+      bounds: { x: 100, y: 50, width: 200, height: 100 },
     });
   });
   it("is undefined for a display that is gone or has no source", async () => {
@@ -162,6 +167,7 @@ describe("resolve", () => {
       sourceId: "window:10:0",
       title: "Editor",
       windowRect: { x: 5, y: 5, width: 400, height: 300 },
+      bounds: { x: 5, y: 5, width: 400, height: 300 },
     });
   });
 });

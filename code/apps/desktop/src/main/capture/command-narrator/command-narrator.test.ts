@@ -65,16 +65,18 @@ describe("command narrator", () => {
 });
 
 describe("narrator choice", () => {
-  const make = (name: string) => ({ ready: vi.fn(() => name === "command"), transcribe: vi.fn(async () => name) });
-  it("uses the command when chosen and the dictation model otherwise, deciding at each call", async () => {
-    const dictation = make("dictation");
-    const command = make("command");
-    let chosen = false;
-    const n = chooseNarrator(() => chosen, { dictation, command });
+  const make = (name: string) => ({ ready: vi.fn(() => name !== "dictation"), transcribe: vi.fn(async () => name) });
+  it("uses the chosen model and decides at each call", async () => {
+    const parts = { dictation: make("dictation"), windows: make("windows"), command: make("command") };
+    let chosen: "dictation" | "windows" | "command" = "dictation";
+    const n = chooseNarrator(() => chosen, parts);
     expect(await n.transcribe(pcm)).toBe("dictation");
     expect(n.ready()).toBe(false);
-    chosen = true;
+    chosen = "command";
     expect(await n.transcribe(pcm)).toBe("command");
+    expect(n.ready()).toBe(true);
+    chosen = "windows";
+    expect(await n.transcribe(pcm)).toBe("windows");
     expect(n.ready()).toBe(true);
   });
 });

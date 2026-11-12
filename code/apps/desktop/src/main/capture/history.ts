@@ -11,6 +11,7 @@ import { createJournal, type Journal, type JournalEntry } from "./journal";
 import { pickKeyframes } from "./keyframes";
 import { framesIn, trimRange, wordsIn } from "./trim";
 import { sweepCaptures, type SweepResult } from "./retention";
+import { applyZoom, suggestZoom, type ZoomDeps } from "./zoom";
 import { createStore, type CaptureStore } from "./store";
 
 export interface HistoryDeps {
@@ -24,6 +25,8 @@ export interface HistoryDeps {
   sheet?(id: string, files: readonly string[]): Promise<Buffer | undefined>;
   /** Cuts a recorded video to a range; undefined when it could not be cut. */
   trim?(video: Uint8Array, startMs: number, endMs: number): Promise<Uint8Array | undefined>;
+  zoomVideo?: ZoomDeps["zoomVideo"];
+  zoomSheet?: ZoomDeps["zoomSheet"];
 }
 
 /** The saved captures: the index, the folders on disk, the journal that finishes interrupted ones, and what can be done with one (copy, reveal, remove, clean up). */
@@ -189,7 +192,7 @@ export class History {
     if (!cut?.length) return false;
     await this.bundle.writeFile(r.dir, "video-trim.webm", cut);
     const kept = framesIn(await this.bundle.frames(r.dir), r.words ?? [], range).map((f) => f.file);
-    const saved = await this.store.mutate(id, (cur) => ({ media: "video-trim.webm", trim: range, frames: kept, ...(cur.words && { words: wordsIn(cur.words, range) }) }));
+    const saved = await this.store.mutate(id, (cur) => ({ media: "video-trim.webm", trim: range, frames: kept, zoom: [], zoomSheet: "", ...(cur.words && { words: wordsIn(cur.words, range) }) }));
     if (!saved) {
       await this.bundle.remove(r.dir);
       return false;
@@ -197,6 +200,20 @@ export class History {
     await this.#rebuildSheet(id);
     await this.store.update(id, { bytes: await this.bundle.bytes(r.dir) });
     return true;
+  }
+
+  #zoomDeps(): ZoomDeps {
+    const { zoomVideo, zoomSheet } = this.#d;
+    return { store: this.store, bundle: this.bundle, log: this.#d.log, ...(zoomVideo && { zoomVideo }), ...(zoomSheet && { zoomSheet }) };
+  }
+
+  /** Shows parts of the video closer and keeps the result next to the original; no parts puts the video back as it was. */
+  zoom(id: string, regions: Parameters<typeof applyZoom>[2]): Promise<boolean> {
+    return applyZoom(this.#zoomDeps(), id, regions);
+  }
+
+  suggestZoom(id: string) {
+    return suggestZoom(this.#zoomDeps(), id);
   }
 
   /** The capture was handed to the voice chat: the list shows it. */

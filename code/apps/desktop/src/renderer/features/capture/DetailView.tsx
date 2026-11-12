@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { Banner, Button, Icon, Skeleton } from "@speakkit/ui";
 import type { CaptureDetail, CopyWhat, EditSource } from "../../../shared/capture/contract";
+import type { ZoomRegion } from "../../../shared/capture/zoom";
 import { capture } from "./api";
 import { AnnotateEditor } from "./annotate/AnnotateEditor";
 import { duration, itemSubtitle } from "./format";
 import { TrimPanel } from "./TrimPanel";
+import { ZoomPanel } from "./ZoomPanel";
 
 interface Props {
   id: string;
   platform: string;
+  /** The zoom experiment is on. */
+  zoomOn: boolean;
   onBack(): void;
   onDelete(item: CaptureDetail): void;
 }
@@ -26,7 +30,23 @@ function Narration({ words }: { words: CaptureDetail["words"] }) {
   );
 }
 
-function Actions({ detail, platform, onCopied, onDelete, onTrim }: { detail: CaptureDetail; platform: string; onCopied(what: CopyWhat): void; onDelete(): void; onTrim(): void }) {
+function Actions({
+  detail,
+  platform,
+  zoomOn,
+  onCopied,
+  onDelete,
+  onTrim,
+  onZoom,
+}: {
+  detail: CaptureDetail;
+  platform: string;
+  zoomOn: boolean;
+  onCopied(what: CopyWhat): void;
+  onDelete(): void;
+  onTrim(): void;
+  onZoom(): void;
+}) {
   const copy = async (what: CopyWhat) => {
     if (await capture.copy(detail.id, what)) onCopied(what);
   };
@@ -38,6 +58,7 @@ function Actions({ detail, platform, onCopied, onDelete, onTrim }: { detail: Cap
       </Button>
       <Button onClick={() => void copy("path")}>Copy path</Button>
       {detail.trimmable ? <Button onClick={onTrim}>Trim video</Button> : null}
+      {detail.zoomable && zoomOn ? <Button onClick={onZoom}>Zoom video</Button> : null}
       <Button iconLeft="folder" onClick={() => void capture.reveal(detail.id)}>
         {platform === "darwin" ? "Show in Finder" : "Show in folder"}
       </Button>
@@ -83,9 +104,17 @@ const saveTrim = (id: string, done: () => void) => async (startMs: number, endMs
   return ok;
 };
 
-function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail; platform: string; onDelete(): void; onChanged(): void }) {
+/** Shows parts of the video closer; `done` runs when it was done. */
+const saveZoom = (id: string, done: () => void) => async (regions: ZoomRegion[]) => {
+  const ok = await capture.zoom(id, regions);
+  if (ok) done();
+  return ok;
+};
+
+function Opened({ detail, platform, zoomOn, onDelete, onChanged }: { detail: CaptureDetail; platform: string; zoomOn: boolean; onDelete(): void; onChanged(): void }) {
   const [copied, setCopied] = useState<CopyWhat | null>(null);
   const [trimming, setTrimming] = useState(false);
+  const [zooming, setZooming] = useState(false);
   const { editing, cannotOpen, openEditor, closeEditor, saveEdit } = useEditing(detail.id, onChanged);
   return (
     <>
@@ -113,8 +142,11 @@ function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDeta
       {editing ? <AnnotateEditor source={editing.source} onClose={closeEditor} onSave={saveEdit} /> : null}
       {detail.kind === "recording" ? <p className="cap-detail__meta">Edits change the pictures, the contact sheet that is copied or sent to Voice chat, and nothing in the video file.</p> : null}
       {trimming ? <TrimPanel durationMs={detail.durationMs ?? 0} kept={detail.trim} onCancel={() => setTrimming(false)} onSave={saveTrim(detail.id, () => (setTrimming(false), onChanged()))} /> : null}
+      {zooming ? (
+        <ZoomPanel detail={detail} onCancel={() => setZooming(false)} onSave={saveZoom(detail.id, () => (setZooming(false), onChanged()))} onSuggest={() => capture.suggestZoom(detail.id)} />
+      ) : null}
       <Narration words={detail.words} />
-      <Actions detail={detail} platform={platform} onCopied={setCopied} onDelete={onDelete} onTrim={() => setTrimming(true)} />
+      <Actions detail={detail} platform={platform} zoomOn={zoomOn} onCopied={setCopied} onDelete={onDelete} onTrim={() => setTrimming(true)} onZoom={() => setZooming(true)} />
       <span className="cap-sr" role="status">
         {copied ? `Copied ${copied}` : ""}
       </span>
@@ -122,7 +154,19 @@ function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDeta
   );
 }
 
-function Body({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail | null | undefined; platform: string; onDelete(item: CaptureDetail): void; onChanged(): void }) {
+function Body({
+  detail,
+  platform,
+  zoomOn,
+  onDelete,
+  onChanged,
+}: {
+  detail: CaptureDetail | null | undefined;
+  platform: string;
+  zoomOn: boolean;
+  onDelete(item: CaptureDetail): void;
+  onChanged(): void;
+}) {
   if (detail === undefined)
     return (
       <div className="lm-card" aria-busy="true" aria-label="Loading capture">
@@ -135,11 +179,11 @@ function Body({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail
         It was removed from this computer. Go back to the list.
       </Banner>
     );
-  return <Opened detail={detail} platform={platform} onDelete={() => onDelete(detail)} onChanged={onChanged} />;
+  return <Opened detail={detail} platform={platform} zoomOn={zoomOn} onDelete={() => onDelete(detail)} onChanged={onChanged} />;
 }
 
 /** One capture opened: its keyframes, the narration with times, and the actions on it. */
-export function DetailView({ id, platform, onBack, onDelete }: Props) {
+export function DetailView({ id, platform, zoomOn, onBack, onDelete }: Props) {
   const [detail, setDetail] = useState<CaptureDetail | null | undefined>(undefined);
   const [version, setVersion] = useState(0);
   useEffect(() => {
@@ -157,7 +201,7 @@ export function DetailView({ id, platform, onBack, onDelete }: Props) {
       <Button iconLeft="arrow-left" onClick={onBack}>
         Captures
       </Button>
-      <Body detail={detail} platform={platform} onDelete={onDelete} onChanged={() => setVersion((n) => n + 1)} />
+      <Body detail={detail} platform={platform} zoomOn={zoomOn} onDelete={onDelete} onChanged={() => setVersion((n) => n + 1)} />
     </div>
   );
 }

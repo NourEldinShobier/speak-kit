@@ -1,3 +1,6 @@
+import type { PointerTrack } from "./pointer";
+import type { LiveSession } from "./live-narrator";
+import type { TimeRange } from "./page-context";
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
 import type { CaptureConfig } from "../../shared/capture/settings";
@@ -53,7 +56,11 @@ export interface RecordingDeps {
   micMissing(): void;
   noticeParams(): NoticeParams;
   /** The agent context text, or undefined when the experiment is off. */
-  context?(sourceId?: string): Promise<string | undefined>;
+  context?(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
+  /** Words made while the recording goes on (the live engine); absent or inactive, the whole track is transcribed afterwards. */
+  live?: LiveSession;
+  /** Where the pointer was during this recording (for suggested zooms); absent or with the input log off, nothing is noted. */
+  pointer?: PointerTrack;
   /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
   events?(): InputEvent[];
 }
@@ -103,6 +110,8 @@ class RecorderPorts {
     }
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
+    d.live?.begin();
+    d.pointer?.start(resolved.bounds);
   }
 
   async swap(id: string, target: Target): Promise<void> {
@@ -110,12 +119,19 @@ class RecorderPorts {
     const r = await this.#d.host.call({ op: "switch", sourceId: resolved.sourceId, ...(resolved.crop && { crop: resolved.crop }) });
     if (!r.ok) throw new Error(REASON[r.code]);
     if (this.#current?.id === id) this.#current.resolved = resolved;
+    this.#d.pointer?.move(resolved.bounds);
+  }
+
+  /** From the start of the recording to now. */
+  #range() {
+    return { from: this.#current?.startedAt ?? this.#d.now(), to: this.#d.now() };
   }
 
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     // read first: stopping the recorder can change which window is in front
-    const context = await d.context?.(this.#current?.resolved.sourceId);
+    const context = await d.context?.(this.#current?.resolved.sourceId, this.#range());
+    d.pointer?.stop();
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
     d.fence.close();
@@ -140,6 +156,8 @@ class RecorderPorts {
     await this.#d.host.call({ op: "abort" });
     // A capture that began meanwhile is not this one's to clear.
     if (this.#current && this.#current.id !== id) return;
+    this.#d.live?.cancel();
+    this.#d.pointer?.stop();
     this.#d.hideOwnWindows(false);
     this.#current = undefined;
   }
@@ -177,7 +195,11 @@ export function createSessionPorts(d: RecordingDeps): SessionPorts {
 }
 
 /** Words of the microphone track. Every stretch with any sound goes to the model; quiet speech is never dropped before it. */
-export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log">, media: Media): Promise<Word[] | null> {
+export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log" | "live">, media: Media): Promise<Word[] | null> {
+  if (d.live?.active()) {
+    const words = await d.live.finish();
+    return words && correctLag(words, AUDIO_LAG_MS);
+  }
   if (!media.pcm?.length || !d.narrator.ready()) return null;
   const words: Word[] = [];
   for (const seg of findSegments(media.pcm, { rate: SAMPLE_RATE })) {
@@ -216,9 +238,11 @@ export interface Finished {
 }
 
 /** The input events of the recording, next to its pictures; no file when there were none. */
-async function writeEvents(d: Pick<RecordingDeps, "events" | "bundle">, id: string) {
+async function writeEvents(d: Pick<RecordingDeps, "events" | "pointer" | "bundle">, id: string) {
   const events = d.events?.() ?? [];
   if (events.length) await d.bundle.writeFile(id, "events.json", JSON.stringify(events));
+  const pointer = d.pointer?.take() ?? [];
+  if (pointer.length) await d.bundle.writeFile(id, "pointer.json", JSON.stringify(pointer));
 }
 
 export async function saveBundle(d: RecordingDeps, f: Finished): Promise<CaptureRecord> {

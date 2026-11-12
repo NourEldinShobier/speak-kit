@@ -3,6 +3,7 @@ import type { CaptureStatus } from "../../../shared/capture/contract";
 import type { ExperimentId } from "../../../shared/capture/settings";
 import { registerExperiment, type ExperimentState } from "../experiments";
 import { capture, patchCapture } from "./api";
+import { PageScriptFromApp } from "./PageScript";
 
 /** The state of one capture experiment: read once, then kept in step with the pushes from the main process. */
 function useCaptureExperiment(id: ExperimentId): ExperimentState {
@@ -33,6 +34,12 @@ const GROUP = {
 
 /** Adds the capture cards to the Experiments page. */
 export function registerCaptureExperiments(): void {
+  registerCaptureKeyExperiments();
+  registerLabExperiments();
+}
+
+/** The experiments that add a way to start a capture or a source for it. */
+function registerCaptureKeyExperiments(): void {
   registerExperiment({
     ...GROUP,
     id: "capture-screenshots",
@@ -61,6 +68,43 @@ export function registerCaptureExperiments(): void {
     badges: ["Experimental"],
     guard: "Names only, never what is typed in a field. Password fields are skipped. Off until you turn it on; on a Mac, Speak Kit asks for Accessibility access first.",
     useState: () => useCaptureExperiment("agentContext"),
+  });
+
+  registerExperiment({
+    ...GROUP,
+    id: "capture-replay",
+    title: "Replay buffer",
+    description:
+      "Keeps the last 15 seconds of your first screen in memory while it is on. A key saves them as a capture, so you can catch something that just happened. Turn it on under Capture settings.",
+    badges: ["Experimental"],
+    guard: "A pill on the screen shows while it is on. Nothing is saved or sent until you save it, and you read what it keeps before the first time.",
+    useState: () => useCaptureExperiment("replay"),
+  });
+}
+
+/** The experiments that change what a capture holds or how it is edited. */
+function registerLabExperiments(): void {
+  registerExperiment({
+    ...GROUP,
+    id: "capture-zoom-export",
+    title: "Zoom in a recording",
+    description:
+      "Open a recording and show parts of its video closer, chosen by hand or suggested from where you clicked, where the pointer rested and where you drew. The zoomed copy comes with a contact sheet of the zoomed parts.",
+    badges: ["Experimental"],
+    guard: "The original video stays. A click is noted as a place and a time only, never what was clicked. With the input log off, no pointer positions or clicks are noted.",
+    useState: () => useCaptureExperiment("zoomExport"),
+  });
+
+  registerExperiment({
+    ...GROUP,
+    id: "capture-page-context",
+    title: "Development page context",
+    description:
+      "A page you are building can report what was clicked, console errors and failed requests. A capture lists them with the times, and Voice chat gets the list. Turn it on to get the script tag to add to your page.",
+    badges: ["Developer", "Experimental"],
+    guard: "Only pages on this computer can report, and only names: a button's text, a tag, a path. Never what is typed in a field, a request body or a cookie. Off until you turn it on.",
+    Extra: PageScriptFromApp,
+    useState: () => useCaptureExperiment("pageContext"),
   });
 
   registerExperiment({

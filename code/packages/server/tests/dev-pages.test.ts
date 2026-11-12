@@ -40,6 +40,12 @@ describe("page context store", () => {
     expect(store.between(905, 915).length).toBe(1);
   });
 
+  it("drops the label of an element that holds typed text because of its role", () => {
+    const store = new DevPages(() => 1000);
+    store.add({ page, events: ["textbox", "searchbox", "combobox", "spinbutton"].map((role) => ({ type: "click" as const, at: 900, element: { tag: "div", role, label: "my secret note" } })) });
+    expect(store.between(0, 2000).every((e) => e.type === "click" && e.element.label === undefined)).toBe(true);
+  });
+
   it("keeps every named field of a click, drops the label of every typed-text element, and cuts an address to its path", () => {
     const store = new DevPages(() => 1000);
     const el = (tag: string) => ({ type: "click" as const, at: 1000, element: { tag, role: "r", label: "L", component: "C", path: "main > x" } });
@@ -119,5 +125,114 @@ describe("page context routes", () => {
     expect((await post(c, { page, events: Array.from({ length: 51 }, () => click) })).status).toBe(400);
     expect((await fetch(`${c.base}/v1/capture/page-context?from=x`, { headers: c.auth })).status).toBe(400);
     expect((await fetch(`${c.base}/v1/capture/page-context`)).status).toBe(404);
+  });
+});
+
+describe("page context from the browser", () => {
+  const fromPage = (c: Ctx, origin: string, path = "/v1/capture/page-context") =>
+    fetch(`${c.base}${path}`, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } });
+
+  it("answers the preflight of a page on this computer, for this route only", async () => {
+    const c = (ctx = await start());
+    const ok = await fromPage(c, "http://localhost:3000");
+    expect([ok.status, ok.headers.get("access-control-allow-origin"), ok.headers.get("access-control-allow-headers")]).toEqual([
+      204,
+      "http://localhost:3000",
+      "Authorization, Content-Type, X-SpeakKit-Replace",
+    ]);
+    expect((await fromPage(c, "https://example.com")).status).toBe(403);
+    expect((await fromPage(c, "http://localhost.evil.com")).status).toBe(403);
+    expect((await fromPage(c, "http://localhost:3000", "/v1/speak")).status).toBe(403);
+  });
+
+  it("lets a page on this computer post with the token, and still refuses it without", async () => {
+    const c = (ctx = await start());
+    const body = JSON.stringify({ page, events: [{ type: "click", at: 5, element: { tag: "button" } }] });
+    const headers = { Origin: "http://localhost:3000", "Content-Type": "application/json" };
+    const withToken = await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers: { ...headers, ...c.auth }, body });
+    expect([withToken.status, withToken.headers.get("access-control-allow-origin")]).toEqual([202, "http://localhost:3000"]);
+    expect((await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers, body })).status).toBe(401);
+  });
+
+  it("serves the script without a token, and it posts what the page does", async () => {
+    const c = (ctx = await start());
+    const res = await fetch(`${c.base}/v1/capture/page-context/sdk.js`);
+    expect([res.status, res.headers.get("content-type")]).toEqual([200, "text/javascript; charset=utf-8"]);
+
+    const posts: { url: string; body: { events: { type: string; element?: unknown; message?: string }[] } }[] = [];
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const consoleErrors: unknown[][] = [];
+    let timer: (() => void) | undefined;
+    const button = { nodeType: 1, tagName: "BUTTON", id: "save", textContent: "  Save   order ", getAttribute: (n: string) => (n === "role" ? null : null), parentElement: null };
+    const win = {
+      location: { href: "http://localhost:3000/orders?token=x" },
+      fetch: async (url: string, init?: { body?: string; method?: string }) => {
+        if (init?.body) posts.push({ url, body: JSON.parse(init.body) });
+        return { status: url.endsWith("/api/orders") ? 500 : 200 };
+      },
+      setTimeout: (fn: () => void) => ((timer = fn), 1),
+      console: { error: (...a: unknown[]) => consoleErrors.push(a) },
+      addEventListener: (n: string, fn: (e: unknown) => void) => (listeners[n] = fn),
+    };
+    const doc = {
+      currentScript: { src: `${c.base}/v1/capture/page-context/sdk.js`, getAttribute: (n: string) => (n === "data-token" ? "tok" : null) },
+      title: "Orders",
+      addEventListener: (n: string, fn: (e: unknown) => void) => (listeners[`doc-${n}`] = fn),
+    };
+    new Function("window", "document", await res.text())(win, doc);
+
+    listeners["doc-click"]!({ target: { closest: () => button } });
+    win.console.error("bad", 7);
+    await win.fetch("http://localhost:3000/api/orders", { method: "post" });
+    await win.fetch(`${c.base}/v1/capture/page-context`, { method: "POST", body: "{}" });
+    timer?.();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const sent = posts.filter((p) => p.url.endsWith("page-context") && p.body.events);
+    expect(sent.length).toBe(1);
+    expect(sent[0]!.body.events.map((e) => e.type)).toEqual(["click", "console-error", "failed-request"]);
+    expect(sent[0]!.body.events[0]).toMatchObject({ element: { tag: "button", label: "Save order", path: "button#save" } });
+    expect(sent[0]!.body.events[1]!.message).toBe("bad 7");
+    expect(consoleErrors).toEqual([["bad", 7]]);
+  });
+
+  it("names what was clicked by its label, and never by text typed into a rich text editor or shown by a container", async () => {
+    const c = (ctx = await start());
+    const posts: { events: { element: { label?: string; tag: string } }[] }[] = [];
+    const listeners: Record<string, (e: unknown) => void> = {};
+    let timer: (() => void) | undefined;
+    const win = {
+      location: { href: "http://localhost:3000/" },
+      fetch: async (_url: string, init?: { body?: string }) => (init?.body && posts.push(JSON.parse(init.body)), { status: 200 }),
+      setTimeout: (fn: () => void) => ((timer = fn), 1),
+      console: { error: () => undefined },
+      addEventListener: () => undefined,
+    };
+    const doc = {
+      currentScript: { src: `${c.base}/v1/capture/page-context/sdk.js`, getAttribute: (n: string) => (n === "data-token" ? "tok" : null) },
+      title: "T",
+      addEventListener: (n: string, fn: (e: unknown) => void) => (listeners[n] = fn),
+    };
+    new Function("window", "document", await (await fetch(`${c.base}/v1/capture/page-context/sdk.js`)).text())(win, doc);
+    const el = (tag: string, attrs: Record<string, string>, text: string, inField = false) => ({
+      nodeType: 1,
+      tagName: tag,
+      id: "",
+      textContent: text,
+      parentElement: null,
+      getAttribute: (n: string) => attrs[n] ?? null,
+      closest: (sel: string) => (inField && sel.includes("contenteditable") ? {} : null),
+    });
+    const click = (e: ReturnType<typeof el>) => listeners["click"]!({ target: { closest: () => e } });
+    click(el("DIV", { contenteditable: "true" }, "dear diary, my password is hunter2", true));
+    click(el("DIV", { role: "textbox" }, "private draft", true));
+    click(el("DIV", { role: "dialog" }, "Settings Name Email Save Cancel"));
+    click(el("MAIN", {}, "the whole page text"));
+    click(el("DIV", { role: "dialog", "aria-label": "Settings" }, "Settings Name Email Save Cancel"));
+    click(el("BUTTON", {}, "  Save   order "));
+    click(el("DIV", { role: "tab" }, "Billing"));
+    timer?.();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(posts[0]!.events.map((e) => e.element.label)).toEqual([undefined, undefined, undefined, undefined, "Settings", "Save order", "Billing"]);
   });
 });

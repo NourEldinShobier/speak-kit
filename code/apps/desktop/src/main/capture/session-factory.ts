@@ -1,5 +1,8 @@
 import { nativeImage } from "electron";
 import { randomBytes } from "node:crypto";
+import type { PointerTrack } from "./pointer";
+import type { LiveSession } from "./live-narrator";
+import type { TimeRange } from "./page-context";
 import type { NoticeParams, Notice } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import { writeCapture } from "./clipboard-out";
@@ -14,7 +17,7 @@ import type { CaptureRecord } from "./store";
 import { hideOwnWindows } from "./windows";
 
 const now = () => Date.now();
-const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
+export const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
 
 export interface SessionWiring {
   platform: CapturePlatform;
@@ -23,8 +26,10 @@ export interface SessionWiring {
   fence: Fence;
   recorder: RecorderHolder;
   settings(): CaptureConfig;
-  context(sourceId?: string): Promise<string | undefined>;
+  context(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
   events(): InputEvent[];
+  live?: LiveSession;
+  pointer?: PointerTrack;
   /** False once the session this was made for was replaced: what it finishes later is not shown or copied. */
   current(): boolean;
   saved(record: CaptureRecord): void;
@@ -73,6 +78,8 @@ export function makeSession(w: SessionWiring): Session {
       noticeParams: w.noticeParams,
       context: w.context,
       events: w.events,
+      ...(w.live && { live: w.live }),
+      ...(w.pointer && { pointer: w.pointer }),
     }),
   );
 }

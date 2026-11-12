@@ -27,11 +27,17 @@ const scrub = (m: string): string => m.replace(/\bhttps?:\/\/[^\s"')]+/gi, (u) =
 
 /** The elements that hold what a person typed: their name is never kept. */
 const TYPED = new Set(["input", "textarea", "select"]);
+const TYPED_ROLES = new Set(["textbox", "searchbox", "combobox", "spinbutton"]);
 
 function clean(e: PageContextPost["events"][number], page: string): PageEvent {
   if (e.type === "click") {
     const { tag, role, label, component, path } = e.element;
-    return { type: "click", at: e.at, page, element: { tag, ...(role && { role }), ...(label && !TYPED.has(tag) && { label }), ...(component && { component }), ...(path && { path }) } };
+    return {
+      type: "click",
+      at: e.at,
+      page,
+      element: { tag, ...(role && { role }), ...(label && !TYPED.has(tag) && !(role && TYPED_ROLES.has(role)) && { label }), ...(component && { component }), ...(path && { path }) },
+    };
   }
   if (e.type === "console-error") return { type: "console-error", at: e.at, page, message: scrub(e.message) };
   return { type: "failed-request", at: e.at, page, method: e.method, path: pathOf(e.url), status: e.status };

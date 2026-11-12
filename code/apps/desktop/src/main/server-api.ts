@@ -11,6 +11,7 @@ import {
   type ExportRequest,
   type Health,
   type VoiceList,
+  type PageEvent,
 } from "@speakkit/protocol";
 import { DesktopFault } from "../shared/errors";
 import type { PreviewAudio } from "../shared/ipc";
@@ -28,6 +29,17 @@ export class ServerError extends DesktopFault {
     this.code = code;
   }
 }
+
+const optional = v.exactOptional(v.string());
+const pageEventsSchema = v.object({
+  events: v.array(
+    v.variant("type", [
+      v.object({ type: v.literal("click"), at: v.number(), page: v.string(), element: v.object({ tag: v.string(), role: optional, label: optional, component: optional, path: optional }) }),
+      v.object({ type: v.literal("console-error"), at: v.number(), page: v.string(), message: v.string() }),
+      v.object({ type: v.literal("failed-request"), at: v.number(), page: v.string(), method: v.string(), path: v.string(), status: v.number() }),
+    ]),
+  ),
+});
 
 /** Client for the engine and export routes of the local server (the desktop app talks to its own server over loopback). */
 export class ServerApi {
@@ -85,6 +97,9 @@ export class ServerApi {
   health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", { signal }));
   voices = (): Promise<VoiceList> => this.#json(voiceListSchema, this.#call("GET", "/v1/voices"));
   engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
+
+  /** What development pages reported between two moments (milliseconds since 1970). */
+  pageEvents = async (from: number, to: number): Promise<PageEvent[]> => (await this.#json(pageEventsSchema, this.#call("GET", `/v1/capture/page-context?from=${from}&to=${to}`))).events;
 
   startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));
   exportStatus = (id: string): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("GET", `/v1/export/${id}`));

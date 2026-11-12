@@ -70,4 +70,14 @@ describe("ServerApi", () => {
     expect(seen.map((s) => `${s.method} ${s.url}`)).toEqual(["POST /v1/export", `GET /v1/export/${job.id}`, `GET /v1/export/${job.id}/audio`, `DELETE /v1/export/${job.id}`]);
     expect(JSON.parse(seen[0]!.body)).toEqual({ sentences: ["A.", "B."], voice: "af_heart", speed: 1, gapMs: 250 });
   });
+
+  it("asks for the page events of a time range and keeps the fields of each kind", async () => {
+    const events = [
+      { type: "click", at: 5, page: "http://localhost:3000/", element: { tag: "button", label: "Pay" } },
+      { type: "failed-request", at: 6, page: "http://localhost:3000/", method: "GET", path: "/api", status: 500 },
+    ];
+    const { api, seen } = await stub((_r, _b, res) => json(res, 200, { events }));
+    expect(await api.pageEvents(1, 9)).toEqual(events);
+    expect(seen[0]!.url).toBe("/v1/capture/page-context?from=1&to=9");
+  });
 });

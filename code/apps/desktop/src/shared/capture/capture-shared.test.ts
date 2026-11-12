@@ -19,6 +19,34 @@ describe("capture settings", () => {
     expect(v.safeParse(CapturePatchSchema, { narrationCommand: "x".repeat(501) }).success).toBe(false);
     expect(v.safeParse(CapturePatchSchema, { narrationEngine: "command", narrationCommand: "stt {audio}", shiftInk: true }).success).toBe(true);
   });
+  it("keeps the live and Windows speech engines, and refuses an engine that does not exist", () => {
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "live" }).narrationEngine).toBe("live");
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "windows" }).narrationEngine).toBe("windows");
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "windows" }).success).toBe(true);
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "cloud" }).success).toBe(false);
+  });
+  it("keeps the replay buffer off until chosen, with its own key, and an old config loads", () => {
+    const c = parseConfig({ setupDone: true, capture: { enabled: true } }).capture;
+    expect([c.replayBuffer, c.replayConsented, c.replayHotkey]).toEqual([false, false, "F11"]);
+    expect(v.parse(CaptureConfigSchema, { replayBuffer: "yes", replayConsented: 1, replayHotkey: "Nonsense+" })).toMatchObject({ replayBuffer: false, replayConsented: false, replayHotkey: "F11" });
+    expect(v.parse(CaptureConfigSchema, { replayBuffer: true, replayConsented: true, replayHotkey: "F5" })).toMatchObject({ replayBuffer: true, replayConsented: true, replayHotkey: "F5" });
+    expect(v.safeParse(CapturePatchSchema, { replayBuffer: true, replayConsented: true, replayHotkey: "F5" }).success).toBe(true);
+    expect(v.safeParse(CapturePatchSchema, { replayHotkey: "" }).success).toBe(false);
+  });
+  it("describes the replay capsule: a beating dot, two buttons and what the buffer keeps", () => {
+    expect(capsuleView({ kind: "replay", target: "Screen" })).toEqual({
+      chip: "Screen",
+      text: "Replay is on. Keeping the last 15 seconds of the screen.",
+      detail: "Nothing is saved until you save it. Turning it off drops what is kept.",
+      tone: "normal",
+      live: true,
+      buttons: [
+        { id: "replay-save", label: "Save last 15 s", primary: true },
+        { id: "replay-off", label: "Turn off" },
+      ],
+    });
+    expect(capsuleView({ kind: "replay", target: "Screen", saving: true })).toMatchObject({ text: "Saving the last 15 seconds", live: true, buttons: [] });
+  });
   it("turns the setting into seconds", () => {
     expect(AUTO_SEND.map(autoSendSeconds)).toEqual([0, 3, 5, 10]);
   });

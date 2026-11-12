@@ -25,6 +25,8 @@ const handlersOf = (c: CaptureService): Handlers => ({
   source: (id, file) => c.source(id, file),
   saveEdit: (id, file, png) => c.saveEdit(id, file, png),
   trim: (id, startMs, endMs) => c.trim(id, startMs, endMs),
+  zoom: (id, regions) => c.zoom(id, regions),
+  suggestZoom: (id) => c.suggestZoom(id),
 });
 
 /** The Capture pages of the app window call these (only the app window may). Arguments are checked before any handler runs. */

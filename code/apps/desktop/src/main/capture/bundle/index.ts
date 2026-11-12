@@ -113,7 +113,9 @@ export function writeStreamed(b: Bundle, id: string, d: RecorderPayload): Promis
       return b.frame(id, d.atMs, d.jpeg);
     case "video":
       return b.video(id, d.segment, d.chunk);
-    default:
+    case "audio":
       return b.audio(id, d.chunk);
+    case "lost":
+      return Promise.resolve();
   }
 }

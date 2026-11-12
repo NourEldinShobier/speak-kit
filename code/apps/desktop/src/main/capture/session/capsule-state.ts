@@ -17,6 +17,8 @@ export interface CapsuleInputs {
   switching: boolean;
   /** What stays on screen after the session went idle, until it is closed or fades. */
   after?: AfterState | undefined;
+  /** The replay buffer is on (and whether a replay is being saved): shown while nothing else is. */
+  replay?: { saving: boolean } | undefined;
 }
 
 const STEPS = ["Saving the video", "Writing the words...", "Copying"] as const;
@@ -44,6 +46,7 @@ export function capsuleFor(i: CapsuleInputs): CapsuleState | null {
       ...(i.confirmDiscard && { confirmDiscard: true }),
     };
   if (s.phase === "finishing") return { kind: "finishing", target, steps: stepsFor(s.step) };
-  if (s.phase === "picking" || !i.after) return null;
-  return { ...i.after, target } as CapsuleState;
+  if (s.phase === "picking") return null;
+  if (i.after) return { ...i.after, target } as CapsuleState;
+  return i.replay ? { kind: "replay", target, ...(i.replay.saving && { saving: true }) } : null;
 }

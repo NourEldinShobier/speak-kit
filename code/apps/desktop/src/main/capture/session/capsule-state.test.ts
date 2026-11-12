@@ -34,4 +34,11 @@ describe("capsule state", () => {
     const notice = noticeFor("nothing-recorded");
     expect(capsuleFor({ ...base, after: { kind: "failed", notice } })).toMatchObject({ kind: "failed", notice });
   });
+  it("shows the replay indicator while nothing else is on, and gives way to a capture and to what follows one", () => {
+    expect(capsuleFor({ ...base, replay: { saving: false } })).toEqual({ kind: "replay", target: "Figma · Pricing page" });
+    expect(capsuleFor({ ...base, replay: { saving: true } })).toEqual({ kind: "replay", target: "Figma · Pricing page", saving: true });
+    expect(capsuleFor({ ...base, replay: { saving: false }, after: { kind: "saved", what: "x" } })).toMatchObject({ kind: "saved" });
+    expect(capsuleFor({ ...base, replay: { saving: false }, session: { phase: "recording", startedAt: 4000 } })).toMatchObject({ kind: "recording" });
+    expect(capsuleFor({ ...base, replay: { saving: false }, session: { phase: "picking" } })).toBeNull();
+  });
 });

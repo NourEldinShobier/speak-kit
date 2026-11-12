@@ -29,6 +29,8 @@ export const STORIES: { name: string; state: CapsuleState }[] = [
   { name: "Held", state: { kind: "countdown", target: TARGET, secondsLeft: 2, held: true } },
   { name: "Sent", state: { kind: "sent", target: TARGET, destination: "Voice chat", canUndo: false } },
   { name: "Undone", state: { kind: "undone", target: TARGET } },
+  { name: "Replay buffer on", state: { kind: "replay", target: TARGET } },
+  { name: "Saving a replay", state: { kind: "replay", target: TARGET, saving: true } },
   { name: "Could not send", state: { kind: "failed", target: TARGET, notice: noticeFor("send-failed") } },
 ];
 

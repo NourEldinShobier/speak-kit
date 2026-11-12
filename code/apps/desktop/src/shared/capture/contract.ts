@@ -2,6 +2,7 @@ import * as v from "valibot";
 import type { CapsuleState } from "./capsule";
 import type { CAPTURE_METHODS } from "./channels";
 import type { Notice, NoticeAction } from "./notices";
+import { ZoomRegionsSchema, type FrameRect, type ZoomRegion } from "./zoom";
 import { CapturePatchSchema, type CaptureConfig, type CapturePatch } from "./settings";
 
 export type CapturePhase = "idle" | "picking" | "recording" | "finishing";
@@ -59,6 +60,11 @@ export interface CaptureDetail extends CaptureItem {
   /** The video can be cut (a recording with one video file); `trim` is the range kept now. */
   trimmable: boolean;
   trim?: { startMs: number; endMs: number };
+  /** The video can be shown closer in parts (a recording with one video file). */
+  zoomable: boolean;
+  /** The zooms in the video shown now, and the contact sheet of them (a data: URL). */
+  zoom?: ZoomRegion[];
+  zoomSheet?: string;
 }
 
 export interface EditSource {
@@ -92,6 +98,10 @@ export interface CaptureBridge {
   saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean>;
   /** Cuts the video of a recording to this range (milliseconds from its start); false when it cannot be cut. The original video stays. */
   trim(id: string, startMs: number, endMs: number): Promise<boolean>;
+  /** Makes the video show these parts closer (none: the video as it was); false when it cannot be done. The original video stays. */
+  zoom(id: string, regions: ZoomRegion[]): Promise<boolean>;
+  /** Zooms chosen from where you clicked, where the pointer rested and where the pen drew; empty when nothing was noted. */
+  suggestZoom(id: string): Promise<ZoomRegion[]>;
   onStatus(cb: (s: CaptureStatus) => void): () => void;
 }
 
@@ -132,6 +142,8 @@ export const CAPTURE_ARGS = {
     ),
   ]),
   trim: v.tuple([id, v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_TRIM_MS)), v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(MAX_TRIM_MS))]),
+  zoom: v.tuple([id, ZoomRegionsSchema]),
+  suggestZoom: v.tuple([id]),
 } as const satisfies Record<(typeof CAPTURE_METHODS)[number], v.GenericSchema<unknown[]>>;
 
 /** What the picker overlay draws. Rectangles are in device-independent pixels of the overlay's display. */
@@ -171,6 +183,8 @@ export const CapsuleActionSchema = v.picklist([
   "switch",
   "copy-again",
   "copy-path",
+  "replay-save",
+  "replay-off",
 ]);
 export type CapsuleAction = v.InferOutput<typeof CapsuleActionSchema>;
 
@@ -182,7 +196,20 @@ export type RecorderCommand =
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
   | { id: number; op: "abort" }
-  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number }
+  | {
+      id: number;
+      op: "sheet";
+      jpegs: Uint8Array[];
+      columns: number;
+      cellWidth: number;
+      cellHeight: number;
+      /** The part of each picture to show (fractions), for the zoom contact sheet. */ crops?: FrameRect[];
+    }
+  | { id: number; op: "zoom"; video: Uint8Array; regions: ZoomRegion[] }
+  /** The replay buffer: the screen is kept in short pieces in the recorder window, the oldest dropped. Nothing is streamed to main until it is saved. */
+  | { id: number; op: "replay-start"; sourceId: string; crop?: Crop; frameEveryMs: number; maxSide: number; segmentMs: number }
+  | { id: number; op: "replay-save" }
+  | { id: number; op: "replay-stop" }
   | { id: number; op: "trim"; video: Uint8Array; startMs: number; endMs: number };
 
 export type RecorderResult =
@@ -198,11 +225,18 @@ export type RecorderResult =
       /** A trimmed video. */
       video?: Uint8Array | undefined;
       segments?: number | undefined;
+      /** A saved replay: the video pieces in order, and the pictures with their times from the start of the clip. */
+      clip?: { videos: Uint8Array[]; frames: { atMs: number; jpeg: Uint8Array }[]; durationMs: number } | undefined;
     }
   | { ok: false; code: "source" | "encoder" | "denied" };
 
 /** What the recorder streams to main while it runs, so nothing waits in memory and a crash loses at most a second. */
-export type RecorderPayload = { kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; segment: number; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array };
+export type RecorderPayload =
+  | { kind: "frame"; atMs: number; jpeg: Uint8Array }
+  | { kind: "video"; segment: number; chunk: Uint8Array }
+  | { kind: "audio"; chunk: Int16Array }
+  /** The screen being recorded went away (its video track ended). */
+  | { kind: "lost" };
 /** Each piece carries the generation of the recording it belongs to (see the fence in main). */
 export type RecorderData = RecorderPayload & { gen: number };
 
@@ -223,6 +257,7 @@ export const RecorderReplySchema = v.tuple([
       jpeg: v.optional(bytes),
       video: v.optional(bytes),
       segments: v.optional(count),
+      clip: v.optional(v.object({ videos: v.array(bytes), frames: v.array(v.object({ atMs: count, jpeg: bytes })), durationMs: count })),
     }),
     v.object({ ok: v.literal(false), code: v.picklist(["source", "encoder", "denied"]) }),
   ]),
@@ -233,4 +268,5 @@ export const RecorderDataSchema = v.variant("kind", [
   v.object({ gen, kind: v.literal("frame"), atMs: count, jpeg: bytes }),
   v.object({ gen, kind: v.literal("video"), segment: v.pipe(v.number(), v.integer(), v.minValue(1)), chunk: bytes }),
   v.object({ gen, kind: v.literal("audio"), chunk: v.instance(Int16Array) }),
+  v.object({ gen, kind: v.literal("lost") }),
 ]);

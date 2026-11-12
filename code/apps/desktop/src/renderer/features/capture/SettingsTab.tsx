@@ -4,6 +4,7 @@ import type { CaptureStatus } from "../../../shared/capture/contract";
 import { AUTO_SEND, INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
 import { HotkeyRecorder } from "../dictation";
 import { capture, patchCapture } from "./api";
+import { ReplaySettings } from "./ReplaySettings";
 import { INK_LABEL, RETENTION_LABEL } from "./format";
 
 const WHERE: Record<(typeof TARGET_KINDS)[number], string> = { ask: "Ask each time", screen: "Whole screen", window: "A window", area: "An area" };
@@ -50,6 +51,7 @@ function General({ s }: { s: CaptureStatus }) {
         control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await patchCapture({ hotkey }))} />}
       />
       {c.experiments.recording ? <RecordingKey s={s} onRecording={setRecording} /> : null}
+      {c.experiments.replay ? <ReplaySettings s={s} onRecording={setRecording} /> : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
           {s.hotkeyNote} <Button onClick={() => void patchCapture({ hotkey: "F9" })}>Restore F9</Button>
@@ -80,7 +82,7 @@ function Engine({ s }: { s: CaptureStatus }) {
       <SettingRow
         className="lm-row--control"
         label="Speech engine"
-        description="Dictation model uses the model Speak Kit already loads. Command starts a program of your own for each stretch of speech."
+        description="Dictation model and Live use the model Speak Kit already loads: Live works while you record, so the words are ready sooner. Windows speech uses the recognizer that comes with Windows. Command starts a program of your own for each stretch of speech."
         control={
           <Select
             label="Speech engine"
@@ -88,6 +90,8 @@ function Engine({ s }: { s: CaptureStatus }) {
             onChange={(narrationEngine) => void patchCapture({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
             options={[
               { value: "dictation", label: "Dictation model" },
+              { value: "live", label: "Dictation model, live" },
+              ...(s.platform === "win32" ? [{ value: "windows", label: "Windows speech" }] : []),
               { value: "command", label: "Command" },
             ]}
           />

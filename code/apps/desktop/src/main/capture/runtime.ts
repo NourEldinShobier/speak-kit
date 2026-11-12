@@ -1,15 +1,14 @@
-import { app, ipcMain, shell, type WebContents } from "electron";
-import * as v from "valibot";
-import { CAPSULE_ACTION, CAPSULE_HOVER } from "../../shared/capture/channels";
-import { CapsuleActionSchema, type CapsuleAction, type CapturePhase } from "../../shared/capture/contract";
+import type { CapsuleAction, CapturePhase } from "../../shared/capture/contract";
 import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
-import { createAgentContext } from "./context";
 import { createEventLog } from "./events";
+import { createRecordingExtras } from "./recording-extras";
+import { createReplayControl, type ReplayControl } from "./replay/control";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
-import { capsuleHandlers } from "./capsule-actions";
+import type { CapsuleActionDeps } from "./capsule-actions";
+import { CapsuleInput } from "./capsule-input";
 import { CaptureController } from "./controller";
 import { createFence, type Fence } from "./fence";
 import type { CaptureInbox } from "../voice-chat/capture-inbox";
@@ -28,7 +27,8 @@ import { shootFlow } from "./screenshot";
 import { finishForQuit } from "./session/quit";
 import { createSwitchFlow, type SwitchFlow } from "./switch-flow";
 import type { Session, Target } from "./session";
-import { externalFor } from "./notice-target";
+import type { CaptureRecord } from "./store";
+import { runNoticeAction } from "./notice-action";
 import { createRecordingGuards } from "./recording-guards";
 import { capturePage, openCapsuleWindow, openOverlayWindow } from "./windows";
 
@@ -42,6 +42,8 @@ export interface RuntimeDeps {
   inbox: CaptureInbox;
   /** Tests only: a recorder that makes pictures up. */
   recorder?: RecorderHost | undefined;
+  /** Left clicks while a recording runs (for suggested zooms); missing where the mouse cannot be hooked. */
+  clicks?: ((onClick: () => void) => () => void) | undefined;
   /** Sends the status to the app window. */
   publish(): void;
   /** Re-reads the number of captures, then publishes. */
@@ -59,11 +61,14 @@ export class CaptureRuntime {
   /** The recorder window; tests script it. */
   readonly recorder: RecorderHolder;
   readonly #place: Placement;
-  readonly #context: (sourceId?: string) => Promise<string | undefined>;
+  readonly #extras: ReturnType<typeof createRecordingExtras>;
   readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   #after!: AfterCapture;
+  /** The replay buffer (experiment). */
+  readonly replay: ReplayControl;
+  readonly #capsule = new CapsuleInput(() => this.#capsuleDeps());
   #switch!: SwitchFlow;
   readonly #fence: Fence = createFence();
   /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
@@ -77,6 +82,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
+    this.#extras = createRecordingExtras(deps);
     this.recorder = new RecorderHolder({
       recorder: deps.recorder,
       distDir: deps.distDir,
@@ -86,8 +92,9 @@ export class CaptureRuntime {
       bundle: () => deps.history.bundle,
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
+      live: this.#extras.live,
+      lost: () => void this.replay.rearm(),
     });
-    this.#context = createAgentContext({ enabled: () => this.#settings.experiments.agentContext, os: deps.platform.os });
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
@@ -109,14 +116,10 @@ export class CaptureRuntime {
       notify: (n) => this.notify(n),
       refresh: () => deps.refresh(),
     });
-    const onAction = (e: Electron.IpcMainEvent, a: unknown) => this.#fromCapsule(e.sender, a);
-    const onHover = (e: Electron.IpcMainEvent, over: unknown) => typeof over === "boolean" && this.controller.owns(e.sender) && this.controller.hover(over);
-    ipcMain.on(CAPSULE_ACTION, onAction);
-    ipcMain.on(CAPSULE_HOVER, onHover);
+    this.replay = createReplayControl(deps, this);
     this.#off.push(
       deps.platform.onDisplaysChanged(() => this.#displaysChanged()),
-      () => ipcMain.off(CAPSULE_ACTION, onAction),
-      () => ipcMain.off(CAPSULE_HOVER, onHover),
+      this.#capsule.listen(),
     );
   }
 
@@ -160,8 +163,10 @@ export class CaptureRuntime {
       fence: this.#fence,
       recorder: this.recorder,
       settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
-      context: this.#context,
+      context: this.#extras.context,
       events: () => this.#events.take(),
+      live: this.#extras.live,
+      pointer: this.#extras.pointer,
       current: () => epoch === this.#epoch,
       saved: (r) => this.#after.saved(r),
       pick: (signal) => this.#pick(signal),
@@ -205,12 +210,14 @@ export class CaptureRuntime {
     if (this.#session.state.phase === "idle") this.#screenOnly = false;
     this.#place.sessionChanged();
     this.#guards.limit.sync(this.#session.state.phase === "recording");
+    void this.replay.sync();
     this.controller.update();
     this.#d.publish();
   }
 
   /** A screen that is being recorded was unplugged: the capture so far is saved. */
   #displaysChanged() {
+    void this.replay.rearm(true);
     if (!this.#place.recordedDisplayLost()) return;
     this.notify(noticeFor("display-lost"));
     this.#session.stop();
@@ -226,6 +233,7 @@ export class CaptureRuntime {
       return this.#d.publish();
     }
     if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
+    await this.replay.pause();
     this.#after.send.cancel();
     this.#events.reset();
     this.controller.reset();
@@ -243,6 +251,11 @@ export class CaptureRuntime {
     this.#screenOnly = true;
     await this.start();
     if (this.#session.state.phase === "idle") this.#screenOnly = false;
+  }
+
+  /** The capture of a saved replay is shown like any other. */
+  saved(record: CaptureRecord) {
+    this.#after.saved(record);
   }
 
   stop() {
@@ -279,8 +292,8 @@ export class CaptureRuntime {
 
   // The capsule -----------------------------------------------------------------------------------------------------------------------------
 
-  #capsuleHandlers(): Record<CapsuleAction, () => void> {
-    return capsuleHandlers({
+  #capsuleDeps(): CapsuleActionDeps {
+    return {
       controller: this.controller,
       stop: () => this.#session.stop(),
       discard: () => this.discard(),
@@ -290,21 +303,14 @@ export class CaptureRuntime {
       sendLast: () => this.#after.sendLast(),
       switchTarget: () => void this.#switch.run().then((r) => r === "switched" && this.#events.add("target-switch")),
       note: (kind) => this.#events.add(kind),
+      replay: this.replay,
       copyLast: (what) => void this.#after.copyLast(what),
-    });
+    };
   }
 
   /** Tests only: presses a button of the capsule. */
   pressCapsule(action: CapsuleAction) {
-    this.#capsuleHandlers()[action]();
-    this.controller.update();
-  }
-
-  #fromCapsule(sender: WebContents, action: unknown) {
-    const parsed = v.safeParse(CapsuleActionSchema, action);
-    if (!parsed.success || !this.controller.owns(sender)) return;
-    this.#capsuleHandlers()[parsed.output]();
-    this.controller.update();
+    this.#capsule.press(action);
   }
 
   /** Try again sends the same capture again after a failed hand-over, and starts a new capture after any other failure. */
@@ -323,13 +329,9 @@ export class CaptureRuntime {
   }
 
   async noticeAction(action: NoticeAction): Promise<"folder" | "done"> {
-    const external = externalFor(action, this.#d.platform.os, app.getPath("home"));
-    if (external) await (external.kind === "url" ? shell.openExternal(external.value) : shell.openPath(external.value));
-    else if (action === "open-permissions") await this.#d.platform.openScreenSettings();
-    else if (action === "choose-folder") return "folder";
-    else if (action === "retry") void this.start();
-    this.dismissNotice();
-    return "done";
+    const done = await runNoticeAction(action, { platform: this.#d.platform, retry: () => void this.start() });
+    if (done === "done") this.dismissNotice();
+    return done;
   }
 
   /** At quit: a recording is stopped and saved, and the returned promise resolves when it is (or after 30 s). Undefined when nothing is running. */
@@ -339,6 +341,7 @@ export class CaptureRuntime {
 
   dispose() {
     this.#guards.limit.sync(false);
+    void this.replay.dispose();
     for (const off of this.#off) off();
     this.#board.dispose();
     this.#session.discard();
