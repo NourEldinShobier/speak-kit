@@ -65,10 +65,21 @@ describe("historyStats", () => {
         { app: "code.exe", count: 2 },
         { app: "notepad.exe", count: 1 },
       ],
+      outcomes: { pasted: 4, copied: 0, failed: 0 },
     });
   });
   it("is all zero for nothing", () => {
-    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, topApps: [] });
+    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } });
+  });
+  it("counts what happened to each text; an entry from before outcomes were kept counts as pasted", () => {
+    const stats = historyStats([
+      { text: "a", durationMs: 1, outcome: "sent" },
+      { text: "b", durationMs: 1, outcome: "copied" },
+      { text: "c", durationMs: 1, outcome: "failed" },
+      { text: "d", durationMs: 1, outcome: "failed" },
+      { text: "e", durationMs: 1 },
+    ]);
+    expect(stats.outcomes).toEqual({ pasted: 2, copied: 1, failed: 2 });
   });
   it("lists at most five programs, ties in name order", () => {
     const entries = "fedcbaz".split("").map((l) => ({ text: "x", durationMs: 1, app: `${l}.exe` }));
