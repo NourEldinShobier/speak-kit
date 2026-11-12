@@ -84,7 +84,7 @@ describe("double tap lock", () => {
   for (const [script, effects, kind] of rows) it(`${script} -> ${kind}`, () => expect(play(script)).toMatchObject({ effects, capture: { kind } }));
 
   it("a lock keeps the id of the second recording", () => {
-    expect(play("D0 U100 D200 U300").capture).toEqual({ kind: "locked", id: 2 });
+    expect(play("D0 U100 D200 U300").capture).toEqual({ kind: "locked", id: 2, key: "H" });
   });
 });
 
@@ -124,8 +124,8 @@ describe("toggle mode", () => {
   for (const [script, effects, kind] of rows) it(`${script} -> ${kind}`, () => expect(play(script, toggle)).toMatchObject({ effects, capture: { kind } }));
 
   it("the recording id stays with the toggled capture", () => {
-    expect(play("D0 U10", toggle).capture).toEqual({ kind: "toggle", id: 1, down: false });
-    expect(play("D0", toggle).capture).toEqual({ kind: "toggle", id: 1, down: true });
+    expect(play("D0 U10", toggle).capture).toEqual({ kind: "toggle", id: 1, down: false, key: "H" });
+    expect(play("D0", toggle).capture).toEqual({ kind: "toggle", id: 1, down: true, key: "H" });
   });
 });
 
@@ -180,7 +180,7 @@ describe("recorder failure", () => {
   });
 
   it("ignores a failure that belongs to an older recording", () => {
-    expect(play("D0 U100 D200 U300 F1").capture).toEqual({ kind: "locked", id: 2 });
+    expect(play("D0 U100 D200 U300 F1").capture).toEqual({ kind: "locked", id: 2, key: "H" });
     expect(play("D0 U300 F1").capture).toEqual({ kind: "idle" });
     expect(play("D0 F2").capture).toMatchObject({ kind: "hold", id: 1 });
   });

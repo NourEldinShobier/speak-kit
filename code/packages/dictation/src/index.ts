@@ -4,7 +4,7 @@
  * those arrive as the ports in `DictationDeps`.
  */
 export { createDictation } from "./dictation";
-export { defaultSettings, type InsertMode, type Replacement, type Retention, type Settings } from "./settings";
+export { defaultSettings, type InsertMode, type Mode, type Replacement, type Retention, type Settings } from "./settings";
 export type { HistoryEntry } from "./history";
 export type { CopyReason, PastePlan, Target } from "./paste-plan";
 export type {

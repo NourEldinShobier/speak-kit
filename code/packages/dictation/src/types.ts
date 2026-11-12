@@ -71,9 +71,11 @@ export type DictationErrorCode =
   | "insert-failed"
   | "password-field"
   | "hotkey-failed"
+  /** Another feature holds the microphone; the state names it in `owner`. */
+  | "mic-in-use"
   | "failed";
 
-export type Notice = { kind: "inserted" } | { kind: "copied"; reason: CopyReason } | { kind: "cancelled" } | { kind: "no-speech" };
+export type Notice = { kind: "inserted" } | { kind: "cancelled"; undoable?: true } | { kind: "copied"; reason: CopyReason } | { kind: "no-speech" };
 
 export type DictationState =
   | { status: "idle"; notice?: Notice }
@@ -81,7 +83,7 @@ export type DictationState =
   | { status: "locked" }
   | { status: "transcribing" }
   | { status: "pasting" }
-  | { status: "error"; code: DictationErrorCode };
+  | { status: "error"; code: DictationErrorCode; owner?: string };
 
 export interface DictationDeps {
   clock: Clock;
@@ -92,6 +94,8 @@ export interface DictationDeps {
   storage: HistoryStorage;
   /** Starting values; later changes go through `configure`. Missing keys take `defaultSettings`. */
   settings?: Partial<Settings>;
+  /** The feature that holds the microphone right now (voice chat, a screen look, a capture), or undefined when it is free. Dictation does not start while one does. */
+  micOwner?: () => string | undefined;
 }
 
 export interface Dictation {
@@ -105,6 +109,10 @@ export interface Dictation {
   start(): void;
   stop(): void;
   cancel(): void;
+  /** Runs the recording that was cancelled in the last minute through the pipeline. False when there is none. */
+  undoCancel(): boolean;
+  /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */
+  pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed">;
   history: {
     list(query?: { search?: string; limit?: number }): Promise<HistoryEntry[]>;
     /** Puts the saved text on the clipboard. */
