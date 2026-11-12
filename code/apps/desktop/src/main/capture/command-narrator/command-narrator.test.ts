@@ -69,11 +69,11 @@ describe("narrator choice", () => {
   it("uses the command when chosen and the dictation model otherwise, deciding at each call", async () => {
     const dictation = make("dictation");
     const command = make("command");
-    let use = false;
-    const n = chooseNarrator(() => use, { dictation, command });
+    let chosen = false;
+    const n = chooseNarrator(() => chosen, { dictation, command });
     expect(await n.transcribe(pcm)).toBe("dictation");
     expect(n.ready()).toBe(false);
-    use = true;
+    chosen = true;
     expect(await n.transcribe(pcm)).toBe("command");
     expect(n.ready()).toBe(true);
   });
