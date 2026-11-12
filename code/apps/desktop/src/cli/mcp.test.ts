@@ -28,6 +28,30 @@ describe("which tools are on", () => {
     expect(toolOn({ read_aloud: false }, "read_aloud")).toBe(false);
     expect(toolOn({ nope: true }, "nope")).toBe(false);
   });
+  it("names each tool, its group and whether it reads your own words", () => {
+    expect(MCP_TOOLS.map((t) => [t.name, t.title, t.group, t.private])).toEqual([
+      ["read_aloud", "Read aloud", "Reading", false],
+      ["stop_reading", "Stop reading", "Reading", false],
+      ["reading_queue", "Reading queue", "Reading", false],
+      ["history_search", "Search dictation history", "Your data", true],
+      ["meetings_list", "List meetings", "Your data", true],
+      ["meetings_search", "Search meetings", "Your data", true],
+      ["meetings_show", "Read a meeting", "Your data", true],
+      ["capture_list", "List captures", "Your data", true],
+      ["capture_show", "Read a capture", "Your data", true],
+    ]);
+    expect(MCP_TOOLS.map((t) => t.description)).toEqual([
+      "Read text aloud, now or after what is playing.",
+      "Stop the reading and clear the waiting list, or keep it.",
+      "See what is playing and what waits.",
+      "Search what was dictated. Read only.",
+      "List recorded meetings. Read only.",
+      "Search meeting titles, summaries and transcripts. Read only.",
+      "Read one meeting, or a time range or chapter of it. Read only.",
+      "List saved captures. Read only.",
+      "Read what was said in one capture. Read only.",
+    ]);
+  });
   it("the setting has a default, survives a file that lacks it and ignores wrong types", () => {
     expect(parseConfig({}).mcpTools).toEqual({});
     expect(parseConfig({ voice: "x" }).mcpTools).toEqual({});
@@ -57,6 +81,37 @@ describe("MCP server", () => {
       description: "Read one meeting, or a time range or chapter of it. Read only.",
       inputSchema: { required: ["id"], additionalProperties: false, properties: { chapter: { type: "integer", minimum: 1 } } },
     });
+  });
+
+  it("describes every argument of every tool", async () => {
+    const r = rig(Object.fromEntries(MCP_TOOLS.map((t) => [t.name, true])));
+    const list = (await handleMcp({ id: 2, method: "tools/list" }, r.ctx)) as { result: { tools: { name: string; inputSchema: object }[] } };
+    const limit = { type: "integer", minimum: 1, maximum: 200 };
+    const when = { description: "Seconds, m:ss or h:mm:ss.", oneOf: [{ type: "string" }, { type: "number" }] };
+    const obj = (properties: object, required: string[] = []) => ({ type: "object", properties, required, additionalProperties: false });
+    expect(Object.fromEntries(list.result.tools.map((t) => [t.name, t.inputSchema]))).toEqual({
+      read_aloud: obj({ text: { type: "string", description: "The text to read." }, queue: { type: "boolean", description: "Wait behind what is playing instead of replacing it." } }, ["text"]),
+      stop_reading: obj({ keepQueue: { type: "boolean", description: "Start the next waiting reading instead of clearing the list." } }),
+      reading_queue: obj({}),
+      history_search: obj({ query: { type: "string" }, limit }),
+      meetings_list: obj({ limit }),
+      meetings_search: obj({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["query"]),
+      meetings_show: obj({ id: { type: "string", description: "An id, 6 or more characters of one, or latest." }, from: when, to: when, chapter: { type: "integer", minimum: 1 } }, ["id"]),
+      capture_list: obj({ limit }),
+      capture_show: obj({ id: { type: "string", description: "An id, a title or latest." } }, ["id"]),
+    });
+  });
+
+  it("passes a zero start and nothing else through, and refuses a time that is neither text nor a number", async () => {
+    const r = rig({ meetings_show: true });
+    await tool(r, "meetings_show", { id: "x", from: 0 });
+    await tool(r, "meetings_show", { id: "x" });
+    expect(r.reads).toEqual([
+      { command: "meetings", action: "show", ref: "x", from: 0 },
+      { command: "meetings", action: "show", ref: "x" },
+    ]);
+    expect((await tool(r, "meetings_show", { id: "x", to: true })).result.content[0]!.text).toBe("from and to take seconds, m:ss or h:mm:ss.");
+    expect((await tool(r, "meetings_show", { id: "x", from: "1:99" })).result.isError).toBe(true);
   });
 
   it("sends each app tool to the right command", async () => {
@@ -127,7 +182,9 @@ describe("MCP server", () => {
   it("ignores notifications and refuses an unknown method", async () => {
     const r = rig();
     expect(await handleMcp({ method: "notifications/initialized" }, r.ctx)).toBeNull();
-    expect(await handleMcp({ id: 7, method: "nope" }, r.ctx)).toMatchObject({ error: { code: -32601 } });
+    expect(await handleMcp({ id: 7, method: "nope" }, r.ctx)).toEqual({ jsonrpc: "2.0", id: 7, error: { code: -32601, message: "Method not found" } });
+    expect(await handleMcp({ id: null, method: "ping" }, r.ctx)).toBeNull();
+    expect(await handleMcp({ id: 0, method: "tools/call" }, r.ctx)).toMatchObject({ result: { isError: true, content: [{ text: "Unknown tool ." }] } });
     expect(await handleMcp({ id: 8, method: "ping" }, r.ctx)).toMatchObject({ result: {} });
   });
 
@@ -138,7 +195,7 @@ describe("MCP server", () => {
     const lines: string[] = [];
     output.on("data", (c: Buffer) => lines.push(...c.toString().split("\n").filter(Boolean)));
     const done = serveMcp(input, output, r.ctx);
-    input.write('{"jsonrpc":"2.0","id":1,"method":"ping"}\nnot json\n\n{"method":"notifications/initialized"}\n');
+    input.write('{"jsonrpc":"2.0","id":1,"method":"ping"}\nnot json\n   \n\n{"method":"notifications/initialized"}\n');
     input.end();
     await done;
     expect(lines.map((l) => JSON.parse(l))).toEqual([

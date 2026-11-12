@@ -49,10 +49,6 @@ class Session {
     this.seenAt = o.now();
   }
 
-  get closed(): boolean {
-    return this.#closed;
-  }
-
   feed(buf: Buffer): void {
     if (this.#failed) throw new AutomationFault("failed", this.#failed.message);
     if (buf.length % 2 !== 0 || buf.length === 0) throw new AutomationFault("invalid_input", "audio is 16-bit samples: an even, non-zero number of bytes");

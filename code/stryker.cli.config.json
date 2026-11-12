@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "vitest.stryker.cli.config.ts",
+    "related": false
+  },
+  "mutate": [
+    "apps/desktop/src/cli/{run,render,speak,mcp}.ts",
+    "apps/desktop/src/cli/reads/{meetings,captures,time,index}.ts",
+    "apps/desktop/src/main/cli-path/{index,path-list}.ts",
+    "apps/desktop/src/shared/control/mcp-tools.ts",
+    "packages/server/src/streams/{segmenter,sessions}.ts",
+    "packages/server/src/page-context.ts",
+    "!**/*.test.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress", "json"],
+  "jsonReporter": {
+    "fileName": "reports/mutation/cli.json"
+  },
+  "incremental": true,
+  "incrementalFile": "reports/stryker-cli-incremental.json",
+  "tempDirName": "node_modules/.stryker-tmp-cli",
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  },
+  "timeoutMS": 10000,
+  "concurrency": 4,
+  "ignoreStatic": false
+}

@@ -18,6 +18,14 @@ function rig(script: (call: number) => Heard = (n) => ({ ok: true, text: ` words
   const sessions = new StreamSessions(host, { now: () => clock, retryMs: 1 });
   return { sessions, calls, tick: (ms: number) => void (clock += ms) };
 }
+const message = async (p: () => unknown) => {
+  try {
+    await p();
+  } catch (e) {
+    return (e as Error).message;
+  }
+  return "no error";
+};
 const code = async (p: () => unknown) => {
   try {
     await p();
@@ -90,6 +98,71 @@ describe("a live stream", () => {
     sessions.audio(id, owner, phrase());
     expect(await code(() => sessions.finish(id, owner))).toBe("failed");
     expect(events).toEqual([{ type: "failed", code: "model_missing", message: "The speech model is not downloaded yet." }]);
+    expect(sessions.open).toBe(0);
+  });
+});
+
+describe("stream details", () => {
+  it("gives a late listener what was said so far and why it failed, and builds ids and owners of the right length", async () => {
+    const { sessions } = rig();
+    const { id, owner } = sessions.create({});
+    expect([id.length, owner.length]).toEqual([12, 48]);
+    sessions.audio(id, owner, phrase());
+    await new Promise((r) => setTimeout(r, 5));
+    const late: StreamEvent[] = [];
+    sessions.subscribe(id, owner, (e) => late.push(e));
+    expect(late).toEqual([{ type: "segment", segment: { n: 1, text: "words 1" } }]);
+    const broken = rig(() => ({ ok: false, code: "failed" }));
+    const b = broken.sessions.create({});
+    broken.sessions.audio(b.id, b.owner, phrase());
+    await new Promise((r) => setTimeout(r, 5));
+    const seen: StreamEvent[] = [];
+    broken.sessions.subscribe(b.id, b.owner, (e) => seen.push(e));
+    expect(seen).toEqual([{ type: "failed", code: "failed", message: "The speech engine failed on a segment." }]);
+    expect(await message(() => broken.sessions.audio(b.id, b.owner, phrase()))).toBe("The speech engine failed on a segment.");
+  });
+
+  it("asks the engine 120 times while dictation holds it, then fails with a sentence", async () => {
+    const { sessions, calls } = rig(() => ({ ok: false, code: "busy" }));
+    const { id, owner } = sessions.create({});
+    sessions.audio(id, owner, phrase());
+    expect(await message(() => sessions.finish(id, owner))).toBe("Dictation kept the speech engine busy for too long.");
+    expect(calls.length).toBe(120);
+  });
+
+  it("says what is wrong in plain sentences", async () => {
+    const { sessions } = rig();
+    const { id, owner } = sessions.create({});
+    sessions.create({});
+    expect(await message(() => sessions.create({}))).toBe("at most 2 streams at once");
+    expect(await message(() => sessions.audio(id, owner, Buffer.alloc(3)))).toBe("audio is 16-bit samples: an even, non-zero number of bytes");
+    expect(await message(() => sessions.audio(id, "x", phrase()))).toBe("this stream belongs to another program");
+    expect(await message(() => sessions.audio("none", owner, phrase()))).toBe("no such stream");
+  });
+
+  it("takes exactly 30 minutes of audio and refuses one sample more, and a lease of exactly 30 s is not over", async () => {
+    const { sessions, tick } = rig(() => ({ ok: true, text: "", speech: false }));
+    const { id, owner } = sessions.create({});
+    const chunk = Buffer.alloc(1024 * 1024);
+    const full = Math.floor(STREAM_LIMITS.maxStreamBytes / chunk.length);
+    for (let i = 0; i < full; i++) sessions.audio(id, owner, chunk);
+    const rest = STREAM_LIMITS.maxStreamBytes - full * chunk.length;
+    expect(sessions.audio(id, owner, Buffer.alloc(rest))).toBe(rest);
+    expect(await message(() => sessions.audio(id, owner, Buffer.alloc(2)))).toBe("a stream carries at most 30 minutes of audio");
+    tick(STREAM_LIMITS.leaseMs);
+    expect(sessions.sweep()).toBe(0);
+    tick(1);
+    expect(sessions.sweep()).toBe(1);
+  });
+
+  it("a cancelled stream is gone, and so is a finished one", async () => {
+    const { sessions } = rig();
+    const a = sessions.create({});
+    sessions.audio(a.id, a.owner, phrase());
+    sessions.cancel(a.id, a.owner);
+    expect(await code(() => sessions.cancel(a.id, a.owner))).toBe(404);
+    const b = sessions.create({});
+    await sessions.finish(b.id, b.owner);
     expect(sessions.open).toBe(0);
   });
 });

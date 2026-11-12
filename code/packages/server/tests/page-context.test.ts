@@ -15,6 +15,8 @@ describe("page context store", () => {
     expect(loopbackPage("http://localhost:3000/a/b?x=1#y")).toBe("http://localhost:3000/a/b");
     expect(loopbackPage("https://app.localhost/")).toBe("https://app.localhost/");
     expect(loopbackPage("http://127.0.0.1:5173/")).toBe("http://127.0.0.1:5173/");
+    expect(loopbackPage("http://[::1]:5173/x")).toBe("http://[::1]:5173/x");
+    expect(loopbackPage(`http://localhost/${"p".repeat(300)}`)?.length).toBe(160);
     for (const bad of ["https://example.com/", "http://localhost.evil.com/", "file:///c:/x", "javascript:alert(1)", "nonsense"]) expect(loopbackPage(bad)).toBeUndefined();
   });
 
@@ -36,6 +38,51 @@ describe("page context store", () => {
       { type: "failed-request", at: 930, page: "http://localhost:3000/orders/12", method: "GET", path: "/api/orders", status: 500 },
     ]);
     expect(store.between(905, 915).length).toBe(1);
+  });
+
+  it("keeps every named field of a click, drops the label of every typed-text element, and cuts an address to its path", () => {
+    const store = new PageContext(() => 1000);
+    const el = (tag: string) => ({ type: "click" as const, at: 1000, element: { tag, role: "r", label: "L", component: "C", path: "main > x" } });
+    const long = "z".repeat(300);
+    store.add({
+      page,
+      events: [
+        el("div"),
+        el("textarea"),
+        el("select"),
+        { type: "failed-request", at: 1000, method: "PUT", url: "http://[bad", status: 404 },
+        { type: "console-error", at: 1000, message: `see http://localhost:1/a/b?x=1, and HTTP://h.test/c#d ${long}` },
+      ],
+    });
+    const got = store.between(1000, 1000);
+    expect(got[0]).toEqual({ type: "click", at: 1000, page: "http://localhost:3000/orders/12", element: { tag: "div", role: "r", label: "L", component: "C", path: "main > x" } });
+    expect(got[1]).toMatchObject({ element: { tag: "textarea", role: "r", component: "C", path: "main > x" } });
+    expect((got[1] as { element: { label?: string } }).element.label).toBeUndefined();
+    expect((got[2] as { element: { label?: string } }).element.label).toBeUndefined();
+    expect(got[3]).toMatchObject({ type: "failed-request", path: "/" });
+    expect((got[4] as { message: string }).message.startsWith("see /a/b and /c zzz")).toBe(true);
+    expect((got[4] as { message: string }).message.length).toBe(200);
+  });
+
+  it("a time window includes both ends, and an event exactly ten minutes old is kept", () => {
+    let now = 600_000;
+    const store = new PageContext(() => now);
+    const click = (at: number) => ({ type: "click" as const, at, element: { tag: "a" } });
+    store.add({ page, events: [click(0), click(10), click(20)] });
+    expect(store.between(10, 20).map((e) => e.at)).toEqual([10, 20]);
+    expect(store.between(0, 600_000).map((e) => e.at)).toEqual([0, 10, 20]);
+    now = 600_001;
+    store.add({ page, events: [] });
+    expect(store.between(0, 600_001).map((e) => e.at)).toEqual([10, 20]);
+  });
+
+  it("refuses a page that is not on this computer, and stores nothing from it", () => {
+    const store = new PageContext(() => 1000);
+    const click = { type: "click" as const, at: 1000, element: { tag: "a" } };
+    expect(store.add({ page: { url: "https://example.com/" }, events: [click] })).toBe(false);
+    expect(store.add({ page: { url: "ftp://localhost/" }, events: [click] })).toBe(false);
+    expect(store.between(0, 2000)).toEqual([]);
+    expect(store.add({ page, events: [] })).toBe(true);
   });
 
   it("forgets events older than ten minutes and keeps at most 500", () => {

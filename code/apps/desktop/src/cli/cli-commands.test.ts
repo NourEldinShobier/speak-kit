@@ -8,12 +8,13 @@ import type { MeetingsSource } from "./reads/meetings";
 
 const RUNNING: Discovery = { port: 4000, token: "t".repeat(32), pid: 1, version: "0.5.3" };
 
-function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config?: unknown; meetings?: MeetingsSource; running?: boolean } = {}) {
+function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config?: unknown; skill?: string; meetings?: MeetingsSource; running?: boolean } = {}) {
   const out: string[] = [];
   const err: string[] = [];
   const sent: ControlRequest[] = [];
   const replies = [...(over.replies ?? [])];
   let slept = 0;
+  const written: string[] = [];
   const io: Io = {
     out: (t) => void out.push(t),
     err: (t) => void err.push(t),
@@ -26,8 +27,10 @@ function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config
     post: async (_d, req) => (sent.push(req), replies.shift() ?? ok({})),
     stdin: async () => "from stdin",
     sleep: async () => void slept++,
+    readSkill: async () => over.skill,
+    writeSkill: async (t) => (written.push(t), "C:/skills/SKILL.md"),
   };
-  return { io, out, err, sent, slept: () => slept };
+  return { io, out, err, sent, written, slept: () => slept };
 }
 const run = (argv: string[], r = rig()) => runCli(argv, r.io);
 
@@ -209,5 +212,85 @@ describe("labs", () => {
   });
   it("is not changed while the app is closed", async () => {
     expect(await run(["labs", "on", "x"], rig({ running: false }))).toBe(3);
+  });
+});
+
+describe("speak --wait", () => {
+  const playing = ok({ current: { title: "x", status: "playing" }, items: [] });
+  const over = ok({ current: { title: "x", status: "finished" }, items: [] });
+  it("returns when the reading and everything behind it is over", async () => {
+    const r = rig({ replies: [ok({ id: "a", position: 0, sentences: 1, estimatedMs: 1 }), playing, ok({ current: null, items: [{ title: "next" }] }), over] });
+    expect(await run(["speak", "hello", "--wait"], r)).toBe(0);
+    expect(r.sent.map((s) => s.command)).toEqual(["speak", "queue", "queue", "queue"]);
+    expect(r.slept()).toBe(3);
+    expect(r.out.join("")).toBe("Reading.\n");
+  });
+  it("does not wait for a print or an export, or when the start was refused", async () => {
+    const print = rig({ replies: [ok({ id: "", position: 0, sentences: 1, estimatedMs: 1, parts: ["x"] })] });
+    await run(["speak", "x", "--print", "--wait"], print);
+    expect(print.sent.length).toBe(1);
+    const refused = rig({ replies: [fail("busy", "Busy.")] });
+    expect(await run(["speak", "x", "--wait"], refused)).toBe(1);
+    expect(refused.sent.length).toBe(1);
+  });
+  it("stops waiting and says why when the queue cannot be read", async () => {
+    const r = rig({ replies: [ok({ id: "a", position: 0, sentences: 1, estimatedMs: 1 }), fail("timeout", "Slow.")] });
+    expect(await run(["speak", "x", "--wait"], r)).toBe(1);
+    expect(r.err.join("")).toBe("Slow.\n");
+  });
+});
+
+describe("capabilities and skill without the app", () => {
+  it("capabilities answers from this build while the app is closed", async () => {
+    const r = rig({ running: false });
+    expect(await run(["--json", "capabilities"], r)).toBe(0);
+    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: true, data: { app: null, features: { meetings: true, speak: true }, commands: expect.arrayContaining(["speak", "meetings", "capture"]) } });
+  });
+  it("skill status says whether a file is there, and install needs the app", async () => {
+    const none = rig({ running: false });
+    await run(["skill", "status"], none);
+    expect(none.out.join("")).toBe("Not installed. Run: speakkit skill install\n");
+    const some = rig({ running: false, skill: "x" });
+    await run(["--json", "skill", "status"], some);
+    expect(JSON.parse(some.out.join(""))).toMatchObject({ data: { state: "installed" } });
+    expect(await run(["skill", "install"], rig({ running: false }))).toBe(3);
+  });
+});
+
+describe("skill", () => {
+  const text = "---\ndescription: x Written for Speak Kit 0.5.3, control version 1.\n---\n";
+  it("prints the text by default and with print, and refuses an unknown action", async () => {
+    for (const argv of [["skill"], ["skill", "print"]]) {
+      const r = rig({ replies: [ok({ text })] });
+      await run(argv, r);
+      expect(r.out.join("")).toBe(`${text.trimEnd()}\n`);
+    }
+    expect(parseArgs(["skill", "fly"]).usage).toBe("Use: skill, skill print, skill install or skill status.");
+    expect(parseArgs(["skill", "install", "now"]).usage).toBe("Use: skill, skill print, skill install or skill status.");
+  });
+  it("install writes the text the app gave", async () => {
+    const r = rig({ replies: [ok({ text })] });
+    expect(await run(["skill", "install"], r)).toBe(0);
+    expect(r.written).toEqual([text]);
+    expect(r.out.join("")).toBe("Installed at C:/skills/SKILL.md\n");
+  });
+  it("status says up to date, out of date with the version in the file, or not installed", async () => {
+    const same = rig({ replies: [ok({ text })], skill: text });
+    await run(["skill", "status"], same);
+    expect(same.out.join("")).toBe("Installed and up to date.\n");
+    const old = rig({ replies: [ok({ text })], skill: "Written for Speak Kit 0.4.0, control version 1." });
+    await run(["--json", "skill", "status"], old);
+    expect(JSON.parse(old.out.join(""))).toMatchObject({ data: { state: "out-of-date", installedFor: "0.4.0" } });
+    const plain = rig({ replies: [ok({ text })], skill: "old text" });
+    await run(["skill", "status"], plain);
+    expect(plain.out.join("")).toBe("Out of date. Run: speakkit skill install\n");
+    const none = rig({ replies: [ok({ text })] });
+    await run(["skill", "status"], none);
+    expect(none.out.join("")).toBe("Not installed. Run: speakkit skill install\n");
+  });
+  it("passes a failure of the app on with its exit code", async () => {
+    const r = rig({ replies: [fail("timeout", "Slow.")] });
+    expect(await run(["skill", "install"], r)).toBe(1);
+    expect(r.err.join("")).toBe("Slow.\n");
   });
 });

@@ -27,3 +27,18 @@ export async function followExport(io: Io, d: Discovery, first: Reply): Promise<
   }
   return reply;
 }
+
+/** Longest `--wait` follows a reading: an hour of polling every half second. */
+const MAX_WAIT_POLLS = 7200;
+
+/** A reading that was started waits here until it and everything behind it is over; the reply of the start is what the command answers with. */
+export async function followReading(io: Io, d: Discovery, started: Reply): Promise<Reply> {
+  for (let i = 0; i < MAX_WAIT_POLLS; i++) {
+    await io.sleep(500);
+    const q = await io.post(d, { command: "queue", args: {} }, LIMITS.timeoutMs);
+    if (!q.ok) return q;
+    const { current, items } = q.data as { current: { status: string } | null; items: unknown[] };
+    if ((!current || ["idle", "finished", "error"].includes(current.status)) && items.length === 0) return started;
+  }
+  return started;
+}

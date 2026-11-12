@@ -25,6 +25,8 @@ function rig(over: Partial<Io> & { reply?: Reply; running?: boolean } = {}) {
     readConfig: async () => undefined,
     file: async () => ({ kind: "none" }),
     sleep: async () => {},
+    readSkill: async () => undefined,
+    writeSkill: async () => "x",
     ...over,
   };
   return { io, out, err, sent, launched: () => launched, discoveries: () => discoveries };
