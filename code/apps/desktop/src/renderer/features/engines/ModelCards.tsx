@@ -3,11 +3,13 @@ import type { ModelCard } from "../../../shared/speech-models/contract";
 import { models } from "./api";
 import { accuracyPercent, accuracyText, FAILURE_BUTTONS, failureText, languagesText, memoryText, recommendedText, sizeText, speedPercent, speedText, transferText } from "../../speech-text";
 
-const TAGLINES: Record<string, string> = { Accurate: "The accurate one", Fast: "The fast one", Yours: "Added by you" };
+const TAGLINES: Record<string, string> = { Accurate: "Accurate", Fast: "Fast", Tiny: "Smallest", Basic: "Basic", Balanced: "Balanced", English: "English only", Yours: "Added by you, not tested" };
 export const tagline = (c: ModelCard): string => TAGLINES[c.tag] ?? c.tag;
 
 interface Props {
   card: ModelCard;
+  /** The dictation language: the accuracy figure shown is the one measured in it. */
+  language: string;
   busy: boolean;
   /** Runs a model action and shows what it answered. */
   run(f: () => Promise<unknown>): void;
@@ -17,10 +19,10 @@ interface Props {
   onFailureAdvice(advice: string, c: ModelCard): void;
 }
 
-function Facts({ c }: { c: ModelCard }) {
+function Facts({ c, language }: { c: ModelCard; language: string }) {
   // The bars sit under the words and are scaled the same way for every model, so a longer bar is better within one kind of figure; the test language stays in the text.
   const rows: [string, string, (number | undefined)?][] = [
-    ["Accuracy", accuracyText(c), accuracyPercent(c)],
+    ["Accuracy", accuracyText(c, language), accuracyPercent(c, language)],
     ["Speed", speedText(c), speedPercent(c)],
     ["Languages", languagesText(c.languages)],
     ["File size", sizeText(c.bytes)],
@@ -58,10 +60,14 @@ function Details({ c, run }: { c: ModelCard; run: Props["run"] }) {
             )}
           </dd>
         </div>
+        <div>
+          <dt>SHA-256</dt>
+          <dd className="sk-model__hash">{c.sha256 || "Not known"}</dd>
+        </div>
         {c.accuracy && (
           <div>
-            <dt>Accuracy source</dt>
-            <dd>{c.accuracy.source}</dd>
+            <dt>Figures</dt>
+            <dd>Measured by us on a small sample, on one computer. See the note under the cards.</dd>
           </div>
         )}
         <div>
@@ -218,7 +224,7 @@ export function ModelCardView(props: Props) {
           <Badge>Recommended</Badge> <span>{rec}</span>
         </p>
       )}
-      <Facts c={c} />
+      <Facts c={c} language={props.language} />
       <Details c={c} run={props.run} />
       <Footer {...props} />
     </article>

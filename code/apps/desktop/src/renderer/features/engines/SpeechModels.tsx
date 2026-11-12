@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Banner, Button, EmptyState, Modal, Segmented, Select, Skeleton } from "@speakkit/ui";
 import type { FoundView, ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
 import { models } from "./api";
+import { CompareDialog } from "./CompareDialog";
 import { ImportDialog } from "./ImportDialog";
 import { ModelCardView } from "./ModelCards";
 import { Performance } from "./Performance";
 import { DiskSpace, LanguageTable } from "./Tables";
-import { compareTable, deleteConfirm, DEFAULT_FILTER, hiddenLine, languageName, recommendationText, SORT_OPTIONS, visibleModels, type Filter } from "../../speech-text";
+import { deleteConfirm, DEFAULT_FILTER, hiddenLine, languageName, recommendationText, sampleText, SORT_OPTIONS, visibleModels, type Filter } from "../../speech-text";
 import type { Run } from "./run";
 import { useSpeechModels } from "./useSpeechModels";
 import "./speech-models.css";
@@ -158,50 +159,6 @@ function Status({ v, message, clear, run }: { v: SpeechModelsView; message: stri
   );
 }
 
-/** The models side by side. Figures measured in different languages are shown, never ranked against each other. */
-function CompareDialog({ open, cards, onClose }: { open: boolean; cards: ModelCard[]; onClose(): void }) {
-  const t = compareTable(cards);
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Compare models"
-      width={720}
-      footer={
-        <Button data-autofocus onClick={onClose}>
-          Close
-        </Button>
-      }
-    >
-      <div className="sk-compare" role="region" aria-label="Model comparison" tabIndex={0}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col" aria-label="Fact" />
-              {t.names.map((n) => (
-                <th key={n} scope="col">
-                  {n}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {t.rows.map((r) => (
-              <tr key={r.label}>
-                <th scope="row">{r.label}</th>
-                {r.cells.map((c, i) => (
-                  <td key={t.names[i]}>{c}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {t.mixedTests && <p className="sk-modal-text">These accuracy figures were measured in different languages. Compare them only within one language.</p>}
-    </Modal>
-  );
-}
-
 function DeleteDialog({ card, v, onClose, run }: { card: ModelCard | null; v: SpeechModelsView; onClose(): void; run: Run }) {
   const confirm = card ? deleteConfirm(card, v) : null;
   const remove = () => {
@@ -238,6 +195,26 @@ function useFound(v: SpeechModelsView | null): FoundView[] {
   return found;
 }
 
+function ModelGrid({ v, shown, run, busy, onDelete }: { v: SpeechModelsView; shown: ModelCard[]; run: Run; busy: boolean; onDelete(c: ModelCard): void }) {
+  const advice = (a: string) => run(() => (a === "open-proxy-settings" ? models.openProxySettings() : models.openModelsFolder()));
+  return (
+    <div className="sk-model-grid">
+      {shown.map((c) => (
+        <ModelCardView
+          key={c.id}
+          card={c}
+          language={v.dictationLanguage}
+          busy={busy || !!v.switching}
+          run={run}
+          onDelete={onDelete}
+          onUse={(x) => run(() => models.use(x.id))}
+          onFailureAdvice={advice}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ModelsSection({
   v,
   run,
@@ -250,7 +227,6 @@ function ModelsSection({
   const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
   const [comparing, setComparing] = useState(false);
   const { shown, hidden } = visibleModels(v.models, filter);
-  const advice = (a: string) => run(() => (a === "open-proxy-settings" ? models.openProxySettings() : models.openModelsFolder()));
   return (
     <section className="sk-engines-section" aria-labelledby="models-h">
       <div className="sk-engines-section__head">
@@ -259,12 +235,9 @@ function ModelsSection({
       </div>
       <Notices v={v} run={run} found={state.found} />
       <Status v={v} message={state.message} clear={state.clear} run={run} />
-      <div className="sk-model-grid">
-        {shown.map((c) => (
-          <ModelCardView key={c.id} card={c} busy={state.busy || !!v.switching} run={run} onDelete={state.setDeleting} onUse={(x) => run(() => models.use(x.id))} onFailureAdvice={advice} />
-        ))}
-      </div>
+      <ModelGrid v={v} shown={shown} run={run} busy={state.busy} onDelete={state.setDeleting} />
       {shown.length === 0 && <p className="sk-engines-section__foot">No model matches this filter.</p>}
+      <p className="sk-engines-section__foot">{sampleText(v.sample)}</p>
       {filter.downloadedOnly && hidden > 0 && <p className="sk-engines-section__foot">{hiddenLine(hidden)}</p>}
       <div className="sk-engines-section__actions">
         {shown.length > 1 && (
@@ -276,7 +249,7 @@ function ModelsSection({
           Import a model file
         </Button>
       </div>
-      <CompareDialog open={comparing} cards={shown} onClose={() => setComparing(false)} />
+      <CompareDialog open={comparing} v={v} cards={shown} onClose={() => setComparing(false)} />
     </section>
   );
 }

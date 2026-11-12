@@ -1,7 +1,8 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
 import { AUTO_LABEL, DEVICE_CHOICES, IDLE_CHOICES, LANGUAGES, STT_MODELS } from "@speakkit/engine";
-import { DICTATION_LANGUAGES, DICTATION_MODELS } from "../dictation/settings";
+import { DICTATION_MODELS } from "../dictation/models";
+import { DICTATION_LANGUAGES } from "../dictation/settings";
 import { parseConfig } from "../schemas";
 import { DEVICE_VALUES, EnginesConfigSchema, SPEECH_IDLE_CHOICES, SPOKEN_LANGUAGE_CODES, SPOKEN_LANGUAGE_LABELS } from "./config";
 

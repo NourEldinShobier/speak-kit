@@ -108,7 +108,7 @@ function modelTitle(card: ModelCard): string {
 
 export function ModelScreen({ view, card, onBack, onContinue, onSkip }: { view: SpeechModelsView; card: ModelCard; onBack(): void; onContinue(): void; onSkip(): void }) {
   const blocked = card.blocked ?? view.floor?.message;
-  const fast = view.models.find((m) => m.tag === "Fast" && !m.installed && m.id !== card.id);
+  const fast = view.models.find((m) => m.id === view.floor?.useModel && !m.installed && m.id !== card.id);
   const foot = (
     <Foot back={<Back onClick={onBack} />}>
       {!card.installed && (
