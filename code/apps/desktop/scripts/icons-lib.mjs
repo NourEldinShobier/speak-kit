@@ -5,18 +5,22 @@ import { Resvg } from "@resvg/resvg-js";
 
 const read = (name) => readFileSync(fileURLToPath(new URL(`../../../packages/ui/assets/logo/${name}.svg`, import.meta.url)), "utf8");
 /** The logo svg. With `tile`, a white squircle (1 px smaller, to avoid a pale fringe) sits under the pieces so the seams are white, not holes: app, tray and installer icons need a solid container; the in-app logo and the menu-bar template keep transparent seams. */
-const svgOf = (name, tile = false) => {
+const svgOf = (name, tile = false, tileColor = "#FFFFFF") => {
   const svg = read(name);
   const clip = svg.match(/<clipPath id="sq"><path d="([^"]+)"/)[1];
-  return tile ? svg.replace("</defs>\n", `</defs>\n<path transform="translate(1 1) scale(0.998)" d="${clip}" fill="#FFFFFF"/>\n`) : svg;
+  return tile ? svg.replace("</defs>\n", `</defs>\n<path transform="translate(1 1) scale(0.998)" d="${clip}" fill="${tileColor}"/>\n`) : svg;
 };
 /** Corner dot colour per tray state (states not listed have no dot). "asleep" is the logo in greyscale. */
 export const BADGES = { working: "#4A9EFF", error: "#F2555A", paused: "#9AA0AB", attention: "#F59E0B" };
 const DOT = { c: 778, r: 246, ring: 61 }; // bottom-right corner dot on the 1024 canvas
 
 /** PNG bytes of the logo at `size` px: small variant up to 48 px, full above; tray `state` adds the dot or greyscale. */
-export function logoPng(size, state = "normal") {
-  let svg = svgOf(size <= 48 ? "logo-small" : "logo", true);
+/** Under the pieces of the dark-taskbar variants. */
+export const DARK_TILE = "#26242B";
+
+export function logoPng(size, state = "normal", dark = false) {
+  const tile = dark ? DARK_TILE : "#FFFFFF";
+  let svg = svgOf(size <= 48 ? "logo-small" : "logo", true, tile);
   if (state === "asleep") {
     svg = svg
       .replace("<defs>", `<defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter>`)
@@ -24,7 +28,7 @@ export function logoPng(size, state = "normal") {
       .replace("\n</svg>", "</g>\n</svg>");
   } else if (BADGES[state]) {
     const { c, r, ring } = DOT;
-    svg = svg.replace("\n</svg>", `<circle cx="${c}" cy="${c}" r="${r}" fill="#FFFFFF"/><circle cx="${c}" cy="${c}" r="${r - ring}" fill="${BADGES[state]}"/>\n</svg>`);
+    svg = svg.replace("\n</svg>", `<circle cx="${c}" cy="${c}" r="${r}" fill="${tile}"/><circle cx="${c}" cy="${c}" r="${r - ring}" fill="${BADGES[state]}"/>\n</svg>`);
   }
   return new Resvg(svg, { fitTo: { mode: "width", value: size } }).render().asPng();
 }

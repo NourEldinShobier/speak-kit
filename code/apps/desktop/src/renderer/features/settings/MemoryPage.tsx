@@ -5,6 +5,7 @@ import { engineView } from "../../../shared/engine-view";
 import { IDLE_CHOICES, type IdleChoice } from "../../../shared/schemas";
 import { EngineBadge } from "../../pages";
 import { api, Page, useVisible } from "../../ui";
+import { ResourcesSections } from "./ResourcesSection";
 
 const IDLE_LABEL: Record<IdleChoice, string> = { "1": "After 1 minute", "5": "After 5 minutes", "15": "After 15 minutes", never: "Never" };
 
@@ -90,6 +91,7 @@ export function MemoryPage({ s }: { s: AppState }) {
     <Page title="Performance" lead="The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when idle.">
       <RightNow s={s} />
       <Unloading s={s} />
+      <ResourcesSections />
     </Page>
   );
 }

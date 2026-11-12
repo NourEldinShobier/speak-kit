@@ -1,3 +1,4 @@
+import { nativeTheme } from "electron";
 import type { TrayAction, TrayContext } from "../shared/tray";
 import type { Ctx } from "./context";
 import type { createExports } from "./export/service";
@@ -36,6 +37,7 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings }: Tr
     hidden: ctx.config.labs["hide-tray-icon"],
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
+    darkTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
     recorder: { phase: transcripts.phase() },
     ...(m.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(m.shortcut && { shortcut: m.shortcut }) } }),
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
@@ -88,5 +90,6 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
   };
   const tray = createTray(context, actions, (id) => void dictation.speech.use(id));
   ctx.sinks.add(() => tray.refresh());
+  nativeTheme.on("updated", tray.refresh); // the taskbar theme changed
   return tray;
 }

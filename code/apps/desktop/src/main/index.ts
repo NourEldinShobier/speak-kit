@@ -249,7 +249,8 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, pageSite: () => runtime.page.current(), readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      voiceEngine: () => runtime.engine,
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
       voiceChat,
     },
   );

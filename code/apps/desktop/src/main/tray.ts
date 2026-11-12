@@ -1,5 +1,5 @@
 import { Menu, Tray, type MenuItemConstructorOptions } from "electron";
-import { trayIconState, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext, type TrayItem } from "../shared/tray";
+import { trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext, type TrayItem } from "../shared/tray";
 import { trayIcon } from "./icon";
 
 type TrayHandlers = Record<TrayAction, () => void>;
@@ -59,8 +59,11 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   /** The system may refuse to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
   let failed = false;
   const build = () => {
-    tray = nativeTray(run, mac, () => menu);
-    failed = tray === null;
+    const t = new Tray(trayIcon("asleep", trayIconVariant(context()) === "dark"));
+    t.on("click", () => run.open());
+    // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
+    if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
+    tray = t;
     shown = "";
   };
   const refresh = () => {
@@ -74,15 +77,16 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
     }
     if (!tray) mount();
     const icon = trayIconState(c);
+    const dark = trayIconVariant(c) === "dark";
     const tip = trayTooltipFor(c);
     const items = trayMenuModel(c);
-    const key = JSON.stringify([icon, tip, items]);
+    const key = JSON.stringify([icon, dark, tip, items]);
     if (key === shown) return;
     shown = key;
     summary = `${icon}|${tip}`;
-    tray!.setImage(trayIcon(icon));
-    tray!.setToolTip(tip);
-    const template = menuTemplate(items, run, mac);
+    tray.setImage(trayIcon(icon, dark));
+    tray.setToolTip(tip);
+    const template = menuTemplate({ items, run, mac, switchTo });
     menu = Menu.buildFromTemplate(template);
     if (!mac) tray!.setContextMenu(menu);
   };
