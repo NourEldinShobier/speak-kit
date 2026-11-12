@@ -41,7 +41,7 @@ export interface ChecklistRow {
   detail: string;
   ok: boolean;
   /** The button that fixes it, when there is one. */
-  fix?: "fix-hotkey" | "download";
+  fix?: "fix-hotkey" | "download" | "open-mic-settings";
 }
 
 export interface ChecklistInput {
@@ -67,6 +67,7 @@ export function checklist(i: ChecklistInput): ChecklistRow[] {
       title: "Microphone",
       ok: i.mic !== "denied",
       detail: i.mic === "denied" ? "Blocked. Allow microphone access for Speak Kit in your system settings." : "Allowed. Speak Kit can hear your default microphone.",
+      ...(i.mic === "denied" && { fix: "open-mic-settings" as const }),
     },
     {
       id: "hotkey",

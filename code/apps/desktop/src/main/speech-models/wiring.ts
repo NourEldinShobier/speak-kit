@@ -54,6 +54,7 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
     models: () => speech.catalog(),
     transfers: new Transfers(),
     blocked: () => speech.floorMessage(),
+    switching: () => !!speech.switcher.switching,
   });
   speech = new SpeechModels({
     modelsDir: a.o.modelsDir,

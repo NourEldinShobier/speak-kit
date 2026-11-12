@@ -29,6 +29,8 @@ interface Deps {
   transfers?: Transfers;
   /** Why the speech engine cannot start on this computer (a processor without the needed instructions); nothing is loaded or downloaded then. */
   blocked?(): string | undefined;
+  /** A model switch (by hand, from the tray or by a rule) is running: a download that finishes meanwhile must not load or choose its model over it. */
+  switching?(): boolean;
 }
 
 /**
@@ -41,6 +43,8 @@ export class ModelManager {
   readonly #installed = new Map<string, boolean>();
   #job: ModelProgress | null = null;
   #started = 0;
+  /** A download asked for while another one runs; it starts when that one ends. */
+  #queued: string | undefined;
   #cancelled = false;
   /** Dictation was switched off: nothing may load a model again until it is switched on. */
   #stopped = false;
@@ -56,6 +60,14 @@ export class ModelManager {
 
   get catalog(): readonly SttModel[] {
     return this.#d.models?.() ?? STT_MODELS;
+  }
+  get queued(): string | undefined {
+    return this.#queued;
+  }
+  /** Forgets a download that was waiting for its turn. */
+  unqueue(): void {
+    this.#queued = undefined;
+    this.#d.changed(true);
   }
   get busy(): boolean {
     return this.#job !== null;
@@ -110,7 +122,10 @@ export class ModelManager {
   async download(id: DictationModelId): Promise<void> {
     const blocked = this.#d.blocked?.();
     if (blocked) return this.report(blocked);
-    if (this.#job && this.#job.id !== id) return;
+    if (this.#job && this.#job.id !== id) {
+      this.#queued = id;
+      return this.#d.changed(true);
+    }
     if (this.#job?.id === id) return void (await this.#running);
     this.#running = this.#download(id);
     await this.#running;
@@ -140,12 +155,13 @@ export class ModelManager {
         );
         this.#job.kind = "preparing";
         this.#d.changed(true);
-        await this.#d.stt.load(id as SttModelId);
+        if (!this.#d.switching?.()) await this.#d.stt.load(id as SttModelId);
       } else {
         await this.#d.stt.load(id as SttModelId, (f) => this.#progress(id, f));
       }
       this.#installed.set(id, true);
-      this.#d.select(id); // the new model becomes the one dictation uses once it is on disk and loaded
+      // The new model becomes the one dictation uses once it is on disk and loaded, unless a switch to another model is running: that choice wins.
+      if (!this.#d.switching?.()) this.#d.select(id);
     } catch (e) {
       if (!this.#cancelled) {
         this.error = e instanceof Error ? e.message : String(e);
@@ -158,7 +174,10 @@ export class ModelManager {
       this.#running = undefined;
       // Loading another model unloaded the one dictation uses; a failed or cancelled download must not leave it that way.
       if (!this.#stopped) this.#reload(true);
+      const next = this.#queued;
+      this.#queued = undefined;
       this.#d.changed(true);
+      if (next && !this.#cancelled && !this.#stopped) void this.download(next as DictationModelId);
     }
   }
 
@@ -173,12 +192,14 @@ export class ModelManager {
   async cancel(): Promise<void> {
     if (!this.#job) return;
     this.#cancelled = true;
+    this.#queued = undefined;
     this.transfers.cancel(this.#job.id);
     await settle(this.#d.stt.unload());
   }
 
   /** Frees the model (dictation turned off); a download in progress is stopped without an error. */
   async unload(): Promise<void> {
+    this.#queued = undefined;
     this.#cancelled = true;
     this.#stopped = true;
     await settle(this.#d.stt.unload());

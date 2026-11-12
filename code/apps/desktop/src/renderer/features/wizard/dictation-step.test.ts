@@ -90,6 +90,8 @@ describe("checklist", () => {
   it("offers the download when the model is missing and names a blocked microphone", () => {
     expect(checklist({ ...ok, modelInstalled: false })[2]).toMatchObject({ ok: false, fix: "download", detail: "Parakeet v3 is not installed yet." });
     expect(checklist({ ...ok, mic: "denied" })[0]!.ok).toBe(false);
+    expect(checklist({ ...ok, mic: "denied" })[0]).toMatchObject({ fix: "open-mic-settings" });
+    expect(checklist(ok)[0]).not.toHaveProperty("fix");
     expect(checklist({ ...ok, mic: "unknown" })[0]!.ok).toBe(true);
   });
 });

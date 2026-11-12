@@ -19,17 +19,7 @@ export const DICTATION_METHODS = [
   "pasteLast",
   "undoCancel",
   "openSoundSettings",
-  "historyStats",
-  "historyRecent",
-  "historyUseVersion",
-  "historyRetranscribe",
-  "historyCancelRetranscribe",
-  "historyAudio",
-  "historyDeleteRecording",
-  "historyExport",
-  "historyDismissNotice",
-  "vocabImport",
-  "vocabExport",
+  "openMicrophoneSettings",
 ] as const;
 export type DictationMethod = (typeof DICTATION_METHODS)[number];
 export const dictationChannel = (m: string) => `speakkit:dictation:${m}`;

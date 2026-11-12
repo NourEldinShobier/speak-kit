@@ -33,6 +33,8 @@ export interface ModelCard {
   failure?: { kind: string; message: string; host: string; keptBytes: number; advice: string };
   /** The accurate model is too slow here: the card is disabled and says why. */
   blocked?: string;
+  /** The download was asked for while another one runs and starts when that one ends. */
+  queuedBehind?: boolean;
   /** The model file the person added is gone from our folder. */
   fileMissing?: boolean;
   /** "Switched to English" style note when the saved language does not fit this model. */

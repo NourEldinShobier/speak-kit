@@ -1,7 +1,7 @@
 import { Badge, Button, Icon, ProgressBar } from "@speakkit/ui";
 import type { ModelCard } from "../../../shared/speech-models/contract";
 import { models } from "./api";
-import { accuracyText, FAILURE_BUTTONS, failureText, languagesText, memoryText, recommendedText, sizeText, speedText, transferText } from "../../speech-text";
+import { accuracyPercent, accuracyText, FAILURE_BUTTONS, failureText, languagesText, memoryText, recommendedText, sizeText, speedPercent, speedText, transferText } from "../../speech-text";
 
 const TAGLINES: Record<string, string> = { Accurate: "The accurate one", Fast: "The fast one", Yours: "Added by you" };
 export const tagline = (c: ModelCard): string => TAGLINES[c.tag] ?? c.tag;
@@ -18,18 +18,22 @@ interface Props {
 }
 
 function Facts({ c }: { c: ModelCard }) {
-  const rows: [string, string][] = [
-    ["Accuracy", accuracyText(c)],
-    ["Speed", speedText(c)],
+  // The bars sit under the words and are scaled the same way for every model, so a longer bar is better within one kind of figure; the test language stays in the text.
+  const rows: [string, string, (number | undefined)?][] = [
+    ["Accuracy", accuracyText(c), accuracyPercent(c)],
+    ["Speed", speedText(c), speedPercent(c)],
     ["Languages", languagesText(c.languages)],
     ["File size", sizeText(c.bytes)],
   ];
   return (
     <dl className="sk-model__facts">
-      {rows.map(([k, val]) => (
+      {rows.map(([k, val, bar]) => (
         <div key={k}>
           <dt>{k}</dt>
-          <dd>{val}</dd>
+          <dd>
+            {val}
+            {bar !== undefined && <ProgressBar thin block value={bar} label={`${k} of ${c.name}`} />}
+          </dd>
         </div>
       ))}
     </dl>
@@ -176,7 +180,21 @@ function DownloadFooter(p: Props) {
   );
 }
 
+function QueuedFooter({ card: c, run }: Props) {
+  return (
+    <div className="sk-model__foot">
+      <p className="sk-model__note" role="status">
+        Waiting for the current download to finish, then this one starts.
+      </p>
+      <div className="sk-model__actions">
+        <Button onClick={() => run(() => models.cancelDownload(c.id))}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
 function Footer(p: Props) {
+  if (p.card.queuedBehind) return <QueuedFooter {...p} />;
   if (p.card.fileMissing) return <MissingFooter {...p} />;
   if (p.card.transfer) return <TransferFooter {...p} />;
   return p.card.installed ? <InstalledFooter {...p} /> : <DownloadFooter {...p} />;
@@ -193,7 +211,7 @@ export function ModelCardView(props: Props) {
           <h3>{c.name}</h3>
           <p>{tagline(c)}</p>
         </div>
-        {c.inUse && <Badge>In use</Badge>}
+        {c.inUse && <Badge className="sk-badge--dark">In use</Badge>}
       </header>
       {rec && (
         <p className="sk-model__rec">

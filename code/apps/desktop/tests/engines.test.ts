@@ -39,6 +39,19 @@ describe("Engines page", () => {
     await shot(l, "engines-default");
   });
 
+  it("controls are 36 px high, the cards show accuracy and speed bars and the Kokoro row says Ready", async () => {
+    const l = await start({ config: DONE });
+    await open(l);
+    const height = async (loc: ReturnType<typeof l.page.locator>) => Math.round((await loc.boundingBox())!.height);
+    expect(await height(l.page.getByRole("radiogroup", { name: "Show models" }))).toBe(36);
+    expect(await height(l.page.getByRole("combobox", { name: "Language" }))).toBe(36);
+    expect(await height(l.page.getByRole("combobox", { name: "Sort" }))).toBe(36);
+    const first = l.page.locator("[data-testid^=model-card-]").first();
+    expect(await first.getByRole("progressbar", { name: /^Accuracy of / }).getAttribute("aria-valuenow")).toBe("96");
+    expect(await first.getByRole("progressbar", { name: /^Speed of / }).count()).toBe(1);
+    expect(await l.page.locator("[data-engine=kokoro]").getByText("Ready").count()).toBe(1);
+  });
+
   it("the Downloaded filter keeps the installed models and says how many are hidden", async () => {
     const l = await start({ config: DONE });
     await open(l);

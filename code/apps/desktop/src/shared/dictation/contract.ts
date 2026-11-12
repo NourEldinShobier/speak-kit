@@ -132,6 +132,8 @@ export interface DictationBridge {
   undoCancel(): Promise<boolean>;
   /** Opens the operating system's sound input settings. */
   openSoundSettings(): Promise<void>;
+  /** Opens the operating system's microphone permission page. */
+  openMicrophoneSettings(): Promise<void>;
   onStatus(cb: (s: DictationStatus) => void): () => void;
   /** HUD page and microphone window. */
   onHud(cb: (v: HudView) => void): () => void;
@@ -206,17 +208,7 @@ export const DICTATION_ARGS = {
   pasteLast: v.tuple([]),
   undoCancel: v.tuple([]),
   openSoundSettings: v.tuple([]),
-  historyStats: v.tuple([]),
-  historyRecent: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50))]),
-  historyUseVersion: v.tuple([id, id]),
-  historyRetranscribe: v.tuple([id, v.picklist(DICTATION_MODELS)]),
-  historyCancelRetranscribe: v.tuple([]),
-  historyAudio: v.tuple([id]),
-  historyDeleteRecording: v.tuple([id]),
-  historyExport: v.tuple([]),
-  historyDismissNotice: v.tuple([]),
-  vocabImport: v.tuple([]),
-  vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
+  openMicrophoneSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

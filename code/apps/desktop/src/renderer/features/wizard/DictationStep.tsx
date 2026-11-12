@@ -41,6 +41,8 @@ function useMic(): Mic {
   return state;
 }
 
+const FIX_LABELS = { "fix-hotkey": "Fix hotkey", download: "Download", "open-mic-settings": "Open settings" } as const;
+
 function ChecklistCard({ rows, fix }: { rows: ChecklistRow[]; fix(id: ChecklistRow["fix"]): void }) {
   return (
     <section className="sk-checklist" aria-label="Setup checklist">
@@ -49,7 +51,12 @@ function ChecklistCard({ rows, fix }: { rows: ChecklistRow[]; fix(id: ChecklistR
         {rows.map((r) => (
           <SettingRow
             key={r.id}
-            label={r.title}
+            label={
+              <span className="sk-checklist__label">
+                <Icon name={r.ok ? "check" : "alert-triangle"} size={14} />
+                {r.title}
+              </span>
+            }
             description={r.detail}
             control={
               r.ok ? (
@@ -57,7 +64,7 @@ function ChecklistCard({ rows, fix }: { rows: ChecklistRow[]; fix(id: ChecklistR
                   <Icon name="check" size={14} /> Ready
                 </span>
               ) : (
-                r.fix && <Button onClick={() => fix(r.fix)}>{r.fix === "fix-hotkey" ? "Fix hotkey" : "Download"}</Button>
+                r.fix && <Button onClick={() => fix(r.fix)}>{FIX_LABELS[r.fix]}</Button>
               )
             }
           />
@@ -85,6 +92,7 @@ function Resume({ onContinue, onSkip }: { onContinue(): void; onSkip(): void }) 
   const fix = (id: ChecklistRow["fix"]) => {
     if (id === "fix-hotkey") void dictation.setEnabled(true);
     else if (id === "download" && card) void models.download(card.id);
+    else if (id === "open-mic-settings") void dictation.openMicrophoneSettings();
   };
   const skip = (
     <Button variant="ghost" onClick={onSkip}>

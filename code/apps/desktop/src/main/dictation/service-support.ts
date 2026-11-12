@@ -128,3 +128,6 @@ export class Throttle {
     clearTimeout(this.#timer);
   }
 }
+
+/** A recording is running (held, toggled or locked). */
+export const isRecording = (s: { status: string }): boolean => s.status === "recording" || s.status === "locked";

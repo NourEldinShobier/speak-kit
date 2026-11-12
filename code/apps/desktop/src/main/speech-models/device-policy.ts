@@ -43,9 +43,10 @@ export class DevicePolicy {
 
   /** Loading on the card failed and the engine went on with the CPU. An out-of-memory failure is not held against the card. */
   onGpuFallback(message: string): void {
-    const gpu = this.#d.gpu();
+    // Without probe data the failure is kept under a generic card, so it is never mislabelled as out of memory.
+    const gpu = this.#d.gpu() ?? { name: "Unknown graphics card", driver: "unknown" };
     const c = this.#d.config();
-    if (onGpuFailure(message).markFailed && gpu) {
+    if (onGpuFailure(message).markFailed) {
       c.failedDevices = recordFailure(c.failedDevices, gpu, { message, at: this.#d.now() });
       this.#d.save();
     } else this.movedByMemory = true;

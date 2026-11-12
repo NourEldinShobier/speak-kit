@@ -64,6 +64,13 @@
       0 4px 12px rgb(0 0 0 / 0.06);
   }
 }
+.sk-badge--dark {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.sk-model__facts dd .lm-progress {
+  margin-block-start: 6px;
+}
 .sk-model.is-inuse {
   box-shadow: 0 0 0 1px var(--stroke-focus-field);
 }

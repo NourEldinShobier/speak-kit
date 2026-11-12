@@ -131,6 +131,15 @@ describe("SpeechModels: device", () => {
     expect(speech.gpuWanted()).toBe(true);
   });
 
+  it("a real failure while the graphics card is not known is remembered and not called out of memory", async () => {
+    const { speech, cfg } = setup({}, { platform: "win32", arch: "x64", avx2: true, cores: 8, memoryGb: 16 });
+    await speech.init();
+    speech.onGpuFallback("no Vulkan device found");
+    expect(cfg.engines.failedDevices).toHaveLength(1);
+    expect(cfg.engines.failedDevices[0]).toMatchObject({ reason: "no Vulkan device found", at: 1000 });
+    expect(speech.view().device.movedToCpuByMemory).toBe(false);
+  });
+
   it("out of memory moves to the CPU without marking the card as failed, and Try again clears the note", async () => {
     const { speech, cfg, fake } = setup();
     await speech.init();
@@ -183,6 +192,28 @@ describe("SpeechModels: device", () => {
     const { speech } = setup({}, { platform: "win32", arch: "x64" });
     await speech.init();
     expect(speech.gpuWanted()).toBe(false);
+  });
+});
+
+describe("SpeechModels: automatic switching", () => {
+  it("a rule that matched during a recording is applied when the recording ends, not only at the next change of program", async () => {
+    vi.useFakeTimers();
+    try {
+      const { speech, models, cfg, state } = setup();
+      await models.refresh();
+      cfg.engines.autoSwitch = { enabled: true, rules: [{ id: "r", app: "chat.exe", model: PARAKEET }] };
+      cfg.dictation.model = TURBO;
+      state.recording = true;
+      speech.auto.update({ app: "chat.exe" });
+      await vi.advanceTimersByTimeAsync(400);
+      expect(cfg.dictation.model).toBe(TURBO);
+      state.recording = false;
+      speech.recordingEnded();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(cfg.dictation.model).toBe(PARAKEET);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

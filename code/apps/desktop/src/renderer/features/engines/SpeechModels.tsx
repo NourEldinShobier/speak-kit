@@ -76,6 +76,7 @@ function Filters({ v, filter, set }: { v: SpeechModelsView; filter: Filter; set(
     <div className="sk-model-filters">
       <Segmented
         label="Show models"
+        className="lm-seg--lg"
         value={filter.downloadedOnly ? "downloaded" : "all"}
         onChange={(id) => set({ ...filter, downloadedOnly: id === "downloaded" })}
         items={[
@@ -85,12 +86,11 @@ function Filters({ v, filter, set }: { v: SpeechModelsView; filter: Filter; set(
       />
       <Select
         label="Language"
-        size="sm"
         value={filter.language}
         onChange={(language) => set({ ...filter, language })}
         options={[{ value: "all", label: "All languages" }, ...codes.map((c) => ({ value: c, label: languageName(c) }))]}
       />
-      <Select label="Sort" size="sm" value={filter.sort} onChange={(sort) => set({ ...filter, sort: sort as Filter["sort"] })} options={SORT_OPTIONS} />
+      <Select label="Sort" value={filter.sort} onChange={(sort) => set({ ...filter, sort: sort as Filter["sort"] })} options={SORT_OPTIONS} />
     </div>
   );
 }
