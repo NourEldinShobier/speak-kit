@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
+import { DEFAULT_DICTATION } from "../../../shared/dictation/settings";
 
 vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitDictation: {} };
@@ -39,11 +40,12 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: { enabled: true, hotkey: "ControlLeft+AltLeft+Space", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [{ from: "gonna", to: "going to" }] },
+  settings: { ...DEFAULT_DICTATION, enabled: true, hotkey: "ControlLeft+AltLeft+Space", language: "en", replacements: [{ from: "gonna", to: "going to" }] },
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,
   historyCount: 128,
+  mic: { kind: "ready", label: "Microphone Array" },
   ...over,
 });
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));

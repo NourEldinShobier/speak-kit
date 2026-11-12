@@ -40,6 +40,8 @@ export interface Win32 {
   /** GWL_STYLE, or GWL_EXSTYLE when `extended` is true. */
   windowStyle(h: Handle, extended?: boolean): number;
   address(h: Handle): string;
+  /** Brings the window with this address (from `address`) to the front, restoring it when minimized. False when Windows refuses. */
+  setForeground(address: string): boolean;
   /** Program file name and whether its token is elevated. Both null when the process cannot be opened; elevated is null when its token is closed to us (a sign it runs with more rights). */
   processInfo(pid: number): { exe: string | null; elevated: boolean | null };
   hook: {
@@ -118,7 +120,7 @@ function clipboardApi(koffi: Koffi): ClipboardApi {
   };
 }
 
-type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address">;
+type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address" | "setForeground">;
 
 function windowApi(koffi: Koffi): WindowApi {
   const user32 = koffi.load("user32.dll");
@@ -139,6 +141,10 @@ function windowApi(koffi: Koffi): WindowApi {
   const GetClassNameW = user32.func("int __stdcall GetClassNameW(void *h, _Out_ uint16_t *buf, int n)");
   const GetGUIThreadInfo = user32.func("int __stdcall GetGUIThreadInfo(uint32 tid, _Inout_ SpeakKitGuiThreadInfo *info)");
   const GetWindowLongW = user32.func("int32 __stdcall GetWindowLongW(void *h, int index)");
+  const SetForegroundWindow = user32.func("int __stdcall SetForegroundWindow(intptr h)");
+  const IsIconic = user32.func("int __stdcall IsIconic(intptr h)");
+  const ShowWindow = user32.func("int __stdcall ShowWindow(intptr h, int cmd)");
+  const SW_RESTORE = 9;
   const GWL_STYLE = -16;
   const GWL_EXSTYLE = -20;
   return {
@@ -158,6 +164,12 @@ function windowApi(koffi: Koffi): WindowApi {
     },
     windowStyle: (h, extended = false) => GetWindowLongW(h, extended ? GWL_EXSTYLE : GWL_STYLE) >>> 0,
     address: (h) => String(h ? koffi.address(h) : 0),
+    setForeground: (address) => {
+      const h = Number(address);
+      if (!Number.isSafeInteger(h) || h <= 0) return false;
+      if (IsIconic(h)) ShowWindow(h, SW_RESTORE);
+      return SetForegroundWindow(h) !== 0;
+    },
   };
 }
 

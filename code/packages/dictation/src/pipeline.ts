@@ -86,8 +86,8 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
   }
 }
 
-async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string }): Promise<Outcome> {
-  const { clip, heard, text } = said;
+async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number }): Promise<Outcome> {
+  const { clip, heard, text, transcribeMs } = said;
   const target = await job.target;
   let current = await within(ctx, "window", STAGE_MS, () => foreground(ctx.deps.inserter), undefined);
   const refocus = ctx.settings.returnToApp && !!target && !!current && current.id !== target.id && !current.passwordField && !!ctx.deps.inserter.focus;
@@ -116,6 +116,9 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
         ...(heard.language !== undefined && { language: heard.language }),
         ...(heard.model !== undefined && { model: heard.model }),
         ...(clip.interrupted && { kind: "interrupted" as const }),
+        ...((current ?? target)?.name !== undefined && { displayName: (current ?? target)!.name! }),
+        timings: { transcribeMs },
+        outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
       }),
     undefined,
   );
@@ -134,7 +137,9 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
     return { error: "mic-silent" };
   }
   if (clip.interrupted) ctx.deps.keepClip?.(clip, "interrupted");
+  const heardFrom = ctx.deps.clock.now();
   const heard = await hear(ctx, clip);
+  const transcribeMs = ctx.deps.clock.now() - heardFrom;
   if (!heard.ok) {
     ctx.deps.keepClip?.(clip, "failed");
     return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
@@ -142,5 +147,5 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
   if (!text) return { notice: { kind: "no-speech" } };
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text });
+  return insert(ctx, job, { clip, heard, text, transcribeMs });
 }

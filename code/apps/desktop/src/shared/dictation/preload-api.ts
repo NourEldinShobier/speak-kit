@@ -1,5 +1,5 @@
 import type { IpcRenderer } from "electron";
-import { DICTATION_METHODS, dictationChannel, HUD_ACTION, HUD_EVENT, REC_COMMAND, REC_LEVEL, REC_READY, REC_REPLY, STATUS_EVENT } from "./channels";
+import { DICTATION_METHODS, dictationChannel, HUD_ACTION, HUD_EVENT, REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY, STATUS_EVENT } from "./channels";
 import type { DictationBridge, HudView, RecorderCommand } from "./contract";
 
 export function dictationBridge(ipc: IpcRenderer): DictationBridge {
@@ -19,6 +19,7 @@ export function dictationBridge(ipc: IpcRenderer): DictationBridge {
       reply: (id, result) => ipc.send(REC_REPLY, id, result),
       level: (n) => ipc.send(REC_LEVEL, n),
       ready: () => ipc.send(REC_READY),
+      event: (e) => ipc.send(REC_EVENT, e),
     },
   } as DictationBridge;
 }

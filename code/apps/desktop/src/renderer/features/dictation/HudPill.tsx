@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Spinner, type IconName } from "@speakkit/ui";
-import type { HudView } from "../../../shared/dictation/contract";
+import type { HudAction, HudView } from "../../../shared/dictation/contract";
 import { dictation } from "./api";
 import "./hud.css";
 
@@ -60,17 +60,18 @@ function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
   );
 }
 
+const Act = ({ action }: { action: { label: string; id: HudAction } }) => (
+  <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction(action.id))}>
+    {action.label}
+  </button>
+);
+
 function Failure({ view }: { view: Extract<HudView, { kind: "error" }> }) {
-  const action = view.action;
   return (
     <>
       <Lead name={view.icon} tone="error" />
       <b>{view.text}</b>
-      {action && (
-        <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction(action.id))}>
-          {action.label}
-        </button>
-      )}
+      {view.action && <Act action={view.action} />}
     </>
   );
 }
@@ -98,13 +99,18 @@ function Content({ view }: { view: HudView }) {
       return (
         <>
           <Lead name="check" />
-          <b>Pasted</b>
+          <b>Sent</b>
         </>
       );
     case "copied":
       return <Copied reason={view.reason} />;
     case "notice":
-      return <b>{view.text}</b>;
+      return (
+        <>
+          <b>{view.text}</b>
+          {view.action && <Act action={view.action} />}
+        </>
+      );
     case "error":
       return <Failure view={view} />;
   }

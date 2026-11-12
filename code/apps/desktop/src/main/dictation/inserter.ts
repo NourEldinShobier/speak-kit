@@ -1,11 +1,12 @@
 import { profileFor } from "./app-profile";
 import { createRestoreGuard, type ClipboardPort, type RestoreGuard } from "./restore-guard";
-import type { AppOverride, CopyReason, ForegroundInfo, InputPort, InsertOptions, InsertResult } from "./types";
+import type { AppOverride, CopyReason, ForegroundInfo, InputPort, InsertOptions, InsertResult, PasteKey, PasteProfile } from "./types";
 
 interface Deps {
   input: InputPort;
   clip: ClipboardPort;
-  overrides?: readonly AppOverride[] | undefined;
+  /** Read at every insert, so a change in the settings applies to the next paste. */
+  overrides?: readonly AppOverride[] | (() => readonly AppOverride[]) | undefined;
   sleep?: ((ms: number) => Promise<void>) | undefined;
   /** False on a platform without key injection: every insert then only copies. */
   supported?: boolean | undefined;
@@ -15,6 +16,7 @@ interface Deps {
 const MODIFIER_WAIT_MS = 1500;
 const MODIFIER_POLL_MS = 10;
 
+const pasteKey = (shortcut: PasteProfile["shortcut"]): PasteKey => (shortcut === "ctrl-shift-v" || shortcut === "shift-insert" ? shortcut : "ctrl-v");
 const copied = (reason: CopyReason): InsertResult => ({ status: "copied", reason });
 const clipboardFailed: InsertResult = { status: "failed", reason: "clipboard-unavailable" };
 
@@ -26,7 +28,7 @@ const clipboardFailed: InsertResult = { status: "failed", reason: "clipboard-una
 export class Inserter {
   readonly #input: InputPort;
   readonly #clip: ClipboardPort;
-  readonly #overrides: readonly AppOverride[] | undefined;
+  readonly #overrides: (() => readonly AppOverride[]) | undefined;
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #supported: boolean;
   readonly #guard: RestoreGuard;
@@ -35,7 +37,7 @@ export class Inserter {
   constructor({ input, clip, overrides, supported = true, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
     this.#clip = clip;
-    this.#overrides = overrides;
+    this.#overrides = typeof overrides === "function" ? overrides : overrides && (() => overrides);
     this.#sleep = sleep;
     this.#supported = supported;
     this.#guard = createRestoreGuard(clip);
@@ -63,7 +65,7 @@ export class Inserter {
   async #run(text: string, opts: InsertOptions): Promise<InsertResult> {
     if (!this.#supported) return this.#copyOnly(text, "unsupported-platform");
     const fg = this.#input.foreground();
-    if (opts.mode === "copy" || profileFor(fg, this.#overrides).shortcut === "copy") return this.#copyOnly(text, "copy-only");
+    if (opts.mode === "copy" || profileFor(fg, this.#overrides?.()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
     const blocked = this.#veto(fg, opts.target);
     if (blocked === "password-field") return { status: "refused", reason: blocked };
     if (blocked || !fg) return this.#copyOnly(text, blocked ?? "no-foreground");
@@ -79,14 +81,14 @@ export class Inserter {
   }
 
   async #send(text: string, fg: ForegroundInfo, opts: InsertOptions): Promise<InsertResult> {
-    const profile = profileFor(fg, this.#overrides);
+    const profile = profileFor(fg, this.#overrides?.());
     // A clipboard that cannot be put back (copied files) is left alone: the text is typed instead of pasted.
     const typing = opts.mode === "type" || profile.shortcut === "type" || (opts.mode !== "keep" && (await this.#clip.restorable?.()) === false);
     if (!(await this.#releaseModifiers())) return this.#copyOnly(text, "modifiers-held");
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);
     if (this.#input.foreground()?.hwnd !== fg.hwnd) return this.#keepCopy(text, typing, "foreground-changed");
-    const accepted = typing ? this.#input.type(text) : this.#input.pressPaste(profile.shortcut === "ctrl-shift-v");
+    const accepted = typing ? this.#input.type(text) : this.#input.pressPaste(pasteKey(profile.shortcut));
     if (!accepted) return this.#keepCopy(text, typing, "keys-rejected");
     if (typing) return { status: "typed" };
     if (opts.mode === "keep") this.#guard.keep();

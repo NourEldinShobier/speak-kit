@@ -10,6 +10,8 @@ export const DICTATION_METHODS = [
   "historyCopy",
   "historyRemove",
   "historyClear",
+  "historyRemoveMany",
+  "historyStats",
   "retry",
   "openSoundSettings",
 ] as const;
@@ -24,7 +26,7 @@ export const HUD_EVENT = "speakkit:dictation:hud";
 
 /** The HUD page asks for something (Sound settings, Download, Try again) or dismisses itself. */
 export const HUD_ACTION = "speakkit:dictation:hud-action";
-export const HUD_ACTIONS = ["sound-settings", "download", "retry", "dismiss"] as const;
+export const HUD_ACTIONS = ["sound-settings", "download", "retry", "dismiss", "restore", "copy-last"] as const;
 export type HudAction = (typeof HUD_ACTIONS)[number];
 
 /** Microphone window: main sends commands, the window answers each one and reports the level while recording. */
@@ -32,3 +34,5 @@ export const REC_COMMAND = "speakkit:dictation:rec-command";
 export const REC_REPLY = "speakkit:dictation:rec-reply";
 export const REC_LEVEL = "speakkit:dictation:rec-level";
 export const REC_READY = "speakkit:dictation:rec-ready";
+/** The microphone window reports what happened to the microphone itself: silent, lost, reopening, back. */
+export const REC_EVENT = "speakkit:dictation:rec-event";

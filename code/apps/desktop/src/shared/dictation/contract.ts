@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import type { HistoryStats, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
 import { DICTATION_MODELS, DictationPatchSchema } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
@@ -44,13 +45,22 @@ export interface DictationStatus {
   /** The model failed to download or load. */
   modelError?: string;
   historyCount: number;
+  /** The state of the microphone the Audio card shows. */
+  mic: MicStatus;
 }
 
 export interface HistoryItem {
   id: string;
   at: number;
   text: string;
+  /** Executable name of the program the text went to. */
   app?: string;
+  /** Friendly name of that program. */
+  appName?: string;
+  durationMs?: number;
+  /** "interrupted": the recording was cut short; "restored": brought back after a cancel. */
+  kind?: "interrupted" | "restored";
+  outcome?: "sent" | "copied";
 }
 
 /** What the HUD page draws. */
@@ -60,7 +70,7 @@ export type HudView =
   | { kind: "transcribing" }
   | { kind: "pasted" }
   | { kind: "copied"; reason: "clipboard" | "elevated" }
-  | { kind: "notice"; text: string }
+  | { kind: "notice"; text: string; action?: { label: string; id: HudAction } }
   | { kind: "error"; text: string; icon: "microphone-off" | "download" | "alert-triangle" | "shield-check" | "lock"; action?: { label: string; id: HudAction } };
 
 export interface DictationBridge {
@@ -74,6 +84,8 @@ export interface DictationBridge {
   historyCopy(id: string): Promise<boolean>;
   historyRemove(id: string): Promise<void>;
   historyClear(): Promise<void>;
+  historyRemoveMany(ids: string[]): Promise<void>;
+  historyStats(): Promise<HistoryStats>;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
   /** Opens the operating system's sound input settings. */
@@ -87,12 +99,35 @@ export interface DictationBridge {
     reply(id: number, result: RecorderResult): void;
     level(n: number): void;
     ready(): void;
+    event(e: RecorderEvent): void;
   };
 }
 
-export type RecorderCommand = { id: number; op: "start"; prerollMs: number } | { id: number; op: "stop" } | { id: number; op: "discard" } | { id: number; op: "close" };
+export interface RecorderMicConfig {
+  /** Chosen device id; empty for automatic. */
+  saved: string;
+  exclusions: string[];
+  avoidBluetooth: boolean;
+  /** How long an idle open microphone stays open: 0 closes it at once, -1 keeps it open. */
+  keepMs: number;
+}
+
+export type RecorderEvent =
+  | { type: "silent" | "lost" | "gave-up" }
+  | { type: "reopening"; attempt: number }
+  | { type: "opened"; label: string; bluetooth: boolean }
+  | { type: "no-device"; builtInOff: boolean };
+
+export type RecorderCommand = { id: number; op: "start"; prerollMs: number; mic: RecorderMicConfig } | { id: number; op: "stop" } | { id: number; op: "discard" } | { id: number; op: "close" };
 export type RecorderResult =
-  | { ok: true; pcm?: Float32Array | undefined; sampleRate?: number | undefined; peak?: number | undefined; interrupted?: boolean | undefined }
+  | {
+      ok: true;
+      pcm?: Float32Array | undefined;
+      sampleRate?: number | undefined;
+      peak?: number | undefined;
+      interrupted?: boolean | undefined;
+      device?: { label: string; bluetooth: boolean } | undefined;
+    }
   | { ok: false; code: "mic-denied" | "mic-missing" | "mic-busy" | "mic-failed" };
 
 const text = v.pipe(v.string(), v.maxLength(200));
@@ -106,6 +141,8 @@ export const DICTATION_ARGS = {
   historyCopy: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64))]),
   historyRemove: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64))]),
   historyClear: v.tuple([]),
+  historyRemoveMany: v.tuple([v.pipe(v.array(v.pipe(v.string(), v.minLength(1), v.maxLength(64))), v.maxLength(500))]),
+  historyStats: v.tuple([]),
   retry: v.tuple([]),
   openSoundSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
@@ -120,7 +157,15 @@ export const RecorderReplySchema = v.tuple([
       sampleRate: v.optional(v.number()),
       peak: v.optional(v.number()),
       interrupted: v.optional(v.boolean()),
+      device: v.optional(v.object({ label: v.pipe(v.string(), v.maxLength(300)), bluetooth: v.boolean() })),
     }),
     v.object({ ok: v.literal(false), code: v.picklist(["mic-denied", "mic-missing", "mic-busy", "mic-failed"]) }),
   ]),
+]);
+
+export const RecorderEventSchema = v.variant("type", [
+  v.object({ type: v.picklist(["silent", "lost", "gave-up"]) }),
+  v.object({ type: v.literal("reopening"), attempt: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)) }),
+  v.object({ type: v.literal("opened"), label: v.pipe(v.string(), v.maxLength(300)), bluetooth: v.boolean() }),
+  v.object({ type: v.literal("no-device"), builtInOff: v.boolean() }),
 ]);

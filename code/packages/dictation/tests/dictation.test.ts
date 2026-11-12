@@ -53,7 +53,9 @@ describe("hold to talk", () => {
     const r = await rig();
     await r.hold(1000);
     await r.time.advance(200);
-    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000 }]);
+    expect(await r.dictation.history.list()).toStrictEqual([
+      { id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000, timings: { transcribeMs: 0 }, outcome: "sent" },
+    ]);
   });
 
   it("leaves out what it does not know: no program, no language, no model", async () => {
@@ -61,7 +63,9 @@ describe("hold to talk", () => {
     r.ins.state.targetThrows = true;
     await r.hold(1000);
     await r.time.advance(200);
-    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", durationMs: 1000 }]);
+    expect(await r.dictation.history.list()).toStrictEqual([
+      { id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", durationMs: 1000, timings: { transcribeMs: 0 }, outcome: "copied" },
+    ]);
   });
 
   it("records the language and model the engine reports", async () => {

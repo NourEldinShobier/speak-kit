@@ -17,6 +17,8 @@ const handlersOf = (d: DictationService): Handlers => ({
   historyCopy: (id) => d.historyCopy(id),
   historyRemove: (id) => d.historyRemove(id),
   historyClear: () => d.historyClear(),
+  historyRemoveMany: (ids) => d.historyRemoveMany(ids),
+  historyStats: () => d.historyStats(),
   retry: () => d.retry(),
   openSoundSettings: () => d.openSoundSettings(),
 });

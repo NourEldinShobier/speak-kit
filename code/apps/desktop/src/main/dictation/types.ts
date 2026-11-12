@@ -62,9 +62,12 @@ export interface ForegroundInfo {
   elevated: boolean;
 }
 
+/** The key combination that pastes. */
+export type PasteKey = "ctrl-v" | "ctrl-shift-v" | "shift-insert";
+
 /** How text reaches the focused field. */
 export interface PasteProfile {
-  shortcut: "ctrl-v" | "ctrl-shift-v" | "type" | "copy";
+  shortcut: PasteKey | "type" | "copy";
   /** Wait before the keys, for apps that need time to see the clipboard (remote desktop). */
   preDelayMs: number;
   /** How long the new clipboard text stays before the old clipboard comes back. */
@@ -109,8 +112,10 @@ export interface InputPort {
   passwordFocused(): boolean;
   /** Names of the Shift, Alt and Win keys that are down right now. */
   heldModifiers(): string[];
-  /** Presses Ctrl+V (with Shift when asked) as scan codes. False when the system did not accept every key; keys already pressed are released again. */
-  pressPaste(withShift: boolean): boolean;
+  /** Presses the paste keys as scan codes. False when the system did not accept every key; keys already pressed are released again. */
+  pressPaste(key: PasteKey): boolean;
+  /** Brings a window to the front and says whether it is in front within half a second. */
+  focus(hwnd: string): Promise<boolean>;
   /** Types the text as Unicode key events without touching the clipboard. False when the system did not accept every key. */
   type(text: string): boolean;
   /** Changes whenever any program writes the clipboard. */
