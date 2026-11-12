@@ -28,8 +28,15 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
-    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, recent: dictation.history.recent() } }),
+    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
+    ...speechModelsContext(),
   });
+  const speechModelsContext = (): Pick<TrayContext, "speechModels"> => {
+    const v = dictation.speech.view();
+    const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
+    if (models.length === 0) return {};
+    return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
+  };
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
     ctx.sendUi({ type: "nav", page });
@@ -60,12 +67,16 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
       ctx.showWindow();
       ctx.sendUi({ type: "nav", page: "settings", sub: "general" });
     },
+    "cancel-switch": () => void dictation.speech.cancelSwitch(),
+    "get-models": () => {
+      ctx.showWindow();
+      ctx.sendUi({ type: "nav", page: "engines" });
+    },
     "check-updates": () => void updates.updates.checkAndDownload(),
     "restart-update": () => void updates.updates.installNow(),
     quit: requestQuit,
   };
-  const tray = createTray(context, actions);
-  tray.setVisible(showTrayIcon(ctx.config));
+  const tray = createTray(context, actions, (id) => void dictation.speech.use(id));
   ctx.sinks.add(() => tray.refresh());
   return tray;
 }

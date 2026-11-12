@@ -1,10 +1,10 @@
 import type { AppState } from "../../../shared/ipc";
 import { errorText } from "../../error-text";
 
-export const STEPS = ["Welcome", "Download", "Connect browser", "Done"] as const;
+export const STEPS = ["Welcome", "Download", "Dictation", "Connect browser", "Done"] as const;
 export const MODEL_MB = 177;
 
-export type WizardStep = 0 | 1 | 2 | 3;
+export type WizardStep = 0 | 1 | 2 | 3 | 4;
 
 interface WizardState {
   step: WizardStep;
@@ -16,7 +16,7 @@ interface WizardState {
 
 export type WizardAction = { type: "go"; step: WizardStep } | { type: "copied" } | { type: "finish-connect"; skipped: boolean };
 
-export const initWizard = (): WizardState => ({ step: 0, copied: false, skipped: false });
+export const initWizard = (step: WizardStep = 0): WizardState => ({ step, copied: false, skipped: false });
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
@@ -25,7 +25,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "copied":
       return { ...state, copied: true };
     case "finish-connect":
-      return { ...state, skipped: action.skipped, step: 3 };
+      return { ...state, skipped: action.skipped, step: 4 };
     default: {
       const unreachable: never = action;
       return unreachable;

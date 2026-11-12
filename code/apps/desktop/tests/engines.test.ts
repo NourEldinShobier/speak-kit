@@ -83,3 +83,46 @@ describe("Engines page", () => {
     await shot(l, "engines-960");
   });
 });
+
+describe("Setup: dictation step", () => {
+  it("opens again on the dictation step with a live checklist, then asks for a language and picks the model that fits", async () => {
+    const l = await start({ config: { setupDone: false, setupStep: 2, preferredPort: 0 } });
+    await l.page.getByRole("heading", { name: "Welcome back" }).waitFor();
+    const list = l.page.getByRole("region", { name: "Setup checklist" });
+    expect(await list.getByText("Microphone", { exact: true }).count()).toBe(1);
+    expect(await list.getByText("Hotkey", { exact: true }).count()).toBe(1);
+    expect(await list.getByText("Speech model", { exact: true }).count()).toBe(1);
+    await shot(l, "setup-welcome-back");
+    await l.page.getByRole("button", { name: "Continue" }).click();
+    await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor(); // the model is installed: on to the practice
+    await shot(l, "setup-practice");
+    expect(await l.page.getByRole("textbox", { name: "Practice field" }).count()).toBe(1);
+    expect(await l.page.getByRole("button", { name: "Continue" }).isDisabled()).toBe(true); // until something was dictated
+    await expect.poll(() => configOf(l).setupStep).toBe(2);
+  });
+
+  it("asks for a language first, pre-selects the system language and downloads nothing when it is chosen", async () => {
+    const l = await start({ config: { setupDone: false, setupStep: 1, preferredPort: 0 } });
+    await l.page.getByRole("button", { name: /Continue/ }).first().click();
+    await l.page.getByRole("heading", { name: "Choose your language" }).waitFor();
+    expect(await l.page.getByRole("radio", { name: "English" }).isChecked()).toBe(true);
+    expect(await l.page.getByText(/Uses Parakeet v3, 356 MB/).count()).toBe(1);
+    expect(await l.page.getByText(/Uses Whisper Large v3 Turbo, 574 MB/).count()).toBeGreaterThan(0);
+    await shot(l, "setup-language");
+    await l.page.locator("label", { hasText: "German" }).first().click();
+    expect(await l.page.getByRole("radio", { name: "German" }).isChecked()).toBe(true);
+    await l.page.getByRole("button", { name: "Continue" }).click();
+    await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor();
+    expect(configOf(l).dictation.language).toBe("de");
+  });
+
+  it("Skip dictation goes on to the browser step and remembers that no model was chosen", async () => {
+    const l = await start({ config: { setupDone: false, setupStep: 0, preferredPort: 0 } });
+    await l.page.getByRole("button", { name: /Get started|Continue/ }).first().click();
+    await l.page.getByRole("button", { name: /Continue/ }).first().click();
+    await l.page.getByRole("heading", { name: "Choose your language" }).waitFor();
+    await l.page.getByRole("button", { name: "Skip dictation" }).click();
+    await l.page.getByRole("heading", { name: /Connect/ }).waitFor();
+    expect(configOf(l).engines.skippedModel).toBe(true);
+  });
+});
