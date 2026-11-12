@@ -3,7 +3,7 @@ import { addMode, removeMode, setApps, setSites, withDefault, withoutPristineDef
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { dictation, useDictation } from "../dictation-bridge";
+import { patchDictation, useDictation } from "../dictation-bridge";
 import { useLive } from "../vocabulary";
 import { ModeDetail } from "./ModeDetail";
 import { modeRow } from "./model";
@@ -150,7 +150,7 @@ function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(
 }
 
 function Loaded({ s }: { s: DictationStatus }) {
-  const [modes, update] = useLive<Mode>(s.settings.modes, (next) => dictation.patchSettings({ modes: next }));
+  const [modes, update] = useLive<Mode>(s.settings.modes, (next) => patchDictation({ modes: next }));
   return <List s={s} modes={modes} update={update} />;
 }
 

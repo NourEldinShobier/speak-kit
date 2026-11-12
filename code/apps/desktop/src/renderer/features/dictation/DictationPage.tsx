@@ -2,7 +2,7 @@ import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@sp
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
-import { dictation, platformName } from "./api";
+import { dictation, patchDictation, platformName } from "./api";
 import { OtherAudioCard } from "./OtherAudioCard";
 import { AppRulesCard, FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { MicExclusions } from "./MicExclusions";
@@ -34,7 +34,7 @@ function General({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Language"
         description="The language you speak."
-        control={<Select label="Language" value={c.language} onChange={(language) => void dictation.patchSettings({ language: language as typeof c.language })} options={languages} />}
+        control={<Select label="Language" value={c.language} onChange={(language) => void patchDictation({ language: language as typeof c.language })} options={languages} />}
       />
     </SettingsSection>
   );
@@ -95,7 +95,7 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
           <Select
             label="Keep history for"
             value={s.settings.retention}
-            onChange={(retention) => void dictation.patchSettings({ retention: retention as typeof s.settings.retention })}
+            onChange={(retention) => void patchDictation({ retention: retention as typeof s.settings.retention })}
             options={RETENTION_OPTIONS}
           />
         }

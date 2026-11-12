@@ -4,7 +4,7 @@ import { exportVocabulary, importVocabulary, type ExportFormat } from "@speakkit
 import { Banner, Button, DropdownMenu, DropdownMenuItem, Modal, Segmented } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { dictation } from "../dictation-bridge";
+import { dictation, patchDictation } from "../dictation-bridge";
 import { useDictation } from "../dictation-bridge";
 import { HeardAs } from "./HeardAs";
 import { importView, type ImportView } from "./model";
@@ -102,7 +102,7 @@ export function VocabularyPage({ voice, initialTab = "heard" }: { voice: string;
       if (!file) return;
       const c = s.settings;
       const res = importVocabulary({ terms: c.terms, replacements: c.replacements }, file.text, file.format);
-      if (!res.error && (res.addedWords || res.addedReplacements)) await dictation.patchSettings({ terms: res.vocabulary.terms, replacements: res.vocabulary.replacements });
+      if (!res.error && (res.addedWords || res.addedReplacements)) await patchDictation({ terms: res.vocabulary.terms, replacements: res.vocabulary.replacements });
       setResult(importView(res, file.name));
     } catch {
       setError("The file could not be read. Nothing was added.");

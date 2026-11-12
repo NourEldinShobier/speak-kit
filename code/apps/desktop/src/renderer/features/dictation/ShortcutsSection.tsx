@@ -3,11 +3,11 @@ import { Banner, Button, Icon, Modal, Select, SettingRow, SettingsSection, TextI
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { hotkeyText } from "../../../shared/dictation/keys";
 import type { DictationPatch } from "../../../shared/dictation/settings";
-import { dictation } from "./api";
+import { patchDictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
 import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, parseApps, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
 
-const patch = (p: DictationPatch) => dictation.patchSettings(p);
+const patch = (p: DictationPatch) => patchDictation(p);
 
 const FRAME_LABEL = { hold: "Hold, then let go", tap: "Tap, then tap again", double: "Press twice quickly" } as const;
 

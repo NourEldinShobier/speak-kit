@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Chip, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation-bridge";
+import { patchDictation } from "../dictation-bridge";
 import { cleanupRows, LANGUAGE_NAMES } from "./model";
 import { RulesTester } from "./RulesTester";
 
@@ -35,7 +35,7 @@ export function Cleanup({ s }: { s: DictationStatus }) {
               control={
                 <span className="cleanup-ctl">
                   {r.scope ? <Chip>{r.scope}</Chip> : null}
-                  <Toggle aria-label={r.label} checked={!r.unavailable && c[r.key]} disabled={!!r.unavailable} onChange={(on) => void dictation.patchSettings({ cleanup: { ...c, [r.key]: on } })} />
+                  <Toggle aria-label={r.label} checked={!r.unavailable && c[r.key]} disabled={!!r.unavailable} onChange={(on) => void patchDictation({ cleanup: { ...c, [r.key]: on } })} />
                 </span>
               }
             />

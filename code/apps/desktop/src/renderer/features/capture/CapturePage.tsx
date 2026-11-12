@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Banner, Button, Modal, Skeleton, Tabs } from "@speakkit/ui";
 import type { CaptureStatus } from "../../../shared/capture/contract";
 import { Page } from "../../ui";
-import { capture, useCapture } from "./api";
+import { capture, patchCapture, useCapture } from "./api";
 import { CapturesTab } from "./CapturesTab";
 import { Playground } from "./Playground";
 import { PrivacyTab } from "./PrivacyTab";
@@ -26,7 +26,7 @@ function Body({ tab, s }: { tab: string; s: CaptureStatus }) {
 
 function ConsentDialog({ s }: { s: CaptureStatus }) {
   const accept = async () => {
-    await capture.patchSettings({ consented: true });
+    await patchCapture({ consented: true });
     await capture.start();
   };
   return (

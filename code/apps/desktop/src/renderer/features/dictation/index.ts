@@ -7,6 +7,6 @@ export { DictationPage } from "./DictationPage";
 export { DictationHistoryPage, historyLeadNow } from "./HistoryPage";
 export { HotkeyRecorder } from "./HotkeyRecorder";
 // What the setup window's dictation step uses: the bridge, the status hook and the HUD pill drawing.
-export { dictation } from "./api";
+export { dictation, patchDictation } from "./api";
 export { useDictation } from "./useDictation";
 export { Pill } from "./HudPill";

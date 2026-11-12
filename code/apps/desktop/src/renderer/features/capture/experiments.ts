@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { CaptureStatus } from "../../../shared/capture/contract";
 import type { ExperimentId } from "../../../shared/capture/settings";
 import { registerExperiment, type ExperimentState } from "../experiments";
-import { capture } from "./api";
+import { capture, patchCapture } from "./api";
 
 /** The state of one capture experiment: read once, then kept in step with the pushes from the main process. */
 function useCaptureExperiment(id: ExperimentId): ExperimentState {
@@ -20,7 +20,7 @@ function useCaptureExperiment(id: ExperimentId): ExperimentState {
     ready: !!status,
     on: !!status?.settings.experiments[id],
     set: async (on) => {
-      setStatus(await capture.patchSettings({ experiments: { [id]: on } }));
+      setStatus(await patchCapture({ experiments: { [id]: on } }));
     },
   };
 }

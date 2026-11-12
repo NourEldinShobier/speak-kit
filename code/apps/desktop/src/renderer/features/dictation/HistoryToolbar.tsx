@@ -1,5 +1,5 @@
 import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, IconButton, Segmented, TextInput } from "@speakkit/ui";
-import { dictation } from "./api";
+import { dictation, patchDictation } from "./api";
 import { CopyRecent } from "./HistoryParts";
 import type { View } from "./HistoryRow";
 import { RETENTION_OPTIONS } from "./model";
@@ -32,7 +32,7 @@ function MoreMenu({ p }: { p: ToolbarProps }) {
       <DropdownMenuSeparator />
       <DropdownMenuLabel>Keep entries for</DropdownMenuLabel>
       {RETENTION_OPTIONS.map((o) => (
-        <DropdownMenuItem key={o.value} selected={o.value === p.retention} onSelect={() => void dictation.patchSettings({ retention: o.value })}>
+        <DropdownMenuItem key={o.value} selected={o.value === p.retention} onSelect={() => void patchDictation({ retention: o.value })}>
           {o.label}
         </DropdownMenuItem>
       ))}
