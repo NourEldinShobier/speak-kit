@@ -12,6 +12,9 @@ export interface FilePorts {
   pause(): Promise<void>;
 }
 
+/** A compressed file this large that kills the decoder page was too much for it. */
+const PAGE_LIMIT_BYTES = 100 * 1024 ** 2;
+
 export const baseName = (file: string): string => file.split(/[\\/]/).pop() || file;
 
 /** Judges a file by its name, size and first bytes, before anything is decoded. */
@@ -57,7 +60,10 @@ export async function decodeFile(file: string, ports: FilePorts): Promise<Decode
     if (new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF") pcm = await decodeWavAsync(bytes, ports.pause);
     else {
       const r = await ports.decodeInPage(bytes);
-      if (!r.ok) return { ok: false, failure: r.code === "too-long" ? failures.tooLong() : failures.decode(name) };
+      if (!r.ok) {
+        if (r.code === "too-long") return { ok: false, failure: failures.tooLong() };
+        return { ok: false, failure: r.code === "lost" && picked.bytes > PAGE_LIMIT_BYTES ? failures.tooLarge(name) : failures.decode(name) };
+      }
       pcm = r.pcm;
     }
   } catch {

@@ -22,6 +22,10 @@ export interface TranscriptsDeps {
   exportDir(): string;
   /** Something a window should redraw. */
   changed(): void;
+  /** Sends a file to the OS recycle bin. When absent, or when it throws, the file is not recycled. */
+  recycle?(file: string): Promise<void>;
+  /** Tells the person about something that could not be done on a file. */
+  warn?(message: string): void;
   deadlineMs?: JobDeps["deadlineMs"];
   chunks?: JobDeps["chunks"];
 }
@@ -59,7 +63,7 @@ export type Outcome<T = object> = ({ ok: true } & T) | { ok: false; failure: Fai
 export interface Transcripts {
   readonly ready: Promise<void>;
   /** Set when the manifest was written by a newer version (nothing can be changed) or could not be read (it was moved aside). */
-  notice(): { newer: boolean; recoveredFrom?: string };
+  notice(): { newer: boolean; unreadable?: boolean; recoveredFrom?: string };
   list(o?: { search?: string; trashed?: boolean }): Row[];
   get(id: string): Promise<Detail | undefined>;
   importAudio(a: { name: string; pcm: Int16Array; language: string }): Promise<Outcome<{ id: string }>>;

@@ -7,7 +7,7 @@ export type AudioFormat = (typeof AUDIO_FORMATS)[number];
 export const MAX_HOURS = 4;
 /** Largest file read at all. WAV is read straight from the disk; the other formats are decoded in one piece by the browser engine, so they get a lower ceiling. */
 export const MAX_BYTES = 1024 ** 3;
-export const MAX_COMPRESSED_BYTES = 400 * 1024 ** 2;
+export const MAX_COMPRESSED_BYTES = 200 * 1024 ** 2;
 
 const EXT: Record<string, AudioFormat> = { wav: "wav", wave: "wav", mp3: "mp3", m4a: "m4a", mp4: "m4a", aac: "m4a", flac: "flac", ogg: "ogg", oga: "ogg", opus: "ogg" };
 

@@ -25,18 +25,21 @@ export interface TranscriptsPorts {
   files: Omit<FilePorts, "decodeInPage"> & { decodeInPage: FilePorts["decodeInPage"] };
   mic: MicPort;
   dialog: { pickFile(): Promise<string | null>; pickFolder(): Promise<string | null> };
-  shell: { reveal(file: string): void; openFolder(dir: string): Promise<void> };
+  /** `trash` moves a file to the Recycle Bin (Windows) or the Trash (macOS) and rejects when it cannot. */
+  shell: { reveal(file: string): void; trash(file: string): Promise<void>; openFolder(dir: string): Promise<void> };
   clipboard: { writeText(text: string): void };
   /** Tells the windows to redraw. */
   push(p: Push): void;
   /** The tray follows the recorder and the jobs. */
   changed(): void;
+  /** How long the tray says "Done" after a transcript finishes. */
+  doneMs?: number;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   newId?: () => string;
 }
 
-export type TrayPhase = "ready" | "starting" | "recording" | "saving" | "transcribing";
+export type TrayPhase = "ready" | "starting" | "recording" | "saving" | "transcribing" | "done";
 
 export interface TranscriptsService {
   handlers: Handlers;
@@ -54,7 +57,7 @@ const HOUR = 3_600_000;
 export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): TranscriptsService {
   const cfg = () => ctx.config.transcripts;
   const folder = () => cfg().folder || path.join(p.documentsDir, "Speak Kit", "Transcripts");
-  const live = new Live(p.push, p.changed);
+  const live = new Live(p.push, p.changed, p.doneMs);
   const core = createTranscripts({
     dir: `${p.dataDir}/transcripts`,
     fs: p.fs ?? nodeFs(),
@@ -67,6 +70,11 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     policy: () => policyOf(cfg()),
     exportDir: folder,
     changed: () => live.changed(),
+    recycle: (f) => p.shell.trash(f),
+    warn: (text) => {
+      live.notice = text;
+      live.send();
+    },
   });
   const ready = core.then((t) => t.ready.then(() => (live.facade = t)));
   const session = core.then((t) => recorderOf({ ctx, ports: p, transcripts: t, live }));
@@ -91,7 +99,8 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
 function livePhase(live: Live): TrayPhase {
   const r = live.recording;
   if (r) return r.phase === "starting" || r.phase === "saving" ? r.phase : "recording";
-  return live.busy ? "transcribing" : "ready";
+  if (live.busy) return "transcribing";
+  return Date.now() < live.doneUntil ? "done" : "ready";
 }
 
 /** The manual recorder over the store: its changes go to the window, and a recording that ends by itself leaves a notice and a bell entry. */

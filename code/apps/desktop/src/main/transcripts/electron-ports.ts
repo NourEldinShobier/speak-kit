@@ -9,6 +9,7 @@ export class TestSwitches {
   nextFolder: string | null | undefined;
   micDenied = false;
   readonly revealed: string[] = [];
+  readonly recycled: string[] = [];
   copied = "";
 }
 
@@ -54,6 +55,7 @@ export function systemPorts(test: boolean, sw: TestSwitches): Pick<TranscriptsPo
   return {
     shell: {
       reveal: (file) => (test ? void sw.revealed.push(file) : shell.showItemInFolder(file)),
+      trash: async (file) => (test ? void sw.recycled.push(file) : shell.trashItem(file)),
       openFolder: async (dir) => void (await shell.openPath(dir)),
     },
     clipboard: { writeText: (t) => (test ? void (sw.copied = t) : clipboard.writeText(t)) },

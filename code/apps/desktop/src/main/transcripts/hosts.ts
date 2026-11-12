@@ -26,7 +26,8 @@ export const decodeDeadlineMs = (bytes: number): number => 90_000 + Math.ceil(by
  * the app does. The page lives only for one file, so the decoded audio does not stay in memory.
  */
 export function createDecoder(o: { ipcMain: IpcMain; distDir: string }): { decodeInPage: FilePorts["decodeInPage"]; dispose(): void } {
-  const lost: DecoderResult = { ok: false, code: "decode-failed" };
+  // "lost": the page crashed, timed out or never loaded; for a big file that usually means it ran out of memory.
+  const lost: DecoderResult = { ok: false, code: "lost" };
   const page = new HiddenPage<DecoderCommand, DecoderResult>({
     ipcMain: o.ipcMain,
     channels: { command: DEC_COMMAND, reply: DEC_REPLY, ready: DEC_READY },

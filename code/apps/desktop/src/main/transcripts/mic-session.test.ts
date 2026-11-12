@@ -5,7 +5,15 @@ import { RecordingSession, type MicPort } from "./mic-session";
 
 const SEC = new Int16Array(16000);
 
-function rig(over: { mic?: MicResult; append?: (id: string, pcm: Int16Array) => Promise<Outcome<{ seconds: number }>>; finish?: () => Promise<Outcome<{ id: string }>>; maxSeconds?: number } = {}) {
+function rig(
+  over: {
+    mic?: MicResult;
+    append?: (id: string, pcm: Int16Array) => Promise<Outcome<{ seconds: number }>>;
+    finish?: () => Promise<Outcome<{ id: string }>>;
+    maxSeconds?: number;
+    tail?: Int16Array;
+  } = {},
+) {
   let chunk: (p: Int16Array) => void = () => {};
   let level: (n: number) => void = () => {};
   let ended: () => void = () => {};
@@ -16,7 +24,10 @@ function rig(over: { mic?: MicResult; append?: (id: string, pcm: Int16Array) => 
   let seconds = 0;
   const mic: MicPort = {
     start: async () => (log.push("mic start"), over.mic ?? { ok: true }),
-    stop: async () => void log.push("mic stop"),
+    stop: async () => {
+      log.push("mic stop");
+      if (over.tail) chunk(over.tail);
+    },
     onChunk: (cb) => (chunk = cb),
     onLevel: (cb) => (level = cb),
     onEnded: (cb) => (ended = cb),
@@ -234,6 +245,19 @@ describe("recording session", () => {
     await flush();
     expect(await r.session.stop()).toMatchObject({ ok: false });
     expect(await r.session.start()).toMatchObject({ ok: true });
+  });
+
+  it("the tail the mic flushes while stopping is kept", async () => {
+    const appended: number[] = [];
+    const r = rig({
+      tail: new Int16Array(8000),
+      append: async (_id, pcm) => (appended.push(pcm.length), { ok: true, seconds: appended.reduce((a, b) => a + b, 0) / 16000 }),
+    });
+    await r.session.start();
+    r.chunk();
+    await flush();
+    expect(await r.session.stop()).toEqual({ ok: true, id: "r1" });
+    expect(appended).toEqual([16000, 8000]);
   });
 
   it("a mic that fails to stop does not block saving", async () => {

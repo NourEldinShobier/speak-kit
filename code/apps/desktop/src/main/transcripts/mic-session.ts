@@ -106,7 +106,8 @@ export class RecordingSession {
   }
 
   #chunk(pcm: Int16Array): void {
-    if (this.#phase !== "recording" || !this.#id) return;
+    // "saving": the mic page flushes its tail while stopping.
+    if ((this.#phase !== "recording" && this.#phase !== "saving") || !this.#id) return;
     const id = this.#id;
     this.#pending = this.#pending.then(async () => {
       const r = await this.#d.transcripts.appendRecording(id, pcm);
