@@ -2,7 +2,7 @@ import { EXIT } from "../../../shared/control/contract";
 
 /** Where the running app leaves the port and token for scripts, shown the way a person would type it on each system. */
 export function discoveryPath(platform: string): string {
-  return platform === "darwin" ? "~/Library/Application Support/Speak Kit/control.json" : "%APPDATA%\Speak Kit\control.json";
+  return platform === "darwin" ? "~/Library/Application Support/Speak Kit/control.json" : "%APPDATA%\\Speak Kit\\control.json";
 }
 
 /** The block an AI app takes in its MCP settings. The tool starts the bridge itself and finds the token on its own, so none is written here. */

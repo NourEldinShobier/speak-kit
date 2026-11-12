@@ -86,8 +86,10 @@
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
-.cap-pill__btn:hover:not(:disabled) {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .cap-pill__btn:hover:not(:disabled) {
+    background: var(--fill-hover);
+  }
 }
 .cap-pill__btn:focus-visible {
   outline: 2px solid var(--stroke-focus-field);
