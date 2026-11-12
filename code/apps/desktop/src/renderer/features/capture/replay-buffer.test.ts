@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { createReplayBuffer } from "./replay-buffer";
 
 function setup() {
@@ -83,5 +83,81 @@ describe("replay buffer", () => {
     t.buffer.stop();
     expect(t.run.stopped).toBe(1);
     expect(t.cleared).toEqual([3000]);
+  });
+
+  it("drops the oldest pieces and the pictures that belong to them as it goes", async () => {
+    const t = setup();
+    for (let i = 1; i <= 3; i++) await t.piece(i * 3000);
+    expect(t.buffer.held()).toEqual({ pieces: 4, frames: 3 });
+    for (let i = 4; i <= 20; i++) await t.piece(i * 3000);
+    // six finished pieces and the one being recorded; pictures from before the oldest kept piece are gone
+    expect(t.buffer.held()).toEqual({ pieces: 7, frames: 6 });
+  });
+
+  it("leaves out a piece that no video arrived for, and a picture taken after the clip ended", async () => {
+    const t = setup();
+    await t.piece(3000);
+    t.buffer.onPayload({ kind: "frame", atMs: 9000, jpeg: Uint8Array.of(9) });
+    t.at(3500);
+    const clip = await t.buffer.save();
+    expect(clip?.videos.map((v) => [...v])).toEqual([[1, 101]]);
+    expect(clip?.durationMs).toBe(3000);
+    expect(clip?.frames.map((f) => f.atMs)).toEqual([2000]);
+  });
+
+  it("ignores audio, and a video chunk before any piece began", () => {
+    const t = setup();
+    t.buffer.onPayload({ kind: "audio", chunk: Int16Array.of(1) });
+    expect(t.buffer.held()).toEqual({ pieces: 1, frames: 0 });
+  });
+
+  it("puts the chunks of one piece together in the order they arrived", async () => {
+    const t = setup();
+    t.buffer.onPayload({ kind: "video", segment: 1, chunk: Uint8Array.of(1, 2) });
+    t.buffer.onPayload({ kind: "video", segment: 1, chunk: Uint8Array.of(3) });
+    t.buffer.onPayload({ kind: "video", segment: 1, chunk: Uint8Array.of(4, 5, 6) });
+    t.at(2000);
+    expect([...((await t.buffer.save())?.videos[0] ?? [])]).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("keeps a picture taken at the very end of the clip and leaves out one taken after it", async () => {
+    const t = setup();
+    t.buffer.onPayload({ kind: "video", segment: 1, chunk: Uint8Array.of(1) });
+    t.buffer.onPayload({ kind: "frame", atMs: 2000, jpeg: Uint8Array.of(2) });
+    t.buffer.onPayload({ kind: "frame", atMs: 2001, jpeg: Uint8Array.of(3) });
+    t.at(2000);
+    expect((await t.buffer.save())?.frames.map((f) => f.atMs)).toEqual([2000]);
+  });
+
+  it("lets go of everything when stopped, once, and can be stopped before it got a recorder", async () => {
+    const t = setup();
+    await t.piece(3000);
+    t.buffer.stop();
+    t.buffer.stop();
+    expect(t.buffer.held()).toEqual({ pieces: 0, frames: 0 });
+    expect(t.cleared).toEqual([3000]);
+    createReplayBuffer({ now: () => 0 }).stop();
+  });
+});
+
+describe("replay buffer with the system timer", () => {
+  it("starts a new piece every 3 seconds and stops doing so when stopped", async () => {
+    vi.useFakeTimers();
+    try {
+      let now = 0;
+      const run = { startedAt: 0, segment: 0, startSegment: () => void run.segment++, endSegment: async () => undefined, stop: () => undefined };
+      const buffer = createReplayBuffer({ now: () => now });
+      buffer.attach(run);
+      buffer.start(1000);
+      expect(run.segment).toBe(1);
+      now = 3000;
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(run.segment).toBe(2);
+      buffer.stop();
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(run.segment).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
