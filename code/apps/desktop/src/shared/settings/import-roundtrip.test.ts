@@ -10,8 +10,8 @@ describe("settings import round trip", () => {
     if (!plan.ok) return;
     expect(plan.change).toMatchObject({
       port: 47615,
-      voice: stored.voice,
-      "dictation.mode": stored.dictation.mode,
+      voice: "af_heart",
+      "dictation.mode": "hold",
       "meetings.output": "automatic",
       "transcripts.language": stored.transcripts.language,
     });
@@ -40,6 +40,10 @@ describe("settings import round trip", () => {
       "meetings.positions",
       "meetings.inputDevice",
     ]);
+  });
+
+  it("lets an explicit port win over preferredPort without a duplicate", () => {
+    expect(planImport('{"preferredPort": 50000, "port": 51000}')).toMatchObject({ ok: true, change: { port: 51000 }, skipped: [] });
   });
 
   it("takes the server port from the stored name preferredPort", () => {
