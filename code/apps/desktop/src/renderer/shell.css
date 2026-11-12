@@ -87,6 +87,8 @@ html[data-platform="darwin"] .sk-title__r {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
 .sk-search {
+  --search-fill: #dcdcdc;
+  --search-ink: #3f4a5c;
   height: 30px;
   width: 420px;
   box-sizing: border-box;
@@ -94,17 +96,17 @@ html[data-platform="darwin"] .sk-title__r {
   align-items: center;
   gap: 8px;
   padding: 0 6px;
-  border: 1px solid var(--stroke-control);
+  border: 0;
   border-radius: var(--radius-control);
-  background: var(--surface-input);
-  color: var(--text-tertiary);
+  background: var(--search-fill);
+  color: var(--search-ink);
   font: inherit;
   cursor: text;
   text-align: start;
 }
 @media (hover: hover) and (pointer: fine) {
   .sk-search:hover {
-    background: var(--fill-raised-hover);
+    background: color-mix(in srgb, black 3%, var(--search-fill));
   }
 }
 .sk-search span {
@@ -113,14 +115,13 @@ html[data-platform="darwin"] .sk-title__r {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sk-search .lm-kbd,
-.sk-new .lm-kbd {
+.sk-search .lm-kbd {
   height: 16px;
   padding: 0 6px;
   border: 0;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, black 7.5%, white);
-  color: var(--text-tertiary);
+  background: #efefef;
+  color: var(--search-ink);
   font:
     500 12px/16px Inter,
     "Inter Variable",
@@ -182,34 +183,14 @@ html[data-platform="darwin"] .sk-title__r {
   box-sizing: border-box;
   justify-content: flex-start;
 }
-.sk-new {
-  font-weight: 600;
+.sk-side__title {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding-inline: 10px;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-primary);
-}
-.sk-new__tile {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--cta);
-  box-shadow: var(--shadow-cta);
-}
-.sk-new__tile .lm-icon {
-  color: var(--text-on-accent);
-}
-.sk-new .lm-kbd {
-  height: 18px;
-  margin-inline-end: -1px;
-  font:
-    500 11px/18px Inter,
-    system-ui,
-    sans-serif;
-}
-/* 17 px between New reading and Home (8, 1 line that is not drawn, 8); the list's 2 px gaps are taken out so the rows are 17 apart. */
-.sk-side__sep {
-  height: 17px;
-  margin-block: -2px;
   flex: none;
 }
 .sk-side .lm-btn--icon {

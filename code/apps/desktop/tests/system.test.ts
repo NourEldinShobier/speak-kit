@@ -149,10 +149,11 @@ describe("notifications", () => {
 
 describe("export audio", () => {
   const writeNote = async (l: Launched) => {
-    await l.page.getByRole("button", { name: "New reading" }).click();
-    await l.page.getByRole("textbox", { name: "Text to read" }).fill("Exporting is simple. Each sentence is rendered once. Then the file is saved.");
-    await l.page.getByRole("button", { name: "Export audio" }).click();
+    await l.page.keyboard.press("Control+K");
+    await l.page.getByRole("combobox", { name: "Type a command or search" }).fill("export audio");
+    await l.page.keyboard.press("Enter");
     await l.page.getByRole("dialog", { name: "Export audio" }).waitFor();
+    await l.page.getByRole("textbox", { name: "Text to export" }).fill("Exporting is simple. Each sentence is rendered once. Then the file is saved.");
   };
 
   it("WAV: renders with progress, saves the file, shows where, and a toast follows when the window is hidden", async () => {
@@ -298,7 +299,8 @@ describe("palette, engines and the extension", () => {
 
   it("Install the extension reveals the folder and shows the three steps", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("link", { name: "Browser" }).click();
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Browser integration" }).click();
     await l.page.getByRole("button", { name: "Install from this app" }).click();
     const guide = l.page.getByTestId("install-guide");
     await guide.getByText("Load unpacked").waitFor();
