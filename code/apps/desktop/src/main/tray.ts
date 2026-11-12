@@ -1,21 +1,21 @@
 import { Menu, Tray, type MenuItemConstructorOptions } from "electron";
-import { trayIconState, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext } from "../shared/tray";
+import { trayIconState, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext, type TrayItem } from "../shared/tray";
 import { trayIcon } from "./icon";
 
 type TrayHandlers = Record<TrayAction, () => void>;
 
-function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers, mac: boolean): MenuItemConstructorOptions[] {
-  return items.map((i) =>
-    i.type === "separator"
-      ? { type: "separator" }
-      : {
-          label: i.label,
-          enabled: i.enabled,
-          ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
-          ...(i.hint ? { accelerator: i.hint.replace("Ctrl", mac ? "Control" : "CommandOrControl"), registerAccelerator: false } : {}),
-          click: () => run[i.action](),
-        },
-  );
+function menuTemplate(items: TrayItem[], run: TrayHandlers, mac: boolean): MenuItemConstructorOptions[] {
+  return items.map((i): MenuItemConstructorOptions => {
+    if (i.type === "separator") return { type: "separator" };
+    if (i.type === "submenu") return { label: i.label, submenu: menuTemplate(i.items, run, mac) };
+    return {
+      label: i.label,
+      enabled: i.enabled,
+      ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
+      ...(i.hint ? { accelerator: i.hint.replace("Ctrl", mac ? "Control" : "CommandOrControl"), registerAccelerator: false } : {}),
+      click: () => run[i.action](),
+    };
+  });
 }
 
 /**

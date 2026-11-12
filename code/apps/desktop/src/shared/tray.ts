@@ -18,9 +18,7 @@ export interface TrayContext {
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
-  dictation?: { enabled: boolean; hotkey: string };
-  /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
-  recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
+  dictation?: { enabled: boolean; hotkey: string; /** The last dictations, newest first. */ recent?: string[] };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -49,8 +47,11 @@ export type TrayAction =
   | "paste-last"
   | "pause-shortcuts"
   | "dictation-settings"
-  | "record-start"
-  | "record-stop"
+  | "dictation-copy-0"
+  | "dictation-copy-1"
+  | "dictation-copy-2"
+  | "dictation-copy-3"
+  | "dictation-copy-4"
   | "open"
   | "pause"
   | "resume"
@@ -63,7 +64,19 @@ export type TrayAction =
   | "restart-update"
   | "quit";
 
-type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
+export type TrayItem =
+  | { type: "separator" }
+  | { type: "submenu"; label: string; items: TrayItem[] }
+  | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
+
+export const RECENT_ROWS = 5;
+const RECENT_CHARS = 48;
+
+/** One line of a dictation for a menu row: whitespace folded, cut with an ellipsis. */
+export const recentLabel = (text: string): string => {
+  const one = text.replaceAll(/\s+/g, " ").trim();
+  return one.length > RECENT_CHARS ? `${one.slice(0, RECENT_CHARS - 1)}…` : one;
+};
 
 const WAITING = { starting: "Starting recording...", saving: "Saving recording...", transcribing: "Transcribing..." } as const;
 
@@ -88,8 +101,8 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     rows.push(item("dictation", "Dictation", { checked: d.enabled }));
     // A caption, not a command: disabled and without an action of its own.
     if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey)} to dictate`, { enabled: false }));
-    rows.push(item("paste-last", "Paste last dictation", {}));
-    rows.push(item("pause-shortcuts", "Pause all shortcuts", { checked: d.paused === true }));
+    if (d.recent?.length)
+      rows.push({ type: "submenu", label: "Copy recent dictation", items: d.recent.slice(0, RECENT_ROWS).map((t, i) => item(`dictation-copy-${i}` as TrayAction, recentLabel(t))) });
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));

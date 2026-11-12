@@ -82,8 +82,11 @@ export function createReopener(deps: ReopenDeps): { run(): void; cancel(): void 
 }
 
 /** Appends silence for a gap in the audio when the gap is short, so the words around it do not run together; a longer gap is left as it is. */
-export function fillGap(before: Float32Array, gapSamples: number, sampleRate: number, maxMs = 200): Float32Array {
-  if (gapSamples <= 0 || (gapSamples * 1000) / sampleRate >= maxMs) return before;
+/** Longest gap that is filled. */
+const MAX_GAP_MS = 200;
+
+export function fillGap(before: Float32Array, gapSamples: number, sampleRate: number): Float32Array {
+  if (gapSamples <= 0 || (gapSamples * 1000) / sampleRate >= MAX_GAP_MS) return before;
   const out = new Float32Array(before.length + gapSamples);
   out.set(before);
   return out;
@@ -93,50 +96,54 @@ export function fillGap(before: Float32Array, gapSamples: number, sampleRate: nu
 export const PAUSE_KEEP_BEFORE_MS = 2500;
 export const PAUSE_KEEP_AFTER_MS = 300;
 
-/**
- * Drops the middle of long pauses before decoding. A frame is quiet when its level (average removed) is under `threshold`; 0.3 s after the speech stops
- * and 2.5 s before it starts again are kept, the rest of the pause goes. Returns the shortened audio and how much was dropped.
- */
-export function skipPauses(pcm: Float32Array, sampleRate: number, threshold = 0.01, frameMs = 20): { pcm: Float32Array; droppedMs: number } {
-  const frame = Math.max(1, Math.round((sampleRate * frameMs) / 1000));
-  const frames = Math.ceil(pcm.length / frame);
+const FRAME_MS = 20;
+const QUIET_LEVEL = 0.01;
+
+/** One flag per 20 ms frame: true when its level (average removed) is under the threshold. */
+function quietFrames(pcm: Float32Array, frame: number): boolean[] {
   const quiet: boolean[] = [];
-  for (let i = 0; i < frames; i++) {
-    const block = pcm.subarray(i * frame, (i + 1) * frame);
+  for (let at = 0; at < pcm.length; at += frame) {
+    const block = pcm.subarray(at, at + frame);
     let mean = 0;
     for (const x of block) mean += x;
     mean /= block.length;
     let sum = 0;
     for (const x of block) sum += (x - mean) ** 2;
-    quiet.push(Math.sqrt(sum / block.length) < threshold);
+    quiet.push(Math.sqrt(sum / block.length) < QUIET_LEVEL);
   }
-  const keepAfter = Math.round(PAUSE_KEEP_AFTER_MS / frameMs);
-  const keepBefore = Math.round(PAUSE_KEEP_BEFORE_MS / frameMs);
-  const drop = Array.from({ length: frames }, () => false);
-  for (let i = 0; i < frames;) {
+  return quiet;
+}
+
+/** Marks the frames to drop: inside each quiet run, all but 0.3 s after the speech and 2.5 s before the next (a run at an edge has speech on one side only). */
+function framesToDrop(quiet: boolean[]): boolean[] {
+  const keepAfter = Math.round(PAUSE_KEEP_AFTER_MS / FRAME_MS);
+  const keepBefore = Math.round(PAUSE_KEEP_BEFORE_MS / FRAME_MS);
+  const drop = quiet.map(() => false);
+  for (let i = 0; i < quiet.length;) {
     if (!quiet[i]) {
       i++;
       continue;
     }
     let j = i;
-    while (j < frames && quiet[j]) j++;
-    // A pause at the very start or end has speech on one side only.
+    while (j < quiet.length && quiet[j]) j++;
     const from = i === 0 ? 0 : i + keepAfter;
-    const to = j === frames ? j : j - keepBefore;
+    const to = j === quiet.length ? j : j - keepBefore;
     for (let k = from; k < to; k++) drop[k] = true;
     i = j;
   }
-  const parts: Float32Array[] = [];
-  let dropped = 0;
-  for (let i = 0; i < frames; i++) {
-    if (drop[i]) dropped++;
-    else parts.push(pcm.subarray(i * frame, (i + 1) * frame));
-  }
+  return drop;
+}
+
+/** Drops the middle of long pauses before decoding. Returns the shortened audio and how much was dropped. */
+export function skipPauses(pcm: Float32Array, sampleRate: number): { pcm: Float32Array; droppedMs: number } {
+  const frame = Math.max(1, Math.round((sampleRate * FRAME_MS) / 1000));
+  const drop = framesToDrop(quietFrames(pcm, frame));
+  const parts = drop.flatMap((d, i) => (d ? [] : [pcm.subarray(i * frame, (i + 1) * frame)]));
   const out = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) {
     out.set(p, at);
     at += p.length;
   }
-  return { pcm: out, droppedMs: dropped * frameMs };
+  return { pcm: out, droppedMs: (drop.length - parts.length) * FRAME_MS };
 }

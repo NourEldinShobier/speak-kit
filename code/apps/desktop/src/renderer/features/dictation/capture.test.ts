@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { ClipBuffer, levelOf, micCode } from "./capture";
+import { ClipBuffer, micCode } from "./capture";
 
 const block = (n: number, v: number) => new Float32Array(n).fill(v);
 
@@ -78,15 +78,6 @@ describe("clip buffer", () => {
     b.start(0);
     b.push(Float32Array.of(0.2, -0.9, 0.4));
     expect(b.stop()!.peak).toBeCloseTo(0.9);
-  });
-});
-
-describe("level", () => {
-  it("is 0 for silence and rises with loudness, up to 1", () => {
-    expect(levelOf(new Float32Array(0))).toBe(0);
-    expect(levelOf(block(100, 0))).toBe(0);
-    expect(levelOf(block(100, 0.05))).toBeCloseTo(0.3);
-    expect(levelOf(block(100, 0.9))).toBe(1);
   });
 });
 

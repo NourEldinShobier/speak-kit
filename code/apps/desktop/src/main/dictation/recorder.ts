@@ -27,6 +27,9 @@ interface Deps {
 export interface RecorderHost extends Recorder {
   /** Creates the window and waits for its page; later `start` calls open the microphone only. Safe to call again. */
   prepare(): Promise<boolean>;
+  devices(): Promise<void>;
+  /** Opens the microphone for the level meter (on) or lets it go (off). */
+  meter(on: boolean): Promise<void>;
   /** Destroys the window (the microphone closes with it). */
   close(): void;
   owns(contents: WebContents): boolean;
@@ -145,6 +148,15 @@ class Host implements RecorderHost {
     const r = await this.#call({ op: "stop" });
     if (!r.ok || !r.pcm || !r.sampleRate) throw new Error("the microphone window returned no audio");
     return { pcm: r.pcm, sampleRate: r.sampleRate, peak: r.peak ?? 0, ...(r.interrupted && { interrupted: true }) };
+  }
+
+  /** Asks the page to list the microphones; the list comes back as an event. */
+  async devices(): Promise<void> {
+    await this.#call({ op: "devices" });
+  }
+
+  async meter(on: boolean): Promise<void> {
+    await this.#call({ op: "meter", on, mic: this.#d.mic() });
   }
 
   async discard(): Promise<void> {

@@ -148,3 +148,31 @@ describe("tray menu", () => {
     expect(check({ kind: "unsupported" })).toMatchObject({ enabled: false });
   });
 });
+
+describe("tray menu, recent dictations", () => {
+  const withRecent = (recent: string[]) => ctx({ dictation: { enabled: true, hotkey: "ControlRight", recent } });
+  const sub = (c: TrayContext) => trayMenuModel(c).find((i) => i.type === "submenu");
+
+  it("has no submenu until something was dictated", () => {
+    expect(sub(withRecent([]))).toBeUndefined();
+  });
+
+  it("lists the last five, newest first, each copying its own entry", () => {
+    const row = sub(withRecent(["a", "b", "c", "d", "e", "f"]));
+    expect(row).toMatchObject({ label: "Copy recent dictation" });
+    const items = (row as { items: { action: string; label: string }[] }).items;
+    expect(items.map((i) => [i.action, i.label])).toEqual([
+      ["dictation-copy-0", "a"],
+      ["dictation-copy-1", "b"],
+      ["dictation-copy-2", "c"],
+      ["dictation-copy-3", "d"],
+      ["dictation-copy-4", "e"],
+    ]);
+  });
+
+  it("folds line breaks and cuts a long text with an ellipsis", () => {
+    const items = (sub(withRecent(["one\n\n two", "x".repeat(60)])) as { items: { label: string }[] }).items;
+    expect(items[0]!.label).toBe("one two");
+    expect(items[1]!.label).toBe(`${"x".repeat(47)}…`);
+  });
+});

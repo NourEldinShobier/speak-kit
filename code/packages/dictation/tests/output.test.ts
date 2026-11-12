@@ -314,3 +314,51 @@ describe("keep on clipboard", () => {
     expect(r.ins.inserted[0]?.plan).toEqual({ method: "type" });
   });
 });
+
+describe("what a dictation records", () => {
+  it("stores the program's friendly name, the outcome and the transcription time", async () => {
+    const r = await rig();
+    r.ins.state.current = target({ name: "Notepad" });
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(await r.dictation.history.list()).toMatchObject([{ app: "notepad.exe", displayName: "Notepad", outcome: "sent", timings: { transcribeMs: 0 } }]);
+  });
+
+  it("marks a copy as copied", async () => {
+    const r = await rig({ insertMode: "copy" });
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(await r.dictation.history.list()).toMatchObject([{ outcome: "copied" }]);
+  });
+});
+
+describe("logs never carry spoken words", () => {
+  it("a stage that fails is logged by name and reason only", async () => {
+    const lines: string[] = [];
+    const time = fakeClock();
+    const keys = fakeKeyboard();
+    const rec = fakeRecorder();
+    const stt = fakeTranscriber("my secret password is hunter two");
+    const ins = fakeInserter();
+    const storage = fakeStorage();
+    storage.storage.save = () => Promise.reject(new Error("disk full"));
+    const d = createDictation({
+      clock: time.clock,
+      recorder: rec.recorder,
+      transcriber: stt.transcriber,
+      inserter: ins.inserter,
+      hotkeys: keys.source,
+      storage: storage.storage,
+      log: (stage, why) => lines.push(`${stage}: ${why}`),
+    });
+    await d.ready();
+    ins.inserter.target = () => new Promise(() => undefined);
+    keys.send("ControlRight", true, time.clock.now());
+    await time.advance(1000);
+    keys.send("ControlRight", false, time.clock.now());
+    await time.advance(2500);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.join("\n")).not.toMatch(/secret|password|hunter/i);
+    expect(lines[0]).toBe("window: timeout");
+  });
+});
