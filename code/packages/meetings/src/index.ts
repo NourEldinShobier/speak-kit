@@ -34,6 +34,7 @@ export {
   vocabularyVersion,
   writeNotes,
   type CompleteResult,
+  type NoteLine,
   type Notes,
   type NotesDeps,
   type NotesOutcome,

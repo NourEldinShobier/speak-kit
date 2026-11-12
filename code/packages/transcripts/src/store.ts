@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Fs } from "./fs";
+import type { NotesRecord } from "./notes";
 import type { Entry, Segment } from "./types";
 
 const VERSION = 1;
@@ -156,6 +157,22 @@ export class Store {
     }
   }
 
+  async saveNotes(id: string, rec: NotesRecord): Promise<void> {
+    await this.#serial(() => this.#o.fs.write(this.#p("items", `${id}.notes.json`), JSON.stringify(rec)));
+  }
+
+  /** The saved notes; unreadable or missing notes are no notes (the words never depend on them). */
+  async notes(id: string): Promise<NotesRecord | undefined> {
+    const raw = await this.#o.fs.read(this.#p("items", `${id}.notes.json`)).catch(() => undefined);
+    if (!raw) return undefined;
+    try {
+      const r = JSON.parse(new TextDecoder().decode(raw)) as NotesRecord;
+      return r && typeof r === "object" ? r : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Raw 16 kHz 16-bit samples of a recording still in progress. */
   spoolPath(id: string): string {
     return this.#p("audio", `${id}.raw`);
@@ -220,6 +237,7 @@ export class Store {
     await this.#mutate((d) => void d.delete(id));
     await this.#serial(async () => {
       await this.#o.fs.remove(this.#p("items", `${id}.json`));
+      await this.#o.fs.remove(this.#p("items", `${id}.notes.json`));
       await this.#o.fs.remove(this.audioPath(id));
       await this.#o.fs.remove(this.spoolPath(id));
     });
