@@ -31,15 +31,29 @@ export function chunks(text: string): number[][] {
   return out;
 }
 
-export function createMacInput(native: MacNative): InputPort {
+/** How long to wait for an app to come to the front, and how often to look. */
+const FOCUS_WAIT_MS = 500;
+const FOCUS_POLL_MS = 25;
+
+/** Brings the app with this process id to the front and waits up to half a second for the system to agree. */
+async function focusApp(native: MacNative, pid: number): Promise<boolean> {
+  if (native.frontmost()?.pid === pid) return true;
+  if (!native.activate(pid)) return false;
+  for (let waited = 0; waited <= FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
+    if (native.frontmost()?.pid === pid) return true;
+    await new Promise((r) => setTimeout(r, FOCUS_POLL_MS));
+  }
+  return false;
+}
+
+export function createMacInput(native: MacNative, layout?: { current(): string | undefined }): InputPort {
   const press = (code: number, flags: number) => native.postKey(code, true, flags) && native.postKey(code, false, flags);
   return {
     foreground(): ForegroundInfo | null {
       const f = native.frontmost();
       // The window is not told apart from its app: a window switch inside one app goes unnoticed, an app switch does not.
-      if (!f) return null;
-      const bounds = native.windowBounds(f.pid);
-      return { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", elevated: false, ...(bounds && { bounds }) };
+      const code = layout?.current();
+      return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", ...(code && { layout: code }), elevated: false } : null;
     },
     // Which control has focus needs Accessibility queries; secure input is the signal password fields give without them.
     passwordFocused: () => false,

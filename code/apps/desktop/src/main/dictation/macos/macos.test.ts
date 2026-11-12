@@ -157,12 +157,10 @@ describe("macOS foreground and paste keys", () => {
     expect(input.foreground()).toBeNull();
   });
 
-  it("reports the front window's bounds so a full-screen program can be told, and none when it has no window", () => {
+  it("adds the keyboard layout language when the reader has one", () => {
     const fake = fakeMacNative();
-    const input = createMacInput(fake.native);
-    expect(input.foreground()).not.toHaveProperty("bounds");
-    fake.state.windows.set(501, { x: 0, y: 0, width: 1512, height: 982 });
-    expect(input.foreground()?.bounds).toEqual({ x: 0, y: 0, width: 1512, height: 982 });
+    const input = createMacInput(fake.native, { current: () => "de" });
+    expect(input.foreground()).toMatchObject({ exe: "com.apple.TextEdit", layout: "de" });
   });
 
   it("pastes with Command+V and adds Shift when asked, releasing the key last", () => {
