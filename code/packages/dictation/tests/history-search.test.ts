@@ -9,6 +9,12 @@ describe("normalize", () => {
 });
 
 describe("rank", () => {
+  it("finds words that are also members of Object.prototype", () => {
+    for (const word of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
+      expect(rank(normalize(`the ${word} of a class`), word)).toBe(4);
+    }
+    expect(rank(normalize("nothing here"), "constructor")).toBe(0);
+  });
   it("is 1 for a blank search and 0 when a word is missing", () => {
     expect(rank("hello world", "  ")).toBe(1);
     expect(rank("hello world", "hello moon")).toBe(0);

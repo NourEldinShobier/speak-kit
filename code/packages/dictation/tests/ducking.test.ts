@@ -114,4 +114,33 @@ describe("createDucker", () => {
     await d.begin();
     await d.end();
   });
+  it("puts audio back when the key is released while the system is still being asked", async () => {
+    const muted: boolean[] = [];
+    let release: () => void = () => undefined;
+    const ducker = createDucker({
+      mode: () => "mute",
+      output: async () => "speakers",
+      media: undefined,
+      volume: {
+        get: async () => 0.5,
+        ramp: async () => undefined,
+        muted: async () => false,
+        setMuted: (on) => new Promise<void>((resolve) => ((release = () => (muted.push(on), resolve())), undefined)),
+      },
+    });
+    const begun = ducker.begin();
+    await new Promise((r) => setImmediate(r));
+    const ended = ducker.end();
+    release();
+    await begun;
+    release();
+    await ended;
+    expect(muted).toEqual([true, false]);
+  });
+  it("a second begin while the first is still running does not duck twice", async () => {
+    const r = rig("mute");
+    await Promise.all([r.ducker.begin(), r.ducker.begin()]);
+    await r.ducker.end();
+    expect(r.calls).toEqual(["muted true", "muted false"]);
+  });
 });

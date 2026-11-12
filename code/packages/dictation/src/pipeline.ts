@@ -10,6 +10,8 @@ export interface Job {
   clip: Promise<Clip | undefined>;
   /** The window the key was pressed in. */
   target: Promise<Target | undefined>;
+  /** Brought back after a cancel. */
+  restored?: boolean;
 }
 
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
@@ -100,6 +102,11 @@ async function windows(ctx: Context, job: Job): Promise<{ target: Target | undef
   return { target, current: back ? await windowNow(ctx) : current, lost: !back };
 }
 
+function kindOf(clip: Clip, job: Job): "interrupted" | "restored" | undefined {
+  if (clip.interrupted) return "interrupted";
+  return job.restored ? "restored" : undefined;
+}
+
 async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number }): Promise<Outcome> {
   const { clip, heard, text, transcribeMs } = said;
   const { target, current, lost } = await windows(ctx, job);
@@ -109,7 +116,8 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
   const app = (current ?? target)?.exe;
   // Saved before inserting, so the text survives an insertion that fails.
   const name = (current ?? target)?.name;
-  await within(ctx, { name: "history", ms: STAGE_MS, fallback: undefined }, () =>
+  const kind = kindOf(clip, job);
+  const entryId = await within(ctx, { name: "history", ms: STAGE_MS, fallback: undefined }, () =>
     ctx.history.add({
       at: ctx.deps.clock.now(),
       text,
@@ -118,15 +126,19 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
       ...(app !== undefined && { app }),
       ...(heard.language !== undefined && { language: heard.language }),
       ...(heard.model !== undefined && { model: heard.model }),
-      ...(clip.interrupted && { kind: "interrupted" as const }),
+      ...(kind && { kind }),
       ...(name !== undefined && { displayName: name }),
       timings: { transcribeMs },
       outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
     }),
   );
-  if (lost) return { error: "focus-failed" };
+  const failed = (error: "focus-failed" | "insert-failed"): Outcome => {
+    if (entryId) void ctx.history.update(entryId, { outcome: "failed" });
+    return { error };
+  };
+  if (lost) return failed("focus-failed");
   const done = await ctx.deps.inserter.insert({ text, plan });
-  if (!done.ok) return { error: "insert-failed" };
+  if (!done.ok) return failed("insert-failed");
   return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
 }
 

@@ -23,7 +23,7 @@ export interface HistoryEntry {
   mode?: { name: string; failure?: string };
   timings?: { transcribeMs?: number; insertMs?: number };
   /** What really happened to the text. */
-  outcome?: "sent" | "copied";
+  outcome?: "sent" | "copied" | "failed";
 }
 
 export type NewEntry = Omit<HistoryEntry, "id">;
@@ -37,7 +37,10 @@ export interface HistoryQuery {
 }
 
 export interface History {
-  add(entry: NewEntry): Promise<void>;
+  /** Resolves the new entry's id; undefined when retention is off. */
+  add(entry: NewEntry): Promise<string | undefined>;
+  /** Corrects what is known only after the text was sent (what really happened to it). */
+  update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void>;
   /** Newest first, with expired entries already gone. */
   list(query?: HistoryQuery): Promise<HistoryEntry[]>;
   get(id: string): Promise<HistoryEntry | undefined>;
@@ -128,10 +131,19 @@ class Store implements History {
     await this.save();
   };
 
-  async add(entry: NewEntry): Promise<void> {
+  async add(entry: NewEntry): Promise<string | undefined> {
     await this.prune();
-    if (this.deps.retention() === "off") return;
-    this.entries = [{ ...entry, id: freshId(this.entries, entry.at) }, ...this.entries].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    if (this.deps.retention() === "off") return undefined;
+    const id = freshId(this.entries, entry.at);
+    this.entries = [{ ...entry, id }, ...this.entries].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    await this.save();
+    return id;
+  }
+
+  async update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void> {
+    await this.ready();
+    if (!this.entries.some((e) => e.id === id)) return;
+    this.entries = this.entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
     await this.save();
   }
 

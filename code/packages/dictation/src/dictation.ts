@@ -120,7 +120,7 @@ class Runtime implements Dictation {
     this.flashed = undefined;
     this.cancelFlash?.();
     this.pending++;
-    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(kept.clip), target: kept.target }));
+    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(kept.clip), target: kept.target, restored: true }));
     this.emit();
   }
 

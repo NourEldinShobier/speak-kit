@@ -6,8 +6,8 @@ export interface MicDevice {
 
 export type MicKind = "virtual" | "bluetooth" | "built-in" | "wired";
 
-const VIRTUAL = /virtual|aggregate|loopback|voicemeeter|vb-audio|cable (input|output)|blackhole|soundflower|obs|ndi|stereo mix|iphone|ipad|continuity|camo|droidcam|epoccam/i;
-const BLUETOOTH = /bluetooth|hands-free|handsfree|airpods|buds|wh-1000|wf-1000|headset|\bbt\b/i;
+const VIRTUAL = /virtual|aggregate|loopback|voicemeeter|vb-audio|cable (input|output)|blackhole|soundflower|\bobs\b|\bndi\b|stereo mix|iphone|ipad|continuity|\bcamo\b|droidcam|epoccam/i;
+const BLUETOOTH = /bluetooth|hands-free|handsfree|airpods|\bbuds\b|wh-1000|wf-1000|\bbt\b/i;
 const BUILT_IN = /built-in|internal|macbook|microphone array|integrated|realtek/i;
 
 /** Guesses what a device is from its name; the system gives no transport type to a web page. */

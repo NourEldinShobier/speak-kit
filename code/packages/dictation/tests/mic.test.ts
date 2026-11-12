@@ -15,6 +15,20 @@ describe("micKind", () => {
     expect(micKind(cable)).toBe("virtual");
     expect(micKind(phone)).toBe("virtual");
   });
+  it("does not call a wired headset Bluetooth, and does not match short tokens inside other words", () => {
+    expect(micKind({ id: "h", label: "Logitech H390 USB Headset" })).toBe("wired");
+    expect(micKind({ id: "h", label: "Headset Microphone (Realtek(R) Audio)" })).toBe("built-in");
+    expect(micKind({ id: "h", label: "Headset (WH-1000XM4 Hands-Free)" })).toBe("bluetooth");
+    expect(micKind({ id: "c", label: "Candid Mic" })).toBe("wired");
+    expect(micKind({ id: "j", label: "Microphone (Jobs Studio)" })).toBe("wired");
+    expect(micKind({ id: "o", label: "OBS Virtual Camera Audio" })).toBe("virtual");
+    expect(micKind({ id: "n", label: "NDI Audio" })).toBe("virtual");
+  });
+  it("keeps a wired USB headset that is the system default", () => {
+    const headset = { id: "h", label: "Logitech H390 USB Headset" };
+    const choice = chooseMic({ devices: [builtIn, headset], defaultId: "h", avoidBluetooth: true });
+    expect(choice).toMatchObject({ kind: "device", id: "h", bluetooth: false });
+  });
   it("applies the person's exclusion list", () => {
     expect(micKind(usb, ["yeti"])).toBe("virtual");
     expect(micKind(usb, ["  "])).toBe("wired");

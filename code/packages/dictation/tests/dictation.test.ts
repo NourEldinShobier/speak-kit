@@ -623,7 +623,7 @@ describe("where the text goes", () => {
     await r.hold(1000);
     await r.time.advance(200);
     expect(r.dictation.state()).toEqual({ status: "error", code: "insert-failed" });
-    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world " }]);
+    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world ", outcome: "failed" }]);
   });
 
   it("uses the insert mode from the settings", async () => {

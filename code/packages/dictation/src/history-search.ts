@@ -31,7 +31,7 @@ export function rank(key: string, search: string, aliases: Readonly<Record<strin
   const hay = words(key);
   let total = 0;
   for (const token of tokens) {
-    const options = [token, ...(aliases[token] ?? []).map(normalize)];
+    const options = [token, ...(Object.hasOwn(aliases, token) ? aliases[token]! : []).map(normalize)];
     const best = Math.max(...options.map((o) => score(o, hay, key)));
     if (best === 0) return 0;
     total += best;
