@@ -260,6 +260,26 @@ function AddRule({ full, onAdd }: { full: boolean; onAdd(r: Replacement): void }
   );
 }
 
+/** The rows of replacements and the form that adds one; `update` gets a function from the current list to the next, as `useLive` provides. */
+export function ReplacementRules({ rules, update, label }: { rules: readonly Replacement[]; update(change: (cur: Replacement[]) => Replacement[]): void; label: string }) {
+  return (
+    <>
+      <div className="vocab-rule vocab-rule--head" aria-hidden="true">
+        <span className="vocab-rule__from">When I say</span>
+        <span className="vocab-arrow" />
+        <span className="vocab-rule__to">Replace with</span>
+        <span>Capitals</span>
+      </div>
+      <ul className="vocab-rules" aria-label={label}>
+        {rules.map((r) => (
+          <RuleRow key={r.from} r={r} onChange={(next) => update((cur) => cur.map((x) => (x.from === r.from ? next : x)))} onDelete={() => update((cur) => cur.filter((x) => x.from !== r.from))} />
+        ))}
+      </ul>
+      <AddRule full={rules.length >= MAX_REPLACEMENTS} onAdd={(r) => update((cur) => [...cur.filter((x) => x.from.toLowerCase() !== r.from.toLowerCase()), r])} />
+    </>
+  );
+}
+
 /** Replacements: a phrase and what it becomes. An empty "Replace with" deletes the phrase. */
 export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onShowWords(): void }) {
   const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => dictation.patchSettings({ replacements: next }));
@@ -278,18 +298,7 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
         </p>
       </header>
       <div className="lm-card">
-        <div className="vocab-rule vocab-rule--head" aria-hidden="true">
-          <span className="vocab-rule__from">When I say</span>
-          <span className="vocab-arrow" />
-          <span className="vocab-rule__to">Replace with</span>
-          <span>Capitals</span>
-        </div>
-        <ul className="vocab-rules" aria-label="Replacement rules">
-          {list.map((r) => (
-            <RuleRow key={r.from} r={r} onChange={(next) => update((cur) => cur.map((x) => (x.from === r.from ? next : x)))} onDelete={() => update((cur) => cur.filter((x) => x.from !== r.from))} />
-          ))}
-        </ul>
-        <AddRule full={list.length >= MAX_REPLACEMENTS} onAdd={(r) => update((cur) => [...cur.filter((x) => x.from.toLowerCase() !== r.from.toLowerCase()), r])} />
+        <ReplacementRules rules={list} update={update} label="Replacement rules" />
         {derived ? (
           <p className="vocab-note">
             {derived} more {derived === 1 ? "rule comes" : "rules come"} from the sounds-like spellings of your words.{" "}

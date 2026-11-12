@@ -6,6 +6,7 @@ import {
   defaultMode,
   defaultSettings,
   keepsFacts,
+  mergeReplacements,
   removeMode,
   resolveMode,
   rewritePass,
@@ -250,5 +251,42 @@ describe("dictation with modes, words and rewrite", () => {
     await r.hold(1000);
     await r.time.advance(200);
     expect(called).toBe(0);
+  });
+});
+
+describe("replacements per mode", () => {
+  const shared = [
+    { from: "gonna", to: "going to" },
+    { from: "Foo", to: "shared foo" },
+  ];
+
+  it("adds the mode's replacements after the shared ones, and the mode wins for the same phrase whatever the capitals", () => {
+    expect(mergeReplacements(shared, [{ from: "foo", to: "mode foo", matchCase: true }, { from: "bar", to: "baz" }])).toEqual([
+      { from: "gonna", to: "going to" },
+      { from: "foo", to: "mode foo", matchCase: true },
+      { from: "bar", to: "baz" },
+    ]);
+    expect(mergeReplacements(shared, [])).toEqual(shared);
+    expect(mergeReplacements([], shared)).toEqual(shared);
+  });
+
+  it("applies in a mode but never changes the default mode", () => {
+    const base = { ...defaultSettings, replacements: shared };
+    const own = [{ from: "ship it", to: "deploy" }];
+    expect(applyMode(base, mode({ replacements: own })).replacements).toEqual([...shared, ...own]);
+    expect(applyMode(base, { ...defaultMode(), replacements: own }).replacements).toEqual(shared);
+  });
+
+  it("swaps the phrase in the mode's app and not in another", async () => {
+    const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], replacements: [{ from: "world", to: "team" }] });
+    const r = await rig({ modes: [defaultMode(), chat] });
+    r.ins.state.current = target({ exe: "slack.exe" });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("Hello team ");
+    r.ins.state.current = target({ exe: "notepad.exe" });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[1]?.text).toBe("Hello world ");
   });
 });

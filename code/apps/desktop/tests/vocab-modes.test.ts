@@ -25,6 +25,13 @@ afterEach(async () => {
 type Hook = Record<string, (...a: unknown[]) => unknown>;
 const hook = (l: Launched, name: string, ...args: unknown[]) =>
   l.app.evaluate((_e, [n, a]) => (globalThis as unknown as { __speakkit: { dictation: Hook } }).__speakkit.dictation[n as string]!(...(a as unknown[])), [name, args] as const);
+const until = async (f: () => Promise<boolean>) => {
+  for (const end = Date.now() + 8000; Date.now() < end; ) {
+    if (await f()) return;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  expect(await f()).toBe(true);
+};
 const settings = (l: Launched) => l.page.evaluate(async () => (await window.speakkitDictation.status()).settings);
 const open = async (l: Launched, name: string, heading = name) => {
   await l.page.getByRole("link", { name }).click();
@@ -251,6 +258,24 @@ describe("Modes page", () => {
     expect((await settings(l)).modes).toEqual([]);
   });
 
+  it("adds a replacement that applies only in the mode, and removes it again", async () => {
+    const l = await start();
+    await open(l, "Modes");
+    await l.page.getByRole("button", { name: "Add mode" }).click();
+    const add = l.page.getByRole("dialog", { name: "Add a mode" });
+    await add.getByLabel("Name").fill("Chat");
+    await add.getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("heading", { name: "Chat", exact: true, level: 1 }).waitFor();
+    await l.page.getByLabel("When I say").fill("ship it");
+    await l.page.getByLabel("Replace with").fill("deploy");
+    await l.page.getByRole("button", { name: "Add", exact: true }).click();
+    await l.page.getByRole("list", { name: "Replacements for Chat" }).getByText("deploy").waitFor();
+    await until(async () => JSON.stringify((await settings(l)).modes[0]!.replacements) === JSON.stringify([{ from: "ship it", to: "deploy" }]));
+    expect((await settings(l)).replacements).toEqual([]);
+    await l.page.getByRole("button", { name: "Delete replacement ship it" }).click();
+    await until(async () => (await settings(l)).modes[0]!.replacements.length === 0);
+  });
+
   it("refuses a repeated or empty mode name and moves an app from one mode to another", async () => {
     const l = await start();
     await open(l, "Modes");
@@ -408,7 +433,8 @@ describe("History page", () => {
     await l.page.getByRole("button", { name: "More history actions" }).click();
     await l.page.getByRole("menuitem", { name: "Keep recordings (off)" }).click();
     const dialog = l.page.getByRole("dialog", { name: "Keep recordings" });
-    await dialog.getByText("Recordings use up to 512 MB.").waitFor();
+    await dialog.getByText("The oldest recordings are removed first when they pass the size below", { exact: false }).waitFor();
+    expect(await dialog.getByRole("combobox", { name: "Most space recordings may use" }).textContent()).toContain("512 MB");
     await dialog.getByRole("switch", { name: "Keep the audio of each dictation" }).click();
     await dialog.getByRole("button", { name: "Save" }).click();
     await l.page.waitForFunction(async () => (await window.speakkitDictation.status()).settings.keepRecordings === true);

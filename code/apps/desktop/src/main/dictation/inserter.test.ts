@@ -17,6 +17,7 @@ function setup(
     onSleep?: () => void;
     onType?: () => void;
     onTyping?: (on: boolean) => void;
+    version?: string;
   } = {},
 ) {
   let content: string | null = "old";
@@ -63,6 +64,7 @@ function setup(
     clip,
     overrides: opts.overrides,
     onTyping: opts.onTyping,
+    versions: { lookup: async () => opts.version },
     sleep: async (ms) => {
       slept.push(ms);
       opts.onSleep?.();
@@ -278,6 +280,15 @@ describe("typing rule", () => {
     await t.ins.insert("x");
     await setup({ onTyping: (on) => seen.push(on) }).ins.insert("pasted");
     expect(seen).toEqual([true, false]);
+  });
+
+  it("types into a browser on Chromium 155 and pastes into one on 157", async () => {
+    const chrome = { ...notepad, exe: "chrome.exe" };
+    const broken = setup({ fg: chrome, version: "155.0.7000.1" });
+    expect(await broken.ins.insert("hello")).toEqual({ status: "typed" });
+    expect(broken.sent).toEqual(["type hello"]);
+    const fine = setup({ fg: chrome, version: "157.0.1" });
+    expect(await fine.ins.insert("hello")).toEqual({ status: "pasted" });
   });
 
   it("ignores a stop request when nothing is being typed", async () => {

@@ -79,6 +79,8 @@ export interface ForegroundInfo {
   layout?: string;
   /** True when the window's program runs with higher rights than this app (Windows then drops our key presses). */
   elevated: boolean;
+  /** Product version of the program when it is a browser built on Chromium and the version could be read, e.g. "155.0.7000.1". */
+  version?: string;
   /** Where the window is on the screen; used to tell a full-screen program. */
   bounds?: { x: number; y: number; width: number; height: number };
 }

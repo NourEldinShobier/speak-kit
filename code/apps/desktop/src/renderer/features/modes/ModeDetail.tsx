@@ -4,6 +4,7 @@ import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speak
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { WordDialog } from "../vocabulary";
+import { ModeReplacements } from "./ModeReplacements";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
@@ -90,7 +91,7 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length === 1 ? "app goes" : "apps go"} back to the Default mode, and its {mode.terms.length === 1 ? "word is" : "words are"} removed. You cannot undo it.
+        Its {mode.apps.length === 1 ? "app goes" : "apps go"} back to the Default mode, and its words and replacements are removed. You cannot undo it.
       </p>
     </Modal>
   );
@@ -275,6 +276,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
+      <ModeReplacements mode={mode} onChange={onChange} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />
       <DeleteDialog open={asking} mode={mode} onClose={() => setAsking(false)} onConfirm={onDelete} />
     </Page>

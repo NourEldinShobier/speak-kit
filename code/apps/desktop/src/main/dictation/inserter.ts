@@ -1,4 +1,5 @@
 import { profileFor } from "./app-profile";
+import type { ProgramVersions } from "./program-version";
 import { createRestoreGuard, type ClipboardPort, type RestoreGuard } from "./restore-guard";
 import type { AppOverride, CopyReason, ForegroundInfo, InputPort, InsertOptions, InsertResult, PasteKey, PasteProfile } from "./types";
 
@@ -10,6 +11,8 @@ interface Deps {
   sleep?: ((ms: number) => Promise<void>) | undefined;
   /** False on a platform without key injection: every insert then only copies. */
   supported?: boolean | undefined;
+  /** Looks up the version of the browser in front, for the rule about Chromium versions that ignore a paste. */
+  versions?: Pick<ProgramVersions, "lookup"> | undefined;
   /** True while keys are being typed, false when that ends: the cancel key is only taken from the program in front for that time. */
   onTyping?: ((on: boolean) => void) | undefined;
 }
@@ -34,17 +37,19 @@ export class Inserter {
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #supported: boolean;
   readonly #onTyping: (on: boolean) => void;
+  readonly #versions: Pick<ProgramVersions, "lookup"> | undefined;
   readonly #guard: RestoreGuard;
   #chain: Promise<unknown> = Promise.resolve();
   #stopTyping = false;
 
-  constructor({ input, clip, overrides, supported = true, onTyping, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
+  constructor({ input, clip, overrides, supported = true, onTyping, versions, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
     this.#clip = clip;
     this.#overrides = typeof overrides === "function" ? overrides : () => overrides ?? [];
     this.#sleep = sleep;
     this.#supported = supported;
     this.#onTyping = onTyping ?? (() => undefined);
+    this.#versions = versions;
     this.#guard = createRestoreGuard(clip);
   }
 
@@ -75,7 +80,9 @@ export class Inserter {
   async #run(text: string, opts: InsertOptions): Promise<InsertResult> {
     this.#stopTyping = false;
     if (!this.#supported) return this.#copyOnly(text, "unsupported-platform");
-    const fg = this.#input.foreground();
+    const seen = this.#input.foreground();
+    const version = await this.#versions?.lookup(seen);
+    const fg = seen && version ? { ...seen, version } : seen;
     if (opts.mode === "copy" || profileFor(fg, this.#overrides()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
     const blocked = this.#veto(fg, opts.target);
     if (blocked === "password-field") return { status: "refused", reason: blocked };

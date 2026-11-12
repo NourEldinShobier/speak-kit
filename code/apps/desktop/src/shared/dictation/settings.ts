@@ -39,6 +39,22 @@ const Term = v.object({
   soundsLike: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(20)),
 });
 const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), spoken: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)) });
+const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)), matchCase: v.optional(v.boolean()) });
+// A bad entry is dropped, the rest of the list stays.
+const replacements = v.fallback(
+  v.pipe(
+    v.array(v.unknown()),
+    v.transform((items) =>
+      items
+        .flatMap((i) => {
+          const r = v.safeParse(Replacement, i);
+          return r.success ? [r.output] : [];
+        })
+        .slice(0, MAX_REPLACEMENTS),
+    ),
+  ),
+  [],
+);
 const DEFAULT_ID = "default";
 const lower = (x: string) => x.toLowerCase();
 const termKeys = (t: { id: string; word: string }) => [`i:${t.id}`, `w:${lower(t.word)}`];
@@ -78,6 +94,8 @@ const modeEntries = {
   capitals: v.picklist(["keep", "sentence", "lower"]),
   end: v.picklist(["keep", "no-full-stop"]),
   rewrite: v.boolean(),
+  /** Replacements only for this mode; a file from before they existed loads with none. */
+  replacements,
 };
 type ModeOut = v.InferOutput<ReturnType<typeof v.object<typeof modeEntries & { terms: typeof termList }>>>;
 // The built-in default mode lists no apps and keeps its name; no other mode may take that name.
@@ -113,7 +131,6 @@ export const RewriteSchema = v.fallback(v.object({ enabled: bool(false), deadlin
   enabled: false,
   deadlineMs: 4000,
 });
-const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)), matchCase: v.optional(v.boolean()) });
 const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTKEY);
 /** "" is unset. */
 const optionalHotkey = (fallback: string) => v.fallback(v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]), fallback);
@@ -128,21 +145,6 @@ const PauseRules = v.object({
 });
 export type PauseRules = v.InferOutput<typeof PauseRules>;
 const MOUSE_PICK = ["", "Mouse2", "Mouse3", "Mouse4", "Mouse5"] as const;
-// A bad entry is dropped, the rest of the list stays.
-const replacements = v.fallback(
-  v.pipe(
-    v.array(v.unknown()),
-    v.transform((items) =>
-      items
-        .flatMap((i) => {
-          const r = v.safeParse(Replacement, i);
-          return r.success ? [r.output] : [];
-        })
-        .slice(0, MAX_REPLACEMENTS),
-    ),
-  ),
-  [],
-);
 
 const exclusions = v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)), []);
 

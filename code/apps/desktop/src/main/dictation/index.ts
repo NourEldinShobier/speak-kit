@@ -2,6 +2,7 @@ import { systemCaretReader, type CaretReader } from "./caret-reader";
 import { createElectronClipboard } from "./clipboard";
 import { createHud, type Hud, type HudWindow } from "./hud";
 import { openHudWindow, type HudWindowOptions } from "./hud-window";
+import { createProgramVersions, readSystemVersion, type ProgramVersions } from "./program-version";
 import { createInserter } from "./inserter";
 import { createUnsupportedPlatform } from "./unsupported";
 import type { AppOverride, ForegroundInfo, HotkeySource, InsertOptions, InsertResult } from "./types";
@@ -16,6 +17,8 @@ export interface DictationOsOptions {
   hud?: HudWindowOptions & { idleMs?: number; place?: () => "top" | "bottom" };
   /** Called with each HUD window as it is created, so the app can tell which page its HUD buttons come from. */
   onHudWindow?(w: HudWindow): void;
+  /** The version lookup for browsers; replaced in tests. */
+  versions?: ProgramVersions;
   /** Typing started or ended. */
   onTyping?(on: boolean): void;
 }
@@ -53,7 +56,9 @@ async function loadPlatform() {
 
 export async function createDictationOs(options: DictationOsOptions = {}): Promise<DictationOs> {
   const platform = await loadPlatform();
+  const versions = options.versions ?? createProgramVersions((fg) => readSystemVersion(fg));
   const inserter = createInserter({
+    versions,
     input: platform.input,
     clip: createElectronClipboard(platform.input),
     overrides: options.overrides,
@@ -75,7 +80,11 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     supported: platform.supported,
     hotkey: platform.hotkey,
     hud,
-    foreground: () => platform.input.foreground(),
+    foreground: () => {
+      const fg = platform.input.foreground();
+      versions.warm(fg); // read while the person talks, so the paste does not wait for it
+      return fg;
+    },
     passwordFocused: () => platform.input.passwordFocused(),
     insert: (text, opts) => inserter.insert(text, opts),
     focus: (hwnd) => platform.input.focus(hwnd),

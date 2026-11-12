@@ -25,6 +25,7 @@ import { createSystemDucker } from "./ducking";
 import { cancelGrab, cleanField, createRecovery, onStateChange, prepareModel, sleepBlock, warmCaret } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
+import type { Spool } from "./spool";
 import type { Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 

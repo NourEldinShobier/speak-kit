@@ -160,10 +160,10 @@ describe("microphone page", () => {
     b.unplug();
     await vi.advanceTimersByTimeAsync(100);
     b.sound(1600);
-    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true; pcm: Float32Array }>;
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
     expect(r.interrupted).toBeUndefined();
-    expect(r.pcm).toHaveLength(1600 + 1600 + 1600); // 100 ms of silence between two 100 ms pieces
-    expect([r.pcm[1599], r.pcm[1600], r.pcm[3199], r.pcm[3200]]).toEqual([0.5, 0, 0, 0.5]);
+    expect(r.pcm!).toHaveLength(1600 + 1600 + 1600); // 100 ms of silence between two 100 ms pieces
+    expect([r.pcm![1599], r.pcm![1600], r.pcm![3199], r.pcm![3200]]).toEqual([0.5, 0, 0, 0.5]);
   });
 
   it("a drop longer than 200 ms cuts the take short but the recording goes on with the microphone that came back", async () => {
@@ -172,9 +172,9 @@ describe("microphone page", () => {
     b.unplug();
     await vi.advanceTimersByTimeAsync(300);
     b.sound(1600);
-    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true; pcm: Float32Array }>;
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
     expect(r.interrupted).toBe(true);
-    expect(r.pcm).toHaveLength(3200);
+    expect(r.pcm!).toHaveLength(3200);
   });
 
   it("a microphone that never comes back leaves the take cut short with what was heard", async () => {
@@ -183,9 +183,9 @@ describe("microphone page", () => {
     b.failNextOpens(true);
     b.unplug();
     await vi.advanceTimersByTimeAsync(50);
-    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true; pcm: Float32Array }>;
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
     expect(r.interrupted).toBe(true);
-    expect(r.pcm).toHaveLength(1600);
+    expect(r.pcm!).toHaveLength(1600);
   });
 
   it("plays a tone note by note on the speakers without opening the microphone", async () => {

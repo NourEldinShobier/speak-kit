@@ -48,3 +48,20 @@ describe("profileFor on macOS", () => {
     expect(profileFor(win("com.googlecode.iterm2"), [{ exe: "com.googlecode.iterm2", profile: { shortcut: "ctrl-shift-v" } }]).shortcut).toBe("ctrl-shift-v");
   });
 });
+
+describe("browsers built on Chromium 155 and 156", () => {
+  const browser = (exe: string, version?: string): ForegroundInfo => ({ ...win(exe), ...(version && { version }) });
+
+  it("type the text for those two versions, and paste normally for 154, 157 and an unknown version", () => {
+    expect(profileFor(browser("chrome.exe", "155.0.7000.1")).shortcut).toBe("type");
+    expect(profileFor(browser("msedge.exe", "156.2.1")).shortcut).toBe("type");
+    expect(profileFor(browser("com.google.Chrome", "156")).shortcut).toBe("type");
+    for (const v of ["154.0.1", "157.0.1", "1550.0", "15.5", "", "garbage", undefined]) expect(profileFor(browser("chrome.exe", v)).shortcut).toBe("ctrl-v");
+  });
+
+  it("leave other programs alone even when the version number matches, and the user's own rule still wins", () => {
+    expect(profileFor(browser("notepad.exe", "155.0.1")).shortcut).toBe("ctrl-v");
+    expect(profileFor(browser("chrome.exe", "155.0.1"), [{ exe: "chrome", profile: { shortcut: "ctrl-v" } }]).shortcut).toBe("ctrl-v");
+    expect(profileFor(browser("chrome.exe", "155.0.1"), [{ exe: "chrome", profile: { preDelayMs: 50 } }])).toEqual({ shortcut: "type", preDelayMs: 50, restoreDelayMs: 500 });
+  });
+});
