@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { dictationBridge } from "../shared/dictation/preload-api";
 import { libraryBridge } from "../shared/library/preload-api";
+import { transcriptsBridge } from "../shared/transcripts/preload-api";
 import { setPlatformEarly } from "./platform-attr";
 import { channel, METHODS, STATE_EVENT, UI_EVENT, type Api, type AppState, type UiEvent } from "../shared/ipc";
 
@@ -16,5 +17,6 @@ api.onUi = (cb) => subscribe<UiEvent>(UI_EVENT, cb);
 contextBridge.exposeInMainWorld("speakkit", api);
 contextBridge.exposeInMainWorld("speakkitLibrary", libraryBridge(ipcRenderer));
 contextBridge.exposeInMainWorld("speakkitDictation", dictationBridge(ipcRenderer));
+contextBridge.exposeInMainWorld("speakkitTranscripts", transcriptsBridge(ipcRenderer));
 
 setPlatformEarly(document, process.platform);

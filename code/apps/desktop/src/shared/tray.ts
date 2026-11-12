@@ -17,6 +17,8 @@ export interface TrayContext {
   shortcuts: Bindings;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
   dictation?: { enabled: boolean; hotkey: string };
+  /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
+  recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -42,6 +44,8 @@ export type TrayAction =
   | "dictation"
   | "dictation-history"
   | "dictation-settings"
+  | "record-start"
+  | "record-stop"
   | "open"
   | "pause"
   | "resume"
@@ -55,6 +59,15 @@ export type TrayAction =
   | "quit";
 
 type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
+
+const WAITING = { starting: "Starting recording...", saving: "Saving recording...", transcribing: "Transcribing..." } as const;
+
+/** One row that follows the recorder: it starts a recording when ready, stops it while recording, and waits (disabled) while the recording is saved and transcribed. */
+function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
+  if (phase === "ready") return item("record-start", "Record a conversation");
+  if (phase === "recording") return item("record-stop", "Stop recording");
+  return item("record-start", WAITING[phase], { enabled: false });
+}
 
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
 export function trayMenuModel(c: TrayContext): TrayItem[] {
@@ -71,6 +84,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey)} to dictate`, { enabled: false }));
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
+  if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));

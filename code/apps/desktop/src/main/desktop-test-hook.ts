@@ -5,6 +5,7 @@ import type { setupTray } from "./desktop-tray";
 import type { createReading } from "./reader/service";
 import { dictationTestHook } from "./dictation/test-hook";
 import type { DictationService } from "./dictation/service";
+import type { TranscriptsFeature } from "./transcripts";
 
 interface HookParts {
   shortcuts: ReturnType<typeof setupShortcuts>;
@@ -12,11 +13,12 @@ interface HookParts {
   tray: ReturnType<typeof setupTray>;
   reading: ReturnType<typeof createReading>;
   dictation: DictationService;
+  transcripts: TranscriptsFeature;
   installs(): number;
 }
 
 /** SPEAKKIT_TEST hooks: simulate what Playwright cannot do (global key presses, native menus, toasts). */
-export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, installs }: HookParts) => {
+export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs }: HookParts) => {
   const loop = monitorEventLoopDelay({ resolution: 10 });
   loop.enable();
   return {
@@ -33,6 +35,7 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
     trayState: () => tray.summary(),
     readText: (text: string) => reading.readText(text, "text"),
     dictation: dictationTestHook(dictation),
+    transcripts: { ...transcripts.testHook, phase: () => transcripts.phase() },
     /** Main-process event-loop delay since the app started, in ms (nanoseconds from the histogram). */
     loopDelay: () => ({ p50Ms: loop.percentile(50) / 1e6, p99Ms: loop.percentile(99) / 1e6, maxMs: loop.max / 1e6 }),
   };
