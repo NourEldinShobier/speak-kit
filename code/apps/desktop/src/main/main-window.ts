@@ -1,4 +1,4 @@
-import { app, type BrowserWindow } from "electron";
+import { app, screen, type BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
@@ -141,7 +141,13 @@ export class MainWindow {
       if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
-    const guard = createSizeGuard(w);
+    const guard = createSizeGuard({
+      getContentSize: () => w.getContentSize(),
+      setContentSize: (a, b) => w.setContentSize(a, b),
+      isMaximized: () => w.isMaximized(),
+      isFullScreen: () => w.isFullScreen(),
+      scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
+    });
     w.on("will-move", guard.willMove);
     w.on("moved", guard.moved);
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.

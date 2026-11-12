@@ -229,10 +229,15 @@ function watchSettingsFile() {
     keep: process.env.SPEAKKIT_PORT ? ["preferredPort"] : [],
     onEdit: (edit) => {
       if (edit.kind === "newer") return;
-      applyExternalConfig(handlerDeps(), edit.patch);
       addActivity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);
+      log.warn("settings file edited outside the app", edit.keys.join(","), edit.repaired.length ? `repaired: ${edit.repaired.join(",")}` : "");
+      applyExternalConfig(handlerDeps(), edit.patch);
     },
-    onUnreadable: () => addActivity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has."),
+    onUnreadable: () => {
+      addActivity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has.");
+      log.warn("settings file edited outside the app is not valid; keeping the running settings");
+      publish();
+    },
   });
 }
 
