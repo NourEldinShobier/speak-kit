@@ -2,11 +2,11 @@ import { VOICE_PORT, type VoiceUp } from "@speakkit/protocol";
 import { getToken, loadSettings } from "../../features/settings";
 import { VOICE_DOC_PORT, type FromOffscreen, type VoiceCommand } from "../../shared/internal";
 import { parseVoiceUp } from "../../shared/schemas";
-import { OFFSCREEN_URL, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
+import { OFFSCREEN_URL, closeOffscreen, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
 import { runPlayerCommand } from "./player";
 import { getState, publishState } from "./state";
-import { tell, voicePorts, voiceTabs } from "./voice-state";
-import { ignore } from "../../shared/ignore";
+import { tell, tellEnded, voicePorts, voiceTabs } from "./voice-state";
+import { ignore, sleep } from "../../shared/ignore";
 
 /**
  * Voice chat in the worker: a relay between the page (a port that lives as long as the page does) and the voice session in the
@@ -28,24 +28,24 @@ async function pausePlayer() {
   const s = await getState();
   if (s.status !== "playing" && s.status !== "preparing") return;
   await runPlayerCommand({ cmd: "pause" });
-  for (let i = 0; i < 20 && (await getState()).status !== "paused"; i++) await new Promise((r) => setTimeout(r, 25));
+  for (let i = 0; i < 20 && (await getState()).status !== "paused"; i++) await sleep(25);
   const now = await getState();
   if (now.status !== "paused") publishState({ ...now, status: "paused" });
 }
 
 async function begin(tabId: number, up: Extract<VoiceUp, { t: "start" }>) {
-  for (const other of voiceTabs) if (other !== tabId) tell(other, { t: "view", view: { phase: "ended", muted: false } }); // one conversation at a time
+  for (const other of voiceTabs) if (other !== tabId) tellEnded(other); // one conversation at a time
   voiceTabs.clear();
   voiceTabs.add(tabId);
   sid++;
   try {
     await pausePlayer();
-    if (await hasOffscreen()) await chrome.offscreen.closeDocument().catch(ignore); // the player's document, or a conversation of another tab
+    await closeOffscreen(); // the player's document, or a conversation of another tab
     await createOffscreen({ url: `${OFFSCREEN_URL}?voice`, reasons: ["USER_MEDIA" as chrome.offscreen.Reason], justification: "Listens through the microphone and plays the model's voice" });
     await toVoiceDoc(tabId, up, { cfg: { port: (await loadSettings()).port, token: await getToken() } });
   } catch {
     voiceTabs.delete(tabId);
-    tell(tabId, { t: "view", view: { phase: "ended", muted: false, problem: "unavailable" } });
+    tellEnded(tabId, "unavailable");
   }
 }
 

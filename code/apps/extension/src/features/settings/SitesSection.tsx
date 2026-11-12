@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { compareNames, plural, type SiteDefault, type SiteRule } from "@speakkit/protocol";
 import { Icon, IconButton, Select, SettingRow, TextInput } from "@speakkit/ui";
 import { Card, PageHead, ToggleGrid, ToggleRow } from "../../shared/ui";
-import { hasTabsPermission, recentWebTabs, removeTabsPermission, requestTabsPermission } from "./browser";
+import { hasTabsPermission, recentWebTabs, removeTabsPermission, requestTabsPermission } from "./tabs-access";
 import { defaultSettings, type SectionProps, type Settings } from "./types";
 
 /** "https://www.News.Example.com/a?b" -> "www.news.example.com"; null when it is not a host name. */

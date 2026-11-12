@@ -1,5 +1,6 @@
 import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { invalidateSettings, loadSettings, migrateStoredSettings } from "../../features/settings";
+import { ignore } from "../../shared/ignore";
 import type { FromOffscreen, WorkerFailure } from "../../shared/internal";
 import { parseInbound } from "../../shared/schemas";
 import { onCommand } from "./commands";
@@ -53,7 +54,7 @@ if (__TEST__)
 chrome.runtime.onInstalled.addListener(async () => {
   await migrateStoredSettings();
   await rebuildMenus();
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {});
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(ignore);
 });
 chrome.runtime.onStartup.addListener(() => {
   void rebuildMenus();

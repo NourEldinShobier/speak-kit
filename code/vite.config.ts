@@ -100,12 +100,12 @@ export default defineConfig({
       { files: ["apps/extension/src/app/**"], rules: restrict(noElectron, noNode, noDeepFeature) },
       { files: ["apps/extension/src/features/**"], rules: restrict(noElectron, noNode, noDeepSibling) },
       { files: ["packages/ui/src/**", "packages/player/src/**", "packages/dictation/src/**", "packages/protocol/src/**"], rules: restrict(noElectron, noNode) },
-      // The global chrome object: extension app/, shared/ and one port file for settings.
+      // The global chrome object: extension app/, shared/ and two port files for settings (browser.ts, and tabs-access.ts for the options page only).
       {
         files: ["apps/extension/src/features/**", "apps/extension/src/styles/**"],
-        rules: { "no-restricted-globals": ["warn", { name: "chrome", message: "Use the chrome API only in extension app/ and shared/, or through features/settings/browser.ts." }] },
+        rules: { "no-restricted-globals": ["warn", { name: "chrome", message: "Use the chrome API only in extension app/ and shared/, or through features/settings/browser.ts and tabs-access.ts." }] },
       },
-      { files: ["apps/extension/src/features/settings/browser.ts"], rules: { "no-restricted-globals": "off" } },
+      { files: ["apps/extension/src/features/settings/browser.ts", "apps/extension/src/features/settings/tabs-access.ts"], rules: { "no-restricted-globals": "off" } },
       // The service worker has no log sink but its console; console.error is how it reports an exception.
       { files: ["apps/extension/src/app/background/**"], rules: { "no-console": ["warn", { allow: ["error"] }] } },
       // The extension has no Node; oxlint takes CSSStyleSheet.replaceSync for a file API.

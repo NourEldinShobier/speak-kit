@@ -1,8 +1,8 @@
 import { createPageReporter, hostOf, postPage } from "../../features/connection";
-import { getToken, loadSettings } from "../../features/settings";
+import { net } from "./connection";
 
 const reporter = createPageReporter({
-  send: (host) => postPage({ fetch: (i, init) => fetch(i, init), port: async () => (await loadSettings()).port, token: getToken }, host),
+  send: (host) => postPage(net, host),
   now: Date.now,
 });
 
