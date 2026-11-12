@@ -73,8 +73,13 @@ function Recording({ s }: { s: CaptureStatus }) {
       />
       <SettingRow
         label="Pointer trail"
-        description="Hold Shift while recording and a glowing trail follows the pointer. Shift alone draws ink. If Windows offers Sticky Keys after five Shift presses, choose No."
+        description="Hold Shift while recording and a glowing trail follows the pointer. If Windows offers Sticky Keys after five Shift presses, choose No."
         control={<Toggle aria-label="Pointer trail" checked={c.pointerTrail} onChange={(pointerTrail) => void capture.patchSettings({ pointerTrail })} />}
+      />
+      <SettingRow
+        label="Draw with Shift"
+        description="Hold Shift alone for a moment while recording to draw, and let go to stop. Shift with a letter or a click never draws. Off by default because it can start drawing before a shift-click."
+        control={<Toggle aria-label="Draw with Shift" checked={c.shiftInk} onChange={(shiftInk) => void capture.patchSettings({ shiftInk })} />}
       />
       <SettingRow
         className="lm-row--control"

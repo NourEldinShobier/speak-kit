@@ -6,7 +6,8 @@ import { CapsuleActionSchema, type CapsuleAction, type CapturePhase } from "../.
 import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
-import { createDataSink } from "./data-sink";
+import { Placement } from "./placement";
+import { RecorderHolder } from "./recorder-holder";
 import { capsuleHandlers } from "./capsule-actions";
 import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
@@ -16,19 +17,20 @@ import { AfterCapture } from "./after-capture";
 import { NoticeBoard } from "./notice-board";
 import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
+import type { ShiftAction } from "./gesture/shift-ink";
 import type { History } from "./history";
 import { displayAt } from "./picker";
 import { TargetPicker } from "./target-picker";
 import type { CapturePlatform } from "./platform/types";
-import { createRecorderHost, type RecorderHost } from "./recorder-host";
+import type { RecorderHost } from "./recorder-host";
 import { createSessionPorts, type Narrator } from "./recording";
 import { shootFlow } from "./screenshot";
 import { finishForQuit } from "./session/quit";
+import { createSwitchFlow, type SwitchFlow } from "./switch-flow";
 import { createSession, type Session, type Target } from "./session";
 import { externalFor } from "./notice-target";
-import { displayOfTarget, lostDisplay, titleOfTarget } from "./target-display";
 import { createRecordingGuards } from "./recording-guards";
-import { capturePage, hideOwnWindows, openCapsuleWindow, openOverlayWindow, openRecorderWindow } from "./windows";
+import { capturePage, hideOwnWindows, openCapsuleWindow, openOverlayWindow } from "./windows";
 
 export interface RuntimeDeps {
   ctx: Ctx;
@@ -55,15 +57,15 @@ export class CaptureRuntime {
   readonly controller: CaptureController;
   readonly #d: RuntimeDeps;
   #session: Session;
-  #host: RecorderHost | undefined;
+  readonly #holder: RecorderHolder;
+  readonly #place: Placement;
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   #after!: AfterCapture;
+  #switch!: SwitchFlow;
   readonly #fence: Fence = createFence();
   /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
   #epoch = 0;
-  #title = "Screen";
-  #bounds: Electron.Rectangle | undefined;
   #off: (() => void)[] = [];
   readonly #guards: ReturnType<typeof createRecordingGuards>;
 
@@ -71,9 +73,28 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
+    this.#holder = new RecorderHolder({
+      recorder: deps.recorder,
+      distDir: deps.distDir,
+      narration: () => this.#settings.narration,
+      fence: this.#fence,
+      writes: this.#guards.writes,
+      bundle: () => deps.history.bundle,
+      id: () => this.#session.state.id,
+      log: (l) => deps.ctx.log.warn(l),
+    });
+    this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
     this.controller = this.#makeController();
+    this.#switch = createSwitchFlow({
+      session: () => this.#session,
+      pick: (signal) => this.#targets.pick(signal, true),
+      setSwitching: (on) => {
+        this.controller.switching = on;
+        this.controller.update();
+      },
+    });
     this.#after = new AfterCapture({
       controller: this.controller,
       history: deps.history,
@@ -116,8 +137,8 @@ export class CaptureRuntime {
       openCapsule: (b) => openCapsuleWindow(capturePage(distDir, "capture-capsule"), b),
       openInk: (b) => openOverlayWindow(capturePage(distDir, "capture-overlay"), b, true),
       session: () => this.#session.state,
-      title: () => this.#title,
-      displayBounds: () => this.#bounds ?? platform.displays()[0]?.bounds ?? { x: 0, y: 0, width: 1280, height: 800 },
+      title: () => this.#place.title,
+      displayBounds: () => this.#place.bounds ?? platform.displays()[0]?.bounds ?? { x: 0, y: 0, width: 1280, height: 800 },
       settings: () => this.#settings,
       now,
       changed: () => this.#d.publish(),
@@ -126,14 +147,14 @@ export class CaptureRuntime {
 
   #makeSession(): Session {
     const d = this.#d;
-    const host = () => (this.#host ??= this.#openHost());
+    const holder = this.#holder;
     const epoch = this.#epoch;
     return createSession(
       createSessionPorts({
         platform: d.platform,
         fence: this.#fence,
         get host() {
-          return host();
+          return holder.host;
         },
         // Read when used: the folder can change and the history then holds new files.
         get bundle() {
@@ -166,17 +187,9 @@ export class CaptureRuntime {
     );
   }
 
-  #openHost(): RecorderHost {
-    const page = () => openRecorderWindow(capturePage(this.#d.distDir, "capture-recorder"), () => this.#settings.narration);
-    const host = this.#d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
-    host.onData(createDataSink({ fence: this.#fence, writes: this.#guards.writes, bundle: () => this.#d.history.bundle, id: () => this.#session.state.id, log: (l) => this.#d.ctx.log.warn(l) }));
-    return host;
-  }
-
   /** Tests only: tells the scripted recorder what to do. */
   scriptRecorder(o: FakeRecorderOptions) {
-    const fake = this.#d.recorder as { options?: FakeRecorderOptions } | undefined;
-    if (fake?.options) Object.assign(fake.options, o);
+    this.#holder.script(o);
   }
 
   /** The folder changed: a new session on the new files. */
@@ -186,7 +199,7 @@ export class CaptureRuntime {
     this.#session = this.#makeSession();
   }
 
-  act(a: GestureAction) {
+  act(a: GestureAction | ShiftAction) {
     if (a === "start") void this.start();
     else if (a === "stop") this.#session.stop();
     else if (a === "ink-start") this.controller.showInk();
@@ -200,29 +213,15 @@ export class CaptureRuntime {
   }
 
   #sessionChanged() {
-    const t = this.#session.state.target;
-    if (t) {
-      this.#title = titleOfTarget(t, this.#d.platform.displays());
-      this.#bounds = undefined;
-      void this.#placeOnTarget(t);
-    }
+    this.#place.sessionChanged();
     this.#guards.limit.sync(this.#session.state.phase === "recording");
     this.controller.update();
     this.#d.publish();
   }
 
-  /** The capsule and the ink layer go to the display that is recorded; for a window that is the display it is on. */
-  async #placeOnTarget(t: Target) {
-    const windows = t.kind === "window" ? await this.#d.platform.windows().catch(() => []) : [];
-    if (this.#session.state.target !== t) return;
-    this.#bounds = displayOfTarget(t, this.#d.platform.displays(), windows)?.bounds;
-    this.controller.relocate();
-  }
-
   /** A screen that is being recorded was unplugged: the capture so far is saved. */
   #displaysChanged() {
-    const { phase, target } = this.#session.state;
-    if (phase !== "recording" || !target || !lostDisplay(target, this.#d.platform.displays())) return;
+    if (!this.#place.recordedDisplayLost()) return;
     this.notify(noticeFor("display-lost"));
     this.#session.stop();
   }
@@ -246,10 +245,12 @@ export class CaptureRuntime {
   }
 
   stop() {
+    this.#switch.cancel();
     this.#session.stop();
   }
 
   discard() {
+    this.#switch.cancel();
     this.#session.discard();
     this.controller.reset();
     this.controller.update();
@@ -269,7 +270,7 @@ export class CaptureRuntime {
       notify: (n) => this.notify(n),
       log: (l) => this.#d.ctx.log.warn(l),
       shown: (record) => {
-        this.#title = record.title;
+        this.#place.title = record.title;
         this.#after.shot(record);
       },
     });
@@ -286,6 +287,7 @@ export class CaptureRuntime {
       retry: () => this.#retry(),
       send: this.#after.send,
       sendLast: () => this.#after.sendLast(),
+      switchTarget: () => void this.#switch.run(),
       copyLast: (what) => void this.#after.copyLast(what),
     });
   }
@@ -340,6 +342,6 @@ export class CaptureRuntime {
     this.#session.discard();
     this.#targets.dispose();
     this.controller.dispose();
-    this.#host?.dispose();
+    this.#holder.dispose();
   }
 }

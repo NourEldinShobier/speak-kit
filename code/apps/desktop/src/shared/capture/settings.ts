@@ -27,6 +27,8 @@ export const CaptureConfigSchema = v.object({
   narration: bool(true),
   otherAudio: v.fallback(v.picklist(["mute", "keep"]), "mute"),
   pointerTrail: bool(true),
+  /** Shift held alone draws while recording. Off until chosen: a long Shift press before a shift-click would otherwise start drawing. */
+  shiftInk: bool(false),
   inkFadeMs: v.fallback(v.picklist(INK_FADE_MS), 1000),
   folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
   retentionDays: v.fallback(v.picklist(RETENTION_DAYS), 30),
@@ -48,6 +50,7 @@ export const CapturePatchSchema = v.partial(
     narration: v.boolean(),
     otherAudio: v.picklist(["mute", "keep"]),
     pointerTrail: v.boolean(),
+    shiftInk: v.boolean(),
     inkFadeMs: v.picklist(INK_FADE_MS),
     folder: v.pipe(v.string(), v.maxLength(1024)),
     retentionDays: v.picklist(RETENTION_DAYS),

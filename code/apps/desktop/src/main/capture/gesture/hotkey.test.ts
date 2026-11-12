@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { VK, type HotkeyHandlers, type HotkeySource } from "../../dictation/types";
-import { captureHotkey } from "./hotkey";
+import { captureHotkey, shiftHotkey } from "./hotkey";
 import type { GestureEvent } from "./index";
 
 function fakeSource() {
@@ -57,5 +57,23 @@ describe("capture hotkey", () => {
     h.resync();
     h.stop();
     expect([src.resynced, h.active]).toEqual([1, false]);
+  });
+});
+
+describe("shift hotkey", () => {
+  it("hooks left Shift as the chord and right Shift as an extra chord, and reports press, release and other keys only", () => {
+    const s = fakeSource() as ReturnType<typeof fakeSource> & { extra?: unknown; setExtraChords?: (c: unknown) => void };
+    s.setExtraChords = (c) => (s.extra = c);
+    const got: string[] = [];
+    expect(shiftHotkey(s as unknown as HotkeySource).start((e) => got.push(e.kind))).toEqual({ ok: true });
+    expect(s.chord).toEqual([0xa0]);
+    expect(s.extra).toEqual({ right: { keys: [0xa1] } });
+    for (const e of [{ kind: "down" }, { kind: "other", vk: 0x41 }, { kind: "grabbed", vk: 0x1b }, { kind: "up" }] as const) s.handlers!.onEvent(e);
+    expect(got).toEqual(["down", "other", "up"]);
+  });
+
+  it("works on a source that has no extra chords", () => {
+    const s = fakeSource();
+    expect(shiftHotkey(s).start(() => {})).toEqual({ ok: true });
   });
 });
