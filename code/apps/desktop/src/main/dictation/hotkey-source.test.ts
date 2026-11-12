@@ -3,7 +3,7 @@ import type { KeyEvent } from "@speakkit/dictation";
 import { createHotkeys, type HotkeyLayout } from "./hotkey-source";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const BASE: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape", share: false };
+const BASE: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: "Escape", share: false };
 
 /** An OS hook that records what it was asked and lets the test push events. */
 function fakeOs() {

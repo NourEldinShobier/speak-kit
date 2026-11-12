@@ -4,7 +4,7 @@ import { createHotkeys, type HotkeyLayout, type SwitchableHotkeys } from "./hotk
 import { ShortcutControls } from "./shortcut-controls";
 import type { HotkeyHandlers, HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", second: "ControlRight", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape", share: false };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", second: "ControlRight", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: "Escape", share: false };
 
 function rig() {
   let handlers: HotkeyHandlers | undefined;

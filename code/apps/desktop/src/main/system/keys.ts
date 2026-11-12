@@ -6,6 +6,7 @@ const VK_SHIFT = 0x10;
 const VK_CONTROL = 0x11;
 const VK_MENU = 0x12; // Alt
 const VK_C = 0x43;
+const VK_A = 0x41;
 const KEYUP = 2;
 
 /**
@@ -13,10 +14,15 @@ const KEYUP = 2;
  * released first; otherwise the target app would see Ctrl+Alt+C. koffi is loaded on first use, so it costs nothing until a
  * selection is read.
  */
-export async function sendCopyKeys(): Promise<void> {
+export const sendCopyKeys = (): Promise<void> => sendChord("c", VK_C);
+
+/** Presses Ctrl+A (Cmd+A on macOS) the same way. */
+export const sendSelectAllKeys = (): Promise<void> => sendChord("a", VK_A);
+
+async function sendChord(letter: string, vk: number): Promise<void> {
   if (process.platform === "darwin") {
     return new Promise((resolve, reject) =>
-      execFile("osascript", ["-e", 'tell application "System Events" to keystroke "c" using command down'], { timeout: 3000, env: launchEnv() }, (err) => (err ? reject(err) : resolve())),
+      execFile("osascript", ["-e", `tell application "System Events" to keystroke "${letter}" using command down`], { timeout: 3000, env: launchEnv() }, (err) => (err ? reject(err) : resolve())),
     );
   }
   if (process.platform !== "win32") throw new DesktopFault({ code: "selection-unsupported" });
@@ -26,7 +32,7 @@ export async function sendCopyKeys(): Promise<void> {
   const down = user32.func("int16_t __stdcall GetAsyncKeyState(int vKey)");
   for (const vk of [VK_MENU, VK_SHIFT, VK_CONTROL]) if (down(vk) & 0x8000) keybd(vk, 0, KEYUP, 0);
   keybd(VK_CONTROL, 0, 0, 0);
-  keybd(VK_C, 0, 0, 0);
-  keybd(VK_C, 0, KEYUP, 0);
+  keybd(vk, 0, 0, 0);
+  keybd(vk, 0, KEYUP, 0);
   keybd(VK_CONTROL, 0, KEYUP, 0);
 }

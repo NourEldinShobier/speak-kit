@@ -7,7 +7,7 @@ import { pausedFor } from "./pause-rules";
 import { coreSettings, hotkeyLayout } from "./service-support";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape", share: false };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", second: "", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: "Escape", share: false };
 
 function rig(down = new Set<number>()) {
   let handlers: HotkeyHandlers | undefined;
@@ -92,6 +92,20 @@ describe("several shortcuts through the source", () => {
     r.push({ kind: "up", chord: "pasteLast" });
     expect(calls).toBe(1);
     expect(r.events).toEqual([]);
+  });
+
+  it("calls the clean-up handler on press only, as its own chord, and never as a dictation key", () => {
+    const r = rig();
+    let calls = 0;
+    let pasteLast = 0;
+    r.hk.onTransform(() => void calls++);
+    r.hk.onPasteLast(() => void pasteLast++);
+    r.hk.layout({ ...LAYOUT, transform: "ControlLeft+AltLeft+KeyT" });
+    r.hk.enable(true);
+    expect(r.extras().transform).toEqual({ keys: [0xa2, 0xa4, 0x54] });
+    r.push({ kind: "down", chord: "transform" });
+    r.push({ kind: "up", chord: "transform" });
+    expect([calls, pasteLast, r.events]).toEqual([1, 0, []]);
   });
 
   it("reports the configured cancel key by its name", () => {
