@@ -71,7 +71,7 @@ describe("settings import", () => {
     await l.page.getByText("Could not import: the file is not valid JSON.").waitFor();
     await pickFile(l, null);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByRole("button", { name: "Import", exact: true }).waitFor();
+    await l.page.getByRole("button", { name: "Import", exact: true, disabled: false }).waitFor(); // the import call has returned
     expect(await l.page.getByText("Could not import").count()).toBe(1);
   }, 60_000);
 
