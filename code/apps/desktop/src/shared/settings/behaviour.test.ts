@@ -68,3 +68,14 @@ describe("privacy copy", () => {
     expect(NO_TELEMETRY).toContain("except voice chat");
   });
 });
+
+describe("a tray icon the system would not create", () => {
+  it("closing quits, because nothing could bring a hidden window back", () => {
+    expect(effectiveCloseAction({ closeAction: "hide", hideTrayIcon: false }, true)).toBe("quit");
+    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, false, true)).toBe("quit");
+    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true, true)).toBe("confirm-quit");
+  });
+  it("changes nothing while the icon exists", () => {
+    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true, false)).toBe("hide");
+  });
+});

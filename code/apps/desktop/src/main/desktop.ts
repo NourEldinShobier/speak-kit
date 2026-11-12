@@ -157,6 +157,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onWindowHidden: () => void dictation.mic.setMeter(false),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
+    /** The tray icon is wanted but the system would not create it. */
+    trayMissing: () => tray.failed(),
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */

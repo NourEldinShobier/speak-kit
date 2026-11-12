@@ -19,7 +19,7 @@ import { mkdir } from "node:fs/promises";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { createAppHandlers, metrics } from "./handlers";
-import { isLaunchAtLogin, openedAtLogin } from "./login-item";
+import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
@@ -120,8 +120,10 @@ const mainWindow: MainWindow = new MainWindow(config, {
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
-  onHidden: () => runtime.stopPolling(),
-  onCloseWithoutTray: () => askToQuit(),
+  onHidden: () => (runtime.stopPolling(), desktop?.onWindowHidden()),
+  busy: () => desktop?.busy() ?? false,
+  trayMissing: () => desktop?.trayMissing() ?? false,
+  onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 const askToQuit = () => {
   mainWindow.show();
@@ -339,12 +341,9 @@ if (labsCode !== null) {
         ...desktop.testHook(),
       };
 
+    if (app.isPackaged) repairLoginItem(config.startMinimized); // an update may have moved the program; the entry must start this copy
     const boot = findDeepLink(process.argv) ?? launchLink;
-    const hidden =
-      config.setupDone &&
-      !config.hideTrayIcon && // a hidden tray icon leaves no way to open a hidden window
-      (process.argv.includes("--hidden") || (config.startMinimized && openedAtLogin(true)));
-    mainWindow.create(hidden && !boot);
+    mainWindow.create(startsHidden(config, process.argv, desktop.trayMissing()) && !boot);
     booted = true;
     await runtime.start(test.token);
     performance.mark("server:listening");

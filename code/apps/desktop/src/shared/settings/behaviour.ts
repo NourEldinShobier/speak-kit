@@ -1,13 +1,13 @@
 import type { Config } from "../schemas";
 
 /** What the close button does. With the tray icon hidden there is nothing to reopen a hidden window from, so closing quits. */
-export function effectiveCloseAction(c: Pick<Config, "closeAction" | "hideTrayIcon">): "hide" | "quit" {
-  return c.hideTrayIcon ? "quit" : c.closeAction;
+export function effectiveCloseAction(c: Pick<Config, "closeAction" | "hideTrayIcon">, trayMissing = false): "hide" | "quit" {
+  return c.hideTrayIcon || trayMissing ? "quit" : c.closeAction;
 }
 
 /** What closing the window does right now: running work (an export, a reading) is confirmed before a quit. */
-export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, busy: boolean): "hide" | "quit" | "confirm-quit" {
-  const a = effectiveCloseAction(c);
+export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, busy: boolean, trayMissing = false): "hide" | "quit" | "confirm-quit" {
+  const a = effectiveCloseAction(c, trayMissing);
   return a === "quit" && busy ? "confirm-quit" : a;
 }
 
