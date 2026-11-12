@@ -84,13 +84,6 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
   const session = core.then((t) => recorderOf({ ctx, ports: p, transcripts: t, live }));
   const sweepTimer = setInterval(() => void core.then((t) => t.sweep()), HOUR);
   sweepTimer.unref();
-  /** A shortcut press that did nothing leaves a notice in the window and an entry in the bell. */
-  const tell = (text: string) => {
-    live.notice = text;
-    ctx.addActivity("error", "Recording", text);
-    ctx.publish();
-    live.send();
-  };
   const handlers = createHandlers({ ready, session, ports: p, cfg, folder, saveConfig: () => ctx.saveConfig(), live: () => live.snapshot(), clearNotice: () => void (live.notice = undefined) });
   return {
     handlers,
@@ -98,25 +91,7 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     phase: () => livePhase(live),
     startRecording: handlers.recordStart,
     stopRecording: handlers.recordStop,
-    toggleRecording: async () => {
-      const a = recordToggle(livePhase(live));
-      if (a === "stop") {
-        if (live.notice === STARTED) live.notice = undefined;
-        return handlers.recordStop();
-      }
-      if (a === "none") return tell("Wait until the recording is saved, then press the shortcut again.");
-      try {
-        const r = await handlers.recordStart();
-        if (!r.ok) return tell(r.failure.message);
-        live.notice = STARTED;
-        live.send();
-        ctx.showWindow();
-        ctx.sendUi({ type: "nav", page: "history" });
-        return r;
-      } catch (e) {
-        return tell(e instanceof Error ? e.message : "The recording could not start.");
-      }
-    },
+    toggleRecording: () => toggleOf(ctx, live, handlers),
     async dispose() {
       clearInterval(sweepTimer);
       const t = await ready;
@@ -124,6 +99,33 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
       await t.dispose();
     },
   };
+}
+
+/** The global record shortcut. A press that did nothing leaves a notice in the window and an entry in the bell. */
+async function toggleOf(ctx: Ctx, live: Live, handlers: Handlers): Promise<unknown> {
+  const tell = (text: string) => {
+    live.notice = text;
+    ctx.addActivity("error", "Recording", text);
+    ctx.publish();
+    live.send();
+  };
+  const a = recordToggle(livePhase(live));
+  if (a === "stop") {
+    if (live.notice === STARTED) live.notice = undefined;
+    return handlers.recordStop();
+  }
+  if (a === "none") return tell("Wait until the recording is saved, then press the shortcut again.");
+  try {
+    const r = await handlers.recordStart();
+    if (!r.ok) return tell(r.failure.message);
+    live.notice = STARTED;
+    live.send();
+    ctx.showWindow();
+    ctx.sendUi({ type: "nav", page: "history" });
+    return r;
+  } catch (e) {
+    return tell(e instanceof Error ? e.message : "The recording could not start.");
+  }
 }
 
 function livePhase(live: Live): TrayPhase {
