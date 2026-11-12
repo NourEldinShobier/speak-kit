@@ -44,3 +44,12 @@ export function foreignMacArch(name, arch) {
   const m = /darwin[-_](arm64|x64)$/.exec(name);
   return !!m && m[1] !== arch;
 }
+
+/**
+ * Which directory of node_modules/@fugood to keep in the app: the addon loader, and the native build for the target. macOS keeps the Metal builds of both
+ * architectures (after-pack drops the one an app does not run on); Windows keeps the Vulkan build and the plain CPU one it falls back to. CUDA, WASM and
+ * other systems are never loaded.
+ */
+export function keepWhisperPackage(name, mac) {
+  return name === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(name);
+}
