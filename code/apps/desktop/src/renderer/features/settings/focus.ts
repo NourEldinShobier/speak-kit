@@ -22,15 +22,7 @@ export const takeRow = (): string | null => {
   return id;
 };
 
-/** Where an arrow key moves focus in a list of `count` items from item `at`; null when the key does nothing here. Ends do not wrap. */
-export function arrowTarget(key: string, at: number, count: number): number | null {
-  if (count <= 0 || at < 0) return null;
-  if (key === "ArrowDown" || key === "ArrowRight") return Math.min(at + 1, count - 1);
-  if (key === "ArrowUp" || key === "ArrowLeft") return Math.max(at - 1, 0);
-  if (key === "Home") return 0;
-  if (key === "End") return count - 1;
-  return null;
-}
+export { arrowTarget } from "@speakkit/ui";
 
 /** True when `row` is a row behind the Advanced fold of `page`. */
 export const isAdvancedRow = (page: string, row: string | null): boolean => !!row && SETTING_ROWS.some((r) => r.id === row && r.page === page && r.advanced);

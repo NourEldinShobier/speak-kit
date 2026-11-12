@@ -1,6 +1,7 @@
 import { Tabs as RTabs, ToggleGroup as RToggleGroup } from "radix-ui";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import type { IconName } from "../icons";
+import { onArrowKeys } from "./arrow-keys";
 import { Badge } from "./display";
 import { cx, Icon } from "./shared";
 
@@ -79,7 +80,7 @@ export function Segmented({ items, value, onChange, label, variant = "settings",
 
 export function SidebarNav({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
   return (
-    <nav aria-label={label} className={cx("lm-nav", className)}>
+    <nav aria-label={label} className={cx("lm-nav", className)} onKeyDown={onArrowKeys(".lm-nav__item")}>
       {children}
     </nav>
   );
