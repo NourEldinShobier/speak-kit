@@ -26,89 +26,102 @@ type Phase = "idle" | "countdown" | "held" | "sending" | "sent" | "undone";
  * What happens after a capture is saved when it goes to another place: a countdown the person can hold or undo, then the hand-over. Undo works inside
  * the countdown, and after it only when the destination can still give the capture back; the capsule says plainly when it cannot.
  */
-export function createAutoSend(d: AutoSendDeps) {
-  let phase: Phase = "idle";
-  let secondsLeft = 0;
-  let cancelTick: (() => void) | undefined;
-  let stopListening: (() => void) | undefined;
-  let undoWhileSending = false;
+class AutoSendImpl {
+  readonly #d: AutoSendDeps;
+  #phase: Phase = "idle";
+  #secondsLeft = 0;
+  #cancelTick: (() => void) | undefined;
+  #stopListening: (() => void) | undefined;
+  #undoWhileSending = false;
 
-  const stopTick = () => {
-    cancelTick?.();
-    cancelTick = undefined;
-  };
-  const tick = () => {
-    cancelTick = d.schedule(() => {
-      if (phase !== "countdown") return;
-      secondsLeft -= 1;
-      if (secondsLeft <= 0) void sendNow();
-      else {
-        d.show({ kind: "countdown", secondsLeft });
-        tick();
-      }
-    }, 1000);
-  };
-  const showSent = () => d.show({ kind: "sent", destination: d.sender.destination, canUndo: d.sender.canUndo() });
-
-  async function sendNow(): Promise<void> {
-    if (phase !== "countdown" && phase !== "held" && phase !== "idle") return;
-    stopTick();
-    phase = "sending";
-    const ok = await d.sender.send();
-    if (!ok) {
-      phase = "idle";
-      d.failed();
-      return;
-    }
-    if (undoWhileSending) {
-      d.sender.undo();
-      phase = "undone";
-      d.show({ kind: "undone" });
-      return;
-    }
-    phase = "sent";
-    stopListening = d.sender.onChange(() => phase === "sent" && showSent());
-    showSent();
+  constructor(deps: AutoSendDeps) {
+    this.#d = deps;
   }
 
-  return {
-    /** Starts the countdown; with 0 seconds the capture is handed over at once. */
-    start(seconds: number): void {
-      if (phase !== "idle") return;
-      if (seconds <= 0) return void sendNow();
-      phase = "countdown";
-      secondsLeft = seconds;
-      d.show({ kind: "countdown", secondsLeft });
-      tick();
-    },
-    hold(): void {
-      if (phase !== "countdown") return;
-      stopTick();
-      phase = "held";
-      d.show({ kind: "countdown", secondsLeft, held: true });
-    },
-    sendNow,
-    undo(): void {
-      if (phase === "countdown" || phase === "held") {
-        stopTick();
-        phase = "undone";
-        d.show({ kind: "undone" });
-      } else if (phase === "sending") undoWhileSending = true;
-      else if (phase === "sent" && d.sender.canUndo() && d.sender.undo()) {
-        phase = "undone";
-        stopListening?.();
-        d.show({ kind: "undone" });
+  get phase(): Phase {
+    return this.#phase;
+  }
+
+  #stopTick() {
+    this.#cancelTick?.();
+    this.#cancelTick = undefined;
+  }
+
+  #tick() {
+    this.#cancelTick = this.#d.schedule(() => {
+      if (this.#phase !== "countdown") return;
+      this.#secondsLeft -= 1;
+      if (this.#secondsLeft <= 0) void this.sendNow();
+      else {
+        this.#d.show({ kind: "countdown", secondsLeft: this.#secondsLeft });
+        this.#tick();
       }
-    },
-    /** The capsule was closed or a new capture began: nothing more happens. */
-    dispose(): void {
-      stopTick();
-      stopListening?.();
-      phase = "undone";
-    },
-    get phase(): Phase {
-      return phase;
-    },
-  };
+    }, 1000);
+  }
+
+  #showSent() {
+    this.#d.show({ kind: "sent", destination: this.#d.sender.destination, canUndo: this.#d.sender.canUndo() });
+  }
+
+  /** Starts the countdown; with 0 seconds the capture is handed over at once. */
+  start(seconds: number): void {
+    if (this.#phase !== "idle") return;
+    if (seconds <= 0) return void this.sendNow();
+    this.#phase = "countdown";
+    this.#secondsLeft = seconds;
+    this.#d.show({ kind: "countdown", secondsLeft: seconds });
+    this.#tick();
+  }
+
+  hold(): void {
+    if (this.#phase !== "countdown") return;
+    this.#stopTick();
+    this.#phase = "held";
+    this.#d.show({ kind: "countdown", secondsLeft: this.#secondsLeft, held: true });
+  }
+
+  async sendNow(): Promise<void> {
+    if (this.#phase !== "countdown" && this.#phase !== "held" && this.#phase !== "idle") return;
+    this.#stopTick();
+    this.#phase = "sending";
+    const ok = await this.#d.sender.send();
+    if (!ok) {
+      this.#phase = "idle";
+      this.#d.failed();
+      return;
+    }
+    if (this.#undoWhileSending) {
+      this.#d.sender.undo();
+      this.#phase = "undone";
+      this.#d.show({ kind: "undone" });
+      return;
+    }
+    this.#phase = "sent";
+    this.#stopListening = this.#d.sender.onChange(() => this.#phase === "sent" && this.#showSent());
+    this.#showSent();
+  }
+
+  undo(): void {
+    const { sender } = this.#d;
+    if (this.#phase === "countdown" || this.#phase === "held") {
+      this.#stopTick();
+      this.#phase = "undone";
+      this.#d.show({ kind: "undone" });
+    } else if (this.#phase === "sending") this.#undoWhileSending = true;
+    else if (this.#phase === "sent" && sender.canUndo() && sender.undo()) {
+      this.#phase = "undone";
+      this.#stopListening?.();
+      this.#d.show({ kind: "undone" });
+    }
+  }
+
+  /** The capsule was closed or a new capture began: nothing more happens. */
+  dispose(): void {
+    this.#stopTick();
+    this.#stopListening?.();
+    this.#phase = "undone";
+  }
 }
-export type AutoSend = ReturnType<typeof createAutoSend>;
+
+export const createAutoSend = (d: AutoSendDeps) => new AutoSendImpl(d);
+export type AutoSend = AutoSendImpl;
