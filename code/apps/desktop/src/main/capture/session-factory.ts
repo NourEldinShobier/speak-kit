@@ -17,7 +17,7 @@ import type { CaptureRecord } from "./store";
 import { hideOwnWindows } from "./windows";
 
 const now = () => Date.now();
-const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
+export const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
 
 export interface SessionWiring {
   platform: CapturePlatform;

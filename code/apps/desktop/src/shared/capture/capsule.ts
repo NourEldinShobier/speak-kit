@@ -11,7 +11,9 @@ export type CapsuleState =
   | { kind: "sent"; target: string; destination: string; canUndo: boolean }
   | { kind: "undone"; target: string }
   | { kind: "shot"; target: string; what: string }
-  | { kind: "failed"; target: string; notice: Notice };
+  | { kind: "failed"; target: string; notice: Notice }
+  /** The replay buffer is on: the screen is being kept for the last 15 seconds. Shown for as long as it is on. */
+  | { kind: "replay"; target: string; saving?: boolean };
 
 export type CapsuleButtonId =
   | "pen"
@@ -28,7 +30,9 @@ export type CapsuleButtonId =
   | "dismiss"
   | "switch"
   | "copy-again"
-  | "copy-path";
+  | "copy-path"
+  | "replay-save"
+  | "replay-off";
 
 export interface CapsuleButton {
   id: CapsuleButtonId;
@@ -96,6 +100,18 @@ function countdownView(c: Extract<CapsuleState, { kind: "countdown" }>): Capsule
   ]);
 }
 
+function replayView(c: Extract<CapsuleState, { kind: "replay" }>): CapsuleView {
+  if (c.saving) return { ...view(c.target, "Saving the last 15 seconds", []), live: true };
+  return {
+    ...view(c.target, "Replay is on. Keeping the last 15 seconds of the screen.", [
+      { id: "replay-save", label: "Save last 15 s", primary: true },
+      { id: "replay-off", label: "Turn off" },
+    ]),
+    detail: "Nothing is saved until you save it. Turning it off drops what is kept.",
+    live: true,
+  };
+}
+
 /** The words and buttons of each capsule state. */
 export function capsuleView(c: CapsuleState): CapsuleView {
   switch (c.kind) {
@@ -131,6 +147,8 @@ export function capsuleView(c: CapsuleState): CapsuleView {
         { id: "open", label: "Open" },
         { id: "dismiss", label: "Close" },
       ]);
+    case "replay":
+      return replayView(c);
     case "failed":
       return { ...view(c.target, c.notice.title, [{ id: "retry", label: c.notice.actionLabel }]), detail: c.notice.body, tone: c.notice.tone === "error" ? "error" : "warning" };
   }

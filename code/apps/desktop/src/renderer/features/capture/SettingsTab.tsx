@@ -4,6 +4,7 @@ import type { CaptureStatus } from "../../../shared/capture/contract";
 import { AUTO_SEND, INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
 import { HotkeyRecorder } from "../dictation";
 import { capture } from "./api";
+import { ReplaySettings } from "./ReplaySettings";
 import { INK_LABEL, RETENTION_LABEL } from "./format";
 
 const WHERE: Record<(typeof TARGET_KINDS)[number], string> = { ask: "Ask each time", screen: "Whole screen", window: "A window", area: "An area" };
@@ -50,6 +51,7 @@ function General({ s }: { s: CaptureStatus }) {
         control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await capture.patchSettings({ hotkey }))} />}
       />
       {c.experiments.recording ? <RecordingKey s={s} onRecording={setRecording} /> : null}
+      {c.experiments.replay ? <ReplaySettings s={s} onRecording={setRecording} /> : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
           {s.hotkeyNote} <Button onClick={() => void capture.patchSettings({ hotkey: "F9" })}>Restore F9</Button>

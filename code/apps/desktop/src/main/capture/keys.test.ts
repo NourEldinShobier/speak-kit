@@ -30,7 +30,7 @@ function fakeSource() {
   return s;
 }
 
-function setup(recording = true, onRecord = vi.fn()) {
+function setup(recording = true, onRecord = vi.fn(), onReplay = vi.fn()) {
   const sources: ReturnType<typeof fakeSource>[] = [];
   const actions: (GestureAction | ShiftAction)[] = [];
   const state = { recording };
@@ -44,9 +44,10 @@ function setup(recording = true, onRecord = vi.fn()) {
     onAction: (a) => actions.push(a),
     onShot: () => {},
     onRecord,
+    onReplay,
     log: () => {},
   });
-  return { keys, sources, actions, state, onRecord };
+  return { keys, sources, actions, state, onRecord, onReplay };
 }
 
 describe("capture keys: Shift draws", () => {
@@ -122,6 +123,31 @@ describe("capture keys: screen recording key", () => {
     await t.keys.apply(true, { capture: "F9", screenshot: undefined });
     expect(t.sources[1]!.stopped).toBe(1);
     await t.keys.apply(true, { capture: "F9", screenshot: undefined, recording: "F7" });
+    t.keys.stop();
+    expect(t.sources.every((s) => !s.active)).toBe(true);
+  });
+});
+
+describe("capture keys: replay key", () => {
+  it("hooks the key only when it is given, and reports its release", async () => {
+    const t = setup();
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined });
+    expect(t.sources).toHaveLength(1);
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, replay: "F6" });
+    expect(t.sources).toHaveLength(2);
+    t.sources[1]!.handlers!.onEvent({ kind: "down" });
+    expect(t.onReplay).not.toHaveBeenCalled();
+    t.sources[1]!.handlers!.onEvent({ kind: "up" });
+    expect(t.onReplay).toHaveBeenCalledOnce();
+    expect(t.onRecord).not.toHaveBeenCalled();
+  });
+
+  it("stops the hook when the key is no longer given, and with stop()", async () => {
+    const t = setup();
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, replay: "F6" });
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined });
+    expect(t.sources[1]!.stopped).toBe(1);
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, replay: "F6" });
     t.keys.stop();
     expect(t.sources.every((s) => !s.active)).toBe(true);
   });

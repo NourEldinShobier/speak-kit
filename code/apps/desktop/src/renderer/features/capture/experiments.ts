@@ -65,6 +65,17 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-replay",
+    title: "Replay buffer",
+    description:
+      "Keeps the last 15 seconds of your first screen in memory while it is on. A key saves them as a capture, so you can catch something that just happened. Turn it on under Capture settings.",
+    badges: ["Experimental"],
+    guard: "A pill on the screen shows while it is on. Nothing is saved or sent until you save it, and you read what it keeps before the first time.",
+    useState: () => useCaptureExperiment("replay"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-zoom-export",
     title: "Zoom in a recording",
     description:

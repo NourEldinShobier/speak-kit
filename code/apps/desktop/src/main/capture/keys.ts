@@ -13,6 +13,8 @@ export interface KeysDeps {
   onShot(): void;
   /** The screen recording key was released. */
   onRecord?(): void;
+  /** The replay key was released. */
+  onReplay?(): void;
   log(line: string): void;
 }
 
@@ -27,6 +29,7 @@ export class CaptureKeys {
   #capture: CaptureHotkey | undefined;
   #shot: CaptureHotkey | undefined;
   #rec: CaptureHotkey | undefined;
+  #replay: CaptureHotkey | undefined;
   #poll: ReturnType<typeof setInterval> | undefined;
 
   constructor(deps: KeysDeps) {
@@ -38,7 +41,7 @@ export class CaptureKeys {
   }
 
   /** Starts or stops the hooks to match the settings. Returns false when a key could not be hooked. */
-  async apply(on: boolean, keys: { capture: string; screenshot: string | undefined; recording?: string | undefined; shiftInk?: boolean }): Promise<boolean> {
+  async apply(on: boolean, keys: { capture: string; screenshot: string | undefined; recording?: string | undefined; replay?: string | undefined; shiftInk?: boolean }): Promise<boolean> {
     if (!on) {
       this.stop();
       return true;
@@ -49,6 +52,8 @@ export class CaptureKeys {
     if (!keys.screenshot) this.#stopShot();
     if (keys.recording && !this.#rec) ok = !!(this.#rec = await this.#hook(keys.recording, (e) => e.kind === "up" && this.#d.onRecord?.())) && ok;
     if (!keys.recording) this.#stopRec();
+    if (keys.replay && !this.#replay) ok = !!(this.#replay = await this.#hook(keys.replay, (e) => e.kind === "up" && this.#d.onReplay?.())) && ok;
+    if (!keys.replay) this.#stopReplay();
     if (keys.shiftInk) this.#shiftHook ??= await this.#hookShift();
     else this.#stopShiftHook();
     return ok;
@@ -127,6 +132,11 @@ export class CaptureKeys {
     this.#rec = undefined;
   }
 
+  #stopReplay() {
+    this.#replay?.stop();
+    this.#replay = undefined;
+  }
+
   #stopShot() {
     this.#shot?.stop();
     this.#shot = undefined;
@@ -139,6 +149,7 @@ export class CaptureKeys {
     this.#capture?.resync();
     this.#shot?.resync();
     this.#rec?.resync();
+    this.#replay?.resync();
     this.#shiftHook?.resync();
   }
 
@@ -148,6 +159,7 @@ export class CaptureKeys {
     this.#capture = undefined;
     this.#stopShot();
     this.#stopRec();
+    this.#stopReplay();
     this.#stopShiftHook();
     this.#gesture.reset();
   }

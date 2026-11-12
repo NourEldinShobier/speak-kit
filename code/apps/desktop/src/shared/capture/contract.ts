@@ -183,6 +183,8 @@ export const CapsuleActionSchema = v.picklist([
   "switch",
   "copy-again",
   "copy-path",
+  "replay-save",
+  "replay-off",
 ]);
 export type CapsuleAction = v.InferOutput<typeof CapsuleActionSchema>;
 
@@ -204,6 +206,10 @@ export type RecorderCommand =
       /** The part of each picture to show (fractions), for the zoom contact sheet. */ crops?: FrameRect[];
     }
   | { id: number; op: "zoom"; video: Uint8Array; regions: ZoomRegion[] }
+  /** The replay buffer: the screen is kept in short pieces in the recorder window, the oldest dropped. Nothing is streamed to main until it is saved. */
+  | { id: number; op: "replay-start"; sourceId: string; crop?: Crop; frameEveryMs: number; maxSide: number; segmentMs: number }
+  | { id: number; op: "replay-save" }
+  | { id: number; op: "replay-stop" }
   | { id: number; op: "trim"; video: Uint8Array; startMs: number; endMs: number };
 
 export type RecorderResult =
@@ -219,6 +225,8 @@ export type RecorderResult =
       /** A trimmed video. */
       video?: Uint8Array | undefined;
       segments?: number | undefined;
+      /** A saved replay: the video pieces in order, and the pictures with their times from the start of the clip. */
+      clip?: { videos: Uint8Array[]; frames: { atMs: number; jpeg: Uint8Array }[]; durationMs: number } | undefined;
     }
   | { ok: false; code: "source" | "encoder" | "denied" };
 
@@ -244,6 +252,7 @@ export const RecorderReplySchema = v.tuple([
       jpeg: v.optional(bytes),
       video: v.optional(bytes),
       segments: v.optional(count),
+      clip: v.optional(v.object({ videos: v.array(bytes), frames: v.array(v.object({ atMs: count, jpeg: bytes })), durationMs: count })),
     }),
     v.object({ ok: v.literal(false), code: v.picklist(["source", "encoder", "denied"]) }),
   ]),

@@ -83,6 +83,7 @@ export class CaptureService {
       onAction: (a) => this.runtime.act(a),
       onShot: () => void this.runtime.shoot(),
       onRecord: () => void this.runtime.toggleScreenRecording(),
+      onReplay: () => this.runtime.replay.save(),
       log: (l) => ctx.log.warn(l),
     });
     this.#stopPower = resyncOnPower(powerMonitor, () => this.keys.resync());
@@ -120,6 +121,7 @@ export class CaptureService {
       capture: s.hotkey,
       screenshot: s.experiments.screenshots ? s.screenshotHotkey : undefined,
       recording: s.experiments.recording ? s.recordingHotkey : undefined,
+      replay: s.experiments.replay && s.replayBuffer ? s.replayHotkey : undefined,
       shiftInk: s.shiftInk,
     });
     this.#hotkeyFailed = !ok;
@@ -127,6 +129,7 @@ export class CaptureService {
       this.runtime.discard();
       this.runtime.controller.after(undefined);
     } else if (!ok) this.runtime.notify(noticeFor("hotkey-failed"));
+    await this.runtime.replay.sync();
     this.#publish();
   }
 

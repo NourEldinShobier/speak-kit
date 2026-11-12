@@ -8,7 +8,9 @@
     "apps/desktop/src/main/capture/{target-display,write-guard,notice-target,settings-patch}.ts",
     "apps/desktop/src/main/capture/{events/index,send/auto-send,send/look,fence/index,context/index,context/labels,context/readers,command-narrator/index,command-narrator/commandline,edits/index,switch-flow}.ts",
     "apps/desktop/src/main/voice-chat/capture-inbox.ts",
-    "apps/desktop/src/renderer/features/capture/{audio-timeline,format}.ts",
+    "apps/desktop/src/main/capture/{page-context/index,live-narrator/index,windows-speech/index,context/combined,zoom/index,pointer/index,replay/index}.ts",
+    "apps/desktop/src/shared/capture/{zoom,replay}.ts",
+    "apps/desktop/src/renderer/features/capture/{audio-timeline,format,replay-buffer}.ts",
     "apps/desktop/src/renderer/features/capture/annotate/{model,keyboard,render}.ts",
     "!**/*.test.ts"
   ],
