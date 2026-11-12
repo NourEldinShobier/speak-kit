@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { validHotkey } from "../dictation/keys";
 
 export const CAPTURE_HOTKEY = "F9";
+export const SCREENSHOT_HOTKEY = "F10";
 export const TARGET_KINDS = ["ask", "screen", "window", "area"] as const;
 export type TargetKind = (typeof TARGET_KINDS)[number];
 export const INK_FADE_MS = [1000, 3000, 0] as const;
@@ -19,6 +20,7 @@ const experiments = v.fallback(
 export const CaptureConfigSchema = v.object({
   enabled: bool(false),
   hotkey: v.fallback(v.pipe(v.string(), v.check(validHotkey)), CAPTURE_HOTKEY),
+  screenshotHotkey: v.fallback(v.pipe(v.string(), v.check(validHotkey)), SCREENSHOT_HOTKEY),
   target: v.fallback(v.picklist(TARGET_KINDS), "ask"),
   narration: bool(true),
   otherAudio: v.fallback(v.picklist(["mute", "keep"]), "mute"),
@@ -39,6 +41,7 @@ export type CaptureConfig = v.InferOutput<typeof CaptureConfigSchema>;
 export const CapturePatchSchema = v.partial(
   v.strictObject({
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
+    screenshotHotkey: v.pipe(v.string(), v.check(validHotkey)),
     target: v.picklist(TARGET_KINDS),
     narration: v.boolean(),
     otherAudio: v.picklist(["mute", "keep"]),

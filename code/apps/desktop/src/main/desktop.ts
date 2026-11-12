@@ -16,7 +16,7 @@ import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
-import { setupControl } from "./control";
+import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
@@ -62,11 +62,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const reading = createReading(ctx, toasts, () => tray.refresh());
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
-  const stopWork = () => {
-    // Restart now: what is running stops first; quitAndInstall then quits the app itself.
-    reading.controller.command({ type: "stop" });
-    exports.dispose();
-  };
+  // Restart now: what is running stops first; quitAndInstall then quits the app itself.
+  const stopWork = () => (reading.controller.command({ type: "stop" }), exports.dispose());
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
@@ -77,7 +74,13 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
+  const permissions = setupPermissions(
+    () => o.parent()?.webContents,
+    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
+  );
+  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
+  app.on("browser-window-focus", permissions.refresh);
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -109,8 +112,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
-      return controlDown;
+      capture.dispose();
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, installs: () => installedByTest }),
   };
 }

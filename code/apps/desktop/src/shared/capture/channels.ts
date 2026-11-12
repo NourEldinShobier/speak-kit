@@ -27,6 +27,9 @@ export const CAPTURE_STATUS_EVENT = "speakkit:capture:status";
 export const CAPSULE_EVENT = "speakkit:capture:capsule";
 export const CAPSULE_ACTION = "speakkit:capture:capsule-action";
 
+/** The capsule page tells main whether the pointer is over the pill, so the rest of its window stays click-through. */
+export const CAPSULE_HOVER = "speakkit:capture:capsule-hover";
+
 /** Main to the picker overlay: the targets to show; the overlay answers with the choice, or null when cancelled. */
 export const OVERLAY_EVENT = "speakkit:capture:overlay";
 export const OVERLAY_RESULT = "speakkit:capture:overlay-result";

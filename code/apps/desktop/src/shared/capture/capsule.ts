@@ -10,9 +10,25 @@ export type CapsuleState =
   | { kind: "countdown"; target: string; secondsLeft: number; held?: boolean }
   | { kind: "sent"; target: string; destination: string; canUndo: boolean }
   | { kind: "undone"; target: string }
+  | { kind: "shot"; target: string; what: string }
   | { kind: "failed"; target: string; notice: Notice };
 
-export type CapsuleButtonId = "pen" | "stop" | "discard" | "discard-keep" | "discard-confirm" | "open" | "send" | "hold" | "undo" | "send-now" | "retry" | "dismiss" | "switch";
+export type CapsuleButtonId =
+  | "pen"
+  | "stop"
+  | "discard"
+  | "discard-keep"
+  | "discard-confirm"
+  | "open"
+  | "send"
+  | "hold"
+  | "undo"
+  | "send-now"
+  | "retry"
+  | "dismiss"
+  | "switch"
+  | "copy-again"
+  | "copy-path";
 
 export interface CapsuleButton {
   id: CapsuleButtonId;
@@ -99,6 +115,13 @@ export function capsuleView(c: CapsuleState): CapsuleView {
         ...view(c.target, `Sent to ${c.destination}`, [{ id: "undo", label: "Undo", disabled: !c.canUndo }]),
         detail: c.canUndo ? undefined : `${c.destination} already has the capture and cannot take it back.`,
       };
+    case "shot":
+      return view(c.target, c.what, [
+        { id: "copy-again", label: "Copy again" },
+        { id: "copy-path", label: "Copy path" },
+        { id: "open", label: "Open" },
+        { id: "dismiss", label: "Close" },
+      ]);
     case "undone":
       return view(c.target, "Not sent. The capture is saved and copied.", [{ id: "open", label: "Open" }]);
     case "failed":

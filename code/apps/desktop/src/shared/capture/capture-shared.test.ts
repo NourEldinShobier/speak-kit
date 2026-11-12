@@ -8,7 +8,7 @@ import { parseConfig } from "../schemas";
 describe("capture settings", () => {
   it("an old config without a capture section loads with defaults (off, F9, 30 days)", () => {
     const c = parseConfig({ setupDone: true }).capture;
-    expect(c).toMatchObject({ enabled: false, hotkey: "F9", target: "ask", narration: true, retentionDays: 30, inputLog: "events", consented: false, lastTargets: {} });
+    expect(c).toMatchObject({ enabled: false, hotkey: "F9", screenshotHotkey: "F10", target: "ask", narration: true, retentionDays: 30, inputLog: "events", consented: false, lastTargets: {} });
     expect(c.experiments).toEqual({ screenshots: false, recording: false, replay: false, zoomExport: false, agentContext: false, pageContext: false, speechEngines: false, playground: false });
   });
   it("bad values fall back one by one and the rest stay", () => {
