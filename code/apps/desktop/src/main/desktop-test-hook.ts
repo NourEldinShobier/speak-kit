@@ -65,6 +65,8 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
       phase: () => meetings()?.phase(),
     },
     /** Main-process event-loop delay since the app started, in ms (nanoseconds from the histogram). */
+    /** Starts the measurement over: the startup stalls (the window opening, the server starting) are not "idle". */
+    loopReset: () => loop.reset(),
     loopDelay: () => ({ p50Ms: loop.percentile(50) / 1e6, p99Ms: loop.percentile(99) / 1e6, maxMs: loop.max / 1e6 }),
   };
 };
