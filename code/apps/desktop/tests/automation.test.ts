@@ -1,218 +1,232 @@
-import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { afterEach, describe, expect, it } from "vite-plus/test";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import type { Page } from "@playwright/test";
-import { electronPath, launch, type Launched } from "./harness";
+import { appDir, launch, type Launched } from "./harness";
 
-const run = promisify(execFile);
 const running: Launched[] = [];
-
-/** An app whose skill home folder, launcher PATH and macOS bin folder are in a temp folder, so nothing of the machine running the test changes. */
-async function start(config: object = {}) {
-  const sandbox = mkdtempSync(path.join(tmpdir(), "speakkit-auto-"));
-  const home = path.join(sandbox, "home");
-  mkdirSync(home);
-  const l = await launch({
-    config: { setupDone: true, setupSkipped: false, preferredPort: 0, ...config },
-    env: { SPEAKKIT_TEST: "1", SPEAKKIT_TEST_LAUNCHER_DIR: sandbox },
-  });
+const dirs: string[] = [];
+const start = async (o: Parameters<typeof launch>[0] = {}) => {
+  const l = await launch({ ...o, env: { SPEAKKIT_TEST: "1", ...o.env } });
   running.push(l);
-  return { ...l, sandbox, home };
-}
+  return l;
+};
 afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
+  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-const goto = async (p: Page, name: string) => {
-  const nav = p.getByRole("navigation", { name: "Settings" });
-  if (!(await nav.isVisible())) await p.getByRole("link", { name: "Settings" }).click();
-  await nav.getByRole("link", { name, exact: true }).click();
-  await p.getByRole("heading", { name, exact: true }).waitFor();
-};
-const open = (p: Page) => goto(p, "Automation");
-
-/** Runs the installed launcher the way a terminal does: the shim and its console output, through the app's own executable as Node. */
-async function speakkit(a: { userData: string; port: number; sandbox: string }, args: string[]) {
-  const env = { ...process.env, SPEAKKIT_USER_DATA: a.userData, SPEAKKIT_PORT: String(a.port) };
-  const file = process.platform === "win32" ? path.join(a.userData, "bin", "speakkit.cmd") : path.join(a.sandbox, "bin", "speakkit");
-  try {
-    const r = await run(process.platform === "win32" ? "cmd.exe" : file, process.platform === "win32" ? ["/c", file, ...args] : args, { env, windowsHide: true });
-    return { code: 0, out: r.stdout, err: r.stderr };
-  } catch (e) {
-    const x = e as { code: number; stdout: string; stderr: string };
-    return { code: x.code, out: x.stdout, err: x.stderr };
+const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
+const discovery = (dir: string) => JSON.parse(readFileSync(path.join(dir, "control.json"), "utf8")) as { port: number; token: string };
+const until = async (f: () => boolean, ms = 10_000) => {
+  for (const end = Date.now() + ms; Date.now() < end;) {
+    if (f()) return;
+    await new Promise((r) => setTimeout(r, 50));
   }
-}
+  expect(f()).toBe(true);
+};
+const cli = (dir: string, args: string[], input?: string) => {
+  const r = spawnSync(process.execPath, [path.join(appDir, "dist/cli/speakkit.js"), ...args], {
+    env: { ...process.env, SPEAKKIT_USER_DATA: dir },
+    encoding: "utf8",
+    ...(input !== undefined && { input }),
+  });
+  return { code: r.status, out: r.stdout, err: r.stderr };
+};
+const openAutomation = async (l: Launched) => {
+  await l.page.getByRole("heading", { name: "Home" }).waitFor();
+  await l.page.getByRole("link", { name: "Settings" }).click();
+  await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Automation", exact: true }).click();
+  await l.page.getByRole("heading", { name: "Automation", exact: true, level: 1 }).waitFor();
+};
+const tmp = () => {
+  const d = mkdtempSync(path.join(tmpdir(), "speakkit-auto-"));
+  dirs.push(d);
+  return d;
+};
 
 describe("Automation page", () => {
-  it("shows the tool, what this version can do, the error codes and the real server limits", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByTestId("automation-cli").waitFor();
-    expect(await a.page.getByTestId("automation-cli").innerText()).toContain("Not installed");
-    const chips = await a.page.getByTestId("automation-capabilities").innerText();
-    expect(chips).toContain("speak");
-    expect(chips).toContain("live-stream · parked");
-    expect((await a.page.getByTestId("automation-errors").getByRole("row").allInnerTexts()).map((t) => t.split("\n")[0])).toEqual([
-      "model_missing",
-      "busy",
-      "permission_denied",
-      "too_large",
-      "unsupported",
-      "queue_full",
-      "invalid_input",
-      "not_running",
-      "token_rejected",
-      "timeout",
-      "failed",
-    ]);
-    const limits = a.page.getByTestId("automation-limits");
-    expect(await limits.getAttribute("data-offline")).toBe("false");
-    expect(await limits.innerText()).toContain("Live streams");
-    expect(await limits.innerText()).toContain("100 000 characters");
+  it("lists the tools with a switch each, saves a choice, and pauses the switches with the server", async () => {
+    const l = await start({ config: DONE });
+    await openAutomation(l);
+    await l.page.getByText("speakkit status --json").waitFor();
+    await l.page.getByRole("button", { name: "Copy speakkit://lab/caption-export" }).waitFor();
+    const history = l.page.getByRole("switch", { name: "Search dictation history" });
+    expect(await history.getAttribute("aria-checked")).toBe("false");
+    expect(await l.page.getByRole("switch", { name: "Read aloud" }).getAttribute("aria-checked")).toBe("true");
+    await history.click();
+    await l.page.waitForFunction(() => document.querySelector('[aria-label="Search dictation history"]')?.getAttribute("aria-checked") === "true");
+    expect(configOf(l).mcpTools).toEqual({ history_search: true });
+    await l.page.getByRole("switch", { name: "Let AI apps use Speak Kit" }).click();
+    await l.page.getByText("The local server is not running").waitFor();
+    expect(configOf(l).controlServer).toBe(false);
+    expect(await history.isDisabled()).toBe(true);
+    await l.page.getByRole("button", { name: "Start server" }).click();
+    await l.page.getByText("The local server is not running").waitFor({ state: "detached" });
+    expect(configOf(l).controlServer).toBe(true);
   });
 
-  it("puts the command on the PATH, prints in a terminal, and takes it off again", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await vi.waitFor(async () => expect(await a.page.getByTestId("automation-cli").innerText()).toContain("Installed"));
-    expect(await a.page.getByTestId("automation-terminal").innerText()).toContain("Working");
-    await a.page.getByText("Open a new terminal").waitFor();
-
-    // The launcher file is real, and running it prints in the terminal that ran it.
-    const status = await speakkit(a, ["status", "--json"]);
-    expect({ code: status.code, err: status.err, out: status.code ? status.out : "" }).toEqual({ code: 0, err: "", out: "" });
-    expect(JSON.parse(status.out)).toMatchObject({ status: "idle", queued: 0 });
-    const caps = await speakkit(a, ["capabilities", "--json"]);
-    expect(JSON.parse(caps.out)).toMatchObject({ app: "speakkit", commands: { speak: "available", "live-stream": "parked" } });
-
-    await a.page.getByRole("button", { name: "Test in terminal" }).click();
-    await vi.waitFor(async () => expect(await a.app.evaluate(() => (globalThis as unknown as { __speakkit: { terminals(): string[] } }).__speakkit.terminals())).toHaveLength(1));
-
-    await a.page.getByRole("button", { name: "Remove" }).click();
-    await vi.waitFor(async () => expect(await a.page.getByTestId("automation-cli").innerText()).toContain("Not installed"));
+  it("says the command-line tool is part of the installed app when run from source", async () => {
+    const l = await start({ config: DONE });
+    await openAutomation(l);
+    await l.page.getByText("Not available").waitFor();
+    expect(await l.page.getByRole("button", { name: "Install" }).count()).toBe(0);
   });
 
-  it("shows Repair when the launcher file is gone, and repairing brings it back", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await a.page.getByRole("button", { name: "Remove" }).waitFor();
-    const { rm } = await import("node:fs/promises");
-    const file = process.platform === "win32" ? path.join(a.userData, "bin", "speakkit.cmd") : path.join(a.sandbox, "bin", "speakkit");
-    await rm(file);
-    // The page reads again when it opens.
-    await goto(a.page, "General");
-    await open(a.page);
-    if (process.platform === "win32") {
-      expect(await a.page.getByTestId("automation-terminal").innerText()).toContain("Terminal output is off");
-      expect(await a.page.getByTestId("automation-terminal").innerText()).toContain("speakkit.cmd is missing");
-      await a.page.getByRole("button", { name: "Repair" }).click();
-      await vi.waitFor(() => expect(existsSync(file)).toBe(true));
-    }
+  it("Reset token gives the discovery file a new token and the old one is refused", async () => {
+    const l = await start({ config: DONE });
+    await until(() => existsSync(path.join(l.userData, "control.json")));
+    const before = discovery(l.userData);
+    await openAutomation(l);
+    await l.page.getByRole("button", { name: "Reset token" }).click();
+    await until(() => discovery(l.userData).token !== before.token);
+    const post = (token: string) => fetch(`http://127.0.0.1:${before.port}/control`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ command: "status" }) });
+    expect((await post(before.token)).status).toBe(404);
+    expect((await post(discovery(l.userData).token)).status).toBe(200);
+    expect(cli(l.userData, ["--json", "status"]).code).toBe(0);
   });
 
-  it("installs the agent skill and then shows it as up to date", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Install skill" }).click();
-    await vi.waitFor(async () => expect(await a.page.getByTestId("automation-skill").innerText()).toContain("Up to date"));
-    const file = path.join(a.home, ".claude", "skills", "speakkit", "SKILL.md");
-    expect(readFileSync(file, "utf8")).toContain("<!-- speakkit-version:");
-  });
-
-  it("every control on the page has a name and the keyboard reaches the actions", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByTestId("automation-cli").waitFor();
-    const unnamed = await a.page.evaluate(() =>
-      [...document.querySelectorAll("button, [role=switch], pre[tabindex]")].filter((e) => !(e.getAttribute("aria-label") || e.textContent?.trim())).map((e) => e.outerHTML.slice(0, 100)),
+  it("names every control and holds at the 960 px window without sideways scroll", async () => {
+    const l = await start({ config: DONE });
+    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 800));
+    await openAutomation(l);
+    const unnamed = await l.page.evaluate(() =>
+      [...document.querySelectorAll("button, [role=switch], a[href]")].filter((e) => !(e.getAttribute("aria-label") || e.textContent?.trim())).map((e) => e.outerHTML.slice(0, 80)),
     );
     expect(unnamed).toEqual([]);
-    await a.page.getByRole("button", { name: "Put on PATH" }).focus();
-    expect(await a.page.evaluate(() => document.activeElement?.textContent)).toBe("Put on PATH");
-  });
-
-  it("stays inside the 960 px window with nothing scrolling sideways", async () => {
-    const a = await start();
-    await a.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 700));
-    await open(a.page);
-    await a.page.getByTestId("automation-cli").waitFor();
-    expect(await a.page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect(await l.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
 
-describe("the speakkit command against the running app", () => {
-  it("speaks, reports, previews and stops through the real server", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await a.page.getByRole("button", { name: "Remove" }).waitFor();
-
-    const printed = await speakkit(a, ["speak", "--print", "Hello there. How are you today?"]);
-    expect(printed).toMatchObject({ code: 0, out: "Hello there.\nHow are you today?\n" });
-
-    const spoken = await speakkit(a, ["speak", "Hello there.", "--json"]);
-    expect(spoken.code).toBe(0);
-    expect(JSON.parse(spoken.out)).toMatchObject({ position: 0, sentences: 1 });
-    const queued = await speakkit(a, ["speak", "--queue", "Second one.", "--json"]);
-    expect(queued.code).toBe(0);
-    const q = await speakkit(a, ["queue", "--json"]);
-    expect(JSON.parse(q.out)).toHaveProperty("items");
-    const stopped = await speakkit(a, ["stop", "--json"]);
-    expect(JSON.parse(stopped.out)).toMatchObject({ status: "idle", queued: 0 });
-
-    const bad = await speakkit(a, ["speak", "--print"]);
-    expect(bad.code).toBe(2);
-    expect(bad.err).toContain("invalid_input");
+describe("the command line against the real app", () => {
+  it("speak --print shows the sentences, queue and voices answer, and stop works", async () => {
+    const l = await start({ config: DONE });
+    await until(() => existsSync(path.join(l.userData, "control.json")));
+    const printed = cli(l.userData, ["speak", "One sentence. Another sentence.", "--print"]);
+    expect([printed.code, printed.out]).toEqual([0, "One sentence.\nAnother sentence.\n"]);
+    expect(JSON.parse(cli(l.userData, ["--json", "queue"]).out)).toMatchObject({ ok: true, data: { items: [] } });
+    expect(JSON.parse(cli(l.userData, ["--json", "voices"]).out).data.voices.length).toBeGreaterThan(0);
+    expect(cli(l.userData, ["stop", "--keep-queue"]).code).toBe(0);
+    expect(cli(l.userData, ["speak", "x", "--out", "relative.txt"]).code).toBe(2);
   });
 
-  it("refuses a request that is too large with exit code 1", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await a.page.getByRole("button", { name: "Remove" }).waitFor();
-    const big = path.join(a.sandbox, "big.txt");
-    (await import("node:fs")).writeFileSync(big, "a".repeat(100_001));
-    const r = await speakkit(a, ["speak", big]);
-    expect(r.code).toBe(1);
-    expect(r.err).toContain("too_large");
+  it("speak a file with --out saves the audio and refuses a file over the limit", async () => {
+    const l = await start({ config: DONE });
+    await until(() => existsSync(path.join(l.userData, "control.json")));
+    const dir = tmp();
+    const text = path.join(dir, "notes.txt");
+    writeFileSync(text, "A short note for the export.");
+    const out = path.join(dir, "note.wav");
+    const done = cli(l.userData, ["speak", text, "--out", out]);
+    expect(done.code).toBe(0);
+    expect(done.out.trim()).toBe(out);
+    expect(existsSync(out)).toBe(true);
+    const big = path.join(dir, "big.txt");
+    writeFileSync(big, "");
+    spawnSync(process.execPath, ["-e", `require("fs").truncateSync(${JSON.stringify(big)}, 64*1024*1024+1)`]);
+    const refused = cli(l.userData, ["--json", "speak", big]);
+    expect([refused.code, JSON.parse(refused.out).error.code]).toEqual([1, "too-large"]);
   });
 
-  it("prints the labs in a terminal and changes one without touching other settings, and the running app follows", async () => {
-    const a = await start({ speed: 1.5, futureThing: { a: 1 } });
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await a.page.getByRole("button", { name: "Remove" }).waitFor();
-    const list = await speakkit(a, ["labs", "list"]);
-    expect(list.code).toBe(0);
-    expect(list.out).toContain("hide-tray-icon	off");
-    expect(await speakkit(a, ["labs", "on", "hide-tray-icon"])).toMatchObject({ code: 0 });
-    const stored = JSON.parse(readFileSync(path.join(a.userData, "config.json"), "utf8"));
-    expect(stored).toMatchObject({ speed: 1.5, futureThing: { a: 1 }, labs: { "hide-tray-icon": true } });
-    expect((await speakkit(a, ["labs", "on", "nope"])).code).toBe(3);
-    await goto(a.page, "Experiments");
-    await vi.waitFor(async () => expect(await a.page.getByRole("switch", { name: "Hide the tray icon" }).getAttribute("aria-checked")).toBe("true"));
+  it("turns an experiment on and off and lists it", async () => {
+    const l = await start({ config: DONE });
+    await until(() => existsSync(path.join(l.userData, "control.json")));
+    expect(cli(l.userData, ["labs", "on", "caption-export"]).code).toBe(0);
+    await until(() => configOf(l).experiments?.["caption-export"] === true);
+    expect(cli(l.userData, ["labs", "off", "caption-export"]).code).toBe(0);
+    await until(() => configOf(l).experiments?.["caption-export"] !== true);
+    const unknown = cli(l.userData, ["--json", "labs", "on", "no-such-lab"]);
+    expect([unknown.code, JSON.parse(unknown.out).error.code]).toEqual([2, "usage"]);
+  });
+});
+
+describe("reads and the MCP bridge with the app closed", () => {
+  const folder = () => {
+    const dir = tmp();
+    mkdirSync(path.join(dir, "meetings", "aaaaaa1"), { recursive: true });
+    const entry = {
+      id: "aaaaaa1",
+      title: "Budget review",
+      titleTemporary: false,
+      providerId: "zoom",
+      providerName: "Zoom",
+      startedAt: Date.UTC(2026, 10, 12, 10),
+      durationSec: 90,
+      status: "done",
+      audio: { you: 0, them: 0 },
+      notes: { state: "off", chapters: 0 },
+      exports: [],
+    };
+    writeFileSync(path.join(dir, "meetings", "manifest.json"), JSON.stringify({ v: 1, entries: [entry] }));
+    writeFileSync(
+      path.join(dir, "meetings", "aaaaaa1", "transcript.json"),
+      JSON.stringify({
+        v: 1,
+        lines: [
+          { start: 5, end: 9, text: "the budget is over plan", who: "You" },
+          { start: 70, end: 80, text: "move the launch", who: "Them" },
+        ],
+      }),
+    );
+    return dir;
+  };
+
+  it("meetings list, show with a range, and search never start the app and change no file", async () => {
+    const dir = folder();
+    const before = readFileSync(path.join(dir, "meetings", "manifest.json"), "utf8");
+    expect(cli(dir, ["meetings", "list"]).out).toContain("Budget review");
+    const shown = cli(dir, ["meetings", "show", "latest", "--from", "1:00"]);
+    expect(shown.code).toBe(0);
+    expect(shown.out).toContain("[01:10] Them: move the launch");
+    expect(shown.out).not.toContain("over plan");
+    expect(JSON.parse(cli(dir, ["--json", "meetings", "search", "budget"]).out).data.hits[0].id).toBe("aaaaaa1");
+    expect(cli(dir, ["capture", "list"]).out).toBe("No captures yet.\n");
+    expect(existsSync(path.join(dir, "control.json"))).toBe(false);
+    expect(readFileSync(path.join(dir, "meetings", "manifest.json"), "utf8")).toBe(before);
   });
 
-  it("a wrong token is rejected with exit code 3", async () => {
-    const a = await start();
-    await open(a.page);
-    await a.page.getByRole("button", { name: "Put on PATH" }).click();
-    await a.page.getByRole("button", { name: "Remove" }).waitFor();
-    const wrong = await new Promise<{ code: number; err: string }>((resolve) => {
-      execFile(
-        electronPath,
-        [path.resolve(__dirname, "../dist/main/cli.js"), "status", "--token", "wrong", "--port", String(a.port)],
-        { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", SPEAKKIT_USER_DATA: a.userData } },
-        (e, _o, err) => resolve({ code: (e as { code?: number } | null)?.code ?? 0, err }),
-      );
-    });
-    expect(wrong.code).toBe(3);
-    expect(wrong.err).toContain("token_rejected");
+  it("the MCP bridge lists the tools that are on and answers a meeting read once its switch is on", async () => {
+    const dir = folder();
+    const ask = (flags: object, method: string, params: object = {}) => {
+      writeFileSync(path.join(dir, "config.json"), JSON.stringify({ mcpTools: flags }));
+      const r = cli(dir, ["mcp"], `${JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })}\n`);
+      return JSON.parse(r.out.trim().split("\n")[0]!).result;
+    };
+    expect(ask({}, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
+    const off = ask({}, "tools/call", { name: "meetings_list", arguments: {} });
+    expect(off.isError).toBe(true);
+    const on = ask({ meetings_list: true }, "tools/call", { name: "meetings_list", arguments: {} });
+    expect(on.isError).toBe(false);
+    expect(JSON.parse(on.content[0].text).meetings[0].title).toBe("Budget review");
+  });
+});
+
+describe("live transcription over the local API", () => {
+  it("a stream of audio ends with the engine's text, the processed text and the times", async () => {
+    const l = await start({ config: DONE });
+    const token = readFileSync(path.join(l.userData, "token"), "utf8").trim();
+    const base = `http://127.0.0.1:${l.port}`;
+    const api = (p: string, init: RequestInit & { owner?: string } = {}) =>
+      fetch(`${base}${p}`, {
+        ...init,
+        headers: { Authorization: `Bearer ${token}`, ...(init.owner && { "X-Stream-Owner": init.owner }), ...(typeof init.body === "string" && { "Content-Type": "application/json" }) },
+      });
+    await until(() => existsSync(path.join(l.userData, "token")));
+    const made = (await (await api("/v1/streams", { method: "POST", body: JSON.stringify({ process: true, timestamps: true }) })).json()) as { id: string; owner: string };
+    const pcm = (ms: number, amp: number) => Buffer.from(new Int16Array((16_000 * ms) / 1000).fill(amp).buffer);
+    const sent = await api(`/v1/streams/${made.id}/audio`, { method: "POST", owner: made.owner, body: Buffer.concat([pcm(1500, 9000), pcm(720, 0)]) as unknown as BodyInit });
+    expect(sent.status).toBe(202);
+    const done = (await (await api(`/v1/streams/${made.id}/finish`, { method: "POST", owner: made.owner })).json()) as {
+      text: string;
+      processed: string;
+      segments: { startMs: number; endMs: number }[];
+    };
+    expect(done.text).toBe("hello from the fake speech engine");
+    expect(typeof done.processed).toBe("string");
+    expect(done.segments[0]).toMatchObject({ startMs: 0, endMs: 2220 });
+    const caps = (await (await api("/v1/capabilities")).json()) as { commands: Record<string, string> };
+    expect(caps.commands["live-stream"]).toBe("available");
   });
 });
