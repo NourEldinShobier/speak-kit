@@ -2,7 +2,7 @@ import * as v from "valibot";
 import { DictationPatchSchema, type DictationPatch } from "../dictation/settings";
 import { ConfigPatchSchema, type ConfigPatch } from "../schemas";
 
-/** The app settings the command line may change: plain values with no side effect to run. */
+/** The app settings the command line may change: plain values with no side effect to run. No dictation key is listed: how dictated text is stored, rewritten and pasted stays with the Settings pages. */
 export const COMMAND_LINE_KEYS = ["voice", "speed", "controlServer"] as const;
 
 export type SettingsChange = { ok: true; app: ConfigPatch; dictation: DictationPatch } | { ok: false; message: string };
@@ -18,7 +18,7 @@ export function validateChange(change: Readonly<Record<string, unknown>>, only?:
     if (key.startsWith("dictation.")) dictation[key.slice("dictation.".length)] = value;
     else app[key] = value;
   }
-  const outside = only ? Object.keys(app).find((k) => !only.includes(k)) : undefined;
+  const outside = only ? Object.keys(change).find((k) => !only.includes(k)) : undefined;
   if (outside) return { ok: false, message: `${outside} cannot be changed from the command line.` };
   const a = v.safeParse(ConfigPatchSchema, app);
   if (!a.success) return { ok: false, message: describe(a.issues) };
