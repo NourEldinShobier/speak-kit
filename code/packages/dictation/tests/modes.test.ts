@@ -6,6 +6,10 @@ import {
   defaultMode,
   defaultSettings,
   keepsFacts,
+  normalizeSite,
+  reportsPages,
+  setSites,
+  siteMatches,
   removeMode,
   resolveMode,
   rewritePass,
@@ -81,6 +85,78 @@ describe("modes", () => {
     const out = applyMode(base, mode({ capitals: "lower", end: "no-full-stop", insertMode: "type", rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
     expect(out).toMatchObject({ autoCapitalize: false, lowercase: true, stripFinalStop: true, insertMode: "type", rewrite: true });
     expect(out.terms.map((t) => t.word)).toEqual(["pnpm"]);
+  });
+});
+
+describe("modes by website", () => {
+  it("reduces what was typed to a host name and refuses what is not one", () => {
+    expect(normalizeSite("https://www.Mail.Google.com/inbox?x=1#y")).toBe("mail.google.com");
+    expect(normalizeSite("  Docs.Example.org:8080/a ")).toBe("docs.example.org");
+    expect(normalizeSite("user:pw@example.com")).toBe("example.com");
+    expect(normalizeSite("localhost:3000")).toBe("localhost");
+    expect(normalizeSite("example.com.")).toBe("example.com");
+    for (const bad of ["", "   ", "two words.com", "nodot", "a..b", "-a.com", "a.c", "http://", "exa mple.com"]) expect(normalizeSite(bad), bad).toBe("");
+  });
+
+  it("covers the host and the hosts under it, not a host that only ends the same way", () => {
+    expect(siteMatches("google.com", "google.com")).toBe(true);
+    expect(siteMatches("google.com", "mail.google.com")).toBe(true);
+    expect(siteMatches("mail.google.com", "google.com")).toBe(false);
+    expect(siteMatches("google.com", "notgoogle.com")).toBe(false);
+  });
+
+  it("knows which programs are browsers that report the page, on Windows and macOS", () => {
+    for (const exe of ["chrome.exe", "MSEDGE.EXE", "com.google.Chrome", "com.microsoft.edgemac", "brave.exe"]) expect(reportsPages(exe), exe).toBe(true);
+    for (const exe of ["firefox.exe", "notepad.exe", "com.apple.Safari", "", undefined]) expect(reportsPages(exe), String(exe)).toBe(false);
+  });
+
+  it("gives a site to one mode: adding it elsewhere takes it away, and the default mode keeps none", () => {
+    const list = [defaultMode(), mode({ id: "a", sites: ["mail.google.com", "slack.com"] }), mode({ id: "b" })];
+    const next = setSites(list, "b", ["https://www.Slack.com/x", "slack.com", "bad name", "github.com"]);
+    expect(next.find((m) => m.id === "a")?.sites).toEqual(["mail.google.com"]);
+    expect(next.find((m) => m.id === "b")?.sites).toEqual(["slack.com", "github.com"]);
+    expect(setSites(list, "default", ["x.com"]).find((m) => m.id === "default")?.sites).toEqual([]);
+  });
+
+  const list = [
+    defaultMode(),
+    mode({ id: "work", sites: ["google.com"] }),
+    mode({ id: "mail", sites: ["mail.google.com"] }),
+    mode({ id: "chrome", apps: ["chrome"] }),
+    mode({ id: "term", apps: ["windowsterminal"], sites: ["example.com"] }),
+  ];
+  it("picks the mode of the page in a browser, the most specific site first", () => {
+    expect(resolveMode(list, "chrome.exe", "mail.google.com").id).toBe("mail");
+    expect(resolveMode(list, "chrome.exe", "drive.google.com").id).toBe("work");
+    expect(resolveMode(list, "chrome.exe", "Mail.Google.com").id).toBe("mail");
+  });
+  it("falls back to the browser's own mode, then the default, when no site matches or none was reported", () => {
+    expect(resolveMode(list, "chrome.exe", "other.org").id).toBe("chrome");
+    expect(resolveMode(list, "chrome.exe", undefined).id).toBe("chrome");
+    expect(resolveMode(list, "chrome.exe", "").id).toBe("chrome");
+    expect(resolveMode(list, "msedge.exe", "other.org").id).toBe("default");
+  });
+  it("ignores the page when the program in front is not a browser that reports it", () => {
+    expect(resolveMode(list, "windowsterminal.exe", "mail.google.com").id).toBe("term");
+    expect(resolveMode(list, "notepad.exe", "mail.google.com").id).toBe("default");
+    expect(resolveMode(list, undefined, "mail.google.com").id).toBe("default");
+  });
+  it("never picks the default mode by site", () => {
+    expect(resolveMode([{ ...defaultMode(), sites: ["a.com"] }], "chrome.exe", "a.com").id).toBe("default");
+  });
+
+  it("dictates with the rules of the page's mode", async () => {
+    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], capitals: "lower" });
+    const r = await rig({ modes: [defaultMode(), mail] });
+    r.ins.state.current = target({ exe: "chrome.exe", site: "mail.google.com" });
+    r.stt.state.result = { ok: true, text: "Hello There." };
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("hello there. ");
+    r.ins.state.current = target({ exe: "chrome.exe", site: "news.org" });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[1]?.text).toBe("Hello There. ");
   });
 });
 

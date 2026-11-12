@@ -11,6 +11,8 @@ export interface Mode {
   name: string;
   /** Program names without ".exe", lower case. The default mode has none: it takes every program no other mode lists. */
   apps: string[];
+  /** Website host names such as "mail.google.com": in a supported browser these pick the mode by the page in front, ahead of `apps`. */
+  sites: string[];
   insertMode: InsertMode;
   capitals: Capitals;
   end: EndOfDictation;
@@ -22,7 +24,7 @@ export const DEFAULT_MODE_ID = "default";
 export const MAX_MODES = 24;
 export const MAX_MODE_NAME = 40;
 
-export const defaultMode = (): Mode => ({ id: DEFAULT_MODE_ID, name: "Default", apps: [], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: false, terms: [] });
+export const defaultMode = (): Mode => ({ id: DEFAULT_MODE_ID, name: "Default", apps: [], sites: [], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: false, terms: [] });
 
 /** The list with the default mode in it, first: the one that was saved, or the built-in one when nothing about it was ever changed. */
 export const withDefault = (modes: readonly Mode[]): Mode[] => [modes.find((m) => m.id === DEFAULT_MODE_ID) ?? defaultMode(), ...modes.filter((m) => m.id !== DEFAULT_MODE_ID)];
@@ -55,10 +57,51 @@ export function setApps(modes: readonly Mode[], id: string, apps: readonly strin
   });
 }
 
-/** The mode for a program: the first that lists it, else the default. */
-export function resolveMode(modes: readonly Mode[], exe: string | undefined): Mode {
+/** A site as the person typed it ("https://www.Mail.Google.com/inbox") reduced to its host name; "" when it is not a host name. */
+export function normalizeSite(input: string): string {
+  const text = input.trim();
+  if (!text || /\s/.test(text)) return "";
+  let host: string;
+  try {
+    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`).hostname;
+  } catch {
+    return "";
+  }
+  host = host.toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
+  return host === "localhost" || /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,}$/.test(host) ? host : "";
+}
+
+/** A listed site covers its own host and every host under it: "google.com" covers "mail.google.com". */
+export const siteMatches = (site: string, host: string): boolean => host === site || host.endsWith(`.${site}`);
+
+/** Browsers that can report the page in front (the extension runs in these). Names as `exeKey` gives them, plus macOS bundle ids. */
+const PAGE_BROWSERS = new Set(["chrome", "msedge", "brave", "vivaldi", "opera", "arc", "chromium", "com.google.chrome", "com.microsoft.edgemac", "com.brave.browser", "com.vivaldi.vivaldi", "com.operasoftware.opera", "company.thebrowser.browser", "org.chromium.chromium"]);
+export const reportsPages = (exe: string | undefined): boolean => !!exe && PAGE_BROWSERS.has(exeKey(exe));
+
+/** Sites belong to one mode: giving them to a mode takes them from any other. The default mode lists no sites. */
+export function setSites(modes: readonly Mode[], id: string, sites: readonly string[]): Mode[] {
+  const mine = [...new Set(sites.map(normalizeSite).filter(Boolean))];
+  return modes.map((m) => {
+    if (m.id === DEFAULT_MODE_ID) return m;
+    return m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((x) => !mine.includes(x)) };
+  });
+}
+
+/**
+ * The mode for the program in front, and the page in it when the browser reports one. The mode that lists the most specific matching site wins,
+ * then the first mode that lists the program, else the default.
+ */
+export function resolveMode(modes: readonly Mode[], exe: string | undefined, site?: string): Mode {
   const key = exe ? exeKey(exe) : "";
-  return (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
+  const host = site && reportsPages(exe) ? normalizeSite(site) : "";
+  let bySite: Mode | undefined;
+  let longest = 0;
+  if (host)
+    for (const m of modes) {
+      if (m.id === DEFAULT_MODE_ID) continue;
+      for (const s of m.sites) if (s.length > longest && siteMatches(s, host)) [bySite, longest] = [m, s.length];
+    }
+  return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
 }
 
 export type ModeSettings = Pick<Settings, "autoCapitalize" | "lowercase" | "stripFinalStop" | "insertMode" | "terms">;
@@ -78,4 +121,4 @@ export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { re
 }
 
 /** Words that tell a row how many apps and words a mode has, for the list. */
-export const modeSummary = (m: Mode): { apps: number; words: number; rewrite: boolean } => ({ apps: m.apps.length, words: m.terms.length, rewrite: m.rewrite });
+export const modeSummary = (m: Mode): { apps: number; sites: number; words: number; rewrite: boolean } => ({ apps: m.apps.length, sites: m.sites.length, words: m.terms.length, rewrite: m.rewrite });

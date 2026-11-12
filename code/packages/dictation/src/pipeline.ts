@@ -154,9 +154,10 @@ const rewriteStyle = (s: Pick<Settings, "lowercase" | "autoCapitalize" | "stripF
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
   if (!clip) return undefined;
-  if (clip.peak === 0) return { error: "mic-silent" };
-  const mode = resolveMode(ctx.settings.modes, (await job.target)?.exe);
-  const eff = applyMode(ctx.settings, mode);
+  const silent = checkClip(ctx, clip);
+  if (silent) return silent;
+  const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
+  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.site));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
   const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language, ...(prompt && { prompt }) });
   if (!heard.ok) return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
