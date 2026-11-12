@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RecorderData } from "../../../shared/capture/contract";
+import type { RecorderPayload } from "../../../shared/capture/contract";
 import { Run } from "./recorder-run";
 
 interface FakeRecorder {
@@ -84,7 +84,7 @@ afterEach(() => {
 });
 
 const setup = () => {
-  const sent: RecorderData[] = [];
+  const sent: RecorderPayload[] = [];
   return { sent, run: new Run(1280, (d) => void sent.push(d)) };
 };
 

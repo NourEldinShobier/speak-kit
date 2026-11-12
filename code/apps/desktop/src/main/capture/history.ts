@@ -1,6 +1,7 @@
 import { shell } from "electron";
 import path from "node:path";
-import type { CaptureDetail, CaptureItem, CopyWhat, RecoveryView } from "../../shared/capture/contract";
+import type { CaptureDetail, EditSource, CaptureItem, CopyWhat, RecoveryView } from "../../shared/capture/contract";
+import { canEditFile, editedName, refuseEdit, shownFile } from "./edits";
 import { createBundle, type Bundle } from "./bundle";
 import { writeCapture, writeText } from "./clipboard-out";
 import { nativeImage } from "electron";
@@ -110,11 +111,32 @@ export class History {
     if (what === "path") await writeText(this.bundle.dir(r.dir));
     else if (what === "text") await writeText(r.words?.map((w) => w.text).join(" ") ?? "");
     else {
-      const cover = await this.bundle.readFile(r.dir, r.kind === "screenshot" ? r.media : (r.sheet ?? ""));
+      const cover = await this.bundle.readFile(r.dir, r.kind === "screenshot" ? shownFile(r, r.media) : (r.sheet ?? ""));
       if (!cover) return false;
       await writeCapture("", nativeImage.createFromBuffer(cover));
     }
     if (!r.chips.includes("copied")) await this.store.update(id, { chips: [...r.chips, "copied"] });
+    return true;
+  }
+
+  /** A picture of a capture at full size, to edit. */
+  async source(id: string, file: string): Promise<EditSource | null> {
+    const r = await this.store.get(id);
+    if (!canEditFile(r, file)) return null;
+    const buf = await this.bundle.readFile(r.dir, shownFile(r, file));
+    const image = buf && nativeImage.createFromBuffer(buf);
+    if (!image || image.isEmpty()) return null;
+    const { width, height } = image.getSize();
+    return { src: image.toDataURL(), width, height };
+  }
+
+  /** Saves the edited copy next to the original and points the record at it. */
+  async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
+    const r = await this.store.get(id);
+    if (refuseEdit(r, file, png) || !r) return false;
+    const name = editedName(file);
+    await this.bundle.writeFile(r.dir, name, png);
+    await this.store.update(id, { edits: { ...r.edits, [file]: name }, bytes: await this.bundle.bytes(r.dir) });
     return true;
   }
 

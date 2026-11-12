@@ -13,6 +13,8 @@ export interface CaptureRecord {
   media: string;
   frames: string[];
   sheet?: string;
+  /** Edited copies of pictures: file of the original -> file of the edit. The original stays. */
+  edits?: Record<string, string>;
   /** What happened to it so far. */
   chips: ("copied" | "saved" | "sent")[];
   /** Still being finished after a crash or a stop; the list shows "Finishing". */

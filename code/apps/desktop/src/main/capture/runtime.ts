@@ -3,10 +3,10 @@ import { randomBytes } from "node:crypto";
 import * as v from "valibot";
 import { CAPSULE_ACTION, CAPSULE_HOVER } from "../../shared/capture/channels";
 import { CapsuleActionSchema, type CapsuleAction, type CapturePhase, type CopyWhat } from "../../shared/capture/contract";
-import { noticeFor, noticeOfError, type Notice, type NoticeAction } from "../../shared/capture/notices";
+import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
-import { writeStreamed } from "./bundle";
+import { createDataSink } from "./data-sink";
 import { capsuleHandlers } from "./capsule-actions";
 import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
@@ -15,12 +15,13 @@ import { NoticeBoard } from "./notice-board";
 import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
 import type { History } from "./history";
-import { displayAt, remember } from "./picker";
-import { createPickerFlow, type PickerFlow } from "./picker/flow";
+import { displayAt } from "./picker";
+import { TargetPicker } from "./target-picker";
 import type { CapturePlatform } from "./platform/types";
 import { createRecorderHost, type RecorderHost } from "./recorder-host";
 import { createSessionPorts, type Narrator } from "./recording";
-import { takeScreenshot } from "./screenshot";
+import { shootFlow } from "./screenshot";
+import { finishForQuit } from "./session/quit";
 import { createSession, type Session, type Target } from "./session";
 import { externalFor } from "./notice-target";
 import { displayOfTarget, lostDisplay, titleOfTarget } from "./target-display";
@@ -52,7 +53,7 @@ export class CaptureRuntime {
   readonly #d: RuntimeDeps;
   #session: Session;
   #host: RecorderHost | undefined;
-  #picker: PickerFlow | undefined;
+  readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   readonly #fence: Fence = createFence();
   /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
@@ -67,6 +68,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
+    this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
     this.controller = this.#makeController();
     const onAction = (e: Electron.IpcMainEvent, a: unknown) => this.#fromCapsule(e.sender, a);
@@ -152,16 +154,7 @@ export class CaptureRuntime {
   #openHost(): RecorderHost {
     const page = () => openRecorderWindow(capturePage(this.#d.distDir, "capture-recorder"), () => this.#settings.narration);
     const host = this.#d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
-    host.onData((data) => {
-      const id = this.#session.state.id;
-      if (!this.#fence.accepts(data.gen)) {
-        this.#fence.refuse();
-        if (this.#fence.refused === 1) this.#d.ctx.log.warn("capture: data of an earlier recording was refused");
-        return;
-      }
-      // while the disk is refusing writes nothing more is queued
-      if (id && this.#guards.writes.failures === 0) this.#guards.writes.watch(writeStreamed(this.#d.history.bundle, id, data));
-    });
+    host.onData(createDataSink({ fence: this.#fence, writes: this.#guards.writes, bundle: () => this.#d.history.bundle, id: () => this.#session.state.id, log: (l) => this.#d.ctx.log.warn(l) }));
     return host;
   }
 
@@ -187,28 +180,8 @@ export class CaptureRuntime {
 
   // Taking a capture ------------------------------------------------------------------------------------------------------------------------
 
-  /** The picker over every display. A choice is remembered per display; Esc and a closed picker are a clean exit. */
-  async #pick(signal: AbortSignal): Promise<Target | null> {
-    const { platform: p, distDir } = this.#d;
-    this.#picker ??= createPickerFlow({
-      ipcMain,
-      displays: () => p.displays(),
-      windows: () => p.windows(),
-      open: (display) => openOverlayWindow(capturePage(distDir, "capture-overlay"), display.bounds),
-      lastTargets: () => this.#settings.lastTargets,
-      windowPicker: p.windowPicker,
-    });
-    const target = await this.#picker.pick(signal, this.#session.state.phase === "recording");
-    if (target) this.#remember(target);
-    return target;
-  }
-
-  #remember(t: Target) {
-    const p = this.#d.platform;
-    const id = t.kind === "window" ? displayAt(p.cursor(), p.displays())?.id : t.displayId;
-    if (!id) return;
-    this.#settings.lastTargets = remember(this.#settings.lastTargets, id, t.kind);
-    this.#d.ctx.saveConfig();
+  #pick(signal: AbortSignal): Promise<Target | null> {
+    return this.#targets.pick(signal, this.#session.state.phase === "recording");
   }
 
   #sessionChanged() {
@@ -268,26 +241,24 @@ export class CaptureRuntime {
 
   /** The screenshot of the experiment: pick, take one picture, copy it, show the corner card. */
   async shoot(): Promise<void> {
-    const { platform: p, history, ctx } = this.#d;
+    const { platform: p, history } = this.#d;
     const s = this.#settings;
     if (!s.enabled || !s.experiments.screenshots || this.#session.state.phase !== "idle") return;
-    if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
     const epoch = this.#epoch;
-    try {
-      const target = await this.#pick(new AbortController().signal);
-      if (!target || epoch !== this.#epoch) return;
-      const shot = await takeScreenshot({ platform: p, bundle: history.bundle, store: history.store, title: (t) => titleOfTarget(t, p.displays()), now }, target);
-      if (epoch !== this.#epoch) return;
-      if (!shot.ok) return this.notify(noticeFor("nothing-recorded"));
-      await writeCapture("", shot.image);
-      this.#last = shot.record;
-      this.#title = shot.record.title;
-      this.controller.after({ kind: "shot", what: "Copied picture" }, 6000);
-      this.#d.refresh();
-    } catch (e) {
-      ctx.log.warn(`screenshot failed: ${String(e)}`);
-      this.notify(noticeOfError(e, { os: p.os }));
-    }
+    await shootFlow({
+      platform: p,
+      history,
+      pick: () => this.#pick(new AbortController().signal),
+      current: () => epoch === this.#epoch,
+      notify: (n) => this.notify(n),
+      log: (l) => this.#d.ctx.log.warn(l),
+      shown: (record) => {
+        this.#last = record;
+        this.#title = record.title;
+        this.controller.after({ kind: "shot", what: "Copied picture" }, 6000);
+        this.#d.refresh();
+      },
+    });
   }
 
   #saved(record: CaptureRecord) {
@@ -348,10 +319,7 @@ export class CaptureRuntime {
 
   /** At quit: a recording is stopped and saved, and the returned promise resolves when it is (or after 30 s). Undefined when nothing is running. */
   finishForQuit(): Promise<void> | undefined {
-    const { phase } = this.#session.state;
-    if (phase === "recording") this.#session.stop();
-    else if (phase !== "finishing") return undefined;
-    return Promise.race([this.#session.idle(), new Promise<void>((r) => setTimeout(r, QUIT_WAIT_MS))]);
+    return finishForQuit(this.#session, QUIT_WAIT_MS);
   }
 
   dispose() {
@@ -359,7 +327,7 @@ export class CaptureRuntime {
     for (const off of this.#off) off();
     this.#board.dispose();
     this.#session.discard();
-    this.#picker?.dispose();
+    this.#targets.dispose();
     this.controller.dispose();
     this.#host?.dispose();
   }

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Banner, Button, Icon, Skeleton } from "@speakkit/ui";
-import type { CaptureDetail, CopyWhat } from "../../../shared/capture/contract";
+import type { CaptureDetail, CopyWhat, EditSource } from "../../../shared/capture/contract";
 import { capture } from "./api";
+import { AnnotateEditor } from "./annotate/AnnotateEditor";
 import { duration, itemSubtitle } from "./format";
 
 interface Props {
@@ -46,8 +47,36 @@ function Actions({ detail, platform, onCopied, onDelete }: { detail: CaptureDeta
   );
 }
 
-function Opened({ detail, platform, onDelete }: { detail: CaptureDetail; platform: string; onDelete(): void }) {
+/** The picture editor of one capture: opens a picture at full size, saves the copy, and says when a picture cannot be opened. */
+function useEditing(id: string, onChanged: () => void) {
+  const [editing, setEditing] = useState<{ file: string; source: EditSource } | null>(null);
+  const [cannotOpen, setCannotOpen] = useState(false);
+  return {
+    editing,
+    cannotOpen,
+    closeEditor: () => setEditing(null),
+    async openEditor(file: string) {
+      setCannotOpen(false);
+      let source: EditSource | null = null;
+      try {
+        source = await capture.source(id, file);
+      } catch {
+        // the main process could not read it: the banner below says so
+      }
+      if (source) setEditing({ file, source });
+      else setCannotOpen(true);
+    },
+    async saveEdit(png: Uint8Array) {
+      const ok = editing ? await capture.saveEdit(id, editing.file, png).catch(() => false) : false;
+      if (ok) onChanged();
+      return ok;
+    },
+  };
+}
+
+function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail; platform: string; onDelete(): void; onChanged(): void }) {
   const [copied, setCopied] = useState<CopyWhat | null>(null);
+  const { editing, cannotOpen, openEditor, closeEditor, saveEdit } = useEditing(detail.id, onChanged);
   return (
     <>
       <h2 className="cap-detail__title">{detail.title}</h2>
@@ -56,10 +85,22 @@ function Opened({ detail, platform, onDelete }: { detail: CaptureDetail; platfor
         {detail.frames.map((f) => (
           <figure key={f.atMs} role="listitem">
             <img src={f.src} alt={`Frame at ${duration(f.atMs)}`} />
-            <figcaption>{duration(f.atMs)}</figcaption>
+            <figcaption>
+              {detail.kind === "screenshot" ? "Picture" : duration(f.atMs)}
+              {f.edited ? " (edited)" : ""}
+            </figcaption>
+            <Button size="sm" aria-label={`Edit picture at ${duration(f.atMs)}`} onClick={() => void openEditor(f.file)}>
+              Edit
+            </Button>
           </figure>
         ))}
       </div>
+      {cannotOpen ? (
+        <Banner tone="error" title="The picture could not be opened">
+          It may have been moved or removed from the capture folder.
+        </Banner>
+      ) : null}
+      {editing ? <AnnotateEditor source={editing.source} onClose={closeEditor} onSave={saveEdit} /> : null}
       <Narration words={detail.words} />
       <Actions detail={detail} platform={platform} onCopied={setCopied} onDelete={onDelete} />
       <span className="cap-sr" role="status">
@@ -69,7 +110,7 @@ function Opened({ detail, platform, onDelete }: { detail: CaptureDetail; platfor
   );
 }
 
-function Body({ detail, platform, onDelete }: { detail: CaptureDetail | null | undefined; platform: string; onDelete(item: CaptureDetail): void }) {
+function Body({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail | null | undefined; platform: string; onDelete(item: CaptureDetail): void; onChanged(): void }) {
   if (detail === undefined)
     return (
       <div className="lm-card" aria-busy="true" aria-label="Loading capture">
@@ -82,12 +123,13 @@ function Body({ detail, platform, onDelete }: { detail: CaptureDetail | null | u
         It was removed from this computer. Go back to the list.
       </Banner>
     );
-  return <Opened detail={detail} platform={platform} onDelete={() => onDelete(detail)} />;
+  return <Opened detail={detail} platform={platform} onDelete={() => onDelete(detail)} onChanged={onChanged} />;
 }
 
 /** One capture opened: its keyframes, the narration with times, and the actions on it. */
 export function DetailView({ id, platform, onBack, onDelete }: Props) {
   const [detail, setDetail] = useState<CaptureDetail | null | undefined>(undefined);
+  const [version, setVersion] = useState(0);
   useEffect(() => {
     let live = true;
     capture.detail(id).then(
@@ -97,13 +139,13 @@ export function DetailView({ id, platform, onBack, onDelete }: Props) {
     return () => {
       live = false;
     };
-  }, [id]);
+  }, [id, version]);
   return (
     <div className="cap-detail" data-testid="capture-detail">
       <Button iconLeft="arrow-left" onClick={onBack}>
         Captures
       </Button>
-      <Body detail={detail} platform={platform} onDelete={onDelete} />
+      <Body detail={detail} platform={platform} onDelete={onDelete} onChanged={() => setVersion((n) => n + 1)} />
     </div>
   );
 }
