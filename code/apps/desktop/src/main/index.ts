@@ -15,6 +15,7 @@ import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
 import { watchConfigFile } from "./config-watch";
+import { acquireInstance, classifySecondLaunch, clearRunningVersion, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
 import { isLaunchAtLogin, openedAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
@@ -250,12 +251,25 @@ function startDesktop() {
 
 // `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
 const QUIT_FLAG = "--quit";
-if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
+// A newer install waits for an older running copy it asks to leave; a copy that is stuck leaves by itself after the stop guard.
+const ownVersion = app.getVersion();
+const lock = () => app.requestSingleInstanceLock({ version: ownVersion });
+const mayRun = process.argv.includes(QUIT_FLAG)
+  ? (lock(), false)
+  : await acquireInstance({ tryLock: lock, runningVersion: () => readRunningVersion(dataDir), ownVersion, wait: (ms) => new Promise((r) => setTimeout(r, ms)) });
+if (!mayRun) {
   app.quit();
 } else {
+  void writeRunningVersion(dataDir, ownVersion);
+  app.on("will-quit", () => void clearRunningVersion(dataDir));
   registerProtocol();
-  app.on("second-instance", (_e, argv) => {
-    if (argv.includes(QUIT_FLAG)) return mainWindow.quit();
+  app.on("second-instance", (_e, argv, _cwd, incoming) => {
+    const why = classifySecondLaunch(argv, ownVersion, incoming);
+    if (why !== "open") {
+      mainWindow.quit();
+      stopGuard(() => app.exit(0));
+      return;
+    }
     const link = findDeepLink(argv);
     if (link) onDeepLink(link);
     else mainWindow.show();
