@@ -87,10 +87,11 @@ describe("live transcriber", () => {
 
 describe("live session", () => {
   const silent = () => undefined;
+  const settings = (live: boolean) => ({ narrationEngine: live ? "live" : "dictation", experiments: { speechEngines: true } }) as ReturnType<Parameters<typeof createLiveSession>[0]["settings"]>;
   it("makes a transcriber for a recording only when chosen and the model is ready", async () => {
     let on = false;
     const m = model();
-    const s = createLiveSession({ enabled: () => on, narrator: m.narrator, log: silent });
+    const s = createLiveSession({ settings: () => settings(on), narrator: m.narrator, log: silent });
     s.begin();
     expect(s.active()).toBe(false);
     on = true;
@@ -100,14 +101,14 @@ describe("live session", () => {
     expect(await s.finish()).toEqual([{ text: "w1", startMs: 0, endMs: 1000 }]);
     expect(s.active()).toBe(false);
     expect(await s.finish()).toBeNull();
-    const cold = createLiveSession({ enabled: () => true, narrator: model({ ready: false }).narrator, log: silent });
+    const cold = createLiveSession({ settings: () => settings(true), narrator: model({ ready: false }).narrator, log: silent });
     cold.begin();
     expect(cold.active()).toBe(false);
   });
 
   it("drops a recording that was cancelled", async () => {
     const m = model();
-    const s = createLiveSession({ enabled: () => true, narrator: m.narrator, log: silent });
+    const s = createLiveSession({ settings: () => settings(true), narrator: m.narrator, log: silent });
     s.begin();
     feed(s, speech(1000));
     s.cancel();

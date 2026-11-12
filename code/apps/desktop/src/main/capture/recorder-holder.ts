@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import { createDataSink } from "./data-sink";
 import type { Bundle } from "./bundle";
 import type { FakeRecorderOptions } from "./fake";
+import type { LiveSession } from "./live-narrator";
 import type { Fence } from "./fence";
 import { createRecorderHost, type RecorderHost } from "./recorder-host";
 import type { WriteGuard } from "./write-guard";
@@ -18,7 +19,8 @@ export interface RecorderHolderDeps {
   /** The capture that is on now. */
   id(): string | undefined;
   log(line: string): void;
-  audio?(chunk: Int16Array): void;
+  /** The live narration: it hears the microphone track as it streams in. */
+  live: LiveSession;
 }
 
 /** The recorder window, opened the first time a capture needs it, with what it streams going to the files of the capture that is on. */
@@ -30,12 +32,16 @@ export class RecorderHolder {
     this.#d = deps;
   }
 
+  get live(): LiveSession {
+    return this.#d.live;
+  }
+
   get host(): RecorderHost {
     if (this.#host) return this.#host;
     const d = this.#d;
     const page = () => openRecorderWindow(capturePage(d.distDir, "capture-recorder"), d.narration);
     const host = d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
-    host.onData(createDataSink({ fence: d.fence, writes: d.writes, bundle: d.bundle, id: d.id, log: d.log, ...(d.audio && { audio: d.audio }) }));
+    host.onData(createDataSink({ fence: d.fence, writes: d.writes, bundle: d.bundle, id: d.id, log: d.log, audio: (c) => d.live.push(c) }));
     return (this.#host = host);
   }
 

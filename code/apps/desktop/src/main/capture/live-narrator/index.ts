@@ -1,4 +1,5 @@
 import { findSegments, wordsOf, type Segment, type Word } from "../narration";
+import { engineOf } from "../narration/engine";
 import type { Narrator } from "../recording";
 
 const RATE = 16_000;
@@ -105,11 +106,11 @@ export interface LiveSession {
   cancel(): void;
 }
 
-export function createLiveSession(d: { enabled(): boolean; narrator: Narrator; log(line: string): void }): LiveSession {
+export function createLiveSession(d: { settings(): Parameters<typeof engineOf>[0]; narrator: Narrator; log(line: string): void }): LiveSession {
   let current: LiveTranscriber | undefined;
   return {
     begin() {
-      current = d.enabled() && d.narrator.ready() ? createLiveTranscriber({ narrator: d.narrator, log: d.log }) : undefined;
+      current = engineOf(d.settings()) === "live" && d.narrator.ready() ? createLiveTranscriber({ narrator: d.narrator, log: d.log }) : undefined;
     },
     push: (chunk) => current?.push(chunk),
     active: () => !!current,
