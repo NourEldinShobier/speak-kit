@@ -13,8 +13,9 @@ import { chooseProcessMode } from "./cli-mode";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { createAppHandlers, metrics } from "./handlers";
-import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
+import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { watchConfigFile } from "./config-watch";
+import { isLaunchAtLogin, openedAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
@@ -181,8 +182,19 @@ function watchPower() {
   powerMonitor.on("on-ac", () => onPower(false));
 }
 
-function createHandlers() {
-  return createAppHandlers({
+function watchPairingActivity() {
+  watchPairing(state.pairing, {
+    token: () => state.token,
+    port: () => state.port,
+    onChange: () => {
+      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
+      publish();
+    },
+  });
+}
+
+function handlerDeps(): HandlerDeps {
+  return {
     state,
     config,
     saveConfig: store.save,
@@ -195,10 +207,21 @@ function createHandlers() {
     modelsDir,
     logsDir,
     addActivity,
-    onConfigPatch: (patch) => {
-      desktop?.onConfigPatch(patch);
-      if (patch.labs) labs.apply();
+    onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
+  };
+}
+
+function watchSettingsFile() {
+  return watchConfigFile({
+    file: store.path,
+    current: () => config,
+    keep: process.env.SPEAKKIT_PORT ? ["preferredPort"] : [],
+    onEdit: (edit) => {
+      if (edit.kind === "newer") return;
+      applyExternalConfig(handlerDeps(), edit.patch);
+      addActivity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);
     },
+    onUnreadable: () => addActivity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has."),
   });
 }
 
@@ -301,9 +324,10 @@ if (labsCode !== null) {
       onRecovered: (f) => unreadable("The library", f),
     });
     watchPower();
-    labs.watch();
-    watchPairingActivity(state, { addActivity, publish });
-    const appHandlers = createHandlers();
+    watchPairingActivity();
+    const appHandlers = createAppHandlers(handlerDeps());
+    const settingsWatch = watchSettingsFile();
+    app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     automation.attach(desktop.automation);
     const automationPage = await setupAutomationPage({ here, dataDir, state, api: serverApi, test });
