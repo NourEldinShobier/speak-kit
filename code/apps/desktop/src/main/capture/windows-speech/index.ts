@@ -39,7 +39,7 @@ export function createWindowsSpeechNarrator(d: WindowsSpeechDeps): Narrator {
       const name = d.newName();
       const wav = await d.writeTemp(`${name}.wav`, wavOf(pcm));
       const script = await d.writeTemp(`${name}.ps1`, Buffer.from(SCRIPT, "utf8")).catch(async (e: unknown) => {
-        await wav.remove().catch(() => undefined);
+        await wav.remove().catch((err: unknown) => d.log(`capture: a temporary file was not removed (${String(err)})`));
         throw e;
       });
       try {

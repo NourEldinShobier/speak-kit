@@ -184,8 +184,23 @@ describe("suggested zooms", () => {
 
   it("take a pointer sample and a stroke at the very start of the trimmed copy, and none before it", async () => {
     const t = await setup({ record: { trim: { startMs: 1000, endMs: 4000 }, media: "video-trim.webm" } });
-    await t.bundle.writeFile("r1", "pointer.json", JSON.stringify([{ atMs: 999, x: 0.9, y: 0.9 }, { atMs: 1000, x: 0.2, y: 0.7 }]));
-    await t.bundle.writeFile("r1", "events.json", JSON.stringify([{ atMs: 999, kind: "ink-start" }, { atMs: 1000, kind: "ink-start" }, { atMs: 1500, kind: "ink-end" }]));
+    await t.bundle.writeFile(
+      "r1",
+      "pointer.json",
+      JSON.stringify([
+        { atMs: 999, x: 0.9, y: 0.9 },
+        { atMs: 1000, x: 0.2, y: 0.7 },
+      ]),
+    );
+    await t.bundle.writeFile(
+      "r1",
+      "events.json",
+      JSON.stringify([
+        { atMs: 999, kind: "ink-start" },
+        { atMs: 1000, kind: "ink-start" },
+        { atMs: 1500, kind: "ink-end" },
+      ]),
+    );
     expect(await suggestZoom(t.deps, "r1")).toEqual([region(0, 2000, { x: 0.2, y: 0.7 })]);
   });
 

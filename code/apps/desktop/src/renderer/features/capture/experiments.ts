@@ -33,6 +33,12 @@ const GROUP = {
 
 /** Adds the capture cards to the Experiments page. */
 export function registerCaptureExperiments(): void {
+  registerCaptureKeyExperiments();
+  registerLabExperiments();
+}
+
+/** The experiments that add a way to start a capture or a source for it. */
+function registerCaptureKeyExperiments(): void {
   registerExperiment({
     ...GROUP,
     id: "capture-screenshots",
@@ -73,7 +79,10 @@ export function registerCaptureExperiments(): void {
     guard: "A pill on the screen shows while it is on. Nothing is saved or sent until you save it, and you read what it keeps before the first time.",
     useState: () => useCaptureExperiment("replay"),
   });
+}
 
+/** The experiments that change what a capture holds or how it is edited. */
+function registerLabExperiments(): void {
   registerExperiment({
     ...GROUP,
     id: "capture-zoom-export",

@@ -1,80 +1,89 @@
-/* oxlint-disable typescript/no-explicit-any, max-lines-per-function -- sent to the browser as text: one self-contained function over untyped page objects */
 /**
  * The script a development page includes to report clicks, console errors and failed requests to the local server:
  * `<script src="http://127.0.0.1:PORT/v1/capture/page-context/sdk.js" data-token="TOKEN"></script>`.
  * It reports names only (a button's text, a tag, a path of tags), never what is typed, and it never reports its own requests.
+ * It is plain browser code kept as text, so it runs as it is written here.
  */
-export function pageSdk(w: any, d: any): void {
-  const script = d.currentScript;
-  const token = script?.getAttribute("data-token");
-  if (!script?.src || !token || w.__speakkitPage) return;
+export const PAGE_SDK_SOURCE = String.raw`(function (w, d) {
+  var script = d.currentScript;
+  var token = script && script.getAttribute("data-token");
+  if (!script || !script.src || !token || w.__speakkitPage) return;
   w.__speakkitPage = true;
-  const url = `${new URL(script.src).origin}/v1/capture/page-context`;
-  const send = w.fetch.bind(w);
-  const queue: unknown[] = [];
-  let timer: unknown;
-  const flush = () => {
+  var url = new URL(script.src).origin + "/v1/capture/page-context";
+  var send = w.fetch.bind(w);
+  var queue = [];
+  var timer;
+  function flush() {
     timer = undefined;
-    const events = queue.splice(0, 50);
+    var events = queue.splice(0, 50);
     if (!events.length) return;
     send(url, {
       method: "POST",
       keepalive: true,
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ page: { url: String(w.location.href).slice(0, 2048), title: String(d.title).slice(0, 80) }, events }),
-    }).catch(() => undefined);
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ page: { url: String(w.location.href).slice(0, 2048), title: String(d.title).slice(0, 80) }, events: events }),
+    }).catch(function () {
+      /* a report that did not arrive is not worth an error in the page being built */
+    });
     if (queue.length) timer = w.setTimeout(flush, 1000);
-  };
-  const add = (e: unknown) => {
+  }
+  function add(e) {
     if (queue.length < 200) queue.push(e);
-    timer ??= w.setTimeout(flush, 1000);
-  };
-  const tagOf = (el: any) => {
-    const t = String(el.tagName).toLowerCase().slice(0, 32);
+    if (timer === undefined) timer = w.setTimeout(flush, 1000);
+  }
+  function tagOf(el) {
+    var t = String(el.tagName).toLowerCase().slice(0, 32);
     return /^[a-z][a-z0-9-]*$/.test(t) ? t : "element";
-  };
-  const part = (el: any) => tagOf(el) + (el.id ? `#${String(el.id).slice(0, 30)}` : "");
-  const pathOf = (el: any) => {
-    const parts: string[] = [];
-    for (let n = el; n && n.nodeType === 1 && parts.length < 4; n = n.parentElement) parts.unshift(part(n));
+  }
+  function part(el) {
+    return tagOf(el) + (el.id ? "#" + String(el.id).slice(0, 30) : "");
+  }
+  function pathOf(el) {
+    var parts = [];
+    for (var n = el; n && n.nodeType === 1 && parts.length < 4; n = n.parentElement) parts.unshift(part(n));
     return parts.join(" > ").slice(0, 160);
-  };
-  const clicked = (ev: any) => {
-    const el = ev.target?.closest?.("button, a, [role], input, select, textarea, summary, label") ?? ev.target;
+  }
+  function clicked(ev) {
+    var target = ev.target;
+    var el = (target && target.closest && target.closest("button, a, [role], input, select, textarea, summary, label")) || target;
     if (!el || el.nodeType !== 1) return;
-    const tag = tagOf(el);
-    const typed = tag === "input" || tag === "textarea" || tag === "select";
-    const label = typed
-      ? ""
-      : String(el.getAttribute("aria-label") || el.textContent || "")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 80);
-    const role = el.getAttribute("role");
-    add({ type: "click", at: Date.now(), element: { tag, ...(role && { role: String(role).slice(0, 32) }), ...(label && { label }), path: pathOf(el) } });
-  };
-  const fail = (message: string) => add({ type: "console-error", at: Date.now(), message: message.slice(0, 400) });
+    var tag = tagOf(el);
+    var typed = tag === "input" || tag === "textarea" || tag === "select";
+    var label = typed ? "" : String(el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    var role = el.getAttribute("role");
+    var element = { tag: tag, path: pathOf(el) };
+    if (role) element.role = String(role).slice(0, 32);
+    if (label) element.label = label;
+    add({ type: "click", at: Date.now(), element: element });
+  }
+  function fail(message) {
+    add({ type: "console-error", at: Date.now(), message: String(message).slice(0, 400) });
+  }
   d.addEventListener("click", clicked, true);
-  w.addEventListener("error", (e: any) => fail(String(e.message)));
-  w.addEventListener("unhandledrejection", (e: any) => fail(String(e.reason)));
-  const consoleError = w.console.error.bind(w.console);
-  w.console.error = (...args: unknown[]) => {
+  w.addEventListener("error", function (e) { fail(e.message); });
+  w.addEventListener("unhandledrejection", function (e) { fail(e.reason); });
+  var consoleError = w.console.error.bind(w.console);
+  w.console.error = function () {
+    var args = Array.prototype.slice.call(arguments);
     fail(args.map(String).join(" "));
-    consoleError(...args);
+    consoleError.apply(null, args);
   };
-  w.fetch = async (input: any, init?: any) => {
-    const target = String(input?.url ?? input).slice(0, 2048);
-    const method = String(init?.method ?? input?.method ?? "GET").toUpperCase();
-    const report = (status: number) => /^[A-Z]{3,7}$/.test(method) && !target.startsWith(url) && add({ type: "failed-request", at: Date.now(), method, url: target, status });
-    try {
-      const res = await send(input, init);
-      if (res.status >= 400) report(res.status);
-      return res;
-    } catch (e) {
-      report(0);
-      throw e;
+  w.fetch = function (input, init) {
+    var target = String((input && input.url) || input).slice(0, 2048);
+    var method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+    function report(status) {
+      if (/^[A-Z]{3,7}$/.test(method) && target.indexOf(url) !== 0) add({ type: "failed-request", at: Date.now(), method: method, url: target, status: status });
     }
+    return send(input, init).then(
+      function (res) {
+        if (res.status >= 400) report(res.status);
+        return res;
+      },
+      function (e) {
+        report(0);
+        throw e;
+      }
+    );
   };
-}
-
-export const PAGE_SDK_SOURCE = `(${pageSdk.toString()})(window, document);\n`;
+})(window, document);
+`;

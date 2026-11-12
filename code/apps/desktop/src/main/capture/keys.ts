@@ -27,9 +27,8 @@ export class CaptureKeys {
   readonly #shiftInk = createShiftInk();
   #shiftHook: ShiftHook | undefined;
   #capture: CaptureHotkey | undefined;
-  #shot: CaptureHotkey | undefined;
-  #rec: CaptureHotkey | undefined;
-  #replay: CaptureHotkey | undefined;
+  /** The keys of the experiments, each hooked only while it is given. */
+  readonly #optional = new Map<"shot" | "record" | "replay", CaptureHotkey>();
   #poll: ReturnType<typeof setInterval> | undefined;
 
   constructor(deps: KeysDeps) {
@@ -48,15 +47,25 @@ export class CaptureKeys {
     }
     let ok = true;
     if (!this.#capture) ok = !!(this.#capture = await this.#hook(keys.capture, (e) => this.#key(e)));
-    if (keys.screenshot && !this.#shot) ok = !!(this.#shot = await this.#hook(keys.screenshot, (e) => e.kind === "up" && this.#d.onShot())) && ok;
-    if (!keys.screenshot) this.#stopShot();
-    if (keys.recording && !this.#rec) ok = !!(this.#rec = await this.#hook(keys.recording, (e) => e.kind === "up" && this.#d.onRecord?.())) && ok;
-    if (!keys.recording) this.#stopRec();
-    if (keys.replay && !this.#replay) ok = !!(this.#replay = await this.#hook(keys.replay, (e) => e.kind === "up" && this.#d.onReplay?.())) && ok;
-    if (!keys.replay) this.#stopReplay();
+    ok = (await this.#sync("shot", keys.screenshot, () => this.#d.onShot())) && ok;
+    ok = (await this.#sync("record", keys.recording, () => this.#d.onRecord?.())) && ok;
+    ok = (await this.#sync("replay", keys.replay, () => this.#d.onReplay?.())) && ok;
     if (keys.shiftInk) this.#shiftHook ??= await this.#hookShift();
     else this.#stopShiftHook();
     return ok;
+  }
+
+  /** Hooks the key when it is given and not hooked yet, and lets go of it when it is no longer given. False when the key could not be hooked. */
+  async #sync(slot: "shot" | "record" | "replay", hotkey: string | undefined, onUp: () => void): Promise<boolean> {
+    if (!hotkey) {
+      this.#optional.get(slot)?.stop();
+      this.#optional.delete(slot);
+      return true;
+    }
+    if (this.#optional.has(slot)) return true;
+    const hook = await this.#hook(hotkey, (e) => e.kind === "up" && onUp());
+    if (hook) this.#optional.set(slot, hook);
+    return !!hook;
   }
 
   async #hook(hotkey: string, onEvent: (e: GestureEvent) => void): Promise<CaptureHotkey | undefined> {
@@ -127,29 +136,12 @@ export class CaptureKeys {
     this.#poll = undefined;
   }
 
-  #stopRec() {
-    this.#rec?.stop();
-    this.#rec = undefined;
-  }
-
-  #stopReplay() {
-    this.#replay?.stop();
-    this.#replay = undefined;
-  }
-
-  #stopShot() {
-    this.#shot?.stop();
-    this.#shot = undefined;
-  }
-
   /** Forgets keys believed down (screen lock, sleep). */
   resync() {
     this.#gesture.reset();
     this.#shiftInk.reset();
     this.#capture?.resync();
-    this.#shot?.resync();
-    this.#rec?.resync();
-    this.#replay?.resync();
+    for (const hook of this.#optional.values()) hook.resync();
     this.#shiftHook?.resync();
   }
 
@@ -157,9 +149,8 @@ export class CaptureKeys {
     this.#stopPoll();
     this.#capture?.stop();
     this.#capture = undefined;
-    this.#stopShot();
-    this.#stopRec();
-    this.#stopReplay();
+    for (const hook of this.#optional.values()) hook.stop();
+    this.#optional.clear();
     this.#stopShiftHook();
     this.#gesture.reset();
   }

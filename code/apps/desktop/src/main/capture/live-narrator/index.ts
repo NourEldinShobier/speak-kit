@@ -31,14 +31,20 @@ const joined = (parts: readonly Int16Array[], length: number): Int16Array => {
   return all;
 };
 
+/** The stretches that are finished: all of them at the end of the recording, else those followed by a pause; a stretch that never pauses is cut after `maxStretchMs`. */
+function finishedStretches(found: readonly Segment[], o: { final: boolean; totalMs: number; closeGapMs: number; maxStretchMs: number }): Segment[] {
+  const done = o.final ? [...found] : found.filter((s) => s.endMs <= o.totalMs - o.closeGapMs);
+  const first = found[0];
+  return !done.length && first && o.totalMs - first.startMs > o.maxStretchMs ? [{ startMs: first.startMs, endMs: first.startMs + o.maxStretchMs }] : done;
+}
+
 /**
  * Speech to words while the recording goes on: a stretch of speech is sent to the model as soon as a pause shows it is finished, so the words
  * of a long capture are ready a moment after it ends instead of minutes later. A stretch that fails is skipped and logged.
  */
 export function createLiveTranscriber(o: LiveOptions): LiveTranscriber {
-  const everySamples = ((o.everyMs ?? 1000) * RATE) / 1000;
-  const closeGapMs = o.closeGapMs ?? 1200;
-  const maxStretchMs = o.maxStretchMs ?? 30_000;
+  const { everyMs = 1000, closeGapMs = 1200, maxStretchMs = 30_000 } = o;
+  const everySamples = (everyMs * RATE) / 1000;
   let parts: Int16Array[] = [];
   /** Samples in `parts`, and how many samples came before them. */
   let held = 0;
@@ -49,9 +55,7 @@ export function createLiveTranscriber(o: LiveOptions): LiveTranscriber {
 
   const send = (pcm: Int16Array, seg: Segment, offsetMs: number) => {
     const at = { startMs: offsetMs + seg.startMs, endMs: offsetMs + seg.endMs };
-    const from = Math.floor((seg.startMs / 1000) * RATE);
-    const to = Math.ceil((seg.endMs / 1000) * RATE);
-    const piece = pcm.slice(from, to);
+    const piece = pcm.slice(Math.floor((seg.startMs / 1000) * RATE), Math.ceil((seg.endMs / 1000) * RATE));
     chain = chain.then(async () => {
       try {
         words.push(...wordsOf(await o.narrator.transcribe(piece), at));
@@ -65,10 +69,7 @@ export function createLiveTranscriber(o: LiveOptions): LiveTranscriber {
     const pcm = joined(parts, held);
     const offsetMs = (before / RATE) * 1000;
     const totalMs = (held / RATE) * 1000;
-    const found = findSegments(pcm, { rate: RATE });
-    let done = final ? found : found.filter((s) => s.endMs <= totalMs - closeGapMs);
-    const first = found[0];
-    if (!done.length && first && totalMs - first.startMs > maxStretchMs) done = [{ startMs: first.startMs, endMs: first.startMs + maxStretchMs }];
+    const done = finishedStretches(findSegments(pcm, { rate: RATE }), { final, totalMs, closeGapMs, maxStretchMs });
     for (const seg of done) send(pcm, seg, offsetMs);
     const upTo = final ? totalMs : (done.at(-1)?.endMs ?? 0);
     const cut = Math.min(held, Math.floor((upTo / 1000) * RATE));

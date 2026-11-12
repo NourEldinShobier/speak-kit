@@ -122,10 +122,15 @@ class RecorderPorts {
     this.#d.pointer?.move(resolved.bounds);
   }
 
+  /** From the start of the recording to now. */
+  #range() {
+    return { from: this.#current?.startedAt ?? this.#d.now(), to: this.#d.now() };
+  }
+
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     // read first: stopping the recorder can change which window is in front
-    const context = await d.context?.(this.#current?.resolved.sourceId, { from: this.#current?.startedAt ?? d.now(), to: d.now() });
+    const context = await d.context?.(this.#current?.resolved.sourceId, this.#range());
     d.pointer?.stop();
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
