@@ -93,7 +93,7 @@ describe("Windows launcher", () => {
     expect(t.userPath()).toBe(once);
     expect(await l.inspect()).toMatchObject({ state: "installed", needsNewTerminal: false });
   });
-  it("is broken with the design's message when the PATH points at a folder without speakkit.cmd", async () => {
+  it("is broken, naming the missing file, when the PATH points at a folder without speakkit.cmd", async () => {
     const t = fakeDeps("win32", { userPath: BIN });
     expect(await (await createLauncher(t.deps)).inspect()).toMatchObject({ state: "broken", problem: `speakkit.cmd is missing in ${BIN}. Commands run but print nothing in a terminal.` });
   });
