@@ -65,6 +65,16 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-zoom-export",
+    title: "Zoom in a recording",
+    description: "Open a recording and show parts of its video closer, chosen by hand or suggested from where the pointer rested and where you drew. The zoomed copy comes with a contact sheet of the zoomed parts.",
+    badges: ["Experimental"],
+    guard: "The original video stays. Clicks are not seen, so a suggestion follows where the pointer rested. With the input log off, no pointer positions are noted.",
+    useState: () => useCaptureExperiment("zoomExport"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-page-context",
     title: "Development page context",
     description:

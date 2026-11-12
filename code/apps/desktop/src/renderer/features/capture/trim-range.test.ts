@@ -19,4 +19,8 @@ describe("trim range sliders", () => {
   it("stops the end at the length of the recording", () => {
     expect(clampTrim(r, { which: "end", ms: 99_000, durationMs: 10_000 })).toEqual({ startMs: 2000, endMs: 10_000 });
   });
+  it("keeps the gap a caller asks for", () => {
+    expect(clampTrim(r, { which: "start", ms: 9000, durationMs: 10_000, minMs: 1000 })).toEqual({ startMs: 5000, endMs: 6000 });
+    expect(clampTrim(r, { which: "end", ms: 1000, durationMs: 10_000, minMs: 1000 })).toEqual({ startMs: 2000, endMs: 3000 });
+  });
 });

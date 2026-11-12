@@ -9,6 +9,7 @@ import type { Ctx } from "../context";
 import type { HotkeySource } from "../dictation/types";
 import { resyncOnPower } from "../dictation/power-resync";
 import { History } from "./history";
+import { recorderEditing } from "./zoom/host";
 import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
@@ -62,10 +63,7 @@ export class CaptureService {
       log: (l) => ctx.log.info(l),
       now: () => Date.now(),
       sheet: (id, files) => makeSheet({ bundle: this.history.bundle, host: this.runtime.recorder.host, log: (l) => ctx.log.warn(l) }, id, files),
-      trim: async (video, startMs, endMs) => {
-        const r = await this.runtime.recorder.host.call({ op: "trim", video, startMs, endMs }, 10 * 60_000);
-        return r.ok ? r.video : undefined;
-      },
+      ...recorderEditing(() => this.runtime.recorder.host),
       trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined,
     });
     this.runtime = new CaptureRuntime({
@@ -271,6 +269,16 @@ export class CaptureService {
     const ok = await this.history.trim(id, startMs, endMs);
     if (ok) void this.#refresh();
     return ok;
+  }
+
+  async zoom(id: string, regions: Parameters<History["zoom"]>[1]): Promise<boolean> {
+    const ok = await this.history.zoom(id, regions);
+    if (ok) void this.#refresh();
+    return ok;
+  }
+
+  suggestZoom(id: string) {
+    return this.history.suggestZoom(id);
   }
 
   async remove(id: string): Promise<void> {

@@ -172,7 +172,7 @@ export function CapturesTab({ s }: { s: CaptureStatus }) {
   if (openId)
     return (
       <>
-        <DetailView id={openId} platform={s.platform} onBack={() => setOpenId(null)} onDelete={setDoomed} />
+        <DetailView id={openId} platform={s.platform} zoomOn={s.settings.experiments.zoomExport} onBack={() => setOpenId(null)} onDelete={setDoomed} />
         {dialog}
       </>
     );

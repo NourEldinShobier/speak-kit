@@ -2,6 +2,7 @@ import * as v from "valibot";
 import type { CapsuleState } from "./capsule";
 import type { CAPTURE_METHODS } from "./channels";
 import type { Notice, NoticeAction } from "./notices";
+import { ZoomRegionsSchema, type FrameRect, type ZoomRegion } from "./zoom";
 import { CapturePatchSchema, type CaptureConfig, type CapturePatch } from "./settings";
 
 export type CapturePhase = "idle" | "picking" | "recording" | "finishing";
@@ -59,6 +60,11 @@ export interface CaptureDetail extends CaptureItem {
   /** The video can be cut (a recording with one video file); `trim` is the range kept now. */
   trimmable: boolean;
   trim?: { startMs: number; endMs: number };
+  /** The video can be shown closer in parts (a recording with one video file). */
+  zoomable: boolean;
+  /** The zooms in the video shown now, and the contact sheet of them (a data: URL). */
+  zoom?: ZoomRegion[];
+  zoomSheet?: string;
 }
 
 export interface EditSource {
@@ -92,6 +98,10 @@ export interface CaptureBridge {
   saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean>;
   /** Cuts the video of a recording to this range (milliseconds from its start); false when it cannot be cut. The original video stays. */
   trim(id: string, startMs: number, endMs: number): Promise<boolean>;
+  /** Makes the video show these parts closer (none: the video as it was); false when it cannot be done. The original video stays. */
+  zoom(id: string, regions: ZoomRegion[]): Promise<boolean>;
+  /** Zooms chosen from where the pointer rested and where the pen drew; empty when nothing was noted. */
+  suggestZoom(id: string): Promise<ZoomRegion[]>;
   onStatus(cb: (s: CaptureStatus) => void): () => void;
 }
 
@@ -132,6 +142,8 @@ export const CAPTURE_ARGS = {
     ),
   ]),
   trim: v.tuple([id, v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_TRIM_MS)), v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(MAX_TRIM_MS))]),
+  zoom: v.tuple([id, ZoomRegionsSchema]),
+  suggestZoom: v.tuple([id]),
 } as const satisfies Record<(typeof CAPTURE_METHODS)[number], v.GenericSchema<unknown[]>>;
 
 /** What the picker overlay draws. Rectangles are in device-independent pixels of the overlay's display. */
@@ -182,7 +194,8 @@ export type RecorderCommand =
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
   | { id: number; op: "abort" }
-  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number }
+  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number; /** The part of each picture to show (fractions), for the zoom contact sheet. */ crops?: FrameRect[] }
+  | { id: number; op: "zoom"; video: Uint8Array; regions: ZoomRegion[] }
   | { id: number; op: "trim"; video: Uint8Array; startMs: number; endMs: number };
 
 export type RecorderResult =

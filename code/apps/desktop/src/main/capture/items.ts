@@ -46,5 +46,16 @@ export async function toDetail(bundle: Bundle, r: CaptureRecord): Promise<Captur
     if (src) frames.push({ atMs: Number(/f-(\d+)/.exec(file)?.[1] ?? 0), src, file, edited: shownFile(r, file) !== file });
   }
   const trimmable = r.kind === "recording" && !r.finishing && !!r.durationMs && r.media.endsWith(".webm");
-  return { ...(await toItem(bundle, r)), words: r.words ?? [], frames, path: bundle.dir(r.dir), trimmable, ...(r.trim && { trim: r.trim }) };
+  const zoomSheet = await dataUrl(bundle, { id: r.dir, file: r.zoomSheet || undefined }, FRAME_PX);
+  return {
+    ...(await toItem(bundle, r)),
+    words: r.words ?? [],
+    frames,
+    path: bundle.dir(r.dir),
+    trimmable,
+    zoomable: trimmable,
+    ...(r.trim && { trim: r.trim }),
+    ...(r.zoom?.length && { zoom: r.zoom }),
+    ...(zoomSheet && { zoomSheet }),
+  };
 }
