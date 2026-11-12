@@ -66,3 +66,11 @@
   outline: 2px solid #fda29b;
   outline-offset: 2px;
 }
+
+/* Reduce motion: the level bars jump instead of gliding and the spinner stands still. */
+:root[data-reduce-motion="on"] .hud__bars i {
+  transition: none;
+}
+:root[data-reduce-motion="on"] .hud .lm-spin {
+  animation: none;
+}

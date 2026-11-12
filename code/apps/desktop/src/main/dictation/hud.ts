@@ -21,6 +21,8 @@ export interface HudWindow {
   showInactive(): void;
   hide(): void;
   destroy(): void;
+  /** Reduce motion changed: the pill stops its animations (a still frame, no level transitions). */
+  setReduceMotion?(on: boolean): void;
 }
 
 export interface Hud {
