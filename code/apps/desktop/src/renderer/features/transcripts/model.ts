@@ -58,7 +58,10 @@ export function sizeText(bytes: number): string {
   const units = ["KB", "MB", "GB", "TB"];
   let n = bytes / 1024;
   let i = 0;
-  while (n >= 1000 && i < units.length - 1) ((n /= 1024), i++);
+  while (n >= 1000 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
   return `${n >= 100 || Number.isInteger(n) ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
 }
 

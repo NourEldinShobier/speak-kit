@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DEC_COMMAND, DEC_READY, DEC_REPLY, MIC_CHUNK, MIC_COMMAND, MIC_ENDED, MIC_LEVEL, MIC_READY, MIC_REPLY } from "../../shared/transcripts/channels";
 import { DecoderReplySchema, MicReplySchema, type DecoderCommand, type DecoderResult, type MicCommand, type MicResult } from "../../shared/transcripts/contract";
+import { settle } from "../dictation/models";
 import { openRecorderWindow } from "../dictation/recorder-window";
 import { createSecureWindow } from "../secure-window";
 import { HiddenPage, type PageHandle } from "./hidden-page";
@@ -33,7 +34,8 @@ export function createDecoder(o: { ipcMain: IpcMain; distDir: string }): { decod
     lost,
     open: () => {
       const w = createSecureWindow({ show: false, width: 320, height: 200, webPreferences: { backgroundThrottling: false, partition: "speakkit-transcripts-decoder" } }, () => {});
-      w.loadURL(pathToFileURL(path.join(o.distDir, "../renderer", "decoder.html")).href).catch(() => {});
+      // A page that cannot load never says it is ready; the host then drops the window and the file counts as undecodable.
+      void settle(w.loadURL(pathToFileURL(path.join(o.distDir, "../renderer", "decoder.html")).href));
       return handle(w);
     },
   });
@@ -47,7 +49,7 @@ export function createDecoder(o: { ipcMain: IpcMain; distDir: string }): { decod
           page.close();
         }
       });
-      chain = run.catch(() => {});
+      chain = settle(run);
       return run;
     },
     dispose: () => page.dispose(),

@@ -87,19 +87,14 @@ export class SearchIndex {
   }
 }
 
-/** About 120 characters around the first place `term` starts a word, cut at word edges, with ellipses where text was left out. */
+/** About 120 characters with the first place `term` starts a word a third of the way in, and an ellipsis where text was left out. */
 export function snippetAround(text: string, term: string, span = 120): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  const at = flat.toLowerCase().search(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(term)}`, "u"));
-  if (at < 0 || flat.length <= span) return flat.slice(0, span);
-  let from = Math.max(0, at - Math.floor(span / 3));
-  let to = Math.min(flat.length, from + span);
-  from = Math.max(0, to - span);
-  const sp = flat.indexOf(" ", from);
-  if (from > 0 && sp >= 0 && sp < at) from = sp + 1;
-  const sp2 = flat.lastIndexOf(" ", to);
-  if (to < flat.length && sp2 > at) to = sp2;
-  return `${from > 0 ? "…" : ""}${flat.slice(from, to)}${to < flat.length ? "…" : ""}`;
+  if (flat.length <= span) return flat;
+  const at = Math.max(0, flat.toLowerCase().search(new RegExp(String.raw`(?<![\p{L}\p{N}])${escapeRe(term)}`, "u")));
+  const from = Math.max(0, Math.min(at - Math.floor(span / 3), flat.length - span));
+  const to = from + span;
+  return `${from > 0 ? "…" : ""}${flat.slice(from, to).trim()}${to < flat.length ? "…" : ""}`;
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

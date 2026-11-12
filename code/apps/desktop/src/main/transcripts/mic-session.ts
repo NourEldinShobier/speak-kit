@@ -1,5 +1,6 @@
 import { failures, MAX_HOURS, type Failure, type Outcome, type Transcripts } from "@speakkit/transcripts";
 import type { MicResult, RecordingView } from "../../shared/transcripts/contract";
+import { settle } from "../dictation/models";
 
 /** The microphone page: opens the device and streams 16 kHz mono samples. */
 export interface MicPort {
@@ -136,7 +137,7 @@ export class RecordingSession {
     this.#phase = "saving";
     this.#emit();
     this.#ending = (async () => {
-      await this.#d.mic.stop().catch(() => {});
+      await settle(this.#d.mic.stop());
       await this.#pending;
       let result: Outcome<{ id: string }>;
       if (this.#seconds < MIN_SECONDS) {

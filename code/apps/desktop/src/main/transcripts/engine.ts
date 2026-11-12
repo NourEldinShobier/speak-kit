@@ -1,5 +1,6 @@
 import { HUNG, type ChunkResult } from "@speakkit/transcripts";
 import { EngineNotReadyError, STT_MODELS, type SttLanguage, type SttModelId } from "@speakkit/engine";
+import { settle } from "../dictation/models";
 import type { Stt } from "../dictation/stt";
 
 export interface ChunkEngineDeps {
@@ -31,7 +32,7 @@ export function chunkEngine({ stt, model }: ChunkEngineDeps): (pcm: Int16Array, 
     } catch (e) {
       if (e instanceof EngineNotReadyError) return { ok: false, code: "engine-loading" };
       if (signal.aborted && signal.reason instanceof Error && signal.reason.message === HUNG) {
-        await stt.unload().catch(() => {});
+        await settle(stt.unload());
         void stt.warm(id);
       }
       return { ok: false, code: "failed" };

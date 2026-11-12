@@ -17,9 +17,21 @@ export const baseName = (file: string): string => file.split(/[\\/]/).pop() || f
 /** Judges a file by its name, size and first bytes, before anything is decoded. */
 export async function inspectFile(file: string, ports: FilePorts): Promise<Picked> {
   const name = baseName(file);
-  const info = await ports.stat(file).catch(() => undefined);
+  let info: { size: number } | undefined;
+  try {
+    info = await ports.stat(file);
+  } catch {
+    // A file that cannot be examined is judged like a missing one: it cannot be decoded.
+    info = undefined;
+  }
   if (!info) return { ok: false, name, failure: failures.decode(name) };
-  const head = await ports.head(file, 16).catch(() => new Uint8Array(0));
+  let head: Uint8Array;
+  try {
+    head = await ports.head(file, 16);
+  } catch {
+    // Without its first bytes the content cannot be recognised, so the file counts as unsupported.
+    head = new Uint8Array(0);
+  }
   const check = checkFile({ name, bytes: info.size, head });
   return check.ok ? { ok: true, path: file, name, bytes: info.size } : { ok: false, name, failure: check.failure };
 }
