@@ -18,3 +18,258 @@
 .sk-vckey__notice[data-tone="error"] {
   color: var(--tag-red);
 }
+
+/* Advanced fold */
+.sk-fold__toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+.sk-fold__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.sk-fold__text span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sk-fold__count {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f4f4f4;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-fold__toggle:hover,
+  .sk-find__row:hover {
+    background: #f4f4f4;
+  }
+}
+.sk-fold__toggle:focus-visible,
+.sk-find__row:focus-visible,
+.sk-find__chip:focus-visible,
+.sk-side__link:focus-visible,
+.sk-report:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+.sk-fold__body {
+  margin-top: 8px;
+}
+
+/* A row asked for by search or a deep link */
+[data-setting-row][data-focus-ring] {
+  box-shadow: 0 0 0 2px var(--text-primary);
+  border-radius: var(--radius-control);
+}
+
+.sk-notice {
+  margin-bottom: 16px;
+}
+.sk-note {
+  margin: -8px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+/* Sidebar search results and footer */
+.sk-find {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.sk-find p {
+  margin: 4px 10px 8px;
+  color: var(--text-tertiary);
+}
+.sk-find .lm-btn {
+  margin: 0 10px;
+}
+.sk-find__page {
+  padding: 8px 10px 2px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+}
+.sk-find__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.sk-find__row b {
+  font-weight: 600;
+}
+.sk-find__tag {
+  margin-inline-start: auto;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.sk-find--topics {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px;
+}
+.sk-find__chip {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sk-side__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sk-side__foot [data-problem] {
+  color: #c62828;
+}
+.sk-side__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Experiments */
+.sk-exps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sk-exps__group {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sk-exp {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  background: var(--surface-card);
+}
+.sk-exp p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sk-exp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sk-exp__warn {
+  color: var(--text-primary);
+}
+.sk-exp__grad {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* Diagnostics */
+.sk-activity__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sk-activity {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-activity li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 16px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e5e5;
+  font-size: 13px;
+}
+.sk-activity li span {
+  grid-column: 1;
+  color: var(--text-secondary);
+}
+.sk-activity li time {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sk-activity li[data-kind="error"] b {
+  color: #c62828;
+}
+.sk-report {
+  max-height: 320px;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  font:
+    12px/1.5 ui-monospace,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sk-report--log {
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Reduce motion chosen in Settings; the operating system preference is handled by the component styles */
+:root[data-reduce-motion="on"] *,
+:root[data-reduce-motion="on"] *::before,
+:root[data-reduce-motion="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}

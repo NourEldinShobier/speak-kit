@@ -9,14 +9,23 @@ import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./
 export const IDLE_CHOICES = ["1", "5", "15", "never"] as const;
 export type IdleChoice = (typeof IDLE_CHOICES)[number];
 
-const bool = (d: boolean) => v.fallback(v.boolean(), d);
+const UNWRAPPED = new WeakMap<object, v.GenericSchema>();
+/** v.fallback that remembers the schema it wraps, so the settings loader can tell which stored fields were invalid. */
+function fb<const S extends v.GenericSchema, const F extends v.Fallback<S>>(schema: S, d: F) {
+  const wrapped = v.fallback(schema, d);
+  UNWRAPPED.set(wrapped, schema);
+  return wrapped;
+}
+export const unwrappedField = (field: object): v.GenericSchema => UNWRAPPED.get(field) ?? (field as v.GenericSchema);
+
+const bool = (d: boolean) => fb(v.boolean(), d);
 
 /** Events in Settings > Notifications; each can show a Windows toast, a line in the bell, and play a sound. */
 export const NOTIFY_EVENTS = ["reading-finished", "export-done", "engine-error", "update-ready"] as const;
 export type NotifyEvent = (typeof NOTIFY_EVENTS)[number];
 export const NOTIFY_CHANNELS = ["toast", "bell", "sound"] as const;
 export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
-const channelsOf = (toast: boolean, bell: boolean, sound: boolean) => v.fallback(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
+const channelsOf = (toast: boolean, bell: boolean, sound: boolean) => fb(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
 const NotificationsSchema = v.object({
   "reading-finished": channelsOf(false, false, false),
   "export-done": channelsOf(true, true, false),
@@ -26,7 +35,7 @@ const NotificationsSchema = v.object({
 export type Notifications = v.InferOutput<typeof NotificationsSchema>;
 
 const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
-  v.fallback(
+  fb(
     v.pipe(
       v.string(),
       v.check((a) => checkAccelerator(a) === null),
@@ -42,15 +51,20 @@ const ShortcutsSchema = v.object({
 
 const EXPORT_FORMATS = ["wav", "mp3"] as const;
 export const MP3_KBPS = [128, 192, 256] as const;
-const ExportPrefsSchema = v.fallback(
+const ExportPrefsSchema = fb(
   v.object({
-    format: v.fallback(v.picklist(EXPORT_FORMATS), "mp3"),
-    mp3Kbps: v.fallback(v.picklist(MP3_KBPS), 192),
-    folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
+    format: fb(v.picklist(EXPORT_FORMATS), "mp3"),
+    mp3Kbps: fb(v.picklist(MP3_KBPS), 192),
+    folder: fb(v.pipe(v.string(), v.maxLength(1024)), ""),
   }),
   { format: "mp3", mp3Kbps: 192, folder: "" },
 );
 export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
+
+export const APPEARANCES = ["system", "light"] as const;
+export const CLOSE_ACTIONS = ["hide", "quit"] as const;
+export const MOTION_CHOICES = ["system", "on", "off"] as const;
+export const UPDATE_CHANNELS = ["stable", "early"] as const;
 
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
@@ -58,22 +72,30 @@ const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 export const ConfigSchema = v.object({
   setupDone: bool(false),
   setupSkipped: bool(false),
-  preferredPort: v.fallback(port, DEFAULT_PORT),
+  preferredPort: fb(port, DEFAULT_PORT),
   startMinimized: bool(false),
-  language: v.fallback(v.picklist(["system", "en"]), "system"),
-  idleUnload: v.fallback(v.picklist(IDLE_CHOICES), "5"),
+  language: fb(v.picklist(["system", "en"]), "system"),
+  appearance: fb(v.picklist(APPEARANCES), "system"),
+  closeAction: fb(v.picklist(CLOSE_ACTIONS), "hide"),
+  hideTrayIcon: bool(false),
+  reduceMotion: fb(v.picklist(MOTION_CHOICES), "system"),
+  updateChannel: fb(v.picklist(UPDATE_CHANNELS), "stable"),
+  experiments: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
+  appliedMigrations: fb(v.array(v.pipe(v.string(), v.maxLength(64))), []),
+  configVersion: fb(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+  idleUnload: fb(v.picklist(IDLE_CHOICES), "5"),
   loadAtStart: bool(false),
   batterySaver: bool(true),
-  notifications: v.fallback(NotificationsSchema, v.parse(NotificationsSchema, {})),
+  notifications: fb(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
   autoUpdate: bool(true),
-  shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
+  shortcuts: fb(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
   // Saved ids of the form `cb_` plus 8 hex digits name voices that no longer exist; they become the default voice.
-  voice: v.fallback(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
-  speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
-  voiceChatVoice: v.fallback(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
-  dictation: v.fallback(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
+  voice: fb(v.pipe(v.string(), v.minLength(1), v.maxLength(64), v.regex(/^(?!cb_[0-9a-f]{8}$)/)), DEFAULT_VOICE),
+  speed: fb(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
+  voiceChatVoice: fb(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
+  dictation: fb(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 
@@ -87,6 +109,12 @@ export const ConfigPatchSchema = v.partial(
     setupSkipped: v.boolean(),
     startMinimized: v.boolean(),
     language: v.picklist(["system", "en"]),
+    appearance: v.picklist(APPEARANCES),
+    closeAction: v.picklist(CLOSE_ACTIONS),
+    hideTrayIcon: v.boolean(),
+    reduceMotion: v.picklist(MOTION_CHOICES),
+    updateChannel: v.picklist(UPDATE_CHANNELS),
+    experiments: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
     idleUnload: v.picklist(IDLE_CHOICES),
     loadAtStart: v.boolean(),
     batterySaver: v.boolean(),
@@ -118,8 +146,8 @@ const ExportOptionsSchema = v.object({
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
 });
 
-const EXTERNAL_LINKS = ["webstore"] as const;
-const OPEN_PATHS = ["models", "logs"] as const;
+const EXTERNAL_LINKS = ["webstore", "release-notes", "issues", "security"] as const;
+const OPEN_PATHS = ["models", "logs", "data"] as const;
 
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
 export const ARGS = {
@@ -167,4 +195,11 @@ export const ARGS = {
   voiceChatRemoveKey: v.tuple([]),
   voiceChatTestKey: v.tuple([]),
   voiceChatSetVoice: v.tuple([v.picklist(VOICE_CHAT_VOICES)]),
+  diagnosticsLog: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(0))]),
+  diagnosticsReport: v.tuple([]),
+  clearActivity: v.tuple([]),
+  dismissSettingsNotice: v.tuple([]),
+  micAccess: v.tuple([]),
+  openSystemSettings: v.tuple([v.literal("microphone")]),
+  restartApp: v.tuple([]),
 } as const;

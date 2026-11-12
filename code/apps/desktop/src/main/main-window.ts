@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
 import type { Config } from "../shared/schemas";
+import { closeOutcome } from "../shared/settings/behaviour";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
@@ -17,6 +18,8 @@ interface MainWindowEvents {
   onVisible(): void;
   /** The window was hidden or minimized: nothing should poll for it. */
   onHidden(): void;
+  /** Something is still running (an export or a reading) that a quit would lose. */
+  busy(): boolean;
 }
 
 /**
@@ -135,15 +138,26 @@ export class MainWindow {
     });
     w.on("minimize", () => this.#events.onHidden());
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
-    w.on("close", (e) => {
-      if (this.quitting) return;
-      e.preventDefault();
-      this.hide();
-    });
+    w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;
     });
     void w.loadFile(path.join(here, "../renderer/index.html"));
+  }
+
+  #onClose(e: { preventDefault(): void }): void {
+    if (this.quitting) return;
+    e.preventDefault();
+    const outcome = closeOutcome(this.#config, this.#events.busy());
+    if (outcome === "confirm-quit") {
+      this.sendUi({ type: "confirm-quit" }); // the same dialog the tray Quit opens; the window stays open meanwhile
+      return;
+    }
+    if (outcome === "quit") {
+      setImmediate(() => this.quit()); // quitting inside the close event is ignored for the window that is closing
+      return;
+    }
+    this.hide();
   }
 
   /** Really quit: lets the window close, then exits the app. */
