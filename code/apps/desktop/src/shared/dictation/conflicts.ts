@@ -22,15 +22,17 @@ const isHook = (s: Slot): boolean => (HOOK_SLOTS as readonly string[]).includes(
 const SIDELESS = /^(Control|Alt|Shift|Meta)(Left|Right)$/;
 const ACCEL: Record<string, string> = { ctrl: "Control", control: "Control", alt: "Alt", option: "Alt", shift: "Shift", super: "Meta", meta: "Meta", win: "Meta" };
 
+function acceleratorToken(t: string): string {
+  const named = ACCEL[t.toLowerCase()];
+  if (named) return named;
+  if (/^[a-z]$/i.test(t)) return `Key${t.toUpperCase()}`;
+  return /^\d$/.test(t) ? `Digit${t}` : t;
+}
+
 /** The keys of one shortcut with left and right modifiers folded together, so an accelerator and a chord can be compared. */
 function tokens(slot: Slot, value: string): Set<string> {
   if (isHook(slot)) return new Set(hotkeyKeys(value).map((k) => k.replace(SIDELESS, "$1")));
-  return new Set(
-    value.split("+").map((p) => {
-      const t = p.trim();
-      return ACCEL[t.toLowerCase()] ?? (/^[a-z]$/i.test(t) ? `Key${t.toUpperCase()}` : /^\d$/.test(t) ? `Digit${t}` : t);
-    }),
-  );
+  return new Set(value.split("+").map((p) => acceleratorToken(p.trim())));
 }
 
 const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((k) => b.has(k));

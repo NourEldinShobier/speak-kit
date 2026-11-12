@@ -12,7 +12,8 @@ export const TAIL_MS = 200;
 export const MAX_RECORDING_MS = 5 * 60_000;
 
 type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "secondKey" | "mouseKey" | "rawKey">>;
-type Which = { key: string; raw: boolean };
+/** A press of one of the shortcuts: which, and when. */
+type Press = { key: string; raw: boolean; at: number };
 
 export type Capture =
   | { kind: "idle" }
@@ -61,18 +62,18 @@ const idle: Capture = { kind: "idle" };
 const holdMs = (cfg: Config) => cfg.holdMs ?? HOLD_MS;
 const finish = (c: { id: number; raw?: boolean }): Effect => ({ type: "finish-recording", id: c.id, ...(c.raw && { raw: true as const }) });
 
-function begin(session: Session, cfg: Config, which: Which, at: number): Out {
+function begin(session: Session, cfg: Config, press: Press): Out {
   const id = session.seq + 1;
-  const armed = session.capture.kind === "armed" && session.capture.key === which.key ? session.capture.until : -Infinity;
-  const raw = which.raw ? { raw: true } : {};
+  const armed = session.capture.kind === "armed" && session.capture.key === press.key ? session.capture.until : -Infinity;
+  const raw = press.raw ? { raw: true } : {};
   const capture: Capture =
-    cfg.mode === "toggle"
-      ? { kind: "toggle", id, down: true, key: which.key, ...raw }
-      : { kind: "hold", id, key: which.key, pressedAt: at, lockUntil: armed, mode: cfg.mode, ...raw };
+    cfg.mode === "toggle" ? { kind: "toggle", id, down: true, key: press.key, ...raw } : { kind: "hold", id, key: press.key, pressedAt: press.at, lockUntil: armed, mode: cfg.mode, ...raw };
   return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: cfg.duck ? 0 : PREROLL_MS }] };
 }
 
-function release(session: Session, cfg: Config, c: Extract<Capture, { kind: "hold" }>, at: number): Out {
+function release(session: Session, cfg: Config, at: number): Out {
+  const c = session.capture;
+  if (c.kind !== "hold") return same(session);
   // The mode in force when the press began decides, so a setting changed mid-hold cannot strand the recording.
   const long = at - c.pressedAt >= holdMs(cfg);
   if (long && c.mode !== "double-tap") return to(session, idle, finish(c));
@@ -82,16 +83,16 @@ function release(session: Session, cfg: Config, c: Extract<Capture, { kind: "hol
   return to(session, { kind: "armed", until: at + DOUBLE_TAP_MS, key: c.key }, { type: "discard-recording", id: c.id, cancelled: false });
 }
 
-function hotkey(session: Session, cfg: Config, which: Which, event: KeyEvent): Out {
+function hotkey(session: Session, cfg: Config, press: Press & { down: boolean }): Out {
   const c = session.capture;
-  if (event.down) {
+  if (press.down) {
     // The key is still down after this press; its repeats and its release must not start another recording.
     if (c.kind === "locked" || (c.kind === "toggle" && !c.down)) return to(session, { kind: "ignoring", key: c.key }, finish(c));
-    return c.kind === "idle" || c.kind === "armed" ? begin(session, cfg, which, event.at) : same(session);
+    return c.kind === "idle" || c.kind === "armed" ? begin(session, cfg, press) : same(session);
   }
   if (c.kind === "toggle") return to(session, { ...c, down: false });
   if (c.kind === "ignoring") return to(session, idle);
-  return c.kind === "hold" ? release(session, cfg, c, event.at) : same(session);
+  return release(session, cfg, press.at);
 }
 
 // Another key: a chord during a short hold discards, a long hold ignores it, Escape cancels only a toggled recording.
@@ -100,31 +101,28 @@ function otherKey(session: Session, cfg: Config, event: KeyEvent): Step {
   // Escape cancels only a recording this app owns: a toggled one. Held or locked ones leave it to the app in front.
   if (c.kind === "toggle" && event.key === cfg.cancelKey) return { ...to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }), consumed: true };
   if (c.kind === "armed") return { ...to(session, idle), consumed: false };
-  if (c.kind === "hold" && event.at - c.pressedAt < holdMs(cfg)) return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false }), consumed: false };
+  if (c.kind === "hold" && event.at - c.pressedAt < holdMs(cfg))
+    return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false }), consumed: false };
   return { ...same(session), consumed: false };
 }
 
 function control(session: Session, cfg: Config, event: Extract<SessionEvent, { type: "start" | "stop" | "cancel" }>): Out {
   const c = session.capture;
-  if (event.type === "start") return c.kind === "idle" || c.kind === "armed" ? begin(session, { ...cfg, mode: "toggle" }, { key: cfg.hotkey, raw: false }, event.at) : same(session);
+  if (event.type === "start") return c.kind === "idle" || c.kind === "armed" ? begin(session, { ...cfg, mode: "toggle" }, { key: cfg.hotkey, raw: false, at: event.at }) : same(session);
   if (c.kind !== "hold" && c.kind !== "toggle" && c.kind !== "locked") return same(session);
   if (event.type === "stop") return to(session, idle, finish(c));
   return event.type === "cancel" ? to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }) : same(session);
 }
 
+/** Which shortcut an event is: a capture ends with the shortcut that started it (even if the settings changed meanwhile), else any configured one. */
+function shortcutOf(c: Capture, cfg: Config, key: string): { key: string; raw: boolean } | undefined {
+  if (c.kind !== "armed" && "key" in c) return key === c.key ? { key, raw: "raw" in c && c.raw === true } : undefined;
+  return key && [cfg.hotkey, cfg.secondKey, cfg.mouseKey, cfg.rawKey].includes(key) ? { key, raw: key === cfg.rawKey } : undefined;
+}
+
 function key(session: Session, cfg: Config, event: KeyEvent): Step {
-  const c = session.capture;
-  // A capture ends with the shortcut that started it, even if the settings changed meanwhile.
-  const owner = c.kind !== "armed" && "key" in c ? c.key : undefined;
-  const which: Which | undefined =
-    owner !== undefined
-      ? event.key === owner
-        ? { key: owner, raw: "raw" in c && c.raw === true }
-        : undefined
-      : [cfg.hotkey, cfg.secondKey, cfg.mouseKey, cfg.rawKey].includes(event.key) && event.key
-        ? { key: event.key, raw: event.key === cfg.rawKey }
-        : undefined;
-  if (which) return { ...hotkey(session, cfg, which, event), consumed: true };
+  const which = shortcutOf(session.capture, cfg, event.key);
+  if (which) return { ...hotkey(session, cfg, { ...which, at: event.at, down: event.down }), consumed: true };
   if (!event.down) return { ...same(session), consumed: false };
   return otherKey(session, cfg, event);
 }

@@ -56,7 +56,15 @@ describe("tray menu, dictation", () => {
   });
 
   it("puts the switch, a hint with the hotkey, the history and the settings under Open Speak Kit", () => {
-    expect(labels(dictation(true)).slice(0, 7)).toEqual(["Open Speak Kit", "Dictation", "Hold Ctrl Alt Space to dictate", "Paste last dictation", "Pause all shortcuts", "Dictation history", "Dictation settings"]);
+    expect(labels(dictation(true)).slice(0, 7)).toEqual([
+      "Open Speak Kit",
+      "Dictation",
+      "Hold Ctrl Alt Space to dictate",
+      "Paste last dictation",
+      "Pause all shortcuts",
+      "Dictation history",
+      "Dictation settings",
+    ]);
   });
 
   it("shows Pause all shortcuts as a switch, and the paused state on the icon and in the tooltip", () => {

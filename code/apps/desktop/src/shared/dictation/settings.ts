@@ -91,7 +91,15 @@ export const DictationConfigSchema = v.pipe(
       if (!clash) break;
       const drop = (["raw", "mouse", "second", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
-      out = { ...out, resetNotice: "clash" as const, ...(drop === "raw" && { rawHotkey: "" }), ...(drop === "mouse" && { mouseButton: "" as const }), ...(drop === "second" && { secondHotkey: "" }), ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }), ...(drop === "cancel" && { cancelKey: "Escape" }) };
+      out = {
+        ...out,
+        resetNotice: "clash" as const,
+        ...(drop === "raw" && { rawHotkey: "" }),
+        ...(drop === "mouse" && { mouseButton: "" as const }),
+        ...(drop === "second" && { secondHotkey: "" }),
+        ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
+        ...(drop === "cancel" && { cancelKey: "Escape" }),
+      };
     }
     return out;
   }),

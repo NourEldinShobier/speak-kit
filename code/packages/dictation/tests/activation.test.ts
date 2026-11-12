@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createDictation } from "../src";
-import { initialSession, reduce, type Session, type SessionEvent } from "../src/session";
+import { initialSession, reduce, type Effect, type Session, type SessionEvent } from "../src/session";
 import { fakeClock, fakeKeyboard, flush, loud, target } from "./fakes";
 
 type Cfg = Parameters<typeof reduce>[2];
@@ -14,6 +14,12 @@ function parse(t: string): SessionEvent {
   return { type: "key", key: t[1]!, down: t[0] === "D", at };
 }
 
+function label(e: Effect): string {
+  if (e.type === "start-recording") return "start";
+  if (e.type === "finish-recording") return e.raw ? "finish-raw" : "finish";
+  return e.cancelled ? "cancel" : "discard";
+}
+
 function play(script: string, cfg: Cfg = base) {
   let session: Session = initialSession;
   const effects: string[] = [];
@@ -22,7 +28,7 @@ function play(script: string, cfg: Cfg = base) {
     const step = reduce(session, parse(t), cfg);
     session = step.session;
     consumed.push(step.consumed);
-    effects.push(...step.effects.map((e) => (e.type === "start-recording" ? "start" : e.type === "finish-recording" ? (e.raw ? "finish-raw" : "finish") : e.cancelled ? "cancel" : "discard")));
+    effects.push(...step.effects.map(label));
   }
   return { capture: session.capture, effects, consumed };
 }

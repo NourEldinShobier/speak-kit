@@ -6,7 +6,11 @@ export interface ForegroundFacts {
   fullscreen: boolean;
 }
 
-const key = (exe: string) => exe.trim().toLowerCase().replace(/\.exe$/, "");
+const key = (exe: string) =>
+  exe
+    .trim()
+    .toLowerCase()
+    .replace(/\.exe$/, "");
 
 /**
  * Whether the shortcuts should stand down for the program in front. "block": pause in the listed programs. "allow": pause everywhere except the listed ones.

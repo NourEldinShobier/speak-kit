@@ -67,7 +67,7 @@ export class ChordTracker {
    * are not added, so a repair never starts a capture. Reports "up" when that ends the chord.
    */
   rebuild(isDown: (vk: VirtualKey) => boolean): HotkeyEvent[] {
-    for (const vk of [...this.#held]) {
+    for (const vk of this.#held) {
       if (isDown(vk)) continue;
       this.#held.delete(vk);
       this.#swallowedDown.delete(vk);

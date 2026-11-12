@@ -37,7 +37,17 @@ function rig(down = new Set<number>()) {
   let changes = 0;
   const hk = createHotkeys({ os, now: () => 5, changed: () => void changes++, after: (_ms, fn) => (timers.push(fn), () => undefined) });
   void hk.subscribe((e) => (events.push(e), true));
-  return { hk, down, events, starts: () => starts, chord: () => chord, extras: () => extras, push: (e: Parameters<HotkeyHandlers["onEvent"]>[0]) => handlers?.onEvent(e), fireTimer: () => timers.splice(0).forEach((f) => f()), changes: () => changes };
+  return {
+    hk,
+    down,
+    events,
+    starts: () => starts,
+    chord: () => chord,
+    extras: () => extras,
+    push: (e: Parameters<HotkeyHandlers["onEvent"]>[0]) => handlers?.onEvent(e),
+    fireTimer: () => timers.splice(0).forEach((f) => f()),
+    changes: () => changes,
+  };
 }
 
 describe("several shortcuts through the source", () => {
@@ -238,7 +248,9 @@ describe("pills for activation", () => {
   it("names the feature that holds the microphone", () => {
     expect(errorView("mic-in-use", false, "Voice chat")).toMatchObject({ kind: "error", text: "Voice chat is using the microphone" });
     expect(errorView("mic-in-use", false)).toMatchObject({ text: "Another feature is using the microphone" });
-    expect(hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Screen look" }, hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false })).toMatchObject({ text: "Screen look is using the microphone" });
+    expect(hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Screen look" }, hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false })).toMatchObject({
+      text: "Screen look is using the microphone",
+    });
   });
 
   it("shows the cancel key while a toggled recording runs, and not in a held or locked one", () => {
@@ -250,7 +262,11 @@ describe("pills for activation", () => {
 
   it("offers Undo after a cancel that can be undone", () => {
     const base = { hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false };
-    expect(hudViewFor({ ...base, state: { status: "idle", notice: { kind: "cancelled", undoable: true } } })).toEqual({ kind: "notice", text: "Cancelled", action: { label: "Undo", id: "undo-cancel" } });
+    expect(hudViewFor({ ...base, state: { status: "idle", notice: { kind: "cancelled", undoable: true } } })).toEqual({
+      kind: "notice",
+      text: "Cancelled",
+      action: { label: "Undo", id: "undo-cancel" },
+    });
     expect(hudViewFor({ ...base, state: { status: "idle", notice: { kind: "cancelled" } } })).toEqual({ kind: "notice", text: "Cancelled" });
   });
 });
