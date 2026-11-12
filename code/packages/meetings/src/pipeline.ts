@@ -1,4 +1,4 @@
-import { createGate, decodeWav, runJob, type Segment } from "@speakkit/transcripts";
+import { createGates, decodeWav, runJob, type Segment } from "@speakkit/transcripts";
 import { failure, FAILED, NOTHING, type MeetingsDeps, type Outcome } from "./api";
 import type { EventLog } from "./events";
 import { suppressEcho } from "./echo";
@@ -25,7 +25,7 @@ export type TrackResult = { ok: true; lines: Line[] } | { ok: false; failure: Fa
 /** What turns saved audio into a transcript and notes: transcription per track, the merge with echo removal, the notes pass, vocabulary versions and finishing the audio files. */
 export function createPipeline(c: PipelineContext) {
   const { d, store, search, patch, writers } = c;
-  const clear = createGate({ busy: d.busy, sleep: d.sleep });
+  const { clear, preempt } = createGates({ busy: d.busy, sleep: d.sleep });
   const speech = d.hasSpeech ?? ((p: Int16Array) => energyHasSpeech(p));
 
   const reindex = async (e: MeetingEntry) => {
@@ -56,6 +56,7 @@ export function createPipeline(c: PipelineContext) {
           return { ok: true, text, speech: out.speech && !!text };
         },
         clear,
+        preempt,
         sleep: d.sleep,
       } as JobDeps,
       { pcm, language: lang, signal },
