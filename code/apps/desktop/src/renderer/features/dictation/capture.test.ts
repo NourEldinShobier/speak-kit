@@ -6,7 +6,7 @@ const block = (n: number, v: number) => new Float32Array(n).fill(v);
 describe("clip buffer pieces", () => {
   const rig = (pieceMs = 100) => {
     const pieces: Float32Array[] = [];
-    return { pieces, b: new ClipBuffer(1000, 1000, (p) => pieces.push(p), pieceMs) };
+    return { pieces, b: new ClipBuffer(1000, 1000, { onPiece: (p) => pieces.push(p), ms: pieceMs }) };
   };
 
   it("hands over the samples of a running recording in order, in pieces, with the pre-roll in the first", () => {

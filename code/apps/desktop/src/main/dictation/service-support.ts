@@ -7,6 +7,7 @@ import { firstClash, type Shortcuts } from "../../shared/dictation/conflicts";
 import { hotkeySlots, type AppRule, type DictationConfig, type DictationPatch } from "../../shared/dictation/settings";
 import type { AppOverride } from "./types";
 import type { ModelManager } from "./models";
+import { failureLine } from "./hud-view";
 import type { HotkeyLayout } from "./hotkey-source";
 
 /** The speech worker is the built file (packaged) or the source file in the engine package (development), like the voice worker. */
@@ -111,6 +112,9 @@ interface StatusParts {
   mic: MicStatus;
   devices: MicDeviceView[];
   notes: HistoryNotes;
+  last?: { code: string; at: number; owner?: string } | undefined;
+  /** A failed take is kept, so Try again can run it again. */
+  canRetry?: boolean;
 }
 
 /** What the History page is told beyond the entries: the file notices, recordings, the rewrite key and the word-list note. */
@@ -151,6 +155,8 @@ export const dictationStatus = ({
   mic,
   devices,
   notes,
+  last,
+  canRetry,
 }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
@@ -173,6 +179,7 @@ export const dictationStatus = ({
   ...(state.status === "error" && state.owner && { errorOwner: state.owner }),
   mic,
   devices,
+  ...(last && { lastFailure: { code: last.code, ...failureLine(last.code, canRetry === true, last.owner), at: last.at } }),
   ...historyNotes(notes),
 });
 

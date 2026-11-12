@@ -10,6 +10,8 @@ export interface Failure {
   clip: Clip | undefined;
   error: string;
   replay: ReplayRecorder | undefined;
+  /** The newest failure the Settings page shows until a dictation works again or the person dismisses it. */
+  last?: { code: string; at: number; owner?: string } | undefined;
 }
 
 interface Host {
@@ -25,6 +27,8 @@ interface Host {
   copyLast(): Promise<void>;
   /** Inserts the newest dictation again into the window in front. */
   pasteAgain(): Promise<void>;
+  /** The status changed (the last failure was answered). */
+  changed?(): void;
 }
 
 /** The buttons of the HUD and the Settings page that act on the last dictation: Try again, Sound settings, Download, Undo. */
@@ -36,6 +40,8 @@ export function createActions(h: Host) {
     const state = h.state().status;
     if (!clip || !core || (state !== "idle" && state !== "error")) return;
     h.failure.clip = undefined;
+    h.failure.last = undefined;
+    h.changed?.();
     h.failure.replay?.replay(clip);
     core.start();
     setTimeout(() => core.stop(), 0);
@@ -46,6 +52,10 @@ export function createActions(h: Host) {
   };
   const hudAction = (a: HudAction): void => {
     if (a !== "cancel-recording") h.presenter.dismiss();
+    if (a === "dismiss" && h.failure.last) {
+      h.failure.last = undefined;
+      h.changed?.();
+    }
     if (a === "retry") void retry();
     else if (a === "download") h.download();
     else if (a === "sound-settings") void openSoundSettings();

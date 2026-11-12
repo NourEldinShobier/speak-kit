@@ -44,7 +44,10 @@ describe("soundFor", () => {
     [{ status: "transcribing" }, { status: "pasting" }],
     [{ status: "pasting" }, { status: "idle", notice: { kind: "inserted" } }],
     [{ status: "error" }, { status: "error" }],
-    [{ status: "idle", notice: { kind: "cancelled" } }, { status: "idle", notice: { kind: "cancelled" } }],
+    [
+      { status: "idle", notice: { kind: "cancelled" } },
+      { status: "idle", notice: { kind: "cancelled" } },
+    ],
     [{ status: "recording" }, { status: "idle" }],
   ])("%j to %j is silent", (prev, next) => expect(soundFor(prev, next)).toBeUndefined());
 });

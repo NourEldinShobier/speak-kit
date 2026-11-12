@@ -149,7 +149,13 @@ describe("microphone page", () => {
   });
 
   it("plays a tone note by note on the speakers without opening the microphone", async () => {
-    await send({ op: "tone", notes: [{ at: 0, ms: 70, hz: 880, gain: 0.2 }, { at: 100, ms: 60, hz: 440, gain: 0.2 }] });
+    await send({
+      op: "tone",
+      notes: [
+        { at: 0, ms: 70, hz: 880, gain: 0.2 },
+        { at: 100, ms: 60, hz: 440, gain: 0.2 },
+      ],
+    });
     expect(b.tones.map((t) => t.hz)).toEqual([880, 440]);
     expect(b.tones[1]!.start - b.tones[0]!.start).toBeCloseTo(0.1);
     expect(b.opened).toEqual([]);

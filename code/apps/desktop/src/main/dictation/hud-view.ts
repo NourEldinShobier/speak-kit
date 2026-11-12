@@ -54,6 +54,12 @@ export function errorView(code: string, canRetry: boolean, owner?: string): HudV
   return E(text, icon, action?.id === "retry" && !canRetry ? undefined : action);
 }
 
+/** The words for an error and whether Try again can run the last take again, for the Settings page. */
+export function failureLine(code: string, canRetry: boolean, owner?: string): { text: string; retry: boolean } {
+  const v = errorView(code, canRetry, owner);
+  return v.kind === "error" ? { text: v.text, retry: v.action?.id === "retry" } : { text: "Dictation stopped working", retry: false };
+}
+
 /** The short message after a dictation ended (or none). */
 function idleView(notice: Extract<DictationState, { status: "idle" }>["notice"], insertedAsCopy: boolean, secureInput = false): HudView | null {
   if (!notice) return null;

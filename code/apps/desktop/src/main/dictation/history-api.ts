@@ -127,6 +127,7 @@ export class HistoryApi {
       expiresInMs: Number.isFinite(left) ? left : null,
       ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
       ...(e.kind && { kind: e.kind }),
+      ...(e.timings && { timings: e.timings }),
       ...(e.outcome && { outcome: e.outcome }),
       ...(e.rewrite && { rewrite: e.rewrite }),
       ...(e.audio && { recording: true }),

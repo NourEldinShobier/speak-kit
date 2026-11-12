@@ -157,7 +157,9 @@ export function FeedbackCard({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Recording indicator"
         description="Where the pill appears, on the screen the pointer is on. Hidden still shows failures that need you."
-        control={<Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void dictation.patchSettings({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />}
+        control={
+          <Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void dictation.patchSettings({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />
+        }
       />
       <SettingRow
         label="Sounds"

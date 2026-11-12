@@ -1,7 +1,4 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import type { CaretContext } from "@speakkit/dictation";
 import { launchEnv } from "../system/launch-env";
 
@@ -85,7 +82,8 @@ interface Deps {
   timeoutMs?: number;
 }
 
-export function createCaretReader({ platform, start, once, timeoutMs = 600 }: Deps): CaretReader {
+/** Asks a line-per-answer helper one question at a time. A helper that does not answer in time is killed and started again by the next read. */
+function createLineClient(start: () => LineProcess, timeoutMs: number) {
   let proc: LineProcess | undefined;
   let ready = false;
   const waiting: ((line: string) => void)[] = [];
@@ -94,11 +92,8 @@ export function createCaretReader({ platform, start, once, timeoutMs = 600 }: De
     if (proc) return proc;
     const p = (proc = start());
     p.onLine((line) => {
-      if (!ready) {
-        ready = line.trim() === "ready";
-        return;
-      }
-      waiting.shift()?.(line);
+      if (ready) waiting.shift()?.(line);
+      else ready = line.trim() === "ready";
     });
     p.onExit(() => {
       if (proc === p) proc = undefined;
@@ -108,65 +103,75 @@ export function createCaretReader({ platform, start, once, timeoutMs = 600 }: De
     return p;
   };
 
-  const readWindows = (): Promise<string> => {
-    const p = open();
-    return new Promise<string>((resolve) => {
-      const timer = setTimeout(() => {
-        // A helper that does not answer in time may answer later and shift the replies: it is dropped and restarted on the next read.
-        p.kill();
-        resolve("unreadable");
-      }, timeoutMs);
-      waiting.push((line) => {
-        clearTimeout(timer);
-        resolve(line);
-      });
-      p.write("read");
-    });
-  };
-
   return {
-    warm() {
-      if (platform === "win32") open();
+    open,
+    ask(): Promise<string> {
+      const p = open();
+      return new Promise<string>((resolve) => {
+        const timer = setTimeout(() => {
+          p.kill();
+          resolve("unreadable");
+        }, timeoutMs);
+        waiting.push((line) => {
+          clearTimeout(timer);
+          resolve(line);
+        });
+        p.write("read");
+      });
     },
-    async read() {
-      try {
-        if (platform === "win32") return parseCaret(await readWindows());
-        if (platform === "darwin") return parseCaret(await Promise.race([once(MAC_SCRIPT), new Promise<string>((r) => setTimeout(() => r("unreadable"), timeoutMs))]));
-      } catch {
-        // an unreadable field is not an error
-      }
-      return undefined;
-    },
-    dispose() {
+    close() {
       proc?.kill();
       proc = undefined;
     },
   };
 }
 
-/** The real helpers: PowerShell kept alive on Windows, osascript per read on macOS. */
+export function createCaretReader({ platform, start, once, timeoutMs = 600 }: Deps): CaretReader {
+  const helper = createLineClient(start, timeoutMs);
+  const oneShot = () => Promise.race([once(MAC_SCRIPT), new Promise<string>((r) => setTimeout(() => r("unreadable"), timeoutMs))]);
+  return {
+    warm() {
+      if (platform === "win32") helper.open();
+    },
+    async read() {
+      try {
+        if (platform === "win32") return parseCaret(await helper.ask());
+        if (platform === "darwin") return parseCaret(await oneShot());
+      } catch {
+        // an unreadable field is not an error
+      }
+      return undefined;
+    },
+    dispose: helper.close,
+  };
+}
+
+const NL = String.fromCharCode(10);
+
+/** The real helpers: PowerShell kept alive on Windows (the script goes in the command line, so no file is written), osascript per read on macOS. */
 export function systemCaretReader(): CaretReader {
   return createCaretReader({
     platform: process.platform,
     start() {
-      // A script file keeps stdin free for the requests.
-      const file = path.join(mkdtempSync(path.join(tmpdir(), "speakkit-caret-")), "caret.ps1");
-      writeFileSync(file, WINDOWS_LOOP);
-      const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", file], { env: launchEnv(), windowsHide: true, stdio: ["pipe", "pipe", "ignore"] });
+      const script = Buffer.from(WINDOWS_LOOP, "utf16le").toString("base64");
+      const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", script], {
+        env: launchEnv(),
+        windowsHide: true,
+        stdio: ["pipe", "pipe", "ignore"],
+      });
       let buffer = "";
       let lines: (line: string) => void = () => undefined;
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", (d: string) => {
         buffer += d;
-        for (let i = buffer.indexOf("\n"); i >= 0; i = buffer.indexOf("\n")) {
+        for (let i = buffer.indexOf(NL); i >= 0; i = buffer.indexOf(NL)) {
           lines(buffer.slice(0, i));
           buffer = buffer.slice(i + 1);
         }
       });
       child.stdin.on("error", () => undefined);
-      child.stdin.write(WINDOWS_LOOP + "\n");
       return {
-        write: (line) => void child.stdin.write(line + "\n"),
+        write: (line) => void child.stdin.write(line + NL),
         onLine: (fn) => void (lines = fn),
         onExit: (fn) => void child.once("exit", fn),
         kill: () => void child.kill(),

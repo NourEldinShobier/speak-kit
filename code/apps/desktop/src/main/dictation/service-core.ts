@@ -54,12 +54,12 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     open: () => recorderHandle(openRecorderWindow({ page: h.page("recorder.html"), micAllowed: () => !svc.micDenied })),
   });
   const spool = createSpool({ dir: path.join(o.dataDir, "dictation-spool") });
-  const kept = (spooled = createSpooledRecorder(recorder, spool, RECORDER_RATE));
+  const kept = (spooled = createSpooledRecorder(recorder, spool, { rate: RECORDER_RATE }));
   // Test builds only: SPEAKKIT_AUDIO_FIXTURE names a WAV file that stands in for the microphone.
   const fixture = __TEST_CODE__ ? process.env["SPEAKKIT_AUDIO_FIXTURE"] : undefined;
   h.failure.replay = new ReplayRecorder(fixture ? createFixtureRecorder(kept, fixture) : kept);
   let core: Dictation | undefined;
-  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, (gone) => void core?.history.dropAudio(gone), () => cfg().audioCapMb * 1024 * 1024);
+  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, { onEvicted: (gone) => void core?.history.dropAudio(gone), limitBytes: () => cfg().audioCapMb * 1024 * 1024 });
   core = createDictation({
     clock,
     recorder: h.failure.replay,

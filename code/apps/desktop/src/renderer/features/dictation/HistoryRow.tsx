@@ -1,6 +1,6 @@
 import { Checkbox, Icon } from "@speakkit/ui";
 import type { HistoryItem } from "../../../shared/dictation/contract";
-import { clockText, entryLabel, expiryText, markChanges, rewriteTag, rowApp, rowTags, timeText } from "./model";
+import { clockText, entryLabel, expiryText, markChanges, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
 
 export type View = "final" | "side";
 
@@ -27,7 +27,7 @@ function RowMeta({ item, deadlineMs }: { item: HistoryItem; deadlineMs: number }
         {item.recording ? <span>Recording kept</span> : null}
         {item.recordingRemoved ? <span>Recording removed to stay under the limit</span> : null}
         {tag ? <span className="dict-hist__tag">{tag}</span> : null}
-        {rowTags(item).map((t) => (
+        {[...rowTags(item), ...timingTags(item)].map((t) => (
           <span key={t} className="dict-hist__tag">
             {t}
           </span>

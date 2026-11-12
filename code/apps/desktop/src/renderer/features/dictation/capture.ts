@@ -17,14 +17,14 @@ export class ClipBuffer {
   #pieceLen = 0;
 
   /**
-   * `keepMs` is the most pre-roll a recording can ask for. `onPiece` gets the samples of a running recording in order, in pieces of about `pieceMs`
+   * `keepMs` is the most pre-roll a recording can ask for. `pieces.onPiece` gets the samples of a running recording in order, in pieces of about `pieces.ms`
    * (the pre-roll comes with the first one, and `stop` hands over what is left), so they can be kept somewhere safe before the recording ends.
    */
-  constructor(sampleRate: number, keepMs: number, onPiece?: (pcm: Float32Array) => void, pieceMs = 1000) {
+  constructor(sampleRate: number, keepMs: number, pieces?: { onPiece: (pcm: Float32Array) => void; ms?: number }) {
     this.#rate = sampleRate;
     this.#ringMax = Math.round((sampleRate * keepMs) / 1000);
-    this.#onPiece = onPiece;
-    this.#pieceMax = Math.round((sampleRate * pieceMs) / 1000);
+    this.#onPiece = pieces?.onPiece;
+    this.#pieceMax = Math.round((sampleRate * (pieces?.ms ?? 1000)) / 1000);
   }
 
   #offer(chunk: Float32Array): void {

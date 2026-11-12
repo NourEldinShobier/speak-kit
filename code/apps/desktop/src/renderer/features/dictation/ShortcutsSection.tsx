@@ -243,7 +243,9 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
         className="lm-row--control"
         label="Clean up the field"
         description="Applies your clean-up rules and replacements to the text in the field in front: the selection, or all of it when nothing is selected. Not used in password fields or terminals. Not set until you record one."
-        control={<HotkeyRecorder slot="transform" label="Clean up the field" value={c.transformHotkey} remove status={s} save={(transformHotkey) => patch({ transformHotkey })} confirmAdvanced={confirm} />}
+        control={
+          <HotkeyRecorder slot="transform" label="Clean up the field" value={c.transformHotkey} remove status={s} save={(transformHotkey) => patch({ transformHotkey })} confirmAdvanced={confirm} />
+        }
       />
     </SettingsSection>
   );

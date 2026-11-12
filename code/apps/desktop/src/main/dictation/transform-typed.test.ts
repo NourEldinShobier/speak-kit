@@ -5,12 +5,15 @@ import type { ForegroundInfo, InsertResult } from "./types";
 
 const win = (extra: Partial<ForegroundInfo> = {}): ForegroundInfo => ({ hwnd: "w1", pid: 1, exe: "notepad.exe", className: "Edit", elevated: false, ...extra });
 
+/** An unset window is a normal notepad; null is no window at all. */
+const pick = (w: ForegroundInfo | null | undefined): ForegroundInfo | null => (w === undefined ? win() : w);
+
 function rig(o: { copies?: string[]; fg?: ForegroundInfo | null; password?: boolean; secure?: boolean; insert?: InsertResult; fgAfter?: ForegroundInfo | null } = {}) {
   const log: string[] = [];
   const copies = [...(o.copies ?? [])];
   let reads = 0;
   const deps: TransformDeps = {
-    foreground: () => (reads++ === 0 ? (o.fg === undefined ? win() : o.fg) : o.fgAfter === undefined ? win() : o.fgAfter),
+    foreground: () => pick(reads++ === 0 ? o.fg : o.fgAfter),
     passwordFocused: () => o.password ?? false,
     secureInput: () => o.secure ?? false,
     selectAll: async () => void log.push("select-all"),

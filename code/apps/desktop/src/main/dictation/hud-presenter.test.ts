@@ -12,7 +12,13 @@ function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" |
     update: (s: HudState) => s.kind === "view" && updates.push(s.view),
     hide: () => shown.push("hide"),
   } as unknown as Hud;
-  const p = new HudPresenter({ hud: () => hud, hotkey: () => "ControlLeft+AltLeft+Space", canRetry: () => over.canRetry ?? false, insertedAsCopy: () => over.copied ?? false, indicator: () => over.indicator ?? "bottom" });
+  const p = new HudPresenter({
+    hud: () => hud,
+    hotkey: () => "ControlLeft+AltLeft+Space",
+    canRetry: () => over.canRetry ?? false,
+    insertedAsCopy: () => over.copied ?? false,
+    indicator: () => over.indicator ?? "bottom",
+  });
   return { p, shown, updates };
 }
 const state = (s: DictationState) => s;

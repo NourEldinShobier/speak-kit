@@ -94,8 +94,7 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
       });
     },
     showInactive(place = "bottom") {
-      const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
-      const at = hudPosition(area, { width, height }, place);
+      const at = hudPosition(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, { width, height }, place);
       w.setPosition(at.x, at.y);
       w.showInactive();
     },

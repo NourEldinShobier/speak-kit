@@ -1,4 +1,5 @@
 import type { Clip, Recorder } from "@speakkit/dictation";
+import { ignore } from "../../shared/ignore";
 import type { Spool } from "./spool";
 
 export interface SpooledRecorder extends Recorder {
@@ -15,10 +16,11 @@ export interface SpooledRecorder extends Recorder {
  * quit or a crash anywhere in between leaves the audio for the next start. A take that cannot be written to disk is simply not kept; the dictation
  * itself never waits for the disk.
  */
-export function createSpooledRecorder(inner: Recorder, spool: Spool, rate: number, now: () => number = Date.now): SpooledRecorder {
+export function createSpooledRecorder(inner: Recorder, spool: Spool, o: { rate: number; now?: () => number }): SpooledRecorder {
+  const { rate, now = Date.now } = o;
   let current: Promise<string> | undefined;
   const ids = new WeakMap<Clip, Promise<string>>();
-  const quietly = <T>(p: Promise<T>) => p.catch(() => undefined);
+  const quietly = <T>(p: Promise<T>) => p.catch(ignore);
   return {
     async start(req) {
       const r = await inner.start(req);

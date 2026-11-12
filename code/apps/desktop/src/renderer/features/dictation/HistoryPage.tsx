@@ -169,7 +169,13 @@ export async function historyLeadNow(): Promise<string> {
 
 /** The numbers the page reads from the status: how many entries, which retention, whether recordings are kept, and the revision that reloads the list. */
 function useHistoryNumbers(s: DictationStatus | null) {
-  return { total: s?.historyCount ?? 0, rev: s?.historyRev ?? 0, retention: s?.settings.retention ?? "7d", keepRecordings: s?.settings.keepRecordings ?? false, audioCapMb: s?.settings.audioCapMb ?? 512 };
+  return {
+    total: s?.historyCount ?? 0,
+    rev: s?.historyRev ?? 0,
+    retention: s?.settings.retention ?? "7d",
+    keepRecordings: s?.settings.keepRecordings ?? false,
+    audioCapMb: s?.settings.audioCapMb ?? 512,
+  };
 }
 
 /**

@@ -116,6 +116,15 @@ export function rowTags(item: Pick<HistoryItem, "kind" | "outcome">): string[] {
   return tags;
 }
 
+/** How long the entry took to transcribe and how much silence was cut, as short notes; none for an entry from before they were stored. */
+export function timingTags(item: Pick<HistoryItem, "timings">): string[] {
+  const t = item.timings;
+  const tags: string[] = [];
+  if (t?.transcribeMs !== undefined) tags.push(`Transcribed in ${t.transcribeMs < 1000 ? `${Math.round(t.transcribeMs)} ms` : `${(t.transcribeMs / 1000).toFixed(1)} s`}`);
+  if (t?.pausesDroppedMs) tags.push(`${(t.pausesDroppedMs / 1000).toFixed(1)} s of silence skipped`);
+  return tags;
+}
+
 /** "45 s", "12 min" or "2 h 5 min". */
 export function listenText(ms: number): string {
   const s = Math.round(ms / 1000);

@@ -11,8 +11,11 @@ export const trashViaShell = (file: string): Promise<boolean> =>
   );
 
 /** The history file and the folder of kept recordings under the data directory. */
-export function historyFiles(dataDir: string, trash: (file: string) => Promise<boolean>, onEvicted: (files: string[]) => void, limitBytes?: () => number) {
-  return { storage: createHistoryStorage(path.join(dataDir, "dictation-history.json")), audio: createAudioStore({ dir: path.join(dataDir, "dictation-audio"), trash, onEvicted, ...(limitBytes && { limitBytes }) }) };
+export function historyFiles(dataDir: string, trash: (file: string) => Promise<boolean>, audio: { onEvicted: (files: string[]) => void; limitBytes?: () => number }) {
+  return {
+    storage: createHistoryStorage(path.join(dataDir, "dictation-history.json")),
+    audio: createAudioStore({ dir: path.join(dataDir, "dictation-audio"), trash, ...audio }),
+  };
 }
 
 /** Tests only: a writer that succeeds, fails or never answers (until its deadline aborts it). */

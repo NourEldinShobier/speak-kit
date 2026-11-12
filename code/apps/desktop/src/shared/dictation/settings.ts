@@ -1,5 +1,9 @@
 import * as v from "valibot";
 import { firstClash, type Shortcuts } from "./conflicts";
+import { appRules, AppRule, exeName, MAX_APP_RULES } from "./app-rules";
+export { MAX_APP_RULES, PASTE_METHODS, type AppRule, type PasteMethod } from "./app-rules";
+import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
+export { AUDIO_CAPS_MB, INDICATORS, type Indicator } from "./feedback";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
 
 import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
@@ -20,16 +24,8 @@ export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
 export const OUTPUTS = ["restore", "keep", "copy"] as const;
-export const PASTE_METHODS = ["ctrl-v", "ctrl-shift-v", "shift-insert", "type", "copy"] as const;
-export type PasteMethod = (typeof PASTE_METHODS)[number];
-export const MAX_APP_RULES = 50;
 export const MAX_EXCLUSIONS = 20;
 export const MAX_KEEP_READY_MINUTES = 120;
-/** Where the recording pill sits on the screen under the pointer, or never. */
-export const INDICATORS = ["top", "bottom", "off"] as const;
-export type Indicator = (typeof INDICATORS)[number];
-/** What the kept recordings may take up together, in megabytes. */
-export const AUDIO_CAPS_MB = [128, 512, 2048] as const;
 
 export const MAX_TERMS = 500;
 export const MAX_MODES = 24;
@@ -147,28 +143,7 @@ const replacements = v.fallback(
   [],
 );
 
-const AppRule = v.object({ method: v.picklist(PASTE_METHODS), delayMs: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(5000)), 0) });
-export type AppRule = v.InferOutput<typeof AppRule>;
-const exeName = v.pipe(v.string(), v.trim(), v.toLowerCase(), v.regex(/^[a-z0-9._ -]{1,60}$/));
-// A bad rule is dropped, the rest of the table stays; the program name is kept without ".exe".
-const appRules = v.fallback(
-  v.pipe(
-    v.record(v.string(), v.unknown()),
-    v.transform((all) => {
-      const out: Record<string, AppRule> = {};
-      for (const [name, rule] of Object.entries(all)) {
-        const key = v.safeParse(exeName, name.replace(/\.exe$/i, ""));
-        const parsed = v.safeParse(AppRule, rule);
-        if (key.success && parsed.success && Object.keys(out).length < MAX_APP_RULES) out[key.output] = parsed.output;
-      }
-      return out;
-    }),
-  ),
-  {},
-);
 const exclusions = v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)), []);
-
-const SoundsSchema = v.object({ enabled: v.fallback(v.boolean(), false), volume: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)), 50) });
 
 /** Persisted under `dictation` in config.json. Off until the person turns it on; every key falls back to its default, which is also how files from before dictation existed load. */
 const CORE_KEYS = {

@@ -20,8 +20,20 @@ export interface SoundSettings {
 const SHAPES: Record<SoundKind, { loudness: number; notes: readonly Omit<Note, "gain">[] }> = {
   start: { loudness: 0.16, notes: [{ at: 0, ms: 70, hz: 880 }] },
   stop: { loudness: 0.16, notes: [{ at: 0, ms: 70, hz: 660 }] },
-  cancel: { loudness: 0.14, notes: [{ at: 0, ms: 60, hz: 520 }, { at: 70, ms: 60, hz: 390 }] },
-  error: { loudness: 0.22, notes: [{ at: 0, ms: 90, hz: 330 }, { at: 110, ms: 120, hz: 247 }] },
+  cancel: {
+    loudness: 0.14,
+    notes: [
+      { at: 0, ms: 60, hz: 520 },
+      { at: 70, ms: 60, hz: 390 },
+    ],
+  },
+  error: {
+    loudness: 0.22,
+    notes: [
+      { at: 0, ms: 90, hz: 330 },
+      { at: 110, ms: 120, hz: 247 },
+    ],
+  },
 };
 
 /** The notes of a tone at the chosen volume; nothing when it is off or the volume is 0. */

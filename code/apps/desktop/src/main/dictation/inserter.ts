@@ -95,17 +95,20 @@ export class Inserter {
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);
     if (this.#input.foreground()?.hwnd !== fg.hwnd) return this.#keepCopy(text, typing, "foreground-changed");
-    if (typing) {
-      this.#stopTyping = false;
-      const how = await this.#input.type(text, () => this.#stopTyping);
-      this.#stopTyping = false;
-      if (how === "stopped") return this.#keepCopy(text, true, "typing-stopped");
-      return how === "done" ? { status: "typed" } : this.#keepCopy(text, true, "keys-rejected");
-    }
+    if (typing) return this.#typeIn(text);
     if (!this.#input.pressPaste(pasteKey(profile.shortcut))) return this.#keepCopy(text, false, "keys-rejected");
     if (opts.mode === "keep") this.#guard.keep();
     else this.#guard.restoreAfter(profile.restoreDelayMs);
     return { status: "pasted" };
+  }
+
+  /** Types the text; when it is stopped or refused part way, the whole text is left on the clipboard. */
+  async #typeIn(text: string): Promise<InsertResult> {
+    this.#stopTyping = false;
+    const how = await this.#input.type(text, () => this.#stopTyping);
+    this.#stopTyping = false;
+    if (how === "done") return { status: "typed" };
+    return this.#keepCopy(text, true, how === "stopped" ? "typing-stopped" : "keys-rejected");
   }
 
   async #stage(text: string): Promise<boolean> {

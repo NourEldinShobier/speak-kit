@@ -41,7 +41,7 @@ function rig(o: { startOk?: boolean; stopThrows?: boolean } = {}) {
     },
     speaking: () => true,
   };
-  return { log, rec: createSpooledRecorder(mic, spool, 16_000, () => 7) };
+  return { log, rec: createSpooledRecorder(mic, spool, { rate: 16_000, now: () => 7 }) };
 }
 
 describe("spooled recorder", () => {

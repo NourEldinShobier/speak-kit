@@ -1,34 +1,22 @@
+import { createCancelledTake } from "./cancelled-take";
 import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
 import { historyApi } from "./history-actions";
 import type { Target } from "./paste-plan";
 import { failureOf, foreground, pasteLast, runJob, type Job, type Outcome } from "./pipeline";
+import { reportSettled, tryStart } from "./start";
 import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
 import type { CaptureHandle, CaptureResult, Clip, Dictation, DictationDeps, DictationErrorCode, DictationState, Notice, Unsubscribe } from "./types";
 
 const ERROR_MS = 4000;
 const NOTICE_MS = 1200;
-/** A cancelled recording can be brought back for this long. */
-const UNDO_MS = 60_000;
 /** How long the "Cancelled" notice with its Undo button stays on screen. */
 const UNDO_NOTICE_MS = 10_000;
 const TAIL_POLL_MS = 50;
-/** Failures that came before any text existed, so the recording is the only copy of what was said. */
-const NEEDS_AUDIO: ReadonlySet<DictationErrorCode> = new Set(["model-missing", "model-loading", "model-failed", "transcribe-failed", "failed"]);
-
 const flashMs = (notice: Notice): number => (notice.kind === "cancelled" && notice.undoable ? UNDO_NOTICE_MS : NOTICE_MS);
 
 type Flash = { error: DictationErrorCode; owner?: string } | { notice: Notice };
-
-async function tryStart(deps: DictationDeps, prerollMs: number): Promise<DictationErrorCode | undefined> {
-  try {
-    const started = await deps.recorder.start({ prerollMs });
-    return started.ok ? undefined : started.code;
-  } catch {
-    return "mic-failed"; // a recorder that throws is a microphone that cannot be used
-  }
-}
 
 class Runtime implements Dictation {
   private settings: Settings;
@@ -43,15 +31,14 @@ class Runtime implements Dictation {
   private cancelFlash: Unsubscribe | undefined;
   private cancelLimit: Unsubscribe | undefined;
   private readonly captures = new Map<number, (r: CaptureResult) => void>();
-  private cancelledClip: Clip | undefined;
   private noUndo = false;
   private readonly rawCaptures = new Set<number>();
-  private dropCancelled: Unsubscribe | undefined;
   private readonly listeners = new Set<(state: DictationState) => void>();
   private lastState: string;
   private unsubscribe: Unsubscribe | undefined;
   private disposed = false;
   private readonly store: History;
+  private readonly cancelled: ReturnType<typeof createCancelledTake>;
   private readonly live: Promise<boolean>;
   readonly history: Dictation["history"];
   private readonly deps: DictationDeps;
@@ -59,6 +46,7 @@ class Runtime implements Dictation {
   constructor(deps: DictationDeps) {
     this.deps = deps;
     this.settings = { ...defaultSettings, ...deps.settings };
+    this.cancelled = createCancelledTake(deps.clock, (clip) => deps.settled?.(clip, true));
     this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention, ...(deps.audio && { audio: deps.audio }), terms: () => this.settings.terms });
     this.history = historyApi({ store: this.store, deps: this.deps, settings: () => this.settings, disposed: () => this.disposed });
     this.lastState = JSON.stringify(this.state());
@@ -120,7 +108,7 @@ class Runtime implements Dictation {
     this.dispatch({ type: "cancel" });
     this.disposed = true;
     this.cancelFlash?.();
-    this.dropCancelled?.();
+    this.cancelled.release();
     this.unsubscribe?.();
     this.listeners.clear();
   }
@@ -186,8 +174,7 @@ class Runtime implements Dictation {
   private startRecording(id: number, prerollMs: number): void {
     this.flashed = undefined;
     this.cancelFlash?.();
-    this.dropCancelled?.();
-    this.forgetCancelled();
+    this.cancelled.release();
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
@@ -208,7 +195,7 @@ class Runtime implements Dictation {
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
       try {
-        if (cancelled && !this.noUndo) return this.keepCancelled(await this.deps.recorder.stop());
+        if (cancelled && !this.noUndo) return this.cancelled.keep(await this.deps.recorder.stop());
         await this.deps.recorder.discard();
       } catch {
         // Nothing is left to discard if the recorder already stopped.
@@ -216,30 +203,9 @@ class Runtime implements Dictation {
     });
   }
 
-  private keepCancelled(clip: Clip): void {
-    this.dropCancelled?.();
-    this.forgetCancelled();
-    this.cancelledClip = clip;
-    this.dropCancelled = this.deps.clock.after(UNDO_MS, () => this.forgetCancelled());
-  }
-
-  /** The cancelled take can no longer be brought back, so the app may drop the copy of it that it kept. */
-  private forgetCancelled(): void {
-    const clip = this.cancelledClip;
-    this.cancelledClip = undefined;
-    if (!clip) return;
-    try {
-      this.deps.settled?.(clip, true);
-    } catch {
-      // the app's bookkeeping must not stop a recording
-    }
-  }
-
   undoCancel(): boolean {
-    const clip = this.cancelledClip;
-    if (!clip || this.disposed) return false;
-    this.cancelledClip = undefined;
-    this.dropCancelled?.();
+    if (!this.cancelled.held() || this.disposed) return false;
+    const clip = this.cancelled.take()!;
     this.pending++;
     this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: foreground(this.deps.inserter) }));
     this.emit();
@@ -334,14 +300,12 @@ class Runtime implements Dictation {
     else this.emit();
   }
 
-  /** Tells the app a take is dealt with. Only a take the speech engine could not read is kept; text saved, no speech, a silent take or a refused paste are done. */
   private async settle(job: Job, outcome: Outcome | undefined): Promise<void> {
-    const clip = await job.clip.catch(() => undefined);
-    if (!clip) return;
     try {
-      this.deps.settled?.(clip, !(outcome && "error" in outcome && NEEDS_AUDIO.has(outcome.error)));
+      const clip = await job.clip;
+      if (clip) reportSettled(this.deps, clip, outcome && "error" in outcome ? outcome.error : undefined);
     } catch {
-      // the app's bookkeeping must not stop the queue
+      // the take never existed (the microphone failed to start): nothing to report
     }
   }
 

@@ -77,6 +77,8 @@ export interface DictationStatus {
   rewriteKey: boolean;
   /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
   promptDropped?: boolean;
+  /** The newest failure, kept until a dictation works again or the person dismisses it: what it was in plain words, when, and whether Try again can run the take again. */
+  lastFailure?: { code: string; text: string; at: number; retry: boolean };
   /** "Transcribe again" for one entry, while it runs or after it failed; absent otherwise. */
   redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" | "busy" };
 }
@@ -107,6 +109,8 @@ export interface HistoryItem {
   rewrite?: RewriteOutcome;
   /** Milliseconds until the entry is removed; null when it is kept for ever. */
   expiresInMs: number | null;
+  /** How long the speech model took, and how much silence was cut before it ran. */
+  timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
   /** The entry has a kept recording. */
   recording?: boolean;
   recordingRemoved?: boolean;

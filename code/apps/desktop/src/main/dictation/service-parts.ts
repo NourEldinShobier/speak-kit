@@ -69,6 +69,7 @@ export function createParts(h: PartsHost) {
       undoCancel: async () => controls.undoCancel(),
       copyLast: () => history.copyLast(),
       pasteAgain: async () => void (await history.pasteLast()),
+      changed: h.changed,
     }),
   };
 }

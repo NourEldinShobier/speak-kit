@@ -6,7 +6,17 @@ import type { AppOverride, ForegroundInfo, InputPort } from "./types";
 const notepad: ForegroundInfo = { hwnd: "100", pid: 1, exe: "notepad.exe", className: "Notepad", elevated: false };
 
 function setup(
-  opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void; onType?: () => void } = {},
+  opts: {
+    fg?: ForegroundInfo | null;
+    overrides?: AppOverride[];
+    held?: string[][];
+    password?: boolean;
+    accept?: boolean;
+    failWrite?: boolean;
+    restorable?: boolean;
+    onSleep?: () => void;
+    onType?: () => void;
+  } = {},
 ) {
   let content: string | null = "old";
   let seq = 1;
