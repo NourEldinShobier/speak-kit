@@ -18,16 +18,16 @@ describe("page reporter", () => {
   const make = (accept = true) => {
     const sent: string[] = [];
     const clock = { t: 0 };
-    const r = createPageReporter({ send: async (h) => (sent.push(h), accept), now: () => clock.t, renewMs: 100 });
+    const r = createPageReporter({ send: async (h) => (sent.push(h), accept), now: () => clock.t });
     return { r, sent, clock };
   };
   it("sends a new host at once and the same host again only after the renew time", async () => {
     const { r, sent, clock } = make();
     await r.report("a.com");
-    clock.t = 99;
+    clock.t = 19_999;
     await r.report("a.com");
     expect(sent).toEqual(["a.com"]);
-    clock.t = 100;
+    clock.t = 20_000;
     await r.report("a.com");
     await r.report("b.com");
     await r.report("");
