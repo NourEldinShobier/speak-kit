@@ -36,3 +36,15 @@ describe("profileFor", () => {
     expect(profileFor(win("keepass.exe"), [{ exe: "keepass", profile: { shortcut: "copy" } }]).shortcut).toBe("copy");
   });
 });
+
+describe("profileFor on macOS", () => {
+  it("names programs by bundle identifier, in any letter case, and pastes with plain Cmd+V in terminals", () => {
+    expect(profileFor(win("com.apple.Terminal")).shortcut).toBe("ctrl-v");
+    expect(profileFor(win("com.microsoft.rdc.macos"))).toEqual({ shortcut: "ctrl-v", preDelayMs: 400, restoreDelayMs: 3000 });
+    expect(profileFor(win("com.apple.ScreenSharing")).preDelayMs).toBe(400);
+  });
+
+  it("lets a user rule ask for Cmd+Shift+V in a terminal", () => {
+    expect(profileFor(win("com.googlecode.iterm2"), [{ exe: "com.googlecode.iterm2", profile: { shortcut: "ctrl-shift-v" } }]).shortcut).toBe("ctrl-shift-v");
+  });
+});

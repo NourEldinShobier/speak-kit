@@ -75,7 +75,8 @@ export class Inserter {
     if (!fg) return "no-foreground";
     if (target !== undefined && fg.hwnd !== target) return "foreground-changed";
     if (fg.elevated) return "elevated-target";
-    return this.#input.passwordFocused() ? "password-field" : null;
+    if (this.#input.passwordFocused()) return "password-field";
+    return this.#input.secureInput?.() ? "secure-input" : null;
   }
 
   async #send(text: string, fg: ForegroundInfo, opts: InsertOptions): Promise<InsertResult> {

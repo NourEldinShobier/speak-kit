@@ -1,6 +1,6 @@
 import type { DictationPlatform } from "./types";
 
-/** Platforms without a key hook and key injection yet (macOS, Linux): the hotkey refuses to start and dictation only copies text to the clipboard. */
+/** Platforms without a key hook and key injection yet (Linux): the hotkey refuses to start and dictation only copies text to the clipboard. */
 export function createUnsupportedPlatform(): DictationPlatform {
   return {
     supported: false,
