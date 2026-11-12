@@ -17,6 +17,8 @@ export interface CaptureSetup {
   dictation: DictationService;
   /** SPEAKKIT_TEST: a recorder that makes pictures up replaces the real one, so a spec can run a whole capture without a screen. */
   test: boolean;
+  /** Dictation waits while a capture is recording. */
+  micClaim?: (name: string) => () => void;
 }
 
 /** The narration of a capture uses the speech model dictation already loads: nothing new is downloaded or kept in memory. */
@@ -43,6 +45,7 @@ export function setupCapture(ctx: Ctx, o: CaptureSetup): CaptureService {
     dictationHotkey: () => (ctx.config.dictation.enabled ? ctx.config.dictation.hotkey : undefined),
     recorder: o.test ? fakeRecorder() : undefined,
     test: o.test,
+    micClaim: o.micClaim,
   });
   registerCaptureIpc(service, (c) => o.parent()?.webContents === c);
   return service;

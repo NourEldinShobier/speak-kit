@@ -19,6 +19,8 @@ interface Deps {
   fetch?: typeof fetch;
   /** One look at the screen for the model (screen vision); the local server offers it as POST /v1/voice-chat/look. */
   look?: VoiceChatService["look"];
+  /** The conversation in the browser holds the microphone or lets it go. */
+  mic?: VoiceChatService["mic"];
 }
 
 /** The part the local server calls: the key check and the minting. */
@@ -38,6 +40,7 @@ function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }):
       return { ok: true, session: { ...r.value, model: VOICE_CHAT_MODEL, voice } };
     },
     ...(d.look && { look: d.look }),
+    ...(d.mic && { mic: d.mic }),
   };
 }
 

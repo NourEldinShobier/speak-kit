@@ -132,3 +132,28 @@ describe("MintLimiter", () => {
     expect(l.take()).toBe(0);
   });
 });
+
+describe("POST /v1/voice-chat/mic", () => {
+  const send = (c: Ctx, body: string, headers = c.auth) => fetch(`${c.base}/v1/voice-chat/mic`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body });
+
+  it("passes the held flag to the app and answers 204", async () => {
+    const seen: boolean[] = [];
+    const c = await open({ ...fakeService(), mic: (held) => void seen.push(held) });
+    expect((await send(c, '{"held":true}')).status).toBe(204);
+    expect((await send(c, '{"held":false}')).status).toBe(204);
+    expect(seen).toEqual([true, false]);
+  });
+
+  it("answers 400 for a body that is not exactly { held: boolean } and passes nothing on", async () => {
+    const seen: boolean[] = [];
+    const c = await open({ ...fakeService(), mic: (held) => void seen.push(held) });
+    for (const body of ['{"held":"yes"}', "{}", '{"held":true,"x":1}', "not json", "null"]) expect((await send(c, body)).status).toBe(400);
+    expect(seen).toEqual([]);
+  });
+
+  it("answers 204 when the app does not track the microphone, and needs the token", async () => {
+    const c = await open(fakeService());
+    expect((await send(c, '{"held":true}')).status).toBe(204);
+    expect((await send(c, '{"held":true}', {})).status).toBe(401);
+  });
+});

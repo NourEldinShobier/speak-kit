@@ -9,6 +9,8 @@ export interface VoiceChatService {
   /** Asks OpenAI for a short-lived Realtime client secret. Aborts with `signal`. */
   mint(signal: AbortSignal): Promise<MintResult>;
   /** One look at the screen for the model: asks the user, captures, reads the text. Aborts with `signal` (the extension gave up). Absent where the app cannot capture. */
+  /** The conversation in the browser holds the microphone (true, reported every few seconds) or let it go (false). */
+  mic?(held: boolean): void;
   look?(request: LookRequest, signal: AbortSignal): Promise<LookResult>;
 }
 
