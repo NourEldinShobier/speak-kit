@@ -100,8 +100,9 @@ const mainWindow: MainWindow = new MainWindow(config, {
   onHidden: () => runtime.stopPolling(),
 });
 const screenVision = createScreenVision();
+const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
-  store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
+  store: keyStore,
   config,
   saveConfig: store.save,
   log,
@@ -218,7 +219,7 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      dictation: { dataDir, modelsDir, sttWorker },
+      dictation: { dataDir, modelsDir, sttWorker, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
     },
   );
 }

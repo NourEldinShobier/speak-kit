@@ -50,7 +50,7 @@ describe("history text", () => {
   });
 
   it("groups entries that are already newest first by day, keeping their order", () => {
-    const e = (id: string, when: number) => ({ id, at: when, text: id });
+    const e = (id: string, when: number) => ({ id, at: when, text: id, raw: id, durationMs: 0, expiresInMs: null });
     const groups = groupByDay([e("a", at(0, 11)), e("b", at(0, 8)), e("c", at(1)), e("d", at(5))], noon);
     expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
       ["Today", ["a", "b"]],

@@ -47,8 +47,10 @@ const ExportPrefsSchema = v.fallback(
     format: v.fallback(v.picklist(EXPORT_FORMATS), "mp3"),
     mp3Kbps: v.fallback(v.picklist(MP3_KBPS), 192),
     folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
+    captions: v.fallback(v.picklist(["none", "srt", "vtt"]), "none"),
+    chapters: v.fallback(v.boolean(), false),
   }),
-  { format: "mp3", mp3Kbps: 192, folder: "" },
+  { format: "mp3", mp3Kbps: 192, folder: "", captions: "none", chapters: false },
 );
 export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
 
@@ -116,6 +118,8 @@ const ExportOptionsSchema = v.object({
   dir: v.pipe(v.string(), v.maxLength(1024)),
   name: v.pipe(v.string(), v.minLength(1), v.maxLength(120)),
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
+  captions: v.optional(v.picklist(["none", "srt", "vtt"])),
+  chapters: v.optional(v.boolean()),
 });
 
 const EXTERNAL_LINKS = ["webstore"] as const;

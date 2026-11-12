@@ -1,5 +1,6 @@
 import { dialog, shell, type BrowserWindow } from "electron";
 import { mkdir } from "node:fs/promises";
+import { applyReadAs } from "@speakkit/dictation";
 import type { Ctx } from "../context";
 import type { Api } from "../../shared/ipc";
 import { DesktopFault } from "../../shared/errors";
@@ -14,6 +15,7 @@ type ExportHandlers = Pick<Api, "exportCheck" | "exportStart" | "exportCancel" |
 export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => BrowserWindow | null; workerFile: URL; onChange: () => void }) {
   const jobs = new ExportJobs({
     server: ctx.server,
+    spoken: (s) => applyReadAs(s, ctx.config.dictation.readAs),
     mp3: mp3InWorker(o.workerFile),
     onChange: (views) => {
       ctx.state.exports = views.map((v) => ({ ...v }));
@@ -37,7 +39,7 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => 
     exportStart: async (o) => {
       const dir = o.dir || ctx.state.exportDir;
       await mkdir(dir, { recursive: true });
-      ctx.config.exportPrefs = { format: o.format, mp3Kbps: o.mp3Kbps, folder: dir === ctx.state.exportDir ? "" : dir };
+      ctx.config.exportPrefs = { format: o.format, mp3Kbps: o.mp3Kbps, folder: dir === ctx.state.exportDir ? "" : dir, captions: o.captions ?? "none", chapters: o.chapters === true };
       ctx.saveConfig();
       return jobs.start({ ...o, dir });
     },

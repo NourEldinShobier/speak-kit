@@ -1,4 +1,5 @@
 import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chaptersOf, toSrt, toVtt, withChapters, type Cue } from "./captions";
 import path from "node:path";
 import type { ExportJob, ExportRequest } from "@speakkit/protocol";
 import { safeFileName, type ExportOptions, type ExportTarget, type ExportView } from "../../shared/export";
@@ -22,6 +23,8 @@ export interface ExportDeps {
   onChange(views: ExportView[]): void;
   onDone(view: ExportView): void;
   pollMs?: number;
+  /** How a written sentence is said (the "Read as" list); the captions keep the written form. */
+  spoken?(sentence: string): string;
 }
 
 /** Silence between sentences in the rendered file. */
@@ -76,7 +79,7 @@ export class ExportJobs {
     this.#aborts.set(view.id, ac);
     this.#views = [view, ...this.#views].slice(0, 8);
     this.#d.onChange(this.#views);
-    void this.#run({ view, ac, req: { sentences, voice: o.voice, speed: o.speed }, file, format: o.format, kbps: o.mp3Kbps });
+    void this.#run({ view, ac, req: { sentences: sentences.map((s) => this.#d.spoken?.(s) ?? s), voice: o.voice, speed: o.speed }, file, format: o.format, kbps: o.mp3Kbps, written: { text: o.text, sentences }, captions: o.captions ?? "none", chapters: o.chapters === true, replace: o.conflict === "replace" });
     return { ...view };
   }
 
@@ -110,10 +113,42 @@ export class ExportJobs {
     return job;
   }
 
-  async #run({ view, ac, req, file, format, kbps }: { view: ExportView; ac: AbortController; req: Omit<ExportRequest, "gapMs">; file: string; format: "wav" | "mp3"; kbps: number }) {
+  /** The caption file's name: the audio's name with the caption extension; a file already there is kept unless the audio replaces its own. */
+  async #captionFile(file: string, ext: "srt" | "vtt", replace: boolean): Promise<string> {
+    const base = file.slice(0, file.length - path.extname(file).length);
+    let candidate = `${base}.${ext}`;
+    if (replace) return candidate;
+    for (let n = 2; await stat(candidate).then(() => true, () => false); n++) candidate = `${base} (${n}).${ext}`;
+    return candidate;
+  }
+
+  async #run({
+    view,
+    ac,
+    req,
+    file,
+    format,
+    kbps,
+    written,
+    captions,
+    chapters,
+    replace,
+  }: {
+    view: ExportView;
+    ac: AbortController;
+    req: Omit<ExportRequest, "gapMs">;
+    file: string;
+    format: "wav" | "mp3";
+    kbps: number;
+    written: { text: string; sentences: string[] };
+    captions: "none" | "srt" | "vtt";
+    chapters: boolean;
+    replace: boolean;
+  }) {
     const { signal } = ac;
     const part = `${file}.part`;
     let serverId: string | undefined;
+    let captionsPath: string | undefined;
     try {
       const job = await this.#render({ view, req: { ...req, gapMs: GAP_MS }, format, signal, onStarted: (id) => (serverId = id) });
       let bytes = await this.#d.server.exportAudio(job.id, signal);
@@ -121,15 +156,35 @@ export class ExportJobs {
         this.#patch(view, { stage: "encoding", progress: 0.7, done: job.total });
         bytes = await this.#d.mp3({ wav: parseWav(bytes), kbps, onProgress: (f) => this.#patch(view, { progress: 0.7 + f * 0.28 }), signal });
       }
+      const cues: Cue[] = written.sentences.map((text, i) => ({ text, startMs: job.sentenceMs?.[i]?.[0] ?? 0, endMs: job.sentenceMs?.[i]?.[1] ?? 0 }));
+      if ((captions !== "none" || chapters) && job.sentenceMs?.length !== written.sentences.length) throw new DesktopFault({ code: "render-failed", args: { detail: "the server sent no sentence timings" } });
+      // A WAV file cannot hold chapter markers, so the option is ignored there.
+      const marks = format === "mp3" && chapters ? chaptersOf(written.text, cues, job.durationMs) : [];
+      if (marks.length) bytes = withChapters(bytes, marks);
       this.#patch(view, { stage: "saving", progress: 0.98 });
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(part, bytes);
       await rename(part, file);
-      this.#patch(view, { stage: "done", progress: 1, path: file, bytes: bytes.length, durationMs: job.durationMs });
+      if (captions !== "none") {
+        captionsPath = await this.#captionFile(file, captions, replace);
+        const body = captions === "srt" ? toSrt(cues) : toVtt(cues);
+        await writeFile(`${captionsPath}.part`, body, "utf8");
+        await rename(`${captionsPath}.part`, captionsPath);
+      }
+      this.#patch(view, {
+        stage: "done",
+        progress: 1,
+        path: file,
+        bytes: bytes.length,
+        durationMs: job.durationMs,
+        ...(captionsPath && { captionsPath, captionCount: cues.filter((c) => c.text.trim()).length }),
+        ...(marks.length && { chapterCount: marks.length }),
+      });
       this.#d.onDone(view);
     } catch (e) {
       try {
         await rm(part, { force: true });
+        if (captionsPath) await rm(`${captionsPath}.part`, { force: true });
       } catch {
         // force ignores only a missing file; below a plain file Linux gives ENOTDIR, and that must not replace the error handled here
       }

@@ -1,3 +1,5 @@
+import { parse } from "valibot";
+import { DictationConfigSchema } from "../../../shared/dictation/settings";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
@@ -39,11 +41,14 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: { enabled: true, hotkey: "ControlLeft+AltLeft+Space", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [{ from: "gonna", to: "going to" }] },
+  settings: parse(DictationConfigSchema, { enabled: true, hotkey: "ControlLeft+AltLeft+Space", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [{ from: "gonna", to: "going to" }] }),
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,
   historyCount: 128,
+  historyStatus: "ok",
+  keptRecordings: 0,
+  rewriteKey: false,
   ...over,
 });
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));
@@ -189,7 +194,7 @@ describe("history page", () => {
 });
 
 describe("history rows", () => {
-  const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", app: "chrome.exe" };
+  const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", raw: "send the report to dana by friday", durationMs: 3000, expiresInMs: null, app: "chrome.exe" };
   const row = (copied: boolean) => renderToStaticMarkup(<HistoryRow item={item} copied={copied} onCopy={() => undefined} onDelete={() => undefined} />);
 
   it("names both buttons after the entry, so a screen reader can tell the rows apart", () => {

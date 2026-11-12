@@ -22,7 +22,19 @@ export const clock = {
     return () => clearTimeout(t);
   },
 };
-export const coreSettings = (c: DictationConfig): Partial<Settings> => ({ hotkey: c.hotkey, mode: c.mode, language: c.language, retention: c.retention, replacements: c.replacements });
+export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
+  hotkey: c.hotkey,
+  mode: c.mode,
+  language: c.language,
+  retention: c.retention,
+  replacements: c.replacements,
+  ...c.cleanup,
+  terms: c.terms,
+  prompt: c.prompt,
+  modes: c.modes,
+  rewrite: c.rewrite,
+  keepRecordings: c.keepRecordings,
+});
 
 interface StatusParts {
   supported: boolean;
@@ -32,10 +44,15 @@ interface StatusParts {
   state: DictationState;
   models: ModelManager;
   historyCount: number;
+  historyStatus: DictationStatus["historyStatus"];
+  keptRecordings: number;
+  rewriteKey: boolean;
+  promptDropped: boolean;
+  redo: DictationStatus["redo"];
 }
 
 /** What the Settings page and the tray are told about dictation. */
-export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount }: StatusParts): DictationStatus => ({
+export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, historyStatus, keptRecordings, rewriteKey, promptDropped, redo }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
   hotkeyReady,
@@ -48,4 +65,9 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   modelReady: models.ready,
   ...(models.error && { modelError: models.error }),
   historyCount,
+  historyStatus,
+  keptRecordings,
+  rewriteKey,
+  ...(promptDropped && { promptDropped: true }),
+  ...(redo && { redo }),
 });

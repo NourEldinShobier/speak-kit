@@ -196,3 +196,87 @@ describe("ExportJobs", () => {
     await expect(j.start(opts(tmp(), { text: " ... " }))).rejects.toMatchObject({ error: { code: "nothing-to-export" } });
   });
 });
+
+describe("captions and chapters", () => {
+  const timed = (over: Partial<ExportJob> = {}): ExportServer =>
+    fakeServer({
+      exportStatus: async () => ({ id: "srv1", state: "done", done: 2, total: 2, durationMs: 2000, sentenceMs: [[0, 800], [1000, 1900]], ...over }) satisfies ExportJob,
+    }).server;
+  const text = "# Intro\nFirst sentence here.\n# Next\nSecond sentence here.";
+
+  it("writes an SRT next to the audio, with the written text and the server's timings", async () => {
+    const dir = tmp();
+    const { j, done } = jobs(timed());
+    await j.start(opts(dir, { text: "First sentence here. Second sentence here.", captions: "srt" }));
+    await until(() => done.length === 1);
+    expect(readFileSync(path.join(dir, "reading.srt"), "utf8")).toBe("1\n00:00:00,000 --> 00:00:00,800\nFirst sentence here.\n\n2\n00:00:01,000 --> 00:00:01,900\nSecond sentence here.\n");
+    expect(done[0]).toMatchObject({ captionsPath: path.join(dir, "reading.srt"), captionCount: 2 });
+    expect(done[0]?.chapterCount).toBeUndefined();
+  });
+
+  it("writes WebVTT when asked and nothing when captions are off", async () => {
+    const dir = tmp();
+    const { j, done } = jobs(timed());
+    await j.start(opts(dir, { captions: "vtt" }));
+    await until(() => done.length === 1);
+    expect(readFileSync(path.join(dir, "reading.vtt"), "utf8").startsWith("WEBVTT\n\n00:00:00.000")).toBe(true);
+    const off = tmp();
+    const second = jobs(timed());
+    await second.j.start(opts(off, { captions: "none" }));
+    await until(() => second.done.length === 1);
+    expect(readdirSync(off)).toEqual(["reading.wav"]);
+  });
+
+  it("puts one chapter per heading into an MP3, counted on the finished export", async () => {
+    const dir = tmp();
+    const { j, done } = jobs(timed({ done: 4, total: 4, sentenceMs: [[0, 500], [600, 1000], [1100, 1500], [1600, 1900]] }));
+    await j.start(opts(dir, { text, format: "mp3", chapters: true }));
+    await until(() => done.length === 1);
+    const file = readFileSync(path.join(dir, "reading.mp3"));
+    expect(file.subarray(0, 3).toString("latin1")).toBe("ID3");
+    expect(file.toString("latin1").match(/CHAP/g)).toHaveLength(2);
+    expect(done[0]).toMatchObject({ chapterCount: 2 });
+  });
+
+  it("ignores chapters for a WAV file, which cannot hold them", async () => {
+    const dir = tmp();
+    const { j, done } = jobs(timed({ done: 4, total: 4, sentenceMs: [[0, 500], [600, 1000], [1100, 1500], [1600, 1900]] }));
+    await j.start(opts(dir, { text, format: "wav", chapters: true }));
+    await until(() => done.length === 1);
+    expect(readFileSync(path.join(dir, "reading.wav")).subarray(0, 4).toString("latin1")).toBe("RIFF");
+    expect(done[0]?.chapterCount).toBeUndefined();
+  });
+
+  it("keeps an existing caption file unless the audio is replaced", async () => {
+    const dir = tmp();
+    writeFileSync(path.join(dir, "reading.srt"), "mine");
+    const { j, done } = jobs(timed());
+    await j.start(opts(dir, { captions: "srt" }));
+    await until(() => done.length === 1);
+    expect(readFileSync(path.join(dir, "reading.srt"), "utf8")).toBe("mine");
+    expect(done[0]?.captionsPath).toBe(path.join(dir, "reading (2).srt"));
+  });
+
+  it("fails with a visible error and leaves no half-written file when the server sends no timings", async () => {
+    const dir = tmp();
+    const { j, done, changes } = jobs(timed({ sentenceMs: undefined as never }));
+    await j.start(opts(dir, { captions: "srt" }));
+    await until(() => changes.at(-1)?.[0]?.stage === "error");
+    expect(done).toHaveLength(0);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it("says the written sentence to the server in its spoken form but keeps the written one in the captions", async () => {
+    const dir = tmp();
+    const sent: string[][] = [];
+    const base = timed();
+    const server: ExportServer = { ...base, startExport: async (req) => (sent.push(req.sentences), base.startExport(req)) };
+    const changes: ExportView[][] = [];
+    const done: ExportView[] = [];
+    const j = new ExportJobs({ server, pollMs: 1, mp3: async () => new Uint8Array(), onChange: (v) => changes.push(v), onDone: (v) => done.push({ ...v }), spoken: (s) => s.replace("k8s", "kubernetes") });
+    await j.start(opts(dir, { text: "Deploy to k8s now. Second sentence here.", captions: "srt" }));
+    await until(() => done.length === 1);
+    expect(sent[0]![0]).toBe("Deploy to kubernetes now.");
+    expect(readFileSync(path.join(dir, "reading.srt"), "utf8")).toContain("Deploy to k8s now.");
+  });
+});
