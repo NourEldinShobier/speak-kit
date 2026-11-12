@@ -7,7 +7,6 @@ export const RECORD_SOURCES = ["call-app", "system"] as const;
 export const AUDIO_HOURS = [1, 6, 24, 72, 168] as const;
 export const MEETING_TEXT_DAYS = [7, 30, 90, 365, 0] as const;
 export const MEETING_TRASH_DAYS = [7, 30, 90] as const;
-export const MEETING_DEFAULT_FOLDER_NAME = "Meetings";
 
 const pick = <T extends readonly (string | number)[]>(options: T, fallback: T[number]) => v.fallback(v.picklist(options), fallback);
 const device = v.fallback(v.pipe(v.string(), v.maxLength(256)), "");
@@ -18,7 +17,6 @@ export const AddedAppSchema = v.object({
   exe: v.optional(v.pipe(v.string(), v.maxLength(120))),
   link: v.optional(v.pipe(v.string(), v.maxLength(300))),
 });
-export type AddedApp = v.InferOutput<typeof AddedAppSchema>;
 
 const Position = v.object({ x: v.pipe(v.number(), v.finite()), y: v.pipe(v.number(), v.finite()) });
 

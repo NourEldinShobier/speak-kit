@@ -233,10 +233,3 @@ export function expiryText(ms: number | null, what = "Removed"): string {
   if (ms < DAY) return `${what} in ${plural(Math.ceil(ms / HOUR), "hour")}`;
   return `${what} in ${plural(Math.ceil(ms / DAY), "day")}`;
 }
-
-/** The heading above the totals. */
-export function statsTitle(retention: DictationConfig["retention"]): string {
-  if (retention === "forever") return "All time";
-  if (retention === "off") return "Now";
-  return `Last ${RETENTION_OPTIONS.find((o) => o.value === retention)?.label.toLowerCase()}`;
-}

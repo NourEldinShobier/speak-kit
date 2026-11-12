@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import type { Detail, Failure, Outcome, Row, Since } from "@speakkit/meetings/pure";
+import type { Detail, Outcome, Row, Since } from "@speakkit/meetings/pure";
 import type { MeetingsMethod } from "./channels";
 import { AddedAppSchema, CALL_POLICY_CHOICES, MeetingsPatchSchema, type MeetingsConfig, type MeetingsPatch } from "./settings";
 
@@ -199,4 +199,4 @@ export const CapsuleActionSchema = v.variant("type", [
   v.object({ type: v.literal("open"), id }),
 ]);
 
-export type { Failure };
+
