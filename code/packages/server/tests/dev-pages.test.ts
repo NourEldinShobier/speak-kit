@@ -121,3 +121,67 @@ describe("page context routes", () => {
     expect((await fetch(`${c.base}/v1/capture/page-context`)).status).toBe(401);
   });
 });
+
+describe("page context from the browser", () => {
+  const fromPage = (c: Ctx, origin: string, path = "/v1/capture/page-context") => fetch(`${c.base}${path}`, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } });
+
+  it("answers the preflight of a page on this computer, for this route only", async () => {
+    const c = (ctx = await start());
+    const ok = await fromPage(c, "http://localhost:3000");
+    expect([ok.status, ok.headers.get("access-control-allow-origin"), ok.headers.get("access-control-allow-headers")]).toEqual([204, "http://localhost:3000", "Authorization, Content-Type, X-SpeakKit-Replace"]);
+    expect((await fromPage(c, "https://example.com")).status).toBe(403);
+    expect((await fromPage(c, "http://localhost.evil.com")).status).toBe(403);
+    expect((await fromPage(c, "http://localhost:3000", "/v1/speak")).status).toBe(403);
+  });
+
+  it("lets a page on this computer post with the token, and still refuses it without", async () => {
+    const c = (ctx = await start());
+    const body = JSON.stringify({ page, events: [{ type: "click", at: 5, element: { tag: "button" } }] });
+    const headers = { Origin: "http://localhost:3000", "Content-Type": "application/json" };
+    const withToken = await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers: { ...headers, ...c.auth }, body });
+    expect([withToken.status, withToken.headers.get("access-control-allow-origin")]).toEqual([202, "http://localhost:3000"]);
+    expect((await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers, body })).status).toBe(401);
+  });
+
+  it("serves the script without a token, and it posts what the page does", async () => {
+    const c = (ctx = await start());
+    const res = await fetch(`${c.base}/v1/capture/page-context/sdk.js`);
+    expect([res.status, res.headers.get("content-type")]).toEqual([200, "text/javascript; charset=utf-8"]);
+
+    const posts: { url: string; body: { events: { type: string; element?: unknown; message?: string }[] } }[] = [];
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const consoleErrors: unknown[][] = [];
+    let timer: (() => void) | undefined;
+    const button = { nodeType: 1, tagName: "BUTTON", id: "save", textContent: "  Save   order ", getAttribute: (n: string) => (n === "role" ? null : null), parentElement: null };
+    const win = {
+      location: { href: "http://localhost:3000/orders?token=x" },
+      fetch: async (url: string, init?: { body?: string; method?: string }) => {
+        if (init?.body) posts.push({ url, body: JSON.parse(init.body) });
+        return { status: url.endsWith("/api/orders") ? 500 : 200 };
+      },
+      setTimeout: (fn: () => void) => ((timer = fn), 1),
+      console: { error: (...a: unknown[]) => consoleErrors.push(a) },
+      addEventListener: (n: string, fn: (e: unknown) => void) => (listeners[n] = fn),
+    };
+    const doc = {
+      currentScript: { src: `${c.base}/v1/capture/page-context/sdk.js`, getAttribute: (n: string) => (n === "data-token" ? "tok" : null) },
+      title: "Orders",
+      addEventListener: (n: string, fn: (e: unknown) => void) => (listeners[`doc-${n}`] = fn),
+    };
+    new Function("window", "document", await res.text())(win, doc);
+
+    listeners["doc-click"]!({ target: { closest: () => button } });
+    win.console.error("bad", 7);
+    await win.fetch("http://localhost:3000/api/orders", { method: "post" });
+    await win.fetch(`${c.base}/v1/capture/page-context`, { method: "POST", body: "{}" });
+    timer?.();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const sent = posts.filter((p) => p.url.endsWith("page-context") && p.body.events);
+    expect(sent.length).toBe(1);
+    expect(sent[0]!.body.events.map((e) => e.type)).toEqual(["click", "console-error", "failed-request"]);
+    expect(sent[0]!.body.events[0]).toMatchObject({ element: { tag: "button", label: "Save order", path: "button#save" } });
+    expect(sent[0]!.body.events[1]!.message).toBe("bad 7");
+    expect(consoleErrors).toEqual([["bad", 7]]);
+  });
+});
