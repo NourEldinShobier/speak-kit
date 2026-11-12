@@ -140,7 +140,6 @@ export function ShortcutsPage({ s }: { s: AppState }) {
       </SettingsSection>
       <SettingsSection title="In this app">
         <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" platform={s.platform} scope="app" />} />
-        <SettingRow label="New reading" control={<Keys accelerator="Ctrl+N" platform={s.platform} scope="app" />} />
       </SettingsSection>
     </Page>
   );

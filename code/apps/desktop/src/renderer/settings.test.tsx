@@ -7,17 +7,29 @@ vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
-import { Settings, SETTINGS_NAV } from "./settings";
+import { Settings } from "./settings";
+import { SETTINGS_NAV } from "./routes";
 
 const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => renderToStaticMarkup(<Settings s={appState({ config: parseConfig({ setupDone: true, ...config }) })} sub={sub} />);
 
 describe("settings navigation", () => {
-  it("lists the pages in three groups", () => {
-    expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.id)])).toEqual([
-      ["General", ["general", "voice", "dictation", "shortcuts", "notifications"]],
-      ["Device", ["memory", "storage"]],
-      ["App", ["browser", "about"]],
+  it("lists the 14 pages in four groups", () => {
+    expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
+      ["General", ["General", "Voice and playback", "Shortcuts", "Notifications", "Accessibility"]],
+      ["Device", ["Performance", "Storage", "Privacy"]],
+      ["Features", ["Meetings", "Automation", "Experiments"]],
+      ["App", ["Browser integration", "Diagnostics", "About"]],
     ]);
+  });
+
+  it("opens every page with its own title", () => {
+    for (const g of SETTINGS_NAV) for (const i of g.items.filter((x) => x.id !== "performance")) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
+  });
+
+  it("shows a placeholder with an empty state for a page that is not built yet", () => {
+    const html = page("privacy");
+    expect(html).toContain("Coming soon");
+    expect(html).toContain("What stays on this computer.");
   });
 });
 

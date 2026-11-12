@@ -328,7 +328,7 @@ export class DictationService {
 
   #downloadFromHud(): void {
     this.#ctx.showWindow();
-    this.#ctx.sendUi({ type: "nav", page: "settings", sub: "dictation" });
+    this.#ctx.sendUi({ type: "nav", page: "dictation" });
     void this.download(this.#cfg.model);
   }
 

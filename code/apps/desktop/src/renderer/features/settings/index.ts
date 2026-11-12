@@ -1,7 +1,6 @@
 /**
- * The settings pages except About: general, voice, shortcuts, notifications, memory, browser and storage, and the navigation list.
+ * The settings pages except About: general, voice, shortcuts, notifications, performance, browser and storage.
  */
-export { SETTINGS_NAV } from "./nav";
 export { GeneralPage } from "./GeneralPage";
 export { VoicePage } from "./VoicePage";
 export { ShortcutsPage } from "./ShortcutsPage";

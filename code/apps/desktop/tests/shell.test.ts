@@ -32,10 +32,11 @@ describe("shell", () => {
     expect(main.y + main.height).toBe(inner[1]! - 8);
     // Panel: no stroke, a card shadow instead.
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
-    // Sidebar: New reading, Home, Library, Voices, Engines, Browser, Settings, Recent.
+    // Sidebar: Menu title, the four groups, Recent and Settings; no New reading and no Browser.
     const nav = l.page.getByRole("navigation", { name: "Main" });
-    for (const n of ["Home", "Voices", "Engines", "Browser", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
-    expect(await nav.getByRole("link", { name: "Library" }).count()).toBe(1);
+    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture", "Settings"])
+      expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
+    for (const n of ["New reading", "Browser"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
     expect(await nav.getByText("Recent").count()).toBe(1);
     // A ready engine shows nothing in the title bar (the sidebar card says it); the bell lives there.
     await l.page.getByTestId("title-engine-status").waitFor({ state: "detached" });
@@ -104,18 +105,18 @@ describe("command palette", () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await l.page.keyboard.press("Control+K");
-    const input = l.page.getByRole("combobox", { name: "Search readings, voices and commands" });
+    const input = l.page.getByRole("combobox", { name: "Type a command or search" });
     await input.waitFor();
     expect(await l.page.getByRole("option").count()).toBeGreaterThan(8);
-    await input.fill("memory");
+    await input.fill("idle");
     expect(await l.page.getByRole("option").count()).toBe(1);
     await l.page.keyboard.press("Enter");
-    await l.page.getByRole("heading", { name: "Memory" }).waitFor();
+    await l.page.getByRole("heading", { name: "Performance" }).waitFor();
     expect(await input.count()).toBe(0);
     // The title-bar search opens it too; voices are searchable; Escape closes.
     await l.page.getByRole("button", { name: "Search readings, voices and commands" }).click();
     await input.fill("bella");
-    await l.page.getByRole("option", { name: /Preview Bella/ }).waitFor();
+    await l.page.getByRole("option", { name: /Bella/ }).waitFor();
     await l.page.keyboard.press("Escape");
     expect(await input.count()).toBe(0);
   });
@@ -153,7 +154,7 @@ describe("settings", () => {
     await l.page.getByRole("link", { name: "Voices" }).click();
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
-    await l.page.getByRole("link", { name: "Memory" }).click();
+    await l.page.getByRole("link", { name: "Performance" }).click();
     await l.page.getByRole("link", { name: "Shortcuts" }).click();
     await l.page.getByRole("button", { name: "Close settings" }).click();
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
@@ -165,11 +166,11 @@ describe("settings", () => {
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
   });
 
-  it("Memory: idle unload, load at startup and battery saver persist to config.json; engine state and RAM are shown", async () => {
+  it("Performance: idle unload, load at startup and battery saver persist to config.json; engine state and RAM are shown", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();
-    await l.page.getByRole("link", { name: "Memory" }).click();
-    await l.page.getByRole("heading", { name: "Memory" }).waitFor();
+    await l.page.getByRole("link", { name: "Performance" }).click();
+    await l.page.getByRole("heading", { name: "Performance" }).waitFor();
     expect(await l.page.getByTestId("memory-engine").textContent()).toBe("Ready");
     await l.page
       .getByTestId("memory-rss")
@@ -189,7 +190,7 @@ describe("settings", () => {
     for (const [link, heading] of [
       ["General", "General"],
       ["Voice and playback", "Voice and playback"],
-      ["Memory", "Memory"],
+      ["Performance", "Performance"],
       ["Storage", "Storage"],
       ["About", "About"],
       ["Browser integration", "Browser integration"],
@@ -273,7 +274,7 @@ describe("tray and lifecycle", () => {
     expect(await visible()).toBe(false);
     const second = await launch({ userData: first.userData, port: first.port, args: ["speakkit://pair"] }).catch(() => null);
     await expect.poll(visible, { timeout: 10_000 }).toBe(true);
-    await first.page.getByRole("heading", { name: "Browser", level: 1 }).waitFor();
+    await first.page.getByRole("heading", { name: "Browser integration", level: 1 }).waitFor();
     // An unknown link only focuses.
     await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());
     await launch({ userData: first.userData, port: first.port, args: ["speakkit://evil"] }).catch(() => null);

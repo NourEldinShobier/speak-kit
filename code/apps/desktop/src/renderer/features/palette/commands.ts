@@ -16,7 +16,10 @@ type Runners = { [K in PaletteAction["type"]]: (a: Extract<PaletteAction, { type
 
 const RUNNERS: Runners = {
   nav: (a, _c, x) => x.dispatch({ type: "go", page: a.page, ...(a.sub ? { sub: a.sub } : {}) }),
-  "new-reading": (_a, _c, x) => x.dispatch({ type: "open-reading", text: "" }),
+  "open-doc": (a, _c, x) => {
+    x.dispatch({ type: "go", page: "library" });
+    x.dispatch({ type: "open-doc", doc: { id: a.id, autoplay: false } });
+  },
   pause: (_a, _c, x) => x.halt(),
   "copy-token": (_a, _c, x) => void api.copy(x.s.token),
   "open-logs": () => void api.openPath("logs"),
@@ -24,9 +27,9 @@ const RUNNERS: Runners = {
   export: (_a, _c, x) => x.dispatch({ type: "export", open: { text: "" } }),
   "check-updates": () => void api.updateAction("check"),
   dnd: (_a, _c, x) => void api.patchConfig({ doNotDisturb: !x.s.config.doNotDisturb }),
-  "install-extension": (_a, _c, x) => x.dispatch({ type: "go", page: "browser" }),
+  "install-extension": (_a, _c, x) => x.dispatch({ type: "go", page: "settings", sub: "browser" }),
   "load-engine": () => void api.warmEngine(),
-  preview: (a, c, x) => x.preview(a.voice, `Hello, this is ${c.title.replace("Preview ", "")}.`),
+  preview: (a, c, x) => x.preview(a.voice, `Hello, this is ${c.title}.`),
 };
 
 /** Runs the action of a palette command; closes the palette first. */

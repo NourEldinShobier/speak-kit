@@ -1,20 +1,14 @@
 import { useEffect, useReducer, useRef, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
-import { EnginesPage } from "./features/engines";
-import { VoicesPage } from "./features/voices";
 import { ExportDialog } from "./features/export";
-import { LibraryPage } from "./features/library";
-import { Reader } from "./features/reader";
 import { Palette, runCommand } from "./features/palette";
 import { QuitDialog } from "./QuitDialog";
-import { NewReading } from "./NewReading";
 import { Settings } from "./settings";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
 import { Wizard } from "./features/wizard";
-import { BrowserPage } from "./BrowserPage";
-import { Home } from "./HomePage";
+import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
 import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
 import { api, useAppState, usePreview, useVisible } from "./ui";
@@ -49,38 +43,11 @@ const saveRecent = (recent: string[]) => {
   }
 };
 
-/** The page for the current location. The library page and the reader share one route: opening a reading swaps the list for the reader. */
+/** The page for the current location, looked up in the page registries. */
 function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; sub: SettingsSub; doc: OpenDoc | null; dispatch: Dispatch<ShellAction> }) {
-  const go = (p: "engines" | "browser") => dispatch({ type: "go", page: p });
-  switch (page) {
-    case "home":
-      return <Home s={s} go={go} />;
-    case "library":
-      return doc ? (
-        <Reader
-          key={doc.id}
-          s={s}
-          id={doc.id}
-          autoplay={doc.autoplay}
-          onBack={() => dispatch({ type: "open-doc", doc: null })}
-          onExport={(text, name) => dispatch({ type: "export", open: { text, name } })}
-        />
-      ) : (
-        <LibraryPage s={s} onOpen={(id, autoplay) => dispatch({ type: "open-doc", doc: { id, autoplay } })} />
-      );
-    case "voices":
-      return <VoicesPage s={s} />;
-    case "engines":
-      return <EnginesPage s={s} />;
-    case "browser":
-      return <BrowserPage s={s} />;
-    case "settings":
-      return <Settings s={s} sub={sub} go={(sb) => dispatch({ type: "go", page: "settings", sub: sb })} />;
-    default: {
-      const unreachable: never = page;
-      return unreachable;
-    }
-  }
+  if (page === "settings") return <Settings s={s} sub={sub} />;
+  const Body = PAGE_REGISTRY[page];
+  return <Body s={s} dispatch={dispatch} doc={doc} />;
 }
 
 function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
@@ -113,26 +80,10 @@ function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
 }
 
 function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; dispatch: Dispatch<ShellAction>; player: ReturnType<typeof usePreview> }) {
-  const closeReading = () => {
-    player.halt();
-    dispatch({ type: "close-reading" });
-  };
   return (
     <>
       {st.palette && (
         <Palette onRun={(c) => runCommand(c, { s, dispatch, halt: player.halt, preview: (v, t) => void player.toggle(v, t) })} onClose={() => dispatch({ type: "palette", open: false })} />
-      )}
-      {st.reading !== null && (
-        <NewReading
-          s={s}
-          initial={st.reading}
-          onClose={closeReading}
-          onRead={(text) => dispatch({ type: "remember", text })}
-          onExport={(text) => {
-            closeReading();
-            dispatch({ type: "export", open: { text } });
-          }}
-        />
       )}
       {st.exporting && <ExportDialog s={s} open={st.exporting} onClose={() => dispatch({ type: "export", open: null })} />}
       <QuitDialog s={s} open={st.quit} playing={!!player.playing} onClose={() => dispatch({ type: "quit", open: false })} />
@@ -168,7 +119,7 @@ function Shell({ s }: { s: AppState }) {
             recent={st.recent}
             go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
             onCloseSettings={() => dispatch({ type: "close-settings" })}
-            onNewReading={(text) => dispatch({ type: "open-reading", text })}
+            onOpenRecent={() => dispatch({ type: "go", page: "library" })}
             onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
           />
           <main className="sk-main">

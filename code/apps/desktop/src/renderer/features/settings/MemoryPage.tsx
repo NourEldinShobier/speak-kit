@@ -87,7 +87,7 @@ function Unloading({ s }: { s: AppState }) {
 
 export function MemoryPage({ s }: { s: AppState }) {
   return (
-    <Page title="Memory" lead="The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when idle.">
+    <Page title="Performance" lead="The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when idle.">
       <RightNow s={s} />
       <Unloading s={s} />
     </Page>
