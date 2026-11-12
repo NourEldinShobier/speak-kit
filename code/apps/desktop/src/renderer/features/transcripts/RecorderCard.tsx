@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Banner, Button, IconButton, Select } from "@speakkit/ui";
 import type { RecordingView, SettingsView } from "../../../shared/transcripts/contract";
 import { TRANSCRIPT_LANGUAGES } from "../../../shared/transcripts/settings";
-import { attempt, transcripts } from "./api";
+import { attempt, patchTranscripts, transcripts } from "./api";
 import { LANGUAGES, timerText } from "./model";
 
 const BARS = 18;
@@ -68,7 +68,7 @@ function LanguageRow({ settings, disabled }: { settings: SettingsView | null; di
   const [language, setLanguage] = useState<string | null>(null);
   const pick = (l: string) => {
     setLanguage(l);
-    void attempt(transcripts.patchSettings({ language: l as (typeof TRANSCRIPT_LANGUAGES)[number] }));
+    void attempt(patchTranscripts({ language: l as (typeof TRANSCRIPT_LANGUAGES)[number] }));
   };
   return (
     <div className="tr-rec__row">

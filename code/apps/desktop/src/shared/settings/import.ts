@@ -30,7 +30,7 @@ const NESTED = [...AREA_NAMES, "dictation", "shortcuts"];
 export function flatten(file: Record<string, unknown>): [string, unknown][] {
   return Object.entries(file).flatMap(([key, value]): [string, unknown][] => {
     if (NESTED.includes(key) && value && typeof value === "object" && !Array.isArray(value)) return Object.entries(value).map(([k, x]) => [`${key}.${k}`, x]);
-    return [[key, value]];
+    return [[key === "preferredPort" ? "port" : key, value]];
   });
 }
 

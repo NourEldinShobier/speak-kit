@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Banner, Button, SettingRow, SettingsSection, StatusPill, TextInput } from "@speakkit/ui";
+import { validateChange } from "../../../shared/control/settings-registry";
 import type { AppState } from "../../../shared/ipc";
 import { InstallExtension } from "../../pages";
 import { api, cleanError, Page, TokenField } from "../../ui";
@@ -11,7 +12,7 @@ function PortRow({ s }: { s: AppState }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const n = Number(port);
-  const valid = Number.isInteger(n) && n >= 1024 && n <= 65535;
+  const check = validateChange({ port: n });
   const apply = async () => {
     setBusy(true);
     try {
@@ -30,8 +31,8 @@ function PortRow({ s }: { s: AppState }) {
       description="The extension connects here. Default 47615. If it is busy, the next free port is used."
       control={
         <div className="sk-row-actions">
-          <TextInput aria-label="Server port" inputMode="numeric" value={port} error={!valid ? "1024 to 65535" : err || undefined} onChange={(e) => setPort(e.target.value)} style={{ width: 96 }} />
-          <Button disabled={!valid || busy || n === s.config.preferredPort} loading={busy} onClick={apply}>
+          <TextInput aria-label="Server port" inputMode="numeric" value={port} error={!check.ok ? check.message : err || undefined} onChange={(e) => setPort(e.target.value)} style={{ width: 96 }} />
+          <Button disabled={!check.ok || busy || n === s.config.preferredPort} loading={busy} onClick={apply}>
             Apply
           </Button>
         </div>
