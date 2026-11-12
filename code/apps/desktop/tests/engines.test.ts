@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { launch, type Launched } from "./harness";
 
@@ -50,6 +52,21 @@ describe("Engines page", () => {
     expect(await first.getByRole("progressbar", { name: /^Accuracy of / }).getAttribute("aria-valuenow")).toBe("96");
     expect(await first.getByRole("progressbar", { name: /^Speed of / }).count()).toBe(1);
     expect(await l.page.locator("[data-engine=kokoro]").getByText("Ready").count()).toBe(1);
+  });
+
+  it("Compare models opens a table with one column per model, the test language in each accuracy cell, and closes with Escape", async () => {
+    const l = await start({ config: DONE });
+    await open(l);
+    await l.page.getByRole("button", { name: "Compare models" }).click();
+    const table = l.page.getByRole("region", { name: "Model comparison" });
+    await table.waitFor();
+    expect(await table.getByRole("columnheader").allTextContents()).toEqual(["", "Whisper Large v3 Turbo", "Parakeet v3"]);
+    const accuracy = table.getByRole("row", { name: /^Accuracy/ });
+    expect(await accuracy.getByRole("cell").allTextContents()).toEqual(["About 1 wrong word in 25 (English test)", "About 1 wrong word in 18 (English test)"]);
+    await l.page.waitForTimeout(400); // the dialog fades in
+    await shot(l, "engines-compare");
+    await l.page.keyboard.press("Escape");
+    await table.waitFor({ state: "detached" });
   });
 
   it("the Downloaded filter keeps the installed models and says how many are hidden", async () => {
@@ -111,6 +128,11 @@ describe("Setup: dictation step", () => {
     await shot(l, "setup-practice");
     expect(await l.page.getByRole("textbox", { name: "Practice field" }).count()).toBe(1);
     expect(await l.page.getByRole("button", { name: "Continue" }).isDisabled()).toBe(true); // until something was dictated
+    await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor();
+    // Practice does not say it is the person's turn before the hotkey listener is live: either the wait line shows or the pill hint does, never both.
+    const waiting = await l.page.getByText("Getting the hotkey ready").count();
+    const hint = await l.page.getByText("This pill appears near the bottom of your screen").count();
+    expect(waiting + hint).toBe(1);
     await expect.poll(() => configOf(l).setupStep).toBe(2);
   });
 
@@ -161,5 +183,40 @@ describe("About: Run setup again", () => {
       .waitFor();
     await expect.poll(() => configOf(l).setupDone).toBe(false);
     expect(configOf(l).dictation.language).toBe("de");
+  });
+});
+
+/** A proxy that answers every plain request with the host it was asked for, and a server for the PAC script that points at it. */
+async function proxyAndPac() {
+  const proxy = http.createServer((req, res) => res.end(`via proxy: ${req.url}`));
+  await new Promise<void>((r) => proxy.listen(0, "127.0.0.1", r));
+  const proxyPort = (proxy.address() as AddressInfo).port;
+  const pac = http.createServer((_req, res) => res.end(`function FindProxyForURL() { return "PROXY 127.0.0.1:${proxyPort}"; }`));
+  await new Promise<void>((r) => pac.listen(0, "127.0.0.1", r));
+  const pacPort = (pac.address() as AddressInfo).port;
+  return { proxyPort, pacPort, close: () => (proxy.close(), pac.close()) };
+}
+
+describe("Model downloads use the system proxy", () => {
+  const through = (l: Launched) => l.app.evaluate(({ net }) => net.fetch("http://models.proxy-test.invalid/ggml.bin").then((r) => r.text()));
+
+  it("goes through a manual proxy", async () => {
+    const p = await proxyAndPac();
+    try {
+      const l = await start({ config: DONE, args: [`--proxy-server=127.0.0.1:${p.proxyPort}`] });
+      expect(await through(l)).toBe("via proxy: http://models.proxy-test.invalid/ggml.bin");
+    } finally {
+      p.close();
+    }
+  });
+
+  it("goes through the proxy a PAC script names", async () => {
+    const p = await proxyAndPac();
+    try {
+      const l = await start({ config: DONE, args: [`--proxy-pac-url=http://127.0.0.1:${p.pacPort}/proxy.pac`] });
+      expect(await through(l)).toBe("via proxy: http://models.proxy-test.invalid/ggml.bin");
+    } finally {
+      p.close();
+    }
   });
 });

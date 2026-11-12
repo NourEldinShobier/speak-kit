@@ -1,4 +1,4 @@
-import { net, type BrowserWindow } from "electron";
+import type { BrowserWindow } from "electron";
 import { Transfers, WhisperStt } from "@speakkit/engine";
 import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
@@ -6,6 +6,7 @@ import type { Settings } from "@speakkit/dictation";
 import { ModelManager } from "../dictation/models";
 import { coreSettings, isRecording } from "../dictation/service-support";
 import type { Stt } from "../dictation/stt";
+import { modelFetch } from "./download-fetch";
 import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "./ports";
 import { SpeechModels, type SttExtras } from "./service";
 
@@ -23,9 +24,7 @@ interface Args {
 /** The real engine (unless a test gave one): it asks the speech models service where to run, and downloads through the browser engine's fetch. */
 function createEngine(a: Args, speech: () => SpeechModels): Stt & SttExtras {
   if (a.stt) return a.stt;
-  // The browser engine's fetch follows the system proxy (manual and PAC scripts) and trusts the system certificate store, so a network that
-  // inspects secure traffic works once its certificate is installed; the plain Node fetch would ignore both.
-  const systemFetch = __TEST_CODE__ && a.o.test ? undefined : (net.fetch as typeof fetch);
+  const systemFetch = modelFetch(__TEST_CODE__ && a.o.test);
   return new WhisperStt({
     modelsDir: a.o.modelsDir,
     workerUrl: a.o.sttWorker,
