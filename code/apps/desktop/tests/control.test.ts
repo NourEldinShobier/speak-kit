@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { appDir, launch, type Launched } from "./harness";
 
@@ -26,6 +27,28 @@ const cli = (l: Launched, ...args: string[]) => {
   const r = spawnSync(process.execPath, [path.join(appDir, "dist/cli/speakkit.js"), ...args], { env: { ...process.env, SPEAKKIT_USER_DATA: l.userData }, encoding: "utf8" });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
+
+/** Two seconds of a 16 kHz mono tone, as a WAVE file in a temporary folder. */
+function tone(dir: string): string {
+  const n = 32_000;
+  const buf = Buffer.alloc(44 + n * 2);
+  buf.write("RIFF", 0);
+  buf.writeUInt32LE(36 + n * 2, 4);
+  buf.write("WAVEfmt ", 8);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(16_000, 24);
+  buf.writeUInt32LE(32_000, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36);
+  buf.writeUInt32LE(n * 2, 40);
+  for (let i = 0; i < n; i++) buf.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * i) / 16_000) * 9000), 44 + i * 2);
+  const file = path.join(dir, "talk.wav");
+  writeFileSync(file, buf);
+  return file;
+}
 
 describe("control server in the real app", () => {
   it("writes the discovery file, answers with the token, and hides from a wrong token", async () => {
@@ -70,5 +93,22 @@ describe("control server in the real app", () => {
     const gone = cli(l, "status");
     expect(gone.code).toBe(3);
     expect(gone.err).toContain("Speak Kit is not running");
+  });
+
+  it("transcribes a file from the command line: prints the words, and refuses a missing file, an unsupported one and no file", async () => {
+    const l = await start();
+    await until(() => existsSync(file(l)));
+    const dir = mkdtempSync(path.join(tmpdir(), "speakkit-transcribe-"));
+    const done = cli(l, "transcribe", tone(dir));
+    expect(done.code).toBe(0);
+    expect(done.out).toContain("hello from the fake speech engine");
+    const missing = JSON.parse(cli(l, "--json", "transcribe", path.join(dir, "missing.wav")).out);
+    expect(missing).toMatchObject({ ok: false });
+    writeFileSync(path.join(dir, "notes.xyz"), "this is just text");
+    const bad = cli(l, "--json", "transcribe", path.join(dir, "notes.xyz"));
+    expect(bad.code).toBe(1);
+    expect(JSON.parse(bad.out)).toMatchObject({ ok: false, error: { code: "unsupported" } });
+    expect(cli(l, "transcribe").code).toBe(2);
+    await l.app.close();
   });
 });

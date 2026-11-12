@@ -1,3 +1,4 @@
+import { plainText } from "@speakkit/transcripts";
 import type { AutomationHost } from "@speakkit/server";
 import { SLOT_NAMES } from "../../shared/dictation/conflicts";
 import "../../shared/settings/builtin-experiments";
@@ -5,6 +6,7 @@ import { experiments, toggled } from "../../shared/settings/experiments";
 import type { ConfigPatch } from "../../shared/schemas";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
+import type { Handlers as TranscriptHandlers } from "../transcripts/handlers";
 import type { Reading } from "../reader/service";
 import type { AutomationInfo, CommandLineAction } from "../../shared/control/info";
 import type { AgentSkill } from "../agent-skill";
@@ -24,6 +26,7 @@ interface Parts {
   /** The folder of the shipped launcher, when this is an installed app. */
   shippedDir: string | undefined;
   dictation: DictationService;
+  transcripts: Pick<TranscriptHandlers, "importFile" | "get">;
   dataDir: string;
   version: string;
 }
@@ -63,6 +66,19 @@ function settingsDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps["settin
       if (change.app.controlServer !== undefined) setTimeout(sync, 300).unref(); // after this reply has been sent
       ctx.publish();
       return undefined;
+    },
+  };
+}
+
+/** The transcripts store as the `transcribe` command sees it: the words of a job exist once it is done. */
+function transcriptsDeps(t: Parts["transcripts"]): ControlDeps["transcripts"] {
+  return {
+    importFile: t.importFile,
+    job: async (id) => {
+      const d = await t.get(id);
+      if (!d) return undefined;
+      const { status, chunksDone, chunksTotal, failure } = d;
+      return { id, status, chunksDone, chunksTotal, ...(failure && { failure }), ...(status === "done" && { text: plainText(d.segments) }) };
     },
   };
 }
@@ -109,6 +125,7 @@ function controlDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps {
       cancel: () => d.core?.cancel(),
       busy: () => busy(d),
     },
+    transcripts: transcriptsDeps(p.transcripts),
     history: { list: async (q) => d.history.list(q.search, q.limit) },
     warn: (message, detail) => ctx.log.warn(message, detail),
     settings: settingsDeps(ctx, p, sync),

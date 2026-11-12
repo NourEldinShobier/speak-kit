@@ -22,8 +22,14 @@ function history(d: Data): string {
   return rows.length ? rows.map((e) => `${new Date(e.at).toISOString()}  ${e.text.trim()}`).join("\n") : "Nothing dictated yet.";
 }
 
+function transcribe(d: Data): string {
+  const t = d.transcript as { text?: string; status: string };
+  return t.text?.replace(/\s+$/, "") || "Nothing was heard in the file.";
+}
+
 const BY_COMMAND: Record<string, (d: Data) => string> = {
   speak,
+  transcribe,
   queue,
   history,
   voices: (d) => (d.voices as { id: string; name: string }[]).map((v) => `${v.id === d.current ? "*" : " "} ${v.id}  ${v.name}`).join("\n"),

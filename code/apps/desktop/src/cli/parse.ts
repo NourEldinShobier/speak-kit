@@ -20,6 +20,8 @@ export const USAGE = `Usage: speakkit [--json] <command>
   dictate cancel              cancel it
   settings [get <key> | set <key>=<json> ...]
   history [--search words] [--limit n]
+  transcribe <file> [--language auto|en|de|ar]
+                              transcribe an audio file; prints the text when it is done
   meetings list [--limit n] | search <words> [--limit n]
   meetings show <id|latest> [--from t] [--to t] [--chapter n]
   meetings chapters <id|latest>
@@ -92,6 +94,7 @@ interface Rest {
   search: string | undefined;
   limit: string | undefined;
   out: string | undefined;
+  language: string | undefined;
   from: string | undefined;
   to: string | undefined;
   chapter: string | undefined;
@@ -126,6 +129,9 @@ const speakRequest = (r: Rest): Built =>
     ? { command: "speak", args: { source: r.args.join(" "), ...(r.queue && { queue: true }), ...(r.print && { print: true }), ...(r.out !== undefined && { out: r.out }) } }
     : "speak needs some text, a file or - for stdin.";
 
+const transcribeRequest = (r: Rest): Built =>
+  r.args.length === 1 ? { command: "transcribe", args: { path: r.args[0], ...(r.language !== undefined && { language: r.language }) } } : "transcribe needs one audio file.";
+
 const stopRequest = (r: Rest): Built => (r.args.length ? `Unexpected "${r.args.join(" ")}".` : { command: "stop", args: r.keepQueue ? { keepQueue: true } : {} });
 
 /** How each command that goes to the app turns its words into a request, or into the sentence that says what is wrong. */
@@ -133,6 +139,7 @@ const BUILDERS: Record<string, (r: Rest) => Built> = {
   read: (r) => (r.args.length ? { command: "read", args: { text: r.args.join(" ") } } : "read needs some text."),
   speak: speakRequest,
   stop: stopRequest,
+  transcribe: transcribeRequest,
   voice: (r) => ({ command: "voice", args: r.args[0] ? { set: r.args[0] } : {} }),
   dictate: dictateRequest,
   history: historyRequest,
@@ -184,6 +191,7 @@ export function parseArgs(argv: readonly string[]): Parsed {
     search: value(args, "--search"),
     limit: value(args, "--limit"),
     out: value(args, "--out"),
+    language: value(args, "--language"),
     from: value(args, "--from"),
     to: value(args, "--to"),
     chapter: value(args, "--chapter"),

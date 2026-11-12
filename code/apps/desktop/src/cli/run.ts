@@ -5,7 +5,7 @@ import { experiments } from "../shared/settings/experiments";
 import type { Discovery } from "../main/control/discovery";
 import { parseArgs, USAGE, type Parsed } from "./parse";
 import { render } from "./render";
-import { followExport, followReading, speakSource } from "./speak";
+import { followExport, followReading, followTranscription, speakSource } from "./speak";
 import { skillAction } from "./skill";
 import { runRead, type ReadOutcome, type Sources } from "./reads";
 
@@ -55,7 +55,10 @@ function emitText(io: Io, p: Parsed, o: ReadOutcome): Exit {
   return exitFor(reply);
 }
 
-const wait = (req: ControlRequest): number => (req.command === "dictate" ? LIMITS.printWaitMs * 5 + 5000 : LIMITS.timeoutMs);
+const wait = (req: ControlRequest): number => {
+  if (req.command === "dictate") return LIMITS.printWaitMs * 5 + 5000;
+  return req.command === "transcribe" ? LIMITS.printWaitMs : LIMITS.timeoutMs;
+};
 
 /** `start`: the only command that launches the app, and only when it is not running. */
 async function startApp(io: Io, p: Parsed): Promise<Exit> {
@@ -97,6 +100,7 @@ async function sendToApp(io: Io, d: Discovery, call: { request: ControlRequest; 
   const { request } = call;
   try {
     const reply = await io.post(d, request, wait(request));
+    if (request.command === "transcribe") return reply.ok ? await followTranscription(io, d, reply) : reply;
     if (request.command !== "speak" || !reply.ok) return reply;
     if (request.args?.out !== undefined) return await followExport(io, d, reply);
     return call.wait && request.args?.print !== true ? await followReading(io, d, reply) : reply;
@@ -135,6 +139,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<Exit> {
   if (handled !== null) return handled;
   const request = p.request!;
   if (request.command === "read" && request.args?.text === "-") request.args = { text: await io.stdin() };
+  if (request.command === "transcribe") request.args = { ...request.args, path: path.resolve(String(request.args?.path)) };
   if (request.command === "speak") {
     const failed = await prepareSpeak(io, request, p);
     if (failed !== null) return failed;

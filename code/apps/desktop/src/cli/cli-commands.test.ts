@@ -34,6 +34,49 @@ function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config
 }
 const run = (argv: string[], r = rig()) => runCli(argv, r.io);
 
+describe("transcribe", () => {
+  const started = ok({ transcript: { id: "t1", status: "queued", chunksDone: 0, chunksTotal: 0 } });
+  const running = ok({ transcript: { id: "t1", status: "transcribing", chunksDone: 1, chunksTotal: 3 } });
+  const done = ok({ transcript: { id: "t1", status: "done", chunksDone: 3, chunksTotal: 3, text: "Hello there.\n" } });
+
+  it("turns a file and a language into one request, and refuses anything else", () => {
+    expect(parseArgs(["transcribe", "talk.mp3"]).request).toEqual({ command: "transcribe", args: { path: "talk.mp3" } });
+    expect(parseArgs(["transcribe", "talk.mp3", "--language", "ar"]).request).toEqual({ command: "transcribe", args: { path: "talk.mp3", language: "ar" } });
+    expect(parseArgs(["transcribe"]).usage).toBe("transcribe needs one audio file.");
+    expect(parseArgs(["transcribe", "a.mp3", "b.mp3"]).usage).toBe("transcribe needs one audio file.");
+  });
+
+  it("sends the absolute path, follows the job until it is done and prints the text", async () => {
+    const r = rig({ replies: [started, running, done] });
+    expect(await run(["transcribe", "talk.mp3"], r)).toBe(0);
+    expect(r.sent).toEqual([
+      { command: "transcribe", args: { path: path.resolve("talk.mp3") } },
+      { command: "transcribe", args: { jobId: "t1" } },
+      { command: "transcribe", args: { jobId: "t1" } },
+    ]);
+    expect(r.slept()).toBe(2);
+    expect(r.out.join("")).toBe("Hello there.\n");
+  });
+
+  it("ends with the failure the job ended with, and with the refusal of the start", async () => {
+    const a = rig({ replies: [started, fail("model-missing", "No speech model.")] });
+    expect(await run(["transcribe", "talk.mp3"], a)).toBe(1);
+    expect(a.err.join("")).toBe("No speech model.\n");
+    const b = rig({ replies: [fail("unsupported", "That format is not supported.")] });
+    expect(await run(["--json", "transcribe", "x.xyz"], b)).toBe(1);
+    expect(JSON.parse(b.out.join(""))).toMatchObject({ ok: false, error: { code: "unsupported" } });
+    expect(b.slept()).toBe(0);
+  });
+
+  it("says so when the file held no speech, and needs the app running", async () => {
+    const empty = rig({ replies: [ok({ transcript: { id: "t1", status: "done", chunksDone: 1, chunksTotal: 1, text: "" } })] });
+    await run(["transcribe", "quiet.wav"], empty);
+    expect(empty.out.join("")).toBe("Nothing was heard in the file.\n");
+    const off = rig({ running: false });
+    expect(await run(["transcribe", "talk.mp3"], off)).toBe(3);
+  });
+});
+
 describe("speak", () => {
   it("turns its words and flags into one request", () => {
     expect(parseArgs(["speak", "hello", "there", "--queue"]).request).toEqual({ command: "speak", args: { source: "hello there", queue: true } });

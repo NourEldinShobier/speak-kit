@@ -23,8 +23,12 @@ export interface ControlServer {
 }
 
 const same = (a: string, b: string): boolean => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
-/** A dictate command may wait for the person to finish speaking; everything else ends within the normal limit. */
-const waitFor = (req: ControlRequest, normal: number): number => (req.command === "dictate" ? LIMITS.printWaitMs * 5 + 5000 : normal);
+/** A dictate command may wait for the person to finish speaking, a transcribe for the file to be decoded; everything else ends within the normal limit. */
+const waitFor = (req: ControlRequest, normal: number): number => {
+  if (req.command === "dictate") return LIMITS.printWaitMs * 5 + 5000;
+  // Starting a transcription decodes the whole file before it answers.
+  return req.command === "transcribe" ? LIMITS.printWaitMs : normal;
+};
 
 function send(res: http.ServerResponse, status: number, reply: Reply): void {
   if (res.headersSent || res.writableEnded) return;

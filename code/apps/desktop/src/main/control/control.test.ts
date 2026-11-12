@@ -175,6 +175,23 @@ function deps(over: Partial<ControlDeps> = {}) {
       cancel: () => void log.push("cancel"),
       busy: () => phase !== "idle",
     },
+    transcripts: {
+      importFile: async ({ path: p, language }) => {
+        log.push(`transcribe:${p}:${language}`);
+        if (p.endsWith("bad.xyz")) return { ok: false, failure: { code: "unsupported", message: "That format is not supported." } };
+        if (p.endsWith("long.wav")) return { ok: false, failure: { code: "too-long", message: "Over 4 hours." } };
+        if (p.endsWith("boom.wav")) throw new Error("disk");
+        return { ok: true, id: "t1" };
+      },
+      job: async (id) =>
+        ({
+          t1: { id, status: "transcribing" as const, chunksDone: 1, chunksTotal: 4 },
+          t2: { id, status: "done" as const, chunksDone: 4, chunksTotal: 4, text: "Hello there." },
+          t3: { id, status: "failed" as const, chunksDone: 0, chunksTotal: 4, failure: { code: "engine-missing", message: "No speech model." } },
+          t4: { id, status: "cancelled" as const, chunksDone: 0, chunksTotal: 4 },
+          t5: { id, status: "interrupted" as const, chunksDone: 2, chunksTotal: 4 },
+        })[id],
+    },
     history: { list: async (q) => (log.push(`history:${q.search ?? ""}:${q.limit}`), [{ id: "1", at: 1, text: "one" }]) },
     settings: {
       snapshot: () => ({ ...config }),
@@ -339,6 +356,29 @@ describe("commands", () => {
     ] as const) {
       expect(await call(t.run, "speak", { text })).toMatchObject({ ok: false, error: { code } });
     }
+  });
+
+  it("starts a transcription of an absolute path and reports the job by its id", async () => {
+    const t = deps();
+    expect(await call(t.run, "transcribe", { path: "C:/a/talk.mp3" })).toMatchObject({ ok: true, data: { transcript: { id: "t1", status: "queued" } } });
+    await call(t.run, "transcribe", { path: "C:/a/talk.mp3", language: "de" });
+    expect(t.log).toEqual(["transcribe:C:/a/talk.mp3:auto", "transcribe:C:/a/talk.mp3:de"]);
+    expect(await call(t.run, "transcribe", { jobId: "t1" })).toMatchObject({ ok: true, data: { transcript: { status: "transcribing", chunksDone: 1, chunksTotal: 4 } } });
+    expect(await call(t.run, "transcribe", { jobId: "t2" })).toMatchObject({ ok: true, data: { transcript: { status: "done", text: "Hello there." } } });
+  });
+
+  it("refuses a relative path, an unknown language and a missing job, and names what the store refused or a job ended with", async () => {
+    const t = deps();
+    expect(await call(t.run, "transcribe", { path: "talk.mp3" })).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(await call(t.run, "transcribe", {})).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(await call(t.run, "transcribe", { path: "C:/a.mp3", language: "fr" })).toMatchObject({ ok: false, error: { code: "usage", message: "The language is one of: auto, en, de, ar." } });
+    expect(await call(t.run, "transcribe", { jobId: "nope" })).toMatchObject({ ok: false, error: { code: "failed" } });
+    expect(await call(t.run, "transcribe", { path: "C:/bad.xyz" })).toMatchObject({ ok: false, error: { code: "unsupported", message: "That format is not supported." } });
+    expect(await call(t.run, "transcribe", { path: "C:/long.wav" })).toMatchObject({ ok: false, error: { code: "too-large" } });
+    expect(await call(t.run, "transcribe", { path: "C:/boom.wav" })).toMatchObject({ ok: false, error: { code: "failed" } });
+    expect(await call(t.run, "transcribe", { jobId: "t3" })).toMatchObject({ ok: false, error: { code: "model-missing", message: "No speech model." } });
+    expect(await call(t.run, "transcribe", { jobId: "t4" })).toMatchObject({ ok: false, error: { code: "cancelled" } });
+    expect(await call(t.run, "transcribe", { jobId: "t5" })).toMatchObject({ ok: false, error: { code: "failed" } });
   });
 
   it("shows the waiting list and the voices with the current one", async () => {
