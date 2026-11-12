@@ -5,7 +5,7 @@ import type { HudPresenter } from "./hud-presenter";
 import { createActions, type Failure } from "./service-actions";
 
 export type { Failure };
-import { DictationHistory } from "./service-history";
+import { HistoryFacade } from "./history-facade";
 import { ShortcutControls } from "./shortcut-controls";
 import type { ForegroundInfo } from "./types";
 
@@ -21,17 +21,27 @@ export interface PartsHost {
   rules(): PauseRules | undefined;
   /** The status changed. */
   changed(): void;
-  refreshCount(): Promise<void>;
   download(): void;
 }
 
 /** The pieces of the service that are not the dictation itself: pause and paste last, the history, and the buttons that act on the last dictation. */
 export function createParts(h: PartsHost) {
   const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, foreground: h.foreground, rules: h.rules, changed: h.changed });
+  const history = new HistoryFacade({ ready: h.ready, core: h.core, changed: h.changed });
   return {
     controls,
-    history: new DictationHistory({ ready: h.ready, core: h.core, changed: h.refreshCount }),
-    actions: createActions({ ready: h.ready, failure: h.failure, core: h.core, state: h.state, presenter: h.presenter, download: h.download, undoCancel: async () => controls.undoCancel() }),
+    history,
+    actions: createActions({
+      ready: h.ready,
+      failure: h.failure,
+      core: h.core,
+      state: h.state,
+      presenter: h.presenter,
+      download: h.download,
+      undoCancel: async () => controls.undoCancel(),
+      copyLast: () => history.copyLast(),
+      pasteAgain: async () => void (await history.pasteLast()),
+    }),
   };
 }
 

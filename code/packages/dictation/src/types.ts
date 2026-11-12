@@ -1,4 +1,5 @@
-import type { HistoryEntry } from "./history";
+import type { HistoryEntry, HistoryQuery } from "./history";
+import type { HistoryStats } from "./history-search";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
 import type { Settings } from "./settings";
 
@@ -40,6 +41,8 @@ export interface Recorder {
   start(req: { prerollMs: number }): Promise<{ ok: true } | { ok: false; code: MicErrorCode }>;
   stop(): Promise<Clip>;
   discard(): Promise<void>;
+  /** True while speech is coming in right now; lets the recording run on a little after the key is released. Absent when the recorder cannot tell. */
+  speaking?(): boolean;
 }
 
 export type TranscribeFailure = "model-missing" | "model-loading" | "model-failed" | "failed";
@@ -53,6 +56,8 @@ export interface Transcriber {
 export interface Inserter {
   /** The foreground window now; undefined when there is none. */
   target(): Promise<Target | undefined>;
+  /** Brings the window the key was pressed in back to the front and says whether it is in front within a short time. */
+  focus?(target: Target): Promise<boolean>;
   insert(req: { text: string; plan: Exclude<PastePlan, { method: "refuse" }> }): Promise<{ ok: true } | { ok: false; code: "rejected" | "failed" }>;
 }
 
@@ -69,6 +74,7 @@ export type DictationErrorCode =
   | "model-failed"
   | "transcribe-failed"
   | "insert-failed"
+  | "focus-failed"
   | "password-field"
   | "hotkey-failed"
   /** Another feature holds the microphone; the state names it in `owner`. */
@@ -92,6 +98,10 @@ export interface DictationDeps {
   inserter: Inserter;
   hotkeys: HotkeySource;
   storage: HistoryStorage;
+  /** Called with audio that must not be lost: a take that came back silent or a recording cut short. */
+  keepClip?(clip: Clip, why: "silent" | "interrupted" | "failed"): void;
+  /** One line per stage that failed or ran out of time and passed its input on. Never receives spoken text. */
+  log?(stage: string, why: string): void;
   /** Starting values; later changes go through `configure`. Missing keys take `defaultSettings`. */
   settings?: Partial<Settings>;
   /** The feature that holds the microphone right now (voice chat, a screen look, a capture), or undefined when it is free. Dictation does not start while one does. */
@@ -127,10 +137,14 @@ export interface Dictation {
   /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */
   pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed">;
   history: {
-    list(query?: { search?: string; limit?: number }): Promise<HistoryEntry[]>;
+    list(query?: HistoryQuery): Promise<HistoryEntry[]>;
     /** Puts the saved text on the clipboard. */
     copy(id: string): Promise<boolean>;
+    /** Inserts the saved text again into the window in front now, the way a new dictation would; false when it could not be inserted. */
+    insert(id: string): Promise<boolean>;
     remove(id: string): Promise<void>;
+    removeMany(ids: readonly string[]): Promise<void>;
+    stats(): Promise<HistoryStats>;
     clear(): Promise<void>;
   };
   dispose(): void;

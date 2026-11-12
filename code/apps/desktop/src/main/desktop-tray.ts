@@ -18,9 +18,9 @@ interface TrayParts {
   retryEngine(): Promise<unknown>;
 }
 
-/** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, requestQuit, retryEngine }: TrayParts) {
-  const context = (): TrayContext => ({
+/** What the menu is built from: the shared state plus the live counts of the features. */
+function trayContext(ctx: Ctx, { exports, dictation, transcripts }: Pick<TrayParts, "exports" | "dictation" | "transcripts">): TrayContext {
+  return {
     health: ctx.state.health,
     serverError: ctx.state.serverError,
     reader: ctx.state.reader,
@@ -30,8 +30,15 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     recorder: { phase: transcripts.phase() },
-    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
-  });
+    ...(dictation.status().supported && {
+      dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused, recent: dictation.history.recent() },
+    }),
+  };
+}
+
+/** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, requestQuit, retryEngine }: TrayParts) {
+  const context = () => trayContext(ctx, { exports, dictation, transcripts });
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
     ctx.sendUi({ type: "nav", page });
@@ -44,6 +51,11 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     "record-stop": () => void transcripts.stopRecording(),
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
+    "dictation-copy-0": () => dictation.history.copyRecent(0),
+    "dictation-copy-1": () => dictation.history.copyRecent(1),
+    "dictation-copy-2": () => dictation.history.copyRecent(2),
+    "dictation-copy-3": () => dictation.history.copyRecent(3),
+    "dictation-copy-4": () => dictation.history.copyRecent(4),
     open: ctx.showWindow,
     pause: () => reading.controller.command({ type: "pause" }),
     resume: () => reading.controller.command({ type: "resume" }),

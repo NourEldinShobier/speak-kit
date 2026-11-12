@@ -10,6 +10,10 @@ describe("defaults", () => {
       mode: "hold",
       language: "auto",
       duck: false,
+      skipPauses: false,
+      keepReady: false,
+      keepOnClipboard: false,
+      returnToApp: true,
       insertMode: "paste",
       appModes: {},
       fillers: true,
@@ -55,7 +59,9 @@ describe("hold to talk", () => {
     const r = await rig();
     await r.hold(1000);
     await r.time.advance(200);
-    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000 }]);
+    expect(await r.dictation.history.list()).toStrictEqual([
+      { id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", app: "notepad.exe", durationMs: 1000, timings: { transcribeMs: 0 }, outcome: "sent" },
+    ]);
   });
 
   it("leaves out what it does not know: no program, no language, no model", async () => {
@@ -63,7 +69,9 @@ describe("hold to talk", () => {
     r.ins.state.targetThrows = true;
     await r.hold(1000);
     await r.time.advance(200);
-    expect(await r.dictation.history.list()).toStrictEqual([{ id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", durationMs: 1000 }]);
+    expect(await r.dictation.history.list()).toStrictEqual([
+      { id: "1001200-0", at: 1001200, text: "Hello world ", raw: "hello world", durationMs: 1000, timings: { transcribeMs: 0 }, outcome: "copied" },
+    ]);
   });
 
   it("records the language and model the engine reports", async () => {
@@ -269,11 +277,11 @@ describe("toggle mode", () => {
 });
 
 describe("recording limit", () => {
-  it("finishes a toggled recording nobody stopped after five minutes and transcribes it", async () => {
+  it("finishes a toggled recording nobody stopped after thirty minutes and transcribes it", async () => {
     const r = await rig({ mode: "toggle" });
     r.press();
     r.release();
-    await r.time.advance(299_000);
+    await r.time.advance(1_799_000);
     expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
     await r.time.advance(2000);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
@@ -284,7 +292,7 @@ describe("recording limit", () => {
   it("finishes a hold whose key release was lost, and the later release changes nothing", async () => {
     const r = await rig();
     r.press();
-    await r.time.advance(301_000);
+    await r.time.advance(1_801_000);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.ins.inserted).toHaveLength(1);
     r.release();
@@ -292,7 +300,7 @@ describe("recording limit", () => {
     expect(r.rec.log).toEqual(["start:450", "stop"]);
   });
 
-  it("measures the five minutes from each recording's own start", async () => {
+  it("measures the thirty minutes from each recording's own start", async () => {
     const r = await rig({ mode: "toggle" });
     r.press();
     r.release();
@@ -621,7 +629,7 @@ describe("where the text goes", () => {
     await r.hold(1000);
     await r.time.advance(200);
     expect(r.dictation.state()).toEqual({ status: "error", code: "insert-failed" });
-    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world " }]);
+    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world ", outcome: "failed" }]);
   });
 
   it("uses the insert mode from the settings", async () => {

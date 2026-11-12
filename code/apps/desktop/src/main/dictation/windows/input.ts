@@ -24,13 +24,31 @@ const MODIFIERS: ReadonlyArray<[name: string, vk: number]> = [
 interface Press {
   vk: number;
   up: boolean;
+  extended?: boolean;
 }
+
+const EXTENDED = 0x1;
+const VK_INSERT = 0x2d;
+/** How long to wait for a window to come to the front, and how often to look. */
+const FOCUS_WAIT_MS = 500;
+const FOCUS_POLL_MS = 25;
 
 /** Another program may hold the clipboard open for a moment: try a few times, 10 ms apart. */
 async function addWhenFree(w: Win32, marks: readonly string[]): Promise<boolean> {
   for (let tries = 0; tries < 5; tries++) {
     if (w.clipboardAdd(marks)) return true;
     await new Promise((r) => setTimeout(r, 10));
+  }
+  return false;
+}
+
+/** Brings a window to the front and waits up to half a second for Windows to agree. */
+async function focusWindow(w: Win32, hwnd: string): Promise<boolean> {
+  if (w.address(w.foregroundWindow()) === hwnd) return true;
+  if (!w.setForeground(hwnd)) return false;
+  for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
+    await new Promise((r) => setTimeout(r, FOCUS_POLL_MS));
+    if (w.address(w.foregroundWindow()) === hwnd) return true;
   }
   return false;
 }
@@ -42,9 +60,9 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
   const press = (presses: Press[]): KeyInput[] => {
     const h = w.foregroundWindow();
     const layout = w.keyboardLayout(h ? w.windowOwner(h).tid : 0);
-    return presses.map(({ vk, up }) => {
+    return presses.map(({ vk, up, extended }) => {
       const scan = w.mapVirtualKey(vk, layout);
-      return event((up ? KEYUP : 0) | (scan ? SCANCODE : 0), vk, scan);
+      return event((up ? KEYUP : 0) | (scan ? SCANCODE : 0) | (extended ? EXTENDED : 0), vk, scan);
     });
   };
 
@@ -69,13 +87,16 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
     foreground: () => fg.info(),
     passwordFocused: () => fg.passwordFocused(),
     heldModifiers: () => [...new Set(MODIFIERS.filter(([, vk]) => w.keyIsDown(vk)).map(([name]) => name))],
-    pressPaste(withShift) {
+    pressPaste(key) {
       // A Ctrl the user is holding (the dictation key itself) is not pressed or released again.
-      const ctrl: Press[] = w.keyIsDown(0x11) ? [] : [{ vk: VK.leftCtrl, up: false }];
-      const shift: Press[] = withShift ? [{ vk: VK.leftShift, up: false }] : [];
+      const insert = key === "shift-insert";
+      const ctrl: Press[] = insert || w.keyIsDown(0x11) ? [] : [{ vk: VK.leftCtrl, up: false }];
+      const shift: Press[] = key === "ctrl-v" ? [] : [{ vk: VK.leftShift, up: false }];
       const ups = [...shift, ...ctrl].reverse().map(({ vk }) => ({ vk, up: true }));
-      return sendAll([...ctrl, ...shift, { vk: VK.v, up: false }, { vk: VK.v, up: true }, ...ups]);
+      const main = insert ? { vk: VK_INSERT, extended: true } : { vk: VK.v };
+      return sendAll([...ctrl, ...shift, { ...main, up: false }, { ...main, up: true }, ...ups]);
     },
+    focus: (hwnd) => focusWindow(w, hwnd),
     type(text) {
       const events = unicode(text);
       for (let i = 0; i < events.length; i += TYPE_CHUNK * 2) {

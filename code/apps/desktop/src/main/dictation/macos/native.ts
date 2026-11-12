@@ -38,6 +38,8 @@ export interface MacNative {
   /** True while a password field (or anything else) has switched on secure keyboard input. */
   secureInput(): boolean;
   frontmost(): Frontmost | null;
+  /** Brings the app with this process id to the front. False when it is gone or refuses. */
+  activate(pid: number): boolean;
   pasteboard: {
     changeCount(): number;
     /** Type identifiers (UTIs) of the content on the general pasteboard. */
@@ -51,6 +53,8 @@ export interface MacNative {
 const FW = (name: string) => `/System/Library/Frameworks/${name}.framework/${name}`;
 const UTF8 = 0x08000100;
 const KEYBOARD_KEYCODE_FIELD = 9;
+/** NSApplicationActivateIgnoringOtherApps: the app comes to the front even though another one is active. */
+const NS_ACTIVATE_IGNORING_OTHER_APPS = 2;
 const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
@@ -68,7 +72,7 @@ export async function loadMacNative(): Promise<MacNative> {
 }
 
 function bind(koffi: Koffi): MacNative {
-  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi) };
+  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
 }
 
 /** Attaching a mach port to the main run loop, and taking it off and freeing it again. */
@@ -194,6 +198,21 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
   return {
     secureInput: () => IsSecureEventInputEnabled(),
     inputMonitoring: { status: () => states[IOHIDCheckAccess(IOHID_LISTEN_EVENT)] ?? "unknown", request: () => IOHIDRequestAccess(IOHID_LISTEN_EVENT) },
+  };
+}
+
+function activateApi(koffi: Koffi): Pick<MacNative, "activate"> {
+  const objc = koffi.load("/usr/lib/libobjc.A.dylib");
+  const getClass = objc.func("void *objc_getClass(const char *name)");
+  const sel = objc.func("void *sel_registerName(const char *name)");
+  const appOf = objc.func("void *objc_msgSend(void *self, void *sel, uint64 pid)");
+  const isTerminated = objc.func("bool objc_msgSend(void *self, void *sel)");
+  const activateWith = objc.func("bool objc_msgSend(void *self, void *sel, uint64 options)");
+  return {
+    activate(pid) {
+      const app = appOf(getClass("NSRunningApplication"), sel("runningApplicationWithProcessIdentifier:"), pid);
+      return !!app && !isTerminated(app, sel("isTerminated")) && activateWith(app, sel("activateWithOptions:"), NS_ACTIVATE_IGNORING_OTHER_APPS);
+    },
   };
 }
 

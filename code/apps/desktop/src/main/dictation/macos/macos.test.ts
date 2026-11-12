@@ -160,8 +160,8 @@ describe("macOS foreground and paste keys", () => {
   it("pastes with Command+V and adds Shift when asked, releasing the key last", () => {
     const fake = fakeMacNative();
     const input = createMacInput(fake.native);
-    expect(input.pressPaste(false)).toBe(true);
-    expect(input.pressPaste(true)).toBe(true);
+    expect(input.pressPaste("ctrl-v")).toBe(true);
+    expect(input.pressPaste("ctrl-shift-v")).toBe(true);
     expect(fake.state.posted).toEqual([
       { keycode: 9, down: true, flags: 0x100000 },
       { keycode: 9, down: false, flags: 0x100000 },
@@ -170,13 +170,25 @@ describe("macOS foreground and paste keys", () => {
     ]);
   });
 
+  it("brings an app back to the front by its process id and waits until it is there", async () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native);
+    const notes = { pid: 777, bundleId: "com.apple.Notes", name: "Notes" };
+    fake.state.running.set(777, notes);
+    expect(await input.focus("501")).toBe(true);
+    expect(fake.state.activated).toEqual([]);
+    expect(await input.focus("777")).toBe(true);
+    expect(fake.state.activated).toEqual([777]);
+    expect(await input.focus("999")).toBe(false);
+  });
+
   it("releases V again when the system takes only the key down", () => {
     const fake = fakeMacNative();
     fake.state.acceptPosts = 1;
     const input = createMacInput(fake.native);
-    expect(input.pressPaste(false)).toBe(false);
+    expect(input.pressPaste("ctrl-v")).toBe(false);
     fake.state.acceptPosts = Infinity;
-    expect(createMacInput(fake.native).pressPaste(false)).toBe(true);
+    expect(createMacInput(fake.native).pressPaste("ctrl-v")).toBe(true);
   });
 
   it("types text as Unicode events and a newline as Return", () => {

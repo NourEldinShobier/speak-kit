@@ -1,4 +1,5 @@
 import type { Clip, Inserter, Recorder } from "@speakkit/dictation";
+import { friendlyAppName } from "./app-name";
 import type { DictationOs, InsertResult } from "./index";
 
 /** The `Inserter` port over the OS layer. `onResult` sees how each insert really ended (the OS layer can fall back to copying where the plan said paste). */
@@ -6,10 +7,12 @@ export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) 
   return {
     async target() {
       const fg = os.foreground();
-      return fg ? { id: fg.hwnd, exe: fg.exe ?? "", elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
+      const name = friendlyAppName(fg?.exe);
+      return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
     },
+    focus: (t) => os.focus(t.id),
     async insert({ text, plan }) {
-      const result = await os.insert(text, { mode: plan.method });
+      const result = await os.insert(text, { mode: plan.method === "paste" && plan.keep ? "keep" : plan.method });
       onResult(result);
       if (result.status === "failed") return { ok: false, code: "failed" };
       return result.status === "refused" ? { ok: false, code: "rejected" } : { ok: true };
@@ -41,6 +44,10 @@ export class ReplayRecorder implements Recorder {
     const clip = this.#clip;
     this.#clip = undefined;
     return clip ?? this.#mic.stop();
+  }
+
+  speaking(): boolean {
+    return !this.#clip && !!this.#mic.speaking?.();
   }
 
   async discard(): Promise<void> {

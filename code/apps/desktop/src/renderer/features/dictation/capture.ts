@@ -70,14 +70,6 @@ function join(parts: readonly Float32Array[], length: number): Float32Array {
   return out;
 }
 
-/** Loudness of a block, 0 to 1, for the HUD bars: RMS with a boost, because speech sits low in the range. */
-export function levelOf(block: Float32Array): number {
-  if (!block.length) return 0;
-  let sum = 0;
-  for (const x of block) sum += x * x;
-  return Math.min(1, Math.sqrt(sum / block.length) * 6);
-}
-
 /** getUserMedia failures as the codes dictation reports. */
 export function micCode(error: unknown): "mic-denied" | "mic-missing" | "mic-busy" | "mic-failed" {
   switch ((error as { name?: string } | null)?.name) {

@@ -1,3 +1,4 @@
+import { normalize, rank, type HistoryStats, historyStats } from "./history-search";
 import type { Retention } from "./settings";
 import type { Clock, HistoryStorage } from "./types";
 
@@ -14,24 +15,38 @@ export interface HistoryEntry {
   durationMs: number;
   language?: string;
   model?: string;
-  /** "raw": dictated with clean-up off. "printed": handed to a command and never pasted. Missing for ordinary entries. */
-  kind?: "raw" | "printed";
+  /** Absent for a normal dictation. "raw": dictated with clean-up off. "printed": handed to a command and never pasted. "interrupted": the recording was cut short. */
+  kind?: "raw" | "printed" | "interrupted";
+  /** Name shown for the program, from its file description; the executable name stands in when there is none. */
+  displayName?: string;
+  /** Only when a rewrite ran: its name and, if it failed, why (the plain text was inserted instead). */
+  mode?: { name: string; failure?: string };
+  timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
+  /** What really happened to the text. */
+  outcome?: "sent" | "copied" | "failed";
 }
 
 export type NewEntry = Omit<HistoryEntry, "id">;
 
 export interface HistoryQuery {
-  /** Every word must appear in the text or the program name, in any case. */
+  /** Every word must be found in the text or the program name, in any case and without accents; the best matches come first. */
   search?: string;
+  /** Other spellings for a word of the search (from the person's vocabulary). */
+  aliases?: Readonly<Record<string, readonly string[]>>;
   limit?: number;
 }
 
 export interface History {
-  add(entry: NewEntry): Promise<void>;
+  /** Resolves the new entry's id; undefined when retention is off. */
+  add(entry: NewEntry): Promise<string | undefined>;
+  /** Corrects what is known only after the text was sent (what really happened to it). */
+  update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void>;
   /** Newest first, with expired entries already gone. */
   list(query?: HistoryQuery): Promise<HistoryEntry[]>;
   get(id: string): Promise<HistoryEntry | undefined>;
   remove(id: string): Promise<void>;
+  removeMany(ids: readonly string[]): Promise<void>;
+  stats(): Promise<HistoryStats>;
   clear(): Promise<void>;
   /** Drops what the retention no longer allows. */
   prune(): Promise<void>;
@@ -61,16 +76,19 @@ function freshId(entries: HistoryEntry[], at: number): string {
   return `${at}-${n}`;
 }
 
-function matches(e: HistoryEntry, search: string): boolean {
-  const hay = `${e.text}\n${e.app ?? ""}`.toLowerCase();
-  return (search.toLowerCase().match(/\S+/g) ?? []).every((word) => hay.includes(word));
-}
+// Search runs over a normalized copy of the text and program names, made once per entry and kept off the stored data.
+const keys = new WeakMap<HistoryEntry, string>();
+const keyOf = (e: HistoryEntry): string => {
+  let key = keys.get(e);
+  if (key === undefined) keys.set(e, (key = normalize([e.text, e.displayName ?? "", e.app ?? ""].join("\n"))));
+  return key;
+};
 
 /** What `list` would return for stored data read straight from the file, without the app: the same shape check, retention and search. An unknown retention counts as the default. */
 export function readStoredHistory(stored: unknown, o: { now: number; retention: unknown; search?: string; limit?: number }): HistoryEntry[] {
   const retention = typeof o.retention === "string" && o.retention in WINDOW_MS ? (o.retention as Retention) : "7d";
   const kept = keep(parse(stored), o.now, retention);
-  const found = o.search ? kept.filter((e) => matches(e, o.search!)) : kept;
+  const found = o.search ? kept.filter((e) => rank(keyOf(e), o.search!) > 0) : kept;
   return found.slice(0, o.limit ?? found.length);
 }
 
@@ -121,17 +139,33 @@ class Store implements History {
     await this.save();
   };
 
-  async add(entry: NewEntry): Promise<void> {
+  async add(entry: NewEntry): Promise<string | undefined> {
     await this.prune();
-    if (this.deps.retention() === "off") return;
-    this.entries = [{ ...entry, id: freshId(this.entries, entry.at) }, ...this.entries].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    if (this.deps.retention() === "off") return undefined;
+    const id = freshId(this.entries, entry.at);
+    this.entries = [{ ...entry, id }, ...this.entries].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    await this.save();
+    return id;
+  }
+
+  async update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void> {
+    await this.ready();
+    if (!this.entries.some((e) => e.id === id)) return;
+    this.entries = this.entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
     await this.save();
   }
 
   async list(query: HistoryQuery = {}): Promise<HistoryEntry[]> {
     await this.prune();
     const { search } = query;
-    const found = search ? this.entries.filter((e) => matches(e, search)) : this.entries;
+    const found = search?.trim()
+      ? this.entries
+          .map((e) => ({ e, score: rank(keyOf(e), search, query.aliases) }))
+          .filter((x) => x.score > 0)
+          // Entries are newest first already and the sort is stable, so equal scores stay newest first.
+          .sort((a, b) => b.score - a.score)
+          .map((x) => x.e)
+      : this.entries;
     return found.slice(0, query.limit ?? found.length);
   }
 
@@ -144,6 +178,18 @@ class Store implements History {
     await this.ready();
     this.entries = this.entries.filter((e) => e.id !== id);
     await this.save();
+  }
+
+  async removeMany(ids: readonly string[]): Promise<void> {
+    await this.ready();
+    const drop = new Set(ids);
+    this.entries = this.entries.filter((e) => !drop.has(e.id));
+    await this.save();
+  }
+
+  async stats(): Promise<HistoryStats> {
+    await this.prune();
+    return historyStats(this.entries);
   }
 
   async clear(): Promise<void> {

@@ -31,7 +31,7 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "pasting" }))).toEqual({ kind: "transcribing" });
   });
 
-  it("says Pasted after an insert, unless the system only managed to copy", () => {
+  it("says Sent after an insert, unless the system only managed to copy", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }))).toEqual({ kind: "pasted" });
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: true }))).toEqual({ kind: "copied", reason: "clipboard" });
   });
@@ -56,7 +56,8 @@ describe("errors", () => {
   it.each([
     ["mic-denied", "Microphone access is blocked", "sound-settings"],
     ["mic-missing", "No microphone found", "sound-settings"],
-    ["mic-silent", "The microphone sent no sound", "sound-settings"],
+    ["mic-silent", "Microphone is muted or too quiet", "sound-settings"],
+    ["focus-failed", "Could not return to the app. The text is in History", "copy-last"],
     ["model-missing", "Speech model missing", "download"],
   ])("%s says %s and offers %s", (code, text, action) => {
     expect(errorView(code, false)).toMatchObject({ kind: "error", text, action: { id: action } });
@@ -67,10 +68,13 @@ describe("errors", () => {
     expect(errorView("transcribe-failed", false)).not.toHaveProperty("action");
   });
 
+  it("offers Try again for a failed insertion without needing a kept recording, because the text is in History", () => {
+    expect(errorView("insert-failed", false)).toMatchObject({ text: "Could not insert the text. It is in History", action: { label: "Try again", id: "paste-again" } });
+  });
+
   it("explains the errors that have nothing to press", () => {
     expect(errorView("mic-busy", false)).toMatchObject({ text: "Another app is using the microphone" });
     expect(errorView("password-field", false)).toMatchObject({ icon: "lock", text: "Not typed into a password field" });
-    expect(errorView("insert-failed", false)).toMatchObject({ text: "Could not insert the text" });
     expect(errorView("hotkey-failed", false)).toMatchObject({ text: "The hotkey could not start" });
     expect(errorView("model-loading", false)).toMatchObject({ icon: "download" });
     expect(errorView("model-loading", false)).not.toHaveProperty("action");

@@ -25,37 +25,33 @@ const E = (text: string, icon: Extract<HudView, { kind: "error" }>["icon"], acti
   ...(action && { action }),
 });
 
+type Icon = Extract<HudView, { kind: "error" }>["icon"];
+type Button = NonNullable<Extract<HudView, { kind: "error" }>["action"]>;
+const SOUND: Button = { label: "Sound settings", id: "sound-settings" };
+const TRY_AGAIN: Button = { label: "Try again", id: "retry" };
+
+/** Words, icon and button of each error; a button of "retry" shows only while there is a recording to retry. */
+const ERRORS: Record<string, [text: string, icon: Icon, action?: Button]> = {
+  "mic-denied": ["Microphone access is blocked", "microphone-off", SOUND],
+  "mic-missing": ["No microphone found", "microphone-off", SOUND],
+  "mic-busy": ["Another app is using the microphone", "microphone-off"],
+  "mic-silent": ["Microphone is muted or too quiet", "microphone-off", SOUND],
+  "mic-in-use": ["Another feature is using the microphone", "microphone-off"],
+  "focus-failed": ["Could not return to the app. The text is in History", "alert-triangle", { label: "Copy", id: "copy-last" }],
+  "model-missing": ["Speech model missing", "download", { label: "Download", id: "download" }],
+  "model-loading": ["The speech model is still loading, try again in a moment", "download", TRY_AGAIN],
+  "model-failed": ["The speech model could not be loaded", "alert-triangle", TRY_AGAIN],
+  "transcribe-failed": ["Could not transcribe", "alert-triangle", TRY_AGAIN],
+  "password-field": ["Not typed into a password field", "lock"],
+  "insert-failed": ["Could not insert the text. It is in History", "alert-triangle", { label: "Try again", id: "paste-again" }],
+  "hotkey-failed": ["The hotkey could not start", "alert-triangle"],
+};
+
 /** Words and buttons for each error the core can end in. */
 export function errorView(code: string, canRetry: boolean, owner?: string): HudView {
-  const retry = canRetry ? ({ label: "Try again", id: "retry" } as const) : undefined;
-  switch (code) {
-    case "mic-denied":
-      return E("Microphone access is blocked", "microphone-off", { label: "Sound settings", id: "sound-settings" });
-    case "mic-missing":
-      return E("No microphone found", "microphone-off", { label: "Sound settings", id: "sound-settings" });
-    case "mic-busy":
-      return E("Another app is using the microphone", "microphone-off");
-    case "mic-in-use":
-      return E(`${owner ?? "Another feature"} is using the microphone`, "microphone-off");
-    case "mic-silent":
-      return E("The microphone sent no sound", "microphone-off", { label: "Sound settings", id: "sound-settings" });
-    case "model-missing":
-      return E("Speech model missing", "download", { label: "Download", id: "download" });
-    case "model-loading":
-      return E("The speech model is still loading, try again in a moment", "download", retry);
-    case "model-failed":
-      return E("The speech model could not be loaded", "alert-triangle", retry);
-    case "transcribe-failed":
-      return E("Could not transcribe", "alert-triangle", retry);
-    case "password-field":
-      return E("Not typed into a password field", "lock");
-    case "insert-failed":
-      return E("Could not insert the text", "alert-triangle");
-    case "hotkey-failed":
-      return E("The hotkey could not start", "alert-triangle");
-    default:
-      return E("Dictation stopped working", "alert-triangle");
-  }
+  if (code === "mic-in-use") return E(`${owner ?? "Another feature"} is using the microphone`, "microphone-off");
+  const [text, icon, action] = ERRORS[code] ?? ["Dictation stopped working", "alert-triangle"];
+  return E(text, icon, action?.id === "retry" && !canRetry ? undefined : action);
 }
 
 /** The short message after a dictation ended (or none). */

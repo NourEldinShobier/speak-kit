@@ -10,6 +10,7 @@ export function createUnsupportedPlatform(): DictationPlatform {
       passwordFocused: () => false,
       heldModifiers: () => [],
       pressPaste: () => false,
+      focus: async () => false,
       type: () => false,
       clipboardSequence: () => 0,
       clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),

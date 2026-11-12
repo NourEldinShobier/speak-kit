@@ -13,6 +13,9 @@ const initialState = () => ({
   addTypesOk: true,
   access: "granted" as "granted" | "denied" | "unknown",
   requested: 0,
+  /** Process ids `activate` was asked for; an app listed in `running` comes to the front. */
+  activated: [] as number[],
+  running: new Map<number, Frontmost>(),
 });
 
 export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
@@ -40,6 +43,12 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
     },
     secureInput: () => state.secure,
     frontmost: () => state.front,
+    activate(pid) {
+      state.activated.push(pid);
+      const app = state.running.get(pid);
+      if (app) state.front = app;
+      return !!app;
+    },
     pasteboard: {
       changeCount: () => state.seq,
       types: () => state.types,

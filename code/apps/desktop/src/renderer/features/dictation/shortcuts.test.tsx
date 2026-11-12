@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { DictationStatus } from "../../../shared/dictation/contract";
+import { DEFAULT_DICTATION } from "../../../shared/dictation/settings";
 
 vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitDictation: {} };
@@ -15,6 +16,7 @@ const base: DictationStatus = {
   hotkeyReady: true,
   phase: "idle",
   settings: {
+    ...DEFAULT_DICTATION,
     enabled: true,
     hotkey: "ControlRight",
     mode: "hold",
@@ -39,6 +41,8 @@ const base: DictationStatus = {
   mouseButtons: true,
   platform: "win32",
   readerShortcuts: { "read-selection": "Ctrl+Alt+S" },
+  mic: { kind: "ready", label: "Microphone Array" },
+  devices: [],
 };
 const withSettings = (over: Partial<DictationStatus["settings"]>, rest: Partial<DictationStatus> = {}): DictationStatus => ({ ...base, ...rest, settings: { ...base.settings, ...over } });
 const text = (s: DictationStatus) =>

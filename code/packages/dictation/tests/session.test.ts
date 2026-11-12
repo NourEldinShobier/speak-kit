@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { initialSession, reduce, type Effect, type Session, type SessionEvent } from "../src/session";
 
 type Cfg = Parameters<typeof reduce>[2];
-const hold: Cfg = { hotkey: "H", cancelKey: "Esc", mode: "hold", duck: false };
+const hold: Cfg = { hotkey: "H", cancelKey: "Esc", mode: "hold", duck: false, keepReady: true };
 const toggle: Cfg = { ...hold, mode: "toggle" };
 
 function label(e: Effect): string {

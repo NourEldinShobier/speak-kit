@@ -60,6 +60,12 @@ function stopForRestart(reading: ReturnType<typeof createReading>, exports: Retu
   exports.dispose();
 }
 
+/** The dictation IPC, and the permissions the hotkey needs. */
+function wireDictation(parent: DesktopOptions["parent"], dictation: DictationService): void {
+  registerDictationIpc(dictation, (c) => parent()?.webContents === c);
+  watchPermissions(parent, dictation);
+}
+
 /** Permissions the dictation hotkey needs; the hotkey is retried when they get allowed. */
 function watchPermissions(parent: DesktopOptions["parent"], dictation: DictationService): void {
   const permissions = setupPermissions(
@@ -87,8 +93,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
-  registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  watchPermissions(o.parent, dictation);
+  wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
@@ -110,6 +115,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       control.onConfigPatch(patch);
     },
     onEngineState: engineAnnouncer(ctx, toasts),
+    onWindowHidden: () => void dictation.mic.setMeter(false), // hidden or minimized: the level meter lets go of the microphone at once
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */

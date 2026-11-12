@@ -1,7 +1,9 @@
+import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
+import { copyEntry, insertEntry } from "./history-actions";
 import type { Target } from "./paste-plan";
 import { failureOf, foreground, pasteLast, runJob, type Job, type Outcome } from "./pipeline";
-import { initialSession, MAX_RECORDING_MS, reduce, TAIL_MS, type Effect, type Session, type SessionEvent } from "./session";
+import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
 import type { CaptureHandle, CaptureResult, Clip, Dictation, DictationDeps, DictationErrorCode, DictationState, Notice, Unsubscribe } from "./types";
 
@@ -9,6 +11,11 @@ const ERROR_MS = 4000;
 const NOTICE_MS = 1200;
 /** A cancelled recording can be brought back for this long. */
 const UNDO_MS = 60_000;
+/** How long the "Cancelled" notice with its Undo button stays on screen. */
+const UNDO_NOTICE_MS = 10_000;
+const TAIL_POLL_MS = 50;
+
+const flashMs = (notice: Notice): number => (notice.kind === "cancelled" && notice.undoable ? UNDO_NOTICE_MS : NOTICE_MS);
 
 type Flash = { error: DictationErrorCode; owner?: string } | { notice: Notice };
 
@@ -53,8 +60,11 @@ class Runtime implements Dictation {
     this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention });
     this.history = {
       list: (query) => this.store.list(query),
-      copy: (id) => this.copy(id),
+      copy: (id) => copyEntry({ store: this.store, deps: this.deps }, id),
+      insert: (id) => (this.disposed ? Promise.resolve(false) : insertEntry({ store: this.store, deps: this.deps, settings: this.settings }, id)),
       remove: (id) => this.store.remove(id),
+      removeMany: (ids) => this.store.removeMany(ids),
+      stats: () => this.store.stats(),
       clear: () => this.store.clear(),
     };
     this.lastState = JSON.stringify(this.state());
@@ -173,6 +183,8 @@ class Runtime implements Dictation {
   private startRecording(id: number, prerollMs: number): void {
     this.flashed = undefined;
     this.cancelFlash?.();
+    this.dropCancelled?.();
+    this.cancelledClip = undefined;
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
@@ -260,7 +272,7 @@ class Runtime implements Dictation {
     this.pending++;
     const clip: Promise<Clip | undefined> = this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return undefined;
-      await new Promise<void>((resolve) => this.deps.clock.after(TAIL_MS, resolve));
+      await this.tail();
       return this.deps.recorder.stop();
     });
     const owned = this.captures.has(id);
@@ -272,6 +284,14 @@ class Runtime implements Dictation {
     };
     this.targets.delete(id);
     this.jobQueue = this.jobQueue.then(() => this.process(job));
+  }
+
+  /** Waits the minimum tail, then a little longer (up to the cap) while the person is still speaking. */
+  private async tail(): Promise<void> {
+    const from = this.deps.clock.now();
+    const wait = (ms: number) => new Promise<void>((resolve) => this.deps.clock.after(ms, resolve));
+    await wait(TAIL_MIN_MS);
+    while (!tailDone(this.deps.clock.now() - from, this.deps.recorder.speaking?.())) await wait(TAIL_POLL_MS);
   }
 
   private async process(job: Job): Promise<void> {
@@ -298,7 +318,8 @@ class Runtime implements Dictation {
   private flash(what: Flash): void {
     this.cancelFlash?.();
     this.flashed = what;
-    this.cancelFlash = this.deps.clock.after("error" in what ? ERROR_MS : NOTICE_MS, () => {
+    const ms = "error" in what ? ERROR_MS : flashMs(what.notice);
+    this.cancelFlash = this.deps.clock.after(ms, () => {
       this.flashed = undefined;
       this.emit();
     });
@@ -311,17 +332,6 @@ class Runtime implements Dictation {
     if (text === this.lastState) return;
     this.lastState = text;
     for (const listener of this.listeners) listener(state);
-  }
-
-  private async copy(id: string): Promise<boolean> {
-    const entry = await this.store.get(id);
-    if (!entry) return false;
-    const req = { text: entry.text, plan: { method: "copy", reason: "manual" } } as const;
-    try {
-      return (await this.deps.inserter.insert(req)).ok;
-    } catch {
-      return false; // the clipboard could not be written
-    }
   }
 }
 

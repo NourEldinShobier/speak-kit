@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ModelView } from "../../../shared/dictation/contract";
-import { appName, dayLabel, downloadText, emptyHint, entriesText, entryLabel, etaText, focusAfterDelete, groupByDay, historyFooter, historyLead, hotkeyHelp, mb, modelLine, timeText } from "./model";
+import {
+  appName,
+  dayLabel,
+  downloadText,
+  emptyHint,
+  entriesText,
+  entryLabel,
+  etaText,
+  focusAfterDelete,
+  groupByDay,
+  historyFooter,
+  historyLead,
+  hotkeyHelp,
+  listenText,
+  mb,
+  modelLine,
+  rowApp,
+  rowTags,
+  statsRows,
+  timeText,
+  toggled,
+} from "./model";
 
 const model = (over: Partial<ModelView> = {}): ModelView => ({
   id: "large-v3-turbo-q5_0",
@@ -110,5 +131,47 @@ describe("history focus and names", () => {
     expect(entryLabel("  Send   the\nreport  ")).toBe("Send the report");
     expect(entryLabel("a".repeat(40))).toBe("a".repeat(40));
     expect(entryLabel("a".repeat(41))).toBe(`${"a".repeat(39)}…`);
+  });
+});
+
+describe("history rows and statistics", () => {
+  it("shows the file description of the program, else the executable name made readable", () => {
+    expect(rowApp({ app: "notepad.exe", appName: "Notepad++" })).toBe("Notepad++");
+    expect(rowApp({ app: "notepad.exe" })).toBe("Notepad");
+    expect(rowApp({})).toBe("");
+  });
+
+  it("tags an entry that did not go the usual way", () => {
+    expect(rowTags({})).toEqual([]);
+    expect(rowTags({ outcome: "sent" })).toEqual([]);
+    expect(rowTags({ kind: "interrupted", outcome: "copied" })).toEqual(["Cut short", "Copied only"]);
+    expect(rowTags({ kind: "raw", outcome: "failed" })).toEqual(["Not inserted"]);
+  });
+
+  it("writes the time spoken in seconds, minutes or hours", () => {
+    expect(listenText(45_000)).toBe("45 s");
+    expect(listenText(12 * 60_000)).toBe("12 min");
+    expect(listenText(125 * 60_000)).toBe("2 h 5 min");
+    expect(listenText(120 * 60_000)).toBe("2 h");
+    expect(listenText(0)).toBe("0 s");
+  });
+
+  it("lists the statistics rows with thousands separators", () => {
+    expect(statsRows({ dictations: 1200, words: 34_500, listeningMs: 90_000, topApps: [], outcomes: { pasted: 1000, copied: 150, failed: 50 } })).toEqual([
+      { label: "Dictations", value: "1,200" },
+      { label: "Words", value: "34,500" },
+      { label: "Time spoken", value: "2 min" },
+      { label: "Pasted", value: "1,000" },
+      { label: "Copied only", value: "150" },
+      { label: "Not inserted", value: "50" },
+    ]);
+  });
+
+  it("ticks and unticks entries without changing the set it was given", () => {
+    const one = new Set(["a"]);
+    expect([...toggled(one, "b")]).toEqual(["a", "b"]);
+    expect([...toggled(one, "a")]).toEqual([]);
+    expect([...one]).toEqual(["a"]);
+    expect([...toggled(null, "x")]).toEqual(["x"]);
   });
 });

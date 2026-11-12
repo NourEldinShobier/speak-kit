@@ -1,3 +1,4 @@
+import type { HistoryStats } from "@speakkit/dictation";
 import type { HistoryItem, ModelView } from "../../../shared/dictation/contract";
 import type { DictationConfig } from "../../../shared/dictation/settings";
 
@@ -105,3 +106,44 @@ export const entryLabel = (text: string, max = 40): string => {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}\u2026` : flat;
 };
+
+/** The program name shown for an entry: its file description when it has one, else the executable name made readable. */
+export const rowApp = (item: Pick<HistoryItem, "app" | "appName">): string => item.appName || appName(item.app);
+
+/** Short notes on an entry that did not go the usual way. */
+export function rowTags(item: Pick<HistoryItem, "kind" | "outcome">): string[] {
+  const tags: string[] = [];
+  if (item.kind === "interrupted") tags.push("Cut short");
+  if (item.outcome === "copied") tags.push("Copied only");
+  if (item.outcome === "failed") tags.push("Not inserted");
+  return tags;
+}
+
+/** "45 s", "12 min" or "2 h 5 min". */
+export function listenText(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+}
+
+/** The rows of the statistics dialog, label and value. */
+export function statsRows(stats: HistoryStats): { label: string; value: string }[] {
+  const n = (x: number) => x.toLocaleString("en-US");
+  return [
+    { label: "Dictations", value: n(stats.dictations) },
+    { label: "Words", value: n(stats.words) },
+    { label: "Time spoken", value: listenText(stats.listeningMs) },
+    { label: "Pasted", value: n(stats.outcomes.pasted) },
+    { label: "Copied only", value: n(stats.outcomes.copied) },
+    { label: "Not inserted", value: n(stats.outcomes.failed) },
+  ];
+}
+
+/** The selection with `id` ticked or unticked; `null` (selection off) becomes a selection of just that entry. */
+export function toggled(picked: ReadonlySet<string> | null, id: string): Set<string> {
+  const next = new Set(picked);
+  if (!next.delete(id)) next.add(id);
+  return next;
+}

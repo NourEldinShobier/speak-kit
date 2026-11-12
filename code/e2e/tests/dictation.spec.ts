@@ -85,6 +85,41 @@ function dictationSpec() {
       expect((await rig.hook("calls")).length).toBe(before);
     });
 
+    test("paste and keep leaves the dictated text on the clipboard", async () => {
+      await rig.bridge("patchSettings", { output: "keep" });
+      try {
+        await rig.setClipboard("my own clipboard");
+        await rig.tap(700);
+        await until(async () => (await rig.typed()) === "Hello there ", "the pasted text");
+        await sleep(1200);
+        expect(await rig.clipboard()).toBe("Hello there ");
+      } finally {
+        await rig.bridge("patchSettings", { output: "restore" });
+      }
+    });
+
+    test("copy only puts the text on the clipboard and sends no keys", async () => {
+      await rig.bridge("patchSettings", { output: "copy" });
+      try {
+        await rig.tap(700);
+        await until(async () => (await rig.clipboard()) === "Hello there ", "the copied text");
+        expect(await rig.typed()).toBe("");
+      } finally {
+        await rig.bridge("patchSettings", { output: "restore" });
+      }
+    });
+
+    test("the Audio and Output settings are saved and the microphone list comes back", async () => {
+      const status = await rig.bridge("patchSettings", { keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+      try {
+        expect(status.settings).toMatchObject({ keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+        await rig.bridge("micDevices");
+        await until(async () => (await rig.bridge("status")).devices.length > 0, "the microphone list", 8000);
+      } finally {
+        await rig.bridge("patchSettings", { keepReady: false, keepReadyMinutes: 0, avoidBluetooth: true, appRules: {} });
+      }
+    });
+
     test("a short tap is discarded: nothing is transcribed or pasted", async () => {
       const before = (await rig.hook("calls")).length;
       await rig.tap(80);
@@ -168,13 +203,86 @@ function dictationSpec() {
     });
   });
 
+  test.describe("dictation page, audio cards @slow", () => {
+    const windows = (rig: DictationRig) => rig.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.webContents.getURL().split("/").pop()));
+
+    test("with dictation off the page opens no microphone window; turned on, the cards show Automatic at 36 px and the meter follows the window", async () => {
+      const rig = await startRig({ dictation: { enabled: false } });
+      try {
+        await rig.page.getByRole("link", { name: "Dictation", exact: true }).click();
+        await rig.page.getByRole("heading", { name: "Microphone", exact: true }).waitFor();
+        await sleep(600);
+        expect(await windows(rig)).not.toContain("recorder.html");
+        expect(await rig.hook("meterOn")).toBe(false);
+
+        await rig.page.getByRole("switch", { name: "Dictation" }).click();
+        await until(() => rig.hook("meterOn"), "the level meter", 8000);
+        const picker = rig.page.getByRole("combobox", { name: "Microphone", exact: true });
+        await expect(picker).toHaveText(/Automatic/);
+        const heights = await rig.page.evaluate(() => {
+          const h = (s: string) => Math.round(document.querySelector(s)!.getBoundingClientRect().height);
+          const field = document.querySelector('input[aria-label="Program name"]')!.closest(".lm-input")!;
+          return { field: Math.round(field.getBoundingClientRect().height), add: h("form.dict-rule--add button") };
+        });
+        expect(heights).toEqual({ field: 36, add: 36 });
+
+        await rig.app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()
+            .find((w) => w.webContents.getURL().includes("index.html"))
+            ?.hide(),
+        );
+        await until(async () => !(await rig.hook("meterOn")), "the meter to let go of a hidden window", 8000);
+      } finally {
+        await rig.close();
+      }
+    });
+  });
+
+  test.describe("dictation history page @slow", () => {
+    const entry = (n: number, extra: object = {}) => ({
+      id: `${Date.now() - n}-0`,
+      at: Date.now() - n * 1000,
+      text: `Entry number ${n}`,
+      raw: `entry ${n}`,
+      app: "notepad.exe",
+      durationMs: 2000,
+      ...extra,
+    });
+
+    test("rows show details, several can be selected and deleted at once, and the statistics add up", async () => {
+      const history = JSON.stringify([entry(1, { outcome: "sent" }), entry(2, { outcome: "copied", kind: "interrupted" }), entry(3, { outcome: "failed", displayName: "Notes" }), entry(4)]);
+      const rig = await startRig({ files: { "dictation-history.json": history } });
+      try {
+        await rig.page.getByRole("link", { name: "History", exact: true }).click();
+        await expect(rig.page.getByTestId("history-row")).toHaveCount(4);
+        await expect(rig.page.getByText("Copied only", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Cut short", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Not inserted", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Notes", { exact: true })).toBeVisible();
+
+        await rig.page.getByRole("button", { name: "Statistics" }).click();
+        await expect(rig.page.getByRole("dialog", { name: "Dictation statistics" })).toContainText("Dictations4");
+        await rig.page.getByRole("button", { name: "Close" }).click();
+
+        await rig.page.getByRole("button", { name: "Select", exact: true }).click();
+        await rig.page.getByRole("checkbox", { name: "Select: Entry number 1" }).check({ force: true });
+        await rig.page.getByRole("checkbox", { name: "Select: Entry number 2" }).check({ force: true });
+        await rig.page.getByRole("button", { name: "Delete selected (2)" }).click();
+        await rig.page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+        await expect(rig.page.getByTestId("history-row")).toHaveCount(2);
+        expect((await rig.bridge("historyList")).map((i) => i.text).sort()).toEqual(["Entry number 3", "Entry number 4"]);
+      } finally {
+        await rig.close();
+      }
+    });
+  });
+
   test.describe("dictation, first run @slow", () => {
     test("turning dictation on without a model shows the download card, then the settings once it is ready", async () => {
       const rig = await startRig({ dictation: { enabled: false } });
       try {
         await rig.hook("setInstalled", "large-v3-turbo-q5_0", false);
-        await rig.page.getByRole("link", { name: "Settings" }).click();
-        await rig.page.getByRole("link", { name: "Dictation" }).click();
+        await rig.page.getByRole("link", { name: "Dictation", exact: true }).click();
         await rig.page.getByRole("switch", { name: "Dictation" }).click();
         await rig.page.getByText("Set up dictation").waitFor();
         await expect(rig.page.getByText("Step 1 of 2")).toBeVisible();

@@ -31,6 +31,21 @@ export function chunks(text: string): number[][] {
   return out;
 }
 
+/** How long to wait for an app to come to the front, and how often to look. */
+const FOCUS_WAIT_MS = 500;
+const FOCUS_POLL_MS = 25;
+
+/** Brings the app with this process id to the front and waits up to half a second for the system to agree. */
+async function focusApp(native: MacNative, pid: number): Promise<boolean> {
+  if (native.frontmost()?.pid === pid) return true;
+  if (!native.activate(pid)) return false;
+  for (let waited = 0; waited <= FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
+    if (native.frontmost()?.pid === pid) return true;
+    await new Promise((r) => setTimeout(r, FOCUS_POLL_MS));
+  }
+  return false;
+}
+
 export function createMacInput(native: MacNative): InputPort {
   const press = (code: number, flags: number) => native.postKey(code, true, flags) && native.postKey(code, false, flags);
   return {
@@ -51,12 +66,14 @@ export function createMacInput(native: MacNative): InputPort {
       ];
       return held.filter(([, bit]) => (flags & bit) !== 0).map(([name]) => name);
     },
-    pressPaste(withShift) {
-      const flags = FLAG_COMMAND | (withShift ? FLAG_SHIFT : 0);
+    // Command stands in for Ctrl; Shift+Insert has no Mac key, so it is the plain paste.
+    pressPaste(key) {
+      const flags = FLAG_COMMAND | (key === "ctrl-shift-v" ? FLAG_SHIFT : 0);
       if (press(MAC_KEY_V, flags)) return true;
       native.postKey(MAC_KEY_V, false, flags); // never leave the key down
       return false;
     },
+    focus: (hwnd) => focusApp(native, Number(hwnd)),
     type(text) {
       const lines = text.replaceAll("\r\n", "\n").split("\n");
       for (const [i, line] of lines.entries()) {

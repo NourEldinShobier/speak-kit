@@ -53,7 +53,7 @@ describe("HUD pill", () => {
 
   it("covers the short states", () => {
     expect(text({ kind: "transcribing" })).toBe("Transcribing");
-    expect(text({ kind: "pasted" })).toBe("Pasted");
+    expect(text({ kind: "pasted" })).toBe("Sent");
     expect(text({ kind: "notice", text: "Cancelled" })).toBe("Cancelled");
     expect(text({ kind: "copied", reason: "clipboard" })).toBe("Copied Press Ctrl V to paste");
     expect(text({ kind: "copied", reason: "secure-input" })).toBe("Copied, a password field or Secure Keyboard Entry is on Press Ctrl V to paste");

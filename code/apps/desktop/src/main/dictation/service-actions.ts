@@ -21,6 +21,10 @@ interface Host {
   /** Brings the app window to the Dictation page and starts the model download. */
   download(): void;
   undoCancel(): Promise<boolean>;
+  /** Puts the newest dictation on the clipboard. */
+  copyLast(): Promise<void>;
+  /** Inserts the newest dictation again into the window in front. */
+  pasteAgain(): Promise<void>;
 }
 
 /** The buttons of the HUD and the Settings page that act on the last dictation: Try again, Sound settings, Download, Undo. */
@@ -47,6 +51,8 @@ export function createActions(h: Host) {
     else if (a === "sound-settings") void openSoundSettings();
     else if (a === "undo-cancel") void h.undoCancel();
     else if (a === "cancel-recording") h.core()?.cancel();
+    else if (a === "copy-last") void h.copyLast();
+    else if (a === "paste-again") void h.pasteAgain();
   };
   return { retry, openSoundSettings, hudAction };
 }

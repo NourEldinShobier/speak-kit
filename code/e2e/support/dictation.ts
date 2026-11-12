@@ -52,6 +52,8 @@ export function writeToneWav(file: string, seconds = 20): void {
 
 export interface Hook {
   hotkeyActive(): boolean;
+  /** Whether the level meter is holding the microphone open. */
+  meterOn(): boolean;
   hud(): HudView | null;
   state(): { status: string };
   status(): DictationStatus;

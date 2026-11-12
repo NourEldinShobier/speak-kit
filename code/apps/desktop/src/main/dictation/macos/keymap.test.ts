@@ -18,7 +18,7 @@ describe("mac key codes", () => {
 
   it("round-trips every key a hotkey can name that a Mac keyboard has", () => {
     for (const [code, vk] of Object.entries(KEY_VK)) {
-      if (["Pause", "ScrollLock"].includes(code) || (/^F\d+$/.test(code) && Number(code.slice(1)) > 20)) continue;
+      if (["Pause", "ScrollLock"].includes(code) || /^Mouse\d$/.test(code) || (/^F\d+$/.test(code) && Number(code.slice(1)) > 20)) continue;
       expect(macKeyOfVk(vk), code).toBeDefined();
       expect(vkOfMacKey(macKeyOfVk(vk)!), code).toBe(vk);
     }

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
+import { DEFAULT_DICTATION } from "../../../shared/dictation/settings";
 
 vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitDictation: {} };
@@ -42,23 +43,7 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: {
-    enabled: true,
-    hotkey: "ControlLeft+AltLeft+Space",
-    mode: "hold",
-    holdMs: 300,
-    secondHotkey: "",
-    mouseButton: "",
-    rawHotkey: "",
-    pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
-    cancelKey: "Escape",
-    shareHotkey: false,
-    pauseRules: { mode: "off", apps: [], fullscreen: false },
-    language: "en",
-    model: "large-v3-turbo-q5_0",
-    retention: "7d",
-    replacements: [{ from: "gonna", to: "going to" }],
-  },
+  settings: { ...DEFAULT_DICTATION, enabled: true, hotkey: "ControlLeft+AltLeft+Space", language: "en", replacements: [{ from: "gonna", to: "going to" }] },
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,
@@ -67,6 +52,8 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   mouseButtons: true,
   platform: "win32",
   readerShortcuts: {},
+  mic: { kind: "ready", label: "Microphone Array" },
+  devices: [],
   ...over,
 });
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));
@@ -112,6 +99,8 @@ describe("Settings > Dictation", () => {
       "Dictate without processing",
       "Paste last dictation",
       "Restore default",
+      "Skipped microphones",
+      "Nothing is skipped by name.",
       "Speech model",
       "Whisper Large v3 Turbo",
       "Replacements",
@@ -225,6 +214,8 @@ describe("history page", () => {
     expect(t).toContain("What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
     expect(t).toContain("Clear all");
+    expect(t).toContain("Statistics");
+    expect(t).toContain("Select");
   });
 });
 
@@ -246,6 +237,31 @@ describe("history rows", () => {
     expect(html).toContain("data-copied");
     expect(row(false)).toContain('<span class="dict-hist__sr" role="status"></span>');
     expect(row(false)).not.toContain("data-copied");
+  });
+});
+
+describe("history rows, details and selection", () => {
+  const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report" };
+  const html = (item: object, selection?: { checked: boolean; toggle: () => void }) =>
+    renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
+
+  it("shows the program's own name and a note for an interrupted entry that was only copied", () => {
+    const h = html({ app: "code.exe", appName: "Visual Studio Code", kind: "interrupted", outcome: "copied" });
+    expect(h).toContain("Visual Studio Code");
+    expect(h).toContain(">Cut short<");
+    expect(h).toContain(">Copied only<");
+  });
+
+  it("says when the text could not be inserted, and tags nothing for a normal entry", () => {
+    expect(html({ outcome: "failed" })).toContain(">Not inserted<");
+    expect(html({ outcome: "sent" })).not.toContain("dict-hist__tag");
+  });
+
+  it("has a named checkbox only in selection mode", () => {
+    expect(html({})).not.toContain('type="checkbox"');
+    const h = html({}, { checked: true, toggle: () => undefined });
+    expect(h).toContain('aria-label="Select: Send the report"');
+    expect(h).toContain("checked");
   });
 });
 
