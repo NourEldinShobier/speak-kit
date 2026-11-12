@@ -61,15 +61,18 @@ export class History {
   }
 
   async #finish(entry: JournalEntry) {
-    const plan = pickKeyframes(await this.bundle.frames(entry.id), []);
+    const frames = await this.bundle.frames(entry.id);
+    const plan = pickKeyframes(frames, []);
+    const hasVideo = !!(await this.bundle.readFile(entry.id, "video.webm"))?.length;
     await this.store.add({
       id: entry.id,
       kind: "recording",
       title: "Recovered capture",
       at: entry.startedAt,
       dir: entry.id,
+      ...(frames.length && { durationMs: frames[frames.length - 1]!.atMs }),
       bytes: await this.bundle.bytes(entry.id),
-      media: entry.media ?? "",
+      media: entry.media ?? (hasVideo ? "video.webm" : (frames[0]?.file ?? "")),
       frames: plan.frames.map((f) => f.file),
       chips: ["saved"],
     });

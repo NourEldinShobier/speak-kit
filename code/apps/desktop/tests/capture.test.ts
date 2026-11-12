@@ -144,17 +144,50 @@ describe("recovery after a crash", () => {
     for (const [id, stage, media] of [
       ["cdone", "media-saved", "video.webm"],
       ["cempty", "recording", undefined],
+      ["ccut", "recording", undefined],
     ] as const) {
       mkdirSync(path.join(root, id, "frames"), { recursive: true });
       writeFileSync(path.join(root, id, "journal.json"), JSON.stringify({ id, stage, startedAt: Date.now() - 5000, ...(media && { media }) }));
       if (media) writeFileSync(path.join(root, id, media), "x");
     }
+    // cut off while recording, after pictures were streamed to disk: kept
+    writeFileSync(path.join(root, "ccut", "frames", "f-00000000.jpg"), "x");
     const l = await start({ config: ON, userData });
     await open(l);
     await l.page.getByText("Captures recovered after Speak Kit closed unexpectedly").waitFor();
-    await l.page.getByText("Recovered capture").waitFor();
+    await l.page.getByText("Recovered capture").first().waitFor();
+    expect((await hook<{ items: unknown[] }>(l, "state")).items).toHaveLength(2);
+    expect(existsSync(path.join(root, "ccut", "frames", "f-00000000.jpg"))).toBe(true);
     expect(existsSync(path.join(root, "cempty"))).toBe(false);
     expect(existsSync(path.join(root, "cdone", "video.webm"))).toBe(true);
+  });
+});
+
+describe("folder and quit", () => {
+  it("saves new captures in the folder chosen in Settings", async () => {
+    const folder = mkdtempSync(path.join(tmpdir(), "speakkit-capture-folder-"));
+    dirs.push(folder);
+    const l = await start({ config: ON });
+    await open(l);
+    await hook(l, "settings", { folder });
+    await record(l);
+    const [item] = (await hook<{ items: { id: string; dir: string }[] }>(l, "state")).items;
+    expect(item).toBeDefined();
+    expect(existsSync(path.join(folder, "index.json"))).toBe(true);
+    expect(existsSync(path.join(folder, item!.dir, "journal.json"))).toBe(true);
+    expect(JSON.parse(readFileSync(path.join(folder, item!.dir, "journal.json"), "utf8")).stage).toBe("complete");
+    expect(existsSync(path.join(l.userData, "captures", item!.dir))).toBe(false);
+  });
+
+  it("quitting while recording saves the capture", async () => {
+    const l = await start({ config: ON });
+    await open(l);
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await hook(l, "quit");
+    const state = await hook<{ session: { phase: string }; items: unknown[] }>(l, "state");
+    expect(state.session.phase).toBe("idle");
+    expect(state.items).toHaveLength(1);
   });
 });
 

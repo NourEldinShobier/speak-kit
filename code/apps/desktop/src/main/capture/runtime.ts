@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, nativeImage, shell, type WebContents } from "electron";
+import { app, ipcMain, nativeImage, shell, type WebContents } from "electron";
 import { randomBytes } from "node:crypto";
 import * as v from "valibot";
 import { CAPSULE_ACTION, CAPSULE_HOVER } from "../../shared/capture/channels";
@@ -6,8 +6,11 @@ import { CapsuleActionSchema, type CapsuleAction, type CapturePhase, type CopyWh
 import { noticeFor, noticeOfError, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
+import { writeStreamed } from "./bundle";
+import { capsuleHandlers } from "./capsule-actions";
 import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
+import { NoticeBoard } from "./notice-board";
 import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
 import type { History } from "./history";
@@ -18,8 +21,11 @@ import { createRecorderHost, type RecorderHost } from "./recorder-host";
 import { createSessionPorts, type Narrator } from "./recording";
 import { takeScreenshot } from "./screenshot";
 import { createSession, type Session, type Target } from "./session";
+import { externalFor } from "./notice-target";
+import { displayOfTarget, lostDisplay, titleOfTarget } from "./target-display";
+import { createWriteGuard, type WriteGuard } from "./write-guard";
 import type { CaptureRecord } from "./store";
-import { capturePage, isProtected, openCapsuleWindow, openOverlayWindow, openRecorderWindow } from "./windows";
+import { capturePage, hideOwnWindows, openCapsuleWindow, openOverlayWindow, openRecorderWindow } from "./windows";
 
 export interface RuntimeDeps {
   ctx: Ctx;
@@ -37,7 +43,7 @@ export interface RuntimeDeps {
 
 const now = () => Date.now();
 const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
-const NOTICE_MS = 8000;
+const QUIT_WAIT_MS = 30_000;
 
 /** What happens while a capture is on: the session and its recorder window, the picker, the capsule and ink layer, notices and the screenshot. */
 export class CaptureRuntime {
@@ -46,15 +52,17 @@ export class CaptureRuntime {
   #session: Session;
   #host: RecorderHost | undefined;
   #picker: PickerFlow | undefined;
-  #notice: Notice | undefined;
-  #noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  readonly #board: NoticeBoard;
   #title = "Screen";
   #bounds: Electron.Rectangle | undefined;
   #last: CaptureRecord | undefined;
   #off: (() => void)[] = [];
+  readonly #writes: WriteGuard;
 
   constructor(deps: RuntimeDeps) {
     this.#d = deps;
+    this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
+    this.#writes = createWriteGuard({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }) });
     this.#session = this.#makeSession();
     this.controller = this.#makeController();
     const onAction = (e: Electron.IpcMainEvent, a: unknown) => this.#fromCapsule(e.sender, a);
@@ -62,6 +70,7 @@ export class CaptureRuntime {
     ipcMain.on(CAPSULE_ACTION, onAction);
     ipcMain.on(CAPSULE_HOVER, onHover);
     this.#off.push(
+      deps.platform.onDisplaysChanged(() => this.#displaysChanged()),
       () => ipcMain.off(CAPSULE_ACTION, onAction),
       () => ipcMain.off(CAPSULE_HOVER, onHover),
     );
@@ -76,7 +85,7 @@ export class CaptureRuntime {
   }
 
   get notice(): Notice | undefined {
-    return this.#notice;
+    return this.#board.current;
   }
 
   get state() {
@@ -106,12 +115,19 @@ export class CaptureRuntime {
         get host() {
           return host();
         },
-        bundle: d.history.bundle,
-        store: d.history.store,
-        journal: d.history.journal,
+        // Read when used: the folder can change and the history then holds new files.
+        get bundle() {
+          return d.history.bundle;
+        },
+        get store() {
+          return d.history.store;
+        },
+        get journal() {
+          return d.history.journal;
+        },
         narrator: d.narrator,
         settings: () => this.#settings,
-        hideOwnWindows: (on) => this.#hideOwn(on),
+        hideOwnWindows: hideOwnWindows,
         delivery: { copy: (text, sheet) => void writeCapture(text, sheet && nativeImage.createFromBuffer(sheet)), saved: (r) => this.#saved(r) },
         now,
         newId,
@@ -133,10 +149,7 @@ export class CaptureRuntime {
     host.onData((data) => {
       const id = this.#session.state.id;
       if (!id) return;
-      const b = this.#d.history.bundle;
-      if (data.kind === "frame") void b.frame(id, data.atMs, data.jpeg);
-      else if (data.kind === "video") void b.video(id, data.segment, data.chunk);
-      else void b.audio(id, data.chunk);
+      this.#writes.watch(writeStreamed(this.#d.history.bundle, id, data));
     });
     return host;
   }
@@ -186,20 +199,31 @@ export class CaptureRuntime {
     this.#d.ctx.saveConfig();
   }
 
-  #titleOf(t: Target): string {
-    if (t.kind === "window") return t.title;
-    const d = this.#d.platform.displays().find((x) => x.id === t.displayId);
-    return t.kind === "area" ? `${d?.name ?? "Screen"} · Area` : (d?.name ?? "Screen");
-  }
-
   #sessionChanged() {
     const t = this.#session.state.target;
     if (t) {
-      this.#title = this.#titleOf(t);
-      this.#bounds = t.kind === "window" ? undefined : this.#d.platform.displays().find((d) => d.id === t.displayId)?.bounds;
+      this.#title = titleOfTarget(t, this.#d.platform.displays());
+      this.#bounds = undefined;
+      void this.#placeOnTarget(t);
     }
     this.controller.update();
     this.#d.publish();
+  }
+
+  /** The capsule and the ink layer go to the display that is recorded; for a window that is the display it is on. */
+  async #placeOnTarget(t: Target) {
+    const windows = t.kind === "window" ? await this.#d.platform.windows().catch(() => []) : [];
+    if (this.#session.state.target !== t) return;
+    this.#bounds = displayOfTarget(t, this.#d.platform.displays(), windows)?.bounds;
+    this.controller.relocate();
+  }
+
+  /** A screen that is being recorded was unplugged: the capture so far is saved. */
+  #displaysChanged() {
+    const { phase, target } = this.#session.state;
+    if (phase !== "recording" || !target || !lostDisplay(target, this.#d.platform.displays())) return;
+    this.notify(noticeFor("display-lost"));
+    this.#session.stop();
   }
 
   async start(): Promise<void> {
@@ -213,7 +237,8 @@ export class CaptureRuntime {
     }
     if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
     this.controller.reset();
-    this.#notice = undefined;
+    this.#writes.reset();
+    this.#board.clear();
     const d = displayAt(p.cursor(), p.displays()) ?? p.displays()[0];
     await this.#session.start(s.target === "screen" && d ? { kind: "screen", displayId: d.id } : undefined);
   }
@@ -237,7 +262,7 @@ export class CaptureRuntime {
     try {
       const target = await this.#pick(new AbortController().signal);
       if (!target) return;
-      const shot = await takeScreenshot({ platform: p, bundle: history.bundle, store: history.store, title: (t) => this.#titleOf(t), now }, target);
+      const shot = await takeScreenshot({ platform: p, bundle: history.bundle, store: history.store, title: (t) => titleOfTarget(t, p.displays()), now }, target);
       if (!shot.ok) return this.notify(noticeFor("nothing-recorded"));
       await writeCapture("", shot.image);
       this.#last = shot.record;
@@ -256,37 +281,17 @@ export class CaptureRuntime {
     this.#d.refresh();
   }
 
-  #hideOwn(on: boolean) {
-    for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.setContentProtection(on || isProtected(w));
-  }
-
   // The capsule -----------------------------------------------------------------------------------------------------------------------------
 
   #capsuleHandlers(): Record<CapsuleAction, () => void> {
-    const c = this.controller;
-    const nothing = () => undefined;
-    return {
-      pen: () => {
-        c.pen = !c.pen;
-        if (c.pen) c.showInk();
-        else c.hideInk();
-      },
+    return capsuleHandlers({
+      controller: this.controller,
       stop: () => this.#session.stop(),
-      discard: () => (c.confirmDiscard = true),
-      "discard-keep": () => (c.confirmDiscard = false),
-      "discard-confirm": () => this.discard(),
+      discard: () => this.discard(),
       open: () => this.#openLast(),
       retry: () => void this.start(),
-      dismiss: () => c.after(undefined),
-      "copy-again": () => void this.#copyLast("picture"),
-      "copy-path": () => void this.#copyLast("path"),
-      // Sending to the voice chat is not part of capture yet.
-      send: nothing,
-      hold: nothing,
-      undo: nothing,
-      "send-now": nothing,
-      switch: nothing,
-    };
+      copyLast: (what) => void this.#copyLast(what),
+    });
   }
 
   #fromCapsule(sender: WebContents, action: unknown) {
@@ -308,35 +313,35 @@ export class CaptureRuntime {
 
   // Notices ---------------------------------------------------------------------------------------------------------------------------------
 
-  /** A failure or a note: it goes to the capsule (errors and warnings) and to the Capture page, where it stays until dismissed or replaced. */
   notify(n: Notice) {
-    clearTimeout(this.#noticeTimer);
-    this.#notice = n;
-    if (n.tone !== "info") this.controller.after({ kind: "failed", notice: n });
-    else this.#noticeTimer = setTimeout(() => this.dismissNotice(), NOTICE_MS);
-    this.#d.publish();
+    this.#board.notify(n);
   }
 
   dismissNotice() {
-    this.#notice = undefined;
-    this.controller.after(undefined);
-    this.#d.publish();
+    this.#board.dismiss();
   }
 
   async noticeAction(action: NoticeAction): Promise<"folder" | "done"> {
-    const mac = this.#d.platform.os === "darwin";
-    if (action === "open-audio") await shell.openExternal(mac ? "x-apple.systempreferences:com.apple.preference.sound" : "ms-settings:sound");
+    const external = externalFor(action, this.#d.platform.os, app.getPath("home"));
+    if (external) await (external.kind === "url" ? shell.openExternal(external.value) : shell.openPath(external.value));
     else if (action === "open-permissions") await this.#d.platform.openScreenSettings();
-    else if (action === "open-trash") await (mac ? shell.openPath("~/.Trash") : shell.openExternal("shell:RecycleBinFolder"));
     else if (action === "choose-folder") return "folder";
     else if (action === "retry") void this.start();
     this.dismissNotice();
     return "done";
   }
 
+  /** At quit: a recording is stopped and saved, and the returned promise resolves when it is (or after 30 s). Undefined when nothing is running. */
+  finishForQuit(): Promise<void> | undefined {
+    const { phase } = this.#session.state;
+    if (phase === "recording") this.#session.stop();
+    else if (phase !== "finishing") return undefined;
+    return Promise.race([this.#session.idle(), new Promise<void>((r) => setTimeout(r, QUIT_WAIT_MS))]);
+  }
+
   dispose() {
     for (const off of this.#off) off();
-    clearTimeout(this.#noticeTimer);
+    this.#board.dispose();
     this.#session.discard();
     this.#picker?.dispose();
     this.controller.dispose();

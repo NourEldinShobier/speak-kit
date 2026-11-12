@@ -30,6 +30,8 @@ export interface CapturePlatform {
   /** Windows of other programs, topmost first. Never this app's own windows. */
   windows(): Promise<WindowGeometry[]>;
   cursor(): { x: number; y: number };
+  /** Calls `fn` when a display is plugged in or out. Returns the function that stops listening. */
+  onDisplaysChanged(fn: () => void): () => void;
   screenPermission(): ScreenPermission;
   openScreenSettings(): Promise<void>;
   resolve(target: Target): Promise<Resolved | undefined>;

@@ -4,8 +4,6 @@ import type { CAPTURE_METHODS } from "./channels";
 import type { Notice, NoticeAction } from "./notices";
 import { CapturePatchSchema, type CaptureConfig, type CapturePatch } from "./settings";
 
-export type { CaptureMethod } from "./channels";
-
 export type CapturePhase = "idle" | "picking" | "recording" | "finishing";
 
 /** Outcome of the start-up recovery of interrupted captures. */

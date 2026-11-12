@@ -33,6 +33,14 @@ export const journalFs: JournalFs = {
       return [];
     }
   },
+  async fileNames(dir) {
+    try {
+      return (await readdir(dir, { withFileTypes: true })).filter((e) => e.isFile()).map((e) => e.name);
+    } catch {
+      // no such folder
+      return [];
+    }
+  },
   async exists(p) {
     try {
       await stat(p);

@@ -223,4 +223,30 @@ describe("capture session", () => {
     await session.start(screen);
     expect(picked).toBe(0);
   });
+  it("a capture started while a discarded one is still being stopped waits for the stop", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const { session, calls } = setup({
+      abortRecording: async (id) => {
+        calls.push(`abort-begin ${id}`);
+        await gate;
+        calls.push(`abort-end ${id}`);
+      },
+    });
+    await session.start();
+    session.discard();
+    const next = session.start(screen);
+    await Promise.resolve();
+    expect(calls).not.toContain("start c2");
+    release();
+    expect(await next).toEqual({ ok: true });
+    expect(calls.slice(-4)).toEqual(["abort-end c1", "discard c1", "begin c2", "start c2"]);
+    expect(session.state).toMatchObject({ phase: "recording", id: "c2" });
+  });
+  it("two starts at once record once", async () => {
+    const { session, calls } = setup();
+    const results = await Promise.all([session.start(screen), session.start(screen)]);
+    expect(results.map((r) => r.ok).sort()).toEqual([false, true]);
+    expect(calls.filter((c) => c.startsWith("start"))).toHaveLength(1);
+  });
 });

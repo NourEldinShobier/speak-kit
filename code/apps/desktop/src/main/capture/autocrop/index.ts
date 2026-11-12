@@ -31,8 +31,3 @@ export function cropOrFull<T>(frame: FrameSize, windowRect: Rect | undefined, { 
     return full();
   }
 }
-
-/** A desktop rectangle in the pixels of the display whose top-left corner is `origin`. */
-export function toFrame(windowRect: Rect, origin: { x: number; y: number }): Rect {
-  return { x: windowRect.x - origin.x, y: windowRect.y - origin.y, width: windowRect.width, height: windowRect.height };
-}

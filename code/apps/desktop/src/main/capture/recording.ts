@@ -117,8 +117,10 @@ class RecorderPorts {
     };
   }
 
-  async abort(): Promise<void> {
+  async abort(id: string): Promise<void> {
     await this.#d.host.call({ op: "abort" });
+    // A capture that began meanwhile is not this one's to clear.
+    if (this.#current && this.#current.id !== id) return;
     this.#d.hideOwnWindows(false);
     this.#current = undefined;
   }
@@ -141,11 +143,13 @@ export function createSessionPorts(d: RecordingDeps): SessionPorts {
     startRecording: (id, target) => r.begin(id, target),
     switchTarget: (id, target) => r.swap(id, target),
     stopRecording: (id) => r.stop(id),
-    abortRecording: () => r.abort(),
+    abortRecording: (id) => r.abort(id),
     transcribe: (media) => transcribeTrack(d, media),
     save: (id, media, words) => r.save(id, media, words),
     discard: (id) => d.bundle.remove(id),
-    journal: d.journal,
+    get journal() {
+      return d.journal;
+    },
     notify: d.notify,
     changed: d.changed,
     log: d.log,

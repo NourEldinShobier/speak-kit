@@ -1,9 +1,10 @@
-import { BrowserWindow, desktopCapturer, screen, shell, systemPreferences, type Display } from "electron";
+import { BrowserWindow, desktopCapturer, screen, shell, systemPreferences, type Display, type NativeImage } from "electron";
 import { loadWindowApi, type WindowApi } from "../../screen-vision/native";
-import type { Rect } from "../autocrop";
-import { displayAt, toDisplayPixels, type DisplayGeometry, type WindowGeometry } from "../picker";
+import { cropOrFull, type Rect } from "../autocrop";
+import { toDisplayPixels, type DisplayGeometry, type WindowGeometry } from "../picker";
 import { withoutOwn } from "../privacy";
 import type { Target } from "../session";
+import { displayOfTarget } from "../target-display";
 import type { CapturePlatform, Resolved, ScreenPermission, Still } from "./types";
 
 const SCREEN_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
@@ -25,6 +26,16 @@ function areaOf(t: Target, display: DisplayGeometry, window: WindowGeometry | un
   return window ? toDisplayPixels(window.rect, display) : undefined;
 }
 
+/** The picture cut to `area` (kept inside the picture); the whole picture when there is no area or it cannot be cut. */
+export function stillOf(picture: NativeImage, area: Rect | undefined): NativeImage {
+  const full = picture.getSize();
+  if (!area) return picture;
+  const x = Math.max(0, area.x);
+  const y = Math.max(0, area.y);
+  const clamped = { x, y, width: Math.min(area.x + area.width, full.width) - x, height: Math.min(area.y + area.height, full.height) - y };
+  return cropOrFull(full, clamped, { crop: (r) => picture.crop(r), full: () => picture });
+}
+
 /**
  * The platform of Windows and macOS over Electron's desktop capturer. Windows lists other programs' windows with their rectangles through the DWM
  * (koffi); macOS has no such list in Electron, so the window picker is off there and screen and area remain.
@@ -42,6 +53,14 @@ class ElectronCapturePlatform implements CapturePlatform {
 
   displays = displays;
   cursor = () => screen.getCursorScreenPoint();
+  onDisplaysChanged = (fn: () => void) => {
+    screen.on("display-removed", fn);
+    screen.on("display-added", fn);
+    return () => {
+      screen.off("display-removed", fn);
+      screen.off("display-added", fn);
+    };
+  };
   screenPermission = () => permissionOf(this.os);
   windowRect = (): Rect | undefined => undefined;
 
@@ -75,20 +94,13 @@ class ElectronCapturePlatform implements CapturePlatform {
 
   async still(t: Target): Promise<Still | undefined> {
     const window = t.kind === "window" ? (await this.windows()).find((w) => w.id === t.windowId) : undefined;
-    const at = window ? { x: window.rect.x + 1, y: window.rect.y + 1 } : { x: 0, y: 0 };
-    const display = t.kind === "window" ? displayAt(at, displays()) : displays().find((d) => d.id === t.displayId);
+    const display = displayOfTarget(t, displays(), window ? [window] : []);
     if (!display) return undefined;
     const size = { width: Math.round(display.bounds.width * display.scaleFactor), height: Math.round(display.bounds.height * display.scaleFactor) };
     const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: size });
     const source = sources.find((x) => x.display_id === display.id);
     if (!source || source.thumbnail.isEmpty()) return undefined;
-    let image = source.thumbnail;
-    const area = areaOf(t, display, window);
-    const full = image.getSize();
-    if (area) {
-      const r = { x: Math.max(0, area.x), y: Math.max(0, area.y), width: Math.min(area.width, full.width - area.x), height: Math.min(area.height, full.height - area.y) };
-      if (r.width > 0 && r.height > 0) image = image.crop(r);
-    }
+    const image = stillOf(source.thumbnail, areaOf(t, display, window));
     const out = image.getSize();
     return { png: image.toPNG(), width: out.width, height: out.height };
   }
@@ -101,6 +113,7 @@ const unsupported: CapturePlatform = {
   displays: () => [],
   windows: async () => [],
   cursor: () => ({ x: 0, y: 0 }),
+  onDisplaysChanged: () => () => {},
   screenPermission: () => "not-needed",
   openScreenSettings: async () => {},
   resolve: async () => undefined,

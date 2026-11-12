@@ -103,9 +103,9 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onEngineState: engineAnnouncer(ctx, toasts),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
-    /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: (): Promise<void> => {
-      const controlDown = control.dispose();
+    /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
+    finishCapture: () => capture.finishForQuit(),
+    dispose: () => {
       shortcuts.unregisterAll();
       reading.dispose();
       exports.dispose();

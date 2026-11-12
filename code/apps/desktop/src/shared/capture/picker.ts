@@ -59,6 +59,3 @@ export const describeDisplay = (d: DisplayGeometry): string =>
 export const startMode = (last: Readonly<Record<string, "screen" | "window" | "area">>, displayId: string): "screen" | "window" | "area" => last[displayId] ?? "screen";
 
 export const remember = (last: Readonly<Record<string, "screen" | "window" | "area">>, displayId: string, kind: "screen" | "window" | "area") => ({ ...last, [displayId]: kind });
-
-/** Esc, a click outside any target and closing the picker are all the same clean exit: the result is null and nothing is left running. */
-export const isCancel = (r: PickResult | null | undefined): r is null | undefined => r === null || r === undefined;

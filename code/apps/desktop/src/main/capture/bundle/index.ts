@@ -1,5 +1,6 @@
 import { appendFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { RecorderData } from "../../../shared/capture/contract";
 import type { Frame } from "../keyframes";
 import type { Word } from "../narration";
 
@@ -103,4 +104,16 @@ export function createBundle(root: string): Bundle {
     bytes: (id) => settled(() => sizeOrZero(dir(id))),
     remove: (id) => queued(() => rm(dir(id), { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })),
   };
+}
+
+/** Writes what the recorder window streamed: a picture, a piece of video or a piece of the microphone track. */
+export function writeStreamed(b: Bundle, id: string, d: RecorderData): Promise<unknown> {
+  switch (d.kind) {
+    case "frame":
+      return b.frame(id, d.atMs, d.jpeg);
+    case "video":
+      return b.video(id, d.segment, d.chunk);
+    default:
+      return b.audio(id, d.chunk);
+  }
 }

@@ -87,6 +87,11 @@ export class CaptureController {
     this.#capsule?.moveTo(this.#d.displayBounds());
   }
 
+  /** The recorded display became known or changed: the capsule moves there. */
+  relocate() {
+    this.#capsule?.moveTo(this.#d.displayBounds());
+  }
+
   owns(contents: Electron.WebContents): boolean {
     return !!this.#capsule && !this.#capsule.window.isDestroyed() && this.#capsule.window.webContents === contents;
   }

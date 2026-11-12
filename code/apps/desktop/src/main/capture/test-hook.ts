@@ -6,6 +6,10 @@ export const captureTestHook = (c: CaptureService) => ({
   start: () => c.start(),
   stop: () => c.stop(),
   discard: () => c.discard(),
+  /** A change in Settings, as the page sends it. */
+  settings: (patch: Parameters<CaptureService["patchSettings"]>[0]) => c.patchSettings(patch),
+  /** What the app does at quit while a capture runs; resolves when it is saved. */
+  quit: async () => void (await c.finishForQuit()),
   state: () => c.testState(),
   status: () => c.statusNow(),
   /** What the scripted recorder does on the next recordings: how many frames it makes, whether the microphone is missing. */
