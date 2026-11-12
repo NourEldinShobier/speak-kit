@@ -110,6 +110,7 @@ export const rowApp = (item: Pick<HistoryItem, "app" | "appName">): string => it
 export function rowTags(item: Pick<HistoryItem, "kind" | "outcome">): string[] {
   const tags: string[] = [];
   if (item.kind === "interrupted") tags.push("Cut short");
+  if (item.kind === "restored") tags.push("Recovered");
   if (item.outcome === "copied") tags.push("Copied only");
   if (item.outcome === "failed") tags.push("Not inserted");
   return tags;

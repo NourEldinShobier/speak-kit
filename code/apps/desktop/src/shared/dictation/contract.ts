@@ -98,7 +98,7 @@ export interface HistoryItem {
   /** Friendly name of that program. */
   appName?: string;
   /** "raw": dictated with clean-up off. "printed": handed to a command, never pasted. "interrupted": the recording was cut short. */
-  kind?: "raw" | "printed" | "interrupted";
+  kind?: "raw" | "printed" | "interrupted" | "restored";
   outcome?: "sent" | "copied" | "failed";
   /** What the speech model heard, before the clean-up. */
   raw: string;
@@ -186,10 +186,15 @@ export interface DictationBridge {
     onCommand(cb: (c: RecorderCommand) => void): () => void;
     reply(id: number, result: RecorderResult): void;
     level(n: number): void;
+    /** Samples of the running recording, in order. */
+    chunk(pcm: Float32Array): void;
     ready(): void;
     event(e: RecorderEvent): void;
   };
 }
+
+/** The microphone window records mono at this rate. */
+export const RECORDER_RATE = 16_000;
 
 export interface RecorderMicConfig {
   /** Chosen device id; empty for automatic. */

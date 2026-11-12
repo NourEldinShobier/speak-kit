@@ -20,6 +20,9 @@ import type { RecorderHost } from "./recorder";
 import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, shouldRetryHotkey, touchesMicrophone, windowShown } from "./service-support";
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
+import { restoreTakes } from "./restore-takes";
+import type { Spool } from "./spool";
+import type { SpooledRecorder } from "./spooled-recorder";
 import { soundFor, tonesFor } from "../../shared/dictation/sounds";
 import { runTransform, transformToast } from "./transform-run";
 import { MicState } from "./mic-state";
@@ -68,6 +71,8 @@ export class DictationService {
     (why) => this.#ctx.log.warn("dictation sleep block", why),
   );
   #audio: AudioStore | undefined;
+  #spool: { spool: Spool; spooled: SpooledRecorder } | undefined;
+  #recovered = false;
   /** Tests only: what the scripted writer does with the next dictation. */
   fakeRewrite: "ok" | "hang" | "fail" = "ok";
   /** Tests only: the files the pickers return (null is a cancelled dialog). */
@@ -147,6 +152,7 @@ export class DictationService {
       onPromptDropped: () => this.records.setPromptDropped(true),
     });
     ({ recorder: this.#recorder, core: this.core, audio: this.#audio } = built);
+    this.#spool = { spool: built.spool, spooled: built.spooled };
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await this.models.refresh();
@@ -294,12 +300,25 @@ export class DictationService {
     this.controls.watch();
     this.#setHotkeyFailed(!ready);
     void this.#recorder?.prepare().then(() => this.mic.refresh());
+    void this.#recoverTakes();
     await this.models.refresh();
     // At launch (quiet) with release-when-idle on, the model stays on disk: the first dictation loads it (the page says that takes longer).
     if (this.models.installed) {
       if (!quiet || this.#ctx.config.engines.idleMinutes === 0) this.models.warm();
     } else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
     if (!quiet && ready) this.presenter.flashReady();
+  }
+
+  /** Once per launch, when dictation is on: takes the last session left on disk go through dictation and end up copied and in the history. */
+  async #recoverTakes(): Promise<void> {
+    if (this.#recovered || !this.#spool || !this.core) return;
+    this.#recovered = true;
+    try {
+      const n = await restoreTakes(this.#spool.spool, this.#spool.spooled, this.core);
+      if (n > 0) this.presenter.toast(n === 1 ? "Recovered a recording from the last session" : `Recovered ${n} recordings from the last session`);
+    } catch (e) {
+      this.#ctx.log.warn("dictation recovery failed", String(e));
+    }
   }
 
   async #stop(): Promise<void> {

@@ -3,6 +3,59 @@ import { ClipBuffer, micCode } from "./capture";
 
 const block = (n: number, v: number) => new Float32Array(n).fill(v);
 
+describe("clip buffer pieces", () => {
+  const rig = (pieceMs = 100) => {
+    const pieces: Float32Array[] = [];
+    return { pieces, b: new ClipBuffer(1000, 1000, (p) => pieces.push(p), pieceMs) };
+  };
+
+  it("hands over the samples of a running recording in order, in pieces, with the pre-roll in the first", () => {
+    const { b, pieces } = rig(100);
+    b.push(block(300, 0.1));
+    b.start(50);
+    b.push(block(60, 0.2));
+    b.push(block(60, 0.3));
+    expect(pieces.map((p) => p.length)).toEqual([110]);
+    expect([pieces[0]![0], pieces[0]![49], pieces[0]![50], pieces[0]![109]]).toEqual([expect.closeTo(0.1), expect.closeTo(0.1), expect.closeTo(0.2), expect.closeTo(0.2)]);
+    expect(b.stop()!.pcm).toHaveLength(170);
+    expect(pieces.map((p) => p.length)).toEqual([110, 60]);
+  });
+
+  it("hands over nothing while no recording runs", () => {
+    const { b, pieces } = rig(10);
+    b.push(block(500, 0.5));
+    expect(pieces).toEqual([]);
+  });
+
+  it("hands over what is left when the recording stops, and does not repeat it", () => {
+    const { b, pieces } = rig(1000);
+    b.start(0);
+    b.push(block(40, 0.5));
+    expect(pieces).toEqual([]);
+    b.stop();
+    b.stop();
+    expect(pieces.map((p) => p.length)).toEqual([40]);
+  });
+
+  it("drops the unsent samples of a discarded recording", () => {
+    const { b, pieces } = rig(1000);
+    b.start(0);
+    b.push(block(40, 0.5));
+    b.discard();
+    b.start(0);
+    b.push(block(10, 0.5));
+    b.stop();
+    expect(pieces.map((p) => p.length)).toEqual([10]);
+  });
+
+  it("works without a receiver", () => {
+    const b = new ClipBuffer(1000, 1000);
+    b.start(0);
+    b.push(block(5000, 0.5));
+    expect(b.stop()!.pcm).toHaveLength(5000);
+  });
+});
+
 describe("clip buffer", () => {
   it("records what arrives after start, and nothing before when there is no pre-roll", () => {
     const b = new ClipBuffer(1000, 1000);

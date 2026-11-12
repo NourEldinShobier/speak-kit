@@ -117,6 +117,8 @@ export interface DictationDeps {
   storage: HistoryStorage;
   /** Called with audio that must not be lost: a take that came back silent or a recording cut short. */
   keepClip?(clip: Clip, why: "silent" | "interrupted" | "failed"): void;
+  /** Called once a take has been dealt with: `done` when its text is in the history (or there was no speech), false when it failed and the audio is still needed. Lets the app drop the copy of the take it kept on disk. */
+  settled?(clip: Clip, done: boolean): void;
   /** One line per stage that failed or ran out of time and passed its input on. Never receives spoken text. */
   log?(stage: string, why: string): void;
   /** Where recordings are kept; without it nothing is recorded whatever the setting says. */
@@ -153,6 +155,8 @@ export interface Dictation {
   cancel(): void;
   /** Runs the recording that was cancelled in the last minute through the pipeline. False when there is none. */
   undoCancel(): boolean;
+  /** Runs a take found on disk after the app stopped mid-recording through the pipeline. There is no window to paste into, so the text is copied and kept in the history as recovered. */
+  restore(clip: Clip): void;
   /** Starts a recording whose text goes to the caller instead of a window. Busy when a recording or a dictation is already running. */
   capture(opts?: { raw?: boolean }): CaptureHandle;
   /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */

@@ -11,11 +11,35 @@ export class ClipBuffer {
   #ring: Float32Array[] = [];
   #ringLen = 0;
   #clip: Float32Array[] | null = null;
+  readonly #onPiece: ((pcm: Float32Array) => void) | undefined;
+  readonly #pieceMax: number;
+  #piece: Float32Array[] = [];
+  #pieceLen = 0;
 
-  /** `keepMs` is the most pre-roll a recording can ask for. */
-  constructor(sampleRate: number, keepMs: number) {
+  /**
+   * `keepMs` is the most pre-roll a recording can ask for. `onPiece` gets the samples of a running recording in order, in pieces of about `pieceMs`
+   * (the pre-roll comes with the first one, and `stop` hands over what is left), so they can be kept somewhere safe before the recording ends.
+   */
+  constructor(sampleRate: number, keepMs: number, onPiece?: (pcm: Float32Array) => void, pieceMs = 1000) {
     this.#rate = sampleRate;
     this.#ringMax = Math.round((sampleRate * keepMs) / 1000);
+    this.#onPiece = onPiece;
+    this.#pieceMax = Math.round((sampleRate * pieceMs) / 1000);
+  }
+
+  #offer(chunk: Float32Array): void {
+    if (!this.#onPiece || !chunk.length) return;
+    this.#piece.push(chunk);
+    this.#pieceLen += chunk.length;
+    if (this.#pieceLen >= this.#pieceMax) this.#flushPiece();
+  }
+
+  #flushPiece(): void {
+    if (!this.#onPiece || !this.#pieceLen) return;
+    const pcm = join(this.#piece, this.#pieceLen);
+    this.#piece = [];
+    this.#pieceLen = 0;
+    this.#onPiece(pcm);
   }
 
   get recording(): boolean {
@@ -23,7 +47,10 @@ export class ClipBuffer {
   }
 
   push(chunk: Float32Array): void {
-    if (this.#clip) this.#clip.push(chunk);
+    if (this.#clip) {
+      this.#clip.push(chunk);
+      this.#offer(chunk);
+    }
     this.#ring.push(chunk);
     this.#ringLen += chunk.length;
     while (this.#ring.length > 1 && this.#ringLen - this.#ring[0]!.length >= this.#ringMax) this.#ringLen -= this.#ring.shift()!.length;
@@ -34,12 +61,16 @@ export class ClipBuffer {
     const want = Math.round((this.#rate * prerollMs) / 1000);
     const joined = join(this.#ring, this.#ringLen);
     this.#clip = want > 0 && joined.length ? [joined.subarray(Math.max(0, joined.length - want))] : [];
+    this.#piece = [];
+    this.#pieceLen = 0;
+    for (const part of this.#clip) this.#offer(part);
   }
 
   stop(): Recorded | null {
     const parts = this.#clip;
     this.#clip = null;
     if (!parts) return null;
+    this.#flushPiece();
     const pcm = join(
       parts,
       parts.reduce((n, p) => n + p.length, 0),
@@ -51,6 +82,8 @@ export class ClipBuffer {
 
   discard(): void {
     this.#clip = null;
+    this.#piece = [];
+    this.#pieceLen = 0;
   }
 
   /** Forgets the ring (the microphone closed), so the next recording has no pre-roll from before. */

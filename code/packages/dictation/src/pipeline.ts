@@ -18,6 +18,8 @@ export interface Job {
   target: Promise<Target | undefined>;
   /** Dictated without text clean-up or replacements. */
   raw?: boolean;
+  /** A take found on disk after the app stopped in the middle of it; there is no window to paste into. */
+  restored?: boolean;
   /** The text goes here and not into a window; it is saved in the history as printed. */
   print?: (result: CaptureResult) => void;
 }
@@ -124,7 +126,8 @@ async function windows(ctx: Context, job: Job, settings: Settings): Promise<{ ta
   return { target, current: back ? await windowNow(ctx) : current, lost: !back };
 }
 
-function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | undefined {
+function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | "restored" | undefined {
+  if (job.restored) return "restored";
   if (clip.interrupted) return "interrupted";
   return job.raw ? "raw" : undefined;
 }

@@ -11,6 +11,7 @@ describe("defaults", () => {
       language: "auto",
       duck: false,
       skipPauses: false,
+      smartSpacing: false,
       keepReady: false,
       keepOnClipboard: false,
       returnToApp: true,

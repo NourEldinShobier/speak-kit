@@ -14,6 +14,8 @@ const UNDO_MS = 60_000;
 /** How long the "Cancelled" notice with its Undo button stays on screen. */
 const UNDO_NOTICE_MS = 10_000;
 const TAIL_POLL_MS = 50;
+/** Failures that came before any text existed, so the recording is the only copy of what was said. */
+const NEEDS_AUDIO: ReadonlySet<DictationErrorCode> = new Set(["model-missing", "model-loading", "model-failed", "transcribe-failed", "failed"]);
 
 const flashMs = (notice: Notice): number => (notice.kind === "cancelled" && notice.undoable ? UNDO_NOTICE_MS : NOTICE_MS);
 
@@ -176,7 +178,7 @@ class Runtime implements Dictation {
     this.flashed = undefined;
     this.cancelFlash?.();
     this.dropCancelled?.();
-    this.cancelledClip = undefined;
+    this.forgetCancelled();
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
@@ -207,8 +209,21 @@ class Runtime implements Dictation {
 
   private keepCancelled(clip: Clip): void {
     this.dropCancelled?.();
+    this.forgetCancelled();
     this.cancelledClip = clip;
-    this.dropCancelled = this.deps.clock.after(UNDO_MS, () => (this.cancelledClip = undefined));
+    this.dropCancelled = this.deps.clock.after(UNDO_MS, () => this.forgetCancelled());
+  }
+
+  /** The cancelled take can no longer be brought back, so the app may drop the copy of it that it kept. */
+  private forgetCancelled(): void {
+    const clip = this.cancelledClip;
+    this.cancelledClip = undefined;
+    if (!clip) return;
+    try {
+      this.deps.settled?.(clip, true);
+    } catch {
+      // the app's bookkeeping must not stop a recording
+    }
   }
 
   undoCancel(): boolean {
@@ -220,6 +235,13 @@ class Runtime implements Dictation {
     this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: foreground(this.deps.inserter) }));
     this.emit();
     return true;
+  }
+
+  restore(clip: Clip): void {
+    if (this.disposed) return;
+    this.pending++;
+    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: Promise.resolve(undefined), restored: true }));
+    this.emit();
   }
 
   pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed"> {
@@ -296,10 +318,22 @@ class Runtime implements Dictation {
       outcome = { error: "failed" }; // a port that throws must not stop the queue
     }
     this.pending--;
+    await this.settle(job, outcome);
     // Printed text settled its capture already; anything else that ends a capture settles it here.
     job.print?.(failureOf(outcome));
     if (outcome) this.flash(outcome);
     else this.emit();
+  }
+
+  /** Tells the app a take is dealt with. Only a take the speech engine could not read is kept; text saved, no speech, a silent take or a refused paste are done. */
+  private async settle(job: Job, outcome: Outcome | undefined): Promise<void> {
+    const clip = await job.clip.catch(() => undefined);
+    if (!clip) return;
+    try {
+      this.deps.settled?.(clip, !(outcome && "error" in outcome && NEEDS_AUDIO.has(outcome.error)));
+    } catch {
+      // the app's bookkeeping must not stop the queue
+    }
   }
 
   private insertingNow(): void {

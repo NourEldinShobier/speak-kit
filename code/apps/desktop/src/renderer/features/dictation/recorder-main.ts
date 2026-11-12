@@ -38,7 +38,7 @@ interface Live {
   bluetooth: boolean;
 }
 
-const buffer = new ClipBuffer(RATE, RING_MS);
+const buffer = new ClipBuffer(RATE, RING_MS, (pcm) => dictation.recorder.chunk(pcm));
 const watch = createSilenceWatch();
 let live: Live | null = null;
 let opening: Promise<Live> | null = null;
