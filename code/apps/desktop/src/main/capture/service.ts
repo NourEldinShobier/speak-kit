@@ -250,6 +250,11 @@ export class CaptureService {
     void this.#refresh();
   }
 
+  /** Tests only: the inbox of captures sent to the voice chat. */
+  testInbox() {
+    return this.#o.inbox;
+  }
+
   /** Whether this webContents is the capsule page. */
   owns(contents: WebContents): boolean {
     return this.runtime.controller.owns(contents);
