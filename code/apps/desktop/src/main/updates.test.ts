@@ -7,7 +7,7 @@ import { RELEASES, RELEASES_PAGE, Updates, feedOverride, githubLatestRelease, is
 class FakeUpdater extends EventEmitter implements UpdaterLike {
   autoDownload = true;
   autoInstallOnAppQuit = true;
-  allowPrerelease: boolean | undefined;
+  allowPrerelease = false;
   calls: string[] = [];
   checkForUpdates = async () => void this.calls.push("check");
   downloadUpdate = async () => void this.calls.push("download");
@@ -236,7 +236,13 @@ describe("update channel", () => {
 describe("githubLatestRelease early", () => {
   const list = (body: unknown) => (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
   it("takes the newest release that is not a draft, pre-releases included", async () => {
-    const r = await githubLatestRelease(list([{ tag_name: "v1.0.0-draft", html_url: `${RELEASES_PAGE}tag/x`, draft: true }, { tag_name: "v0.9.0-beta.2", html_url: `${RELEASES_PAGE}tag/v0.9.0-beta.2` }]), true);
+    const r = await githubLatestRelease(
+      list([
+        { tag_name: "v1.0.0-draft", html_url: `${RELEASES_PAGE}tag/x`, draft: true },
+        { tag_name: "v0.9.0-beta.2", html_url: `${RELEASES_PAGE}tag/v0.9.0-beta.2` },
+      ]),
+      true,
+    );
     expect(r.version).toBe("0.9.0-beta.2");
   });
   it("rejects an empty list and a foreign page", async () => {

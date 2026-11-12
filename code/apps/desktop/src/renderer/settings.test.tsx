@@ -4,7 +4,8 @@ import { parseConfig } from "../shared/schemas";
 import { appState } from "./app-state.fixture";
 
 vi.hoisted(() => {
-  (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
+  (globalThis as { window?: unknown; document?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
+  (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
 import { Settings } from "./settings";
@@ -27,9 +28,9 @@ describe("settings navigation", () => {
   });
 
   it("shows a placeholder with an empty state for a page that is not built yet", () => {
-    const html = page("privacy");
+    const html = page("meetings");
     expect(html).toContain("Coming soon");
-    expect(html).toContain("What stays on this computer.");
+    expect(html).toContain("Record and transcribe meetings.");
   });
 });
 
@@ -76,5 +77,75 @@ describe("About", () => {
 
   it("says a Windows uninstall removes them", () => {
     expect(page("about")).toContain("Uninstalling Speak Kit removes the downloaded models.");
+  });
+});
+
+const pageWith = (sub: Parameters<typeof Settings>[0]["sub"], over: Partial<Parameters<typeof appState>[0]> = {}) => renderToStaticMarkup(<Settings s={appState(over)} sub={sub} />);
+
+describe("settings pages of the surface package", () => {
+  it("General has six basic rows and an Advanced fold that starts closed", () => {
+    const html = pageWith("general");
+    expect((html.match(/data-setting-row="general\/(launch|minimized|appearance|language|close|tray)"/g) ?? []).length).toBe(6);
+    expect(html).toMatch(/aria-expanded="false"[^>]*aria-controls="advanced-general"/);
+    expect(html).toContain('id="advanced-general" hidden=""');
+    expect(html).toContain("A dark theme is not offered");
+  });
+
+  it("the tray hint explains the way back when the tray icon is hidden", () => {
+    const html = pageWith("general", { config: parseConfig({ setupDone: true, hideTrayIcon: true }) });
+    expect(html).toContain("closing the window quits Speak Kit");
+  });
+
+  it("Accessibility lists reduce motion and the keyboard map", () => {
+    const html = pageWith("accessibility");
+    for (const t of ["Reduce motion", "Keyboard map", "Ctrl+K", "no full session with a screen reader"]) expect(html).toContain(t);
+  });
+
+  it("Privacy states there is no telemetry and lists every network host", () => {
+    const html = pageWith("privacy");
+    expect(html).toContain("sends no usage data");
+    for (const h of ["github.com", "huggingface.co", "api.openai.com", "127.0.0.1"]) expect(html).toContain(h);
+  });
+
+  it("Experiments shows developer-only cards on a source build and hides them in an installed one", () => {
+    const dev = pageWith("experiments", { packaged: false });
+    expect(dev).toContain("Live dictation preview");
+    expect(dev).toContain("Turn on");
+    expect(dev).not.toContain("Turn off");
+    const installed = pageWith("experiments", { packaged: true });
+    expect(installed).toContain("No experiments right now");
+    expect(installed).not.toContain("Live dictation preview");
+  });
+
+  it("Experiments shows a turned-on experiment as On with Turn off", () => {
+    const html = pageWith("experiments", { packaged: false, config: parseConfig({ setupDone: true, experiments: { "caption-export": true } }) });
+    expect(html).toContain("Turn off");
+  });
+
+  it("Diagnostics has Copy diagnostics, Open log folder and an empty activity log", () => {
+    const html = pageWith("diagnostics");
+    for (const t of ["Copy diagnostics", "Open log folder", "Nothing logged yet", "Run setup again"]) expect(html).toContain(t);
+  });
+
+  it("Diagnostics lists activity rows in plain words", () => {
+    const html = pageWith("diagnostics", { activity: [{ id: 1, atMs: 1_700_000_000_000, kind: "error", title: "Engine stopped", body: "Restart it from the tray." }] });
+    expect(html).toContain("Engine stopped");
+    expect(html).toContain("Problem: Restart it from the tray.");
+  });
+
+  it("About shows the version, the channel, release notes and the network table", () => {
+    const html = pageWith("about");
+    for (const t of ["Release notes", "Update channel", "Stable", "Report a security issue", "network-table"]) expect(html).toContain(t);
+    expect(pageWith("about", { config: parseConfig({ setupDone: true, updateChannel: "early" }) })).toContain("Early builds come first");
+  });
+
+  it("a settings notice shows above the page and names the repaired fields", () => {
+    const html = pageWith("general", { settingsNotice: { kind: "repaired", fields: ["idleUnload"] } });
+    expect(html).toContain("Some settings were reset");
+    expect(html).toContain("idleUnload");
+  });
+
+  it("a newer settings file shows a warning", () => {
+    expect(pageWith("general", { settingsNotice: { kind: "newer", version: 5 } })).toContain("newer version");
   });
 });

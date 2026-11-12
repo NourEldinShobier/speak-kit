@@ -50,13 +50,11 @@ export function createTray(context: () => TrayContext, run: TrayHandlers) {
     summary = `${icon}|${tip}`;
     tray.setImage(trayIcon(icon));
     tray.setToolTip(tip);
-    const template = menuTemplate(items, run, mac);
-    menu = Menu.buildFromTemplate(template);
+    menu = Menu.buildFromTemplate(menuTemplate(items, run, mac));
     if (!mac) tray.setContextMenu(menu);
   };
   build();
   refresh();
-
   return {
     refresh,
     /** The icon can be hidden in Settings; showing it again rebuilds it from the current state. */
@@ -69,7 +67,6 @@ export function createTray(context: () => TrayContext, run: TrayHandlers) {
         tray = null;
       }
     },
-    visible: () => tray !== null,
     /** For tests: the native menu cannot be clicked from Playwright. */
     items: () => menu?.items ?? [],
     summary: () => summary,

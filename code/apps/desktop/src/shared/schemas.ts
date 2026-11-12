@@ -11,10 +11,10 @@ export type IdleChoice = (typeof IDLE_CHOICES)[number];
 
 const UNWRAPPED = new WeakMap<object, v.GenericSchema>();
 /** v.fallback that remembers the schema it wraps, so the settings loader can tell which stored fields were invalid. */
-function fb<const S extends v.GenericSchema>(schema: S, d: v.InferOutput<S>) {
-  const wrapped = v.fallback(schema, d as never);
+function fb<const S extends v.GenericSchema, const F extends v.Fallback<S>>(schema: S, d: F) {
+  const wrapped = v.fallback(schema, d);
   UNWRAPPED.set(wrapped, schema);
-  return wrapped as unknown as v.SchemaWithFallback<S, v.InferOutput<S>>;
+  return wrapped;
 }
 export const unwrappedField = (field: object): v.GenericSchema => UNWRAPPED.get(field) ?? (field as v.GenericSchema);
 
@@ -65,7 +65,6 @@ export const APPEARANCES = ["system", "light"] as const;
 export const CLOSE_ACTIONS = ["hide", "quit"] as const;
 export const MOTION_CHOICES = ["system", "on", "off"] as const;
 export const UPDATE_CHANNELS = ["stable", "early"] as const;
-const volume = v.pipe(v.number(), v.minValue(0), v.maxValue(100));
 
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
@@ -80,8 +79,6 @@ export const ConfigSchema = v.object({
   closeAction: fb(v.picklist(CLOSE_ACTIONS), "hide"),
   hideTrayIcon: bool(false),
   reduceMotion: fb(v.picklist(MOTION_CHOICES), "system"),
-  announce: bool(true),
-  soundVolume: fb(volume, 60),
   updateChannel: fb(v.picklist(UPDATE_CHANNELS), "stable"),
   experiments: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
   appliedMigrations: fb(v.array(v.pipe(v.string(), v.maxLength(64))), []),
@@ -116,8 +113,6 @@ export const ConfigPatchSchema = v.partial(
     closeAction: v.picklist(CLOSE_ACTIONS),
     hideTrayIcon: v.boolean(),
     reduceMotion: v.picklist(MOTION_CHOICES),
-    announce: v.boolean(),
-    soundVolume: volume,
     updateChannel: v.picklist(UPDATE_CHANNELS),
     experiments: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
     idleUnload: v.picklist(IDLE_CHOICES),

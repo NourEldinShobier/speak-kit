@@ -139,7 +139,10 @@ export class MainWindow {
     w.on("close", (e) => {
       if (this.quitting) return;
       e.preventDefault();
-      if (effectiveCloseAction(this.#config) === "quit") return this.quit();
+      if (effectiveCloseAction(this.#config) === "quit") {
+        setImmediate(() => this.quit()); // quitting inside the close event is ignored for the window that is closing
+        return;
+      }
       this.hide();
     });
     w.on("closed", () => {

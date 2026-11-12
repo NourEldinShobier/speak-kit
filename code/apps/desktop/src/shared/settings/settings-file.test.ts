@@ -7,7 +7,15 @@ describe("loading settings", () => {
     expect(l.invalidFields).toEqual([]);
     expect(l.needsBackup).toBe(false);
     expect(noticeOf(l)).toBeNull();
-    expect(l.config).toMatchObject({ appearance: "system", closeAction: "hide", hideTrayIcon: false, reduceMotion: "system", announce: true, soundVolume: 60, updateChannel: "stable", experiments: {}, configVersion: CONFIG_VERSION });
+    expect(l.config).toMatchObject({
+      appearance: "system",
+      closeAction: "hide",
+      hideTrayIcon: false,
+      reduceMotion: "system",
+      updateChannel: "stable",
+      experiments: {},
+      configVersion: CONFIG_VERSION,
+    });
   });
 
   it("an invalid field loads as its default, is named, and asks for a backup", () => {
@@ -21,8 +29,8 @@ describe("loading settings", () => {
   });
 
   it("a number outside its range counts as invalid", () => {
-    expect(invalidFieldsOf({ soundVolume: 400, speed: 1 })).toEqual(["soundVolume"]);
-    expect(loadSettings({ soundVolume: 400 }).config.soundVolume).toBe(60);
+    expect(invalidFieldsOf({ speed: 9, preferredPort: 70000 })).toEqual(["preferredPort", "speed"]);
+    expect(loadSettings({ speed: 9 }).config.speed).toBe(1);
   });
 
   it("a file from a newer app loads read-only with a notice and no backup", () => {
@@ -68,5 +76,24 @@ describe("one-time migrations", () => {
   it("a newer file is not migrated", () => {
     const l = loadSettings({ configVersion: 99, appliedMigrations: [] }, list);
     expect(l.config.appliedMigrations).toEqual([]);
+  });
+});
+
+describe("stored values of the wrong type", () => {
+  it("a version that is not a number counts as version 1, not as newer", () => {
+    expect(loadSettings({ configVersion: "9" }).newerVersion).toBeNull();
+    expect(loadSettings({ configVersion: Number.POSITIVE_INFINITY }).newerVersion).toBeNull();
+  });
+
+  it("applied ids that are not strings are ignored", () => {
+    const list = [{ id: "m1", run: (r: Record<string, unknown>) => ({ ...r, speed: 2 }) }];
+    expect(loadSettings({ appliedMigrations: [5, null], speed: 1 }, list).config.speed).toBe(2);
+    expect(loadSettings({ appliedMigrations: "m1", speed: 1 }, list).config.speed).toBe(2);
+    expect(loadSettings({ appliedMigrations: ["m1", 5], speed: 1 }, list).config.speed).toBe(1);
+  });
+
+  it("the notice lists four fields without a tail and five with one", () => {
+    expect(noticeText({ kind: "repaired", fields: ["a", "b", "c", "d"] })).toBe("Some saved settings were not valid and use their defaults: a, b, c, d. The original file is kept as a backup.");
+    expect(noticeText({ kind: "repaired", fields: ["a", "b", "c", "d", "e"] })).toContain("a, b, c, d and 1 more");
   });
 });

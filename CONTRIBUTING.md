@@ -70,6 +70,10 @@ Build the Windows installer with `pnpm --filter @speakkit/desktop exec node scri
 - The visible product name is "Speak Kit"; technical names (`speakkit`, `@speakkit/*`) stay as they are.
 - Do not add a dependency that a maintained package or the platform already covers.
 
+## Security
+
+Report a vulnerability privately through [GitHub security advisories](https://github.com/NourEldinShobier/speak-kit/security/advisories/new), not in a public issue. Include the version, the steps to reproduce and what an attacker gains. Speak Kit sends no telemetry, so a report with the text from Settings, Diagnostics, Copy diagnostics helps most.
+
 ## License
 
 Contributions are released under the Apache License 2.0 (see `LICENSE`).

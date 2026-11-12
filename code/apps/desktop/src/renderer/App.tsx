@@ -7,6 +7,7 @@ import { Settings } from "./settings";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
+import { useMotionPreference } from "./features/settings";
 import { Wizard } from "./features/wizard";
 import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
@@ -91,6 +92,7 @@ function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; di
 }
 
 function Shell({ s }: { s: AppState }) {
+  useMotionPreference(s.config.reduceMotion);
   const player = usePreview(s.config.speed);
   const [st, dispatch] = useReducer(shellReducer, undefined, initShell);
   const { page, sub } = currentLoc(st);

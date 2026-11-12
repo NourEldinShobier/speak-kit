@@ -187,7 +187,8 @@ describe("settings sidebar search and Recent", () => {
     const nav = l.page.getByRole("navigation", { name: "Settings" });
     const find = nav.getByRole("searchbox", { name: "Search settings" });
     await find.fill("shortcuts");
-    expect(await nav.getByRole("link").count()).toBe(1);
+    await nav.getByRole("group", { name: "Shortcuts" }).waitFor();
+    expect(await nav.getByRole("link").count()).toBe(0);
     await find.fill("zzzz");
     await nav.getByText("No settings match").waitFor();
     await find.fill("");
