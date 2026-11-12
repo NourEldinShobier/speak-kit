@@ -82,6 +82,19 @@ describe("IPC argument tuples", () => {
   });
 });
 
+describe("interface language", () => {
+  it("defaults to the system language, keeps a supported one and falls back for any other", () => {
+    expect(parseConfig({}).language).toBe("system");
+    expect(parseConfig({ language: "es" }).language).toBe("es");
+    expect(parseConfig({ language: "klingon" }).language).toBe("system");
+  });
+
+  it("the renderer may choose a supported language only", () => {
+    expect(v.safeParse(ConfigPatchSchema, { language: "es" }).success).toBe(true);
+    expect(v.safeParse(ConfigPatchSchema, { language: "klingon" }).success).toBe(false);
+  });
+});
+
 describe("voice chat", () => {
   const KEY = "sk-proj-Valid_Key-0123456789abcdef";
   it("the voice defaults to marin, and an unknown saved voice falls back to it", () => {

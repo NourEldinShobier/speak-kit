@@ -7,6 +7,7 @@ import { QuickTopics, requestRow, SettingsResults, SettingsSearchField } from ".
 import { searchSettings, type SettingRowDef } from "../shared/settings/search-index";
 import { footerStatus } from "../shared/settings/footer";
 import { filterSettingsNav, MENU, settingsItem } from "./routes";
+import { useT } from "./i18n";
 import type { RecentReading } from "./shell-model";
 
 export interface SidebarProps {
@@ -34,19 +35,21 @@ const Link = ({ href, onActivate, ...rest }: { href: string; onActivate(): void 
 );
 
 function FooterStatus({ s }: { s: AppState }) {
+  const { t } = useT();
   const f = footerStatus(s);
   return (
     <div className="sk-side__foot" data-testid="settings-footer">
       <span data-problem={f.problem || undefined}>{f.listener}</span>
       {f.update && <span>{f.update}</span>}
       <button type="button" className="sk-side__link" onClick={() => window.speakkit.openExternal("release-notes")}>
-        Release notes
+        {t("nav.releaseNotes")}
       </button>
     </div>
   );
 }
 
 function SettingsNav(p: SidebarProps) {
+  const { t, label } = useT();
   const [q, setQ] = useState("");
   const [focus, setFocus] = useState(false);
   const typing = q.trim().length > 0;
@@ -58,10 +61,10 @@ function SettingsNav(p: SidebarProps) {
   };
   const groups = filterSettingsNav("");
   return (
-    <SidebarNav label="Settings">
+    <SidebarNav label={t("nav.settings")}>
       <div className="sk-side__head">
-        <IconButton name="arrow-left" label="Close settings" size={28} onClick={p.onCloseSettings} />
-        <span className="sk-side__label">Settings</span>
+        <IconButton name="arrow-left" label={t("nav.closeSettings")} size={28} onClick={p.onCloseSettings} />
+        <span className="sk-side__label">{t("nav.settings")}</span>
       </div>
       <SettingsSearchField q={q} setQ={setQ} setFocus={setFocus} onEnter={() => found[0] && open(found[0].rows[0]!)} />
       {typing && <SettingsResults q={q} groups={found} onOpen={open} onClear={() => setQ("")} />}
@@ -69,10 +72,10 @@ function SettingsNav(p: SidebarProps) {
       {!typing &&
         groups.map((g) => (
           <div key={g.group} style={{ display: "contents" }}>
-            <NavSection>{g.group}</NavSection>
+            <NavSection>{label(`group.${g.group}`, g.group)}</NavSection>
             {g.items.map((it) => (
               <Link key={it.id} icon={it.icon} href={`#settings-${it.id}`} selected={p.sub === it.id} onActivate={() => p.go("settings", it.id)}>
-                {it.label}
+                {label(`sub.${it.id}`, it.label)}
               </Link>
             ))}
           </div>
@@ -98,7 +101,8 @@ function EngineCard({ s }: { s: AppState }) {
 }
 
 function RecentList({ recent, onPick }: { recent: RecentReading[]; onPick(id: string): void }) {
-  if (recent.length === 0) return <div className="sk-side__empty">Readings you open appear here.</div>;
+  const { t } = useT();
+  if (recent.length === 0) return <div className="sk-side__empty">{t("nav.recentEmpty")}</div>;
   return (
     <>
       {recent.map((r) => (
@@ -111,26 +115,27 @@ function RecentList({ recent, onPick }: { recent: RecentReading[]; onPick(id: st
 }
 
 function MainNav(p: SidebarProps) {
+  const { t, label } = useT();
   return (
     <SidebarNav label="Main">
-      <div className="sk-side__title">Menu</div>
+      <div className="sk-side__title">{t("nav.menu")}</div>
       {MENU.map((g) => (
         <div key={g.group} style={{ display: "contents" }}>
-          <NavSection>{g.group}</NavSection>
+          <NavSection>{label(`group.${g.group}`, g.group)}</NavSection>
           {g.items.map((n) => (
             <Link key={n.page} icon={n.icon} href={`#${n.page}`} selected={p.page === n.page} onActivate={() => p.go(n.page)}>
-              {n.label}
+              {label(`page.${n.page}`, n.label)}
             </Link>
           ))}
         </div>
       ))}
-      <NavSection>Recent</NavSection>
+      <NavSection>{t("nav.recent")}</NavSection>
       <RecentList recent={p.recent} onPick={p.onOpenRecent} />
       <div className="sk-side__spacer" />
       <ExportPill s={p.s} onOpen={p.onOpenExport} />
       <EngineCard s={p.s} />
       <Link icon="settings" href="#settings" onActivate={() => p.go("settings", "general")}>
-        Settings
+        {t("nav.settings")}
       </Link>
     </SidebarNav>
   );
