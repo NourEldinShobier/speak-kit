@@ -99,14 +99,16 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onEngineState: announceEngine,
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
-    dispose: () => {
-      void control.dispose();
+    /** Resolves once the control server is down and its discovery file is gone. */
+    dispose: (): Promise<void> => {
+      const controlDown = control.dispose();
       shortcuts.unregisterAll();
       reading.dispose();
       exports.dispose();
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
+      return controlDown;
     },
     testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
   };

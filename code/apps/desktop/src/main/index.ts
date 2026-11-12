@@ -264,10 +264,16 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   app.on("window-all-closed", () => {
     /* stay alive in the tray */
   });
-  app.on("will-quit", () => {
-    desktop?.dispose();
+  let cleaned = false;
+  app.on("will-quit", (event) => {
+    if (cleaned) return;
+    cleaned = true;
+    // Quit again once the control server has removed its discovery file, so a quit never leaves a token behind (capped, so it cannot hold the quit).
+    event.preventDefault();
+    const controlDown = Promise.race([Promise.resolve(desktop?.dispose()), new Promise((r) => setTimeout(r, 2000))]);
     screenVision.dispose();
     void runtime.shutdown();
+    void controlDown.finally(() => app.quit());
   });
 
   app.whenReady().then(async () => {
