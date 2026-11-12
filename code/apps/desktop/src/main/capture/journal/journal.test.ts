@@ -7,6 +7,10 @@ function memoryFs(): JournalFs & { files: Map<string, string> } {
     files,
     write: async (f, t) => void files.set(f, t),
     read: async (f) => files.get(f),
+    fileNames: async (dir) =>
+      Array.from(files.keys())
+        .filter((k) => k.startsWith(`${dir}/`))
+        .map((k) => k.slice(dir.length + 1)),
     list: async (dir) => [
       ...new Set(
         Array.from(files.keys())
@@ -22,14 +26,30 @@ function memoryFs(): JournalFs & { files: Map<string, string> } {
 }
 
 describe("capture journal", () => {
-  it("removes a capture that stopped while recording: there is no media to keep", async () => {
+  it("removes a capture that stopped while recording and streamed nothing", async () => {
     const fs = memoryFs();
     const j = createJournal(fs, "caps");
     await j.begin("a", 1);
-    fs.files.set("caps/a/frame-0.jpg", "x");
     const report = await j.recover(async () => {});
     expect(report).toEqual({ finished: [], removed: ["a"], failed: [] });
     expect([...fs.files.keys()]).toEqual([]);
+  });
+  it("finishes a capture cut off while recording from the pictures already on disk", async () => {
+    const fs = memoryFs();
+    const j = createJournal(fs, "caps");
+    await j.begin("a", 1);
+    fs.files.set("caps/a/frames/f-00000000.jpg", "x");
+    const finished: JournalEntry[] = [];
+    expect(await j.recover(async (e) => void finished.push(e))).toEqual({ finished: ["a"], removed: [], failed: [] });
+    expect(finished[0]).toMatchObject({ id: "a", stage: "recording" });
+    expect(JSON.parse(fs.files.get("caps/a/journal.json")!).stage).toBe("complete");
+  });
+  it("finishes a capture cut off while recording from the video already on disk", async () => {
+    const fs = memoryFs();
+    const j = createJournal(fs, "caps");
+    await j.begin("a", 1);
+    fs.files.set("caps/a/video.webm", "x");
+    expect((await j.recover(async () => {})).finished).toEqual(["a"]);
   });
   it("finishes a capture whose media was saved before the crash, then marks it complete", async () => {
     const fs = memoryFs();

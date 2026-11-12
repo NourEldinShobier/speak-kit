@@ -83,6 +83,7 @@ class SessionImpl implements Session {
   #p: SessionPorts;
   #abort: AbortController | undefined;
   #work: Promise<void> = Promise.resolve();
+  #aborting: Promise<void> | undefined;
 
   constructor(ports: SessionPorts) {
     this.#p = ports;
@@ -128,6 +129,11 @@ class SessionImpl implements Session {
       return { ok: false, reason: "finishing" };
     }
     if (this.state.phase !== "idle") return { ok: false, reason: "busy" };
+    // A recording that was just discarded is still being stopped: a new one must not start under it.
+    if (this.#aborting) {
+      await this.#aborting;
+      if (this.state.phase !== "idle") return { ok: false, reason: "busy" };
+    }
     const id = this.#p.newId();
     const target = preset ?? (await this.#pick(id));
     if (!target) return { ok: false, reason: "cancelled" };
@@ -212,7 +218,12 @@ class SessionImpl implements Session {
     if (phase === "idle" || phase === "finishing") return;
     this.#abort?.abort();
     this.#idle();
-    if (phase === "recording" && id) this.#work = this.#throwAway(id);
+    if (phase === "recording" && id) {
+      const abort: Promise<void> = this.#throwAway(id).finally(() => {
+        if (this.#aborting === abort) this.#aborting = undefined;
+      });
+      this.#aborting = this.#work = abort;
+    }
   }
 
   async switchTarget(target: Target): Promise<boolean> {

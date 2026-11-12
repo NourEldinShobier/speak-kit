@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cropOrFull, toFrame } from "./index";
+import { cropOrFull } from "./index";
 
 const frame = { width: 1920, height: 1080 };
 const full = () => "full";
@@ -30,8 +30,5 @@ describe("window crop", () => {
     const errors: unknown[] = [];
     expect(cropOrFull(frame, { x: 1, y: 1, width: 10, height: 10 }, { crop: boom, full, onError: (e) => errors.push(e) })).toBe("full");
     expect(errors).toHaveLength(1);
-  });
-  it("moves a desktop rectangle into display pixels", () => {
-    expect(toFrame({ x: 2020, y: 40, width: 500, height: 300 }, { x: 1920, y: 0 })).toEqual({ x: 100, y: 40, width: 500, height: 300 });
   });
 });

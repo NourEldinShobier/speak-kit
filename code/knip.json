@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vite.config.ts", "vitest.stryker.config.ts"],
+      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vite.config.ts", "vitest.stryker.config.ts", "vitest.stryker.capture.config.ts"],
       "ignore": ["scripts/canary/*/**"]
     },
     "e2e": {
@@ -19,6 +19,7 @@
         "src/renderer/*.html",
         "src/renderer/*.tsx",
         "src/renderer/features/dictation/{hud-main.tsx,recorder-main.ts}",
+        "src/renderer/features/capture/{capsule-main.tsx,overlay-main.ts,recorder-main.ts}",
         "scripts/*.mjs",
         "tests/*.ts",
         "**/*.test.{ts,tsx}"

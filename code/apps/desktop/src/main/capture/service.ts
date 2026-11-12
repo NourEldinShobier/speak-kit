@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, type WebContents } from "electron";
+import { BrowserWindow, dialog, powerMonitor, type WebContents } from "electron";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { CAPTURE_STATUS_EVENT } from "../../shared/capture/channels";
@@ -7,6 +7,7 @@ import { noticeFor, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig, CapturePatch } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
 import type { HotkeySource } from "../dictation/types";
+import { resyncOnPower } from "../dictation/power-resync";
 import { History } from "./history";
 import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
@@ -46,6 +47,7 @@ export class CaptureService {
   #hotkeyFailed = false;
   #hotkeyNote: string | undefined;
   #recovery: CaptureStatus["recovery"];
+  readonly #stopPower: () => void;
 
   constructor(ctx: Ctx, o: CaptureServiceOptions) {
     this.#ctx = ctx;
@@ -68,6 +70,7 @@ export class CaptureService {
       onShot: () => void this.runtime.shoot(),
       log: (l) => ctx.log.warn(l),
     });
+    this.#stopPower = resyncOnPower(powerMonitor, () => this.keys.resync());
     this.ready = this.#init();
   }
 
@@ -164,8 +167,8 @@ export class CaptureService {
     this.#hotkeyNote = result.note;
     this.#ctx.saveConfig();
     if (this.history.changedFolder) {
-      this.runtime.rebind();
       this.history.open();
+      this.runtime.rebind();
       this.#recovery = await this.history.recover();
     }
     if (result.keysChanged) {
@@ -244,7 +247,13 @@ export class CaptureService {
     return { session: this.runtime.state, capsule: this.runtime.controller.state, items: await this.history.store.list(), notice: this.runtime.notice };
   }
 
+  /** See the runtime: saves what is recording at quit. */
+  finishForQuit(): Promise<void> | undefined {
+    return this.runtime.finishForQuit();
+  }
+
   dispose() {
+    this.#stopPower();
     if (this.#sweep) clearInterval(this.#sweep);
     this.keys.stop();
     this.runtime.dispose();

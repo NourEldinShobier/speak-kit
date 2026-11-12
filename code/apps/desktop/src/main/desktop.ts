@@ -101,6 +101,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onEngineState: announceEngine,
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
+    /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
+    finishCapture: () => capture.finishForQuit(),
     dispose: () => {
       shortcuts.unregisterAll();
       reading.dispose();

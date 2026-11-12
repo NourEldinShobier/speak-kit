@@ -3,7 +3,7 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createBundle, videoName, type Bundle } from "./index";
+import { createBundle, videoName, writeStreamed, type Bundle } from "./index";
 
 let root: string;
 let bundle: Bundle;
@@ -54,5 +54,19 @@ describe("capture bundle", () => {
   });
   it("names the first video video.webm", () => {
     expect([videoName(0), videoName(1), videoName(3)]).toEqual(["video.webm", "video.webm", "video-3.webm"]);
+  });
+  it("writes what the recorder streams: pictures, video and sound go to their own files", async () => {
+    await bundle.open("a");
+    await writeStreamed(bundle, "a", { kind: "frame", atMs: 5, jpeg: new Uint8Array([7]) });
+    await writeStreamed(bundle, "a", { kind: "video", segment: 2, chunk: new Uint8Array([8]) });
+    await writeStreamed(bundle, "a", { kind: "audio", chunk: Int16Array.from([1, 2]) });
+    expect((await bundle.frames("a")).map((f) => f.atMs)).toEqual([5]);
+    expect([...(await bundle.readFile("a", videoName(2)))!]).toEqual([8]);
+    expect([...(await bundle.pcm("a"))!]).toEqual([1, 2]);
+  });
+  it("a write into a folder that is gone rejects, so the caller can tell the person", async () => {
+    await expect(writeStreamed(bundle, "missing", { kind: "video", segment: 1, chunk: new Uint8Array([1]) })).rejects.toThrow();
+    await bundle.open("b");
+    await expect(bundle.video("b", 1, new Uint8Array([1]))).resolves.toBeUndefined();
   });
 });

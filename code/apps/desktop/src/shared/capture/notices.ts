@@ -12,6 +12,8 @@ export type NoticeCode =
   | "permission-denied"
   | "unsupported"
   | "hotkey-failed"
+  | "write-failed"
+  | "display-lost"
   | "failed";
 
 export type NoticeTone = "error" | "warning" | "info";
@@ -68,6 +70,13 @@ const TEXT: Record<Exclude<NoticeCode, "no-space" | "cleaned-up">, Text> = {
   "permission-denied": { tone: "error", title: "Speak Kit cannot see the screen", body: "Allow Speak Kit under Screen Recording in System Settings, then try again.", action: "open-permissions" },
   unsupported: { tone: "info", title: "Capture is not available here", body: "This computer cannot record the screen with Speak Kit yet.", action: "ok" },
   "hotkey-failed": { tone: "error", title: "The capture key did not start", body: "Another program may be using it. Choose a different key in Capture settings.", action: "open-settings" },
+  "write-failed": {
+    tone: "error",
+    title: "Part of the recording could not be saved",
+    body: "The capture folder stopped accepting files, so pictures or sound may be missing. Choose another folder for captures.",
+    action: "choose-folder",
+  },
+  "display-lost": { tone: "warning", title: "The screen was disconnected", body: "Recording stopped and what was captured so far is saved.", action: "ok" },
   failed: { tone: "error", title: "The capture failed", body: "Nothing was saved. Try again; details are in the log.", action: "retry" },
 };
 

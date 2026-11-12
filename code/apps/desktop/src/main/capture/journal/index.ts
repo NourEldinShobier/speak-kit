@@ -4,6 +4,8 @@ export interface JournalFs {
   read(file: string): Promise<string | undefined>;
   /** Names of the entries directly under `dir`. */
   list(dir: string): Promise<string[]>;
+  /** Names of the files directly under `dir`. */
+  fileNames(dir: string): Promise<string[]>;
   exists(path: string): Promise<boolean>;
   /** Removes a folder and everything in it; no error when it is missing. */
   removeDir(dir: string): Promise<void>;
@@ -33,7 +35,7 @@ export interface RecoveryReport {
 export interface Journal {
   begin(id: string, startedAt: number): Promise<void>;
   stage(id: string, stage: Stage, media?: string): Promise<void>;
-  /** Looks at every capture folder that is not complete: finishes it when its media is saved, removes it when not. */
+  /** Looks at every capture folder that is not complete: finishes it when its media is saved or was streamed to disk before the crash, removes it when not. */
   recover(finish: (entry: JournalEntry) => Promise<void>): Promise<RecoveryReport>;
 }
 
@@ -70,7 +72,7 @@ export function createJournal(fs: JournalFs, root: string): Journal {
           continue;
         }
         if (entry.stage === "complete") continue;
-        const saved = entry.stage !== "recording" && entry.media !== undefined && (await fs.exists(at(root, id, entry.media)));
+        const saved = entry.stage !== "recording" ? entry.media !== undefined && (await fs.exists(at(root, id, entry.media))) : await hasStreamed(fs, at(root, id));
         if (!saved) {
           report[(await discard(fs, at(root, id))) ? "removed" : "failed"].push(id);
           continue;
@@ -86,6 +88,11 @@ export function createJournal(fs: JournalFs, root: string): Journal {
       return report;
     },
   };
+}
+
+/** A capture cut off while recording has what was already streamed to disk: a video or at least one picture. */
+async function hasStreamed(fs: JournalFs, dir: string): Promise<boolean> {
+  return (await fs.exists(`${dir}/video.webm`)) || (await fs.fileNames(`${dir}/frames`)).length > 0;
 }
 
 /** Removes an interrupted capture folder; true when it is gone. */

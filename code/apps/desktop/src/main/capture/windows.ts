@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, type Rectangle } from "electron";
+import { BrowserWindow, type Rectangle } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { CAPSULE_EVENT, OVERLAY_EVENT } from "../../shared/capture/channels";
@@ -141,5 +141,7 @@ export function openCapsuleWindow(page: string, displayBounds: Rectangle): Capsu
   };
 }
 
-/** The display a point is on, as the rectangle the overlay and the capsule cover. */
-export const displayBoundsAt = (p: { x: number; y: number }): Rectangle => screen.getDisplayNearestPoint(p).bounds;
+/** Keeps this app's own windows out of a recording while one runs (the always-hidden ones stay hidden after). */
+export function hideOwnWindows(on: boolean): void {
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.setContentProtection(on || isProtected(w));
+}

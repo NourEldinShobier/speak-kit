@@ -4,7 +4,6 @@ import { validHotkey } from "../dictation/keys";
 export const CAPTURE_HOTKEY = "F9";
 export const SCREENSHOT_HOTKEY = "F10";
 export const TARGET_KINDS = ["ask", "screen", "window", "area"] as const;
-export type TargetKind = (typeof TARGET_KINDS)[number];
 export const INK_FADE_MS = [1000, 3000, 0] as const;
 export const RETENTION_DAYS = [7, 30, 90, 0] as const;
 export const EXPERIMENT_IDS = ["screenshots", "recording", "replay", "zoomExport", "agentContext", "pageContext", "speechEngines", "playground"] as const;
