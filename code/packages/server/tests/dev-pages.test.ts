@@ -118,6 +118,6 @@ describe("page context routes", () => {
     expect((await post(c, { page: { url: "https://example.com/" }, events: [click] })).status).toBe(400);
     expect((await post(c, { page, events: Array.from({ length: 51 }, () => click) })).status).toBe(400);
     expect((await fetch(`${c.base}/v1/capture/page-context?from=x`, { headers: c.auth })).status).toBe(400);
-    expect((await fetch(`${c.base}/v1/capture/page-context`)).status).toBe(401);
+    expect((await fetch(`${c.base}/v1/capture/page-context`)).status).toBe(404);
   });
 });

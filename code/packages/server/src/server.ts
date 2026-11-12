@@ -135,7 +135,7 @@ function requestHandler(services: Services, authorized: (req: IncomingMessage) =
     const method = req.method ?? "GET";
     if (method === "OPTIONS") return preflight(res, origin);
     const { route, params } = resolveRoute(ROUTES, method, new URL(req.url ?? "/", "http://x").pathname);
-    if (route.auth !== false && !authorized(req)) throw new HttpError(401, "token-rejected", "missing or wrong token");
+    if (route.auth !== false && !authorized(req)) throw new HttpError(404, "token-rejected", "missing or wrong token");
     const ac = new AbortController();
     const done = route.handle({ req, res, params, signal: ac.signal }, services);
     await (route.stream ? done : withDeadline(done, services.deadlines.controlMs, ac));

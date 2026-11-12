@@ -6,7 +6,7 @@ import type { EngineId } from "./engines";
  * Requests whose Origin is an http(s) web page are rejected (CSRF / DNS rebinding); only no-Origin or chrome-extension:// origins pass.
  *
  *   GET  /v1/health        -> Health            (no auth)
- *   GET  /v1/auth/check    -> 204 | 401         (token check, used by the pairing UI)
+ *   GET  /v1/auth/check    -> 204 | 404         (a wrong or missing token answers 404 with the code token-rejected; the pairing UI reads it, used by the pairing UI)
  *   GET  /v1/voices        -> VoiceList
  *   POST /v1/speak         -> body SpeakRequest, response is a stream of frames (see frames.ts)
  *   POST /v1/engine/warm   -> 202, loads the model ahead of the first request (idempotent)

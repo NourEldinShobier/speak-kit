@@ -1,5 +1,6 @@
 import { parseLookError, parseScreenLook, type LookRequestScope, type VoiceView } from "@speakkit/protocol";
 import { ignore } from "../../shared/ignore";
+import { tokenRejected } from "../../shared/rejection";
 import type { LookAnswer } from "./look-tool";
 import type { VoiceEvent } from "./machine";
 import { call, type LocalDeps } from "./mint";
@@ -14,7 +15,7 @@ export async function lookAtScreen(d: LocalDeps, req: { session: string; scope: 
   const body: unknown = await res.json().catch(ignore);
   const code = parseLookError(body);
   if (code) return { ok: false, code };
-  if (res.status === 401 || res.status === 403) return { ok: false, code: "unpaired" };
+  if (tokenRejected(res.status, body)) return { ok: false, code: "unpaired" };
   const look = res.ok ? parseScreenLook(body) : undefined;
   return look ? { ok: true, look } : { ok: false, code: "unavailable" };
 }

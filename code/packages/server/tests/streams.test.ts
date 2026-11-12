@@ -87,7 +87,7 @@ describe("live transcription routes", () => {
     const made = await create(c);
     expect(await (await call(c, `/v1/streams/${made.id}`, { method: "DELETE", owner: made.owner })).json()).toEqual({ cancelled: true });
     expect((await call(c, `/v1/streams/${made.id}/heartbeat`, { method: "POST", owner: made.owner })).status).toBe(404);
-    expect((await fetch(`${c.base}/v1/streams`, { method: "POST", body: "{}" })).status).toBe(401);
+    expect((await fetch(`${c.base}/v1/streams`, { method: "POST", body: "{}" })).status).toBe(404);
   });
 
   it("answers unsupported when the app lends no speech engine", async () => {

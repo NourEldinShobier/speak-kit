@@ -1,10 +1,23 @@
+import path from "node:path";
 import type { CaptureHandle, CaptureResult } from "@speakkit/dictation";
 import { AUTOMATION_LIMITS, type AutomationErrorCode } from "@speakkit/protocol";
 import { AutomationFault, type AutomationHost } from "@speakkit/server";
 import { CAPABILITIES, CONTROL_VERSION, fail, LIMITS, ok, type Command, type ControlRequest, type ErrorCode, type Reply } from "../../shared/control/contract";
+import { TRANSCRIPT_LANGUAGES } from "../../shared/transcripts/settings";
 import { skillText } from "../../shared/control/skill";
 import { COMMAND_LINE_KEYS, validateChange, type SettingsChange } from "../../shared/control/settings-registry";
 import type { ReaderCommand } from "../../shared/reader";
+
+/** A transcription as the command line follows it. */
+export interface TranscribeJob {
+  id: string;
+  status: "queued" | "transcribing" | "done" | "failed" | "interrupted" | "cancelled" | "recording";
+  chunksDone: number;
+  chunksTotal: number;
+  failure?: { code: string; message: string };
+  /** The words, once the status is done. */
+  text?: string;
+}
 
 export interface HistoryRow {
   id: string;
@@ -34,6 +47,11 @@ export interface ControlDeps {
     stop(): void;
     cancel(): void;
     busy(): boolean;
+  };
+  /** The transcripts store: start a file, then ask for the job by its id. */
+  transcripts: {
+    importFile(a: { path: string; language: string }): Promise<{ ok: true; id: string } | { ok: false; failure: { code: string; message: string } }>;
+    job(id: string): Promise<TranscribeJob | undefined>;
   };
   history: { list(q: { search?: string; limit?: number }): Promise<HistoryRow[]> };
   settings: {
@@ -182,6 +200,40 @@ function createSpeak(d: ControlDeps): Handler {
   };
 }
 
+const FAILURE: Record<string, ErrorCode> = {
+  unsupported: "unsupported",
+  "too-large": "too-large",
+  "too-long": "too-large",
+  "engine-missing": "model-missing",
+  "engine-loading": "busy",
+};
+const failureReply = (f: { code: string; message: string }): Reply => fail(FAILURE[f.code] ?? "failed", f.message);
+
+/** `transcribe`: start a transcript of an audio file, or ask how the one with this id is going. A job that did not finish answers as the failure it ended with. */
+function createTranscribe(d: ControlDeps): Handler {
+  return async (a) => {
+    const jobId = str(a.jobId);
+    if (jobId !== undefined) {
+      const job = await d.transcripts.job(jobId);
+      if (!job) return fail("failed", "There is no such transcription.");
+      if (job.status === "failed") return failureReply(job.failure ?? { code: "failed", message: "The transcription failed." });
+      if (job.status === "cancelled") return fail("cancelled", "The transcription was cancelled.");
+      if (job.status === "interrupted") return fail("failed", "The transcription was interrupted. It resumes when Speak Kit starts again.");
+      return ok({ transcript: job });
+    }
+    const file = str(a.path);
+    if (!file || !path.isAbsolute(file)) return fail("usage", "transcribe needs the full path of an audio file.");
+    const language = str(a.language) ?? "auto";
+    if (!(TRANSCRIPT_LANGUAGES as readonly string[]).includes(language)) return fail("usage", `The language is one of: ${TRANSCRIPT_LANGUAGES.join(", ")}.`);
+    try {
+      const r = await d.transcripts.importFile({ path: file, language });
+      return r.ok ? ok({ transcript: { id: r.id, status: "queued", chunksDone: 0, chunksTotal: 0 } }) : failureReply(r.failure);
+    } catch {
+      return fail("failed", "The file could not be transcribed.");
+    }
+  };
+}
+
 /** The commands of the control server, the command line and the MCP server: one place, so they cannot drift apart. */
 export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise<Reply> {
   const reader =
@@ -224,6 +276,7 @@ export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise
       return refused ? fail("refused", refused) : ok({ id, on: a.on });
     },
     speak: createSpeak(d),
+    transcribe: createTranscribe(d),
     skill: () => ok({ text: skillText(CONTROL_VERSION, d.version) }),
   };
   return async (req) => handlers[req.command](req.args ?? {});

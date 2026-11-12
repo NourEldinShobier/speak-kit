@@ -32,6 +32,8 @@ describe("mintSession", () => {
   it("reports an app that is down, a rejected token, an unpaired extension and a body it cannot read", async () => {
     expect(await mintSession(deps(new TypeError("fetch failed")))).toEqual({ ok: false, problem: "app-not-running" });
     expect(await mintSession(deps(json(401, {})))).toEqual({ ok: false, problem: "unpaired" });
+    expect(await mintSession(deps(json(404, { error: { code: "token-rejected", message: "no" } })))).toEqual({ ok: false, problem: "unpaired" });
+    expect(await mintSession(deps(json(404, {})))).toEqual({ ok: false, problem: "unavailable" });
     expect(await mintSession({ ...deps(json(200, session)), token: "" })).toEqual({ ok: false, problem: "unpaired" });
     expect(await mintSession(deps(json(200, { nope: 1 })))).toEqual({ ok: false, problem: "unavailable" });
     expect(await mintSession(deps(json(500, "<html>")))).toEqual({ ok: false, problem: "unavailable" });

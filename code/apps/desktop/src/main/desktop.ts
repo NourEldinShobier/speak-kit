@@ -199,7 +199,7 @@ function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dic
 }
 
 /** The control server and the command-line tools it lends. */
-function desktopControl(ctx: Ctx, o: DesktopOptions, f: Pick<Parameters<typeof setupControl>[1], "reading" | "automation" | "dictation">) {
+function desktopControl(ctx: Ctx, o: DesktopOptions, f: Pick<Parameters<typeof setupControl>[1], "reading" | "automation" | "dictation" | "transcripts">) {
   return setupControl(ctx, { ...f, ...commandLineTools(o), dataDir: o.dictation.dataDir, version: o.version });
 }
 
@@ -231,7 +231,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
-  const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation });
+  const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, inbox: o.voiceChat.captureInbox, test: o.test, micClaim: o.dictation.micClaim });
 
