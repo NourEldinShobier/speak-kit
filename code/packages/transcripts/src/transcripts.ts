@@ -6,7 +6,7 @@ import { saveExport, sha256 } from "./files";
 import { DiskFullError } from "./fs";
 import { failures, MAX_HOURS } from "./formats";
 import { runJob } from "./job";
-import { createGate, JobQueue, QueueFullError } from "./queue";
+import { createGates, JobQueue, QueueFullError } from "./queue";
 import { sweep, audioTotal } from "./retention";
 import { SearchIndex } from "./search";
 import { recordingApi } from "./recording";
@@ -23,7 +23,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
   const store: Store = await openStore({ dir: d.dir, fs: d.fs, now: d.now, newId: d.newId });
   const index = new SearchIndex();
   const queue = new JobQueue();
-  const clear = createGate({ busy: d.busy, sleep: d.sleep });
+  const { clear, preempt } = createGates({ busy: d.busy, sleep: d.sleep });
   const spooled = new Map<string, number>();
   const writing = new Set<string>();
   let notesIdle: Promise<unknown> = Promise.resolve();
@@ -73,6 +73,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         {
           transcribe: d.transcribe,
           clear,
+          preempt,
           ...(d.deadlineMs && { deadlineMs: d.deadlineMs }),
           ...(d.chunks && { chunks: d.chunks }),
           checkpoint: async (done, total, segments) => {

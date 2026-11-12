@@ -11,7 +11,7 @@ export { checkFile, failures, knownExtension, sniff, AUDIO_FORMATS, FORMAT_LIST,
 export { decodeWav, decodeWavAsync, encodeWav16k, wavInfo, WavError, WavTooLong } from "./wav";
 export { planChunks, RATE, type Chunk } from "./chunker";
 export { runJob, HUNG, type ChunkResult, type JobResult } from "./job";
-export { createGate, JobQueue, QueueFullError } from "./queue";
+export { createGate, createGates, createPreempt, JobQueue, QueueFullError } from "./queue";
 export { DEFAULT_POLICY, audioTotal, daysLeft, normalizePolicy, sweep, type Policy, type Sweep } from "./retention";
 export { freePath, removeIfUnchanged, safeName, saveExport, sha256, type Saved } from "./files";
 export { openStore, Store, StoreError } from "./store";

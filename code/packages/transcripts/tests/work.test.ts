@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import {
   audioTotal,
   createGate,
+  createPreempt,
   daysLeft,
   decodeWav,
   decodeWavAsync,
@@ -309,6 +310,104 @@ describe("runJob", () => {
     expect(r).toMatchObject({ status: "cancelled", chunksDone: 0 });
   });
 
+  describe("dictation pre-empts a running chunk", () => {
+    const one = tone(10);
+    // A chunk that runs until its signal aborts, then rejects like the engine does.
+    const hangs = (signal: AbortSignal) =>
+      new Promise<ChunkResult>((_, reject) => (signal.aborted ? reject(signal.reason) : signal.addEventListener("abort", () => reject(signal.reason), { once: true })));
+
+    test("the chunk is stopped, waits for the gate and runs again from the same audio", async () => {
+      const order: string[] = [];
+      let take!: () => void;
+      const preempt = vi.fn(
+        (signal: AbortSignal) =>
+          new Promise<void>((resolve) => {
+            take = resolve;
+            signal.addEventListener("abort", () => resolve(), { once: true });
+          }),
+      );
+      let calls = 0;
+      const sizes: number[] = [];
+      const p = runJob(
+        {
+          clear: async () => void order.push("clear"),
+          preempt: (signal) => (order.push("watch"), preempt(signal)),
+          transcribe: async (part, _l, signal) => {
+            sizes.push(part.length);
+            order.push(`t${++calls}`);
+            return calls === 1 ? hangs(signal) : ok("said");
+          },
+        },
+        { pcm: one, language: "en", signal: new AbortController().signal },
+      );
+      await vi.waitFor(() => expect(calls).toBe(1));
+      take();
+      const r = await p;
+      expect(order).toEqual(["clear", "watch", "t1", "clear", "watch", "t2"]);
+      expect(sizes).toEqual([160000, 160000]);
+      expect(r).toMatchObject({ status: "done", chunksDone: 1, chunksTotal: 1 });
+      expect(r.segments).toEqual([{ start: 0, end: 10, text: "said" }]);
+    });
+
+    test("an engine that answers a stopped chunk with a failure still just gives way", async () => {
+      let calls = 0;
+      let take!: () => void;
+      const r = await runJob(
+        {
+          preempt: (signal) =>
+            new Promise<void>((resolve) => {
+              take = resolve;
+              signal.addEventListener("abort", () => resolve(), { once: true });
+            }),
+          transcribe: async (_p, _l, signal) => {
+            if (++calls > 1) return ok("again");
+            setTimeout(() => take());
+            await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+            return { ok: false, code: "failed" };
+          },
+        },
+        { pcm: one, language: "en", signal: new AbortController().signal },
+      );
+      expect(calls).toBe(2);
+      expect(r).toMatchObject({ status: "done" });
+      expect(r.segments.map((s) => s.text)).toEqual(["again"]);
+    });
+
+    test("giving way is not a failure: a chunk that fails twice for real still fails the job", async () => {
+      let calls = 0;
+      const r = await runJob(
+        { preempt: () => new Promise(() => {}), transcribe: async () => (calls++, { ok: false, code: "failed" }) },
+        { pcm: one, language: "en", signal: new AbortController().signal },
+      );
+      expect(calls).toBe(2);
+      expect(r.status).toBe("failed");
+    });
+
+    test("a cancel while the chunk waits to run again ends the job as cancelled", async () => {
+      const ctl = new AbortController();
+      let calls = 0;
+      const r = await runJob(
+        {
+          clear: async () => {},
+          preempt: async () => {},
+          transcribe: async (_p, _l, signal) => {
+            calls++;
+            ctl.abort("cancel");
+            return hangs(signal);
+          },
+        },
+        { pcm: one, language: "en", signal: ctl.signal },
+      );
+      expect(calls).toBe(1);
+      expect(r).toMatchObject({ status: "cancelled", chunksDone: 0 });
+    });
+
+    test("a chunk that finished is kept even when dictation came at the same moment", async () => {
+      const r = await runJob({ preempt: async () => {}, transcribe: async () => ok("whole") }, { pcm: one, language: "en", signal: new AbortController().signal });
+      expect(r.segments.map((s) => s.text)).toEqual(["whole"]);
+    });
+  });
+
   test("a checkpoint that fails ends the job: disk full has its own message", async () => {
     const full = await run(() => ok("x"), { checkpoint: () => Promise.reject(new DiskFullError()) });
     expect(full).toMatchObject({ status: "failed", failure: { code: "disk-full" }, chunksDone: 0, segments: [] });
@@ -391,6 +490,19 @@ describe("JobQueue", () => {
 });
 
 describe("gate", () => {
+  test("the pre-empt watch resolves as soon as dictation is busy, polling until then, and stops when aborted", async () => {
+    let busy = false;
+    let polls = 0;
+    const watch = createPreempt({ busy: () => busy, sleep: async () => void (++polls === 3 && (busy = true)), pollMs: 50 });
+    await watch(new AbortController().signal);
+    expect(polls).toBe(3);
+    busy = false;
+    const ctl = new AbortController();
+    const waits: number[] = [];
+    await createPreempt({ busy: () => false, sleep: async (ms) => void (waits.push(ms), ctl.abort()), pollMs: 50 })(ctl.signal);
+    expect(waits).toEqual([50]);
+  });
+
   test("waits while dictation is busy, polling, and stops when aborted", async () => {
     let busy = true;
     let polls = 0;

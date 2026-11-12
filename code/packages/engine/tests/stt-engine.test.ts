@@ -146,6 +146,26 @@ describe("WhisperStt", () => {
     expect((await e.transcribe(speech(100), "en")).speech).toBe(true);
   });
 
+  it("aborting a transcription tells the worker to stop that job, once", async () => {
+    const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "starts");
+    dirs.push(join(log, ".."));
+    process.env.SPEAKKIT_FAKE_LOG = log;
+    try {
+      const { e } = await make();
+      await e.load("large-v3-turbo-q5_0");
+      const ac = new AbortController();
+      const hang = new Int16Array(100);
+      hang[0] = 999;
+      const p = e.transcribe(hang, "en", { signal: ac.signal });
+      ac.abort(new Error("dictation"));
+      await expect(p).rejects.toThrow("dictation");
+      await vi.waitFor(async () => expect((await starts(log)).filter((l) => l.startsWith("abort id="))).toHaveLength(1));
+      expect((await e.transcribe(speech(100), "en")).speech).toBe(true);
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_LOG;
+    }
+  });
+
   it("a killed worker rejects the pending job, shows unloaded, and the next load starts a new one", async () => {
     const { e } = await make();
     await e.load("large-v3-turbo-q5_0");
