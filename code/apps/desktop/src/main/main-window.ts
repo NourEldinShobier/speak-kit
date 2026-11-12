@@ -6,6 +6,7 @@ import type { Config } from "../shared/schemas";
 import { closeOutcome } from "../shared/settings/behaviour";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
+import { createSizeGuard } from "./window-size-guard";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -140,6 +141,9 @@ export class MainWindow {
       if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
+    const guard = createSizeGuard(w);
+    w.on("will-move", guard.willMove);
+    w.on("moved", guard.moved);
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
     w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
