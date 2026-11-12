@@ -11,7 +11,7 @@ export const TAIL_MS = 200;
 /** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
 export const MAX_RECORDING_MS = 5 * 60_000;
 
-type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "secondKey" | "rawKey">>;
+type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "secondKey" | "mouseKey" | "rawKey">>;
 type Which = { key: string; raw: boolean };
 
 export type Capture =
@@ -121,7 +121,7 @@ function key(session: Session, cfg: Config, event: KeyEvent): Step {
       ? event.key === owner
         ? { key: owner, raw: "raw" in c && c.raw === true }
         : undefined
-      : [cfg.hotkey, cfg.secondKey, cfg.rawKey].includes(event.key) && event.key
+      : [cfg.hotkey, cfg.secondKey, cfg.mouseKey, cfg.rawKey].includes(event.key) && event.key
         ? { key: event.key, raw: event.key === cfg.rawKey }
         : undefined;
   if (which) return { ...hotkey(session, cfg, which, event), consumed: true };

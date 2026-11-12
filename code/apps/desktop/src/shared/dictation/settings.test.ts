@@ -5,8 +5,16 @@ import { DictationConfigSchema, DictationPatchSchema } from "./settings";
 
 const DEFAULTS = {
   enabled: false,
-  hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
+  hotkey: "ControlRight",
   mode: "hold",
+  holdMs: 300,
+  secondHotkey: "",
+  mouseButton: "",
+  rawHotkey: "",
+  pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
+  cancelKey: "Escape",
+  shareHotkey: false,
+  pauseRules: { mode: "off", apps: [], fullscreen: false },
   language: "auto",
   model: "large-v3-turbo-q5_0",
   retention: "7d",
