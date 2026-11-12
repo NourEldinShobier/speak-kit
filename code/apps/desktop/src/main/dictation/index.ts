@@ -1,3 +1,4 @@
+import { systemCaretReader, type CaretReader } from "./caret-reader";
 import { createElectronClipboard } from "./clipboard";
 import { createHud, type Hud, type HudWindow } from "./hud";
 import { openHudWindow, type HudWindowOptions } from "./hud-window";
@@ -12,7 +13,7 @@ export type { Hud, HudState, HudWindow } from "./hud";
 export interface DictationOsOptions {
   /** Per-program paste rules on top of the built-in ones (terminals, Java, remote desktop). */
   overrides?: readonly AppOverride[] | (() => readonly AppOverride[]);
-  hud?: HudWindowOptions & { idleMs?: number };
+  hud?: HudWindowOptions & { idleMs?: number; place?: () => "top" | "bottom" };
   /** Called with each HUD window as it is created, so the app can tell which page its HUD buttons come from. */
   onHudWindow?(w: HudWindow): void;
 }
@@ -29,6 +30,8 @@ export interface DictationOs {
   passwordFocused(): boolean;
   /** Gets text into the focused field of the foreground program. Calls are queued, so dictations paste in the order they finish. */
   insert(text: string, options?: InsertOptions): Promise<InsertResult>;
+  /** The character before the caret in the focused field, for smart spacing. Absent on an OS layer that cannot read it. */
+  readonly caret?: CaretReader;
   /** Brings a window (by the `hwnd` of `foreground()`) to the front; true when it is in front within half a second. */
   focus(hwnd: string): Promise<boolean>;
   /** Resolves once the user's old clipboard is back after a paste. */
@@ -59,8 +62,11 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
       return w;
     },
     idleMs: options.hud?.idleMs,
+    ...(options.hud?.place && { place: options.hud.place }),
   });
+  const caret = systemCaretReader();
   return {
+    caret,
     supported: platform.supported,
     hotkey: platform.hotkey,
     hud,
@@ -71,6 +77,7 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     settled: () => inserter.settled(),
     async dispose() {
       platform.dispose();
+      caret.dispose();
       hud.dispose();
       await inserter.flush();
     },

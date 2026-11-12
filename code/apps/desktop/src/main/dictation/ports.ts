@@ -11,6 +11,7 @@ export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) 
       return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
     },
     focus: (t) => os.focus(t.id),
+    ...(os.caret && { caret: () => os.caret!.read() }),
     async insert({ text, plan }) {
       const result = await os.insert(text, { mode: plan.method === "paste" && plan.keep ? "keep" : plan.method });
       onResult(result);

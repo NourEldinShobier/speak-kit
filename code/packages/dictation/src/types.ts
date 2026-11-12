@@ -2,6 +2,7 @@ import type { AudioTrash, HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus,
 import type { HistoryStats } from "./history-search";
 import type { Rewriter } from "./modes/rewrite";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
+import type { CaretContext } from "./spacing";
 import type { Settings } from "./settings";
 
 export type Unsubscribe = () => void;
@@ -63,6 +64,8 @@ export interface Inserter {
   target(): Promise<Target | undefined>;
   /** Brings the window the key was pressed in back to the front and says whether it is in front within a short time. */
   focus?(target: Target): Promise<boolean>;
+  /** The character before the caret in the focused field and whether text is selected; undefined when the platform cannot read it. */
+  caret?(): Promise<CaretContext | undefined>;
   insert(req: { text: string; plan: Exclude<PastePlan, { method: "refuse" }> }): Promise<{ ok: true } | { ok: false; code: "rejected" | "failed" }>;
 }
 

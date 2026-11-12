@@ -15,6 +15,7 @@ export * from "./vocabulary";
 export * from "./modes";
 export type { Mode as WritingMode } from "./modes";
 export { applyReplacements, applyRules, traceRules, isNumbersOnly, FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES, type RulesOptions, type RulesTrace } from "./rules";
+export { spaceBefore, type CaretContext } from "./spacing";
 export type { CopyReason, PastePlan, Target } from "./paste-plan";
 export type {
   AudioStore,
