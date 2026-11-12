@@ -3,7 +3,7 @@
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.stryker.config.ts", "related": false },
-  "mutate": ["packages/dictation/src/**/*.ts"],
+  "mutate": ["packages/dictation/src/**/*.ts", "packages/engine/src/stt/{languages,download-error,transfers,device,hardware,idle,switching,model-files}.ts"],
   "coverageAnalysis": "perTest",
   "reporters": ["clear-text", "progress", "html", "json"],
   "htmlReporter": { "fileName": "reports/mutation/index.html" },

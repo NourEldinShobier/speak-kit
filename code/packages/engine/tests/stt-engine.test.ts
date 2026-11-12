@@ -5,10 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { EngineNotReadyError, WhisperStt, type EngineStatus, type SttModel } from "../src";
 
 // Tiny stand-ins for the catalog files; the sha256 values are those of the strings "model-a", "model-b" and "vad-model".
+const base = { name: "Model", tag: "Test", description: "", license: { name: "MIT", url: "" }, origin: "builtin" } as const;
 const models: SttModel[] = [
   {
+    ...base,
     id: "large-v3-turbo-q5_0",
     engine: "whisper",
+    detects: true,
     label: "Accurate",
     file: "a.bin",
     url: "http://models.test/a",
@@ -17,8 +20,10 @@ const models: SttModel[] = [
     languages: ["auto", "en", "de", "ar"],
   },
   {
+    ...base,
     id: "parakeet-tdt-0.6b-v3-q4_0",
     engine: "parakeet",
+    detects: false,
     label: "Fast",
     file: "b.bin",
     url: "http://models.test/b",
