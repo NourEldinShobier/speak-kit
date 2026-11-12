@@ -43,9 +43,9 @@ export function createCommandNarrator(d: CommandNarratorDeps): Narrator {
 }
 
 /** The speech model of dictation, or the command when the speech engines experiment is on and the command is chosen. Read at each call, so a change applies to the next capture. */
-export function chooseNarrator(use: () => boolean, parts: { dictation: Narrator; command: Narrator }): Narrator {
+export function chooseNarrator(chosen: () => boolean, parts: { dictation: Narrator; command: Narrator }): Narrator {
   return {
-    ready: () => (use() ? parts.command : parts.dictation).ready(),
-    transcribe: (pcm) => (use() ? parts.command : parts.dictation).transcribe(pcm),
+    ready: () => (chosen() ? parts.command : parts.dictation).ready(),
+    transcribe: (pcm) => (chosen() ? parts.command : parts.dictation).transcribe(pcm),
   };
 }
