@@ -9,6 +9,7 @@ import { applyMemory } from "../shared/memory";
 import type { Config, ConfigPatch } from "../shared/schemas";
 import type { MainWindow } from "./main-window";
 import { emptyPairing } from "./pairing";
+import { SETTINGS_LINKS, createSettingsHandlers } from "./settings-handlers";
 import type { ServerApi } from "./server-api";
 import type { ServerRuntime } from "./server-lifecycle";
 import { voiceChatHandlers } from "./voice-chat/handlers";
@@ -50,6 +51,7 @@ export { metrics };
 /** The only addresses the renderer can make the app open. */
 const EXTERNAL_URLS: Record<ExternalLink, string> = {
   webstore: "https://chromewebstore.google.com/search/SpeakKit",
+  ...SETTINGS_LINKS,
 };
 
 async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
@@ -114,7 +116,7 @@ export function createAppHandlers(d: HandlerDeps) {
       if (url) await shell.openExternal(url);
     },
     openPath: async (which) => {
-      const dir = which === "models" ? d.modelsDir : d.logsDir;
+      const dir = which === "models" ? d.modelsDir : which === "data" ? d.dataDir : d.logsDir;
       await mkdir(dir, { recursive: true });
       await shell.openPath(dir);
     },
@@ -126,6 +128,7 @@ export function createAppHandlers(d: HandlerDeps) {
     },
     metrics: async () => metrics(),
     ...voiceChatHandlers(d.voiceChat, d.publish),
+    ...createSettingsHandlers(d),
     hideWindow: async () => mainWindow.hide(),
     quit: async () => mainWindow.quit(),
   } satisfies Partial<{ [K in Method]: Api[K] }>;

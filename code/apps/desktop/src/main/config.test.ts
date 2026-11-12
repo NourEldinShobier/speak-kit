@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -67,5 +67,41 @@ describe("openConfig", () => {
     c.config.setupDone = true;
     c.save();
     expect(onDisk()).toMatchObject({ setupDone: true, preferredPort: 50000 });
+  });
+});
+
+describe("settings repair and backup", () => {
+  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", closeAction: "quit" });
+
+  it("names the invalid field, keeps the others, and backs up the exact original bytes once before the first save", async () => {
+    writeFileSync(path.join(dir, "config.json"), raw);
+    const c = await openConfig(dir);
+    expect(c.notice).toEqual({ kind: "repaired", fields: ["idleUnload"] });
+    expect(c.config).toMatchObject({ idleUnload: "5", closeAction: "quit" });
+    c.save();
+    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
+    expect(onDisk()).toMatchObject({ idleUnload: "5", configVersion: 1 });
+    writeFileSync(path.join(dir, "config.json"), "{}");
+    c.save();
+    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
+  });
+
+  it("a healthy file is not backed up", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true }));
+    const c = await openConfig(dir);
+    expect(c.notice).toBeNull();
+    c.save();
+    expect(existsSync(path.join(dir, "config.backup.json"))).toBe(false);
+  });
+
+  it("a file from a newer app is read, flagged and never rewritten", async () => {
+    const newer = JSON.stringify({ configVersion: 9, setupDone: true, speed: 2 });
+    writeFileSync(path.join(dir, "config.json"), newer);
+    const c = await openConfig(dir);
+    expect(c.notice).toEqual({ kind: "newer", version: 9 });
+    expect(c.config.speed).toBe(2);
+    c.config.speed = 1;
+    c.save();
+    expect(readFileSync(path.join(dir, "config.json"), "utf8")).toBe(newer);
   });
 });

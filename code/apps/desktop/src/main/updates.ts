@@ -10,6 +10,8 @@ export interface UpdaterLike {
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
   /** Protected in its typings, public at run time. Hooks the app's quit event; electron-updater does that itself only when autoInstallOnAppQuit is already true as the download ends. */
   addQuitHandler?(): void;
+  /** Early channel: a pre-release counts as an update. */
+  allowPrerelease?: boolean;
   setFeedURL?(options: { provider: "generic"; url: string }): void;
   on(event: string, listener: (payload: unknown) => void): unknown;
 }
@@ -66,8 +68,21 @@ export const isReleaseUrl = (url: string) => url.startsWith(RELEASES_PAGE);
 
 const latestSchema = v.object({ tag_name: v.string(), html_url: v.string() });
 
-/** The newest published (non-draft, non-prerelease) release, from the public GitHub API: no token, no install. */
-export async function githubLatestRelease(fetchImpl: typeof fetch): Promise<{ version: string; url: string }> {
+const listSchema = v.array(v.object({ tag_name: v.string(), html_url: v.string(), draft: v.optional(v.boolean()) }));
+
+/** The newest published release from the public GitHub API: no token, no install. The stable channel skips pre-releases; early takes the newest of any kind. */
+export async function githubLatestRelease(fetchImpl: typeof fetch, early = false): Promise<{ version: string; url: string }> {
+  if (early) {
+    const res = await fetchImpl(`https://api.github.com/repos/${RELEASES.owner}/${RELEASES.repo}/releases?per_page=10`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "speakkit" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`GitHub answered ${res.status} for the releases`);
+    const list = v.safeParse(listSchema, await res.json());
+    const top = list.success ? list.output.find((r) => !r.draft) : undefined;
+    if (!top || !isReleaseUrl(top.html_url)) throw new Error("GitHub sent an unexpected release answer");
+    return { version: top.tag_name.replace(/^v/, ""), url: top.html_url };
+  }
   const res = await fetchImpl(`https://api.github.com/repos/${RELEASES.owner}/${RELEASES.repo}/releases/latest`, {
     headers: { Accept: "application/vnd.github+json", "User-Agent": "speakkit" },
     signal: AbortSignal.timeout(15_000),
@@ -85,7 +100,9 @@ interface UpdatesDeps {
   /** Loads electron-updater (auto mode). */
   load(): Promise<UpdaterLike>;
   /** The newest release (manual mode). */
-  latestRelease?(): Promise<{ version: string; url: string }>;
+  latestRelease?(early: boolean): Promise<{ version: string; url: string }>;
+  /** True on the early channel. Read at every check, so a change takes effect at once. */
+  early?(): boolean;
   onState(state: UpdateState): void;
   /** Called once when an update has been downloaded. */
   onReady(version: string): void;
@@ -138,6 +155,7 @@ export class Updates {
     if (this.#u) return this.#u;
     const u = (this.#u = await this.#d.load());
     u.autoDownload = false;
+    u.allowPrerelease = this.#d.early?.() ?? false;
     u.autoInstallOnAppQuit = false;
     const on = u.on.bind(u) as (e: string, l: (x: never) => void) => void;
     on("update-available", (info: { version: string }) => {
@@ -161,6 +179,7 @@ export class Updates {
     if (this.#d.mode === "manual") return this.#checkManual();
     const u = await this.#updater();
     if (!u) return;
+    u.allowPrerelease = this.#d.early?.() ?? false;
     this.#set({ kind: "checking" });
     await u.checkForUpdates().catch((e: unknown) => this.#rejected(e));
   }
@@ -168,7 +187,7 @@ export class Updates {
   async #checkManual() {
     this.#set({ kind: "checking" });
     try {
-      const r = await this.#d.latestRelease!();
+      const r = await this.#d.latestRelease!(this.#d.early?.() ?? false);
       this.#set(isNewerVersion(r.version, this.#d.currentVersion) ? { kind: "manual", version: r.version, url: r.url } : { kind: "idle", checkedAtMs: this.#d.now() });
     } catch (e) {
       this.#fail(e instanceof Error ? e.message : String(e));

@@ -24,16 +24,22 @@ function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers
  */
 export function createTray(context: () => TrayContext, run: TrayHandlers) {
   const mac = process.platform === "darwin";
-  const tray = new Tray(trayIcon("asleep"));
+  let tray: Tray | null = null;
   let menu: Menu | null = null;
   let shown = "";
   let summary = "";
 
-  tray.on("click", () => run.open());
-  // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
-  if (mac) tray.on("right-click", () => menu && tray.popUpContextMenu(menu));
+  const build = () => {
+    const t = new Tray(trayIcon("asleep"));
+    t.on("click", () => run.open());
+    // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
+    if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
+    tray = t;
+    shown = "";
+  };
 
   const refresh = () => {
+    if (!tray) return;
     const c = context();
     const icon = trayIconState(c);
     const tip = trayTooltipFor(c);
@@ -48,15 +54,28 @@ export function createTray(context: () => TrayContext, run: TrayHandlers) {
     menu = Menu.buildFromTemplate(template);
     if (!mac) tray.setContextMenu(menu);
   };
+  build();
   refresh();
 
   return {
     refresh,
+    /** The icon can be hidden in Settings; showing it again rebuilds it from the current state. */
+    setVisible: (on: boolean) => {
+      if (on && !tray) {
+        build();
+        refresh();
+      } else if (!on && tray) {
+        tray.destroy();
+        tray = null;
+      }
+    },
+    visible: () => tray !== null,
     /** For tests: the native menu cannot be clicked from Playwright. */
     items: () => menu?.items ?? [],
     summary: () => summary,
     dispose: () => {
-      tray.destroy();
+      tray?.destroy();
+      tray = null;
     },
   };
 }

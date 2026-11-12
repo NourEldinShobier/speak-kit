@@ -88,18 +88,6 @@ export function activityRow(a: Activity): { title: string; detail: string } {
   return { title: a.title, detail: a.body ? `${prefix[a.kind]}: ${a.body}` : prefix[a.kind] };
 }
 
-export interface LogReader {
-  /** Bytes already read. */
-  size: number;
-  lines: string[];
-}
-
-/** The log view refreshes only when the file grew; a smaller file means it was rotated and is read from the start. */
-export function logDelta(prev: LogReader, size: number, readTail: () => string[]): LogReader {
-  if (size === prev.size) return prev;
-  return { size, lines: readTail() };
-}
-
 /** Keeps the last `n` lines of a text, dropping a half line cut by the read window. */
 export function tailLines(text: string, n: number, cut = false): string[] {
   const all = text.split(/\r?\n/);

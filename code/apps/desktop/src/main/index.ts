@@ -72,6 +72,7 @@ const state: AppState = {
   update: UPDATE_UNSUPPORTED,
   exports: [],
   exportDir: config.exportPrefs.folder || path.join(app.getPath("music"), "Speak Kit"),
+  settingsNotice: store.notice,
   packaged: app.isPackaged,
 };
 
@@ -293,7 +294,8 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       };
 
     const boot = findDeepLink(process.argv) ?? launchLink;
-    const hidden = config.setupDone && (process.argv.includes("--hidden") || (config.startMinimized && openedAtLogin(true)));
+    const hidden = config.setupDone && !config.hideTrayIcon && ( // a hidden tray icon leaves no way to open a hidden window
+      process.argv.includes("--hidden") || (config.startMinimized && openedAtLogin(true)));
     mainWindow.create(hidden && !boot);
     booted = true;
     await runtime.start(test.token);

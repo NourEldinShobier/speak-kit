@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
 import type { Config } from "../shared/schemas";
+import { effectiveCloseAction } from "../shared/settings/behaviour";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
@@ -138,6 +139,7 @@ export class MainWindow {
     w.on("close", (e) => {
       if (this.quitting) return;
       e.preventDefault();
+      if (effectiveCloseAction(this.#config) === "quit") return this.quit();
       this.hide();
     });
     w.on("closed", () => {

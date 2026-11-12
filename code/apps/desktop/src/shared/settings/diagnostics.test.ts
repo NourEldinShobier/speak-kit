@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Activity } from "../ipc";
-import { activityRow, buildReport, filterActivity, logDelta, redactReport, tailLines, type ReportInput } from "./diagnostics";
+import { activityRow, buildReport, filterActivity, redactReport, tailLines, type ReportInput } from "./diagnostics";
 
 const ctx = { home: "C:\\Users\\Jane", user: "Jane" };
 
@@ -80,18 +80,7 @@ describe("activity log", () => {
   });
 });
 
-describe("log reader", () => {
-  it("does not read again until the file grows", () => {
-    let reads = 0;
-    const read = () => (reads++, ["x"]);
-    const a = logDelta({ size: 0, lines: [] }, 10, read);
-    expect(a).toEqual({ size: 10, lines: ["x"] });
-    expect(logDelta(a, 10, read)).toBe(a);
-    expect(reads).toBe(1);
-    expect(logDelta(a, 4, read).size).toBe(4); // rotated: read again
-    expect(reads).toBe(2);
-  });
-
+describe("log tail", () => {
   it("keeps the last lines and drops a cut first line", () => {
     expect(tailLines("a\nb\r\nc\n\nd", 2)).toEqual(["c", "d"]);
     expect(tailLines("cut\nb\nc", 5, true)).toEqual(["b", "c"]);

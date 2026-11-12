@@ -6,6 +6,8 @@ import type { ExportOptions, ExportTarget, ExportView } from "./export";
 import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
+import type { MicAccess } from "./settings/permissions";
+import type { SettingsNotice } from "./settings/settings-file";
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
 export type { Config, ConfigPatch } from "./schemas";
@@ -66,6 +68,8 @@ export interface AppState {
   exports: ExportView[];
   /** Folder the export dialog starts in. */
   exportDir: string;
+  /** Bad settings repaired at start, or a file from a newer app; shown as a banner in Settings until dismissed. */
+  settingsNotice: SettingsNotice | null;
   /** False when running from source: no installer, no updates, no bundled extension. */
   packaged: boolean;
 }
@@ -95,8 +99,8 @@ export interface Metrics {
 
 export type ShortcutResult = { ok: true } | { ok: false; error: DesktopError; conflict?: ShortcutConflict };
 
-export type ExternalLink = "webstore";
-export type OpenPath = "models" | "logs";
+export type ExternalLink = "webstore" | "release-notes" | "issues" | "security";
+export type OpenPath = "models" | "logs" | "data";
 
 /** Main to renderer, besides the state stream. */
 export type UiEvent =
@@ -157,6 +161,17 @@ export interface Api {
   /** Asks OpenAI whether the saved key is accepted. */
   voiceChatTestKey(): Promise<VoiceChatTestResult>;
   voiceChatSetVoice(voice: VoiceChatVoice): Promise<AppState>;
+  /** The log lines since the last read; `lines` is null when the file did not grow, so the view stays as it is. */
+  diagnosticsLog(sinceSize: number): Promise<{ size: number; lines: string[] | null }>;
+  /** The redacted text Copy diagnostics puts on the clipboard. */
+  diagnosticsReport(): Promise<string>;
+  clearActivity(): Promise<AppState>;
+  dismissSettingsNotice(): Promise<AppState>;
+  micAccess(): Promise<MicAccess>;
+  /** Opens the operating system page where the microphone permission is changed; false when this system has none. */
+  openSystemSettings(which: "microphone"): Promise<boolean>;
+  /** Relaunches the app (an experiment that needs a restart). */
+  restartApp(): Promise<void>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -198,6 +213,13 @@ export const METHODS = [
   "voiceChatRemoveKey",
   "voiceChatTestKey",
   "voiceChatSetVoice",
+  "diagnosticsLog",
+  "diagnosticsReport",
+  "clearActivity",
+  "dismissSettingsNotice",
+  "micAccess",
+  "openSystemSettings",
+  "restartApp",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";
