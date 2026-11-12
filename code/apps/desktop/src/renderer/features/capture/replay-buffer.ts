@@ -8,12 +8,9 @@ export interface PieceRecorder {
   startSegment(frameEveryMs: number): void;
   endSegment(): Promise<void>;
   stop(): void;
-  /** How many pieces and pictures are held now (for tests and diagnostics). */
-  held(): { pieces: number; frames: number };
 }
 
 interface Piece {
-  segment: number;
   startMs: number;
   endMs: number;
   chunks: Uint8Array[];
@@ -33,6 +30,8 @@ export interface ReplayBuffer {
   /** Ends the piece being recorded, gives the newest 15 seconds, and goes on recording. Undefined when nothing was recorded yet. */
   save(): Promise<Clip | undefined>;
   stop(): void;
+  /** How many pieces and pictures are held now (for tests and diagnostics). */
+  held(): { pieces: number; frames: number };
 }
 
 const joined = (parts: readonly Uint8Array[]): Uint8Array => {
@@ -44,6 +43,45 @@ const joined = (parts: readonly Uint8Array[]): Uint8Array => {
   }
   return out;
 };
+
+/** The pieces and pictures held now. A piece with an end time of -1 is the one being recorded. */
+function createStore() {
+  let pieces: Piece[] = [];
+  let frames: { atMs: number; jpeg: Uint8Array }[] = [];
+  const open = () => pieces[pieces.length - 1];
+  return {
+    clear() {
+      pieces = [];
+      frames = [];
+    },
+    begin(startMs: number) {
+      pieces.push({ startMs, endMs: -1, chunks: [] });
+    },
+    end(endMs: number) {
+      const piece = open();
+      if (piece && piece.endMs < 0) piece.endMs = endMs;
+    },
+    chunk: (chunk: Uint8Array) => open()?.chunks.push(chunk),
+    frame: (atMs: number, jpeg: Uint8Array) => frames.push({ atMs, jpeg }),
+    /** Drops the finished pieces nobody needs any more, and the pictures from before the oldest one kept. */
+    prune() {
+      const keep = new Set(keepPieces(pieces.filter((p) => p.endMs >= 0)));
+      pieces = pieces.filter((p) => p.endMs < 0 || keep.has(p));
+      const oldest = pieces[0]?.startMs ?? 0;
+      frames = frames.filter((f) => f.atMs >= oldest);
+    },
+    /** The newest 15 seconds of finished pieces with video, or undefined when there are none. */
+    clip(): Clip | undefined {
+      const chosen = clipPieces(pieces.filter((p) => p.endMs >= 0 && p.chunks.length));
+      const first = chosen[0];
+      const last = chosen[chosen.length - 1];
+      if (!first || !last) return undefined;
+      const durationMs = last.endMs - first.startMs;
+      return { videos: chosen.map((p) => joined(p.chunks)), frames: clipTimes(frames, first.startMs).filter((f) => f.atMs <= durationMs), durationMs };
+    },
+    held: () => ({ pieces: pieces.length, frames: frames.length }),
+  };
+}
 
 export interface ReplayBufferDeps {
   now(): number;
@@ -57,80 +95,52 @@ export interface ReplayBufferDeps {
  * is dropped, so memory holds one clip's worth and nothing is written to disk until a clip is saved.
  */
 export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
-  const segmentMs = d.segmentMs ?? REPLAY.segmentMs;
   const set = d.setInterval ?? ((fn, ms) => setInterval(fn, ms));
   const clear = d.clearInterval ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>));
+  const store = createStore();
   let run: PieceRecorder | undefined;
   let frameEveryMs = 1000;
-  let pieces: Piece[] = [];
-  let frames: { atMs: number; jpeg: Uint8Array }[] = [];
   let timer: unknown;
   let rotating: Promise<void> = Promise.resolve();
-  const clock = () => d.now() - run!.startedAt;
-  const open = () => pieces[pieces.length - 1];
-
   const begin = () => {
     run!.startSegment(frameEveryMs);
-    pieces.push({ segment: -1, startMs: clock(), endMs: -1, chunks: [] });
+    store.begin(d.now() - run!.startedAt);
   };
   const close = async () => {
     await run!.endSegment();
-    const piece = open();
-    if (piece && piece.endMs < 0) piece.endMs = clock();
+    store.end(d.now() - run!.startedAt);
   };
-  const prune = () => {
-    const closed = pieces.filter((p) => p.endMs >= 0);
-    const keep = new Set(keepPieces(closed));
-    pieces = pieces.filter((p) => p.endMs < 0 || keep.has(p));
-    const oldest = pieces[0]?.startMs ?? 0;
-    frames = frames.filter((f) => f.atMs >= oldest);
-  };
-  const rotate = () => {
-    rotating = rotating.then(async () => {
+  const rotate = () =>
+    (rotating = rotating.then(async () => {
       await close();
-      prune();
+      store.prune();
       begin();
-    });
-    return rotating;
-  };
-
+    }));
   return {
     attach: (r) => void (run = r),
     onPayload(p) {
-      if (p.kind === "frame") frames.push({ atMs: p.atMs, jpeg: p.jpeg });
-      else if (p.kind === "video") {
-        const piece = open();
-        if (!piece) return;
-        piece.segment = p.segment;
-        piece.chunks.push(p.chunk);
-      }
+      if (p.kind === "frame") store.frame(p.atMs, p.jpeg);
+      else if (p.kind === "video") store.chunk(p.chunk);
     },
     start(every) {
       frameEveryMs = every;
-      pieces = [];
-      frames = [];
+      store.clear();
       begin();
-      timer = set(() => void rotate(), segmentMs);
+      timer = set(() => void rotate(), d.segmentMs ?? REPLAY.segmentMs);
     },
     async save() {
       await rotating;
       await close();
-      const chosen = clipPieces(pieces.filter((p) => p.endMs >= 0 && p.chunks.length));
-      const first = chosen[0];
-      const last = chosen[chosen.length - 1];
-      let clip: Clip | undefined;
-      if (first && last)
-        clip = { videos: chosen.map((p) => joined(p.chunks)), frames: clipTimes(frames, first.startMs).filter((f) => f.atMs <= last.endMs - first.startMs), durationMs: last.endMs - first.startMs };
+      const clip = store.clip();
       begin();
       return clip;
     },
-    held: () => ({ pieces: pieces.length, frames: frames.length }),
     stop() {
       if (timer !== undefined) clear(timer);
       timer = undefined;
       run?.stop();
-      pieces = [];
-      frames = [];
+      store.clear();
     },
+    held: store.held,
   };
 }

@@ -67,15 +67,56 @@ function Place({ draft, busy, set }: { draft: ZoomRegion; busy: boolean; set(pat
   );
 }
 
+type Phase = "idle" | "saving" | "failed" | "nothing";
+
+function Span({ draft, length, disabled, onChange }: { draft: ZoomRegion; length: number; disabled: boolean; onChange(patch: Partial<ZoomRegion>): void }) {
+  const move = (which: "start" | "end") => (ms: number) => {
+    const next = clampTrim(draft, { which, ms, durationMs: length, minMs: ZOOM.minMs });
+    onChange(next);
+  };
+  return (
+    <>
+      <label className="cap-trim__row">
+        <span>Start {duration(draft.startMs)}</span>
+        <Slider aria-label="Zoom start" min={0} max={length} step={500} value={draft.startMs} onChange={move("start")} disabled={disabled} />
+      </label>
+      <label className="cap-trim__row">
+        <span>End {duration(draft.endMs)}</span>
+        <Slider aria-label="Zoom end" min={0} max={length} step={500} value={draft.endMs} onChange={move("end")} disabled={disabled} />
+      </label>
+    </>
+  );
+}
+
+function Notices({ phase }: { phase: Phase }) {
+  if (phase === "nothing")
+    return (
+      <Banner tone="info" title="No zoom to suggest">
+        The pointer did not rest anywhere and nothing was drawn, or the input log was off for this capture.
+      </Banner>
+    );
+  if (phase === "failed")
+    return (
+      <Banner tone="error" title="The video could not be zoomed">
+        Nothing was changed. Try again, or keep the video as it is.
+      </Banner>
+    );
+  return null;
+}
+
+function saveLabel(busy: boolean, hasRegions: boolean): string {
+  if (busy) return "Zooming, this takes as long as the video";
+  return hasRegions ? "Save zoomed video" : "Remove zoom";
+}
+
 /** Chooses the parts of a video to show closer. The original video file stays; the zoomed copy is saved next to it. */
 export function ZoomPanel({ detail, onCancel, onSave, onSuggest }: Props) {
   const length = detail.trim ? detail.trim.endMs - detail.trim.startMs : (detail.durationMs ?? 0);
   const [regions, setRegions] = useState<ZoomRegion[]>(detail.zoom ?? []);
   const [draft, setDraft] = useState<ZoomRegion>({ startMs: 0, endMs: Math.min(length, 4000), x: 0.5, y: 0.5, scale: ZOOM.defaultScale });
-  const [phase, setPhase] = useState<"idle" | "saving" | "failed" | "nothing">("idle");
+  const [phase, setPhase] = useState<Phase>("idle");
   const busy = phase === "saving";
-  const tooShort = length < ZOOM.minMs * 2;
-  const span = (which: "start" | "end") => (ms: number) => setDraft((d) => ({ ...d, ...clampTrim(d, { which, ms, durationMs: length, minMs: ZOOM.minMs }) }));
+  const edit = (patch: Partial<ZoomRegion>) => setDraft((d) => ({ ...d, ...patch }));
   const suggest = async () => {
     const found = await onSuggest().catch(() => []);
     setPhase(found.length ? "idle" : "nothing");
@@ -85,43 +126,28 @@ export function ZoomPanel({ detail, onCancel, onSave, onSuggest }: Props) {
     setPhase("saving");
     if (!(await onSave(regions).catch(() => false))) setPhase("failed");
   };
+  const unusable = busy || length < ZOOM.minMs * 2;
   return (
     <section className="cap-trim cap-zoom" aria-label="Zoom video">
       <h3 className="cap-trim__title">Zoom video</h3>
       <p className="cap-detail__meta">Shows parts of the video closer. The original video file stays in the capture folder.</p>
       <Preview detail={detail} region={draft} />
-      <label className="cap-trim__row">
-        <span>Start {duration(draft.startMs)}</span>
-        <Slider aria-label="Zoom start" min={0} max={length} step={500} value={draft.startMs} onChange={span("start")} disabled={busy || tooShort} />
-      </label>
-      <label className="cap-trim__row">
-        <span>End {duration(draft.endMs)}</span>
-        <Slider aria-label="Zoom end" min={0} max={length} step={500} value={draft.endMs} onChange={span("end")} disabled={busy || tooShort} />
-      </label>
-      <Place draft={draft} busy={busy} set={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
+      <Span draft={draft} length={length} disabled={unusable} onChange={edit} />
+      <Place draft={draft} busy={busy} set={edit} />
       <div className="cap-actions">
-        <Button disabled={busy || tooShort} onClick={() => setRegions((rs) => normalizeRegions([...rs, draft], length))}>
+        <Button disabled={unusable} onClick={() => setRegions((rs) => normalizeRegions([...rs, draft], length))}>
           Add zoom
         </Button>
-        <Button disabled={busy || tooShort} onClick={() => void suggest()}>
+        <Button disabled={unusable} onClick={() => void suggest()}>
           Suggest zooms
         </Button>
       </div>
       <RegionList regions={regions} onRemove={(i) => setRegions((rs) => rs.filter((_, k) => k !== i))} />
-      {phase === "nothing" ? (
-        <Banner tone="info" title="No zoom to suggest">
-          The pointer did not rest anywhere and nothing was drawn, or the input log was off for this capture.
-        </Banner>
-      ) : null}
-      {phase === "failed" ? (
-        <Banner tone="error" title="The video could not be zoomed">
-          Nothing was changed. Try again, or keep the video as it is.
-        </Banner>
-      ) : null}
+      <Notices phase={phase} />
       {detail.zoomSheet ? <img className="cap-zoom__sheet" src={detail.zoomSheet} alt="Contact sheet of the zoomed parts" /> : null}
       <div className="cap-actions">
         <Button variant="primary" loading={busy} disabled={busy || (!regions.length && !detail.zoom?.length)} onClick={() => void save()}>
-          {busy ? "Zooming, this takes as long as the video" : regions.length ? "Save zoomed video" : "Remove zoom"}
+          {saveLabel(busy, regions.length > 0)}
         </Button>
         <Button disabled={busy} onClick={onCancel}>
           Cancel

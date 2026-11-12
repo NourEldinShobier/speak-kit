@@ -24,8 +24,8 @@ const lengthOf = (r: CaptureRecord): number => (r.trim ? r.trim.endMs - r.trim.s
 const PointerFile = v.array(v.object({ atMs: v.number(), x: v.number(), y: v.number() }));
 const EventsFile = v.array(v.object({ atMs: v.number(), kind: v.string() }));
 
-async function readJson<T>(d: ZoomDeps, dir: string, name: string, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> {
-  const text = (await d.bundle.readFile(dir, name))?.toString("utf8");
+async function readJson<T>(d: ZoomDeps, file: { dir: string; name: string }, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> {
+  const text = (await d.bundle.readFile(file.dir, file.name))?.toString("utf8");
   if (!text) return undefined;
   try {
     const parsed = v.safeParse(schema, JSON.parse(text));
@@ -43,8 +43,8 @@ export async function suggestZoom(d: ZoomDeps, id: string): Promise<ZoomRegion[]
   const offset = r.trim?.startMs ?? 0;
   const length = lengthOf(r);
   const inside = (atMs: number) => atMs >= 0 && atMs <= length;
-  const pointer = ((await readJson(d, r.dir, "pointer.json", PointerFile)) ?? []).map((p) => ({ ...p, atMs: p.atMs - offset })).filter((p) => inside(p.atMs)) satisfies PointerSample[];
-  const ink = ((await readJson(d, r.dir, "events.json", EventsFile)) ?? [])
+  const pointer = ((await readJson(d, { dir: r.dir, name: "pointer.json" }, PointerFile)) ?? []).map((p) => ({ ...p, atMs: p.atMs - offset })).filter((p) => inside(p.atMs)) satisfies PointerSample[];
+  const ink = ((await readJson(d, { dir: r.dir, name: "events.json" }, EventsFile)) ?? [])
     .filter((e) => e.kind === "ink-start")
     .map((e) => e.atMs - offset)
     .filter(inside);

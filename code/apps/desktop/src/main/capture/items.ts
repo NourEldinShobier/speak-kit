@@ -37,20 +37,24 @@ export async function toItem(bundle: Bundle, r: CaptureRecord): Promise<CaptureI
   };
 }
 
-export async function toDetail(bundle: Bundle, r: CaptureRecord): Promise<CaptureDetail> {
+/** The pictures of a capture, as the detail shows them: a screenshot is its own single picture. */
+async function framesOf(bundle: Bundle, r: CaptureRecord): Promise<CaptureDetail["frames"]> {
   const frames: CaptureDetail["frames"] = [];
-  // a screenshot is its own single picture
   const files = r.kind === "screenshot" ? [r.media] : r.frames.slice(0, MAX_FRAMES);
   for (const file of files) {
     const src = await dataUrl(bundle, { id: r.dir, file: shownFile(r, file) }, r.kind === "screenshot" ? SHOT_PX : FRAME_PX);
     if (src) frames.push({ atMs: Number(/f-(\d+)/.exec(file)?.[1] ?? 0), src, file, edited: shownFile(r, file) !== file });
   }
+  return frames;
+}
+
+export async function toDetail(bundle: Bundle, r: CaptureRecord): Promise<CaptureDetail> {
   const trimmable = r.kind === "recording" && !r.finishing && !!r.durationMs && r.media.endsWith(".webm");
   const zoomSheet = await dataUrl(bundle, { id: r.dir, file: r.zoomSheet || undefined }, FRAME_PX);
   return {
     ...(await toItem(bundle, r)),
     words: r.words ?? [],
-    frames,
+    frames: await framesOf(bundle, r),
     path: bundle.dir(r.dir),
     trimmable,
     zoomable: trimmable,
