@@ -52,7 +52,7 @@ describe("automation", () => {
     await openSettings(l, "Automation");
     await l.page.getByText("speakkit status --json").waitFor();
     await l.page.getByRole("button", { name: "Copy speakkit://settings/shortcuts" }).waitFor();
-    await l.page.getByRole("switch", { name: "Local server" }).click();
+    await l.page.getByRole("switch", { name: "Let AI apps use Speak Kit" }).click();
     await l.page.getByText("The local server is off").waitFor();
     expect(configOf(l).controlServer).toBe(false);
     await l.page.getByRole("button", { name: "Start server" }).click();

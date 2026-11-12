@@ -197,7 +197,7 @@ export async function startRig(opts: RigOptions = {}): Promise<DictationRig> {
   for (const [name, text] of Object.entries(opts.files ?? {})) writeFileSync(path.join(userData, name), text);
   const launched = await launch({
     userData,
-    config: { setupDone: true, setupSkipped: false, preferredPort: 0, dictation: { enabled: true, ...opts.dictation } },
+    config: { setupDone: true, setupSkipped: false, preferredPort: 0, engines: { idleMinutes: 0 }, dictation: { enabled: true, ...opts.dictation } },
     env: { SPEAKKIT_TEST: "1", SPEAKKIT_FAKE_MIC: wav, ...opts.env },
   });
   const rig = new DictationRig({ launched, target, targetPage, targetPid, w: await loadWin32(), dirs });

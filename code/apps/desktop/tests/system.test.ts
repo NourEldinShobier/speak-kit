@@ -43,7 +43,7 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
   it("the four defaults are registered", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
   });
 
   it("the recorder rebinds a key, rejects a bad combination, and Escape cancels", async () => {
