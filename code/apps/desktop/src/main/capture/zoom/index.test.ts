@@ -154,7 +154,14 @@ describe("suggested zooms", () => {
   it("come from where the pointer rested and where the pen drew", async () => {
     const t = await setup();
     await t.bundle.writeFile("r1", "pointer.json", JSON.stringify([...rest, { atMs: 100, x: 0.2, y: 0.7 }]));
-    await t.bundle.writeFile("r1", "events.json", JSON.stringify([{ atMs: 100, kind: "ink-start" }, { atMs: 200, kind: "ink-end" }]));
+    await t.bundle.writeFile(
+      "r1",
+      "events.json",
+      JSON.stringify([
+        { atMs: 100, kind: "ink-start" },
+        { atMs: 200, kind: "ink-end" },
+      ]),
+    );
     expect(await suggestZoom(t.deps, "r1")).toEqual([region(100, 2100, { x: 0.2, y: 0.7 }), region(3000, 4800)]);
   });
 

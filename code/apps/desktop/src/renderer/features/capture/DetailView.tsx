@@ -30,7 +30,23 @@ function Narration({ words }: { words: CaptureDetail["words"] }) {
   );
 }
 
-function Actions({ detail, platform, zoomOn, onCopied, onDelete, onTrim, onZoom }: { detail: CaptureDetail; platform: string; zoomOn: boolean; onCopied(what: CopyWhat): void; onDelete(): void; onTrim(): void; onZoom(): void }) {
+function Actions({
+  detail,
+  platform,
+  zoomOn,
+  onCopied,
+  onDelete,
+  onTrim,
+  onZoom,
+}: {
+  detail: CaptureDetail;
+  platform: string;
+  zoomOn: boolean;
+  onCopied(what: CopyWhat): void;
+  onDelete(): void;
+  onTrim(): void;
+  onZoom(): void;
+}) {
   const copy = async (what: CopyWhat) => {
     if (await capture.copy(detail.id, what)) onCopied(what);
   };
@@ -126,7 +142,9 @@ function Opened({ detail, platform, zoomOn, onDelete, onChanged }: { detail: Cap
       {editing ? <AnnotateEditor source={editing.source} onClose={closeEditor} onSave={saveEdit} /> : null}
       {detail.kind === "recording" ? <p className="cap-detail__meta">Edits change the pictures, the contact sheet that is copied or sent to Voice chat, and nothing in the video file.</p> : null}
       {trimming ? <TrimPanel durationMs={detail.durationMs ?? 0} kept={detail.trim} onCancel={() => setTrimming(false)} onSave={saveTrim(detail.id, () => (setTrimming(false), onChanged()))} /> : null}
-      {zooming ? <ZoomPanel detail={detail} onCancel={() => setZooming(false)} onSave={saveZoom(detail.id, () => (setZooming(false), onChanged()))} onSuggest={() => capture.suggestZoom(detail.id)} /> : null}
+      {zooming ? (
+        <ZoomPanel detail={detail} onCancel={() => setZooming(false)} onSave={saveZoom(detail.id, () => (setZooming(false), onChanged()))} onSuggest={() => capture.suggestZoom(detail.id)} />
+      ) : null}
       <Narration words={detail.words} />
       <Actions detail={detail} platform={platform} zoomOn={zoomOn} onCopied={setCopied} onDelete={onDelete} onTrim={() => setTrimming(true)} onZoom={() => setZooming(true)} />
       <span className="cap-sr" role="status">
@@ -136,7 +154,19 @@ function Opened({ detail, platform, zoomOn, onDelete, onChanged }: { detail: Cap
   );
 }
 
-function Body({ detail, platform, zoomOn, onDelete, onChanged }: { detail: CaptureDetail | null | undefined; platform: string; zoomOn: boolean; onDelete(item: CaptureDetail): void; onChanged(): void }) {
+function Body({
+  detail,
+  platform,
+  zoomOn,
+  onDelete,
+  onChanged,
+}: {
+  detail: CaptureDetail | null | undefined;
+  platform: string;
+  zoomOn: boolean;
+  onDelete(item: CaptureDetail): void;
+  onChanged(): void;
+}) {
   if (detail === undefined)
     return (
       <div className="lm-card" aria-busy="true" aria-label="Loading capture">

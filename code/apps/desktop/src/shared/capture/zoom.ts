@@ -104,7 +104,8 @@ function rests(samples: readonly PointerSample[]): { startMs: number; endMs: num
   return out;
 }
 
-const pointerAt = (samples: readonly PointerSample[], atMs: number): PointerSample | undefined => samples.reduce<PointerSample | undefined>((best, p) => (!best || Math.abs(p.atMs - atMs) < Math.abs(best.atMs - atMs) ? p : best), undefined);
+const pointerAt = (samples: readonly PointerSample[], atMs: number): PointerSample | undefined =>
+  samples.reduce<PointerSample | undefined>((best, p) => (!best || Math.abs(p.atMs - atMs) < Math.abs(best.atMs - atMs) ? p : best), undefined);
 
 /**
  * Zooms chosen from the pointer: one where it rests (it holds a little after it moves on), and one where a stroke was drawn with the pen. Clicks are

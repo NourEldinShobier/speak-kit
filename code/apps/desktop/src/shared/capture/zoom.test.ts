@@ -114,6 +114,11 @@ describe("region schema", () => {
     expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000, { scale: 5 })]).success).toBe(false);
     expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000, { x: 1.1 })]).success).toBe(false);
     expect(v.safeParse(ZoomRegionsSchema, [region(0.5, 2000)]).success).toBe(false);
-    expect(v.safeParse(ZoomRegionsSchema, Array.from({ length: 51 }, () => region(0, 2000))).success).toBe(false);
+    expect(
+      v.safeParse(
+        ZoomRegionsSchema,
+        Array.from({ length: 51 }, () => region(0, 2000)),
+      ).success,
+    ).toBe(false);
   });
 });

@@ -194,7 +194,15 @@ export type RecorderCommand =
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
   | { id: number; op: "abort" }
-  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number; /** The part of each picture to show (fractions), for the zoom contact sheet. */ crops?: FrameRect[] }
+  | {
+      id: number;
+      op: "sheet";
+      jpegs: Uint8Array[];
+      columns: number;
+      cellWidth: number;
+      cellHeight: number;
+      /** The part of each picture to show (fractions), for the zoom contact sheet. */ crops?: FrameRect[];
+    }
   | { id: number; op: "zoom"; video: Uint8Array; regions: ZoomRegion[] }
   | { id: number; op: "trim"; video: Uint8Array; startMs: number; endMs: number };
 

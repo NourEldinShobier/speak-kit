@@ -5,9 +5,8 @@ import { CapsuleActionSchema, type CapsuleAction, type CapturePhase } from "../.
 import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
-import { createCaptureContext } from "./context/combined";
-import { createLiveSession } from "./live-narrator";
 import { createEventLog } from "./events";
+import { createRecordingExtras } from "./recording-extras";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
 import { capsuleHandlers } from "./capsule-actions";
@@ -60,7 +59,7 @@ export class CaptureRuntime {
   /** The recorder window; tests script it. */
   readonly recorder: RecorderHolder;
   readonly #place: Placement;
-  readonly #context: ReturnType<typeof createCaptureContext>;
+  readonly #extras: ReturnType<typeof createRecordingExtras>;
   readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
@@ -78,6 +77,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
+    this.#extras = createRecordingExtras(deps.ctx, deps.platform, deps.narrator);
     this.recorder = new RecorderHolder({
       recorder: deps.recorder,
       distDir: deps.distDir,
@@ -87,9 +87,8 @@ export class CaptureRuntime {
       bundle: () => deps.history.bundle,
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
-      live: createLiveSession({ settings: () => deps.ctx.config.capture, narrator: deps.narrator, log: (l) => deps.ctx.log.warn(l) }),
+      live: this.#extras.live,
     });
-    this.#context = createCaptureContext({ settings: () => this.#settings, os: deps.platform.os, pageEvents: (from, to) => deps.ctx.server.pageEvents(from, to) });
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
@@ -162,9 +161,10 @@ export class CaptureRuntime {
       fence: this.#fence,
       recorder: this.recorder,
       settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
-      context: this.#context,
+      context: this.#extras.context,
       events: () => this.#events.take(),
-      live: this.recorder.live,
+      live: this.#extras.live,
+      pointer: this.#extras.pointer,
       current: () => epoch === this.#epoch,
       saved: (r) => this.#after.saved(r),
       pick: (signal) => this.#pick(signal),
