@@ -247,3 +247,13 @@ describe("MCP server", () => {
     ]);
   });
 });
+
+describe("inherited names", () => {
+  it.each(["constructor", "valueOf", "toString", "__proto__"])("refuses %s as a tool and runs nothing", async (name) => {
+    const r = rig({ meetings_list: false });
+    const out = await tool(r, name, { read: { command: "meetings", action: "list" }, app: { command: "history", args: {} } });
+    expect(out.result.isError).toBe(true);
+    expect(r.reads).toEqual([]);
+    expect(r.app).toEqual([]);
+  });
+});
