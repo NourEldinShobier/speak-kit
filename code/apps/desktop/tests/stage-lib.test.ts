@@ -30,6 +30,11 @@ describe("importedPackages", () => {
     expect(importedPackages(src)).toEqual(["electron-store", "electron-updater", "koffi", "valibot", "zod"]);
   });
 
+  it("ignores comment lines that say from followed by a quoted word", () => {
+    const src = `// src/cli/reads/time.ts\n/** Seconds from "90", "90.5" or "1:30"; undefined */\nimport x from "valibot";\n * from "zod"`;
+    expect(importedPackages(src)).toEqual(["valibot"]);
+  });
+
   it("does not take a string that is the word from for an import", () => {
     const src = `const [a, b] = [Number(q.get("from") ?? 0), Number(q.get("to") ?? 1)]; import x from "valibot"; Array.from("ab");`;
     expect(importedPackages(src)).toEqual(["valibot"]);

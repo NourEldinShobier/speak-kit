@@ -14,7 +14,9 @@ export function packageOf(specifier) {
 export function importedPackages(source) {
   const found = new Set();
   const re = /(?:(?<![\w"'.])from\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)(["'])([^"'\n]+)\1/g;
-  for (let m; (m = re.exec(source));) {
+  // shortcut: whole comment lines only (a comment after code on the same line can still match), upgrade to a real tokenizer if one does.
+  const code = source.replace(/^\s*(?:\/\/|\/\*|\*).*$/gm, "");
+  for (let m; (m = re.exec(code));) {
     const name = packageOf(m[2]);
     if (name) found.add(name);
   }
