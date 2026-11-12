@@ -1,0 +1,158 @@
+/* Capture in the app window. Rows, cards, banners and tabs come from @speakkit/ui; this file adds the list rows, the opened capture and the playground. */
+.cap-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-block-start: 16px;
+}
+.cap-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.cap-bar > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.cap-day {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.cap-card {
+  padding: 0;
+}
+.cap-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+.cap-row__thumb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 72px;
+  block-size: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-well);
+  color: var(--text-tertiary);
+}
+.cap-row__thumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+.cap-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.cap-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cap-row__meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.cap-chip {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--kbd-fill);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.cap-chip--copied {
+  background: #dcfce7;
+  color: #166534;
+}
+.cap-footer {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.cap-danger {
+  color: #c62828;
+}
+.cap-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding-inline: 16px;
+  color: #c62828;
+  font-size: 13px;
+}
+.cap-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding-block-start: 16px;
+}
+.cap-detail__title {
+  margin: 0;
+  font-size: 18px;
+}
+.cap-detail__meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.cap-frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  inline-size: 100%;
+}
+.cap-frames figure {
+  margin: 0;
+}
+.cap-frames img {
+  inline-size: 100%;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+}
+.cap-frames figcaption {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.cap-words {
+  margin: 0;
+  max-inline-size: 640px;
+  line-height: 1.6;
+}
+.cap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cap-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.cap-stories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cap-stories h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

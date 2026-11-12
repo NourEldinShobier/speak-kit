@@ -18,6 +18,7 @@
     "check:integrity": "node scripts/check-integrity.mjs",
     "ratchet": "node scripts/check-ratchet.mjs",
     "mutate": "stryker run",
+    "mutate:capture": "stryker run stryker.capture.config.json",
     "gates": "node scripts/check-deps.mjs && node scripts/check-css.mjs && node scripts/check-network.mjs && node scripts/check-integrity.mjs && node scripts/check-ratchet.mjs"
   },
   "devDependencies": {

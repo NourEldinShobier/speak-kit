@@ -4,6 +4,7 @@ import type { AppState } from "../../../shared/ipc";
 import "../../../shared/settings/builtin-experiments";
 import { experiments, groupExperiments, needsRestart, toggled, visibleExperiments, type Experiment } from "../../../shared/settings/experiments";
 import { api, Page } from "../../ui";
+import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";
 
 function Card({ e, on, onToggle }: { e: Experiment; on: boolean; onToggle(): void }) {
@@ -84,7 +85,7 @@ export function ExperimentsPage({ s }: { s: AppState }) {
     <Page title="Experiments" lead="Early features that may change or disappear. Each one is off until you turn it on.">
       {restart && <RestartBanner />}
       <div {...rowAttr("experiments/list")} className="sk-exps" onKeyDown={moveBetweenCards}>
-        {list.length === 0 && (
+        {list.length === 0 && experimentCards().length === 0 && (
           <EmptyState icon="flask" title="No experiments right now">
             New early features show up here when a version has them.
           </EmptyState>
@@ -98,6 +99,7 @@ export function ExperimentsPage({ s }: { s: AppState }) {
           </section>
         ))}
       </div>
+      <ExperimentCards />
       <p className="sk-note">Experiments are not covered by support. If one causes trouble, turn it off.</p>
       <ConfirmOn
         e={confirm}

@@ -17,6 +17,7 @@ import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
 import { setupControl } from "./control";
+import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
@@ -52,6 +53,12 @@ const readerHandlers = (reading: ReturnType<typeof createReading>) =>
     readerDone: async (epoch, index) => reading.done(epoch, index),
   }) satisfies Partial<Api>;
 
+// Restart now: what is running stops first; quitAndInstall then quits the app itself.
+function stopForRestart(reading: ReturnType<typeof createReading>, exports: ReturnType<typeof createExports>): void {
+  reading.controller.command({ type: "stop" });
+  exports.dispose();
+}
+
 /** Permissions the dictation hotkey needs; the hotkey is retried when they get allowed. */
 function watchPermissions(parent: DesktopOptions["parent"], dictation: DictationService): void {
   const permissions = setupPermissions(
@@ -72,11 +79,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const reading = createReading(ctx, toasts, () => tray.refresh());
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
-  const stopWork = () => {
-    // Restart now: what is running stops first; quitAndInstall then quits the app itself.
-    reading.controller.command({ type: "stop" });
-    exports.dispose();
-  };
+  const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
@@ -89,6 +92,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
   watchPermissions(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -112,6 +116,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onEngineState: engineAnnouncer(ctx, toasts),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
+    /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
+    finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */
     dispose: (): Promise<void> => {
       const controlDown = control.dispose();
@@ -121,8 +127,9 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
+      capture.dispose();
       return controlDown;
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, installs: () => installedByTest }),
   };
 }

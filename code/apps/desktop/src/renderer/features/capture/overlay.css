@@ -1,0 +1,95 @@
+/* The picker and ink overlay: a dimmed display with one outlined target, a hint pill, and the ink canvas. */
+html,
+body,
+#root {
+  margin: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+  background: transparent;
+  font:
+    13px system-ui,
+    sans-serif;
+  user-select: none;
+}
+#root[data-mode="window"],
+#root[data-mode="area"],
+#root[data-mode="screen"] {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.35);
+  cursor: crosshair;
+}
+.ov-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  background: rgb(255 255 255 / 0.12);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.ov-box--screen {
+  inset: 12px;
+}
+.ov-box--area[data-small="true"] {
+  border-color: #ff8a80;
+}
+.ov-title,
+.ov-badge {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #201e25;
+  color: #ffffff;
+  white-space: nowrap;
+}
+.ov-badge {
+  inset-block-start: auto;
+  inset-block-end: -32px;
+}
+.ov-hint {
+  position: absolute;
+  inset-block-start: 24px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1b2230;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  cursor: default;
+}
+.ov-hint__btn {
+  block-size: 36px;
+  padding-inline: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ov-hint__btn[aria-pressed="true"] {
+  background: #201e25;
+  border-color: #201e25;
+  color: #ffffff;
+}
+.ov-hint__btn:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 2px;
+}
+.ov-hint__esc {
+  padding-inline: 8px;
+  color: #475467;
+}
+.ov-ink {
+  position: fixed;
+  inset: 0;
+  cursor: crosshair;
+}

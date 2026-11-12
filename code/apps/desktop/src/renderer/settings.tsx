@@ -20,7 +20,10 @@ import {
   VoicePage,
 } from "./features/settings";
 import { StubPage } from "./StubPage";
+import { registerCaptureExperiments } from "./features/capture";
 import "./settings.css";
+
+registerCaptureExperiments();
 
 const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   general: GeneralPage,

@@ -114,14 +114,7 @@ const voiceChat = createVoiceChat({
   log,
   baseUrl: test.openaiBaseUrl,
   // Dictation waits while a screen look has the microphone busy with its own session.
-  look: async (...a: Parameters<typeof screenVision.look>) => {
-    const release = micOwners.claim("Screen look");
-    try {
-      return await screenVision.look(...a);
-    } finally {
-      release();
-    }
-  },
+  look: micOwners.holding("Screen look", screenVision.look),
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -263,8 +256,17 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   // Dock icon clicked while the window is hidden to the menu bar (the activation at launch must not defeat --hidden).
   let booted = false;
   app.on("activate", () => booted && mainWindow.show());
-  app.on("before-quit", () => {
+  let captureSaved = false;
+  app.on("before-quit", (e) => {
     mainWindow.quitting = true;
+    // A recording is saved, not thrown away, when the app quits.
+    const saving = captureSaved ? undefined : desktop?.finishCapture();
+    if (!saving) return;
+    e.preventDefault();
+    void saving.finally(() => {
+      captureSaved = true;
+      app.quit();
+    });
   });
   app.on("window-all-closed", () => {
     /* stay alive in the tray */

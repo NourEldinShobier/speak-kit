@@ -5,3 +5,4 @@
  */
 export { DictationPage } from "./DictationPage";
 export { DictationHistoryPage } from "./HistoryPage";
+export { HotkeyRecorder } from "./HotkeyRecorder";
