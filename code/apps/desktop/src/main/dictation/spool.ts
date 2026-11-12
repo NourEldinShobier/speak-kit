@@ -183,14 +183,15 @@ export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((
         }
       }),
 
-    recover: () => scanTakes(dir, fs, now),
-    sweep: async () => void (await scanTakes(dir, fs, now, "sweep")),
-    clear: async () => void (await scanTakes(dir, fs, now, "clear")),
+    recover: () => scanTakes({ dir, fs, now }),
+    sweep: async () => void (await scanTakes({ dir, fs, now, mode: "sweep" })),
+    clear: async () => void (await scanTakes({ dir, fs, now, mode: "clear" })),
   };
 }
 
 /** The takes in the folder, oldest first; see `Spool.recover`. */
-async function scanTakes(dir: string, fs: ReturnType<typeof files>, now: () => number, mode: "recover" | "sweep" | "clear" = "recover"): Promise<Recovered[]> {
+async function scanTakes(o: { dir: string; fs: ReturnType<typeof files>; now: () => number; mode?: "recover" | "sweep" | "clear" }): Promise<Recovered[]> {
+  const { dir, fs, now, mode = "recover" } = o;
   let names: string[];
   try {
     names = await readdir(dir);

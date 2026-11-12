@@ -5,6 +5,7 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { WordDialog } from "../vocabulary";
 import { ModeReplacements } from "./ModeReplacements";
+import { ModeSites } from "./ModeSites";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
@@ -241,11 +242,12 @@ export interface ModeDetailProps {
   onBack(): void;
   onChange(next: Mode): void;
   onApps(apps: string[]): void;
+  onSites(sites: string[]): void;
   onDelete(): void;
 }
 
 /** One mode: its apps, how it inserts and cleans up, the rewrite choice and its own words. */
-export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete }: ModeDetailProps) {
+export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites, onDelete }: ModeDetailProps) {
   const [addApp, setAddApp] = useState(false);
   const [asking, setAsking] = useState(false);
   // The default mode takes every app no other mode lists and uses the settings of the Dictation page; only its rewrite choice is its own.
@@ -274,6 +276,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete
         <Icon name="arrow-left" size={12} /> Modes
       </button>
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
+      <ModeSites mode={mode} others={others} onSites={onSites} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <ModeReplacements mode={mode} onChange={onChange} />

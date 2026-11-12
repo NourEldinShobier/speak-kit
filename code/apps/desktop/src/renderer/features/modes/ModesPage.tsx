@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addMode, removeMode, setApps, withDefault, withoutPristineDefault, type WritingMode as Mode, type ModeError } from "@speakkit/dictation";
+import { addMode, removeMode, setApps, setSites, withDefault, withoutPristineDefault, type WritingMode as Mode, type ModeError } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
@@ -126,6 +126,7 @@ function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(
         onBack={() => setOpen(null)}
         onChange={(next) => change((list) => list.map((m) => (m.id === next.id ? next : m)))}
         onApps={(apps) => change((list) => setApps(list, current.id, apps))}
+        onSites={(sites) => change((list) => setSites(list, current.id, sites))}
         onDelete={() => {
           change((list) => removeMode(list, current.id));
           setOpen(null);

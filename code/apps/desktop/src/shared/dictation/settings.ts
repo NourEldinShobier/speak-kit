@@ -90,6 +90,8 @@ const modeEntries = {
   id,
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
   apps: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)),
+  /** Websites for the mode, by name ("github.com"); a file from before they existed loads with none. */
+  sites: v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)), []),
   insertMode: v.picklist(["paste", "type", "copy"]),
   capitals: v.picklist(["keep", "sentence", "lower"]),
   end: v.picklist(["keep", "no-full-stop"]),

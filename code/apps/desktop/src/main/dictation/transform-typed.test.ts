@@ -8,7 +8,9 @@ const win = (extra: Partial<ForegroundInfo> = {}): ForegroundInfo => ({ hwnd: "w
 /** An unset window is a normal notepad; null is no window at all. */
 const pick = (w: ForegroundInfo | null | undefined): ForegroundInfo | null => (w === undefined ? win() : w);
 
-function rig(o: { hasSelection?: boolean | undefined; copies?: string[]; fg?: ForegroundInfo | null; password?: boolean; secure?: boolean; insert?: InsertResult; fgAfter?: ForegroundInfo | null } = {}) {
+function rig(
+  o: { hasSelection?: boolean | undefined; copies?: string[]; fg?: ForegroundInfo | null; password?: boolean; secure?: boolean; insert?: InsertResult; fgAfter?: ForegroundInfo | null } = {},
+) {
   const log: string[] = [];
   const copies = [...(o.copies ?? [])];
   let reads = 0;

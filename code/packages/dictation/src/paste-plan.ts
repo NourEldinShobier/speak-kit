@@ -7,6 +7,8 @@ export interface Target {
   exe: string;
   /** Friendly name of the program, when the system has one. */
   name?: string;
+  /** The address in the browser's address bar, when the program is a browser and it could be read. */
+  url?: string;
   elevated: boolean;
   passwordField: boolean;
 }

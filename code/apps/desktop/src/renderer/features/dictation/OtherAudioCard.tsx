@@ -18,7 +18,14 @@ export function OtherAudioCard({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="While dictating"
         description="Keeps music and video out of the recording. It all comes back when the recording ends."
-        control={<Select label="Other audio while dictating" value={c.duckAudio} onChange={(duckAudio) => void dictation.patchSettings({ duckAudio: duckAudio as typeof c.duckAudio })} options={DUCK_OPTIONS} />}
+        control={
+          <Select
+            label="Other audio while dictating"
+            value={c.duckAudio}
+            onChange={(duckAudio) => void dictation.patchSettings({ duckAudio: duckAudio as typeof c.duckAudio })}
+            options={DUCK_OPTIONS}
+          />
+        }
       />
       {c.duckAudio !== "nothing" && (
         <SettingRow

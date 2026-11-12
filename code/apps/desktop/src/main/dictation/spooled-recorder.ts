@@ -16,7 +16,11 @@ export interface SpooledRecorder extends Recorder {
  * quit or a crash anywhere in between leaves the audio for the next start. A take that cannot be written to disk is simply not kept; the dictation
  * itself never waits for the disk.
  */
-export function createSpooledRecorder(inner: Recorder, spool: Spool, o: { rate: number; now?: () => number; /** False while nothing may be kept on disk (History is off). Read at each start. */ enabled?: () => boolean }): SpooledRecorder {
+export function createSpooledRecorder(
+  inner: Recorder,
+  spool: Spool,
+  o: { rate: number; now?: () => number; /** False while nothing may be kept on disk (History is off). Read at each start. */ enabled?: () => boolean },
+): SpooledRecorder {
   const { rate, now = Date.now, enabled = () => true } = o;
   let current: Promise<string> | undefined;
   const ids = new WeakMap<Clip, Promise<string>>();

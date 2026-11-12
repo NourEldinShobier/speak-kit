@@ -30,6 +30,18 @@ describe("inserter port", () => {
     expect(await createInserterPort(os, () => undefined).target()).toEqual({ id: "42", exe: "notepad.exe", name: "Notepad", elevated: false, passwordField: true });
   });
 
+  it("reads the browser address only when asked, and leaves it out when there is none", async () => {
+    const os = {
+      ...fakeOs({ fg: { hwnd: "1", pid: 1, exe: "chrome.exe", className: "Chrome_WidgetWin_1", elevated: false } }).os,
+      address: { read: async () => "https://github.com/a" },
+    } as unknown as DictationOs;
+    const port = createInserterPort(os, () => undefined);
+    expect(await port.target()).not.toHaveProperty("url");
+    expect(await port.target({ address: true })).toMatchObject({ exe: "chrome.exe", url: "https://github.com/a" });
+    const none = { ...os, address: { read: async () => undefined } } as unknown as DictationOs;
+    expect(await createInserterPort(none, () => undefined).target({ address: true })).not.toHaveProperty("url");
+  });
+
   it("has no target when no window is in front, and an empty program name when it cannot be read", async () => {
     expect(await createInserterPort(fakeOs({ fg: null }).os, () => undefined).target()).toBeUndefined();
     const { os } = fakeOs({ fg: { hwnd: "1", pid: 1, exe: null, className: "x", elevated: true } });

@@ -1,5 +1,6 @@
 import { applyRules, soundsLikeRules } from "@speakkit/dictation";
 import type { DictationConfig } from "../../shared/dictation/settings";
+import { ignore } from "../../shared/ignore";
 import { profileFor } from "./app-profile";
 import type { ForegroundInfo, InsertOptions, InsertResult } from "./types";
 
@@ -38,6 +39,25 @@ const MAX_CHARS = 50_000;
 
 const isTerminal = (fg: ForegroundInfo): boolean => profileFor(fg).shortcut === "ctrl-shift-v" || MAC_TERMINALS.includes((fg.exe ?? "").toLowerCase());
 
+/** Why the focused field must not be touched, or undefined. */
+function blockedReason(d: TransformDeps, fg: ForegroundInfo | null): Extract<TransformResult, { status: "blocked" }>["reason"] | undefined {
+  if (!fg) return "no-window";
+  if (d.passwordFocused()) return "password-field";
+  if (d.secureInput?.()) return "secure-input";
+  if (fg.elevated) return "elevated";
+  return isTerminal(fg) ? "terminal" : undefined;
+}
+
+/** The selection, or the whole field when nothing is selected ("" when the field is empty). */
+async function readField(d: TransformDeps, sleep: (ms: number) => Promise<void>): Promise<string> {
+  const none = (await d.hasSelection?.().catch(ignore)) === false;
+  const selected = none ? "" : await d.copy();
+  if (selected) return selected;
+  await d.selectAll();
+  await sleep(SELECT_SETTLE_MS);
+  return d.copy();
+}
+
 /**
  * Cleans the text of the focused field with the dictation rules and puts it back. With a selection it cleans the selection; with none it selects the
  * whole field first. The text is read twice and must match before anything is written, so a slow app never gets half a field pasted over it. Never runs
@@ -46,19 +66,10 @@ const isTerminal = (fg: ForegroundInfo): boolean => profileFor(fg).shortcut === 
 export async function transformTyped(d: TransformDeps): Promise<TransformResult> {
   const sleep = d.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const fg = d.foreground();
-  if (!fg) return { status: "blocked", reason: "no-window" };
-  if (d.passwordFocused()) return { status: "blocked", reason: "password-field" };
-  if (d.secureInput?.()) return { status: "blocked", reason: "secure-input" };
-  if (fg.elevated) return { status: "blocked", reason: "elevated" };
-  if (isTerminal(fg)) return { status: "blocked", reason: "terminal" };
+  const blocked = blockedReason(d, fg);
+  if (!fg || blocked) return { status: "blocked", reason: blocked ?? "no-window" };
 
-  const none = (await d.hasSelection?.().catch(() => undefined)) === false;
-  let text = none ? "" : await d.copy();
-  if (!text) {
-    await d.selectAll();
-    await sleep(SELECT_SETTLE_MS);
-    text = await d.copy();
-  }
+  const text = await readField(d, sleep);
   if (!text) return { status: "nothing-selected" };
   if ((await d.copy()) !== text) return { status: "failed", reason: "copy-unstable" };
 

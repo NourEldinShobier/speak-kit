@@ -2,6 +2,7 @@ import { systemCaretReader, type CaretReader } from "./caret-reader";
 import { createElectronClipboard } from "./clipboard";
 import { createHud, type Hud, type HudWindow } from "./hud";
 import { openHudWindow, type HudWindowOptions } from "./hud-window";
+import { systemPageAddress, type PageAddress } from "./page-address";
 import { createProgramVersions, readSystemVersion, type ProgramVersions } from "./program-version";
 import { createInserter } from "./inserter";
 import { createUnsupportedPlatform } from "./unsupported";
@@ -37,6 +38,8 @@ export interface DictationOs {
   insert(text: string, options?: InsertOptions): Promise<InsertResult>;
   /** The character before the caret in the focused field, for smart spacing. Absent on an OS layer that cannot read it. */
   readonly caret?: CaretReader;
+  /** The address bar of the browser in front, for modes by website. */
+  readonly address?: Pick<PageAddress, "read">;
   /** Brings a window (by the `hwnd` of `foreground()`) to the front; true when it is in front within half a second. */
   focus(hwnd: string): Promise<boolean>;
   /** Resolves once the user's old clipboard is back after a paste. */
@@ -75,8 +78,10 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     ...(options.hud?.place && { place: options.hud.place }),
   });
   const caret = systemCaretReader();
+  const address = systemPageAddress();
   return {
     caret,
+    address,
     supported: platform.supported,
     hotkey: platform.hotkey,
     hud,
@@ -93,6 +98,7 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     async dispose() {
       platform.dispose();
       caret.dispose();
+      address.dispose();
       hud.dispose();
       await inserter.flush();
     },

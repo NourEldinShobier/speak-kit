@@ -11,6 +11,8 @@ export interface Mode {
   name: string;
   /** Program names without ".exe", lower case. The default mode has none: it takes every program no other mode lists. */
   apps: string[];
+  /** Website names without "www.", lower case, for example "github.com". In a browser a site wins over the program's mode; it also covers the subdomains. */
+  sites: string[];
   insertMode: InsertMode;
   capitals: Capitals;
   end: EndOfDictation;
@@ -24,7 +26,18 @@ export const DEFAULT_MODE_ID = "default";
 export const MAX_MODES = 24;
 export const MAX_MODE_NAME = 40;
 
-export const defaultMode = (): Mode => ({ id: DEFAULT_MODE_ID, name: "Default", apps: [], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: false, terms: [], replacements: [] });
+export const defaultMode = (): Mode => ({
+  id: DEFAULT_MODE_ID,
+  name: "Default",
+  apps: [],
+  sites: [],
+  insertMode: "paste",
+  capitals: "sentence",
+  end: "keep",
+  rewrite: false,
+  terms: [],
+  replacements: [],
+});
 
 /** The list with the default mode in it, first: the one that was saved, or the built-in one when nothing about it was ever changed. */
 export const withDefault = (modes: readonly Mode[]): Mode[] => [modes.find((m) => m.id === DEFAULT_MODE_ID) ?? defaultMode(), ...modes.filter((m) => m.id !== DEFAULT_MODE_ID)];
@@ -57,10 +70,35 @@ export function setApps(modes: readonly Mode[], id: string, apps: readonly strin
   });
 }
 
-/** The mode for a program: the first that lists it, else the default. */
-export function resolveMode(modes: readonly Mode[], exe: string | undefined): Mode {
+/** The host of an address or of what the person typed (an address with or without its scheme, "www." and path gives the bare host); undefined when it is not a website name. */
+export function siteOf(text: string | undefined): string | undefined {
+  const raw = (text ?? "").trim();
+  if (!raw || /\s/.test(raw)) return undefined;
+  try {
+    const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    return host === "localhost" || /^[a-z\d-]+(\.[a-z\d-]+)+$/.test(host) ? host : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The site is the address's host or a parent of it: "github.com" covers "gist.github.com". */
+const covers = (site: string, host: string): boolean => host === site || host.endsWith(`.${site}`);
+
+/** A site belongs to one mode: adding it to a mode takes it from any other. */
+export function setSites(modes: readonly Mode[], id: string, sites: readonly string[]): Mode[] {
+  const mine = [...new Set(sites.map(siteOf).filter((s): s is string => !!s))];
+  return modes.map((m) => (m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((s) => !mine.includes(s)) }));
+}
+
+/** The mode for a window: the first that lists the website in the address bar, then the first that lists the program, else the default. */
+export function resolveMode(modes: readonly Mode[], exe: string | undefined, address?: string): Mode {
   const key = exe ? exeKey(exe) : "";
-  return (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
+  const host = siteOf(address);
+  const bySite = host && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.sites.some((s) => covers(s, host)));
+  return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
 }
 
 export type ModeSettings = Pick<Settings, "autoCapitalize" | "lowercase" | "stripFinalStop" | "insertMode" | "terms" | "replacements">;

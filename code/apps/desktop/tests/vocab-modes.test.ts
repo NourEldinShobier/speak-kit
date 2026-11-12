@@ -26,7 +26,7 @@ type Hook = Record<string, (...a: unknown[]) => unknown>;
 const hook = (l: Launched, name: string, ...args: unknown[]) =>
   l.app.evaluate((_e, [n, a]) => (globalThis as unknown as { __speakkit: { dictation: Hook } }).__speakkit.dictation[n as string]!(...(a as unknown[])), [name, args] as const);
 const until = async (f: () => Promise<boolean>) => {
-  for (const end = Date.now() + 8000; Date.now() < end; ) {
+  for (const end = Date.now() + 8000; Date.now() < end;) {
     if (await f()) return;
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -274,6 +274,28 @@ describe("Modes page", () => {
     expect((await settings(l)).replacements).toEqual([]);
     await l.page.getByRole("button", { name: "Delete replacement ship it" }).click();
     await until(async () => (await settings(l)).modes[0]!.replacements.length === 0);
+  });
+
+  it("adds a website to a mode, refuses a phrase that is not a website, and moves the site when another mode takes it", async () => {
+    const l = await start();
+    await open(l, "Modes");
+    for (const name of ["Work", "Fun"]) {
+      await l.page.getByRole("button", { name: "Add mode" }).click();
+      const add = l.page.getByRole("dialog", { name: "Add a mode" });
+      await add.getByLabel("Name").fill(name);
+      await add.getByRole("button", { name: "Add mode" }).click();
+      await l.page.getByRole("heading", { name, exact: true, level: 1 }).waitFor();
+      if (name === "Work") await l.page.getByRole("button", { name: "Modes", exact: true }).click();
+    }
+    await l.page.getByLabel("Website").fill("how to cook");
+    await l.page.getByText("Not a website name.").waitFor();
+    expect(await l.page.getByRole("button", { name: "Add website" }).isDisabled()).toBe(true);
+    await l.page.getByLabel("Website").fill("https://www.GitHub.com/a");
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    await l.page.getByRole("button", { name: "Remove github.com" }).waitFor();
+    await until(async () => JSON.stringify((await settings(l)).modes.find((m: { name: string }) => m.name === "Fun")?.sites) === '["github.com"]');
+    await l.page.getByRole("button", { name: "Remove github.com" }).click();
+    await until(async () => (await settings(l)).modes.every((m: { sites: string[] }) => m.sites.length === 0));
   });
 
   it("refuses a repeated or empty mode name and moves an app from one mode to another", async () => {

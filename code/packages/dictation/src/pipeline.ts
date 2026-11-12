@@ -105,9 +105,9 @@ async function hearAll(ctx: Context, clip: Clip, prompt: string): Promise<Transc
 }
 
 /** The foreground window, or undefined when it cannot be read. */
-export async function foreground(inserter: DictationDeps["inserter"]): Promise<Target | undefined> {
+export async function foreground(inserter: DictationDeps["inserter"], opts?: { address?: boolean }): Promise<Target | undefined> {
   try {
-    return await inserter.target();
+    return await inserter.target(opts);
   } catch {
     return undefined; // an unreadable window is treated as "unknown", which copies instead of pasting
   }
@@ -251,7 +251,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const silent = checkClip(ctx, clip);
   if (silent) return silent;
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
-  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe));
+  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.url));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
   const got = await transcribe(ctx, clip, prompt);
   if ("error" in got) return got;

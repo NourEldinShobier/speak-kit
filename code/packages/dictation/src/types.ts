@@ -62,7 +62,8 @@ export interface Transcriber {
 
 export interface Inserter {
   /** The foreground window now; undefined when there is none. */
-  target(): Promise<Target | undefined>;
+  /** The foreground window. `address`: also read the browser's address bar, which is slower and only needed to choose the mode of a dictation. */
+  target(opts?: { address?: boolean }): Promise<Target | undefined>;
   /** Brings the window the key was pressed in back to the front and says whether it is in front within a short time. */
   focus?(target: Target): Promise<boolean>;
   /** The character before the caret in the focused field and whether text is selected; undefined when the platform cannot read it. */

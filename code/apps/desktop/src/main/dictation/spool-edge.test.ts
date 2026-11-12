@@ -70,8 +70,9 @@ describe("spool edge cases", () => {
   });
 
   it("never writes outside the folder for an unsafe id", async () => {
-    await spool().append("../escape", second(0.5));
-    await expect(stat(path.join(dir, "..", "escape.pcm"))).rejects.toThrow();
+    const inner = createSpool({ now: () => 10_000, dir: path.join(dir, "takes") }); // the escape lands in `dir`, which the test removes
+    await inner.append("../escape", second(0.5));
+    await expect(stat(path.join(dir, "escape.pcm"))).rejects.toThrow();
   });
 
   it("gives takes started in one millisecond different names, counting up", async () => {
@@ -114,7 +115,8 @@ describe("spool edge cases", () => {
 
   it("waits for real between retries when no sleep is given", async () => {
     let busy = 1;
-    const s = createSpool({ now: () => 10_000,
+    const s = createSpool({
+      now: () => 10_000,
       dir,
       unlink: async (f) => {
         if (busy-- > 0) throw Object.assign(new Error("locked"), { code: "EBUSY" });

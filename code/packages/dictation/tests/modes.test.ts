@@ -11,6 +11,8 @@ import {
   resolveMode,
   rewritePass,
   setApps,
+  setSites,
+  siteOf,
   withDefault,
   withoutPristineDefault,
   type WritingMode as Mode,
@@ -261,7 +263,12 @@ describe("replacements per mode", () => {
   ];
 
   it("adds the mode's replacements after the shared ones, and the mode wins for the same phrase whatever the capitals", () => {
-    expect(mergeReplacements(shared, [{ from: "foo", to: "mode foo", matchCase: true }, { from: "bar", to: "baz" }])).toEqual([
+    expect(
+      mergeReplacements(shared, [
+        { from: "foo", to: "mode foo", matchCase: true },
+        { from: "bar", to: "baz" },
+      ]),
+    ).toEqual([
       { from: "gonna", to: "going to" },
       { from: "foo", to: "mode foo", matchCase: true },
       { from: "bar", to: "baz" },
@@ -285,6 +292,48 @@ describe("replacements per mode", () => {
     await r.time.advance(200);
     expect(r.ins.inserted[0]?.text).toBe("Hello team ");
     r.ins.state.current = target({ exe: "notepad.exe" });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[1]?.text).toBe("Hello world ");
+  });
+});
+
+describe("modes by website", () => {
+  const github = mode({ id: "gh", name: "GitHub", sites: ["github.com"] });
+  const code = mode({ id: "code", name: "Code", apps: ["chrome"] });
+  const list = [defaultMode(), github, code];
+
+  it("reads the website from an address or from what the person typed", () => {
+    expect(siteOf("https://www.GitHub.com/a/b?c=1#d")).toBe("github.com");
+    expect(siteOf("github.com/a")).toBe("github.com");
+    expect(siteOf(" http://gist.github.com:8080 ")).toBe("gist.github.com");
+    expect(siteOf("localhost:3000/x")).toBe("localhost");
+    for (const bad of ["", "   ", undefined, "how to cook rice", "chrome://settings", "file:///c:/a.txt", "singleword", "https://", "a..b"]) expect(siteOf(bad)).toBeUndefined();
+  });
+
+  it("picks the mode of the website over the mode of the browser, covering subdomains but not look-alikes", () => {
+    expect(resolveMode(list, "chrome.exe", "https://github.com/x").id).toBe("gh");
+    expect(resolveMode(list, "chrome.exe", "https://gist.github.com/x").id).toBe("gh");
+    expect(resolveMode(list, "chrome.exe", "https://notgithub.com/").id).toBe("code");
+    expect(resolveMode(list, "chrome.exe", "https://github.com.evil.io/").id).toBe("code");
+    expect(resolveMode(list, "chrome.exe", undefined).id).toBe("code");
+    expect(resolveMode(list, "notepad.exe", undefined).id).toBe("default");
+  });
+
+  it("a site belongs to one mode: adding it to a mode takes it from another, and typed text is cleaned up", () => {
+    const next = setSites(list, "code", ["https://www.GitHub.com/x", "github.com", "nonsense words", "gitlab.com"]);
+    expect(next.find((m) => m.id === "code")!.sites).toEqual(["github.com", "gitlab.com"]);
+    expect(next.find((m) => m.id === "gh")!.sites).toEqual([]);
+  });
+
+  it("applies the site's mode to a dictation into that address and not to another page of the same browser", async () => {
+    const chat = mode({ id: "gh", name: "GitHub", sites: ["github.com"], replacements: [{ from: "world", to: "repo" }] });
+    const r = await rig({ modes: [defaultMode(), chat] });
+    r.ins.state.current = target({ exe: "chrome.exe", url: "https://github.com/a" });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("Hello repo ");
+    r.ins.state.current = target({ exe: "chrome.exe", url: "https://example.com/" });
     await r.hold(1000);
     await r.time.advance(200);
     expect(r.ins.inserted[1]?.text).toBe("Hello world ");
