@@ -14,7 +14,11 @@ export interface DownloadOptions {
   signal?: AbortSignal;
   /** Injectable for tests; the app passes the browser engine's fetch so the system proxy, PAC scripts and the system certificate store apply. */
   fetch?: typeof fetch;
+  /** The transfer is given up when no data arrives for this long (a proxy or sign-in page that accepts the connection and then says nothing). Default 30 s. */
+  stallMs?: number;
 }
+
+const STALL_MS = 30_000;
 
 const size = (p: string) =>
   stat(p).then(
@@ -33,21 +37,60 @@ export async function modelPresent(dest: string, f: ModelFile): Promise<boolean>
   return (await size(dest)) === f.bytes;
 }
 
+/** A watchdog for silence: `signal` aborts when `arm()` was not called again within `ms`; joined with the person's own signal. */
+function stallGuard(user: AbortSignal | undefined, ms: number) {
+  const stall = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const arm = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => stall.abort(), ms);
+  };
+  arm();
+  return {
+    signal: user ? AbortSignal.any([user, stall.signal]) : stall.signal,
+    arm,
+    stop: () => clearTimeout(timer),
+    /** The silence, not the person, ended the transfer: an error the failure text knows as a lost connection. */
+    stalled: () => stall.signal.aborted && !user?.aborted,
+    error: () => Object.assign(new Error(`no data for ${Math.round(ms / 1000)} seconds`), { code: "ETIMEDOUT" }),
+  };
+}
+
 /** Streams the file into `part`, continuing at byte `have` when the server honours the range. */
-async function transfer({ url, f, part }: { url: string; f: ModelFile; part: string }, { have, onProgress, signal, fetch: doFetch = fetch }: DownloadOptions & { have: number }): Promise<void> {
-  const res = await doFetch(url, { headers: have > 0 ? { Range: `bytes=${have}-` } : {}, ...(signal && { signal }) });
-  if (!res.ok || !res.body) throw httpFailure(res.status, url, Math.max(0, have));
-  // 206 continues the partial file; a plain 200 means the server ignored the range, so start over.
-  const resumed = res.status === 206;
-  let done = resumed ? have : 0;
-  let last = -1;
-  const counted = Readable.fromWeb(res.body as never);
-  counted.on("data", (c: Buffer) => {
-    done += c.length;
-    const p = Math.min(1, done / f.bytes);
-    if (p - last >= 0.005 || p >= 1) onProgress?.((last = p));
-  });
-  await pipeline(counted, createWriteStream(part, { flags: resumed ? "a" : "w" }), ...(signal ? [{ signal }] : []));
+async function transfer({ url, f, part }: { url: string; f: ModelFile; part: string }, o: DownloadOptions & { have: number }): Promise<void> {
+  const { have, onProgress, signal, fetch: doFetch = fetch, stallMs = STALL_MS } = o;
+  const guard = stallGuard(signal, stallMs);
+  try {
+    const res = await doFetch(url, { headers: have > 0 ? { Range: `bytes=${have}-` } : {}, signal: guard.signal });
+    // The partial file does not fit the file the server has now (it changed): keeping it would fail the same way every time, so start over once.
+    if (res.status === 416 && have > 0) {
+      try {
+        await res.body?.cancel();
+      } catch {
+        // the body is not needed any more; a cancel that fails changes nothing
+      }
+      await rm(part, { force: true });
+      guard.stop();
+      return await transfer({ url, f, part }, { ...o, have: 0 });
+    }
+    if (!res.ok || !res.body) throw httpFailure(res.status, url, Math.max(0, have));
+    // 206 continues the partial file; a plain 200 means the server ignored the range, so start over.
+    const resumed = res.status === 206;
+    let done = resumed ? have : 0;
+    let last = -1;
+    const counted = Readable.fromWeb(res.body as never);
+    counted.on("data", (c: Buffer) => {
+      guard.arm();
+      done += c.length;
+      const p = Math.min(1, done / f.bytes);
+      if (p - last >= 0.005 || p >= 1) onProgress?.((last = p));
+    });
+    await pipeline(counted, createWriteStream(part, { flags: resumed ? "a" : "w" }), { signal: guard.signal });
+  } catch (e) {
+    throw guard.stalled() ? guard.error() : e;
+  } finally {
+    guard.stop();
+  }
 }
 
 /**

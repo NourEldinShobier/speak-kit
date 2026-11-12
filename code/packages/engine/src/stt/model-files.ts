@@ -81,14 +81,42 @@ const REGISTRY = "imported.json";
 const sttDir = (modelsDir: string) => join(modelsDir, "stt");
 
 export async function loadImported(modelsDir: string): Promise<ImportedModel[]> {
+  const path = join(sttDir(modelsDir), REGISTRY);
+  let text: string;
   try {
-    const raw: unknown = JSON.parse(await readFile(join(sttDir(modelsDir), REGISTRY), "utf8"));
-    return Array.isArray(raw)
-      ? raw.filter((r): r is ImportedModel => !!r && typeof r.id === "string" && isCustomModelId(r.id) && typeof r.file === "string" && typeof r.sha256 === "string" && typeof r.bytes === "number")
-      : [];
+    text = await readFile(path, "utf8");
   } catch {
+    return []; // no registry yet
+  }
+  try {
+    const raw: unknown = JSON.parse(text);
+    if (!Array.isArray(raw)) throw new Error("not a list");
+    return raw.filter((r): r is ImportedModel => !!r && typeof r.id === "string" && isCustomModelId(r.id) && typeof r.file === "string" && typeof r.sha256 === "string" && typeof r.bytes === "number");
+  } catch {
+    // Unreadable: set it aside so the next save cannot wipe the person's list for good.
+    try {
+      await rename(path, `${path}.bak`);
+    } catch {
+      // cannot be set aside (read-only folder): the list is still read as empty and the next save reports its own error
+    }
     return [];
   }
+}
+
+/** Registry changes are read-modify-write; one at a time per folder so two imports cannot overwrite each other. */
+const queues = new Map<string, Promise<unknown>>();
+function serialized<T>(modelsDir: string, work: () => Promise<T>): Promise<T> {
+  const run = (queues.get(modelsDir) ?? Promise.resolve()).then(work, work);
+  const tail = (async () => {
+    try {
+      await run;
+    } catch {
+      // the caller of `run` sees the failure; the queue goes on
+    }
+  })();
+  queues.set(modelsDir, tail);
+  void tail.then(() => queues.get(modelsDir) === tail && queues.delete(modelsDir));
+  return run;
 }
 
 async function saveImported(modelsDir: string, list: readonly ImportedModel[]): Promise<void> {
@@ -132,10 +160,12 @@ export interface ImportOptions {
 }
 
 /** Copies `source` to `dest` through a .part file, so a half copy never counts. Returns the failure message, or undefined when it worked. */
-async function copyInto(source: string, dest: string): Promise<string | undefined> {
+async function copyInto(source: string, dest: string, sha256: string): Promise<string | undefined> {
   try {
     await mkdir(dirname(dest), { recursive: true });
     await copyFile(source, `${dest}.part`);
+    // The source may have changed since it was read, or the copy been cut short: only a copy with the same fingerprint counts.
+    if ((await sha256File(`${dest}.part`)) !== sha256) throw new Error("the copy does not match the original file");
     await rename(`${dest}.part`, dest);
     return undefined;
   } catch (e) {
@@ -163,12 +193,16 @@ export async function importModelFile(o: ImportOptions): Promise<ImportResult> {
   const check = await inspectModelFile(o.source);
   if (!check.ok) return check;
   if (o.expectSha256 && check.sha256 !== o.expectSha256) return { ok: false, reason: "different-file", message: "That is not the same file: its fingerprint is different." };
+  return serialized(o.modelsDir, () => register(o, check));
+}
+
+async function register(o: ImportOptions, check: Extract<Inspection, { ok: true }>): Promise<ImportResult> {
   const list = await loadImported(o.modelsDir);
   const dest = join(sttDir(o.modelsDir), `${check.id}.bin`);
   const known = list.find((m) => m.id === check.id);
   const present = (await sizeOf(dest)) === check.bytes;
   if (known && present) return { ok: true, model: known, alreadyThere: true };
-  const failure = present ? undefined : await copyInto(o.source, dest);
+  const failure = present ? undefined : await copyInto(o.source, dest, check.sha256);
   if (failure) return { ok: false, reason: "disk", message: failure };
   const model = registryEntry(check, known, o);
   await saveImported(o.modelsDir, [...list.filter((m) => m.id !== model.id), model]);
@@ -182,12 +216,14 @@ export async function missingImported(modelsDir: string, list: readonly Imported
   return out;
 }
 
-export async function removeImported(modelsDir: string, id: string): Promise<void> {
-  const list = await loadImported(modelsDir);
-  await saveImported(
-    modelsDir,
-    list.filter((m) => m.id !== id),
-  );
+export function removeImported(modelsDir: string, id: string): Promise<void> {
+  return serialized(modelsDir, async () => {
+    const list = await loadImported(modelsDir);
+    await saveImported(
+      modelsDir,
+      list.filter((m) => m.id !== id),
+    );
+  });
 }
 
 export interface FoundModel {
@@ -221,8 +257,14 @@ export async function adoptFound(modelsDir: string, found: FoundModel, m: ModelF
   const dest = join(sttDir(modelsDir), m.file);
   if (resolve(found.path) === resolve(dest)) return;
   await mkdir(dirname(dest), { recursive: true });
-  await copyFile(found.path, `${dest}.part`);
-  await rename(`${dest}.part`, dest);
+  try {
+    await copyFile(found.path, `${dest}.part`);
+    if ((await sha256File(`${dest}.part`)) !== m.sha256) throw new Error("the file changed while it was copied, so it was not used");
+    await rename(`${dest}.part`, dest);
+  } catch (e) {
+    await rm(`${dest}.part`, { force: true });
+    throw e;
+  }
 }
 
 export interface DiskUse {
