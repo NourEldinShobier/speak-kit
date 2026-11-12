@@ -77,3 +77,28 @@ export async function mintClientSecret(key: string, o: MintOptions): Promise<Ope
   const parsed = v.safeParse(secretSchema, r.value);
   return parsed.success ? { ok: true, value: { clientSecret: parsed.output.value, expiresAt: parsed.output.expires_at } } : { ok: false, code: "unavailable" };
 }
+
+const completionSchema = v.object({ choices: v.pipe(v.array(v.object({ message: v.object({ content: v.string() }) })), v.minLength(1)) });
+
+export interface CompleteOptions extends OpenAiOptions {
+  model: string;
+  system: string;
+  user: string;
+}
+
+/** POST /v1/chat/completions asking for a JSON object: the text the model answered with. The meeting notes use it. */
+export async function completeJson(key: string, o: CompleteOptions): Promise<OpenAiResult<string>> {
+  const body = {
+    model: o.model,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: o.system },
+      { role: "user", content: o.user },
+    ],
+  };
+  const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await call({ ...o, key, path: "/v1/chat/completions", init, defaultTimeoutMs: 60_000 });
+  if (!r.ok) return r;
+  const parsed = v.safeParse(completionSchema, r.value);
+  return parsed.success ? { ok: true, value: parsed.output.choices[0]!.message.content } : { ok: false, code: "unavailable" };
+}

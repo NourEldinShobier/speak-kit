@@ -10,7 +10,11 @@
     "packages/engine/src/stt/{languages,download-error,transfers,device,hardware,idle,switching,model-files,compare}.ts",
     "apps/desktop/src/main/speech-models/{view,hardware-probe,layout}.ts",
     "apps/desktop/src/renderer/speech-text.ts",
-    "apps/desktop/src/renderer/features/wizard/dictation-step.ts"
+    "apps/desktop/src/renderer/features/wizard/dictation-step.ts",
+    "packages/meetings/src/**/*.ts",
+    "!packages/meetings/src/index.ts",
+    "!packages/meetings/src/pure.ts",
+    "!packages/meetings/src/types.ts"
   ],
   "coverageAnalysis": "perTest",
   "reporters": ["clear-text", "progress", "html", "json"],

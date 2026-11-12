@@ -334,6 +334,9 @@ importers:
       '@speakkit/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@speakkit/meetings':
+        specifier: workspace:*
+        version: link:../../packages/meetings
       '@speakkit/player':
         specifier: workspace:*
         version: link:../../packages/player
@@ -493,6 +496,12 @@ importers:
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@7.0.2)
+
+  packages/meetings:
+    dependencies:
+      '@speakkit/transcripts':
+        specifier: workspace:*
+        version: link:../transcripts
 
   packages/player:
     dependencies:

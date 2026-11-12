@@ -24,6 +24,8 @@ import { setupPermissions } from "./system/permissions";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
+import { setupMeetings } from "./meetings";
+import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -40,6 +42,8 @@ interface DesktopOptions {
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
+  voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -93,6 +97,32 @@ function desktopHandlers(
   } satisfies Partial<Api>;
 }
 
+/** Stops every feature; resolves once the control server is down. */
+function disposeAll(p: {
+  control: { dispose(): Promise<void> };
+  shortcuts: { unregisterAll(): void };
+  reading: { dispose(): void };
+  exports: { dispose(): void };
+  updates: { dispose(): void };
+  tray: { dispose(): void };
+  dictation: { dispose(): unknown };
+  capture: { dispose(): void };
+  transcripts: { dispose(): unknown };
+  meetings: { dispose(): unknown } | undefined;
+}): Promise<void> {
+  const controlDown = p.control.dispose();
+  p.shortcuts.unregisterAll();
+  p.reading.dispose();
+  p.exports.dispose();
+  p.updates.dispose();
+  p.tray.dispose();
+  void p.dictation.dispose();
+  p.capture.dispose();
+  void p.transcripts.dispose();
+  void p.meetings?.dispose();
+  return controlDown;
+}
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -108,10 +138,12 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  let meetings: ReturnType<typeof setupMeetings> | undefined;
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   return {
@@ -133,18 +165,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: (): Promise<void> => {
-      const controlDown = control.dispose();
-      shortcuts.unregisterAll();
-      reading.dispose();
-      exports.dispose();
-      updates.dispose();
-      tray.dispose();
-      void dictation.dispose();
-      capture.dispose();
-      void transcripts.dispose();
-      return controlDown;
-    },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, installs: () => installedByTest }),
+    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, capture, transcripts, meetings }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

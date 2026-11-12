@@ -6,6 +6,7 @@ import { DictationConfigSchema } from "./dictation/settings";
 import { CaptureConfigSchema } from "./capture/settings";
 import { TranscriptsConfigSchema } from "./transcripts/settings";
 import { EnginesConfigSchema } from "./speech-models/config";
+import { MeetingsConfigSchema } from "./meetings/settings";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
@@ -108,6 +109,8 @@ export const ConfigSchema = v.object({
   capture: fb(CaptureConfigSchema, v.parse(CaptureConfigSchema, {})),
   transcripts: fb(TranscriptsConfigSchema, v.parse(TranscriptsConfigSchema, {})),
   engines: fb(EnginesConfigSchema, v.parse(EnginesConfigSchema, {})),
+  // A function, so every parse gets its own default object (settings are changed in place).
+  meetings: fb(MeetingsConfigSchema, () => v.parse(MeetingsConfigSchema, {})),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 

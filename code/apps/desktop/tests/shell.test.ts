@@ -324,6 +324,8 @@ describe("tray and lifecycle", () => {
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
     expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts|Speech model)/.test(n))).toEqual([
       "Open Speak Kit",
+      "Record a conversation",
+      "Record a meeting",
       "Load the voice engine now",
       "Do not disturb",
       "Settings",

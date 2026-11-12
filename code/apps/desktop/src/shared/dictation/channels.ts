@@ -19,7 +19,6 @@ export const DICTATION_METHODS = [
   "pasteLast",
   "undoCancel",
   "openSoundSettings",
-  "historyStats",
   "historyRecent",
   "historyUseVersion",
   "historyRetranscribe",

@@ -4,7 +4,10 @@ import type { Config } from "../../shared/schemas";
 import { normalizeApiKey, type VoiceChatKeyStatus, type VoiceChatSaveResult, type VoiceChatTestResult } from "../../shared/voice-chat";
 import type { Logger } from "../context";
 import type { KeyStore } from "./key-store";
-import { mintClientSecret, OPENAI_BASE_URL, testKey } from "./openai";
+import { completeJson, mintClientSecret, OPENAI_BASE_URL, testKey, type OpenAiResult } from "./openai";
+
+/** The model that writes meeting notes; small, because a summary needs no more. */
+export const NOTES_MODEL = "gpt-4o-mini";
 
 interface Deps {
   store: KeyStore;
@@ -18,14 +21,10 @@ interface Deps {
   look?: VoiceChatService["look"];
 }
 
-/** The voice chat of the app: the saved key, its test, the voice, and the minting the local server calls. The key goes only to OpenAI. */
-export function createVoiceChat(d: Deps) {
+/** The part the local server calls: the key check and the minting. */
+function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }): VoiceChatService {
   const { store, config, log } = d;
-  const net = () => ({ baseUrl: d.baseUrl ?? OPENAI_BASE_URL, fetch: d.fetch ?? fetch });
-
-  const status = async (): Promise<VoiceChatKeyStatus> => ({ hasKey: await store.has(), canEncrypt: store.canEncrypt() });
-
-  const server: VoiceChatService = {
+  return {
     hasKey: () => store.has(),
     mint: async (signal) => {
       const key = await store.read();
@@ -40,6 +39,16 @@ export function createVoiceChat(d: Deps) {
     },
     ...(d.look && { look: d.look }),
   };
+}
+
+/** The voice chat of the app: the saved key, its test, the voice, and the minting the local server calls. The key goes only to OpenAI. */
+export function createVoiceChat(d: Deps) {
+  const { store, config, log } = d;
+  const net = () => ({ baseUrl: d.baseUrl ?? OPENAI_BASE_URL, fetch: d.fetch ?? fetch });
+
+  const status = async (): Promise<VoiceChatKeyStatus> => ({ hasKey: await store.has(), canEncrypt: store.canEncrypt() });
+
+  const server = serverOf(d, net);
 
   return {
     server,
@@ -63,6 +72,12 @@ export function createVoiceChat(d: Deps) {
       if (!key) return { ok: false, code: "no-key" };
       const r = await testKey(key, net());
       return r.ok ? { ok: true } : r;
+    },
+    /** One JSON answer from the writer model, for the meeting notes. No saved key is "no-key"; the key goes only to OpenAI. */
+    async complete(system: string, user: string, signal: AbortSignal): Promise<OpenAiResult<string>> {
+      const key = await store.read();
+      if (!key) return { ok: false, code: "no-key" };
+      return completeJson(key, { ...net(), signal, model: NOTES_MODEL, system, user });
     },
     setVoice(voice: VoiceChatVoice): void {
       config.voiceChatVoice = voice;

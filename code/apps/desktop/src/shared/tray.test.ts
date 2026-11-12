@@ -214,3 +214,20 @@ describe("Speech model submenu", () => {
     expect(submenu(ctx({ dictation }))).toBeUndefined();
   });
 });
+
+describe("tray meeting row", () => {
+  const meeting = (phase: NonNullable<TrayContext["meetings"]>["phase"], shortcut?: string) =>
+    trayMenuModel(ctx({ meetings: { phase, ...(shortcut && { shortcut }) } })).filter((i) => i.type === "item" && /meeting/i.test(i.label));
+  it("starts a meeting recording when ready, with the optional shortcut beside it", () => {
+    expect(meeting("ready", "Ctrl+Alt+M")).toEqual([{ type: "item", action: "meeting-start", label: "Record a meeting", enabled: true, hint: "Ctrl+Alt+M" }]);
+  });
+  it("stops it while recording and waits, disabled, while it starts, saves and transcribes", () => {
+    expect(meeting("recording")).toEqual([{ type: "item", action: "meeting-stop", label: "Stop meeting recording", enabled: true }]);
+    expect(meeting("starting")).toEqual([{ type: "item", action: "meeting-start", label: "Starting meeting recording...", enabled: false }]);
+    expect(meeting("saving")[0]).toMatchObject({ label: "Saving meeting...", enabled: false });
+    expect(meeting("transcribing")[0]).toMatchObject({ label: "Transcribing meeting...", enabled: false });
+  });
+  it("has no meeting row when the feature is off", () => {
+    expect(labels(ctx())).not.toContain("Record a meeting");
+  });
+});

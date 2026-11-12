@@ -29,6 +29,8 @@ export interface TrayContext {
   recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
   /** The downloaded speech models, for the quick switch. Absent when none is downloaded. */
   speechModels?: { models: { id: string; name: string; inUse: boolean }[]; switching?: { name: string }; recording: boolean };
+  /** Meeting recording; absent while the Meetings feature is off. `shortcut` is the optional start and stop shortcut. */
+  meetings?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing"; shortcut?: string };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -64,6 +66,8 @@ export type TrayAction =
   | "dictation-copy-2"
   | "dictation-copy-3"
   | "dictation-copy-4"
+  | "meeting-start"
+  | "meeting-stop"
   | "open"
   | "pause"
   | "resume"
@@ -124,6 +128,33 @@ function speechModelItems(c: TrayContext): TrayItem[] {
   return c.dictation && m && m.models.length > 0 ? [{ type: "models", label: "Speech model", rows: speechModelRows(m) }] : [];
 }
 
+const MEETING_WAITING = { starting: "Starting meeting recording...", saving: "Saving meeting...", transcribing: "Transcribing meeting..." } as const;
+
+/** One row that follows the meeting recording: starts one when ready, stops it while recording, and waits (disabled) while it is saved and transcribed. */
+function meetingRow(m: NonNullable<TrayContext["meetings"]>, item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
+  const hint = m.shortcut ? { hint: m.shortcut } : {};
+  if (m.phase === "ready") return item("meeting-start", "Record a meeting", hint);
+  if (m.phase === "recording") return item("meeting-stop", "Stop meeting recording", hint);
+  return item("meeting-start", MEETING_WAITING[m.phase], { enabled: false });
+}
+
+type ItemFn = (action: TrayAction, label: string, extra?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem;
+
+/** The dictation rows; none where dictation is not supported. */
+function dictationRows(c: TrayContext, item: ItemFn): TrayItem[] {
+  if (!c.dictation) return [];
+  const d = c.dictation;
+  const rows: TrayItem[] = [];
+  rows.push(item("dictation", "Dictation", { checked: d.enabled }));
+  // A caption, not a command: disabled and without an action of its own.
+  if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey, c.platform)} to dictate`, { enabled: false }));
+  rows.push(item("paste-last", "Paste last dictation", {}));
+  if (d.recent?.length) rows.push({ type: "submenu", label: "Copy recent dictation", items: d.recent.slice(0, RECENT_ROWS).map((t, i) => item(`dictation-copy-${i}` as TrayAction, recentLabel(t))) });
+  rows.push(item("pause-shortcuts", "Pause all shortcuts", { checked: d.paused === true }));
+  rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
+  return rows;
+}
+
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
 export function trayMenuModel(c: TrayContext): TrayItem[] {
   const engine = c.health?.engine.state;
@@ -132,19 +163,10 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const reading = c.reader.status === "playing" || c.reader.status === "preparing";
   const paused = c.reader.status === "paused";
   const rows: TrayItem[] = [item("open", "Open Speak Kit")];
-  if (c.dictation) {
-    const d = c.dictation;
-    rows.push(item("dictation", "Dictation", { checked: d.enabled }));
-    // A caption, not a command: disabled and without an action of its own.
-    if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey, c.platform)} to dictate`, { enabled: false }));
-    rows.push(item("paste-last", "Paste last dictation", {}));
-    if (d.recent?.length)
-      rows.push({ type: "submenu", label: "Copy recent dictation", items: d.recent.slice(0, RECENT_ROWS).map((t, i) => item(`dictation-copy-${i}` as TrayAction, recentLabel(t))) });
-    rows.push(item("pause-shortcuts", "Pause all shortcuts", { checked: d.paused === true }));
-    rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
-  }
+  rows.push(...dictationRows(c, item));
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   rows.push(...speechModelItems(c));
+  if (c.meetings) rows.push(meetingRow(c.meetings, item));
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));

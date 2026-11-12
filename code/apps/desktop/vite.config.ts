@@ -32,7 +32,10 @@ export default defineConfig({
     // The app, the always-on-top mini player, the two dictation windows (the HUD pill and the hidden microphone page) and the three capture windows (capsule, picker and ink layer, hidden recorder).
     rollupOptions: {
       input: Object.fromEntries(
-        ["index", "mini", "hud", "recorder", "capture-capsule", "capture-overlay", "capture-recorder", "decoder", "trecorder"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)]),
+        ["index", "mini", "hud", "recorder", "capture-capsule", "capture-overlay", "capture-recorder", "decoder", "trecorder", "mrecorder", "meeting-capsule"].map((n) => [
+          n,
+          path.join(root, `src/renderer/${n}.html`),
+        ]),
       ),
     },
   },
