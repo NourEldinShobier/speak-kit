@@ -327,7 +327,7 @@ export class DictationService {
     if (a === "retry") void this.retry();
     else if (a === "download") {
       this.#ctx.showWindow();
-      this.#ctx.sendUi({ type: "nav", page: "settings", sub: "dictation" });
+      this.#ctx.sendUi({ type: "nav", page: "dictation" });
       void this.download(this.#cfg.model);
     } else if (a === "sound-settings") void this.openSoundSettings();
   }

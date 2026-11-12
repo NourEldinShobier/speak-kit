@@ -16,7 +16,7 @@ export function usePermissions(bridge: PermissionsBridge | undefined = window.sp
     void bridge
       .status()
       .then((s) => live && setStatus((cur) => cur ?? s))
-      .catch(() => undefined);
+      .catch(() => setStatus((cur) => cur)); // a failed fetch leaves it null
     const off = bridge.onStatus(setStatus);
     return () => {
       live = false;
