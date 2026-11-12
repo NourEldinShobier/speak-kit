@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   IdleRelease,
   accurateModelFits,
+  hasFastGraphics,
   checkFloor,
   deviceInUse,
   forgetFailure,
@@ -95,6 +96,20 @@ describe("hardware floor", () => {
   it("starts without a graphics driver", () => {
     expect(checkFloor({ platform: "win32", arch: "x64", avx2: true, gpu: undefined })).toEqual({ ok: true });
   });
+  it("counts a discrete card and an Apple silicon Mac as fast graphics, an integrated card, no card or an Intel Mac as not", () => {
+    expect(hasFastGraphics({ platform: "win32", arch: "x64", gpu: rtx })).toBe(true);
+    expect(hasFastGraphics({ platform: "win32", arch: "x64", gpu: igpu })).toBe(false);
+    expect(hasFastGraphics({ platform: "win32", arch: "x64" })).toBe(false);
+    expect(hasFastGraphics({ platform: "darwin", arch: "arm64" })).toBe(true);
+    expect(hasFastGraphics({ platform: "darwin", arch: "x64" })).toBe(false);
+    expect(hasFastGraphics({ platform: "linux", arch: "arm64" })).toBe(false);
+    expect(hasFastGraphics(undefined)).toBe(false);
+  });
+
+  it("names the model to use instead in the too-slow message", () => {
+    expect(accurateModelFits({ platform: "win32", arch: "x64", cores: 2 }, "Whisper Base")).toEqual({ fits: false, reason: "This computer is too slow for the accurate model. Use Whisper Base." });
+  });
+
   it("says the accurate model is too slow on a weak CPU without a discrete card", () => {
     expect(accurateModelFits({ platform: "win32", arch: "x64", cores: 2, memoryGb: 16 })).toEqual({ fits: false, reason: "This computer is too slow for the accurate model. Use the fast one." });
     expect(accurateModelFits({ platform: "win32", arch: "x64", cores: 8, memoryGb: 4 }).fits).toBe(false);

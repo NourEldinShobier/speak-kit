@@ -135,7 +135,7 @@ export function importedAsModel(m: ImportedModel): SttModel {
     name: m.name,
     label: "Added by you",
     tag: "Yours",
-    description: "A model file you added.",
+    description: "A model file you added. Speak Kit has not tested it, and it was not measured.",
     file: m.file,
     url: "",
     sha256: m.sha256,

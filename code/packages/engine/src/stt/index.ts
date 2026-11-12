@@ -4,7 +4,19 @@
  * Does not: record audio, decide when to record, or insert text anywhere.
  */
 export { WhisperStt, type SpeechToText, type SttOptions, type Transcript } from "./engine";
-export { DEFAULT_STT_MODEL, PREFERRED_MODEL, STT_MODELS, STT_VAD, isCustomModelId, type Accuracy, type CustomSttModelId, type ModelFile, type SttModel, type SttModelId } from "./catalog";
+export {
+  DEFAULT_STT_MODEL,
+  FEATURED_STT_MODELS,
+  PREFERRED_MODEL,
+  PREFERRED_MODEL_CPU,
+  STT_MODELS,
+  STT_VAD,
+  isCustomModelId,
+  type CustomSttModelId,
+  type ModelFile,
+  type SttModel,
+  type SttModelId,
+} from "./catalog";
 export {
   AUTO_LABEL,
   LANGUAGES,
@@ -37,7 +49,9 @@ export {
   type FailedDevice,
   type GpuInfo,
 } from "./device";
-export { accurateModelFits, checkFloor, deviceInUse, type FloorVerdict, type Hardware } from "./hardware";
+export { accurateModelFits, checkFloor, deviceInUse, hasFastGraphics, type FloorVerdict, type Hardware } from "./hardware";
+export { MEASUREMENT_SAMPLE, type Measured } from "./measured";
+export { cpuFloorModel, quickOn, recommendFor, recommendedPreference, tenSecondSeconds, wrongWords, type Device } from "./recommend";
 export { DEFAULT_IDLE_MINUTES, IDLE_CHOICES, IdleRelease, type IdleDeps, type IdleMinutes } from "./idle";
 export {
   adoptFound,
