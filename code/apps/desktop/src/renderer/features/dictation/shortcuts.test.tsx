@@ -36,6 +36,8 @@ const base: DictationStatus = {
   modelReady: true,
   historyCount: 0,
   paused: false,
+  mouseButtons: true,
+  platform: "win32",
   readerShortcuts: { "read-selection": "Ctrl+Alt+S" },
 };
 const withSettings = (over: Partial<DictationStatus["settings"]>, rest: Partial<DictationStatus> = {}): DictationStatus => ({ ...base, ...rest, settings: { ...base.settings, ...over } });
@@ -98,6 +100,12 @@ describe("shortcuts page", () => {
     expect(t).toContain("The left button cannot be a shortcut");
   });
 
+  it("says the mouse button is not available where there is no mouse hook, and turns its button off", () => {
+    const s = { ...base, mouseButtons: false };
+    expect(text(s)).toContain("Mouse buttons as shortcuts are not available on this computer yet.");
+    expect(buttonOf(renderToStaticMarkup(<ShortcutsSections s={s} />), "Choose button: Mouse button")).toContain("disabled");
+  });
+
   it("says why a mode cannot be delivered on a computer without the key listener", () => {
     expect(text({ ...base, supported: false })).toContain("Shortcuts need a system-wide key listener");
   });
@@ -116,9 +124,10 @@ describe("shortcut model", () => {
   });
 
   it("offers sharing in Hold mode only and says why not otherwise", () => {
-    expect(shareAvailable("hold-only")).toEqual({ ok: true, reason: "" });
-    expect(shareAvailable("toggle").ok).toBe(false);
-    expect(shareAvailable("hold").reason).toContain("Hands-free modes");
+    expect(shareAvailable("hold-only", "win32")).toEqual({ ok: true, reason: "" });
+    expect(shareAvailable("toggle", "win32").ok).toBe(false);
+    expect(shareAvailable("hold", "win32").reason).toContain("Hands-free modes");
+    expect(shareAvailable("hold-only", "darwin")).toEqual({ ok: false, reason: "Sharing the shortcut with other apps is available on Windows only." });
   });
 
   it("collects every shortcut, including the reader ones, and words a conflict", () => {

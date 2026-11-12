@@ -60,8 +60,11 @@ export function explainerFrames(mode: Mode): ("hold" | "tap" | "double")[] {
   return FRAMES[mode];
 }
 
-export const shareAvailable = (mode: Mode): { ok: boolean; reason: string } =>
-  mode === "hold-only" ? { ok: true, reason: "" } : { ok: false, reason: "Hands-free modes cannot keep the other app's key held. Switch the mode to Hold to share the shortcut." };
+export function shareAvailable(mode: Mode, platform: string): { ok: boolean; reason: string } {
+  if (platform !== "win32") return { ok: false, reason: "Sharing the shortcut with other apps is available on Windows only." };
+  if (mode !== "hold-only") return { ok: false, reason: "Hands-free modes cannot keep the other app's key held. Switch the mode to Hold to share the shortcut." };
+  return { ok: true, reason: "" };
+}
 
 export const isDefault = (slot: "dictation" | "pasteLast", value: string): boolean => value === (slot === "dictation" ? DEFAULT_HOTKEY : DEFAULT_PASTE_LAST);
 

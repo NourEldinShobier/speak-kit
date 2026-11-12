@@ -60,13 +60,27 @@ interface StatusParts {
   models: ModelManager;
   historyCount: number;
   paused: boolean;
+  mouseButtons: boolean;
   readerShortcuts: Record<string, string>;
   rejected: DictationStatus["rejected"];
   micOwner: string | undefined;
 }
 
 /** What the Settings page and the tray are told about dictation. */
-export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, paused, readerShortcuts, rejected, micOwner }: StatusParts): DictationStatus => ({
+export const dictationStatus = ({
+  supported,
+  config,
+  hotkeyReady,
+  hotkeyFailed,
+  state,
+  models,
+  historyCount,
+  paused,
+  readerShortcuts,
+  rejected,
+  micOwner,
+  mouseButtons,
+}: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
   hotkeyReady,
@@ -80,6 +94,8 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   ...(models.error && { modelError: models.error }),
   historyCount,
   paused,
+  mouseButtons,
+  platform: process.platform,
   readerShortcuts,
   ...(rejected && { rejected }),
   ...(micOwner && { micOwner }),

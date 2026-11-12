@@ -185,6 +185,17 @@ describe("mouse buttons", () => {
     expect(r.hook.mouse).toBe(false);
   });
 
+  it("watches clicks while a chord is held, so a click during a hold is reported as another key", async () => {
+    const r = rig({ mouse: true });
+    r.hook.start({ keys: [VK.rightCtrl] }, r.handlers);
+    r.key(VK.rightCtrl, true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(r.stats().mouseInstalls).toBe(1);
+    expect(r.click(0x01, true)).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(r.events.at(-1)).toEqual({ kind: "other", vk: 0x01 });
+  });
+
   it("watches clicks briefly after a release so a click between two taps cancels the lock, then lets the hook go", async () => {
     const r = rig({ mouse: true });
     r.hook.start({ keys: [VK.rightCtrl] }, r.handlers);

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Button, Icon, Kbd } from "@speakkit/ui";
 import { findConflict, type Slot } from "../../../shared/dictation/conflicts";
 import type { DictationStatus } from "../../../shared/dictation/contract";
@@ -106,6 +106,8 @@ interface Props {
   /** Called with the keys of a shortcut that needs the advanced warning before it is saved. */
   confirmAdvanced?: (hotkey: string) => Promise<boolean>;
   onRecording?: (on: boolean) => void;
+  /** This system cannot deliver the shortcut (no mouse hook): the buttons that start a recording are off. */
+  disabled?: boolean;
 }
 
 const Chips = ({ value }: { value: string }) => (
@@ -116,11 +118,26 @@ const Chips = ({ value }: { value: string }) => (
   </span>
 );
 
+function RecordingRow({ label, mouse, stop, line }: { label: string; mouse: boolean; stop(): void; line: ReactNode }) {
+  return (
+    <div className="dict-hotkey" role="group" aria-label={label}>
+      <div className="dict-hotkey__field" role="status" aria-live="polite">
+        <i className="dict-hotkey__dot" />
+        {mouse ? "Waiting for a click" : "Press the new keys"}
+      </div>
+      <Button data-recorder-control onClick={stop}>
+        Cancel
+      </Button>
+      {line}
+    </div>
+  );
+}
+
 /**
  * One shortcut as keycaps and Change, a recorder while changing, and a line for the result: refused keys, a clash with another shortcut, saving, saved,
  * could not save. The row has a fixed width so the buttons never move while the state changes.
  */
-export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "Add shortcut", remove, restore, mouse, confirmAdvanced, onRecording }: Props) {
+export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "Add shortcut", remove, restore, mouse, confirmAdvanced, onRecording, disabled }: Props) {
   const [recording, setRecordingState] = useState(false);
   const [note, setNote] = useState<RecorderNote | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -153,22 +170,19 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
   useButtonCapture(recording && !!mouse, { pick: (key) => void commit(key), refused: (why) => setNote({ kind: "refused", text: REFUSAL_TEXT[why] }), stop });
 
   const line = note && <RecorderLine note={note} value={value} ready={status.hotkeyReady} />;
-  if (recording)
-    return (
-      <div className="dict-hotkey" role="group" aria-label={label}>
-        <div className="dict-hotkey__field" role="status" aria-live="polite">
-          <i className="dict-hotkey__dot" />
-          {mouse ? "Waiting for a click" : "Press the new keys"}
-        </div>
-        <Button data-recorder-control onClick={stop}>
-          Cancel
-        </Button>
-        {line}
-      </div>
-    );
+  if (recording) return <RecordingRow label={label} mouse={mouse === true} stop={stop} line={line} />;
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
-      <Resting label={label} value={value} addLabel={addLabel} restore={restore} remove={remove} start={() => (setNote(null), setRecording(true))} commit={(v) => void commit(v)} />
+      <Resting
+        label={label}
+        value={value}
+        addLabel={addLabel}
+        restore={restore}
+        remove={remove}
+        disabled={disabled === true}
+        start={() => (setNote(null), setRecording(true))}
+        commit={(v) => void commit(v)}
+      />
       {line}
     </div>
   );
@@ -180,17 +194,18 @@ interface RestingProps {
   addLabel: string;
   restore: string | undefined;
   remove: boolean | undefined;
+  disabled: boolean;
   start(): void;
   commit(value: string): void;
 }
 
 /** The row when nothing is being recorded: keycaps with Change (and Restore default or Remove), or Not set with an add button. */
-function Resting({ label, value, addLabel, restore, remove, start, commit }: RestingProps) {
+function Resting({ label, value, addLabel, restore, remove, disabled, start, commit }: RestingProps) {
   if (!value)
     return (
       <>
         <span className="dict-hotkey__unset">Not set</span>
-        <Button aria-label={`${addLabel}: ${label}`} onClick={start}>
+        <Button aria-label={`${addLabel}: ${label}`} disabled={disabled} onClick={start}>
           {addLabel}
         </Button>
       </>
@@ -198,7 +213,7 @@ function Resting({ label, value, addLabel, restore, remove, start, commit }: Res
   return (
     <>
       <Chips value={value} />
-      <Button aria-label={`Change ${label}`} onClick={start}>
+      <Button aria-label={`Change ${label}`} disabled={disabled} onClick={start}>
         Change
       </Button>
       {restore !== undefined && (
