@@ -61,11 +61,11 @@ describe("Automation page", () => {
     await l.page.waitForFunction(() => document.querySelector('[aria-label="Search dictation history"]')?.getAttribute("aria-checked") === "true");
     expect(configOf(l).mcpTools).toEqual({ history_search: true });
     await l.page.getByRole("switch", { name: "Let AI apps use Speak Kit" }).click();
-    await l.page.getByText("The local server is not running").waitFor();
+    await l.page.getByText("The local server is off").waitFor();
     expect(configOf(l).controlServer).toBe(false);
     expect(await history.isDisabled()).toBe(true);
     await l.page.getByRole("button", { name: "Start server" }).click();
-    await l.page.getByText("The local server is not running").waitFor({ state: "detached" });
+    await l.page.getByText("The local server is off").waitFor({ state: "detached" });
     expect(configOf(l).controlServer).toBe(true);
   });
 

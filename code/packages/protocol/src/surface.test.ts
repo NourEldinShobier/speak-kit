@@ -22,6 +22,7 @@ describe("protocol runtime surface", () => {
       "FrameDecoder",
       "LOOK_ERROR_CODES",
       "LOOK_IMAGE_WIDTH",
+      "LOOK_REQUEST_SCOPES",
       "LOOK_SCOPES",
       "LOOPBACK_HOST",
       "MAX_LOOK_IMAGE_BYTES",
