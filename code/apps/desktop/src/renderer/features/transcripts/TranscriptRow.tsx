@@ -38,6 +38,7 @@ function Meta({ row, audioDays, now }: { row: Row; audioDays: number; now: numbe
     <span className="tr-row__sub">
       <Chip>{row.source === "file" ? "Imported" : "Recorded"}</Chip>
       {row.recovered ? <Chip>Recovered</Chip> : null}
+      {row.notesState === "writing" ? <Chip>Writing notes</Chip> : null}
       {sub ? <span>{sub}</span> : null}
     </span>
   );

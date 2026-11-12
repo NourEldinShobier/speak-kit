@@ -60,12 +60,15 @@ export interface TranscriptsBridge {
   importFile(a: { path: string; language: string }): Promise<Outcome<{ id: string }>>;
   cancel(id: string): Promise<void>;
   resume(id: string): Promise<Outcome>;
+  /** Writes the notes again; the transcript is never changed by it. */
+  writeNotes(id: string): Promise<Outcome>;
   rename(id: string, title: string): Promise<void>;
   trash(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   remove(id: string): Promise<void>;
   emptyTrash(): Promise<number>;
-  copyText(id: string): Promise<boolean>;
+  /** Copies the words, or only those said from `from` up to `to` seconds (a chapter). */
+  copyText(id: string, range?: { from: number; to: number }): Promise<boolean>;
   save(id: string, format: Format): Promise<Outcome<SavedFile>>;
   /** Shows a file this app exported in the file manager, selected. */
   reveal(id: string, format: Format): Promise<boolean>;
@@ -113,12 +116,13 @@ export const TRANSCRIPTS_ARGS = {
   importFile: v.tuple([v.object({ path, language: v.picklist(TRANSCRIPT_LANGUAGES) })]),
   cancel: v.tuple([id]),
   resume: v.tuple([id]),
+  writeNotes: v.tuple([id]),
   rename: v.tuple([id, v.pipe(v.string(), v.maxLength(400))]),
   trash: v.tuple([id]),
   restore: v.tuple([id]),
   remove: v.tuple([id]),
   emptyTrash: v.tuple([]),
-  copyText: v.tuple([id]),
+  copyText: v.tuple([id, v.optional(v.object({ from: v.pipe(v.number(), v.minValue(0)), to: v.pipe(v.number(), v.minValue(0)) }))]),
   save: v.tuple([id, format]),
   reveal: v.tuple([id, format]),
   deleteAudio: v.tuple([id]),

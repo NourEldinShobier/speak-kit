@@ -63,7 +63,8 @@ export function promptText(lines: readonly NoteLine[], max = MAX_PROMPT_CHARS): 
 }
 
 const SPEAKERS = `The speakers are "You" (the person who recorded) and "Them" (everyone else on the call). `;
-const system = (lines: readonly NoteLine[]) => `You write notes for a transcript. ${lines.some((l) => l.who) ? SPEAKERS : ""}Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
+const system = (lines: readonly NoteLine[]) =>
+  `You write notes for a transcript. ${lines.some((l) => l.who) ? SPEAKERS : ""}Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 

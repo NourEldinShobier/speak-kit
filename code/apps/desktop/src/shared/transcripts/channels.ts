@@ -8,6 +8,7 @@ export const TRANSCRIPTS_METHODS = [
   "importFile",
   "cancel",
   "resume",
+  "writeNotes",
   "rename",
   "trash",
   "restore",

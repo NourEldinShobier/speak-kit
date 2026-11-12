@@ -22,12 +22,13 @@ export interface HandlerEnv {
 type Part<K extends keyof Handlers> = Pick<Handlers, K>;
 
 /** Looking at transcripts and changing what is in the list. */
-function listing({ ready }: HandlerEnv): Part<"list" | "get" | "cancel" | "resume" | "rename" | "trash" | "restore" | "remove" | "emptyTrash" | "deleteAudio" | "deleteAllAudio"> {
+function listing({ ready }: HandlerEnv): Part<"list" | "get" | "cancel" | "resume" | "writeNotes" | "rename" | "trash" | "restore" | "remove" | "emptyTrash" | "deleteAudio" | "deleteAllAudio"> {
   return {
     list: async (q) => (await ready).list(q ?? {}),
     get: async (id): Promise<Detail | null> => (await (await ready).get(id)) ?? null,
     cancel: async (id) => (await ready).cancel(id),
     resume: async (id) => (await ready).resume(id),
+    writeNotes: async (id) => (await ready).writeNotes(id),
     rename: async (id, title) => (await ready).rename(id, title),
     trash: async (id) => (await ready).trash(id),
     restore: async (id) => (await ready).restore(id),
@@ -58,9 +59,9 @@ function importing({ ready, ports: p }: HandlerEnv): Part<"pickFile" | "checkFil
 /** Copy, Save as and Show in folder. */
 function exporting({ ready, ports: p }: HandlerEnv): Part<"copyText" | "save" | "reveal"> {
   return {
-    copyText: async (id) => {
+    copyText: async (id, range) => {
       const d = await (await ready).get(id);
-      if (d) p.clipboard.writeText(plainText(d.segments));
+      if (d) p.clipboard.writeText(plainText(range ? d.segments.filter((s) => s.start >= range.from && s.start < range.to) : d.segments));
       return !!d;
     },
     save: async (id, format: Format): Promise<Outcome<SavedFile>> => {

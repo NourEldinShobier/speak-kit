@@ -66,7 +66,7 @@ describe("notes after a transcript finishes", () => {
     const id = await imported(t);
     await notesState(t, id, "failed");
     const d = (await t.get(id))!;
-    expect(d.notes).toEqual({ state: "failed", failure: { code: "failed", message: "OpenAI is busy right now. The transcript is unchanged." } });
+    expect(d.notes).toEqual({ state: "failed", failure: { code: "notes", message: "OpenAI is busy right now. The transcript is unchanged." } });
     expect(d.segments.map((x) => x.text)).toEqual(["words 1"]);
     expect(d.status).toBe("done");
     on = GOOD;
@@ -88,11 +88,9 @@ describe("notes after a transcript finishes", () => {
   });
 
   test("a writer that throws is a failure, never a throw", async () => {
-    const t = await setup(
-      () => async () => {
-        throw new Error("boom");
-      },
-    ).t;
+    const t = await setup(() => async () => {
+      throw new Error("boom");
+    }).t;
     const id = await imported(t);
     await notesState(t, id, "failed");
     expect((await t.get(id))!.status).toBe("done");
