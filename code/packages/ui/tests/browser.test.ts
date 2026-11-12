@@ -11,6 +11,22 @@ let page: Page;
 let close: () => void;
 const light = (spec: string) => `[data-panel="light"] [data-spec="${spec}"]`;
 
+/** Any CSS colour as sRGB channels (0..255) and alpha (0..1), resolved by the browser: the way an engine serializes color-mix() differs between versions. */
+const rgba = (css: string) =>
+  page.evaluate((c) => {
+    const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+    ctx.fillStyle = c;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+    return [r!, g!, b!, a! / 255] as [number, number, number, number];
+  }, css);
+/** Two CSS colours are the same colour: 1/255 per channel and 0.01 alpha, whatever their notation. */
+const expectColor = async (actual: string, expected: string) => {
+  const [a, e] = await Promise.all([rgba(actual), rgba(expected)]);
+  const same = [0, 1, 2].every((i) => Math.abs(a[i]! - e[i]!) <= 1) && Math.abs(a[3] - e[3]) <= 0.01;
+  expect(same, `${actual} is ${a.join(",")}, expected ${expected} = ${e.join(",")}`).toBe(true);
+};
+
 beforeAll(async () => {
   await build({ configFile: resolve(root, "vite.config.ts"), logLevel: "silent" });
   const s = await serveDir(resolve(root, "out/gallery"));
@@ -67,15 +83,15 @@ describe("Button states (real CSS)", () => {
     const sec = page.locator(`${light("button-secondary-rest")} button`);
     await sec.hover();
     await page.waitForTimeout(200);
-    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(247, 248, 250)");
+    await expectColor(await sec.evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(247, 248, 250)");
     await page.mouse.down();
     await page.waitForTimeout(250);
-    expect(await sec.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(240, 240, 240)");
+    await expectColor(await sec.evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(240, 240, 240)");
     await page.mouse.up();
     const pri = page.locator(`${light("button-primary-rest")} button`);
     await pri.hover();
     await page.waitForTimeout(200);
-    expect(await pri.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("color(srgb 0.12549 0.117647 0.145098 / 0.9)");
+    await expectColor(await pri.evaluate((e) => getComputedStyle(e).backgroundColor), "color(srgb 0.12549 0.117647 0.145098 / 0.9)");
     await page.mouse.move(0, 0);
   });
 
@@ -118,10 +134,14 @@ describe("Button states (real CSS)", () => {
     });
     const b = page.locator("#t-play");
     const read = () => b.evaluate((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]);
-    expect(await read()).toEqual(["rgb(250, 250, 250)", "rgb(32, 30, 37)"]);
+    let [fg, bg] = await read();
+    await expectColor(fg!, "rgb(250, 250, 250)");
+    await expectColor(bg!, "rgb(32, 30, 37)");
     await b.hover();
     await page.waitForTimeout(200);
-    expect(await read()).toEqual(["rgb(250, 250, 250)", "color(srgb 0.12549 0.117647 0.145098 / 0.9)"]);
+    [fg, bg] = await read();
+    await expectColor(fg!, "rgb(250, 250, 250)");
+    await expectColor(bg!, "color(srgb 0.12549 0.117647 0.145098 / 0.9)");
     await page.mouse.move(0, 0);
     await b.evaluate((e) => e.remove());
   });
@@ -327,13 +347,9 @@ describe("Tactile refinements", () => {
     }
   };
 
-  /** Contrast ratio of a text colour on a (possibly translucent) fill laid over a backdrop, all as "rgb(a)" strings. */
-  const ratio = (fg: string, fill: string, backdrop: string) => {
-    // color-mix() results come back as "color(srgb 0.7 0.5 0.1 / 0.16)" with channels in 0..1
-    const n = (c: string) => {
-      const v = (c.match(/[\d.]+/g) ?? []).map(Number);
-      return c.startsWith("color(") ? [v[0]! * 255, v[1]! * 255, v[2]! * 255, ...v.slice(3)] : v;
-    };
+  /** Contrast ratio of a text colour on a (possibly translucent) fill laid over a backdrop, all as CSS colours. */
+  const ratio = async (fg: string, fill: string, backdrop: string) => {
+    const [f, t, u] = await Promise.all([rgba(fill), rgba(fg), rgba(backdrop)]);
     const over = (top: number[], under: number[]) => {
       const a = top[3] ?? 1;
       return [0, 1, 2].map((i) => top[i]! * a + under[i]! * (1 - a));
@@ -342,8 +358,8 @@ describe("Tactile refinements", () => {
       const [r, g, b] = c.map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
       return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
     };
-    const bg = over(n(fill), n(backdrop));
-    const [hi, lo] = [lum(over(n(fg), bg)), lum(bg)].sort((a, b) => b - a);
+    const bg = over(f, u);
+    const [hi, lo] = [lum(over(t, bg)), lum(bg)].sort((a, b) => b - a);
     return (hi! + 0.05) / (lo! + 0.05);
   };
 
@@ -373,14 +389,14 @@ describe("Tactile refinements", () => {
 
   test("forced .is-hover still works outside the media query", async () => {
     const bg = await withHost('<button class="lm-btn lm-btn--secondary is-hover">A</button>', (h) => getComputedStyle(h.firstElementChild!).backgroundColor);
-    expect(bg).toBe("rgb(247, 248, 250)");
+    await expectColor(bg, "rgb(247, 248, 250)");
   });
 
   test("purple and yellow pill text reach 4.5:1 on their tints, and the tag colours themselves are unchanged", async () => {
     const m = await withHost('<span class="lm-pill lm-pill--purple">A</span><span class="lm-pill lm-pill--yellow">B</span>', (h) =>
       [...h.children].map((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]),
     );
-    expect(m.map(([fg, bg]) => ratio(fg!, bg!, "rgb(255, 255, 255)") >= 4.5)).toEqual([true, true]);
+    expect(await Promise.all(m.map(async ([fg, bg]) => (await ratio(fg!, bg!, "rgb(255, 255, 255)")) >= 4.5))).toEqual([true, true]);
     expect(m.map(([fg]) => fg)).toEqual(["rgb(111, 66, 193)", "rgb(128, 96, 10)"]);
     const tags = await page.evaluate(() => ["--tag-purple", "--tag-yellow"].map((t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim()));
     expect(tags).toEqual(["#7a4cd9", "#b8860b"]);
@@ -392,11 +408,11 @@ describe("Tactile refinements", () => {
     );
     expect(seg[0]![0]).toBe("rgb(71, 84, 103)");
     expect(seg[1]![0]).toBe("rgb(71, 84, 103)");
-    for (const [fg, bg] of seg) expect(ratio(fg!, bg!, "rgb(240, 240, 240)")).toBeGreaterThanOrEqual(4.5);
+    for (const [fg, bg] of seg) expect(await ratio(fg!, bg!, "rgb(240, 240, 240)")).toBeGreaterThanOrEqual(4.5);
     const ghost = await withHost('<button class="lm-btn lm-btn--ghost is-hover">A</button><button class="lm-btn lm-btn--ghost is-pressed">B</button>', (h) =>
       [...h.querySelectorAll("button")].map((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]),
     );
-    for (const [fg, bg] of ghost) expect(ratio(fg!, bg!, "rgb(255, 255, 255)")).toBeGreaterThanOrEqual(4.5);
+    for (const [fg, bg] of ghost) expect(await ratio(fg!, bg!, "rgb(255, 255, 255)")).toBeGreaterThanOrEqual(4.5);
   });
 
   test("segmented label reserves the 500-weight width so selecting does not move it", async () => {
