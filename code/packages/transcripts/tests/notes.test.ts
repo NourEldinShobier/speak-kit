@@ -9,7 +9,7 @@ const GOOD: Summarise = async () => ({
   notes: { title: "Weekly sync", summary: "They agreed the date. Nothing else was decided.", chapters: [{ start: 0, title: "Date", text: "words 1" }] },
 });
 
-function setup(notes: () => Summarise | undefined, text = (n: number) => `words ${n}`) {
+function setup(notes: () => Summarise | undefined, text = (n: number) => `words ${n}`, busy: () => boolean = () => false, changed: () => void = () => {}) {
   const fs = new MemFs();
   const c = clock();
   let calls = 0;
@@ -19,12 +19,12 @@ function setup(notes: () => Summarise | undefined, text = (n: number) => `words 
     now: c.now,
     newId: ids(),
     transcribe: async () => ({ ok: true, text: text(++calls), speech: true }),
-    busy: () => false,
+    busy,
     sleep: c.sleep,
     model: () => "model-a",
     policy: () => DEFAULT_POLICY,
     exportDir: () => OUT,
-    changed: () => {},
+    changed,
     notes,
   });
   return { fs, t };
@@ -87,13 +87,65 @@ describe("notes after a transcript finishes", () => {
     expect(n.doc?.title).toBe("Weekly sync");
   });
 
-  test("a writer that throws is a failure, never a throw", async () => {
+  test("a writer that throws is a failure with a message that says the transcript is unchanged", async () => {
     const t = await setup(() => async () => {
       throw new Error("boom");
     }).t;
     const id = await imported(t);
     await notesState(t, id, "failed");
-    expect((await t.get(id))!.status).toBe("done");
+    const d = (await t.get(id))!;
+    expect(d.status).toBe("done");
+    expect(d.notes).toEqual({ state: "failed", failure: { code: "notes", message: "The notes could not be written. The transcript is unchanged." } });
+  });
+
+  test("only one pass runs at a time and the state says writing while it runs", async () => {
+    let release: () => void = () => {};
+    let calls = 0;
+    const slow: Summarise = () => {
+      calls++;
+      return new Promise((res) => (release = () => res({ ok: true, writer: "W", notes: { title: "T", summary: "S.", chapters: [] } })));
+    };
+    const t = await setup(() => slow).t;
+    const id = await imported(t);
+    await vi.waitFor(() => expect(calls).toBe(1));
+    expect((await t.get(id))!.notes).toEqual({ state: "writing" });
+    expect(t.list()[0]!.notesState).toBe("writing");
+    expect((await t.writeNotes(id)).ok).toBe(false);
+    expect(calls).toBe(1);
+    release();
+    await notesState(t, id, "ready");
+    expect(t.list()[0]!.notesState).toBe("ready");
+  });
+
+  test("a window is told when the pass starts and when it ends", async () => {
+    let n = 0;
+    const t = await setup(
+      () => GOOD,
+      (k) => `words ${k}`,
+      () => false,
+      () => void n++,
+    ).t;
+    const id = await imported(t);
+    await notesState(t, id, "ready");
+    const before = n;
+    await t.writeNotes(id);
+    expect(n - before).toBeGreaterThanOrEqual(3);
+  });
+
+  test("notes cannot be written for a transcript that is not finished", async () => {
+    let busy = true;
+    const t = await setup(
+      () => GOOD,
+      undefined,
+      () => busy,
+    ).t;
+    await t.ready;
+    const r = await t.importAudio({ name: "a.m4a", pcm: tone(5), language: "en" });
+    const id = (r as unknown as { id: string }).id;
+    expect((await t.get(id))!.status).not.toBe("done");
+    expect((await t.writeNotes(id)).ok).toBe(false);
+    busy = false;
+    await vi.waitFor(async () => expect((await t.get(id))!.status).toBe("done"));
   });
 
   test("writing again with notes off says so and changes nothing", async () => {
@@ -101,7 +153,7 @@ describe("notes after a transcript finishes", () => {
     const id = await imported(t);
     const r = await t.writeNotes(id);
     expect(r.ok).toBe(false);
-    expect(!r.ok && r.failure.message).toContain("Notes are off");
+    expect(r).toEqual({ ok: false, failure: { code: "notes", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." } });
     expect((await t.get(id))!.notes).toBeUndefined();
   });
 
@@ -113,7 +165,7 @@ describe("notes after a transcript finishes", () => {
     const id = await imported(t);
     await t.dispose();
     const r = await t.writeNotes(id);
-    expect(!r.ok && r.failure.message).toContain("nothing to write notes from");
+    expect(r).toEqual({ ok: false, failure: { code: "notes", message: "There is nothing to write notes from: no words were heard." } });
   });
 
   test("writing again for an unknown transcript fails without throwing", async () => {

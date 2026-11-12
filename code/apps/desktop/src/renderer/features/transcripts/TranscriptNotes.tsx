@@ -38,12 +38,14 @@ export function SummaryCard({ detail: d, reload }: { detail: Detail; reload(): v
       {n.doc ? (
         <section className="lm-card mt-notes" aria-label="Summary">
           <p className="mt-summary">{n.doc.summary}</p>
-          <p className="mt-writer">Written by {n.doc.writer}. The transcript below is exactly what was heard.</p>
-          {n.state === "ready" ? (
-            <Button size="sm" disabled={busy} onClick={regenerate}>
-              Write notes again
-            </Button>
-          ) : null}
+          <div className="tr-notes__foot">
+            <p className="mt-writer">Written by {n.doc.writer}. The transcript below is exactly what was heard.</p>
+            {n.state === "ready" ? (
+              <Button size="sm" disabled={busy} onClick={regenerate}>
+                Write notes again
+              </Button>
+            ) : null}
+          </div>
         </section>
       ) : null}
     </>
