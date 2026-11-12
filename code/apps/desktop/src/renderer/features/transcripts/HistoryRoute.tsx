@@ -8,6 +8,7 @@ import { TrashPage } from "./TrashPage";
 import { TranscriptsTab } from "./TranscriptsTab";
 import { TranscriptView } from "./TranscriptView";
 import { usePush, useSettingsView } from "./useTranscripts";
+import { MeetingsTab, MeetingView, takeOpen, useMeetingsPush, useMeetingsSettings } from "../meetings";
 import "./transcripts.css";
 
 // The dictation history is its own feature; it loads when its tab is first shown.
@@ -22,7 +23,7 @@ function useDictationLead(): string {
 }
 
 type View = { kind: "list" } | { kind: "transcript"; id: string } | { kind: "trash" };
-type Tab = "dictations" | "transcripts";
+type Tab = "dictations" | "transcripts" | "meetings";
 type Undo = { id: string; title: string };
 
 function DeleteAllDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose(): void; onConfirm(): void }) {
@@ -140,6 +141,8 @@ function TranscriptsBody({ push, settings, search, setSearch, recorderOpen, clos
 
 interface FrameProps {
   tab: Tab;
+  /** The Meetings tab is there only while the feature is on. */
+  meetings: boolean;
   setTab(t: Tab): void;
   lead: string;
   actions?: ReactNode;
@@ -147,7 +150,7 @@ interface FrameProps {
 }
 
 /** The History page frame: the title, the sentence under it, the tab switch, and what the tab shows. */
-function Frame({ tab, setTab, lead, actions, children }: FrameProps) {
+function Frame({ tab, meetings, setTab, lead, actions, children }: FrameProps) {
   return (
     <div className="sk-page tr-page">
       <div className="sk-page__bar">
@@ -162,10 +165,7 @@ function Frame({ tab, setTab, lead, actions, children }: FrameProps) {
         variant="settings"
         value={tab}
         onChange={(t) => setTab(t as Tab)}
-        items={[
-          { id: "dictations", label: "Dictations" },
-          { id: "transcripts", label: "Transcripts" },
-        ]}
+        items={[{ id: "dictations", label: "Dictations" }, { id: "transcripts", label: "Transcripts" }, ...(meetings ? [{ id: "meetings", label: "Meetings" }] : [])]}
       />
       {children}
     </div>
@@ -174,6 +174,7 @@ function Frame({ tab, setTab, lead, actions, children }: FrameProps) {
 
 interface PageProps {
   push: Push;
+  meetings: boolean;
   setTab(t: Tab): void;
   openSettings(): void;
 }
@@ -181,7 +182,7 @@ interface PageProps {
 const moveAllToTrash = () => void transcripts.list().then((rows) => Promise.all(rows.filter((r) => r.status !== "recording").map((r) => transcripts.trash(r.id))));
 
 /** The Transcripts tab with what it opens: a transcript, the Trash, the import dialog, the recorder, and the undo after a delete. */
-function TranscriptsPage({ push, setTab, openSettings }: PageProps) {
+function TranscriptsPage({ push, meetings, setTab, openSettings }: PageProps) {
   const { view: settings } = useSettingsView(push.tick);
   const [view, setView] = useState<View>({ kind: "list" });
   const [importing, setImporting] = useState(false);
@@ -211,7 +212,7 @@ function TranscriptsPage({ push, setTab, openSettings }: PageProps) {
     />
   );
   return (
-    <Frame tab="transcripts" setTab={setTab} lead="Dictations and transcripts, kept on this computer." actions={actions}>
+    <Frame tab="transcripts" meetings={meetings} setTab={setTab} lead="Dictations and transcripts, kept on this computer." actions={actions}>
       <TranscriptsBody
         push={push}
         settings={settings}
@@ -231,19 +232,56 @@ function TranscriptsPage({ push, setTab, openSettings }: PageProps) {
   );
 }
 
+/** The Meetings tab with what it opens: one meeting. */
+function MeetingsPage({ meetings, setTab, openMeetingSettings, initial }: { meetings: boolean; setTab(t: Tab): void; openMeetingSettings(): void; initial: string | undefined }) {
+  const push = useMeetingsPush();
+  const { view: settings } = useMeetingsSettings(push.tick);
+  const [open, setOpen] = useState<string | null>(initial ?? null);
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const on = () => {
+      const id = takeOpen();
+      if (id) setOpen(id);
+    };
+    window.addEventListener("speakkit:open-meeting", on);
+    return () => window.removeEventListener("speakkit:open-meeting", on);
+  }, []);
+  if (open)
+    return (
+      <Frame tab="meetings" meetings={meetings} setTab={setTab} lead="Dictations, transcripts and meetings, kept on this computer.">
+        <MeetingView id={open} tick={push.tick} onBack={() => setOpen(null)} onDeleted={() => setOpen(null)} />
+      </Frame>
+    );
+  const actions = <Button onClick={openMeetingSettings}>Meeting settings</Button>;
+  return (
+    <Frame tab="meetings" meetings={meetings} setTab={setTab} lead="Dictations, transcripts and meetings, kept on this computer." actions={actions}>
+      <MeetingsTab push={push} settings={settings} onOpen={setOpen} onSettings={openMeetingSettings} search={search} setSearch={setSearch} />
+    </Frame>
+  );
+}
+
 /** History: the Dictations tab (the existing dictation history) and the Transcripts tab. */
-export function HistoryRoute({ openSettings }: { openSettings(): void }) {
+export function HistoryRoute({ openSettings, openMeetingSettings }: { openSettings(): void; openMeetingSettings(): void }) {
   const push = usePush();
   const [tab, setTab] = useState<Tab>("dictations");
   const lead = useDictationLead();
+  const meetingsPush = useMeetingsPush();
+  const { view: meetingsView } = useMeetingsSettings(meetingsPush.tick);
+  // Hidden while the feature is off; a tab that was open when it was turned off falls back to the dictations.
+  const meetings = meetingsView?.config.enabled ?? false;
   const recording = push.recording !== null;
+  const [initial] = useState(takeOpen);
+  useEffect(() => {
+    if (initial) setTab("meetings");
+  }, [initial]);
   // A recording that is running is shown whichever tab was open when it started (the tray can start one too).
   useEffect(() => {
     if (recording) setTab("transcripts");
   }, [recording]);
-  if (tab === "transcripts") return <TranscriptsPage push={push} setTab={setTab} openSettings={openSettings} />;
+  if (tab === "meetings" && (meetings || initial)) return <MeetingsPage meetings={meetings} setTab={setTab} openMeetingSettings={openMeetingSettings} initial={initial} />;
+  if (tab === "transcripts") return <TranscriptsPage push={push} meetings={meetings} setTab={setTab} openSettings={openSettings} />;
   return (
-    <Frame tab={tab} setTab={setTab} lead={lead}>
+    <Frame tab={tab === "meetings" ? "dictations" : tab} meetings={meetings} setTab={setTab} lead={lead}>
       <Suspense fallback={null}>
         <DictationHistory embedded />
       </Suspense>

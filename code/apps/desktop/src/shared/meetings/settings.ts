@@ -69,6 +69,8 @@ export const MeetingsPatchSchema = v.partial(
     audioHours: v.picklist(AUDIO_HOURS),
     textDays: v.picklist(MEETING_TEXT_DAYS),
     trashDays: v.picklist(MEETING_TRASH_DAYS),
+    /** Puts the capsule back in its first place on every monitor. */
+    resetPositions: v.literal(true),
   }),
 );
 export type MeetingsPatch = v.InferOutput<typeof MeetingsPatchSchema>;

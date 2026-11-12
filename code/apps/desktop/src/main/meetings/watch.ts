@@ -15,6 +15,8 @@ export interface WatchDeps {
   /** Opens a meeting in the app window / shows its files in the folder. */
   open(id: string): void;
   showFolder(id: string): void;
+  /** Opens Settings > Meetings (the "Never offer" choice sends the person there). */
+  openSettings(): void;
 }
 
 const SAVED_MS = 20_000;
@@ -31,7 +33,7 @@ export class CallWatch {
   readonly #offers: Offers;
   readonly #sessions = new Map<string, CallSession>();
   #ending: { sessionId: string; app: string; left: number | null } | undefined;
-  #saved: { id: string; title: string; until: number } | undefined;
+  #saved: { id: string; title: string; mark: string; until: number } | undefined;
   #notice: string | undefined;
 
   constructor(d: WatchDeps) {
@@ -103,8 +105,8 @@ export class CallWatch {
   }
 
   /** A transcript is ready: the capsule says so for a while, with a way to the files. */
-  finished(id: string, title: string): void {
-    this.#saved = { id, title, until: this.#d.now() + SAVED_MS };
+  finished(id: string, title: string, mark: string): void {
+    this.#saved = { id, title, mark, until: this.#d.now() + SAVED_MS };
     this.render();
   }
 
@@ -122,7 +124,9 @@ export class CallWatch {
         break;
       }
       case "dismiss":
-        this.#offers.dismissed(a.sessionId, a.how);
+        // "Never offer" sets the policy in Settings, where the person sees what it changes: this call is skipped and Settings opens.
+        this.#offers.dismissed(a.sessionId, a.how === "never" ? "this-call" : a.how);
+        if (a.how === "never") this.#d.openSettings();
         break;
       case "stop":
         await this.#stop();
@@ -155,11 +159,11 @@ export class CallWatch {
   #view(): CapsuleView | null {
     if (this.#ending) return { kind: "ending", sessionId: this.#ending.sessionId, app: this.#ending.app, secondsLeft: this.#ending.left };
     const offer = this.#offers.shown[0];
-    if (offer && !this.#d.recording.active) return { kind: "offer", sessionId: offer.id, app: offer.providerName };
+    if (offer && !this.#d.recording.active) return { kind: "offer", sessionId: offer.id, app: offer.providerName, mark: this.#d.providers().find((p) => p.id === offer.providerId)?.mark ?? "Mt" };
     const r: RecordingView | null = this.#d.recording.view();
     if (r && r.phase !== "saving") return { kind: "recording", app: r.app, seconds: r.seconds, you: r.you, them: r.them, micSilent: r.micSilent, system: r.system, ...(r.note && { note: r.note }) };
     if (this.#notice) return { kind: "notice", text: this.#notice };
-    if (this.#saved) return { kind: "saved", id: this.#saved.id, title: this.#saved.title };
+    if (this.#saved) return { kind: "saved", id: this.#saved.id, title: this.#saved.title, mark: this.#saved.mark };
     return null;
   }
 }

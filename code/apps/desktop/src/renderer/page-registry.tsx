@@ -61,8 +61,9 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
   engines: ({ s }) => <EnginesPage s={s} />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
-  modes: () => later(<ModesPage />),
-  vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),
-  history: ({ dispatch }) => later(<HistoryPage openDictation={() => dispatch({ type: "go", page: "dictation" })} />),
-  capture: () => <StubPage page="capture" />,
+  modes: () => <StubPage page="modes" />,
+  vocabulary: () => <StubPage page="vocabulary" />,
+  history: ({ dispatch }) =>
+    later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} openMeetingSettings={() => dispatch({ type: "go", page: "settings", sub: "meetings" })} />),
+  capture: () => later(<CapturePage />),
 };

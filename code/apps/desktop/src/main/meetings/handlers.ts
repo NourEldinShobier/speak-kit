@@ -127,8 +127,9 @@ function settingsOf(env: HandlerEnv): Pick<Handlers, "settings" | "patchSettings
     settings: view,
     patchSettings: (patch) =>
       change(() => {
-        const { shortcut, ...rest } = patch;
+        const { shortcut, resetPositions, ...rest } = patch;
         Object.assign(cfg(), rest);
+        if (resetPositions) cfg().positions = {};
         // A shortcut the system would refuse is not saved; the page shows the old one again.
         if (shortcut !== undefined && (shortcut === "" || checkAccelerator(shortcut) === null)) cfg().shortcut = shortcut === "" ? "" : normalize(shortcut)!;
       }),

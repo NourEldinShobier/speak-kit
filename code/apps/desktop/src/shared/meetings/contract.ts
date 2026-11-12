@@ -135,10 +135,10 @@ export type RecCommand = { id: number; op: "start"; micDevice: string; system: b
 export type RecResult = { ok: true; system?: SystemAudio; devices?: { inputs: Device[]; outputs: Device[] } } | { ok: false; code: "mic-denied" | "mic-missing" | "mic-busy" | "mic-failed" };
 
 export type CapsuleView =
-  | { kind: "offer"; sessionId: string; app: string }
+  | { kind: "offer"; sessionId: string; app: string; mark: string }
   | { kind: "recording"; app: string; seconds: number; you: number; them: number; micSilent: boolean; system: SystemAudio; note?: string }
   | { kind: "ending"; sessionId: string; app: string; secondsLeft: number | null }
-  | { kind: "saved"; id: string; title: string }
+  | { kind: "saved"; id: string; title: string; mark: string }
   | { kind: "notice"; text: string };
 
 export type CapsuleAction =
