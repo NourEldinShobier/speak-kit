@@ -56,6 +56,48 @@ const readerHandlers = (reading: ReturnType<typeof createReading>) =>
     readerDone: async (epoch, index) => reading.done(epoch, index),
   }) satisfies Partial<Api>;
 
+// Restart now: what is running stops first; quitAndInstall then quits the app itself.
+function stopForRestart(reading: ReturnType<typeof createReading>, exports: ReturnType<typeof createExports>): void {
+  reading.controller.command({ type: "stop" });
+  exports.dispose();
+}
+
+/** Permissions the dictation hotkey needs; the hotkey is retried when they get allowed. */
+function watchPermissions(parent: DesktopOptions["parent"], dictation: DictationService): void {
+  const permissions = setupPermissions(
+    () => parent()?.webContents,
+    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
+  );
+  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
+  app.on("browser-window-focus", permissions.refresh);
+}
+
+/** Stops every feature; resolves once the control server is down. */
+function disposeAll(p: {
+  control: { dispose(): Promise<void> };
+  shortcuts: { unregisterAll(): void };
+  reading: { dispose(): void };
+  exports: { dispose(): void };
+  updates: { dispose(): void };
+  tray: { dispose(): void };
+  dictation: { dispose(): unknown };
+  capture: { dispose(): void };
+  transcripts: { dispose(): unknown };
+  meetings: { dispose(): unknown } | undefined;
+}): Promise<void> {
+  const controlDown = p.control.dispose();
+  p.shortcuts.unregisterAll();
+  p.reading.dispose();
+  p.exports.dispose();
+  p.updates.dispose();
+  p.tray.dispose();
+  void p.dictation.dispose();
+  p.capture.dispose();
+  void p.transcripts.dispose();
+  void p.meetings?.dispose();
+  return controlDown;
+}
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -100,17 +142,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     refreshTray: () => tray.refresh(),
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),
-    dispose: () => {
-      shortcuts.unregisterAll();
-      reading.dispose();
-      exports.dispose();
-      updates.dispose();
-      tray.dispose();
-      void dictation.dispose();
-      void transcripts.dispose();
-      void meetings?.dispose();
-      return controlDown;
-    },
+    /** Resolves once the control server is down and its discovery file is gone. */
+    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, capture, transcripts, meetings }),
     testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

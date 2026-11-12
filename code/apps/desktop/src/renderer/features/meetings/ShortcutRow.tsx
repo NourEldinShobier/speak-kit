@@ -10,6 +10,26 @@ interface Props {
   onChange(accelerator: string): void;
 }
 
+function Current({ recording, value, platform }: { recording: boolean; value: string; platform: string }) {
+  if (recording) {
+    return (
+      <span className="sk-rec" role="status">
+        Press new keys <Kbd small>Esc</Kbd> to cancel
+      </span>
+    );
+  }
+  if (!value) return <Chip>Not set</Chip>;
+  return (
+    <span className="sk-keys">
+      {showAccelerator(value, platform, "global")
+        .split("+")
+        .map((k) => (
+          <Kbd key={k}>{k}</Kbd>
+        ))}
+    </span>
+  );
+}
+
 /** The optional start and stop shortcut: Not set, or the keys, with Set shortcut and Clear. Esc cancels while recording. */
 export function ShortcutRow({ value, platform, disabled, onChange }: Props) {
   const [recording, setRecording] = useState(false);
@@ -39,21 +59,7 @@ export function ShortcutRow({ value, platform, disabled, onChange }: Props) {
         description="Optional. Works when no call is detected."
         control={
           <div className="sk-row-actions">
-            {recording ? (
-              <span className="sk-rec" role="status">
-                Press new keys <Kbd small>Esc</Kbd> to cancel
-              </span>
-            ) : value ? (
-              <span className="sk-keys">
-                {showAccelerator(value, platform, "global")
-                  .split("+")
-                  .map((k) => (
-                    <Kbd key={k}>{k}</Kbd>
-                  ))}
-              </span>
-            ) : (
-              <Chip>Not set</Chip>
-            )}
+            <Current recording={recording} value={value} platform={platform} />
             <Button disabled={disabled} onClick={() => (setProblem(null), setRecording(true))}>
               {value ? "Change" : "Set shortcut"}
             </Button>

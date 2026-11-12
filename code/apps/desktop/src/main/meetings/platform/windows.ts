@@ -32,7 +32,8 @@ export function parseConsent(out: string): string[] {
       continue;
     }
     const m = /^(LastUsedTimeStart|LastUsedTimeStop)\s+REG_QWORD\s+(0x[0-9a-f]+)/i.exec(line);
-    if (m) m[1]!.toLowerCase().endsWith("start") ? (start = BigInt(m[2]!)) : (stop = BigInt(m[2]!));
+    if (m && m[1]!.toLowerCase().endsWith("start")) start = BigInt(m[2]!);
+    else if (m) stop = BigInt(m[2]!);
   }
   flush();
   return [...exes];

@@ -21,17 +21,12 @@ interface TrayParts {
   retryEngine(): Promise<unknown>;
 }
 
-/** The downloaded speech models for the tray's quick switch; nothing when none is downloaded. */
-function speechModelsContext(dictation: DictationService): Pick<TrayContext, "speechModels"> {
-  const v = dictation.speech.view();
-  const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
-  if (models.length === 0) return {};
-  return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
-}
+type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "meetings">;
 
-/** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, requestQuit, retryEngine }: TrayParts) {
-  const context = (): TrayContext => ({
+/** What the menu is built from: the shared state plus the live counts of the features. */
+function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings }: TrayStateParts): TrayContext {
+  const m = ctx.config.meetings;
+  return {
     health: ctx.state.health,
     serverError: ctx.state.serverError,
     reader: ctx.state.reader,
@@ -41,9 +36,14 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     recorder: { phase: transcripts.phase() },
-    ...(ctx.config.meetings.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(ctx.config.meetings.shortcut && { shortcut: ctx.config.meetings.shortcut }) } }),
+    ...(m.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(m.shortcut && { shortcut: m.shortcut }) } }),
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
-  });
+  };
+}
+
+/** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, requestQuit, retryEngine }: TrayParts) {
+  const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings });
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
     ctx.sendUi({ type: "nav", page });

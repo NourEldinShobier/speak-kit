@@ -148,11 +148,14 @@ function Body({
   return (
     <>
       <Days rows={rows} push={push} search={search} trashed={trashed} onOpen={onOpen} reload={list.reload} />
-      <p className="tr-foot">
-        {search.trim() !== "" ? `${plural(rows.length, "match", "matches")}.` : settings ? footerText(rows.length, settings.config) : plural(rows.length, "meeting", "meetings")}
-      </p>
+      <p className="tr-foot">{footerFor(rows.length, search, settings)}</p>
     </>
   );
+}
+
+function footerFor(count: number, search: string, settings: { config: Parameters<typeof footerText>[1] } | null | undefined): string {
+  if (search.trim() !== "") return `${plural(count, "match", "matches")}.`;
+  return settings ? footerText(count, settings.config) : plural(count, "meeting", "meetings");
 }
 
 /** The Meetings tab of History: search, the Trash switch, the meetings grouped by day, the notices, and the empty, loading and error states. */
