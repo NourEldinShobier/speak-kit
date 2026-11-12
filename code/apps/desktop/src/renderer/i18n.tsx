@@ -1,5 +1,5 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { resolveLocale, translate, translateOr, type Locale, type StringKey } from "../shared/i18n";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { loadLocale, resolveLocale, translate, translateOr, type Locale, type StringKey } from "../shared/i18n";
 
 export interface Translator {
   locale: Locale;
@@ -16,7 +16,13 @@ const Ctx = createContext<Translator>(make("en"));
 export function LocaleProvider({ choice, children }: { choice: string; children: ReactNode }) {
   const system = typeof navigator === "undefined" ? [] : navigator.languages;
   const locale = resolveLocale(choice, system);
-  const value = useMemo(() => make(locale), [locale]);
+  const [value, setValue] = useState(() => make(locale));
+  useEffect(() => {
+    let live = true;
+    setValue(make(locale));
+    void loadLocale(locale).then(() => live && setValue(make(locale))); // a new object re-renders the screens once the table arrives
+    return () => void (live = false);
+  }, [locale]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

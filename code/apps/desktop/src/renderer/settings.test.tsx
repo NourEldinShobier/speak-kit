@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { parseConfig } from "../shared/schemas";
 import { appState } from "./app-state.fixture";
 
@@ -8,10 +8,13 @@ vi.hoisted(() => {
   (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
+import { loadLocale, LOCALES } from "../shared/i18n";
 import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
 import { SETTINGS_NAV } from "./routes";
 import { SETTINGS_SUBS } from "../shared/ipc";
+
+beforeAll(() => Promise.all(LOCALES.map(loadLocale)));
 
 const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => renderToStaticMarkup(<Settings s={appState({ config: parseConfig({ setupDone: true, ...config }) })} sub={sub} />);
 
