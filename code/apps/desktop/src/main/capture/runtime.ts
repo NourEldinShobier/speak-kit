@@ -68,6 +68,8 @@ export class CaptureRuntime {
   readonly #fence: Fence = createFence();
   /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
   #epoch = 0;
+  /** The recording on now (or about to start) was started with the screen recording key: no narration. */
+  #screenOnly = false;
   #off: (() => void)[] = [];
   readonly #guards: ReturnType<typeof createRecordingGuards>;
 
@@ -170,7 +172,7 @@ export class CaptureRuntime {
           return d.history.journal;
         },
         narrator: d.narrator,
-        settings: () => this.#settings,
+        settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
         hideOwnWindows: hideOwnWindows,
         delivery: {
           copy: (text, sheet) => epoch === this.#epoch && void writeCapture(text, sheet && nativeImage.createFromBuffer(sheet)),
@@ -212,6 +214,7 @@ export class CaptureRuntime {
   }
 
   #sessionChanged() {
+    if (this.#session.state.phase === "idle") this.#screenOnly = false;
     this.#place.sessionChanged();
     this.#guards.limit.sync(this.#session.state.phase === "recording");
     this.controller.update();
@@ -241,6 +244,16 @@ export class CaptureRuntime {
     this.#board.clear();
     const d = displayAt(p.cursor(), p.displays()) ?? p.displays()[0];
     await this.#session.start(s.target === "screen" && d ? { kind: "screen", displayId: d.id } : undefined);
+  }
+
+  /** The screen recording key: starts a recording of the screen without narration, and the next press stops it. */
+  async toggleScreenRecording(): Promise<void> {
+    const { phase } = this.#session.state;
+    if (phase === "recording") return this.stop();
+    if (phase !== "idle" || !this.#settings.experiments.recording) return;
+    this.#screenOnly = true;
+    await this.start();
+    if (this.#session.state.phase === "idle") this.#screenOnly = false;
   }
 
   stop() {

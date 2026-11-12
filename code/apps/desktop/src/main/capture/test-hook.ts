@@ -16,6 +16,10 @@ export const captureTestHook = (c: CaptureService) => ({
   /** What the scripted recorder does on the next recordings: how many frames it makes, whether the microphone is missing. */
   script: (o: FakeRecorderOptions) => c.runtime.recorder.script(o),
   /** Same as pressing the capture key: "down" then "up" starts, a quick "down" "up" while recording stops. */
+  /** Same as pressing the screen recording key. */
+  record: () => c.runtime.toggleScreenRecording(),
+  /** Whether narration was asked for in each recording started so far. */
+  narrationFlags: () => c.runtime.recorder.starts(),
   /** Same as pressing a button of the capsule. */
   capsule: (action: CapsuleAction) => c.runtime.pressCapsule(action),
   /** The voice chat reads the capture that waits for it (what the look call does); the inbox is empty afterwards. */

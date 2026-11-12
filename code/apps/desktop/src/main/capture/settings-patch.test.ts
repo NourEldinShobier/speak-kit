@@ -30,6 +30,21 @@ describe("capture settings change", () => {
     expect(applyPatch(s, { screenshotHotkey: "F9" }, ctx).note).toBe("The two capture keys cannot be the same");
     expect(s.screenshotHotkey).toBe("F10");
   });
+  it("keeps the screen recording key apart from the other two and from dictation", () => {
+    const s = config();
+    expect(s.recordingHotkey).toBe("F7");
+    expect(applyPatch(s, { recordingHotkey: "F9" }, ctx).note).toBe("The two capture keys cannot be the same");
+    expect(applyPatch(s, { recordingHotkey: "F10" }, ctx).note).toBe("The two capture keys cannot be the same");
+    expect(applyPatch(s, { recordingHotkey: "ControlRight" }, ctx).note).toBe("Right Ctrl belongs to Dictation");
+    expect(s.recordingHotkey).toBe("F7");
+    expect(applyPatch(s, { recordingHotkey: "F6" }, ctx)).toEqual({ note: undefined, keysChanged: true });
+    expect(s.recordingHotkey).toBe("F6");
+  });
+  it("refuses to move the capture key onto the screen recording key", () => {
+    const s = config();
+    expect(applyPatch(s, { hotkey: "F7" }, ctx).note).toBe("The two capture keys cannot be the same");
+    expect(s.hotkey).toBe("F9");
+  });
   it("changes plain settings without restarting the hooks, and experiments with a restart", () => {
     const s = config();
     expect(applyPatch(s, { narration: false, retentionDays: 7 }, ctx)).toEqual({ note: undefined, keysChanged: false });

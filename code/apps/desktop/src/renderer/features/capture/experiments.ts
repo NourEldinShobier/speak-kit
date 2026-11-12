@@ -45,6 +45,16 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-recording",
+    title: "Screen recording key",
+    description: "A key that starts a recording of the screen with no narration. Press it again to stop. The recording is saved with your captures.",
+    badges: ["New", "Experimental"],
+    guard: "The capture key keeps working as before. Narration, the pen and the capsule are the same.",
+    useState: () => useCaptureExperiment("recording"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-agent-context",
     title: "Agent context text",
     description: "When a recording ends, Speak Kit lists the names of the buttons, menus and fields in the window in front and sends them with the capture to Voice chat.",
