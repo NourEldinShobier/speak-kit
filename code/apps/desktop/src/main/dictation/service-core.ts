@@ -48,7 +48,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
   });
   h.failure.replay = new ReplayRecorder(recorder);
   let core: Dictation | undefined;
-  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, (gone) => void core?.history.dropAudio(gone));
+  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, (gone) => void core?.history.dropAudio(gone), () => cfg().audioCapMb * 1024 * 1024);
   core = createDictation({
     clock,
     recorder: h.failure.replay,

@@ -25,6 +25,11 @@ export type PasteMethod = (typeof PASTE_METHODS)[number];
 export const MAX_APP_RULES = 50;
 export const MAX_EXCLUSIONS = 20;
 export const MAX_KEEP_READY_MINUTES = 120;
+/** Where the recording pill sits on the screen under the pointer, or never. */
+export const INDICATORS = ["top", "bottom", "off"] as const;
+export type Indicator = (typeof INDICATORS)[number];
+/** What the kept recordings may take up together, in megabytes. */
+export const AUDIO_CAPS_MB = [128, 512, 2048] as const;
 
 export const MAX_TERMS = 500;
 export const MAX_MODES = 24;
@@ -163,6 +168,8 @@ const appRules = v.fallback(
 );
 const exclusions = v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)), []);
 
+const SoundsSchema = v.object({ enabled: v.fallback(v.boolean(), false), volume: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)), 50) });
+
 /** Persisted under `dictation` in config.json. Off until the person turns it on; every key falls back to its default, which is also how files from before dictation existed load. */
 const CORE_KEYS = {
   enabled: v.fallback(v.boolean(), false),
@@ -211,14 +218,23 @@ const CORE_KEYS = {
   modes: v.fallback(lenient(LenientMode, MAX_MODES, modeKeys), []),
   rewrite: RewriteSchema,
   keepRecordings: bool(false),
+  /** Add a space before the text when the character before the caret is a letter, digit or closing punctuation. */
+  smartSpacing: bool(false),
+  /** Cleans the text of the focused field with the dictation rules and puts it back; "" is off. */
+  transformHotkey: optionalHotkey(""),
+  /** Short tones when a recording starts, stops and fails. Off until the person turns them on; volume is 0 to 100. */
+  sounds: v.fallback(SoundsSchema, { enabled: false, volume: 50 }),
+  indicator: v.fallback(v.picklist(INDICATORS), "bottom"),
+  audioCapMb: v.fallback(v.picklist(AUDIO_CAPS_MB), 512),
 };
 const MouseOne = /(^|\+)Mouse1(\+|$)/;
-const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
+const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; transformHotkey: string; cancelKey: string }): Shortcuts => ({
   dictation: c.hotkey,
   second: c.secondHotkey,
   mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
+  transform: c.transformHotkey,
   cancel: c.cancelKey,
 });
 export const DictationConfigSchema = v.pipe(
@@ -240,7 +256,7 @@ export const DictationConfigSchema = v.pipe(
     for (let i = 0; i < 6; i++) {
       const clash = firstClash(hotkeySlots(out));
       if (!clash) break;
-      const drop = (["raw", "mouse", "second", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
+      const drop = (["raw", "mouse", "second", "pasteLast", "transform", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
       out = {
         ...out,
@@ -249,6 +265,7 @@ export const DictationConfigSchema = v.pipe(
         ...(drop === "mouse" && { mouseButton: "" as const }),
         ...(drop === "second" && { secondHotkey: "" }),
         ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
+        ...(drop === "transform" && { transformHotkey: "" }),
         ...(drop === "cancel" && { cancelKey: "Escape" }),
       };
     }
@@ -325,6 +342,11 @@ export const DictationPatchSchema = v.partial(
     modes: modeList,
     rewrite: v.strictObject({ enabled: v.boolean(), deadlineMs: v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)) }),
     keepRecordings: v.boolean(),
+    smartSpacing: v.boolean(),
+    transformHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
+    sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),
+    indicator: v.picklist(INDICATORS),
+    audioCapMb: v.picklist(AUDIO_CAPS_MB),
   }),
 );
 export type DictationPatch = v.InferOutput<typeof DictationPatchSchema>;

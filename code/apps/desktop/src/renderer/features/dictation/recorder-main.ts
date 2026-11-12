@@ -247,12 +247,38 @@ navigator.mediaDevices.addEventListener("devicechange", () => {
   if ((config.keepMs !== 0 || meterOn) && !live) void tryOpen();
 });
 
+let speakers: AudioContext | undefined;
+/** The tones go through their own context at the system rate: the microphone context runs at 16 kHz and is only for capture. */
+function playTone(notes: readonly { at: number; ms: number; hz: number; gain: number }[]): void {
+  try {
+    speakers ??= new AudioContext();
+    const t0 = speakers.currentTime + 0.01;
+    for (const n of notes) {
+      const osc = speakers.createOscillator();
+      const amp = speakers.createGain();
+      const from = t0 + n.at / 1000;
+      const to = from + n.ms / 1000;
+      osc.frequency.value = n.hz;
+      // A short fade in and out keeps the tone from clicking.
+      amp.gain.setValueAtTime(0, from);
+      amp.gain.linearRampToValueAtTime(n.gain, from + 0.008);
+      amp.gain.linearRampToValueAtTime(0, to);
+      osc.connect(amp).connect(speakers.destination);
+      osc.start(from);
+      osc.stop(to + 0.01);
+    }
+  } catch {
+    // no output device: the dictation goes on without a tone
+  }
+}
+
 dictation.recorder.onCommand((c: RecorderCommand) => {
   void (async () => {
     let result: RecorderResult = { ok: true };
     if (c.op === "start") result = await start(c.prerollMs, c.mic);
     else if (c.op === "stop") result = stop();
     else if (c.op === "devices") await announceDevices();
+    else if (c.op === "tone") playTone(c.notes);
     else if (c.op === "configure") result = await configure(c.meter, c.mic);
     else if (c.op === "discard") {
       buffer.discard();

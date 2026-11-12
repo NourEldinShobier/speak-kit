@@ -169,7 +169,7 @@ export async function historyLeadNow(): Promise<string> {
 
 /** The numbers the page reads from the status: how many entries, which retention, whether recordings are kept, and the revision that reloads the list. */
 function useHistoryNumbers(s: DictationStatus | null) {
-  return { total: s?.historyCount ?? 0, rev: s?.historyRev ?? 0, retention: s?.settings.retention ?? "7d", keepRecordings: s?.settings.keepRecordings ?? false };
+  return { total: s?.historyCount ?? 0, rev: s?.historyRev ?? 0, retention: s?.settings.retention ?? "7d", keepRecordings: s?.settings.keepRecordings ?? false, audioCapMb: s?.settings.audioCapMb ?? 512 };
 }
 
 /**
@@ -181,7 +181,7 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
   const [search, setSearch] = useState("");
   const [view, setView] = useState<View>("final");
   const [dialog, setDialog] = useState<HistoryDialog>(null);
-  const { total, rev, retention, keepRecordings } = useHistoryNumbers(s);
+  const { total, rev, retention, keepRecordings, audioCapMb } = useHistoryNumbers(s);
   const { items, setItems, load } = useItems(search, total, rev);
   const sel = useSelection(items);
   const changed = (cleared: boolean) => {
@@ -211,7 +211,7 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
         onDeleteSelected={() => setDialog("delete")}
       />
       <Entries s={s} items={items} load={load} sel={sel} view={view} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} />
-      <HistoryDialogs dialog={dialog} close={() => setDialog(null)} total={total} picked={sel.picked} keepRecordings={keepRecordings} onChanged={changed} />
+      <HistoryDialogs dialog={dialog} close={() => setDialog(null)} total={total} picked={sel.picked} keepRecordings={keepRecordings} audioCapMb={audioCapMb} onChanged={changed} />
     </div>
   );
 }

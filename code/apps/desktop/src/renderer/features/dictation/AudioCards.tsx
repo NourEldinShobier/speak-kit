@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, Slider, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
@@ -130,9 +130,48 @@ export function OutputCard({ s }: { s: DictationStatus }) {
         description="Brings the app you were in back to the front before inserting. If it cannot, nothing is pasted and the text stays in History."
         control={<Toggle aria-label="Return to the app" checked={c.returnToApp} onChange={(returnToApp) => void dictation.patchSettings({ returnToApp })} />}
       />
+      <SettingRow
+        label="Space before the text"
+        description="Adds a space when the character before the cursor is a letter, a digit or closing punctuation, so the text does not run into what is already there. Nothing is added after a selection or when the field cannot be read."
+        control={<Toggle aria-label="Space before the text" checked={c.smartSpacing} onChange={(smartSpacing) => void dictation.patchSettings({ smartSpacing })} />}
+      />
       <Banner tone="info" role="status">
         Windows does not send keys to a window that runs as administrator. For those the text is copied and you paste it yourself.
       </Banner>
+    </SettingsSection>
+  );
+}
+
+const INDICATOR_OPTIONS = [
+  { value: "bottom", label: "Bottom of the screen" },
+  { value: "top", label: "Top of the screen" },
+  { value: "off", label: "Hidden" },
+];
+
+/** What you see and hear while dictating. */
+export function FeedbackCard({ s }: { s: DictationStatus }) {
+  const c = s.settings;
+  return (
+    <SettingsSection title="Feedback">
+      <SettingRow
+        className="lm-row--control"
+        label="Recording indicator"
+        description="Where the pill appears, on the screen the pointer is on. Hidden still shows failures that need you."
+        control={<Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void dictation.patchSettings({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />}
+      />
+      <SettingRow
+        label="Sounds"
+        description="A short tone when a recording starts, stops, is cancelled or fails."
+        control={<Toggle aria-label="Sounds" checked={c.sounds.enabled} onChange={(enabled) => void dictation.patchSettings({ sounds: { ...c.sounds, enabled } })} />}
+      />
+      {c.sounds.enabled && (
+        <SettingRow
+          className="lm-row--control"
+          label="Volume"
+          description={c.sounds.volume === 0 ? "Volume 0 plays nothing." : `${c.sounds.volume} percent`}
+          control={<Slider min={0} max={100} step={5} defaultValue={c.sounds.volume} aria-label="Volume" onCommit={(volume) => void dictation.patchSettings({ sounds: { ...c.sounds, volume } })} />}
+        />
+      )}
     </SettingsSection>
   );
 }

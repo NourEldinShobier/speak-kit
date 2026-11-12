@@ -40,6 +40,7 @@ function browser() {
   ];
   let failOpen = false;
   const node = () => ({ connect: (n: unknown) => n });
+  const tones: { hz: number; start: number; stop: number; peak: number }[] = [];
   vi.stubGlobal("navigator", {
     mediaDevices: {
       enumerateDevices: async () => devices,
@@ -61,7 +62,22 @@ function browser() {
     class {
       audioWorklet = { addModule: async () => undefined };
       destination = {};
-      createGain = () => ({ gain: {}, connect: (n: unknown) => n });
+      currentTime = 1;
+      createGain = () => ({ gain: { setValueAtTime: () => undefined, linearRampToValueAtTime: () => undefined }, connect: (n: unknown) => n });
+      createOscillator = () => {
+        const tone = { hz: 0, start: 0, stop: 0, peak: 0 };
+        tones.push(tone);
+        return {
+          frequency: {
+            set value(hz: number) {
+              tone.hz = hz;
+            },
+          },
+          connect: (n: unknown) => n,
+          start: (t: number) => (tone.start = t),
+          stop: (t: number) => (tone.stop = t),
+        };
+      };
       createMediaStreamSource = node;
       close = async () => undefined;
     },
@@ -74,6 +90,7 @@ function browser() {
     },
   );
   return {
+    tones,
     opened,
     live: () => tracks.filter((t) => !t.stopped).length,
     unplug: () => tracks.filter((t) => !t.stopped).forEach((t) => t.ended?.()),
@@ -128,6 +145,14 @@ describe("microphone page", () => {
     expect(b.live()).toBe(1);
     expect(h.events.map((e) => e.type)).not.toContain("lost");
     expect(cardAfter(h.events)).toEqual({ kind: "back", label: "Blue Yeti" });
+  });
+
+  it("plays a tone note by note on the speakers without opening the microphone", async () => {
+    await send({ op: "tone", notes: [{ at: 0, ms: 70, hz: 880, gain: 0.2 }, { at: 100, ms: 60, hz: 440, gain: 0.2 }] });
+    expect(b.tones.map((t) => t.hz)).toEqual([880, 440]);
+    expect(b.tones[1]!.start - b.tones[0]!.start).toBeCloseTo(0.1);
+    expect(b.opened).toEqual([]);
+    expect(h.replies.get(nextId - 1)).toEqual({ ok: true });
   });
 
   it("says 'lost' once after six failed tries, with one reconnecting report for the whole outage", async () => {

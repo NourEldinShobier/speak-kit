@@ -51,6 +51,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   modes: c.modes,
   rewrite: c.rewrite,
   keepRecordings: c.keepRecordings,
+  smartSpacing: c.smartSpacing,
 });
 
 /** What the key hook listens for. Sharing the keys with other programs is only offered in Hold mode, because a hands-free mode cannot keep the other program's key held. */
@@ -60,6 +61,7 @@ export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
+  transform: c.transformHotkey,
   cancelKey: c.cancelKey,
   share: c.shareHotkey && c.mode === "hold-only",
 });
@@ -183,7 +185,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", transformHotkey: "transform", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {

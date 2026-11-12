@@ -20,6 +20,8 @@ import type { RecorderHost } from "./recorder";
 import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, shouldRetryHotkey, touchesMicrophone, windowShown } from "./service-support";
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
+import { soundFor, tonesFor } from "../../shared/dictation/sounds";
+import { runTransform, transformToast } from "./transform-run";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import { createSleepBlock } from "./sleep-block";
@@ -125,12 +127,13 @@ export class DictationService {
       this.#o.os ??
       (await createDictationOs({
         overrides: () => appOverrides(this.#cfg.appRules),
-        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true },
+        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, place: () => (this.#cfg.indicator === "top" ? "top" : "bottom") },
         onHudWindow: (w) => (this.#hudWindow = w),
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered), changed: () => this.#push(true) });
     this.#hotkeys.onPasteLast(() => void this.controls.pasteLast());
+    this.#hotkeys.onTransform(() => void this.#transform());
     const built = buildCore({
       ctx: this.#ctx,
       o: this.#o,
@@ -152,7 +155,16 @@ export class DictationService {
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
+  /** Cleans the focused field when its shortcut is pressed; only while dictation is on and the setting exists. */
+  async #transform(): Promise<void> {
+    if (!this.os || !this.#cfg.enabled || !this.#cfg.transformHotkey) return;
+    const toast = transformToast(await runTransform(this.os, this.#cfg));
+    this.presenter.toast(toast.text, toast.tone);
+  }
+
   #onState(s: DictationState): void {
+    const kind = soundFor(this.state, s);
+    if (kind) this.#recorder?.tone(tonesFor(kind, this.#cfg.sounds));
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     this.state = s;
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
@@ -227,6 +239,7 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.layout(hotkeyLayout(this.#cfg));
     this.controls.watch();
+    if (this.#cfg.smartSpacing) this.os?.caret?.warm();
     if (patch.retention !== undefined) void this.history.refresh();
     if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
     this.#push(true);
@@ -275,6 +288,7 @@ export class DictationService {
   async #start(quiet: boolean): Promise<void> {
     if (!this.supported || !this.core || !this.#hotkeys) return;
     this.core.configure(coreSettings(this.#cfg));
+    if (this.#cfg.smartSpacing) this.os?.caret?.warm();
     this.#hotkeys.layout(hotkeyLayout(this.#cfg));
     const ready = this.#hotkeys.enable(true);
     this.controls.watch();

@@ -2,6 +2,7 @@ import { screen } from "electron";
 import { HUD_EVENT } from "../../shared/dictation/channels";
 import { createSecureWindow } from "../secure-window";
 import { hudChrome, raiseAboveEverything } from "./hud-chrome";
+import { hudPosition } from "./hud-place";
 import type { HudState, HudWindow } from "./hud";
 
 export interface HudWindowOptions {
@@ -92,9 +93,10 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
         // The page can be gone by the time the script runs (window destroyed right after a show).
       });
     },
-    showInactive() {
+    showInactive(place = "bottom") {
       const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
-      w.setPosition(Math.round(area.x + (area.width - width) / 2), area.y + area.height - height - 24);
+      const at = hudPosition(area, { width, height }, place);
+      w.setPosition(at.x, at.y);
       w.showInactive();
     },
     hide: () => w.hide(),

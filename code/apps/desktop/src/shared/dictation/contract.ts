@@ -1,3 +1,4 @@
+import type { Note } from "./sounds";
 import * as v from "valibot";
 import type { HistoryStats, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
@@ -217,6 +218,8 @@ export type RecorderCommand =
   | { id: number; op: "discard" }
   | { id: number; op: "close" }
   | { id: number; op: "devices" }
+  /** Plays a short tone on the speakers; the notes come from `tonesFor`. */
+  | { id: number; op: "tone"; notes: Note[] }
   /** Applies the microphone settings at once: opens the microphone when it is to be kept ready or the level meter is on, lets it go otherwise. */
   | { id: number; op: "configure"; meter: boolean; mic: RecorderMicConfig };
 export type RecorderResult =

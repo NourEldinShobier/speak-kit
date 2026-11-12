@@ -2,6 +2,7 @@ import type { IpcMain, IpcMainEvent, WebContents } from "electron";
 import * as v from "valibot";
 import type { Clip, MicErrorCode, Recorder } from "@speakkit/dictation";
 import { REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY } from "../../shared/dictation/channels";
+import type { Note } from "../../shared/dictation/sounds";
 import { RecorderEventSchema, RecorderReplySchema, type RecorderCommand, type RecorderEvent, type RecorderMicConfig, type RecorderResult } from "../../shared/dictation/contract";
 
 /** What the recorder host needs of its window: a page it can send commands to. */
@@ -28,6 +29,8 @@ export interface RecorderHost extends Recorder {
   /** Creates the window and waits for its page; later `start` calls open the microphone only. Safe to call again. */
   prepare(): Promise<boolean>;
   devices(): Promise<void>;
+  /** Plays the notes on the speakers through the microphone window; nothing happens while that window is not open. */
+  tone(notes: readonly Note[]): void;
   /** Applies the microphone settings now: the microphone is opened for the level meter or a kept-ready setting, and released when neither applies. */
   configure(meter: boolean): Promise<void>;
   /** Destroys the window (the microphone closes with it). */
@@ -150,6 +153,11 @@ class Host implements RecorderHost {
     const r = await this.#call({ op: "stop" });
     if (!r.ok || !r.pcm || !r.sampleRate) throw new Error("the microphone window returned no audio");
     return { pcm: r.pcm, sampleRate: r.sampleRate, peak: r.peak ?? 0, ...(r.interrupted && { interrupted: true }) };
+  }
+
+  tone(notes: readonly Note[]): void {
+    if (notes.length === 0 || !this.#page || this.#page.destroyed) return;
+    void this.#call({ op: "tone", notes: [...notes] });
   }
 
   /** Asks the page to list the microphones; the list comes back as an event. */

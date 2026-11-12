@@ -38,6 +38,11 @@ const DEFAULTS = {
   modes: [],
   rewrite: { enabled: false, deadlineMs: 4000 },
   keepRecordings: false,
+  smartSpacing: false,
+  transformHotkey: "",
+  sounds: { enabled: false, volume: 50 },
+  indicator: "bottom",
+  audioCapMb: 512,
 };
 
 describe("dictation config", () => {
@@ -69,6 +74,34 @@ describe("dictation config", () => {
     ]);
     const many = Array.from({ length: 150 }, (_, i) => ({ from: `w${i}`, to: "x" }));
     expect(v.parse(DictationConfigSchema, { replacements: many }).replacements).toHaveLength(100);
+  });
+});
+
+describe("settings added after the first release", () => {
+  it("a file written before them loads with each at its default", () => {
+    const old = parseConfig({ dictation: { enabled: true, keepRecordings: true } }).dictation;
+    expect(old).toMatchObject({ smartSpacing: false, transformHotkey: "", sounds: { enabled: false, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("keeps good values and replaces each bad one with its default", () => {
+    const got = parseConfig({
+      dictation: { smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
+    }).dictation;
+    expect(got).toMatchObject({ smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
+    const got = parseConfig({ dictation: { hotkey: "ControlLeft+AltLeft+KeyT", transformHotkey: "ControlLeft+AltLeft+KeyT" } }).dictation;
+    expect(got).toMatchObject({ transformHotkey: "", resetNotice: "clash" });
+  });
+
+  it("the renderer may change each of them and nothing else inside sounds", () => {
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ smartSpacing: true, indicator: "top", audioCapMb: 2048, sounds: { enabled: true, volume: 0 } })).toBe(true);
+    expect(ok({ indicator: "left" })).toBe(false);
+    expect(ok({ audioCapMb: 1 })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 101 } })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 5, theme: "x" } })).toBe(false);
   });
 });
 
