@@ -104,7 +104,7 @@ export function VoiceChatKeyRows({ st, dispatch }: { st: CardState; dispatch: Di
   );
 }
 
-/** Settings > Voice and playback > Voice chat: the OpenAI key (kept encrypted by main, never shown again), the voice and the model. */
+/** The Voice chat page body: the OpenAI key (kept encrypted by main, never shown again), the voice and the model. */
 export function VoiceChatCard({ s }: { s: AppState }) {
   const [st, dispatch] = useReducer(cardReducer, undefined, initCard);
   useEffect(() => {
@@ -114,7 +114,7 @@ export function VoiceChatCard({ s }: { s: AppState }) {
     );
   }, []);
   return (
-    <SettingsSection title="Voice chat" description="Talk to a web page by voice. It uses your own OpenAI account.">
+    <SettingsSection title="OpenAI account" description="Voice chat uses your own key.">
       <VoiceChatKeyRows st={st} dispatch={dispatch} />
       <SettingRow
         className="lm-row--control"

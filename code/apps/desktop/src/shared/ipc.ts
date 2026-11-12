@@ -9,8 +9,23 @@ import type { UpdateAction, UpdateState } from "./updates";
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
 export type { Config, ConfigPatch } from "./schemas";
-export const PAGES = ["home", "library", "voices", "engines", "browser", "settings"] as const;
-export const SETTINGS_SUBS = ["general", "voice", "dictation", "dictation-history", "shortcuts", "notifications", "memory", "browser", "storage", "about"] as const;
+export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "capture", "settings"] as const;
+export const SETTINGS_SUBS = [
+  "general",
+  "voice",
+  "shortcuts",
+  "notifications",
+  "accessibility",
+  "performance",
+  "storage",
+  "privacy",
+  "meetings",
+  "automation",
+  "experiments",
+  "browser",
+  "diagnostics",
+  "about",
+] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 

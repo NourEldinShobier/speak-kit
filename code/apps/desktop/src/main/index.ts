@@ -149,7 +149,7 @@ function onDeepLink(link: DeepLink) {
       if (!runtime.server) void runtime.start(state.token || undefined).then(publish);
     },
     showWindow: () => mainWindow.show(),
-    navigate: (page) => mainWindow.sendUi({ type: "nav", page }),
+    navigate: () => mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" }),
   });
 }
 
@@ -298,7 +298,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     booted = true;
     await runtime.start(test.token);
     performance.mark("server:listening");
-    if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "browser" });
+    if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" });
     publish();
   });
 }

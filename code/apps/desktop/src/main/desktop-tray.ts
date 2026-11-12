@@ -27,13 +27,13 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     shortcuts: ctx.config.shortcuts,
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
   });
-  const openDictation = (sub: "dictation" | "dictation-history") => () => {
+  const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
-    ctx.sendUi({ type: "nav", page: "settings", sub });
+    ctx.sendUi({ type: "nav", page });
   };
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
-    "dictation-history": openDictation("dictation-history"),
+    "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
     open: ctx.showWindow,
     pause: () => reading.controller.command({ type: "pause" }),

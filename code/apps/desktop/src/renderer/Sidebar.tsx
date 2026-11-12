@@ -1,29 +1,20 @@
-import { Icon, IconButton, Kbd, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
+import { useState } from "react";
+import { Icon, IconButton, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
 import type { AppState, Page, SettingsSub } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
-import { showAccelerator } from "../shared/shortcuts";
 import { ExportPill } from "./features/export";
-import { SETTINGS_NAV } from "./settings";
-
-type MainPage = Exclude<Page, "settings">;
-
-const NAV: { page: MainPage; label: string; icon: "home" | "book" | "microphone" | "cpu" | "world" }[] = [
-  { page: "home", label: "Home", icon: "home" },
-  { page: "library", label: "Library", icon: "book" },
-  { page: "voices", label: "Voices", icon: "microphone" },
-  { page: "engines", label: "Engines", icon: "cpu" },
-  { page: "browser", label: "Browser", icon: "world" },
-];
+import { filterSettingsNav, MENU } from "./routes";
+import type { RecentReading } from "./shell-model";
 
 export interface SidebarProps {
   s: AppState;
   hidden: boolean;
   page: Page;
   sub: SettingsSub;
-  recent: string[];
+  recent: RecentReading[];
   go(page: Page, sub?: SettingsSub): void;
   onCloseSettings(): void;
-  onNewReading(text: string): void;
+  onOpenRecent(id: string): void;
   onOpenExport(jobId: string): void;
 }
 
@@ -40,23 +31,24 @@ const Link = ({ href, onActivate, ...rest }: { href: string; onActivate(): void 
 );
 
 function SettingsNav(p: SidebarProps) {
+  const [q, setQ] = useState("");
+  const groups = filterSettingsNav(q);
   return (
     <SidebarNav label="Settings">
       <div className="sk-side__head">
         <IconButton name="arrow-left" label="Close settings" size={28} onClick={p.onCloseSettings} />
         <span className="sk-side__label">Settings</span>
       </div>
-      {SETTINGS_NAV.map((g) => (
+      <div className="sk-side__find">
+        <Icon name="search" size={16} />
+        <input type="search" aria-label="Search settings" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      {groups.length === 0 && <div className="sk-side__empty">No settings match “{q.trim()}”.</div>}
+      {groups.map((g) => (
         <div key={g.group} style={{ display: "contents" }}>
           <NavSection>{g.group}</NavSection>
           {g.items.map((it) => (
-            <Link
-              key={it.id}
-              icon={it.icon}
-              href={`#settings-${it.id}`}
-              selected={p.sub === it.id || (it.id === "dictation" && p.sub === "dictation-history")}
-              onActivate={() => p.go("settings", it.id)}
-            >
+            <Link key={it.id} icon={it.icon} href={`#settings-${it.id}`} selected={p.sub === it.id} onActivate={() => p.go("settings", it.id)}>
               {it.label}
             </Link>
           ))}
@@ -80,13 +72,13 @@ function EngineCard({ s }: { s: AppState }) {
   );
 }
 
-function RecentList({ recent, onPick }: { recent: string[]; onPick(text: string): void }) {
-  if (recent.length === 0) return <div className="sk-side__empty">Readings you start appear here.</div>;
+function RecentList({ recent, onPick }: { recent: RecentReading[]; onPick(id: string): void }) {
+  if (recent.length === 0) return <div className="sk-side__empty">Readings you open appear here.</div>;
   return (
     <>
       {recent.map((r) => (
-        <Link key={r} icon="history" href="#recent" onActivate={() => onPick(r)}>
-          {r}
+        <Link key={r.id} icon="history" href="#recent" onActivate={() => onPick(r.id)}>
+          {r.title}
         </Link>
       ))}
     </>
@@ -96,21 +88,19 @@ function RecentList({ recent, onPick }: { recent: string[]; onPick(text: string)
 function MainNav(p: SidebarProps) {
   return (
     <SidebarNav label="Main">
-      <button type="button" className="lm-nav__item sk-new" onClick={() => p.onNewReading("")}>
-        <span className="sk-new__tile">
-          <Icon name="plus" size={14} />
-        </span>
-        <span className="lm-nav__label">New reading</span>
-        <Kbd small>{showAccelerator("Ctrl+N", p.s.platform, "app").replace("+", " ")}</Kbd>
-      </button>
-      <div className="sk-side__sep" aria-hidden="true" />
-      {NAV.map((n) => (
-        <Link key={n.page} icon={n.icon} href={`#${n.page}`} selected={p.page === n.page} onActivate={() => p.go(n.page)}>
-          {n.label}
-        </Link>
+      <div className="sk-side__title">Menu</div>
+      {MENU.map((g) => (
+        <div key={g.group} style={{ display: "contents" }}>
+          <NavSection>{g.group}</NavSection>
+          {g.items.map((n) => (
+            <Link key={n.page} icon={n.icon} href={`#${n.page}`} selected={p.page === n.page} onActivate={() => p.go(n.page)}>
+              {n.label}
+            </Link>
+          ))}
+        </div>
       ))}
       <NavSection>Recent</NavSection>
-      <RecentList recent={p.recent} onPick={p.onNewReading} />
+      <RecentList recent={p.recent} onPick={p.onOpenRecent} />
       <div className="sk-side__spacer" />
       <ExportPill s={p.s} onOpen={p.onOpenExport} />
       <EngineCard s={p.s} />

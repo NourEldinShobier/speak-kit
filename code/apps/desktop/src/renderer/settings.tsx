@@ -1,16 +1,15 @@
-import { lazy, Suspense } from "react";
+/**
+ * Settings page registry: ONE line per settings page id in SETTINGS_PAGES below. To build one, create renderer/features/<name>/
+ * (public interface in index.ts) and replace that line's `StubPage`. The sidebar list lives in routes.ts. Main pages have their registry in page-registry.tsx.
+ */
+import type { ComponentType } from "react";
 import { Button, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState, SettingsSub } from "../shared/ipc";
 import { api, Page } from "./ui";
-import { BrowserPage, GeneralPage, MemoryPage, NotificationsPage, SETTINGS_NAV, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
+import { BrowserPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
+import { StubPage } from "./StubPage";
 import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
-
-export { SETTINGS_NAV };
-
-// Dictation is rarely opened: its pages, its styles and the code behind them load on first use.
-const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
-const DictationHistoryPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationHistoryPage })));
 
 function About({ s }: { s: AppState }) {
   return (
@@ -56,35 +55,24 @@ function About({ s }: { s: AppState }) {
   );
 }
 
-export function Settings({ s, sub, go }: { s: AppState; sub: SettingsSub; go?: (sub: SettingsSub) => void }) {
-  switch (sub) {
-    case "dictation":
-      return (
-        <Suspense fallback={null}>
-          <DictationPage openHistory={() => go?.("dictation-history")} />
-        </Suspense>
-      );
-    case "dictation-history":
-      return (
-        <Suspense fallback={null}>
-          <DictationHistoryPage back={() => go?.("dictation")} />
-        </Suspense>
-      );
-    case "voice":
-      return <VoicePage s={s} />;
-    case "shortcuts":
-      return <ShortcutsPage s={s} />;
-    case "notifications":
-      return <NotificationsPage s={s} />;
-    case "memory":
-      return <MemoryPage s={s} />;
-    case "browser":
-      return <BrowserPage s={s} />;
-    case "storage":
-      return <StoragePage />;
-    case "about":
-      return <About s={s} />;
-    default:
-      return <GeneralPage s={s} />;
-  }
+const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
+  general: GeneralPage,
+  voice: VoicePage,
+  shortcuts: ShortcutsPage,
+  notifications: NotificationsPage,
+  accessibility: () => <StubPage setting="accessibility" />,
+  performance: MemoryPage,
+  storage: StoragePage,
+  privacy: () => <StubPage setting="privacy" />,
+  meetings: () => <StubPage setting="meetings" />,
+  automation: () => <StubPage setting="automation" />,
+  experiments: () => <StubPage setting="experiments" />,
+  browser: BrowserPage,
+  diagnostics: () => <StubPage setting="diagnostics" />,
+  about: About,
+};
+
+export function Settings({ s, sub }: { s: AppState; sub: SettingsSub }) {
+  const Body = SETTINGS_PAGES[sub];
+  return <Body s={s} />;
 }
