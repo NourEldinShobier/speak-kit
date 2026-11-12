@@ -239,10 +239,10 @@ export class HistoryApi {
   }
 
   /** One transcription with `model`: loads it when it is not the chosen one and puts the chosen one back after. Gives "cancelled" when the person cancels first. */
-  async #run(model: DictationModelId, clip: Clip, abort: AbortController): Promise<TranscribeResult | "cancelled"> {
+  async #run({ model, clip, wanted }: { model: DictationModelId; clip: Clip; wanted: DictationConfig["language"] }, abort: AbortController): Promise<TranscribeResult | "cancelled"> {
     const cancelled = new Promise<"cancelled">((resolve) => abort.signal.addEventListener("abort", () => resolve("cancelled"), { once: true }));
     const selected = this.d.cfg().model;
-    const language = supportsLanguage(model, this.d.cfg().language) ? this.d.cfg().language : "auto";
+    const language = supportsLanguage(model, wanted) ? wanted : "auto";
     const work = async (): Promise<TranscribeResult> => {
       if (model !== selected) await this.d.stt.load(model);
       try {
@@ -274,7 +274,7 @@ export class HistoryApi {
    * Transcribes a kept recording again with another (or the same) installed model and stores the result as a new version; the text in use does not
    * change until the person picks it. A model that is not installed, a recording that is gone and an engine failure each end in a visible failed state.
    */
-  async retranscribe(id: string, model: DictationModelId): Promise<void> {
+  async retranscribe(id: string, model: DictationModelId, language?: DictationConfig["language"]): Promise<void> {
     await this.d.ready();
     await this.#settling; // a cancelled run may still be putting the chosen model back
     const core = this.d.core();
@@ -290,13 +290,13 @@ export class HistoryApi {
       if (!entry || !clip) return fail("no-audio");
       if (!(await this.d.stt.downloaded(model))) return fail("model-missing");
       const started = Date.now();
-      const result = await this.#run(model, clip, abort);
+      const result = await this.#run({ model, clip, wanted: language ?? this.d.cfg().language }, abort);
       if (result === "cancelled") {
         await this.#settling; // stays "running" until the chosen model is back
         return this.#setRedo(undefined);
       }
       if (!result.ok || !result.text) return fail("failed");
-      await core.history.addVersion(id, { model, at: Date.now(), text: this.#versionText(result.text, result.language, entry.app), ms: Date.now() - started });
+      await core.history.addVersion(id, { model, at: Date.now(), text: this.#versionText(result.text, result.language ?? language, entry.app), ms: Date.now() - started });
       this.#rev++;
       this.#setRedo(undefined);
     } catch {

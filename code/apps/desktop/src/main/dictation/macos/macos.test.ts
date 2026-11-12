@@ -165,6 +165,19 @@ describe("macOS foreground and paste keys", () => {
     expect(input.foreground()?.bounds).toEqual({ x: 0, y: 0, width: 1512, height: 982 });
   });
 
+  it("adds the keyboard layout language when the reader has one", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native, { current: () => "de" });
+    expect(input.foreground()).toMatchObject({ exe: "com.apple.TextEdit", layout: "de" });
+  });
+
+  it("does not read the layout when the caller says nobody needs it", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native, { current: () => "de" });
+    expect(input.foreground({ layout: false })?.layout).toBeUndefined();
+    expect(input.foreground({ layout: true })?.layout).toBe("de");
+  });
+
   it("pastes with Command+V and adds Shift when asked, releasing the key last", () => {
     const fake = fakeMacNative();
     const input = createMacInput(fake.native);

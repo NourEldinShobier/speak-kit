@@ -310,6 +310,11 @@ export class SpeechModels {
     return this.view();
   }
 
+  /** Whether a rule looks at the keyboard layout; without one, nothing needs to read it. */
+  wantsLayout(): boolean {
+    return this.#cfg.autoSwitch.enabled && this.#cfg.autoSwitch.rules.some((r) => !!r.layout);
+  }
+
   setAutoSwitch(c: { enabled: boolean; rules: SwitchRuleView[] }): SpeechModelsView {
     this.#cfg.autoSwitch = { enabled: c.enabled, rules: c.rules.map((r) => ({ ...r })) };
     this.#d.save();

@@ -20,6 +20,8 @@ interface MainWindowEvents {
   onHidden(): void;
   /** Something is still running (an export or a reading) that a quit would lose. */
   busy(): boolean;
+  /** The tray icon could not be created: the window cannot be hidden, because nothing would bring it back. */
+  trayMissing?(): boolean;
   /** The window was destroyed to free memory (not by a quit). */
   onReleased?(): void;
 }
@@ -152,7 +154,7 @@ export class MainWindow {
   #onClose(e: { preventDefault(): void }): void {
     if (this.quitting) return;
     e.preventDefault();
-    const outcome = closeOutcome(this.#config, this.#events.busy());
+    const outcome = closeOutcome(this.#config, this.#events.busy(), this.#events.trayMissing?.() ?? false);
     if (outcome === "confirm-quit") {
       this.sendUi({ type: "confirm-quit" }); // the same dialog the tray Quit opens; the window stays open meanwhile
       return;

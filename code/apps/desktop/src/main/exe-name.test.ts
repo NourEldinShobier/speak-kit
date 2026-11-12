@@ -43,6 +43,14 @@ describe("executable name", () => {
     expect(value("productName")).toBe("Speak Kit");
   });
 
+  it("the app id and the window class are not those of a program the same lists know", () => {
+    // Windows version info (file description, company) is taken from the product name by the packager; the window class is Chromium's own.
+    const id = (value("appId") ?? "").toLowerCase();
+    expect(id).toMatch(/^[a-z]+\.speakkit\./);
+    for (const k of KNOWN) expect(id).not.toContain(k.replaceAll(" ", ""));
+    expect(KNOWN).not.toContain("chrome_widgetwin_1");
+  });
+
   it("the check itself notices a colliding name", () => {
     expect(KNOWN).toContain("discord");
   });
