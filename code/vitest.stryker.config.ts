@@ -14,6 +14,8 @@ export default defineConfig({
       "apps/desktop/src/main/speech-models/{view,hardware-probe,layout}.test.ts",
       "apps/desktop/src/renderer/speech-text.test.ts",
       "apps/desktop/src/renderer/features/wizard/dictation-step.test.ts",
+      "apps/desktop/src/shared/dictation/sounds.test.ts",
+      "apps/desktop/src/main/dictation/{hud-place,transform-typed,spool,spool-edge,spooled-recorder,fixture-recorder,fixture-recorder-edge}.test.ts",
     ],
   },
 });
