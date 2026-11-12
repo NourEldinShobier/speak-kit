@@ -23,6 +23,8 @@ export const captureTestHook = (c: CaptureService) => ({
   record: () => c.runtime.toggleScreenRecording(),
   /** Whether narration was asked for in each recording started so far. */
   narrationFlags: () => c.runtime.recorder.starts(),
+  /** The commands the scripted recorder got, in order. */
+  commands: () => c.runtime.recorder.commands(),
   /** Same as pressing a button of the capsule. */
   capsule: (action: CapsuleAction) => c.runtime.pressCapsule(action),
   /** The voice chat reads the capture that waits for it (what the look call does); the inbox is empty afterwards. */

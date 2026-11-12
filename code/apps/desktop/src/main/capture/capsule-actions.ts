@@ -16,6 +16,8 @@ export interface CapsuleActionDeps {
   switchTarget(): void;
   /** Notes that the pen was switched on or off. */
   note(kind: "pen-on" | "pen-off"): void;
+  /** The replay buffer: save the last 15 seconds, or turn it off. */
+  replay: { save(): void; off(): void };
 }
 
 /** What each button of the capsule does. */
@@ -42,5 +44,7 @@ export function capsuleHandlers(d: CapsuleActionDeps): Record<CapsuleAction, () 
     undo: () => d.send.undo(),
     "send-now": () => d.send.sendNow(),
     switch: d.switchTarget,
+    "replay-save": d.replay.save,
+    "replay-off": d.replay.off,
   };
 }

@@ -4,6 +4,7 @@ import { validHotkey } from "../dictation/keys";
 export const CAPTURE_HOTKEY = "F9";
 export const SCREENSHOT_HOTKEY = "F10";
 export const RECORDING_HOTKEY = "F7";
+export const REPLAY_HOTKEY = "F11";
 export const TARGET_KINDS = ["ask", "screen", "window", "area"] as const;
 export const INK_FADE_MS = [1000, 3000, 0] as const;
 /** How long the capsule counts down before a finished recording goes to the voice chat. */
@@ -28,6 +29,11 @@ export const CaptureConfigSchema = v.object({
   screenshotHotkey: v.fallback(v.pipe(v.string(), v.check(validHotkey)), SCREENSHOT_HOTKEY),
   /** The screen recording key (experiment): one press starts a recording of the screen without narration, the next stops it. */
   recordingHotkey: v.fallback(v.pipe(v.string(), v.check(validHotkey)), RECORDING_HOTKEY),
+  /** The key that saves the last 15 seconds of the replay buffer (experiment). */
+  replayHotkey: v.fallback(v.pipe(v.string(), v.check(validHotkey)), REPLAY_HOTKEY),
+  /** The replay buffer keeps the last 15 seconds of the screen in memory while this is on. Off until the person turns it on and reads what it does. */
+  replayBuffer: bool(false),
+  replayConsented: bool(false),
   target: v.fallback(v.picklist(TARGET_KINDS), "ask"),
   narration: bool(true),
   otherAudio: v.fallback(v.picklist(["mute", "keep"]), "mute"),
@@ -55,6 +61,9 @@ export const CapturePatchSchema = v.partial(
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
     screenshotHotkey: v.pipe(v.string(), v.check(validHotkey)),
     recordingHotkey: v.pipe(v.string(), v.check(validHotkey)),
+    replayHotkey: v.pipe(v.string(), v.check(validHotkey)),
+    replayBuffer: v.boolean(),
+    replayConsented: v.boolean(),
     target: v.picklist(TARGET_KINDS),
     narration: v.boolean(),
     otherAudio: v.picklist(["mute", "keep"]),

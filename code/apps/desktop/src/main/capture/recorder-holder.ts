@@ -56,6 +56,11 @@ export class RecorderHolder {
     return (this.#d.recorder as { starts?: boolean[] } | undefined)?.starts ?? [];
   }
 
+  /** Tests only: the commands the scripted recorder got, in order. */
+  commands(): string[] {
+    return (this.#d.recorder as { commands?: string[] } | undefined)?.commands ?? [];
+  }
+
   dispose() {
     this.#host?.dispose();
   }

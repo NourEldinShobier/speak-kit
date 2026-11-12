@@ -31,6 +31,8 @@ export class CaptureController {
   confirmDiscard = false;
   micMissing = false;
   switching = false;
+  /** The replay buffer is on: the capsule stays on screen as its indicator. */
+  replay: { saving: boolean } | undefined;
   state: CapsuleState | null = null;
 
   constructor(deps: ControllerDeps) {
@@ -49,6 +51,7 @@ export class CaptureController {
       dictationPaused: false,
       switching: this.switching,
       after: this.#after,
+      replay: this.replay,
     });
     this.state = state;
     const recording = this.#d.session().phase === "recording";

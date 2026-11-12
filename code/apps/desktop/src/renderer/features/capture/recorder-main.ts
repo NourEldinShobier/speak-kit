@@ -4,6 +4,7 @@ import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
 import { trimVideo } from "./trim-video";
 import { zoomVideo } from "./zoom-video";
+import { createReplayBuffer, type ReplayBuffer } from "./replay-buffer";
 import { inPixels } from "../../../shared/capture/zoom";
 
 /**
@@ -89,6 +90,29 @@ async function trim(c: Extract<RecorderCommand, { op: "trim" }>): Promise<Record
   return video.length ? { ok: true, video, durationMs: c.endMs - c.startMs } : { ok: false, code: "encoder" };
 }
 
+let replay: ReplayBuffer | undefined;
+
+async function replayStart(c: Extract<RecorderCommand, { op: "replay-start" }>): Promise<RecorderResult> {
+  replay?.stop();
+  const buffer = (replay = createReplayBuffer({ now: () => performance.now(), segmentMs: c.segmentMs }));
+  const r = new Run(c.maxSide, buffer.onPayload);
+  buffer.attach(r);
+  try {
+    await withTimeout(r.source(c.sourceId, c.crop), FIRST_FRAME_MS);
+    buffer.start(c.frameEveryMs);
+    return { ok: true };
+  } catch (e) {
+    r.stop();
+    replay = undefined;
+    return { ok: false, code: failureCode(String(e)) };
+  }
+}
+
+async function replaySave(): Promise<RecorderResult> {
+  const clip = await replay?.save();
+  return clip ? { ok: true, clip, durationMs: clip.durationMs } : { ok: false, code: "source" };
+}
+
 async function zoom(c: Extract<RecorderCommand, { op: "zoom" }>): Promise<RecorderResult> {
   const video = await zoomVideo(c.video, c.regions);
   return video.length ? { ok: true, video } : { ok: false, code: "encoder" };
@@ -104,7 +128,12 @@ bridge.onCommand((c: RecorderCommand) => {
       else if (c.op === "sheet") result = await sheet(c);
       else if (c.op === "trim") result = await trim(c);
       else if (c.op === "zoom") result = await zoom(c);
-      else {
+      else if (c.op === "replay-start") result = await replayStart(c);
+      else if (c.op === "replay-save") result = await replaySave();
+      else if (c.op === "replay-stop") {
+        replay?.stop();
+        replay = undefined;
+      } else {
         run?.stop();
         run = undefined;
       }

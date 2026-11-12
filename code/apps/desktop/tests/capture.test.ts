@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
@@ -742,5 +742,82 @@ describe("speech engine for narration", () => {
     await open(l);
     await record(l);
     expect((await hook<{ items: unknown[] }>(l, "state")).items).toHaveLength(1);
+  });
+});
+
+describe("replay buffer", () => {
+  const REPLAY_ON = { ...ON, capture: { ...ON.capture, replayBuffer: true, replayConsented: true, experiments: { replay: true } } };
+  const kind = async (l: Launched) => (await hook<{ capsule: { kind: string } | null }>(l, "state")).capsule?.kind ?? null;
+  const items = async (l: Launched) => (await hook<{ items: { title: string }[] }>(l, "state")).items;
+  const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture;
+
+  it("shows its pill while it keeps the screen, and saves the last 15 seconds as a capture with its pieces", async () => {
+    const l = await start({ config: REPLAY_ON });
+    await open(l);
+    await until(async () => (await kind(l)) === "replay");
+    expect(await hook(l, "commands")).toContain("replay-start");
+    await hook(l, "capsule", "replay-save");
+    await until(async () => (await items(l)).length === 1);
+    const [item] = await items(l);
+    expect(item!.title).toMatch(/^Replay · /);
+    const dir = path.join(l.userData, "captures", JSON.parse(readFileSync(path.join(l.userData, "captures", "index.json"), "utf8"))[0].dir);
+    expect(readdirSync(dir).filter((f) => f.startsWith("video"))).toEqual(["video-2.webm", "video.webm"]);
+    expect(existsSync(path.join(dir, "sheet.jpg"))).toBe(true);
+    await until(async () => (await kind(l)) === "saved");
+    expect(await hook(l, "commands")).toContain("replay-save");
+  });
+
+  it("turns off from the pill, remembers it, and stops the recorder", async () => {
+    const l = await start({ config: REPLAY_ON });
+    await until(async () => (await kind(l)) === "replay");
+    await hook(l, "capsule", "replay-off");
+    await until(async () => (await kind(l)) === null);
+    await until(async () => configOf(l).replayBuffer === false);
+    expect(await hook(l, "commands")).toContain("replay-stop");
+  });
+
+  it("gives way to a capture and starts again when it is saved", async () => {
+    const l = await start({ config: REPLAY_ON });
+    await open(l);
+    await until(async () => (await kind(l)) === "replay");
+    await record(l);
+    await hook(l, "capsule", "dismiss");
+    await until(async () => (await kind(l)) === "replay");
+    const commands = (await hook<string[]>(l, "commands")).filter((c) => c.startsWith("replay") || c === "start");
+    expect(commands).toEqual(["replay-start", "replay-stop", "start", "replay-start"]);
+  });
+
+  it("does not start without the experiment, the choice or the consent", async () => {
+    for (const capture of [
+      { ...REPLAY_ON.capture, experiments: { replay: false } },
+      { ...REPLAY_ON.capture, replayBuffer: false },
+      { ...REPLAY_ON.capture, replayConsented: false },
+    ]) {
+      const l = await start({ config: { ...ON, capture } });
+      await open(l);
+      await hook(l, "state");
+      expect(await kind(l)).not.toBe("replay");
+      expect(await hook<string[]>(l, "commands")).not.toContain("replay-start");
+    }
+  });
+
+  it("asks for consent before the first time, and turns on only after it", async () => {
+    const l = await start({ config: { ...ON, capture: { ...ON.capture, experiments: { replay: true } } } });
+    await l.page.getByRole("link", { name: "Capture" }).click();
+    await l.page.getByRole("tab", { name: "Settings" }).click();
+    await l.page.getByRole("switch", { name: "Replay buffer" }).click();
+    const dialog = l.page.getByRole("dialog", { name: "Keep the last 15 seconds of your screen?" });
+    await dialog.getByText(/including passwords and private windows/).waitFor();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await dialog.waitFor({ state: "detached" });
+    expect(configOf(l).replayBuffer).not.toBe(true);
+    expect(await kind(l)).not.toBe("replay");
+    await l.page.getByRole("switch", { name: "Replay buffer" }).click();
+    await dialog.getByRole("button", { name: "Turn on replay" }).click();
+    await until(async () => configOf(l).replayBuffer === true && configOf(l).replayConsented === true);
+    await until(async () => (await kind(l)) === "replay");
+    await l.page.getByRole("switch", { name: "Replay buffer" }).click();
+    await until(async () => configOf(l).replayBuffer === false);
+    await until(async () => (await kind(l)) !== "replay");
   });
 });
