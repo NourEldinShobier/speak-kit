@@ -36,6 +36,18 @@ function menuTemplate({ items, run, mac, switchTo }: TemplateArgs): MenuItemCons
   });
 }
 
+function nativeTray(run: TrayHandlers, mac: boolean, menu: () => Menu | null): Tray | null {
+  try {
+    const t = new Tray(trayIcon("asleep"));
+    t.on("click", () => run.open());
+    // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
+    if (mac) t.on("right-click", () => menu() && t.popUpContextMenu(menu()!));
+    return t;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The tray icon, its short native menu (right click) and the main window (left click). Icon, tooltip and menu are rebuilt
  * only when what they show has changed.
@@ -44,26 +56,14 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   const mac = process.platform === "darwin";
   let tray: Tray | null = null;
   let menu: Menu | null = null;
-  let shown = "";
-  let summary = "";
-
-  /** The system refused to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
+  let [shown, summary] = ["", ""];
+  /** The system may refuse to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
   let failed = false;
   const build = () => {
-    try {
-      const t = new Tray(trayIcon("asleep"));
-      t.on("click", () => run.open());
-      // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
-      if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
-      tray = t;
-      failed = false;
-    } catch {
-      tray = null;
-      failed = true;
-    }
+    tray = nativeTray(run, mac, () => menu);
+    failed = tray === null;
     shown = "";
   };
-
   const refresh = () => {
     if (!tray) return;
     const c = context();
