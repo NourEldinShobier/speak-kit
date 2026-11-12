@@ -1,4 +1,4 @@
-import { BrowserWindow, desktopCapturer, screen, type Display, type NativeImage } from "electron";
+import { BrowserWindow, desktopCapturer, screen, systemPreferences, type Display, type NativeImage } from "electron";
 import type { Shot, ScreenPlatform } from "./look";
 import { loadWindowApi, type WindowApi } from "./native";
 import type { Bitmap, DisplayInfo, WindowInfo } from "./plan";
@@ -23,8 +23,48 @@ function shotOf(image: NativeImage): Shot {
   };
 }
 
-/** The platform of Windows: desktopCapturer for the pictures, koffi for window positions. Elsewhere there is no capture yet. */
+/** Runs `run` with Speak Kit's own windows excluded from capture; windows that stay protected are left as they were. */
+async function withOwnWindowsHidden<T>(run: () => Promise<T>): Promise<T> {
+  const windows = BrowserWindow.getAllWindows().filter((b) => !b.isDestroyed());
+  for (const b of windows) b.setContentProtection(true);
+  await sleep(HIDE_SETTLE_MS);
+  try {
+    return await run();
+  } finally {
+    for (const b of windows) if (!b.isDestroyed() && !keepProtected.has(b)) b.setContentProtection(false);
+  }
+}
+
+/**
+ * The platform of macOS: the whole screen through desktopCapturer, which asks for Screen Recording permission the first time. There is no window list
+ * (positions need a native call), so a look at the window answers "no window" and a look at the screen works. A denied permission fails the capture
+ * instead of returning a picture of the wallpaper.
+ */
+export function createMacPlatform(): ScreenPlatform {
+  return {
+    supported: true,
+    displays: () => screen.getAllDisplays().map((d): DisplayInfo => ({ id: String(d.id), bounds: d.bounds })),
+    cursor: () => screen.getCursorScreenPoint(),
+    windows: async () => [],
+    foreground: () => undefined,
+    async grab(display) {
+      const status = systemPreferences.getMediaAccessStatus("screen");
+      if (status === "denied" || status === "restricted") throw new Error("screen recording is not allowed");
+      const scale = screen.getAllDisplays().find((d) => String(d.id) === display.id)?.scaleFactor ?? 1;
+      const width = Math.round(display.bounds.width * scale);
+      const height = Math.round(display.bounds.height * scale);
+      const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width, height } });
+      const source = sources.find((s) => s.display_id === display.id);
+      if (!source || source.thumbnail.isEmpty()) throw new Error("no picture of the display");
+      return shotOf(source.thumbnail);
+    },
+    hideOwnWindows: withOwnWindowsHidden,
+  };
+}
+
+/** The platform of Windows: desktopCapturer for the pictures, koffi for window positions. macOS has its own; elsewhere there is no capture. */
 export function createElectronPlatform(): ScreenPlatform {
+  if (process.platform === "darwin") return createMacPlatform();
   if (process.platform !== "win32") {
     return {
       supported: false,
@@ -61,15 +101,6 @@ export function createElectronPlatform(): ScreenPlatform {
       if (!source || source.thumbnail.isEmpty()) throw new Error("no picture of the display");
       return shotOf(source.thumbnail);
     },
-    async hideOwnWindows(run) {
-      const windows = BrowserWindow.getAllWindows().filter((b) => !b.isDestroyed());
-      for (const b of windows) b.setContentProtection(true);
-      await sleep(HIDE_SETTLE_MS);
-      try {
-        return await run();
-      } finally {
-        for (const b of windows) if (!b.isDestroyed() && !keepProtected.has(b)) b.setContentProtection(false);
-      }
-    },
+    hideOwnWindows: withOwnWindowsHidden,
   };
 }
