@@ -108,6 +108,17 @@ describe("versions", () => {
     const ids = [await history.addVersion(id, { model: "x", at: 1, text: "b", ms: 1 }), await history.addVersion(id, { model: "y", at: 2, text: "c", ms: 1 })];
     expect(ids).toEqual(["v2", "v3"]);
   });
+
+  it("keeps five versions: the original and the one in use stay, the oldest other makes room", async () => {
+    const { history, time } = setup();
+    const id = (await history.add(entry(time.clock.now(), "a", { model: "m" })))!;
+    for (const t of ["b", "c", "d", "e"]) await history.addVersion(id, { model: "x", at: 1, text: t, ms: 1 });
+    await history.useVersion(id, "v2");
+    expect(await history.addVersion(id, { model: "x", at: 2, text: "f", ms: 1 })).toBe("v6");
+    const e = await history.get(id);
+    expect(e?.versions?.map((v) => v.id)).toEqual(["v1", "v2", "v4", "v5", "v6"]);
+    expect(e?.text).toBe("b");
+  });
 });
 
 describe("search by sounds-like spelling", () => {
