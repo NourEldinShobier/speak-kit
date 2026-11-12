@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Toggle } from "@speakkit/ui";
-import { dictation } from "./api";
+import { Button, Modal, Select, Toggle } from "@speakkit/ui";
+import type { HistoryStats } from "@speakkit/dictation";
+import { dictation, patchDictation } from "./api";
+import { AUDIO_CAPS_MB } from "../../../shared/dictation/settings";
+import { appName, statsRows } from "./model";
 
 export function ClearDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose: () => void; onConfirm: () => void }) {
   return (
@@ -42,7 +45,7 @@ export function RecordingsDialog({ open, on, onClose }: { open: boolean; on: boo
           <Button
             variant="primary"
             onClick={() => {
-              void dictation.patchSettings({ keepRecordings: value });
+              void patchDictation({ keepRecordings: value, audioCapMb: cap as (typeof AUDIO_CAPS_MB)[number] });
               onClose();
             }}
           >

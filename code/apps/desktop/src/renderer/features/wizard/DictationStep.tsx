@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Icon, SettingRow } from "@speakkit/ui";
 import { hotkeyText } from "../../../shared/dictation/keys";
 import type { SpeechModelsView } from "../../../shared/speech-models/contract";
-import { dictation, useDictation } from "../dictation";
+import { dictation, patchDictation, useDictation } from "../dictation";
 import { models, useSpeechModels } from "../engines";
 import { Back, Foot, Frame } from "./Frame";
 import { afterLanguage, checklist, languageChoice, type ChecklistRow, type DictationPhase } from "./dictation-step";
@@ -135,7 +135,7 @@ function Waiting({ unsupported, failed, onBack, onNext }: { unsupported: boolean
 async function startModel(view: SpeechModelsView, language: string, found: boolean): Promise<{ id: string; phase: DictationPhase } | undefined> {
   const choice = languageChoice(view, language, found ? [view.table.find((r) => r.language === language)!.recommended] : []);
   if (!choice) return undefined;
-  void dictation.patchSettings({ language: language as never });
+  void patchDictation({ language: language as never });
   const id = choice.model.id;
   const next = afterLanguage(choice, found);
   if (next === "download") {

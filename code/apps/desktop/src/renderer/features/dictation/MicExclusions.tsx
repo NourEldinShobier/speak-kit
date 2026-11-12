@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Button, Icon, SettingsSection, TextInput } from "@speakkit/ui";
 import { MAX_EXCLUSIONS } from "../../../shared/dictation/settings";
-import { dictation } from "./api";
+import { patchDictation } from "./api";
 import { withExclusion } from "./mic-model";
 
 /** Names the automatic choice must never pick: any input whose name contains one of these words. A microphone picked by hand is still used. */
 export function MicExclusions({ list }: { list: readonly string[] }) {
   const [word, setWord] = useState("");
-  const save = (next: string[]) => void dictation.patchSettings({ micExclusions: next });
+  const save = (next: string[]) => void patchDictation({ micExclusions: next });
   const add = () => {
     save(withExclusion(list, word));
     setWord("");

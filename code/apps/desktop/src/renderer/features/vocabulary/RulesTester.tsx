@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { addTerm, type Term } from "@speakkit/dictation";
 import { Button, Icon, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation-bridge";
+import { patchDictation } from "../dictation-bridge";
 import { changedWords, parseSounds, testStages, type Stage } from "./model";
 
 function Steps({ stages }: { stages: Stage[] }) {
@@ -40,7 +40,7 @@ function FixForm({ heard, final, terms, onDone }: { heard: string; final: string
   const add = () => {
     const r = addTerm(terms, { word, soundsLike: parseSounds(sounds) });
     if (!r.ok) return setError(r.error === "duplicate" ? `"${r.existing?.word ?? word}" ${FIX_ERRORS.duplicate}` : FIX_ERRORS[r.error]);
-    void dictation.patchSettings({ terms: r.list });
+    void patchDictation({ terms: r.list });
     onDone();
   };
   return (

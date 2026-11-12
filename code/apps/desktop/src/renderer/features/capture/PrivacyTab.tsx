@@ -1,6 +1,6 @@
 import { Checkbox, Select, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { CaptureStatus } from "../../../shared/capture/contract";
-import { capture } from "./api";
+import { patchCapture } from "./api";
 
 export function PrivacyTab({ s }: { s: CaptureStatus }) {
   const c = s.settings;
@@ -28,7 +28,7 @@ export function PrivacyTab({ s }: { s: CaptureStatus }) {
             <Select
               label="Input log"
               value={c.inputLog}
-              onChange={(inputLog) => void capture.patchSettings({ inputLog: inputLog as typeof c.inputLog })}
+              onChange={(inputLog) => void patchCapture({ inputLog: inputLog as typeof c.inputLog })}
               options={[
                 { value: "events", label: "Events only" },
                 { value: "off", label: "Off" },

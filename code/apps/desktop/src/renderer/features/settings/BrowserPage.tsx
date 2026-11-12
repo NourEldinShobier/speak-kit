@@ -3,6 +3,7 @@ import { Banner, Button, SettingRow, SettingsSection, StatusPill, TextInput } fr
 import type { AppState } from "../../../shared/ipc";
 import { InstallExtension } from "../../pages";
 import { api, cleanError, Page, TokenField } from "../../ui";
+import { changeSystem } from "./change";
 
 /** The port field with its Apply button; the message of a refused port stays under the field. */
 function PortRow({ s }: { s: AppState }) {
@@ -14,7 +15,7 @@ function PortRow({ s }: { s: AppState }) {
   const apply = async () => {
     setBusy(true);
     try {
-      await api.setPort(n);
+      await changeSystem({ port: n });
       setErr("");
     } catch (e) {
       setErr(cleanError(e));

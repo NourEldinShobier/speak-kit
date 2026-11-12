@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Banner, Button, Modal, Select, SettingRow } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation-bridge";
+import { patchDictation } from "../dictation-bridge";
 import { deadlineLabel, DEADLINES, WRITER } from "./model";
 import { Toggle } from "@speakkit/ui";
 
@@ -37,7 +37,7 @@ function OptInBody({ hasKey, deadline, onDeadline }: { hasKey: boolean; deadline
 function OptInDialog({ open, s, onClose }: { open: boolean; s: DictationStatus; onClose(): void }) {
   const [deadline, setDeadline] = useState<number>(s.settings.rewrite.deadlineMs);
   const turnOn = () => {
-    void dictation.patchSettings({ rewrite: { enabled: true, deadlineMs: deadline } });
+    void patchDictation({ rewrite: { enabled: true, deadlineMs: deadline } });
     onClose();
   };
   const footer = (
@@ -73,7 +73,7 @@ export function RewriteCard({ s }: { s: DictationStatus }) {
             control={
               <div className="modes-acts">
                 <Button onClick={() => setAsking(true)}>Change</Button>
-                <Toggle aria-label="Rewrite dictated text" checked onChange={() => void dictation.patchSettings({ rewrite: { enabled: false, deadlineMs: r.deadlineMs } })} />
+                <Toggle aria-label="Rewrite dictated text" checked onChange={() => void patchDictation({ rewrite: { enabled: false, deadlineMs: r.deadlineMs } })} />
               </div>
             }
           />
