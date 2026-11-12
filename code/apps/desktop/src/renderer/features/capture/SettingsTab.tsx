@@ -9,6 +9,26 @@ import { INK_LABEL, RETENTION_LABEL } from "./format";
 const WHERE: Record<(typeof TARGET_KINDS)[number], string> = { ask: "Ask each time", screen: "Whole screen", window: "A window", area: "An area" };
 const opts = <T extends string | number>(values: readonly T[], label: (v: T) => string) => values.map((v) => ({ value: String(v), label: label(v) }));
 
+/** The key of the screen recording experiment. */
+function RecordingKey({ s, onRecording }: { s: CaptureStatus; onRecording(on: boolean): void }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Screen recording key"
+      description="Press to start a recording of the screen without narration, press again to stop."
+      control={
+        <HotkeyRecorder
+          label="Screen recording hotkey"
+          value={s.settings.recordingHotkey}
+          restore="F7"
+          onRecording={onRecording}
+          save={async (recordingHotkey) => void (await capture.patchSettings({ recordingHotkey }))}
+        />
+      }
+    />
+  );
+}
+
 function General({ s }: { s: CaptureStatus }) {
   const [recording, setRecording] = useState(false);
   const c = s.settings;
@@ -29,14 +49,7 @@ function General({ s }: { s: CaptureStatus }) {
         }
         control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await capture.patchSettings({ hotkey }))} />}
       />
-      {c.experiments.recording ? (
-        <SettingRow
-          className="lm-row--control"
-          label="Screen recording key"
-          description="Press to start a recording of the screen without narration, press again to stop."
-          control={<HotkeyRecorder label="Screen recording hotkey" value={c.recordingHotkey} restore="F7" onRecording={setRecording} save={async (recordingHotkey) => void (await capture.patchSettings({ recordingHotkey }))} />}
-        />
-      ) : null}
+      {c.experiments.recording ? <RecordingKey s={s} onRecording={setRecording} /> : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
           {s.hotkeyNote} <Button onClick={() => void capture.patchSettings({ hotkey: "F9" })}>Restore F9</Button>

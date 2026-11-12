@@ -14,6 +14,8 @@ export interface CapsuleActionDeps {
   sendLast(): void;
   /** Picks another target and moves the recording to it. */
   switchTarget(): void;
+  /** Notes that the pen was switched on or off. */
+  note(kind: "pen-on" | "pen-off"): void;
 }
 
 /** What each button of the capsule does. */
@@ -22,6 +24,7 @@ export function capsuleHandlers(d: CapsuleActionDeps): Record<CapsuleAction, () 
   return {
     pen: () => {
       c.pen = !c.pen;
+      d.note(c.pen ? "pen-on" : "pen-off");
       if (c.pen) c.showInk();
       else c.hideInk();
     },

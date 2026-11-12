@@ -1,5 +1,4 @@
-import { app, ipcMain, nativeImage, shell, type WebContents } from "electron";
-import { randomBytes } from "node:crypto";
+import { app, ipcMain, shell, type WebContents } from "electron";
 import * as v from "valibot";
 import { CAPSULE_ACTION, CAPSULE_HOVER } from "../../shared/capture/channels";
 import { CapsuleActionSchema, type CapsuleAction, type CapturePhase } from "../../shared/capture/contract";
@@ -7,10 +6,10 @@ import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
 import { createAgentContext } from "./context";
+import { createEventLog } from "./events";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
 import { capsuleHandlers } from "./capsule-actions";
-import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
 import { createFence, type Fence } from "./fence";
 import type { CaptureInbox } from "../voice-chat/capture-inbox";
@@ -23,14 +22,15 @@ import { displayAt } from "./picker";
 import { TargetPicker } from "./target-picker";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
-import { createSessionPorts, type Narrator } from "./recording";
+import type { Narrator } from "./recording";
+import { makeSession } from "./session-factory";
 import { shootFlow } from "./screenshot";
 import { finishForQuit } from "./session/quit";
 import { createSwitchFlow, type SwitchFlow } from "./switch-flow";
-import { createSession, type Session, type Target } from "./session";
+import type { Session, Target } from "./session";
 import { externalFor } from "./notice-target";
 import { createRecordingGuards } from "./recording-guards";
-import { capturePage, hideOwnWindows, openCapsuleWindow, openOverlayWindow } from "./windows";
+import { capturePage, openCapsuleWindow, openOverlayWindow } from "./windows";
 
 export interface RuntimeDeps {
   ctx: Ctx;
@@ -49,7 +49,6 @@ export interface RuntimeDeps {
 }
 
 const now = () => Date.now();
-const newId = () => `c${now().toString(36)}${randomBytes(3).toString("hex")}`;
 const QUIT_WAIT_MS = 30_000;
 
 /** What happens while a capture is on: the session and its recorder window, the picker, the capsule and ink layer, notices and the screenshot. */
@@ -61,6 +60,7 @@ export class CaptureRuntime {
   readonly recorder: RecorderHolder;
   readonly #place: Placement;
   readonly #context: () => Promise<string | undefined>;
+  readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   #after!: AfterCapture;
@@ -152,45 +152,27 @@ export class CaptureRuntime {
 
   #makeSession(): Session {
     const d = this.#d;
-    const holder = this.recorder;
     const epoch = this.#epoch;
-    return createSession(
-      createSessionPorts({
-        platform: d.platform,
-        fence: this.#fence,
-        get host() {
-          return holder.host;
-        },
-        // Read when used: the folder can change and the history then holds new files.
-        get bundle() {
-          return d.history.bundle;
-        },
-        get store() {
-          return d.history.store;
-        },
-        get journal() {
-          return d.history.journal;
-        },
-        narrator: d.narrator,
-        settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
-        hideOwnWindows: hideOwnWindows,
-        delivery: {
-          copy: (text, sheet) => epoch === this.#epoch && void writeCapture(text, sheet && nativeImage.createFromBuffer(sheet)),
-          saved: (r) => epoch === this.#epoch && this.#after.saved(r),
-        },
-        now,
-        newId,
-        log: (line) => d.ctx.log.warn(line),
-        pick: (signal) => this.#pick(signal),
-        notify: (n) => this.notify(n),
-        changed: () => this.#sessionChanged(),
-        micMissing: () => {
-          this.controller.micMissing = true;
-        },
-        noticeParams: () => ({ os: d.platform.os, days: this.#settings.retentionDays }),
-        context: this.#context,
-      }),
-    );
+    return makeSession({
+      platform: d.platform,
+      history: d.history,
+      narrator: d.narrator,
+      fence: this.#fence,
+      recorder: this.recorder,
+      settings: () => (this.#screenOnly ? { ...this.#settings, narration: false } : this.#settings),
+      context: this.#context,
+      events: () => this.#events.take(),
+      current: () => epoch === this.#epoch,
+      saved: (r) => this.#after.saved(r),
+      pick: (signal) => this.#pick(signal),
+      notify: (n) => this.notify(n),
+      changed: () => this.#sessionChanged(),
+      micMissing: () => {
+        this.controller.micMissing = true;
+      },
+      noticeParams: () => ({ os: d.platform.os, days: this.#settings.retentionDays }),
+      log: (line) => d.ctx.log.warn(line),
+    });
   }
 
   /** The folder changed: a new session on the new files. */
@@ -203,8 +185,14 @@ export class CaptureRuntime {
   act(a: GestureAction | ShiftAction) {
     if (a === "start") void this.start();
     else if (a === "stop") this.#session.stop();
-    else if (a === "ink-start") this.controller.showInk();
-    else if (a === "ink-end" && !this.controller.pen) this.controller.hideInk();
+    else if (a === "ink-start" || a === "ink-end") this.#ink(a);
+  }
+
+  /** Drawing with the capture key or Shift: the ink layer shows while the key is held, unless the pen keeps it. */
+  #ink(a: "ink-start" | "ink-end") {
+    this.#events.add(a);
+    if (a === "ink-start") this.controller.showInk();
+    else if (!this.controller.pen) this.controller.hideInk();
   }
 
   // Taking a capture ------------------------------------------------------------------------------------------------------------------------
@@ -239,6 +227,7 @@ export class CaptureRuntime {
     }
     if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
     this.#after.send.cancel();
+    this.#events.reset();
     this.controller.reset();
     this.#guards.writes.reset();
     this.#board.clear();
@@ -299,7 +288,8 @@ export class CaptureRuntime {
       retry: () => this.#retry(),
       send: this.#after.send,
       sendLast: () => this.#after.sendLast(),
-      switchTarget: () => void this.#switch.run(),
+      switchTarget: () => void this.#switch.run().then((r) => r === "switched" && this.#events.add("target-switch")),
+      note: (kind) => this.#events.add(kind),
       copyLast: (what) => void this.#after.copyLast(what),
     });
   }

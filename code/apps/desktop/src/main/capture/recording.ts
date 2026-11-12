@@ -1,6 +1,7 @@
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
 import type { CaptureConfig } from "../../shared/capture/settings";
+import type { InputEvent } from "./events";
 import type { Fence } from "./fence";
 import type { Bundle } from "./bundle";
 import type { Journal } from "./journal";
@@ -53,6 +54,8 @@ export interface RecordingDeps {
   noticeParams(): NoticeParams;
   /** The agent context text, or undefined when the experiment is off. */
   context?(): Promise<string | undefined>;
+  /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
+  events?(): InputEvent[];
 }
 
 const REASON: Record<Extract<RecorderResult, { ok: false }>["code"], string> = { source: "no frames from the source", encoder: "encoder failed", denied: "permission denied" };
@@ -213,10 +216,17 @@ export interface Finished {
   at: number;
 }
 
+/** The input events of the recording, next to its pictures; no file when there were none. */
+async function writeEvents(d: Pick<RecordingDeps, "events" | "bundle">, id: string) {
+  const events = d.events?.() ?? [];
+  if (events.length) await d.bundle.writeFile(id, "events.json", JSON.stringify(events));
+}
+
 export async function saveBundle(d: RecordingDeps, f: Finished): Promise<CaptureRecord> {
   const { id, media, words, title, at } = f;
   const plan = pickKeyframes(media.frames, words ?? []);
   if (words?.length) await d.bundle.words(id, words);
+  await writeEvents(d, id);
   const sheet = await makeSheet(d, id, plan.frames);
   const record: CaptureRecord = {
     id,
