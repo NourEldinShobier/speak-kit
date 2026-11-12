@@ -1,13 +1,28 @@
+import type { AutomationHost } from "@speakkit/server";
 import { SLOT_NAMES } from "../../shared/dictation/conflicts";
+import "../../shared/settings/builtin-experiments";
+import { experiments, toggled } from "../../shared/settings/experiments";
 import type { ConfigPatch } from "../../shared/schemas";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
 import type { Reading } from "../reader/service";
+import type { AutomationInfo, CommandLineAction } from "../../shared/control/info";
+import type { AgentSkill } from "../agent-skill";
+import type { CommandLine } from "../cli-path";
+import { manualInstallCommand } from "../cli-path/manual";
+import { openTryCommand, type Terminal } from "../cli-terminal";
 import { createCommands, type ControlDeps } from "./commands";
+import { discoveryFile } from "./discovery";
 import { createControlServer } from "./server";
 
 interface Parts {
   reading: Pick<Reading, "readText" | "command">;
+  automation: AutomationHost;
+  commandLine: CommandLine;
+  agentSkill: AgentSkill;
+  terminal: Terminal;
+  /** The folder of the shipped launcher, when this is an installed app. */
+  shippedDir: string | undefined;
   dictation: DictationService;
   dataDir: string;
   version: string;
@@ -64,6 +79,20 @@ function controlDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps {
     }),
     readText: (text) => p.reading.readText(text, "text"),
     readerCommand: (c) => p.reading.command(c),
+    automation: p.automation,
+    voices: async () => (await ctx.server.voices()).voices.map((v) => ({ id: v.id, name: v.name })),
+    labs: {
+      known: (id) => {
+        const e = experiments().find((x) => x.id === id);
+        if (!e) return "no";
+        return e.audience === "dev" && ctx.state.packaged ? "dev-only" : "yes";
+      },
+      set: async (id, on) => {
+        ctx.config.experiments = toggled(ctx.config.experiments, id, on);
+        ctx.saveConfig();
+        ctx.publish();
+      },
+    },
     voice: {
       get: () => ctx.config.voice,
       set: (id) => {
@@ -91,8 +120,23 @@ export function setupControl(ctx: Ctx, p: Parts) {
   const sync = (): void => void (ctx.config.controlServer ? server.start() : server.stop()).catch((e) => ctx.log.warn("control server", String(e)));
   const server = createControlServer({ dataDir: p.dataDir, version: p.version, dispatch: createCommands(controlDeps(ctx, p, sync)) });
   sync();
+  const info = async (): Promise<AutomationInfo> => ({
+    running: server.running,
+    discoveryFile: discoveryFile(p.dataDir),
+    commandLine: await p.commandLine.status(),
+    skill: await p.agentSkill.status(),
+    manualInstall: manualInstallCommand(process.platform, p.shippedDir),
+  });
   return {
     server,
+    /** The IPC methods of the Automation page. */
+    handlers: {
+      automationInfo: info,
+      resetControlToken: async () => (await server.resetToken(), info()),
+      commandLine: async (action: CommandLineAction) => (await p.commandLine[action](), info()),
+      installAgentSkill: async () => (await p.agentSkill.install(), info()),
+      testInTerminal: async () => openTryCommand(await p.commandLine.status(), p.terminal, p.shippedDir),
+    },
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.controlServer !== undefined) sync();
     },

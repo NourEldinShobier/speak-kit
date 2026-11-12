@@ -61,7 +61,7 @@ describe("control server in the real app", () => {
     expect(JSON.parse(refused.out)).toMatchObject({ ok: false, error: { code: "refused" } });
     expect(cli(l, "--json", "history").code).toBe(0);
     expect(cli(l, "read").code).toBe(2);
-    expect(cli(l, "--json", "meetings").code).toBe(1);
+    expect(cli(l, "--json", "meetings", "list").code).toBe(0);
     const dictate = cli(l, "--json", "dictate", "--print");
     expect(dictate.code).toBe(1);
     expect(JSON.parse(dictate.out)).toMatchObject({ error: { code: "unsupported" } });

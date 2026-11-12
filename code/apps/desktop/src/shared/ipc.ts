@@ -1,5 +1,6 @@
 import type { EngineList, Health, VoiceChatVoice, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
+import type { AutomationInfo, CommandLineAction } from "./control/info";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
@@ -123,6 +124,14 @@ export interface Api {
   setLaunchAtLogin(on: boolean): Promise<AppState>;
   setPort(port: number): Promise<AppState>;
   regenerateToken(): Promise<AppState>;
+  automationInfo(): Promise<AutomationInfo>;
+  /** A new token for the command line and MCP server; the old one stops working at once. */
+  resetControlToken(): Promise<AutomationInfo>;
+  commandLine(action: CommandLineAction): Promise<AutomationInfo>;
+  /** Writes the agent skill file: a first install or an update. */
+  installAgentSkill(): Promise<AutomationInfo>;
+  /** Opens a terminal that runs the try-it command. Rejects when no terminal could be opened. */
+  testInTerminal(): Promise<void>;
   retryEngine(): Promise<AppState>;
   /** Starts the model download (and load) when it is not on disk yet. Idempotent. */
   downloadModel(): Promise<AppState>;
@@ -188,6 +197,11 @@ export const METHODS = [
   "setLaunchAtLogin",
   "setPort",
   "regenerateToken",
+  "automationInfo",
+  "resetControlToken",
+  "commandLine",
+  "installAgentSkill",
+  "testInTerminal",
   "retryEngine",
   "downloadModel",
   "voices",

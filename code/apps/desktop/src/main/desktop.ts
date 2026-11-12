@@ -1,5 +1,6 @@
 import { app, type BrowserWindow } from "electron";
 import type { TtsEngine } from "@speakkit/engine";
+import os from "node:os";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -12,12 +13,21 @@ import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
 import { engineHandlers } from "./engines";
 import { desktopAutomation } from "./automation";
+import { desktopStreams } from "./automation/streams";
 import { createExports } from "./export/service";
 import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
+import { realCommandLine } from "./cli-path/real";
+import { agentSkill } from "./agent-skill";
+import { nodeSkillFs } from "./agent-skill/real";
+import { systemTerminal, type Terminal } from "./cli-terminal";
+import { skillFilePath } from "../cli/paths";
+import { skillText } from "../shared/control/skill";
+import { CONTROL_VERSION } from "../shared/control/contract";
+import { writeFile } from "node:fs/promises";
 import { setupControl } from "./control";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
@@ -110,6 +120,7 @@ function desktopHandlers(
     exports: ReturnType<typeof createExports>;
     updates: ReturnType<typeof createUpdates>;
     shortcuts: ReturnType<typeof setupShortcuts>;
+    control: ReturnType<typeof setupControl>;
     test: boolean;
     resources: Api["resources"];
   },
@@ -120,10 +131,29 @@ function desktopHandlers(
     ...f.updates.handlers,
     ...f.shortcuts.handlers,
     ...readerHandlers(f.reading),
+    ...f.control.handlers,
     installExtension: () => installExtension(!f.test),
     resources: f.resources,
   } satisfies Partial<Api>;
 }
+
+/** The command-line tool, the agent skill and the terminal of the Automation page. A test run keeps the skill in its own folder and opens no window: the command that would have run is written to a file. */
+function commandLineTools(o: { test: boolean; version: string; dictation: { dataDir: string } }) {
+  const shippedDir = app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined;
+  const dataDir = o.dictation.dataDir;
+  return {
+    shippedDir,
+    commandLine: realCommandLine({ platform: process.platform, shippedDir, userData: dataDir, home: os.homedir() }),
+    agentSkill: agentSkill({
+      file: o.test ? path.join(dataDir, "agent-skill", "SKILL.md") : skillFilePath(os.homedir()),
+      text: () => skillText(CONTROL_VERSION, o.version),
+      fs: nodeSkillFs,
+    }),
+    terminal: o.test ? testTerminal(path.join(dataDir, "terminal-command.txt")) : systemTerminal(process.platform),
+  };
+}
+
+const testTerminal = (file: string): Terminal => ({ open: (command, extraPath) => writeFile(file, `${extraPath ?? ""}|${command}`) });
 
 /** Stops every feature; resolves once the control server is down. */
 function disposeAll(p: {
@@ -168,6 +198,11 @@ function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dic
   });
 }
 
+/** The control server and the command-line tools it lends. */
+function desktopControl(ctx: Ctx, o: DesktopOptions, f: Pick<Parameters<typeof setupControl>[1], "reading" | "automation" | "dictation">) {
+  return setupControl(ctx, { ...f, ...commandLineTools(o), dataDir: o.dictation.dataDir, version: o.version });
+}
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -196,14 +231,16 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
-  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
+    /** Live transcription for other apps on the engine dictation holds. */
+    streams: desktopStreams(ctx, { stt: dictation.stt, dictation: () => dictation }),
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */

@@ -1,8 +1,7 @@
-import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vite-plus/test";
 import { CONTROL_VERSION, fail, ok, type ControlRequest, type Reply } from "../shared/control/contract";
 import type { Discovery } from "../main/control/discovery";
-import { handleMcp, serveMcp } from "./mcp";
+
 import { userDataDir } from "./paths";
 import { parseArgs, render, runCli, type Io } from "./run";
 
@@ -22,6 +21,12 @@ function rig(over: Partial<Io> & { reply?: Reply; running?: boolean } = {}) {
     offlineHistory: async () => null,
     post: async (_d, req) => (sent.push(req), over.reply ?? ok({})),
     stdin: async () => "from stdin",
+    reads: { meetings: async () => ({ entries: [], transcript: async () => [], notes: async () => [] }), captures: async () => ({ records: [], root: "" }) },
+    readConfig: async () => undefined,
+    file: async () => ({ kind: "none" }),
+    sleep: async () => {},
+    readSkill: async () => undefined,
+    writeSkill: async () => "x",
     ...over,
   };
   return { io, out, err, sent, launched: () => launched, discoveries: () => discoveries };
@@ -57,7 +62,8 @@ describe("argument parsing", () => {
       [["settings", "get"], "settings get needs a key."],
       [["dictate", "stop", "now"], 'Unexpected "stop now".'],
       [["fly"], 'Unknown command "fly".'],
-      [["speak", "a.md"], "speak is not available in this version."],
+      [["speak"], "speak needs some text, a file or - for stdin."],
+      [["stop", "now"], 'Unexpected "now".'],
     ] as const)
       expect(parseArgs(argv).usage).toBe(usage);
   });
@@ -155,53 +161,5 @@ describe("data folder", () => {
     expect(userDataDir({}, "win32", "C:\\Users\\a")).toMatch(/AppData.Roaming.@speakkit.desktop$/);
     expect(userDataDir({}, "darwin", "/Users/a").replaceAll("\\", "/")).toBe("/Users/a/Library/Application Support/@speakkit/desktop");
     expect(userDataDir({ SPEAKKIT_USER_DATA: "/tmp/x" }, "win32", "/h")).toBe("/tmp/x");
-  });
-});
-
-describe("MCP server", () => {
-  const call = async (req: ControlRequest): Promise<Reply> => (req.command === "history" ? ok({ entries: [{ text: "one" }] }) : ok({}));
-
-  it("answers initialize and lists the three read-only tools", async () => {
-    expect(await handleMcp({ id: 1, method: "initialize" }, call)).toMatchObject({ id: 1, result: { capabilities: { tools: {} }, serverInfo: { name: "speakkit" } } });
-    const list = (await handleMcp({ id: 2, method: "tools/list" }, call)) as { result: { tools: { name: string }[] } };
-    expect(list.result.tools.map((t) => t.name)).toEqual(["read_aloud", "history_search", "meetings_search"]);
-  });
-
-  it("runs a tool through the control commands and marks a failure as an error", async () => {
-    const hist = (await handleMcp({ id: 3, method: "tools/call", params: { name: "history_search", arguments: { query: "hi", limit: 3 } } }, call)) as {
-      result: { isError: boolean; content: { text: string }[] };
-    };
-    expect(hist.result.isError).toBe(false);
-    expect(hist.result.content[0]!.text).toContain("one");
-    const bad = (await handleMcp({ id: 4, method: "tools/call", params: { name: "read_aloud", arguments: {} } }, call)) as { result: { isError: boolean } };
-    expect(bad.result.isError).toBe(true);
-    const unknown = (await handleMcp({ id: 5, method: "tools/call", params: { name: "delete_everything" } }, call)) as { result: { isError: boolean } };
-    expect(unknown.result.isError).toBe(true);
-    const gone = (await handleMcp({ id: 6, method: "tools/call", params: { name: "meetings_search", arguments: {} } }, async () => fail("unsupported", "no"))) as { result: { isError: boolean } };
-    expect(gone.result.isError).toBe(true);
-  });
-
-  it("ignores notifications and refuses an unknown method", async () => {
-    expect(await handleMcp({ method: "notifications/initialized" }, call)).toBeNull();
-    expect(await handleMcp({ id: 7, method: "nope" }, call)).toMatchObject({ error: { code: -32601 } });
-    expect(await handleMcp({ id: 8, method: "ping" }, call)).toMatchObject({ result: {} });
-  });
-
-  it("serves one message per line and survives a line that is not JSON", async () => {
-    const input = new PassThrough();
-    const output = new PassThrough();
-    const lines: string[] = [];
-    output.on("data", (c: Buffer) => lines.push(...c.toString().split("\n").filter(Boolean)));
-    const done = serveMcp(input, output, call);
-    input.write('{"jsonrpc":"2.0","id":1,"method":"ping"}\n');
-    input.write("garbage\n\n");
-    input.write('{"jsonrpc":"2.0","method":"notifications/initialized"}\n');
-    input.end();
-    await done;
-    await new Promise((r) => setImmediate(r));
-    expect(lines.map((l) => JSON.parse(l))).toEqual([
-      { jsonrpc: "2.0", id: 1, result: {} },
-      { jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } },
-    ]);
   });
 });

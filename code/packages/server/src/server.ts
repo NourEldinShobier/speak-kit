@@ -15,6 +15,10 @@ import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDea
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
 import { automationRoutes } from "./routes/automation";
+import { DevPages } from "./dev-pages";
+import { devPageRoutes } from "./routes/dev-pages";
+import { streamRoutes } from "./routes/streams";
+import { StreamSessions, type StreamsHost } from "./streams/sessions";
 import { engineRoutes } from "./routes/engines";
 import { exportRoutes } from "./routes/export";
 import { pageContextRoutes } from "./routes/page-context";
@@ -56,6 +60,8 @@ export interface ServerOptions {
   automation?: AutomationHost;
   /** Keeps the address of the page in front, reported by the browser extension. Without it the report is accepted and dropped. */
   pageContext?: PageContextHost;
+  /** The speech engine and the dictation rules for live transcription of other apps. Without it the stream routes answer "unsupported". */
+  streams?: StreamsHost;
   /** Heartbeat of the event stream in ms. Default 15000. */
   heartbeatMs?: number;
 }
@@ -91,7 +97,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes, ...streamRoutes, ...devPageRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -112,6 +118,8 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
     voiceChat: opts.voiceChat,
     automation: opts.automation,
     pageContext: opts.pageContext,
+    devPages: new DevPages(Date.now),
+    streams: opts.streams && new StreamSessions(opts.streams, { now: Date.now }),
     events: { open: 0 },
     heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
     mintLimiter: new MintLimiter(),
@@ -210,6 +218,7 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
       if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
     },
     close: async () => {
+      services.streams?.dispose();
       queue.abortAll();
       await exporter.close();
       await new Promise<void>((resolve) => {

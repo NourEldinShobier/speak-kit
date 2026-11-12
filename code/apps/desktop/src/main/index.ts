@@ -297,7 +297,7 @@ if (!instance.mayRun) {
     const settingsWatch = watchSettings(handlerDeps(), store.path, log);
     app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
-    runtime.automation.attach(desktop.automation);
+    runtime.attachDesktop(desktop);
     const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
     registerValidatedIpc<Method>(ipcMain, {
       methods: METHODS,
