@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, type Dispatch } from "react";
+import { useEffect, useReducer, useRef, useState, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { ExportDialog } from "./features/export";
 import { Palette, runCommand } from "./features/palette";
@@ -10,7 +10,7 @@ import { UpdatingCard } from "./UpdateCard";
 import { Wizard } from "./features/wizard";
 import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
-import { currentLoc, initShell, shellReducer, type OpenDoc, type ShellAction, type ShellState } from "./shell-model";
+import { currentLoc, initShell, shellReducer, recentReadings, type OpenDoc, type RecentReading, type ShellAction, type ShellState } from "./shell-model";
 import { api, useAppState, usePreview, useVisible } from "./ui";
 
 export function App() {
@@ -26,22 +26,21 @@ export function App() {
   );
 }
 
-const RECENT_KEY = "speakkit.recent";
-const loadRecent = (): string[] => {
-  try {
-    const v = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
-    return Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(0, 5) : [];
-  } catch {
-    return [];
-  }
-};
-const saveRecent = (recent: string[]) => {
-  try {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
-  } catch {
-    /* private mode: recent list is just not remembered */
-  }
-};
+/** The readings opened most recently; read again when the open reading or the page changes. */
+function useRecent(refresh: unknown): RecentReading[] {
+  const [recent, setRecent] = useState<RecentReading[]>([]);
+  useEffect(() => {
+    let live = true;
+    window.speakkitLibrary?.list().then(
+      (docs) => live && setRecent(recentReadings(docs)),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [refresh]);
+  return recent;
+}
 
 /** The page for the current location, looked up in the page registries. */
 function PageView({ s, page, sub, doc, dispatch }: { s: AppState; page: Page; sub: SettingsSub; doc: OpenDoc | null; dispatch: Dispatch<ShellAction> }) {
@@ -93,10 +92,10 @@ function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; di
 
 function Shell({ s }: { s: AppState }) {
   const player = usePreview(s.config.speed);
-  const [st, dispatch] = useReducer(shellReducer, undefined, () => initShell(loadRecent()));
+  const [st, dispatch] = useReducer(shellReducer, undefined, initShell);
   const { page, sub } = currentLoc(st);
   useShellEvents(dispatch, player.halt);
-  useEffect(() => saveRecent(st.recent), [st.recent]);
+  const recent = useRecent(`${page}:${st.doc?.id ?? ""}`);
 
   return (
     <PreviewCtx.Provider value={player}>
@@ -116,10 +115,13 @@ function Shell({ s }: { s: AppState }) {
             hidden={!st.side}
             page={page}
             sub={sub}
-            recent={st.recent}
+            recent={recent}
             go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
             onCloseSettings={() => dispatch({ type: "close-settings" })}
-            onOpenRecent={() => dispatch({ type: "go", page: "library" })}
+            onOpenRecent={(id) => {
+              dispatch({ type: "go", page: "library" });
+              dispatch({ type: "open-doc", doc: { id, autoplay: false } });
+            }}
             onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
           />
           <main className="sk-main">

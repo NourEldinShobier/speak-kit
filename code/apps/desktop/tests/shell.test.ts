@@ -122,6 +122,85 @@ describe("command palette", () => {
   });
 });
 
+describe("command palette states", () => {
+  it("shows Best match, the count and Clear while searching, and the no-results state with chips", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.keyboard.press("Control+K");
+    const input = l.page.getByRole("combobox", { name: "Type a command or search" });
+    await input.waitFor();
+    // Opened without a query: no count, no Clear, no Best match.
+    expect(await l.page.getByText("Best match", { exact: true }).count()).toBe(0);
+    expect(await l.page.getByRole("button", { name: "Clear" }).count()).toBe(0);
+    await input.fill("idle");
+    await l.page.getByText("Best match", { exact: true }).waitFor();
+    expect(await l.page.getByText("1 result", { exact: true }).count()).toBe(1);
+    await l.page.getByRole("button", { name: "Clear" }).click();
+    expect(await input.inputValue()).toBe("");
+    expect(await l.page.getByRole("button", { name: "Clear" }).count()).toBe(0);
+    await input.fill("zzzzqqqq");
+    await l.page.getByText("No matches for “zzzzqqqq”").waitFor();
+    expect(await l.page.getByRole("option").count()).toBe(0);
+    expect(await l.page.locator(".sk-pal__chip").count()).toBeGreaterThan(0);
+  });
+
+  it("arrow keys move the highlight and Enter runs the highlighted row; the run is remembered under Recent", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.keyboard.press("Control+K");
+    const input = l.page.getByRole("combobox", { name: "Type a command or search" });
+    await input.waitFor();
+    const active = () => input.getAttribute("aria-activedescendant");
+    const first = await active();
+    await l.page.keyboard.press("ArrowDown");
+    const second = await active();
+    expect(second).not.toBe(first);
+    await l.page.keyboard.press("ArrowUp");
+    expect(await active()).toBe(first);
+    await l.page.keyboard.press("ArrowUp");
+    expect(await active()).not.toBe(first); // wraps to the last row
+    await l.page.keyboard.press("ArrowDown");
+    await l.page.keyboard.press("Enter");
+    const saved = await l.page.evaluate(() => JSON.parse(localStorage.getItem("speakkit.palette-recent") ?? "[]"));
+    expect(saved).toHaveLength(1);
+  });
+
+  it("Tab stays inside the dialog and Escape closes it even after Tab", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.keyboard.press("Control+K");
+    await l.page.getByRole("combobox", { name: "Type a command or search" }).waitFor();
+    for (let i = 0; i < 3; i++) {
+      await l.page.keyboard.press("Tab");
+      expect(await l.page.evaluate(() => !!document.activeElement?.closest(".sk-pal"))).toBe(true);
+    }
+    await l.page.keyboard.press("Escape");
+    expect(await l.page.locator(".sk-pal").count()).toBe(0);
+  });
+});
+
+describe("settings sidebar search and Recent", () => {
+  it("the search field filters the Settings rows and shows an empty state", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    const nav = l.page.getByRole("navigation", { name: "Settings" });
+    const find = nav.getByRole("searchbox", { name: "Search settings" });
+    await find.fill("shortcuts");
+    expect(await nav.getByRole("link").count()).toBe(1);
+    await find.fill("zzzz");
+    await nav.getByText("No settings match").waitFor();
+    await find.fill("");
+    expect(await nav.getByRole("link").count()).toBe(14);
+  });
+
+  it("Recent shows its empty hint when no reading was opened", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByText("Readings you open appear here.").waitFor();
+  });
+});
+
 describe("settings", () => {
   it("app text is not selectable; the reader text and inputs are", async () => {
     const l = await start({ config: DONE });
@@ -239,14 +318,9 @@ describe("tray and lifecycle", () => {
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     const hook = <T>(fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
-    expect(items.filter((i) => i.type !== "separator").map((i) => i.label)).toEqual([
-      "Open Speak Kit",
-      "Load the voice engine now",
-      "Do not disturb",
-      "Settings",
-      "Check for updates",
-      "Quit Speak Kit",
-    ]);
+    // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
+    const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
+    expect(labels.filter((n) => !/^(Dictation|Hold )/.test(n))).toEqual(["Open Speak Kit", "Load the voice engine now", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
     expect(await hook<string>("trayState")).toMatch(/^asleep\|Speak Kit - Unloaded \(wakes on play\)$/);
 
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());

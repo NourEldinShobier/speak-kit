@@ -207,6 +207,33 @@ html[data-platform="darwin"] .sk-title__r {
   font-weight: 600;
   margin-bottom: 4px;
 }
+.sk-side__find {
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 10px;
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  color: var(--text-tertiary);
+  flex: none;
+}
+.sk-side__find:focus-within {
+  box-shadow: 0 0 0 2px var(--text-primary);
+}
+.sk-side__find input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+}
 .sk-side__spacer {
   flex: 1;
   min-height: 12px;

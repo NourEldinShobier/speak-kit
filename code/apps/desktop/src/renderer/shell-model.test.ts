@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { currentLoc, initShell, MAX_RECENT, rememberRecent, shellReducer, type ShellAction, type ShellState } from "./shell-model";
+import { currentLoc, initShell, recentReadings, shellReducer, type ShellAction, type ShellState } from "./shell-model";
 
-const run = (actions: ShellAction[], from: ShellState = initShell([])) => actions.reduce(shellReducer, from);
+const run = (actions: ShellAction[], from: ShellState = initShell()) => actions.reduce(shellReducer, from);
 
 describe("navigation", () => {
   it("goes forward, back and forward again along the history", () => {
@@ -52,7 +52,7 @@ describe("navigation", () => {
   });
 
   it("close-settings opens Home when Settings was the first entry and waits while a dialog is open", () => {
-    const first = { ...initShell([]), hist: [{ page: "settings" as const, sub: "performance" as const }] };
+    const first = { ...initShell(), hist: [{ page: "settings" as const, sub: "performance" as const }] };
     expect(currentLoc(run([{ type: "close-settings" }], first)).page).toBe("home");
     const withDialog = run([
       { type: "go", page: "settings" },
@@ -85,16 +85,19 @@ describe("overlays", () => {
   });
 });
 
-describe("rememberRecent", () => {
-  it("puts the newest first on one line of at most 80 characters, without repeats", () => {
-    expect(rememberRecent(["a", "b"], "  b\n\n  c  ")).toEqual(["b c", "a", "b"]);
-    expect(rememberRecent(["a", "b"], "a")).toEqual(["a", "b"]);
-    expect(rememberRecent([], "x".repeat(100))[0]).toHaveLength(80);
+describe("recentReadings", () => {
+  const doc = (id: string, openedAt?: number) => ({ id, title: `T${id}`, ...(openedAt === undefined ? {} : { openedAt }) });
+
+  it("lists opened readings newest first and skips never-opened ones", () => {
+    expect(recentReadings([doc("a", 1), doc("b"), doc("c", 3), doc("d", 2)])).toEqual([
+      { id: "c", title: "Tc" },
+      { id: "d", title: "Td" },
+      { id: "a", title: "Ta" },
+    ]);
   });
 
-  it("ignores blank text and keeps at most five", () => {
-    expect(rememberRecent(["a"], "   ")).toEqual(["a"]);
-    expect(MAX_RECENT).toBe(5);
-    expect(rememberRecent(["1", "2", "3", "4", "5"], "6")).toEqual(["6", "1", "2", "3", "4"]);
+  it("keeps at most five and handles an empty library", () => {
+    expect(recentReadings([1, 2, 3, 4, 5, 6, 7].map((n) => doc(String(n), n))).map((r) => r.id)).toEqual(["7", "6", "5", "4", "3"]);
+    expect(recentReadings([])).toEqual([]);
   });
 });

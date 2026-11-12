@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { PAGES, SETTINGS_SUBS } from "../shared/ipc";
-import { MENU, menuItem, SETTINGS_NAV, settingsItem } from "./routes";
+import { filterSettingsNav, MENU, menuItem, SETTINGS_NAV, settingsItem } from "./routes";
 
 describe("routes", () => {
   it("the menu groups and rows are in the designed order", () => {
@@ -19,5 +19,20 @@ describe("routes", () => {
     expect(MENU.flatMap((g) => g.items.map((i) => i.page)).sort()).toEqual(PAGES.filter((p) => p !== "settings").sort());
     expect(SETTINGS_NAV.flatMap((g) => g.items.map((i) => i.id)).sort()).toEqual([...SETTINGS_SUBS].sort());
     expect(settingsItem("performance").label).toBe("Performance");
+  });
+});
+
+describe("filterSettingsNav", () => {
+  const ids = (q: string) => filterSettingsNav(q).flatMap((g) => g.items.map((i) => i.id));
+  it("returns every row for blank text", () => {
+    expect(ids("  ")).toHaveLength(14);
+  });
+  it("matches label or keywords, every word, any case", () => {
+    expect(ids("SHORTCUTS")).toEqual(["shortcuts"]);
+    expect(ids("hotkey record")).toEqual(["shortcuts"]);
+  });
+  it("drops empty groups and returns nothing for no match", () => {
+    expect(filterSettingsNav("shortcuts").map((g) => g.group)).toEqual(["General"]);
+    expect(ids("zzzz")).toEqual([]);
   });
 });
