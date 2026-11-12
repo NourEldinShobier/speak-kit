@@ -1,7 +1,8 @@
 import * as v from "valibot";
 import type { HistoryStats, InstalledApp, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
-import { DICTATION_LANGUAGES, DICTATION_MODELS, DictationPatchSchema, modelId } from "./settings";
+import { DICTATION_MODELS } from "./models";
+import { DICTATION_LANGUAGES, DictationPatchSchema, modelId } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
 import type { HistoryStats, RewriteOutcome } from "@speakkit/dictation";
 
@@ -21,6 +22,8 @@ export interface ModelView {
   selected: boolean;
   /** Languages it understands. */
   languages: string[];
+  /** Not one of the few the short list offers; shown there only once it is installed, selected or downloading. The Engines page lists every model. */
+  more?: boolean;
   progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" } | { kind: "paused"; fraction: number };
 }
 
