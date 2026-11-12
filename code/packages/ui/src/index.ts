@@ -4,6 +4,7 @@
  * It holds no app state and does no I/O.
  */
 export { Icon, Spinner, cx } from "./react/shared";
+export { arrowTarget, onArrowKeys } from "./react/arrow-keys";
 export { browserPlatform } from "./platform";
 export type { IconProps } from "./react/shared";
 export { ErrorBoundary } from "./react/error-boundary";

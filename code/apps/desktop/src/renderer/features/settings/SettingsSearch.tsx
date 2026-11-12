@@ -1,4 +1,4 @@
-import { Button, Icon } from "@speakkit/ui";
+import { Button, Icon, onArrowKeys } from "@speakkit/ui";
 import { QUICK_TOPICS, splitMatch, type SearchGroup, type SettingRowDef } from "../../../shared/settings/search-index";
 import { settingsItem } from "../../routes";
 
@@ -12,7 +12,7 @@ export function SettingsResults({ q, groups, onOpen, onClear }: { q: string; gro
       </div>
     );
   return (
-    <div className="sk-find" role="group" aria-label="Search results">
+    <div className="sk-find" role="group" aria-label="Search results" onKeyDown={onArrowKeys(".sk-find__row")}>
       {groups.map((g) => (
         <div key={g.page} role="group" aria-label={settingsItem(g.page).label}>
           <div className="sk-find__page">{settingsItem(g.page).label}</div>
