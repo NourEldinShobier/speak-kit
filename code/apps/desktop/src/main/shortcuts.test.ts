@@ -23,14 +23,16 @@ function setup(foreign: string[] = []) {
 }
 
 describe("ShortcutRegistry", () => {
-  it("registers the three defaults and runs the action on a press", () => {
+  it("registers the four defaults and runs the action on a press", () => {
     const t = setup();
     expect(t.reg.apply(DEFAULT_SHORTCUTS)).toEqual({});
-    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
     t.press("Ctrl+Alt+S");
     t.advance(1000);
     t.press("Ctrl+Alt+Space");
-    expect(t.ran).toEqual(["read-selection", "play-pause"]);
+    t.advance(1000);
+    t.press("Ctrl+Alt+R");
+    expect(t.ran).toEqual(["read-selection", "play-pause", "record-toggle"]);
   });
 
   it("treats key repeat while the keys are held as one press", () => {
@@ -48,7 +50,7 @@ describe("ShortcutRegistry", () => {
     const t = setup(["Ctrl+Alt+S"]);
     const c = t.reg.apply(DEFAULT_SHORTCUTS);
     expect(c).toEqual({ "read-selection": { accelerator: "Ctrl+Alt+S", reason: "taken", suggestion: "Ctrl+Alt+Shift+S" } });
-    expect(t.live.size).toBe(2);
+    expect(t.live.size).toBe(3);
   });
 
   it("flags the second of two actions that share a combination", () => {
@@ -56,7 +58,7 @@ describe("ShortcutRegistry", () => {
     const c = t.reg.apply({ ...DEFAULT_SHORTCUTS, stop: "Ctrl+Alt+S" });
     expect(c.stop).toMatchObject({ reason: "duplicate", accelerator: "Ctrl+Alt+S" });
     expect(c["read-selection"]).toBeUndefined();
-    expect(t.live.size).toBe(2);
+    expect(t.live.size).toBe(3);
   });
 
   it("set() rebinds, and unregisters the old combination", () => {

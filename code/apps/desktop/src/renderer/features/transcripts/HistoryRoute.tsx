@@ -123,7 +123,7 @@ interface TabBodyProps {
 function TranscriptsBody({ push, settings, search, setSearch, recorderOpen, closeRecorder, setView, onImport, onRecord, onDeleted }: TabBodyProps) {
   return (
     <>
-      {push.recording || recorderOpen ? <RecorderCard recording={push.recording} onClose={closeRecorder} /> : null}
+      {push.recording || recorderOpen ? <RecorderCard recording={push.recording} settings={settings} onClose={closeRecorder} /> : null}
       <TranscriptsTab
         push={push}
         settings={settings}
