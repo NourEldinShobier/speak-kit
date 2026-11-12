@@ -102,6 +102,16 @@ describe("capture journal", () => {
     fs.files.set("caps/a/journal.json", "{not json");
     expect((await createJournal(fs, "caps").recover(async () => {})).removed).toEqual(["a"]);
   });
+  it("keeps a folder whose journal cannot be read right now, and says so", async () => {
+    const fs = memoryFs();
+    fs.files.set("caps/a/journal.json", JSON.stringify({ id: "a", stage: "recording", startedAt: 1 }));
+    fs.files.set("caps/a/video.webm", "x");
+    fs.read = async () => {
+      throw Object.assign(new Error("denied"), { code: "EACCES" });
+    };
+    expect(await createJournal(fs, "caps").recover(async () => {})).toEqual({ finished: [], removed: [], failed: ["a"] });
+    expect(fs.files.has("caps/a/video.webm")).toBe(true);
+  });
   it("counts a failed removal as failed instead of throwing", async () => {
     const fs = memoryFs();
     fs.files.set("caps/a/journal.json", "{not json");

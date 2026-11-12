@@ -99,3 +99,31 @@ describe("day groups", () => {
     ]);
   });
 });
+
+describe("capture store with a damaged index", () => {
+  it("moves a damaged or empty index aside instead of replacing it with a one-record list", async () => {
+    for (const bad of ["{garbage", "", '{"a":1}']) {
+      const aside: string[] = [];
+      const fs = { ...memory(bad), moveAside: async (f: string) => void aside.push(f) };
+      expect(await createStore(fs, "index.json").list()).toEqual([]);
+      expect(aside).toEqual(["index.json"]);
+    }
+  });
+  it("does not touch a missing index, and passes a read failure on instead of treating it as empty", async () => {
+    const aside: string[] = [];
+    const missing = { ...memory(undefined), moveAside: async (f: string) => void aside.push(f) };
+    expect(await createStore(missing, "index.json").list()).toEqual([]);
+    expect(aside).toEqual([]);
+    const locked: StoreFs = {
+      read: async () => {
+        throw new Error("EACCES");
+      },
+      write: async () => {
+        throw new Error("must not write");
+      },
+    };
+    const store = createStore(locked, "index.json");
+    await expect(store.list()).rejects.toThrow("EACCES");
+    await expect(store.add(rec("a", 1))).rejects.toThrow("EACCES");
+  });
+});

@@ -65,7 +65,14 @@ export function createJournal(fs: JournalFs, root: string): Journal {
     async recover(finish) {
       const report: RecoveryReport = { finished: [], removed: [], failed: [] };
       for (const id of await fs.list(root)) {
-        const entry = parse(await fs.read(at(root, id, FILE)));
+        let text: string | undefined;
+        try {
+          text = await fs.read(at(root, id, FILE));
+        } catch {
+          report.failed.push(id); // cannot be read right now: never mistaken for a damaged journal
+          continue;
+        }
+        const entry = parse(text);
         // A folder without a journal is not ours (or not started): leave it alone unless it has a journal that is unreadable.
         if (!entry) {
           if (await fs.exists(at(root, id, FILE))) report[(await discard(fs, at(root, id))) ? "removed" : "failed"].push(id);

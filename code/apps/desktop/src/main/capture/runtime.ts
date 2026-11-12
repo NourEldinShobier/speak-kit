@@ -23,6 +23,7 @@ import { takeScreenshot } from "./screenshot";
 import { createSession, type Session, type Target } from "./session";
 import { externalFor } from "./notice-target";
 import { displayOfTarget, lostDisplay, titleOfTarget } from "./target-display";
+import { createLimitTimer, MAX_CAPTURE_MS } from "./time-limit";
 import { createWriteGuard, type WriteGuard } from "./write-guard";
 import type { CaptureRecord } from "./store";
 import { capturePage, hideOwnWindows, openCapsuleWindow, openOverlayWindow, openRecorderWindow } from "./windows";
@@ -58,11 +59,21 @@ export class CaptureRuntime {
   #last: CaptureRecord | undefined;
   #off: (() => void)[] = [];
   readonly #writes: WriteGuard;
+  readonly #limit = createLimitTimer({
+    ms: MAX_CAPTURE_MS,
+    onLimit: () => {
+      if (this.#session.state.phase !== "recording") return;
+      this.notify(noticeFor("time-limit"));
+      this.#session.stop();
+    },
+  });
 
   constructor(deps: RuntimeDeps) {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
-    this.#writes = createWriteGuard({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }) });
+    this.#writes = createWriteGuard({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }),
+      onFirstFailure: () => this.#session.state.phase === "recording" && this.#session.stop(),
+    });
     this.#session = this.#makeSession();
     this.controller = this.#makeController();
     const onAction = (e: Electron.IpcMainEvent, a: unknown) => this.#fromCapsule(e.sender, a);
@@ -148,7 +159,7 @@ export class CaptureRuntime {
     const host = this.#d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
     host.onData((data) => {
       const id = this.#session.state.id;
-      if (!id) return;
+      if (!id || this.#writes.failures > 0) return; // the disk is refusing: do not queue more
       this.#writes.watch(writeStreamed(this.#d.history.bundle, id, data));
     });
     return host;
@@ -206,6 +217,7 @@ export class CaptureRuntime {
       this.#bounds = undefined;
       void this.#placeOnTarget(t);
     }
+    this.#limit.sync(this.#session.state.phase === "recording");
     this.controller.update();
     this.#d.publish();
   }
@@ -340,6 +352,7 @@ export class CaptureRuntime {
   }
 
   dispose() {
+    this.#limit.sync(false);
     for (const off of this.#off) off();
     this.#board.dispose();
     this.#session.discard();

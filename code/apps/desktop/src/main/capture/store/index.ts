@@ -23,6 +23,8 @@ export interface StoreFs {
   read(file: string): Promise<string | undefined>;
   /** Replaces the file atomically. */
   write(file: string, text: string): Promise<void>;
+  /** Renames a damaged index out of the way, so the next write does not replace it. */
+  moveAside?(file: string): Promise<void>;
 }
 
 export interface CaptureStore {
@@ -39,14 +41,16 @@ const isRecord = (x: unknown): x is CaptureRecord =>
 
 async function loadAll(fs: StoreFs, file: string): Promise<CaptureRecord[]> {
   const text = await fs.read(file);
-  if (!text) return [];
+  if (text === undefined) return [];
   try {
     const parsed = JSON.parse(text) as unknown;
-    return Array.isArray(parsed) ? parsed.filter(isRecord) : [];
+    if (Array.isArray(parsed)) return parsed.filter(isRecord);
   } catch {
-    // an unreadable index reads as empty: the captures stay on disk
-    return [];
+    // falls through to the same handling as a wrong shape
   }
+  // Damaged or empty (a power cut can leave a zero-length file): keep it for a look instead of replacing it with a one-record index.
+  await fs.moveAside?.(file).catch(() => undefined);
+  return [];
 }
 
 const haystack = (r: CaptureRecord) => `${r.title} ${r.words?.map((w) => w.text).join(" ") ?? ""}`.toLowerCase();
