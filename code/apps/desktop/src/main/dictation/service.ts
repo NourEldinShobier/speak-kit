@@ -325,14 +325,11 @@ export class DictationService {
   hudAction(a: HudAction): void {
     this.presenter.dismiss();
     if (a === "retry") void this.retry();
-    else if (a === "download") this.#downloadFromHud();
-    else if (a === "sound-settings") void this.openSoundSettings();
-  }
-
-  #downloadFromHud(): void {
-    this.#ctx.showWindow();
-    this.#ctx.sendUi({ type: "nav", page: "dictation" });
-    void this.download(this.#cfg.model);
+    else if (a === "download") {
+      this.#ctx.showWindow();
+      this.#ctx.sendUi({ type: "nav", page: "dictation" });
+      void this.download(this.#cfg.model);
+    } else if (a === "sound-settings") void this.openSoundSettings();
   }
 
   /** Key releases may have gone to another desktop while the screen was locked or the computer slept. */

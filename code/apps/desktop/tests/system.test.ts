@@ -308,19 +308,26 @@ describe("palette, engines and the extension", () => {
   });
 });
 
+type Status = { platform: string; states: Record<string, string>; guides: { dictation: { steps: { id: string }[] } } };
+const bridge = <T = unknown>(l: Launched, fn: string, ...a: unknown[]) =>
+  l.page.evaluate(([f, args]) => (window as unknown as Record<string, Record<string, (...x: unknown[]) => unknown>>)["speakkitPermissions"]![f as string]!(...(args as unknown[])), [
+    fn,
+    a,
+  ] as const) as Promise<T>;
+
 describe("permissions bridge", () => {
   it("answers through the preload bridge: Windows has a microphone switch and no other permission, and a bad id is refused", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const status = await l.page.evaluate(() => (window as any).speakkitPermissions.status());
+    const status = await bridge<Status>(l, "status");
     expect(status.platform).toBe(process.platform === "darwin" ? "darwin" : "win32");
     if (process.platform === "win32") {
       expect(status.states).toMatchObject({ accessibility: "not-needed", "input-monitoring": "not-needed", "screen-recording": "not-needed" });
       expect(status.states.microphone).toMatch(/^(granted|denied|not-determined|restricted|unknown)$/);
-      expect(await l.page.evaluate(() => (window as any).speakkitPermissions.openSettings("accessibility"))).toBe(false);
+      expect(await bridge(l, "openSettings", "accessibility")).toBe(false);
     }
     expect(status.guides.dictation.steps.map((x: { id: string }) => x.id)).toEqual(["microphone", "input-monitoring", "accessibility"]);
-    await expect(l.page.evaluate(() => (window as any).speakkitPermissions.request("camera"))).rejects.toThrow(/Invalid arguments/);
+    await expect(bridge(l, "request", "camera")).rejects.toThrow(/Invalid arguments/);
   }, 60_000);
 });
 
