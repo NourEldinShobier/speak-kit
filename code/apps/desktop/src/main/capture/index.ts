@@ -5,6 +5,7 @@ import type { DictationService } from "../dictation/service";
 import { registerCaptureIpc } from "./ipc";
 import { createElectronCapturePlatform } from "./platform/electron";
 import type { Narrator } from "./recording";
+import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { CaptureService } from "./service";
 import { fakeRecorder } from "./fake";
 
@@ -15,6 +16,7 @@ export interface CaptureSetup {
   distDir: string;
   parent(): BrowserWindow | null;
   dictation: DictationService;
+  inbox: CaptureInbox;
   /** SPEAKKIT_TEST: a recorder that makes pictures up replaces the real one, so a spec can run a whole capture without a screen. */
   test: boolean;
 }
@@ -39,6 +41,7 @@ export function setupCapture(ctx: Ctx, o: CaptureSetup): CaptureService {
     parent: o.parent,
     platform,
     hotkeySource: platform.supported && !o.test ? hotkeySource : undefined,
+    inbox: o.inbox,
     narrator: narratorOf(o.dictation, () => ctx.config.dictation.language),
     dictationHotkey: () => (ctx.config.dictation.enabled ? ctx.config.dictation.hotkey : undefined),
     recorder: o.test ? fakeRecorder() : undefined,

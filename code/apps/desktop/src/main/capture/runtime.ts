@@ -4,13 +4,16 @@ import * as v from "valibot";
 import { CAPSULE_ACTION, CAPSULE_HOVER } from "../../shared/capture/channels";
 import { CapsuleActionSchema, type CapsuleAction, type CapturePhase, type CopyWhat } from "../../shared/capture/contract";
 import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
-import type { CaptureConfig } from "../../shared/capture/settings";
+import { autoSendSeconds, type CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
 import { createDataSink } from "./data-sink";
 import { capsuleHandlers } from "./capsule-actions";
 import { writeCapture } from "./clipboard-out";
 import { CaptureController } from "./controller";
 import { createFence, type Fence } from "./fence";
+import { SendController } from "./send/controller";
+import type { CaptureInbox } from "../voice-chat/capture-inbox";
+import { pictureReader } from "./send/picture";
 import { NoticeBoard } from "./notice-board";
 import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
@@ -35,6 +38,8 @@ export interface RuntimeDeps {
   platform: CapturePlatform;
   narrator: Narrator;
   distDir: string;
+  /** Where a capture sent to the voice chat waits to be read. */
+  inbox: CaptureInbox;
   /** Tests only: a recorder that makes pictures up. */
   recorder?: RecorderHost | undefined;
   /** Sends the status to the app window. */
@@ -55,6 +60,7 @@ export class CaptureRuntime {
   #host: RecorderHost | undefined;
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
+  readonly #send: SendController;
   readonly #fence: Fence = createFence();
   /** Bumped when the session is replaced, so what the old one finishes later is not shown. */
   #epoch = 0;
@@ -67,6 +73,17 @@ export class CaptureRuntime {
   constructor(deps: RuntimeDeps) {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
+    this.#send = new SendController({
+      inbox: deps.inbox,
+      picture: pictureReader(() => deps.history.bundle),
+      markSent: (id) => void deps.history.markSent(id),
+      show: (v) => v && this.controller.after(v, v.kind === "countdown" ? 0 : 15_000),
+      failed: () => this.notify(noticeFor("send-failed")),
+      schedule: (fn, ms) => {
+        const t = setTimeout(fn, ms);
+        return () => clearTimeout(t);
+      },
+    });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
@@ -222,6 +239,7 @@ export class CaptureRuntime {
       return this.#d.publish();
     }
     if (p.screenPermission() === "denied") return this.notify(noticeFor("permission-denied", { os: p.os }));
+    this.#send.cancel();
     this.controller.reset();
     this.#guards.writes.reset();
     this.#board.clear();
@@ -263,7 +281,9 @@ export class CaptureRuntime {
 
   #saved(record: CaptureRecord) {
     this.#last = record;
-    this.controller.after({ kind: "saved", what: record.words?.length ? "Copied picture and text" : "Copied picture" });
+    const wait = autoSendSeconds(this.#settings.autoSend);
+    if (wait > 0) this.#send.begin(record, wait);
+    else this.controller.after({ kind: "saved", what: record.words?.length ? "Copied picture and text" : "Copied picture" });
     this.#d.refresh();
   }
 
@@ -275,7 +295,9 @@ export class CaptureRuntime {
       stop: () => this.#session.stop(),
       discard: () => this.discard(),
       open: () => this.#openLast(),
-      retry: () => void this.start(),
+      retry: () => this.#retry(),
+      send: this.#send,
+      sendLast: () => this.#last && this.#send.begin(this.#last, 0),
       copyLast: (what) => void this.#copyLast(what),
     });
   }
@@ -285,6 +307,12 @@ export class CaptureRuntime {
     if (!parsed.success || !this.controller.owns(sender)) return;
     this.#capsuleHandlers()[parsed.output]();
     this.controller.update();
+  }
+
+  /** Try again on a failed hand-over sends the same capture again; on any other failure it starts a new capture. */
+  #retry() {
+    if (this.notice?.code === "send-failed" && this.#last) this.#send.begin(this.#last, 0);
+    else void this.start();
   }
 
   #openLast() {

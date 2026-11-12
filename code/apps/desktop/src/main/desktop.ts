@@ -44,7 +44,7 @@ interface DesktopOptions {
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
-  voiceChat: Pick<VoiceChat, "complete" | "status">;
+  voiceChat: Pick<VoiceChat, "complete" | "status" | "captureInbox">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -149,7 +149,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, inbox: o.voiceChat.captureInbox, test: o.test });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),

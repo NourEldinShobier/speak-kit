@@ -2,10 +2,19 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { capsuleView, clock } from "./capsule";
 import { noticeFor, noticeOfError } from "./notices";
-import { CAPTURE_HOTKEY, CaptureConfigSchema, CapturePatchSchema } from "./settings";
+import { AUTO_SEND, autoSendSeconds, CAPTURE_HOTKEY, CaptureConfigSchema, CapturePatchSchema } from "./settings";
 import { parseConfig } from "../schemas";
 
 describe("capture settings", () => {
+  it("send to Voice chat is off by default, keeps the old 3 second value, and falls back on a bad one", () => {
+    expect(parseConfig({ setupDone: true }).capture.autoSend).toBe("off");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "3s" }).autoSend).toBe("3s");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "10s" }).autoSend).toBe("10s");
+    expect(v.parse(CaptureConfigSchema, { autoSend: "2m" }).autoSend).toBe("off");
+  });
+  it("turns the setting into seconds", () => {
+    expect(AUTO_SEND.map(autoSendSeconds)).toEqual([0, 3, 5, 10]);
+  });
   it("an old config without a capture section loads with defaults (off, F9, 30 days)", () => {
     const c = parseConfig({ setupDone: true }).capture;
     expect(c).toMatchObject({ enabled: false, hotkey: "F9", screenshotHotkey: "F10", target: "ask", narration: true, retentionDays: 30, inputLog: "events", consented: false, lastTargets: {} });
@@ -88,6 +97,13 @@ describe("capsule view", () => {
       tone: "error",
       buttons: [{ id: "retry", label: "Try again" }],
     });
+  });
+  it("sent and undone states can be closed", () => {
+    expect(capsuleView({ kind: "sent", target: "t", destination: "Voice chat", canUndo: true }).buttons.map((b) => [b.id, !!b.disabled])).toEqual([
+      ["undo", false],
+      ["dismiss", false],
+    ]);
+    expect(capsuleView({ kind: "undone", target: "t" }).buttons.map((b) => b.id)).toEqual(["open", "dismiss"]);
   });
   it("formats the timer", () => {
     expect([clock(0), clock(59_999), clock(600_000), clock(-5)]).toEqual(["0:00", "0:59", "10:00", "0:00"]);

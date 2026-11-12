@@ -8,6 +8,10 @@ export interface CapsuleActionDeps {
   open(): void;
   retry(): void;
   copyLast(what: CopyWhat): void;
+  /** The send of the capture to the voice chat that is running, if any. */
+  send: { hold(): void; sendNow(): void; undo(): void };
+  /** Sends the capture that was just saved, at once. */
+  sendLast(): void;
 }
 
 /** What each button of the capsule does. */
@@ -29,11 +33,10 @@ export function capsuleHandlers(d: CapsuleActionDeps): Record<CapsuleAction, () 
     dismiss: () => c.after(undefined),
     "copy-again": () => d.copyLast("picture"),
     "copy-path": () => d.copyLast("path"),
-    // Sending to the voice chat is not part of capture yet.
-    send: nothing,
-    hold: nothing,
-    undo: nothing,
-    "send-now": nothing,
+    send: d.sendLast,
+    hold: () => d.send.hold(),
+    undo: () => d.send.undo(),
+    "send-now": () => d.send.sendNow(),
     switch: nothing,
   };
 }

@@ -13,6 +13,7 @@ import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
 import type { Narrator } from "./recording";
+import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { CaptureRuntime } from "./runtime";
 import { applyPatch } from "./settings-patch";
 
@@ -23,6 +24,7 @@ export interface CaptureServiceOptions {
   platform: CapturePlatform;
   hotkeySource?: (() => Promise<HotkeySource>) | undefined;
   narrator: Narrator;
+  inbox: CaptureInbox;
   /** The chord dictation uses, so capture never takes it. */
   dictationHotkey(): string | undefined;
   /** Tests only: a recorder that makes pictures up. */
@@ -58,6 +60,7 @@ export class CaptureService {
       history: this.history,
       platform: o.platform,
       narrator: o.narrator,
+      inbox: o.inbox,
       distDir: o.distDir,
       recorder: o.recorder,
       publish: () => void this.#publish(),

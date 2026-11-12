@@ -3,6 +3,7 @@ import type { VoiceChatService } from "@speakkit/server";
 import type { Config } from "../../shared/schemas";
 import { normalizeApiKey, type VoiceChatKeyStatus, type VoiceChatSaveResult, type VoiceChatTestResult } from "../../shared/voice-chat";
 import type { Logger } from "../context";
+import { createCaptureInbox, lookOrCapture, type CaptureInbox } from "./capture-inbox";
 import type { KeyStore } from "./key-store";
 import { completeJson, mintClientSecret, OPENAI_BASE_URL, testKey, type OpenAiResult } from "./openai";
 
@@ -22,7 +23,7 @@ interface Deps {
 }
 
 /** The part the local server calls: the key check and the minting. */
-function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }): VoiceChatService {
+function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }, inbox: CaptureInbox): VoiceChatService {
   const { store, config, log } = d;
   return {
     hasKey: () => store.has(),
@@ -37,7 +38,8 @@ function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }):
       }
       return { ok: true, session: { ...r.value, model: VOICE_CHAT_MODEL, voice } };
     },
-    ...(d.look && { look: d.look }),
+    // a capture the user sent is read from the inbox; the screen is looked at only where the app can
+    look: lookOrCapture(inbox, d.look ?? (async () => ({ ok: false, code: "unavailable" }))),
   };
 }
 
@@ -48,10 +50,13 @@ export function createVoiceChat(d: Deps) {
 
   const status = async (): Promise<VoiceChatKeyStatus> => ({ hasKey: await store.has(), canEncrypt: store.canEncrypt() });
 
-  const server = serverOf(d, net);
+  const captureInbox = createCaptureInbox({ now: Date.now });
+  const server = serverOf(d, net, captureInbox);
 
   return {
     server,
+    /** Captures sent to the voice chat wait here until it reads them. */
+    captureInbox,
     status,
     async setKey(raw: string): Promise<VoiceChatSaveResult> {
       const key = normalizeApiKey(raw);
