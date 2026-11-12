@@ -4,11 +4,22 @@ import { trayIcon } from "./icon";
 
 type TrayHandlers = Record<TrayAction, () => void>;
 
-function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers, mac: boolean): MenuItemConstructorOptions[] {
-  return items.map((i) =>
+function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers, mac: boolean, useModel: (id: string) => void): MenuItemConstructorOptions[] {
+  return items.map((i): MenuItemConstructorOptions =>
     i.type === "separator"
       ? { type: "separator" }
-      : {
+      : i.type === "models"
+        ? {
+            label: i.label,
+            submenu: i.rows.map((r): MenuItemConstructorOptions =>
+              r.type === "header"
+                ? { label: r.label, enabled: false }
+                : r.type === "model"
+                  ? { label: r.label, type: "radio", checked: r.checked, enabled: r.enabled, click: () => useModel(r.id) }
+                  : { label: r.label, click: () => run[r.action]() },
+            ),
+          }
+        : {
           label: i.label,
           enabled: i.enabled,
           ...(i.checked !== undefined ? { type: "checkbox" as const, checked: i.checked } : {}),
@@ -22,7 +33,7 @@ function menuTemplate(items: ReturnType<typeof trayMenuModel>, run: TrayHandlers
  * The tray icon, its short native menu (right click) and the main window (left click). Icon, tooltip and menu are rebuilt
  * only when what they show has changed.
  */
-export function createTray(context: () => TrayContext, run: TrayHandlers) {
+export function createTray(context: () => TrayContext, run: TrayHandlers, useModel: (id: string) => void = () => {}) {
   const mac = process.platform === "darwin";
   const tray = new Tray(trayIcon("asleep"));
   let menu: Menu | null = null;
@@ -44,7 +55,7 @@ export function createTray(context: () => TrayContext, run: TrayHandlers) {
     summary = `${icon}|${tip}`;
     tray.setImage(trayIcon(icon));
     tray.setToolTip(tip);
-    const template = menuTemplate(items, run, mac);
+    const template = menuTemplate(items, run, mac, useModel);
     menu = Menu.buildFromTemplate(template);
     if (!mac) tray.setContextMenu(menu);
   };

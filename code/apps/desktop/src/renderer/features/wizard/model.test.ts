@@ -13,12 +13,16 @@ describe("wizardReducer", () => {
     expect(run({ type: "go", step: 2 }).step).toBe(2);
   });
 
+  it("starts on the step it is given, so a closed window opens again where setup stopped", () => {
+    expect(initWizard(2)).toEqual({ step: 2, copied: false, skipped: false });
+  });
+
   it("remembers that the token was copied", () => {
     expect(run({ type: "go", step: 2 }, { type: "copied" })).toEqual({ step: 2, copied: true, skipped: false });
   });
 
   it("finishing the browser step goes to Done and records whether it was skipped", () => {
-    expect(run({ type: "go", step: 2 }, { type: "finish-connect", skipped: true })).toEqual({ step: 3, copied: false, skipped: true });
+    expect(run({ type: "go", step: 2 }, { type: "finish-connect", skipped: true })).toEqual({ step: 4, copied: false, skipped: true });
     expect(run({ type: "finish-connect", skipped: true }, { type: "go", step: 2 }, { type: "finish-connect", skipped: false }).skipped).toBe(false);
   });
 });

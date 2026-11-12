@@ -59,6 +59,8 @@ const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 export const ConfigSchema = v.object({
   setupDone: bool(false),
   setupSkipped: bool(false),
+  /** The setup step the person was on when the window closed, so setup resumes there. */
+  setupStep: v.fallback(v.picklist([0, 1, 2, 3, 4]), 0),
   preferredPort: v.fallback(port, DEFAULT_PORT),
   startMinimized: bool(false),
   language: v.fallback(v.picklist(["system", "en"]), "system"),
@@ -87,6 +89,7 @@ export const ConfigPatchSchema = v.partial(
   v.strictObject({
     setupDone: v.boolean(),
     setupSkipped: v.boolean(),
+    setupStep: v.picklist([0, 1, 2, 3, 4]),
     startMinimized: v.boolean(),
     language: v.picklist(["system", "en"]),
     idleUnload: v.picklist(IDLE_CHOICES),

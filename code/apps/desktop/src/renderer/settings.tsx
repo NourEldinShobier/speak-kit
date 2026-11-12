@@ -19,6 +19,18 @@ function About({ s }: { s: AppState }) {
         <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
         <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       </SettingsSection>
+      <SettingsSection title="Setup" description="Go through the first-run steps again: language, speech model, practice and the browser extension.">
+        <SettingRow
+          className="lm-row--control"
+          label="Run setup again"
+          description="Downloaded models and your settings are kept."
+          control={
+            <Button aria-label="Run setup again" onClick={() => void api.patchConfig({ setupDone: false, setupSkipped: false, setupStep: 0 })}>
+              Run setup again
+            </Button>
+          }
+        />
+      </SettingsSection>
       <SettingsSection title="Uninstalling">
         <SettingRow
           label="Downloaded models"
