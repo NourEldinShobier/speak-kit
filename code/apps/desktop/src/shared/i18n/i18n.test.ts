@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { MENU, SETTINGS_NAV } from "../../renderer/routes";
 import { EN } from "./en";
-import { LOCALES, resolveLocale, TABLES, translate, translateOr, type StringKey } from "./index";
+import { directionOf, languageOptions, LOCALES, NATIVE_NAMES, resolveLocale, TABLES, translate, translateOr, type StringKey } from "./index";
 
 const keys = Object.keys(EN) as StringKey[];
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -23,6 +23,31 @@ describe("string tables", () => {
 
   it("translates a page title", () => {
     expect(translate("es", "sub.storage")).toBe("Almacenamiento");
+    expect(translate("de", "sub.storage")).toBe("Speicher");
+    expect(translate("fr", "sub.storage")).toBe("Stockage");
+    expect(translate("ar", "sub.storage")).toBe("التخزين");
+  });
+
+  it("names each language in its own name and gives each a direction", () => {
+    expect(LOCALES.map((l) => NATIVE_NAMES[l])).toEqual(["English", "Español", "Deutsch", "Français", "العربية"]);
+    expect(LOCALES.map(directionOf)).toEqual(["ltr", "ltr", "ltr", "ltr", "rtl"]);
+  });
+
+  it("offers the system default first, then each language in its own name", () => {
+    expect(languageOptions("Systemstandard")).toEqual([
+      { value: "system", label: "Systemstandard" },
+      { value: "en", label: "English" },
+      { value: "es", label: "Español" },
+      { value: "de", label: "Deutsch" },
+      { value: "fr", label: "Français" },
+      { value: "ar", label: "العربية" },
+    ]);
+  });
+
+  it("writes a number in the grouping of the language and leaves a string as it is", () => {
+    expect(translate("en", "fold.count", { n: 1234 })).toBe("1,234 settings");
+    expect(translate("de", "fold.count", { n: 1234 })).toBe("1.234 Einstellungen");
+    expect(translate("fr", "home.portBusy", { port: "47615" })).toBe("Le port 47615 est utilisé");
   });
 });
 
@@ -30,11 +55,15 @@ describe("resolveLocale", () => {
   it.each([
     ["es", ["en-US"], "es"],
     ["en", ["es-ES"], "en"],
-    ["system", ["fr-FR", "es-MX", "en-US"], "es"],
+    ["system", ["pt-BR", "es-MX", "en-US"], "es"],
     ["system", ["ES"], "es"],
-    ["system", ["fr-FR"], "en"],
+    ["system", ["fr-FR"], "fr"],
+    ["system", ["it-IT", "de-AT"], "de"],
+    ["system", ["ar-EG"], "ar"],
+    ["system", ["pt-BR"], "en"],
     ["system", [], "en"],
-    ["fr", ["es"], "en"],
+    ["fr", ["es"], "fr"],
+    ["pt", ["es"], "en"],
     ["", ["es"], "en"],
     ["system", ["esperanto"], "en"],
   ])("choice %j with system %j shows %s", (choice, system, shown) => {

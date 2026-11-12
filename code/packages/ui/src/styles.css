@@ -501,7 +501,8 @@
 .lx-btn-card {
   height: 28px;
   gap: 5px;
-  padding: 0 10px 0 8px;
+  padding-block: 0;
+  padding-inline: 8px 10px;
   font-size: 12.5px;
   line-height: 15px;
   letter-spacing: 0;
@@ -1546,7 +1547,7 @@
 .lm-tip > .lm-tooltip {
   position: absolute;
   z-index: 20;
-  left: 50%;
+  left: 50%; /* physical: centred with translateX */
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
   pointer-events: none;
@@ -2359,4 +2360,8 @@ button.lm-listrow {
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
+}
+
+.lx-flip:dir(rtl) {
+  transform: scaleX(-1);
 }

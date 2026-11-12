@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState, ImportOutcome } from "../../../shared/ipc";
 import type { Config } from "../../../shared/schemas";
+import { languageOptions } from "../../../shared/i18n";
 import { closeHint, effectiveCloseAction } from "../../../shared/settings/behaviour";
 import { importMessage } from "../../../shared/settings/import-text";
 import { useT } from "../../i18n";
@@ -39,18 +40,7 @@ function Appearance({ c }: { c: Config }) {
         className="lm-row--control"
         label={t("general.language")}
         description={t("general.languageHint")}
-        control={
-          <Select
-            label={t("general.language")}
-            value={c.language}
-            onChange={(v) => change({ language: v as Config["language"] })}
-            options={[
-              { value: "system", label: t("general.languageSystem") },
-              { value: "en", label: "English" },
-              { value: "es", label: "Español" },
-            ]}
-          />
-        }
+        control={<Select label={t("general.language")} value={c.language} onChange={(v) => change({ language: v as Config["language"] })} options={languageOptions(t("general.languageSystem"))} />}
       />
     </SettingsSection>
   );

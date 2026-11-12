@@ -264,7 +264,7 @@
 }
 .rd-prepare {
   position: absolute;
-  left: 50%;
+  left: 50%; /* physical: centred with translateX */
   top: 12px;
   transform: translateX(-50%);
   display: flex;

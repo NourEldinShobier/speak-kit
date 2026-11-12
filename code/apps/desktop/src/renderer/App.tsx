@@ -1,6 +1,7 @@
 import { requestOpen } from "./features/meetings";
 import { useEffect, useReducer, useRef, useState, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
+import { directionOf } from "../shared/i18n";
 import { ExportDialog } from "./features/export";
 import { Palette, runCommand } from "./features/palette";
 import { QuitDialog } from "./QuitDialog";
@@ -101,6 +102,7 @@ function DocumentLanguage() {
   const { locale } = useT();
   useEffect(() => {
     document.documentElement.lang = locale;
+    document.documentElement.dir = directionOf(locale);
   }, [locale]);
   return null;
 }

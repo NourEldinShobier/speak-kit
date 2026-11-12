@@ -10,11 +10,21 @@ export interface IconProps {
   className?: string | undefined;
 }
 
+/** Icons that point along the reading direction; they mirror in a right-to-left context. */
+const DIRECTIONAL = new Set<IconName>(["arrow-left", "arrow-right", "arrow-forward", "chevron-left", "chevron-right"]);
+
 /** Outline icon. Same markup as vanilla icon(): display:block, centred by the flex parent. */
 export function Icon({ name, size = 16, className }: IconProps): ReactNode {
   const a = iconAttrs(name, size);
   return (
-    <svg className={cx(a.class, className)} style={{ "--s": size } as CSSProperties} viewBox={a.viewBox} aria-hidden="true" focusable="false" dangerouslySetInnerHTML={{ __html: ICON_DATA[name] }} />
+    <svg
+      className={cx(a.class, DIRECTIONAL.has(name) && "lx-flip", className)}
+      style={{ "--s": size } as CSSProperties}
+      viewBox={a.viewBox}
+      aria-hidden="true"
+      focusable="false"
+      dangerouslySetInnerHTML={{ __html: ICON_DATA[name] }}
+    />
   );
 }
 

@@ -17,7 +17,7 @@
     "shortInterval": 0,
     "oxlintDisable": 0,
     "swallowingCatch": 0,
-    "physicalCss": 1,
+    "physicalCss": 0,
     "skipped": 0,
     "focused": 0,
     "tsNocheck": 0

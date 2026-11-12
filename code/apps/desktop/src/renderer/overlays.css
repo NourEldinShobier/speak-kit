@@ -260,7 +260,8 @@
 }
 .sk-notes--page {
   margin: 0;
-  padding: 16px 16px 16px 32px;
+  padding: 16px;
+  padding-inline-start: 32px;
   font-size: 13px;
   color: var(--text-primary);
 }

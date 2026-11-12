@@ -191,7 +191,8 @@
   grid-template-columns: 40px minmax(0, 1fr) 210px 72px 84px;
   align-items: center;
   gap: 16px;
-  padding: 14px 8px 14px 16px;
+  padding-block: 14px;
+  padding-inline: 16px 8px;
   cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) {

@@ -202,7 +202,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 16px 12px 64px;
+  padding: 0 0 12px;
+  padding-inline: 64px 16px;
 }
 .tr-row__bar {
   display: flex;
