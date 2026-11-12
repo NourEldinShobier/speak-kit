@@ -24,6 +24,7 @@ export function realInstalledApps(): InstalledApps {
         }
       },
       join: path.join,
+      pause: () => new Promise((done) => setImmediate(done)),
     },
     mac: {
       roots: () => ["/Applications", "/System/Applications", path.join(os.homedir(), "Applications")],

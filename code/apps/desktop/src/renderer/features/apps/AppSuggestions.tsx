@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { searchApps, type InstalledApp } from "@speakkit/dictation";
 import { dictation } from "../dictation-bridge";
+import { loadInstalledApps, type Found } from "./load";
 import "./apps.css";
-
-type Found = { status: "loading" } | { status: "ready"; apps: InstalledApp[] } | { status: "unavailable" };
 
 /** The installed programs, asked for once when `active` turns true (the picker opened or its field got focus). */
 export function useInstalledApps(active: boolean): Found {
@@ -14,10 +13,7 @@ export function useInstalledApps(active: boolean): Found {
   useEffect(() => {
     if (!active || asked.current) return;
     asked.current = true;
-    dictation.installedApps().then(
-      (r) => alive.current && setFound(r.available ? { status: "ready", apps: r.apps } : { status: "unavailable" }),
-      () => alive.current && setFound({ status: "unavailable" }),
-    );
+    void loadInstalledApps((refresh) => dictation.installedApps(refresh)).then((f) => alive.current && setFound(f));
   }, [active]);
   return found;
 }
@@ -35,7 +31,7 @@ export function AppSuggestions({ query, skip, active, onPick }: { query: string;
     query,
     SHOWN,
   );
-  if (hits.length === 0) return <p className="apps-note">{query.trim() ? `No installed app matches "${query.trim()}". You can still add the name you typed.` : "No installed apps found."}</p>;
+  if (hits.length === 0) return <p className="apps-note">{query.trim() ? `No installed app matches "${query.trim()}". You can still add the name you typed. Store apps may not be listed: type their name.` : "No installed apps found. Apps from the Microsoft Store are not listed: type their name."}</p>;
   return (
     <div className="apps-list" role="group" aria-label="Installed apps">
       {hits.map((a) => (
