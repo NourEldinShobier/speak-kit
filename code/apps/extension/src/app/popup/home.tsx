@@ -47,10 +47,10 @@ function homeSub(m: PopupModel): string {
 
 /** The progress bar and sentence under it while the model starts or the first sentence is prepared. */
 function busyInfo(m: PopupModel): { label: string; value?: number; text: string } {
-  if (m.view !== "loading-model") return { label: "Preparing audio", text: "Preparing the first sentence. This takes a few seconds." };
+  if (m.view !== "loading-model") return { label: "Preparing audio", text: "Preparing the first sentence." };
   if (m.engineProgress !== undefined) return { label: "Downloading voice model", value: m.engineProgress * 100, text: `Downloading the voice model, ${Math.round(m.engineProgress * 100)}%.` };
   if (m.engine === "unloaded") return { label: "Waking the voice engine", text: "Waking the voice engine. This takes a few seconds." };
-  return { label: "Preparing audio", text: "Starting the voice engine. The first time takes a few seconds." };
+  return { label: "Preparing audio", text: "Starting the voice engine. The first time is slower." };
 }
 
 function IdleActions({ m, a }: { m: PopupModel; a: PopupActions }) {
