@@ -33,6 +33,9 @@ export const CaptureConfigSchema = v.object({
   folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
   retentionDays: v.fallback(v.picklist(RETENTION_DAYS), 30),
   autoSend: v.fallback(v.picklist(AUTO_SEND), "off"),
+  /** Which speech engine makes the words of a capture: the model dictation loads, or a command of your own (needs the speech engines experiment). */
+  narrationEngine: v.fallback(v.picklist(["dictation", "command"]), "dictation"),
+  narrationCommand: v.fallback(v.pipe(v.string(), v.maxLength(500)), ""),
   /** What the log of input events holds: events (click, key counts), never typed text. */
   inputLog: v.fallback(v.picklist(["events", "off"]), "events"),
   consented: bool(false),
@@ -55,6 +58,8 @@ export const CapturePatchSchema = v.partial(
     folder: v.pipe(v.string(), v.maxLength(1024)),
     retentionDays: v.picklist(RETENTION_DAYS),
     autoSend: v.picklist(AUTO_SEND),
+    narrationEngine: v.picklist(["dictation", "command"]),
+    narrationCommand: v.pipe(v.string(), v.maxLength(500)),
     inputLog: v.picklist(["events", "off"]),
     consented: v.boolean(),
     experiments: v.partial(v.strictObject(Object.fromEntries(EXPERIMENT_IDS.map((id) => [id, v.boolean()])) as Record<ExperimentId, v.BooleanSchema<undefined>>)),

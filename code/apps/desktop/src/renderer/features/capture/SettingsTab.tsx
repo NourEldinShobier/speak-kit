@@ -42,12 +42,58 @@ function General({ s }: { s: CaptureStatus }) {
           <Select label="Where to record" value={c.target} onChange={(target) => void capture.patchSettings({ target: target as typeof c.target })} options={opts(TARGET_KINDS, (k) => WHERE[k])} />
         }
       />
+      {c.experiments.speechEngines ? <Engine s={s} /> : null}
       <SettingRow
         label="Talk while you record"
         description="Uses the dictation microphone and speech model. Quiet speech is kept, and a silent microphone is reopened. Nothing is sent anywhere."
         control={<Toggle aria-label="Talk while you record" checked={c.narration} onChange={(narration) => void capture.patchSettings({ narration })} />}
       />
     </SettingsSection>
+  );
+}
+
+/** The speech engine of the narration: the dictation model, or a command of your own. Shown only when the speech engines experiment is on. */
+function Engine({ s }: { s: CaptureStatus }) {
+  const c = s.settings;
+  const [command, setCommand] = useState(c.narrationCommand);
+  return (
+    <>
+      <SettingRow
+        className="lm-row--control"
+        label="Speech engine"
+        description="Dictation model uses the model Speak Kit already loads. Command starts a program of your own for each stretch of speech."
+        control={
+          <Select
+            label="Speech engine"
+            value={c.narrationEngine}
+            onChange={(narrationEngine) => void capture.patchSettings({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
+            options={[
+              { value: "dictation", label: "Dictation model" },
+              { value: "command", label: "Command" },
+            ]}
+          />
+        }
+      />
+      {c.narrationEngine === "command" ? (
+        <SettingRow
+          className="lm-row--control"
+          label="Command"
+          description="The program and its options, with {audio} where the WAV file goes (at the end when you leave it out). It is started directly, not through a shell, and may run for two minutes."
+          control={
+            <input
+              className="lm-input"
+              aria-label="Speech command"
+              value={command}
+              maxLength={500}
+              spellCheck={false}
+              placeholder="whisper-cli -m model.bin -f {audio} -nt"
+              onChange={(e) => setCommand(e.target.value)}
+              onBlur={() => command !== c.narrationCommand && void capture.patchSettings({ narrationCommand: command })}
+            />
+          }
+        />
+      ) : null}
+    </>
   );
 }
 

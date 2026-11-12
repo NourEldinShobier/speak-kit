@@ -2,6 +2,8 @@ import type { BrowserWindow } from "electron";
 import type { SttLanguage } from "@speakkit/engine";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
+import { chooseNarrator, createCommandNarrator } from "./command-narrator";
+import { newName, runCommand, writeTemp } from "./command-narrator/node";
 import { registerCaptureIpc } from "./ipc";
 import { createElectronCapturePlatform } from "./platform/electron";
 import type { Narrator } from "./recording";
@@ -42,7 +44,10 @@ export function setupCapture(ctx: Ctx, o: CaptureSetup): CaptureService {
     platform,
     hotkeySource: platform.supported && !o.test ? hotkeySource : undefined,
     inbox: o.inbox,
-    narrator: narratorOf(o.dictation, () => ctx.config.dictation.language),
+    narrator: chooseNarrator(() => ctx.config.capture.experiments.speechEngines && ctx.config.capture.narrationEngine === "command", {
+      dictation: narratorOf(o.dictation, () => ctx.config.dictation.language),
+      command: createCommandNarrator({ command: () => ctx.config.capture.narrationCommand, run: runCommand, writeTemp, newName, log: (l) => ctx.log.warn(l) }),
+    }),
     dictationHotkey: () => (ctx.config.dictation.enabled ? ctx.config.dictation.hotkey : undefined),
     recorder: o.test ? fakeRecorder() : undefined,
     test: o.test,
