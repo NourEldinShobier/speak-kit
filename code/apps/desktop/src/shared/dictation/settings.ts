@@ -6,10 +6,9 @@ export { MAX_APP_RULES, type AppRule, type PasteMethod } from "./app-rules";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
 export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
-
+import { DICTATION_MODELS } from "./models";
 import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
 
-export const DICTATION_MODELS = ["large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"] as const;
 /** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
 export type DictationModelId = (typeof DICTATION_MODELS)[number] | `custom-${string}`;
 export const modelId = v.union([
