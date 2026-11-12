@@ -2,7 +2,8 @@ import type { Row } from "@speakkit/meetings/pure";
 import { Button, Chip, IconButton } from "@speakkit/ui";
 import type { RecordingView } from "../../../shared/meetings/contract";
 import { Marked } from "./Marked";
-import { markOf, subtitle, timeText, timerText } from "./model";
+import { ProviderMark } from "./ProviderMark";
+import { subtitle, timeText, timerText } from "./model";
 
 interface Props {
   row: Row;
@@ -65,7 +66,7 @@ export function MeetingRow({ row, live, query, trashed, onOpen, onDelete, onRetr
     <div className="tr-row mt-row" data-testid="meeting-row" data-row={row.id} data-status={row.status}>
       <button type="button" className="tr-row__main" onClick={onOpen} disabled={running} aria-label={`Open: ${row.title}`}>
         <span className="tr-row__icon mt-mark" aria-hidden="true">
-          {markOf(row.providerId, row.providerName)}
+          <ProviderMark providerId={row.providerId} name={row.providerName} />
         </span>
         <span className="tr-row__text">
           <span className="tr-row__title">{row.title}</span>
