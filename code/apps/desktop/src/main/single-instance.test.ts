@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { acquireInstance, classifySecondLaunch, clearRunningVersion, isNewer, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
+import { acquireInstance, classifySecondLaunch, clearRunningVersion, exitAfterCleanup, isNewer, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
 
 describe("isNewer", () => {
   it.each([
@@ -145,5 +145,36 @@ describe("acquireInstance detail", () => {
     expect(ok).toBe(false);
     expect(waits).toEqual([1000, 1000, 1000]);
     expect(tries).toBe(4);
+  });
+});
+
+describe("exitAfterCleanup", () => {
+  it("waits for a recording save, then cleans up, then exits", async () => {
+    const order: string[] = [];
+    await exitAfterCleanup({
+      saving: () => new Promise((r) => setTimeout(() => (order.push("saved"), r(undefined)), 30)),
+      cleanup: () => void order.push("cleanup"),
+      exit: () => void order.push("exit"),
+    });
+    expect(order).toEqual(["saved", "cleanup", "exit"]);
+  });
+  it("exits when nothing is saving", async () => {
+    const order: string[] = [];
+    await exitAfterCleanup({ saving: () => undefined, cleanup: () => void order.push("cleanup"), exit: () => void order.push("exit") });
+    expect(order).toEqual(["cleanup", "exit"]);
+  });
+  it("still exits when a save or the cleanup hangs or throws", async () => {
+    const exit = vi.fn();
+    await exitAfterCleanup({ saving: () => new Promise(() => {}), cleanup: () => new Promise(() => {}), exit, savingCapMs: 20, cleanupCapMs: 20 });
+    expect(exit).toHaveBeenCalledTimes(1);
+    const exit2 = vi.fn();
+    await exitAfterCleanup({
+      saving: () => Promise.reject(new Error("disk")),
+      cleanup: () => {
+        throw new Error("x");
+      },
+      exit: exit2,
+    });
+    expect(exit2).toHaveBeenCalledTimes(1);
   });
 });

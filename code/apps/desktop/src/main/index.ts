@@ -219,7 +219,7 @@ function startDesktop() {
   );
 }
 
-const instance = await claimInstance(dataDir, process.argv);
+const instance = await claimInstance(dataDir, process.argv, { saving: () => desktop?.finishCapture(), cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
 if (!instance.mayRun) {
   app.quit();
 } else {

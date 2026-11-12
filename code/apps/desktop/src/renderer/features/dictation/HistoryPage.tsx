@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EmptyState, Icon, Kbd } from "@speakkit/ui";
+import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import { DEFAULT_HOTKEY, hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation, platformName } from "./api";
@@ -75,7 +75,7 @@ function Groups({ items, load, view, s, picked, toggle, openSettings }: GroupsPr
     load();
   };
   return groups.map((g) => (
-    <section key={g.label} className="dict-hist__group">
+    <section key={g.label} className="dict-hist__group" onKeyDown={onArrowKeys('[aria-label^="Copy: "]')}>
       <h3 className="dict-hist__day">{g.label}</h3>
       <div className={`lm-card${view === "side" ? " dict-hist__side" : ""}`}>
         {view === "side" ? (

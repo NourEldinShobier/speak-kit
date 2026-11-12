@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { collectResources, speechModelName, type ResourceSources } from "./resources";
+import { cachedHardware, collectResources, speechModelName, type ResourceSources } from "./resources";
 
 const sources = (over: Partial<ResourceSources> = {}): ResourceSources => ({
   processes: () => [
@@ -83,5 +83,26 @@ describe("speechModelName", () => {
   it("names a catalog model and falls back to the id for one the person added", () => {
     expect(speechModelName("large-v3-turbo-q5_0")).toMatch(/turbo/i);
     expect(speechModelName("custom-my-model")).toBe("custom-my-model");
+  });
+});
+
+describe("cachedHardware", () => {
+  const hw = { platform: "win32", arch: "x64", cores: 8, memoryGb: 16 } as const;
+  it("probes once and shares the answer, also between overlapping calls", async () => {
+    let calls = 0;
+    const read = cachedHardware(async () => (calls++, hw));
+    const [a, b] = await Promise.all([read(), read()]);
+    await read();
+    expect([a, b, calls]).toEqual([hw, hw, 1]);
+  });
+  it("probes again after a failure", async () => {
+    let calls = 0;
+    const read = cachedHardware(async () => {
+      if (calls++ === 0) throw new Error("no powershell");
+      return hw;
+    });
+    await expect(read()).rejects.toThrow("no powershell");
+    expect(await read()).toBe(hw);
+    expect(calls).toBe(2);
   });
 });

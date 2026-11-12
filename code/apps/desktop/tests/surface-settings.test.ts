@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { launch, type Launched } from "./harness";
 
@@ -44,6 +45,9 @@ describe("settings edited outside the app", () => {
     await l.page.getByRole("button", { name: "Notifications" }).click();
     await l.page.getByText("Settings file could not be read").waitFor({ timeout: 10_000 });
     expect(await closing.textContent()).toContain("Quits");
+    // A file that stays broken is reported once, not on every re-read.
+    await new Promise((r) => setTimeout(r, 4000));
+    expect(await l.page.getByText("Settings file could not be read").count()).toBe(1);
   }, 60_000);
 });
 
@@ -133,5 +137,58 @@ describe("the main window uses the dark taskbar tray variant only when asked", (
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     const state = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { trayState(): string } }).__speakkit.trayState());
     expect(state).toMatch(/^[a-z]+\|Speak Kit/);
+  }, 60_000);
+});
+
+describe("arrow keys in lists", () => {
+  const focusedText = (l: Launched) => l.page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent ?? "");
+
+  it("move between the voice cards and between the notices in the bell", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("link", { name: "Voices" }).click();
+    const cards = l.page.getByTestId("voices").locator(".sk-voice");
+    await cards.first().waitFor();
+    await cards.first().focus();
+    await l.page.keyboard.press("ArrowRight");
+    expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe(await cards.nth(1).getAttribute("data-voice"));
+    await l.page.keyboard.press("End");
+    expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe(await cards.last().getAttribute("data-voice"));
+
+    for (const mode of ["quit", "hide"]) {
+      writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), closeAction: mode }));
+      await expect.poll(async () => configOf(l).closeAction).toBe(mode);
+      await new Promise((r) => setTimeout(r, 2500));
+    }
+    await l.page.getByRole("button", { name: "Notifications" }).click();
+    const rows = l.page.locator(".sk-activity > div");
+    await expect.poll(() => rows.count(), { timeout: 10_000 }).toBeGreaterThan(1);
+    await rows.first().focus();
+    await l.page.keyboard.press("ArrowDown");
+    expect(await l.page.evaluate(() => document.activeElement === document.querySelectorAll(".sk-activity > div")[1])).toBe(true);
+    await l.page.keyboard.press("Home");
+    expect(await l.page.evaluate(() => document.activeElement === document.querySelector(".sk-activity > div"))).toBe(true);
+  }, 60_000);
+
+  it("move between the dictation history entries", async () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-ss-"));
+    const now = Date.now();
+    writeFileSync(
+      path.join(userData, "dictation-history.json"),
+      JSON.stringify({
+        version: 1,
+        entries: [
+          { id: "e1", at: now - 60_000, text: "First note.", raw: "first note", durationMs: 1000, app: "notepad.exe" },
+          { id: "e2", at: now - 120_000, text: "Second note.", raw: "second note", durationMs: 1000, app: "notepad.exe" },
+        ],
+      }),
+    );
+    const l = await start({ userData, config: DONE });
+    await l.page.getByRole("link", { name: "History" }).click();
+    await l.page.getByRole("heading", { name: "History", exact: true, level: 1 }).waitFor();
+    await l.page.getByRole("button", { name: "Copy: First note." }).focus();
+    await l.page.keyboard.press("ArrowDown");
+    expect(await focusedText(l)).toBe("Copy: Second note.");
+    await l.page.keyboard.press("ArrowUp");
+    expect(await focusedText(l)).toBe("Copy: First note.");
   }, 60_000);
 });

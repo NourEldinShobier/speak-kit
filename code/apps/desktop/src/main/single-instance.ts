@@ -63,6 +63,20 @@ export function stopGuard(exit: () => void, ms = STOP_GUARD_MS): () => void {
   return () => clearTimeout(t);
 }
 
+/**
+ * What the stop guard runs: a recording still being saved is awaited (up to `savingCapMs`), then the runtime and control server are shut
+ * down (up to `cleanupCapMs`, so a hung worker cannot keep the app), and only then does the app exit.
+ */
+export async function exitAfterCleanup(o: { saving(): Promise<unknown> | undefined; cleanup(): Promise<unknown> | unknown; exit(): void; savingCapMs?: number; cleanupCapMs?: number }): Promise<void> {
+  const capped = (work: Promise<unknown> | undefined, ms: number) => Promise.race([Promise.resolve(work).catch((e: unknown) => e), new Promise((r) => setTimeout(r, ms))]);
+  try {
+    await capped(o.saving(), o.savingCapMs ?? 60_000);
+    await capped(Promise.resolve().then(o.cleanup), o.cleanupCapMs ?? 3_000);
+  } finally {
+    o.exit();
+  }
+}
+
 const RUNNING_FILE = "instance.json";
 
 export async function writeRunningVersion(dir: string, version: string): Promise<void> {

@@ -14,11 +14,18 @@ function useResources(): { reading: Reading; retry(): void } {
   useEffect(() => {
     if (!visible) return;
     let on = true;
-    const tick = () =>
-      api.resources().then(
-        (r) => on && setReading({ kind: "ready", r }),
-        () => on && setReading((was) => (was.kind === "ready" ? was : { kind: "error" })),
-      );
+    let pending = false; // a slow reading is not stacked under the next tick
+    const tick = () => {
+      if (pending) return;
+      pending = true;
+      void api
+        .resources()
+        .then(
+          (r) => on && setReading({ kind: "ready", r }),
+          () => on && setReading((was) => (was.kind === "ready" ? was : { kind: "error" })),
+        )
+        .finally(() => (pending = false));
+    };
     void tick();
     const t = setInterval(tick, 3000);
     return () => {

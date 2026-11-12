@@ -18,6 +18,18 @@ export interface ResourceSources {
 /** The catalog name of the selected speech model; a model the person added has only its id. */
 export const speechModelName = (id: string): string => STT_MODELS.find((m) => m.id === id)?.name ?? id;
 
+/** Reads the hardware once per run: the probe starts a PowerShell, and the computer does not change while the app runs. A failed probe is tried again. */
+export function cachedHardware(probe: () => Promise<Hardware>): () => Promise<Hardware> {
+  let held: Promise<Hardware> | undefined;
+  return () => {
+    held ??= probe().catch((e) => {
+      held = undefined;
+      throw e;
+    });
+    return held;
+  };
+}
+
 /** A failed probe leaves the device values unknown; it never fails the page. */
 const unknownDevice = (): undefined => undefined;
 

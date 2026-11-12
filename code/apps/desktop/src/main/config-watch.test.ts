@@ -53,6 +53,20 @@ describe("watchConfigFile", () => {
     w.dispose();
   });
 
+  it("reports a file that stays broken once, not on every pass", async () => {
+    let bad = 0;
+    const w = watchConfigFile({ file, current: () => parseConfig({}), onEdit: () => {}, onUnreadable: () => bad++, debounceMs: 30 });
+    await writeFile(file, "{ nope");
+    expect(await until(() => bad > 0)).toBe(true);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(bad).toBe(1);
+    await writeFile(file, "{ still nope");
+    expect(await until(() => bad > 1)).toBe(true);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(bad).toBe(2);
+    w.dispose();
+  });
+
   it("ignores edits after dispose", async () => {
     const edits: unknown[] = [];
     const w = watchConfigFile({ file, current: () => parseConfig({}), onEdit: (e) => edits.push(e), debounceMs: 30 });
