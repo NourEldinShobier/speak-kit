@@ -1,4 +1,4 @@
-import { lazy, Suspense, useReducer } from "react";
+import { lazy, Suspense, useReducer, useRef } from "react";
 import type { AppState } from "../../../shared/ipc";
 import { api } from "../../ui";
 import { ConnectStep } from "./ConnectStep";
@@ -12,7 +12,8 @@ const DictationStep = lazy(() => import("./DictationStep").then((m) => ({ defaul
 
 /** First-run setup: welcome, download, dictation, browser, done. Closing the window keeps the step, so setup opens again where it stopped. */
 export function Wizard({ s }: { s: AppState }) {
-  const resumed = s.config.setupStep === 2;
+  // Only a window that opened on the dictation step is a resumed one; arriving there from the step before is not.
+  const resumed = useRef(s.config.setupStep === 2).current;
   const [st, dispatch] = useReducer(wizardReducer, s.config.setupStep as WizardStep, initWizard);
   const go = (step: WizardStep) => {
     void api.patchConfig({ setupStep: step });

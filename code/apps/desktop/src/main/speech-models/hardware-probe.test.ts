@@ -117,3 +117,48 @@ describe("probeHardware", () => {
     expect(await probeHardware({ ...win(""), platform: "linux" })).toEqual({ platform: "linux", arch: "x64", cores: 8, memoryGb: 16 });
   });
 });
+
+describe("probe commands", () => {
+  it("asks PowerShell for the processor features and the video controllers, with a time limit", async () => {
+    const calls: { file: string; args: readonly string[]; timeout: number }[] = [];
+    await probeHardware({ ...win(""), run: async (file, args, timeout) => (calls.push({ file, args, timeout }), "{}") });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ file: "powershell.exe", timeout: 15_000 });
+    expect(calls[0]!.args.slice(0, 3)).toEqual(["-NoProfile", "-NonInteractive", "-Command"]);
+    expect(calls[0]!.args[3]).toContain("IsProcessorFeaturePresent(40)");
+    expect(calls[0]!.args[3]).toContain("Win32_VideoController");
+  });
+
+  it("gives the Mac commands their time limits", async () => {
+    const calls: [string, number][] = [];
+    await probeHardware({ platform: "darwin", arch: "x64", cores: 4, memoryBytes: GB, osRelease: "1", run: async (file, _args, timeout) => (calls.push([file, timeout]), "0") });
+    expect(calls).toEqual([
+      ["sysctl", 5_000],
+      ["system_profiler", 15_000],
+    ]);
+  });
+
+  it("says the processor lacks AVX2 when the Mac reports anything but 1", async () => {
+    const hw = await probeHardware({ platform: "darwin", arch: "x64", cores: 4, memoryBytes: GB, osRelease: "1", run: async () => "0" });
+    expect(hw.avx2).toBe(false);
+  });
+
+  it("rounds the memory to one decimal", async () => {
+    expect((await probeHardware({ ...win(""), memoryBytes: 7.46 * GB })).memoryGb).toBe(7.5);
+  });
+});
+
+describe("pickGpu names", () => {
+  it.each(["NVIDIA Quadro T1000", "NVIDIA GeForce GTX 1050", "AMD Radeon Pro W6600", "AMD Radeon RX 7900", "Intel(R) Arc(TM) A770 Graphics", "AMD FirePro W5100"])("%s is a discrete card", (name) => {
+    expect(pickGpu([{ name, driver: "1" }])?.integrated).toBe(false);
+  });
+  it.each(["Remote Display Adapter", "Virtual Desktop Monitor", "Citrix Indirect Display", "DisplayLink USB Graphics", "Mirage Driver"])("%s is not a card", (name) => {
+    expect(pickGpu([{ name, driver: "1" }])).toBeUndefined();
+  });
+  it("trims names and drivers from PowerShell", () => {
+    expect(parseWindowsProbe(JSON.stringify({ avx2: true, gpus: [{ Name: "  Intel UHD  ", DriverVersion: " 1.2 " }] })).gpu).toEqual({ name: "Intel UHD", driver: "1.2", integrated: true });
+  });
+  it("a card without a name or driver is read as empty, not a crash", () => {
+    expect(parseWindowsProbe(JSON.stringify({ avx2: true, gpus: [{ Name: 5, DriverVersion: null }] })).gpu).toBeUndefined();
+  });
+});

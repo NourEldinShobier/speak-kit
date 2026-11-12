@@ -50,6 +50,7 @@ test.describe("desktop companion, setup and memory @slow", () => {
     try {
       await d.page.getByRole("button", { name: /Get started/ }).click();
       await d.page.getByRole("button", { name: /^Continue/ }).click();
+      await d.page.getByRole("button", { name: "Skip dictation" }).click();
       await d.page.getByRole("heading", { name: "Connect your browser" }).waitFor();
       await d.page.getByRole("button", { name: "Reveal" }).click();
       const token = (await d.page.getByTestId("token").textContent())!;

@@ -26,6 +26,7 @@ describe("desktop app", () => {
     await page.getByRole("button", { name: /Get started/ }).click();
     await page.getByRole("heading", { name: "Kokoro-82M is ready" }).waitFor();
     await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.getByRole("button", { name: "Skip dictation" }).click();
 
     await page.getByRole("heading", { name: "Connect your browser" }).waitFor();
     const cont = page.getByRole("button", { name: /^Continue/ });
