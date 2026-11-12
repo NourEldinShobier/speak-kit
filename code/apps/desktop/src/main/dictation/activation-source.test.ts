@@ -262,20 +262,22 @@ describe("pills for activation", () => {
   it("names the feature that holds the microphone", () => {
     expect(errorView("mic-in-use", false, "Voice chat")).toMatchObject({ kind: "error", text: "Voice chat is using the microphone" });
     expect(errorView("mic-in-use", false)).toMatchObject({ text: "Another feature is using the microphone" });
-    expect(hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Screen look" }, hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false })).toMatchObject({
+    expect(
+      hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Screen look" }, hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false }),
+    ).toMatchObject({
       text: "Screen look is using the microphone",
     });
   });
 
   it("shows the cancel key while a toggled recording runs, and not in a held or locked one", () => {
-    const base = { hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false, cancelLabel: "Esc" };
+    const base = { hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false, cancelLabel: "Esc" };
     expect(hudViewFor({ ...base, state: { status: "recording", mode: "toggle" } })).toMatchObject({ cancel: "Esc" });
     expect(hudViewFor({ ...base, state: { status: "recording", mode: "hold" } })).not.toHaveProperty("cancel");
     expect(hudViewFor({ ...base, state: { status: "locked" } })).not.toHaveProperty("cancel");
   });
 
   it("offers Undo after a cancel that can be undone", () => {
-    const base = { hotkey: "F9", startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false };
+    const base = { hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false };
     expect(hudViewFor({ ...base, state: { status: "idle", notice: { kind: "cancelled", undoable: true } } })).toEqual({
       kind: "notice",
       text: "Cancelled",
