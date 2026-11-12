@@ -4,6 +4,7 @@ import type { CaptureDetail, CopyWhat, EditSource } from "../../../shared/captur
 import { capture } from "./api";
 import { AnnotateEditor } from "./annotate/AnnotateEditor";
 import { duration, itemSubtitle } from "./format";
+import { TrimPanel } from "./TrimPanel";
 
 interface Props {
   id: string;
@@ -25,7 +26,7 @@ function Narration({ words }: { words: CaptureDetail["words"] }) {
   );
 }
 
-function Actions({ detail, platform, onCopied, onDelete }: { detail: CaptureDetail; platform: string; onCopied(what: CopyWhat): void; onDelete(): void }) {
+function Actions({ detail, platform, onCopied, onDelete, onTrim }: { detail: CaptureDetail; platform: string; onCopied(what: CopyWhat): void; onDelete(): void; onTrim(): void }) {
   const copy = async (what: CopyWhat) => {
     if (await capture.copy(detail.id, what)) onCopied(what);
   };
@@ -36,6 +37,7 @@ function Actions({ detail, platform, onCopied, onDelete }: { detail: CaptureDeta
         Copy text
       </Button>
       <Button onClick={() => void copy("path")}>Copy path</Button>
+      {detail.trimmable ? <Button onClick={onTrim}>Trim video</Button> : null}
       <Button iconLeft="folder" onClick={() => void capture.reveal(detail.id)}>
         {platform === "darwin" ? "Show in Finder" : "Show in folder"}
       </Button>
@@ -74,8 +76,16 @@ function useEditing(id: string, onChanged: () => void) {
   };
 }
 
+/** Cuts the video; `done` runs when it was cut. */
+const saveTrim = (id: string, done: () => void) => async (startMs: number, endMs: number) => {
+  const ok = await capture.trim(id, startMs, endMs);
+  if (ok) done();
+  return ok;
+};
+
 function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDetail; platform: string; onDelete(): void; onChanged(): void }) {
   const [copied, setCopied] = useState<CopyWhat | null>(null);
+  const [trimming, setTrimming] = useState(false);
   const { editing, cannotOpen, openEditor, closeEditor, saveEdit } = useEditing(detail.id, onChanged);
   return (
     <>
@@ -101,8 +111,10 @@ function Opened({ detail, platform, onDelete, onChanged }: { detail: CaptureDeta
         </Banner>
       ) : null}
       {editing ? <AnnotateEditor source={editing.source} onClose={closeEditor} onSave={saveEdit} /> : null}
+      {detail.kind === "recording" ? <p className="cap-detail__meta">Edits change the pictures, the contact sheet that is copied or sent to Voice chat, and nothing in the video file.</p> : null}
+      {trimming ? <TrimPanel durationMs={detail.durationMs ?? 0} kept={detail.trim} onCancel={() => setTrimming(false)} onSave={saveTrim(detail.id, () => (setTrimming(false), onChanged()))} /> : null}
       <Narration words={detail.words} />
-      <Actions detail={detail} platform={platform} onCopied={setCopied} onDelete={onDelete} />
+      <Actions detail={detail} platform={platform} onCopied={setCopied} onDelete={onDelete} onTrim={() => setTrimming(true)} />
       <span className="cap-sr" role="status">
         {copied ? `Copied ${copied}` : ""}
       </span>

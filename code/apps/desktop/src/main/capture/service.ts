@@ -59,6 +59,10 @@ export class CaptureService {
       log: (l) => ctx.log.info(l),
       now: () => Date.now(),
       sheet: (id, files) => makeSheet({ bundle: this.history.bundle, host: this.runtime.recorder.host, log: (l) => ctx.log.warn(l) }, id, files),
+      trim: async (video, startMs, endMs) => {
+        const r = await this.runtime.recorder.host.call({ op: "trim", video, startMs, endMs }, 10 * 60_000);
+        return r.ok ? r.video : undefined;
+      },
       trash: o.test ? (dir) => rm(dir, { recursive: true, force: true }) : undefined,
     });
     this.runtime = new CaptureRuntime({
@@ -253,6 +257,12 @@ export class CaptureService {
 
   async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
     const ok = await this.history.saveEdit(id, file, png);
+    if (ok) void this.#refresh();
+    return ok;
+  }
+
+  async trim(id: string, startMs: number, endMs: number): Promise<boolean> {
+    const ok = await this.history.trim(id, startMs, endMs);
     if (ok) void this.#refresh();
     return ok;
   }

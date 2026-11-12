@@ -56,6 +56,9 @@ export interface CaptureDetail extends CaptureItem {
   /** `file` names the picture for editing; `edited` is true when the picture shown is an edited copy. */
   frames: { atMs: number; src: string; file: string; edited: boolean }[];
   path: string;
+  /** The video can be cut (a recording with one video file); `trim` is the range kept now. */
+  trimmable: boolean;
+  trim?: { startMs: number; endMs: number };
 }
 
 export interface EditSource {
@@ -87,12 +90,19 @@ export interface CaptureBridge {
   source(id: string, file: string): Promise<EditSource | null>;
   /** Saves an edited copy of a picture (PNG); the original stays. */
   saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean>;
+  /** Cuts the video of a recording to this range (milliseconds from its start); false when it cannot be cut. The original video stays. */
+  trim(id: string, startMs: number, endMs: number): Promise<boolean>;
   onStatus(cb: (s: CaptureStatus) => void): () => void;
 }
 
 /** Largest edited picture main accepts. */
 export const MAX_EDIT_BYTES = 80_000_000;
-const fileName = v.pipe(v.string(), v.regex(/^[A-Za-z0-9_.-]{1,80}$/));
+/** The shortest piece a trim keeps. */
+export const MIN_TRIM_MS = 500;
+/** Longest recording a trim is asked for (24 hours). */
+export const MAX_TRIM_MS = 86_400_000;
+/** A file of a capture: in the folder, or a frame of a recording in its frames folder. Whether it is one the capture has is checked by main. */
+const fileName = v.pipe(v.string(), v.regex(/^(frames[\\/])?[A-Za-z0-9_.-]{1,80}$/));
 const id = v.pipe(v.string(), v.regex(/^[A-Za-z0-9_-]{1,64}$/));
 const NOTICE_ACTIONS = ["retry", "ok", "open-audio", "choose-folder", "open-trash", "record-screen", "open-permissions", "open-settings"] as const satisfies readonly NoticeAction[];
 
@@ -121,6 +131,7 @@ export const CAPTURE_ARGS = {
       v.check((b) => b.byteLength <= MAX_EDIT_BYTES),
     ),
   ]),
+  trim: v.tuple([id, v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_TRIM_MS)), v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(MAX_TRIM_MS))]),
 } as const satisfies Record<(typeof CAPTURE_METHODS)[number], v.GenericSchema<unknown[]>>;
 
 /** What the picker overlay draws. Rectangles are in device-independent pixels of the overlay's display. */
@@ -171,7 +182,8 @@ export type RecorderCommand =
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
   | { id: number; op: "abort" }
-  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number };
+  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number }
+  | { id: number; op: "trim"; video: Uint8Array; startMs: number; endMs: number };
 
 export type RecorderResult =
   | {
@@ -183,6 +195,8 @@ export type RecorderResult =
       width?: number | undefined;
       height?: number | undefined;
       jpeg?: Uint8Array | undefined;
+      /** A trimmed video. */
+      video?: Uint8Array | undefined;
       segments?: number | undefined;
     }
   | { ok: false; code: "source" | "encoder" | "denied" };
@@ -207,6 +221,7 @@ export const RecorderReplySchema = v.tuple([
       width: v.optional(count),
       height: v.optional(count),
       jpeg: v.optional(bytes),
+      video: v.optional(bytes),
       segments: v.optional(count),
     }),
     v.object({ ok: v.literal(false), code: v.picklist(["source", "encoder", "denied"]) }),

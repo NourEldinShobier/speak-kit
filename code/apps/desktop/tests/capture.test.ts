@@ -325,6 +325,96 @@ describe("editing a screenshot", () => {
   });
 });
 
+describe("editing and trimming a recording", () => {
+  const seed = () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
+    dirs.push(userData);
+    const dir = path.join(userData, "captures", "r1");
+    mkdirSync(path.join(dir, "frames"), { recursive: true });
+    const png = makePng(320, 200);
+    const frames = [0, 2000, 4000].map((ms) => path.join("frames", `f-${String(ms).padStart(8, "0")}.jpg`));
+    for (const f of frames) writeFileSync(path.join(dir, f), png);
+    writeFileSync(path.join(dir, "video.webm"), "video");
+    writeFileSync(path.join(dir, "sheet.jpg"), png);
+    const words = [
+      { text: "before", startMs: 100, endMs: 300 },
+      { text: "kept", startMs: 2500, endMs: 2700 },
+    ];
+    const record = {
+      id: "r1",
+      kind: "recording",
+      title: "Pricing page",
+      at: Date.now(),
+      dir: "r1",
+      durationMs: 6000,
+      bytes: png.length,
+      media: "video.webm",
+      frames,
+      sheet: "sheet.jpg",
+      words,
+      chips: ["saved"],
+    };
+    writeFileSync(path.join(userData, "captures", "index.json"), JSON.stringify([record]));
+    return { userData, dir };
+  };
+  const index = (userData: string) => JSON.parse(readFileSync(path.join(userData, "captures", "index.json"), "utf8"))[0];
+  const openDetail = async (l: Launched) => {
+    await open(l);
+    await l.page.getByRole("button", { name: /^Open Pricing page/ }).click();
+    await l.page.getByTestId("capture-detail").waitFor();
+  };
+
+  it("editing a frame saves a copy and builds the contact sheet again", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByText(/nothing in the video file/).waitFor();
+    await l.page.getByRole("button", { name: "Edit picture at 0:02" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor();
+    await l.page.getByRole("button", { name: "Rectangle" }).click();
+    const box = (await l.page.getByLabel(/^Picture, 320 by 200/).boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 4 });
+    await l.page.mouse.up();
+    await l.page.getByRole("button", { name: "Save a copy" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    await l.page.getByText("0:02 (edited)").waitFor();
+    expect(existsSync(path.join(dir, "edit-f-00002000.png"))).toBe(true);
+    expect(Object.values(index(userData).edits)).toEqual(["edit-f-00002000.png"]);
+    // the scripted recorder builds a different sheet than the one that was seeded
+    expect(readFileSync(path.join(dir, "sheet.jpg")).equals(makePng(320, 200))).toBe(false);
+  });
+
+  it("trims the video, keeps the original, and reduces the frames and words to what is kept", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Trim video" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor();
+    const start1 = l.page.getByRole("slider", { name: "Start" });
+    await start1.focus();
+    for (let i = 0; i < 3; i++) await l.page.keyboard.press("ArrowRight");
+    await l.page.getByText("Start 0:02").waitFor();
+    await l.page.getByRole("button", { name: "Save trimmed video" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor({ state: "detached" });
+    await until(async () => index(userData).media === "video-trim.webm");
+    expect(index(userData)).toMatchObject({ trim: { startMs: 1500, endMs: 6000 }, frames: [path.join("frames", "f-00002000.jpg"), path.join("frames", "f-00004000.jpg")], words: [{ text: "kept" }] });
+    expect(readFileSync(path.join(dir, "video.webm"), "utf8")).toBe("video");
+    expect(existsSync(path.join(dir, "video-trim.webm"))).toBe(true);
+  });
+
+  it("Cancel leaves the video alone", async () => {
+    const { userData } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Trim video" }).click();
+    await l.page.getByRole("button", { name: "Cancel" }).click();
+    await l.page.getByRole("region", { name: "Trim video" }).waitFor({ state: "detached" });
+    expect(index(userData).media).toBe("video.webm");
+  });
+});
+
 describe("send to Voice chat", () => {
   const SEND = { ...ON, capture: { ...ON.capture, autoSend: "3s" } };
   const capsule = async (l: Launched) => (await hook<{ capsule: { kind: string; held?: boolean; canUndo?: boolean } | null }>(l, "state")).capsule;
