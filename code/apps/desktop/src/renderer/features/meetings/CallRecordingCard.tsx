@@ -111,7 +111,7 @@ export function CallRecordingCard() {
   useEffect(() => void attempt(meetings.devices()).then((d) => d && setDevices(d)), []);
   useEffect(() => void attempt(meetings.list()).then((r) => setRows((r ?? []).filter((x) => x.status === "failed"))), [tick, n]);
   if (!view) return failed ? <Banner tone="error">The call recording settings could not be loaded.</Banner> : null;
-  const patch = (p: MeetingsPatch) => void patchMeetings(p).then(set);
+  const patch = (p: MeetingsPatch) => void attempt(patchMeetings(p)).then((r) => r && set(r));
   return (
     <>
       <CallRows view={view} devices={devices} patch={patch} />
