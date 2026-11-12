@@ -118,6 +118,18 @@ describe("Settings > Dictation", () => {
       expect(t).toContain(s);
   });
 
+  it("lists the short list of models and points to the Engines page for the rest, unless a hidden one is installed or downloading", () => {
+    const more = (id: string, over: Partial<ModelView> = {}): ModelView => ({ ...parakeet, id: id as ModelView["id"], name: `Extra ${id}`, more: true, ...over });
+    const html = page(status({ models: [turbo, parakeet, more("tiny"), more("base"), more("small", { installed: true }), more("medium", { progress: { kind: "preparing" } })] }));
+    expect(html).not.toContain("Extra tiny");
+    expect(html).not.toContain("Extra base");
+    expect(html).toContain("Extra small");
+    expect(html).toContain("Extra medium");
+    expect(html).toContain("2 more models are on the Engines page.");
+    expect(page(status({ models: [turbo, parakeet, more("tiny")] }))).toContain("1 more model is on the Engines page.");
+    expect(page(status())).not.toContain("on the Engines page");
+  });
+
   it("marks the chosen model, offers Download for the one that is not on disk, and only the default carries Default", () => {
     const html = page(status());
     expect(html).toContain("Installed");

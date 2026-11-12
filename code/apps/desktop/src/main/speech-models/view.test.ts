@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import { DownloadError, STT_MODELS } from "@speakkit/engine";
+import { DownloadError, STT_MODELS, importedAsModel } from "@speakkit/engine";
 import { parseEnginesConfig } from "./test-support";
 import { buildView, type ViewInput } from "./view";
 
 const TURBO = "large-v3-turbo-q5_0";
 const PARAKEET = "parakeet-tdt-0.6b-v3-q4_0";
+const LARGE = "large-v3-q5_0";
+const RTX = { name: "NVIDIA RTX 3060", driver: "31.0.15.5123" };
+const CPU_ONLY = { platform: "win32", arch: "x64", avx2: true, cores: 8, memoryGb: 16 } as const;
 
 function input(over: Partial<ViewInput> = {}): ViewInput {
   return {
@@ -37,33 +40,116 @@ function input(over: Partial<ViewInput> = {}): ViewInput {
 describe("speech models view", () => {
   it("lists the model in use first, with its size labelled as file size data and the test language of each figure", () => {
     const v = buildView(input({ selected: PARAKEET, installed: new Set([TURBO, PARAKEET]) }));
-    expect(v.models.map((m) => [m.id, m.inUse, m.installed])).toEqual([
+    expect(v.models.slice(0, 3).map((m) => [m.id, m.inUse, m.installed])).toEqual([
       [PARAKEET, true, true],
       [TURBO, false, true],
+      ["tiny-q5_1", false, false],
     ]);
-    expect(v.models[0]!.accuracy).toEqual({ oneIn: 18, testLanguage: "en", source: "published English benchmark" });
+    expect(v.models[0]!.accuracy).toEqual([
+      { language: "en", wrong: 10, of: 79 },
+      { language: "de", wrong: 2, of: 90 },
+    ]);
+    expect(v.models[0]!.sha256).toBe("aa7fe2f5fb47d863ca23e8b1d490632d63a2599f515268b6d6bd656158dad45e");
     expect(v.models[0]!.memory).toBeUndefined(); // never shown unless measured on this computer
   });
 
   it("puts installed models before the ones that still need a download", () => {
-    expect(buildView(input()).models.map((m) => m.id)).toEqual([TURBO, PARAKEET]);
-    expect(buildView(input({ selected: PARAKEET, installed: new Set([TURBO]) })).models.map((m) => m.id)).toEqual([TURBO, PARAKEET]);
+    expect(
+      buildView(input())
+        .models.slice(0, 3)
+        .map((m) => m.id),
+    ).toEqual([TURBO, PARAKEET, "tiny-q5_1"]);
+    expect(
+      buildView(input({ selected: PARAKEET, installed: new Set([TURBO, "base"]) }))
+        .models.slice(0, 4)
+        .map((m) => m.id),
+    ).toEqual([TURBO, "base", PARAKEET, "tiny-q5_1"]);
   });
 
-  it("recommends the fast model for English when it is not installed, and says nothing when the model in use is recommended", () => {
-    expect(buildView(input()).recommendation).toEqual({ model: PARAKEET, language: "en" });
+  it("recommends the model measured best for the language when it is not installed, and says nothing when the model in use is recommended", () => {
+    expect(buildView(input()).recommendation).toEqual({ model: LARGE, language: "en" });
     expect(buildView(input({ language: "de" })).recommendation).toBeUndefined();
-    expect(buildView(input({ installed: new Set([TURBO, PARAKEET]) })).recommendation).toBeUndefined();
+    expect(buildView(input({ installed: new Set([TURBO, LARGE]) })).recommendation).toBeUndefined();
   });
 
-  it("has exactly one recommended model per language row and marks it on the card", () => {
+  it("recommends the fast model for English and German on a computer without a graphics card, and the same table as with one on an Apple silicon Mac", () => {
+    const cpu = buildView(input({ hardware: CPU_ONLY }));
+    expect(cpu.recommendation).toEqual({ model: PARAKEET, language: "en" });
+    expect(cpu.table.find((r) => r.language === "de")!.recommended).toBe(PARAKEET);
+    expect(cpu.table.find((r) => r.language === "ar")!.recommended).toBe("small-q5_1");
+    const mac = buildView(input({ hardware: { platform: "darwin", arch: "arm64", cores: 10, memoryGb: 16 } }));
+    expect(mac.table.find((r) => r.language === "en")!.recommended).toBe(LARGE);
+  });
+
+  it("has exactly one recommended model per language row, with its measured figure, and marks it on the card", () => {
     const v = buildView(input());
-    const turbo = v.models.find((m) => m.id === TURBO)!;
-    const parakeet = v.models.find((m) => m.id === PARAKEET)!;
-    expect(parakeet.recommendedFor).toEqual(["en"]);
-    expect(turbo.recommendedFor).toContain("de");
-    expect(turbo.recommendedFor).not.toContain("en");
-    expect(v.table.find((r) => r.language === "auto")).toEqual({ language: "auto", recommended: TURBO, alsoWorks: [] });
+    expect(v.models.find((m) => m.id === LARGE)!.recommendedFor).toEqual(["en"]);
+    expect(v.models.find((m) => m.id === PARAKEET)!.recommendedFor).toEqual([]);
+    expect(v.models.find((m) => m.id === TURBO)!.recommendedFor).toContain("de");
+    expect(v.models.find((m) => m.id === TURBO)!.recommendedFor).not.toContain("en");
+    expect(v.table.find((r) => r.language === "en")).toEqual({
+      language: "en",
+      recommended: LARGE,
+      alsoWorks: [
+        TURBO,
+        PARAKEET,
+        "tiny-q5_1",
+        "tiny",
+        "base-q5_1",
+        "base",
+        "small-q5_1",
+        "small",
+        "medium-q5_0",
+        "medium",
+        "large-v3",
+        "large-v3-turbo-q8_0",
+        "large-v3-turbo",
+        "distil-large-v3",
+        "parakeet-tdt-0.6b-v3-q8_0",
+        "parakeet-ultra-q8_0",
+      ],
+      figure: { language: "en", wrong: 7, of: 79 },
+      cpuOnly: PARAKEET,
+      cpuSeconds: 2.5,
+    });
+    expect(v.table.find((r) => r.language === "fr")).toEqual({
+      language: "fr",
+      recommended: TURBO,
+      alsoWorks: ["tiny-q5_1", "tiny", "base-q5_1", "base", "small-q5_1", "small", "medium-q5_0", "medium", "large-v3-q5_0", "large-v3", "large-v3-turbo-q8_0", "large-v3-turbo"],
+      cpuOnly: "base-q5_1",
+      cpuSeconds: 4.5,
+    });
+  });
+
+  it("recommends on a computer without a card the fastest usable model for a language no model is quick in, with its speed", () => {
+    const v = buildView(input({ hardware: CPU_ONLY, language: "ar" }));
+    expect(v.table.find((r) => r.language === "ar")).toMatchObject({ recommended: "small-q5_1", cpuOnly: "small-q5_1", cpuSeconds: 16.8 });
+    expect(v.models.find((m) => m.id === "small-q5_1")).toMatchObject({ speedSeconds: 16.8 });
+  });
+
+  it("gives the measured speed for the kind of computer: both on one with a card, the CPU's alone on one without, and says what the figures rest on", () => {
+    const turbo = (v: ReturnType<typeof buildView>) => v.models.find((m) => m.id === TURBO)!;
+    expect(turbo(buildView(input({ hardware: { ...CPU_ONLY, gpu: RTX } })))).toMatchObject({ speedSeconds: 0.2, speedOnCpuSeconds: 88 });
+    const cpu = turbo(buildView(input({ hardware: CPU_ONLY })));
+    expect(cpu.speedSeconds).toBe(88);
+    expect(cpu.speedOnCpuSeconds).toBeUndefined();
+    expect(turbo(buildView(input())).speedSeconds).toBe(0.2);
+    expect(buildView(input()).sample).toEqual({
+      recordings: { en: 4, de: 4, ar: 4 },
+      words: { en: 79, de: 90, ar: 64 },
+      machine: "NVIDIA GeForce RTX 4080 Laptop GPU and an Intel Core i9-13950HX processor (8 speech threads)",
+    });
+  });
+
+  it("shows a model the person added without figures", () => {
+    const custom = "custom-0123456789ab";
+    const catalog = [
+      ...STT_MODELS,
+      importedAsModel({ id: custom, name: "Mine", file: `${custom}.bin`, sha256: "0".repeat(64), bytes: 100_000_000, engine: "whisper", kind: "multilingual", addedAt: 1, sourcePath: "C:/mine.bin" }),
+    ];
+    const mine = buildView(input({ catalog, installed: new Set([custom]) })).models.find((m) => m.id === custom)!;
+    expect(mine.accuracy).toBeUndefined();
+    expect(mine.speedSeconds).toBeUndefined();
   });
 
   it("shows no model installed as an empty state and remembers a choice to go on without one", () => {
@@ -89,11 +175,14 @@ describe("speech models view", () => {
     expect(v.models.find((m) => m.id === TURBO)!.transfer).toEqual({ state: "preparing", fraction: 1 });
   });
 
-  it("blocks the accurate model on a computer that is too slow and points to the fast one", () => {
+  it("blocks the models that are too slow on the CPU of a weak computer and points to the floor model", () => {
     const v = buildView(input({ installed: new Set(), hardware: { platform: "win32", arch: "x64", avx2: true, cores: 2, memoryGb: 4 } }));
-    expect(v.models.find((m) => m.id === TURBO)!.blocked).toBe("This computer is too slow for the accurate model. Use the fast one.");
-    expect(v.models.find((m) => m.id === PARAKEET)!.blocked).toBeUndefined();
-    expect(v.floor?.message).toContain("too slow");
+    const message = "This computer is too slow for the accurate model. Use Parakeet v3.";
+    expect(v.models.find((m) => m.id === TURBO)!.blocked).toBe(message);
+    expect(v.models.find((m) => m.id === "large-v3")!.blocked).toBe(message);
+    expect(v.models.find((m) => m.id === "base")!.blocked).toBe(message);
+    for (const quick of [PARAKEET, "parakeet-tdt-0.6b-v3-q8_0", "parakeet-ultra-q8_0", "tiny-q5_1", "tiny"]) expect(v.models.find((m) => m.id === quick)!.blocked, quick).toBeUndefined();
+    expect(v.floor).toEqual({ message, useModel: PARAKEET });
   });
 
   it("blocks every model without AVX2 and says what is missing", () => {
@@ -122,7 +211,7 @@ describe("speech models view", () => {
     const v = buildView(input({ catalog, installed: new Set([TURBO]), missingFiles: new Set([custom]), measured: { id: TURBO, mb: 1100, setup: "graphics card, idle after loading" } }));
     expect(v.models.find((m) => m.id === custom)!.fileMissing).toBe(true);
     expect(v.models.find((m) => m.id === TURBO)!.memory).toEqual({ mb: 1100, setup: "graphics card, idle after loading" });
-    expect(v.models.map((m) => m.id)).toEqual([TURBO, custom, PARAKEET]);
+    expect(v.models.slice(0, 3).map((m) => m.id)).toEqual([TURBO, custom, PARAKEET]);
   });
 
   it("marks automatic switching rules whose model is not downloaded", () => {

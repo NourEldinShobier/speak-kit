@@ -1,5 +1,5 @@
 import { padTail, supportsPrompt, trailingPadMs, type Clip, type Transcriber, type TranscribeResult } from "@speakkit/dictation";
-import { EngineNotReadyError, STT_MODELS, resolveLanguage, type SttLanguage, type SttModel, type SttModelId, type TransferInfo, type Transcript } from "@speakkit/engine";
+import { EngineNotReadyError, FEATURED_STT_MODELS, STT_MODELS, resolveLanguage, type SttLanguage, type SttModel, type SttModelId, type TransferInfo, type Transcript } from "@speakkit/engine";
 import type { DictationModelId, ModelView } from "../../shared/dictation/contract";
 
 export interface SttStatus {
@@ -56,6 +56,7 @@ export function modelViews(models: readonly SttModel[], selected: DictationModel
       installed: state.isInstalled(id),
       selected: id === selected,
       languages: [...m.languages],
+      ...(m.origin === "builtin" && !FEATURED_STT_MODELS.has(m.id) && { more: true }),
       ...(progress && { progress }),
     };
   });

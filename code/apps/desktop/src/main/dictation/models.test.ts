@@ -24,12 +24,15 @@ describe("model manager", () => {
     expect(m.installed).toBe(true);
   });
 
-  it("lists both models with the selected one marked", async () => {
+  it("lists every catalog model with the selected one marked", async () => {
     const { m } = setup();
     await m.refresh();
-    expect(m.views().map((v) => [v.name, v.selected, v.installed])).toEqual([
+    const views = m.views();
+    expect(views).toHaveLength(17);
+    expect(views.slice(0, 3).map((v) => [v.name, v.selected, v.installed])).toEqual([
       ["Whisper Large v3 Turbo", true, true],
       ["Parakeet v3", false, true],
+      ["Whisper Tiny (5-bit)", false, false],
     ]);
   });
 

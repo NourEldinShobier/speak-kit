@@ -1,5 +1,5 @@
 import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
-import { accuracyText, languageName, sizeText } from "../../speech-text";
+import { accuracyText, languageName, secondsText, sizeText } from "../../speech-text";
 
 /** The languages the first screen lists; every other language is behind "Other language". */
 export const FIRST_LANGUAGES = ["en", "de", "ar", "auto"] as const;
@@ -16,11 +16,14 @@ export interface LanguageChoice {
   language: string;
   title: string;
   model: ModelCard;
-  /** "Uses Parakeet v3, 356 MB. Very fast, about 1 wrong word in 18." */
+  /** "Uses Parakeet v3, 356 MB. Very fast. 1 wrong word in 18 (English test)." */
   detail: string;
   /** The model is already on this computer (installed, or found on disk): nothing to download. */
   noDownload: boolean;
 }
+
+/** Ten seconds of speech that take longer than this to transcribe are called out on the language screen. */
+const SLOW_SECONDS = 3;
 
 const EXTRA: Record<string, string> = { auto: "Slower, handles mixed languages. It can mistranscribe close languages." };
 
@@ -30,8 +33,9 @@ export function languageChoice(view: SpeechModelsView, language: string, foundId
   const model = row && view.models.find((m) => m.id === row.recommended);
   if (!row || !model) return undefined;
   const speed = model.speedSeconds !== undefined && model.speedSeconds <= 1 ? "Very fast. " : "";
-  const quality = model.accuracy ? `${accuracyText(model).replace(/^About /, "")}.` : "";
-  const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}`.trim();
+  const quality = model.accuracy ? `${accuracyText(model, language).replace(/^About /, "")}.` : "";
+  const slow = model.speedSeconds !== undefined && model.speedSeconds > SLOW_SECONDS ? ` Slow on this computer: ${secondsText(model.speedSeconds).toLowerCase()} for ten seconds of speech.` : "";
+  const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}${slow}`.trim();
   return { language, title: languageName(language), model, detail, noDownload: model.installed || foundIds.includes(model.id) };
 }
 

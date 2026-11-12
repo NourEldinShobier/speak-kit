@@ -315,6 +315,12 @@ describe("languages and models", () => {
   it("keeps an automatic choice a person made earlier", () => {
     expect(parseConfig({ dictation: { language: "auto" } }).dictation.language).toBe("auto");
   });
+  it("keeps the model an earlier version saved and accepts the models added since", () => {
+    expect(parseConfig({ dictation: { model: "parakeet-tdt-0.6b-v3-q4_0" } }).dictation.model).toBe("parakeet-tdt-0.6b-v3-q4_0");
+    for (const id of ["tiny-q5_1", "base", "small-q5_1", "medium-q5_0", "large-v3", "large-v3-turbo-q8_0", "distil-large-v3", "parakeet-tdt-0.6b-v3-q8_0", "parakeet-ultra-q8_0"])
+      expect(parseConfig({ dictation: { model: id } }).dictation.model, id).toBe(id);
+    expect(parseConfig({ dictation: { model: "tiny.en" } }).dictation.model).toBe("large-v3-turbo-q5_0");
+  });
   it("accepts an added model by its fingerprint id and nothing else that is not in the catalog", () => {
     expect(parseConfig({ dictation: { model: "custom-0123456789ab" } }).dictation.model).toBe("custom-0123456789ab");
     expect(parseConfig({ dictation: { model: "custom-xyz" } }).dictation.model).toBe("large-v3-turbo-q5_0");

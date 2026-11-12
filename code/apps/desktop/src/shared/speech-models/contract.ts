@@ -8,6 +8,13 @@ export type { SpeechModelMethod } from "./channels";
 export { DEVICE_VALUES };
 export type DeviceValue = (typeof DEVICE_VALUES)[number];
 
+/** Wrong words out of all words of the test recordings in one language. Never invented: it is the count the model got on our recordings. */
+export interface AccuracyFigure {
+  language: string;
+  wrong: number;
+  of: number;
+}
+
 export interface ModelCard {
   id: string;
   name: string;
@@ -21,10 +28,14 @@ export interface ModelCard {
   languages: string[];
   /** Language codes for which this model is the recommended one. */
   recommendedFor: string[];
-  /** One wrong word in `oneIn`, measured on `testLanguage` (a code), from `source`. Never compared across languages. */
-  accuracy?: { oneIn: number; testLanguage: string; source: string };
-  /** Seconds for a ten second sentence. */
+  /** Measured on our test recordings, one figure per language the model was run on. Never compared across languages. */
+  accuracy?: AccuracyFigure[];
+  /** Seconds from the end of a ten second sentence to the text, measured, on the kind of device this computer has. */
   speedSeconds?: number;
+  /** The same on the CPU alone; absent when it is the figure above. */
+  speedOnCpuSeconds?: number;
+  /** SHA-256 of the model file. */
+  sha256: string;
   license: { name: string; url: string };
   origin: "builtin" | "custom";
   /** Memory while running, with the setup it was measured in; absent means not measured on this computer. */
@@ -47,6 +58,11 @@ export interface TableRow {
   language: string;
   recommended: string;
   alsoWorks: string[];
+  /** How the recommended model did on our recordings in this language; absent for a language that was not measured. */
+  figure?: AccuracyFigure;
+  /** The model recommended on a computer without a graphics card, and the measured seconds it takes there for ten seconds of speech. */
+  cpuOnly?: string;
+  cpuSeconds?: number;
 }
 
 export interface DeviceView {
@@ -79,10 +95,13 @@ export interface SpeechModelsView {
   /** Model id to name, for the table. */
   names: Record<string, string>;
   dictationLanguage: string;
+  /** What the figures rest on. */
+  sample: { recordings: Record<string, number>; words: Record<string, number>; machine: string };
   /** The model Speak Kit recommends for the dictation language when another one is in use. */
   recommendation?: { model: string; language: string };
   newer?: { id: string; name: string };
-  floor?: { message: string };
+  /** Why this computer is limited, and the model to use instead (the smallest one that is quick enough on its CPU and accurate enough). */
+  floor?: { message: string; useModel?: string };
   idleMinutes: number;
   device: DeviceView;
   disk: { total: number; folder: string };

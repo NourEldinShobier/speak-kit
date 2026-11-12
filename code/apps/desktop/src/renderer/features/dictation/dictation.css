@@ -788,3 +788,7 @@
     flex: 1;
   }
 }
+.dict-model__more {
+  margin: 0;
+  padding: 16px;
+}

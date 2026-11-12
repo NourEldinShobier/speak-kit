@@ -41,13 +41,18 @@ function ModelRow({ m }: { m: ModelView }) {
   );
 }
 
+/** "1 more model is on the Engines page." */
+export const moreLine = (n: number): string => (n === 1 ? "1 more model is on the Engines page." : `${n} more models are on the Engines page.`);
+
 /** Speech model card: pick an installed model, download another, or cancel a download. */
 export function ModelList({ status }: { status: DictationStatus }) {
+  const shown = status.models.filter((m) => !m.more || m.installed || m.selected || m.progress);
   return (
     <SettingsSection title="Speech model">
-      {status.models.map((m) => (
+      {shown.map((m) => (
         <ModelRow key={m.id} m={m} />
       ))}
+      {shown.length < status.models.length && <p className="lm-row__desc dict-model__more">{moreLine(status.models.length - shown.length)}</p>}
     </SettingsSection>
   );
 }

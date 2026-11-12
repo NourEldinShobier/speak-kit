@@ -25,13 +25,16 @@ export function checkFloor(hw: Hardware): FloorVerdict {
 const MIN_CORES = 4;
 const MIN_MEMORY_GB = 8;
 
-/** The accurate model on the CPU alone needs a reasonably strong machine; with a graphics card any machine passes. */
-export function accurateModelFits(hw: Hardware): { fits: true } | { fits: false; reason: string } {
-  if (hw.gpu && !hw.gpu.integrated) return { fits: true };
+/** Graphics that are quick for speech: a discrete card (an integrated one shares memory with the CPU and is about as slow), or the GPU of an Apple silicon Mac, which the macOS engine uses through Metal. */
+export const hasFastGraphics = (hw: Hardware | undefined): boolean => !!hw && ((hw.platform === "darwin" && hw.arch === "arm64") || (!!hw.gpu && !hw.gpu.integrated));
+
+/** The accurate model on the CPU alone needs a reasonably strong machine; with a graphics card any machine passes. `use` names the model to point to. */
+export function accurateModelFits(hw: Hardware, use = "the fast one"): { fits: true } | { fits: false; reason: string } {
+  if (hasFastGraphics(hw)) return { fits: true };
   const slowCpu = hw.cores !== undefined && hw.cores < MIN_CORES;
   const lowMemory = hw.memoryGb !== undefined && hw.memoryGb < MIN_MEMORY_GB;
   if (!slowCpu && !lowMemory) return { fits: true };
-  return { fits: false, reason: "This computer is too slow for the accurate model. Use the fast one." };
+  return { fits: false, reason: `This computer is too slow for the accurate model. Use ${use}.` };
 }
 
 /** The label of the device actually in use, from what the engine reports. */

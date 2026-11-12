@@ -325,3 +325,27 @@
 .sk-compare tr:last-child > * {
   border-bottom: 0;
 }
+.sk-compare-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.sk-compare-pick legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sk-model__hash {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.sk-compare-pick__lead {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

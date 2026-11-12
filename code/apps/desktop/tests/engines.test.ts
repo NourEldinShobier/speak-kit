@@ -17,6 +17,9 @@ afterEach(async () => {
 });
 
 const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+/** The computer the spec pretends to run on, so the recommendations do not depend on the machine that runs it. */
+const WITH_CARD = { SPEAKKIT_HARDWARE: JSON.stringify({ platform: "win32", arch: "x64", avx2: true, cores: 16, memoryGb: 32, gpu: { name: "NVIDIA GeForce RTX 3060", driver: "31.0.15.5123" } }) };
+const CPU_ONLY = { SPEAKKIT_HARDWARE: JSON.stringify({ platform: "win32", arch: "x64", avx2: true, cores: 8, memoryGb: 16 }) };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 const open = async (l: Launched) => {
   await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Engines" }).click();
@@ -25,16 +28,18 @@ const open = async (l: Launched) => {
 const shot = (l: Launched, name: string) => (process.env.SPEAKKIT_SHOTS ? l.page.screenshot({ path: path.join(process.env.SPEAKKIT_SHOTS, `${name}.png`) }) : Promise.resolve(undefined));
 
 describe("Engines page", () => {
-  it("lists both models with the one in use first, the language table, performance and disk space", async () => {
-    const l = await start({ config: DONE });
+  it("lists every model with the one in use first, the language table, performance and disk space", async () => {
+    const l = await start({ config: DONE, env: WITH_CARD });
     await open(l);
     const cards = l.page.locator("[data-testid^=model-card-]");
-    expect(await cards.count()).toBe(2);
+    expect(await cards.count()).toBe(17);
     expect(await cards.first().getAttribute("data-model")).toBe("large-v3-turbo-q5_0");
     const first = cards.first();
     expect(await first.getByText("In use").count()).toBe(1);
     expect(await first.getByText("File size", { exact: true }).count()).toBe(1);
-    expect(await first.getByText("About 1 wrong word in 25 (English test)").count()).toBe(1);
+    expect(await first.getByText("About 1 wrong word in 6 (English test)").count()).toBe(1);
+    expect(await first.getByText("Under a second with a graphics card, about 88 seconds on the CPU alone").count()).toBe(1);
+    expect(await l.page.getByText(/^Measured by us on a small sample: 4 English \(79 words\), 4 German \(90 words\) and 4 Arabic \(64 words\) recordings/).count()).toBe(2); // under the cards and under the table
     expect(await l.page.getByRole("heading", { name: "Best model for each language" }).count()).toBe(1);
     expect(await l.page.getByRole("table").getByRole("row").count()).toBeGreaterThan(5);
     expect(await l.page.getByRole("heading", { name: "Performance" }).count()).toBe(1);
@@ -50,24 +55,90 @@ describe("Engines page", () => {
     expect(await height(l.page.getByRole("combobox", { name: "Language" }))).toBe(36);
     expect(await height(l.page.getByRole("combobox", { name: "Sort" }))).toBe(36);
     const first = l.page.locator("[data-testid^=model-card-]").first();
-    expect(await first.getByRole("progressbar", { name: /^Accuracy of / }).getAttribute("aria-valuenow")).toBe("96");
+    expect(await first.getByRole("progressbar", { name: /^Accuracy of / }).getAttribute("aria-valuenow")).toBe("84");
     expect(await first.getByRole("progressbar", { name: /^Speed of / }).count()).toBe(1);
     expect(await l.page.locator("[data-engine=kokoro]").getByText("Ready").count()).toBe(1);
   });
 
-  it("Compare models opens a table with one column per model, the test language in each accuracy cell, and closes with Escape", async () => {
-    const l = await start({ config: DONE });
+  it("Compare models starts with four models, one test language named in every accuracy cell, lets the person change both, and closes with Escape", async () => {
+    const l = await start({ config: DONE, env: WITH_CARD });
     await open(l);
     await l.page.getByRole("button", { name: "Compare models" }).click();
     const table = l.page.getByRole("region", { name: "Model comparison" });
     await table.waitFor();
-    expect(await table.getByRole("columnheader").allTextContents()).toEqual(["", "Whisper Large v3 Turbo", "Parakeet v3"]);
+    expect(await table.getByRole("columnheader").allTextContents()).toEqual(["", "Whisper Large v3 Turbo", "Whisper Large v3 (5-bit)", "Parakeet v3", "Whisper Tiny (5-bit)"]);
     const accuracy = table.getByRole("row", { name: /^Accuracy/ });
-    expect(await accuracy.getByRole("cell").allTextContents()).toEqual(["About 1 wrong word in 25 (English test)", "About 1 wrong word in 18 (English test)"]);
+    expect(await accuracy.getByRole("cell").allTextContents()).toEqual([
+      "About 1 wrong word in 6 (English test)",
+      "About 1 wrong word in 11 (English test)",
+      "About 1 wrong word in 8 (English test)",
+      "About 1 wrong word in 4 (English test)",
+    ]);
+    // four are picked: the others cannot be added until one is taken out
+    expect(await l.page.getByRole("checkbox", { name: "Whisper Base (5-bit)" }).isDisabled()).toBe(true);
+    const pick = (name: string) => l.page.getByRole("dialog").locator("label", { hasText: name });
+    await pick("Whisper Tiny (5-bit)").click();
+    expect(await l.page.getByRole("checkbox", { name: "Whisper Tiny (5-bit)" }).isChecked()).toBe(false);
+    await pick("Whisper Base (5-bit)").click();
+    expect(await table.getByRole("columnheader").allTextContents()).toEqual(["", "Whisper Large v3 Turbo", "Whisper Large v3 (5-bit)", "Parakeet v3", "Whisper Base (5-bit)"]);
+    await l.page.getByRole("combobox", { name: "Test language" }).click();
+    await l.page.getByRole("option", { name: "Arabic" }).click();
+    expect(await accuracy.getByRole("cell").allTextContents()).toEqual([
+      "About 1 wrong word in 21 (Arabic test)",
+      "About 1 wrong word in 13 (Arabic test)",
+      "Not measured in Arabic",
+      "About 1 wrong word in 2 (Arabic test)",
+    ]);
+    expect(
+      await l.page
+        .getByRole("dialog")
+        .getByText(/Wrong-word figures are for one test language at a time/)
+        .count(),
+    ).toBe(1);
     await l.page.waitForTimeout(400); // the dialog fades in
     await shot(l, "engines-compare");
     await l.page.keyboard.press("Escape");
     await table.waitFor({ state: "detached" });
+  });
+
+  it("the language table names each language's model with its measured wrong words, and what runs without a graphics card and how long it takes", async () => {
+    const l = await start({ config: DONE, env: WITH_CARD });
+    await open(l);
+    const row = (language: string) => l.page.getByRole("row", { name: new RegExp(`^${language} `) });
+    await row("French").waitFor();
+    expect(await row("English").getByRole("cell").allTextContents()).toEqual([
+      "Whisper Large v3 (5-bit)",
+      "About 1 wrong word in 11 (English test)",
+      "Parakeet v3, about 2.5 seconds",
+      expect.stringContaining("Whisper Large v3 Turbo"),
+    ]);
+    expect(await row("French").getByRole("cell").allTextContents()).toEqual([
+      "Whisper Large v3 Turbo",
+      "Not measured in this language",
+      "Whisper Base (5-bit), about 4.5 seconds",
+      expect.stringContaining("Whisper Tiny"),
+    ]);
+  });
+
+  it("on a computer without a graphics card the English and German models are Parakeet, and a weak computer is pointed to it", async () => {
+    const l = await start({ config: DONE, env: CPU_ONLY });
+    await open(l);
+    const first = l.page.locator("[data-testid^=model-card-]").first();
+    await first.getByText("About 88 seconds").waitFor();
+    expect(
+      await l.page
+        .getByRole("row", { name: /^English / })
+        .getByRole("cell")
+        .first()
+        .textContent(),
+    ).toBe("Parakeet v3");
+    expect(
+      await l.page
+        .getByRole("row", { name: /^Arabic / })
+        .getByRole("cell")
+        .first()
+        .textContent(),
+    ).toBe("Whisper Large v3 Turbo");
   });
 
   it("the Downloaded filter keeps the installed models and says how many are hidden", async () => {
@@ -138,21 +209,21 @@ describe("Setup: dictation step", () => {
   });
 
   it("asks for a language first, pre-selects the system language and downloads nothing when it is chosen", async () => {
-    const l = await start({ config: { setupDone: false, setupStep: 1, preferredPort: 0 } });
+    const l = await start({ config: { setupDone: false, setupStep: 1, preferredPort: 0 }, env: WITH_CARD });
     await l.page
       .getByRole("button", { name: /Continue/ })
       .first()
       .click();
     await l.page.getByRole("heading", { name: "Choose your language" }).waitFor();
     expect(await l.page.getByRole("radio", { name: "English" }).isChecked()).toBe(true);
-    expect(await l.page.getByText(/Uses Parakeet v3, 356 MB/).count()).toBe(1);
+    expect(await l.page.getByText("Uses Whisper Large v3 (5-bit), 1.1 GB. Very fast. 1 wrong word in 11 (English test).").count()).toBe(1);
     expect(await l.page.getByText(/Uses Whisper Large v3 Turbo, 574 MB/).count()).toBeGreaterThan(0);
     await shot(l, "setup-language");
     await l.page.locator("label", { hasText: "German" }).first().click();
     expect(await l.page.getByRole("radio", { name: "German" }).isChecked()).toBe(true);
     await l.page.getByRole("button", { name: "Continue" }).click();
     await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor();
-    expect(configOf(l).dictation.language).toBe("de");
+    await expect.poll(() => configOf(l).dictation.language).toBe("de");
   });
 
   it("Skip dictation goes on to the browser step and remembers that no model was chosen", async () => {
@@ -183,7 +254,7 @@ describe("About: Run setup again", () => {
       .first()
       .waitFor();
     await expect.poll(() => configOf(l).setupDone).toBe(false);
-    expect(configOf(l).dictation.language).toBe("de");
+    await expect.poll(() => configOf(l).dictation.language).toBe("de");
   });
 });
 
