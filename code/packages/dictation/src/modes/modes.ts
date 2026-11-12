@@ -57,7 +57,7 @@ export function setApps(modes: readonly Mode[], id: string, apps: readonly strin
   });
 }
 
-/** A site as the person typed it ("https://www.Mail.Google.com/inbox") reduced to its host name; "" when it is not a host name. */
+/** A site as the person typed it ("https://Example.com/inbox") reduced to its host name; "" when it is not a host name. */
 export function normalizeSite(input: string): string {
   const text = input.trim();
   if (!text || /\s/.test(text)) return "";
@@ -67,7 +67,10 @@ export function normalizeSite(input: string): string {
   } catch {
     return "";
   }
-  host = host.toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
+  host = host
+    .toLowerCase()
+    .replace(/\.$/, "")
+    .replace(/^www\./, "");
   return host === "localhost" || /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,}$/.test(host) ? host : "";
 }
 
@@ -75,7 +78,22 @@ export function normalizeSite(input: string): string {
 export const siteMatches = (site: string, host: string): boolean => host === site || host.endsWith(`.${site}`);
 
 /** Browsers that can report the page in front (the extension runs in these). Names as `exeKey` gives them, plus macOS bundle ids. */
-const PAGE_BROWSERS = new Set(["chrome", "msedge", "brave", "vivaldi", "opera", "arc", "chromium", "com.google.chrome", "com.microsoft.edgemac", "com.brave.browser", "com.vivaldi.vivaldi", "com.operasoftware.opera", "company.thebrowser.browser", "org.chromium.chromium"]);
+const PAGE_BROWSERS = new Set([
+  "chrome",
+  "msedge",
+  "brave",
+  "vivaldi",
+  "opera",
+  "arc",
+  "chromium",
+  "com.google.chrome",
+  "com.microsoft.edgemac",
+  "com.brave.browser",
+  "com.vivaldi.vivaldi",
+  "com.operasoftware.opera",
+  "company.thebrowser.browser",
+  "org.chromium.chromium",
+]);
 export const reportsPages = (exe: string | undefined): boolean => !!exe && PAGE_BROWSERS.has(exeKey(exe));
 
 /** Sites belong to one mode: giving them to a mode takes them from any other. The default mode lists no sites. */

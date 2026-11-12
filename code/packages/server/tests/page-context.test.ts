@@ -29,7 +29,8 @@ describe("POST /v1/page-context", () => {
   it("refuses a body that is not a host name, a path or text that is too long, and does not report it", async () => {
     const seen: string[] = [];
     ctx = await start({}, undefined, { pageContext: { report: (h) => void seen.push(h) } });
-    for (const body of [{ host: "https://a.com/x" }, { host: "A.com" }, { host: 5 }, { host: "a".repeat(254) }, {}, [], "not json"]) expect((await post(ctx, body)).status, JSON.stringify(body)).toBe(400);
+    for (const body of [{ host: "https://a.com/x" }, { host: "A.com" }, { host: 5 }, { host: "a".repeat(254) }, {}, [], "not json"])
+      expect((await post(ctx, body)).status, JSON.stringify(body)).toBe(400);
     expect(seen).toEqual([]);
   });
 

@@ -13,13 +13,9 @@ interface PageReporterDeps {
 
 /** The host name of a page address; "" for anything that is not an ordinary website. */
 export function hostOf(url: string | undefined): string {
-  if (!url) return "";
-  try {
-    const u = new URL(url);
-    return (u.protocol === "http:" || u.protocol === "https:") && /^[a-z0-9.-]+$/.test(u.hostname) ? u.hostname : "";
-  } catch {
-    return "";
-  }
+  if (!url || !URL.canParse(url)) return "";
+  const u = new URL(url);
+  return (u.protocol === "http:" || u.protocol === "https:") && /^[a-z0-9.-]+$/.test(u.hostname) ? u.hostname : "";
 }
 
 export function createPageReporter(deps: PageReporterDeps) {

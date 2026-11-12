@@ -1,4 +1,4 @@
-import { createPageReporter, hostOf, postPage } from "../../features/connection/page-report";
+import { createPageReporter, hostOf, postPage } from "../../features/connection";
 import { getToken, loadSettings } from "../../features/settings";
 
 const reporter = createPageReporter({
@@ -7,9 +7,11 @@ const reporter = createPageReporter({
 });
 
 /** The website in the browser window that has focus; "" when the browser is not the window in front. */
-async function frontHost(): Promise<string> {
-  const w = await chrome.windows.getLastFocused({ populate: true, windowTypes: ["normal"] }).catch(() => undefined);
-  return w?.focused ? hostOf(w.tabs?.find((t) => t.active)?.url) : "";
+function frontHost(): Promise<string> {
+  return chrome.windows.getLastFocused({ populate: true, windowTypes: ["normal"] }).then(
+    (w) => (w.focused ? hostOf(w.tabs?.find((t) => t.active)?.url) : ""),
+    () => "", // no window to ask: nothing is in front
+  );
 }
 
 const ALARM = "page-context";
