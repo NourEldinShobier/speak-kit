@@ -9,6 +9,7 @@ import {
   entriesText,
   entryLabel,
   etaText,
+  versionsCapNote,
   expiryText,
   focusAfterDelete,
   groupByDay,
@@ -252,5 +253,12 @@ describe("timingTags", () => {
   it("has nothing for an entry from before timings were stored", () => {
     expect(timingTags({})).toEqual([]);
     expect(timingTags({ timings: {} })).toEqual([]);
+  });
+});
+
+describe("versionsCapNote", () => {
+  it("is empty below five versions and warns at five", () => {
+    expect(versionsCapNote(4)).toBe("");
+    expect(versionsCapNote(5)).toBe("Oldest other version is replaced.");
   });
 });

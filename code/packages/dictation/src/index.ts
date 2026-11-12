@@ -6,7 +6,7 @@
 export { createDictation } from "./dictation";
 export { defaultSettings, type InsertMode, type Mode, type Replacement, type Retention, type Settings } from "./settings";
 export type { HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus, RemoveReport, Version } from "./history";
-export { MAX_AUDIO_BYTES, planEviction, readStoredHistory, timeLeft, WINDOW_MS } from "./history";
+export { MAX_AUDIO_BYTES, MAX_VERSIONS, planEviction, readStoredHistory, timeLeft, WINDOW_MS } from "./history";
 export { historyStats, normalize, rank, type HistoryStats } from "./history-search";
 export * from "./mic";
 export * from "./capture";

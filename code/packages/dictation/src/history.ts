@@ -163,6 +163,9 @@ interface Deps {
   terms?: () => readonly Term[];
 }
 
+/** Versions kept per entry: the original plus four more. */
+export const MAX_VERSIONS = 5;
+
 class Store implements History {
   private entries: HistoryEntry[] = [];
   private loading: Promise<void> | undefined;
@@ -325,8 +328,16 @@ class Store implements History {
     // The first version is what dictation made, so it exists before any other does.
     const first: Version = { id: "v1", model: e.model ?? "", at: e.at, text: e.versions?.[0]?.text ?? e.text, ms: 0 };
     const all = e.versions ?? [first];
-    const vid = `v${all.length + 1}`;
-    await this.patch(id, { versions: [...all, { ...v, id: vid }], version: e.version ?? first.id });
+    const vid = `v${Math.max(...all.map((x) => Number(x.id.slice(1)) || 0)) + 1}`;
+    const current = e.version ?? first.id;
+    let kept = all;
+    // At the cap the oldest version that is neither the original nor the one in use makes room.
+    if (all.length >= MAX_VERSIONS) {
+      const drop = all.findIndex((x) => x.id !== first.id && x.id !== current);
+      kept = drop < 0 ? all : all.filter((_, i) => i !== drop);
+      if (kept.length >= MAX_VERSIONS) return undefined;
+    }
+    await this.patch(id, { versions: [...kept, { ...v, id: vid }], version: current });
     return vid;
   }
 
