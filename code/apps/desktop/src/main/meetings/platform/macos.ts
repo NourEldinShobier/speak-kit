@@ -134,6 +134,19 @@ export interface MacDeps {
   audio: () => Promise<CoreAudio>;
 }
 
+async function namedUsers(exec: Exec, pids: number[]): Promise<MicUser[]> {
+  const users: MicUser[] = [];
+  for (const pid of pids) {
+    try {
+      const path = (await exec("/bin/ps", ["-p", String(pid), "-o", "comm="], 3000)).trim();
+      if (path) users.push({ pid, exe: appNameOfPath(path) });
+    } catch {
+      /* the process ended */
+    }
+  }
+  return users;
+}
+
 /**
  * macOS: CoreAudio says which processes run an input (14.2 and later), `ps` names them, and System Events gives window titles (it needs Accessibility, which
  * dictation asks for anyway; without it only native apps are found, by program name). The system's own sound is asked of the engine; when it gives none the recording says so and keeps the microphone track. The
@@ -163,15 +176,7 @@ export function macosPlatform(d: MacDeps): MeetingsPlatform {
     async probe(): Promise<Probe> {
       const pids = await input();
       if (!pids.length) return { micUsers: [], windows: [] };
-      const micUsers: MicUser[] = [];
-      for (const pid of pids) {
-        try {
-          const path = (await d.exec("/bin/ps", ["-p", String(pid), "-o", "comm="], 3000)).trim();
-          if (path) micUsers.push({ pid, exe: appNameOfPath(path) });
-        } catch {
-          /* the process ended */
-        }
-      }
+      const micUsers = await namedUsers(d.exec, pids);
       let windows: OpenWindow[] = [];
       try {
         windows = parseWindows(await d.exec("/usr/bin/osascript", ["-l", "JavaScript", "-e", WINDOWS_SCRIPT], 8000));

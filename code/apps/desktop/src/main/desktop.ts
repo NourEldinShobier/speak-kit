@@ -152,14 +152,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   );
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
-  const transcripts = setupTranscripts(ctx, {
-    distDir: o.distDir,
-    parent: o.parent,
-    dictation,
-    test: o.test,
-    onChange: () => tray.refresh(),
-    notes: transcriptNotes({ on: () => ctx.config.meetings.summary, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) }),
-  });
+  const notes = transcriptNotes({ on: () => ctx.config.meetings.summary, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
+  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
