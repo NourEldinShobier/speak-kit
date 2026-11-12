@@ -9,6 +9,8 @@ export const INK_FADE_MS = [1000, 3000, 0] as const;
 /** How long the capsule counts down before a finished recording goes to the voice chat. */
 export const AUTO_SEND = ["off", "3s", "5s", "10s"] as const;
 export const autoSendSeconds = (a: (typeof AUTO_SEND)[number]): number => (a === "off" ? 0 : Number.parseInt(a, 10));
+/** dictation: the whole track after the recording; live: the same model while the recording goes on; windows: the recognizer that comes with Windows; command: a program of your own. */
+export const NARRATION_ENGINES = ["dictation", "live", "windows", "command"] as const;
 export const RETENTION_DAYS = [7, 30, 90, 0] as const;
 export const EXPERIMENT_IDS = ["screenshots", "recording", "replay", "zoomExport", "agentContext", "pageContext", "speechEngines", "playground"] as const;
 export type ExperimentId = (typeof EXPERIMENT_IDS)[number];
@@ -36,8 +38,8 @@ export const CaptureConfigSchema = v.object({
   folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
   retentionDays: v.fallback(v.picklist(RETENTION_DAYS), 30),
   autoSend: v.fallback(v.picklist(AUTO_SEND), "off"),
-  /** Which speech engine makes the words of a capture: the model dictation loads, or a command of your own (needs the speech engines experiment). */
-  narrationEngine: v.fallback(v.picklist(["dictation", "command"]), "dictation"),
+  /** Which speech engine makes the words of a capture: the model dictation loads, or the same model while recording, the recognizer of Windows, or a command of your own (the last three need the speech engines experiment). */
+  narrationEngine: v.fallback(v.picklist(NARRATION_ENGINES), "dictation"),
   narrationCommand: v.fallback(v.pipe(v.string(), v.maxLength(500)), ""),
   /** What the log of input events holds: events (click, key counts), never typed text. */
   inputLog: v.fallback(v.picklist(["events", "off"]), "events"),
@@ -62,7 +64,7 @@ export const CapturePatchSchema = v.partial(
     folder: v.pipe(v.string(), v.maxLength(1024)),
     retentionDays: v.picklist(RETENTION_DAYS),
     autoSend: v.picklist(AUTO_SEND),
-    narrationEngine: v.picklist(["dictation", "command"]),
+    narrationEngine: v.picklist(NARRATION_ENGINES),
     narrationCommand: v.pipe(v.string(), v.maxLength(500)),
     inputLog: v.picklist(["events", "off"]),
     consented: v.boolean(),

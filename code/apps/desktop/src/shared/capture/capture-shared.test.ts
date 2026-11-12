@@ -19,6 +19,12 @@ describe("capture settings", () => {
     expect(v.safeParse(CapturePatchSchema, { narrationCommand: "x".repeat(501) }).success).toBe(false);
     expect(v.safeParse(CapturePatchSchema, { narrationEngine: "command", narrationCommand: "stt {audio}", shiftInk: true }).success).toBe(true);
   });
+  it("keeps the live and Windows speech engines, and refuses an engine that does not exist", () => {
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "live" }).narrationEngine).toBe("live");
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "windows" }).narrationEngine).toBe("windows");
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "windows" }).success).toBe(true);
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "cloud" }).success).toBe(false);
+  });
   it("turns the setting into seconds", () => {
     expect(AUTO_SEND.map(autoSendSeconds)).toEqual([0, 3, 5, 10]);
   });

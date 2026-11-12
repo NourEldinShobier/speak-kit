@@ -19,7 +19,7 @@ export const SAMPLE_RATE = 16_000;
 export const TIMEOUT_MS = 120_000;
 export const MAX_REPLY_CHARS = 4000;
 
-const wavOf = (pcm: Int16Array): Buffer => Buffer.concat([wavHeader(SAMPLE_RATE, pcm.byteLength), Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)]);
+export const wavOf = (pcm: Int16Array): Buffer => Buffer.concat([wavHeader(SAMPLE_RATE, pcm.byteLength), Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)]);
 
 /**
  * A speech engine of your own: the stretch of speech is written to a WAV file (16 kHz, mono), the command from the settings is started with that
@@ -42,10 +42,10 @@ export function createCommandNarrator(d: CommandNarratorDeps): Narrator {
   };
 }
 
-/** The speech model of dictation, or the command when the speech engines experiment is on and the command is chosen. Read at each call, so a change applies to the next capture. */
-export function chooseNarrator(chosen: () => boolean, parts: { dictation: Narrator; command: Narrator }): Narrator {
+/** The speech model of dictation, or the recognizer of Windows or the command when the speech engines experiment is on and it is chosen. Read at each call, so a change applies to the next capture. */
+export function chooseNarrator(engine: () => "dictation" | "windows" | "command", parts: { dictation: Narrator; windows: Narrator; command: Narrator }): Narrator {
   return {
-    ready: () => (chosen() ? parts.command : parts.dictation).ready(),
-    transcribe: (pcm) => (chosen() ? parts.command : parts.dictation).transcribe(pcm),
+    ready: () => parts[engine()].ready(),
+    transcribe: (pcm) => parts[engine()].transcribe(pcm),
   };
 }

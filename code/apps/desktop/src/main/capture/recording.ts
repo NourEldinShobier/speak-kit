@@ -1,3 +1,4 @@
+import type { LiveSession } from "./live-narrator";
 import type { TimeRange } from "./page-context";
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
@@ -55,6 +56,8 @@ export interface RecordingDeps {
   noticeParams(): NoticeParams;
   /** The agent context text, or undefined when the experiment is off. */
   context?(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
+  /** Words made while the recording goes on (the live engine); absent or inactive, the whole track is transcribed afterwards. */
+  live?: LiveSession;
   /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
   events?(): InputEvent[];
 }
@@ -104,6 +107,7 @@ class RecorderPorts {
     }
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
+    d.live?.begin();
   }
 
   async swap(id: string, target: Target): Promise<void> {
@@ -141,6 +145,7 @@ class RecorderPorts {
     await this.#d.host.call({ op: "abort" });
     // A capture that began meanwhile is not this one's to clear.
     if (this.#current && this.#current.id !== id) return;
+    this.#d.live?.cancel();
     this.#d.hideOwnWindows(false);
     this.#current = undefined;
   }
@@ -178,7 +183,11 @@ export function createSessionPorts(d: RecordingDeps): SessionPorts {
 }
 
 /** Words of the microphone track. Every stretch with any sound goes to the model; quiet speech is never dropped before it. */
-export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log">, media: Media): Promise<Word[] | null> {
+export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log" | "live">, media: Media): Promise<Word[] | null> {
+  if (d.live?.active()) {
+    const words = await d.live.finish();
+    return words && correctLag(words, AUDIO_LAG_MS);
+  }
   if (!media.pcm?.length || !d.narrator.ready()) return null;
   const words: Word[] = [];
   for (const seg of findSegments(media.pcm, { rate: SAMPLE_RATE })) {

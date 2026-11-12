@@ -18,6 +18,7 @@ export interface RecorderHolderDeps {
   /** The capture that is on now. */
   id(): string | undefined;
   log(line: string): void;
+  audio?(chunk: Int16Array): void;
 }
 
 /** The recorder window, opened the first time a capture needs it, with what it streams going to the files of the capture that is on. */
@@ -34,7 +35,7 @@ export class RecorderHolder {
     const d = this.#d;
     const page = () => openRecorderWindow(capturePage(d.distDir, "capture-recorder"), d.narration);
     const host = d.recorder ?? createRecorderHost({ ipcMain, open: page, timeoutMs: 10_000 });
-    host.onData(createDataSink({ fence: d.fence, writes: d.writes, bundle: d.bundle, id: d.id, log: d.log }));
+    host.onData(createDataSink({ fence: d.fence, writes: d.writes, bundle: d.bundle, id: d.id, log: d.log, ...(d.audio && { audio: d.audio }) }));
     return (this.#host = host);
   }
 
