@@ -26,7 +26,7 @@ export const MEASURED = {
   medium: { wrong: { en: { wrong: 12, of: 79 }, de: { wrong: 3, of: 90 }, ar: { wrong: 5, of: 64 } }, ms: { gpu: { short: 246, long: 479 }, cpu: { short: 66237, long: 69303 } } },
   "large-v3-q5_0": { wrong: { en: { wrong: 7, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 5, of: 64 } }, ms: { gpu: { short: 341, long: 615 }, cpu: { short: 100302, long: 103933 } } },
   "large-v3": { wrong: { en: { wrong: 8, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 5, of: 64 } }, ms: { gpu: { short: 396, long: 733 }, cpu: { short: 131113, long: 137070 } } },
-  "large-v3-turbo-q5_0": { wrong: { en: { wrong: 13, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 3, of: 64 } }, ms: { gpu: { short: 210, long: 281 }, cpu: { short: 88954, long: 90205 } } },
+  "large-v3-turbo-q5_0": { wrong: { en: { wrong: 13, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 3, of: 64 } }, ms: { gpu: { short: 210, long: 281 }, cpu: { short: 88824, long: 87047 } } },
   "large-v3-turbo-q8_0": { wrong: { en: { wrong: 12, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 3, of: 64 } }, ms: { gpu: { short: 209, long: 280 }, cpu: { short: 35132, long: 35645 } } },
   "large-v3-turbo": { wrong: { en: { wrong: 12, of: 79 }, de: { wrong: 1, of: 90 }, ar: { wrong: 3, of: 64 } }, ms: { gpu: { short: 205, long: 296 }, cpu: { short: 114492, long: 116055 } } },
   "distil-large-v3": { wrong: { en: { wrong: 13, of: 79 } }, ms: { gpu: { short: 212, long: 267 }, cpu: { short: 113957, long: 110914 } } },

@@ -38,7 +38,7 @@ describe("Engines page", () => {
     expect(await first.getByText("In use").count()).toBe(1);
     expect(await first.getByText("File size", { exact: true }).count()).toBe(1);
     expect(await first.getByText("About 1 wrong word in 6 (English test)").count()).toBe(1);
-    expect(await first.getByText("Under a second with a graphics card, about 90 seconds on the CPU alone").count()).toBe(1);
+    expect(await first.getByText("Under a second with a graphics card, about 88 seconds on the CPU alone").count()).toBe(1);
     expect(await l.page.getByText(/^Measured by us on a small sample: 4 English \(79 words\), 4 German \(90 words\) and 4 Arabic \(64 words\) recordings/).count()).toBe(2); // under the cards and under the table
     expect(await l.page.getByRole("heading", { name: "Best model for each language" }).count()).toBe(1);
     expect(await l.page.getByRole("table").getByRole("row").count()).toBeGreaterThan(5);
@@ -115,7 +115,7 @@ describe("Engines page", () => {
     expect(await row("French").getByRole("cell").allTextContents()).toEqual([
       "Whisper Large v3 Turbo",
       "Not measured in this language",
-      "Whisper Large v3 Turbo, about 90 seconds",
+      "Whisper Base (5-bit), about 4.5 seconds",
       expect.stringContaining("Whisper Tiny"),
     ]);
   });
@@ -124,7 +124,7 @@ describe("Engines page", () => {
     const l = await start({ config: DONE, env: CPU_ONLY });
     await open(l);
     const first = l.page.locator("[data-testid^=model-card-]").first();
-    await first.getByText("About 90 seconds").waitFor();
+    await first.getByText("About 88 seconds").waitFor();
     expect(
       await l.page
         .getByRole("row", { name: /^English / })

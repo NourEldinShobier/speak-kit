@@ -1,5 +1,5 @@
 import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
-import { accuracyText, languageName, sizeText } from "../../speech-text";
+import { accuracyText, languageName, secondsText, sizeText } from "../../speech-text";
 
 /** The languages the first screen lists; every other language is behind "Other language". */
 export const FIRST_LANGUAGES = ["en", "de", "ar", "auto"] as const;
@@ -22,6 +22,9 @@ export interface LanguageChoice {
   noDownload: boolean;
 }
 
+/** Ten seconds of speech that take longer than this to transcribe are called out on the language screen. */
+const SLOW_SECONDS = 3;
+
 const EXTRA: Record<string, string> = { auto: "Slower, handles mixed languages. It can mistranscribe close languages." };
 
 /** What the person is told about choosing a language: which model that picks, how big it is, and how good it is, with its test language. */
@@ -31,7 +34,8 @@ export function languageChoice(view: SpeechModelsView, language: string, foundId
   if (!row || !model) return undefined;
   const speed = model.speedSeconds !== undefined && model.speedSeconds <= 1 ? "Very fast. " : "";
   const quality = model.accuracy ? `${accuracyText(model, language).replace(/^About /, "")}.` : "";
-  const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}`.trim();
+  const slow = model.speedSeconds !== undefined && model.speedSeconds > SLOW_SECONDS ? ` Slow on this computer: ${secondsText(model.speedSeconds).toLowerCase()} for ten seconds of speech.` : "";
+  const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}${slow}`.trim();
   return { language, title: languageName(language), model, detail, noDownload: model.installed || foundIds.includes(model.id) };
 }
 

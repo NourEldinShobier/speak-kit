@@ -65,6 +65,8 @@ describe("languageChoice", () => {
     expect(languageChoice({ ...view, models: [{ ...whisper, installed: true }, parakeet] } as SpeechModelsView, "de")!.noDownload).toBe(true);
   });
   it("is undefined for a language with no row", () => {
+    const slow = { ...view, models: [{ ...whisper, speedSeconds: 88 }, parakeet] } as SpeechModelsView;
+    expect(languageChoice(slow, "de")!.detail).toBe("Uses Whisper Large v3 Turbo, 574 MB. 1 wrong word in 12 (German test). Slow on this computer: about 88 seconds for ten seconds of speech.");
     expect(languageChoice(view, "zz")).toBeUndefined();
   });
 });
