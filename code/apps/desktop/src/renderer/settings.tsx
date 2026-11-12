@@ -19,6 +19,7 @@ import {
   ShortcutsPage,
   StoragePage,
   VoicePage,
+  WhatsNewPage,
 } from "./features/settings";
 import { MeetingsPage } from "./features/meetings";
 import { registerCaptureExperiments } from "./features/capture";
@@ -40,6 +41,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: DiagnosticsPage,
+  whatsnew: WhatsNewPage,
   about: AboutPage,
 };
 

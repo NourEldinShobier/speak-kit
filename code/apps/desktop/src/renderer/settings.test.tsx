@@ -15,12 +15,12 @@ import { SETTINGS_SUBS } from "../shared/ipc";
 const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => renderToStaticMarkup(<Settings s={appState({ config: parseConfig({ setupDone: true, ...config }) })} sub={sub} />);
 
 describe("settings navigation", () => {
-  it("lists the 14 pages in four groups", () => {
+  it("lists the 15 pages in four groups", () => {
     expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
       ["General", ["General", "Voice and playback", "Shortcuts", "Notifications", "Accessibility"]],
       ["Device", ["Performance", "Storage", "Privacy"]],
       ["Features", ["Meetings", "Automation", "Experiments"]],
-      ["App", ["Browser integration", "Diagnostics", "About"]],
+      ["App", ["Browser integration", "Diagnostics", "What is new", "About"]],
     ]);
   });
 
@@ -153,5 +153,30 @@ describe("settings pages of the surface package", () => {
 
   it("a repaired-settings notice can still be dismissed", () => {
     expect(pageWith("general", { settingsNotice: { kind: "repaired", fields: ["speed"] } })).toContain("Dismiss");
+  });
+});
+
+describe("What is new", () => {
+  const withNotes = (version: string, appVersion: string) =>
+    renderToStaticMarkup(
+      <Settings s={appState({ version: appVersion, config: parseConfig({ setupDone: true, whatsNew: { version, notes: ["fix(tray): keep the menu open", "feat: new page"] } }) })} sub="whatsnew" />,
+    );
+
+  it("lists the kept notes of the running version", () => {
+    const html = withNotes("0.4.0", "0.4.0");
+    expect(html).toContain("fix(tray): keep the menu open");
+    expect(html).toContain("feat: new page");
+    expect(html).toContain("Speak Kit 0.4.0");
+  });
+
+  it("does not show the notes of another version, and offers the release page instead", () => {
+    const html = withNotes("0.3.0", "0.4.0");
+    expect(html).not.toContain("keep the menu open");
+    expect(html).toContain("No notes kept for this version");
+    expect(html).toContain("Open the release notes");
+  });
+
+  it("shows the empty state with nothing kept", () => {
+    expect(page("whatsnew")).toContain("No notes kept for this version");
   });
 });

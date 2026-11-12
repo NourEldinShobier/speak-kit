@@ -13,6 +13,23 @@ const card = (update: UpdateState, over = {}) => renderToStaticMarkup(<UpdateCar
 const pill = (update: UpdateState) => renderToStaticMarkup(<UpdatePill s={appState({ update })} />);
 
 describe("UpdateCard", () => {
+  it("lists the lines of the release in an available, ready or manual update", () => {
+    const notes = ["fix(tray): keep the menu open", "feat: new page"];
+    for (const u of [
+      { kind: "available", version: "0.4.0", notes },
+      { kind: "ready", version: "0.4.0", onQuit: false, notes },
+      { kind: "manual", version: "0.4.0", url: "https://github.com/NourEldinShobier/speak-kit/releases/tag/v0.4.0", notes },
+    ] as const) {
+      const html = card(u);
+      expect(html).toContain("fix(tray): keep the menu open");
+      expect(html).toContain("feat: new page");
+    }
+  });
+
+  it("shows no list when the release has no notes", () => {
+    expect(card({ kind: "available", version: "0.4.0" })).not.toContain("update-notes");
+  });
+
   it("unsupported (portable or source copy) says it does not update itself", () => {
     expect(card({ kind: "unsupported" })).toContain("so it does not update itself");
   });

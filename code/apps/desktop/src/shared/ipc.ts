@@ -27,6 +27,7 @@ export const SETTINGS_SUBS = [
   "experiments",
   "browser",
   "diagnostics",
+  "whatsnew",
   "about",
 ] as const;
 export type Page = (typeof PAGES)[number];

@@ -18,3 +18,4 @@ export { SettingsFrame } from "./SettingsFrame";
 export { useMotionPreference } from "./accessibility";
 export { requestRow } from "./focus";
 export { QuickTopics, SettingsResults, SettingsSearchField } from "./SettingsSearch";
+export { WhatsNewPage } from "./WhatsNewPage";

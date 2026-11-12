@@ -25,7 +25,7 @@ describe("routes", () => {
 describe("filterSettingsNav", () => {
   const ids = (q: string) => filterSettingsNav(q).flatMap((g) => g.items.map((i) => i.id));
   it("returns every row for blank text", () => {
-    expect(ids("  ")).toHaveLength(14);
+    expect(ids("  ")).toHaveLength(15);
   });
   it("matches label or keywords, every word, any case", () => {
     expect(ids("SHORTCUTS")).toEqual(["shortcuts"]);

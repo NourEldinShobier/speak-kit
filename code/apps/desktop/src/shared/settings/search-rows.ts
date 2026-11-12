@@ -30,6 +30,7 @@ export const SETTING_ROWS: readonly SettingRowDef[] = [
   r("notifications/dnd", "Do not disturb", "quiet silence mute"),
   r("accessibility/motion", "Reduce motion", "animation fade still"),
   r("accessibility/keys", "Keyboard map", "keys shortcuts tab arrows"),
+  r("whatsnew/notes", "What is new", "release notes changelog changes version"),
   r("performance/idle", "Unload the model when idle", "memory ram"),
   r("performance/startup", "Load at startup", "memory warm"),
   r("performance/battery", "Battery saver", "laptop power"),
