@@ -9,6 +9,8 @@ export interface Job {
   clip: Promise<Clip | undefined>;
   /** The window the key was pressed in. */
   target: Promise<Target | undefined>;
+  /** Dictated without text clean-up or replacements. */
+  raw?: boolean;
 }
 
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
@@ -48,6 +50,7 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
     ...(app !== undefined && { app }),
     ...(heard.language !== undefined && { language: heard.language }),
     ...(heard.model !== undefined && { model: heard.model }),
+    ...(job.raw && { kind: "raw" as const }),
   });
   const done = await ctx.deps.inserter.insert({ text, plan });
   if (!done.ok) return { error: "insert-failed" };
@@ -61,7 +64,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   if (clip.peak === 0) return { error: "mic-silent" };
   const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language });
   if (!heard.ok) return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
-  const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
+  const text = job.raw ? heard.text.trim() : applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
   if (!text) return { notice: { kind: "no-speech" } };
   ctx.inserting();
   return insert(ctx, job, { clip, heard, text });

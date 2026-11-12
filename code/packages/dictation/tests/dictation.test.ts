@@ -19,6 +19,10 @@ describe("defaults", () => {
       trailingSpace: true,
       replacements: [],
       retention: "7d",
+      holdMs: 300,
+      secondKey: "",
+      rawKey: "",
+      pasteLastKey: "",
     });
   });
 
@@ -242,9 +246,9 @@ describe("toggle mode", () => {
     r.release();
     expect(r.keys.send("Escape", true, r.time.clock.now())).toBe(true);
     await r.time.advance(500);
-    expect(r.rec.log).toEqual(["start:450", "discard"]);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.ins.inserted).toEqual([]);
-    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled" } });
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", undoable: true } });
   });
 
   it("a custom cancel key works and Escape then passes through", async () => {
@@ -254,7 +258,7 @@ describe("toggle mode", () => {
     expect(r.keys.send("Escape", true, 1)).toBe(false);
     expect(r.keys.send("Backspace", true, 2)).toBe(true);
     await r.time.advance(0);
-    expect(r.rec.log).toEqual(["start:450", "discard"]);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
   });
 
   it("Escape while idle is not swallowed", async () => {
@@ -325,7 +329,7 @@ describe("controls without the hotkey", () => {
     r.dictation.start();
     r.dictation.cancel();
     await r.time.advance(2000);
-    expect(r.rec.log).toEqual(["start:450", "stop", "start:450", "discard"]);
+    expect(r.rec.log).toEqual(["start:450", "stop", "start:450", "stop"]);
     expect(r.ins.inserted).toHaveLength(1);
   });
 

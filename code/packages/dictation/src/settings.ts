@@ -1,5 +1,6 @@
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
 export type InsertMode = "paste" | "type" | "copy";
+export type Mode = "hold" | "hold-only" | "toggle" | "double-tap" | "tap-or-hold";
 export type Replacement = { from: string; to: string };
 
 export interface Settings {
@@ -7,8 +8,19 @@ export interface Settings {
   hotkey: string;
   /** Cancels a toggled recording. */
   cancelKey: string;
-  /** "hold": hold to talk, double-tap to lock. "toggle": press to start, press again to finish. */
-  mode: "hold" | "toggle";
+  /**
+   * "hold": hold to talk, double-tap to lock. "hold-only": hold to talk. "toggle": press to start, press again to finish.
+   * "double-tap": only a double-tap starts a (locked) recording. "tap-or-hold": a long hold dictates until release, a short tap toggles.
+   */
+  mode: Mode;
+  /** A press shorter than this is a tap: nothing is kept. */
+  holdMs: number;
+  /** Second shortcut for the same job, for a laptop and an external keyboard; "" is unset. */
+  secondKey: string;
+  /** Dictates with text clean-up and replacements off; "" is unset. */
+  rawKey: string;
+  /** Types the last dictation again; "" is unset. Handled by the app, which owns the key hook. */
+  pasteLastKey: string;
   /** "auto" or a language code such as "en", "de", "ar". */
   language: string;
   /** Other audio is being ducked, so the recorder must not capture the moments before the press. */
@@ -29,6 +41,10 @@ export const defaultSettings: Readonly<Settings> = {
   hotkey: "ControlRight",
   cancelKey: "Escape",
   mode: "hold",
+  holdMs: 300,
+  secondKey: "",
+  rawKey: "",
+  pasteLastKey: "",
   language: "auto",
   duck: false,
   insertMode: "paste",
