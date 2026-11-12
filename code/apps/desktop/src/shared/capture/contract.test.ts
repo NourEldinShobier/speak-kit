@@ -24,4 +24,13 @@ describe("capture ipc arguments", () => {
       expect(ok(CAPTURE_ARGS.trim, ["c1", ...bad])).toBe(false);
     expect(ok(CAPTURE_ARGS.trim, ["../c1", 0, 1000])).toBe(false);
   });
+
+  it("zoom takes regions of whole milliseconds, a point inside the picture and a scale of 1.25 to 4", () => {
+    const region = { startMs: 0, endMs: 2000, x: 0.5, y: 0.5, scale: 2 };
+    expect(ok(CAPTURE_ARGS.zoom, ["c1", [region]])).toBe(true);
+    expect(ok(CAPTURE_ARGS.zoom, ["c1", []])).toBe(true);
+    expect(ok(CAPTURE_ARGS.zoom, ["../c1", [region]])).toBe(false);
+    for (const bad of [{ scale: 9 }, { x: 2 }, { startMs: 0.5 }, { endMs: -1 }]) expect(ok(CAPTURE_ARGS.zoom, ["c1", [{ ...region, ...bad }]])).toBe(false);
+    expect(ok(CAPTURE_ARGS.suggestZoom, ["c1"])).toBe(true);
+  });
 });

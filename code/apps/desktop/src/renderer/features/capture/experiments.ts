@@ -65,6 +65,27 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-zoom-export",
+    title: "Zoom in a recording",
+    description: "Open a recording and show parts of its video closer, chosen by hand or suggested from where the pointer rested and where you drew. The zoomed copy comes with a contact sheet of the zoomed parts.",
+    badges: ["Experimental"],
+    guard: "The original video stays. Clicks are not seen, so a suggestion follows where the pointer rested. With the input log off, no pointer positions are noted.",
+    useState: () => useCaptureExperiment("zoomExport"),
+  });
+
+  registerExperiment({
+    ...GROUP,
+    id: "capture-page-context",
+    title: "Development page context",
+    description:
+      "A page you are building can report what was clicked, console errors and failed requests. A capture lists them with the times, and Voice chat gets the list. Add the Speak Kit script to your page to turn it on.",
+    badges: ["Developer", "Experimental"],
+    guard: "Only pages on this computer can report, and only names: a button's text, a tag, a path. Never what is typed in a field, a request body or a cookie. Off until you turn it on.",
+    useState: () => useCaptureExperiment("pageContext"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-speech-engines",
     title: "Your own speech engine for narration",
     description: "Make the words of a capture with a command you choose instead of the dictation model. Pick it under Capture settings.",

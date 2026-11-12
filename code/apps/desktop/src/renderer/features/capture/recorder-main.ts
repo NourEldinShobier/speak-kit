@@ -3,6 +3,8 @@ import type { RecorderCommand, RecorderPayload, RecorderResult } from "../../../
 import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
 import { trimVideo } from "./trim-video";
+import { zoomVideo } from "./zoom-video";
+import { inPixels } from "../../../shared/capture/zoom";
 
 /**
  * The page of the hidden recorder window. The screen source is drawn onto a canvas (cut to the area or window, scaled to the size limit); the canvas
@@ -72,7 +74,10 @@ async function sheet(c: Extract<RecorderCommand, { op: "sheet" }>): Promise<Reco
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (const [i, jpeg] of c.jpegs.entries()) {
     const bmp = await createImageBitmap(new Blob([jpeg as BlobPart], { type: "image/jpeg" }));
-    ctx.drawImage(bmp, (i % c.columns) * c.cellWidth, Math.floor(i / c.columns) * c.cellHeight, c.cellWidth, c.cellHeight);
+    const at = [(i % c.columns) * c.cellWidth, Math.floor(i / c.columns) * c.cellHeight] as const;
+    const part = c.crops?.[i] && inPixels(c.crops[i], bmp.width, bmp.height);
+    if (part) ctx.drawImage(bmp, part.x, part.y, part.width, part.height, ...at, c.cellWidth, c.cellHeight);
+    else ctx.drawImage(bmp, ...at, c.cellWidth, c.cellHeight);
     bmp.close();
   }
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
@@ -84,6 +89,11 @@ async function trim(c: Extract<RecorderCommand, { op: "trim" }>): Promise<Record
   return video.length ? { ok: true, video, durationMs: c.endMs - c.startMs } : { ok: false, code: "encoder" };
 }
 
+async function zoom(c: Extract<RecorderCommand, { op: "zoom" }>): Promise<RecorderResult> {
+  const video = await zoomVideo(c.video, c.regions);
+  return video.length ? { ok: true, video } : { ok: false, code: "encoder" };
+}
+
 bridge.onCommand((c: RecorderCommand) => {
   void (async () => {
     let result: RecorderResult = { ok: true };
@@ -93,6 +103,7 @@ bridge.onCommand((c: RecorderCommand) => {
       else if (c.op === "switch") result = await swap(c);
       else if (c.op === "sheet") result = await sheet(c);
       else if (c.op === "trim") result = await trim(c);
+      else if (c.op === "zoom") result = await zoom(c);
       else {
         run?.stop();
         run = undefined;
