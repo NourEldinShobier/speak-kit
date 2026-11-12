@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Spinner, type IconName } from "@speakkit/ui";
 import type { HudView } from "../../../shared/dictation/contract";
-import { dictation } from "./api";
+import { dictation, platformName } from "./api";
 import "./hud.css";
 
 // Heights of the level bars at full volume; each bar follows the microphone level but never collapses entirely.
@@ -55,7 +55,7 @@ function Copied({ reason }: { reason: "clipboard" | "elevated" }) {
     <>
       <Lead name="copy" />
       <b>Copied</b>
-      <Hint>Press Ctrl V to paste</Hint>
+      <Hint>Press {platformName() === "darwin" ? "Cmd" : "Ctrl"} V to paste</Hint>
     </>
   );
 }

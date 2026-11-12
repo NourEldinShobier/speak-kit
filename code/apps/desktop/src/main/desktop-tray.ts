@@ -25,6 +25,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
+    platform: process.platform,
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
   });
   const openDictation = (sub: "dictation" | "dictation-history") => () => {

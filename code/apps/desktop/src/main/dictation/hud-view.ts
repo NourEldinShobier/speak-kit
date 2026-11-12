@@ -56,9 +56,9 @@ export function hudViewFor(i: HudInput): HudView | null {
   const s = i.state;
   switch (s.status) {
     case "recording":
-      return { kind: "recording", locked: s.mode === "toggle", startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey) };
+      return { kind: "recording", locked: s.mode === "toggle", startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, process.platform) };
     case "locked":
-      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey) };
+      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, process.platform) };
     case "transcribing":
     case "pasting":
       return { kind: "transcribing" };

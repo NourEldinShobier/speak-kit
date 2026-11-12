@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, Icon, Kbd, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
-import { hotkeyLabels } from "../../../shared/dictation/keys";
-import { dictation } from "./api";
+import { DEFAULT_HOTKEY, hotkeyLabels } from "../../../shared/dictation/keys";
+import { dictation, platformName } from "./api";
 import { appName, emptyHint, entryLabel, focusAfterDelete, groupByDay, historyFooter, historyLead, timeText } from "./model";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
@@ -38,7 +38,7 @@ function Empty({ s }: { s: DictationStatus | null }) {
       <EmptyState icon="microphone" title="Nothing dictated yet">
         {emptyHint(s?.settings.retention ?? "7d")}
         <div className="dict-keys">
-          {hotkeyLabels(s?.settings.hotkey ?? "ControlRight").map((k) => (
+          {hotkeyLabels(s?.settings.hotkey ?? DEFAULT_HOTKEY, platformName()).map((k) => (
             <Kbd key={k}>{k}</Kbd>
           ))}
         </div>

@@ -59,6 +59,11 @@ describe("tray menu, dictation", () => {
     expect(labels(dictation(true)).slice(0, 5)).toEqual(["Open Speak Kit", "Dictation", "Hold Ctrl Alt Space to dictate", "Dictation history", "Dictation settings"]);
   });
 
+  it("names the hotkey with Mac key names on macOS", () => {
+    const mac = ctx({ platform: "darwin", dictation: { enabled: true, hotkey: "MetaLeft+AltLeft+Space" } });
+    expect(labels(mac)).toContain("Hold Option Command Space to dictate");
+  });
+
   it("shows the switch state, and leaves the hint out while dictation is off", () => {
     const row = (c: TrayContext) => trayMenuModel(c).find((i) => i.type === "item" && i.action === "dictation");
     expect(row(dictation(true))).toMatchObject({ checked: true, enabled: true });

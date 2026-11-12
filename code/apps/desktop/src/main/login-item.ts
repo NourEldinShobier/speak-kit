@@ -11,10 +11,10 @@ export function setLaunchAtLogin(on: boolean, startMinimized: boolean) {
   app.setLoginItemSettings({ openAtLogin: on, ...options(startMinimized) });
 }
 
-/** The real state: registered, and not switched off in Windows Startup apps (executableWillLaunchAtLogin is Windows-only). */
+/** The real state: registered, not switched off in Windows Startup apps (executableWillLaunchAtLogin is Windows-only), and not waiting for approval in macOS System Settings > Login Items (status is macOS-only). */
 export function isLaunchAtLogin(startMinimized: boolean) {
   const s = app.getLoginItemSettings(options(startMinimized));
-  return s.openAtLogin && s.executableWillLaunchAtLogin !== false;
+  return s.openAtLogin && s.executableWillLaunchAtLogin !== false && s.status !== "requires-approval";
 }
 
 export function openedAtLogin(startMinimized: boolean) {
