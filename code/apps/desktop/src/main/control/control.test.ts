@@ -451,6 +451,19 @@ describe("control server", () => {
     expect(s.server.running).toBe(false);
   });
 
+  it("a reset token replaces the one in the discovery file and refuses the old one, and does nothing while stopped", async () => {
+    const s = await start(async () => ok({}));
+    await s.server.resetToken();
+    const now = (await readDiscovery(discoveryFile(s.dataDir)))!;
+    expect(now.token).toHaveLength(64);
+    expect(now.token).not.toBe(s.d.token);
+    expect((await s.post("{}", s.d.token)).status).toBe(404);
+    expect((await s.post(JSON.stringify({ command: "status" }), now.token)).status).toBe(200);
+    await s.server.stop();
+    await s.server.resetToken();
+    expect(await readDiscovery(discoveryFile(s.dataDir))).toBeNull();
+  });
+
   it("runs a command and answers JSON with the version", async () => {
     const s = await start(async (r) => ok({ got: r.command }));
     const res = await s.post(JSON.stringify({ command: "status", args: {} }));
