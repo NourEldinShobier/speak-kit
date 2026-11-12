@@ -17,6 +17,8 @@ export interface TrayContext {
   shortcuts: Bindings;
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
+  /** One line about a problem that happened while the window was closed; the first row of the menu. */
+  notice?: string;
   /** The system theme of the taskbar or menu bar is dark. */
   darkTaskbar?: boolean;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
@@ -167,7 +169,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const sep: TrayItem = { type: "separator" };
   const reading = c.reader.status === "playing" || c.reader.status === "preparing";
   const paused = c.reader.status === "paused";
-  const rows: TrayItem[] = [item("open", "Open Speak Kit")];
+  const rows: TrayItem[] = c.notice ? [item("open", c.notice), sep, item("open", "Open Speak Kit")] : [item("open", "Open Speak Kit")];
   rows.push(...dictationRows(c, item));
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   rows.push(...speechModelItems(c));

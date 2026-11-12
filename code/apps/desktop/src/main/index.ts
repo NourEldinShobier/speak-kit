@@ -15,6 +15,7 @@ import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
 import { watchConfigFile } from "./config-watch";
+import { createTrayNotices, NOTICE_TTL_MS, noticeText } from "../shared/tray-notices";
 import { acquireInstance, classifySecondLaunch, clearRunningVersion, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
 import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
@@ -80,8 +81,21 @@ const state: AppState = {
 };
 
 let nextActivityId = 1;
+const trayNotices = createTrayNotices();
+// The window is built after the first activity lines are written (settings that were repaired): until then nobody is looking.
+let windowVisible = () => false;
+let noticeTimer: NodeJS.Timeout | undefined;
 const addActivity = (kind: Activity["kind"], title: string, body: string) => {
   state.activity = [{ id: nextActivityId++, atMs: Date.now(), kind, title, body }, ...state.activity].slice(0, 20);
+  // A problem while the window is closed stays in the tray menu until the window opens or ten minutes pass.
+  const note = noticeText({ kind, title });
+  if (note && !windowVisible()) {
+    trayNotices.add(note);
+    desktop?.refreshTray();
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => desktop?.refreshTray(), NOTICE_TTL_MS + 1000);
+    noticeTimer.unref();
+  }
 };
 
 const unreadable = (what: string, file: string) =>
@@ -98,6 +112,8 @@ let desktop: ReturnType<typeof setupDesktop> | null = null;
 
 const mainWindow: MainWindow = new MainWindow(config, {
   onVisible: () => {
+    trayNotices.clear();
+    desktop?.refreshTray();
     if (!performance.getEntriesByName("window:shown").length) performance.mark("window:shown");
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
@@ -106,6 +122,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
   busy: () => desktop?.busy() ?? false,
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
+windowVisible = () => mainWindow.isVisible();
 const screenVision = createScreenVision();
 const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
@@ -244,6 +261,7 @@ function startDesktop() {
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
       voiceEngine: () => runtime.engine,
+      trayNotice: () => trayNotices.current(),
       dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
       voiceChat,
     },

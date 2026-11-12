@@ -46,6 +46,8 @@ interface DesktopOptions {
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  /** The notice the tray menu shows while the window is closed. */
+  trayNotice(): string | undefined;
   /** The voice engine, for the memory it holds (Settings, Performance). */
   voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
@@ -170,7 +172,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
