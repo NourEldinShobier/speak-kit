@@ -4,25 +4,9 @@
  */
 import type { ComponentType } from "react";
 import type { AppState, SettingsSub } from "../shared/ipc";
-import {
-  AboutPage,
-  AccessibilityPage,
-  AutomationPage,
-  BrowserPage,
-  DiagnosticsPage,
-  ExperimentsPage,
-  GeneralPage,
-  MemoryPage,
-  NotificationsPage,
-  PrivacyPage,
-  SettingsFrame,
-  ShortcutsPage,
-  StoragePage,
-  VoicePage,
-} from "./features/settings";
-import { MeetingsPage } from "./features/meetings";
-import { registerCaptureExperiments } from "./features/capture";
-import { ExperimentsPage } from "./features/experiments";
+import { api, Page } from "./ui";
+import { BrowserPage, ExperimentsPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
+import { StubPage } from "./StubPage";
 import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
 
@@ -99,9 +83,9 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   accessibility: AccessibilityPage,
   performance: MemoryPage,
   storage: StoragePage,
-  privacy: PrivacyPage,
-  meetings: MeetingsPage,
-  automation: AutomationPage,
+  privacy: () => <StubPage setting="privacy" />,
+  meetings: () => <StubPage setting="meetings" />,
+  automation: () => <StubPage setting="automation" />,
   experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: DiagnosticsPage,

@@ -13,6 +13,7 @@ const ctx = (over: Partial<TrayContext> = {}): TrayContext => ({
   update: { kind: "idle", checkedAtMs: null },
   exportsRunning: 0,
   doNotDisturb: false,
+  hidden: false,
   shortcuts: DEFAULT_SHORTCUTS,
   ...over,
 });

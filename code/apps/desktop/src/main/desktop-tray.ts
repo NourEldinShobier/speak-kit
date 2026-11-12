@@ -33,6 +33,7 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings }: Tr
     update: ctx.state.update,
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
+    hidden: ctx.config.labs["hide-tray-icon"],
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     recorder: { phase: transcripts.phase() },

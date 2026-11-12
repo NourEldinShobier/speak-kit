@@ -36,9 +36,10 @@ const plain = (_key: string, v: unknown) => (v instanceof Error ? { name: v.name
 export const jsonLine = ({ date, level, data }: LogMessage): string => redact(JSON.stringify({ t: date.toISOString(), level, pid: process.pid, data }, plain));
 
 /** Main-process log file `<userData>/logs/main.log` as JSON lines; electron-log rotates it to main.old.log past 1 MB. Uncaught errors are written too. */
-export function initLog(dataDir: string) {
+export function initLog(dataDir: string, verbose = false) {
   log.transports.file.resolvePathFn = () => path.join(dataDir, "logs", "main.log");
   log.transports.file.format = ({ message }) => [jsonLine(message)];
+  log.transports.file.level = verbose ? "debug" : "info";
   log.transports.file.maxSize = MAX_LOG_BYTES;
   log.transports.console.level = process.env.SPEAKKIT_USER_DATA ? "warn" : "info";
   log.hooks.push((message) => ({ ...message, data: message.data.map(redactValue) })); // before every transport, the console included

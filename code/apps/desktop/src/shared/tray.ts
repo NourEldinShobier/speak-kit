@@ -14,6 +14,8 @@ export interface TrayContext {
   update: UpdateState;
   exportsRunning: number;
   doNotDisturb: boolean;
+  /** The hide-tray-icon lab is on: no icon is shown. */
+  hidden: boolean;
   shortcuts: Bindings;
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
