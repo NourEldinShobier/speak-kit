@@ -1,56 +1,28 @@
-import { ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
+import { ipcMain, powerMonitor, shell, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  createDictation,
-  type AudioStore,
-  type Clip,
-  type Dictation,
-  type DictationState,
-  type Rewriter,
-} from "@speakkit/dictation";
+import { createDictation, type AudioStore, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
 import type { DictationStatus } from "../../shared/dictation/contract";
-import { createAudioStore } from "./audio-store";
+import type { DictationServiceOptions } from "./service-options";
 import { filePickers, HistoryApi, type FilePickers } from "./history-api";
 import { createOpenAiRewriter } from "./openai-rewriter";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
-import { createHistoryStorage } from "./history-storage";
 import { HudPresenter } from "./hud-presenter";
 import { createDictationOs, type DictationOs, type HudWindow, type InsertResult } from "./index";
 import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus } from "./service-support";
-import { openRecorderWindow } from "./recorder-window";
+import { clock, coreSettings, dictationStatus, soundSettingsUrl } from "./service-support";
+import { historyFiles, Pusher, recorderWindow, scriptedRewriter, trashViaShell } from "./service-wiring";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
-export interface DictationServiceOptions {
-  dataDir: string;
-  modelsDir: string;
-  /** Directory of the bundled main-process files; the renderer pages sit in ../renderer. */
-  distDir: string;
-  /** The speech worker file (dist/worker/stt-worker.js when built, the source file in development). */
-  sttWorker: URL;
-  parent(): BrowserWindow | null;
-  /** The test hook is on: a scripted speech engine replaces the real one and the microphone can be refused. */
-  test: boolean;
-  /** The saved OpenAI key, for the rewrite pass. */
-  readKey?(): Promise<string | null>;
-  hasKey?(): Promise<boolean>;
-  /** Tests only. */
-  os?: DictationOs;
-  stt?: Stt;
-  rewriter?: Rewriter;
-  trash?(file: string): Promise<boolean>;
-  /** Tests only: the file pickers, in place of the system dialogs. */
-  files?: FilePickers;
-}
+export type { DictationServiceOptions } from "./service-options";
 
 const PUSH_MS = 200;
 /**
@@ -89,8 +61,8 @@ export class DictationService {
   #lastInsert: InsertResult | undefined;
   #lastFailed: Clip | undefined;
   #lastError = "";
-  #lastPush = 0;
-  #pushTimer: NodeJS.Timeout | undefined;
+  readonly #pusher = new Pusher(PUSH_MS, () => this.#send());
+  readonly #push = (soon = false): void => this.#pusher.push(soon);
   #stopPower: (() => void) | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
@@ -149,18 +121,11 @@ export class DictationService {
     this.#recorder = createRecorderHost({
       ipcMain,
       onLevel: (n) => this.presenter.setLevel(n),
-      open: () => {
-        const w = openRecorderWindow({ page: page("recorder.html"), micAllowed: () => !this.micDenied });
-        return {
-          contents: w.webContents,
-          destroy: () => !w.isDestroyed() && w.destroy(),
-          get destroyed() {
-            return w.isDestroyed();
-          },
-        };
-      },
+      open: () => recorderWindow(page("recorder.html"), () => !this.micDenied),
     });
     this.#replay = new ReplayRecorder(this.#recorder);
+    const files = historyFiles(this.#o.dataDir, this.#o.trash ?? trashViaShell, (gone) => void this.core?.history.dropAudio(gone));
+    this.#audio = files.audio;
     this.core = createDictation({
       clock,
       recorder: this.#replay,
@@ -173,19 +138,9 @@ export class DictationService {
       }),
       inserter: createInserterPort(os, (r) => (this.#lastInsert = r)),
       hotkeys: this.#hotkeys,
-      storage: createHistoryStorage(path.join(this.#o.dataDir, "dictation-history.json")),
-      audio: (this.#audio = createAudioStore({
-        dir: path.join(this.#o.dataDir, "dictation-audio"),
-        trash:
-          this.#o.trash ??
-          ((f) =>
-            shell.trashItem(f).then(
-              () => true,
-              () => false,
-            )),
-        onEvicted: (files) => void this.core?.history.dropAudio(files),
-      })),
-      rewriter: this.#o.rewriter ?? this.#writer(),
+      storage: files.storage,
+      audio: files.audio,
+      rewriter: this.#o.rewriter ?? (__TEST_CODE__ && this.#o.test ? scriptedRewriter(() => this.fakeRewrite) : createOpenAiRewriter({ readKey: async () => (await this.#o.readKey?.()) ?? null })),
       settings: coreSettings(this.#cfg),
     });
     this.core.subscribe((s) => this.#onState(s));
@@ -194,19 +149,6 @@ export class DictationService {
     await this.#refreshCount();
     this.#hasKey = (await this.#o.hasKey?.()) ?? false;
     if (this.#cfg.enabled) await this.#enable(true, true);
-  }
-
-  #writer(): Rewriter {
-    if (__TEST_CODE__ && this.#o.test) {
-      return {
-        rewrite: ({ text, signal }) => {
-          if (this.fakeRewrite === "fail") return Promise.reject(new Error("scripted"));
-          if (this.fakeRewrite === "hang") return new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
-          return Promise.resolve(`${text} [rewritten]`);
-        },
-      };
-    }
-    return createOpenAiRewriter({ readKey: async () => (await this.#o.readKey?.()) ?? null });
   }
 
   /** The key can be saved or removed on the Voice chat page at any time. */
@@ -249,18 +191,9 @@ export class DictationService {
   }
 
   #send(): void {
-    clearTimeout(this.#pushTimer);
-    this.#pushTimer = undefined;
-    this.#lastPush = Date.now();
     const contents = this.#o.parent()?.webContents;
     if (contents && !contents.isDestroyed()) contents.send(STATUS_EVENT, this.status());
     this.#onChange();
-  }
-
-  /** Download progress arrives many times a second; the window gets a few updates a second. */
-  #push(soon = false): void {
-    if (soon || Date.now() - this.#lastPush >= PUSH_MS) this.#send();
-    else this.#pushTimer ??= setTimeout(() => this.#send(), PUSH_MS);
   }
 
   async #refreshCount(): Promise<void> {
@@ -372,9 +305,7 @@ export class DictationService {
   }
 
   async openSoundSettings(): Promise<void> {
-    if (process.platform !== "win32") return;
-    const blocked = this.#lastError === "mic-denied" || this.#lastError === "mic-silent";
-    await shell.openExternal(blocked ? "ms-settings:privacy-microphone" : "ms-settings:sound");
+    await shell.openExternal(soundSettingsUrl(this.#lastError === "mic-denied" || this.#lastError === "mic-silent"));
   }
 
   /** True when `contents` is the HUD page: only it may press the HUD buttons. */
@@ -405,7 +336,7 @@ export class DictationService {
   }
 
   async dispose(): Promise<void> {
-    clearTimeout(this.#pushTimer);
+    this.#pusher.stop();
     this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;

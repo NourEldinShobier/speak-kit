@@ -87,3 +87,9 @@ export const dictationStatus = ({
   ...(promptDropped && { promptDropped: true }),
   ...(redo && { redo }),
 });
+
+/** The system page for the microphone (when access is the problem) or for sound in general. */
+export function soundSettingsUrl(micBlocked: boolean, platform: string = process.platform): string {
+  if (platform === "darwin") return micBlocked ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" : "x-apple.systempreferences:com.apple.preference.sound";
+  return micBlocked ? "ms-settings:privacy-microphone" : "ms-settings:sound";
+}

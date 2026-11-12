@@ -52,7 +52,8 @@ describe("renderer bundle", () => {
  * index: 191,000 to 193,500 for the page and settings registries, the stub pages and the new command palette (0.8 KB over the old budget).
  * Before that, 185,500 to 191,000 for dictation's entry in Settings, its config schema and the shared-chunk split of its lazy page (3.2 KB; main was already 1.4 KB over).
  */
-const RENDERER_BUDGET_BYTES = { index: 193_500, mini: 133_000 };
+// index grew with the Vocabulary, Modes and History pages (recordings, side-by-side view, rules tester).
+const RENDERER_BUDGET_BYTES = { index: 195_500, mini: 133_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

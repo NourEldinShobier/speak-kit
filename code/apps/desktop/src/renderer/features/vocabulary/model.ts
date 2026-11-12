@@ -74,7 +74,8 @@ export interface PromptSummary {
 }
 
 /** The speech-model prompt card: what is sent, how much of the budget it uses and what happens to the rest. */
-export function promptSummary(terms: readonly Term[], model: string, on: boolean, modelName: string): PromptSummary {
+export function promptSummary(terms: readonly Term[], o: { model: string; on: boolean; modelName: string }): PromptSummary {
+  const { model, on, modelName } = o;
   const plan = buildPrompt(terms);
   if (!supportsPrompt(model))
     return { state: "unsupported", plan, line: "Not used with this speech model.", note: `${modelName} cannot read a word list. Your words still work through replacements, and nothing is blocked.` };
@@ -131,14 +132,14 @@ export function testStages(heard: string, o: { terms: readonly Term[]; replaceme
   const words = trace.notes.includes("noise") || trace.notes.includes("numbers-only") ? raw : applyReplacements(o.cleanup.lowercase ? raw.toLowerCase() : raw, [...own]);
   const stages: Stage[] = [
     { key: "heard", title: "Model heard", note: "The raw text", text: raw },
-    { key: "words", title: "Words and names", note: ruleNote(own.length, "sounds-like", raw, words), text: words },
-    { key: "replacements", title: "Replacements", note: ruleNote(o.replacements.length, "replacement", words, trace.replacements), text: trace.replacements },
+    { key: "words", title: "Words and names", note: ruleNote({ count: own.length, what: "sounds-like", before: raw, after: words }), text: words },
+    { key: "replacements", title: "Replacements", note: ruleNote({ count: o.replacements.length, what: "replacement", before: words, after: trace.replacements }), text: trace.replacements },
     { key: "cleanup", title: "Clean-up", note: cleanupNote(o.cleanup), text: trace.final.trimEnd() },
   ];
   return { stages, final: trace.final.trimEnd() };
 }
 
-function ruleNote(count: number, what: string, before: string, after: string): string {
+function ruleNote({ count, what, before, after }: { count: number; what: string; before: string; after: string }): string {
   if (!count) return `No ${what} rules`;
   return before === after ? "Nothing changed" : "Changed";
 }

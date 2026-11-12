@@ -82,12 +82,29 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
   return "model-loading";
 }
 
+const pickLanguage = (id: string, language: string): SttLanguage => {
+  const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
+  return (supported.includes(language) ? language : "auto") as SttLanguage;
+};
+
+/** Kills the hung worker and loads a new one; nothing is left to kill when unloading itself fails, and the load starts a new worker either way. */
+async function restart(stt: TranscriberDeps["stt"], id: SttModelId): Promise<void> {
+  try {
+    await stt.unload();
+  } catch {
+    // Nothing is left to kill when unloading itself fails; the load below starts a new worker either way.
+  }
+  void stt.warm(id);
+}
+
 /** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
-export async function heard({ stt, model, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps, req: { clip: Clip; language: string; prompt?: string | undefined }): Promise<TranscribeResult> {
+export async function heard(
+  { stt, model, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps,
+  req: { clip: Clip; language: string; prompt?: string | undefined },
+): Promise<TranscribeResult> {
   const { clip, language, prompt } = req;
   const id = model();
-  const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
-  const lang = (supported.includes(language) ? language : "auto") as SttLanguage;
+  const lang = pickLanguage(id, language);
   const sent = prompt && supportsPrompt(id) ? prompt : undefined;
   if (prompt && !sent) onPromptDropped?.();
   const stop = new AbortController();
@@ -96,14 +113,7 @@ export async function heard({ stt, model, deadlineMs = transcribeDeadlineMs, onP
     const t = await stt.transcribe(to16(clip.pcm), lang, { signal: stop.signal, ...(sent && { prompt: sent }) });
     return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
   } catch (e) {
-    if (stop.signal.aborted) {
-      try {
-        await stt.unload(); // kills the hung worker
-      } catch {
-        // Nothing is left to kill when unloading itself fails; the load below starts a new worker either way.
-      }
-      void stt.warm(id);
-    }
+    if (stop.signal.aborted) await restart(stt, id);
     throw e;
   } finally {
     clearTimeout(timer);

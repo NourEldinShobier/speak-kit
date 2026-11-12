@@ -4,13 +4,10 @@ import type { DictationModelId, DictationStatus, HistoryItem } from "../../../sh
 import { dictation } from "./api";
 import { clockText, timeText } from "./model";
 
-/** Plays a kept recording: the bytes come from the main process and live in a blob URL only while the row is open. */
-function Player({ id, durationMs, kept }: { id: string; durationMs: number; kept: string }) {
+/** The recording's bytes from the main process as a blob URL that lives only while the row is open. */
+function useRecordingUrl(id: string) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [at, setAt] = useState(0);
-  const audio = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     let live = true;
     let made: string | null = null;
@@ -28,6 +25,15 @@ function Player({ id, durationMs, kept }: { id: string; durationMs: number; kept
       if (made) URL.revokeObjectURL(made);
     };
   }, [id]);
+  return { url, failed, setFailed };
+}
+
+/** Plays a kept recording: the bytes come from the main process and live in a blob URL only while the row is open. */
+function Player({ id, durationMs, kept }: { id: string; durationMs: number; kept: string }) {
+  const { url, failed, setFailed } = useRecordingUrl(id);
+  const [playing, setPlaying] = useState(false);
+  const [at, setAt] = useState(0);
+  const audio = useRef<HTMLAudioElement | null>(null);
   const toggle = () => {
     const a = audio.current;
     if (!a) return;
@@ -105,19 +111,18 @@ function Versions({ item, s }: { item: HistoryItem; s: DictationStatus }) {
   );
 }
 
+function failureText(s: DictationStatus, error: string | undefined, model: string): string {
+  if (error === "model-missing") return `${modelName(s, model)} is not installed.`;
+  if (error === "no-audio") return "The recording is not there any more.";
+  return `${modelName(s, model)} could not transcribe this recording.`;
+}
+
 /** Transcribe again: pick a model, see it run, cancel it or read why it failed. The text in use never changes until a version is chosen. */
 function Again({ item, s, openDictation }: { item: HistoryItem; s: DictationStatus; openDictation(): void }) {
   const [model, setModel] = useState<DictationModelId>(s.settings.model);
   const redo = s.redo?.id === item.id ? s.redo : undefined;
   const running = redo?.state === "running";
-  const failure =
-    redo?.state === "failed"
-      ? redo.error === "model-missing"
-        ? `${modelName(s, redo.model)} is not installed.`
-        : redo.error === "no-audio"
-          ? "The recording is not there any more."
-          : `${modelName(s, redo.model)} could not transcribe this recording.`
-      : undefined;
+  const failure = redo?.state === "failed" ? failureText(s, redo.error, redo.model) : undefined;
   return (
     <div className="dict-rec__again">
       <div className="dict-rec__again-row">

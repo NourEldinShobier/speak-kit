@@ -9,7 +9,7 @@ import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
 import { VoiceChatPage } from "./features/voice-chat";
 import { VoicesPage } from "./features/voices";
-import { requestVocabularyTab } from "./features/vocabulary/tab-request";
+import { requestVocabularyTab } from "./vocabulary-tab";
 import { Home } from "./HomePage";
 import type { MenuPage } from "./routes";
 import type { OpenDoc, ShellAction } from "./shell-model";

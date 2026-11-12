@@ -45,7 +45,7 @@ function DoneBody({ job }: { job: ExportView }) {
         </li>
         {job.captionsPath ? (
           <li data-testid="export-captions">
-            {job.captionsPath.split(/[\/]/).pop()} with {job.captionCount} {job.captionCount === 1 ? "caption" : "captions"}
+            {job.captionsPath.split(/[/\\]/).pop()} with {job.captionCount} {job.captionCount === 1 ? "caption" : "captions"}
           </li>
         ) : null}
       </ul>

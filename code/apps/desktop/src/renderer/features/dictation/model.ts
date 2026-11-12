@@ -118,9 +118,9 @@ const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}@]/gu, "");
 function diff(a: string[], b: string[]): boolean[] {
   const n = a.length;
   const m = b.length;
-  const len = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  const len = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => 0));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) len[i]![j] = norm(a[i]!) && norm(a[i]!) === norm(b[j]!) ? len[i + 1]![j + 1]! + 1 : Math.max(len[i + 1]![j]!, len[i]![j + 1]!);
-  const changed = new Array<boolean>(n).fill(true);
+  const changed = Array.from({ length: n }, () => true);
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
@@ -192,4 +192,11 @@ export function expiryText(ms: number | null, what = "Removed"): string {
   if (ms < HOUR) return `${what} in ${plural(Math.ceil(ms / MIN), "minute")}`;
   if (ms < DAY) return `${what} in ${plural(Math.ceil(ms / HOUR), "hour")}`;
   return `${what} in ${plural(Math.ceil(ms / DAY), "day")}`;
+}
+
+/** The heading above the totals. */
+export function statsTitle(retention: DictationConfig["retention"]): string {
+  if (retention === "forever") return "All time";
+  if (retention === "off") return "Now";
+  return `Last ${RETENTION_OPTIONS.find((o) => o.value === retention)?.label.toLowerCase()}`;
 }

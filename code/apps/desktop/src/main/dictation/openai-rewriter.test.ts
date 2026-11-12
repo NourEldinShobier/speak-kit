@@ -17,7 +17,8 @@ describe("OpenAI rewriter", () => {
     });
     expect(await w.rewrite({ text: "hello there", signal })).toBe("Hello there.");
     expect(seen?.url).toBe("http://local.test/v1/chat/completions");
-    expect((seen?.init.headers as Record<string, string>).Authorization).toBe("Bearer sk-test");
+    const headers = (seen?.init.headers ?? {}) as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer sk-test");
     const body = JSON.parse(String(seen?.init.body));
     expect(body.model).toBe(REWRITE_MODEL);
     expect(body.messages[1]).toEqual({ role: "user", content: "hello there" });
