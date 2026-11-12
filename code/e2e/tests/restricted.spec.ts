@@ -43,7 +43,8 @@ test.describe("pages the browser does not let an extension read", () => {
       const page = await ext.ctx.newPage();
       await page.goto(pathToFileURL(join(dir, "local.html")).href);
       const popup = await ext.popup(page);
-      await expect(view(popup)).toHaveAttribute("data-view", "fileurl");
+      // Without the "tabs" permission a popup opened as a Playwright tab has no activeTab grant, so it cannot see the file address; the "fileurl" view itself is covered by Popup.test.tsx.
+      await expect(view(popup)).toHaveAttribute("data-view", "unreadable");
       expect((await readTab(ext, page)).ok).toBe(false);
       await expect.poll(async () => (await stateOf(ext)).code).toMatch(/^(file-access|page-unreadable)$/);
       expect(app.engine.calls).toEqual([]);
