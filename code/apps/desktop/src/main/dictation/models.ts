@@ -71,7 +71,7 @@ export class ModelManager {
   }
   views() {
     const transfers = this.transfers.list();
-    return modelViews(this.catalog, this.#d.selected(), (id) => this.isInstalled(id), this.#job, transfers);
+    return modelViews(this.catalog, this.#d.selected(), { isInstalled: (id) => this.isInstalled(id), job: this.#job, transfers });
   }
 
   async refresh(): Promise<void> {

@@ -85,14 +85,14 @@ describe("local failures", () => {
   });
 
   it("an incomplete download keeps what it has, never a negative count", () => {
-    expect(incompleteFailure("m.bin", URL1, 5, 10).keptBytes).toBe(5);
-    expect(incompleteFailure("m.bin", URL1, -1, 10).keptBytes).toBe(0);
+    expect(incompleteFailure({ file: "m.bin", url: URL1 }, 5, 10).keptBytes).toBe(5);
+    expect(incompleteFailure({ file: "m.bin", url: URL1 }, -1, 10).keptBytes).toBe(0);
   });
 
   it("another host is worth trying for network failures only", () => {
     expect(worthAnotherHost(httpFailure(503, URL1, 0))).toBe(true);
     expect(worthAnotherHost(toDownloadError(withCause("ENOTFOUND"), URL1, 0))).toBe(true);
     expect(worthAnotherHost(checksumFailure("m", URL1))).toBe(false);
-    expect(worthAnotherHost(incompleteFailure("m", URL1, 1, 2))).toBe(false);
+    expect(worthAnotherHost(incompleteFailure({ file: "m", url: URL1 }, 1, 2))).toBe(false);
   });
 });

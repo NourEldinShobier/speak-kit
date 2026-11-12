@@ -73,7 +73,7 @@ describe("speech models view", () => {
   });
 
   it("shows transfers, preparing, and a failure with the host", () => {
-    const failure = new DownloadError("unreachable", "huggingface.co", 214_000_000, "Could not reach the model server huggingface.co.");
+    const failure = new DownloadError({ kind: "unreachable", host: "huggingface.co", keptBytes: 214_000_000, message: "Could not reach the model server huggingface.co." });
     const v = buildView(
       input({
         transfers: [{ id: PARAKEET, state: "paused", fraction: 0.6 }],
@@ -81,7 +81,10 @@ describe("speech models view", () => {
         preparing: TURBO,
       }),
     );
-    expect(v.models.find((m) => m.id === PARAKEET)).toMatchObject({ transfer: { state: "paused", fraction: 0.6 }, failure: { kind: "unreachable", host: "huggingface.co", keptBytes: 214_000_000, advice: "try-again" } });
+    expect(v.models.find((m) => m.id === PARAKEET)).toMatchObject({
+      transfer: { state: "paused", fraction: 0.6 },
+      failure: { kind: "unreachable", host: "huggingface.co", keptBytes: 214_000_000, advice: "try-again" },
+    });
     expect(v.models.find((m) => m.id === TURBO)!.transfer).toEqual({ state: "preparing", fraction: 1 });
   });
 
@@ -122,7 +125,15 @@ describe("speech models view", () => {
   });
 
   it("marks automatic switching rules whose model is not downloaded", () => {
-    const config = parseEnginesConfig({ autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }, { id: "b", app: "code", model: PARAKEET }] } });
+    const config = parseEnginesConfig({
+      autoSwitch: {
+        enabled: true,
+        rules: [
+          { id: "a", layout: "de", model: TURBO },
+          { id: "b", app: "code", model: PARAKEET },
+        ],
+      },
+    });
     const v = buildView(input({ config }));
     expect(v.autoSwitch.skippedRuleIds).toEqual(["b"]);
     expect(v.autoSwitch.rules).toHaveLength(2);

@@ -51,6 +51,9 @@ export interface HistoryItem {
   at: number;
   text: string;
   app?: string;
+  /** Name of the speech model that heard it, and the language it was told (a label); absent for entries from before these were stored. */
+  model?: string;
+  language?: string;
 }
 
 /** What the HUD page draws. */

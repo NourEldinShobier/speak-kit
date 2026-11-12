@@ -151,7 +151,9 @@ describe("transcriber", () => {
 
 describe("model views", () => {
   const installed: Record<string, boolean> = { "large-v3-turbo-q5_0": true, "parakeet-tdt-0.6b-v3-q4_0": false };
-  const views = (selected: DictationModelId, job: Parameters<typeof modelViews>[3], transfers: Parameters<typeof modelViews>[4] = []) => modelViews(STT_MODELS, selected, (id) => installed[id] ?? false, job, transfers);
+  type State = Parameters<typeof modelViews>[2];
+  const views = (selected: DictationModelId, job: State["job"], transfers: State["transfers"] = []) =>
+    modelViews(STT_MODELS, selected, { isInstalled: (id) => installed[id] ?? false, job, transfers });
   it("attaches progress to the model being downloaded only", () => {
     const v = views("large-v3-turbo-q5_0", { id: "parakeet-tdt-0.6b-v3-q4_0", kind: "downloading", fraction: 0.38, etaSeconds: 120 });
     expect(v[0]).not.toHaveProperty("progress");

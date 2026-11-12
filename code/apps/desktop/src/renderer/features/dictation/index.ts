@@ -5,3 +5,7 @@
  */
 export { DictationPage } from "./DictationPage";
 export { DictationHistoryPage } from "./HistoryPage";
+// What the setup window's dictation step uses: the bridge, the status hook and the HUD pill drawing.
+export { dictation } from "./api";
+export { useDictation } from "./useDictation";
+export { Pill } from "./HudPill";

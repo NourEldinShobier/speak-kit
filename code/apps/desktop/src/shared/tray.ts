@@ -61,10 +61,7 @@ export type TrayAction =
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */
 export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
 
-type TrayItem =
-  | { type: "separator" }
-  | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string }
-  | { type: "models"; label: string; rows: ModelRow[] };
+type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string } | { type: "models"; label: string; rows: ModelRow[] };
 
 /** The Speech model submenu: downloaded models only, the one in use marked. While one is checked before switching the old one stays in use and the switch can be cancelled; during a recording the rows are greyed. */
 export function speechModelRows(m: NonNullable<TrayContext["speechModels"]>): ModelRow[] {

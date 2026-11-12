@@ -6,8 +6,14 @@ import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
 export const DICTATION_MODELS = ["large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"] as const;
 /** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
 export type DictationModelId = (typeof DICTATION_MODELS)[number] | `custom-${string}`;
-export const isCustomModel = (id: string): boolean => /^custom-[0-9a-f]{12}$/.test(id);
-const modelId = v.union([v.picklist(DICTATION_MODELS), v.pipe(v.string(), v.regex(/^custom-[0-9a-f]{12}$/), v.transform((s) => s as `custom-${string}`))]);
+const modelId = v.union([
+  v.picklist(DICTATION_MODELS),
+  v.pipe(
+    v.string(),
+    v.regex(/^custom-[0-9a-f]{12}$/),
+    v.transform((s) => s as `custom-${string}`),
+  ),
+]);
 export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;

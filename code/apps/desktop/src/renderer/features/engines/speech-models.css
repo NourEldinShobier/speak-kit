@@ -57,8 +57,12 @@
   box-shadow: var(--shadow-card-ring);
   transition: box-shadow 120ms ease;
 }
-.sk-model:hover {
-  box-shadow: 0 0 0 1px var(--stroke-field), 0 4px 12px rgb(0 0 0 / 0.06);
+@media (hover: hover) and (pointer: fine) {
+  .sk-model:hover {
+    box-shadow:
+      0 0 0 1px var(--stroke-field),
+      0 4px 12px rgb(0 0 0 / 0.06);
+  }
 }
 .sk-model.is-inuse {
   box-shadow: 0 0 0 1px var(--stroke-focus-field);

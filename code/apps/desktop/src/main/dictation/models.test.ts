@@ -284,7 +284,7 @@ describe("model manager downloads", () => {
   it("a failure names the host and is kept for the page; the next attempt clears it", async () => {
     const { stt, failWith } = scripted();
     const { m } = make(stt);
-    failWith(new DownloadError("unreachable", "huggingface.co", 214, "Could not reach the model server huggingface.co."));
+    failWith(new DownloadError({ kind: "unreachable", host: "huggingface.co", keptBytes: 214, message: "Could not reach the model server huggingface.co." }));
     await m.download(PARAKEET);
     expect(m.failure?.id).toBe(PARAKEET);
     expect(m.failure?.error.host).toBe("huggingface.co");

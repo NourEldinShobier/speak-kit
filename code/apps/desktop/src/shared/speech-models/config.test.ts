@@ -5,7 +5,17 @@ import { DICTATION_LANGUAGES, DICTATION_MODELS } from "../dictation/settings";
 import { parseConfig } from "../schemas";
 import { DEVICE_VALUES, EnginesConfigSchema, SPEECH_IDLE_CHOICES, SPOKEN_LANGUAGE_CODES, SPOKEN_LANGUAGE_LABELS } from "./config";
 
-const DEFAULTS = { device: "auto", idleMinutes: 15, failedDevices: [], timedDevices: {}, releaseOnClose: false, autoSwitch: { enabled: false, rules: [] }, dismissedHints: [], skippedModel: false, lastUsed: {} };
+const DEFAULTS = {
+  device: "auto",
+  idleMinutes: 15,
+  failedDevices: [],
+  timedDevices: {},
+  releaseOnClose: false,
+  autoSwitch: { enabled: false, rules: [] },
+  dismissedHints: [],
+  skippedModel: false,
+  lastUsed: {},
+};
 
 describe("engines config", () => {
   it("defaults: device automatic, unload after 15 minutes, nothing remembered, switching off", () => {

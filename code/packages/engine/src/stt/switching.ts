@@ -56,7 +56,11 @@ export class ModelSwitcher {
       return { ok: true };
     } catch (e) {
       const cancelled = this.#cancelled;
-      await this.#d.load(old).catch(() => undefined); // dictation goes on with what it had
+      try {
+        await this.#d.load(old);
+      } catch {
+        // dictation goes on with what it had: the failure that matters is the one that is returned below
+      }
       return cancelled
         ? { ok: false, reason: "cancelled", message: MESSAGES.cancelled }
         : { ok: false, reason: "failed", message: `${id} could not be loaded: ${e instanceof Error ? e.message : String(e)}. The previous model is still in use.` };
@@ -69,7 +73,11 @@ export class ModelSwitcher {
   async cancel(): Promise<void> {
     if (!this.#target) return;
     this.#cancelled = true;
-    await this.#d.abort().catch(() => undefined);
+    try {
+      await this.#d.abort();
+    } catch {
+      // the switch is over either way: the load that was running reports its own end
+    }
   }
 }
 

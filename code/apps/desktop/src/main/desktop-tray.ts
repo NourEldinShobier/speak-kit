@@ -15,6 +15,14 @@ interface TrayParts {
   retryEngine(): Promise<unknown>;
 }
 
+/** The downloaded speech models for the tray's quick switch; nothing when none is downloaded. */
+function speechModelsContext(dictation: DictationService): Pick<TrayContext, "speechModels"> {
+  const v = dictation.speech.view();
+  const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
+  if (models.length === 0) return {};
+  return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
+}
+
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
 export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requestQuit, retryEngine }: TrayParts) {
   const context = (): TrayContext => ({
@@ -26,14 +34,8 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
-    ...speechModelsContext(),
+    ...speechModelsContext(dictation),
   });
-  const speechModelsContext = (): Pick<TrayContext, "speechModels"> => {
-    const v = dictation.speech.view();
-    const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
-    if (models.length === 0) return {};
-    return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
-  };
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
     ctx.sendUi({ type: "nav", page });

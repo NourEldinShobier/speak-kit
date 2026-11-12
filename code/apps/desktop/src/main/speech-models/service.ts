@@ -1,37 +1,13 @@
 import { join } from "node:path";
-import {
-  IdleRelease,
-  ModelSwitcher,
-  AutoSwitch,
-  STT_MODELS,
-  adoptFound,
-  checkFloor,
-  deleteModelFiles,
-  diskUse,
-  findModelsOnDisk,
-  forgetFailure,
-  importModelFile,
-  importedAsModel,
-  loadImported,
-  missingImported,
-  onGpuFailure,
-  planDevice,
-  recordFailure,
-  removeImported,
-  resolveLanguage,
-  type FoundModel,
-  type Hardware,
-  type ImportedModel,
-  type SttLanguage,
-  type SttModel,
-  type SttModelId,
-} from "@speakkit/engine";
+import { IdleRelease, ModelSwitcher, AutoSwitch, checkFloor, resolveLanguage, type Hardware, type SttLanguage, type SttModel, type SttModelId } from "@speakkit/engine";
 import type { DictationConfig } from "../../shared/dictation/settings";
 import type { DictationModelId } from "../../shared/dictation/settings";
 import type { EnginesConfig } from "../../shared/speech-models/config";
 import type { DeviceValue, FoundView, ImportOutcome, SpeechModelsView, SwitchOutcome, SwitchRuleView } from "../../shared/speech-models/contract";
 import type { ModelManager } from "../dictation/models";
 import type { Stt } from "../dictation/stt";
+import { DevicePolicy } from "./device-policy";
+import { ModelLibrary } from "./library";
 import { buildView } from "./view";
 
 /** What the service needs from the engine besides the speech interface. */
@@ -73,21 +49,29 @@ const NOW = Date.now;
  */
 export class SpeechModels {
   readonly #d: SpeechModelsDeps;
-  #imported: ImportedModel[] = [];
-  #missing = new Set<string>();
+  readonly #lib: ModelLibrary;
   #hw: Hardware | undefined;
   #hwReady: Promise<void> | undefined;
-  #disk: { total: number; per: Record<string, number> } = { total: 0, per: {} };
-  #movedByMemory = false;
+  readonly #device: DevicePolicy;
   #languageNote: { model: string; text: string } | undefined;
   #measured: { id: string; mb: number; setup: string } | undefined;
-  #found: FoundModel[] = [];
   readonly idle: IdleRelease;
   readonly switcher: ModelSwitcher;
   readonly auto: AutoSwitch;
 
   constructor(deps: SpeechModelsDeps) {
     this.#d = deps;
+    this.#lib = new ModelLibrary({
+      modelsDir: deps.modelsDir,
+      models: deps.models,
+      selected: () => this.#dict.model,
+      unload: () => deps.stt.unload(),
+      pickFile: deps.pickFile,
+      scanDirs: deps.scanDirs,
+      changed: deps.changed,
+      now: deps.now ?? NOW,
+    });
+    this.#device = new DevicePolicy({ config: () => this.#cfg, gpu: () => this.#hw?.gpu, save: deps.save, changed: deps.changed, now: deps.now ?? NOW });
     this.idle = new IdleRelease({
       minutes: () => this.#cfg.idleMinutes,
       busy: () => !!this.#d.stt.busy || this.#d.recording() || this.#d.models.busy,
@@ -107,12 +91,17 @@ export class SpeechModels {
     this.auto = new AutoSwitch({
       enabled: () => this.#cfg.autoSwitch.enabled && this.#d.models.installed,
       rules: () => this.#cfg.autoSwitch.rules.map((r) => ({ ...r, model: r.model as SttModelId, language: r.language as SttLanguage | undefined })),
-      downloaded: () => new Set(this.catalog().filter((m) => this.#d.models.isInstalled(m.id)).map((m) => m.id)),
+      downloaded: () =>
+        new Set(
+          this.catalog()
+            .filter((m) => this.#d.models.isInstalled(m.id))
+            .map((m) => m.id),
+        ),
       current: () => ({ model: this.#dict.model as SttModelId, language: this.#dict.language as never }),
       recording: () => this.#d.recording(),
       apply: async (model, language) => {
         const r = await this.switcher.switchTo(model);
-        if (r.ok && language && language !== this.#dict.language) this.#d.choose(this.#dict.model, resolveLanguage(this.#find(model)!, language).language);
+        if (r.ok && language && language !== this.#dict.language) this.#d.choose(this.#dict.model, resolveLanguage(this.#lib.find(model)!, language).language);
         this.#d.changed();
       },
     });
@@ -127,24 +116,17 @@ export class SpeechModels {
 
   /** Reads the models the person added, looks at the hardware and the disk. Safe to call again. */
   async init(): Promise<void> {
-    this.#imported = await loadImported(this.#d.modelsDir);
-    this.#hwReady ??= this.#d
-      .hardware()
-      .then((h) => void (this.#hw = h))
-      .catch(() => undefined);
+    await this.#lib.init();
+    // The probe leaves unknown what it cannot read and never rejects.
+    this.#hwReady ??= this.#d.hardware().then((h) => void (this.#hw = h));
     await this.#hwReady;
-    await this.refreshDisk();
     this.#d.changed();
   }
 
   /** Catalog models and the models the person added. */
   catalog(): readonly SttModel[] {
-    return [...STT_MODELS, ...this.#imported.map(importedAsModel)];
+    return this.#lib.catalog();
   }
-  #find(id: string): SttModel | undefined {
-    return this.catalog().find((m) => m.id === id);
-  }
-
   hardware(): Hardware | undefined {
     return this.#hw;
   }
@@ -155,42 +137,24 @@ export class SpeechModels {
     return v && !v.ok ? v.message : undefined;
   }
 
-  async refreshDisk(): Promise<void> {
-    const cat = this.catalog();
-    const use = await diskUse(this.#d.modelsDir, cat);
-    this.#disk = { total: use.total, per: use.perModel };
-    this.#missing = new Set((await missingImported(this.#d.modelsDir, this.#imported)).map((m) => m.id));
+  refreshDisk(): Promise<void> {
+    return this.#lib.refreshDisk();
   }
 
   // ---- the engine asks ----------------------------------------------------------------------------------------
 
-  /** Whether the next load may use the graphics card: decided from the device choice, the cards that failed on this driver and an earlier timing. */
+  /** Where speech runs; the engine asks these at every load. */
   gpuWanted(): boolean {
-    return this.#plan().gpu;
+    return this.#device.gpuWanted();
   }
   timeIntegrated(): boolean {
-    return this.#plan().timeIntegrated;
+    return this.#device.timeIntegrated();
   }
-  #plan() {
-    const gpu = this.#hw?.gpu;
-    return planDevice({ choice: this.#cfg.device, gpu, failed: this.#cfg.failedDevices, timed: gpu ? this.#cfg.timedDevices[`${gpu.name}|${gpu.driver}`] : undefined });
-  }
-  /** The integrated card was timed against the CPU: remember the winner for this driver. */
   onTimed(winner: "gpu" | "cpu"): void {
-    const gpu = this.#hw?.gpu;
-    if (!gpu) return;
-    this.#cfg.timedDevices[`${gpu.name}|${gpu.driver}`] = winner;
-    this.#d.save();
+    this.#device.onTimed(winner);
   }
-  /** Loading on the card failed and the engine went on with the CPU. An out-of-memory failure is not held against the card. */
   onGpuFallback(message: string): void {
-    const gpu = this.#hw?.gpu;
-    const { markFailed } = onGpuFailure(message);
-    if (markFailed && gpu) {
-      this.#cfg.failedDevices = recordFailure(this.#cfg.failedDevices, gpu, message, (this.#d.now ?? NOW)());
-      this.#d.save();
-    } else this.#movedByMemory = true;
-    this.#d.changed();
+    this.#device.onGpuFallback(message);
   }
   /** A model is ready or was just used: the idle wait starts over. */
   used(id?: string): void {
@@ -210,8 +174,8 @@ export class SpeechModels {
     const cat = this.catalog();
     return buildView({
       catalog: cat,
-      installed: new Set(cat.filter((m) => this.#d.models.isInstalled(m.id) && !this.#missing.has(m.id)).map((m) => m.id)),
-      missingFiles: this.#missing,
+      installed: new Set(cat.filter((m) => this.#d.models.isInstalled(m.id) && !this.#lib.missing.has(m.id)).map((m) => m.id)),
+      missingFiles: this.#lib.missing,
       selected: this.#dict.model,
       language: this.#dict.language,
       config: this.#cfg,
@@ -219,11 +183,11 @@ export class SpeechModels {
       transfers: this.#d.models.transfers.list(),
       preparing: this.#d.models.views().find((v) => v.progress?.kind === "preparing")?.id,
       failure: this.#d.models.failure,
-      diskPerModel: this.#disk.per,
-      diskTotal: this.#disk.total,
-      folder: join(this.#d.modelsDir, "stt"),
+      diskPerModel: this.#lib.disk.per,
+      diskTotal: this.#lib.disk.total,
+      folder: this.#lib.folder,
       backend: this.#d.stt.backend,
-      movedToCpuByMemory: this.#movedByMemory,
+      movedToCpuByMemory: this.#device.movedByMemory,
       measured: this.#measured,
       switching: this.switcher.switching,
       recording: this.#d.recording(),
@@ -236,7 +200,7 @@ export class SpeechModels {
   // ---- actions ----------------------------------------------------------------------------------------------
 
   async download(id: string): Promise<SpeechModelsView> {
-    if (!this.#find(id) || this.#find(id)!.origin === "custom") return this.view();
+    if (!this.#lib.find(id) || this.#lib.find(id)!.origin === "custom") return this.view();
     this.#cfg.skippedModel = false;
     await this.#d.models.download(id as DictationModelId);
     await this.refreshDisk();
@@ -260,19 +224,20 @@ export class SpeechModels {
 
   /** Switches to an installed model: loaded first, saved only if that worked, the old model back otherwise. */
   async use(id: string): Promise<SwitchOutcome> {
-    const target = this.#find(id);
+    const target = this.#lib.find(id);
     if (!target) return { ok: false, reason: "unknown", message: "That model is not in the list." };
-    if (this.#missing.has(id)) return { ok: false, reason: "file-missing", message: "The file of this model is missing. Find the file or remove the model." };
+    if (this.#lib.missing.has(id)) return { ok: false, reason: "file-missing", message: "The file of this model is missing. Find the file or remove the model." };
     const r = await this.switcher.switchTo(id as SttModelId);
     this.#d.changed();
     return r.ok ? { ok: true } : { ok: false, reason: r.reason, message: r.message };
   }
 
   #choose(id: DictationModelId): void {
-    const model = this.#find(id);
+    const model = this.#lib.find(id);
     const wanted = this.#dict.language;
     const fit = model ? resolveLanguage(model, wanted) : { language: wanted, changed: false };
-    this.#languageNote = fit.changed && model ? { model: id, text: `${model.name} does not handle ${wanted === "auto" ? "automatic detection" : wanted}, so the language was switched to English.` } : undefined;
+    this.#languageNote =
+      fit.changed && model ? { model: id, text: `${model.name} does not handle ${wanted === "auto" ? "automatic detection" : wanted}, so the language was switched to English.` } : undefined;
     this.#d.choose(id, fit.language);
     this.used(id);
   }
@@ -282,20 +247,8 @@ export class SpeechModels {
     return this.view();
   }
 
-  /** Deletes the model's file from our folder. Never touches a file the person keeps elsewhere; an imported model's original stays where it is. */
   async remove(id: string): Promise<number> {
-    const m = this.#find(id);
-    if (!m) return 0;
-    if (this.#dict.model === id) await this.#d.stt.unload().catch(() => undefined);
-    const freed = await deleteModelFiles(this.#d.modelsDir, m);
-    if (m.origin === "custom") {
-      await removeImported(this.#d.modelsDir, id);
-      this.#imported = this.#imported.filter((x) => x.id !== id);
-    }
-    await this.#d.models.refresh();
-    await this.refreshDisk();
-    this.#d.changed();
-    return freed;
+    return this.#lib.remove(id);
   }
 
   setIdleMinutes(minutes: EnginesConfig["idleMinutes"]): SpeechModelsView {
@@ -308,17 +261,13 @@ export class SpeechModels {
 
   /** Takes effect on the next load; a model that is loaded is reloaded now when it runs somewhere else than the choice says. */
   async setDevice(choice: DeviceValue): Promise<SpeechModelsView> {
-    this.#cfg.device = choice;
-    this.#movedByMemory = false;
-    this.#d.save();
+    this.#device.choose(choice);
     await this.#reloadIfIdle();
     return this.view();
   }
 
   async retryGraphicsCard(): Promise<SpeechModelsView> {
-    this.#cfg.failedDevices = forgetFailure(this.#cfg.failedDevices);
-    this.#movedByMemory = false;
-    this.#d.save();
+    this.#device.forgetFailures();
     await this.#reloadIfIdle();
     return this.view();
   }
@@ -337,52 +286,21 @@ export class SpeechModels {
     return this.view();
   }
 
-  async importFile(kind: "multilingual" | "english", name: string): Promise<ImportOutcome> {
-    const source = await this.#d.pickFile("Choose a speech model file");
-    if (!source) return { cancelled: true };
-    return this.#import({ source, kind, ...(name.trim() && { name: name.trim() }) });
+  importFile(kind: "multilingual" | "english", name: string): Promise<ImportOutcome> {
+    return this.#lib.importFile(kind, name);
   }
-
-  /** Points at the file of an imported model whose copy went missing; only the same file (same fingerprint) is accepted. */
-  async locateFile(id: string): Promise<ImportOutcome> {
-    const known = this.#imported.find((m) => m.id === id);
-    if (!known) return { ok: false, reason: "unknown", message: "That model is not in the list." };
-    const source = await this.#d.pickFile(`Find the file of ${known.name}`);
-    if (!source) return { cancelled: true };
-    return this.#import({ source, expectSha256: known.sha256 });
+  locateFile(id: string): Promise<ImportOutcome> {
+    return this.#lib.locate(id);
   }
-
-  async #import(o: { source: string; kind?: "multilingual" | "english"; name?: string; expectSha256?: string }): Promise<ImportOutcome> {
-    const r = await importModelFile({ modelsDir: this.#d.modelsDir, ...o, now: this.#d.now ?? NOW });
-    if (!r.ok) return { ok: false, reason: r.reason, message: r.message };
-    this.#imported = await loadImported(this.#d.modelsDir);
-    await this.#d.models.refresh();
-    await this.refreshDisk();
-    this.#d.changed();
-    return { ok: true, id: r.model.id, name: r.model.name, alreadyThere: r.alreadyThere };
-  }
-
   async removeImported(id: string): Promise<SpeechModelsView> {
-    await this.remove(id);
+    await this.#lib.remove(id);
     return this.view();
   }
-
-  /** Read-only look in the usual folders for files that are exactly one of our models. Nothing is copied until the person says so. */
-  async scanDisk(): Promise<FoundView[]> {
-    const have = new Set(this.catalog().filter((m) => this.#d.models.isInstalled(m.id)).map((m) => m.id));
-    const builtin = STT_MODELS.filter((m) => !have.has(m.id));
-    this.#found = await findModelsOnDisk(this.#d.scanDirs(), builtin);
-    return this.#found.map((f) => ({ id: f.id, name: this.#find(f.id)?.name ?? f.id, path: f.path }));
+  scanDisk(): Promise<FoundView[]> {
+    return this.#lib.scan();
   }
-
   async adoptFound(ids: string[]): Promise<SpeechModelsView> {
-    for (const f of this.#found.filter((x) => ids.includes(x.id))) {
-      const m = STT_MODELS.find((x) => x.id === f.id);
-      if (m) await adoptFound(this.#d.modelsDir, f, m);
-    }
-    await this.#d.models.refresh();
-    await this.refreshDisk();
-    this.#d.changed();
+    await this.#lib.adopt(ids);
     return this.view();
   }
 

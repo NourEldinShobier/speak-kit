@@ -218,13 +218,18 @@ export class WhisperStt implements SpeechToText {
     if (first.gpuFallback) this.#o.onGpuFallback?.(first.gpuFallback);
     if (timing && first.gpuKind === "integrated" && first.backend === "gpu") return this.#timeAgainstCpu(spec, first.warmupMs ?? Date.now() - t0);
     if (this.#vk !== undefined || first.gpuKind !== "integrated") return void (this.#vk ??= "");
-    for (let i = 1; i < (first.devices ?? 0) - 1; i++) {
+    await this.#pickDiscrete(spec, first.devices ?? 0);
+  }
+
+  /** The host runs on the integrated card: restart it on each other device until one is discrete. */
+  async #pickDiscrete(spec: HostSpec, devices: number): Promise<void> {
+    for (let i = 1; i < devices - 1; i++) {
       await this.#stopHost();
-      const probe = await this.#start(spec, String(i), false);
+      const probe = await this.#start(spec, String(i), { warmup: false });
       if (probe.gpuKind === "discrete") return void (this.#vk = String(i));
     }
     this.#vk = ""; // no discrete GPU after all: the default device it is
-    if (first.devices && first.devices > 2) {
+    if (devices > 2) {
       await this.#stopHost();
       await this.#start(spec, "");
     }
@@ -233,7 +238,7 @@ export class WhisperStt implements SpeechToText {
   /** An integrated card is not always faster than the CPU: run the same warm-up on the CPU and keep the host that answers sooner. */
   async #timeAgainstCpu(spec: HostSpec, gpuMs: number): Promise<void> {
     await this.#stopHost();
-    const cpu = await this.#start(spec, "", true, false);
+    const cpu = await this.#start(spec, "", { gpu: false });
     const cpuMs = cpu.warmupMs ?? Number.MAX_SAFE_INTEGER;
     const winner = cpuMs * 0.8 < gpuMs ? "cpu" : "gpu";
     this.#o.onTimed?.(winner, gpuMs, cpuMs);
@@ -255,8 +260,8 @@ export class WhisperStt implements SpeechToText {
     return typeof g === "function" ? g() : (g ?? true);
   }
 
-  #start(spec: HostSpec, vk: string, warmup = true, gpu?: boolean): Promise<Extract<SttFromWorker, { state: "ready" }>> {
-    const init: SttWorkerInit = { ...spec, gpu: gpu ?? this.#wantsGpu(), threads: Math.min(8, availableParallelism()), warmup };
+  #start(spec: HostSpec, vk: string, o: { warmup?: boolean; gpu?: boolean } = {}): Promise<Extract<SttFromWorker, { state: "ready" }>> {
+    const init: SttWorkerInit = { ...spec, gpu: o.gpu ?? this.#wantsGpu(), threads: Math.min(8, availableParallelism()), warmup: o.warmup ?? true };
     const w = (this.#host = processChannel<SttToWorker, SttFromWorker>(this.#o.workerUrl ?? defaultWorker(), init, vk ? { GGML_VK_VISIBLE_DEVICES: vk } : {}));
     return new Promise((resolve, reject) => {
       let loaded = false;

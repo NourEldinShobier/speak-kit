@@ -59,3 +59,4 @@ export {
   type Inspection,
 } from "./model-files";
 export { AutoSwitch, ModelSwitcher, RULE_WAIT_MS, matchRule, newerModelHint, type RuleContext, type SwitchResult, type SwitchRule } from "./switching";
+export { formatReport, recall, wordErrorRate, words, type CompareRow } from "./compare";

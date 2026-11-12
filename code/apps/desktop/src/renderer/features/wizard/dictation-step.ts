@@ -1,5 +1,5 @@
 import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
-import { accuracyText, languageName, sizeText } from "../engines/speech-text";
+import { accuracyText, languageName, sizeText } from "../../speech-text";
 
 /** The languages the first screen lists; every other language is behind "Other language". */
 export const FIRST_LANGUAGES = ["en", "de", "ar", "auto"] as const;
@@ -54,6 +54,11 @@ export interface ChecklistInput {
   modelInstalled: boolean;
 }
 
+function hotkeyDetail(i: ChecklistInput): string {
+  if (i.hotkeyFailed) return `${i.hotkeyLabel} could not start. Another app may be using it.`;
+  return i.hotkeyReady ? `${i.hotkeyLabel} is ready.` : "Not started yet.";
+}
+
 /** The live checklist of the welcome-back screen: what is ready and the one-click fix for what is not. */
 export function checklist(i: ChecklistInput): ChecklistRow[] {
   return [
@@ -67,7 +72,7 @@ export function checklist(i: ChecklistInput): ChecklistRow[] {
       id: "hotkey",
       title: "Hotkey",
       ok: i.hotkeyReady && !i.hotkeyFailed,
-      detail: i.hotkeyFailed ? `${i.hotkeyLabel} could not start. Another app may be using it.` : i.hotkeyReady ? `${i.hotkeyLabel} is ready.` : "Not started yet.",
+      detail: hotkeyDetail(i),
       ...(!(i.hotkeyReady && !i.hotkeyFailed) && { fix: "fix-hotkey" as const }),
     },
     {

@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import type { ModelFile } from "./catalog";
-import { checksumFailure, DownloadError, httpFailure, incompleteFailure, toDownloadError, worthAnotherHost } from "./download-error";
+import { checksumFailure, httpFailure, incompleteFailure, toDownloadError, worthAnotherHost } from "./download-error";
 
 export interface DownloadOptions {
   /** 0..1 of the file, reported when it moves by at least half a percent. */
@@ -34,7 +34,7 @@ export async function modelPresent(dest: string, f: ModelFile): Promise<boolean>
 }
 
 /** Streams the file into `part`, continuing at byte `have` when the server honours the range. */
-async function transfer(url: string, f: ModelFile, part: string, { have, onProgress, signal, fetch: doFetch = fetch }: DownloadOptions & { have: number }): Promise<void> {
+async function transfer({ url, f, part }: { url: string; f: ModelFile; part: string }, { have, onProgress, signal, fetch: doFetch = fetch }: DownloadOptions & { have: number }): Promise<void> {
   const res = await doFetch(url, { headers: have > 0 ? { Range: `bytes=${have}-` } : {}, ...(signal && { signal }) });
   if (!res.ok || !res.body) throw httpFailure(res.status, url, Math.max(0, have));
   // 206 continues the partial file; a plain 200 means the server ignored the range, so start over.
@@ -70,7 +70,7 @@ export async function downloadModel(f: ModelFile, dest: string, o: DownloadOptio
     const urls = [f.url, ...(f.mirrors ?? [])];
     for (const [i, url] of urls.entries()) {
       try {
-        await transfer(url, f, part, { ...o, have });
+        await transfer({ url, f, part }, { ...o, have });
         break;
       } catch (e) {
         if (o.signal?.aborted) throw e;
@@ -82,12 +82,10 @@ export async function downloadModel(f: ModelFile, dest: string, o: DownloadOptio
   }
 
   const got = await size(part);
-  if (got !== f.bytes) throw incompleteFailure(f.file, f.url, got, f.bytes);
+  if (got !== f.bytes) throw incompleteFailure(f, got, f.bytes);
   if ((await sha256Of(part)) !== f.sha256) {
     await rm(part, { force: true });
     throw checksumFailure(f.file, f.url);
   }
   await rename(part, dest);
 }
-
-export { DownloadError };

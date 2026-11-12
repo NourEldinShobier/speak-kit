@@ -1,7 +1,7 @@
 import { Badge, Button, Icon, ProgressBar } from "@speakkit/ui";
 import type { ModelCard } from "../../../shared/speech-models/contract";
 import { models } from "./api";
-import { accuracyText, FAILURE_BUTTONS, failureText, languagesText, memoryText, recommendedText, sizeText, speedText, transferText } from "./speech-text";
+import { accuracyText, FAILURE_BUTTONS, failureText, languagesText, memoryText, recommendedText, sizeText, speedText, transferText } from "../../speech-text";
 
 const TAGLINES: Record<string, string> = { Accurate: "The accurate one", Fast: "The fast one", Yours: "Added by you" };
 export const tagline = (c: ModelCard): string => TAGLINES[c.tag] ?? c.tag;
@@ -44,7 +44,15 @@ function Details({ c, run }: { c: ModelCard; run: Props["run"] }) {
       <dl className="sk-model__facts">
         <div>
           <dt>Licence</dt>
-          <dd>{c.license.url ? <a href={c.license.url} target="_blank" rel="noreferrer">{c.license.name}</a> : c.license.name}</dd>
+          <dd>
+            {c.license.url ? (
+              <a href={c.license.url} target="_blank" rel="noreferrer">
+                {c.license.name}
+              </a>
+            ) : (
+              c.license.name
+            )}
+          </dd>
         </div>
         {c.accuracy && (
           <div>
@@ -68,93 +76,110 @@ function Details({ c, run }: { c: ModelCard; run: Props["run"] }) {
   );
 }
 
-function Footer({ card: c, busy, run, onDelete, onUse, onFailureAdvice }: Props) {
-  if (c.fileMissing)
-    return (
-      <div className="sk-model__foot">
-        <p className="sk-model__note" role="alert">
-          The file of this model is missing from Speak Kit's folder. The file is fine if you still have it: find it again.
-        </p>
-        <div className="sk-model__actions">
-          <Button disabled={busy} onClick={() => run(() => models.locateFile(c.id))}>
-            Find the file
-          </Button>
-          <Button disabled={busy} onClick={() => run(() => models.removeImported(c.id))}>
-            Remove
-          </Button>
-        </div>
-      </div>
-    );
-  if (c.transfer) {
-    const t = c.transfer;
-    return (
-      <div className="sk-model__foot">
-        <ProgressBar thin block value={t.state === "preparing" ? undefined : Math.round(t.fraction * 100)} label={`${c.name} download`} />
-        <p className="sk-model__note" aria-live="polite">
-          {transferText(c)}
-        </p>
-        {t.state !== "preparing" && (
-          <div className="sk-model__actions">
-            {t.state === "running" ? <Button onClick={() => run(() => models.pauseDownload(c.id))}>Pause</Button> : <Button variant="primary" onClick={() => run(() => models.resumeDownload(c.id))}>Resume</Button>}
-            <Button onClick={() => run(() => models.cancelDownload(c.id))}>Cancel</Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-  if (c.installed)
-    return (
-      <div className="sk-model__foot">
-        {c.languageNote && <p className="sk-model__note">{c.languageNote}</p>}
-        <div className="sk-model__actions sk-model__actions--between">
-          <span className="sk-model__installed">
-            <Icon name="check" size={14} /> Installed
-          </span>
-          <span className="sk-model__actions">
-            {!c.inUse && (
-              <Button disabled={busy} onClick={() => onUse(c)}>
-                Use this model
-              </Button>
-            )}
-            <Button aria-label={`Delete ${c.name}`} disabled={busy} variant="danger" onClick={() => onDelete(c)}>
-              Delete
-            </Button>
-          </span>
-        </div>
-      </div>
-    );
+function MissingFooter({ card: c, busy, run }: Props) {
   return (
     <div className="sk-model__foot">
-      {c.failure && (
-        <div className="sk-model__failure" role="alert">
-          <p>{failureText(c)}</p>
-          <div className="sk-model__actions">
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() => (c.failure!.advice === "try-again" || c.failure!.advice === "download-again" ? run(() => models.download(c.id)) : onFailureAdvice(c.failure!.advice, c))}
-            >
-              {FAILURE_BUTTONS[c.failure.advice] ?? "Try again"}
+      <p className="sk-model__note" role="alert">
+        The file of this model is missing from Speak Kit's folder. The file is fine if you still have it: find it again.
+      </p>
+      <div className="sk-model__actions">
+        <Button disabled={busy} onClick={() => run(() => models.locateFile(c.id))}>
+          Find the file
+        </Button>
+        <Button disabled={busy} onClick={() => run(() => models.removeImported(c.id))}>
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TransferFooter({ card: c, run }: Props) {
+  const t = c.transfer!;
+  return (
+    <div className="sk-model__foot">
+      <ProgressBar thin block value={t.state === "preparing" ? undefined : Math.round(t.fraction * 100)} label={`${c.name} download`} />
+      <p className="sk-model__note" aria-live="polite">
+        {transferText(c)}
+      </p>
+      {t.state !== "preparing" && (
+        <div className="sk-model__actions">
+          {t.state === "running" ? (
+            <Button onClick={() => run(() => models.pauseDownload(c.id))}>Pause</Button>
+          ) : (
+            <Button variant="primary" onClick={() => run(() => models.resumeDownload(c.id))}>
+              Resume
             </Button>
-            {(c.failure.advice === "open-proxy-settings" || c.failure.advice === "free-space") && (
-              <Button disabled={busy} onClick={() => run(() => models.download(c.id))}>
-                Try again
-              </Button>
-            )}
-          </div>
+          )}
+          <Button onClick={() => run(() => models.cancelDownload(c.id))}>Cancel</Button>
         </div>
-      )}
-      {c.blocked ? (
-        <p className="sk-model__note">{c.blocked}</p>
-      ) : (
-        !c.failure && (
-          <Button className="sk-model__wide" disabled={busy} onClick={() => run(() => models.download(c.id))}>
-            Download {sizeText(c.bytes)}
-          </Button>
-        )
       )}
     </div>
   );
+}
+
+function InstalledFooter({ card: c, busy, onDelete, onUse }: Props) {
+  return (
+    <div className="sk-model__foot">
+      {c.languageNote && <p className="sk-model__note">{c.languageNote}</p>}
+      <div className="sk-model__actions sk-model__actions--between">
+        <span className="sk-model__installed">
+          <Icon name="check" size={14} /> Installed
+        </span>
+        <span className="sk-model__actions">
+          {!c.inUse && (
+            <Button disabled={busy} onClick={() => onUse(c)}>
+              Use this model
+            </Button>
+          )}
+          <Button aria-label={`Delete ${c.name}`} disabled={busy} variant="danger" onClick={() => onDelete(c)}>
+            Delete
+          </Button>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function FailureNote({ card: c, busy, run, onFailureAdvice }: Props) {
+  const f = c.failure!;
+  const retry = f.advice === "try-again" || f.advice === "download-again";
+  return (
+    <div className="sk-model__failure" role="alert">
+      <p>{failureText(c)}</p>
+      <div className="sk-model__actions">
+        <Button variant="primary" disabled={busy} onClick={() => (retry ? run(() => models.download(c.id)) : onFailureAdvice(f.advice, c))}>
+          {FAILURE_BUTTONS[f.advice] ?? "Try again"}
+        </Button>
+        {!retry && (
+          <Button disabled={busy} onClick={() => run(() => models.download(c.id))}>
+            Try again
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DownloadFooter(p: Props) {
+  const c = p.card;
+  return (
+    <div className="sk-model__foot">
+      {c.failure && <FailureNote {...p} />}
+      {c.blocked && <p className="sk-model__note">{c.blocked}</p>}
+      {!c.blocked && !c.failure && (
+        <Button className="sk-model__wide" disabled={p.busy} onClick={() => p.run(() => models.download(c.id))}>
+          Download {sizeText(c.bytes)}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function Footer(p: Props) {
+  if (p.card.fileMissing) return <MissingFooter {...p} />;
+  if (p.card.transfer) return <TransferFooter {...p} />;
+  return p.card.installed ? <InstalledFooter {...p} /> : <DownloadFooter {...p} />;
 }
 
 /** One model: its name, what it is for, the four facts that matter, and the one button that fits its state. */

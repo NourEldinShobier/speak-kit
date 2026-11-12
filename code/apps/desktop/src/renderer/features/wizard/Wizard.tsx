@@ -1,12 +1,14 @@
-import { useReducer } from "react";
+import { lazy, Suspense, useReducer } from "react";
 import type { AppState } from "../../../shared/ipc";
 import { api } from "../../ui";
 import { ConnectStep } from "./ConnectStep";
-import { DictationStep } from "./DictationStep";
 import { DoneStep } from "./DoneStep";
 import { DownloadStep } from "./DownloadStep";
 import { initWizard, wizardReducer, type WizardAction, type WizardStep } from "./model";
 import { WelcomeStep } from "./WelcomeStep";
+
+// The dictation step pulls in the dictation and engines code: it loads when setup gets there.
+const DictationStep = lazy(() => import("./DictationStep").then((m) => ({ default: m.DictationStep })));
 
 /** First-run setup: welcome, download, dictation, browser, done. Closing the window keeps the step, so setup opens again where it stopped. */
 export function Wizard({ s }: { s: AppState }) {
@@ -23,7 +25,11 @@ export function Wizard({ s }: { s: AppState }) {
     case 1:
       return <DownloadStep s={s} onBack={() => go(0)} onNext={() => go(2)} />;
     case 2:
-      return <DictationStep resumed={resumed && st.step === 2} onBack={() => go(1)} onNext={() => go(3)} />;
+      return (
+        <Suspense fallback={null}>
+          <DictationStep resumed={resumed} onBack={() => go(1)} onNext={() => go(3)} />
+        </Suspense>
+      );
     case 3:
       return (
         <ConnectStep

@@ -29,7 +29,13 @@ describe("pickGpu", () => {
     expect(pickGpu([{ name: "AMD Radeon RX 6600", driver: "31" }])?.integrated).toBe(false);
   });
   it("ignores adapters that are not cards", () => {
-    expect(pickGpu([{ name: "Microsoft Basic Display Adapter", driver: "1" }, { name: "Parsec Virtual Display Adapter", driver: "1" }, { name: "", driver: "" }])).toBeUndefined();
+    expect(
+      pickGpu([
+        { name: "Microsoft Basic Display Adapter", driver: "1" },
+        { name: "Parsec Virtual Display Adapter", driver: "1" },
+        { name: "", driver: "" },
+      ]),
+    ).toBeUndefined();
     expect(pickGpu([])).toBeUndefined();
   });
 });

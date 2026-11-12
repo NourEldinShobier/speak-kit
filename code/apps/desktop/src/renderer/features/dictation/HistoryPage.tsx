@@ -15,6 +15,11 @@ export function HistoryRow({ item, copied, onCopy, onDelete }: { item: HistoryIt
       <div className="dict-hist__when">
         <span>{timeText(item.at)}</span>
         <span className="dict-hist__app">{appName(item.app)}</span>
+        {item.model && (
+          <span className="dict-hist__app" data-testid="history-model">
+            {[item.model, item.language].filter(Boolean).join(", ")}
+          </span>
+        )}
       </div>
       <p className="dict-hist__text">{item.text}</p>
       <div className="dict-hist__acts" data-copied={copied || undefined}>
