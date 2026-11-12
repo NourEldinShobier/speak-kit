@@ -15,7 +15,7 @@ export function QuitDialog({ s, open, playing, onClose }: { s: AppState; open: b
       footer={
         <>
           <Button data-autofocus onClick={onClose}>
-            Keep running in tray
+            {s.config.labs["hide-tray-icon"] ? "Cancel" : "Keep running in tray"}
           </Button>
           <span style={{ flex: 1 }} />
           <Button variant="danger" onClick={() => api.quit()}>

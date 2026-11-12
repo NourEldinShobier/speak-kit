@@ -33,6 +33,19 @@ describe("settings navigation", () => {
   });
 });
 
+describe("Automation", () => {
+  it("shows its title and a loading state before main has answered, never the placeholder", () => {
+    const html = page("automation");
+    expect(html).toContain("<h1>Automation</h1>");
+    expect(html).toContain("lm-skeleton");
+    expect(html).not.toContain("Coming soon");
+  });
+  it("warns when the local server is not running", () => {
+    const html = renderToStaticMarkup(<Settings s={appState({ port: 0 })} sub="automation" />);
+    expect(html).toContain("The local server is not running");
+  });
+});
+
 describe("Experiments", () => {
   it("lists the everyday labs with a named switch and hides developer ones", () => {
     const html = page("experiments");

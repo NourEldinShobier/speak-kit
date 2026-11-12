@@ -15,6 +15,7 @@
   "dependencies": {
     "@lingo-reader/epub-parser": "catalog:",
     "@mozilla/readability": "catalog:",
+    "@speakkit/cli": "workspace:*",
     "@speakkit/dictation": "workspace:*",
     "@speakkit/engine": "workspace:*",
     "@speakkit/player": "workspace:*",

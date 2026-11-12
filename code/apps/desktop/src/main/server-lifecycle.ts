@@ -1,10 +1,10 @@
-import { access } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
 import type { DownloadsReport } from "../shared/app-data";
 import { toDesktopError } from "../shared/errors";
-import { createServer, type VoiceChatService } from "@speakkit/server";
+import { createServer, type AutomationHost, type VoiceChatService } from "@speakkit/server";
 import { FakeEngine, KokoroEngine, type TtsEngine } from "@speakkit/engine";
 import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
@@ -28,6 +28,8 @@ interface RuntimeDeps {
   api: ServerApi;
   /** The OpenAI key and the minting of Realtime client secrets; the server only calls it. */
   voiceChat: VoiceChatService;
+  /** The reader, queue and exports lent to scripts and AI apps. */
+  automation: AutomationHost;
   /** Sends the state to every window. */
   publish(): AppState;
   /** Health is polled only while the main window is visible. */
@@ -105,6 +107,7 @@ export class ServerRuntime {
           port,
           version: state.version,
           voiceChat: this.#d.voiceChat,
+          automation: this.#d.automation,
           ...(token ? { token } : {}),
           onError: (e) => this.#onServerError(e),
           // Lazy-load options of the server build; extra keys are ignored by a build that predates them.
@@ -118,6 +121,8 @@ export class ServerRuntime {
       const missing = applyMemory(server, config, state.onBattery);
       if (missing.length) log.info("server has no runtime setter for:", missing.join(", "));
       log.info(`server listening on 127.0.0.1:${port}`);
+      // The command line tool finds the port here, also after a port fallback.
+      await writeFile(path.join(dataDir, "server.json"), JSON.stringify({ port })).catch((e) => log.warn("server.json not written", e instanceof Error ? e.message : e));
     } catch (e) {
       state.serverError = toDesktopError(e);
       log.error("server failed to start", e instanceof Error ? e.message : e);

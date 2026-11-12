@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -49,6 +49,25 @@ describe("ServerRuntime", () => {
     expect(state.serverError).toEqual({ code: "unexpected", args: { detail: "EMFILE: too many open files" } });
     expect(log.error).toHaveBeenCalledWith("server error", "EMFILE: too many open files");
     expect(publish).toHaveBeenCalled();
+  });
+
+  it("writes the port to server.json so the command line tool finds it, also after a port fallback", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "sk-rt-"));
+    try {
+      const { rt, state } = runtime(root);
+      await rt.start();
+      expect(state.port).toBeGreaterThan(0);
+      expect(JSON.parse(readFileSync(path.join(root, "server.json"), "utf8"))).toEqual({ port: state.port });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("starts anyway when server.json cannot be written", async () => {
+    const { rt, state, log } = runtime(path.join(tmpdir(), "sk-rt-missing", "nowhere"));
+    await rt.start();
+    expect(state.serverError).toBeNull();
+    expect(log.warn).toHaveBeenCalledWith("server.json not written", expect.any(String));
   });
 
   it("deletes the downloads, keeps the library and starts the server again", async () => {

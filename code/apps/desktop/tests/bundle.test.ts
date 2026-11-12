@@ -49,10 +49,11 @@ describe("renderer bundle", () => {
 
 /**
  * Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR, dictation and worker chunks are not counted). Current size plus 10 %.
- * index: 191,000 to 193,500 for the page and settings registries, the stub pages and the new command palette (0.8 KB over the old budget).
+ * index: 193,500 to 200,000 for the Automation settings page, its view model and the protocol's automation constants (2.9 KB over).
+ * Before that, 191,000 to 193,500 for the page and settings registries, the stub pages and the new command palette (0.8 KB over the old budget).
  * Before that, 185,500 to 191,000 for dictation's entry in Settings, its config schema and the shared-chunk split of its lazy page (3.2 KB; main was already 1.4 KB over).
  */
-const RENDERER_BUDGET_BYTES = { index: 193_500, mini: 133_000 };
+const RENDERER_BUDGET_BYTES = { index: 200_000, mini: 133_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

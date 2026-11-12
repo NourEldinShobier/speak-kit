@@ -1,25 +1,15 @@
 import path from "node:path";
-import { labsArgs, runLabsCommand } from "../shared/labs";
-import { openConfig } from "./config";
+import { labsArgs } from "../shared/labs";
+import { readLabsFile, runLabsFile } from "../cli/labs-file";
 
 /**
- * `Speak Kit labs list|on|off <lab>`: runs against the settings file in `dataDir` and returns the process exit code, or null when
- * the command line is not a labs command. A running app is told to re-read the file by the second-instance handler.
+ * `Speak Kit labs list|on|off <lab>` run on the app's own executable: returns the process exit code, or null when the command line
+ * is not a labs command. A running app is told to re-read the file by the second-instance handler.
  */
 export async function runLabsCli(argv: readonly string[], dataDir: string, print: (line: string) => void): Promise<number | null> {
   const args = labsArgs(argv);
-  if (!args) return null;
-  const store = await openConfig(dataDir);
-  const r = runLabsCommand(args, store.config.labs);
-  print(r.out);
-  if (r.next) {
-    store.config.labs = r.next;
-    store.save();
-  }
-  return r.code;
+  return args && runLabsFile(args, dataDir, print);
 }
 
-/** The labs currently on disk, for a running app that was told another process changed them. */
-export async function readLabs(dataDir: string) {
-  return (await openConfig(path.resolve(dataDir))).config.labs;
-}
+/** The labs currently on disk, for a running app that was told another process changed them; null when the file cannot be read. */
+export const readLabs = (dataDir: string) => readLabsFile(path.resolve(dataDir));

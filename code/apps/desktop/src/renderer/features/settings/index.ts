@@ -9,3 +9,4 @@ export { MemoryPage } from "./MemoryPage";
 export { BrowserPage } from "./BrowserPage";
 export { StoragePage } from "./StoragePage";
 export { ExperimentsPage } from "./ExperimentsPage";
+export { AutomationPage } from "./AutomationPage";

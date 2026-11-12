@@ -17,6 +17,8 @@ interface MainWindowEvents {
   onVisible(): void;
   /** The window was hidden or minimized: nothing should poll for it. */
   onHidden(): void;
+  /** Close was pressed while no tray icon exists to bring a hidden window back: ask whether to quit instead. */
+  onCloseWithoutTray?(): void;
 }
 
 /**
@@ -138,7 +140,9 @@ export class MainWindow {
     w.on("close", (e) => {
       if (this.quitting) return;
       e.preventDefault();
-      this.hide();
+      // With the tray icon hidden, a window hidden to the tray could never be reopened or quit (Windows and Linux have no Dock).
+      if (this.#config.labs["hide-tray-icon"] && process.platform !== "darwin") this.#events.onCloseWithoutTray?.();
+      else this.hide();
     });
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;

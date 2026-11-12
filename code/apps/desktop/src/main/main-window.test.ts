@@ -41,7 +41,12 @@ vi.mock("./window-colors", () => ({ appBackground: () => "#grey", setupBackgroun
 import { MainWindow } from "./main-window";
 import type { Config } from "../shared/schemas";
 
-const make = (setupDone = true) => new MainWindow({ setupDone } as Config, { onVisible: () => {}, onHidden: () => {} });
+const make = (setupDone = true, extra: { hideTray?: boolean; onCloseWithoutTray?: () => void } = {}) =>
+  new MainWindow({ setupDone, labs: { "hide-tray-icon": !!extra.hideTray } } as unknown as Config, {
+    onVisible: () => {},
+    onHidden: () => {},
+    ...(extra.onCloseWithoutTray && { onCloseWithoutTray: extra.onCloseWithoutTray }),
+  });
 
 describe("MainWindow and the macOS Dock", () => {
   it("closing the window hides the Dock icon and keeps the app alive", () => {
@@ -77,6 +82,34 @@ describe("MainWindow and the macOS Dock", () => {
     h.on["close"]!({ preventDefault: () => (prevented = true) });
     expect(prevented).toBe(false);
     expect(h.dock).toEqual([]);
+  });
+});
+
+describe("MainWindow close with the tray icon hidden", () => {
+  const closeWith = (platform: NodeJS.Platform, hideTray: boolean) => {
+    const real = process.platform;
+    Object.defineProperty(process, "platform", { value: platform });
+    try {
+      h.dock.length = 0;
+      let asked = 0;
+      const w = make(true, { hideTray, onCloseWithoutTray: () => asked++ });
+      w.create(false);
+      let prevented = false;
+      h.on["close"]!({ preventDefault: () => (prevented = true) });
+      return { prevented, asked, dock: [...h.dock] };
+    } finally {
+      Object.defineProperty(process, "platform", { value: real });
+    }
+  };
+
+  it("asks to quit instead of hiding a window nothing could bring back", () => {
+    expect(closeWith("win32", true)).toEqual({ prevented: true, asked: 1, dock: [] });
+  });
+  it("still hides to the tray while the tray icon is shown", () => {
+    expect(closeWith("win32", false)).toEqual({ prevented: true, asked: 0, dock: ["hide"] });
+  });
+  it("on macOS the Dock icon remains, so closing still hides the window", () => {
+    expect(closeWith("darwin", true)).toEqual({ prevented: true, asked: 0, dock: ["hide"] });
   });
 });
 

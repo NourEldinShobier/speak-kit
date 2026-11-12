@@ -8,7 +8,7 @@ const GROUPS = ["App", "Developer"] as const;
 export function ExperimentsPage({ s }: { s: AppState }) {
   const c = s.config;
   const shown = visibleLabs(c.showDeveloperLabs);
-  const set = (id: LabId, on: boolean) => api.patchConfig({ labs: { ...c.labs, [id]: on } });
+  const set = (id: LabId, on: boolean) => api.patchConfig({ labs: { [id]: on } });
   return (
     <Page title="Experiments" lead="Features that are still being tried out. Each one is off until you switch it on.">
       {GROUPS.map((g) => {

@@ -6,7 +6,7 @@ import { dirSize, measureDownloads } from "./downloads";
 import { isLaunchAtLogin, setLaunchAtLogin } from "./login-item";
 import type { Activity, Api, AppState, ExternalLink, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
-import type { Config, ConfigPatch } from "../shared/schemas";
+import { applyConfigPatch, type Config, type ConfigPatch } from "../shared/schemas";
 import type { MainWindow } from "./main-window";
 import { emptyPairing } from "./pairing";
 import type { ServerApi } from "./server-api";
@@ -55,7 +55,7 @@ const EXTERNAL_URLS: Record<ExternalLink, string> = {
 async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
   const { state, config, runtime, mainWindow } = d;
   const setupWas = config.setupDone;
-  Object.assign(config, patch);
+  applyConfigPatch(config, patch);
   d.saveConfig();
   if (patch.startMinimized !== undefined && isLaunchAtLogin(!config.startMinimized)) setLaunchAtLogin(true, config.startMinimized);
   if (patch.idleUnload || patch.batterySaver !== undefined) applyMemory(runtime.server, config, state.onBattery);

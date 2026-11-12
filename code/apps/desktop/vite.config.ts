@@ -14,6 +14,7 @@ const electronProcesses = (): Plugin => ({
     await nodeBuild("src/main/index.ts", "dist/main", "es", "index.js");
     await nodeBuild("src/main/export/mp3-worker.ts", "dist/main", "es", "mp3-worker.js", { empty: false });
     await nodeBuild("src/main/library/parse/worker.ts", "dist/main", "es", "parse-worker.js", { empty: false });
+    await nodeBuild("src/cli/main.ts", "dist/main", "es", "cli.js", { empty: false });
     await nodeBuild("src/preload/index.ts", "dist/preload", "cjs", "index.cjs");
   },
 });

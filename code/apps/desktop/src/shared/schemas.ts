@@ -56,6 +56,9 @@ export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
 const labsEntries = Object.fromEntries(LAB_IDS.map((id) => [id, bool(false)])) as Record<LabId, ReturnType<typeof bool>>;
 const LabsSchema = v.fallback(v.object(labsEntries), v.parse(v.object(labsEntries), {}));
 
+/** What the renderer may send for labs: any of the known switches, nothing else. A wrong type is refused, not turned into defaults. */
+const LabsPatchSchema = v.partial(v.strictObject(Object.fromEntries(LAB_IDS.map((id) => [id, v.boolean()])) as Record<LabId, v.BooleanSchema<undefined>>));
+
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
@@ -115,11 +118,18 @@ export const ConfigPatchSchema = v.partial(
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
-    labs: LabsSchema,
+    labs: LabsPatchSchema,
     showDeveloperLabs: v.boolean(),
   }),
 );
 export type ConfigPatch = v.InferOutput<typeof ConfigPatchSchema>;
+
+/** Applies a validated patch in place; labs merge per switch so a partial patch leaves the other labs as they are. */
+export function applyConfigPatch(config: Config, patch: ConfigPatch): void {
+  const { labs, ...rest } = patch;
+  Object.assign(config, rest);
+  if (labs) Object.assign(config.labs, labs);
+}
 
 const ShortcutIdSchema = v.picklist(SHORTCUT_IDS);
 const ReaderCommandSchema = v.variant("type", [
@@ -188,4 +198,7 @@ export const ARGS = {
   voiceChatRemoveKey: v.tuple([]),
   voiceChatTestKey: v.tuple([]),
   voiceChatSetVoice: v.tuple([v.picklist(VOICE_CHAT_VOICES)]),
+  automationInfo: v.tuple([]),
+  automationCli: v.tuple([v.picklist(["install", "remove", "test"])]),
+  automationSkill: v.tuple([]),
 } as const;

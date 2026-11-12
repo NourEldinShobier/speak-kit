@@ -3,6 +3,7 @@ import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
+import type { AutomationCliAction, AutomationInfo } from "./automation";
 import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
@@ -157,6 +158,11 @@ export interface Api {
   /** Asks OpenAI whether the saved key is accepted. */
   voiceChatTestKey(): Promise<VoiceChatTestResult>;
   voiceChatSetVoice(voice: VoiceChatVoice): Promise<AppState>;
+  /** Automation settings: the command line tool, the agent skill and the server limits. Actions answer with the new info. */
+  automationInfo(): Promise<AutomationInfo>;
+  automationCli(action: AutomationCliAction): Promise<AutomationInfo>;
+  /** Writes (or updates) the agent skill under the user's skills folder. */
+  automationSkill(): Promise<AutomationInfo>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -198,6 +204,9 @@ export const METHODS = [
   "voiceChatRemoveKey",
   "voiceChatTestKey",
   "voiceChatSetVoice",
+  "automationInfo",
+  "automationCli",
+  "automationSkill",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";
