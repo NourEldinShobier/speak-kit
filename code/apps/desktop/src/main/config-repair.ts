@@ -1,3 +1,4 @@
+import { constants } from "node:fs";
 import { copyFile } from "node:fs/promises";
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -16,10 +17,16 @@ export function repairedPaths(raw: unknown, parsed: unknown, at = ""): string[] 
   return out;
 }
 
-/** Copies the file to `<name>.invalid` before it is rewritten with repaired values, so nothing the person typed is lost. Returns the copy, or null when nothing was repaired. */
+/** Copies the file to `<name>.invalid` before it is rewritten with repaired values, so nothing the person typed is lost. A copy that already exists is kept: the new one gets a timestamp. Returns the copy, or null when nothing was repaired. */
 export async function keepInvalidAside(file: string, raw: unknown, parsed: unknown): Promise<string | null> {
   if (repairedPaths(raw, parsed).length === 0) return null;
-  const copy = `${file}.invalid`;
-  await copyFile(file, copy);
+  let copy = `${file}.invalid`;
+  try {
+    await copyFile(file, copy, constants.COPYFILE_EXCL);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    copy = `${file}.invalid-${Date.now()}`;
+    await copyFile(file, copy);
+  }
   return copy;
 }

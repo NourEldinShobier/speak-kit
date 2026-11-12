@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -77,6 +77,19 @@ describe("settings file care", () => {
     const c = await openConfig(dir);
     expect(c.config).toMatchObject({ speed: 1, dictation: { mode: "hold", enabled: true } });
     expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(text);
+  });
+
+  it("never overwrites an earlier copy: a second damaged load keeps its own", async () => {
+    const first = JSON.stringify({ setupDone: true, speed: 99 });
+    const second = JSON.stringify({ setupDone: true, speed: 77 });
+    writeFileSync(path.join(dir, "config.json"), first);
+    await openConfig(dir);
+    writeFileSync(path.join(dir, "config.json"), second);
+    await openConfig(dir);
+    expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(first);
+    const extra = readdirSync(dir).filter((f) => f.startsWith("config.json.invalid-"));
+    expect(extra).toHaveLength(1);
+    expect(readFileSync(path.join(dir, extra[0]!), "utf8")).toBe(second);
   });
 
   it("keeps nothing aside for a file that only lacks newer keys or has an unknown one", async () => {

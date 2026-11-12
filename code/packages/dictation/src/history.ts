@@ -66,6 +66,14 @@ function matches(e: HistoryEntry, search: string): boolean {
   return (search.toLowerCase().match(/\S+/g) ?? []).every((word) => hay.includes(word));
 }
 
+/** What `list` would return for stored data read straight from the file, without the app: the same shape check, retention and search. An unknown retention counts as the default. */
+export function readStoredHistory(stored: unknown, o: { now: number; retention: unknown; search?: string; limit?: number }): HistoryEntry[] {
+  const retention = typeof o.retention === "string" && o.retention in WINDOW_MS ? (o.retention as Retention) : "7d";
+  const kept = keep(parse(stored), o.now, retention);
+  const found = o.search ? kept.filter((e) => matches(e, o.search!)) : kept;
+  return found.slice(0, o.limit ?? found.length);
+}
+
 interface Deps {
   storage: HistoryStorage;
   clock: Clock;

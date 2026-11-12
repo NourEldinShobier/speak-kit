@@ -79,6 +79,8 @@ export class ShortcutControls {
   }
 
   #apply(): void {
+    // The hook carries the stop and cancel keys, so a recording that outlives it could not be ended: it ends here.
+    if (this.paused) this.#d.core()?.cancel();
     this.#d.hotkeys()?.pause(this.paused);
     this.#d.changed();
   }

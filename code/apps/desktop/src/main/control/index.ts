@@ -1,3 +1,4 @@
+import { SLOT_NAMES } from "../../shared/dictation/conflicts";
 import type { ConfigPatch } from "../../shared/schemas";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
@@ -14,10 +15,18 @@ interface Parts {
 
 const busy = (d: DictationService): boolean => d.state.status !== "idle" && d.state.status !== "error";
 
-/** Runs `fn` once dictation is idle, checking again every quarter second. */
-function whenIdle(d: DictationService, fn: () => void): void {
-  if (busy(d)) setTimeout(() => whenIdle(d, fn), 250).unref();
-  else fn();
+/** Longer than the longest recording, so a queued change only gives up when dictation is stuck. */
+const IDLE_WAIT_MS = 10 * 60_000;
+
+/** Runs `fn` once dictation is idle, checking again every quarter second; `giveUp` runs instead after `IDLE_WAIT_MS`. */
+function whenIdle(d: DictationService, fn: () => void, giveUp: () => void): void {
+  const until = Date.now() + IDLE_WAIT_MS;
+  const check = (): void => {
+    if (!busy(d)) fn();
+    else if (Date.now() >= until) giveUp();
+    else setTimeout(check, 250).unref();
+  };
+  check();
 }
 
 /** The dictation settings the way a script names them: `dictation.<key>`. */
@@ -27,13 +36,18 @@ function settingsDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps["settin
   return {
     snapshot: () => ({ voice: ctx.config.voice, speed: ctx.config.speed, controlServer: ctx.config.controlServer, ...dictationKeys(ctx.config.dictation) }),
     busy: () => busy(p.dictation),
-    whenIdle: (fn) => whenIdle(p.dictation, fn),
+    whenIdle: (fn, giveUp) => whenIdle(p.dictation, fn, giveUp),
     async apply(change) {
+      // Dictation first: a refused shortcut must leave every other setting of the same call unsaved too.
+      if (Object.keys(change.dictation).length) {
+        const { rejected } = await p.dictation.patchSettings(change.dictation);
+        if (rejected) return `That shortcut is already used by ${SLOT_NAMES[rejected.with]}.`;
+      }
       Object.assign(ctx.config, change.app);
       ctx.saveConfig();
       if (change.app.controlServer !== undefined) setTimeout(sync, 300).unref(); // after this reply has been sent
-      if (Object.keys(change.dictation).length) await p.dictation.patchSettings(change.dictation);
       ctx.publish();
+      return undefined;
     },
   };
 }
@@ -66,7 +80,8 @@ function controlDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps {
       cancel: () => d.core?.cancel(),
       busy: () => busy(d),
     },
-    history: { list: async (q) => d.history.list(q.search) },
+    history: { list: async (q) => d.history.list(q.search, q.limit) },
+    warn: (message, detail) => ctx.log.warn(message, detail),
     settings: settingsDeps(ctx, p, sync),
   };
 }

@@ -2,8 +2,9 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { readStoredHistory } from "@speakkit/dictation";
 import { fail, LIMITS, type Reply } from "../shared/control/contract";
-import { discoveryFile, readDiscovery } from "../main/control/discovery";
+import { discoveryFile, portOpen, processAlive, readDiscovery } from "../main/control/discovery";
 import { serveMcp } from "./mcp";
 import { userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
@@ -13,7 +14,7 @@ const dir = userDataDir(process.env, process.platform, os.homedir());
 const io: Io = {
   out: (t) => void process.stdout.write(t),
   err: (t) => void process.stderr.write(t),
-  discovery: () => readDiscovery(discoveryFile(dir)),
+  discovery: () => readDiscovery(discoveryFile(dir), processAlive, portOpen),
   async launch() {
     // The launcher is next to the shim that started this script: SPEAKKIT_APP is set by it. Without it there is nothing safe to start.
     const exe = process.env.SPEAKKIT_APP;
@@ -24,17 +25,25 @@ const io: Io = {
     spawn(cmd, args, { detached: true, stdio: "ignore", env }).unref();
     for (let i = 0; i < 100; i++) {
       await new Promise((r) => setTimeout(r, 200));
-      if (await readDiscovery(discoveryFile(dir))) return true;
+      if (await readDiscovery(discoveryFile(dir), processAlive, portOpen)) return true;
     }
     return false;
   },
   async offlineHistory({ search, limit }) {
+    const read = async (name: string): Promise<unknown> => {
+      try {
+        return JSON.parse(await readFile(path.join(dir, name), "utf8"));
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+        throw e;
+      }
+    };
     try {
-      const all = JSON.parse(await readFile(path.join(dir, "dictation-history.json"), "utf8")) as { id: string; at: number; text: string }[];
-      const words = (search ?? "").toLowerCase().split(/\s+/).filter(Boolean);
-      return all.filter((e) => words.every((w) => e.text.toLowerCase().includes(w))).slice(0, limit);
+      const config = (await read("config.json")) as { dictation?: { retention?: unknown } } | undefined;
+      const stored = (await read("dictation-history.json")) ?? [];
+      return readStoredHistory(stored, { now: Date.now(), retention: config?.dictation?.retention, ...(search && { search }), limit });
     } catch {
-      return [];
+      return null; // a file that cannot be read is not an empty history
     }
   },
   async post(d, req, timeoutMs): Promise<Reply> {

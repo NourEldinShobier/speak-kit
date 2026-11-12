@@ -16,9 +16,9 @@ export class DictationHistory {
     this.#d = d;
   }
 
-  async list(search?: string): Promise<HistoryItem[]> {
+  async list(search?: string, limit?: number): Promise<HistoryItem[]> {
     await this.#d.ready();
-    const items = (await this.#d.core()?.history.list(search ? { search } : undefined)) ?? [];
+    const items = (await this.#d.core()?.history.list(search || limit ? { ...(search && { search }), ...(limit && { limit }) } : undefined)) ?? [];
     return items.map((e) => ({ id: e.id, at: e.at, text: e.text, ...(e.app && { app: e.app }), ...(e.kind && { kind: e.kind }) }));
   }
 
