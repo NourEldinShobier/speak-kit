@@ -1,0 +1,50 @@
+.apps-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.apps-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.apps-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-block-size: 36px;
+  padding-inline: 16px;
+  cursor: pointer;
+}
+.apps-item + .apps-item {
+  border-block-start: 1px solid var(--stroke-control);
+}
+.apps-item:hover {
+  background: var(--chip-gray);
+}
+.apps-item:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: -2px;
+}
+.apps-item__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.apps-item__key {
+  flex: none;
+  max-inline-size: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-rule__suggest > * {
+  flex: 1;
+  min-inline-size: 0;
+}

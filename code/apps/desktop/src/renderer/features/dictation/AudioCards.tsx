@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
+import { AppSuggestions } from "../apps";
 import { dictation } from "./api";
 import { watchMeter } from "./meter-watch";
 import { KEEP_READY_MINUTES, METHOD_OPTIONS, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
@@ -137,12 +138,35 @@ export function OutputCard({ s }: { s: DictationStatus }) {
   );
 }
 
+type Rules = DictationStatus["settings"]["appRules"];
+
+function RuleRow({ exe, rule: r, rules, save }: { exe: string; rule: Rules[string]; rules: Rules; save(next: Rules): void }) {
+  return (
+    <div className="lm-row dict-rule">
+      <span className="dict-rule__name">{exe}</span>
+      <Select label={`Method for ${exe}`} value={r.method} onChange={(method) => save({ ...rules, [exe]: { ...r, method: method as PasteMethod } })} options={METHOD_OPTIONS} />
+      <TextInput
+        aria-label={`Delay in milliseconds for ${exe}`}
+        inputMode="numeric"
+        value={String(r.delayMs)}
+        maxLength={4}
+        frameClassName="dict-rule__delay"
+        onChange={(e) => save({ ...rules, [exe]: { ...r, delayMs: Math.min(5000, Number(e.target.value.replace(/\D/g, "")) || 0) } })}
+      />
+      <button type="button" className="lm-btn lm-btn--icon" aria-label={`Remove rule for ${exe}`} onClick={() => save(Object.fromEntries(Object.entries(rules).filter(([k]) => k !== exe)))}>
+        <Icon name="trash" size={14} />
+      </button>
+    </div>
+  );
+}
+
 export function AppRulesCard({ s }: { s: DictationStatus }) {
   const rules = s.settings.appRules;
   const [name, setName] = useState("");
-  const save = (next: DictationStatus["settings"]["appRules"]) => void dictation.patchSettings({ appRules: next });
-  const add = () => {
-    const key = name
+  const [focused, setFocused] = useState(false);
+  const save = (next: Rules) => void dictation.patchSettings({ appRules: next });
+  const add = (typed = name) => {
+    const key = typed
       .trim()
       .toLowerCase()
       .replace(/\.exe$/, "");
@@ -153,34 +177,33 @@ export function AppRulesCard({ s }: { s: DictationStatus }) {
   return (
     <SettingsSection title="Insert method by app" description="Terminals, remote desktop and Java programs have built-in rules. Add a program to choose its own method and delay.">
       {Object.entries(rules).map(([exe, r]) => (
-        <div className="lm-row dict-rule" key={exe}>
-          <span className="dict-rule__name">{exe}</span>
-          <Select label={`Method for ${exe}`} value={r.method} onChange={(method) => save({ ...rules, [exe]: { ...r, method: method as PasteMethod } })} options={METHOD_OPTIONS} />
-          <TextInput
-            aria-label={`Delay in milliseconds for ${exe}`}
-            inputMode="numeric"
-            value={String(r.delayMs)}
-            maxLength={4}
-            frameClassName="dict-rule__delay"
-            onChange={(e) => save({ ...rules, [exe]: { ...r, delayMs: Math.min(5000, Number(e.target.value.replace(/\D/g, "")) || 0) } })}
-          />
-          <button type="button" className="lm-btn lm-btn--icon" aria-label={`Remove rule for ${exe}`} onClick={() => save(Object.fromEntries(Object.entries(rules).filter(([k]) => k !== exe)))}>
-            <Icon name="trash" size={14} />
-          </button>
-        </div>
+        <RuleRow key={exe} exe={exe} rule={r} rules={rules} save={save} />
       ))}
       <form
         className="lm-row dict-rule dict-rule--add"
         onSubmit={(e) => {
           e.preventDefault();
-          add();
+          add(name);
         }}
       >
-        <TextInput aria-label="Program name" placeholder="Program, for example putty" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className="dict-rule__field" />
+        <TextInput
+          aria-label="Program name"
+          placeholder="Program, for example putty"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onFocus={() => setFocused(true)}
+          maxLength={60}
+          className="dict-rule__field"
+        />
         <Button type="submit" variant="primary" disabled={!name.trim()}>
           Add
         </Button>
       </form>
+      {focused && (
+        <div className="lm-row dict-rule__suggest">
+          <AppSuggestions query={name} skip={Object.keys(rules)} active={focused} onPick={(a) => add(a.key)} />
+        </div>
+      )}
     </SettingsSection>
   );
 }
