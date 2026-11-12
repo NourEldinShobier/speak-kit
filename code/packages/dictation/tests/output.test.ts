@@ -412,3 +412,81 @@ describe("skip long pauses", () => {
     expect(r.stt.calls).toEqual([{ language: "auto", samples: 48000 }]);
   });
 });
+
+describe("insert a saved text again", () => {
+  async function failedOnce() {
+    const r = await rig();
+    r.ins.state.result = { ok: false, code: "rejected" };
+    await r.hold(1000);
+    await r.time.advance(200);
+    r.ins.state.result = { ok: true };
+    const [entry] = await r.dictation.history.list();
+    return { r, id: entry!.id };
+  }
+
+  it("pastes the saved text into the window in front now and records that it went in", async () => {
+    const { r, id } = await failedOnce();
+    r.ins.inserted.length = 0;
+    expect(await r.dictation.history.insert(id)).toBe(true);
+    expect(r.ins.inserted).toEqual([{ text: "Hello world ", plan: { method: "paste" } }]);
+    expect((await r.dictation.history.list())[0]?.outcome).toBe("sent");
+  });
+
+  it("copies instead when the window in front is elevated, and says so", async () => {
+    const { r, id } = await failedOnce();
+    r.ins.state.current = target({ elevated: true });
+    r.ins.inserted.length = 0;
+    expect(await r.dictation.history.insert(id)).toBe(true);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "copy", reason: "elevated" });
+    expect((await r.dictation.history.list())[0]?.outcome).toBe("copied");
+  });
+
+  it("types nothing into a password field", async () => {
+    const { r, id } = await failedOnce();
+    r.ins.state.current = target({ passwordField: true });
+    r.ins.inserted.length = 0;
+    expect(await r.dictation.history.insert(id)).toBe(false);
+    expect(r.ins.inserted).toEqual([]);
+  });
+
+  it("is false, and leaves the entry failed, when the insertion fails again or throws", async () => {
+    const { r, id } = await failedOnce();
+    r.ins.state.result = { ok: false, code: "rejected" };
+    expect(await r.dictation.history.insert(id)).toBe(false);
+    r.ins.inserter.insert = async () => {
+      throw new Error("clipboard busy");
+    };
+    expect(await r.dictation.history.insert(id)).toBe(false);
+    expect((await r.dictation.history.list())[0]?.outcome).toBe("failed");
+  });
+
+  it("is false for an entry that is gone", async () => {
+    const r = await rig();
+    expect(await r.dictation.history.insert("nope")).toBe(false);
+  });
+});
+
+describe("invented credit at the end of the text", () => {
+  it("is dropped when the recording ended in silence, and the text before it is inserted", async () => {
+    const r = await rig();
+    const pcm = new Float32Array(16000 * 4);
+    for (let i = 0; i < 16000 * 2; i++) pcm[i] = 0.3 * Math.sin((2 * Math.PI * 300 * i) / 16000);
+    r.rec.state.clip = { pcm, sampleRate: 16000, peak: 0.3 };
+    r.stt.state.result = { ok: true, text: "send the report thanks for watching" };
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.ins.inserted[0]?.text).toBe("Send the report ");
+  });
+
+  it("says no speech when nothing but the credit was heard", async () => {
+    const r = await rig();
+    const pcm = new Float32Array(16000 * 4);
+    for (let i = 0; i < 16000 * 2; i++) pcm[i] = 0.3 * Math.sin((2 * Math.PI * 300 * i) / 16000);
+    r.rec.state.clip = { pcm, sampleRate: 16000, peak: 0.3 };
+    r.stt.state.result = { ok: true, text: "Thank you for watching." };
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.ins.inserted).toEqual([]);
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "no-speech" } });
+  });
+});

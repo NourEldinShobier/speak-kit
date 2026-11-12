@@ -84,6 +84,12 @@ export class HistoryFacade {
     return (await this.#d.core()?.history.stats()) ?? NO_STATS;
   }
 
+  /** Inserts the newest dictation again, into the window in front now. */
+  async pasteLast(): Promise<boolean> {
+    const [last] = this.#recent;
+    return last ? ((await this.#d.core()?.history.insert(last.id)) ?? false) : false;
+  }
+
   /** Puts the newest dictation on the clipboard. */
   async copyLast(): Promise<void> {
     const [last] = this.#recent;
