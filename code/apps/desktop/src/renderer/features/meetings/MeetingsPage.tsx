@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Banner, Button, Chip, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { Banner, Button, Chip, OptInCard, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import type { PermissionsStatus } from "../../../shared/permissions/contract";
 import type { ProviderView, SettingsView } from "../../../shared/meetings/contract";
@@ -243,7 +243,11 @@ export function MeetingsPage({ s }: { s: AppState }) {
   const patch = (p: MeetingsPatch) => void meetings.patchSettings(p).then(set);
   return (
     <Page title="Meetings" lead={lead}>
-      {!view.config.enabled ? <Banner tone="info">Meetings are off. The Meetings tab in History is hidden and nothing is offered. Your recordings are kept.</Banner> : null}
+      {!view.config.enabled ? (
+        <OptInCard icon="video" title="Meetings are off" onEnable={() => patch({ enabled: true })}>
+          Speak Kit can offer to record a call when it starts. The Meetings tab in History is hidden and nothing is offered while this is off. Your recordings are kept.
+        </OptInCard>
+      ) : null}
       {view.capabilities.callDetection === "unavailable" && view.config.enabled ? (
         <Banner tone="warning">This computer does not tell Speak Kit when a call starts, so nothing is offered. You can still record with the shortcut or the tray menu.</Banner>
       ) : null}

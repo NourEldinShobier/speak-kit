@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vite-plus/test";
-import { Button, Checkbox, IconButton, Select, Toggle } from "../src/index";
+import { Button, Checkbox, IconButton, OptInCard, Select, Toggle } from "../src/index";
 
 const html = (n: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(n);
 
@@ -68,5 +68,29 @@ describe("Checkbox / Select", () => {
     expect(closed).toContain('aria-expanded="false"');
     expect(closed).toMatch(/lm-select__value.*?>B</);
     expect(closed).toContain("lm-icon--chevron-down");
+  });
+});
+
+describe("OptInCard", () => {
+  test("names the feature, explains it and has one button that defaults to Turn on", () => {
+    const m = html(
+      <OptInCard icon="video" title="Meetings are off" onEnable={() => {}}>
+        Offers to record a call.
+      </OptInCard>,
+    );
+    expect(m).toContain('aria-label="Meetings are off"');
+    expect(m).toContain("Offers to record a call.");
+    expect(m).toMatch(/<button[^>]*type="button"[^>]*>Turn on<\/button>/);
+    expect(m.match(/<button/g)).toHaveLength(1);
+  });
+
+  test("takes its own button label", () => {
+    expect(
+      html(
+        <OptInCard icon="terminal" title="Server off" enableLabel="Start server" onEnable={() => {}}>
+          x
+        </OptInCard>,
+      ),
+    ).toContain(">Start server</button>");
   });
 });

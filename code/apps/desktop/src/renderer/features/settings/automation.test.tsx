@@ -31,14 +31,14 @@ describe("Automation page", () => {
   it("with the server running shows Running, no warning, and every section", () => {
     const html = renderToStaticMarkup(<AutomationPage s={state(true)} />);
     expect(html).toContain("Running");
-    expect(html).not.toContain("The local server is not running");
+    expect(html).not.toContain("The local server is off");
     for (const t of ["Command-line tool", "MCP server", "Deep links", "speakkit status --json", "control.json"]) expect(html).toContain(t);
     expect(html).toMatch(/aria-label="Copy speakkit:\/\/settings\/shortcuts"/);
   });
 
   it("with the server off shows the warning with Start server and an off toggle", () => {
     const html = renderToStaticMarkup(<AutomationPage s={state(false, "darwin")} />);
-    expect(html).toContain("The local server is not running");
+    expect(html).toContain("The local server is off");
     expect(html).toContain("Start server");
     expect(html).toContain("Library/Application Support");
     expect(html).toMatch(/aria-label="Local server"[^>]*/);
