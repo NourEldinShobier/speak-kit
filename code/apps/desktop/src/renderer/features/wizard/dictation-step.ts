@@ -89,6 +89,33 @@ export function checklist(i: ChecklistInput): ChecklistRow[] {
 /** Practice worked when something other than blanks landed in the field. */
 export const practiceDone = (text: string): boolean => text.trim().length > 0;
 
+export type PracticeStage = "waiting" | "failed" | "ready" | "listening" | "worked";
+
+interface PracticeInput {
+  hotkeyReady: boolean;
+  hotkeyFailed: boolean;
+  /** The dictation phase the main process reports. */
+  phase: string;
+  /** A press of the shortcut was seen since the practice opened (see `seenPress`). */
+  pressed: boolean;
+  text: string;
+}
+
+/** The phases in which a press of the shortcut is being handled. */
+const BUSY = new Set(["recording", "locked", "transcribing", "pasting"]);
+
+/** Latches once the shortcut starts a recording: the first press counts even when the words never land in the field. */
+export const seenPress = (before: boolean, phase: string): boolean => before || BUSY.has(phase);
+
+/** Where practice stands. "Your turn" is only shown once the listener is live, and success is a detected press that finished (or words in the field). */
+export function practiceStage(i: PracticeInput): PracticeStage {
+  if (i.hotkeyFailed) return "failed";
+  if (!i.hotkeyReady) return "waiting";
+  if (practiceDone(i.text)) return "worked";
+  if (BUSY.has(i.phase)) return "listening";
+  return i.pressed ? "worked" : "ready";
+}
+
 /** What Continue does on the language screen: the model is used from disk, or downloaded now (never before this press). */
 export function afterLanguage(choice: LanguageChoice, found: boolean): "use" | "adopt" | "download" {
   if (choice.model.installed) return "use";

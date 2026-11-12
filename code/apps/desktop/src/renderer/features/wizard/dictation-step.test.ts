@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
-import { afterLanguage, checklist, defaultLanguage, languageChoice, practiceDone } from "./dictation-step";
+import { afterLanguage, checklist, defaultLanguage, languageChoice, practiceDone, practiceStage, seenPress } from "./dictation-step";
 
 const card = (over: Partial<ModelCard>): ModelCard => ({
   id: "large-v3-turbo-q5_0",
@@ -101,5 +101,38 @@ describe("practiceDone", () => {
     expect(practiceDone("hello")).toBe(true);
     expect(practiceDone("   \n")).toBe(false);
     expect(practiceDone("")).toBe(false);
+  });
+});
+
+describe("practiceStage", () => {
+  const base = { hotkeyReady: true, hotkeyFailed: false, phase: "idle", pressed: false, text: "" };
+  it("waits until the hotkey listener is live before it says it is the person's turn", () => {
+    expect(practiceStage({ ...base, hotkeyReady: false })).toBe("waiting");
+    expect(practiceStage(base)).toBe("ready");
+  });
+  it("says so when the hotkey could not start, even if it was ready before", () => {
+    expect(practiceStage({ ...base, hotkeyFailed: true })).toBe("failed");
+    expect(practiceStage({ ...base, hotkeyReady: false, hotkeyFailed: true })).toBe("failed");
+  });
+  it("is listening while a press is handled and worked once a press finished", () => {
+    for (const phase of ["recording", "locked", "transcribing", "pasting"]) expect(practiceStage({ ...base, phase, pressed: true })).toBe("listening");
+    expect(practiceStage({ ...base, pressed: true })).toBe("worked");
+    expect(practiceStage({ ...base, phase: "error", pressed: true })).toBe("worked");
+  });
+  it("counts words in the field as success without a seen press, and blanks as nothing", () => {
+    expect(practiceStage({ ...base, text: "hello" })).toBe("worked");
+    expect(practiceStage({ ...base, text: "  \n" })).toBe("ready");
+  });
+  it("a press that was never answered while the listener is down does not count as success", () => {
+    expect(practiceStage({ ...base, hotkeyReady: false, pressed: true })).toBe("waiting");
+  });
+});
+
+describe("seenPress", () => {
+  it("latches on the first handled phase and stays", () => {
+    expect(seenPress(false, "idle")).toBe(false);
+    expect(seenPress(false, "error")).toBe(false);
+    expect(seenPress(false, "recording")).toBe(true);
+    expect(seenPress(true, "idle")).toBe(true);
   });
 });

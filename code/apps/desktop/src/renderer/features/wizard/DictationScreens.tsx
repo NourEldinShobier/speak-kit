@@ -6,7 +6,7 @@ import { dictation, Pill, useDictation } from "../dictation";
 import { models } from "../engines";
 import { failureText, languageName, transferText } from "../../speech-text";
 import { Back, Foot, Frame } from "./Frame";
-import { defaultLanguage, FIRST_LANGUAGES, languageChoice, practiceDone, type LanguageChoice } from "./dictation-step";
+import { defaultLanguage, FIRST_LANGUAGES, languageChoice, practiceStage, seenPress, type LanguageChoice, type PracticeStage } from "./dictation-step";
 
 const AT = 2;
 
@@ -145,9 +145,8 @@ export function ModelScreen({ view, card, onBack, onContinue, onSkip }: { view: 
   );
 }
 
-function PracticeField({ text, setText, hotkey, since }: { text: string; setText(t: string): void; hotkey: string; since: number }) {
+function PracticeField({ text, setText, hotkey, since, stage }: { text: string; setText(t: string): void; hotkey: string; since: number; stage: PracticeStage }) {
   const d = useDictation();
-  const done = practiceDone(text);
   return (
     <>
       <div className="sk-practice__key">
@@ -157,17 +156,23 @@ function PracticeField({ text, setText, hotkey, since }: { text: string; setText
         ))}{" "}
         <span>{d?.settings.mode === "toggle" ? "Press to toggle" : "Hold to talk"}</span>
       </div>
-      {d?.hotkeyFailed && (
+      {stage === "failed" && (
         <Banner tone="warning" title="The hotkey could not start" action={<Button onClick={() => void dictation.setEnabled(true)}>Fix hotkey</Button>}>
           Another app may be using it. You can change it later in Dictation.
         </Banner>
       )}
       <textarea className="sk-practice__field" aria-label="Practice field" placeholder="Your words appear here" rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-      {done ? (
+      {stage === "waiting" && (
+        <p className="sk-practice__wait" role="status">
+          <Icon name="loader-2" size={14} className="lm-spin" /> Getting the hotkey ready. Try it when this line is gone.
+        </p>
+      )}
+      {stage === "worked" && (
         <p className="sk-practice__ok" role="status">
           <Icon name="circle-check" size={14} /> It worked. You can use the hotkey in any app.
         </p>
-      ) : (
+      )}
+      {(stage === "ready" || stage === "listening") && (
         <div className="sk-practice__pill">
           <Pill view={{ kind: "recording", locked: false, startedAt: since, level: 0.6, hotkey }} />
           <p>This pill appears near the bottom of your screen while you talk.</p>
@@ -177,14 +182,26 @@ function PracticeField({ text, setText, hotkey, since }: { text: string; setText
   );
 }
 
+const PRACTICE_SUB: Record<PracticeStage, string> = {
+  waiting: "Speak Kit is starting the hotkey. This takes a moment.",
+  failed: "The hotkey did not start. Fix it, or skip this step and set it up later in Dictation.",
+  ready: "Click the field, hold the key, say a sentence, then let go. Your words appear in the field.",
+  listening: "Listening. Let go of the key when you are done.",
+  worked: "Your press was heard.",
+};
+
 export function Practice({ onBack, onNext, onSkip }: { onBack(): void; onNext(): void; onSkip(): void }) {
   const d = useDictation();
   const [text, setText] = useState("");
-  const done = practiceDone(text);
+  const [pressed, setPressed] = useState(false);
   const since = useRef(Date.now());
   useEffect(() => {
     void dictation.setEnabled(true); // the hotkey has to be live for the practice
   }, []);
+  const phase = d?.phase ?? "idle";
+  useEffect(() => setPressed((p) => seenPress(p, phase)), [phase]);
+  const stage = practiceStage({ hotkeyReady: !!d?.hotkeyReady, hotkeyFailed: !!d?.hotkeyFailed, phase, pressed, text });
+  const done = stage === "worked";
   const foot = (
     <Foot back={<Back onClick={onBack} />}>
       {!done && (
@@ -197,10 +214,10 @@ export function Practice({ onBack, onNext, onSkip }: { onBack(): void; onNext():
       </Button>
     </Foot>
   );
-  const sub = done ? "Your words appeared in the field." : "Click the field, hold the key, say a sentence, then let go. Your words appear in the field.";
+  const sub = text.trim() ? "Your words appeared in the field." : PRACTICE_SUB[stage];
   return (
     <Frame at={AT} title={done ? "Dictation works" : "Try dictation here"} sub={sub} foot={foot}>
-      <PracticeField text={text} setText={setText} hotkey={d?.settings.hotkey ?? "ControlRight"} since={since.current} />
+      <PracticeField text={text} setText={setText} hotkey={d?.settings.hotkey ?? "ControlRight"} since={since.current} stage={stage} />
     </Frame>
   );
 }
