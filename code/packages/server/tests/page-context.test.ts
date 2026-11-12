@@ -22,7 +22,7 @@ describe("POST /v1/page-context", () => {
   it("needs the token", async () => {
     const seen: string[] = [];
     ctx = await start({}, undefined, { pageContext: { report: (h) => void seen.push(h) } });
-    expect((await post(ctx, { host: "a.com" }, false)).status).toBe(401);
+    expect((await post(ctx, { host: "a.com" }, false)).status).toBe(404);
     expect(seen).toEqual([]);
   });
 

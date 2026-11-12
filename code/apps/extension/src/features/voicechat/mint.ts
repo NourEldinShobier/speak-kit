@@ -1,5 +1,6 @@
 import { parseVoiceChatError, parseVoiceChatSession, parseVoiceChatStatus, type VoiceChatSession, type VoiceProblem } from "@speakkit/protocol";
 import { ignore } from "../../shared/ignore";
+import { tokenRejected } from "../../shared/rejection";
 
 /** Calls to the Speak Kit app on 127.0.0.1. The app holds the OpenAI key; this side only ever sees a short-lived client secret. */
 export interface LocalDeps {
@@ -35,7 +36,7 @@ export async function mintSession(d: LocalDeps): Promise<Minted> {
   const body: unknown = await res.json().catch(ignore);
   const code = parseVoiceChatError(body);
   if (code) return { ok: false, problem: code }; // the app's own codes win over its HTTP status
-  if (res.status === 401 || res.status === 403) return { ok: false, problem: "unpaired" };
+  if (tokenRejected(res.status, body)) return { ok: false, problem: "unpaired" };
   if (res.ok) {
     const session = parseVoiceChatSession(body);
     return session ? { ok: true, session } : { ok: false, problem: "unavailable" };
@@ -47,7 +48,8 @@ export async function mintSession(d: LocalDeps): Promise<Minted> {
 export async function voiceStatus(d: LocalDeps): Promise<{ ok: true; hasKey: boolean } | { ok: false; problem: VoiceProblem }> {
   const res = await call(d, "/v1/voice-chat/status", {});
   if (typeof res === "string") return { ok: false, problem: res };
-  if (res.status === 401 || res.status === 403) return { ok: false, problem: "unpaired" };
-  const status = res.ok ? parseVoiceChatStatus(await res.json().catch(ignore)) : undefined;
+  const body: unknown = await res.json().catch(ignore);
+  if (tokenRejected(res.status, body)) return { ok: false, problem: "unpaired" };
+  const status = res.ok ? parseVoiceChatStatus(body) : undefined;
   return status ? { ok: true, hasKey: status.hasKey } : { ok: false, problem: "unavailable" };
 }
