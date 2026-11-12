@@ -4,4 +4,4 @@
  */
 export { ExperimentsPage } from "./ExperimentsPage";
 export { registerExperiment } from "./registry";
-export type { ExperimentCard, ExperimentState } from "./registry";
+export type { ExperimentState } from "./registry";
