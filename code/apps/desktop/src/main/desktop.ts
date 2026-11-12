@@ -16,6 +16,7 @@ import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { createUpdates } from "./updates-service";
 import { registerDictationIpc } from "./dictation/ipc";
+import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { fakeUpdater } from "./updates-fake";
 
@@ -73,6 +74,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
+  registerSpeechModelsIpc(dictation.speech, (c) => o.parent()?.webContents === c);
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -91,6 +93,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
     },
+    dictation,
     onEngineState: announceEngine,
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),

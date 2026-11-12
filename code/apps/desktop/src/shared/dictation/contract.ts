@@ -19,7 +19,7 @@ export interface ModelView {
   selected: boolean;
   /** Languages it understands. */
   languages: string[];
-  progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" };
+  progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" } | { kind: "paused"; fraction: number };
 }
 
 export type DictationPhase = "idle" | "recording" | "locked" | "transcribing" | "pasting" | "error";

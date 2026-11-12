@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "auto", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
+const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
 
 describe("dictation config", () => {
   it("is off, on Right Ctrl, hold to talk, for 7 days, until the person turns it on", () => {
@@ -47,11 +47,25 @@ describe("what the renderer may change", () => {
     ["turning dictation on (it has its own call)", { enabled: true }],
     ["an unknown key", { anything: 1 }],
     ["a hotkey that is not allowed", { hotkey: "KeyA" }],
-    ["an unknown language", { language: "fr" }],
+    ["an unknown language", { language: "tlh" }],
     ["an unknown model", { model: "other" }],
     ["a replacement without text", { replacements: [{ from: "", to: "x" }] }],
     ["more than 100 replacements", { replacements: Array.from({ length: 101 }, () => ({ from: "a", to: "b" })) }],
   ])("refuses %s", (_why, patch) => {
     expect(v.safeParse(DictationPatchSchema, patch).success).toBe(false);
+  });
+});
+
+describe("languages and models", () => {
+  it("starts on an explicit language, never on automatic detection", () => {
+    expect(parseConfig({}).dictation.language).toBe("en");
+  });
+  it("keeps an automatic choice a person made earlier", () => {
+    expect(parseConfig({ dictation: { language: "auto" } }).dictation.language).toBe("auto");
+  });
+  it("accepts an added model by its fingerprint id and nothing else that is not in the catalog", () => {
+    expect(parseConfig({ dictation: { model: "custom-0123456789ab" } }).dictation.model).toBe("custom-0123456789ab");
+    expect(parseConfig({ dictation: { model: "custom-xyz" } }).dictation.model).toBe("large-v3-turbo-q5_0");
+    expect(parseConfig({ dictation: { model: "../../evil" } }).dictation.model).toBe("large-v3-turbo-q5_0");
   });
 });

@@ -33,7 +33,7 @@ async function recognize(pcm: Int16Array, language: string): Promise<string> {
 async function load(): Promise<void> {
   send({ type: "status", state: "loading" });
   const w = await import("@fugood/whisper.node");
-  const variant = process.platform === "darwin" ? "default" : "vulkan"; // macOS has Metal in the default addon; Windows and Linux use the Vulkan addon, which falls back to the default one when missing
+  const variant = process.platform === "darwin" || !init.gpu ? "default" : "vulkan"; // macOS has Metal in the default addon; Windows and Linux use the Vulkan addon (which falls back to the default one when missing), except when the CPU was chosen: then no graphics runtime is loaded at all
   await w.loadWhisperModule(variant);
   // Without a listener whisper.cpp prints a page of model details to stderr; keep errors, and read which device it picked (type 1 is a discrete GPU, 2 an integrated one).
   let gpuKind: "discrete" | "integrated" | undefined;

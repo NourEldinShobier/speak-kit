@@ -1,9 +1,14 @@
 import * as v from "valibot";
 import { DEFAULT_HOTKEY, validHotkey } from "./keys";
 
+import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
+
 export const DICTATION_MODELS = ["large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"] as const;
-export type DictationModelId = (typeof DICTATION_MODELS)[number];
-export const DICTATION_LANGUAGES = ["auto", "en", "de", "ar"] as const;
+/** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
+export type DictationModelId = (typeof DICTATION_MODELS)[number] | `custom-${string}`;
+export const isCustomModel = (id: string): boolean => /^custom-[0-9a-f]{12}$/.test(id);
+const modelId = v.union([v.picklist(DICTATION_MODELS), v.pipe(v.string(), v.regex(/^custom-[0-9a-f]{12}$/), v.transform((s) => s as `custom-${string}`))]);
+export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 
@@ -31,8 +36,9 @@ export const DictationConfigSchema = v.object({
   enabled: v.fallback(v.boolean(), false),
   hotkey,
   mode: v.fallback(v.picklist(["hold", "toggle"]), "hold"),
-  language: v.fallback(v.picklist(DICTATION_LANGUAGES), "auto"),
-  model: v.fallback(v.picklist(DICTATION_MODELS), DICTATION_MODELS[0]),
+  // An explicit language is the default: automatic detection can mistranscribe close languages, so it is something the person chooses.
+  language: v.fallback(v.picklist(DICTATION_LANGUAGES), "en"),
+  model: v.fallback(modelId, DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
   replacements,
 });
@@ -44,7 +50,7 @@ export const DictationPatchSchema = v.partial(
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
     mode: v.picklist(["hold", "toggle"]),
     language: v.picklist(DICTATION_LANGUAGES),
-    model: v.picklist(DICTATION_MODELS),
+    model: modelId,
     retention: v.picklist(RETENTIONS),
     replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
   }),

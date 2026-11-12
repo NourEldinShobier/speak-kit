@@ -77,11 +77,11 @@ export class ModelSwitcher {
 export interface SwitchRule {
   id: string;
   /** Keyboard layout, "de" or "de-DE"; a short code matches every region. */
-  layout?: string;
+  layout?: string | undefined;
   /** Program name, with or without .exe. */
-  app?: string;
+  app?: string | undefined;
   model: SttModelId;
-  language?: SttLanguage;
+  language?: SttLanguage | undefined;
 }
 
 export interface RuleContext {

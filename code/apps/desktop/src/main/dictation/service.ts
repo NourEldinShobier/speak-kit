@@ -1,9 +1,12 @@
-import { ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
+import { ipcMain, net, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
-import { WhisperStt } from "@speakkit/engine";
+import { Transfers, WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
+import { SPEECH_MODELS_EVENT } from "../../shared/speech-models/channels";
+import { SpeechModels } from "../speech-models/service";
+import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "../speech-models/ports";
 import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
@@ -47,6 +50,7 @@ export class DictationService {
   readonly stt: Stt;
   readonly fake: FakeStt | undefined;
   readonly models: ModelManager;
+  readonly speech: SpeechModels;
   readonly presenter: HudPresenter;
   readonly ready: Promise<void>;
   /** Tests only: the microphone window refuses the microphone while this is set. */
@@ -66,6 +70,7 @@ export class DictationService {
   #lastPush = 0;
   #pushTimer: NodeJS.Timeout | undefined;
   #stopPower: (() => void) | undefined;
+  #watch: NodeJS.Timeout | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
     this.#ctx = ctx;
@@ -73,13 +78,54 @@ export class DictationService {
     this.#onChange = onChange;
     // SPEAKKIT_REAL_STT keeps the real engine in a test run (a manual check against the models on this computer).
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
-    this.stt = o.stt ?? this.fake ?? new WhisperStt({ modelsDir: o.modelsDir, workerUrl: o.sttWorker });
+    // The browser engine's fetch follows the system proxy (manual and PAC scripts) and trusts the system certificate store, so a network that
+    // inspects secure traffic works once its certificate is installed; the plain Node fetch would ignore both.
+    const systemFetch = __TEST_CODE__ && o.test ? undefined : (net.fetch as unknown as typeof fetch);
+    this.stt =
+      o.stt ??
+      this.fake ??
+      new WhisperStt({
+        modelsDir: o.modelsDir,
+        workerUrl: o.sttWorker,
+        gpu: () => this.speech.gpuWanted(),
+        extraModels: () => this.speech.catalog().filter((m) => m.origin === "custom"),
+        onGpuFallback: (m) => this.speech.onGpuFallback(m),
+        timeIntegrated: () => this.speech.timeIntegrated(),
+        onTimed: (w) => this.speech.onTimed(w),
+        ...(systemFetch && { fetch: systemFetch }),
+      });
     this.models = new ModelManager({
       stt: this.stt,
       selected: () => this.#cfg.model,
       select: (id) => this.#choose(id),
       changed: (soon) => this.#push(soon),
+      models: () => this.speech.catalog(),
+      transfers: new Transfers(),
     });
+    this.speech = new SpeechModels({
+      modelsDir: o.modelsDir,
+      stt: this.stt,
+      models: this.models,
+      config: () => ({ dictation: this.#ctx.config.dictation, engines: this.#ctx.config.engines }),
+      save: () => this.#ctx.saveConfig(),
+      choose: (id, language) => {
+        this.#cfg.model = id;
+        this.#cfg.language = language as DictationConfig["language"];
+        this.#ctx.saveConfig();
+        this.core?.configure(coreSettings(this.#cfg));
+      },
+      recording: () => this.state.status === "recording" || this.state.status === "locked",
+      dictationSupported: () => this.supported,
+      hardware: probeThisComputer,
+      pickFile: (title) => pickModelFile(this.#o.parent(), title),
+      openFolder,
+      openProxySettings,
+      memoryOf,
+      scanDirs,
+      changed: () => this.#push(true),
+      platform: process.platform,
+    });
+    this.stt.onStatus((s) => s.state === "ready" && this.speech.used());
     this.presenter = new HudPresenter({
       hud: () => this.os?.hud,
       hotkey: () => this.#cfg.hotkey,
@@ -126,7 +172,7 @@ export class DictationService {
     this.core = createDictation({
       clock,
       recorder: this.#replay,
-      transcriber: createTranscriber({ stt: this.stt, model: () => this.#cfg.model, onFailedClip: (c) => (this.#lastFailed = c), onModelError: (d) => this.models.report(d) }),
+      transcriber: createTranscriber({ stt: this.stt, model: () => this.#cfg.model, models: () => this.speech.catalog(), onUsed: (id) => this.speech.used(id), onFailedClip: (c) => (this.#lastFailed = c), onModelError: (d) => this.models.report(d) }),
       inserter: createInserterPort(os, (r) => (this.#lastInsert = r)),
       hotkeys: this.#hotkeys,
       storage: createHistoryStorage(path.join(this.#o.dataDir, "dictation-history.json")),
@@ -168,7 +214,10 @@ export class DictationService {
     this.#pushTimer = undefined;
     this.#lastPush = Date.now();
     const contents = this.#o.parent()?.webContents;
-    if (contents && !contents.isDestroyed()) contents.send(STATUS_EVENT, this.status());
+    if (contents && !contents.isDestroyed()) {
+      contents.send(STATUS_EVENT, this.status());
+      contents.send(SPEECH_MODELS_EVENT, this.speech.view());
+    }
     this.#onChange();
   }
 
@@ -180,14 +229,31 @@ export class DictationService {
 
   async #refreshCount(): Promise<void> {
     this.#count = ((await this.core?.history.list().catch(() => [])) ?? []).length;
+    void this.speech.init();
+    this.#autoSwitchWatch();
     this.#push(true);
+  }
+
+  /** While dictation is on, the program in front and its keyboard layout feed the automatic switching rules; the rules wait 300 ms for them to settle. */
+  #autoSwitchWatch(): void {
+    let last = "";
+    this.#watch = setInterval(() => {
+      if (!this.#cfg.enabled || !this.#ctx.config.engines.autoSwitch.enabled) return;
+      const info = this.os?.foreground();
+      const ctx = { app: info?.exe ?? undefined, layout: info?.layout };
+      const key = `${ctx.app}|${ctx.layout}`;
+      if (key === last) return;
+      last = key;
+      this.speech.auto.update(ctx);
+    }, 400);
+    this.#watch.unref();
   }
 
   // ---- settings, enabling, models ----------------------------------------------------------------------------
 
   #choose(id: DictationModelId): void {
     this.#cfg.model = id;
-    if (!supportsLanguage(id, this.#cfg.language)) this.#cfg.language = "auto";
+    if (!supportsLanguage(id, this.#cfg.language, this.speech.catalog())) this.#cfg.language = "en";
     this.#ctx.saveConfig();
   }
 
@@ -196,7 +262,7 @@ export class DictationService {
     const { model, ...rest } = patch;
     Object.assign(this.#cfg, rest);
     if (model && model !== this.#cfg.model) await this.models.switchTo(model); // only an installed model can be chosen
-    if (!supportsLanguage(this.#cfg.model, this.#cfg.language)) this.#cfg.language = "auto";
+    if (!supportsLanguage(this.#cfg.model, this.#cfg.language, this.speech.catalog())) this.#cfg.language = "en";
     this.#ctx.saveConfig();
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.setHotkey(this.#cfg.hotkey);
@@ -246,8 +312,9 @@ export class DictationService {
     this.#setHotkeyFailed(!ready);
     void this.#recorder?.prepare();
     await this.models.refresh();
-    if (this.models.installed) this.models.warm();
-    else void this.models.download(this.#cfg.model);
+    // At launch (quiet) with release-when-idle on, the model stays on disk: the first dictation loads it (the page says that takes longer).
+    if (this.models.installed) (!quiet || this.#ctx.config.engines.idleMinutes === 0) && this.models.warm();
+    else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
     if (!quiet && ready) this.presenter.flashReady();
   }
 
@@ -342,6 +409,8 @@ export class DictationService {
   }
 
   async dispose(): Promise<void> {
+    clearInterval(this.#watch);
+    this.speech.dispose();
     clearTimeout(this.#pushTimer);
     this.#stopPower?.();
     this.presenter.dispose();

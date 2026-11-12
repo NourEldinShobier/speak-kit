@@ -98,6 +98,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
   onHidden: () => runtime.stopPolling(),
+  onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 const screenVision = createScreenVision();
 const voiceChat = createVoiceChat({

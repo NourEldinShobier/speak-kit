@@ -98,6 +98,15 @@ export class WhisperStt implements SpeechToText {
     return this.#backend;
   }
 
+  /** Jobs that were sent to the model and have not answered. */
+  get pending(): number {
+    return this.#jobs.size;
+  }
+  /** A job is queued, or a model is being loaded: nothing may be released under it. */
+  get busy(): boolean {
+    const s = this.#em.status.state;
+    return this.#jobs.size > 0 || s === "loading" || s === "downloading";
+  }
   /** The model that is loaded and ready; undefined when none. */
   get loaded(): SttModelId | undefined {
     return this.#em.status.state === "ready" ? this.#model?.id : undefined;
