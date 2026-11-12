@@ -310,6 +310,11 @@ export class SpeechModels {
     return this.view();
   }
 
+  /** Whether a rule looks at the keyboard layout; without one, nothing needs to read it. */
+  wantsLayout(): boolean {
+    return this.#cfg.autoSwitch.enabled && this.#cfg.autoSwitch.rules.some((r) => !!r.layout);
+  }
+
   setAutoSwitch(c: { enabled: boolean; rules: SwitchRuleView[] }): SpeechModelsView {
     this.#cfg.autoSwitch = { enabled: c.enabled, rules: c.rules.map((r) => ({ ...r })) };
     this.#d.save();
@@ -337,12 +342,6 @@ export class SpeechModels {
       if (mb !== undefined) this.#measured = { id, mb, setup: `${this.#d.stt.backend === "gpu" ? "graphics card" : "CPU"}, idle after loading, this computer` };
     }
     return this.view();
-  }
-
-  /** What the Performance page shows about the speech model: its name, state, the process that holds it and where it runs. */
-  resourceUse(): { name: string; state: string; pid: number | undefined; backend: "gpu" | "cpu" | undefined } {
-    const id = this.#dict.model;
-    return { name: this.#lib.find(id as SttModelId)?.name ?? id, state: this.#d.stt.status().state, pid: this.#d.stt.workerPid, backend: this.#d.stt.backend };
   }
 
   openProxySettings(): Promise<void> {

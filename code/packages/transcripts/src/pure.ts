@@ -5,3 +5,4 @@ export { AUDIO_FORMATS, FORMAT_LIST, MAX_HOURS } from "./formats";
 export { RATE } from "./chunker";
 export type { Detail, Outcome, Row } from "./api";
 export type { Failure, FailureCode, Segment, Source, Status } from "./types";
+export { footerOf, type NoteDoc, type NotesState, type NotesView } from "./notes";

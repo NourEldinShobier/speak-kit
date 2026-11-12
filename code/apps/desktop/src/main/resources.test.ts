@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { collectResources, type ResourceSources } from "./resources";
+import { collectResources, speechModelName, type ResourceSources } from "./resources";
 
 const sources = (over: Partial<ResourceSources> = {}): ResourceSources => ({
   processes: () => [
@@ -76,5 +76,12 @@ describe("collectResources", () => {
     const r = await collectResources(sources({ processes: () => [] }));
     expect(r.rows).toEqual([]);
     expect(r.totalMb).toBe(0);
+  });
+});
+
+describe("speechModelName", () => {
+  it("names a catalog model and falls back to the id for one the person added", () => {
+    expect(speechModelName("large-v3-turbo-q5_0")).toMatch(/turbo/i);
+    expect(speechModelName("custom-my-model")).toBe("custom-my-model");
   });
 });

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Banner, Button, Icon, Select } from "@speakkit/ui";
 import type { DictationModelId, DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
+import type { DictationConfig } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
-import { clockText, timeText } from "./model";
+import { clockText, LANGUAGE_OPTIONS, timeText } from "./model";
 
 /** The recording's bytes from the main process as a blob URL that lives only while the row is open. */
 function useRecordingUrl(id: string) {
@@ -118,9 +119,35 @@ function failureText(s: DictationStatus, error: string | undefined, model: strin
   return `${modelName(s, model)} could not transcribe this recording.`;
 }
 
+function AgainFailure({ text, missing, openDictation }: { text: string; missing: boolean; openDictation(): void }) {
+  return (
+    <Banner
+      tone="error"
+      role="alert"
+      action={
+        <>
+          {missing ? <Button onClick={openDictation}>Open Dictation</Button> : null}
+          <Button onClick={() => void dictation.historyCancelRetranscribe()}>Dismiss</Button>
+        </>
+      }
+    >
+      {text} The first version is kept.
+    </Banner>
+  );
+}
+
+/** The language for one Transcribe again run: starts as the dictation language, lists what the chosen model knows, and falls back to automatic detection when it does not know the pick. */
+function useRunLanguage(s: DictationStatus, model: DictationModelId) {
+  const [picked, setPicked] = useState<DictationConfig["language"]>(s.settings.language);
+  const known = s.models.find((m) => m.id === model)?.languages ?? [];
+  const options = LANGUAGE_OPTIONS.filter((l) => l.value === "auto" || known.includes(l.value));
+  return [options.some((l) => l.value === picked) ? picked : "auto", setPicked, options] as const;
+}
+
 /** Transcribe again: pick a model, see it run, cancel it or read why it failed. The text in use never changes until a version is chosen. */
 function Again({ item, s, openDictation }: { item: HistoryItem; s: DictationStatus; openDictation(): void }) {
   const [model, setModel] = useState<DictationModelId>(s.settings.model);
+  const [language, setLanguage, spoken] = useRunLanguage(s, model);
   const redo = s.redo?.id === item.id ? s.redo : undefined;
   const running = redo?.state === "running";
   const failure = redo?.state === "failed" ? failureText(s, redo.error, redo.model) : undefined;
@@ -134,6 +161,7 @@ function Again({ item, s, openDictation }: { item: HistoryItem; s: DictationStat
           options={s.models.map((m) => ({ value: m.id, label: m.name }))}
           disabled={running}
         />
+        <Select label="Language for transcribing again" value={language} onChange={(l) => setLanguage(l as DictationConfig["language"])} options={spoken} disabled={running} />
         {running ? (
           <>
             <span className="dict-rec__running" role="status">
@@ -142,7 +170,7 @@ function Again({ item, s, openDictation }: { item: HistoryItem; s: DictationStat
             <Button onClick={() => void dictation.historyCancelRetranscribe()}>Cancel</Button>
           </>
         ) : (
-          <Button iconLeft="refresh" onClick={() => void dictation.historyRetranscribe(item.id, model)}>
+          <Button iconLeft="refresh" onClick={() => void dictation.historyRetranscribe(item.id, model, language)}>
             Transcribe again
           </Button>
         )}
@@ -151,20 +179,7 @@ function Again({ item, s, openDictation }: { item: HistoryItem; s: DictationStat
           Delete recording
         </Button>
       </div>
-      {failure ? (
-        <Banner
-          tone="error"
-          role="alert"
-          action={
-            <>
-              {redo?.error === "model-missing" ? <Button onClick={openDictation}>Open Dictation</Button> : null}
-              <Button onClick={() => void dictation.historyCancelRetranscribe()}>Dismiss</Button>
-            </>
-          }
-        >
-          {failure} The first version is kept.
-        </Banner>
-      ) : null}
+      {failure ? <AgainFailure text={failure} missing={redo?.error === "model-missing"} openDictation={openDictation} /> : null}
     </div>
   );
 }

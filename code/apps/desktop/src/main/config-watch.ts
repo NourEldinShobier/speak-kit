@@ -62,34 +62,3 @@ export function watchConfigFile(o: WatchOptions): { dispose(): void } {
     },
   };
 }
-
-interface SettingsWatch {
-  file: string;
-  config: Config;
-  /** The port is set by the environment for this run: an edit to it is ignored. */
-  keepPort: boolean;
-  apply(patch: Partial<Config>): void;
-  activity(kind: "info", title: string, body: string): void;
-  log: { warn(...a: unknown[]): void };
-  publish(): void;
-}
-
-/** The settings file of the running app: valid edits are applied and noted in the bell and the log; a file that stays broken is noted and the running settings kept. */
-export function watchSettings(w: SettingsWatch): { dispose(): void } {
-  return watchConfigFile({
-    file: w.file,
-    current: () => w.config,
-    keep: w.keepPort ? ["preferredPort"] : [],
-    onEdit: (edit) => {
-      if (edit.kind === "newer") return;
-      w.activity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);
-      w.log.warn("settings file edited outside the app", edit.keys.join(","), edit.repaired.length ? `repaired: ${edit.repaired.join(",")}` : "");
-      w.apply(edit.patch);
-    },
-    onUnreadable: () => {
-      w.activity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has.");
-      w.log.warn("settings file edited outside the app is not valid; keeping the running settings");
-      w.publish();
-    },
-  });
-}

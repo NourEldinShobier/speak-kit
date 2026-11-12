@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { createInserter } from "../inserter";
 import type { ClipboardPort } from "../restore-guard";
 import { VK, type HotkeyEvent } from "../types";
-import { installTapHook } from "./hook";
+import { installMouseTap, installTapHook, mouseButtonOf } from "./hook";
 import { chunks, createMacInput } from "./input";
 import { fakeMacNative } from "./fake-native";
 import { createMacPlatformWith } from "./index";
@@ -157,6 +157,27 @@ describe("macOS foreground and paste keys", () => {
     expect(input.foreground()).toBeNull();
   });
 
+  it("reports the front window's bounds so a full-screen program can be told, and none when it has no window", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native);
+    expect(input.foreground()).not.toHaveProperty("bounds");
+    fake.state.windows.set(501, { x: 0, y: 0, width: 1512, height: 982 });
+    expect(input.foreground()?.bounds).toEqual({ x: 0, y: 0, width: 1512, height: 982 });
+  });
+
+  it("adds the keyboard layout language when the reader has one", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native, { current: () => "de" });
+    expect(input.foreground()).toMatchObject({ exe: "com.apple.TextEdit", layout: "de" });
+  });
+
+  it("does not read the layout when the caller says nobody needs it", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native, { current: () => "de" });
+    expect(input.foreground({ layout: false })?.layout).toBeUndefined();
+    expect(input.foreground({ layout: true })?.layout).toBe("de");
+  });
+
   it("pastes with Command+V and adds Shift when asked, releasing the key last", () => {
     const fake = fakeMacNative();
     const input = createMacInput(fake.native);
@@ -305,5 +326,69 @@ describe("macOS insert through the inserter", () => {
     const t = insertSetup();
     t.fake.state.flags = 0x100000;
     expect(await t.ins.insert("x")).toEqual({ status: "pasted" });
+  });
+});
+
+describe("macOS mouse buttons as hotkeys", () => {
+  const SIDE_BUTTON = 3; // button number 3 is the first side button, reported as Mouse4
+  const MOUSE4 = 0x05;
+
+  it("maps button numbers to the codes the chords use, and ignores buttons it has no code for", () => {
+    expect(mouseButtonOf(3, 1)).toEqual({ vk: 0x02, down: true });
+    expect(mouseButtonOf(4, 1)).toEqual({ vk: 0x02, down: false });
+    expect(mouseButtonOf(25, 2)).toEqual({ vk: 0x04, down: true });
+    expect(mouseButtonOf(26, 3)).toEqual({ vk: 0x05, down: false });
+    expect(mouseButtonOf(25, 4)).toEqual({ vk: 0x06, down: true });
+    expect(mouseButtonOf(25, 7)).toBeUndefined();
+    expect(mouseButtonOf(5, 0)).toBeUndefined();
+  });
+
+  it("is available, and a bound side button holds the dictation down and up, swallowed as a pair", async () => {
+    const t = started([MOUSE4]);
+    expect(t.platform.hotkey.mouse).toBe(true);
+    expect(t.fake.sendMouse({ type: 25, keycode: SIDE_BUTTON })).toBe(true);
+    expect(t.fake.sendMouse({ type: 26, keycode: SIDE_BUTTON })).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+
+  it("does not open the mouse tap while no button is bound", () => {
+    const t = started([VK.rightAlt]);
+    expect(t.fake.calls.taps).toBe(1);
+  });
+
+  it("a click during a keyboard hold discards the press and reaches the app", async () => {
+    const t = started([VK.rightAlt]);
+    t.fake.send({ type: FLAGS, keycode: RIGHT_OPTION, flags: RIGHT_OPTION_BIT });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.fake.sendMouse({ type: 1, keycode: 0 })).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "other", vk: 0x01 }]);
+  });
+
+  it("keeps the keyboard shortcut working when macOS refuses only the mouse tap", async () => {
+    const fake = fakeMacNative({ refuseMouseTap: true });
+    const platform = createMacPlatformWith(fake.native);
+    const events: HotkeyEvent[] = [];
+    expect(platform.hotkey.start({ keys: [VK.rightAlt, MOUSE4] }, { onEvent: (e) => void events.push(e) })).toEqual({ ok: true });
+    expect(fake.calls.taps).toBe(1);
+    expect(platform.hotkey.active).toBe(true);
+  });
+
+  it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
+    const fake = fakeMacNative();
+    const faults: unknown[] = [];
+    const hook = installMouseTap(
+      fake.native,
+      () => {
+        throw new Error("boom");
+      },
+      (e) => void faults.push(e),
+    );
+    expect(fake.sendMouse({ type: 25, keycode: SIDE_BUTTON })).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fake.calls.removed).toBe(1);
+    expect(faults).toHaveLength(1);
+    hook.uninstall();
   });
 });

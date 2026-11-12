@@ -14,9 +14,12 @@ import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
 import type { Narrator } from "./recording";
 import { CaptureRuntime } from "./runtime";
+import { createMicClaim } from "./mic-claim";
 import { applyPatch } from "./settings-patch";
 
 export interface CaptureServiceOptions {
+  /** Claims the microphone while a capture records, so the dictation key says who has it instead of opening it twice. */
+  micClaim?: ((name: string) => () => void) | undefined;
   dataDir: string;
   distDir: string;
   parent(): BrowserWindow | null;
@@ -135,8 +138,11 @@ export class CaptureService {
     };
   }
 
+  readonly #mic = createMicClaim((name) => this.#o.micClaim?.(name) ?? (() => undefined));
+
   #publish(): CaptureStatus {
     const status = this.status();
+    this.#mic.sync(this.runtime.phase === "recording", this.#settings.narration);
     const w = this.#o.parent();
     if (w && !w.isDestroyed()) w.webContents.send(CAPTURE_STATUS_EVENT, status);
     return status;
@@ -256,6 +262,7 @@ export class CaptureService {
     this.#stopPower();
     if (this.#sweep) clearInterval(this.#sweep);
     this.keys.stop();
+    this.#mic.release();
     this.runtime.dispose();
   }
 }

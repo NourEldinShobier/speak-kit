@@ -10,6 +10,8 @@ import { createGate, JobQueue, QueueFullError } from "./queue";
 import { sweep, audioTotal } from "./retention";
 import { SearchIndex } from "./search";
 import { recordingApi } from "./recording";
+import { viewOf } from "./notes";
+import { notesRunner } from "./notes-pass";
 import { openStore, type Store } from "./store";
 import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
@@ -23,6 +25,8 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
   const queue = new JobQueue();
   const clear = createGate({ busy: d.busy, sleep: d.sleep });
   const spooled = new Map<string, number>();
+  const writing = new Set<string>();
+  let notesIdle: Promise<unknown> = Promise.resolve();
   let idle: Promise<unknown> = Promise.resolve();
 
   const indexOne = async (e: Entry) => {
@@ -47,7 +51,10 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     }
   };
 
-  const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, now: d.now(), policy: d.policy(), snippet });
+  const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, writing, now: d.now(), policy: d.policy(), snippet });
+
+  const quit = new AbortController();
+  const notesPass = notesRunner({ d, quit: quit.signal, reindex: indexOne, store, settle, writing, failure });
 
   async function job(id: string, signal: AbortSignal): Promise<void> {
     const e = store.get(id);
@@ -93,6 +100,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         await store.dropAudio(id).catch(() => {});
         next = store.get(id);
       }
+      if (r.status === "done" && saved && d.notes?.()) notesIdle = Promise.all([notesIdle, notesPass(id)]);
     } catch (err) {
       await settle(id, { status: "failed", failure: failure(err) });
     } finally {
@@ -171,7 +179,9 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     },
     async get(id) {
       const e = store.get(id);
-      return e ? { ...row(e), segments: await store.segments(id), exports: e.exports } : undefined;
+      if (!e) return undefined;
+      const notes = viewOf(await store.notes(id), writing.has(id));
+      return { ...row(e), segments: await store.segments(id), exports: e.exports, ...(notes && { notes }) };
     },
     importAudio: ({ name, pcm, language }) =>
       run(async () => {
@@ -227,6 +237,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         const wasWaiting = queue.waiting.includes(id);
         if (queue.cancel(id, "cancel") && wasWaiting) await settle(id, { status: "cancelled" });
       }),
+    writeNotes: (id) => run(() => notesPass(id)),
     rename: (id, title) =>
       run(async () => {
         const t = title.trim();
@@ -261,7 +272,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     async text(id, format) {
       const e = store.get(id);
       if (!e) return undefined;
-      return { name: e.title, text: render(format, { ...e, segments: await store.segments(id) }) };
+      return { name: e.title, text: render(format, { ...e, segments: await store.segments(id), notes: (await store.notes(id))?.doc }) };
     },
     save: (id, format) =>
       run(async () => {
@@ -270,7 +281,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         const ext: string = format;
         const previous = e.exports.find((f) => f.path.toLowerCase().endsWith(`.${ext}`));
         try {
-          const saved = await saveExport(d.fs, d.exportDir(), e.title, ext, render(format, { ...e, segments: await store.segments(id) }), previous);
+          const saved = await saveExport(d.fs, d.exportDir(), e.title, ext, render(format, { ...e, segments: await store.segments(id), notes: (await store.notes(id))?.doc }), previous);
           const exports = [...e.exports.filter((f) => f !== previous), { path: saved.path, sha256: saved.sha256 }];
           await store.update(id, { exports });
           return { ok: true, ...saved };
@@ -297,7 +308,9 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     storage: () => ({ audioBytes: audioTotal(store.list().concat(store.list(true))), count: store.list().length, trashed: store.list(true).length }),
     async dispose() {
       queue.stopAll("quit");
+      quit.abort();
       await idle;
+      await notesIdle;
     },
   };
 }

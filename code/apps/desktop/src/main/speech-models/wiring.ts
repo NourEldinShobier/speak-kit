@@ -1,4 +1,4 @@
-import { net, type BrowserWindow } from "electron";
+import type { BrowserWindow } from "electron";
 import { Transfers, WhisperStt } from "@speakkit/engine";
 import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
@@ -6,6 +6,7 @@ import type { Settings } from "@speakkit/dictation";
 import { ModelManager } from "../dictation/models";
 import { coreSettings, isRecording } from "../dictation/service-support";
 import type { Stt } from "../dictation/stt";
+import { modelFetch } from "./download-fetch";
 import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "./ports";
 import { SpeechModels, type SttExtras } from "./service";
 
@@ -23,9 +24,8 @@ interface Args {
 /** The real engine (unless a test gave one): it asks the speech models service where to run, and downloads through the browser engine's fetch. */
 function createEngine(a: Args, speech: () => SpeechModels): Stt & SttExtras {
   if (a.stt) return a.stt;
-  // The browser engine's fetch follows the system proxy (manual and PAC scripts) and trusts the system certificate store, so a network that
-  // inspects secure traffic works once its certificate is installed; the plain Node fetch would ignore both.
-  const systemFetch = __TEST_CODE__ && a.o.test ? undefined : (net.fetch as typeof fetch);
+  // A test run keeps the plain fetch for local servers, except when it asks for the real engine, whose downloads must take the app path.
+  const systemFetch = modelFetch(__TEST_CODE__ && a.o.test && !process.env.SPEAKKIT_REAL_STT);
   return new WhisperStt({
     modelsDir: a.o.modelsDir,
     workerUrl: a.o.sttWorker,
@@ -84,12 +84,12 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
 }
 
 /** Starts the speech models service (hardware probe, models on disk) and, while dictation is on, feeds the program in front and its keyboard layout to the automatic switching rules; the rules wait 300 ms for them to settle. Returns the stop function. */
-export function startSpeech(speech: SpeechModels, os: { foreground(): { exe: string | null; layout?: string | undefined } | null }, dictationOn: () => boolean): () => void {
+export function startSpeech(speech: SpeechModels, os: { foreground(want?: { layout: boolean }): { exe: string | null; layout?: string | undefined } | null }, dictationOn: () => boolean): () => void {
   void speech.init();
   let last = "";
   const t = setInterval(() => {
     if (!dictationOn()) return;
-    const info = os.foreground();
+    const info = os.foreground({ layout: speech.wantsLayout() });
     const c = { app: info?.exe ?? undefined, layout: info?.layout };
     const key = `${c.app}|${c.layout}`;
     if (key === last) return;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
 import { IDLE_READER, type ReaderState } from "./reader";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
-import { speechModelRows, trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
+import { recordToggle, speechModelRows, trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
 
 const health = (state: EngineState): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state } });
 const reader = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READER, status, title: "Chapter one", index: 2, total: 9, source: "selection" });
@@ -111,10 +111,10 @@ describe("tray menu, recorder", () => {
     expect(row("done")).toEqual({ type: "item", action: "record-start", label: "Done. Record a conversation", enabled: true });
   });
 
-  it("waits, disabled, while it starts, saves and transcribes, so it never stays greyed once that is over", () => {
+  it("waits, disabled, while it starts and saves; a transcript being made does not grey it", () => {
     expect(row("starting")).toMatchObject({ label: "Starting recording...", enabled: false });
     expect(row("saving")).toMatchObject({ label: "Saving recording...", enabled: false });
-    expect(row("transcribing")).toMatchObject({ label: "Transcribing...", enabled: false });
+    expect(row("transcribing")).toMatchObject({ label: "Record a conversation", enabled: true });
     expect(row("ready")).toMatchObject({ enabled: true });
   });
 
@@ -253,5 +253,15 @@ describe("tray icon variant", () => {
     expect(trayIconVariant(ctx({ platform: "win32", darkTaskbar: false }))).toBe("light");
     expect(trayIconVariant(ctx({ platform: "win32" }))).toBe("light");
     expect(trayIconVariant(ctx({ platform: "darwin", darkTaskbar: true }))).toBe("light");
+  });
+});
+
+describe("record shortcut", () => {
+  it("stops while recording, starts when idle, done or only a transcript is running, ignores starting and saving", () => {
+    expect(recordToggle("recording")).toBe("stop");
+    expect(recordToggle("ready")).toBe("start");
+    expect(recordToggle("done")).toBe("start");
+    expect(["starting", "saving"].map((p) => recordToggle(p as never))).toEqual(["none", "none"]);
+    expect(recordToggle("transcribing")).toBe("start");
   });
 });

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { launch, type Launched } from "./harness";
 
@@ -50,6 +53,21 @@ describe("Engines page", () => {
     expect(await first.getByRole("progressbar", { name: /^Accuracy of / }).getAttribute("aria-valuenow")).toBe("96");
     expect(await first.getByRole("progressbar", { name: /^Speed of / }).count()).toBe(1);
     expect(await l.page.locator("[data-engine=kokoro]").getByText("Ready").count()).toBe(1);
+  });
+
+  it("Compare models opens a table with one column per model, the test language in each accuracy cell, and closes with Escape", async () => {
+    const l = await start({ config: DONE });
+    await open(l);
+    await l.page.getByRole("button", { name: "Compare models" }).click();
+    const table = l.page.getByRole("region", { name: "Model comparison" });
+    await table.waitFor();
+    expect(await table.getByRole("columnheader").allTextContents()).toEqual(["", "Whisper Large v3 Turbo", "Parakeet v3"]);
+    const accuracy = table.getByRole("row", { name: /^Accuracy/ });
+    expect(await accuracy.getByRole("cell").allTextContents()).toEqual(["About 1 wrong word in 25 (English test)", "About 1 wrong word in 18 (English test)"]);
+    await l.page.waitForTimeout(400); // the dialog fades in
+    await shot(l, "engines-compare");
+    await l.page.keyboard.press("Escape");
+    await table.waitFor({ state: "detached" });
   });
 
   it("the Downloaded filter keeps the installed models and says how many are hidden", async () => {
@@ -111,6 +129,11 @@ describe("Setup: dictation step", () => {
     await shot(l, "setup-practice");
     expect(await l.page.getByRole("textbox", { name: "Practice field" }).count()).toBe(1);
     expect(await l.page.getByRole("button", { name: "Continue" }).isDisabled()).toBe(true); // until something was dictated
+    await l.page.getByRole("heading", { name: "Try dictation here" }).waitFor();
+    // Practice does not say it is the person's turn before the hotkey listener is live: either the wait line shows or the pill hint does, never both.
+    const waiting = await l.page.getByText("Getting the hotkey ready").count();
+    const hint = await l.page.getByText("This pill appears near the bottom of your screen").count();
+    expect(waiting + hint).toBe(1);
     await expect.poll(() => configOf(l).setupStep).toBe(2);
   });
 
@@ -162,4 +185,40 @@ describe("About: Run setup again", () => {
     await expect.poll(() => configOf(l).setupDone).toBe(false);
     expect(configOf(l).dictation.language).toBe("de");
   });
+});
+
+/** A proxy that refuses every tunnel but records the host asked for, and a server for the PAC script that points at it. */
+async function proxyAndPac() {
+  const connects: string[] = [];
+  const proxy = http.createServer((_req, res) => res.end());
+  proxy.on("connect", (req, socket) => (connects.push(req.url ?? ""), socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n")));
+  await new Promise<void>((r) => proxy.listen(0, "127.0.0.1", r));
+  const proxyPort = (proxy.address() as AddressInfo).port;
+  const pac = http.createServer((_req, res) => res.end(`function FindProxyForURL() { return "PROXY 127.0.0.1:${proxyPort}"; }`));
+  await new Promise<void>((r) => pac.listen(0, "127.0.0.1", r));
+  const pacPort = (pac.address() as AddressInfo).port;
+  return { proxyPort, pacPort, connects, close: () => (proxy.close(), pac.close()) };
+}
+
+describe("Model downloads use the system proxy", () => {
+  /** Starts the real engine, presses Download on the first card and returns the hosts the proxy was asked to connect to. */
+  async function downloadVia(proxyArgs: (p: Awaited<ReturnType<typeof proxyAndPac>>) => string[]) {
+    const p = await proxyAndPac();
+    try {
+      const l = await start({ config: DONE, args: proxyArgs(p), env: { SPEAKKIT_REAL_STT: "1", SPEAKKIT_MODELS_DIR: mkdtempSync(path.join(tmpdir(), "speakkit-models-")) } });
+      await open(l);
+      await l.page
+        .locator("[data-testid^=model-card-]")
+        .first()
+        .getByRole("button", { name: /^Download / })
+        .click();
+      await expect.poll(() => p.connects, { timeout: 20_000 }).toContain("huggingface.co:443");
+    } finally {
+      p.close();
+    }
+  }
+
+  it("goes through a manual proxy", () => downloadVia((p) => [`--proxy-server=127.0.0.1:${p.proxyPort}`]));
+
+  it("goes through the proxy a PAC script names", () => downloadVia((p) => [`--proxy-pac-url=http://127.0.0.1:${p.pacPort}/proxy.pac`]));
 });

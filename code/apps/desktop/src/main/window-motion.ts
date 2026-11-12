@@ -11,10 +11,15 @@ interface MotionTarget {
 export const motionScript = (on: boolean): string => `document.documentElement.setAttribute("data-reduce-motion", ${JSON.stringify(on ? "on" : "off")})`;
 
 /** Keeps every window of the app (the pill, the mini player, the capsules) on one Reduce motion decision: applied when a page has loaded and whenever it changes. */
+/** The page can be gone by the time the script runs. */
+function pageGone(): void {
+  /* nothing to update */
+}
+
 export function createWindowMotion() {
   let reduce = false;
   const targets = new Set<MotionTarget>();
-  const apply = (t: MotionTarget) => void t.webContents.executeJavaScript(motionScript(reduce)).catch(() => {}); // the page can be gone by now
+  const apply = (t: MotionTarget) => void t.webContents.executeJavaScript(motionScript(reduce)).catch(pageGone);
   return {
     add(t: MotionTarget): void {
       targets.add(t);

@@ -1,6 +1,7 @@
 import path from "node:path";
-import { createTranscripts, nodeFs, type Fs, type Outcome, type Transcripts } from "@speakkit/transcripts";
+import { createTranscripts, nodeFs, type Fs, type Outcome, type Summarise, type Transcripts } from "@speakkit/transcripts";
 import type { Push } from "../../shared/transcripts/contract";
+import { recordToggle } from "../../shared/tray";
 import { policyOf } from "../../shared/transcripts/settings";
 import type { Ctx } from "../context";
 import type { FilePorts } from "./decode";
@@ -22,6 +23,8 @@ export interface TranscriptsPorts {
   modelName(): { name: string; installed: boolean };
   /** Dictation is recording or transcribing. */
   dictationBusy(): boolean;
+  /** The notes writer, or nothing when notes are off or there is no key. */
+  notes?(): Summarise | undefined;
   files: Omit<FilePorts, "decodeInPage"> & { decodeInPage: FilePorts["decodeInPage"] };
   mic: MicPort;
   dialog: { pickFile(): Promise<string | null>; pickFolder(): Promise<string | null> };
@@ -48,10 +51,13 @@ export interface TranscriptsService {
   phase(): TrayPhase;
   stopRecording(): Promise<Outcome<{ id: string }>>;
   startRecording(): Promise<Outcome<{ id: string }>>;
+  /** The global record shortcut: stops a running recording, starts one when idle. */
+  toggleRecording(): Promise<unknown>;
   dispose(): Promise<void>;
 }
 
 const HOUR = 3_600_000;
+const STARTED = "Recording started. Recording other people can need their consent, and the rules depend on where you live.";
 
 /** The store and the recorder of transcripts, wired to the engine, the OS ports and the window. */
 export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): TranscriptsService {
@@ -69,6 +75,7 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     model: p.model,
     policy: () => policyOf(cfg()),
     exportDir: folder,
+    ...(p.notes && { notes: p.notes }),
     changed: () => live.changed(),
     recycle: (f) => p.shell.trash(f),
     warn: (text) => {
@@ -87,6 +94,7 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     phase: () => livePhase(live),
     startRecording: handlers.recordStart,
     stopRecording: handlers.recordStop,
+    toggleRecording: () => toggleOf(ctx, live, handlers),
     async dispose() {
       clearInterval(sweepTimer);
       const t = await ready;
@@ -94,6 +102,33 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
       await t.dispose();
     },
   };
+}
+
+/** The global record shortcut. A press that did nothing leaves a notice in the window and an entry in the bell. */
+async function toggleOf(ctx: Ctx, live: Live, handlers: Handlers): Promise<unknown> {
+  const tell = (text: string) => {
+    live.notice = text;
+    ctx.addActivity("error", "Recording", text);
+    ctx.publish();
+    live.send();
+  };
+  const a = recordToggle(livePhase(live));
+  if (a === "stop") {
+    if (live.notice === STARTED) live.notice = undefined;
+    return handlers.recordStop();
+  }
+  if (a === "none") return tell("Wait until the recording is saved, then press the shortcut again.");
+  try {
+    const r = await handlers.recordStart();
+    if (!r.ok) return tell(r.failure.message);
+    live.notice = STARTED;
+    live.send();
+    ctx.showWindow();
+    ctx.sendUi({ type: "nav", page: "history" });
+    return r;
+  } catch (e) {
+    return tell(e instanceof Error ? e.message : "The recording could not start.");
+  }
 }
 
 function livePhase(live: Live): TrayPhase {

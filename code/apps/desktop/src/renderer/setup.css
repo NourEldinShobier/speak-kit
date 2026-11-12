@@ -164,6 +164,14 @@
   font-size: 13px;
   color: var(--tag-green);
 }
+.sk-practice__wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
 .sk-practice__pill {
   display: flex;
   flex-direction: column;
@@ -193,4 +201,23 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+.sk-startup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  padding: 16px;
+  text-align: center;
+}
+.sk-startup h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.sk-startup p {
+  margin: 0;
+  max-width: 420px;
+  color: var(--text-secondary);
 }

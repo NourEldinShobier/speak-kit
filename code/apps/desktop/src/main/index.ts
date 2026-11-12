@@ -1,11 +1,10 @@
-import { app, ipcMain, Menu, nativeTheme, powerMonitor, safeStorage } from "electron";
+import { app, ipcMain, Menu, nativeTheme, safeStorage } from "electron";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { channel, METHODS, type Activity, type AppState, type Method } from "../shared/ipc";
 import { ARGS } from "../shared/schemas";
 import { findDeepLink, handleDeepLink, type DeepLink } from "../shared/deeplink";
-import { applyMemory } from "../shared/memory";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
@@ -13,17 +12,18 @@ import { appMenuTemplate } from "./app-menu";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
-import { watchSettings } from "./config-watch";
+import { createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { watchSettings } from "./settings-watch";
 import { motionNow, windowMotion } from "./window-motion";
 import { createNoticeCenter } from "./tray-notice";
 import { claimInstance, registerProtocol } from "./instance";
-import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
+import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
-import { emptyPairing, watchPairing } from "./pairing";
+import { emptyPairing } from "./pairing";
+import { watchPairingActivity, watchPower } from "./watchers";
 import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
@@ -113,6 +113,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
   },
   onHidden: () => (runtime.stopPolling(), desktop?.onWindowHidden()),
   busy: () => desktop?.busy() ?? false,
+  trayMissing: () => desktop?.trayMissing() ?? false,
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 windowVisible = () => mainWindow.isVisible();
@@ -126,8 +127,8 @@ const voiceChat = createVoiceChat({
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
-  // Dictation waits while a screen look has the microphone busy with its own session.
-  look: micOwners.holding("Screen look", screenVision.look),
+  // Dictation waits while a screen look or a conversation in the browser holds the microphone.
+  ...micOwners.voiceChat(screenVision.look),
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -163,28 +164,6 @@ function onDeepLink(link: DeepLink) {
     },
     showWindow: () => mainWindow.show(),
     navigate: (sub) => mainWindow.sendUi({ type: "nav", page: "settings", sub }),
-  });
-}
-
-function watchPower() {
-  state.onBattery = powerMonitor.isOnBatteryPower();
-  const onPower = (battery: boolean) => {
-    state.onBattery = battery;
-    applyMemory(runtime.server, config, battery);
-    publish();
-  };
-  powerMonitor.on("on-battery", () => onPower(true));
-  powerMonitor.on("on-ac", () => onPower(false));
-}
-
-function watchPairingActivity() {
-  watchPairing(state.pairing, {
-    token: () => state.token,
-    port: () => state.port,
-    onChange: () => {
-      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
-      publish();
-    },
   });
 }
 
@@ -234,14 +213,12 @@ function startDesktop() {
       version: app.getVersion(),
       voiceEngine: () => runtime.engine,
       trayNotice: () => trayNotices.current(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, micClaim: micOwners.claim, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
       voiceChat,
     },
   );
 }
 
-// `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
-const QUIT_FLAG = "--quit";
 const instance = await claimInstance(dataDir, process.argv);
 if (!instance.mayRun) {
   app.quit();
@@ -307,19 +284,10 @@ if (!instance.mayRun) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
-    if (config.setupDone && !process.env.SPEAKKIT_USER_DATA) repairLaunchAtLogin(config.startMinimized);
-    watchPower();
-    watchPairingActivity();
+    watchPower({ state, config, runtime, publish });
+    watchPairingActivity({ state, addActivity, publish });
     const appHandlers = createAppHandlers(handlerDeps());
-    const settingsWatch = watchSettings({
-      file: store.path,
-      config,
-      keepPort: !!process.env.SPEAKKIT_PORT,
-      apply: (patch) => applyExternalConfig(handlerDeps(), patch),
-      activity: addActivity,
-      log,
-      publish,
-    });
+    const settingsWatch = watchSettings(handlerDeps(), store.path, log);
     app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     runtime.automation.attach(desktop.automation);
@@ -339,12 +307,9 @@ if (!instance.mayRun) {
         ...desktop.testHook(),
       };
 
+    if (app.isPackaged) repairLoginItem(config.startMinimized); // an update may have moved the program; the entry must start this copy
     const boot = findDeepLink(process.argv) ?? launchLink;
-    const hidden =
-      config.setupDone &&
-      !config.hideTrayIcon && // a hidden tray icon leaves no way to open a hidden window
-      (process.argv.includes("--hidden") || (config.startMinimized && openedAtLogin(true)));
-    mainWindow.create(hidden && !boot);
+    mainWindow.create(startsHidden(config, process.argv, desktop.trayMissing()) && !boot);
     booted = true;
     await runtime.start(test.token);
     performance.mark("server:listening");

@@ -51,6 +51,7 @@ const ShortcutsSchema = v.object({
   "read-selection": accelerator("read-selection"),
   "play-pause": accelerator("play-pause"),
   stop: accelerator("stop"),
+  "record-toggle": accelerator("record-toggle"),
 });
 
 const EXPORT_FORMATS = ["wav", "mp3"] as const;

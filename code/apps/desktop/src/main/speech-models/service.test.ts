@@ -358,17 +358,26 @@ describe("SpeechModels: small settings", () => {
     expect(m).toEqual({ mb: 1100, setup: "graphics card, idle after loading, this computer" });
   });
 
-  it("tells the Performance page which model is selected and where it runs", async () => {
-    const { speech, stt } = setup();
-    expect(speech.resourceUse()).toEqual({ name: expect.any(String), state: "unloaded", pid: 4242, backend: "gpu" });
-    await stt.load(TURBO);
-    expect(speech.resourceUse().state).toBe("ready");
-    expect(speech.resourceUse().name).toMatch(/turbo/i);
-  });
-
   it("stores automatic switching rules as given", () => {
     const { speech, cfg } = setup();
     speech.setAutoSwitch({ enabled: true, rules: [{ id: "a", layout: "de", model: TURBO, language: "de" }] });
     expect(cfg.engines.autoSwitch).toEqual({ enabled: true, rules: [{ id: "a", layout: "de", model: TURBO, language: "de" }] });
+  });
+
+  it("asks for the keyboard layout only while a rule uses it", () => {
+    const { speech } = setup();
+    expect(speech.wantsLayout()).toBe(false);
+    speech.setAutoSwitch({ enabled: true, rules: [{ id: "a", app: "chat.exe", model: TURBO }] });
+    expect(speech.wantsLayout()).toBe(false);
+    speech.setAutoSwitch({
+      enabled: true,
+      rules: [
+        { id: "a", app: "chat.exe", model: TURBO },
+        { id: "b", layout: "de", model: TURBO },
+      ],
+    });
+    expect(speech.wantsLayout()).toBe(true);
+    speech.setAutoSwitch({ enabled: false, rules: [{ id: "b", layout: "de", model: TURBO }] });
+    expect(speech.wantsLayout()).toBe(false);
   });
 });

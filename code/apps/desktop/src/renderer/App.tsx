@@ -9,7 +9,7 @@ import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
 import { useMotionPreference } from "./features/settings";
-import { Wizard } from "./features/wizard";
+import { StartupState, Wizard } from "./features/wizard";
 import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
 import { currentLoc, initShell, shellReducer, recentReadings, type OpenDoc, type RecentReading, type ShellAction, type ShellState } from "./shell-model";
@@ -23,6 +23,7 @@ export function App() {
   }, [s?.platform]);
   return (
     <div className="lm" style={{ height: "100%" }}>
+      {!s && <StartupState />}
       {s && (s.config.setupDone ? <Shell s={s} /> : <Wizard s={s} />)}
     </div>
   );

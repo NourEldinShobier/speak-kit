@@ -26,10 +26,13 @@ import { setupPermissions } from "./system/permissions";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
+import { transcriptNotes } from "./transcripts/notes";
+import { NOTES_MODEL } from "./voice-chat/service";
 import { setupMeetings } from "./meetings";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
-import { collectResources } from "./resources";
+import { collectResources, speechModelName } from "./resources";
+import type { SttExtras } from "./speech-models/service";
 import { motionNow, windowMotion } from "./window-motion";
 import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
@@ -46,7 +49,10 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey"> & {
+    /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
+    micClaim: (name: string) => () => void;
+  };
   /** The notice the tray menu shows while the window is closed. */
   trayNotice(): string | undefined;
   /** The voice engine, for the memory it holds (Settings, Performance). */
@@ -55,10 +61,11 @@ interface DesktopOptions {
   voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
-const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
+const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
   "read-selection": () => void reading.readSelection(),
   "play-pause": () => reading.controller.command({ type: "toggle" }),
   stop: () => reading.controller.command({ type: "stop" }),
+  "record-toggle": toggleRecording,
 });
 
 const readerHandlers = (reading: ReturnType<typeof createReading>) =>
@@ -145,7 +152,10 @@ function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dic
   return collectResources({
     processes: () => app.getAppMetrics().map((m) => ({ type: m.type, name: m.name, workingSetKb: m.memory.workingSetSize, cpu: m.cpu.percentCPUUsage })),
     voice: () => ({ state: ctx.state.health?.engine.state, name: "Kokoro-82M", pid: (voiceEngine() as { workerPid?: number } | null)?.workerPid }),
-    speech: () => dictation.speech.resourceUse(),
+    speech: () => {
+      const stt = dictation.stt as typeof dictation.stt & SttExtras; // the real engine reports its process and backend
+      return { state: stt.status().state, name: speechModelName(ctx.config.dictation.model), pid: stt.workerPid, backend: stt.backend };
+    },
     memoryOf,
     hardware: probeThisComputer,
     platform: process.platform === "darwin" ? "darwin" : "win32",
@@ -168,17 +178,22 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   let installedByTest = 0;
   const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
-  const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
+  const shortcuts = setupShortcuts(
+    ctx,
+    shortcutActions(reading, () => transcripts.toggleRecording()),
+    o.test,
+  );
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
-  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
+  const notes = transcriptNotes({ on: () => ctx.config.meetings.summary, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
+  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
@@ -199,6 +214,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** A reading or an export is running: a quit would lose it. */
     busy: () => ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing" || exports.runningCount() > 0,
     refreshTray: () => tray.refresh(),
+    /** The tray icon is wanted but the system would not create it. */
+    trayMissing: () => tray.failed(),
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */

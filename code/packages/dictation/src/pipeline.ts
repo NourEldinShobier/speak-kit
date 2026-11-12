@@ -48,7 +48,11 @@ export function within<T>(ctx: Pick<Context, "deps">, stage: { name: string; ms:
       if (done) return;
       done = true;
       cancel();
-      if (why) ctx.deps.log?.(name, why);
+      try {
+        if (why) ctx.deps.log?.(name, why);
+      } catch {
+        // a broken log must not hold the text up
+      }
       resolve(value);
     };
     const cancel = ctx.deps.clock.after(ms, () => settle(fallback, "timeout"));

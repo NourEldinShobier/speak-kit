@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import path from "node:path";
-import { encodeWav16k, type Fs } from "@speakkit/transcripts";
+import { encodeWav16k, type Fs, type Summarise } from "@speakkit/transcripts";
 import type { Push } from "../../shared/transcripts/contract";
 import { parseConfig } from "../../shared/schemas";
 import type { Ctx } from "../context";
@@ -24,13 +24,22 @@ function memFs() {
 
 const tone = (sec: number) => Int16Array.from({ length: sec * 16000 }, (_, i) => Math.round(Math.sin(i / 20) * 5000));
 
-function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object } = {}) {
+function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object; notes?: () => Summarise | undefined } = {}) {
   const { fs, files } = memFs();
   const pushes: Push[] = [];
   // The schema hands out one shared default object: a test that changes a setting must not change it for the next.
   const config = structuredClone(parseConfig(over.config ?? {}));
   const activity: string[] = [];
-  const ctx = { config, saveConfig: vi.fn(), addActivity: (_k: string, t: string, b: string) => activity.push(`${t}: ${b}`), publish: vi.fn() } as unknown as Ctx;
+  const sent: unknown[] = [];
+  const shown = vi.fn();
+  const ctx = {
+    config,
+    saveConfig: vi.fn(),
+    showWindow: shown,
+    sendUi: (e: unknown) => void sent.push(e),
+    addActivity: (_k: string, t: string, b: string) => activity.push(`${t}: ${b}`),
+    publish: vi.fn(),
+  } as unknown as Ctx;
   let state = "ready";
   const stt: Stt = {
     status: () => ({ state }),
@@ -42,9 +51,18 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     unload: async () => {},
     ...over.stt,
   };
+  let micResult: { ok: true } | { ok: false; code: string } = { ok: true };
+  let micThrows = false;
+  let micGate: Promise<void> = Promise.resolve();
   let chunk: (p: Int16Array) => void = () => {};
   let ended: () => void = () => {};
-  const mic: MicPort = { start: async () => ({ ok: true }), stop: async () => {}, onChunk: (cb) => (chunk = cb), onLevel: () => {}, onEnded: (cb) => (ended = cb) };
+  const mic: MicPort = {
+    start: async () => (await micGate, micThrows ? Promise.reject(new Error("boom")) : (micResult as never)),
+    stop: async () => {},
+    onChunk: (cb) => (chunk = cb),
+    onLevel: () => {},
+    onEnded: (cb) => (ended = cb),
+  };
   const revealed: string[] = [];
   const recycled: string[] = [];
   const clip: string[] = [];
@@ -71,6 +89,7 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     model: () => "large-v3-turbo-q5_0",
     modelName: () => ({ name: "Whisper Large v3 Turbo", installed: true }),
     dictationBusy: over.busy ?? (() => false),
+    ...(over.notes && { notes: over.notes }),
     files: files2,
     mic,
     dialog: { pickFile: async () => pick, pickFolder: async () => dir },
@@ -92,6 +111,15 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     recycled,
     clip,
     activity,
+    sent,
+    shown,
+    denyMic: () => (micResult = { ok: false, code: "mic-denied" }),
+    holdMic: () => {
+      let open!: () => void;
+      micGate = new Promise<void>((r) => (open = r));
+      return open;
+    },
+    breakMic: () => (micThrows = true),
     chunk: (p: Int16Array) => chunk(p),
     setPick: (f: string | null) => (pick = f),
     setDir: (d: string | null) => (dir = d),
@@ -174,6 +202,33 @@ describe("transcripts service", () => {
     expect(await h.copyText("nope")).toBe(false);
   });
 
+  it("Copy section copies only the words said inside the chapter", async () => {
+    const t = setup({ stt: { transcribe: async () => ({ text: "alpha beta", speech: true }) } });
+    const h = t.service.handlers;
+    const id = ((await h.importFile({ path: "/in/talk.wav", language: "auto" })) as { id: string }).id;
+    await done(h, id);
+    expect(await h.copyText(id, { from: 0, to: 0.5 })).toBe(true);
+    expect(t.clip.at(-1)).toBe("alpha beta");
+    expect(await h.copyText(id, { from: 100, to: 200 })).toBe(false);
+    expect(t.clip.at(-1)).toBe("alpha beta");
+  });
+
+  it("writes notes through the handler and keeps the transcript when the writer fails", async () => {
+    let fail = true;
+    const t = setup({
+      notes: () => async () =>
+        fail ? { ok: false, failure: { code: "x", message: "OpenAI is busy. The transcript is unchanged." } } : { ok: true, writer: "W", notes: { title: "T", summary: "One. Two.", chapters: [] } },
+    });
+    const h = t.service.handlers;
+    const id = ((await h.importFile({ path: "/in/talk.wav", language: "auto" })) as { id: string }).id;
+    await done(h, id);
+    await vi.waitFor(async () => expect((await h.get(id))!.notes?.state).toBe("failed"));
+    expect((await h.get(id))!.segments[0]!.text).toBe("hello world");
+    fail = false;
+    expect(await h.writeNotes(id)).toEqual({ ok: true });
+    expect((await h.get(id))!.notes).toMatchObject({ state: "ready", doc: { title: "T", writer: "W" } });
+  });
+
   it("save writes into the folder, never over a file, and reveal selects the saved file", async () => {
     const t = setup();
     const h = t.service.handlers;
@@ -254,6 +309,80 @@ describe("transcripts service", () => {
     release();
     await vi.waitFor(() => expect(t.service.phase()).toBe("done"));
     await vi.waitFor(() => expect(t.service.phase()).toBe("ready"));
+  });
+
+  it("the record shortcut starts when idle, opens the recorder page and says recording began; pressing again stops and clears that notice", async () => {
+    const t = setup();
+    await t.service.toggleRecording();
+    expect(t.service.phase()).toBe("recording");
+    expect(t.shown).toHaveBeenCalledTimes(1);
+    expect(t.sent).toEqual([{ type: "nav", page: "history" }]);
+    expect((await t.service.handlers.push()).notice).toBe("Recording started. Recording other people can need their consent, and the rules depend on where you live.");
+    t.chunk(tone(2));
+    await vi.waitFor(async () => expect((await t.service.handlers.push()).recording!.seconds).toBe(2));
+    await t.service.toggleRecording();
+    expect((await t.service.handlers.push()).notice).toBeUndefined();
+    expect(await t.service.handlers.list()).toHaveLength(1);
+  });
+
+  it("the record shortcut starts a recording while a transcript is still being made", async () => {
+    let release!: () => void;
+    const hold = new Promise<void>((r) => (release = r));
+    const t = setup({ stt: { transcribe: async () => (await hold, { text: "x", speech: true }) } });
+    const h = t.service.handlers;
+    await h.recordStart();
+    t.chunk(tone(2));
+    await vi.waitFor(async () => expect((await h.push()).recording!.seconds).toBe(2));
+    await h.recordStop();
+    await vi.waitFor(() => expect(t.service.phase()).toBe("transcribing"));
+    await t.service.toggleRecording();
+    expect(t.service.phase()).toBe("recording");
+    release();
+  });
+
+  it("a press while the recorder is starting is ignored with a notice", async () => {
+    const t = setup();
+    const open = t.holdMic();
+    const first = t.service.toggleRecording();
+    await vi.waitFor(() => expect(t.service.phase()).toBe("starting"));
+    await t.service.toggleRecording();
+    expect((await t.service.handlers.push()).notice).toBe("Wait until the recording is saved, then press the shortcut again.");
+    expect(t.activity).toEqual(["Recording: Wait until the recording is saved, then press the shortcut again."]);
+    open();
+    await first;
+    expect(t.service.phase()).toBe("recording");
+  });
+
+  it("a shortcut start that fails leaves the message in the window and the bell, and does not raise the window", async () => {
+    const t = setup();
+    t.denyMic();
+    await t.service.toggleRecording();
+    expect(t.service.phase()).toBe("ready");
+    const msg = "Speak Kit cannot use the microphone. Allow it in your system's privacy settings and try again.";
+    expect((await t.service.handlers.push()).notice).toBe(msg);
+    expect(t.activity).toEqual([`Recording: ${msg}`]);
+    expect(t.shown).not.toHaveBeenCalled();
+    expect(t.sent).toEqual([]);
+  });
+
+  it("a shortcut start that throws is caught and reported", async () => {
+    const t = setup();
+    t.breakMic();
+    await expect(t.service.toggleRecording()).resolves.toBeUndefined();
+    expect(t.shown).not.toHaveBeenCalled();
+    expect(t.activity).toHaveLength(1);
+  });
+
+  it("the language chosen in the settings is the language of the next recording", async () => {
+    const t = setup();
+    const h = t.service.handlers;
+    await h.patchSettings({ language: "de" });
+    expect(t.config.transcripts.language).toBe("de");
+    expect(t.ctx.saveConfig).toHaveBeenCalled();
+    const started = await h.recordStart();
+    expect(started.ok).toBe(true);
+    expect((await h.list())[0]).toMatchObject({ language: "de", status: "recording" });
+    await t.service.toggleRecording();
   });
 
   it("a recording that ends by itself leaves a notice in the push and the bell, and is kept", async () => {

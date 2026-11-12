@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -149,6 +151,50 @@ describe("import", () => {
     await l.page.getByRole("button", { name: "Show in folder" }).click();
     await until(async () => (await transcriptsHook(l, "revealed")).length === 1);
     expect((await transcriptsHook(l, "revealed"))[0]).toContain("weekly planning (2).md");
+  });
+
+  it("with notes on, a finished transcript gets a summary naming the writer, chapters with Copy section, and the writer's name in the export", async () => {
+    const dir = tmp("in");
+    const answer = JSON.stringify({
+      title: "Invoice talk",
+      summary: "They discuss the invoice. Nothing else comes up.",
+      chapters: [
+        { start: 0, title: "The invoice" },
+        { start: 30, title: "Wrap up" },
+      ],
+    });
+    const server: Server = createServer((req, res) => {
+      req.resume();
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(req.url === "/v1/chat/completions" ? JSON.stringify({ choices: [{ message: { content: answer } }] }) : JSON.stringify({ data: [] }));
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    try {
+      const { l, exportDir } = await app({ config: { meetings: { summary: true } }, env: { SPEAKKIT_OPENAI_BASE_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}` } });
+      await l.page.getByRole("link", { name: "Voice chat" }).click();
+      await l.page.getByLabel("OpenAI API key").fill("sk-proj-E2E_good_key-0123456789abcdef");
+      await l.page.getByRole("button", { name: "Save", exact: true }).click();
+      await l.page.getByTestId("voice-chat-notice").waitFor();
+      await hook(l, "dictation.say", "We talk about the invoice today");
+      await openTranscripts(l);
+      await importFile(l, wav(path.join(dir, "weekly_planning.wav"), 70));
+      const row = l.page.locator('[data-testid="transcript-row"]').first();
+      await row.getByRole("button", { name: /^Open: / }).click();
+      await l.page.getByText("They discuss the invoice. Nothing else comes up.").waitFor();
+      await l.page.getByText(/Written by OpenAI/).waitFor();
+      await l.page.getByText("2 chapters").waitFor();
+      await l.page.getByRole("button", { name: "Copy section: The invoice" }).click();
+      expect(await transcriptsHook(l, "clipboard")).toContain("We talk about the invoice today");
+      await shot(l, "summary");
+      await l.page.getByRole("button", { name: "Export" }).click();
+      await l.page.getByRole("menuitem", { name: "Save as Markdown" }).click();
+      await l.page.getByText("Saved as Invoice talk.md.").waitFor();
+      const md = readFileSync(path.join(exportDir, "Invoice talk.md"), "utf8");
+      expect(md).toContain("## Summary");
+      expect(md).toMatch(/_Summary written by OpenAI .+\._/);
+    } finally {
+      server.close();
+    }
   });
 
   it("an MP3 goes through the decoder page and is transcribed with its real length", async () => {
@@ -324,6 +370,61 @@ describe("record a conversation", () => {
     await row.getByText("Recorded", { exact: true }).waitFor();
     await row.getByText(/audio kept \d+ more days?/).waitFor();
     await until(async () => (await transcriptsHook(l, "phase")) === "ready");
+  });
+
+  it("the record shortcut starts a recording and stops and saves it when pressed again", async () => {
+    const dir = tmp("mic");
+    const tone = wav(path.join(dir, "mic.wav"), 20);
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: tone } });
+    await hook(l, "dictation.say", "shortcut words");
+    expect(await hook<string[]>(l, "registeredShortcuts")).toContain("Ctrl+Alt+R");
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await until(async () => (await transcriptsHook(l, "phase")) === "recording");
+    await l.page.waitForTimeout(2000);
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await openTranscripts(l);
+    await l.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+  });
+
+  it("the shortcut from Home opens the recorder with its recording sign and the consent reminder", async () => {
+    const dir = tmp("mic");
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 20) } });
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await l.page.getByRole("timer", { name: "Recording time" }).waitFor();
+    await l.page.getByText(/Recording started\. Recording other people can need their consent/).waitFor();
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await until(async () => (await transcriptsHook(l, "phase")) !== "recording");
+  });
+
+  it("the shortcut with a refused microphone says why instead of doing nothing", async () => {
+    const dir = tmp("mic");
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 5) } });
+    await transcriptsHook(l, "denyMic", true);
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await openTranscripts(l);
+    await l.page
+      .getByText(/cannot use the microphone/)
+      .first()
+      .waitFor();
+    expect(await transcriptsHook(l, "phase")).toBe("ready");
+  });
+
+  it("German picked in the recorder is saved and is the language of the new transcript", async () => {
+    const dir = tmp("mic");
+    const userData = tmp("data");
+    const { l } = await app({ userData, env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 20) } });
+    await openTranscripts(l);
+    await l.page.getByRole("button", { name: "Record a conversation" }).first().click();
+    await l.page.getByRole("combobox", { name: "Language" }).click();
+    await l.page.getByRole("option", { name: "German" }).click();
+    await until(async () => JSON.parse(readFileSync(path.join(userData, "config.json"), "utf8")).transcripts?.language === "de");
+    await l.page.getByRole("button", { name: "Start recording" }).click();
+    await l.page.getByRole("timer", { name: "Recording time" }).waitFor();
+    await l.page.waitForTimeout(1500);
+    await l.page.getByRole("button", { name: "Stop and save" }).click();
+    await l.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+    const rows = await l.page.evaluate(() => (window as unknown as { speakkitTranscripts: { list(): Promise<{ language: string }[]> } }).speakkitTranscripts.list());
+    expect(rows.map((r) => r.language)).toEqual(["de"]);
   });
 
   it("a crash while recording leaves a recovered recording with Open and Transcribe now", async () => {

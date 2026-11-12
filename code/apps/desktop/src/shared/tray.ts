@@ -104,14 +104,21 @@ export const recentLabel = (text: string): string => {
   return one.length > RECENT_CHARS ? `${one.slice(0, RECENT_CHARS - 1)}…` : one;
 };
 
-const WAITING = { starting: "Starting recording...", saving: "Saving recording...", transcribing: "Transcribing..." } as const;
+const WAITING = { starting: "Starting recording...", saving: "Saving recording..." } as const;
 
 /** One row that follows the recorder: it starts a recording when ready, stops it while recording, and waits (disabled) while the recording is saved and transcribed. */
 function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
   if (phase === "ready") return item("record-start", "Record a conversation");
   if (phase === "recording") return item("record-stop", "Stop recording");
   if (phase === "done") return item("record-start", "Done. Record a conversation");
+  if (phase === "transcribing") return item("record-start", "Record a conversation");
   return item("record-start", WAITING[phase], { enabled: false });
+}
+
+/** What a press of the record shortcut does: it stops a recording, starts one when idle, and does nothing only while a recording is starting or being saved (a transcript being made does not block a new recording). */
+export function recordToggle(phase: NonNullable<TrayContext["recorder"]>["phase"]): "start" | "stop" | "none" {
+  if (phase === "recording") return "stop";
+  return phase === "starting" || phase === "saving" ? "none" : "start";
 }
 
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */

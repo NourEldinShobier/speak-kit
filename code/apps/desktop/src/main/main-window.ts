@@ -10,6 +10,19 @@ import { createSizeGuard } from "./window-size-guard";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+/** A drag onto a monitor with another scale factor does not leave the window a different size. */
+function keepSizeOnMove(w: BrowserWindow): void {
+  const guard = createSizeGuard({
+    getContentSize: () => w.getContentSize(),
+    setContentSize: (a, b) => w.setContentSize(a, b),
+    isMaximized: () => w.isMaximized(),
+    isFullScreen: () => w.isFullScreen(),
+    scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
+  });
+  w.on("will-move", guard.willMove);
+  w.on("moved", guard.moved);
+}
 const TITLE = "Speak Kit";
 /** Window hidden this long (ms): destroy it. 0 disables. */
 const HIDE_DESTROY_MS = Number(process.env.SPEAKKIT_DESTROY_MS ?? 30_000);
@@ -21,6 +34,8 @@ interface MainWindowEvents {
   onHidden(): void;
   /** Something is still running (an export or a reading) that a quit would lose. */
   busy(): boolean;
+  /** The tray icon could not be created: the window cannot be hidden, because nothing would bring it back. */
+  trayMissing?(): boolean;
   /** The window was destroyed to free memory (not by a quit). */
   onReleased?(): void;
 }
@@ -141,15 +156,7 @@ export class MainWindow {
       if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
-    const guard = createSizeGuard({
-      getContentSize: () => w.getContentSize(),
-      setContentSize: (a, b) => w.setContentSize(a, b),
-      isMaximized: () => w.isMaximized(),
-      isFullScreen: () => w.isFullScreen(),
-      scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
-    });
-    w.on("will-move", guard.willMove);
-    w.on("moved", guard.moved);
+    keepSizeOnMove(w);
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
     w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
@@ -162,7 +169,7 @@ export class MainWindow {
   #onClose(e: { preventDefault(): void }): void {
     if (this.quitting) return;
     e.preventDefault();
-    const outcome = closeOutcome(this.#config, this.#events.busy());
+    const outcome = closeOutcome(this.#config, this.#events.busy(), this.#events.trayMissing?.() ?? false);
     if (outcome === "confirm-quit") {
       this.sendUi({ type: "confirm-quit" }); // the same dialog the tray Quit opens; the window stays open meanwhile
       return;

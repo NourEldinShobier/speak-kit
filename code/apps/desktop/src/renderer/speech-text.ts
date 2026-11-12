@@ -154,3 +154,34 @@ export function hardwareLine(v: SpeechModelsView): string {
   ].filter(Boolean);
   return bits.join(". ");
 }
+
+function statusText(c: ModelCard): string {
+  if (c.inUse) return "In use";
+  return c.installed ? "Installed" : "Not downloaded";
+}
+
+export interface CompareTable {
+  names: string[];
+  rows: { label: string; cells: string[] }[];
+  /** The accuracy figures were measured in different languages: the table says so instead of lining them up. */
+  mixedTests: boolean;
+}
+
+/** Side by side: the same facts as the cards, one column per model in the order given. Accuracy keeps its test language in every cell. */
+export function compareTable(cards: readonly ModelCard[]): CompareTable {
+  const tests = new Set(cards.map((c) => c.accuracy?.testLanguage).filter((t) => t !== undefined));
+  const row = (label: string, f: (c: ModelCard) => string) => ({ label, cells: cards.map(f) });
+  return {
+    names: cards.map((c) => c.name),
+    mixedTests: tests.size > 1,
+    rows: [
+      row("Accuracy", accuracyText),
+      row("Speed", speedText),
+      row("Languages", (c) => languagesText(c.languages, 6)),
+      row("File size", (c) => sizeText(c.bytes)),
+      row("Recommended", (c) => recommendedText(c).replace(/^for /, "") || "Not for a language"),
+      row("Licence", (c) => c.license.name),
+      row("Status", (c) => statusText(c)),
+    ],
+  };
+}

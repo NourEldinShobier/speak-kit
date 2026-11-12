@@ -77,13 +77,13 @@ const PAUSE_MODE_OPTIONS = [
   { value: "allow", label: "Everywhere except these" },
 ];
 
-function PauseApps({ rules, save }: { rules: DictationStatus["settings"]["pauseRules"]; save: (next: Partial<typeof rules>) => void }) {
+function PauseApps({ rules, save, mac }: { rules: DictationStatus["settings"]["pauseRules"]; save: (next: Partial<typeof rules>) => void; mac: boolean }) {
   const [apps, setApps] = useState(rules.apps.join(", "));
   return (
     <SettingRow
       className="lm-row--control"
       label="Programs"
-      description="Program file names separated by commas, for example game.exe, editor"
+      description={mac ? "App identifiers separated by commas, for example com.valvesoftware.steam" : "Program file names separated by commas, for example game.exe, editor"}
       control={<TextInput aria-label="Programs" value={apps} maxLength={800} onChange={(e) => setApps(e.target.value)} onBlur={() => save({ apps: parseApps(apps) })} />}
     />
   );
@@ -91,6 +91,7 @@ function PauseApps({ rules, save }: { rules: DictationStatus["settings"]["pauseR
 
 function PauseRules({ s }: { s: DictationStatus }) {
   const r = s.settings.pauseRules;
+  const mac = s.platform === "darwin";
   const save = (next: Partial<typeof r>) => void patch({ pauseRules: { ...r, ...next } });
   return (
     <>
@@ -100,7 +101,7 @@ function PauseRules({ s }: { s: DictationStatus }) {
         description="Keys pass through to the program in front while a rule matches. Test it with your games before relying on it."
         control={<Select label="Pause in some programs" value={r.mode} onChange={(mode) => save({ mode: mode as typeof r.mode })} options={PAUSE_MODE_OPTIONS} />}
       />
-      {r.mode !== "off" && <PauseApps rules={r} save={save} />}
+      {r.mode !== "off" && <PauseApps rules={r} save={save} mac={mac} />}
       <SettingRow
         label="Pause in full-screen programs (experimental)"
         description="A program that covers the whole screen gets every key."

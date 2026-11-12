@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Banner, Button, IconButton } from "@speakkit/ui";
-import type { RecordingView } from "../../../shared/transcripts/contract";
+import { Banner, Button, IconButton, Select } from "@speakkit/ui";
+import type { RecordingView, SettingsView } from "../../../shared/transcripts/contract";
+import { TRANSCRIPT_LANGUAGES } from "../../../shared/transcripts/settings";
 import { attempt, transcripts } from "./api";
-import { timerText } from "./model";
+import { LANGUAGES, timerText } from "./model";
 
 const BARS = 18;
 
@@ -63,8 +64,29 @@ function Active({ rec }: { rec: RecordingView }) {
   );
 }
 
+function LanguageRow({ settings, disabled }: { settings: SettingsView | null; disabled: boolean }) {
+  const [language, setLanguage] = useState<string | null>(null);
+  const pick = (l: string) => {
+    setLanguage(l);
+    void attempt(transcripts.patchSettings({ language: l as (typeof TRANSCRIPT_LANGUAGES)[number] }));
+  };
+  return (
+    <div className="tr-rec__row">
+      <span className="tr-rec__label">Language</span>
+      <Select
+        label="Language"
+        size="md"
+        value={language ?? settings?.config.language ?? "auto"}
+        onChange={pick}
+        options={TRANSCRIPT_LANGUAGES.map((l) => ({ value: l, label: LANGUAGES[l]! }))}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
 /** Before recording: the consent reminder, the microphone, and Start recording. Nothing is saved until Start. */
-function Ready({ starting, onClose }: { starting: boolean; onClose(): void }) {
+function Ready({ starting, settings, onClose }: { starting: boolean; settings: SettingsView | null; onClose(): void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const start = async () => {
@@ -88,6 +110,7 @@ function Ready({ starting, onClose }: { starting: boolean; onClose(): void }) {
         <span className="tr-rec__label">Microphone</span>
         <span className="tr-rec__device">Default microphone</span>
       </div>
+      <LanguageRow settings={settings} disabled={busy || starting} />
       <p className="tr-rec__note">Only the microphone is recorded here. Nothing is saved until you press Start.</p>
       <Problem text={error} />
       <div className="tr-rec__foot">
@@ -102,7 +125,7 @@ function Ready({ starting, onClose }: { starting: boolean; onClose(): void }) {
 }
 
 /** Record a conversation: the consent reminder and Start recording; while recording, the timer, the level, the sound check and Stop and save. Microphone only: system audio belongs to meetings. */
-export function RecorderCard({ recording, onClose }: { recording: RecordingView | null; onClose(): void }) {
+export function RecorderCard({ recording, settings, onClose }: { recording: RecordingView | null; settings: SettingsView | null; onClose(): void }) {
   if (recording && recording.phase !== "starting") return <Active rec={recording} />;
-  return <Ready starting={recording?.phase === "starting"} onClose={onClose} />;
+  return <Ready starting={recording?.phase === "starting"} settings={settings} onClose={onClose} />;
 }

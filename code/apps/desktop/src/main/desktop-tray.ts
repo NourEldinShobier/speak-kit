@@ -61,10 +61,7 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, noti
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
 export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, notice, requestQuit, retryEngine }: TrayParts) {
   const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings, notice });
-  const openDictation = (page: "dictation" | "history") => () => {
-    ctx.showWindow();
-    ctx.sendUi({ type: "nav", page });
-  };
+  const openDictation = (page: "dictation" | "history") => () => (ctx.showWindow(), ctx.sendUi({ type: "nav", page }));
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
     "paste-last": () => void dictation.controls.pasteLast(),
