@@ -1,6 +1,7 @@
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
 import type { CaptureConfig } from "../../shared/capture/settings";
+import type { Fence } from "./fence";
 import type { Bundle } from "./bundle";
 import type { Journal } from "./journal";
 import { contactSheetPlan, MAX_SIDE_PX, pickKeyframes, type Frame } from "./keyframes";
@@ -31,6 +32,8 @@ export interface Delivery {
 export interface RecordingDeps {
   platform: CapturePlatform;
   host: RecorderHost;
+  /** Which recording the streamed data belongs to. */
+  fence: Fence;
   bundle: Bundle;
   store: CaptureStore;
   journal: Journal;
@@ -81,6 +84,7 @@ class RecorderPorts {
     d.hideOwnWindows(true);
     const start = {
       op: "start",
+      gen: d.fence.open(),
       sourceId: resolved.sourceId,
       ...(resolved.crop && { crop: resolved.crop }),
       narration: d.settings().narration,
@@ -88,7 +92,10 @@ class RecorderPorts {
       maxSide: MAX_SIDE_PX,
     } as const;
     const r = await d.host.call(start, 15_000);
-    if (!r.ok) throw new Error(REASON[r.code]);
+    if (!r.ok) {
+      d.fence.close();
+      throw new Error(REASON[r.code]);
+    }
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
   }
@@ -103,6 +110,8 @@ class RecorderPorts {
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     const r = await d.host.call({ op: "stop" }, 60_000);
+    // the recorder sends the last chunk before it answers, so nothing valid arrives after this
+    d.fence.close();
     d.hideOwnWindows(false);
     if (!r.ok) throw new Error(REASON[r.code]);
     const hasVideo = !!(await d.bundle.readFile(id, "video.webm"))?.length;
@@ -118,6 +127,8 @@ class RecorderPorts {
   }
 
   async abort(id: string): Promise<void> {
+    // a capture that began meanwhile has a newer generation and keeps it
+    if (!this.#current || this.#current.id === id) this.#d.fence.close();
     await this.#d.host.call({ op: "abort" });
     // A capture that began meanwhile is not this one's to clear.
     if (this.#current && this.#current.id !== id) return;

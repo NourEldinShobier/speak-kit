@@ -4,6 +4,7 @@ import type { MicTrack } from "./mic-track";
 const MIME = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
 const DRAW_MS = 100;
 export type Crop = { x: number; y: number; width: number; height: number };
+type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
 const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
 
 export class Run {
@@ -22,11 +23,12 @@ export class Run {
   #shot: ReturnType<typeof setInterval> | undefined;
   #crop: Crop | undefined;
   #maxSide: number;
-  readonly #send: (d: RecorderData) => void;
+  readonly #send: (d: DistributiveOmit<RecorderData, "gen">) => void;
+
   /** Chunks of video still being turned into bytes: the recorder is not done until they were sent. */
   readonly #pending = new Set<Promise<void>>();
 
-  constructor(maxSide: number, send: (d: RecorderData) => void) {
+  constructor(maxSide: number, send: (d: DistributiveOmit<RecorderData, "gen">) => void) {
     this.#maxSide = maxSide;
     this.#send = send;
     this.video.muted = true;
