@@ -1,3 +1,6 @@
+/** Languages whose filler list is vetted. German and Arabic stay off until someone who speaks them has checked the words. */
+export const FILLER_LANGUAGES: readonly string[] = ["en"];
+
 // "er" and "um" are real words in German and Portuguese, so the caller applies this to English only.
 // Whole words in lowercase or with a first capital: "umbrella", "error", "Uhura", "uh-huh" and "ER" stay.
 const FILLER = /[ \t]*(?<![\p{L}\p{N}'’_-])([Uu]mm?|[Uu]hh?|[Ee]rm?|[Aa]h)(?:\.{3}|…|,)?(?![\p{L}\p{N}'’_-])/gu;

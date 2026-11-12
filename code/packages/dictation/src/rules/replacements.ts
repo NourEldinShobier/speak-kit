@@ -7,13 +7,18 @@ interface Hit {
   order: number;
 }
 
+// Scripts written without spaces between words: a phrase next to them has no word edge to respect.
+const UNSPACED = String.raw`\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}`;
 const WORD = /[\p{L}\p{N}_]/u;
+const UNSPACED_CHAR = new RegExp(`[${UNSPACED}]`, "u");
+const edge = (ch: string): boolean => WORD.test(ch) && !UNSPACED_CHAR.test(ch);
+const INSIDE = String.raw`(?:(?![${UNSPACED}])[\p{L}\p{N}_])`;
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") has no such edge.
+// A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") or in an unspaced script has no such edge.
 function pattern(from: string): RegExp {
-  const before = WORD.test(from.charAt(0)) ? "(?<![\\p{L}\\p{N}_])" : "";
-  const after = WORD.test(from.charAt(from.length - 1)) ? "(?![\\p{L}\\p{N}_])" : "";
+  const before = edge(from.charAt(0)) ? `(?<!${INSIDE})` : "";
+  const after = edge(from.charAt(from.length - 1)) ? `(?!${INSIDE})` : "";
   return new RegExp(`${before}${escape(from)}${after}`, "giu");
 }
 

@@ -21,6 +21,27 @@ const symbolTables: Record<string, Phrase[]> = {
     { words: ["komma"], out: ",", join: "prev" },
     { words: ["semikolon", "strichpunkt"], out: ";", join: "prev" },
     { words: ["doppelpunkt"], out: ":", join: "prev" },
+    { words: ["fragezeichen"], out: "?", join: "prev" },
+    { words: ["ausrufezeichen"], out: "!", join: "prev" },
+  ],
+  es: [
+    { words: ["almohadilla", "hashtag"], out: "#", join: "next" },
+    { words: ["arroba"], out: "@", join: "both" },
+    { words: ["guion bajo"], out: "_", join: "both" },
+    { words: ["guion"], out: "-", join: "both" },
+    { words: ["barra"], out: "/", join: "both" },
+    { words: ["punto y coma"], out: ";", join: "prev" },
+    { words: ["dos puntos"], out: ":", join: "prev" },
+    { words: ["coma"], out: ",", join: "prev" },
+  ],
+  // Written for Arabic punctuation: the comma and semicolon are the Arabic ones.
+  ar: [
+    { words: ["فاصلة منقوطة"], out: "؛", join: "prev" },
+    { words: ["فاصلة"], out: "،", join: "prev" },
+    { words: ["علامة استفهام"], out: "؟", join: "prev" },
+    { words: ["نقطتان"], out: ":", join: "prev" },
+    { words: ["شرطة سفلية"], out: "_", join: "both" },
+    { words: ["شرطة"], out: "-", join: "both" },
   ],
 };
 
@@ -34,15 +55,27 @@ const formattingTables: Record<string, Phrase[]> = {
   de: [
     { words: ["neuer absatz"], out: "\n\n", join: "both" },
     { words: ["neue zeile", "zeilenumbruch"], out: "\n", join: "both" },
+    { words: ["anführungszeichen auf"], out: "„", join: "next" },
+    { words: ["anführungszeichen zu"], out: "“", join: "prev" },
+  ],
+  es: [
+    { words: ["nuevo párrafo"], out: "\n\n", join: "both" },
+    { words: ["nueva línea", "salto de línea"], out: "\n", join: "both" },
+    { words: ["abrir comillas"], out: "«", join: "next" },
+    { words: ["cerrar comillas"], out: "»", join: "prev" },
   ],
 };
+
+/** Languages that have a table. Others keep their text: the page says so in the row. */
+export const SYMBOL_LANGUAGES: readonly string[] = Object.keys(symbolTables);
+export const FORMATTING_LANGUAGES: readonly string[] = Object.keys(formattingTables);
 
 // Compiled once at load; a Map, so a language code such as "constructor" finds nothing.
 const compileAll = (tables: Record<string, Phrase[]>, attached: boolean): Map<string, Compiled> => new Map(Object.entries(tables).map(([lang, table]) => [lang, compile(table, attached)]));
 const SYMBOLS = compileAll(symbolTables, false);
 const FORMATTING = compileAll(formattingTables, true);
 
-/** A language without a table keeps its text: only English and German have spoken symbols so far. */
+/** A language without a table keeps its text: English, German, Spanish and Arabic have spoken symbols; Arabic has no spoken formatting. */
 export function spokenSymbols(text: string, lang: string): string {
   const table = SYMBOLS.get(lang);
   return table ? apply(text, table) : text;

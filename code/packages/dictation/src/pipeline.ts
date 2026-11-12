@@ -1,6 +1,9 @@
 import type { History } from "./history";
+import { applyMode, resolveMode } from "./modes/modes";
+import { rewritePass, type RewriteOutcome } from "./modes/rewrite";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
+import { buildPrompt, soundsLikeRules } from "./vocabulary";
 import type { Settings } from "./settings";
 import type { Clip, DictationDeps, DictationErrorCode, Notice, TranscribeResult } from "./types";
 
@@ -14,7 +17,7 @@ export interface Job {
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
 
 export interface Context {
-  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock">;
+  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock" | "audio" | "rewriter">;
   history: History;
   settings: Settings;
   /** Called when the text is ready and insertion starts. */
@@ -32,15 +35,15 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
   }
 }
 
-async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string }): Promise<Outcome> {
+async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; settings: Settings; rewrite?: RewriteOutcome }): Promise<Outcome> {
   const { clip, heard, text } = said;
   const target = await job.target;
   const current = await foreground(ctx.deps.inserter);
-  const plan = planPaste({ target, current, settings: ctx.settings, interrupted: clip.interrupted === true });
+  const plan = planPaste({ target, current, settings: said.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
   const app = (current ?? target)?.exe;
   // Saved before inserting, so the text survives an insertion that fails.
-  await ctx.history.add({
+  const id = await ctx.history.add({
     at: ctx.deps.clock.now(),
     text,
     raw: heard.text,
@@ -48,21 +51,36 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
     ...(app !== undefined && { app }),
     ...(heard.language !== undefined && { language: heard.language }),
     ...(heard.model !== undefined && { model: heard.model }),
+    ...(said.rewrite && { rewrite: said.rewrite }),
   });
+  if (id && ctx.settings.keepRecordings && ctx.deps.audio) {
+    const audio = await ctx.deps.audio.save(id, clip).catch(() => undefined);
+    if (audio) await ctx.history.patch(id, { audio });
+  }
   const done = await ctx.deps.inserter.insert({ text, plan });
   if (!done.ok) return { error: "insert-failed" };
   return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
 }
 
-/** Recording to inserted text: silence check, transcription, text rules, insertion plan, history. */
+/** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
   if (!clip) return undefined;
   if (clip.peak === 0) return { error: "mic-silent" };
-  const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language });
+  const mode = resolveMode(ctx.settings.modes, (await job.target)?.exe);
+  const eff = applyMode(ctx.settings, mode);
+  const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
+  const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language, ...(prompt && { prompt }) });
   if (!heard.ok) return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
-  const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
+  const language = heard.language ?? ctx.settings.language;
+  let text = applyRules(heard.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language });
   if (!text) return { notice: { kind: "no-speech" } };
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text });
+  let rewrite: RewriteOutcome | undefined;
+  if (eff.rewrite && ctx.settings.rewrite.enabled && ctx.deps.rewriter) {
+    const r = await rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock });
+    text = r.text;
+    rewrite = r.outcome;
+  }
+  return insert(ctx, job, { clip, heard, text, settings: eff, ...(rewrite && { rewrite }) });
 }

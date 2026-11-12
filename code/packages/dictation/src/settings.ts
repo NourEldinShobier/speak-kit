@@ -1,3 +1,6 @@
+import type { Mode } from "./modes/modes";
+import type { Term } from "./vocabulary/terms";
+
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
 export type InsertMode = "paste" | "type" | "copy";
 export type Replacement = { from: string; to: string };
@@ -21,8 +24,20 @@ export interface Settings {
   spokenFormatting: boolean;
   autoCapitalize: boolean;
   trailingSpace: boolean;
+  /** Lower-case everything the model heard; words from the vocabulary keep their spelling. */
+  lowercase: boolean;
+  /** Drop a single full stop at the very end of the dictation. */
+  stripFinalStop: boolean;
   replacements: Replacement[];
   retention: Retention;
+  /** Shared words and names; every mode sees them. */
+  terms: Term[];
+  /** Send the words to the speech model as a prompt, within a character budget. */
+  prompt: boolean;
+  modes: Mode[];
+  rewrite: { enabled: boolean; deadlineMs: number };
+  /** Keep the audio of each dictation next to its history entry (needs an audio store). */
+  keepRecordings: boolean;
 }
 
 export const defaultSettings: Readonly<Settings> = {
@@ -38,6 +53,13 @@ export const defaultSettings: Readonly<Settings> = {
   spokenFormatting: true,
   autoCapitalize: true,
   trailingSpace: true,
+  lowercase: false,
+  stripFinalStop: false,
   replacements: [],
   retention: "7d",
+  terms: [],
+  prompt: true,
+  modes: [],
+  rewrite: { enabled: false, deadlineMs: 4000 },
+  keepRecordings: false,
 };

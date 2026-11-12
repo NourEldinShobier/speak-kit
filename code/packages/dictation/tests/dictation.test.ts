@@ -19,6 +19,13 @@ describe("defaults", () => {
       trailingSpace: true,
       replacements: [],
       retention: "7d",
+      lowercase: false,
+      stripFinalStop: false,
+      terms: [],
+      prompt: true,
+      modes: [],
+      rewrite: { enabled: false, deadlineMs: 4000 },
+      keepRecordings: false,
     });
   });
 
