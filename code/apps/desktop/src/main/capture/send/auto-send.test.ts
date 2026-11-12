@@ -30,7 +30,7 @@ function setup(o: { sendOk?: boolean; retractable?: boolean } = {}) {
     canUndo = false;
     listeners.forEach((l) => l());
   };
-  return { auto, sender, views, tickOnce, failed, read, timers };
+  return { auto, sender, views, tickOnce, failed, read, timers, listeners: () => listeners.length };
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -110,6 +110,16 @@ describe("auto send", () => {
     await t.auto.sendNow();
     expect(t.failed).toHaveBeenCalledOnce();
     expect(t.views.some((v) => v?.kind === "sent")).toBe(false);
+  });
+
+  it("a capsule closed while the hand-over runs takes the capture back and shows nothing", async () => {
+    const t = setup();
+    const p = t.auto.sendNow();
+    t.auto.dispose();
+    await p;
+    expect(t.sender.undone).toBe(1);
+    expect(t.views).toEqual([]);
+    expect(t.listeners()).toBe(0);
   });
 
   it("with 0 seconds sends at once", async () => {

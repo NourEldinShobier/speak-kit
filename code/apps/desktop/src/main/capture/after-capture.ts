@@ -32,6 +32,7 @@ export class AfterCapture {
       inbox: deps.inbox,
       picture: pictureReader(() => deps.history.bundle),
       markSent: (id) => void deps.history.markSent(id),
+      unmarkSent: (id) => void deps.history.unmarkSent(id),
       show: (v) => v && deps.controller.after(v, v.kind === "countdown" ? 0 : 15_000),
       failed: () => deps.notify(noticeFor("send-failed")),
       schedule: (fn, ms) => {

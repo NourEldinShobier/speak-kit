@@ -5,10 +5,21 @@ import type { UiNode } from "./labels";
 /** Runs a program and gives back what it printed; rejects on a failure or after the time is up. */
 export type Run = (file: string, args: string[], timeoutMs: number) => Promise<string>;
 
-export interface ContextReader {
-  /** The controls of the window in front, or undefined when the system would not say (no permission, no window, a timeout). */
-  read(): Promise<UiNode[] | undefined>;
+/** Which window to read. */
+export interface ReadTarget {
+  /** The window the recording was pointed at (its native handle), when it was a window; the window in front otherwise. */
+  windowHandle?: string | undefined;
+  /** This app's own process: its windows (the capsule, the app) are never read. */
+  ownPid: number;
 }
+
+export interface ContextReader {
+  /** The controls of the window, or undefined when the system would not say (no permission, no window, a timeout) or the window is this app's own. */
+  read(target: ReadTarget): Promise<UiNode[] | undefined>;
+}
+
+/** The native window handle inside a capture source id ("window:123456:0"), or undefined for a screen or an area. */
+export const handleOfSource = (sourceId: string | undefined): string | undefined => /^window:(\d{1,20}):/.exec(sourceId ?? "")?.[1];
 
 const MAX_NODES = 400;
 const MAX_DEPTH = 8;
@@ -18,11 +29,14 @@ const TIMEOUT_MS = 6000;
  * Windows UI Automation: walks the window in front breadth-limited and prints one JSON array. Only the name and the password flag of each control
  * are asked for; no value or text pattern is ever read.
  */
-export const WINDOWS_SCRIPT = `
+export const windowsScript = (t: ReadTarget): string => `
 Add-Type -AssemblyName UIAutomationClient
-Add-Type -Namespace SK -Name Win -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();'
-$h = [SK.Win]::GetForegroundWindow()
+Add-Type -Namespace SK -Name Win -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint pid);'
+$h = ${t.windowHandle ? `[System.IntPtr][long]${Number(t.windowHandle)}` : "[SK.Win]::GetForegroundWindow()"}
 if ($h -eq [System.IntPtr]::Zero) { '[]'; exit }
+$owner = [uint32]0
+[void][SK.Win]::GetWindowThreadProcessId($h, [ref]$owner)
+if ($owner -eq ${Math.trunc(t.ownPid)}) { '[]'; exit }
 $root = [System.Windows.Automation.AutomationElement]::FromHandle($h)
 $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 $out = New-Object System.Collections.ArrayList
@@ -39,7 +53,7 @@ ConvertTo-Json -InputObject @($out) -Compress -Depth 4
 `;
 
 /** macOS Accessibility through System Events: the window in front, roles, names and the secure-field subrole; values are not read. */
-export const MAC_SCRIPT = `
+export const macScript = (t: ReadTarget): string => `
 const se = Application('System Events');
 const out = [];
 function attempt(f, fallback) {
@@ -55,7 +69,7 @@ function walk(el, depth) {
   for (const k of attempt(() => el.uiElements(), [])) walk(k, depth + 1);
 }
 const front = se.processes.whose({ frontmost: true })[0];
-const wins = front.windows();
+const wins = front.unixId() === ${Math.trunc(t.ownPid)} ? [] : front.windows();
 if (wins.length) walk(wins[0], 0);
 JSON.stringify(out);
 `;
@@ -82,9 +96,9 @@ export function parseNodes(text: string): UiNode[] | undefined {
   return parsed.output.slice(0, MAX_NODES).map((n) => ({ role: n.role, name: n.name ?? undefined, secure: n.secure, depth: n.depth }));
 }
 
-const COMMANDS: Record<string, readonly [string, string[]]> = {
-  win32: ["powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_SCRIPT]],
-  darwin: ["osascript", ["-l", "JavaScript", "-e", MAC_SCRIPT]],
+const COMMANDS: Record<string, (t: ReadTarget) => readonly [string, string[]]> = {
+  win32: (t) => ["powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", windowsScript(t)]],
+  darwin: (t) => ["osascript", ["-l", "JavaScript", "-e", macScript(t)]],
 };
 
 /** The reader for this system, or undefined where there is none. `run` is the way programs are started (tests give a fake). */
@@ -92,9 +106,10 @@ export function createContextReader(os: string, run: Run = runCommand): ContextR
   const via = COMMANDS[os];
   if (!via) return undefined;
   return {
-    async read() {
+    async read(target) {
       try {
-        return parseNodes(await run(via[0], via[1], TIMEOUT_MS));
+        const [file, args] = via(target);
+        return parseNodes(await run(file, args, TIMEOUT_MS));
       } catch {
         // no permission, no window or too slow: the capture goes on without context
         return undefined;

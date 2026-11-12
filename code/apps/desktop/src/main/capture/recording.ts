@@ -5,7 +5,7 @@ import type { InputEvent } from "./events";
 import type { Fence } from "./fence";
 import type { Bundle } from "./bundle";
 import type { Journal } from "./journal";
-import { contactSheetPlan, MAX_SIDE_PX, pickKeyframes, type Frame } from "./keyframes";
+import { contactSheetPlan, MAX_SIDE_PX, pickKeyframes } from "./keyframes";
 import { correctLag, findSegments, wordsOf, type Word } from "./narration";
 import type { CapturePlatform, Resolved } from "./platform/types";
 import type { Media, SessionPorts, SessionState, Target } from "./session";
@@ -53,7 +53,7 @@ export interface RecordingDeps {
   micMissing(): void;
   noticeParams(): NoticeParams;
   /** The agent context text, or undefined when the experiment is off. */
-  context?(): Promise<string | undefined>;
+  context?(sourceId?: string): Promise<string | undefined>;
   /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
   events?(): InputEvent[];
 }
@@ -115,7 +115,7 @@ class RecorderPorts {
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     // read first: stopping the recorder can change which window is in front
-    const context = await d.context?.();
+    const context = await d.context?.(this.#current?.resolved.sourceId);
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
     d.fence.close();
@@ -192,12 +192,11 @@ export async function transcribeTrack(d: Pick<RecordingDeps, "narrator" | "log">
   return words.length ? correctLag(words, AUDIO_LAG_MS) : null;
 }
 
-const aspectOf = (frames: readonly Frame[]) => (frames.length ? 16 / 9 : 1);
-
-async function makeSheet(d: Pick<RecordingDeps, "bundle" | "host" | "log">, id: string, chosen: readonly Frame[]): Promise<Buffer | undefined> {
-  const jpegs = (await Promise.all(chosen.map((f) => d.bundle.readFile(id, f.file)))).filter((b): b is Buffer => !!b);
+/** Builds sheet.jpg from these picture files of the capture (the edited copies when the person edited them). */
+export async function makeSheet(d: Pick<RecordingDeps, "bundle" | "host" | "log">, id: string, files: readonly string[]): Promise<Buffer | undefined> {
+  const jpegs = (await Promise.all(files.map((f) => d.bundle.readFile(id, f)))).filter((b): b is Buffer => !!b);
   if (!jpegs.length) return undefined;
-  const plan = contactSheetPlan(jpegs.length, aspectOf(chosen));
+  const plan = contactSheetPlan(jpegs.length, 16 / 9);
   const r = await d.host.call({ op: "sheet", jpegs: jpegs.map((b) => new Uint8Array(b)), columns: plan.columns, cellWidth: plan.cellWidth, cellHeight: plan.cellHeight }, 20_000);
   if (!r.ok || !r.jpeg) {
     d.log("capture: the contact sheet could not be made");
@@ -227,7 +226,11 @@ export async function saveBundle(d: RecordingDeps, f: Finished): Promise<Capture
   const plan = pickKeyframes(media.frames, words ?? []);
   if (words?.length) await d.bundle.words(id, words);
   await writeEvents(d, id);
-  const sheet = await makeSheet(d, id, plan.frames);
+  const sheet = await makeSheet(
+    d,
+    id,
+    plan.frames.map((f) => f.file),
+  );
   const record: CaptureRecord = {
     id,
     kind: "recording",

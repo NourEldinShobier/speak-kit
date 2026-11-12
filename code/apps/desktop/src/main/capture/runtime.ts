@@ -59,7 +59,7 @@ export class CaptureRuntime {
   /** The recorder window; tests script it. */
   readonly recorder: RecorderHolder;
   readonly #place: Placement;
-  readonly #context: () => Promise<string | undefined>;
+  readonly #context: (sourceId?: string) => Promise<string | undefined>;
   readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
