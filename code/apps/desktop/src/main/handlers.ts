@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dirSize, measureDownloads } from "./downloads";
 import { isLaunchAtLogin, setLaunchAtLogin } from "./login-item";
+import type { AreaName } from "../shared/control/settings-registry";
 import type { Activity, Api, AppState, ExternalLink, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
 import type { DictationStatus } from "../shared/dictation/contract";
@@ -35,8 +36,13 @@ export interface HandlerDeps {
   onConfigPatch(patch: ConfigPatch): void;
   /** Dictation settings, stored by the dictation feature; the shortcut it clashes with when refused. */
   patchDictation(patch: DictationPatch): Promise<DictationStatus["rejected"]>;
+  /** The settings of capture, transcripts, meetings and engines, stored by the feature that owns them. */
+  patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
+  setShortcut: Api["setShortcut"];
   /** The settings file the person picks to import; null when cancelled. */
   pickSettingsFile(): Promise<string | null>;
+  /** Asks whether an import may apply settings that reach beyond the app (their plain names); false leaves them out. */
+  confirmImport(what: string[]): Promise<boolean>;
 }
 
 function metrics(): Metrics {
@@ -79,7 +85,26 @@ async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
   return applyConfigChange(d, patch, setupWas);
 }
 
-const changeTargets = (d: HandlerDeps): ChangeTargets => ({ patchDictation: d.patchDictation, patchApp: (p) => patchConfig(d, p) });
+function applyLaunchAtLogin(d: HandlerDeps, on: boolean) {
+  setLaunchAtLogin(on, d.config.startMinimized);
+  return d.publish();
+}
+
+function applyPort(d: HandlerDeps, port: number) {
+  d.config.preferredPort = port;
+  d.saveConfig();
+  return d.runtime.restart(d.state.token);
+}
+
+const changeTargets = (d: HandlerDeps): ChangeTargets => ({
+  patchDictation: d.patchDictation,
+  patchApp: (p) => patchConfig(d, p),
+  patchArea: d.patchArea,
+  setShortcut: d.setShortcut,
+  setLaunchAtLogin: async (on) => applyLaunchAtLogin(d, on),
+  setVoiceChatVoice: (voice) => d.voiceChat.setVoice(voice),
+  setPort: async (port) => applyPort(d, port),
+});
 
 /** The settings file was edited outside the app: take the new values (they are already in the file, so nothing is saved). */
 export function applyExternalConfig(d: HandlerDeps, patch: Partial<Config>) {
@@ -106,22 +131,15 @@ async function storageInfo(d: HandlerDeps): Promise<StorageInfo> {
 
 /** The IPC methods of the app shell: settings, server and engine control, storage. The desktop features add their own. */
 export function createAppHandlers(d: HandlerDeps) {
-  const { state, config, runtime, mainWindow } = d;
+  const { runtime, mainWindow } = d;
 
   return {
     state: async () => d.publish(),
     patchConfig: (patch) => patchConfig(d, patch),
     applySettings: (change) => applyChange(changeTargets(d), change),
-    importSettings: () => importSettings({ pick: d.pickSettingsFile, read: (f) => readFile(f, "utf8") }, changeTargets(d)),
-    setLaunchAtLogin: async (on) => {
-      setLaunchAtLogin(on, config.startMinimized);
-      return d.publish();
-    },
-    setPort: async (port) => {
-      config.preferredPort = port;
-      d.saveConfig();
-      return runtime.restart(state.token);
-    },
+    importSettings: () => importSettings({ pick: d.pickSettingsFile, read: (f) => readFile(f, "utf8"), current: () => d.config, confirm: d.confirmImport }, changeTargets(d)),
+    setLaunchAtLogin: async (on) => applyLaunchAtLogin(d, on),
+    setPort: async (port) => applyPort(d, port),
     regenerateToken: () => regenerateToken(d),
     retryEngine: () => runtime.retry(),
     downloadModel: async () => {

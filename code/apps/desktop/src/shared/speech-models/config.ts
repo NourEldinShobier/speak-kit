@@ -76,3 +76,13 @@ export const EnginesConfigSchema = v.object({
   lastUsed: v.fallback(v.record(v.string(), v.number()), {}),
 });
 export type EnginesConfig = v.InferOutput<typeof EnginesConfigSchema>;
+
+/** What an import or a settings page may change under `engines`: the person's choices, not the measurements and history this computer collected. */
+export const EnginesPatchSchema = v.partial(
+  v.strictObject({
+    device: v.picklist(DEVICE_VALUES),
+    idleMinutes: v.picklist(SPEECH_IDLE_CHOICES),
+    releaseOnClose: v.boolean(),
+    autoSwitch: v.strictObject({ enabled: v.boolean(), rules: v.pipe(v.array(Rule), v.maxLength(20)) }),
+  }),
+);
