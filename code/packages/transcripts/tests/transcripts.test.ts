@@ -6,7 +6,7 @@ const OUT = "/export";
 
 function setup(
   over: {
-    transcribe?: (n: number, pcm: Int16Array, lang: string) => Promise<ChunkResult> | ChunkResult;
+    transcribe?: (n: number, pcm: Int16Array, lang: string, signal: AbortSignal) => Promise<ChunkResult> | ChunkResult;
     policy?: Policy;
     busy?: () => boolean;
     fs?: MemFs;
@@ -25,9 +25,9 @@ function setup(
       fs,
       now: c.now,
       newId: ids(),
-      transcribe: async (pcm, lang) => {
+      transcribe: async (pcm, lang, signal) => {
         langs.push(lang);
-        return (over.transcribe ?? ((n) => ({ ok: true, text: `words ${n}`, speech: true })))(++calls, pcm, lang);
+        return (over.transcribe ?? ((n) => ({ ok: true, text: `words ${n}`, speech: true })))(++calls, pcm, lang, signal);
       },
       busy: over.busy ?? (() => false),
       sleep: c.sleep,
@@ -131,6 +131,25 @@ describe("import", () => {
     busy = false;
     await settled(t, id, "done");
     expect(s.calls()).toBe(1);
+  });
+
+  test("dictation starting mid-chunk stops the running chunk and it runs again once dictation is done", async () => {
+    let busy = false;
+    const s = setup({
+      busy: () => busy,
+      transcribe: async (n, _p, _l, signal) => {
+        if (n > 1) return { ok: true, text: "again", speech: true };
+        busy = true;
+        await new Promise((r) => signal.addEventListener("abort", r, { once: true }));
+        setTimeout(() => (busy = false), 20);
+        throw signal.reason;
+      },
+    });
+    const t = await s.make();
+    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
+    await settled(t, id, "done");
+    expect(s.calls()).toBe(2);
+    expect((await t.get(id))!.segments.map((x) => x.text)).toEqual(["again"]);
   });
 
   test("jobs run one after the other and report their place in the line", async () => {
