@@ -16,9 +16,10 @@ function stateRig(over: { sounds?: boolean } = {}) {
     failure,
     recorder: { tone: (n: readonly unknown[]) => log.push(`tone:${n.length}`) } as never,
     hotkeys: { setCancelGrab: (on: boolean) => log.push(`grab:${on}`) } as never,
+    typing: false,
     now: 99,
   };
-  return { log, failure, run: (prev: DictationState, next: DictationState) => onStateChange({ ...base, prev, next }) };
+  return { log, failure, run: (prev: DictationState, next: DictationState, typing = false) => onStateChange({ ...base, typing, prev, next }) };
 }
 
 describe("onStateChange", () => {
@@ -28,11 +29,12 @@ describe("onStateChange", () => {
     expect(r.log).toEqual(["tone:1", "grab:false"]);
   });
 
-  it("grabs the cancel key for a toggled recording and while text is going in", () => {
+  it("grabs the cancel key for a toggled recording and while text is being typed, but not for a paste", () => {
     const r = stateRig();
     r.run(idle, { status: "recording", mode: "toggle" });
     r.run({ status: "transcribing" }, { status: "pasting" });
-    expect(r.log.filter((l) => l.startsWith("grab"))).toEqual(["grab:true", "grab:true"]);
+    r.run({ status: "transcribing" }, { status: "pasting" }, true);
+    expect(r.log.filter((l) => l.startsWith("grab"))).toEqual(["grab:true", "grab:false", "grab:true"]);
   });
 
   it("plays nothing when sounds are off", () => {

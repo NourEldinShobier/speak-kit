@@ -27,10 +27,16 @@ export async function recoverTakes(o: { spool: { spool: Spool; spooled: SpooledR
 
 /** The clean-up shortcut: cleans the focused field and says what happened. Only while dictation is on and the shortcut is set. */
 export async function cleanField(os: DictationOs | undefined, cfg: DictationConfig, presenter: HudPresenter): Promise<void> {
-  if (!os || !cfg.enabled || !cfg.transformHotkey) return;
-  const toast = transformToast(await runTransform(os, cfg));
-  presenter.toast(toast.text, toast.tone);
+  if (!os || !cfg.enabled || !cfg.transformHotkey || cleaning) return; // a second press while one runs would race it for the clipboard
+  cleaning = true;
+  try {
+    const toast = transformToast(await runTransform(os, cfg));
+    presenter.toast(toast.text, toast.tone);
+  } finally {
+    cleaning = false;
+  }
 }
+let cleaning = false;
 
 /** Runs `recoverTakes` once per launch, at the first start with dictation on. */
 export function createRecovery(h: { spool: { spool: Spool; spooled: SpooledRecorder }; core(): Dictation | undefined; presenter: HudPresenter; warn(title: string, detail: string): void }) {
@@ -43,6 +49,9 @@ export function createRecovery(h: { spool: { spool: Spool; spooled: SpooledRecor
   };
 }
 
+/** Escape is taken from the program in front only when it cancels something: a toggled recording, or typing that is going in (a paste cannot be stopped, so Escape stays with the app). */
+export const cancelGrab = (s: DictationState, typing: boolean): boolean => (s.status === "recording" && s.mode === "toggle") || (s.status === "pasting" && typing);
+
 /** What a change of the dictation state sets off outside the pill: a tone, the cancel key's grab, and the last failure the page keeps. */
 export function onStateChange(h: {
   prev: DictationState;
@@ -51,13 +60,15 @@ export function onStateChange(h: {
   failure: Failure;
   recorder: RecorderHost | undefined;
   hotkeys: SwitchableHotkeys | undefined;
+  /** Keys are being typed into the program in front. */
+  typing: boolean;
   now: number;
 }): void {
   const { next, failure } = h;
   const kind = soundFor(h.prev, next);
   if (kind) h.recorder?.tone(tonesFor(kind, h.cfg.sounds));
   // Escape cancels a toggled recording, and typing that is going in; in a held or locked recording it belongs to the app in front.
-  h.hotkeys?.setCancelGrab((next.status === "recording" && next.mode === "toggle") || next.status === "pasting");
+  h.hotkeys?.setCancelGrab(cancelGrab(next, h.typing));
   if (next.status === "error") {
     failure.error = next.code;
     failure.last = { code: next.code, at: h.now, ...(next.owner && { owner: next.owner }) };

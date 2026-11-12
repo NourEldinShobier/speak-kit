@@ -10,6 +10,8 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 /** What the person is told, per result. */
 export const TRANSFORM_TOAST: Record<string, string> = {
   changed: "Cleaned up the text",
+  "nothing-left": "Only filler words, nothing was changed",
+  "too-long": "The text is too long to clean up at once",
   unchanged: "Nothing to clean up",
   "nothing-selected": "Nothing to clean up, the field is empty",
   "password-field": "Not used in a password field",
@@ -22,8 +24,11 @@ export const TRANSFORM_TOAST: Record<string, string> = {
   "not-inserted": "Could not paste the cleaned text, nothing was changed",
 };
 
-export const transformToast = (r: TransformResult): { text: string; tone: "ok" | "error" } => ({
-  text: TRANSFORM_TOAST[r.status === "blocked" || r.status === "failed" ? r.reason : r.status] ?? "Nothing was changed",
+/** The field comes back as plain text, so formatting in a rich editor is lost; the undo shortcut brings it back. */
+const undoHint = (platform: string) => ` (${platform === "darwin" ? "Cmd" : "Ctrl"}+Z undoes it)`;
+
+export const transformToast = (r: TransformResult, platform: string = process.platform): { text: string; tone: "ok" | "error" } => ({
+  text: (TRANSFORM_TOAST[r.status === "blocked" || r.status === "failed" ? r.reason : r.status] ?? "Nothing was changed") + (r.status === "changed" ? undoHint(platform) : ""),
   tone: r.status === "changed" || r.status === "unchanged" ? "ok" : "error",
 });
 
@@ -32,6 +37,7 @@ export function runTransform(os: DictationOs, cfg: DictationConfig): Promise<Tra
   return transformTyped({
     foreground: () => os.foreground(),
     passwordFocused: () => os.passwordFocused(),
+    hasSelection: async () => (await os.caret?.read())?.selected,
     selectAll: sendSelectAllKeys,
     copy: () => captureSelection({ clip: electronClipboard, copy: sendCopyKeys, sleep }),
     insert: (text, options) => os.insert(text, options),

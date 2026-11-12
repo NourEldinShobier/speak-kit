@@ -12,12 +12,14 @@ export type TransformResult =
   /** The field was not touched: a password field, a terminal, a window with higher rights, secure input, or no window. */
   | { status: "blocked"; reason: "password-field" | "terminal" | "elevated" | "secure-input" | "no-window" }
   /** The field was not touched: the two copies differed (the app answered late or the text moved), the window changed, or the paste was refused. */
-  | { status: "failed"; reason: "copy-unstable" | "window-changed" | "not-inserted" };
+  | { status: "failed"; reason: "copy-unstable" | "window-changed" | "not-inserted" | "nothing-left" | "too-long" };
 
 export interface TransformDeps {
   foreground(): ForegroundInfo | null;
   passwordFocused(): boolean;
   secureInput?(): boolean;
+  /** Whether text is selected in the focused field; undefined when that cannot be read. With no selection the field is selected whole before anything is copied, because some editors copy the current line on a copy with nothing selected. */
+  hasSelection?(): Promise<boolean | undefined>;
   /** Presses select-all in the focused field. */
   selectAll(): Promise<void>;
   /** Copies what is selected and gives it back, putting the clipboard back afterwards; "" when nothing came. */
@@ -31,6 +33,8 @@ export interface TransformDeps {
 
 const MAC_TERMINALS = ["com.apple.terminal", "com.googlecode.iterm2", "dev.warp.warp-stable", "net.kovidgoyal.kitty", "com.mitchellh.ghostty", "io.alacritty"];
 const SELECT_SETTLE_MS = 40;
+/** A rich-text field is pasted back as plain text, so a very long field is left alone. */
+const MAX_CHARS = 50_000;
 
 const isTerminal = (fg: ForegroundInfo): boolean => profileFor(fg).shortcut === "ctrl-shift-v" || MAC_TERMINALS.includes((fg.exe ?? "").toLowerCase());
 
@@ -48,7 +52,8 @@ export async function transformTyped(d: TransformDeps): Promise<TransformResult>
   if (fg.elevated) return { status: "blocked", reason: "elevated" };
   if (isTerminal(fg)) return { status: "blocked", reason: "terminal" };
 
-  let text = await d.copy();
+  const none = (await d.hasSelection?.().catch(() => undefined)) === false;
+  let text = none ? "" : await d.copy();
   if (!text) {
     await d.selectAll();
     await sleep(SELECT_SETTLE_MS);
@@ -57,8 +62,10 @@ export async function transformTyped(d: TransformDeps): Promise<TransformResult>
   if (!text) return { status: "nothing-selected" };
   if ((await d.copy()) !== text) return { status: "failed", reason: "copy-unstable" };
 
+  if (text.length > MAX_CHARS) return { status: "failed", reason: "too-long" };
   const cleaned = d.clean(text);
   if (cleaned === text) return { status: "unchanged" };
+  if (!cleaned.trim()) return { status: "failed", reason: "nothing-left" }; // pasting nothing would wipe the field
   if (d.foreground()?.hwnd !== fg.hwnd) return { status: "failed", reason: "window-changed" };
   const done = await d.insert(cleaned, { target: fg.hwnd, mode: "paste" });
   return done.status === "pasted" ? { status: "changed" } : { status: "failed", reason: "not-inserted" };

@@ -16,6 +16,8 @@ export interface DictationOsOptions {
   hud?: HudWindowOptions & { idleMs?: number; place?: () => "top" | "bottom" };
   /** Called with each HUD window as it is created, so the app can tell which page its HUD buttons come from. */
   onHudWindow?(w: HudWindow): void;
+  /** Typing started or ended. */
+  onTyping?(on: boolean): void;
 }
 
 /** Everything dictation needs from the operating system, behind one object. */
@@ -56,6 +58,7 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     clip: createElectronClipboard(platform.input),
     overrides: options.overrides,
     supported: platform.supported,
+    onTyping: options.onTyping,
   });
   const hud = createHud({
     open: () => {

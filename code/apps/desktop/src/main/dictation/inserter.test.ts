@@ -16,6 +16,7 @@ function setup(
     restorable?: boolean;
     onSleep?: () => void;
     onType?: () => void;
+    onTyping?: (on: boolean) => void;
   } = {},
 ) {
   let content: string | null = "old";
@@ -61,6 +62,7 @@ function setup(
     input,
     clip,
     overrides: opts.overrides,
+    onTyping: opts.onTyping,
     sleep: async (ms) => {
       slept.push(ms);
       opts.onSleep?.();
@@ -261,6 +263,21 @@ describe("typing rule", () => {
     expect(t.clipboard).toBe("long text");
     stop = false;
     expect(await t.ins.insert("again")).toEqual({ status: "typed" });
+  });
+
+  it("stops typing when the stop request came while the clipboard was being staged or the delay ran", async () => {
+    let t!: ReturnType<typeof setup>;
+    t = setup({ overrides: [{ exe: "notepad", profile: { shortcut: "type", preDelayMs: 30 } }], onSleep: () => t.ins.cancelTyping() });
+    expect(await t.ins.insert("long text")).toEqual({ status: "copied", reason: "typing-stopped" });
+    expect(t.clipboard).toBe("long text");
+  });
+
+  it("reports when typing starts and ends, also when the typing throws, and not for a paste", async () => {
+    const seen: boolean[] = [];
+    const t = setup({ overrides: rule, onTyping: (on) => seen.push(on) });
+    await t.ins.insert("x");
+    await setup({ onTyping: (on) => seen.push(on) }).ins.insert("pasted");
+    expect(seen).toEqual([true, false]);
   });
 
   it("ignores a stop request when nothing is being typed", async () => {

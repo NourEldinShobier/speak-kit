@@ -10,6 +10,8 @@ interface Deps {
   sleep?: ((ms: number) => Promise<void>) | undefined;
   /** False on a platform without key injection: every insert then only copies. */
   supported?: boolean | undefined;
+  /** True while keys are being typed, false when that ends: the cancel key is only taken from the program in front for that time. */
+  onTyping?: ((on: boolean) => void) | undefined;
 }
 
 /** How long to wait for the user to let go of Shift, Alt and Win before giving up and copying instead: Ctrl+V with Shift held is a different shortcut. */
@@ -31,16 +33,18 @@ export class Inserter {
   readonly #overrides: () => readonly AppOverride[];
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #supported: boolean;
+  readonly #onTyping: (on: boolean) => void;
   readonly #guard: RestoreGuard;
   #chain: Promise<unknown> = Promise.resolve();
   #stopTyping = false;
 
-  constructor({ input, clip, overrides, supported = true, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
+  constructor({ input, clip, overrides, supported = true, onTyping, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
     this.#clip = clip;
     this.#overrides = typeof overrides === "function" ? overrides : () => overrides ?? [];
     this.#sleep = sleep;
     this.#supported = supported;
+    this.#onTyping = onTyping ?? (() => undefined);
     this.#guard = createRestoreGuard(clip);
   }
 
@@ -69,6 +73,7 @@ export class Inserter {
   }
 
   async #run(text: string, opts: InsertOptions): Promise<InsertResult> {
+    this.#stopTyping = false;
     if (!this.#supported) return this.#copyOnly(text, "unsupported-platform");
     const fg = this.#input.foreground();
     if (opts.mode === "copy" || profileFor(fg, this.#overrides()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
@@ -104,8 +109,13 @@ export class Inserter {
 
   /** Types the text; when it is stopped or refused part way, the whole text is left on the clipboard. */
   async #typeIn(text: string): Promise<InsertResult> {
-    this.#stopTyping = false;
-    const how = await this.#input.type(text, () => this.#stopTyping);
+    this.#onTyping(true);
+    let how: Awaited<ReturnType<InputPort["type"]>>;
+    try {
+      how = await this.#input.type(text, () => this.#stopTyping);
+    } finally {
+      this.#onTyping(false);
+    }
     this.#stopTyping = false;
     if (how === "done") return { status: "typed" };
     return this.#keepCopy(text, true, how === "stopped" ? "typing-stopped" : "keys-rejected");
