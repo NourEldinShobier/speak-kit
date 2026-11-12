@@ -1,0 +1,316 @@
+import { describe, expect, it } from "vite-plus/test";
+import { createDictation, type Clip } from "../src";
+import { fakeClock, fakeInserter, fakeKeyboard, fakeRecorder, fakeStorage, fakeTranscriber, flush, loud, rig, target } from "./fakes";
+
+const clipOf = (seconds: number, peak = 0.5): Clip => ({ pcm: new Float32Array(16000 * seconds).fill(peak), sampleRate: 16000, peak });
+
+describe("speech-aware release tail", () => {
+  it("stops after 200 ms when nobody is speaking", async () => {
+    const r = await rig();
+    r.rec.recorder.speaking = () => false;
+    await r.hold(1000);
+    await r.time.advance(199);
+    expect(r.rec.log).toEqual(["start:450"]);
+    await r.time.advance(51);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+  });
+
+  it("keeps recording while speech continues and stops at 600 ms at the latest", async () => {
+    const r = await rig();
+    r.rec.recorder.speaking = () => true;
+    await r.hold(1000);
+    await r.time.advance(550);
+    expect(r.rec.log).toEqual(["start:450"]);
+    await r.time.advance(100);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+  });
+
+  it("ends as soon as the speech stops after the minimum", async () => {
+    const r = await rig();
+    let speaking = true;
+    r.rec.recorder.speaking = () => speaking;
+    await r.hold(1000);
+    await r.time.advance(300);
+    speaking = false;
+    await r.time.advance(60);
+    expect(r.rec.log).toEqual(["start:450", "stop"]);
+  });
+});
+
+describe("pre-roll", () => {
+  it("is zero when the microphone is released when idle", async () => {
+    const r = await rig({ keepReady: false });
+    await r.hold(1000);
+    expect(r.rec.log).toEqual(["start:0"]);
+  });
+});
+
+describe("long takes", () => {
+  it("go to the model in pieces and come back as one text, skipping a silent piece", async () => {
+    const r = await rig();
+    r.stt.state.queue = [
+      { ok: true, text: "first part", language: "en", model: "turbo" },
+      { ok: true, text: "second part" },
+      { ok: true, text: "third part" },
+    ];
+    const long = new Float32Array(16000 * 95).fill(0.5);
+    long.fill(0, 16000 * 30, 16000 * 60); // the second piece is exactly silent
+    r.rec.state.clip = { pcm: long, sampleRate: 16000, peak: 0.5 };
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.stt.calls.map((c) => c.samples)).toEqual([480000, 480000, 80000]);
+    expect(r.ins.inserted[0]?.text).toBe("First part second part third part ");
+    expect(await r.dictation.history.list()).toMatchObject([{ language: "en", model: "turbo" }]);
+  });
+
+  it("a failing piece fails the whole take and nothing is inserted", async () => {
+    const r = await rig();
+    r.stt.state.queue = [
+      { ok: true, text: "one" },
+      { ok: false, code: "failed" },
+    ];
+    r.rec.state.clip = clipOf(70);
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.dictation.state()).toMatchObject({ status: "error", code: "transcribe-failed" });
+    expect(r.ins.inserted).toEqual([]);
+  });
+});
+
+describe("kept audio", () => {
+  function keeper(clip: Clip, transcribe: "ok" | "fail" = "ok") {
+    const kept: string[] = [];
+    const time = fakeClock();
+    const keys = fakeKeyboard();
+    const rec = fakeRecorder();
+    rec.state.clip = clip;
+    const stt = fakeTranscriber();
+    if (transcribe === "fail") stt.state.result = { ok: false, code: "failed" };
+    const ins = fakeInserter();
+    const dictation = createDictation({
+      clock: time.clock,
+      recorder: rec.recorder,
+      transcriber: stt.transcriber,
+      inserter: ins.inserter,
+      hotkeys: keys.source,
+      storage: fakeStorage().storage,
+      keepClip: (_c, why) => kept.push(why),
+    });
+    return { dictation, kept, time, keys, ins, stt };
+  }
+  const run = async (k: ReturnType<typeof keeper>) => {
+    await k.dictation.ready();
+    k.keys.send("ControlRight", true, k.time.clock.now());
+    await k.time.advance(1000);
+    k.keys.send("ControlRight", false, k.time.clock.now());
+    await k.time.advance(300);
+  };
+
+  it("a take that came back silent is kept and reported as muted or too quiet", async () => {
+    const k = keeper(loud({ peak: 0.001 }));
+    await run(k);
+    expect(k.dictation.state()).toMatchObject({ status: "error", code: "mic-silent" });
+    expect(k.stt.calls).toEqual([]);
+    expect(k.kept).toEqual(["silent"]);
+  });
+
+  it("a recording cut short is kept and still inserted as a copy", async () => {
+    const k = keeper(loud({ interrupted: true }));
+    await run(k);
+    expect(k.kept).toEqual(["interrupted"]);
+    expect(k.ins.inserted[0]?.plan).toEqual({ method: "copy", reason: "interrupted" });
+    expect(await k.dictation.history.list()).toMatchObject([{ kind: "interrupted" }]);
+  });
+
+  it("a take the model could not transcribe is kept for a retry", async () => {
+    const k = keeper(loud(), "fail");
+    await run(k);
+    expect(k.kept).toEqual(["failed"]);
+  });
+
+  it("a take that worked is not kept", async () => {
+    const k = keeper(loud());
+    await run(k);
+    expect(k.kept).toEqual([]);
+  });
+});
+
+describe("cancel and restore", () => {
+  it("keeps the cancelled audio for ten seconds and restores it into the window", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.dictation.start();
+    await r.time.advance(500);
+    r.dictation.cancel();
+    await r.time.advance(2000);
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", restorable: true } });
+    r.dictation.restore();
+    await r.time.advance(300);
+    expect(r.ins.inserted).toHaveLength(1);
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
+  });
+
+  it("a restore after ten seconds does nothing", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.dictation.start();
+    await r.time.advance(500);
+    r.dictation.cancel();
+    await r.time.advance(10_001);
+    r.dictation.restore();
+    await r.time.advance(300);
+    expect(r.ins.inserted).toEqual([]);
+  });
+
+  it("a restore can be used once", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.dictation.start();
+    await r.time.advance(500);
+    r.dictation.cancel();
+    await r.time.advance(500);
+    r.dictation.restore();
+    r.dictation.restore();
+    await r.time.advance(300);
+    expect(r.ins.inserted).toHaveLength(1);
+  });
+
+  it("starting a new recording drops the restorable one", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.dictation.start();
+    await r.time.advance(500);
+    r.dictation.cancel();
+    await r.time.advance(500);
+    r.dictation.start();
+    r.dictation.restore();
+    await r.time.advance(100);
+    expect(r.ins.inserted).toEqual([]);
+  });
+
+  it("a cancelled recording with no sound is not restorable", async () => {
+    const r = await rig({ mode: "toggle" });
+    r.rec.state.clip = loud({ peak: 0 });
+    r.dictation.start();
+    await r.time.advance(500);
+    r.dictation.cancel();
+    await r.time.advance(500);
+    r.dictation.restore();
+    await r.time.advance(300);
+    expect(r.ins.inserted).toEqual([]);
+  });
+});
+
+describe("return to app", () => {
+  it("brings the window back and pastes there", async () => {
+    const r = await rig();
+    const calls: string[] = [];
+    let now = target({ id: "other" });
+    r.ins.inserter.focus = async (t) => {
+      calls.push(t.id);
+      now = t;
+      return true;
+    };
+    const original = r.ins.inserter.target;
+    r.ins.inserter.target = async () => (r.ins.state.current ? now : original());
+    r.ins.state.current = target({ id: "win-1" });
+    now = target({ id: "win-1" });
+    r.press();
+    await r.time.advance(1000);
+    now = target({ id: "other" });
+    r.release();
+    await r.time.advance(300);
+    expect(calls).toEqual(["win-1"]);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste" });
+  });
+
+  it("pastes nothing and keeps the text in History when the window does not come back", async () => {
+    const r = await rig();
+    let now = target({ id: "win-1" });
+    r.ins.inserter.target = async () => now;
+    r.ins.inserter.focus = async () => false;
+    r.press();
+    await r.time.advance(1000);
+    now = target({ id: "other" });
+    r.release();
+    await r.time.advance(300);
+    expect(r.ins.inserted).toEqual([]);
+    expect(r.dictation.state()).toMatchObject({ status: "error", code: "focus-failed" });
+    expect(await r.dictation.history.list()).toMatchObject([{ text: "Hello world " }]);
+  });
+
+  it("a stuck focus call passes after the stage deadline", async () => {
+    const r = await rig();
+    let now = target({ id: "win-1" });
+    r.ins.inserter.target = async () => now;
+    r.ins.inserter.focus = () => new Promise(() => undefined);
+    r.press();
+    await r.time.advance(1000);
+    now = target({ id: "other" });
+    r.release();
+    await r.time.advance(2500);
+    expect(r.dictation.state()).toMatchObject({ status: "error", code: "focus-failed" });
+  });
+
+  it("never brings a window back in front of a password field", async () => {
+    const r = await rig();
+    let focused = false;
+    let now = target({ id: "win-1" });
+    r.ins.inserter.target = async () => now;
+    r.ins.inserter.focus = async () => (focused = true);
+    r.press();
+    await r.time.advance(1000);
+    now = target({ id: "other", passwordField: true });
+    r.release();
+    await r.time.advance(300);
+    expect(focused).toBe(false);
+    expect(r.dictation.state()).toMatchObject({ status: "error", code: "password-field" });
+  });
+
+  it("is off when the setting is off: the text is copied as before", async () => {
+    const r = await rig({ returnToApp: false });
+    let now = target({ id: "win-1" });
+    let focused = false;
+    r.ins.inserter.target = async () => now;
+    r.ins.inserter.focus = async () => (focused = true);
+    r.press();
+    await r.time.advance(1000);
+    now = target({ id: "other" });
+    r.release();
+    await r.time.advance(300);
+    expect(focused).toBe(false);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "copy", reason: "focus-changed" });
+  });
+});
+
+describe("optional stages pass their input on", () => {
+  it("a history write that never finishes does not hold the paste forever", async () => {
+    const storage = fakeStorage();
+    storage.storage.save = () => new Promise(() => undefined);
+    const r = await rig({ keepReady: true }, storage);
+    await r.hold(1000);
+    await r.time.advance(2500);
+    expect(r.ins.inserted).toHaveLength(1);
+    await flush();
+  });
+
+  it("a window read that never finishes is treated as an unknown window and copies", async () => {
+    const r = await rig();
+    let calls = 0;
+    r.ins.inserter.target = () => (++calls === 1 ? Promise.resolve(target()) : new Promise(() => undefined));
+    await r.hold(1000);
+    await r.time.advance(2500);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste" });
+  });
+});
+
+describe("keep on clipboard", () => {
+  it("is part of the paste plan", async () => {
+    const r = await rig({ keepOnClipboard: true });
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "paste", keep: true });
+  });
+  it("is ignored when typing or copying", async () => {
+    const r = await rig({ keepOnClipboard: true, insertMode: "type" });
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.ins.inserted[0]?.plan).toEqual({ method: "type" });
+  });
+});

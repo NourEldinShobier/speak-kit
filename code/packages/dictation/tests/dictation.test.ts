@@ -10,6 +10,9 @@ describe("defaults", () => {
       mode: "hold",
       language: "auto",
       duck: false,
+      keepReady: false,
+      keepOnClipboard: false,
+      returnToApp: true,
       insertMode: "paste",
       appModes: {},
       fillers: true,
@@ -249,7 +252,7 @@ describe("toggle mode", () => {
     await r.time.advance(500);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.ins.inserted).toEqual([]);
-    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", undoable: true } });
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", restorable: true } });
   });
 
   it("a custom cancel key works and Escape then passes through", async () => {
@@ -269,11 +272,11 @@ describe("toggle mode", () => {
 });
 
 describe("recording limit", () => {
-  it("finishes a toggled recording nobody stopped after five minutes and transcribes it", async () => {
+  it("finishes a toggled recording nobody stopped after thirty minutes and transcribes it", async () => {
     const r = await rig({ mode: "toggle" });
     r.press();
     r.release();
-    await r.time.advance(299_000);
+    await r.time.advance(1_799_000);
     expect(r.dictation.state()).toEqual({ status: "recording", mode: "toggle" });
     await r.time.advance(2000);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
@@ -284,7 +287,7 @@ describe("recording limit", () => {
   it("finishes a hold whose key release was lost, and the later release changes nothing", async () => {
     const r = await rig();
     r.press();
-    await r.time.advance(301_000);
+    await r.time.advance(1_801_000);
     expect(r.rec.log).toEqual(["start:450", "stop"]);
     expect(r.ins.inserted).toHaveLength(1);
     r.release();
@@ -292,7 +295,7 @@ describe("recording limit", () => {
     expect(r.rec.log).toEqual(["start:450", "stop"]);
   });
 
-  it("measures the five minutes from each recording's own start", async () => {
+  it("measures the thirty minutes from each recording's own start", async () => {
     const r = await rig({ mode: "toggle" });
     r.press();
     r.release();
