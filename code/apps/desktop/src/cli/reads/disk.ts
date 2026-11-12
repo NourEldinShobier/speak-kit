@@ -44,6 +44,15 @@ const captureFs: StoreFs = { read: readText, write: refuse };
 export function diskSources(dir: string): Sources {
   return {
     async meetings() {
+      // The app sets a damaged manifest aside and starts a new one; a read must not, so it says the file is damaged instead of showing no meetings.
+      const manifest = await readText(path.join(dir, "meetings", "manifest.json"));
+      if (manifest !== undefined) {
+        try {
+          JSON.parse(manifest);
+        } catch {
+          throw new Error("the meetings list file is damaged");
+        }
+      }
       const store = await MeetingStore.open({ dir: path.join(dir, "meetings"), fs: readOnly(nodeFs()), now: Date.now });
       return { entries: store.list(), transcript: (id) => store.transcript(id), notes: (id) => store.notes(id) };
     },

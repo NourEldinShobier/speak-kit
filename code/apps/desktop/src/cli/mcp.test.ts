@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { CONTROL_VERSION, fail, ok, type ControlRequest, type Reply } from "../shared/control/contract";
 import { MCP_TOOLS, toolOn } from "../shared/control/mcp-tools";
 import { parseConfig } from "../shared/schemas";
-import { handleMcp, serveMcp, type McpContext } from "./mcp";
+import { handleMcp, mcpFlags, serveMcp, type McpContext } from "./mcp";
 import type { ReadRequest } from "./reads";
 
 const rig = (flags: Record<string, boolean> = {}) => {
@@ -20,6 +20,32 @@ const rig = (flags: Record<string, boolean> = {}) => {
 type Result = { result: { isError: boolean; content: { text: string }[]; tools: { name: string }[] } };
 const tool = (r: ReturnType<typeof rig>, name: string, args: object = {}) =>
   handleMcp({ id: 1, method: "tools/call", params: { name, arguments: args as Record<string, unknown> } }, r.ctx) as Promise<Result>;
+
+describe("the master switch", () => {
+  it("offers no tool, not even a switched-on one, while the control server is off", () => {
+    const stored = { controlServer: false, mcpTools: { history_search: true, meetings_list: true } };
+    const flags = mcpFlags(stored);
+    expect(MCP_TOOLS.filter((t) => toolOn(flags, t.name))).toEqual([]);
+    expect(MCP_TOOLS.filter((t) => toolOn(mcpFlags({ ...stored, controlServer: true }), t.name)).map((t) => t.name)).toEqual([
+      "read_aloud",
+      "stop_reading",
+      "reading_queue",
+      "history_search",
+      "meetings_list",
+    ]);
+  });
+  it("uses the stored switches, and the defaults for a missing or damaged settings file", () => {
+    expect(mcpFlags({ mcpTools: { read_aloud: false } })).toEqual({ read_aloud: false });
+    expect(mcpFlags(undefined)).toEqual({});
+    expect(mcpFlags({ mcpTools: "yes" })).toEqual({});
+  });
+  it("refuses a tool call while it is off, without reading any file", async () => {
+    const r = rig(mcpFlags({ controlServer: false, mcpTools: { meetings_list: true } }));
+    const res = await tool(r, "meetings_list");
+    expect(res.result.isError).toBe(true);
+    expect(r.reads).toEqual([]);
+  });
+});
 
 describe("which tools are on", () => {
   it("reading tools are on by default and the ones that read your own words are off", () => {
@@ -201,6 +227,23 @@ describe("MCP server", () => {
     expect(lines.map((l) => JSON.parse(l))).toEqual([
       { jsonrpc: "2.0", id: 1, result: {} },
       { jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } },
+    ]);
+  });
+  it("answers a call that throws with an error and keeps serving the next request", async () => {
+    const r = rig({ meetings_list: true });
+    r.ctx.read = async () => {
+      throw new Error("EISDIR");
+    };
+    const [input, output] = [new PassThrough(), new PassThrough()];
+    const lines: string[] = [];
+    output.on("data", (c: Buffer) => lines.push(...c.toString().split("\n").filter(Boolean)));
+    const done = serveMcp(input, output, r.ctx);
+    input.write('{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"meetings_list","arguments":{}}}\n{"jsonrpc":"2.0","id":2,"method":"ping"}\n');
+    input.end();
+    await done;
+    expect(lines.map((l) => JSON.parse(l))).toEqual([
+      { jsonrpc: "2.0", id: 1, error: { code: -32603, message: "Speak Kit could not answer that request." } },
+      { jsonrpc: "2.0", id: 2, result: {} },
     ]);
   });
 });

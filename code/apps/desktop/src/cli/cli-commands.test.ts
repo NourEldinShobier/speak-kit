@@ -100,6 +100,13 @@ describe("speak", () => {
     expect(refused.err.join("")).toBe("The speech model is not downloaded yet.\n");
   });
 
+  it("fails with a timeout, not success, when an export is still running after 30 minutes", async () => {
+    const running = ok({ export: { id: "e", stage: "encoding", progress: 0.5 } });
+    const r = rig({ replies: Array.from({ length: 6001 }, () => running) });
+    expect(await run(["--json", "speak", "x", "--out", "a.mp3"], r)).toBe(1);
+    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: false, error: { code: "timeout" } });
+  });
+
   it("says queued with the place, and exits 3 when the app is not running", async () => {
     const r = rig({ replies: [ok({ id: "a", position: 2, sentences: 1, estimatedMs: 1 }), ok({ id: "b", position: 0, sentences: 1, estimatedMs: 1 })] });
     await run(["speak", "x", "--queue"], r);
@@ -232,6 +239,15 @@ describe("speak --wait", () => {
     const refused = rig({ replies: [fail("busy", "Busy.")] });
     expect(await run(["speak", "x", "--wait"], refused)).toBe(1);
     expect(refused.sent.length).toBe(1);
+  });
+  it("exits 1 when the reading ends in an error, and when it is still going after an hour", async () => {
+    const start = ok({ id: "a", position: 0, sentences: 1, estimatedMs: 1 });
+    const broken = rig({ replies: [start, ok({ current: { title: "x", status: "error" }, items: [] })] });
+    expect(await run(["--json", "speak", "x", "--wait"], broken)).toBe(1);
+    expect(JSON.parse(broken.out.join(""))).toMatchObject({ ok: false, error: { code: "failed", message: "The reading failed." } });
+    const endless = rig({ replies: [start, ...Array.from({ length: 7200 }, () => playing)] });
+    expect(await run(["--json", "speak", "x", "--wait"], endless)).toBe(1);
+    expect(JSON.parse(endless.out.join(""))).toMatchObject({ error: { code: "timeout" } });
   });
   it("stops waiting and says why when the queue cannot be read", async () => {
     const r = rig({ replies: [ok({ id: "a", position: 0, sentences: 1, estimatedMs: 1 }), fail("timeout", "Slow.")] });
