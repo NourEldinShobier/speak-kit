@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 
-const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/
-/g, "
+const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replaceAll("
+", "
 ");
 const jobOf = (yml, name) => {
   const m = yml.match(new RegExp(`^  ${name}:\n([\s\S]*?)(?=^  \S|(?![\s\S]))`, "m"));
