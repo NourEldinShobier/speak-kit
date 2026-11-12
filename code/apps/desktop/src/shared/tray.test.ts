@@ -149,40 +149,19 @@ describe("tray menu", () => {
   });
 });
 
-describe("Speech model submenu", () => {
-  const models = [
-    { id: "large-v3-turbo-q5_0", name: "Whisper Large v3 Turbo", inUse: true },
-    { id: "parakeet-tdt-0.6b-v3-q4_0", name: "Parakeet v3", inUse: false },
-  ];
-  const dictation = { enabled: true, hotkey: "ControlRight" };
-  const submenu = (c: TrayContext) => trayMenuModel(c).find((i) => i.type === "models");
-
-  it("lists the downloaded models with the one in use marked, and a way to get more", () => {
-    expect(speechModelRows({ models, recording: false })).toEqual([
-      { type: "model", id: "large-v3-turbo-q5_0", label: "Whisper Large v3 Turbo", checked: true, enabled: true },
-      { type: "model", id: "parakeet-tdt-0.6b-v3-q4_0", label: "Parakeet v3", checked: false, enabled: true },
-      { type: "action", action: "get-models", label: "Get more models in Engines" },
-    ]);
+describe("tray meeting row", () => {
+  const meeting = (phase: NonNullable<TrayContext["meetings"]>["phase"], shortcut?: string) =>
+    trayMenuModel(ctx({ meetings: { phase, ...(shortcut && { shortcut }) } })).filter((i) => i.type === "item" && /meeting/i.test(i.label));
+  it("starts a meeting recording when ready, with the optional shortcut beside it", () => {
+    expect(meeting("ready", "Ctrl+Alt+M")).toEqual([{ type: "item", action: "meeting-start", label: "Record a meeting", enabled: true, hint: "Ctrl+Alt+M" }]);
   });
-
-  it("while a model is checked the old one stays in use, the rows are locked and the switch can be cancelled", () => {
-    const rows = speechModelRows({ models, recording: false, switching: { name: "Parakeet v3" } });
-    expect(rows[0]).toEqual({ type: "header", label: "Parakeet v3 is checked before switching. The current model stays in use." });
-    expect(rows.filter((r) => r.type === "model").every((r) => r.type === "model" && !r.enabled)).toBe(true);
-    expect(rows).toContainEqual({ type: "action", action: "cancel-switch", label: "Cancel the switch" });
+  it("stops it while recording and waits, disabled, while it starts, saves and transcribes", () => {
+    expect(meeting("recording")).toEqual([{ type: "item", action: "meeting-stop", label: "Stop meeting recording", enabled: true }]);
+    expect(meeting("starting")).toEqual([{ type: "item", action: "meeting-start", label: "Starting meeting recording...", enabled: false }]);
+    expect(meeting("saving")[0]).toMatchObject({ label: "Saving meeting...", enabled: false });
+    expect(meeting("transcribing")[0]).toMatchObject({ label: "Transcribing meeting...", enabled: false });
   });
-
-  it("during a recording the rows are greyed and the header says to finish first", () => {
-    const rows = speechModelRows({ models, recording: true });
-    expect(rows[0]).toEqual({ type: "header", label: "Finish the recording first, then switch" });
-    expect(rows.filter((r) => r.type === "model").every((r) => r.type === "model" && !r.enabled)).toBe(true);
-    expect(rows.some((r) => r.type === "action" && r.action === "cancel-switch")).toBe(false);
-  });
-
-  it("the tray shows the submenu only where dictation runs and a model is downloaded", () => {
-    expect(submenu(ctx({ dictation, speechModels: { models, recording: false } }))).toMatchObject({ type: "models", label: "Speech model" });
-    expect(submenu(ctx({ speechModels: { models, recording: false } }))).toBeUndefined();
-    expect(submenu(ctx({ dictation, speechModels: { models: [], recording: false } }))).toBeUndefined();
-    expect(submenu(ctx({ dictation }))).toBeUndefined();
+  it("has no meeting row when the feature is off", () => {
+    expect(labels(ctx())).not.toContain("Record a meeting");
   });
 });

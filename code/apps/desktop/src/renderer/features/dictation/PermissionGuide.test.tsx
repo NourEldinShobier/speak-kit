@@ -7,7 +7,7 @@ import { PermissionGuide } from "./PermissionGuide";
 
 const status = (over: Partial<Record<PermissionId, PermissionState>>): PermissionsStatus => {
   const states = { accessibility: "granted", "input-monitoring": "granted", microphone: "granted", "screen-recording": "not-needed", ...over } as Record<PermissionId, PermissionState>;
-  return { platform: "darwin", states, guides: { dictation: guideFor(states, "dictation"), "screen-reading": guideFor(states, "screen-reading") } };
+  return { platform: "darwin", states, guides: { dictation: guideFor(states, "dictation"), "screen-reading": guideFor(states, "screen-reading"), meetings: guideFor(states, "meetings") } };
 };
 const html = (s: PermissionsStatus | null) => renderToStaticMarkup(<PermissionGuide status={s} onAct={() => undefined} />);
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");

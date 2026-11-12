@@ -4,6 +4,8 @@ import type { PermissionId, PermissionState } from "./channels";
 export const FEATURE_PERMISSIONS = {
   dictation: ["microphone", "input-monitoring", "accessibility"],
   "screen-reading": ["screen-recording"],
+  /** The call microphone, and on macOS the screen permission that the system's sound is taken through (Windows has none). */
+  meetings: ["microphone", "screen-recording"],
 } as const satisfies Record<string, readonly PermissionId[]>;
 export type PermissionFeature = keyof typeof FEATURE_PERMISSIONS;
 

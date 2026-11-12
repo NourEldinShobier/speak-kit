@@ -334,6 +334,9 @@ importers:
       '@speakkit/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@speakkit/meetings':
+        specifier: workspace:*
+        version: link:../../packages/meetings
       '@speakkit/player':
         specifier: workspace:*
         version: link:../../packages/player

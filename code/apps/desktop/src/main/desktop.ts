@@ -21,6 +21,8 @@ import { registerDictationIpc } from "./dictation/ipc";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
+import { setupMeetings } from "./meetings";
+import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -36,7 +38,9 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "readKey" | "hasKey">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner">;
+  /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
+  voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -70,21 +74,14 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
-  ctx.state.reader = IDLE_READER;
-  ctx.state.update ??= UPDATE_UNSUPPORTED;
-
+  let meetings: ReturnType<typeof setupMeetings> | undefined;
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  registerSpeechModelsIpc(dictation.speech, (c) => o.parent()?.webContents === c);
-
-  const handlers = {
-    ...engineHandlers(ctx),
-    ...exports.handlers,
-    ...updates.handlers,
-    ...shortcuts.handlers,
-    ...readerHandlers(reading),
-    installExtension: () => installExtension(!o.test),
-  } satisfies Partial<Api>;
+  watchPermissions(o.parent, dictation);
+  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   return {
     handlers,
@@ -111,7 +108,9 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       tray.dispose();
       void dictation.dispose();
       void transcripts.dispose();
+      void meetings?.dispose();
+      return controlDown;
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

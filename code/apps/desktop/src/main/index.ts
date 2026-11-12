@@ -236,7 +236,9 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      dictation: { dataDir, modelsDir, sttWorker, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      version: app.getVersion(),
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
+      voiceChat,
     },
   );
 }
