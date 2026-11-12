@@ -50,7 +50,7 @@ function busyInfo(m: PopupModel): { label: string; value?: number; text: string 
   if (m.view !== "loading-model") return { label: "Preparing audio", text: "Preparing the first sentence." };
   if (m.engineProgress !== undefined) return { label: "Downloading voice model", value: m.engineProgress * 100, text: `Downloading the voice model, ${Math.round(m.engineProgress * 100)}%.` };
   if (m.engine === "unloaded") return { label: "Waking the voice engine", text: "Waking the voice engine. This takes a few seconds." };
-  return { label: "Preparing audio", text: "Starting the voice engine. The first time is slower." };
+  return { label: "Preparing audio", text: "Starting the voice engine." };
 }
 
 function IdleActions({ m, a }: { m: PopupModel; a: PopupActions }) {
