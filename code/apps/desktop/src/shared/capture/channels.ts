@@ -18,6 +18,7 @@ export const CAPTURE_METHODS = [
   "chooseFolder",
   "source",
   "saveEdit",
+  "trim",
 ] as const;
 export type CaptureMethod = (typeof CAPTURE_METHODS)[number];
 export const captureChannel = (m: string) => `speakkit:capture:${m}`;

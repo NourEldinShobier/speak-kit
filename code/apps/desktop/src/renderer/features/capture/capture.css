@@ -131,6 +131,23 @@
   max-inline-size: 640px;
   line-height: 1.6;
 }
+.cap-trim {
+  display: grid;
+  gap: 12px;
+  max-inline-size: 480px;
+  padding: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 12px;
+}
+.cap-trim__title {
+  margin: 0;
+  font-size: 15px;
+}
+.cap-trim__row {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
 .cap-actions {
   display: flex;
   flex-wrap: wrap;

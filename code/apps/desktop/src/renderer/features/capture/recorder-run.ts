@@ -1,7 +1,7 @@
 import type { RecorderPayload } from "../../../shared/capture/contract";
 import type { MicTrack } from "./mic-track";
 
-const MIME = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+export const MIME = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
 const DRAW_MS = 100;
 export type Crop = { x: number; y: number; width: number; height: number };
 const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());

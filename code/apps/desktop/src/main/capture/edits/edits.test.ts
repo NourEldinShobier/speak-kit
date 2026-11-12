@@ -16,6 +16,11 @@ describe("capture edits", () => {
     expect(editedName("f-3000.jpg")).toBe("edit-f-3000.png");
   });
 
+  it("saves the copy of a frame in the capture folder, whichever separator the frame path has", () => {
+    expect(editedName("frames/f-00003000.jpg")).toBe("edit-f-00003000.png");
+    expect(editedName("frames\\f-00003000.jpg")).toBe("edit-f-00003000.png");
+  });
+
   it("shows the edit when there is one", () => {
     expect(shownFile({ edits: { "shot.png": "edit-shot.png" } }, "shot.png")).toBe("edit-shot.png");
     expect(shownFile({}, "shot.png")).toBe("shot.png");

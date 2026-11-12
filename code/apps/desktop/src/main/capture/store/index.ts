@@ -17,6 +17,8 @@ export interface CaptureRecord {
   context?: string;
   /** Edited copies of pictures: file of the original -> file of the edit. The original stays. */
   edits?: Record<string, string>;
+  /** The part of the video kept by a trim (milliseconds from the start of the original); `media` is then the cut copy. */
+  trim?: { startMs: number; endMs: number };
   /** What happened to it so far. */
   chips: ("copied" | "saved" | "sent")[];
   /** Still being finished after a crash or a stop; the list shows "Finishing". */

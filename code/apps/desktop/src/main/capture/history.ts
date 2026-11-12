@@ -9,6 +9,7 @@ import { journalFs, storeFs } from "./fs-adapters";
 import { toDetail, toItem } from "./items";
 import { createJournal, type Journal, type JournalEntry } from "./journal";
 import { pickKeyframes } from "./keyframes";
+import { framesIn, trimRange, wordsIn } from "./trim";
 import { sweepCaptures, type SweepResult } from "./retention";
 import { createStore, type CaptureStore } from "./store";
 
@@ -21,6 +22,8 @@ export interface HistoryDeps {
   trash?: ((dir: string) => Promise<void>) | undefined;
   /** Builds the contact sheet of a capture from these picture files and writes it as sheet.jpg; undefined when it could not be made. */
   sheet?(id: string, files: readonly string[]): Promise<Buffer | undefined>;
+  /** Cuts a recorded video to a range; undefined when it could not be cut. */
+  trim?(video: Uint8Array, startMs: number, endMs: number): Promise<Uint8Array | undefined>;
 }
 
 /** The saved captures: the index, the folders on disk, the journal that finishes interrupted ones, and what can be done with one (copy, reveal, remove, clean up). */
@@ -166,6 +169,34 @@ export class History {
       }
     };
     return (this.#sheets = this.#sheets.then(run, run));
+  }
+
+  /** Cuts the video of a recording to a range and keeps the cut next to the original. The keyframes, the contact sheet and the words are reduced to what is kept, so nothing cut away is copied or sent. */
+  async trim(id: string, startMs: number, endMs: number): Promise<boolean> {
+    const r = await this.store.get(id);
+    const range = r && trimRange(startMs, endMs, r.durationMs);
+    if (!r || !range || r.finishing || r.kind !== "recording" || !this.#d.trim) return false;
+    // a recording that followed a switch has more than one video file: it is not cut
+    if (await this.bundle.readFile(r.dir, "video-2.webm")) return false;
+    const video = await this.bundle.readFile(r.dir, "video.webm");
+    if (!video?.length) return false;
+    let cut: Uint8Array | undefined;
+    try {
+      cut = await this.#d.trim(new Uint8Array(video), range.startMs, range.endMs);
+    } catch (e) {
+      this.#d.log(`capture ${id}: the video could not be cut (${String(e)})`);
+    }
+    if (!cut?.length) return false;
+    await this.bundle.writeFile(r.dir, "video-trim.webm", cut);
+    const kept = framesIn(await this.bundle.frames(r.dir), r.words ?? [], range).map((f) => f.file);
+    const saved = await this.store.mutate(id, (cur) => ({ media: "video-trim.webm", trim: range, frames: kept, ...(cur.words && { words: wordsIn(cur.words, range) }) }));
+    if (!saved) {
+      await this.bundle.remove(r.dir);
+      return false;
+    }
+    await this.#rebuildSheet(id);
+    await this.store.update(id, { bytes: await this.bundle.bytes(r.dir) });
+    return true;
   }
 
   /** The capture was handed to the voice chat: the list shows it. */

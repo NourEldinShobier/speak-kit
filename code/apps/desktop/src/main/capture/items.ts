@@ -45,5 +45,6 @@ export async function toDetail(bundle: Bundle, r: CaptureRecord): Promise<Captur
     const src = await dataUrl(bundle, { id: r.dir, file: shownFile(r, file) }, r.kind === "screenshot" ? SHOT_PX : FRAME_PX);
     if (src) frames.push({ atMs: Number(/f-(\d+)/.exec(file)?.[1] ?? 0), src, file, edited: shownFile(r, file) !== file });
   }
-  return { ...(await toItem(bundle, r)), words: r.words ?? [], frames, path: bundle.dir(r.dir) };
+  const trimmable = r.kind === "recording" && !r.finishing && !!r.durationMs && r.media.endsWith(".webm");
+  return { ...(await toItem(bundle, r)), words: r.words ?? [], frames, path: bundle.dir(r.dir), trimmable, ...(r.trim && { trim: r.trim }) };
 }

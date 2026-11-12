@@ -2,6 +2,7 @@ import { digitalSilence } from "../../../shared/capture/audio";
 import type { RecorderCommand, RecorderPayload, RecorderResult } from "../../../shared/capture/contract";
 import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
+import { trimVideo } from "./trim-video";
 
 /**
  * The page of the hidden recorder window. The screen source is drawn onto a canvas (cut to the area or window, scaled to the size limit); the canvas
@@ -78,6 +79,11 @@ async function sheet(c: Extract<RecorderCommand, { op: "sheet" }>): Promise<Reco
   return blob ? { ok: true, jpeg: await bytes(blob) } : { ok: false, code: "encoder" };
 }
 
+async function trim(c: Extract<RecorderCommand, { op: "trim" }>): Promise<RecorderResult> {
+  const video = await trimVideo(c.video, c.startMs, c.endMs);
+  return video.length ? { ok: true, video, durationMs: c.endMs - c.startMs } : { ok: false, code: "encoder" };
+}
+
 bridge.onCommand((c: RecorderCommand) => {
   void (async () => {
     let result: RecorderResult = { ok: true };
@@ -86,6 +92,7 @@ bridge.onCommand((c: RecorderCommand) => {
       else if (c.op === "stop") result = await stop();
       else if (c.op === "switch") result = await swap(c);
       else if (c.op === "sheet") result = await sheet(c);
+      else if (c.op === "trim") result = await trim(c);
       else {
         run?.stop();
         run = undefined;

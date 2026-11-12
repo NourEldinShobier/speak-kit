@@ -49,6 +49,7 @@ export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { opti
       }
       if (cmd.op === "stop") return { ok: true, durationMs: Math.max(1000, Date.now() - startedAt), frames: host.options.frames ?? 3 };
       if (cmd.op === "sheet") return { ok: true, jpeg: sheetJpeg() };
+      if (cmd.op === "trim") return { ok: true, video: BYTES, durationMs: cmd.endMs - cmd.startMs };
       return { ok: true };
     },
   };
