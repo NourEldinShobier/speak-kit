@@ -105,10 +105,8 @@ const mainWindow: MainWindow = new MainWindow(config, {
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
-  onHidden: () => {
-    runtime.stopPolling();
-    desktop?.onWindowHidden();
-  },
+  onHidden: () => runtime.stopPolling(),
+  onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 const screenVision = createScreenVision();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);

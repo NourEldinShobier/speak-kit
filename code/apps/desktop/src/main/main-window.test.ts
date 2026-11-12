@@ -41,7 +41,7 @@ vi.mock("./window-colors", () => ({ appBackground: () => "#grey", setupBackgroun
 import { MainWindow } from "./main-window";
 import type { Config } from "../shared/schemas";
 
-const make = (setupDone = true, extra: Partial<Config> = {}, busy = false) => new MainWindow({ setupDone, ...extra } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy });
+const make = (setupDone = true) => new MainWindow({ setupDone, engines: { releaseOnClose: false } } as Config, { onVisible: () => {}, onHidden: () => {} });
 
 describe("MainWindow and the macOS Dock", () => {
   it("closing the window hides the Dock icon and keeps the app alive", () => {

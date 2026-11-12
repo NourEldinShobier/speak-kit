@@ -3,23 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { countDropped, DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
-const DEFAULTS = {
-  enabled: false,
-  hotkey: "ControlRight",
-  mode: "hold",
-  language: "auto",
-  model: "large-v3-turbo-q5_0",
-  retention: "7d",
-  replacements: [],
-  terms: [],
-  readAs: [],
-  prompt: true,
-  cleanup: CLEANUP,
-  modes: [],
-  rewrite: { enabled: false, deadlineMs: 4000 },
-  keepRecordings: false,
-};
+const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
 
 describe("dictation config", () => {
   it("is off, on Right Ctrl, hold to talk, for 7 days, until the person turns it on", () => {
@@ -63,7 +47,7 @@ describe("what the renderer may change", () => {
     ["turning dictation on (it has its own call)", { enabled: true }],
     ["an unknown key", { anything: 1 }],
     ["a hotkey that is not allowed", { hotkey: "KeyA" }],
-    ["an unknown language", { language: "fr" }],
+    ["an unknown language", { language: "tlh" }],
     ["an unknown model", { model: "other" }],
     ["a replacement without text", { replacements: [{ from: "", to: "x" }] }],
     ["more than 100 replacements", { replacements: Array.from({ length: 101 }, () => ({ from: "a", to: "b" })) }],
@@ -72,102 +56,16 @@ describe("what the renderer may change", () => {
   });
 });
 
-describe("vocabulary, modes and rewrite in the config", () => {
-  it("loads a dictation section from before they existed with every new field at its default", () => {
-    const old = parseConfig({
-      dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] },
-    }).dictation;
-    expect(old).toEqual({ ...DEFAULTS, enabled: true, language: "de", retention: "30d", replacements: [{ from: "a", to: "b" }] });
+describe("languages and models", () => {
+  it("starts on an explicit language, never on automatic detection", () => {
+    expect(parseConfig({}).dictation.language).toBe("en");
   });
-
-  it("keeps good words and drops each bad one, trimming and capping at 500", () => {
-    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "", soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
-    expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([{ id: "a", word: "Kubernetes", soundsLike: ["cooper netties"] }]);
-    const many = Array.from({ length: 600 }, (_, i) => ({ id: `i${i}`, word: `w${i}`, soundsLike: [] }));
-    expect(v.parse(DictationConfigSchema, { terms: many }).terms).toHaveLength(500);
-    expect(v.parse(DictationConfigSchema, { terms: "no" }).terms).toEqual([]);
+  it("keeps an automatic choice a person made earlier", () => {
+    expect(parseConfig({ dictation: { language: "auto" } }).dictation.language).toBe("auto");
   });
-
-  it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
-    const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
-    const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
-    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"] }]);
-  });
-
-  it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
-    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false, lowercase: true });
-    expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
-    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
-    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
-  });
-
-  it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {
-    const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
-    expect(ok({ terms: [{ id: "a", word: "w", soundsLike: [] }], prompt: false, keepRecordings: true })).toBe(true);
-    expect(ok({ terms: Array.from({ length: 501 }, (_, i) => ({ id: `i${i}`, word: "w", soundsLike: [] })) })).toBe(false);
-    expect(ok({ rewrite: { enabled: true, deadlineMs: 20_000 } })).toBe(false);
-    expect(ok({ cleanup: { fillers: true } })).toBe(false);
-    expect(ok({ unknown: 1 })).toBe(false);
-  });
-
-  it("keeps the rest of a mode when one of its words is broken, instead of losing the whole mode", () => {
-    const mode = { id: "m1", name: "Code", apps: ["code"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
-    const good = { id: "t1", word: "pnpm", soundsLike: [] };
-    const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
-    expect(got).toEqual([{ ...mode, terms: [good] }]);
-  });
-
-  it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {
-    const a = { id: "a", word: "Kubernetes", soundsLike: [] };
-    expect(v.parse(DictationConfigSchema, { terms: [a, { ...a, id: "b", word: "kubernetes" }, { ...a, word: "Other" }] }).terms).toEqual([a]);
-    const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
-    expect(ok({ terms: [a, { ...a, id: "b", word: "KUBERNETES" }] })).toBe(false);
-    expect(ok({ terms: [a, { ...a, word: "Other" }] })).toBe(false);
-    const m = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [a, { ...a, id: "z" }] };
-    expect(ok({ modes: [m] })).toBe(false);
-    const clean = { ...m, terms: [a] };
-    expect(ok({ modes: [clean, { ...clean, id: "m2", name: "code" }] })).toBe(false);
-    expect(ok({ modes: [clean, { ...clean, name: "Chat" }] })).toBe(false);
-    expect(ok({ modes: [clean, { ...clean, id: "m2", name: "Chat" }] })).toBe(true);
-    expect(
-      ok({
-        readAs: [
-          { id: "r", written: "a", spoken: "b" },
-          { id: "r", written: "c", spoken: "d" },
-        ],
-      }),
-    ).toBe(false);
-  });
-
-  it("keeps the default mode under its own name with no apps and refuses another mode called Default", () => {
-    const base = { apps: ["code"], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: true, terms: [] };
-    const saved = v.parse(DictationConfigSchema, {
-      modes: [
-        { ...base, id: "default", name: "Anything" },
-        { ...base, id: "m1", name: "DEFAULT" },
-      ],
-    }).modes;
-    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [] }]);
-    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "m1", name: " default " }] }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Default" }] }).success).toBe(true);
-  });
-});
-
-describe("entries that loading leaves out", () => {
-  const mode = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
-  it("counts broken and repeated entries in every list, and broken words inside a kept mode", () => {
-    expect(countDropped(undefined)).toBe(0);
-    expect(countDropped({})).toBe(0);
-    expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }] })).toBe(0);
-    expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }, { id: "b" }, "junk", { id: "c", word: "X", soundsLike: [] }] })).toBe(3);
-    expect(countDropped({ readAs: [{ id: "r" }], replacements: [{ from: "", to: "b" }] })).toBe(2);
-    expect(
-      countDropped({
-        modes: [
-          { ...mode, terms: [{ id: "t", word: "w", soundsLike: [] }, { id: "u" }] },
-          { ...mode, id: "m2", capitals: "shout", terms: [{ id: "x" }] },
-        ],
-      }),
-    ).toBe(2);
+  it("accepts an added model by its fingerprint id and nothing else that is not in the catalog", () => {
+    expect(parseConfig({ dictation: { model: "custom-0123456789ab" } }).dictation.model).toBe("custom-0123456789ab");
+    expect(parseConfig({ dictation: { model: "custom-xyz" } }).dictation.model).toBe("large-v3-turbo-q5_0");
+    expect(parseConfig({ dictation: { model: "../../evil" } }).dictation.model).toBe("large-v3-turbo-q5_0");
   });
 });

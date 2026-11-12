@@ -2,9 +2,14 @@ import * as v from "valibot";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
 
+import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
+
 export const DICTATION_MODELS = ["large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"] as const;
-export type DictationModelId = (typeof DICTATION_MODELS)[number];
-export const DICTATION_LANGUAGES = ["auto", "en", "de", "ar"] as const;
+/** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
+export type DictationModelId = (typeof DICTATION_MODELS)[number] | `custom-${string}`;
+export const isCustomModel = (id: string): boolean => /^custom-[0-9a-f]{12}$/.test(id);
+const modelId = v.union([v.picklist(DICTATION_MODELS), v.pipe(v.string(), v.regex(/^custom-[0-9a-f]{12}$/), v.transform((s) => s as `custom-${string}`))]);
+export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
@@ -156,20 +161,10 @@ const exclusions = v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minL
 const CORE_KEYS = {
   enabled: v.fallback(v.boolean(), false),
   hotkey,
-  mode: v.fallback(v.picklist(MODES), "hold"),
-  holdMs: v.fallback(v.picklist(HOLD_TIMES), 300),
-  secondHotkey: optionalHotkey(""),
-  mouseButton: v.fallback(v.picklist(MOUSE_PICK), ""),
-  rawHotkey: optionalHotkey(""),
-  pasteLastHotkey: optionalHotkey(DEFAULT_PASTE_LAST),
-  cancelKey: v.fallback(v.pipe(v.string(), v.check(validCancelKey)), "Escape"),
-  /** Hold mode only: the keys also reach the program that listens for them (push-to-talk in a chat app). */
-  shareHotkey: v.fallback(v.boolean(), false),
-  pauseRules: v.fallback(PauseRules, { mode: "off", apps: [], fullscreen: false }),
-  /** Set when a saved shortcut was refused at load and replaced: the page says so once. */
-  resetNotice: v.fallback(v.optional(v.picklist(["left-click", "clash"])), undefined),
-  language: v.fallback(v.picklist(DICTATION_LANGUAGES), "auto"),
-  model: v.fallback(v.picklist(DICTATION_MODELS), DICTATION_MODELS[0]),
+  mode: v.fallback(v.picklist(["hold", "toggle"]), "hold"),
+  // An explicit language is the default: automatic detection can mistranscribe close languages, so it is something the person chooses.
+  language: v.fallback(v.picklist(DICTATION_LANGUAGES), "en"),
+  model: v.fallback(modelId, DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
   replacements,
   terms: v.fallback(lenient(Term, MAX_TERMS, termKeys), []),
@@ -252,7 +247,7 @@ export const DictationPatchSchema = v.partial(
     shareHotkey: v.boolean(),
     pauseRules: PauseRules,
     language: v.picklist(DICTATION_LANGUAGES),
-    model: v.picklist(DICTATION_MODELS),
+    model: modelId,
     retention: v.picklist(RETENTIONS),
     replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
     terms: termList,

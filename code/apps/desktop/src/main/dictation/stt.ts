@@ -1,5 +1,5 @@
-import { supportsPrompt, type Clip, type Transcriber, type TranscribeResult } from "@speakkit/dictation";
-import { EngineNotReadyError, STT_MODELS, type SttLanguage, type SttModelId, type Transcript } from "@speakkit/engine";
+import type { Clip, Transcriber, TranscribeResult } from "@speakkit/dictation";
+import { EngineNotReadyError, STT_MODELS, resolveLanguage, type SttLanguage, type SttModel, type SttModelId, type TransferInfo, type Transcript } from "@speakkit/engine";
 import type { DictationModelId, ModelView } from "../../shared/dictation/contract";
 
 export interface SttStatus {
@@ -13,16 +13,13 @@ export interface Stt {
   status(): SttStatus;
   onStatus(cb: (s: SttStatus) => void): () => void;
   downloaded(id: SttModelId): Promise<boolean>;
+  /** Downloads without loading; absent in scripted engines, which then download inside load. */
+  download?(id: SttModelId, o?: { progress?: (fraction: number) => void; signal?: AbortSignal }): Promise<void>;
   load(id: SttModelId, progress?: (fraction: number) => void): Promise<void>;
   warm(id: SttModelId): Promise<void>;
   transcribe(pcm: Int16Array, language: SttLanguage, opts?: { signal?: AbortSignal; prompt?: string }): Promise<Transcript>;
   unload(): Promise<void>;
 }
-
-const BLURB: Record<DictationModelId, { name: string; tag: string; description: string }> = {
-  "large-v3-turbo-q5_0": { name: "Whisper Large v3 Turbo", tag: "Accurate", description: "Best accuracy in English, German and Arabic. Quick with a graphics card." },
-  "parakeet-tdt-0.6b-v3-q4_0": { name: "Parakeet v3", tag: "Fast", description: "Very fast on any computer. English and German only." },
-};
 
 export interface ModelProgress {
   id: DictationModelId;
@@ -32,12 +29,13 @@ export interface ModelProgress {
   etaSeconds?: number;
 }
 
-export function modelViews(selected: DictationModelId, installed: Record<DictationModelId, boolean>, job: ModelProgress | null): ModelView[] {
-  return STT_MODELS.map((m) => {
+export function modelViews(models: readonly SttModel[], selected: DictationModelId, isInstalled: (id: string) => boolean, job: ModelProgress | null, transfers: readonly TransferInfo[] = []): ModelView[] {
+  return models.map((m) => {
     const id = m.id as DictationModelId;
-    const view: ModelView = { id, ...BLURB[id], bytes: m.bytes, installed: installed[id], selected: id === selected, languages: [...m.languages] };
-    if (job?.id === id)
-      view.progress = job.kind === "preparing" ? { kind: "preparing" } : { kind: "downloading", fraction: job.fraction, ...(job.etaSeconds !== undefined && { etaSeconds: job.etaSeconds }) };
+    const view: ModelView = { id, name: m.name, tag: m.tag, description: m.description, bytes: m.bytes, installed: isInstalled(id), selected: id === selected, languages: [...m.languages] };
+    const paused = transfers.find((t) => t.id === id && t.state === "paused");
+    if (paused) view.progress = { kind: "paused", fraction: paused.fraction };
+    else if (job?.id === id) view.progress = job.kind === "preparing" ? { kind: "preparing" } : { kind: "downloading", fraction: job.fraction, ...(job.etaSeconds !== undefined && { etaSeconds: job.etaSeconds }) };
     return view;
   });
 }
@@ -62,8 +60,10 @@ interface TranscriberDeps {
   sentencePause?(): boolean;
   /** How long a clip of this many seconds may take. */
   deadlineMs?(clipSeconds: number): number;
-  /** The words were not sent because the model cannot read a prompt; dictation goes on without them. */
-  onPromptDropped?(): void;
+  /** Every model there is (catalog and the ones the person added); the catalog alone when absent. */
+  models?(): readonly SttModel[];
+  /** A recording is about to be transcribed with this model: it counts as used (idle release restarts its wait). */
+  onUsed?(id: string): void;
 }
 
 type Waiting = "model-loading" | "model-failed" | "model-missing";
@@ -84,31 +84,13 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
   return "model-loading";
 }
 
-const pickLanguage = (id: string, language: string): SttLanguage => {
-  const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
-  return (supported.includes(language) ? language : "auto") as SttLanguage;
-};
-
-/** Kills the hung worker and loads a new one; nothing is left to kill when unloading itself fails, and the load starts a new worker either way. */
-async function restart(stt: TranscriberDeps["stt"], id: SttModelId): Promise<void> {
-  try {
-    await stt.unload();
-  } catch {
-    // Nothing is left to kill when unloading itself fails; the load below starts a new worker either way.
-  }
-  void stt.warm(id);
-}
-
 /** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
-export async function heard(
-  { stt, model, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps,
-  req: { clip: Clip; language: string; prompt?: string | undefined },
-): Promise<TranscribeResult> {
-  const { clip, language, prompt } = req;
+async function heard({ stt, model, models, onUsed, deadlineMs = transcribeDeadlineMs }: TranscriberDeps, clip: Clip, language: string): Promise<TranscribeResult> {
   const id = model();
-  const lang = pickLanguage(id, language);
-  const sent = prompt && supportsPrompt(id) ? prompt : undefined;
-  if (prompt && !sent) onPromptDropped?.();
+  const facts = (models?.() ?? STT_MODELS).find((m) => m.id === id);
+  // A language the model lacks becomes English (the page says so); automatic detection only on a model that detects.
+  const lang = (facts ? resolveLanguage(facts, language).language : "en") as SttLanguage;
+  onUsed?.(id);
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(new Error("transcription timed out")), deadlineMs(clip.pcm.length / clip.sampleRate));
   try {

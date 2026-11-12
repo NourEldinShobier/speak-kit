@@ -18,8 +18,7 @@ import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
-import { hotkeyPermissionsReady } from "../shared/permissions/guide";
-import { setupPermissions } from "./system/permissions";
+import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
 import { fakeUpdater } from "./updates-fake";
@@ -76,13 +75,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
-  const permissions = setupPermissions(
-    () => o.parent()?.webContents,
-    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
-  );
-  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
-  app.on("browser-window-focus", permissions.refresh);
+  registerSpeechModelsIpc(dictation.speech, (c) => o.parent()?.webContents === c);
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -102,6 +95,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       control.onConfigPatch(patch);
     },
+    dictation,
     onEngineState: announceEngine,
     /** The app window was hidden or minimized: the level meter lets go of the microphone at once. */
     onWindowHidden: () => void dictation.mic.setMeter(false),
