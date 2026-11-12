@@ -47,10 +47,11 @@ interface DesktopOptions {
   voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
-const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
+const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
   "read-selection": () => void reading.readSelection(),
   "play-pause": () => reading.controller.command({ type: "toggle" }),
   stop: () => reading.controller.command({ type: "stop" }),
+  "record-toggle": toggleRecording,
 });
 
 const readerHandlers = (reading: ReturnType<typeof createReading>) =>
@@ -139,7 +140,11 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   let installedByTest = 0;
   const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
-  const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
+  const shortcuts = setupShortcuts(
+    ctx,
+    shortcutActions(reading, () => transcripts.toggleRecording()),
+    o.test,
+  );
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });

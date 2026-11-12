@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
 import { IDLE_READER, type ReaderState } from "./reader";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
-import { speechModelRows, trayIconState, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
+import { recordToggle, speechModelRows, trayIconState, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
 
 const health = (state: EngineState): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state } });
 const reader = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READER, status, title: "Chapter one", index: 2, total: 9, source: "selection" });
@@ -229,5 +229,14 @@ describe("tray meeting row", () => {
   });
   it("has no meeting row when the feature is off", () => {
     expect(labels(ctx())).not.toContain("Record a meeting");
+  });
+});
+
+describe("record shortcut", () => {
+  it("stops while recording, starts when idle or done, ignores the busy phases", () => {
+    expect(recordToggle("recording")).toBe("stop");
+    expect(recordToggle("ready")).toBe("start");
+    expect(recordToggle("done")).toBe("start");
+    expect(["starting", "saving", "transcribing"].map((p) => recordToggle(p as never))).toEqual(["none", "none", "none"]);
   });
 });

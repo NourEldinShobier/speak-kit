@@ -107,6 +107,12 @@ function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item:
   return item("record-start", WAITING[phase], { enabled: false });
 }
 
+/** What a press of the record shortcut does: it stops a recording, starts one when idle, and does nothing while a recording is starting, being saved or transcribed. */
+export function recordToggle(phase: NonNullable<TrayContext["recorder"]>["phase"]): "start" | "stop" | "none" {
+  if (phase === "recording") return "stop";
+  return phase === "ready" || phase === "done" ? "start" : "none";
+}
+
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */
 export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
 
