@@ -6,6 +6,7 @@ import { experiments, groupExperiments, needsRestart, toggled, visibleExperiment
 import { api, Page } from "../../ui";
 import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";
+import { change } from "./change";
 
 function Card({ e, on, onToggle }: { e: Experiment; on: boolean; onToggle(): void }) {
   return (
@@ -79,7 +80,7 @@ export function ExperimentsPage({ s }: { s: AppState }) {
   const set = async (e: Experiment, on: boolean) => {
     const next = toggled(flags, e.id, on);
     if (needsRestart(flags, next, experiments())) setRestart(true);
-    await api.patchConfig({ experiments: next });
+    await change({ experiments: next });
   };
   return (
     <Page title="Experiments" lead="Early features that may change or disappear. Each one is off until you turn it on.">

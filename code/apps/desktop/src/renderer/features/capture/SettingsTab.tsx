@@ -3,7 +3,7 @@ import { Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/u
 import type { CaptureStatus } from "../../../shared/capture/contract";
 import { AUTO_SEND, INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
 import { HotkeyRecorder } from "../dictation";
-import { capture } from "./api";
+import { capture, patchCapture } from "./api";
 import { INK_LABEL, RETENTION_LABEL } from "./format";
 
 const WHERE: Record<(typeof TARGET_KINDS)[number], string> = { ask: "Ask each time", screen: "Whole screen", window: "A window", area: "An area" };
@@ -22,7 +22,7 @@ function RecordingKey({ s, onRecording }: { s: CaptureStatus; onRecording(on: bo
           value={s.settings.recordingHotkey}
           restore="F7"
           onRecording={onRecording}
-          save={async (recordingHotkey) => void (await capture.patchSettings({ recordingHotkey }))}
+          save={async (recordingHotkey) => void (await patchCapture({ recordingHotkey }))}
         />
       }
     />
@@ -47,27 +47,25 @@ function General({ s }: { s: CaptureStatus }) {
             ? "Press the keys you want to use. Esc cancels."
             : "Tap to start or stop. Hold to draw with the mouse. A hotkey with modifier keys starts when you let go, and Esc before that records nothing."
         }
-        control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await capture.patchSettings({ hotkey }))} />}
+        control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await patchCapture({ hotkey }))} />}
       />
       {c.experiments.recording ? <RecordingKey s={s} onRecording={setRecording} /> : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
-          {s.hotkeyNote} <Button onClick={() => void capture.patchSettings({ hotkey: "F9" })}>Restore F9</Button>
+          {s.hotkeyNote} <Button onClick={() => void patchCapture({ hotkey: "F9" })}>Restore F9</Button>
         </p>
       ) : null}
       <SettingRow
         className="lm-row--control"
         label="Where to record"
         description="Speak Kit remembers your last choice for each screen."
-        control={
-          <Select label="Where to record" value={c.target} onChange={(target) => void capture.patchSettings({ target: target as typeof c.target })} options={opts(TARGET_KINDS, (k) => WHERE[k])} />
-        }
+        control={<Select label="Where to record" value={c.target} onChange={(target) => void patchCapture({ target: target as typeof c.target })} options={opts(TARGET_KINDS, (k) => WHERE[k])} />}
       />
       {c.experiments.speechEngines ? <Engine s={s} /> : null}
       <SettingRow
         label="Talk while you record"
         description="Uses the dictation microphone and speech model. Quiet speech is kept, and a silent microphone is reopened. Nothing is sent anywhere."
-        control={<Toggle aria-label="Talk while you record" checked={c.narration} onChange={(narration) => void capture.patchSettings({ narration })} />}
+        control={<Toggle aria-label="Talk while you record" checked={c.narration} onChange={(narration) => void patchCapture({ narration })} />}
       />
     </SettingsSection>
   );
@@ -87,7 +85,7 @@ function Engine({ s }: { s: CaptureStatus }) {
           <Select
             label="Speech engine"
             value={c.narrationEngine}
-            onChange={(narrationEngine) => void capture.patchSettings({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
+            onChange={(narrationEngine) => void patchCapture({ narrationEngine: narrationEngine as typeof c.narrationEngine })}
             options={[
               { value: "dictation", label: "Dictation model" },
               { value: "command", label: "Command" },
@@ -109,7 +107,7 @@ function Engine({ s }: { s: CaptureStatus }) {
               spellCheck={false}
               placeholder="whisper-cli -m model.bin -f {audio} -nt"
               onChange={(e) => setCommand(e.target.value)}
-              onBlur={() => command !== c.narrationCommand && void capture.patchSettings({ narrationCommand: command })}
+              onBlur={() => command !== c.narrationCommand && void patchCapture({ narrationCommand: command })}
             />
           }
         />
@@ -130,7 +128,7 @@ function Recording({ s }: { s: CaptureStatus }) {
           <Select
             label="Other audio"
             value={c.otherAudio}
-            onChange={(otherAudio) => void capture.patchSettings({ otherAudio: otherAudio as typeof c.otherAudio })}
+            onChange={(otherAudio) => void patchCapture({ otherAudio: otherAudio as typeof c.otherAudio })}
             options={[
               { value: "mute", label: "Mute" },
               { value: "keep", label: "Keep playing" },
@@ -141,12 +139,12 @@ function Recording({ s }: { s: CaptureStatus }) {
       <SettingRow
         label="Pointer trail"
         description="Hold Shift while recording and a glowing trail follows the pointer. If Windows offers Sticky Keys after five Shift presses, choose No."
-        control={<Toggle aria-label="Pointer trail" checked={c.pointerTrail} onChange={(pointerTrail) => void capture.patchSettings({ pointerTrail })} />}
+        control={<Toggle aria-label="Pointer trail" checked={c.pointerTrail} onChange={(pointerTrail) => void patchCapture({ pointerTrail })} />}
       />
       <SettingRow
         label="Draw with Shift"
         description="Hold Shift alone for a moment while recording to draw, and let go to stop. Shift with a letter or a click never draws. Off by default because it can start drawing before a shift-click."
-        control={<Toggle aria-label="Draw with Shift" checked={c.shiftInk} onChange={(shiftInk) => void capture.patchSettings({ shiftInk })} />}
+        control={<Toggle aria-label="Draw with Shift" checked={c.shiftInk} onChange={(shiftInk) => void patchCapture({ shiftInk })} />}
       />
       <SettingRow
         className="lm-row--control"
@@ -156,7 +154,7 @@ function Recording({ s }: { s: CaptureStatus }) {
           <Select
             label="Ink fades after"
             value={String(c.inkFadeMs)}
-            onChange={(v) => void capture.patchSettings({ inkFadeMs: Number(v) as (typeof INK_FADE_MS)[number] })}
+            onChange={(v) => void patchCapture({ inkFadeMs: Number(v) as (typeof INK_FADE_MS)[number] })}
             options={opts(INK_FADE_MS, (v) => INK_LABEL[v]!)}
           />
         }
@@ -179,7 +177,7 @@ function Saving({ s }: { s: CaptureStatus }) {
           <Select
             label="Send to Voice chat"
             value={c.autoSend}
-            onChange={(autoSend) => void capture.patchSettings({ autoSend: autoSend as (typeof AUTO_SEND)[number] })}
+            onChange={(autoSend) => void patchCapture({ autoSend: autoSend as (typeof AUTO_SEND)[number] })}
             options={opts(AUTO_SEND, (a) => (a === "off" ? "Off" : `After ${a.replace("s", " seconds")}`))}
           />
         }
@@ -192,7 +190,7 @@ function Saving({ s }: { s: CaptureStatus }) {
           <Select
             label="Keep captures"
             value={String(c.retentionDays)}
-            onChange={(v) => void capture.patchSettings({ retentionDays: Number(v) as (typeof RETENTION_DAYS)[number] })}
+            onChange={(v) => void patchCapture({ retentionDays: Number(v) as (typeof RETENTION_DAYS)[number] })}
             options={opts(RETENTION_DAYS, (v) => RETENTION_LABEL[v]!)}
           />
         }

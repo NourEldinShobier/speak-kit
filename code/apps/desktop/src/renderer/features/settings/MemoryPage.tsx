@@ -6,6 +6,7 @@ import { IDLE_CHOICES, type IdleChoice } from "../../../shared/schemas";
 import { EngineBadge } from "../../pages";
 import { api, Page, useVisible } from "../../ui";
 import { ResourcesSections } from "./ResourcesSection";
+import { change } from "./change";
 
 const IDLE_LABEL: Record<IdleChoice, string> = { "1": "After 1 minute", "5": "After 5 minutes", "15": "After 15 minutes", never: "Never" };
 
@@ -68,19 +69,17 @@ function Unloading({ s }: { s: AppState }) {
         className="lm-row--control"
         label="Unload the model when idle"
         description="Frees its memory after the last reading. The next play loads it again in a moment."
-        control={
-          <Select label="Idle unload" value={c.idleUnload} onChange={(x) => api.patchConfig({ idleUnload: x as IdleChoice })} options={IDLE_CHOICES.map((x) => ({ value: x, label: IDLE_LABEL[x] }))} />
-        }
+        control={<Select label="Idle unload" value={c.idleUnload} onChange={(x) => change({ idleUnload: x as IdleChoice })} options={IDLE_CHOICES.map((x) => ({ value: x, label: IDLE_LABEL[x] }))} />}
       />
       <SettingRow
         label="Load at startup"
         description="Keep the model ready as soon as Speak Kit starts. Uses memory all day."
-        control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => api.patchConfig({ loadAtStart: x })} />}
+        control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => change({ loadAtStart: x })} />}
       />
       <SettingRow
         label="Battery saver"
         description={s.onBattery ? "On battery now: the model unloads sooner." : "On battery, the model unloads sooner."}
-        control={<Toggle aria-label="Battery saver" checked={c.batterySaver} onChange={(x) => api.patchConfig({ batterySaver: x })} />}
+        control={<Toggle aria-label="Battery saver" checked={c.batterySaver} onChange={(x) => change({ batterySaver: x })} />}
       />
     </SettingsSection>
   );

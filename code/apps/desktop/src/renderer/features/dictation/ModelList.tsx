@@ -1,6 +1,6 @@
 import { Badge, Button, Icon, ProgressBar, Radio, SettingsSection } from "@speakkit/ui";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
-import { dictation } from "./api";
+import { dictation, patchDictation } from "./api";
 import { downloadText, modelLine } from "./model";
 
 function Right({ m }: { m: ModelView }) {
@@ -18,7 +18,7 @@ function ModelRow({ m }: { m: ModelView }) {
   const busy = m.progress;
   return (
     <div className="lm-row dict-model" data-testid={`model-${m.id}`}>
-      <Radio name="dictation-model" aria-label={m.name} checked={m.selected && m.installed} disabled={!m.installed} onChange={() => void dictation.patchSettings({ model: m.id })} />
+      <Radio name="dictation-model" aria-label={m.name} checked={m.selected && m.installed} disabled={!m.installed} onChange={() => void patchDictation({ model: m.id })} />
       <div className="lm-row__text">
         <div className="lm-row__label">
           {m.name}

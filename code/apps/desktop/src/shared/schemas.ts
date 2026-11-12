@@ -8,6 +8,7 @@ import { TranscriptsConfigSchema } from "./transcripts/settings";
 import { EnginesConfigSchema } from "./speech-models/config";
 import { MeetingsConfigSchema } from "./meetings/settings";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
+import { LANGUAGE_CHOICES } from "./i18n";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
 export const IDLE_CHOICES = ["1", "5", "15", "never"] as const;
@@ -88,7 +89,7 @@ export const ConfigSchema = v.object({
   setupStep: fb(v.picklist([0, 1, 2, 3, 4]), 0),
   preferredPort: fb(port, DEFAULT_PORT),
   startMinimized: bool(false),
-  language: fb(v.picklist(["system", "en"]), "system"),
+  language: fb(v.picklist(LANGUAGE_CHOICES), "system"),
   appearance: fb(v.picklist(APPEARANCES), "system"),
   closeAction: fb(v.picklist(CLOSE_ACTIONS), "hide"),
   hideTrayIcon: bool(false),
@@ -134,7 +135,7 @@ export const ConfigPatchSchema = v.partial(
     setupSkipped: v.boolean(),
     setupStep: v.picklist([0, 1, 2, 3, 4]),
     startMinimized: v.boolean(),
-    language: v.picklist(["system", "en"]),
+    language: v.picklist(LANGUAGE_CHOICES),
     appearance: v.picklist(APPEARANCES),
     closeAction: v.picklist(CLOSE_ACTIONS),
     hideTrayIcon: v.boolean(),
@@ -183,6 +184,8 @@ const OPEN_PATHS = ["models", "logs", "data"] as const;
 export const ARGS = {
   state: v.tuple([]),
   patchConfig: v.tuple([ConfigPatchSchema]),
+  applySettings: v.tuple([v.record(v.pipe(v.string(), v.maxLength(80)), v.unknown())]),
+  importSettings: v.tuple([]),
   setLaunchAtLogin: v.tuple([v.boolean()]),
   setPort: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535))]),
   regenerateToken: v.tuple([]),

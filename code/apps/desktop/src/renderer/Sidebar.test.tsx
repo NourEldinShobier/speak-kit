@@ -7,10 +7,24 @@ vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
+import { LocaleProvider } from "./i18n";
 import { Sidebar } from "./Sidebar";
 
 const render = (page: Page, sub: SettingsSub = "general") =>
   renderToStaticMarkup(<Sidebar s={appState()} hidden={false} page={page} sub={sub} recent={[]} go={() => {}} onCloseSettings={() => {}} onOpenRecent={() => {}} onOpenExport={() => {}} />);
+
+describe("sidebar in Spanish", () => {
+  it("names the groups, pages and settings in the chosen language", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider choice="es">
+        <Sidebar s={appState()} hidden={false} page="home" sub="general" recent={[]} go={() => {}} onCloseSettings={() => {}} onOpenRecent={() => {}} onOpenExport={() => {}} />
+      </LocaleProvider>,
+    );
+    const text = html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+    for (const w of ["Menú", "Leer", "Inicio", "Biblioteca", "Chat de voz", "Historial", "Recientes", "Ajustes"]) expect(text).toContain(`|${w}|`);
+    expect(text).not.toContain("|Library|");
+  });
+});
 
 describe("sidebar", () => {
   it("shows the Menu title, groups, Recent and Settings in order, without New reading or Browser", () => {

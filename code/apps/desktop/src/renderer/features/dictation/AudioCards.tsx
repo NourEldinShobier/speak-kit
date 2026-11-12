@@ -3,7 +3,7 @@ import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, S
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
 import { AppSuggestions } from "../apps";
-import { dictation } from "./api";
+import { dictation, patchDictation } from "./api";
 import { watchMeter } from "./meter-watch";
 import { KEEP_READY_MINUTES, METHOD_OPTIONS, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
 
@@ -53,17 +53,17 @@ function CaptureRows({ c }: { c: DictationStatus["settings"] }) {
       <SettingRow
         label="End-of-sentence pause"
         description="Adds a short silence after you stop, for the speech models that need it to finish the last sentence."
-        control={<Toggle aria-label="End-of-sentence pause" checked={c.sentencePause} onChange={(sentencePause) => void dictation.patchSettings({ sentencePause })} />}
+        control={<Toggle aria-label="End-of-sentence pause" checked={c.sentencePause} onChange={(sentencePause) => void patchDictation({ sentencePause })} />}
       />
       <SettingRow
         label="Keep the computer awake while recording"
         description="Stops sleep during a recording. It is released when you stop."
-        control={<Toggle aria-label="Keep the computer awake while recording" checked={c.blockSleep} onChange={(blockSleep) => void dictation.patchSettings({ blockSleep })} />}
+        control={<Toggle aria-label="Keep the computer awake while recording" checked={c.blockSleep} onChange={(blockSleep) => void patchDictation({ blockSleep })} />}
       />
       <SettingRow
         label="Skip long pauses"
         description="Cuts the middle out of long pauses before the speech is decoded, which is faster on slow computers. If nothing is heard that way, the whole recording is used."
-        control={<Toggle aria-label="Skip long pauses" checked={c.skipPauses} onChange={(skipPauses) => void dictation.patchSettings({ skipPauses })} />}
+        control={<Toggle aria-label="Skip long pauses" checked={c.skipPauses} onChange={(skipPauses) => void patchDictation({ skipPauses })} />}
       />
     </>
   );
@@ -80,28 +80,26 @@ export function MicrophoneCard({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Microphone"
         description="Automatic uses the system default and never picks a virtual or phone input."
-        control={
-          <Select label="Microphone" value={c.microphone || AUTO} onChange={(microphone) => void dictation.patchSettings({ microphone: microphone === AUTO ? "" : microphone })} options={options} />
-        }
+        control={<Select label="Microphone" value={c.microphone || AUTO} onChange={(microphone) => void patchDictation({ microphone: microphone === AUTO ? "" : microphone })} options={options} />}
       />
       <SettingRow className="lm-row--control" label="Input level" description={line.text} control={<Meter />} />
       {line.problem && <MicProblem s={s} line={line} />}
       <SettingRow
         label="Avoid headset microphones"
         description="A Bluetooth headset switches to a call profile when its microphone opens, which makes music and calls sound worse. Speak Kit uses the built-in or a wired microphone instead, unless you pick the headset above."
-        control={<Toggle aria-label="Avoid headset microphones" checked={c.avoidBluetooth} onChange={(avoidBluetooth) => void dictation.patchSettings({ avoidBluetooth })} />}
+        control={<Toggle aria-label="Avoid headset microphones" checked={c.avoidBluetooth} onChange={(avoidBluetooth) => void patchDictation({ avoidBluetooth })} />}
       />
       <SettingRow
         label="Keep the microphone ready"
         description="Keeps the microphone open between recordings, so the first word is never cut off. Windows shows its microphone indicator the whole time; macOS shows the orange dot. Off by default: the microphone is released when idle."
-        control={<Toggle aria-label="Keep the microphone ready" checked={c.keepReady} onChange={(keepReady) => void dictation.patchSettings({ keepReady })} />}
+        control={<Toggle aria-label="Keep the microphone ready" checked={c.keepReady} onChange={(keepReady) => void patchDictation({ keepReady })} />}
       />
       {c.keepReady && (
         <SettingRow
           className="lm-row--control"
           label="Stay open for"
           description="After this time without dictation the microphone is released."
-          control={<Select label="Stay open for" value={String(c.keepReadyMinutes)} onChange={(v) => void dictation.patchSettings({ keepReadyMinutes: Number(v) })} options={KEEP_READY_MINUTES} />}
+          control={<Select label="Stay open for" value={String(c.keepReadyMinutes)} onChange={(v) => void patchDictation({ keepReadyMinutes: Number(v) })} options={KEEP_READY_MINUTES} />}
         />
       )}
       <CaptureRows c={c} />
@@ -121,7 +119,7 @@ export function OutputCard({ s }: { s: DictationStatus }) {
           <Segmented
             label="After you speak"
             value={c.output}
-            onChange={(output) => void dictation.patchSettings({ output: output as typeof c.output })}
+            onChange={(output) => void patchDictation({ output: output as typeof c.output })}
             items={OUTPUT_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
           />
         }
@@ -129,12 +127,12 @@ export function OutputCard({ s }: { s: DictationStatus }) {
       <SettingRow
         label="Return to the app"
         description="Brings the app you were in back to the front before inserting. If it cannot, nothing is pasted and the text stays in History."
-        control={<Toggle aria-label="Return to the app" checked={c.returnToApp} onChange={(returnToApp) => void dictation.patchSettings({ returnToApp })} />}
+        control={<Toggle aria-label="Return to the app" checked={c.returnToApp} onChange={(returnToApp) => void patchDictation({ returnToApp })} />}
       />
       <SettingRow
         label="Space before the text"
         description="Adds a space when the character before the cursor is a letter, a digit or closing punctuation, so the text does not run into what is already there. Nothing is added after a selection or when the field cannot be read."
-        control={<Toggle aria-label="Space before the text" checked={c.smartSpacing} onChange={(smartSpacing) => void dictation.patchSettings({ smartSpacing })} />}
+        control={<Toggle aria-label="Space before the text" checked={c.smartSpacing} onChange={(smartSpacing) => void patchDictation({ smartSpacing })} />}
       />
       <Banner tone="info" role="status">
         Windows does not send keys to a window that runs as administrator. For those the text is copied and you paste it yourself.
@@ -158,21 +156,19 @@ export function FeedbackCard({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Recording indicator"
         description="Where the pill appears, on the screen the pointer is on. Hidden still shows failures that need you."
-        control={
-          <Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void dictation.patchSettings({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />
-        }
+        control={<Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void patchDictation({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />}
       />
       <SettingRow
         label="Sounds"
         description="A short tone when a recording starts, stops, is cancelled or fails."
-        control={<Toggle aria-label="Sounds" checked={c.sounds.enabled} onChange={(enabled) => void dictation.patchSettings({ sounds: { ...c.sounds, enabled } })} />}
+        control={<Toggle aria-label="Sounds" checked={c.sounds.enabled} onChange={(enabled) => void patchDictation({ sounds: { ...c.sounds, enabled } })} />}
       />
       {c.sounds.enabled && (
         <SettingRow
           className="lm-row--control"
           label="Volume"
           description={c.sounds.volume === 0 ? "Volume 0 plays nothing." : `${c.sounds.volume} percent`}
-          control={<Slider min={0} max={100} step={5} defaultValue={c.sounds.volume} aria-label="Volume" onCommit={(volume) => void dictation.patchSettings({ sounds: { ...c.sounds, volume } })} />}
+          control={<Slider min={0} max={100} step={5} defaultValue={c.sounds.volume} aria-label="Volume" onCommit={(volume) => void patchDictation({ sounds: { ...c.sounds, volume } })} />}
         />
       )}
     </SettingsSection>
@@ -205,7 +201,7 @@ export function AppRulesCard({ s }: { s: DictationStatus }) {
   const rules = s.settings.appRules;
   const [name, setName] = useState("");
   const [focused, setFocused] = useState(false);
-  const save = (next: Rules) => void dictation.patchSettings({ appRules: next });
+  const save = (next: Rules) => void patchDictation({ appRules: next });
   const add = (typed = name) => {
     const key = typed
       .trim()

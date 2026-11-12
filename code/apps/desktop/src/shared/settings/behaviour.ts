@@ -14,12 +14,10 @@ export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, bu
 /** The tray icon is shown unless hidden by the user. */
 export const showTrayIcon = (c: Pick<Config, "hideTrayIcon">): boolean => !c.hideTrayIcon;
 
-/** The Settings row text for the close behaviour; it names the way back when the tray is hidden. */
-export function closeHint(c: Pick<Config, "closeAction" | "hideTrayIcon">): string {
-  if (c.hideTrayIcon) return "The tray icon is hidden, so closing the window quits Speak Kit. Start it again from the Start menu or Launchpad.";
-  return c.closeAction === "hide"
-    ? "Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
-    : "Closing the window quits Speak Kit and stops the extension and the shortcuts.";
+/** Which Settings row text describes the close behaviour; the hidden tray names the way back in. */
+export function closeHint(c: Pick<Config, "closeAction" | "hideTrayIcon">): "general.closeHintHidden" | "general.closeHintKeeps" | "general.closeHintQuits" {
+  if (c.hideTrayIcon) return "general.closeHintHidden";
+  return c.closeAction === "hide" ? "general.closeHintKeeps" : "general.closeHintQuits";
 }
 
 export type MotionMode = "on" | "off";

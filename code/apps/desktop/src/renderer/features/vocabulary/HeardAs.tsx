@@ -3,7 +3,7 @@ import { MAX_TERMS, removeTerm, soundsLikeRules, type Term } from "@speakkit/dic
 import { Banner, Button, Chip, EmptyState, Icon, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_REPLACEMENTS, type Replacement } from "../../../shared/dictation/settings";
-import { dictation } from "../dictation-bridge";
+import { patchDictation } from "../dictation-bridge";
 import { filterTerms, promptSummary, wordCount } from "./model";
 import { ReplacementRules } from "./ReplacementRules";
 import { RulesTester } from "./RulesTester";
@@ -196,9 +196,7 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
         <SettingRow
           label="Send words to the speech model"
           description={sum.line}
-          control={
-            <Toggle aria-label="Send words to the speech model" checked={supported && s.settings.prompt} disabled={!supported} onChange={(prompt) => void dictation.patchSettings({ prompt })} />
-          }
+          control={<Toggle aria-label="Send words to the speech model" checked={supported && s.settings.prompt} disabled={!supported} onChange={(prompt) => void patchDictation({ prompt })} />}
         />
         {sum.note ? (
           <Banner tone={supported ? "info" : "warning"} role="status">
@@ -215,7 +213,7 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
 
 /** Replacements: a phrase and what it becomes. An empty "Replace with" deletes the phrase. */
 export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onShowWords(): void }) {
-  const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => dictation.patchSettings({ replacements: next }));
+  const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => patchDictation({ replacements: next }));
   const derived = soundsLikeRules(s.settings.terms).length;
   return (
     <section className="lm-section" aria-labelledby="vocab-repl">
@@ -247,7 +245,7 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
 
 /** The Heard as tab: words, the model prompt, replacements and the tester. */
 export function HeardAs({ s, onImport, onShowWords }: { s: DictationStatus; onImport(): void; onShowWords(): void }) {
-  const [terms, update] = useLive<Term>(s.settings.terms, (next) => dictation.patchSettings({ terms: next }));
+  const [terms, update] = useLive<Term>(s.settings.terms, (next) => patchDictation({ terms: next }));
   return (
     <>
       <WordsCard terms={terms} update={update} onImport={onImport} />

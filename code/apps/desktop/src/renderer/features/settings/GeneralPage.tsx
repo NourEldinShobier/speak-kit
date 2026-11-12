@@ -1,109 +1,148 @@
-import { Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
-import type { AppState } from "../../../shared/ipc";
+import { useState } from "react";
+import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import type { AppState, ImportOutcome } from "../../../shared/ipc";
 import type { Config } from "../../../shared/schemas";
 import { closeHint, effectiveCloseAction } from "../../../shared/settings/behaviour";
+import { importMessage } from "../../../shared/settings/import-text";
+import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { Advanced } from "./Advanced";
+import { change, changeSystem } from "./change";
 import { rowAttr } from "./focus";
 
-const patch = (p: Parameters<typeof api.patchConfig>[0]) => api.patchConfig(p);
-
 function Startup({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
-    <SettingsSection title="Startup">
+    <SettingsSection title={t("general.startup")}>
       <SettingRow
         {...rowAttr("general/launch")}
-        label="Launch at login"
-        description="Start Speak Kit when you sign in so the extension is ready."
-        control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
+        label={t("general.launch")}
+        description={t("general.launchHint")}
+        control={<Toggle aria-label={t("general.launch")} checked={s.launchAtLogin} onChange={(v) => changeSystem({ launchAtLogin: v })} />}
       />
       <SettingRow
         {...rowAttr("general/minimized")}
-        label="Start minimized to tray"
-        description="When it starts at login, stay in the tray instead of opening a window."
-        control={<Toggle aria-label="Start minimized to tray" checked={s.config.startMinimized} onChange={(v) => patch({ startMinimized: v })} />}
+        label={t("general.minimized")}
+        description={t("general.minimizedHint")}
+        control={<Toggle aria-label={t("general.minimized")} checked={s.config.startMinimized} onChange={(v) => change({ startMinimized: v })} />}
       />
     </SettingsSection>
   );
 }
 
 function Appearance({ c }: { c: Config }) {
+  const { t } = useT();
   return (
-    <>
-      <SettingsSection title="Appearance">
-        <SettingRow
-          {...rowAttr("general/language")}
-          className="lm-row--control"
-          label="Language"
-          description="The language of menus and messages. Anything else falls back to English."
-          control={
-            <Select
-              label="Language"
-              value={c.language}
-              onChange={(v) => patch({ language: v as Config["language"] })}
-              options={[
-                { value: "system", label: "System default" },
-                { value: "en", label: "English" },
-              ]}
-            />
-          }
-        />
-      </SettingsSection>
-    </>
+    <SettingsSection title={t("general.appearance")}>
+      <SettingRow
+        {...rowAttr("general/language")}
+        className="lm-row--control"
+        label={t("general.language")}
+        description={t("general.languageHint")}
+        control={
+          <Select
+            label={t("general.language")}
+            value={c.language}
+            onChange={(v) => change({ language: v as Config["language"] })}
+            options={[
+              { value: "system", label: t("general.languageSystem") },
+              { value: "en", label: "English" },
+              { value: "es", label: "Español" },
+            ]}
+          />
+        }
+      />
+    </SettingsSection>
   );
 }
 
 function Tray({ s }: { s: AppState }) {
+  const { t } = useT();
   const c = s.config;
   return (
-    <SettingsSection title="Tray">
+    <SettingsSection title={t("general.tray")}>
       <SettingRow
         {...rowAttr("general/close")}
         className="lm-row--control"
-        label="Closing the window"
-        description={closeHint(c)}
+        label={t("general.close")}
+        description={t(closeHint(c))}
         control={
           <Select
-            label="Closing the window"
+            label={t("general.close")}
             value={effectiveCloseAction(c)}
             disabled={c.hideTrayIcon}
-            onChange={(v) => patch({ closeAction: v as Config["closeAction"] })}
+            onChange={(v) => change({ closeAction: v as Config["closeAction"] })}
             options={[
-              { value: "hide", label: "Keeps running" },
-              { value: "quit", label: "Quits" },
+              { value: "hide", label: t("general.closeKeeps") },
+              { value: "quit", label: t("general.closeQuits") },
             ]}
           />
         }
       />
       <SettingRow
         {...rowAttr("general/tray")}
-        label="Show the tray icon"
-        description={s.platform === "darwin" ? "The icon in the menu bar. Hidden, closing the window quits." : "The icon in the notification area. Hidden, closing the window quits."}
-        control={<Toggle aria-label="Show the tray icon" checked={!c.hideTrayIcon} onChange={(v) => patch({ hideTrayIcon: !v })} />}
+        label={t("general.showTray")}
+        description={s.platform === "darwin" ? t("general.trayMac") : t("general.trayWin")}
+        control={<Toggle aria-label={t("general.showTray")} checked={!c.hideTrayIcon} onChange={(v) => change({ hideTrayIcon: !v })} />}
       />
     </SettingsSection>
   );
 }
 
-export function GeneralPage({ s }: { s: AppState }) {
+/** The row that imports a settings file, and what the import did. */
+function ImportRow() {
+  const { t, locale } = useT();
+  const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  const run = async () => {
+    setBusy(true);
+    try {
+      setOutcome(await api.importSettings());
+    } catch (e) {
+      setOutcome({ status: "failed", message: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
-    <Page title="General" lead="Startup, language and the tray.">
+    <>
+      <SettingRow
+        {...rowAttr("general/import")}
+        label={t("general.import")}
+        description={t("general.importHint")}
+        control={
+          <Button onClick={() => void run()} disabled={busy}>
+            {t("general.importButton")}
+          </Button>
+        }
+      />
+      {outcome?.status === "imported" && <Banner role="status">{importMessage(locale, outcome)}</Banner>}
+      {outcome?.status === "failed" && <Banner tone="error">{t("general.importFailed", { message: outcome.message })}</Banner>}
+    </>
+  );
+}
+
+export function GeneralPage({ s }: { s: AppState }) {
+  const { t } = useT();
+  return (
+    <Page title={t("general.title")} lead={t("general.lead")}>
       <Startup s={s} />
       <Appearance c={s.config} />
       <Tray s={s} />
-      <Advanced page="general" subtitle="Settings file and setup." count={2}>
-        <SettingsSection title="Settings file and setup">
+      <Advanced page="general" subtitle={t("general.fileSubtitle")} count={3}>
+        <SettingsSection title={t("general.fileSection")}>
           <SettingRow
             {...rowAttr("general/settings-file")}
-            label="Settings file"
-            description="Your settings are kept in one file in the data folder. A repaired file is backed up next to it."
-            control={<Button onClick={() => api.openPath("data")}>Show in folder</Button>}
+            label={t("general.file")}
+            description={t("general.fileHint")}
+            control={<Button onClick={() => api.openPath("data")}>{t("general.showFolder")}</Button>}
           />
+          <ImportRow />
           <SettingRow
             {...rowAttr("general/setup-again")}
-            label="Run setup again"
-            description="Go through the first-run steps once more. Your library and settings stay."
-            control={<Button onClick={() => patch({ setupDone: false })}>Run setup</Button>}
+            label={t("general.setup")}
+            description={t("general.setupHint")}
+            control={<Button onClick={() => change({ setupDone: false })}>{t("general.setupButton")}</Button>}
           />
         </SettingsSection>
       </Advanced>

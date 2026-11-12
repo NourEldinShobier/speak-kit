@@ -4,7 +4,10 @@
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.stryker.surface.config.ts", "related": false },
   "mutate": [
-    "apps/desktop/src/shared/settings/{external-edit,resources}.ts",
+    "apps/desktop/src/shared/settings/{external-edit,resources,import,import-text,area-change}.ts",
+    "apps/desktop/src/shared/i18n/index.ts",
+    "apps/desktop/src/shared/control/settings-registry.ts",
+    "apps/desktop/src/main/settings-change.ts",
     "apps/desktop/src/shared/{release-notes,tray-notices}.ts",
     "apps/desktop/src/main/{resources,single-instance,window-size-guard,window-motion}.ts",
     "!**/*.test.ts"

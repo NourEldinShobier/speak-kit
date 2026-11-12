@@ -10,6 +10,7 @@ import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
 import { useMotionPreference } from "./features/settings";
 import { StartupState, Wizard } from "./features/wizard";
+import { LocaleProvider, useT } from "./i18n";
 import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
 import { currentLoc, initShell, shellReducer, recentReadings, type OpenDoc, type RecentReading, type ShellAction, type ShellState } from "./shell-model";
@@ -96,6 +97,14 @@ function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; di
   );
 }
 
+function DocumentLanguage() {
+  const { locale } = useT();
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+  return null;
+}
+
 function Shell({ s }: { s: AppState }) {
   useMotionPreference(s.config.reduceMotion);
   const player = usePreview(s.config.speed);
@@ -105,39 +114,42 @@ function Shell({ s }: { s: AppState }) {
   const recent = useRecent(`${page}:${st.doc?.id ?? ""}`);
 
   return (
-    <PreviewCtx.Provider value={player}>
-      <div className="sk-app">
-        <TitleBar
-          s={s}
-          canBack={st.at > 0}
-          canFwd={st.at < st.hist.length - 1}
-          onBack={() => dispatch({ type: "back" })}
-          onFwd={() => dispatch({ type: "forward" })}
-          onToggleSide={() => dispatch({ type: "toggle-side" })}
-          onSearch={() => dispatch({ type: "palette", open: true })}
-        />
-        <div className="sk-body">
-          <Sidebar
+    <LocaleProvider choice={s.config.language}>
+      <PreviewCtx.Provider value={player}>
+        <DocumentLanguage />
+        <div className="sk-app">
+          <TitleBar
             s={s}
-            hidden={!st.side}
-            page={page}
-            sub={sub}
-            recent={recent}
-            go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
-            onCloseSettings={() => dispatch({ type: "close-settings" })}
-            onOpenRecent={(id) => {
-              dispatch({ type: "go", page: "library" });
-              dispatch({ type: "open-doc", doc: { id, autoplay: false } });
-            }}
-            onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
+            canBack={st.at > 0}
+            canFwd={st.at < st.hist.length - 1}
+            onBack={() => dispatch({ type: "back" })}
+            onFwd={() => dispatch({ type: "forward" })}
+            onToggleSide={() => dispatch({ type: "toggle-side" })}
+            onSearch={() => dispatch({ type: "palette", open: true })}
           />
-          <main className="sk-main">
-            <PageView s={s} page={page} sub={sub} doc={st.doc} dispatch={dispatch} />
-          </main>
+          <div className="sk-body">
+            <Sidebar
+              s={s}
+              hidden={!st.side}
+              page={page}
+              sub={sub}
+              recent={recent}
+              go={(p, sb) => dispatch({ type: "go", page: p, ...(sb ? { sub: sb } : {}) })}
+              onCloseSettings={() => dispatch({ type: "close-settings" })}
+              onOpenRecent={(id) => {
+                dispatch({ type: "go", page: "library" });
+                dispatch({ type: "open-doc", doc: { id, autoplay: false } });
+              }}
+              onOpenExport={(jobId) => dispatch({ type: "export", open: { text: "", jobId } })}
+            />
+            <main className="sk-main">
+              <PageView s={s} page={page} sub={sub} doc={st.doc} dispatch={dispatch} />
+            </main>
+          </div>
+          <Overlays s={s} st={st} dispatch={dispatch} player={player} />
+          <UpdatingCard s={s} />
         </div>
-        <Overlays s={s} st={st} dispatch={dispatch} player={player} />
-        <UpdatingCard s={s} />
-      </div>
-    </PreviewCtx.Provider>
+      </PreviewCtx.Provider>
+    </LocaleProvider>
   );
 }

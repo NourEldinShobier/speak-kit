@@ -12,19 +12,12 @@ export const DEFAULT_SHORTCUTS: Bindings = {
   "record-toggle": "Ctrl+Alt+R",
 };
 
-export const SHORTCUT_LABELS: Record<ShortcutId, { title: string; description: string }> = {
-  "read-selection": { title: "Read selection", description: "Reads the text selected in any app." },
-  "play-pause": { title: "Play or pause", description: "Pauses and resumes the current reading." },
-  stop: { title: "Stop", description: "Stops the reading and closes the mini player." },
-  "record-toggle": { title: "Record a conversation", description: "Starts a recording of the microphone, and stops and saves it when pressed again." },
-};
-
 /** "Ctrl+Alt+S, Space, X and R", built from the defaults. */
-export const resetText = (platform: string): string => {
+export const resetText = (platform: string, and = "and"): string => {
   const keys = SHORTCUT_IDS.map((id) => DEFAULT_SHORTCUTS[id]);
   const head = showAccelerator(keys[0]!, platform, "global");
   const rest = keys.slice(1).map((k) => showAccelerator(k, platform, "global").split("+").pop()!);
-  return `${head}, ${rest.slice(0, -1).join(", ")} and ${rest.at(-1)}`;
+  return `${head}, ${rest.slice(0, -1).join(", ")} ${and} ${rest.at(-1)}`;
 };
 
 const MODIFIERS = ["Ctrl", "Alt", "Shift"] as const;

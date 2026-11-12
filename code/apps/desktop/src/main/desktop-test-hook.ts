@@ -1,4 +1,5 @@
 import { monitorEventLoopDelay } from "node:perf_hooks";
+import { scriptedSettingsFile } from "./settings-deps";
 import type { ShownToast } from "./desktop-toasts";
 import type { setupShortcuts } from "./desktop-shortcuts";
 import type { setupTray } from "./desktop-tray";
@@ -29,6 +30,10 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
   return {
     ...shortcuts.testHook,
     toasts: () => shownToasts.map(({ title, body, silent }) => ({ title, body, silent })),
+    /** The file the settings import dialog returns; null cancels. */
+    settingsFile: (f: string | null) => void (scriptedSettingsFile.open = f),
+    /** The answer to "also turn on settings that reach beyond the app?" during an import. */
+    settingsConfirm: (on: boolean) => void (scriptedSettingsFile.confirm = on),
     clickToast: (i: number) => shownToasts[i]?.onClick?.(),
     installs,
     trayItems: () => tray.items().map((i) => ({ label: i.label, enabled: i.enabled, type: i.type, checked: i.checked })),
