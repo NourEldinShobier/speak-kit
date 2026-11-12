@@ -22,7 +22,7 @@ function fail(res: ServerResponse, code: AutomationErrorCode, message?: string):
 }
 
 /** Runs `work`; a refusal of the host becomes the typed error body, anything else is an internal error. */
-async function guarded(res: ServerResponse, work: () => Promise<void> | void): Promise<void> {
+export async function guarded(res: ServerResponse, work: () => Promise<void> | void): Promise<void> {
   try {
     await work();
   } catch (e) {

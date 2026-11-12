@@ -334,9 +334,8 @@ if (!instance.mayRun) {
     });
     app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
-    automation.attach(desktop.automation);
-    const automationPage = await setupAutomationPage({ here, dataDir, state, api: serverApi, test });
-    const handlers = { ...appHandlers, ...desktop.handlers, ...automationPage.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
+    runtime.attachDesktop(desktop);
+    const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
     registerValidatedIpc<Method>(ipcMain, {
       methods: METHODS,
       channel,

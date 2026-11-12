@@ -1,4 +1,10 @@
-const norm = (entry: string, sep: string) => (sep === ";" ? entry.trim().replace(/[\\/]+$/, "").toLowerCase() : entry.trim().replace(/\/+$/, ""));
+const norm = (entry: string, sep: string) =>
+  sep === ";"
+    ? entry
+        .trim()
+        .replace(/[\\/]+$/, "")
+        .toLowerCase()
+    : entry.trim().replace(/\/+$/, "");
 
 const split = (list: string, sep: string) => list.split(sep).filter((e) => e.trim() !== "");
 

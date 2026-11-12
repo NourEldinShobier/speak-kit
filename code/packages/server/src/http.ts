@@ -44,6 +44,18 @@ export async function readBody(req: IncomingMessage, max = MAX_BODY): Promise<un
   }
 }
 
+/** The body as bytes, refused above `max` (413) before more is read. */
+export async function readBytes(req: IncomingMessage, max: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let n = 0;
+  for await (const c of req as AsyncIterable<Buffer>) {
+    n += c.length;
+    if (n > max) throw new HttpError(413, "invalid-request", "body too large");
+    chunks.push(c);
+  }
+  return Buffer.concat(chunks);
+}
+
 /**
  * Fails with 504 when `work` takes longer than `ms` and aborts `ac` with that error, so a handler that checks its signal before it
  * creates state stops there. The abandoned work keeps running until it does; its result is dropped.

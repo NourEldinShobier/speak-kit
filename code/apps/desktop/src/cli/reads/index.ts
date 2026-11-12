@@ -22,11 +22,6 @@ export type ReadOutcome = { ok: true; data: unknown; text: string } | { ok: fals
 
 const usage = (message: string): ReadOutcome => ({ ok: false, code: "usage", message });
 
-export const READ_ACTIONS = {
-  meetings: ["list", "show", "chapters", "search"],
-  capture: ["list", "show"],
-} as const;
-
 async function readMeetings(r: ReadRequest, src: Sources): Promise<ReadOutcome> {
   const source = await src.meetings();
   if (r.action === "list") {

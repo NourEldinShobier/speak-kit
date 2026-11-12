@@ -23,7 +23,13 @@ const text = async (file: string): Promise<string | undefined> => {
 };
 
 /** Sets and clears a throwaway variable: the system tells every running program the environment changed, so a new terminal sees the PATH at once. */
-const broadcast = () => run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", '[Environment]::SetEnvironmentVariable("SPEAKKIT_REFRESH","1","User"); [Environment]::SetEnvironmentVariable("SPEAKKIT_REFRESH",$null,"User")']);
+const broadcast = () =>
+  run("powershell.exe", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+    '[Environment]::SetEnvironmentVariable("SPEAKKIT_REFRESH","1","User"); [Environment]::SetEnvironmentVariable("SPEAKKIT_REFRESH",$null,"User")',
+  ]);
 
 function windowsBoundary(markerFile: string): WindowsBoundary {
   return {

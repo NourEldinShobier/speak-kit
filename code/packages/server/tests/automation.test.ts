@@ -65,7 +65,7 @@ describe("limits and capabilities", () => {
     const c = await open();
     const body = (await (await call(c, "/v1/capabilities")).json()) as { version: string; commands: Record<string, string>; errors: { code: string }[] };
     expect(body.version).toBe("9.9.9");
-    expect(body.commands).toMatchObject({ speak: "available", "live-stream": "parked" });
+    expect(body.commands).toMatchObject({ speak: "available", "live-stream": "available" });
     expect(body.errors.map((e) => e.code)).toContain("too_large");
   });
   it("needs the token", async () => {

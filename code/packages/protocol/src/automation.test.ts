@@ -61,7 +61,7 @@ describe("capabilities", () => {
     const c = capabilities("1.2.3");
     expect(c).toMatchObject({ app: "speakkit", version: "1.2.3", apiVersion: 1, exitCodes: { ok: 0, failed: 1, usage: 2, unreachable: 3 } });
     expect(c.commands.speak).toBe("available");
-    expect(c.commands["live-stream"]).toBe("parked");
+    expect(c.commands["live-stream"]).toBe("available");
     expect(c.errors[3]).toEqual({ code: "too_large", message: "The file is over the 64 MiB limit." });
   });
   it("round-trips through its schema", () => {
@@ -210,7 +210,7 @@ describe("the constants other code relies on", () => {
       dictate: "parked",
       history: "parked",
       meetings: "parked",
-      "live-stream": "parked",
+      "live-stream": "available",
     });
   });
 });
