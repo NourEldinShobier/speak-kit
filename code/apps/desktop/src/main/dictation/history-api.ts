@@ -3,6 +3,9 @@ import type { HistoryItem } from "../../shared/dictation/contract";
 import { historyItems } from "./service-support";
 
 interface Deps {
+  /** The whole history was cleared. */
+  cleared?(): void;
+  ready(): Promise<unknown>;
   core(): Dictation | undefined;
   ready(): Promise<void>;
   /** Every speech model, to show the name of the one that heard an entry. */
@@ -49,6 +52,7 @@ export class HistoryApi {
   async clear(): Promise<void> {
     await this.d.ready();
     this.#noteKept((await this.d.core()?.history.clear())?.kept ?? []);
+    this.d.cleared?.();
     await this.d.refreshCount();
   }
 

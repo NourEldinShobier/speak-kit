@@ -2,13 +2,13 @@ import { appendFile, mkdir, readdir, readFile, rename, unlink as fsUnlink, write
 import path from "node:path";
 import type { Clip } from "@speakkit/dictation";
 
-/** One take on disk. `recording`: the microphone was still open when the app stopped. `pending`: the recording ended and its text was not saved yet. */
+/** One take on disk. `recording`: the microphone was still open when the app stopped. `pending`: the recording ended and its text was not saved yet. `cancelled`: the person cancelled it; it is kept for the undo minute only and never recovered. */
 interface Manifest {
   v: 1;
   id: string;
   rate: number;
   startedAt: number;
-  state: "recording" | "pending";
+  state: "recording" | "pending" | "cancelled";
   /** How many launches have already tried to turn this take into text. */
   tries: number;
 }
@@ -25,13 +25,20 @@ export interface Spool {
   begin(rate: number, startedAt: number): Promise<string>;
   /** Adds samples (mono, -1 to 1). Calls for one take run in order. */
   append(id: string, pcm: Float32Array): Promise<void>;
-  /** The recording ended normally: the take stays on disk until `finish`. */
-  seal(id: string): Promise<void>;
+  /** The recording ended normally: the take stays on disk until `finish`. A cancelled take is marked so a restart never brings it back. */
+  seal(id: string, state?: "pending" | "cancelled"): Promise<void>;
   /** The take is dealt with, or was discarded: its files go. A file Windows holds open is retried, then marked so it is never recovered again. */
   finish(id: string): Promise<void>;
   /** The takes a stopped app left behind, oldest first. A take that is too short, unreadable or already tried `MAX_TRIES` times is removed; the others have their try count raised. */
   recover(): Promise<Recovered[]>;
+  /** Removes every take older than `MAX_AGE_MS` or cancelled, without reading any of them. */
+  sweep(): Promise<void>;
+  /** Removes every take. */
+  clear(): Promise<void>;
 }
+
+/** Audio left on disk is not kept longer than this, whether or not it was ever transcribed. */
+export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** A recovered take shorter than this is not worth transcribing. */
 const MIN_RECOVER_MS = 400;
@@ -68,7 +75,7 @@ function parse(text: string): Manifest | undefined {
       Number.isFinite(m.rate) &&
       m.rate! > 0 &&
       Number.isFinite(m.startedAt) &&
-      (m.state === "recording" || m.state === "pending") &&
+      (m.state === "recording" || m.state === "pending" || m.state === "cancelled") &&
       Number.isInteger(m.tries);
     return ok ? (m as Manifest) : undefined;
   } catch {
@@ -150,10 +157,10 @@ export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((
 
     append: (id, pcm) => (safeId(id) && pcm.length ? inOrder(id, () => appendFile(file(pcmName(id)), encode(pcm))) : Promise.resolve()),
 
-    seal: (id) =>
+    seal: (id, state = "pending") =>
       inOrder(id, async () => {
-        const m = await read(id);
-        if (m) await writeManifest({ ...m, state: "pending" });
+        const m = await fs.read(id);
+        if (m) await fs.writeManifest({ ...m, state });
       }),
 
     finish: (id) =>
@@ -167,35 +174,46 @@ export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((
         }
       }),
 
-    async recover() {
-      let names: string[];
-      try {
-        names = await readdir(dir);
-      } catch {
-        return [];
-      }
-      const found: Recovered[] = [];
-      const ids = new Set(names.filter((n) => n.endsWith(".json") || n.endsWith(".pcm")).map((n) => n.replace(/\.(json|pcm)$/, "")));
-      for (const id of ids) {
-        if (!safeId(id)) continue;
-        const m = await read(id);
-        try {
-          if (!m) {
-            await remove(id); // a manifest that never finished writing, or an orphaned file
-            continue;
-          }
-          const pcm = decode(await readFile(file(pcmName(id))));
-          if (m.tries >= MAX_TRIES || (pcm.length / m.rate) * 1000 < MIN_RECOVER_MS) {
-            await remove(id);
-            continue;
-          }
-          await writeManifest({ ...m, tries: m.tries + 1 });
-          found.push({ id, startedAt: m.startedAt, state: m.state, clip: { pcm, sampleRate: m.rate, peak: peakOf(pcm) } });
-        } catch {
-          // an unreadable take is left for the next start
-        }
-      }
-      return found.sort((a, b) => a.startedAt - b.startedAt);
-    },
+    recover: () => scanTakes(dir, fs, now),
+    sweep: async () => void (await scanTakes(dir, fs, now, "sweep")),
+    clear: async () => void (await scanTakes(dir, fs, now, "clear")),
   };
+}
+
+/** The takes in the folder, oldest first; see `Spool.recover`. */
+async function scanTakes(dir: string, fs: ReturnType<typeof files>, now: () => number, mode: "recover" | "sweep" | "clear" = "recover"): Promise<Recovered[]> {
+  let names: string[];
+  try {
+    names = await readdir(dir);
+  } catch {
+    return [];
+  }
+  const found: Recovered[] = [];
+  const ids = new Set(names.filter((n) => n.endsWith(".json") || n.endsWith(".pcm")).map((n) => n.replace(/\.(json|pcm)$/, "")));
+  for (const id of ids) {
+    if (!safeId(id)) continue;
+    const m = await fs.read(id);
+    try {
+      if (!m) {
+        await fs.remove(id); // a manifest that never finished writing, or an orphaned file
+        continue;
+      }
+      const stale = m.state === "cancelled" || now() - m.startedAt > MAX_AGE_MS;
+      if (mode === "clear" || (mode === "sweep" && stale)) {
+        await fs.remove(id);
+        continue;
+      }
+      if (mode === "sweep") continue;
+      const pcm = decode(await readFile(fs.file(pcmName(id))));
+      if (stale || m.tries >= MAX_TRIES || (pcm.length / m.rate) * 1000 < MIN_RECOVER_MS) {
+        await fs.remove(id);
+        continue;
+      }
+      await fs.writeManifest({ ...m, tries: m.tries + 1 });
+      found.push({ id, startedAt: m.startedAt, state: m.state, clip: { pcm, sampleRate: m.rate, peak: peakOf(pcm) } });
+    } catch {
+      // an unreadable take is left for the next start
+    }
+  }
+  return found.sort((a, b) => a.startedAt - b.startedAt);
 }

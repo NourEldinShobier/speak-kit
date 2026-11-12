@@ -8,7 +8,7 @@ let dir = "";
 beforeEach(async () => void (dir = await mkdtemp(path.join(tmpdir(), "spool-"))));
 afterEach(() => rm(dir, { recursive: true, force: true }));
 
-const spool = () => createSpool({ dir, sleep: async () => undefined });
+const spool = () => createSpool({ now: () => 10_000, dir, sleep: async () => undefined });
 const second = (level: number, seconds = 1) => new Float32Array(16_000 * seconds).fill(level);
 const files = async () => (await readdir(dir)).sort();
 
@@ -108,7 +108,7 @@ describe("spool", () => {
   });
 
   it("recovers nothing from a folder that does not exist", async () => {
-    expect(await createSpool({ dir: path.join(dir, "missing") }).recover()).toEqual([]);
+    expect(await createSpool({ now: () => 10_000, dir: path.join(dir, "missing") }).recover()).toEqual([]);
   });
 
   it("does not write empty chunks or chunks for an unsafe id", async () => {
@@ -131,7 +131,7 @@ describe("spool", () => {
   it("retries a file another program holds open for a moment", async () => {
     let busy = 2;
     const slept: number[] = [];
-    const s = createSpool({
+    const s = createSpool({ now: () => 10_000,
       dir,
       sleep: async (ms) => void slept.push(ms),
       unlink: async (f) => {
@@ -147,7 +147,7 @@ describe("spool", () => {
   });
 
   it("marks a take it cannot delete as tried out, so the next start removes it instead of transcribing it twice", async () => {
-    const s = createSpool({
+    const s = createSpool({ now: () => 10_000,
       dir,
       sleep: async () => undefined,
       unlink: async () => {
@@ -163,7 +163,7 @@ describe("spool", () => {
   });
 
   it("does not hide an error that is not a lock", async () => {
-    const s = createSpool({
+    const s = createSpool({ now: () => 10_000,
       dir,
       unlink: async () => {
         throw Object.assign(new Error("io"), { code: "EIO" });

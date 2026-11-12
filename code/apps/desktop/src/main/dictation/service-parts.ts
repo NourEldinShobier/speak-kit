@@ -23,11 +23,38 @@ export interface PartsHost {
   changed(): void;
   refreshCount(): Promise<void>;
   download(): void;
+  audio(): AudioStore | undefined;
+  cfg(): DictationConfig;
+  stt: Stt;
+  /** Every speech model, to show the name of the one that heard an entry. */
+  catalog(): readonly { id: string; name: string }[];
+  files: FilePickers;
+  warn(title: string, detail: string): void;
+  /** The history was cleared: audio kept for a crash goes too. */
+  cleared?(): void;
+  /** Where the saved-key question and the test hook are answered. */
+  key: Pick<DictationServiceOptions, "hasKey" | "test">;
 }
 
 /** The pieces of the service that are not the dictation itself: pause and paste last, the history, and the buttons that act on the last dictation. */
 export function createParts(h: PartsHost) {
   const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, foreground: h.foreground, rules: h.rules, changed: h.changed });
+  const history = new HistoryFacade({ ready: h.ready, core: h.core, changed: h.changed, ...(h.cleared && { cleared: h.cleared }) });
+  const records = new HistoryApi({
+    ready: h.ready,
+    core: h.core,
+    audio: h.audio,
+    cfg: h.cfg,
+    dictating: () => h.state().status !== "idle" && h.state().status !== "error",
+    stt: h.stt,
+    catalog: h.catalog,
+    files: h.files,
+    push: h.changed,
+    refreshCount: () => history.refresh(),
+    warn: h.warn,
+    key: h.key,
+    ...(h.cleared && { cleared: h.cleared }),
+  });
   return {
     controls,
     history: new DictationHistory({ ready: h.ready, core: h.core, changed: h.refreshCount }),

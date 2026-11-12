@@ -243,13 +243,8 @@ class Runtime implements Dictation {
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
       try {
-        if (!cancelled || this.disposed) return await this.deps.recorder.discard();
-        // A cancel keeps the audio for a few seconds, so a slip of the finger can be undone.
-        const clip = await this.deps.recorder.stop();
-        if (clip.peak > 0 && clip.pcm.length > 0 && this.session.seq === id) {
-          this.cancelled = { clip, target: target ?? Promise.resolve(undefined) };
-          this.cancelRestore = this.deps.clock.after(RESTORE_MS, () => this.forgetCancelled());
-        }
+        if (cancelled && !this.noUndo) return this.cancelled.keep(await this.deps.recorder.stop({ cancelled: true }));
+        await this.deps.recorder.discard();
       } catch {
         // Nothing is left to discard if the recorder already stopped.
       }
