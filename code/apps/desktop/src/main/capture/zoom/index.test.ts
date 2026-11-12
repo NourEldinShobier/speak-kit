@@ -185,7 +185,7 @@ describe("suggested zooms", () => {
     expect(zoom).toMatchObject({ startMs: 2700, endMs: 5000, x: 0.4, y: 0.4 });
     expect(zoom?.path).toEqual([
       { atMs: 3000, x: 0.4, y: 0.4 },
-      { atMs: 3200, x: 0.47, y: 0.4 },
+      { atMs: 3200, x: 0.6, y: 0.4 },
     ]);
   });
 

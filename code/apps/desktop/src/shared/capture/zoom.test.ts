@@ -105,7 +105,7 @@ describe("autoRegions", () => {
         y: 0.6,
         path: [
           { atMs: 4000, x: 0.3, y: 0.6 },
-          { atMs: 5000, x: 0.307, y: 0.6 },
+          { atMs: 5000, x: 0.32, y: 0.6 },
         ],
       }),
     ]);
@@ -164,6 +164,11 @@ describe("zoomCells", () => {
 });
 
 describe("region schema", () => {
+  it("refuses a path whose points are out of time order", () => {
+    const pt = (atMs: number) => ({ atMs, x: 0.5, y: 0.5 });
+    expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000, { path: [pt(100), pt(200)] })]).success).toBe(true);
+    expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000, { path: [pt(200), pt(100)] })]).success).toBe(false);
+  });
   it("accepts regions in range and refuses the rest", () => {
     expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000)]).success).toBe(true);
     expect(v.safeParse(ZoomRegionsSchema, [region(0, 2000, { scale: 5 })]).success).toBe(false);
@@ -188,11 +193,27 @@ describe("following the pointer", () => {
   it("gives a smoothed path that lags behind the pointer, and none when the pointer stays put", () => {
     const path = followPath(moving, 1000, 1600);
     expect(path.map((p) => p.atMs)).toEqual([1000, 1200, 1400, 1600]);
-    expect(path.map((p) => Math.round(p.x * 1000) / 1000)).toEqual([0.2, 0.27, 0.386, 0.531]);
+    expect(path.map((p) => Math.round(p.x * 1000) / 1000)).toEqual([0.2, 0.27, 0.386, 0.8]);
     expect(followPath(still(0, 1000, 0.5, 0.5), 0, 1000)).toEqual([]);
     expect(followPath(moving, 1000, 1100)).toEqual([]);
     // a flick across the picture is left out
     expect(followPath([...moving.slice(0, 2), { atMs: 1400, x: 0.95, y: 0.95 }], 1000, 1400).map((p) => p.atMs)).toEqual([1000, 1200]);
+  });
+  it("a flick that comes back does not hide the move after it", () => {
+    const flick: PointerSample[] = [
+      { atMs: 1000, x: 0.2, y: 0.5 },
+      { atMs: 1200, x: 0.9, y: 0.9 },
+      { atMs: 1400, x: 0.25, y: 0.5 },
+      { atMs: 1600, x: 0.4, y: 0.5 },
+    ];
+    expect(followPath(flick, 1000, 1600).map((p) => p.atMs)).toEqual([1000, 1400, 1600]);
+  });
+  it("a long region is thinned evenly and still ends on the last position", () => {
+    const long = Array.from({ length: 200 }, (_, i) => ({ atMs: i * 200, x: i / 400, y: 0.5 }));
+    const path = followPath(long, 0, 39_800);
+    expect(path).toHaveLength(60);
+    expect(path[0]!.atMs).toBe(0);
+    expect(path[59]).toEqual({ atMs: 39_800, x: 199 / 400, y: 0.5 });
   });
   it("the centre moves along the path between points and stays on its ends outside it", () => {
     const r = region(1000, 2000, {
@@ -201,7 +222,8 @@ describe("following the pointer", () => {
         { atMs: 1500, x: 0.6, y: 0.8 },
       ],
     });
-    expect(centerAt(r, 1250)).toEqual({ x: 0.4, y: 0.6000000000000001 });
+    expect(centerAt(r, 1250).x).toBeCloseTo(0.4, 6);
+    expect(centerAt(r, 1250).y).toBeCloseTo(0.6, 6);
     expect(centerAt(r, 500)).toMatchObject({ x: 0.2, y: 0.4 });
     expect(centerAt(r, 1900)).toMatchObject({ x: 0.6, y: 0.8 });
     expect(centerAt(region(0, 1000, { x: 0.3, y: 0.7 }), 500)).toEqual({ x: 0.3, y: 0.7 });
