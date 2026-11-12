@@ -97,7 +97,8 @@ function ImportRow() {
   const run = async () => {
     setBusy(true);
     try {
-      setOutcome(await api.importSettings());
+      const r = await api.importSettings();
+      if (r.status !== "cancelled") setOutcome(r); // a cancelled dialog changes nothing, so the last result stays
     } catch (e) {
       setOutcome({ status: "failed", message: e instanceof Error ? e.message : String(e) });
     } finally {
