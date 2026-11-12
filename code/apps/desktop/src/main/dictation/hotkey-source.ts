@@ -62,6 +62,7 @@ export function createHotkeys({ os, now, onFault, changed, after = (ms, fn) => (
   let lastFault = -Infinity;
   let pasteLast: (() => void) | undefined;
   let waiting: (() => void) | undefined;
+  let generation = 0;
 
   const emit = (key: string, down: boolean) => handler?.({ key, down, at: now() });
   const nameOf = (chord: string | undefined): string | undefined => (chord === undefined ? layout.hotkey : chord === "second" ? layout.second : chord === "mouse" ? layout.mouse : chord === "raw" ? layout.raw : undefined);
@@ -99,9 +100,10 @@ export function createHotkeys({ os, now, onFault, changed, after = (ms, fn) => (
 
   const resume = () => {
     waiting?.();
+    const mine = ++generation;
     const tryNow = () => {
       waiting = undefined;
-      if (!paused) return;
+      if (!paused || mine !== generation) return;
       if (os.anyKeyDown?.()) {
         waiting = after(RESUME_POLL_MS, tryNow);
         return;
@@ -136,6 +138,7 @@ export function createHotkeys({ os, now, onFault, changed, after = (ms, fn) => (
     },
     pause(on) {
       if (on) {
+        generation++;
         waiting?.();
         waiting = undefined;
         paused = true;
