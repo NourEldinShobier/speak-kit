@@ -716,6 +716,21 @@ describe("page context in a capture", () => {
     expect((await post(l, [], "https://example.com")).status).toBe(403);
   });
 
+  it("shows the script tag to add to a page once the experiment is on, with the copy button and without the token on screen", async () => {
+    const l = await start({ config: ON });
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("link", { name: "Experiments" }).click();
+    const card = l.page.locator('[data-id="capture-page-context"]');
+    await card.waitFor();
+    expect(await card.getByText("/v1/capture/page-context/sdk.js").count()).toBe(0);
+    await card.getByRole("button", { name: /Turn on/ }).click();
+    const tag = card.locator("code");
+    await tag.waitFor();
+    expect(await tag.textContent()).toBe(`<script src="http://127.0.0.1:${l.port}/v1/capture/page-context/sdk.js" data-token="TOKEN"></script>`);
+    expect(await tag.textContent()).not.toContain(readFileSync(path.join(l.userData, "token"), "utf8").trim());
+    await card.getByRole("button", { name: "Copy the script tag with your token" }).waitFor();
+  });
+
   it("keeps nothing while the experiment is off", async () => {
     const l = await start({ config: ON });
     await open(l);

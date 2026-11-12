@@ -1,3 +1,5 @@
+import type { ComponentType } from "react";
+
 export type ExperimentBadge = "New" | "Experimental" | "Developer";
 
 export interface ExperimentState {
@@ -22,6 +24,8 @@ export interface ExperimentCard {
   guard?: string;
   /** When set, turning the card on first asks with this dialog. */
   confirm?: { title: string; body: string; confirmLabel: string };
+  /** Shown inside the card while it is on (the script a feature asks people to add, for one). */
+  Extra?: ComponentType;
   /** A hook: the card's current state. Called once per render of the card, in the same order. */
   useState(): ExperimentState;
 }

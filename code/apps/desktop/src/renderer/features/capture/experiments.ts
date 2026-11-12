@@ -3,6 +3,7 @@ import type { CaptureStatus } from "../../../shared/capture/contract";
 import type { ExperimentId } from "../../../shared/capture/settings";
 import { registerExperiment, type ExperimentState } from "../experiments";
 import { capture } from "./api";
+import { PageScriptFromApp } from "./PageScript";
 
 /** The state of one capture experiment: read once, then kept in step with the pushes from the main process. */
 function useCaptureExperiment(id: ExperimentId): ExperimentState {
@@ -88,9 +89,9 @@ function registerLabExperiments(): void {
     id: "capture-zoom-export",
     title: "Zoom in a recording",
     description:
-      "Open a recording and show parts of its video closer, chosen by hand or suggested from where the pointer rested and where you drew. The zoomed copy comes with a contact sheet of the zoomed parts.",
+      "Open a recording and show parts of its video closer, chosen by hand or suggested from where you clicked, where the pointer rested and where you drew. The zoomed copy comes with a contact sheet of the zoomed parts.",
     badges: ["Experimental"],
-    guard: "The original video stays. Clicks are not seen, so a suggestion follows where the pointer rested. With the input log off, no pointer positions are noted.",
+    guard: "The original video stays. A click is noted as a place and a time only, never what was clicked. With the input log off, no pointer positions or clicks are noted.",
     useState: () => useCaptureExperiment("zoomExport"),
   });
 
@@ -99,9 +100,10 @@ function registerLabExperiments(): void {
     id: "capture-page-context",
     title: "Development page context",
     description:
-      "A page you are building can report what was clicked, console errors and failed requests. A capture lists them with the times, and Voice chat gets the list. Add the Speak Kit script to your page to turn it on.",
+      "A page you are building can report what was clicked, console errors and failed requests. A capture lists them with the times, and Voice chat gets the list. Turn it on to get the script tag to add to your page.",
     badges: ["Developer", "Experimental"],
     guard: "Only pages on this computer can report, and only names: a button's text, a tag, a path. Never what is typed in a field, a request body or a cookie. Off until you turn it on.",
+    Extra: PageScriptFromApp,
     useState: () => useCaptureExperiment("pageContext"),
   });
 

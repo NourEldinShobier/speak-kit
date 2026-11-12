@@ -43,14 +43,22 @@ export const PAGE_SDK_SOURCE = String.raw`(function (w, d) {
     for (var n = el; n && n.nodeType === 1 && parts.length < 4; n = n.parentElement) parts.unshift(part(n));
     return parts.join(" > ").slice(0, 160);
   }
+  var TEXT_ROLES = /^(button|link|tab|menuitem|menuitemcheckbox|menuitemradio|option|checkbox|radio|switch|treeitem)$/;
+  var TEXT_TAGS = /^(button|a|summary|label)$/;
+  var FIELD = '[contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"]';
+  /* A name for what was clicked, never what is typed: fields (also rich text editors) have none, and a container (a dialog, the page body) is named by its aria-label only. */
+  function labelOf(el, tag, role) {
+    if (tag === "input" || tag === "textarea" || tag === "select" || (el.closest && el.closest(FIELD))) return "";
+    var own = role ? TEXT_ROLES.test(role) : TEXT_TAGS.test(tag);
+    return String(el.getAttribute("aria-label") || (own && el.textContent) || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  }
   function clicked(ev) {
     var target = ev.target;
     var el = (target && target.closest && target.closest("button, a, [role], input, select, textarea, summary, label")) || target;
     if (!el || el.nodeType !== 1) return;
     var tag = tagOf(el);
-    var typed = tag === "input" || tag === "textarea" || tag === "select";
-    var label = typed ? "" : String(el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
     var role = el.getAttribute("role");
+    var label = labelOf(el, tag, role);
     var element = { tag: tag, path: pathOf(el) };
     if (role) element.role = String(role).slice(0, 32);
     if (label) element.label = label;
