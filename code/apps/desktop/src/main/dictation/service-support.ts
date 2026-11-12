@@ -99,17 +99,10 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   devices,
 });
 
-const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
 
-/** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
-export function shortcutClash(cfg: Config, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {
-  const touched = (Object.keys(SLOT_OF) as (keyof typeof SLOT_OF)[]).filter((k) => patch[k] !== undefined);
-  if (touched.length === 0) return undefined;
-  const next = { ...cfg, ...Object.fromEntries(Object.entries(patch).filter(([, x]) => x !== undefined)) } as Config;
-  const bad = firstClash({ ...hotkeySlots(next), ...reader });
-  if (!bad) return undefined;
-  const own = new Set<string>(touched.map((k) => SLOT_OF[k]));
-  const [a, b] = bad;
-  if (own.has(a)) return { slot: a, with: b };
-  return own.has(b) ? { slot: b, with: a } : undefined;
-}
+/** True when a settings change needs the microphone window told (which input, and whether it stays open). */
+export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) => k in patch);
+
+/** The app window is on screen: not hidden to the tray, not minimized, not gone. */
+export const windowShown = (w: { isDestroyed(): boolean; isVisible(): boolean; isMinimized(): boolean } | null): boolean => !!w && !w.isDestroyed() && w.isVisible() && !w.isMinimized();

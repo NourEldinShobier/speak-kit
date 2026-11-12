@@ -203,6 +203,41 @@ function dictationSpec() {
     });
   });
 
+  test.describe("dictation page, audio cards @slow", () => {
+    const windows = (rig: DictationRig) => rig.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.webContents.getURL().split("/").pop()));
+
+    test("with dictation off the page opens no microphone window; turned on, the cards show Automatic at 36 px and the meter follows the window", async () => {
+      const rig = await startRig({ dictation: { enabled: false } });
+      try {
+        await rig.page.getByRole("link", { name: "Dictation", exact: true }).click();
+        await rig.page.getByRole("heading", { name: "Microphone", exact: true }).waitFor();
+        await sleep(600);
+        expect(await windows(rig)).not.toContain("recorder.html");
+        expect(await rig.hook("meterOn")).toBe(false);
+
+        await rig.page.getByRole("switch", { name: "Dictation" }).click();
+        await until(() => rig.hook("meterOn"), "the level meter", 8000);
+        const picker = rig.page.getByRole("combobox", { name: "Microphone", exact: true });
+        await expect(picker).toHaveText(/Automatic/);
+        const heights = await rig.page.evaluate(() => {
+          const h = (s: string) => Math.round(document.querySelector(s)!.getBoundingClientRect().height);
+          const field = document.querySelector('input[aria-label="Program name"]')!.closest(".lm-input")!;
+          return { field: Math.round(field.getBoundingClientRect().height), add: h("form.dict-rule--add button") };
+        });
+        expect(heights).toEqual({ field: 36, add: 36 });
+
+        await rig.app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()
+            .find((w) => w.webContents.getURL().includes("index.html"))
+            ?.hide(),
+        );
+        await until(async () => !(await rig.hook("meterOn")), "the meter to let go of a hidden window", 8000);
+      } finally {
+        await rig.close();
+      }
+    });
+  });
+
   test.describe("dictation, first run @slow", () => {
     test("turning dictation on without a model shows the download card, then the settings once it is ready", async () => {
       const rig = await startRig({ dictation: { enabled: false } });

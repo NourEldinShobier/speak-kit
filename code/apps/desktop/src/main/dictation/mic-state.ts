@@ -8,6 +8,8 @@ export const METER_LEASE_MS = 15_000;
 
 export interface MeterEnv {
   enabled(): boolean;
+  /** The app window is showing: a hidden window never holds the microphone, whatever its page says. */
+  windowShown(): boolean;
   after(ms: number, fn: () => void): () => void;
 }
 
@@ -30,7 +32,8 @@ export class MicState {
 
   /** Asks the microphone window to list the inputs; the list arrives as an event. */
   list(): Promise<void> | undefined {
-    return this.#recorder()?.devices();
+    // The list needs the microphone window, and nothing opens a microphone while dictation is off.
+    return this.#env.enabled() ? this.#recorder()?.devices() : undefined;
   }
 
   /**
@@ -40,7 +43,7 @@ export class MicState {
   async setMeter(on: boolean): Promise<void> {
     this.#stopLease?.();
     this.#stopLease = undefined;
-    if (on && !this.#env.enabled()) return;
+    if (on && !(this.#env.enabled() && this.#env.windowShown())) return;
     if (on) this.#stopLease = this.#env.after(METER_LEASE_MS, () => void this.setMeter(false));
     if (on === this.meter) return;
     this.meter = on;

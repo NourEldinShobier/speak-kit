@@ -99,10 +99,9 @@ const mainWindow: MainWindow = new MainWindow(config, {
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
-  onHidden: () => runtime.stopPolling(),
-  busy: () => {
-    const w = desktop?.runningWork();
-    return !!w && (w.reading || w.exports > 0);
+  onHidden: () => {
+    runtime.stopPolling();
+    desktop?.onWindowHidden();
   },
 });
 const screenVision = createScreenVision();
