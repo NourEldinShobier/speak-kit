@@ -56,6 +56,7 @@ function Card({ card }: { card: ExperimentCard }) {
             {card.guard}
           </p>
         ) : null}
+        {st.on && card.Extra ? <card.Extra /> : null}
         {failed ? (
           <p className="exp-card__guard" role="alert">
             This could not be changed. Try again.

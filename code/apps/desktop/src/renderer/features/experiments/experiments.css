@@ -60,3 +60,14 @@
   background: var(--kbd-fill);
   color: var(--text-secondary);
 }
+.exp-card__script {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.exp-card__script code {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}

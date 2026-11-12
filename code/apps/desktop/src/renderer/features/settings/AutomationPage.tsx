@@ -5,59 +5,11 @@ import type { AutomationInfo, CommandLineAction } from "../../../shared/control/
 import type { AppState } from "../../../shared/ipc";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
+import { CopyButton } from "../../CopyButton";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
 import { change } from "./change";
 
-/** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
-function CopyButton({ text, label, caption }: { text: string; label: string; caption?: string }) {
-  const { t } = useT();
-  const [done, setDone] = useState(false);
-  return (
-    <div className="sk-pad sk-codeline">
-      <pre className="sk-code" tabIndex={0} aria-label={name}>
-        {text}
-      </pre>
-      <Button
-        iconLeft="copy"
-        aria-label={`${label}: ${name}`}
-        onClick={async () => {
-          await api.copy(text);
-        } catch {
-          return;
-        }
-        setDone(true);
-        setTimeout(() => setDone(false), 1500);
-      }}
-    >
-      {done ? t("automation.copied") : (caption ?? t("automation.copy"))}
-    </Button>
-  );
-}
-
-/** The info from main, loaded when the page opens and whenever the server starts or restarts; actions replace it with the answer. */
-function useAutomation(s: AppState) {
-  const [info, setInfo] = useState<AutomationInfo | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const load = useCallback(() => {
-    setLoadError(null);
-    api.automationInfo().then(setInfo, (e) => setLoadError(cleanError(e)));
-  }, []);
-  useEffect(load, [load, s.port]);
-  const run = async (key: string, call: () => Promise<AutomationInfo>) => {
-    setBusy(key);
-    setError(null);
-    try {
-      setInfo(await call());
-    } catch (e) {
-      setError(cleanError(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-  return { info, loadError, error, busy, load, run };
-}
+const code = (text: string) => <code className="sk-code">{text}</code>;
 
 type Load = { phase: "loading" } | { phase: "error" } | { phase: "ready"; info: AutomationInfo };
 
