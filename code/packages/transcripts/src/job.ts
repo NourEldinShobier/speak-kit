@@ -33,6 +33,9 @@ export interface JobResult {
   failure?: Failure;
 }
 
+/** The reason a chunk is aborted with when the engine took too long: the caller then restarts the engine. */
+export const HUNG = "transcription timed out";
+
 const defaultDeadline = (sec: number) => 20_000 + Math.ceil(sec) * 6_000;
 
 /**
@@ -80,7 +83,7 @@ async function once(deps: JobDeps, part: Int16Array, language: string, signal: A
   const own = new AbortController();
   const relay = () => own.abort(signal.reason);
   signal.addEventListener("abort", relay, { once: true });
-  const timer = setTimeout(() => own.abort(new Error("transcription timed out")), (deps.deadlineMs ?? defaultDeadline)(sec));
+  const timer = setTimeout(() => own.abort(new Error(HUNG)), (deps.deadlineMs ?? defaultDeadline)(sec));
   try {
     return await deps.transcribe(part, language, own.signal);
   } catch {

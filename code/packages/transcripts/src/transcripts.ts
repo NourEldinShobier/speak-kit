@@ -9,6 +9,7 @@ import { runJob } from "./job";
 import { createGate, JobQueue, QueueFullError } from "./queue";
 import { sweep, audioTotal } from "./retention";
 import { SearchIndex } from "./search";
+import { recordingApi } from "./recording";
 import { openStore, type Store } from "./store";
 import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
@@ -85,8 +86,13 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         patch.status = "failed";
         patch.failure = failure(err);
       }
-      const next = await settle(id, patch);
+      let next = await settle(id, patch);
       if (next && saved) await indexOne(next);
+      // Imported audio only waited for the job; a recording's audio goes now if the person keeps none.
+      if (r.status === "done" && saved && (e.source === "file" || !d.policy().keepAudio)) {
+        await store.dropAudio(id).catch(() => {});
+        next = store.get(id);
+      }
     } catch (err) {
       await settle(id, { status: "failed", failure: failure(err) });
     } finally {
@@ -118,22 +124,8 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     return { trashed: s.trash.length, removed: s.remove.length, audioDropped: s.dropAudio.length };
   }
 
-  /** The audio of a recording that never finished: what was spooled becomes the audio file. */
-  async function finalizeSpool(id: string): Promise<Failure | undefined> {
-    const raw = await d.fs.read(store.spoolPath(id));
-    const even = raw ? raw.subarray(0, raw.length - (raw.length % 2)) : undefined;
-    if (!even?.length) return failures.nothingRecorded();
-    const pcm = new Int16Array(even.buffer.slice(even.byteOffset, even.byteOffset + even.length));
-    try {
-      await store.putAudio(id, encodeWav16k(pcm));
-      await store.update(id, { durationSec: pcm.length / RATE });
-      await d.fs.remove(store.spoolPath(id));
-    } catch (err) {
-      return failure(err);
-    }
-    return undefined;
-  }
-
+  const recording = recordingApi({ d, store, spooled, settle, failure, enqueue, run });
+  const finalizeSpool = recording.finalizeSpool;
   const ready = (async () => {
     for (const e of [...store.list(), ...store.list(true)]) await indexOne(e);
     await run(() => sweepNow());
@@ -156,7 +148,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     },
     async get(id) {
       const e = store.get(id);
-      return e ? { ...row(e), segments: await store.segments(id) } : undefined;
+      return e ? { ...row(e), segments: await store.segments(id), exports: e.exports } : undefined;
     },
     importAudio: ({ name, pcm, language }) =>
       run(async () => {
@@ -187,50 +179,10 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         }
         return { ok: true, id };
       }),
-    beginRecording: (language) =>
-      run(async () => {
-        try {
-          const e = await store.add({ title: provisionalTitle({ source: "microphone", at: d.now() }), source: "microphone", language, model: d.model(), status: "recording" });
-          spooled.set(e.id, 0);
-          return { ok: true, id: e.id };
-        } catch (err) {
-          return { ok: false, failure: failure(err) };
-        }
-      }),
-    async appendRecording(id, pcm) {
-      if (!spooled.has(id)) return { ok: false, failure: failures.failed() };
-      try {
-        await d.fs.append(store.spoolPath(id), new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength));
-      } catch (err) {
-        return { ok: false, failure: failure(err) };
-      }
-      const n = spooled.get(id)! + pcm.length;
-      spooled.set(id, n);
-      return { ok: true, seconds: n / RATE };
-    },
-    finishRecording: (id) =>
-      run(async () => {
-        const e = store.get(id);
-        if (!e || e.status !== "recording") return { ok: false, failure: failures.failed() };
-        spooled.delete(id);
-        const bad = await finalizeSpool(id);
-        if (bad) {
-          await settle(id, { status: "failed", failure: bad });
-          return { ok: false, failure: bad };
-        }
-        await settle(id, { status: "queued" });
-        const q = enqueue(id);
-        if (!q.ok) {
-          await settle(id, { status: "failed", failure: q.failure });
-          return q;
-        }
-        return { ok: true, id };
-      }),
-    discardRecording: (id) =>
-      run(async () => {
-        spooled.delete(id);
-        await store.remove(id);
-      }),
+    beginRecording: recording.beginRecording,
+    appendRecording: recording.appendRecording,
+    finishRecording: recording.finishRecording,
+    discardRecording: recording.discardRecording,
     resume: (id) =>
       run(async () => {
         const e = store.get(id);
@@ -301,6 +253,21 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         } catch (err) {
           return { ok: false, failure: failure(err) };
         }
+      }),
+    dropAudio: (id) =>
+      run(async () => {
+        const e = store.get(id);
+        if (e && e.status !== "transcribing" && e.status !== "queued" && e.status !== "recording") await store.dropAudio(id);
+      }),
+    dropAllAudio: () =>
+      run(async () => {
+        let n = 0;
+        for (const e of [...store.list(), ...store.list(true)]) {
+          if (e.audioBytes === 0 || e.status === "transcribing" || e.status === "queued" || e.status === "recording") continue;
+          await store.dropAudio(e.id);
+          n++;
+        }
+        return n;
       }),
     sweep: () => run(sweepNow),
     storage: () => ({ audioBytes: audioTotal(store.list().concat(store.list(true))), count: store.list().length, trashed: store.list(true).length }),

@@ -10,9 +10,11 @@ export interface Policy {
   audioCapBytes: number | null;
   /** How long a deleted transcript waits in the Trash. */
   trashDays: number;
+  /** False deletes the audio of every transcript as soon as it is done. */
+  keepAudio: boolean;
 }
 
-export const DEFAULT_POLICY: Policy = { textDays: 90, audioDays: 7, audioCapBytes: 5 * 1024 ** 3, trashDays: 30 };
+export const DEFAULT_POLICY: Policy = { textDays: 90, audioDays: 7, audioCapBytes: 5 * 1024 ** 3, trashDays: 30, keepAudio: true };
 
 /** Clamps a policy: day counts are whole and at least 1, the audio period is cut to the text period. */
 export function normalizePolicy(p: Policy): Policy {
@@ -20,7 +22,7 @@ export function normalizePolicy(p: Policy): Policy {
   const textDays = days(p.textDays);
   let audioDays = days(p.audioDays);
   if (textDays !== null && (audioDays === null || audioDays > textDays)) audioDays = textDays;
-  return { textDays, audioDays, audioCapBytes: p.audioCapBytes === null ? null : Math.max(0, p.audioCapBytes), trashDays: days(p.trashDays) ?? DEFAULT_POLICY.trashDays };
+  return { textDays, audioDays, audioCapBytes: p.audioCapBytes === null ? null : Math.max(0, p.audioCapBytes), trashDays: days(p.trashDays) ?? DEFAULT_POLICY.trashDays, keepAudio: p.keepAudio };
 }
 
 /** Work in progress is never swept: it would pull the audio from under the engine. */
@@ -50,7 +52,9 @@ export function sweep(all: readonly Entry[], now: number, policy: Policy): Sweep
   const live = all.filter((e) => e.audioBytes > 0 && idle(e) && !out.remove.includes(e.id)).sort((a, b) => a.createdAt - b.createdAt);
   let total = live.reduce((n, e) => n + e.audioBytes, 0);
   for (const e of live) {
-    const old = p.audioDays !== null && now - e.createdAt >= p.audioDays * DAY;
+    // An imported file is never copied for keeps: its audio only waits for the job (and a retry) and goes when the transcript is done.
+    const spent = e.status === "done" && (!p.keepAudio || e.source === "file");
+    const old = spent || (p.audioDays !== null && now - e.createdAt >= p.audioDays * DAY);
     const over = p.audioCapBytes !== null && total > p.audioCapBytes;
     if (old || over) {
       out.dropAudio.push(e.id);

@@ -4,6 +4,7 @@ import {
   createGate,
   daysLeft,
   decodeWav,
+  decodeWavAsync,
   DEFAULT_POLICY,
   DiskFullError,
   encodeWav16k,
@@ -11,10 +12,8 @@ import {
   normalizePolicy,
   planChunks,
   QueueFullError,
-  resampleTo16k,
   runJob,
   sweep,
-  toInt16,
   wavInfo,
   WavError,
 } from "../src";
@@ -110,10 +109,8 @@ describe("wav", () => {
     const out = decodeWav(wav);
     expect(out.length).toBe(1600);
     expect(out[800]).toBe(1000);
-    const up = resampleTo16k(Float32Array.from([0, 1]), 8000);
-    expect(up.length).toBe(4);
-    expect([...up]).toEqual([0, 0.5, 1, 1]);
-    expect(resampleTo16k(Float32Array.from([1, 2]), 16000)).toEqual(Float32Array.from([1, 2]));
+    const up = decodeWav(header({ channels: 1, rate: 8000, bits: 16, data: i16(0, 16384) }));
+    expect([...up]).toEqual([0, 8192, 16384, 16384]);
   });
 
   test("chunks before the data are skipped, a streamed size is clamped to the file", () => {
@@ -137,8 +134,15 @@ describe("wav", () => {
     expect(() => wavInfo(dataFirst)).toThrow("data before fmt");
   });
 
-  test("toInt16 clamps", () => {
-    expect([...toInt16(Float32Array.from([0, 1, -1, 5, -5, 0.5]))]).toEqual([0, 32767, -32768, 32767, -32768, 16384]);
+  test("a large file can be converted with pauses, giving the same samples", async () => {
+    const data = new Uint8Array(new Int16Array(2 * 1_100_000 * 3).fill(2000).buffer); // stereo, 1.1 million frames per step, at 48 kHz
+    const wav = header({ channels: 2, rate: 48000, bits: 16, data });
+    let pauses = 0;
+    const out = await decodeWavAsync(wav, async () => void pauses++);
+    expect(out.length).toBe(1_100_000);
+    expect(pauses).toBe(1);
+    expect(out[500_000]).toBe(2000);
+    expect(decodeWav(wav)).toEqual(out);
   });
 });
 
@@ -414,7 +418,7 @@ describe("retention", () => {
   const e = (over: Partial<Entry> & { id: string }): Entry => ({
     title: "t",
     createdAt: 0,
-    source: "file",
+    source: "microphone",
     durationSec: 1,
     language: "auto",
     model: "m",
@@ -425,13 +429,19 @@ describe("retention", () => {
     exports: [],
     ...over,
   });
-  const policy = { textDays: 30, audioDays: 7, audioCapBytes: null, trashDays: 10 };
+  const policy = { textDays: 30, audioDays: 7, audioCapBytes: null, trashDays: 10, keepAudio: true };
 
   test("normalizing keeps audio no longer than text and days whole and at least one", () => {
-    expect(normalizePolicy({ textDays: 10, audioDays: 30, audioCapBytes: 5, trashDays: 3 })).toEqual({ textDays: 10, audioDays: 10, audioCapBytes: 5, trashDays: 3 });
-    expect(normalizePolicy({ textDays: 10, audioDays: null, audioCapBytes: null, trashDays: 3 }).audioDays).toBe(10);
-    expect(normalizePolicy({ textDays: null, audioDays: null, audioCapBytes: -4, trashDays: 0 })).toEqual({ textDays: null, audioDays: null, audioCapBytes: 0, trashDays: 1 });
-    expect(normalizePolicy({ textDays: 2.6, audioDays: 0, audioCapBytes: null, trashDays: 3 })).toMatchObject({ textDays: 3, audioDays: 1 });
+    expect(normalizePolicy({ textDays: 10, audioDays: 30, audioCapBytes: 5, trashDays: 3, keepAudio: true })).toEqual({ textDays: 10, audioDays: 10, audioCapBytes: 5, trashDays: 3, keepAudio: true });
+    expect(normalizePolicy({ textDays: 10, audioDays: null, audioCapBytes: null, trashDays: 3, keepAudio: true }).audioDays).toBe(10);
+    expect(normalizePolicy({ textDays: null, audioDays: null, audioCapBytes: -4, trashDays: 0, keepAudio: true })).toEqual({
+      textDays: null,
+      audioDays: null,
+      audioCapBytes: 0,
+      trashDays: 1,
+      keepAudio: true,
+    });
+    expect(normalizePolicy({ textDays: 2.6, audioDays: 0, audioCapBytes: null, trashDays: 3, keepAudio: true })).toMatchObject({ textDays: 3, audioDays: 1 });
     expect(normalizePolicy({ ...DEFAULT_POLICY, trashDays: Number.NaN }).trashDays).toBe(DEFAULT_POLICY.trashDays);
   });
 
@@ -461,7 +471,7 @@ describe("retention", () => {
 
   test("forever keeps everything; the size cap drops the oldest audio first", () => {
     const now = 100 * DAY;
-    const forever = { textDays: null, audioDays: null, audioCapBytes: null, trashDays: 30 };
+    const forever = { textDays: null, audioDays: null, audioCapBytes: null, trashDays: 30, keepAudio: true };
     expect(sweep([e({ id: "a", createdAt: 0, audioBytes: 9 })], now, forever)).toEqual({ trash: [], remove: [], dropAudio: [] });
     const all = [e({ id: "new", createdAt: 3, audioBytes: 60 }), e({ id: "old", createdAt: 1, audioBytes: 60 }), e({ id: "mid", createdAt: 2, audioBytes: 60 })];
     expect(sweep(all, now, { ...forever, audioCapBytes: 100 }).dropAudio).toEqual(["old", "mid"]);
@@ -469,10 +479,27 @@ describe("retention", () => {
     expect(sweep(all, now, { ...forever, audioCapBytes: 0 }).dropAudio).toEqual(["old", "mid", "new"]);
   });
 
+  test("an imported file's audio goes when its transcript is done; a failed import keeps it for a retry", () => {
+    const now = 100 * DAY;
+    const all = [
+      e({ id: "file", source: "file", createdAt: now - 1, audioBytes: 5 }),
+      e({ id: "failed", source: "file", status: "failed", createdAt: now - 1, audioBytes: 5 }),
+      e({ id: "rec", createdAt: now - 1, audioBytes: 5 }),
+    ];
+    expect(sweep(all, now, policy).dropAudio).toEqual(["file"]);
+  });
+
+  test("with keep audio off, a finished recording's audio goes too", () => {
+    const now = 100 * DAY;
+    const all = [e({ id: "rec", createdAt: now - 1, audioBytes: 5 }), e({ id: "busy", status: "transcribing", createdAt: now - 1, audioBytes: 5 })];
+    expect(sweep(all, now, { ...policy, keepAudio: false }).dropAudio).toEqual(["rec"]);
+    expect(normalizePolicy({ ...policy, keepAudio: false }).keepAudio).toBe(false);
+  });
+
   test("audio of a transcript about to be deleted is not counted for the cap", () => {
     const now = 100 * DAY;
     const all = [e({ id: "gone", createdAt: 0, trashedAt: 0, audioBytes: 500 }), e({ id: "keep", createdAt: now - 1, audioBytes: 50 })];
-    expect(sweep(all, now, { textDays: null, audioDays: null, audioCapBytes: 100, trashDays: 1 }).dropAudio).toEqual([]);
+    expect(sweep(all, now, { textDays: null, audioDays: null, audioCapBytes: 100, trashDays: 1, keepAudio: true }).dropAudio).toEqual([]);
   });
 
   test("days left counts whole days up and never goes below zero", () => {

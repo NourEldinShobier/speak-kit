@@ -3,7 +3,7 @@ import type { Saved } from "./files";
 import type { Fs } from "./fs";
 import type { JobDeps } from "./job";
 import type { Policy } from "./retention";
-import type { Failure, Segment, Source, Status } from "./types";
+import type { ExportedFile, Failure, Segment, Source, Status } from "./types";
 
 export interface TranscriptsDeps {
   dir: string;
@@ -50,6 +50,8 @@ export interface Row {
 
 export interface Detail extends Row {
   segments: Segment[];
+  /** Files this app exported for it, with the hash recorded at the time. */
+  exports: ExportedFile[];
 }
 
 export type Outcome<T = object> = ({ ok: true } & T) | { ok: false; failure: Failure };
@@ -75,6 +77,10 @@ export interface Transcripts {
   emptyTrash(): Promise<number>;
   text(id: string, format: Format): Promise<{ name: string; text: string } | undefined>;
   save(id: string, format: Format): Promise<Outcome<Saved>>;
+  /** Deletes the audio of one transcript (the words stay). */
+  dropAudio(id: string): Promise<void>;
+  /** Deletes all audio; returns how many transcripts had some. */
+  dropAllAudio(): Promise<number>;
   /** Applies the retention settings now. */
   sweep(): Promise<{ trashed: number; removed: number; audioDropped: number }>;
   storage(): { audioBytes: number; count: number; trashed: number };
