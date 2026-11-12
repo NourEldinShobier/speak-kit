@@ -1,5 +1,4 @@
-import { readFileSync, rmSync } from "node:fs";
-import { chmod, readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import * as v from "valibot";
@@ -65,12 +64,8 @@ export const portOpen = (port: number, timeoutMs = 500): Promise<boolean> =>
     s.once("error", () => done(false));
   });
 
-/** Removes the file on quit, but only while it still belongs to this process: a newer instance may have replaced it. Synchronous, so a quit in progress cannot skip it. */
-export function removeDiscovery(file: string, pid: number): void {
-  try {
-    // oxlint-disable-next-line node/no-sync -- a quit in progress cannot wait for a promise
-    if ((JSON.parse(readFileSync(file, "utf8")) as Partial<Discovery>).pid === pid) rmSync(file, { force: true });
-  } catch {
-    // Missing or damaged: nothing of ours to remove.
-  }
+/** Removes the file on quit, but only while it still belongs to this process: a newer instance may have replaced it. */
+export async function removeDiscovery(file: string, pid: number): Promise<void> {
+  const d = await readDiscovery(file, () => true);
+  if (d?.pid === pid) await rm(file, { force: true });
 }

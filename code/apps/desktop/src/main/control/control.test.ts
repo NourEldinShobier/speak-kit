@@ -73,7 +73,7 @@ describe("discovery file", () => {
     expect(await readDiscovery(file, () => true)).toBeNull();
   });
 
-  it("is gone the moment stop returns, and a file whose port nothing listens on is not trusted", async () => {
+  it("is removed by the time stop resolves, and a file whose port nothing listens on is not trusted", async () => {
     const dir = tmp();
     const file = discoveryFile(dir);
     await writeDiscovery(file, { port: 5000, token: "a".repeat(32), pid: 111, version: "1" });
@@ -97,7 +97,7 @@ describe("discovery file", () => {
     expect(await portOpen(port)).toBe(true);
     await new Promise((r) => server.close(r));
     expect(await portOpen(port)).toBe(false);
-    removeDiscovery(file, 111);
+    await removeDiscovery(file, 111);
     expect(existsSync(file)).toBe(false);
   });
 
