@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Segmented, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import type { Replacement } from "../../../shared/dictation/settings";
-import { MAX_REPLACEMENTS } from "../../../shared/dictation/settings";
 import { Page } from "../../ui";
+import { Cleanup } from "../vocabulary";
 import { dictation } from "./api";
 import { FirstRunCard } from "./FirstRunCard";
 import { HotkeyRecorder } from "./HotkeyRecorder";
@@ -54,52 +53,6 @@ function General({ s }: { s: DictationStatus }) {
         description="The language you speak."
         control={<Select label="Language" value={c.language} onChange={(language) => void dictation.patchSettings({ language: language as typeof c.language })} options={languages} />}
       />
-    </SettingsSection>
-  );
-}
-
-function ReplacementRow({ r, onDelete }: { r: Replacement; onDelete: () => void }) {
-  return (
-    <div className="lm-row dict-repl">
-      <span className="dict-repl__from">{r.from}</span>
-      <Icon name="arrow-right" size={14} className="dict-repl__arrow" />
-      <span className="dict-repl__to">{r.to}</span>
-      <button type="button" className="lm-btn lm-btn--icon dict-repl__del" aria-label={`Delete replacement ${r.from}`} onClick={onDelete}>
-        <Icon name="trash" size={14} />
-      </button>
-    </div>
-  );
-}
-
-function Replacements({ list }: { list: Replacement[] }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const add = () => {
-    const key = from.trim();
-    if (!key || list.length >= MAX_REPLACEMENTS) return;
-    void dictation.patchSettings({ replacements: [...list.filter((r) => r.from.toLowerCase() !== key.toLowerCase()), { from: key, to }] });
-    setFrom("");
-    setTo("");
-  };
-  return (
-    <SettingsSection title="Replacements" description="Swap a word or phrase for other text after you speak it. Capital letters are ignored when matching.">
-      {list.map((r) => (
-        <ReplacementRow key={r.from} r={r} onDelete={() => void dictation.patchSettings({ replacements: list.filter((x) => x !== r) })} />
-      ))}
-      <form
-        className="lm-row dict-repl dict-repl--add"
-        onSubmit={(e) => {
-          e.preventDefault();
-          add();
-        }}
-      >
-        <TextInput aria-label="When I say" placeholder="When I say" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={80} frameClassName="dict-repl__field" />
-        <Icon name="arrow-right" size={14} className="dict-repl__arrow" />
-        <TextInput aria-label="Replace with" placeholder="Replace with" value={to} onChange={(e) => setTo(e.target.value)} maxLength={200} frameClassName="dict-repl__field dict-repl__field--wide" />
-        <Button type="submit" variant="primary" disabled={!from.trim()}>
-          Add
-        </Button>
-      </form>
     </SettingsSection>
   );
 }
@@ -178,7 +131,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
         <>
           <General s={s} />
           <ModelList status={s} />
-          <Replacements list={s.settings.replacements} />
+          <Cleanup s={s} />
           <TestField />
           <HistoryCard s={s} open={openHistory} />
         </>

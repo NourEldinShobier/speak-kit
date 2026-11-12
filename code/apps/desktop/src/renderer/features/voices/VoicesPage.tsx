@@ -106,7 +106,7 @@ function VoiceGrid({ shown, defaultId, playing, tone, preview, onOpen }: GridPro
   );
 }
 
-export function VoicesPage({ s }: { s: AppState }) {
+export function VoicesPage({ s, onFixPronunciation }: { s: AppState; onFixPronunciation?: () => void }) {
   const [st, dispatch] = useReducer(voicesReducer, undefined, initVoices);
   const { playing, error, toggle } = usePlayer();
   useVoiceList(s, dispatch);
@@ -120,6 +120,11 @@ export function VoicesPage({ s }: { s: AppState }) {
     <>
       <Page title="Voices" lead={lead(st.voices.length)} wide>
         {failure && <Banner tone="error">{failure}</Banner>}
+        {onFixPronunciation && (
+          <Banner tone="info" title="Words sound wrong when read aloud?" action={<Button onClick={onFixPronunciation}>Fix a pronunciation</Button>} role="status">
+            Tell the reader how a name or term should sound.
+          </Banner>
+        )}
         <Toolbar query={st.query} filter={st.filter} dispatch={dispatch} />
         {st.voices.length === 0 && !st.error ? (
           <EmptyState icon="microphone" title="No voices yet">

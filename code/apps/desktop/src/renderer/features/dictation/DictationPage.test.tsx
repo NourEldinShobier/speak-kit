@@ -66,7 +66,7 @@ describe("Settings > Dictation", () => {
     expect(text(page(null))).toContain("Dictation Hold a key, speak");
   });
 
-  it("lists the general settings, the models, the replacements, the test field and the history", () => {
+  it("lists the general settings, the models, the clean-up rules, the test field and the history", () => {
     const t = text(page(status()));
     for (const s of [
       "General",
@@ -79,9 +79,9 @@ describe("Settings > Dictation", () => {
       "Press to toggle",
       "Speech model",
       "Whisper Large v3 Turbo",
-      "Replacements",
-      "gonna",
-      "going to",
+      "Clean-up",
+      "Remove filler words",
+      "Try a sentence",
       "Test dictation",
       "History",
       "View history",
@@ -97,7 +97,7 @@ describe("Settings > Dictation", () => {
     expect(html.match(/>Default</g)).toHaveLength(1);
     expect(html).toMatch(/<input[^>]*aria-label="Whisper Large v3 Turbo"[^>]*checked/);
     expect(html).toMatch(/<input[^>]*disabled[^>]*aria-label="Parakeet v3"/);
-    expect(html).not.toContain("lm-field__label"); // the replacement fields carry no visible label
+    expect(html).not.toContain("lm-field__label"); // the tester field carries no visible label
   });
 
   it("shows a download in progress with Cancel and the size done", () => {
@@ -113,7 +113,8 @@ describe("Settings > Dictation", () => {
         { ...parakeet, installed: true, selected: true },
       ],
     });
-    expect(page(onParakeet)).not.toContain("Arabic");
+    // The language list is the Language select; the clean-up scope chips name Arabic for the rules that have a table.
+    expect(text(page(onParakeet)).match(/Arabic/g)).toHaveLength(1);
   });
 
   it("says when dictation cannot run on this platform, and the switch is disabled", () => {
@@ -125,25 +126,25 @@ describe("Settings > Dictation", () => {
   it("shows the set-up card instead of the settings while the chosen model is not installed", () => {
     const t = text(page(status({ models: [{ ...turbo, installed: false, progress: { kind: "downloading", fraction: 0.63, etaSeconds: 60 } }, parakeet], modelReady: false, modelInstalled: false })));
     expect(t).toContain("Set up dictation");
-    expect(t).not.toContain("Replacements");
+    expect(t).not.toContain("Clean-up");
   });
 
   it("does not take the page away while a second model downloads", () => {
     const t = text(page(status({ modelReady: false, models: [turbo, { ...parakeet, progress: { kind: "downloading", fraction: 0.1 } }] })));
-    expect(t).toContain("Replacements");
+    expect(t).toContain("Clean-up");
     expect(t).not.toContain("Set up dictation");
   });
 
   it("shows a failed second download as a notice on the page", () => {
     const t = text(page(status({ modelError: "The download was cut off." })));
     expect(t).toContain("The speech model could not be set up The download was cut off.");
-    expect(t).toContain("Replacements");
+    expect(t).toContain("Clean-up");
   });
 
   it("shows only the card when the chosen model is loading", () => {
     const t = text(page(status({ modelReady: false })));
     expect(t).toContain("Preparing the model");
-    expect(t).not.toContain("Replacements");
+    expect(t).not.toContain("Clean-up");
   });
 });
 
@@ -211,13 +212,5 @@ describe("history rows", () => {
     expect(html).toContain("data-copied");
     expect(row(false)).toContain('<span class="dict-hist__sr" role="status"></span>');
     expect(row(false)).not.toContain("data-copied");
-  });
-});
-
-describe("replacement rows", () => {
-  it("use the full-size icon button, not the small one", () => {
-    const html = page(status());
-    expect(html).toContain('class="lm-btn lm-btn--icon dict-repl__del"');
-    expect(html).not.toContain("lm-btn--sm dict-repl__del");
   });
 });
