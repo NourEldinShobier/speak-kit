@@ -74,12 +74,14 @@ describe("what the renderer may change", () => {
 
 describe("vocabulary, modes and rewrite in the config", () => {
   it("loads a dictation section from before they existed with every new field at its default", () => {
-    const old = parseConfig({ dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] } }).dictation;
+    const old = parseConfig({
+      dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] },
+    }).dictation;
     expect(old).toEqual({ ...DEFAULTS, enabled: true, language: "de", retention: "30d", replacements: [{ from: "a", to: "b" }] });
   });
 
   it("keeps good words and drops each bad one, trimming and capping at 500", () => {
-    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "" , soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
+    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "", soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
     expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([{ id: "a", word: "Kubernetes", soundsLike: ["cooper netties"] }]);
     const many = Array.from({ length: 600 }, (_, i) => ({ id: `i${i}`, word: `w${i}`, soundsLike: [] }));
     expect(v.parse(DictationConfigSchema, { terms: many }).terms).toHaveLength(500);

@@ -2,8 +2,7 @@
 
 .vocab-transfer {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex: none;
   gap: 8px;
 }
 
@@ -349,6 +348,10 @@
 
 /* The 960 px window: buttons wrap under the title, rows keep their chips on one line. */
 @media (max-width: 1000px) {
+  .vocab-transfer {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
   .vocab-row {
     grid-template-columns: minmax(80px, 130px) 1fr auto;
     gap: 12px;

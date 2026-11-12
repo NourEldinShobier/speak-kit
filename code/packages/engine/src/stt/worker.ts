@@ -26,7 +26,8 @@ const ab = (a: Int16Array) => a.buffer.slice(a.byteOffset, a.byteOffset + a.byte
 
 async function recognize(pcm: Int16Array, language: string, prompt?: string): Promise<string> {
   const opts = { maxThreads: init.threads };
-  const { promise } = init.engine === "parakeet" ? (model as ParakeetContext).transcribeData(ab(pcm), opts) : (model as WhisperContext).transcribeData(ab(pcm), { ...opts, language, ...(prompt && { prompt }) });
+  const { promise } =
+    init.engine === "parakeet" ? (model as ParakeetContext).transcribeData(ab(pcm), opts) : (model as WhisperContext).transcribeData(ab(pcm), { ...opts, language, ...(prompt && { prompt }) });
   return (await promise).result.trim();
 }
 

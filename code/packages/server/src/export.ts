@@ -56,7 +56,16 @@ export class ExportManager {
     signal.throwIfAborted();
     if (this.#jobs.size >= MAX_JOBS) throw new ExportFullError(`at most ${MAX_JOBS} exports at once; delete finished ones`);
     const id = randomBytes(8).toString("hex");
-    const job = { id, state: "running", done: 0, total: input.sentences.length, durationMs: 0, sentenceMs: [] as [number, number][], ac: new AbortController(), file: join(this.#dir, `${id}.wav`) } as Job;
+    const job = {
+      id,
+      state: "running",
+      done: 0,
+      total: input.sentences.length,
+      durationMs: 0,
+      sentenceMs: [] as [number, number][],
+      ac: new AbortController(),
+      file: join(this.#dir, `${id}.wav`),
+    } as Job;
     job.settled = this.#run(job, engine, input);
     this.#jobs.set(id, job);
     return this.view(job);

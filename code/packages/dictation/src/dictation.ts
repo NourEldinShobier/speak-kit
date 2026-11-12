@@ -69,10 +69,7 @@ class Runtime implements Dictation {
       status: () => this.store.status(),
       addVersion: (id, v) => this.store.addVersion(id, v),
       useVersion: (id, vid) => this.store.useVersion(id, vid),
-      audio: async (id) => {
-        const file = (await this.store.get(id))?.audio;
-        return file ? ((await this.deps.audio?.load(file).catch(() => undefined)) ?? undefined) : undefined;
-      },
+      audio: (id) => this.recording(id),
       dropAudio: (files) => this.store.dropAudio(files),
     };
     this.lastState = JSON.stringify(this.state());
@@ -363,20 +360,15 @@ class Runtime implements Dictation {
     for (const listener of this.listeners) listener(state);
   }
 
-  private async insertAgain(id: string): Promise<boolean> {
-    const entry = await this.store.get(id);
-    if (!entry || this.disposed) return false;
-    const target = await foreground(this.deps.inserter);
-    const plan = planPaste({ target, current: target, settings: this.settings, interrupted: false });
-    if (plan.method === "refuse") return false;
-    let ok = false;
+  /** The kept recording of an entry; a recording that cannot be read is no recording. */
+  private async recording(id: string): Promise<Clip | undefined> {
+    const file = (await this.store.get(id))?.audio;
+    if (!file || !this.deps.audio) return undefined;
     try {
-      ok = (await this.deps.inserter.insert({ text: entry.text, plan })).ok;
+      return await this.deps.audio.load(file);
     } catch {
-      // The text stays in History; the caller reports that it did not go in.
+      return undefined;
     }
-    if (ok) await this.store.update(id, { outcome: plan.method === "copy" ? "copied" : "sent" });
-    return ok;
   }
 
   private async copy(id: string): Promise<boolean> {

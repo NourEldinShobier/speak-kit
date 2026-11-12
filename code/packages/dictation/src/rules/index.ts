@@ -37,40 +37,38 @@ const languageOf = (language: string): string => {
   return lang === "auto" ? "en" : lang;
 };
 
+type Note = RulesTrace["notes"][number];
+
+/** Which switches are on for a language that has no rule for them. */
+function missingLanguage(opts: RulesOptions, spoken: string): Note[] {
+  const notes: Note[] = [];
+  if (opts.fillers && !FILLER_LANGUAGES.includes(spoken)) notes.push("fillers-language");
+  if (opts.spokenFormatting && !FORMATTING_LANGUAGES.includes(spoken)) notes.push("formatting-language");
+  if (opts.spokenSymbols && !SYMBOL_LANGUAGES.includes(spoken)) notes.push("symbols-language");
+  return notes;
+}
+
+/** Capitals, the final full stop and the space after the text. */
+function finish(text: string, opts: RulesOptions): string {
+  let out = opts.autoCapitalize && !opts.lowercase ? capitalize(text) : text;
+  // Only the last character of the whole dictation: a single full stop, never part of "..." or an abbreviation like "e.g.".
+  if (opts.stripFinalStop) out = out.replace(/(?<!\.\p{L})(?<!\.)\.(?=\s*$)/u, "");
+  if (!out.trim()) return "";
+  return opts.trailingSpace && !/\s$/.test(out) ? `${out} ` : out;
+}
+
 /** Every stage of the clean-up in order, so the tester can show where a word changed. `applyRules` is the last stage. */
 export function traceRules(heard: string, opts: RulesOptions): RulesTrace {
   const raw = heard.trim();
-  const t: RulesTrace = { raw, replacements: raw, fillers: raw, symbols: raw, final: "", notes: [] };
-  if (NOISE_TAG.test(raw)) return { ...t, replacements: "", fillers: "", symbols: "", notes: ["noise"] };
+  if (NOISE_TAG.test(raw)) return { raw, replacements: "", fillers: "", symbols: "", final: "", notes: ["noise"] };
   // Digits and their punctuation are never rewritten: only the trailing space applies.
-  if (isNumbersOnly(raw)) {
-    t.notes.push("numbers-only");
-    t.final = opts.trailingSpace ? `${raw} ` : raw;
-    return t;
-  }
+  if (isNumbersOnly(raw)) return { raw, replacements: raw, fillers: raw, symbols: raw, final: opts.trailingSpace ? `${raw} ` : raw, notes: ["numbers-only"] };
   const spoken = languageOf(opts.language);
-  let text = opts.lowercase ? raw.toLowerCase() : raw;
-  text = t.replacements = applyReplacements(text, opts.replacements);
-  if (opts.fillers) {
-    if (FILLER_LANGUAGES.includes(spoken)) text = stripFillers(text);
-    else t.notes.push("fillers-language");
-  }
-  t.fillers = text;
-  if (opts.spokenFormatting) {
-    if (!FORMATTING_LANGUAGES.includes(spoken)) t.notes.push("formatting-language");
-    text = spokenFormatting(text, spoken);
-  }
-  if (opts.spokenSymbols) {
-    if (!SYMBOL_LANGUAGES.includes(spoken)) t.notes.push("symbols-language");
-    text = spokenSymbols(text, spoken);
-  }
-  t.symbols = text;
-  if (opts.autoCapitalize && !opts.lowercase) text = capitalize(text);
-  // Only the last character of the whole dictation: a single full stop, never part of "..." or an abbreviation like "e.g.".
-  if (opts.stripFinalStop) text = text.replace(/(?<!\.\p{L})(?<!\.)\.(?=\s*$)/u, "");
-  if (!text.trim()) return { ...t, final: "" };
-  t.final = opts.trailingSpace && !/\s$/.test(text) ? `${text} ` : text;
-  return t;
+  const replacements = applyReplacements(opts.lowercase ? raw.toLowerCase() : raw, opts.replacements);
+  const fillers = opts.fillers && FILLER_LANGUAGES.includes(spoken) ? stripFillers(replacements) : replacements;
+  const formatted = opts.spokenFormatting ? spokenFormatting(fillers, spoken) : fillers;
+  const symbols = opts.spokenSymbols ? spokenSymbols(formatted, spoken) : formatted;
+  return { raw, replacements, fillers, symbols, final: finish(symbols, opts), notes: missingLanguage(opts, spoken) };
 }
 
 /** Turns what the speech engine heard into what gets inserted. An empty result means there was nothing to insert. */

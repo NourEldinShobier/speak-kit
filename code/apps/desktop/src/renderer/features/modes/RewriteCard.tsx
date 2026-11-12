@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Banner, Button, Modal, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation/api";
+import { dictation } from "../dictation-bridge";
 import { deadlineLabel, DEADLINES, WRITER } from "./model";
 
 function OptInDialog({ open, s, onClose }: { open: boolean; s: DictationStatus; onClose(): void }) {

@@ -2,25 +2,26 @@ import { describe, expect, it } from "vite-plus/test";
 import type { ModelView } from "../../../shared/dictation/contract";
 import {
   appName,
+  clockText,
   dayLabel,
   downloadText,
   emptyHint,
   entriesText,
   entryLabel,
   etaText,
+  expiryText,
   focusAfterDelete,
   groupByDay,
   historyFooter,
   historyLead,
   hotkeyHelp,
-  listenText,
+  listeningText,
+  markChanges,
   mb,
   modelLine,
-  rowApp,
-  rowTags,
-  statsRows,
+  numberText,
+  rewriteTag,
   timeText,
-  toggled,
 } from "./model";
 
 const model = (over: Partial<ModelView> = {}): ModelView => ({
@@ -134,44 +135,57 @@ describe("history focus and names", () => {
   });
 });
 
-describe("history rows and statistics", () => {
-  it("shows the file description of the program, else the executable name made readable", () => {
-    expect(rowApp({ app: "notepad.exe", appName: "Notepad++" })).toBe("Notepad++");
-    expect(rowApp({ app: "notepad.exe" })).toBe("Notepad");
-    expect(rowApp({})).toBe("");
+describe("history side by side", () => {
+  it("marks the words that changed on each side, ignoring case and punctuation", () => {
+    const r = markChanges("remind the team that the release notes go out on thursday", "Remind the team that the release notes go out on Thursday, please.");
+    expect(r.heard.filter((m) => m.changed).map((m) => m.text)).toEqual([]);
+    expect(r.pasted.filter((m) => m.changed).map((m) => m.text)).toEqual(["please."]);
   });
 
-  it("tags an entry that did not go the usual way", () => {
-    expect(rowTags({})).toEqual([]);
-    expect(rowTags({ outcome: "sent" })).toEqual([]);
-    expect(rowTags({ kind: "interrupted", outcome: "copied" })).toEqual(["Cut short", "Copied only"]);
-    expect(rowTags({ kind: "restored", outcome: "failed" })).toEqual(["Restored", "Not inserted"]);
+  it("marks a replaced word on both sides", () => {
+    const r = markChanges("thanks for the quick comma i will review", "Thanks for the quick, I will review");
+    expect(r.heard.filter((m) => m.changed).map((m) => m.text)).toEqual(["comma"]);
+    expect(r.pasted.filter((m) => m.changed).map((m) => m.text)).toEqual([]);
+    const swapped = markChanges("send it to my email now", "send it to sam@example.com now");
+    expect(swapped.heard.filter((m) => m.changed).map((m) => m.text)).toEqual(["my", "email"]);
+    expect(swapped.pasted.filter((m) => m.changed).map((m) => m.text)).toEqual(["sam@example.com"]);
   });
 
-  it("writes the time spoken in seconds, minutes or hours", () => {
-    expect(listenText(45_000)).toBe("45 s");
-    expect(listenText(12 * 60_000)).toBe("12 min");
-    expect(listenText(125 * 60_000)).toBe("2 h 5 min");
-    expect(listenText(120 * 60_000)).toBe("2 h");
-    expect(listenText(0)).toBe("0 s");
+  it("handles empty text and very long text without comparing every pair", () => {
+    expect(markChanges("", "")).toEqual({ heard: [], pasted: [] });
+    const long = "word ".repeat(1000);
+    expect(markChanges(long, long).heard.some((m) => m.changed)).toBe(false);
+  });
+});
+
+describe("history numbers and tags", () => {
+  it("writes listening time in the largest sensible unit", () => {
+    expect([listeningText(45_000), listeningText(38 * 60_000), listeningText(65 * 60_000), listeningText(0)]).toEqual(["45 s", "38 min", "1 h 5 min", "0 s"]);
+    expect(numberText(4310)).toBe("4,310");
+    expect(clockText(6400)).toBe("0:06");
+    expect(clockText(125_000)).toBe("2:05");
   });
 
-  it("lists the statistics rows with thousands separators", () => {
-    expect(statsRows({ dictations: 1200, words: 34_500, listeningMs: 90_000, topApps: [], outcomes: { pasted: 1000, copied: 150, failed: 50 } })).toEqual([
-      { label: "Dictations", value: "1,200" },
-      { label: "Words", value: "34,500" },
-      { label: "Time spoken", value: "2 min" },
-      { label: "Pasted", value: "1,000" },
-      { label: "Copied only", value: "150" },
-      { label: "Not inserted", value: "50" },
-    ]);
+  it("names what the rewrite pass did", () => {
+    expect(rewriteTag("rewritten", 4000)).toBe("Rewritten");
+    expect(rewriteTag("deadline", 4000)).toBe("Pasted as said after 4 seconds");
+    expect(rewriteTag("numbers-only", 4000)).toBe("Not rewritten, only numbers");
+    expect(rewriteTag("failed", 4000)).toContain("could not be reached");
+    expect(rewriteTag("changed-facts", 4000)).toContain("changed a number");
+    expect(rewriteTag(undefined, 4000)).toBeUndefined();
   });
+});
 
-  it("ticks and unticks entries without changing the set it was given", () => {
-    const one = new Set(["a"]);
-    expect([...toggled(one, "b")]).toEqual(["a", "b"]);
-    expect([...toggled(one, "a")]).toEqual([]);
-    expect([...one]).toEqual(["a"]);
-    expect([...toggled(null, "x")]).toEqual(["x"]);
+describe("expiry text", () => {
+  it("rounds up to the unit the person understands", () => {
+    expect(expiryText(null)).toBe("Kept for ever");
+    expect(expiryText(10_000)).toBe("Removed in less than a minute");
+    expect(expiryText(61_000)).toBe("Removed in 2 minutes");
+    expect(expiryText(60_000)).toBe("Removed in 1 minute");
+    expect(expiryText(3 * 3_600_000 - 1)).toBe("Removed in 3 hours");
+    expect(expiryText(86_400_000 - 1)).toBe("Removed in 24 hours");
+    expect(expiryText(86_400_000)).toBe("Removed in 1 day");
+    expect(expiryText(86_400_001)).toBe("Removed in 2 days");
+    expect(expiryText(3 * 3_600_000, "Audio removed")).toBe("Audio removed in 3 hours");
   });
 });

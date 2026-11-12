@@ -62,16 +62,7 @@ export function WordDialog({ open, onClose, terms, editing, title, onSave, share
           submit();
         }}
       >
-        <TextInput
-          label="Word or name"
-          placeholder="Kubernetes"
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          error={check.message}
-          data-autofocus=""
-          autoComplete="off"
-          spellCheck={false}
-        />
+        <TextInput label="Word or name" placeholder="Kubernetes" value={word} onChange={(e) => setWord(e.target.value)} error={check.message} data-autofocus="" autoComplete="off" spellCheck={false} />
         <div className="vocab-form__meta">
           {check.existing && onShow ? (
             <Button

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { chaptersOf, headingsOf, id3Chapters, toSrt, toVtt, withChapters, type Cue } from "./captions";
+import { headingsOf } from "../../shared/export";
+import { chaptersOf, id3Chapters, toSrt, toVtt, withChapters, type Cue } from "./captions";
 
 const cue = (startMs: number, endMs: number, text: string): Cue => ({ startMs, endMs, text });
 const cues = [cue(0, 1500, "First sentence."), cue(1750, 3_725_005, "Second one & <more>.")];

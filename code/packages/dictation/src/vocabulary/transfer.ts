@@ -66,6 +66,52 @@ export interface ImportResult {
   error?: "unreadable" | "newer";
 }
 
+type Parsed = { terms: { word: string; soundsLike: string[] }[]; rules: { from: string; to: string }[]; bad: string[]; error?: "unreadable" | "newer" };
+
+const clip = (v: unknown): string => JSON.stringify(v).slice(0, 80);
+
+function parseJson(text: string): Parsed {
+  const out: Parsed = { terms: [], rules: [], bad: [] };
+  let data: { version?: unknown; terms?: unknown; replacements?: unknown } | null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { ...out, error: "unreadable" };
+  }
+  if (typeof data !== "object" || data === null) return { ...out, error: "unreadable" };
+  if (typeof data.version === "number" && data.version > FORMAT_VERSION) return { ...out, error: "newer" };
+  for (const t of Array.isArray(data.terms) ? data.terms : []) {
+    const o = t as { word?: unknown; soundsLike?: unknown } | null;
+    if (typeof o?.word !== "string") out.bad.push(clip(t));
+    else out.terms.push({ word: o.word, soundsLike: Array.isArray(o.soundsLike) ? cleanSounds(o.soundsLike.filter((s): s is string => typeof s === "string")) : [] });
+  }
+  for (const x of Array.isArray(data.replacements) ? data.replacements : []) {
+    const o = x as { from?: unknown; to?: unknown } | null;
+    if (typeof o?.from !== "string" || typeof o.to !== "string") out.bad.push(clip(x));
+    else out.rules.push({ from: o.from, to: o.to });
+  }
+  return out;
+}
+
+function parseTxt(text: string): Parsed {
+  const terms = text
+    .split(/\r?\n/)
+    .filter((l) => l.trim())
+    .map((line) => {
+      const [word = "", rest = ""] = line.split("|");
+      return { word, soundsLike: cleanSounds(rest.split(",")) };
+    });
+  return { terms, rules: [], bad: [] };
+}
+
+function parseCsv(text: string): Parsed {
+  const rows = csvRows(text);
+  const body = rows[0]?.[0]?.trim().toLowerCase() === "from" ? rows.slice(1) : rows;
+  return { terms: [], rules: body.map(([from = "", to = ""]) => ({ from, to })), bad: [] };
+}
+
+const PARSERS: Record<ExportFormat, (text: string) => Parsed> = { json: parseJson, txt: parseTxt, csv: parseCsv };
+
 /** Merges a file into the list. Nothing already there is changed; duplicates and long entries are skipped and reported. */
 export function importVocabulary(current: Vocabulary, text: string, format: ExportFormat): ImportResult {
   const r: ImportResult = { vocabulary: { terms: [...current.terms], replacements: [...current.replacements] }, addedWords: 0, addedReplacements: 0, duplicates: 0, tooLong: 0, skipped: [] };
@@ -74,51 +120,27 @@ export function importVocabulary(current: Vocabulary, text: string, format: Expo
     if (reason === "duplicate") r.duplicates++;
     if (reason === "too-long") r.tooLong++;
   };
-  const word = (w: string, sounds: string[]) => {
-    const res = addTerm(r.vocabulary.terms, { word: w, soundsLike: sounds });
+  const parsed = PARSERS[format](text);
+  if (parsed.error) return { ...r, error: parsed.error };
+  for (const line of parsed.bad) skip(line, "invalid");
+  for (const { word, soundsLike } of parsed.terms) {
+    const res = addTerm(r.vocabulary.terms, { word, soundsLike });
     if (res.ok) {
       r.vocabulary.terms = res.list;
       r.addedWords++;
-    } else skip(sounds.length ? `${w.trim()} | ${sounds.join(", ")}` : w.trim(), res.error === "empty" ? "invalid" : res.error);
-  };
-  const rule = (from: string, to: string) => {
-    const f = from.trim();
-    const line = `${from},${to}`;
-    if (!f) return skip(line, "invalid");
-    if ([...f].length > MAX_RULE_FROM || to.length > MAX_RULE_TO) return skip(line, "too-long");
-    if (r.vocabulary.replacements.some((x) => x.from.toLowerCase() === f.toLowerCase())) return skip(line, "duplicate");
-    if (r.vocabulary.replacements.length >= MAX_RULES) return skip(line, "full");
-    r.vocabulary.replacements.push({ from: f, to });
-    r.addedReplacements++;
-  };
-  if (format === "json") {
-    let data: { version?: unknown; terms?: unknown; replacements?: unknown } | null;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return { ...r, error: "unreadable" };
-    }
-    if (typeof data !== "object" || data === null) return { ...r, error: "unreadable" };
-    if (typeof data.version === "number" && data.version > FORMAT_VERSION) return { ...r, error: "newer" };
-    for (const t of Array.isArray(data.terms) ? data.terms : []) {
-      const o = t as { word?: unknown; soundsLike?: unknown } | null;
-      if (typeof o?.word !== "string") skip(JSON.stringify(t).slice(0, 80), "invalid");
-      else word(o.word, Array.isArray(o.soundsLike) ? cleanSounds(o.soundsLike.filter((s): s is string => typeof s === "string")) : []);
-    }
-    for (const x of Array.isArray(data.replacements) ? data.replacements : []) {
-      const o = x as { from?: unknown; to?: unknown } | null;
-      if (typeof o?.from !== "string" || typeof o.to !== "string") skip(JSON.stringify(x).slice(0, 80), "invalid");
-      else rule(o.from, o.to);
-    }
-  } else if (format === "txt") {
-    for (const line of text.split(/\r?\n/).filter((l) => l.trim())) {
-      const [w = "", rest = ""] = line.split("|");
-      word(w, cleanSounds(rest.split(",")));
-    }
-  } else {
-    const rows = csvRows(text);
-    const body = rows[0]?.[0]?.trim().toLowerCase() === "from" ? rows.slice(1) : rows;
-    for (const [from = "", to = ""] of body) rule(from, to);
+    } else skip(soundsLike.length ? `${word.trim()} | ${soundsLike.join(", ")}` : word.trim(), res.error === "empty" ? "invalid" : res.error);
   }
+  for (const { from, to } of parsed.rules) addRule(r, from, to, skip);
   return r;
+}
+
+function addRule(r: ImportResult, from: string, to: string, skip: (line: string, reason: SkipReason) => void): void {
+  const f = from.trim();
+  const line = `${from},${to}`;
+  if (!f) return skip(line, "invalid");
+  if ([...f].length > MAX_RULE_FROM || to.length > MAX_RULE_TO) return skip(line, "too-long");
+  if (r.vocabulary.replacements.some((x) => x.from.toLowerCase() === f.toLowerCase())) return skip(line, "duplicate");
+  if (r.vocabulary.replacements.length >= MAX_RULES) return skip(line, "full");
+  r.vocabulary.replacements.push({ from: f, to });
+  r.addedReplacements++;
 }

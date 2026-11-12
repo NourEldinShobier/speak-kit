@@ -2,7 +2,7 @@
 // A model path containing "bad" fails to load; one containing "igpu" sits on a machine whose every Vulkan device is integrated, otherwise
 // the first Vulkan device is integrated and device 1 is discrete (a hybrid laptop). "dev2" and "dev4" in the path make it report 2 or 4 devices instead of 3.
 // SPEAKKIT_FAKE_LOG names a file that gets one line per start: the pinned device and whether the start warmed the model up.
-// All-zero audio has no speech; a first sample of 999 never gets an answer. Anything else answers "<engine>:<samples>:<language>".
+// All-zero audio has no speech; a first sample of 999 never gets an answer. Anything else answers "<engine>:<samples>:<language>", plus ":prompt=<words>" when words were sent.
 import { appendFileSync } from "node:fs";
 const init = JSON.parse(process.env.SPEAKKIT_WORKER_INIT);
 const vk = process.env.GGML_VK_VISIBLE_DEVICES ?? "";
@@ -25,5 +25,5 @@ else
 process.on("message", (m) => {
   if (m.pcm[0] === 999) return;
   if (m.pcm.every((s) => s === 0)) return process.send({ type: "result", id: m.id, text: "", speech: false });
-  process.send({ type: "result", id: m.id, text: `${init.engine}:${m.pcm.length}:${m.language}`, speech: true });
+  process.send({ type: "result", id: m.id, text: `${init.engine}:${m.pcm.length}:${m.language}${m.prompt ? `:prompt=${m.prompt}` : ""}`, speech: true });
 });

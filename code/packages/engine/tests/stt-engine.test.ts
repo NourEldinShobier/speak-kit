@@ -97,6 +97,14 @@ describe("WhisperStt", () => {
     expect(again.status().state).toBe("ready");
   });
 
+  it("sends the words to the worker and leaves the answer unchanged without them", async () => {
+    const { e } = await make();
+    await e.load("large-v3-turbo-q5_0");
+    expect((await e.transcribe(speech(100), "en", { prompt: "Kubernetes, Grafana" })).text).toBe("whisper:100:en:prompt=Kubernetes, Grafana");
+    expect((await e.transcribe(speech(100), "en", { prompt: "" })).text).toBe("whisper:100:en");
+    expect((await e.transcribe(speech(100), "en", {})).text).toBe("whisper:100:en");
+  });
+
   it("transcribes with the language and reports silence as no speech", async () => {
     const { e } = await make();
     await e.load("large-v3-turbo-q5_0");
@@ -127,7 +135,7 @@ describe("WhisperStt", () => {
     const ac = new AbortController();
     const hang = new Int16Array(100);
     hang[0] = 999;
-    const p = e.transcribe(hang, "en", ac.signal);
+    const p = e.transcribe(hang, "en", { signal: ac.signal });
     ac.abort(new Error("cancelled"));
     await expect(p).rejects.toThrow("cancelled");
     expect((await e.transcribe(speech(100), "en")).speech).toBe(true);

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createOpenAiRewriter, REWRITE_MODEL } from "./openai-rewriter";
 
-const reply = (body: unknown, status = 200) => async () => new Response(JSON.stringify(body), { status });
+const reply =
+  (body: unknown, status = 200) =>
+  async () =>
+    new Response(JSON.stringify(body), { status });
 const signal = new AbortController().signal;
 
 describe("OpenAI rewriter", () => {
@@ -30,7 +33,10 @@ describe("OpenAI rewriter", () => {
 
   it("passes the deadline signal on, so a late answer is cut off", async () => {
     const ac = new AbortController();
-    const w = createOpenAiRewriter({ readKey: async () => "k", fetch: ((_u: string, init: RequestInit) => new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as never });
+    const w = createOpenAiRewriter({
+      readKey: async () => "k",
+      fetch: ((_u: string, init: RequestInit) => new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as never,
+    });
     const p = w.rewrite({ text: "x", signal: ac.signal });
     ac.abort();
     await expect(p).rejects.toThrow("aborted");

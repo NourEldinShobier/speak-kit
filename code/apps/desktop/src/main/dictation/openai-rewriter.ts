@@ -25,7 +25,14 @@ export function createOpenAiRewriter(o: Options): Rewriter {
       const res = await doFetch(`${o.baseUrl ?? OPENAI_BASE_URL}/v1/chat/completions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: REWRITE_MODEL, temperature: 0.2, messages: [{ role: "system", content: INSTRUCTIONS }, { role: "user", content: text }] }),
+        body: JSON.stringify({
+          model: REWRITE_MODEL,
+          temperature: 0.2,
+          messages: [
+            { role: "system", content: INSTRUCTIONS },
+            { role: "user", content: text },
+          ],
+        }),
         signal,
       });
       if (!res.ok) throw new Error(`status ${res.status}`);

@@ -47,6 +47,7 @@ interface StatusParts {
   models: ModelManager;
   historyCount: number;
   historyStatus: DictationStatus["historyStatus"];
+  historyRev: number;
   keptRecordings: number;
   rewriteKey: boolean;
   promptDropped: boolean;
@@ -54,7 +55,21 @@ interface StatusParts {
 }
 
 /** What the Settings page and the tray are told about dictation. */
-export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount, historyStatus, keptRecordings, rewriteKey, promptDropped, redo }: StatusParts): DictationStatus => ({
+export const dictationStatus = ({
+  supported,
+  config,
+  hotkeyReady,
+  hotkeyFailed,
+  state,
+  models,
+  historyCount,
+  historyStatus,
+  historyRev,
+  keptRecordings,
+  rewriteKey,
+  promptDropped,
+  redo,
+}: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
   hotkeyReady,
@@ -68,6 +83,7 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   ...(models.error && { modelError: models.error }),
   historyCount,
   historyStatus,
+  historyRev,
   keptRecordings,
   rewriteKey,
   ...(promptDropped && { promptDropped: true }),

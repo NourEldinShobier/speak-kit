@@ -3,8 +3,8 @@ import { addMode, DEFAULT_MODE_ID, defaultMode, removeMode, setApps, type Mode }
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { dictation } from "../dictation/api";
-import { useDictation } from "../dictation/useDictation";
+import { dictation } from "../dictation-bridge";
+import { useDictation } from "../dictation-bridge";
 import { useLive } from "../vocabulary";
 import "../vocabulary/vocabulary.css";
 import { ModeDetail } from "./ModeDetail";
@@ -17,7 +17,16 @@ const LEAD = "A mode sets how dictation behaves in the apps you put in it: how t
 function AddModeDialog({ open, modes, onClose, onAdd }: { open: boolean; modes: readonly Mode[]; onClose(): void; onAdd(next: Mode[], created: Mode): void }) {
   const [name, setName] = useState("");
   const result = name.trim() ? addMode(modes, name) : null;
-  const error = result && !result.ok ? (result.error === "duplicate" ? "A mode with this name already exists." : result.error === "too-long" ? "Mode names can be up to 40 characters." : result.error === "full" ? "There are too many modes." : undefined) : undefined;
+  const error =
+    result && !result.ok
+      ? result.error === "duplicate"
+        ? "A mode with this name already exists."
+        : result.error === "too-long"
+          ? "Mode names can be up to 40 characters."
+          : result.error === "full"
+            ? "There are too many modes."
+            : undefined
+      : undefined;
   const submit = () => {
     if (!result?.ok) return;
     onAdd(result.modes, result.mode);

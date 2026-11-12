@@ -38,7 +38,11 @@ export interface DraftCheck {
   existing?: Term;
 }
 
-const sounds = (raw: string): string[] => raw.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+const sounds = (raw: string): string[] =>
+  raw
+    .split(/[,\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 export const parseSounds = sounds;
 
 /** What the add-word dialog says about what is typed so far. */
@@ -72,7 +76,8 @@ export interface PromptSummary {
 /** The speech-model prompt card: what is sent, how much of the budget it uses and what happens to the rest. */
 export function promptSummary(terms: readonly Term[], model: string, on: boolean, modelName: string): PromptSummary {
   const plan = buildPrompt(terms);
-  if (!supportsPrompt(model)) return { state: "unsupported", plan, line: "Not used with this speech model.", note: `${modelName} cannot read a word list. Your words still work through replacements, and nothing is blocked.` };
+  if (!supportsPrompt(model))
+    return { state: "unsupported", plan, line: "Not used with this speech model.", note: `${modelName} cannot read a word list. Your words still work through replacements, and nothing is blocked.` };
   if (!terms.length) return { state: "empty", plan, line: "Nothing to send yet." };
   const line = `${plan.included} of ${terms.length} ${terms.length === 1 ? "word" : "words"} read by the model, ${plan.used} of ${plan.budget} characters.`;
   const note = plan.dropped ? `The other ${plan.dropped} still work: they are fixed after the model has heard you.` : undefined;
@@ -93,7 +98,10 @@ export interface CleanupRow {
 export function cleanupRows(language: string): CleanupRow[] {
   const lang = language === "auto" ? "en" : language;
   const name = LANGUAGE_NAMES[lang] ?? lang;
-  const scoped = (list: readonly string[]): { scope: string; unavailable?: string } => ({ scope: `${names(list)}${list.length === 1 ? " only" : ""}`, ...(!list.includes(lang) && { unavailable: `Not available for ${name} yet.` }) });
+  const scoped = (list: readonly string[]): { scope: string; unavailable?: string } => ({
+    scope: `${names(list)}${list.length === 1 ? " only" : ""}`,
+    ...(!list.includes(lang) && { unavailable: `Not available for ${name} yet.` }),
+  });
   return [
     { key: "fillers", label: "Remove filler words", description: 'Takes out "um", "uh" and "you know".', ...scoped(FILLER_LANGUAGES) },
     { key: "spokenSymbols", label: "Spoken symbols", description: 'Say "question mark" to type ?', ...scoped(SYMBOL_LANGUAGES) },
@@ -136,7 +144,14 @@ function ruleNote(count: number, what: string, before: string, after: string): s
 }
 
 function cleanupNote(c: Cleanup): string {
-  const on = [c.fillers && "fillers", c.spokenSymbols && "symbols", c.spokenFormatting && "formatting", c.autoCapitalize && "capital letter", c.lowercase && "lowercase", c.stripFinalStop && "no full stop"].filter(Boolean);
+  const on = [
+    c.fillers && "fillers",
+    c.spokenSymbols && "symbols",
+    c.spokenFormatting && "formatting",
+    c.autoCapitalize && "capital letter",
+    c.lowercase && "lowercase",
+    c.stripFinalStop && "no full stop",
+  ].filter(Boolean);
   return on.length ? on.join(", ") : "All switches off";
 }
 
@@ -155,7 +170,15 @@ export function changedWords(heard: string, final: string): { heard: string; wor
   }
   const h = a.slice(i, ja).join(" ");
   const w = b.slice(i, jb).join(" ");
-  return h && w ? { heard: h.toLowerCase().replace(/[^\p{L}\p{N}\s'-]/gu, "").trim(), word: w.replace(/[.,!?;:]+$/, "") } : undefined;
+  return h && w
+    ? {
+        heard: h
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}\s'-]/gu, "")
+          .trim(),
+        word: w.replace(/[.,!?;:]+$/, ""),
+      }
+    : undefined;
 }
 
 export interface ImportView {
@@ -177,17 +200,4 @@ export function importView(r: ImportResult, name: string): ImportView {
   const body = [`${plural(r.addedWords, "word")} and ${plural(r.addedReplacements, "replacement")} were added.`];
   if (skips.length) body.push(`${skips.join(" and ")} ${skips.length === 1 && r.duplicates === 1 && !r.tooLong ? "was" : "were"} skipped.`);
   return { title: "Import finished", body, skipped: r.skipped.map((s) => ({ line: s.line, why: WHY[s.reason] })), failed: false };
-}
-
-const MIN = 60_000;
-const HOUR = 60 * MIN;
-const DAY = 24 * HOUR;
-
-/** "Removed in 3 days" under each history entry. */
-export function expiryText(ms: number | null, what = "Removed"): string {
-  if (ms === null) return "Kept for ever";
-  if (ms < MIN) return `${what} in less than a minute`;
-  if (ms < HOUR) return `${what} in ${plural(Math.ceil(ms / MIN), "minute")}`;
-  if (ms < DAY) return `${what} in ${plural(Math.ceil(ms / HOUR), "hour")}`;
-  return `${what} in ${plural(Math.ceil(ms / DAY), "day")}`;
 }

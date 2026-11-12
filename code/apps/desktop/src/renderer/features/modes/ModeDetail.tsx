@@ -8,7 +8,10 @@ import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./mo
 
 function AddAppDialog({ open, mode, others, onClose, onSave }: { open: boolean; mode: Mode; others: readonly Mode[]; onClose(): void; onSave(apps: string[]): void }) {
   const [name, setName] = useState("");
-  const key = name.trim().toLowerCase().replace(/\.exe$/, "");
+  const key = name
+    .trim()
+    .toLowerCase()
+    .replace(/\.exe$/, "");
   const owner = key ? others.find((m) => m.id !== mode.id && m.apps.includes(key)) : undefined;
   const have = mode.apps.includes(key);
   const choices = SUGGESTED_APPS.filter((a) => !mode.apps.includes(a));
@@ -50,7 +53,11 @@ function AddAppDialog({ open, mode, others, onClose, onSave }: { open: boolean; 
           autoComplete="off"
           spellCheck={false}
         />
-        {owner ? <p className="vocab-note vocab-note--warn">{appLabel(key)} is in {owner.name} now. It moves to this mode.</p> : null}
+        {owner ? (
+          <p className="vocab-note vocab-note--warn">
+            {appLabel(key)} is in {owner.name} now. It moves to this mode.
+          </p>
+        ) : null}
         <div className="modes-suggest" role="group" aria-label="Common apps">
           {choices.map((a) => (
             <button key={a} type="button" className="lm-chip modes-suggest__btn" onClick={() => setName(a)}>
@@ -100,7 +107,9 @@ function ModeWords({ mode, shared, onChange }: { mode: Mode; shared: readonly Te
         description={`Used only when you dictate in ${mode.name}. They win over the shared list.`}
         control={
           <div className="modes-acts">
-            <Chip>{mode.terms.length} {mode.terms.length === 1 ? "word" : "words"}</Chip>
+            <Chip>
+              {mode.terms.length} {mode.terms.length === 1 ? "word" : "words"}
+            </Chip>
             <Button onClick={() => setDialog({})}>Add word</Button>
           </div>
         }
@@ -133,13 +142,37 @@ function ModeWords({ mode, shared, onChange }: { mode: Mode; shared: readonly Te
           </Button>
         </div>
       ) : null}
-      <WordDialog open={dialog !== null} onClose={() => setDialog(null)} terms={mode.terms} editing={dialog?.editing} title={dialog?.editing ? undefined : `Add a word to ${mode.name}`} shared={shared} onSave={onChange} />
+      <WordDialog
+        open={dialog !== null}
+        onClose={() => setDialog(null)}
+        terms={mode.terms}
+        editing={dialog?.editing}
+        title={dialog?.editing ? undefined : `Add a word to ${mode.name}`}
+        shared={shared}
+        onSave={onChange}
+      />
     </div>
   );
 }
 
 /** One mode: its apps, how it inserts and cleans up, the rewrite choice and its own words. */
-export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete }: { s: DictationStatus; mode: Mode; others: readonly Mode[]; onBack(): void; onChange(next: Mode): void; onApps(apps: string[]): void; onDelete(): void }) {
+export function ModeDetail({
+  s,
+  mode,
+  others,
+  onBack,
+  onChange,
+  onApps,
+  onDelete,
+}: {
+  s: DictationStatus;
+  mode: Mode;
+  others: readonly Mode[];
+  onBack(): void;
+  onChange(next: Mode): void;
+  onApps(apps: string[]): void;
+  onDelete(): void;
+}) {
   const [addApp, setAddApp] = useState(false);
   const [asking, setAsking] = useState(false);
   const rewriteReady = s.settings.rewrite.enabled;
@@ -153,7 +186,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete
         </Button>
       }
     >
-      <button type="button" className="dict-back" onClick={onBack}>
+      <button type="button" className="modes-back" onClick={onBack}>
         <Icon name="arrow-left" size={12} /> Modes
       </button>
       <div className="lm-card modes-apps">

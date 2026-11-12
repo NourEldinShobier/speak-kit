@@ -62,7 +62,17 @@ describe("POST /v1/export", () => {
     expect(created).toMatchObject({ state: "running", total: 2 });
     const done = await wait(ctx, created.id);
     // 50 chars = 3 s, 100 chars = 6 s (FakeEngine 0.06 s/char), one 0.5 s gap: the second sentence starts at 3.5 s
-    expect(done).toEqual({ id: created.id, state: "done", done: 2, total: 2, durationMs: 9500, sentenceMs: [[0, 3000], [3500, 9500]] });
+    expect(done).toEqual({
+      id: created.id,
+      state: "done",
+      done: 2,
+      total: 2,
+      durationMs: 9500,
+      sentenceMs: [
+        [0, 3000],
+        [3500, 9500],
+      ],
+    });
     const audio = await call(ctx, "GET", `/v1/export/${created.id}/audio`);
     expect(audio.headers.get("content-type")).toBe("audio/wav");
     const buf = Buffer.from(await audio.arrayBuffer());

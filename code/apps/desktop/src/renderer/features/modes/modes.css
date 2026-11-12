@@ -99,8 +99,9 @@
   font-size: 13px;
   line-height: 18px;
 }
-.modes-apps {
+.modes-apps.lm-card {
   display: flex;
+  flex-direction: row;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
@@ -185,4 +186,19 @@
     grid-column: 2 / 3;
     justify-content: flex-start;
   }
+}
+
+.modes-back {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.modes-back:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
 }

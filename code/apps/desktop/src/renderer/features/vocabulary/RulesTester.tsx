@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { addTerm, type Term } from "@speakkit/dictation";
 import { Button, Icon, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation/api";
+import { dictation } from "../dictation-bridge";
 import { changedWords, parseSounds, testStages } from "./model";
 
 /** Type a sentence the way the speech model might write it and see each step. Nothing is saved, except through "Fix this". */
@@ -24,7 +24,10 @@ export function RulesTester({
   const [copied, setCopied] = useState(false);
   const c = s.settings;
   const language = forced ?? (c.language === "auto" ? "en" : c.language);
-  const result = useMemo(() => (text.trim() ? testStages(text, { terms: c.terms, replacements: c.replacements, cleanup: c.cleanup, language }) : null), [text, c.terms, c.replacements, c.cleanup, language]);
+  const result = useMemo(
+    () => (text.trim() ? testStages(text, { terms: c.terms, replacements: c.replacements, cleanup: c.cleanup, language }) : null),
+    [text, c.terms, c.replacements, c.cleanup, language],
+  );
   const heard = result?.stages[0]?.text ?? "";
   const final = result?.final ?? "";
   const copy = async () => {
@@ -44,7 +47,15 @@ export function RulesTester({
       </header>
       <div className="lm-card vocab-tester__card">
         <div className="vocab-tester__in">
-          <TextInput aria-label="Sentence to test" placeholder="tell the team the cooper netties update is live" value={text} onChange={(e) => setText(e.target.value)} maxLength={500} autoComplete="off" spellCheck={false} />
+          <TextInput
+            aria-label="Sentence to test"
+            placeholder="tell the team the cooper netties update is live"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={500}
+            autoComplete="off"
+            spellCheck={false}
+          />
         </div>
         {result ? (
           <>
@@ -104,7 +115,15 @@ function FixForm({ heard, final, terms, onDone }: { heard: string; final: string
   const add = () => {
     const r = addTerm(terms, { word, soundsLike: parseSounds(sounds) });
     if (!r.ok) {
-      setError(r.error === "duplicate" ? `"${r.existing?.word ?? word}" is already in your words. Edit it on the Vocabulary page.` : r.error === "too-long" ? "That word is too long." : r.error === "full" ? "The list is full." : "Type the right spelling.");
+      setError(
+        r.error === "duplicate"
+          ? `"${r.existing?.word ?? word}" is already in your words. Edit it on the Vocabulary page.`
+          : r.error === "too-long"
+            ? "That word is too long."
+            : r.error === "full"
+              ? "The list is full."
+              : "Type the right spelling.",
+      );
       return;
     }
     void dictation.patchSettings({ terms: r.list });

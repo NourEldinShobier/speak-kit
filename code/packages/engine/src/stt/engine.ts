@@ -35,8 +35,8 @@ export interface SpeechToText {
   /** Load in the background: resolves when the model is ready or the attempt failed (the failure is in status()); never rejects. */
   warm(model: SttModelId): Promise<void>;
   /** `pcm` is 16 kHz mono 16-bit. Rejects with EngineNotReadyError unless ready. */
-  /** `prompt`: words to steer the model towards; a model that cannot read one ignores it. */
-  transcribe(pcm: Int16Array, language: SttLanguage, signal?: AbortSignal, prompt?: string): Promise<Transcript>;
+  /** `prompt`: words to steer the model towards (a model that cannot read one ignores it); `signal` stops waiting for the answer. */
+  transcribe(pcm: Int16Array, language: SttLanguage, opts?: { signal?: AbortSignal; prompt?: string }): Promise<Transcript>;
   unload(): Promise<void>;
 }
 
@@ -113,7 +113,7 @@ export class WhisperStt implements SpeechToText {
     return this.#serial(() => this.#unload());
   }
 
-  transcribe(pcm: Int16Array, language: SttLanguage, signal?: AbortSignal, prompt?: string): Promise<Transcript> {
+  transcribe(pcm: Int16Array, language: SttLanguage, { signal, prompt }: { signal?: AbortSignal; prompt?: string } = {}): Promise<Transcript> {
     const host = this.#host;
     const m = this.#model;
     if (this.#em.status.state !== "ready" || !host || !m) return Promise.reject(new EngineNotReadyError(this.#em.status.state));

@@ -12,6 +12,15 @@ function RenderingBody({ job }: { job: ExportView }) {
   return (
     <div className="sk-export__job" data-testid="export-progress" data-stage={job.stage}>
       <p className="sk-modal-text">{text}</p>
+      <ul className="sk-export__files" aria-label="Files being written">
+        <li>{job.name}</li>
+        {job.captions ? (
+          <li data-testid="export-plan-captions">
+            {job.name.replace(/\.[^.]+$/, "")}.{job.captions} (captions)
+          </li>
+        ) : null}
+        {job.chapters ? <li data-testid="export-plan-chapters">Chapter markers inside the audio</li> : null}
+      </ul>
       <ProgressBar block className="sk-export__bar" value={Math.round(job.progress * 100)} label={`Export of ${job.name}`} />
       <p className="sk-modal-text">You can close this window; the export keeps running and you get a notification when it is done.</p>
     </div>
@@ -30,6 +39,16 @@ function DoneBody({ job }: { job: ExportView }) {
         {job.name} · {formatBytes(job.bytes ?? 0)}
         {job.durationMs ? ` · ${Math.round(job.durationMs / 1000)} s` : ""}
       </p>
+      <ul className="sk-export__files" aria-label="Files saved">
+        <li>
+          {job.name} {job.chapterCount ? `with ${job.chapterCount} ${job.chapterCount === 1 ? "chapter" : "chapters"}` : ""}
+        </li>
+        {job.captionsPath ? (
+          <li data-testid="export-captions">
+            {job.captionsPath.split(/[\/]/).pop()} with {job.captionCount} {job.captionCount === 1 ? "caption" : "captions"}
+          </li>
+        ) : null}
+      </ul>
       <div className="sk-row-actions">
         <code className="sk-path" title={job.path}>
           {job.path}
