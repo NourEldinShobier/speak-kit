@@ -1,7 +1,8 @@
 import { Banner, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotifyChannel, type NotifyEvent } from "../../../shared/schemas";
-import { api, Page } from "../../ui";
+import { Page } from "../../ui";
+import { change } from "./change";
 
 const EVENT_LABEL: Record<NotifyEvent, string> = {
   "reading-finished": "Reading finished",
@@ -14,14 +15,14 @@ const CHANNEL_LABEL: Record<NotifyChannel, string> = { toast: "Toast", bell: "Be
 /** Settings > Notifications: event by Toast, Bell and Sound, plus Do not disturb. */
 export function NotificationsPage({ s }: { s: AppState }) {
   const c = s.config;
-  const set = (event: NotifyEvent, channel: NotifyChannel, on: boolean) => api.patchConfig({ notifications: { ...c.notifications, [event]: { ...c.notifications[event], [channel]: on } } });
+  const set = (event: NotifyEvent, channel: NotifyChannel, on: boolean) => change({ notifications: { ...c.notifications, [event]: { ...c.notifications[event], [channel]: on } } });
   return (
     <Page title="Notifications" lead="A toast is a Windows notification. The bell is the list in the title bar. Clicking a toast opens the place it is about.">
       <SettingsSection title="Do not disturb">
         <SettingRow
           label="Do not disturb"
           description="No toasts or sounds from Speak Kit. The bell still keeps a line for each event."
-          control={<Toggle aria-label="Do not disturb" checked={c.doNotDisturb} onChange={(v) => api.patchConfig({ doNotDisturb: v })} />}
+          control={<Toggle aria-label="Do not disturb" checked={c.doNotDisturb} onChange={(v) => change({ doNotDisturb: v })} />}
         />
       </SettingsSection>
       <SettingsSection title="Events" description="At most one toast per task every 10 minutes.">

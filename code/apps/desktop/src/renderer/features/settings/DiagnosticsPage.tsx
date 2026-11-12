@@ -5,6 +5,7 @@ import { engineView } from "../../../shared/engine-view";
 import { ACTIVITY_FILTERS, activityRow, filterActivity, type ActivityFilter } from "../../../shared/settings/diagnostics";
 import { api, Page, useVisible } from "../../ui";
 import { rowAttr } from "./focus";
+import { change } from "./change";
 
 function listenerText(s: AppState): string {
   if (s.serverError) return "Not running";
@@ -185,7 +186,7 @@ export function DiagnosticsPage({ s }: { s: AppState }) {
             </Button>
           }
         />
-        <SettingRow label="Run setup again" description="Go through the first-run steps once more." control={<Button onClick={() => api.patchConfig({ setupDone: false })}>Run setup</Button>} />
+        <SettingRow label="Run setup again" description="Go through the first-run steps once more." control={<Button onClick={() => change({ setupDone: false })}>Run setup</Button>} />
       </SettingsSection>
       <ActivityLog s={s} />
       <SettingsSection title="Log (last lines)">

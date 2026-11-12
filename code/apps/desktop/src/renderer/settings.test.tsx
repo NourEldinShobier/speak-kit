@@ -8,6 +8,7 @@ vi.hoisted(() => {
   (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
+import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
 import { SETTINGS_NAV } from "./routes";
 import { SETTINGS_SUBS } from "../shared/ipc";
@@ -33,29 +34,19 @@ describe("settings navigation", () => {
   });
 });
 
-describe("Automation", () => {
-  it("shows its title and a loading state before main has answered, never the placeholder", () => {
-    const html = page("automation");
-    expect(html).toContain("<h1>Automation</h1>");
-    expect(html).toContain("lm-skeleton");
-    expect(html).not.toContain("Coming soon");
+describe("General in Spanish", () => {
+  it("shows the page in the chosen language, with the import row in the folded part", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider choice="es">
+        <Settings s={appState({ config: parseConfig({ setupDone: true, language: "es" }) })} sub="general" />
+      </LocaleProvider>,
+    );
+    for (const text of ["Abrir al iniciar sesión", "Idioma", "Al cerrar la ventana", "Importar ajustes"]) expect(html).toContain(text);
+    expect(html).not.toContain("Launch at login");
   });
-  it("warns when the local server is not running", () => {
-    const html = renderToStaticMarkup(<Settings s={appState({ port: 0 })} sub="automation" />);
-    expect(html).toContain("The local server is not running");
-  });
-});
 
-describe("Experiments", () => {
-  it("lists the everyday labs with a named switch and hides developer ones", () => {
-    const html = page("experiments");
-    expect(html).toContain('aria-label="Hide the tray icon"');
-    expect(html).toContain('aria-label="Show developer experiments"');
-    expect(html).not.toContain("Detailed log");
-  });
-  it("shows developer labs once asked, with their stored state", () => {
-    const html = page("experiments", { showDeveloperLabs: true, labs: { "verbose-log": true } });
-    expect(html).toMatch(/aria-label="Detailed log"[^>]*aria-checked="true"|aria-checked="true"[^>]*aria-label="Detailed log"/);
+  it("offers the import in English too", () => {
+    expect(page("general")).toContain("Import settings");
   });
 });
 

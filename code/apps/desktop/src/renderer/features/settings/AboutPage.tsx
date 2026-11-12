@@ -5,6 +5,7 @@ import type { Config } from "../../../shared/schemas";
 import { api, Page } from "../../ui";
 import { UpdateCard } from "../../UpdateCard";
 import { rowAttr } from "./focus";
+import { change } from "./change";
 import { NetworkTable } from "./PrivacyPage";
 
 const CHANNEL_LABEL: Record<Config["updateChannel"], string> = { stable: "Stable", early: "Early" };
@@ -23,7 +24,7 @@ function BackToStable({ open, onClose }: { open: boolean; onClose(): void }) {
             variant="primary"
             onClick={() => {
               onClose();
-              void api.patchConfig({ updateChannel: "stable" });
+              void change({ updateChannel: "stable" });
             }}
           >
             Switch to Stable
@@ -46,7 +47,7 @@ const CHANNEL_HINT: Record<Config["updateChannel"], string> = {
 function Channel({ s }: { s: AppState }) {
   const [ask, setAsk] = useState(false);
   const channel = s.config.updateChannel;
-  const change = (v: string) => (v === "stable" && channel === "early" ? setAsk(true) : void api.patchConfig({ updateChannel: v as Config["updateChannel"] }));
+  const pick = (v: string) => (v === "stable" && channel === "early" ? setAsk(true) : void change({ updateChannel: v as Config["updateChannel"] }));
   return (
     <>
       <SettingRow
@@ -58,7 +59,7 @@ function Channel({ s }: { s: AppState }) {
           <Select
             label="Update channel"
             value={channel}
-            onChange={change}
+            onChange={pick}
             options={[
               { value: "stable", label: CHANNEL_LABEL.stable },
               { value: "early", label: CHANNEL_LABEL.early },
@@ -78,6 +79,24 @@ function Versions({ s }: { s: AppState }) {
       <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
       <SettingRow label="Platform" control={<span>{s.platform}</span>} />
       <SettingRow label="Channel" control={<span data-testid="about-channel">{CHANNEL_LABEL[s.config.updateChannel]}</span>} />
+    </SettingsSection>
+  );
+}
+
+/** Run setup again: downloaded models and settings stay, the first-run steps are shown again from the model step. */
+function SetupSection() {
+  return (
+    <SettingsSection title="Setup" description="Go through the first-run steps again, from the model step: voice model, dictation language, practice and the browser extension.">
+      <SettingRow
+        className="lm-row--control"
+        label="Run setup again"
+        description="Downloaded models and your settings are kept."
+        control={
+          <Button aria-label="Run setup again" onClick={() => void change({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
+            Run setup again
+          </Button>
+        }
+      />
     </SettingsSection>
   );
 }
@@ -120,7 +139,7 @@ function UpdatesSection({ s }: { s: AppState }) {
       <SettingRow
         label="Check automatically"
         description="Once a day while Speak Kit runs."
-        control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => api.patchConfig({ autoUpdate: v })} />}
+        control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => change({ autoUpdate: v })} />}
       />
     </SettingsSection>
   );

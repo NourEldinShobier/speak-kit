@@ -25,6 +25,7 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
 import { ServerApi } from "./server-api";
+import { settingsChangeDeps } from "./settings-deps";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
@@ -220,6 +221,7 @@ function handlerDeps(): HandlerDeps {
     logsDir,
     addActivity,
     onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
+    ...settingsChangeDeps(() => desktop, mainWindow),
   };
 }
 

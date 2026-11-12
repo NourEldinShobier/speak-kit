@@ -20,6 +20,7 @@ export const SETTING_ROWS: readonly SettingRowDef[] = [
   r("general/close", "Closing the window", "close quit exit hide tray"),
   r("general/tray", "Tray icon", "notification area menu bar hide"),
   adv("general/settings-file", "Settings file", "config json folder backup"),
+  adv("general/import", "Import settings", "restore load file json backup copy"),
   adv("general/setup-again", "Run setup again", "first run welcome wizard"),
   r("voice/voice", "Voice", "speaker preview"),
   r("voice/speed", "Speed", "rate faster slower"),
