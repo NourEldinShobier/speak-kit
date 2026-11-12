@@ -10,6 +10,14 @@ export interface ProgramVersions {
   lookup(fg: ForegroundInfo | null): Promise<string | undefined>;
 }
 
+async function safely(read: (fg: ForegroundInfo) => Promise<string | undefined>, fg: ForegroundInfo): Promise<string | undefined> {
+  try {
+    return await read(fg);
+  } catch {
+    return undefined; // a version that cannot be read is no version
+  }
+}
+
 /** Remembers each process's version for the life of the process (a version cannot change under a running program). */
 export function createProgramVersions(read: (fg: ForegroundInfo) => Promise<string | undefined>, timeoutMs = 2500): ProgramVersions {
   const seen = new Map<string, Promise<string | undefined>>();
@@ -18,7 +26,7 @@ export function createProgramVersions(read: (fg: ForegroundInfo) => Promise<stri
     const key = `${fg.pid}:${fg.exe}`;
     let p = seen.get(key);
     if (!p) {
-      p = Promise.race([read(fg).catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), timeoutMs))]);
+      p = Promise.race([safely(read, fg), new Promise<undefined>((r) => setTimeout(() => r(undefined), timeoutMs))]);
       seen.set(key, p);
       if (seen.size > 64) seen.delete(seen.keys().next().value!);
     }

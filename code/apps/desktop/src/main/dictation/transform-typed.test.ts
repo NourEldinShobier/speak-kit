@@ -5,7 +5,12 @@ import type { ForegroundInfo, InsertResult } from "./types";
 
 const win = (extra: Partial<ForegroundInfo> = {}): ForegroundInfo => ({ hwnd: "w1", pid: 1, exe: "notepad.exe", className: "Edit", elevated: false, ...extra });
 
-function rig(o: { copies?: string[]; fg?: ForegroundInfo | null; password?: boolean; secure?: boolean; insert?: InsertResult; fgAfter?: ForegroundInfo | null } = {}) {
+/** An unset window is a normal notepad; null is no window at all. */
+const pick = (w: ForegroundInfo | null | undefined): ForegroundInfo | null => (w === undefined ? win() : w);
+
+function rig(
+  o: { hasSelection?: boolean | undefined; copies?: string[]; fg?: ForegroundInfo | null; password?: boolean; secure?: boolean; insert?: InsertResult; fgAfter?: ForegroundInfo | null } = {},
+) {
   const log: string[] = [];
   const copies = [...(o.copies ?? [])];
   let reads = 0;

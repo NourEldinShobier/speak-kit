@@ -221,7 +221,7 @@ class Runtime implements Dictation {
     this.forgetCancelled();
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
-    this.targets.set(id, foreground(this.deps.inserter));
+    this.targets.set(id, foreground(this.deps.inserter, { address: true }));
     void this.inRecorderOrder(async () => {
       const failure = await tryStart(this.deps, prerollMs);
       if (!failure) return;
@@ -276,7 +276,7 @@ class Runtime implements Dictation {
     this.cancelledClip = undefined;
     this.dropCancelled?.();
     this.pending++;
-    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: foreground(this.deps.inserter) }));
+    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: foreground(this.deps.inserter, { address: true }) }));
     this.emit();
     return true;
   }

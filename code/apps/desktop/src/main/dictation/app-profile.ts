@@ -20,8 +20,20 @@ export const DEFAULT_OVERRIDES: readonly AppOverride[] = [
 // Chromium 155 and 156 ignore a paste that comes right after the clipboard was written; typing the text works. Later versions paste normally.
 const BROKEN_PASTE_MAJORS = [155, 156];
 const CHROMIUM_BROWSERS = new Set([
-  ...["chrome", "msedge", "brave", "vivaldi", "opera", "chromium", "arc"],
-  ...["com.google.chrome", "com.microsoft.edgemac", "com.brave.browser", "com.vivaldi.vivaldi", "com.operasoftware.opera", "company.thebrowser.browser", "org.chromium.chromium"],
+  "chrome",
+  "msedge",
+  "brave",
+  "vivaldi",
+  "opera",
+  "chromium",
+  "arc",
+  "com.google.chrome",
+  "com.microsoft.edgemac",
+  "com.brave.browser",
+  "com.vivaldi.vivaldi",
+  "com.operasoftware.opera",
+  "company.thebrowser.browser",
+  "org.chromium.chromium",
 ]);
 
 const stem = (name: string) => name.toLowerCase().replace(/\.exe$/, "");

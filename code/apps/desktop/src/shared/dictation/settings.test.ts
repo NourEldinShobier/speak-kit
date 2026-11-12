@@ -103,9 +103,15 @@ describe("settings added after the first release", () => {
 
   it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
     const m = { id: "chat", name: "Chat", apps: ["slack"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
-    expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [] });
-    const got = parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }, { from: "", to: "x" }, 5, { from: "a", to: "b", matchCase: true }] }] } }).dictation.modes[0]!.replacements;
-    expect(got).toEqual([{ from: "ship it", to: "deploy" }, { from: "a", to: "b", matchCase: true }]);
+    expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [], sites: [] });
+    expect(parseConfig({ dictation: { modes: [{ ...m, sites: ["GitHub.com ", "x.org"] }] } }).dictation.modes[0]!.sites).toEqual(["github.com", "x.org"]);
+    expect(parseConfig({ dictation: { modes: [{ ...m, sites: [3] }] } }).dictation.modes[0]!.sites).toEqual([]);
+    const got = parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }, { from: "", to: "x" }, 5, { from: "a", to: "b", matchCase: true }] }] } }).dictation
+      .modes[0]!.replacements;
+    expect(got).toEqual([
+      { from: "ship it", to: "deploy" },
+      { from: "a", to: "b", matchCase: true },
+    ]);
   });
 
   it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
@@ -211,17 +217,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
   it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
     const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
     const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
-    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [] }]);
-  });
-
-  it("gives a mode saved before websites existed an empty list, and keeps sites as host names, once each", () => {
-    const old = { id: "m1", name: "Mail", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
-    expect(v.parse(DictationConfigSchema, { modes: [old] }).modes[0]?.sites).toEqual([]);
-    const sites = ["https://www.Mail.Google.com/inbox", "mail.google.com", "bad name", 5, "", "Example.org"];
-    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites }] }).modes[0]?.sites).toEqual([]); // one wrong entry type falls the whole list back
-    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: sites.filter((x) => typeof x === "string") }] }).modes[0]?.sites).toEqual(["mail.google.com", "example.org"]);
-    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: "mail.google.com" }] }).modes[0]?.sites).toEqual([]);
-    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: Array.from({ length: 80 }, (_, i) => `s${i}.com`) }] }).modes[0]?.sites).toHaveLength(50);
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], replacements: [] }]);
   });
 
   it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
@@ -244,7 +240,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     const mode = { id: "m1", name: "Code", apps: ["code"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
     const good = { id: "t1", word: "pnpm", soundsLike: [] };
     const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
-    expect(got).toEqual([{ ...mode, sites: [], terms: [good] }]);
+    expect(got).toEqual([{ ...mode, sites: [], replacements: [], terms: [good] }]);
   });
 
   it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {
@@ -277,7 +273,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
         { ...base, id: "m1", name: "DEFAULT" },
       ],
     }).modes;
-    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [], sites: [] }]);
+    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [], sites: [], replacements: [] }]);
     expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "m1", name: " default " }] }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Default" }] }).success).toBe(true);
   });

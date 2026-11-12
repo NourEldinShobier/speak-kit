@@ -3,7 +3,13 @@ import { macAudio, parseMacOutput } from "./mac-audio";
 
 function osa(answer: (script: string) => string) {
   const ran: string[] = [];
-  return { ran, audio: macAudio(async (s) => (ran.push(s), answer(s)), async () => undefined) };
+  return {
+    ran,
+    audio: macAudio(
+      async (s) => (ran.push(s), answer(s)),
+      async () => undefined,
+    ),
+  };
 }
 
 const report = (items: object[]) => JSON.stringify({ SPAudioDataType: [{ _items: items }] });
@@ -49,10 +55,17 @@ describe("mac audio", () => {
   });
 
   it("reads the default output from the audio report", () => {
-    expect(parseMacOutput(report([{ _name: "Studio Display", coreaudio_default_audio_output_device: "spaudio_no" }, { _name: "MacBook Pro Speakers", coreaudio_device_transport: "coreaudio_device_type_builtin", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe(
-      "MacBook Pro Speakers builtin",
+    expect(
+      parseMacOutput(
+        report([
+          { _name: "Studio Display", coreaudio_default_audio_output_device: "spaudio_no" },
+          { _name: "MacBook Pro Speakers", coreaudio_device_transport: "coreaudio_device_type_builtin", coreaudio_default_audio_output_device: "spaudio_yes" },
+        ]),
+      ),
+    ).toBe("MacBook Pro Speakers builtin");
+    expect(parseMacOutput(report([{ _name: "AirPods Pro", coreaudio_device_transport: "coreaudio_device_type_bluetooth", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe(
+      "AirPods Pro bluetooth",
     );
-    expect(parseMacOutput(report([{ _name: "AirPods Pro", coreaudio_device_transport: "coreaudio_device_type_bluetooth", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe("AirPods Pro bluetooth");
     expect(parseMacOutput(report([{ _name: "x" }]))).toBeUndefined();
     expect(parseMacOutput("not json")).toBeUndefined();
   });

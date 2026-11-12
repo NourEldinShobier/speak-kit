@@ -6,6 +6,7 @@ import { Page } from "../../ui";
 import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
 import { ModeReplacements } from "./ModeReplacements";
+import { ModeSites } from "./ModeSites";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
@@ -278,7 +279,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
         <Icon name="arrow-left" size={12} /> Modes
       </button>
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
-      <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
+      <ModeSites mode={mode} others={others} onSites={onSites} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <ModeReplacements mode={mode} onChange={onChange} />

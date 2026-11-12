@@ -131,7 +131,8 @@ describe("spool", () => {
   it("retries a file another program holds open for a moment", async () => {
     let busy = 2;
     const slept: number[] = [];
-    const s = createSpool({ now: () => 10_000,
+    const s = createSpool({
+      now: () => 10_000,
       dir,
       sleep: async (ms) => void slept.push(ms),
       unlink: async (f) => {
@@ -147,7 +148,8 @@ describe("spool", () => {
   });
 
   it("marks a take it cannot delete as tried out, so the next start removes it instead of transcribing it twice", async () => {
-    const s = createSpool({ now: () => 10_000,
+    const s = createSpool({
+      now: () => 10_000,
       dir,
       sleep: async () => undefined,
       unlink: async () => {
@@ -163,7 +165,8 @@ describe("spool", () => {
   });
 
   it("does not hide an error that is not a lock", async () => {
-    const s = createSpool({ now: () => 10_000,
+    const s = createSpool({
+      now: () => 10_000,
       dir,
       unlink: async () => {
         throw Object.assign(new Error("io"), { code: "EIO" });

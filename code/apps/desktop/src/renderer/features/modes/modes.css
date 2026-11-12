@@ -109,6 +109,19 @@
   gap: 12px;
   padding: 12px 16px;
 }
+.modes-site-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-basis: 100%;
+}
+.modes-site-form > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.modes-site-form > button {
+  margin-block-start: 22px;
+}
 .modes-apps__label {
   font-size: 13px;
   font-weight: 500;
