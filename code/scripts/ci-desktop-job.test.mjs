@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 
-const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replaceAll("
-", "
-");
+const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const jobOf = (yml, name) => {
-  const m = yml.match(new RegExp(`^  ${name}:\n([\s\S]*?)(?=^  \S|(?![\s\S]))`, "m"));
-  return m ? m[1] : "";
+  const start = yml.indexOf(`\n  ${name}:\n`);
+  if (start < 0) return "";
+  const rest = yml.slice(start + 1);
+  const next = rest.slice(1).search(/^ {2}\S/m);
+  return next < 0 ? rest : rest.slice(0, next + 1);
 };
 
 describe("CI desktop job", () => {
