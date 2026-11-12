@@ -1,9 +1,11 @@
 import path from "node:path";
-import { createTranscripts, nodeFs, plainText, type Detail, type Format, type Fs, type Outcome, type Transcripts } from "@speakkit/transcripts";
-import type { Picked, Push, RecordingView, SavedFile, SettingsView, TranscriptsBridge } from "../../shared/transcripts/contract";
-import { policyOf, type TranscriptsPatch } from "../../shared/transcripts/settings";
+import { createTranscripts, nodeFs, type Fs, type Outcome, type Transcripts } from "@speakkit/transcripts";
+import type { Push } from "../../shared/transcripts/contract";
+import { policyOf } from "../../shared/transcripts/settings";
 import type { Ctx } from "../context";
-import { decodeFile, inspectFile, type FilePorts } from "./decode";
+import type { FilePorts } from "./decode";
+import { createHandlers, type Handlers } from "./handlers";
+import { Live } from "./live";
 import { chunkEngine } from "./engine";
 import { RecordingSession, type MicPort } from "./mic-session";
 import type { Stt } from "../dictation/stt";
@@ -36,8 +38,6 @@ export interface TranscriptsPorts {
 
 export type TrayPhase = "ready" | "starting" | "recording" | "saving" | "transcribing";
 
-type Handlers = Omit<TranscriptsBridge, "onPush" | "pathOf" | "decoder" | "mic">;
-
 export interface TranscriptsService {
   handlers: Handlers;
   core: Promise<Transcripts>;
@@ -50,26 +50,11 @@ export interface TranscriptsService {
 
 const HOUR = 3_600_000;
 
+/** The store and the recorder of transcripts, wired to the engine, the OS ports and the window. */
 export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): TranscriptsService {
   const cfg = () => ctx.config.transcripts;
   const folder = () => cfg().folder || path.join(p.documentsDir, "Speak Kit", "Transcripts");
-  let tick = 0;
-  let recording: RecordingView | null = null;
-  let notice: string | undefined;
-  let lastSend = 0;
-  const send = () => {
-    lastSend = Date.now();
-    p.push({ recording, tick, ...(notice && { notice }) });
-    p.changed();
-  };
-  let busy = false;
-  let facade: Transcripts | undefined;
-  const changed = () => {
-    tick++;
-    busy = !!facade && facade.list().some((r) => r.status === "queued" || r.status === "transcribing");
-    send();
-  };
-
+  const live = new Live(p.push, p.changed);
   const core = createTranscripts({
     dir: `${p.dataDir}/transcripts`,
     fs: p.fs ?? nodeFs(),
@@ -81,151 +66,47 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     model: p.model,
     policy: () => policyOf(cfg()),
     exportDir: folder,
-    changed,
+    changed: () => live.changed(),
   });
-  const ready = core.then((t) => t.ready.then(() => (facade = t)));
-  const session = core.then(
-    (t) =>
-      new RecordingSession({
-        mic: p.mic,
-        transcripts: t,
-        language: () => cfg().language,
-        now: p.now ?? Date.now,
-        changed: (v) => {
-          recording = v;
-          // Level updates arrive many times a second; the window gets about ten.
-          if (!v || Date.now() - lastSend > 100 || v.phase !== "recording") send();
-        },
-        notice: (text) => {
-          notice = text;
-          ctx.addActivity("error", "Recording stopped", text);
-          ctx.publish();
-          send();
-        },
-      }),
-  );
+  const ready = core.then((t) => t.ready.then(() => (live.facade = t)));
+  const session = core.then((t) => recorderOf({ ctx, ports: p, transcripts: t, live }));
   const sweepTimer = setInterval(() => void core.then((t) => t.sweep()), HOUR);
   sweepTimer.unref();
-
-  const picked = async (file: string): Promise<Picked> => inspectFile(file, p.files);
-  const settings = async (): Promise<SettingsView> => {
-    const t = await ready;
-    const n = t.notice();
-    return {
-      config: { ...cfg() },
-      folder: folder(),
-      model: p.modelName(),
-      storage: t.storage(),
-      notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
-      supported: true,
-    };
-  };
-  const exportFile = async (id: string, format: Format) => (await (await ready).get(id))?.exports.find((f) => f.path.toLowerCase().endsWith(`.${format}`));
-
-  const handlers: Handlers = {
-    async list(q) {
-      return (await ready).list(q ?? {});
-    },
-    async get(id): Promise<Detail | null> {
-      return (await (await ready).get(id)) ?? null;
-    },
-    async pickFile() {
-      const file = await p.dialog.pickFile();
-      return file ? picked(file) : null;
-    },
-    checkFile: picked,
-    async importFile({ path, language }) {
-      const t = await ready;
-      const d = await decodeFile(path, p.files);
-      if (!d.ok) return { ok: false, failure: d.failure };
-      return t.importAudio({ name: d.name, pcm: d.pcm, language });
-    },
-    async cancel(id) {
-      await (await ready).cancel(id);
-    },
-    async resume(id) {
-      return (await ready).resume(id);
-    },
-    async rename(id, title) {
-      await (await ready).rename(id, title);
-    },
-    async trash(id) {
-      await (await ready).trash(id);
-    },
-    async restore(id) {
-      await (await ready).restore(id);
-    },
-    async remove(id) {
-      await (await ready).remove(id);
-    },
-    async emptyTrash() {
-      return (await ready).emptyTrash();
-    },
-    async copyText(id) {
-      const d = await (await ready).get(id);
-      if (!d) return false;
-      p.clipboard.writeText(plainText(d.segments));
-      return true;
-    },
-    async save(id, format): Promise<Outcome<SavedFile>> {
-      const r = await (await ready).save(id, format);
-      return r.ok ? { ok: true, path: r.path, kind: r.kind } : r;
-    },
-    async reveal(id, format) {
-      const f = await exportFile(id, format);
-      if (!f) return false;
-      p.shell.reveal(f.path);
-      return true;
-    },
-    async deleteAudio(id) {
-      await (await ready).dropAudio(id);
-    },
-    async deleteAllAudio() {
-      return (await ready).dropAllAudio();
-    },
-    async recordStart() {
-      notice = undefined;
-      return (await session).start();
-    },
-    async recordStop() {
-      return (await session).stop();
-    },
-    settings,
-    async patchSettings(patch: TranscriptsPatch) {
-      Object.assign(cfg(), patch);
-      ctx.saveConfig();
-      await (await ready).sweep();
-      return settings();
-    },
-    async chooseFolder() {
-      const dir = await p.dialog.pickFolder();
-      if (!dir) return null;
-      cfg().folder = dir;
-      ctx.saveConfig();
-      return settings();
-    },
-    async openFolder() {
-      await p.shell.openFolder(folder());
-    },
-    async push() {
-      return { recording, tick, ...(notice && { notice }) };
-    },
-  };
-
+  const handlers = createHandlers({ ready, session, ports: p, cfg, folder, saveConfig: () => ctx.saveConfig(), live: () => live.snapshot(), clearNotice: () => void (live.notice = undefined) });
   return {
     handlers,
     core: ready,
-    phase() {
-      if (recording) return recording.phase === "starting" ? "starting" : recording.phase === "saving" ? "saving" : "recording";
-      return busy ? "transcribing" : "ready";
-    },
+    phase: () => livePhase(live),
     startRecording: handlers.recordStart,
     stopRecording: handlers.recordStop,
     async dispose() {
       clearInterval(sweepTimer);
       const t = await ready;
-      if (recording?.phase === "recording") await (await session).stop();
+      if (live.recording?.phase === "recording") await (await session).stop();
       await t.dispose();
     },
   };
+}
+
+function livePhase(live: Live): TrayPhase {
+  const r = live.recording;
+  if (r) return r.phase === "starting" || r.phase === "saving" ? r.phase : "recording";
+  return live.busy ? "transcribing" : "ready";
+}
+
+/** The manual recorder over the store: its changes go to the window, and a recording that ends by itself leaves a notice and a bell entry. */
+function recorderOf({ ctx, ports: p, transcripts: t, live }: { ctx: Ctx; ports: TranscriptsPorts; transcripts: Transcripts; live: Live }): RecordingSession {
+  return new RecordingSession({
+    mic: p.mic,
+    transcripts: t,
+    language: () => ctx.config.transcripts.language,
+    now: p.now ?? Date.now,
+    changed: (v) => live.setRecording(v),
+    notice: (text) => {
+      live.notice = text;
+      ctx.addActivity("error", "Recording stopped", text);
+      ctx.publish();
+      live.send();
+    },
+  });
 }

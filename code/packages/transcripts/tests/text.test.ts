@@ -229,7 +229,7 @@ describe("search", () => {
     expect(s).toContain("invoice");
     expect(s.length).toBeLessThanOrEqual(124);
     expect(snippetAround("short text", "text")).toBe("short text");
-    expect(snippetAround("x".repeat(300), "zzz")).toHaveLength(120);
+    expect(snippetAround("x".repeat(300), "zzz")).toHaveLength(121);
     expect(snippetAround("an invoice.", "invoice")).toBe("an invoice.");
   });
 

@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from "react";
 import { Banner, Button, DropdownMenu, DropdownMenuItem } from "@speakkit/ui";
 import type { Format } from "@speakkit/transcripts/pure";
-import { transcripts } from "./api";
+import { attempt, transcripts } from "./api";
 
 export type ExportResult = { kind: "copied" } | { kind: "saved"; id: string; format: Format; path: string; how: "new" | "replaced" | "copy" } | { kind: "error"; message: string };
 
@@ -10,7 +10,7 @@ const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 /** The Export menu: Copy transcript and the file formats. The result goes to `onResult`; the menu itself shows nothing. */
 export function ExportMenu({ id, trigger, onResult }: { id: string; trigger: ReactElement; onResult: (r: ExportResult) => void }) {
   const save = async (format: Format) => {
-    const r = await transcripts.save(id, format).catch(() => null);
+    const r = await attempt(transcripts.save(id, format));
     if (!r) onResult({ kind: "error", message: "The file could not be saved." });
     else onResult(r.ok ? { kind: "saved", id, format, path: r.path, how: r.kind } : { kind: "error", message: r.failure.message });
   };

@@ -140,7 +140,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
         const out: Row[] = [];
         for (const h of index.search(q)) {
           const e = store.get(h.id);
-          if (e && !e.trashedAt) out.push(row(e, h.snippet));
+          if (e) out.push(row(e, h.snippet));
         }
         return out;
       }

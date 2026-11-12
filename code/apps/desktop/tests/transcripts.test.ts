@@ -44,15 +44,17 @@ function wav(file: string, seconds: number, rate = 16_000): string {
 
 const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
 type Hook = { pick(f: string | null): void; pickFolder(d: string | null): void; denyMic(on: boolean): void; revealed(): string[]; clipboard(): string; phase(): string };
-const hook = <T>(l: Launched, path: string, ...a: unknown[]) =>
+/** Calls a function of the main process's test hook, by dotted path (for example "dictation.say"). */
+const hook = <T>(l: Launched, fn: string, ...a: unknown[]) =>
   l.app.evaluate(
-    (_, [p, args]) => {
-      const parts = (p as string).split(".");
-      let o: any = (globalThis as any).__speakkit;
-      for (const k of parts.slice(0, -1)) o = o[k];
-      return o[parts.at(-1)!](...(args as unknown[])) as T;
+    (_, [name, args]) => {
+      type Fn = (...x: unknown[]) => unknown;
+      let o = (globalThis as unknown as { __speakkit: Record<string, unknown> }).__speakkit;
+      const parts = (name as string).split(".");
+      for (const k of parts.slice(0, -1)) o = o[k] as Record<string, unknown>;
+      return (o[parts.at(-1)!] as Fn)(...(args as unknown[])) as T;
     },
-    [path, a] as const,
+    [fn, a] as const,
   );
 const transcriptsHook = <K extends keyof Hook>(l: Launched, k: K, ...a: Parameters<Hook[K]>) => hook<ReturnType<Hook[K]>>(l, `transcripts.${k}`, ...a);
 
