@@ -3,7 +3,10 @@ import { Icon, IconButton, NavItem, NavSection, SidebarNav } from "@speakkit/ui"
 import type { AppState, Page, SettingsSub } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import { ExportPill } from "./features/export";
-import { filterSettingsNav, MENU } from "./routes";
+import { QuickTopics, requestRow, SettingsResults, SettingsSearchField } from "./features/settings";
+import { searchSettings, type SettingRowDef } from "../shared/settings/search-index";
+import { footerStatus } from "../shared/settings/footer";
+import { filterSettingsNav, MENU, settingsItem } from "./routes";
 import type { RecentReading } from "./shell-model";
 
 export interface SidebarProps {
@@ -30,30 +33,52 @@ const Link = ({ href, onActivate, ...rest }: { href: string; onActivate(): void 
   />
 );
 
+function FooterStatus({ s }: { s: AppState }) {
+  const f = footerStatus(s);
+  return (
+    <div className="sk-side__foot" data-testid="settings-footer">
+      <span data-problem={f.problem || undefined}>{f.listener}</span>
+      {f.update && <span>{f.update}</span>}
+      <button type="button" className="sk-side__link" onClick={() => window.speakkit.openExternal("release-notes")}>
+        Release notes
+      </button>
+    </div>
+  );
+}
+
 function SettingsNav(p: SidebarProps) {
   const [q, setQ] = useState("");
-  const groups = filterSettingsNav(q);
+  const [focus, setFocus] = useState(false);
+  const typing = q.trim().length > 0;
+  const found = typing ? searchSettings(q, (pg) => settingsItem(pg).label) : [];
+  const open = (row: SettingRowDef) => {
+    requestRow(row.id);
+    p.go("settings", row.page);
+    setQ("");
+  };
+  const groups = filterSettingsNav("");
   return (
     <SidebarNav label="Settings">
       <div className="sk-side__head">
         <IconButton name="arrow-left" label="Close settings" size={28} onClick={p.onCloseSettings} />
         <span className="sk-side__label">Settings</span>
       </div>
-      <div className="sk-side__find">
-        <Icon name="search" size={16} />
-        <input type="search" aria-label="Search settings" placeholder="Search settings" value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-      {groups.length === 0 && <div className="sk-side__empty">No settings match “{q.trim()}”.</div>}
-      {groups.map((g) => (
-        <div key={g.group} style={{ display: "contents" }}>
-          <NavSection>{g.group}</NavSection>
-          {g.items.map((it) => (
-            <Link key={it.id} icon={it.icon} href={`#settings-${it.id}`} selected={p.sub === it.id} onActivate={() => p.go("settings", it.id)}>
-              {it.label}
-            </Link>
-          ))}
-        </div>
-      ))}
+      <SettingsSearchField q={q} setQ={setQ} setFocus={setFocus} onEnter={() => found[0] && open(found[0].rows[0]!)} />
+      {typing && <SettingsResults q={q} groups={found} onOpen={open} onClear={() => setQ("")} />}
+      {!typing && focus && <QuickTopics onPick={setQ} />}
+      {!typing &&
+        groups.map((g) => (
+          <div key={g.group} style={{ display: "contents" }}>
+            <NavSection>{g.group}</NavSection>
+            {g.items.map((it) => (
+              <Link key={it.id} icon={it.icon} href={`#settings-${it.id}`} selected={p.sub === it.id} onActivate={() => p.go("settings", it.id)}>
+                {it.label}
+              </Link>
+            ))}
+          </div>
+        ))}
+      <div className="sk-side__spacer" />
+      <FooterStatus s={p.s} />
     </SidebarNav>
   );
 }

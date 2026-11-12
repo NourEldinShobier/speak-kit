@@ -11,7 +11,9 @@ export const showTrayIcon = (c: Pick<Config, "hideTrayIcon">): boolean => !c.hid
 /** The Settings row text for the close behaviour; it names the way back when the tray is hidden. */
 export function closeHint(c: Pick<Config, "closeAction" | "hideTrayIcon">): string {
   if (c.hideTrayIcon) return "The tray icon is hidden, so closing the window quits Speak Kit. Start it again from the Start menu or Launchpad.";
-  return c.closeAction === "hide" ? "Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu." : "Closing the window quits Speak Kit and stops the extension and the shortcuts.";
+  return c.closeAction === "hide"
+    ? "Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu."
+    : "Closing the window quits Speak Kit and stops the extension and the shortcuts.";
 }
 
 export type MotionMode = "on" | "off";
@@ -21,12 +23,6 @@ export function reduceMotion(choice: Config["reduceMotion"], osPrefersReduced: b
   if (choice === "on") return "on";
   if (choice === "off") return "off";
   return osPrefersReduced ? "on" : "off";
-}
-
-/** Where a text appears in the screen reader live region: said once, in order, and never the same text twice in a row. */
-export function nextAnnouncement(prev: string, next: string): string | null {
-  const t = next.trim();
-  return t && t !== prev ? t : null;
 }
 
 /** The in-app keys the Accessibility page lists. Global keys come from the Shortcuts page. */

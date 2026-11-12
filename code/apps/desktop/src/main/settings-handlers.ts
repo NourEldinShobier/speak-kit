@@ -23,7 +23,7 @@ export const SETTINGS_LINKS: Record<Exclude<ExternalLink, "webstore">, string> =
   security: "https://github.com/NourEldinShobier/speak-kit/security/advisories/new",
 };
 
-const SUPPORT_KEYS = ["language", "idleUnload", "loadAtStart", "batterySaver", "autoUpdate", "updateChannel", "closeAction", "hideTrayIcon", "reduceMotion", "announce", "setupDone"] as const;
+const SUPPORT_KEYS = ["language", "idleUnload", "loadAtStart", "batterySaver", "autoUpdate", "updateChannel", "closeAction", "hideTrayIcon", "reduceMotion", "setupDone"] as const;
 
 function listener(s: AppState): string {
   if (s.serverError) return `not running (${s.serverError.code})`;

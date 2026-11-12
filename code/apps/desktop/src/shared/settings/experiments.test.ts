@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
-import { groupExperiments, isExperimentOn, needsRestart, registerExperiment, toggled, visibleExperiments, type Experiment } from "./experiments";
+import "./builtin-experiments";
+import { experiments, groupExperiments, isExperimentOn, needsRestart, registerExperiment, toggled, visibleExperiments, type Experiment } from "./experiments";
 
 const make = (over: Partial<Experiment> = {}): Experiment => ({ id: "x", title: "X", summary: "s", warning: "w", group: "G", audience: "everyone", graduation: "later", ...over });
 
@@ -50,5 +51,22 @@ describe("experiments", () => {
     expect(needsRestart({ r: true }, {}, list)).toBe(true);
     expect(needsRestart({}, { n: true }, list)).toBe(false);
     expect(needsRestart({ r: true }, { r: true }, list)).toBe(false);
+  });
+});
+
+describe("built-in experiments", () => {
+  it("are registered, dev-only, with a graduation path, and one needs a restart", () => {
+    const list = experiments().filter((e) => ["live-dictation-preview", "pause-shortcuts-in-apps", "caption-export"].includes(e.id));
+    expect(list.map((e) => [e.id, e.audience, e.needsRestart ?? false, e.graduation.length > 10])).toEqual([
+      ["live-dictation-preview", "dev", false, true],
+      ["pause-shortcuts-in-apps", "dev", true, true],
+      ["caption-export", "dev", false, true],
+    ]);
+  });
+
+  it("a flag does nothing for a dev-only experiment unless the build is a dev build", () => {
+    const c = parseConfig({ experiments: { "caption-export": true } });
+    expect(isExperimentOn(c, "caption-export")).toBe(false);
+    expect(isExperimentOn(c, "caption-export", true)).toBe(true);
   });
 });

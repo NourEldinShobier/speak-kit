@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { SETTINGS_SUBS } from "../ipc";
-import { firstResult, SETTING_ROWS, searchSettings, splitMatch } from "./search-index";
+import { QUICK_TOPICS, SETTING_ROWS, searchSettings, splitMatch } from "./search-index";
 
 const label = (p: string) => p[0]!.toUpperCase() + p.slice(1);
 
@@ -26,11 +26,9 @@ describe("settings search", () => {
     expect(searchSettings("Accessibility", label)[0]!.page).toBe("accessibility");
   });
 
-  it("groups by page and Enter opens the first row", () => {
+  it("groups by page", () => {
     const g = searchSettings("log", label);
     expect(new Set(g.map((x) => x.page)).size).toBe(g.length);
-    expect(firstResult(g)).toBe(g[0]!.rows[0]);
-    expect(firstResult([])).toBeNull();
   });
 
   it("is case-insensitive", () => {
@@ -46,5 +44,41 @@ describe("settings search", () => {
   it("row ids are unique and belong to real pages", () => {
     expect(new Set(SETTING_ROWS.map((x) => x.id)).size).toBe(SETTING_ROWS.length);
     for (const row of SETTING_ROWS) expect(SETTINGS_SUBS).toContain(row.page);
+  });
+});
+
+describe("search ordering and splitting", () => {
+  const rows = [
+    { id: "a/one", page: "general" as const, label: "Zebra", keywords: "tray" },
+    { id: "a/two", page: "voice" as const, label: "Tray icon", keywords: "" },
+    { id: "a/three", page: "general" as const, label: "Other", keywords: "tray" },
+  ];
+  it("puts label hits before keyword hits, then keeps the list order, grouped by page in that order", () => {
+    const g = searchSettings("tray", label, rows);
+    expect(g.map((x) => [x.page, x.rows.map((r) => r.id)])).toEqual([
+      ["voice", ["a/two"]],
+      ["general", ["a/one", "a/three"]],
+    ]);
+  });
+
+  it("splits typed words on any run of white space", () => {
+    expect(searchSettings("tray   icon", label, rows)[0]!.rows.map((r) => r.id)).toEqual(["a/two"]);
+    expect(searchSettings("tray\ticon", label, rows)[0]!.rows.map((r) => r.id)).toEqual(["a/two"]);
+  });
+
+  it("looks in the page name too", () => {
+    expect(searchSettings("general", (p) => (p === "general" ? "General" : "Elsewhere"), rows)[0]!.rows.map((r) => r.id)).toEqual(["a/one", "a/three"]);
+  });
+
+  it("a match at the very start of the label has an empty before part", () => {
+    expect(splitMatch("Language", "lang")).toEqual({ before: "", match: "Lang", after: "uage" });
+  });
+
+  it("uses the longest typed word for the bold part", () => {
+    expect(splitMatch("Launch at login", "at login")).toEqual({ before: "Launch at ", match: "login", after: "" });
+  });
+
+  it("offers these quick topics", () => {
+    expect(QUICK_TOPICS).toEqual(["Shortcuts", "Microphone", "Memory", "Updates", "Logs"]);
   });
 });

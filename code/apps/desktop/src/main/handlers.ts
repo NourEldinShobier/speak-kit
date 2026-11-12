@@ -116,7 +116,7 @@ export function createAppHandlers(d: HandlerDeps) {
       if (url) await shell.openExternal(url);
     },
     openPath: async (which) => {
-      const dir = which === "models" ? d.modelsDir : which === "data" ? d.dataDir : d.logsDir;
+      const dir = { models: d.modelsDir, data: d.dataDir, logs: d.logsDir }[which];
       await mkdir(dir, { recursive: true });
       await shell.openPath(dir);
     },

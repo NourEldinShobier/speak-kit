@@ -18,7 +18,13 @@ describe("permissions adapter", () => {
 
   it("an unexpected answer or a throwing system is unknown", () => {
     expect(createPermissions("win32", sys("weird")).micStatus()).toBe("unknown");
-    expect(createPermissions("win32", { getMediaAccessStatus: () => { throw new Error("x"); } }).micStatus()).toBe("unknown");
+    expect(
+      createPermissions("win32", {
+        getMediaAccessStatus: () => {
+          throw new Error("x");
+        },
+      }).micStatus(),
+    ).toBe("unknown");
   });
 
   it("another system has no page and no status", () => {
