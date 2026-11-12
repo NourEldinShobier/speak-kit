@@ -118,6 +118,25 @@ describe("importModelFile", () => {
     expect(await loadImported(models())).toEqual([]);
   });
 
+  it("two imports at the same time both end up in the registry", async () => {
+    const sources = await Promise.all([1, 2, 3, 4].map((n) => put(`m${n}.bin`, ggml(MB + 10 + n, n), join(root, "src"))));
+    const results = await Promise.all(sources.map((source) => importModelFile({ modelsDir: models(), source })));
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(await loadImported(models())).toHaveLength(4);
+    await Promise.all(results.map((r) => (r.ok ? removeImported(models(), r.model.id) : undefined)));
+    expect(await loadImported(models())).toEqual([]);
+  });
+
+  it("an unreadable registry is set aside as .bak, so the next import does not destroy the list", async () => {
+    await mkdir(join(models(), "stt"), { recursive: true });
+    await writeFile(join(models(), "stt", "imported.json"), "{broken");
+    expect(await loadImported(models())).toEqual([]);
+    expect(await readFile(join(models(), "stt", "imported.json.bak"), "utf8")).toBe("{broken");
+    const r = await importModelFile({ modelsDir: models(), source: await put("a.bin", ggml(MB + 20), join(root, "src")) });
+    expect(r.ok).toBe(true);
+    expect(await readFile(join(models(), "stt", "imported.json.bak"), "utf8")).toBe("{broken");
+  });
+
   it("describes an imported model for the catalog: no address, English-only or multilingual", () => {
     const base = { id: "custom-0123456789ab", name: "Mine", file: "f.bin", sha256: "s", bytes: 1, engine: "whisper", addedAt: 1 } as const;
     expect(importedAsModel({ ...base, kind: "english" })).toMatchObject({ url: "", languages: ["en"], detects: false, origin: "custom", tag: "Yours" });
@@ -153,6 +172,15 @@ describe("findModelsOnDisk", () => {
     expect((await readFile(join(root, "models", "stt", "a.bin"))).equals(data)).toBe(true);
     expect((await stat(p)).size).toBe(2000);
     await adoptFound(join(root, "models"), { id: "large-v3-turbo-q5_0", path: join(root, "models", "stt", "a.bin") }, { file: "a.bin", url: "", sha256: sha(data), bytes: 2000 }); // already there: no-op
+  });
+
+  it("a found file that changed since the scan is not adopted and leaves no partial copy", async () => {
+    const p = await put("found.bin", ggml(2000, 3), join(root, "elsewhere"));
+    await expect(adoptFound(join(root, "models"), { id: "large-v3-turbo-q5_0", path: p }, { file: "a.bin", url: "", sha256: sha(ggml(2000)), bytes: 2000 })).rejects.toThrow(
+      "changed while it was copied",
+    );
+    await expect(stat(join(root, "models", "stt", "a.bin"))).rejects.toThrow();
+    await expect(stat(join(root, "models", "stt", "a.bin.part"))).rejects.toThrow();
   });
 });
 

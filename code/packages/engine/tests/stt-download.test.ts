@@ -120,6 +120,81 @@ describe("downloadModel", () => {
     await expect(downloadModel({ ...file, url: base }, join(dir, "b.bin"), { signal: ac.signal })).rejects.toThrow("stop");
   });
 
+  describe("stalled connection", () => {
+    /** Sends the first bytes (or none) and then nothing, until it is aborted. */
+    const silent = (first: Buffer) =>
+      (async (_url: string, init?: RequestInit) =>
+        new Response(
+          new ReadableStream({
+            start(c) {
+              if (first.length) c.enqueue(new Uint8Array(first));
+              init?.signal?.addEventListener("abort", () => c.error(init.signal!.reason));
+            },
+          }),
+          { status: 200 },
+        )) as typeof globalThis.fetch;
+
+    it("gives up after the silence and says the host is unreachable, keeping what arrived", async () => {
+      const err = await downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch: silent(BODY.subarray(0, 300)), stallMs: 50 }).catch((e) => e);
+      expect(err).toMatchObject({ name: "DownloadError", kind: "unreachable", host: "models.test", keptBytes: 300 });
+      expect((await stat(join(dir, "m.bin.part"))).size).toBe(300);
+    });
+
+    it("gives up when the server never sends a single byte", async () => {
+      const never = ((_u: string, init?: RequestInit) => new Promise((_r, rej) => init?.signal?.addEventListener("abort", () => rej(init.signal!.reason)))) as typeof globalThis.fetch;
+      await expect(downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch: never, stallMs: 50 })).rejects.toMatchObject({ kind: "unreachable" });
+    });
+
+    it("a slow but steady transfer is not cut off", async () => {
+      const slow = (async () =>
+        new Response(
+          new ReadableStream({
+            async start(c) {
+              for (let i = 0; i < 4; i++) {
+                c.enqueue(new Uint8Array(BODY.subarray(i * 250, (i + 1) * 250)));
+                await new Promise((r) => setTimeout(r, 40));
+              }
+              c.close();
+            },
+          }),
+          { status: 200 },
+        )) as typeof globalThis.fetch;
+      await downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch: slow, stallMs: 120 });
+      expect((await readFile(join(dir, "m.bin"))).equals(BODY)).toBe(true);
+    });
+
+    it("a pause during the silence is an abort, not a failure", async () => {
+      const ac = new AbortController();
+      const run = downloadModel({ ...file, url: "x" }, join(dir, "m.bin"), { fetch: silent(Buffer.alloc(0)), stallMs: 5000, signal: ac.signal });
+      ac.abort(new Error("paused"));
+      const err = await run.catch((e) => e);
+      expect(err.name).not.toBe("DownloadError");
+      expect(ac.signal.aborted).toBe(true);
+    });
+  });
+
+  describe("range no longer valid", () => {
+    it("on a 416 the partial file is deleted and the download restarts from byte 0 once", async () => {
+      await writeFile(join(dir, "m.bin.part"), Buffer.alloc(400, 9));
+      const seen: (string | undefined)[] = [];
+      const fetch = (async (_u: string, init?: RequestInit) => {
+        const range = (init!.headers as Record<string, string>).Range;
+        seen.push(range);
+        return range ? new Response(null, { status: 416 }) : new Response(new Uint8Array(BODY), { status: 200 });
+      }) as typeof globalThis.fetch;
+      await downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch });
+      expect(seen).toEqual(["bytes=400-", undefined]);
+      expect((await readFile(join(dir, "m.bin"))).equals(BODY)).toBe(true);
+    });
+
+    it("a 416 on a fresh download is a plain server failure, not a loop", async () => {
+      let n = 0;
+      const fetch = (async () => (n++, new Response(null, { status: 416 }))) as typeof globalThis.fetch;
+      await expect(downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch })).rejects.toMatchObject({ kind: "server" });
+      expect(n).toBe(1);
+    });
+  });
+
   describe("partial files", () => {
     it("deletes a partial file larger than the catalog size and starts over without a Range header", async () => {
       await writeFile(join(dir, "m.bin.part"), Buffer.alloc(1500, 1));
@@ -153,14 +228,15 @@ describe("downloadModel", () => {
       expect(calls).toHaveLength(1);
       expect(calls[0]!.url).toBe("http://models.test/m");
       expect(calls[0]!.init?.headers).toEqual({ Range: "bytes=400-" });
-      expect(calls[0]!.init?.signal).toBe(ac.signal);
+      expect(calls[0]!.init?.signal?.aborted).toBe(false);
+      ac.abort();
+      expect(calls[0]!.init?.signal?.aborted).toBe(true);
     });
 
-    it("sends no Range header for a fresh download, and no signal when none was given", async () => {
+    it("sends no Range header for a fresh download", async () => {
       const { fetch, calls } = scripted([BODY]);
       await downloadModel({ ...file, url: "http://models.test/m" }, join(dir, "m.bin"), { fetch });
       expect(calls[0]!.init?.headers).toEqual({});
-      expect(calls[0]!.init).not.toHaveProperty("signal");
     });
   });
 
