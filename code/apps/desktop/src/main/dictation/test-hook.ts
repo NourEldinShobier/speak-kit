@@ -7,6 +7,8 @@ export const dictationTestHook = (d: DictationService) => ({
   /** The next recordings transcribe to this text. */
   say: (text: string) => d.fake?.say({ text }),
   failTranscription: (on: boolean) => d.fake?.say({ fail: on }),
+  /** The next transcription never answers until it is aborted (a hung engine, or a quit while one runs). */
+  hangNext: () => d.fake?.say({ hang: true }),
   setInstalled: async (id: DictationModelId, on: boolean) => {
     await d.fake?.setInstalled(id, on);
     await d.models.refresh();

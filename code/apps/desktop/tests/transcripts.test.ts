@@ -1,7 +1,9 @@
+import { execSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { encodeMp3 } from "../src/main/export/mp3";
 import { launch, removeDir, type Launched } from "./harness";
 
 const running: Launched[] = [];
@@ -149,6 +151,24 @@ describe("import", () => {
     expect((await transcriptsHook(l, "revealed"))[0]).toContain("weekly planning (2).md");
   });
 
+  it("an MP3 goes through the decoder page and is transcribed with its real length", async () => {
+    const dir = tmp("in");
+    const rate = 44_100;
+    const samples = Float32Array.from({ length: rate * 3 }, (_, i) => Math.sin((2 * Math.PI * 440 * i) / rate) * 0.3);
+    const file = path.join(dir, "memo.mp3");
+    writeFileSync(file, await encodeMp3({ sampleRate: rate, samples }, 128, () => {}));
+    const { l } = await app();
+    await hook(l, "dictation.say", "words from an mp3");
+    await openTranscripts(l);
+    await importFile(l, file);
+    const row = l.page.locator('[data-testid="transcript-row"]').first();
+    await row.getByText("memo.mp3").waitFor();
+    await row.getByText("3 s").waitFor();
+    const calls = await hook<{ samples: number }[]>(l, "dictation.calls");
+    // 3 seconds at 16 kHz; an MP3 decoder adds or trims a few frames at the ends.
+    expect(Math.abs(calls[0]!.samples - 48_000)).toBeLessThan(3_000);
+  });
+
   it("a file that is not audio is named in red with the formats that work, and nothing is imported", async () => {
     const dir = tmp("in");
     const bad = path.join(dir, "notes.mp3");
@@ -200,6 +220,51 @@ describe("import", () => {
     await dialog.getByText("a.wav").waitFor();
     await dialog.getByText(/No speech model is installed yet/).waitFor();
     expect(await dialog.getByRole("button", { name: "Import", exact: true }).isDisabled()).toBe(true);
+  });
+});
+
+describe("resume after quit", () => {
+  it("quitting in the middle of a job keeps it; the next start offers Resume and finishes it", async () => {
+    const dir = tmp("in");
+    const userData = tmp("data");
+    const exportDir = tmp("export");
+    const config = { ...DONE, transcripts: { folder: exportDir } };
+    const first = await start({ config, userData });
+    await first.page.getByRole("heading", { name: "Home" }).waitFor();
+    await hook(first, "dictation.say", "first part");
+    // The first chunk never answers (a hung engine): the app quits while the job waits for it.
+    await hook(first, "dictation.hangNext");
+    await openTranscripts(first);
+    await importFile(first, wav(path.join(dir, "long.wav"), 70), false);
+    await first.page.locator('[data-testid="transcript-row"][data-status="transcribing"]').waitFor();
+    await until(async () => (await hook<unknown[]>(first, "dictation.calls")).length === 1);
+    await first.app.close();
+    running.splice(running.indexOf(first), 1);
+    const second = await start({ config, userData });
+    await second.page.getByRole("heading", { name: "Home" }).waitFor();
+    await openTranscripts(second);
+    const row = second.page.locator('[data-testid="transcript-row"][data-status="interrupted"]');
+    await row.getByText("Interrupted before it finished.").waitFor();
+    await second.page
+      .getByRole("alert")
+      .getByText("Your last recording was recovered")
+      .waitFor({ timeout: 1000 })
+      .then(
+        () => {
+          throw new Error("an import is not a recovered recording");
+        },
+        () => {},
+      );
+    await hook(second, "dictation.say", "second start");
+    await row.getByRole("button", { name: /Resume/ }).click();
+    await second.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+    await second.page
+      .locator('[data-testid="transcript-row"]')
+      .first()
+      .getByRole("button", { name: /Open: long/ })
+      .click();
+    await second.page.getByRole("heading", { name: "long" }).waitFor();
+    await second.page.getByText("second start").first().waitFor();
   });
 });
 
@@ -259,6 +324,39 @@ describe("record a conversation", () => {
     await row.getByText("Recorded", { exact: true }).waitFor();
     await row.getByText(/audio kept \d+ more days?/).waitFor();
     await until(async () => (await transcriptsHook(l, "phase")) === "ready");
+  });
+
+  it("a crash while recording leaves a recovered recording with Open and Transcribe now", async () => {
+    const dir = tmp("mic");
+    const userData = tmp("data");
+    const config = { ...DONE, transcripts: { folder: tmp("export") } };
+    const env = { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 20) };
+    const first = await start({ config, userData, env });
+    await first.page.getByRole("heading", { name: "Home" }).waitFor();
+    await openTranscripts(first);
+    await first.page.getByRole("button", { name: "Record a conversation" }).first().click();
+    await first.page.getByRole("button", { name: "Start recording" }).click();
+    const timer = first.page.getByRole("timer", { name: "Recording time" });
+    await until(async () => !["00:00:00", "00:00:01", "00:00:02"].includes((await timer.textContent()) ?? ""));
+    const proc = first.app.process();
+    const gone = new Promise((r) => proc.once("exit", r));
+    if (process.platform === "win32") execSync(`taskkill /pid ${proc.pid} /T /F`);
+    else proc.kill("SIGKILL"); // no chance to save anything: only what was spooled so far survives
+    await gone;
+    await new Promise((r) => setTimeout(r, 1000));
+    running.splice(running.indexOf(first), 1);
+    const second = await start({ config, userData, env });
+    await second.page.getByRole("heading", { name: "Home" }).waitFor();
+    await hook(second, "dictation.say", "what was said before the crash");
+    await openTranscripts(second);
+    await second.page.getByText("Your last recording was recovered").waitFor();
+    const row = second.page.locator('[data-testid="transcript-row"]');
+    await row.getByText("Recovered", { exact: true }).waitFor();
+    await shot(second, "recovered");
+    await second.page.getByRole("button", { name: "Transcribe now" }).click();
+    await second.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+    await row.getByRole("button", { name: /^Open:/ }).click();
+    await second.page.getByText("what was said before the crash").first().waitFor();
   });
 
   it("a microphone that is refused says why and leaves no recording behind", async () => {

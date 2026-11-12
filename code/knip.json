@@ -19,6 +19,7 @@
         "src/renderer/*.html",
         "src/renderer/*.tsx",
         "src/renderer/features/dictation/{hud-main.tsx,recorder-main.ts}",
+        "src/renderer/features/transcripts/{decoder-main.ts,mic-main.ts}",
         "scripts/*.mjs",
         "tests/*.ts",
         "**/*.test.{ts,tsx}"
