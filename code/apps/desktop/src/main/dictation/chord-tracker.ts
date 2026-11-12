@@ -1,4 +1,4 @@
-import { VK, type Chord, type HotkeyEvent, type VirtualKey } from "./types";
+import { MENU_KEYS, VK, type Chord, type HotkeyEvent, type VirtualKey } from "./types";
 
 export interface Stroke {
   vk: VirtualKey;
@@ -9,6 +9,8 @@ export interface Decision {
   /** True when the key must not reach the app. */
   swallow: boolean;
   events: HotkeyEvent[];
+  /** Press and release an unassigned key before this release reaches the app, so a lone Alt or Win release opens no menu. */
+  mask?: boolean;
 }
 
 const PASS: Decision = { swallow: false, events: [] };
@@ -27,6 +29,12 @@ export class ChordTracker {
   readonly #swallowedDown = new Set<VirtualKey>();
   #grabbed = new Set<VirtualKey>();
   #active = false;
+  /** Chord keys pressed while another key was already down: a combination such as Ctrl+C, not a lone press. */
+  readonly #blocked = new Set<VirtualKey>();
+  /** The chord was just released: the next other key still matters once (it ends a double-tap window). */
+  #afterRelease = false;
+  /** The chord has an Alt or Win key that was used: its release needs the mask, even when the chord itself ended first. */
+  #maskPending = false;
 
   constructor(chord: Chord) {
     this.#chord = chord;
@@ -54,11 +62,33 @@ export class ChordTracker {
     return this.feed({ vk, down: false }).events;
   }
 
+  /**
+   * Rebuilds what is believed down from the physical keyboard: a key that is up there is released here. Keys the keyboard says are down but this never saw
+   * are not added, so a repair never starts a capture. Reports "up" when that ends the chord.
+   */
+  rebuild(isDown: (vk: VirtualKey) => boolean): HotkeyEvent[] {
+    for (const vk of [...this.#held]) {
+      if (isDown(vk)) continue;
+      this.#held.delete(vk);
+      this.#swallowedDown.delete(vk);
+      this.#blocked.delete(vk);
+    }
+    if (!this.#active || this.#chord.keys.every((k) => this.#held.has(k))) return [];
+    this.#active = false;
+    return [{ kind: "up" }];
+  }
+
+  /** A chord key (not a mouse button or an extended key) is down on the physical keyboard while this has no record of it: the hook missed its press. */
+  unseenDown(isDown: (vk: VirtualKey) => boolean): boolean {
+    return this.#chord.keys.some((k) => k < 0x100 && k > 0x06 && !this.#held.has(k) && isDown(k));
+  }
+
   /** Forgets every key believed down, for when key events may have been lost (screen lock, secure desktop, a stalled app). Reports up if the chord was down. */
   reset(): HotkeyEvent[] {
     const events: HotkeyEvent[] = this.#active ? [{ kind: "up" }] : [];
     this.#held.clear();
     this.#swallowedDown.clear();
+    this.#blocked.clear();
     this.#active = false;
     return events;
   }
@@ -69,16 +99,28 @@ export class ChordTracker {
       this.#held.add(vk);
       if (repeat) return this.#swallowedDown.has(vk) ? SWALLOW : PASS;
       if (this.#active || !this.#chord.keys.every((k) => this.#held.has(k))) return PASS;
+      // A lone modifier counts only as a fresh press with nothing else down: Ctrl+C typed with the chord key last is not a dictation press.
+      if (this.#chord.keys.every((k) => MODIFIERS.has(k)) && [...this.#held].some((k) => !this.#chord.keys.includes(k))) {
+        this.#blocked.add(vk);
+        return PASS;
+      }
       this.#active = true;
-      if (MODIFIERS.has(vk)) return { swallow: false, events: [{ kind: "down" }] };
+      this.#afterRelease = false;
+      this.#maskPending = this.#chord.keys.some((k) => MENU_KEYS.has(k));
+      if (MODIFIERS.has(vk) || this.#chord.share) return { swallow: false, events: [{ kind: "down" }] };
       this.#swallowedDown.add(vk);
       return { swallow: true, events: [{ kind: "down" }] };
     }
     this.#held.delete(vk);
+    this.#blocked.delete(vk);
     const swallow = this.#swallowedDown.delete(vk);
-    const events: HotkeyEvent[] = this.#active ? [{ kind: "up" }] : [];
+    const wasActive = this.#active;
+    const events: HotkeyEvent[] = wasActive ? [{ kind: "up" }] : [];
     this.#active = false;
-    return { swallow, events };
+    this.#afterRelease = wasActive;
+    const mask = this.#maskPending && MENU_KEYS.has(vk);
+    if (mask && !this.#chord.keys.some((k) => MENU_KEYS.has(k) && this.#held.has(k))) this.#maskPending = false;
+    return { swallow, events, ...(mask && { mask: true }) };
   }
 
   #otherKey({ vk, down }: Stroke): Decision {
@@ -92,7 +134,11 @@ export class ChordTracker {
       this.#swallowedDown.add(vk);
       return { swallow: true, events: [{ kind: "grabbed", vk }] };
     }
-    return this.#active ? { swallow: false, events: [{ kind: "other", vk }] } : PASS;
+    if (this.#active || this.#afterRelease) {
+      this.#afterRelease = false;
+      return { swallow: false, events: [{ kind: "other", vk }] };
+    }
+    return PASS;
   }
 }
 

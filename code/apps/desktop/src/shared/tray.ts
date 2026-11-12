@@ -16,14 +16,14 @@ export interface TrayContext {
   doNotDisturb: boolean;
   shortcuts: Bindings;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
-  dictation?: { enabled: boolean; hotkey: string };
+  dictation?: { enabled: boolean; hotkey: string; /** Pause all shortcuts is on. */ paused?: boolean; /** Key chord of Paste last, shown beside the row. */ pasteLast?: string };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
 export function trayIconState(c: TrayContext): TrayState {
   const engine = engineTrayState(c.health, c.serverError);
   if (engine === "error") return "error";
-  if (c.reader.status === "paused") return "paused";
+  if (c.reader.status === "paused" || c.dictation?.paused) return "paused";
   if (c.update.kind === "ready") return "attention";
   if (c.reader.status === "playing" || c.reader.status === "preparing" || c.exportsRunning > 0) return "working";
   return engine;
@@ -31,6 +31,7 @@ export function trayIconState(c: TrayContext): TrayState {
 
 export function trayTooltipFor(c: TrayContext): string {
   const r = c.reader;
+  if (c.dictation?.paused) return "Speak Kit - Shortcuts paused";
   if (r.status === "playing" || r.status === "preparing") return `Speak Kit - Reading ${r.index + 1} of ${r.total}: ${r.title}`;
   if (r.status === "paused") return `Speak Kit - Paused: ${r.title}`;
   if (c.exportsRunning) return `Speak Kit - Exporting ${plural(c.exportsRunning, "file", "files")}`;
@@ -41,6 +42,8 @@ export function trayTooltipFor(c: TrayContext): string {
 export type TrayAction =
   | "dictation"
   | "dictation-history"
+  | "paste-last"
+  | "pause-shortcuts"
   | "dictation-settings"
   | "open"
   | "pause"
@@ -69,6 +72,8 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     rows.push(item("dictation", "Dictation", { checked: d.enabled }));
     // A caption, not a command: disabled and without an action of its own.
     if (d.enabled) rows.push(item("dictation-settings", `Hold ${hotkeyText(d.hotkey)} to dictate`, { enabled: false }));
+    rows.push(item("paste-last", "Paste last dictation", {}));
+    rows.push(item("pause-shortcuts", "Pause all shortcuts", { checked: d.paused === true }));
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));

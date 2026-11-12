@@ -17,6 +17,8 @@ export interface Settings {
   holdMs: number;
   /** Second shortcut for the same job, for a laptop and an external keyboard; "" is unset. */
   secondKey: string;
+  /** A mouse button (Mouse2 to Mouse5) that dictates like the main shortcut; "" is unset. */
+  mouseKey: string;
   /** Dictates with text clean-up and replacements off; "" is unset. */
   rawKey: string;
   /** Types the last dictation again; "" is unset. Handled by the app, which owns the key hook. */
@@ -43,6 +45,7 @@ export const defaultSettings: Readonly<Settings> = {
   mode: "hold",
   holdMs: 300,
   secondKey: "",
+  mouseKey: "",
   rawKey: "",
   pasteLastKey: "",
   language: "auto",

@@ -38,7 +38,7 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
       {view.locked ? <Lead name="lock" /> : <i className="hud__dot" />}
       <Bars level={view.level} />
       <Elapsed since={view.startedAt} />
-      <Hint>{view.locked ? "Press the hotkey to stop" : "Release to finish"}</Hint>
+      <Hint>{view.cancel ? `Press the hotkey to stop, ${view.cancel} cancels` : view.locked ? "Press the hotkey to stop" : "Release to finish"}</Hint>
     </>
   );
 }
@@ -104,7 +104,16 @@ function Content({ view }: { view: HudView }) {
     case "copied":
       return <Copied reason={view.reason} />;
     case "notice":
-      return <b>{view.text}</b>;
+      return (
+        <>
+          <b>{view.text}</b>
+          {view.action && (
+            <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction(view.action!.id))}>
+              {view.action.label}
+            </button>
+          )}
+        </>
+      );
     case "error":
       return <Failure view={view} />;
   }

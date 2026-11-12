@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { KeyEvent } from "@speakkit/dictation";
-import { createHotkeys } from "./hotkey-source";
+import { createHotkeys, type HotkeyLayout } from "./hotkey-source";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
+
+const BASE: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape", share: false };
 
 /** An OS hook that records what it was asked and lets the test push events. */
 function fakeOs() {
@@ -45,7 +47,7 @@ const setup = () => {
   const faults: [unknown, boolean][] = [];
   let t = 1000;
   const hk = createHotkeys({ os: f.os, now: () => (t += 10), onFault: (e, recovered) => faults.push([e, recovered]) });
-  hk.setHotkey("ControlLeft+AltLeft+Space");
+  hk.layout({ ...BASE, hotkey: "ControlLeft+AltLeft+Space" });
   return { ...f, hk, events, faults, later: (ms: number) => (t += ms), subscribe: () => hk.subscribe((e) => (events.push(e), true)) };
 };
 
@@ -116,7 +118,7 @@ describe("hotkey source", () => {
     await s.subscribe();
     s.hk.enable(true);
     s.hk.setCancelGrab(true);
-    s.hk.setHotkey("F9");
+    s.hk.layout({ ...BASE, hotkey: "F9" });
     expect(s.chord()).toEqual({ keys: [0x78] });
     expect(s.grabbed()).toEqual([VK.escape]);
     s.push({ kind: "down" });
@@ -173,7 +175,7 @@ describe("hotkey source", () => {
 
   it("says so when the system refuses the hook", async () => {
     const hk = createHotkeys({ os: { active: false, start: () => ({ ok: false, reason: "hook-failed" }), stop() {}, grab() {}, resync() {} }, now: () => 0 });
-    hk.setHotkey("F9");
+    hk.layout({ ...BASE, hotkey: "F9" });
     await hk.subscribe(() => true);
     expect(hk.enable(true)).toBe(false);
   });

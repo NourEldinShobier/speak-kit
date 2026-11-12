@@ -25,6 +25,7 @@ import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 import { createScreenVision } from "./screen-vision";
+import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
 import { createVoiceChat } from "./voice-chat/service";
 
@@ -100,13 +101,22 @@ const mainWindow: MainWindow = new MainWindow(config, {
   onHidden: () => runtime.stopPolling(),
 });
 const screenVision = createScreenVision();
+const micOwners = createMicOwners();
 const voiceChat = createVoiceChat({
   store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
   config,
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
-  look: screenVision.look,
+  // Dictation waits while a screen look has the microphone busy with its own session.
+  look: async (...a: Parameters<typeof screenVision.look>) => {
+    const release = micOwners.claim("Screen look");
+    try {
+      return await screenVision.look(...a);
+    } finally {
+      release();
+    }
+  },
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -218,7 +228,7 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      dictation: { dataDir, modelsDir, sttWorker },
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
     },
   );
 }

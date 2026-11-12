@@ -15,24 +15,35 @@ export const VK = {
   leftWin: 0x5b,
   rightWin: 0x5c,
   capsLock: 0x14,
+  leftButton: 0x01,
 } as const;
+
+/** Home, End, Page Up and Page Down arrive with the same codes as the numpad keys when Num Lock is off; the extended flag tells them apart. The hook reports the dedicated keys as the code plus this offset. */
+export const EXTENDED = 0x100;
 
 /** All keys must be down together; the one pressed last completes the chord and is the one swallowed. */
 export interface Chord {
   keys: readonly VirtualKey[];
+  /** Let the keys reach the app too (sharing the shortcut with another program that listens for it). */
+  share?: boolean;
 }
 
-export type HotkeyEvent =
-  /** The chord was completed. */
+export type HotkeyEvent = (
   | { kind: "down" }
-  /** A chord key was released after "down" (also sent when the key was found stuck: it was up while the hook never saw the release). */
   | { kind: "up" }
-  /** Another key went down while the chord was complete. The app still gets it. */
+  /** Another key (or a mouse click) went down while the chord was complete, or right after it was released. The app still gets it. */
   | { kind: "other"; vk: VirtualKey }
   /** A key given to `grab` went down; it was swallowed. */
-  | { kind: "grabbed"; vk: VirtualKey };
+  | { kind: "grabbed"; vk: VirtualKey }
+) & {
+  /** Which chord it is about; absent for the primary one. */
+  chord?: string;
+};
 
 export type HotkeyStart = { ok: true } | { ok: false; reason: "unsupported-platform" | "hook-failed" | "already-running" };
+
+/** Keys whose release would open a menu or the Start menu in the app in front when nothing else was pressed with them. */
+export const MENU_KEYS: ReadonlySet<VirtualKey> = new Set([VK.leftAlt, VK.rightAlt, VK.leftWin, VK.rightWin]);
 
 export interface HotkeyHandlers {
   /** Called from the event loop, never from inside the hook callback, so it may take as long as it needs. */
@@ -43,6 +54,12 @@ export interface HotkeyHandlers {
 
 export interface HotkeySource {
   readonly active: boolean;
+  /** More chords next to the primary one, by name; their events carry the name in `chord`. Replaces the earlier set and takes effect at once, also while running. */
+  setExtraChords?(chords: Readonly<Record<string, Chord>>): void;
+  /** True while any key or mouse button is physically down (the keyboard state, not what the hook saw). */
+  anyKeyDown?(): boolean;
+  /** The mouse hook is needed for mouse buttons in a chord and for clicks that end a hold. Absent where the platform has none. */
+  readonly mouse?: boolean;
   start(chord: Chord, handlers: HotkeyHandlers): HotkeyStart;
   stop(): void;
   /** Swallows these keys (and reports them as "grabbed") until the list is replaced; an empty list releases them. Used for Escape while a toggled recording runs. */
@@ -60,6 +77,8 @@ export interface ForegroundInfo {
   className: string;
   /** True when the window's program runs with higher rights than this app (Windows then drops our key presses). */
   elevated: boolean;
+  /** Where the window is on the screen; used to tell a full-screen program. */
+  bounds?: { x: number; y: number; width: number; height: number };
 }
 
 /** How text reaches the focused field. */

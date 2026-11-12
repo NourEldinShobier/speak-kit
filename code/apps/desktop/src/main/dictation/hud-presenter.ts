@@ -12,6 +12,8 @@ interface Deps {
   hud(): Hud | undefined;
   hotkey(): string;
   canRetry(): boolean;
+  /** Label of the key that cancels a toggled recording. */
+  cancelLabel?(): string;
   /** The last insert ended with the text on the clipboard only. */
   insertedAsCopy(): boolean;
 }
@@ -63,10 +65,17 @@ export class HudPresenter {
   }
 
   /** A failure that is not a dictation's own (the key hook died): shown like a failed dictation, for as long as one with a button. */
-  alert(code: string): void {
-    const view = errorView(code, false);
+  alert(code: string, owner?: string): void {
+    const view = errorView(code, false, owner);
     this.#stick(view);
     this.#show(view);
+  }
+
+  /** A short message that is not about a recording (Paste last). */
+  toast(text: string, tone: "ok" | "error" = "ok"): void {
+    clearTimeout(this.#ready);
+    this.#show(tone === "error" ? { kind: "error", text, icon: "alert-triangle" } : { kind: "notice", text });
+    this.#ready = setTimeout(() => this.#show(null), READY_MS + 1000);
   }
 
   dismiss(): void {
@@ -81,7 +90,7 @@ export class HudPresenter {
 
   #render(): void {
     clearTimeout(this.#ready);
-    const next = hudViewFor({ state: this.#state, hotkey: this.#d.hotkey(), startedAt: this.#startedAt, level: this.#level, insertedAsCopy: this.#d.insertedAsCopy(), canRetry: this.#d.canRetry() });
+    const next = hudViewFor({ state: this.#state, hotkey: this.#d.hotkey(), startedAt: this.#startedAt, level: this.#level, insertedAsCopy: this.#d.insertedAsCopy(), canRetry: this.#d.canRetry(), ...(this.#d.cancelLabel && { cancelLabel: this.#d.cancelLabel() }) });
     if (busy(this.#state)) this.#clearSticky();
     if (next?.kind === "error" && next.action) this.#stick(next);
     const view = this.#sticky ?? next;

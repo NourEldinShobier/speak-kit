@@ -3,7 +3,25 @@
 const MODIFIERS = { ShiftLeft: 0xa0, ShiftRight: 0xa1, ControlLeft: 0xa2, ControlRight: 0xa3, AltLeft: 0xa4, AltRight: 0xa5, MetaLeft: 0x5b, MetaRight: 0x5c } as const;
 
 const build = () => {
-  const vk: Record<string, number> = { ...MODIFIERS, Space: 0x20, CapsLock: 0x14, Pause: 0x13, ScrollLock: 0x91, Insert: 0x2d, Backquote: 0xc0, Tab: 0x09 };
+  // Home, End, Page Up and Page Down carry the extended offset (0x100) the hook adds for the dedicated keys, so the numpad keys with Num Lock off never match. Mouse buttons use their own virtual-key codes.
+  const vk: Record<string, number> = {
+    ...MODIFIERS,
+    Space: 0x20,
+    CapsLock: 0x14,
+    Pause: 0x13,
+    ScrollLock: 0x91,
+    Insert: 0x2d,
+    Backquote: 0xc0,
+    Tab: 0x09,
+    PageUp: 0x121,
+    PageDown: 0x122,
+    End: 0x123,
+    Home: 0x124,
+    Mouse2: 0x02,
+    Mouse3: 0x04,
+    Mouse4: 0x05,
+    Mouse5: 0x06,
+  };
   for (let n = 1; n <= 24; n++) vk[`F${n}`] = 0x70 + n - 1;
   for (let c = 0; c < 26; c++) vk[`Key${String.fromCharCode(65 + c)}`] = 0x41 + c;
   for (let d = 0; d < 10; d++) vk[`Digit${d}`] = 0x30 + d;
@@ -15,6 +33,19 @@ export const KEY_VK: Readonly<Record<string, number>> = build();
 const VK_KEY = new Map(Object.entries(KEY_VK).map(([k, v]) => [v, k]));
 
 export const DEFAULT_HOTKEY = "ControlRight";
+/** Where Paste last starts out. */
+export const DEFAULT_PASTE_LAST = "ControlLeft+AltLeft+KeyV";
+/** Home, End, Page Up and Page Down work as a whole shortcut, but they type nothing and move the cursor in every app, so they sit behind the advanced options with a warning. */
+export const ADVANCED_KEYS: readonly string[] = ["Home", "End", "PageUp", "PageDown"];
+export const MOUSE_KEYS: readonly string[] = ["Mouse2", "Mouse3", "Mouse4", "Mouse5"];
+export const isMouseKey = (code: string): boolean => MOUSE_KEYS.includes(code);
+export const usesAdvancedKey = (hotkey: string): boolean => hotkeyKeys(hotkey).some((k) => ADVANCED_KEYS.includes(k));
+/** A key this app cannot match (the recorder says "Unsupported key" instead of ignoring it). Escape is the cancel key, not a hotkey. */
+export const unsupportedKey = (code: string): boolean => !(code in KEY_VK);
+
+/** Cancel keys: Escape (the default) or any single key a hotkey can be. */
+export const validCancelKey = (code: string): boolean => code === CANCEL_KEY || (code in KEY_VK && !isMouseKey(code) && !(code in MODIFIERS));
+export const cancelVk = (code: string): number => (code === CANCEL_KEY ? 0x1b : (KEY_VK[code] ?? 0x1b));
 export const MAX_CHORD_KEYS = 3;
 export const CANCEL_KEY = "Escape";
 
@@ -24,7 +55,7 @@ export const keyOfVk = (vk: number): string => VK_KEY.get(vk) ?? `Vk${vk}`;
 export const hotkeyKeys = (hotkey: string): string[] => hotkey.split("+");
 
 /** A key that is safe to be the whole hotkey: a modifier, a function key or a key typing never uses. Letters, digits and Space alone are not. */
-const standsAlone = (code: string) => code in MODIFIERS || /^F\d+$/.test(code) || ["Pause", "ScrollLock", "Insert", "CapsLock"].includes(code);
+const standsAlone = (code: string) => code in MODIFIERS || /^F\d+$/.test(code) || ["Pause", "ScrollLock", "Insert", "CapsLock", ...ADVANCED_KEYS, ...MOUSE_KEYS].includes(code);
 
 /** One to three known, different keys; a single key must be one that stands alone, a chord needs a modifier or such a key in it. */
 export function validHotkey(hotkey: string): boolean {
@@ -42,6 +73,12 @@ const LABELS: Record<string, string> = {
   MetaLeft: "Win",
   MetaRight: "Right Win",
   Backquote: "`",
+  PageUp: "Page Up",
+  PageDown: "Page Down",
+  Mouse2: "Mouse 2",
+  Mouse3: "Mouse 3",
+  Mouse4: "Mouse 4",
+  Mouse5: "Mouse 5",
 };
 const ORDER = ["ControlLeft", "ControlRight", "AltLeft", "AltRight", "ShiftLeft", "ShiftRight", "MetaLeft", "MetaRight"];
 
