@@ -111,7 +111,14 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
   const settings = async (): Promise<SettingsView> => {
     const t = await ready;
     const n = t.notice();
-    return { config: { ...cfg() }, folder: folder(), model: p.modelName(), storage: t.storage(), notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) }, supported: true };
+    return {
+      config: { ...cfg() },
+      folder: folder(),
+      model: p.modelName(),
+      storage: t.storage(),
+      notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
+      supported: true,
+    };
   };
   const exportFile = async (id: string, format: Format) => (await (await ready).get(id))?.exports.find((f) => f.path.toLowerCase().endsWith(`.${format}`));
 
@@ -222,4 +229,3 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     },
   };
 }
-

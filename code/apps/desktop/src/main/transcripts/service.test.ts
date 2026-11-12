@@ -49,7 +49,11 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
   const clip: string[] = [];
   let pick: string | null = null;
   let dir: string | null = null;
-  const wavs: Record<string, Uint8Array> = { "/in/talk.wav": encodeWav16k(tone(5)), "/in/big.mp3": new TextEncoder().encode("ID3\x04".padEnd(32, "\0")), "/in/notes.txt": new TextEncoder().encode("just words, not audio") };
+  const wavs: Record<string, Uint8Array> = {
+    "/in/talk.wav": encodeWav16k(tone(5)),
+    "/in/big.mp3": new TextEncoder().encode("ID3\x04".padEnd(32, "\0")),
+    "/in/notes.txt": new TextEncoder().encode("just words, not audio"),
+  };
   const files2: TranscriptsPorts["files"] = {
     stat: async (f) => (wavs[f] ? { size: wavs[f]!.length } : undefined),
     head: async (f, n) => wavs[f]!.subarray(0, n),
@@ -76,7 +80,20 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     sleep: () => new Promise((r) => setTimeout(r, 0)),
     newId: () => `id${++n}`,
   });
-  return { service, ctx, files, pushes, ended: () => ended(), revealed, clip, activity, chunk: (p: Int16Array) => chunk(p), setPick: (f: string | null) => (pick = f), setDir: (d: string | null) => (dir = d), config };
+  return {
+    service,
+    ctx,
+    files,
+    pushes,
+    ended: () => ended(),
+    revealed,
+    clip,
+    activity,
+    chunk: (p: Int16Array) => chunk(p),
+    setPick: (f: string | null) => (pick = f),
+    setDir: (d: string | null) => (dir = d),
+    config,
+  };
 }
 const done = async (h: ReturnType<typeof setup>["service"]["handlers"], id: string) => vi.waitFor(async () => expect((await h.get(id))!.status).toBe("done"));
 

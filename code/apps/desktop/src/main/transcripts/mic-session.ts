@@ -110,7 +110,11 @@ export class RecordingSession {
     this.#pending = this.#pending.then(async () => {
       const r = await this.#d.transcripts.appendRecording(id, pcm);
       if (!r.ok) {
-        void this.#autoStop(r.failure.code === "disk-full" ? "The disk is full. What was recorded so far is saved and is being transcribed." : "Recording stopped because it could not be saved. What was recorded so far is kept.");
+        void this.#autoStop(
+          r.failure.code === "disk-full"
+            ? "The disk is full. What was recorded so far is saved and is being transcribed."
+            : "Recording stopped because it could not be saved. What was recorded so far is kept.",
+        );
         return;
       }
       this.#seconds = r.seconds;

@@ -18,7 +18,8 @@ function stt(over: Partial<Stt> & { state?: string; have?: boolean } = {}) {
   };
   return { s, calls, set: (x: string) => (state = x) };
 }
-const run = (s: Stt, model: "large-v3-turbo-q5_0" | "parakeet-tdt-0.6b-v3-q4_0" = "large-v3-turbo-q5_0", language = "en", signal = new AbortController().signal) => chunkEngine({ stt: s, model: () => model })(new Int16Array(10), language, signal);
+const run = (s: Stt, model: "large-v3-turbo-q5_0" | "parakeet-tdt-0.6b-v3-q4_0" = "large-v3-turbo-q5_0", language = "en", signal = new AbortController().signal) =>
+  chunkEngine({ stt: s, model: () => model })(new Int16Array(10), language, signal);
 
 describe("chunk engine", () => {
   it("transcribes with a ready engine", async () => {

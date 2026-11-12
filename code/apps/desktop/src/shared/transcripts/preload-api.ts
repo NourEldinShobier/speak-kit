@@ -1,8 +1,9 @@
-import { webUtils, type IpcRenderer } from "electron";
+import type { IpcRenderer } from "electron";
 import { DEC_COMMAND, DEC_READY, DEC_REPLY, MIC_CHUNK, MIC_COMMAND, MIC_ENDED, MIC_LEVEL, MIC_READY, MIC_REPLY, TRANSCRIPTS_EVENT, TRANSCRIPTS_METHODS, transcriptsChannel } from "./channels";
 import type { DecoderCommand, MicCommand, Push, TranscriptsBridge } from "./contract";
 
-export function transcriptsBridge(ipc: IpcRenderer): TranscriptsBridge {
+/** `pathOf` is Electron's webUtils.getPathForFile, passed in by the preload, which may import Electron. */
+export function transcriptsBridge(ipc: IpcRenderer, pathOf: (file: File) => string): TranscriptsBridge {
   const methods = Object.fromEntries(TRANSCRIPTS_METHODS.map((m) => [m, (...args: unknown[]) => ipc.invoke(transcriptsChannel(m), ...args)]));
   const on = <T>(channel: string, cb: (v: T) => void) => {
     const h = (_: unknown, v: T) => cb(v);
@@ -12,7 +13,7 @@ export function transcriptsBridge(ipc: IpcRenderer): TranscriptsBridge {
   return {
     ...methods,
     onPush: (cb) => on<Push>(TRANSCRIPTS_EVENT, cb),
-    pathOf: (file: File) => webUtils.getPathForFile(file),
+    pathOf,
     decoder: {
       onCommand: (cb) => on<DecoderCommand>(DEC_COMMAND, cb),
       reply: (id, r) => ipc.send(DEC_REPLY, id, r),

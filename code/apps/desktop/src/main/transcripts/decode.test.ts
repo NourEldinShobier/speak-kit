@@ -69,9 +69,24 @@ describe("decode", () => {
   });
 
   it("a page that cannot decode, or finds the audio too long, gives the matching message", async () => {
-    expect(await decodeFile("/a/x.mp3", ports({ "/a/x.mp3": MP3 }, async () => ({ ok: false, code: "decode-failed" })))).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
-    expect(await decodeFile("/a/x.mp3", ports({ "/a/x.mp3": MP3 }, async () => ({ ok: false, code: "too-long" })))).toMatchObject({ ok: false, failure: { code: "too-long" } });
-    expect(await decodeFile("/a/x.mp3", ports({ "/a/x.mp3": MP3 }, async () => Promise.reject(new Error("page gone"))))).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
+    expect(
+      await decodeFile(
+        "/a/x.mp3",
+        ports({ "/a/x.mp3": MP3 }, async () => ({ ok: false, code: "decode-failed" })),
+      ),
+    ).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
+    expect(
+      await decodeFile(
+        "/a/x.mp3",
+        ports({ "/a/x.mp3": MP3 }, async () => ({ ok: false, code: "too-long" })),
+      ),
+    ).toMatchObject({ ok: false, failure: { code: "too-long" } });
+    expect(
+      await decodeFile(
+        "/a/x.mp3",
+        ports({ "/a/x.mp3": MP3 }, async () => Promise.reject(new Error("page gone"))),
+      ),
+    ).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
   });
 
   it("decoded audio over four hours is refused, empty audio is a decode error", async () => {

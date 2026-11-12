@@ -27,7 +27,15 @@ function rig(over: { mic?: MicResult; append?: (id: string, pcm: Int16Array) => 
     finishRecording: over.finish ?? (async () => (log.push("finish"), { ok: true as const, id: "r1" })),
     discardRecording: async () => void log.push("discard"),
   };
-  const session = new RecordingSession({ mic, transcripts, language: () => "de", now: () => now, changed: (v) => views.push(v), notice: (t) => notices.push(t), ...(over.maxSeconds && { maxSeconds: over.maxSeconds }) });
+  const session = new RecordingSession({
+    mic,
+    transcripts,
+    language: () => "de",
+    now: () => now,
+    changed: (v) => views.push(v),
+    notice: (t) => notices.push(t),
+    ...(over.maxSeconds && { maxSeconds: over.maxSeconds }),
+  });
   return { session, views, notices, log, chunk: (p = SEC) => chunk(p), level: (n: number) => level(n), ended: () => ended(), advance: (ms: number) => (now += ms) };
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -76,7 +84,12 @@ describe("recording session", () => {
     const r = rig();
     const bad = new RecordingSession({
       mic: { start: async () => Promise.reject(new Error("x")), stop: async () => {}, onChunk: () => {}, onLevel: () => {}, onEnded: () => {} },
-      transcripts: { beginRecording: async () => ({ ok: true, id: "r2" }), appendRecording: async () => ({ ok: true, seconds: 0 }), finishRecording: async () => ({ ok: true, id: "r2" }), discardRecording: async () => {} },
+      transcripts: {
+        beginRecording: async () => ({ ok: true, id: "r2" }),
+        appendRecording: async () => ({ ok: true, seconds: 0 }),
+        finishRecording: async () => ({ ok: true, id: "r2" }),
+        discardRecording: async () => {},
+      },
       language: () => "auto",
       now: () => 0,
       changed: () => {},
@@ -90,7 +103,12 @@ describe("recording session", () => {
     const failure = { code: "disk-full", message: "The disk is full." } as const;
     const s = new RecordingSession({
       mic: { start: async () => ({ ok: true }), stop: async () => {}, onChunk: () => {}, onLevel: () => {}, onEnded: () => {} },
-      transcripts: { beginRecording: async () => ({ ok: false, failure }), appendRecording: async () => ({ ok: true, seconds: 0 }), finishRecording: async () => ({ ok: true, id: "x" }), discardRecording: async () => {} },
+      transcripts: {
+        beginRecording: async () => ({ ok: false, failure }),
+        appendRecording: async () => ({ ok: true, seconds: 0 }),
+        finishRecording: async () => ({ ok: true, id: "x" }),
+        discardRecording: async () => {},
+      },
       language: () => "auto",
       now: () => 0,
       changed: () => {},

@@ -128,8 +128,13 @@ function Toolbar({ search, setSearch, empty, onClear }: { search: string; setSea
   );
 }
 
-/** Settings > Dictation > history: what was dictated, searchable, with copy, delete and clear all. */
-export function DictationHistoryPage({ back }: { back: () => void }) {
+/** The sentence under the History title for the dictation tab (how long entries are kept). */
+export async function historyLeadNow(): Promise<string> {
+  return historyLead((await dictation.status()).settings.retention);
+}
+
+/** Settings > Dictation > history: what was dictated, searchable, with copy, delete and clear all. `embedded` leaves out the back link and the title: History puts the page under its own tabs. */
+export function DictationHistoryPage({ back, embedded }: { back?: () => void; embedded?: boolean }) {
   const s = useDictation();
   const [items, setItems] = useState<HistoryItem[] | null>(null);
   const [search, setSearch] = useState("");
@@ -140,14 +145,18 @@ export function DictationHistoryPage({ back }: { back: () => void }) {
   useEffect(load, [load, total]);
 
   return (
-    <div className="sk-page dict-hist">
-      <button type="button" className="dict-back" onClick={back}>
-        <Icon name="arrow-left" size={12} /> Dictation
-      </button>
-      <div className="sk-page__head">
-        <h1>Dictation history</h1>
-        <p>{historyLead(retention)}</p>
-      </div>
+    <div className={embedded ? "dict-hist dict-hist--embedded" : "sk-page dict-hist"}>
+      {embedded ? null : (
+        <>
+          <button type="button" className="dict-back" onClick={back}>
+            <Icon name="arrow-left" size={12} /> Dictation
+          </button>
+          <div className="sk-page__head">
+            <h1>Dictation history</h1>
+            <p>{historyLead(retention)}</p>
+          </div>
+        </>
+      )}
       <Toolbar search={search} setSearch={setSearch} empty={total === 0} onClear={() => setAsking(true)} />
       {total === 0 ? (
         <Empty s={s} />
