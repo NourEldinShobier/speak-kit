@@ -1,7 +1,6 @@
 import { labelsOf } from "./labels";
 import { createContextReader, type ContextReader } from "./readers";
 
-export { labelsOf } from "./labels";
 
 /**
  * The text of an agent context: the labels of the controls in the window in front, when the experiment is on. Off by default, and a failure of

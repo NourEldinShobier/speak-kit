@@ -40,4 +40,3 @@ export function createEventLog(d: EventLogDeps) {
     },
   };
 }
-export type EventLog = ReturnType<typeof createEventLog>;
