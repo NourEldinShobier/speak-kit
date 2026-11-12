@@ -22,9 +22,27 @@ describe("inserter port", () => {
 
   it("adds the page the browser reported, and nothing when none was or no window is in front", async () => {
     const { os } = fakeOs({ fg: { hwnd: "1", pid: 1, exe: "chrome.exe", className: "Chrome", elevated: false } });
-    expect(await createInserterPort(os, () => undefined, () => "mail.google.com").target()).toMatchObject({ exe: "chrome.exe", site: "mail.google.com" });
-    expect(await createInserterPort(os, () => undefined, () => undefined).target()).not.toHaveProperty("site");
-    expect(await createInserterPort(fakeOs({ fg: null }).os, () => undefined, () => "a.com").target()).toBeUndefined();
+    expect(
+      await createInserterPort(
+        os,
+        () => undefined,
+        () => "mail.google.com",
+      ).target(),
+    ).toMatchObject({ exe: "chrome.exe", site: "mail.google.com" });
+    expect(
+      await createInserterPort(
+        os,
+        () => undefined,
+        () => undefined,
+      ).target(),
+    ).not.toHaveProperty("site");
+    expect(
+      await createInserterPort(
+        fakeOs({ fg: null }).os,
+        () => undefined,
+        () => "a.com",
+      ).target(),
+    ).toBeUndefined();
   });
 
   it("has no target when no window is in front, and an empty program name when it cannot be read", async () => {

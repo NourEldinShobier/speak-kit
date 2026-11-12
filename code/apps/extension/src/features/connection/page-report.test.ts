@@ -62,7 +62,8 @@ describe("postPage", () => {
     expect(await postPage(d, "a.com")).toBe(true);
     expect(calls[0]?.url).toBe("http://127.0.0.1:47615/v1/page-context");
     expect(calls[0]?.init?.body).toBe('{"host":"a.com"}');
-    expect((calls[0]?.init?.headers as Record<string, string>).Authorization).toBe("Bearer t");
+    const headers = (calls[0]?.init?.headers ?? {}) as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer t");
   });
   it("is false without a token (nothing is sent), when the app refuses and when it is not running", async () => {
     const none = deps(new Response(null, { status: 204 }), "");

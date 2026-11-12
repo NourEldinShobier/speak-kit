@@ -425,6 +425,52 @@ describe("History page", () => {
   });
 });
 
+describe("Websites in a mode", () => {
+  const addMode = async (l: Launched, name: string) => {
+    await l.page.getByRole("button", { name: "Add mode" }).click();
+    const d = l.page.getByRole("dialog", { name: "Add a mode" });
+    await d.getByLabel("Name").fill(name);
+    await d.getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("heading", { name, exact: true, level: 1 }).waitFor();
+  };
+
+  it("adds a website as a host name, refuses text that is not one, moves it from another mode and removes it", async () => {
+    const l = await start();
+    await open(l, "Modes");
+    await addMode(l, "Mail");
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    const dialog = l.page.getByRole("dialog", { name: "Add a website to Mail" });
+    await dialog.getByLabel("Website").fill("two words");
+    await dialog.getByText("That is not a website address.").waitFor();
+    expect(await dialog.getByRole("button", { name: "Add website" }).isDisabled()).toBe(true);
+    await dialog.getByLabel("Website").fill("https://www.Mail.Google.com/inbox");
+    await dialog.getByRole("button", { name: "Add website" }).click();
+    await expect.poll(async () => (await settings(l)).modes[0]?.sites).toEqual(["mail.google.com"]);
+    await l.page.getByRole("button", { name: "Remove mail.google.com" }).waitFor();
+
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    await l.page.getByRole("dialog", { name: "Add a website to Mail" }).getByLabel("Website").fill("mail.google.com");
+    await l.page.getByText("mail.google.com is already in this mode.").waitFor();
+    await l.page.getByRole("dialog", { name: "Add a website to Mail" }).getByRole("button", { name: "Cancel" }).click();
+
+    await l.page.getByRole("button", { name: "Modes", exact: true }).click();
+    await addMode(l, "Work");
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    const second = l.page.getByRole("dialog", { name: "Add a website to Work" });
+    await second.getByLabel("Website").fill("mail.google.com");
+    await second.getByText("mail.google.com is in Mail now. It moves to this mode.").waitFor();
+    await second.getByRole("button", { name: "Add website" }).click();
+    await expect
+      .poll(async () => (await settings(l)).modes.map((m: { name: string; sites: string[] }) => [m.name, m.sites]))
+      .toEqual([
+        ["Mail", []],
+        ["Work", ["mail.google.com"]],
+      ]);
+    await l.page.getByRole("button", { name: "Remove mail.google.com" }).click();
+    await expect.poll(async () => (await settings(l)).modes[1]?.sites).toEqual([]);
+  });
+});
+
 describe("Installed-app picker", () => {
   const APPS = JSON.stringify([
     { key: "slack", name: "Slack" },

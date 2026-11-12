@@ -5,6 +5,7 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
+import { AddSiteDialog, SitesCard } from "./SitesCard";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
@@ -92,7 +93,8 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length === 1 ? "app goes" : "apps go"} back to the Default mode, and its {mode.terms.length === 1 ? "word is" : "words are"} removed. You cannot undo it.
+        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to the Default mode, and its {mode.terms.length === 1 ? "word is" : "words are"} removed.
+        You cannot undo it.
       </p>
     </Modal>
   );
@@ -242,12 +244,14 @@ export interface ModeDetailProps {
   onBack(): void;
   onChange(next: Mode): void;
   onApps(apps: string[]): void;
+  onSites(sites: string[]): void;
   onDelete(): void;
 }
 
 /** One mode: its apps, how it inserts and cleans up, the rewrite choice and its own words. */
-export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete }: ModeDetailProps) {
+export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites, onDelete }: ModeDetailProps) {
   const [addApp, setAddApp] = useState(false);
+  const [addSite, setAddSite] = useState(false);
   const [asking, setAsking] = useState(false);
   // The default mode takes every app no other mode lists and uses the settings of the Dictation page; only its rewrite choice is its own.
   if (mode.id === DEFAULT_MODE_ID)
@@ -264,7 +268,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete
   return (
     <Page
       title={mode.name}
-      lead="How dictation behaves in the apps below."
+      lead="How dictation behaves in the apps and websites below."
       action={
         <Button variant="danger" onClick={() => setAsking(true)}>
           Delete mode
@@ -275,9 +279,11 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete
         <Icon name="arrow-left" size={12} /> Modes
       </button>
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
+      <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />
+      <AddSiteDialog open={addSite} mode={mode} others={others} onClose={() => setAddSite(false)} onSave={onSites} />
       <DeleteDialog open={asking} mode={mode} onClose={() => setAsking(false)} onConfirm={onDelete} />
     </Page>
   );
