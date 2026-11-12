@@ -4,6 +4,8 @@ export const REPLAY = {
   windowMs: 15_000,
   /** The video is cut into pieces of this length: each one can be played on its own, and the oldest piece is dropped whole. */
   segmentMs: 3000,
+  /** The most memory the buffer holds (video and pictures): above it the oldest finished pieces are dropped even if the window is no longer covered. */
+  maxBytes: 150 * 1024 * 1024,
 } as const;
 
 export interface ReplayPiece {
@@ -31,4 +33,15 @@ export const clipPieces = <T extends ReplayPiece>(pieces: readonly T[], windowMs
 /** The picture times of a clip, moved so the clip starts at zero; pictures from before its first piece are left out. */
 export function clipTimes<T extends { atMs: number }>(items: readonly T[], clipStartMs: number): (T & { atMs: number })[] {
   return items.filter((x) => x.atMs >= clipStartMs).map((x) => ({ ...x, atMs: x.atMs - clipStartMs }));
+}
+
+/** The pieces that fit in `maxBytes`, newest first kept; the newest piece is always kept so a very high bitrate still gives a clip. */
+export function fitBytes<T>(pieces: readonly T[], size: (p: T) => number, maxBytes: number = REPLAY.maxBytes): T[] {
+  let total = 0;
+  let first = pieces.length;
+  while (first > 0 && (first === pieces.length || total + size(pieces[first - 1]!) <= maxBytes)) {
+    first--;
+    total += size(pieces[first]!);
+  }
+  return pieces.slice(first);
 }

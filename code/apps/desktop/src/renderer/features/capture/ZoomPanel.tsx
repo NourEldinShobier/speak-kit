@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Banner, Button, Select, Slider } from "@speakkit/ui";
 import type { CaptureDetail } from "../../../shared/capture/contract";
-import { cropOfRegion, normalizeRegions, ZOOM, type ZoomRegion } from "../../../shared/capture/zoom";
+import { cropOfRegion, overrideRegions, ZOOM, type ZoomRegion } from "../../../shared/capture/zoom";
 import { duration } from "./format";
 import { clampTrim } from "./trim-range";
 
@@ -41,7 +41,7 @@ function RegionList({ regions, onRemove }: { regions: ZoomRegion[]; onRemove(i: 
       {regions.map((r, i) => (
         <li key={`${r.startMs}-${i}`}>
           <span>
-            {duration(r.startMs)} to {duration(r.endMs)}, {r.scale}x at {percent(r.x)} across, {percent(r.y)} down
+            {duration(r.startMs)} to {duration(r.endMs)}, {r.scale}x {r.path ? "following the pointer" : `at ${percent(r.x)} across, ${percent(r.y)} down`}
           </span>
           <Button size="sm" aria-label={`Remove the zoom at ${duration(r.startMs)}`} onClick={() => onRemove(i)}>
             Remove
@@ -131,12 +131,14 @@ export function ZoomPanel({ detail, onCancel, onSave, onSuggest }: Props) {
   return (
     <section className="cap-trim cap-zoom" aria-label="Zoom video">
       <h3 className="cap-trim__title">Zoom video</h3>
-      <p className="cap-detail__meta">Shows parts of the video closer. The original video file stays in the capture folder.</p>
+      <p className="cap-detail__meta">
+        Shows parts of the video closer. Suggested zooms follow the pointer; a zoom you add by hand replaces any zoom it overlaps. The original video file stays in the capture folder.
+      </p>
       <Preview detail={detail} region={draft} />
       <Span draft={draft} length={length} disabled={unusable} onChange={edit} />
       <Place draft={draft} busy={busy} set={edit} />
       <div className="cap-actions">
-        <Button disabled={unusable} onClick={() => setRegions((rs) => normalizeRegions([...rs, draft], length))}>
+        <Button disabled={unusable} onClick={() => setRegions((rs) => overrideRegions(rs, draft, length))}>
           Add zoom
         </Button>
         <Button disabled={unusable} onClick={() => void suggest()}>

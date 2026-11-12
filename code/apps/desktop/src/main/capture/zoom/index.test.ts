@@ -171,6 +171,24 @@ describe("suggested zooms", () => {
     expect(await suggestZoom(t.deps, "r1")).toEqual([region(2700, 5000, { x: 0.8, y: 0.2 })]);
   });
 
+  it("carry a smoothed path when the pointer moved after the click", async () => {
+    const t = await setup();
+    await t.bundle.writeFile(
+      "r1",
+      "pointer.json",
+      JSON.stringify([
+        { atMs: 3000, x: 0.4, y: 0.4, click: true },
+        { atMs: 3200, x: 0.6, y: 0.4 },
+      ]),
+    );
+    const [zoom] = await suggestZoom(t.deps, "r1");
+    expect(zoom).toMatchObject({ startMs: 2700, endMs: 5000, x: 0.4, y: 0.4 });
+    expect(zoom?.path).toEqual([
+      { atMs: 3000, x: 0.4, y: 0.4 },
+      { atMs: 3200, x: 0.47, y: 0.4 },
+    ]);
+  });
+
   it("use the timeline of the trimmed copy and leave out what was cut away", async () => {
     const t = await setup({ record: { trim: { startMs: 2000, endMs: 5000 }, media: "video-trim.webm" } });
     await t.bundle.writeFile("r1", "pointer.json", JSON.stringify([...rest, { atMs: 100, x: 0.2, y: 0.7 }]));

@@ -1,5 +1,5 @@
 import type { RecorderPayload } from "../../../shared/capture/contract";
-import { clipPieces, clipTimes, keepPieces, REPLAY } from "../../../shared/capture/replay";
+import { clipPieces, clipTimes, fitBytes, keepPieces, REPLAY } from "../../../shared/capture/replay";
 
 /** What the buffer needs of the screen recorder: it starts and ends one video piece at a time. */
 export interface PieceRecorder {
@@ -9,6 +9,9 @@ export interface PieceRecorder {
   endSegment(): Promise<void>;
   stop(): void;
 }
+
+/** Pictures are about one a second, so this is far more than the window needs; it only stops a stuck clock from growing the list. */
+const MAX_FRAMES = 60;
 
 interface Piece {
   startMs: number;
@@ -34,6 +37,8 @@ export interface ReplayBuffer {
   held(): { pieces: number; frames: number };
 }
 
+const sizeOf = (p: Piece): number => p.chunks.reduce((n, c) => n + c.length, 0);
+
 const joined = (parts: readonly Uint8Array[]): Uint8Array => {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
@@ -45,7 +50,7 @@ const joined = (parts: readonly Uint8Array[]): Uint8Array => {
 };
 
 /** The pieces and pictures held now. A piece with an end time of -1 is the one being recorded. */
-function createStore() {
+function createStore(maxBytes: number) {
   let pieces: Piece[] = [];
   let frames: { atMs: number; jpeg: Uint8Array }[] = [];
   const open = () => pieces[pieces.length - 1];
@@ -65,10 +70,10 @@ function createStore() {
     frame: (atMs: number, jpeg: Uint8Array) => frames.push({ atMs, jpeg }),
     /** Drops the finished pieces nobody needs any more, and the pictures from before the oldest one kept. */
     prune() {
-      const keep = new Set(keepPieces(pieces.filter((p) => p.endMs >= 0)));
+      const keep = new Set(fitBytes(keepPieces(pieces.filter((p) => p.endMs >= 0)), sizeOf, maxBytes));
       pieces = pieces.filter((p) => p.endMs < 0 || keep.has(p));
       const oldest = pieces[0]?.startMs ?? 0;
-      frames = frames.filter((f) => f.atMs >= oldest);
+      frames = frames.filter((f) => f.atMs >= oldest).slice(-MAX_FRAMES);
     },
     /** The newest 15 seconds of finished pieces with video, or undefined when there are none. */
     clip(): Clip | undefined {
@@ -100,6 +105,8 @@ function serial() {
 export interface ReplayBufferDeps {
   now(): number;
   segmentMs?: number;
+  /** The most video kept, in bytes (default: the replay limit). */
+  maxBytes?: number;
   setInterval?: (fn: () => void, ms: number) => unknown;
   clearInterval?: (h: unknown) => void;
 }
@@ -111,7 +118,7 @@ export interface ReplayBufferDeps {
 export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
   const set = d.setInterval ?? ((fn, ms) => setInterval(fn, ms));
   const clear = d.clearInterval ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>));
-  const store = createStore();
+  const store = createStore(d.maxBytes ?? REPLAY.maxBytes);
   let run: PieceRecorder | undefined;
   let frameEveryMs = 1000;
   let timer: unknown;
