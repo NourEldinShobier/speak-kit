@@ -88,3 +88,34 @@ describe("Transcribe again", () => {
     expect(loads).toEqual([other(cfg), cfg.model, other(cfg), cfg.model]);
   });
 });
+
+describe("the entries the History page gets", () => {
+  const entry = { id: "a", at: 5, text: "hello", raw: "um hello", durationMs: 1200, timings: { transcribeMs: 420, pausesDroppedMs: 800 }, kind: "restored" };
+
+  function listed(extra: object = {}) {
+    const cfg = v.parse(DictationConfigSchema, {});
+    const core = { history: { list: async () => [{ ...entry, ...extra }], status: () => "ok", preservedAs: () => undefined } } as unknown as Dictation;
+    const api = new HistoryApi({
+      ready: async () => {},
+      core: () => core,
+      audio: () => undefined,
+      cfg: () => cfg,
+      dictating: () => false,
+      stt: {} as Stt,
+      files: { open: async () => null, save: async () => null },
+      push: () => undefined,
+      refreshCount: async () => {},
+      warn: () => {},
+      key: { test: false },
+    });
+    return api.list();
+  }
+
+  it("carries how long the model took and how much silence was skipped, and the recovered kind", async () => {
+    expect((await listed())[0]).toMatchObject({ timings: { transcribeMs: 420, pausesDroppedMs: 800 }, kind: "restored", raw: "um hello", text: "hello" });
+  });
+
+  it("has no timings for an entry from before they were stored", async () => {
+    expect((await listed({ timings: undefined }))[0]).not.toHaveProperty("timings");
+  });
+});
