@@ -24,6 +24,11 @@ describe("capture look", () => {
     });
   });
 
+  it("adds the controls that were on screen after the words, or alone when nothing was said", () => {
+    expect(lookOfCapture({ title: "Screen", words: [word("this")], context: "button: Save" }, pic).text).toBe("this\n\nControls on screen when the recording ended:\nbutton: Save");
+    expect(lookOfCapture({ title: "Screen", context: "button: Save" }, pic)).toMatchObject({ text: "Controls on screen when the recording ended:\nbutton: Save", ocr: "ok" });
+  });
+
   it("says empty when nothing was said", () => {
     expect(lookOfCapture({ title: "Screen" }, pic)).toMatchObject({ text: "", ocr: "empty" });
     expect(lookOfCapture({ title: "Screen", words: [] }, pic)).toMatchObject({ ocr: "empty" });

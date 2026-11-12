@@ -51,6 +51,8 @@ export interface RecordingDeps {
   /** The recorder could not open the microphone: the capsule says so. */
   micMissing(): void;
   noticeParams(): NoticeParams;
+  /** The agent context text, or undefined when the experiment is off. */
+  context?(): Promise<string | undefined>;
 }
 
 const REASON: Record<Extract<RecorderResult, { ok: false }>["code"], string> = { source: "no frames from the source", encoder: "encoder failed", denied: "permission denied" };
@@ -109,6 +111,8 @@ class RecorderPorts {
 
   async stop(id: string): Promise<Media> {
     const d = this.#d;
+    // read first: stopping the recorder can change which window is in front
+    const context = await d.context?.();
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
     d.fence.close();
@@ -122,6 +126,7 @@ class RecorderPorts {
       videoFile: hasVideo ? "video.webm" : undefined,
       pcm: cur?.micOk ? await d.bundle.pcm(id) : undefined,
       ...(r.softwareEncoder && { softwareEncoder: true }),
+      ...(context && { context }),
       ...(cur?.resolved.windowRect && { windowRect: cur.resolved.windowRect }),
     };
   }
@@ -225,6 +230,7 @@ export async function saveBundle(d: RecordingDeps, f: Finished): Promise<Capture
     media: media.videoFile ?? media.frames[0]?.file ?? "",
     frames: plan.frames.map((f) => f.file),
     ...(sheet && { sheet: "sheet.jpg" }),
+    ...(media.context && { context: media.context }),
     chips: ["saved", "copied"],
   };
   await d.store.add(record);

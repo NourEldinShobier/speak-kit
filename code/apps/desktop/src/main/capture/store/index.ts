@@ -13,6 +13,8 @@ export interface CaptureRecord {
   media: string;
   frames: string[];
   sheet?: string;
+  /** Labels of the controls on screen at the end of the recording (agent context experiment). */
+  context?: string;
   /** Edited copies of pictures: file of the original -> file of the edit. The original stays. */
   edits?: Record<string, string>;
   /** What happened to it so far. */

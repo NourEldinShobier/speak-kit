@@ -14,7 +14,7 @@ export const captureTestHook = (c: CaptureService) => ({
   state: () => c.testState(),
   status: () => c.statusNow(),
   /** What the scripted recorder does on the next recordings: how many frames it makes, whether the microphone is missing. */
-  script: (o: FakeRecorderOptions) => c.runtime.scriptRecorder(o),
+  script: (o: FakeRecorderOptions) => c.runtime.recorder.script(o),
   /** Same as pressing the capture key: "down" then "up" starts, a quick "down" "up" while recording stops. */
   /** Same as pressing a button of the capsule. */
   capsule: (action: CapsuleAction) => c.runtime.pressCapsule(action),

@@ -45,6 +45,16 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-agent-context",
+    title: "Agent context text",
+    description: "When a recording ends, Speak Kit lists the names of the buttons, menus and fields in the window in front and sends them with the capture to Voice chat.",
+    badges: ["Experimental"],
+    guard: "Names only, never what is typed in a field. Password fields are skipped. Off until you turn it on; on a Mac, Speak Kit asks for Accessibility access first.",
+    useState: () => useCaptureExperiment("agentContext"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-playground",
     title: "Playground",
     description: "A page in Capture that shows every capsule state with sample data, for people building on Speak Kit.",
