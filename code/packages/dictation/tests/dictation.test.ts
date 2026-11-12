@@ -10,6 +10,7 @@ describe("defaults", () => {
       mode: "hold",
       language: "auto",
       duck: false,
+      skipPauses: false,
       keepReady: false,
       keepOnClipboard: false,
       returnToApp: true,
