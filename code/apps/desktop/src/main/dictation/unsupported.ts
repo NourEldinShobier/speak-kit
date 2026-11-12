@@ -11,7 +11,7 @@ export function createUnsupportedPlatform(): DictationPlatform {
       heldModifiers: () => [],
       pressPaste: () => false,
       focus: async () => false,
-      type: () => false,
+      type: async () => "rejected",
       clipboardSequence: () => 0,
       clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
       markClipboard: async () => false,

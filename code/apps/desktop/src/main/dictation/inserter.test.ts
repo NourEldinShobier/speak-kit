@@ -6,7 +6,7 @@ import type { AppOverride, ForegroundInfo, InputPort } from "./types";
 const notepad: ForegroundInfo = { hwnd: "100", pid: 1, exe: "notepad.exe", className: "Notepad", elevated: false };
 
 function setup(
-  opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void } = {},
+  opts: { fg?: ForegroundInfo | null; overrides?: AppOverride[]; held?: string[][]; password?: boolean; accept?: boolean; failWrite?: boolean; restorable?: boolean; onSleep?: () => void; onType?: () => void } = {},
 ) {
   let content: string | null = "old";
   let seq = 1;
@@ -35,9 +35,11 @@ function setup(
       sent.push(`${key.replaceAll("-", "+")} while clipboard=${content}`);
       return opts.accept ?? true;
     },
-    type: (text) => {
+    type: async (text, stopped) => {
       sent.push(`type ${text}`);
-      return opts.accept ?? true;
+      opts.onType?.();
+      if (stopped?.()) return "stopped";
+      return (opts.accept ?? true) ? "done" : "rejected";
     },
     clipboardSequence: () => seq,
     clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
@@ -212,7 +214,7 @@ describe("unsupported platform", () => {
       passwordFocused: () => false,
       heldModifiers: () => [],
       pressPaste: () => false,
-      type: () => false,
+      type: async () => "rejected" as const,
       clipboardSequence: () => 0,
       clipboardTraits: () => ({ files: false, formats: 0, marks: [] }),
       markClipboard: async () => false,
@@ -239,6 +241,22 @@ describe("typing rule", () => {
     expect(await t.ins.insert("héllo", { mode: "type" })).toEqual({ status: "typed" });
     expect(t.sent).toEqual(["type héllo"]);
     expect(t.clipboard).toBe("old");
+  });
+
+  it("leaves the whole text on the clipboard when typing is stopped, and the next typing is not stopped", async () => {
+    let t!: ReturnType<typeof setup>;
+    let stop = true;
+    t = setup({ overrides: rule, onType: () => stop && t.ins.cancelTyping() });
+    expect(await t.ins.insert("long text")).toEqual({ status: "copied", reason: "typing-stopped" });
+    expect(t.clipboard).toBe("long text");
+    stop = false;
+    expect(await t.ins.insert("again")).toEqual({ status: "typed" });
+  });
+
+  it("ignores a stop request when nothing is being typed", async () => {
+    const t = setup({ overrides: rule });
+    t.ins.cancelTyping();
+    expect(await t.ins.insert("x")).toEqual({ status: "typed" });
   });
 
   it("copies the text when typing is refused", async () => {

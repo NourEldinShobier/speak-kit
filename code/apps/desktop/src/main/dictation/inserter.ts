@@ -33,6 +33,7 @@ export class Inserter {
   readonly #supported: boolean;
   readonly #guard: RestoreGuard;
   #chain: Promise<unknown> = Promise.resolve();
+  #stopTyping = false;
 
   constructor({ input, clip, overrides, supported = true, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
@@ -51,6 +52,11 @@ export class Inserter {
       () => undefined,
     );
     return result;
+  }
+
+  /** Ends typing that is in progress after the piece being sent; the whole text then stays on the clipboard. Does nothing when nothing is being typed. */
+  cancelTyping(): void {
+    this.#stopTyping = true;
   }
 
   /** Resolves once the old clipboard is back (or will never be restored). */
@@ -89,9 +95,14 @@ export class Inserter {
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);
     if (this.#input.foreground()?.hwnd !== fg.hwnd) return this.#keepCopy(text, typing, "foreground-changed");
-    const accepted = typing ? this.#input.type(text) : this.#input.pressPaste(pasteKey(profile.shortcut));
-    if (!accepted) return this.#keepCopy(text, typing, "keys-rejected");
-    if (typing) return { status: "typed" };
+    if (typing) {
+      this.#stopTyping = false;
+      const how = await this.#input.type(text, () => this.#stopTyping);
+      this.#stopTyping = false;
+      if (how === "stopped") return this.#keepCopy(text, true, "typing-stopped");
+      return how === "done" ? { status: "typed" } : this.#keepCopy(text, true, "keys-rejected");
+    }
+    if (!this.#input.pressPaste(pasteKey(profile.shortcut))) return this.#keepCopy(text, false, "keys-rejected");
     if (opts.mode === "keep") this.#guard.keep();
     else this.#guard.restoreAfter(profile.restoreDelayMs);
     return { status: "pasted" };

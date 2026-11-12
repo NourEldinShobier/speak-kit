@@ -15,6 +15,16 @@ function fakeOs(over: { fg?: object | null; password?: boolean; result?: InsertR
 }
 
 describe("inserter port", () => {
+  it("passes a cancel on to the operating system layer, and reads the caret only when the layer has a reader", async () => {
+    let cancelled = 0;
+    const os = { ...fakeOs().os, cancelTyping: () => void cancelled++, caret: { read: async () => ({ before: "d", selected: false }) } } as unknown as DictationOs;
+    const port = createInserterPort(os, () => undefined);
+    port.cancel?.();
+    expect(cancelled).toBe(1);
+    expect(await port.caret?.()).toEqual({ before: "d", selected: false });
+    expect(createInserterPort(fakeOs().os, () => undefined).caret).toBeUndefined();
+  });
+
   it("describes the window in front, with whether a password field has focus", async () => {
     const { os } = fakeOs({ password: true });
     expect(await createInserterPort(os, () => undefined).target()).toEqual({ id: "42", exe: "notepad.exe", name: "Notepad", elevated: false, passwordField: true });

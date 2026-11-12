@@ -43,3 +43,75 @@ describe("clipboard traits", () => {
     expect(tries).toHaveLength(5);
   });
 });
+
+describe("typing", () => {
+  type Ev = { vk: number; scan: number; flags: number };
+  const rig = (accept = Infinity) => {
+    const sent: Ev[][] = [];
+    const w = {
+      sendInput: (events: { u: { ki: { wVk: number; wScan: number; dwFlags: number } } }[]) => {
+        sent.push(events.map((e) => ({ vk: e.u.ki.wVk, scan: e.u.ki.wScan, flags: e.u.ki.dwFlags })));
+        return Math.min(events.length, accept);
+      },
+    } as unknown as Win32;
+    return { input: createInput(w, {} as Foreground), sent };
+  };
+  const SHIFT = 0xa0;
+  const RETURN = 0x0d;
+
+  it("sends each character as a Unicode key down and up", async () => {
+    const { input: i, sent } = rig();
+    expect(await i.type("hé")).toBe("done");
+    expect(sent.flat()).toEqual([
+      { vk: 0, scan: 0x68, flags: 4 },
+      { vk: 0, scan: 0x68, flags: 6 },
+      { vk: 0, scan: 0xe9, flags: 4 },
+      { vk: 0, scan: 0xe9, flags: 6 },
+    ]);
+  });
+
+  it("sends a line break as Shift+Enter, for LF and CRLF alike", async () => {
+    for (const text of ["a\nb", "a\r\nb"]) {
+      const { input: i, sent } = rig();
+      expect(await i.type(text)).toBe("done");
+      expect(sent.flat().map((e) => [e.vk, e.flags])).toEqual([
+        [0, 4],
+        [0, 6],
+        [SHIFT, 0],
+        [RETURN, 0],
+        [RETURN, 2],
+        [SHIFT, 2],
+        [0, 4],
+        [0, 6],
+      ]);
+    }
+  });
+
+  it("sends a long text in pieces of 128 characters, whole characters only", async () => {
+    const { input: i, sent } = rig();
+    await i.type("x".repeat(300));
+    expect(sent.map((p) => p.length / 2)).toEqual([128, 128, 44]);
+    const { input: j, sent: pairs } = rig();
+    await j.type("\u{1F600}".repeat(130));
+    expect(pairs.map((p) => p.length / 4)).toEqual([128, 2]);
+  });
+
+  it("reports a refusal and sends nothing more", async () => {
+    const { input: i, sent } = rig(3);
+    expect(await i.type("x".repeat(300))).toBe("rejected");
+    expect(sent).toHaveLength(1);
+  });
+
+  it("stops between pieces when asked, after the pieces already sent", async () => {
+    const { input: i, sent } = rig();
+    let asked = 0;
+    expect(await i.type("x".repeat(300), () => ++asked > 1)).toBe("stopped");
+    expect(sent).toHaveLength(1);
+  });
+
+  it("types nothing for empty text", async () => {
+    const { input: i, sent } = rig();
+    expect(await i.type("")).toBe("done");
+    expect(sent).toEqual([]);
+  });
+});
