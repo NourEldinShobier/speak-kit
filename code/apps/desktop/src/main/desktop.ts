@@ -16,6 +16,7 @@ import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
+import { setupControl } from "./control";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
@@ -32,8 +33,10 @@ interface DesktopOptions {
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
   fakeUpdate?: string | undefined;
+  /** The app version, for the control server. */
+  version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -48,6 +51,16 @@ const readerHandlers = (reading: ReturnType<typeof createReading>) =>
     readerStarted: async (epoch, index) => reading.started(epoch, index),
     readerDone: async (epoch, index) => reading.done(epoch, index),
   }) satisfies Partial<Api>;
+
+/** Permissions the dictation hotkey needs; the hotkey is retried when they get allowed. */
+function watchPermissions(parent: DesktopOptions["parent"], dictation: DictationService): void {
+  const permissions = setupPermissions(
+    () => parent()?.webContents,
+    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
+  );
+  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
+  app.on("browser-window-focus", permissions.refresh);
+}
 
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
@@ -74,12 +87,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  const permissions = setupPermissions(
-    () => o.parent()?.webContents,
-    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
-  );
-  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
-  app.on("browser-window-focus", permissions.refresh);
+  watchPermissions(o.parent, dictation);
+  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -98,17 +107,21 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
+      control.onConfigPatch(patch);
     },
     onEngineState: engineAnnouncer(ctx, toasts),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
-    dispose: () => {
+    /** Resolves once the control server is down and its discovery file is gone. */
+    dispose: (): Promise<void> => {
+      const controlDown = control.dispose();
       shortcuts.unregisterAll();
       reading.dispose();
       exports.dispose();
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
+      return controlDown;
     },
     testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
   };

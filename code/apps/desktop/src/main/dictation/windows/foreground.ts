@@ -16,7 +16,7 @@ export function createForeground(w: Win32) {
       const p = w.processInfo(pid);
       // A program whose token (or whole process) is closed to us runs with more rights than we do, which is what Windows needs to drop our key presses.
       const elevated = (p.elevated ?? true) && !ownRights();
-      return { hwnd: w.address(h), pid, exe: p.exe, className: w.className(h), elevated };
+      return { hwnd: w.address(h), pid, exe: p.exe, className: w.className(h), elevated, bounds: w.windowBounds(h) };
     },
     /** Only classic edit controls (Win32, WinForms, RichEdit) carry the password style; browsers and other custom-drawn fields are not recognised. */
     passwordFocused(): boolean {

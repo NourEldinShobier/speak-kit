@@ -27,7 +27,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
-    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
+    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
   });
   const openDictation = (page: "dictation" | "history") => () => {
     ctx.showWindow();
@@ -35,6 +35,8 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
   };
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
+    "paste-last": () => void dictation.controls.pasteLast(),
+    "pause-shortcuts": () => dictation.controls.setPaused(!dictation.controls.paused),
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
     open: ctx.showWindow,

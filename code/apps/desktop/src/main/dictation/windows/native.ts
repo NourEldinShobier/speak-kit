@@ -10,6 +10,12 @@ export interface KeyInput {
 }
 
 /** What the low-level keyboard hook reports for one key stroke (KBDLLHOOKSTRUCT). */
+export interface RawMouse {
+  mouseData: number;
+  flags: number;
+  extra: number;
+}
+
 export interface RawKbd {
   vk: number;
   scan: number;
@@ -40,12 +46,16 @@ export interface Win32 {
   /** GWL_STYLE, or GWL_EXSTYLE when `extended` is true. */
   windowStyle(h: Handle, extended?: boolean): number;
   address(h: Handle): string;
+  /** Outer bounds of a window in screen pixels. */
+  windowBounds(h: Handle): { x: number; y: number; width: number; height: number };
   /** Program file name and whether its token is elevated. Both null when the process cannot be opened; elevated is null when its token is closed to us (a sign it runs with more rights). */
   processInfo(pid: number): { exe: string | null; elevated: boolean | null };
   hook: {
     kbdStruct: TypeObject;
+    mouseStruct: TypeObject;
     callbackType: TypeObject;
     install(callback: unknown): Handle;
+    installMouse(callback: unknown): Handle;
     callNext(code: number, wParam: number, lParam: unknown): number;
     remove(h: Handle): void;
   };
@@ -118,7 +128,7 @@ function clipboardApi(koffi: Koffi): ClipboardApi {
   };
 }
 
-type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address">;
+type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address" | "windowBounds">;
 
 function windowApi(koffi: Koffi): WindowApi {
   const user32 = koffi.load("user32.dll");
@@ -139,6 +149,7 @@ function windowApi(koffi: Koffi): WindowApi {
   const GetClassNameW = user32.func("int __stdcall GetClassNameW(void *h, _Out_ uint16_t *buf, int n)");
   const GetGUIThreadInfo = user32.func("int __stdcall GetGUIThreadInfo(uint32 tid, _Inout_ SpeakKitGuiThreadInfo *info)");
   const GetWindowLongW = user32.func("int32 __stdcall GetWindowLongW(void *h, int index)");
+  const GetWindowRect = user32.func("int __stdcall GetWindowRect(void *h, _Out_ SpeakKitRect *r)");
   const GWL_STYLE = -16;
   const GWL_EXSTYLE = -20;
   return {
@@ -158,6 +169,11 @@ function windowApi(koffi: Koffi): WindowApi {
     },
     windowStyle: (h, extended = false) => GetWindowLongW(h, extended ? GWL_EXSTYLE : GWL_STYLE) >>> 0,
     address: (h) => String(h ? koffi.address(h) : 0),
+    windowBounds: (h) => {
+      const r = { left: 0, top: 0, right: 0, bottom: 0 };
+      GetWindowRect(h, r);
+      return { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
+    },
   };
 }
 
@@ -207,7 +223,9 @@ function hookApi(koffi: Koffi): Win32["hook"] {
   const WH_KEYBOARD_LL = 13;
   return {
     kbdStruct: koffi.struct("SpeakKitKbdLlHook", { vk: "uint32", scan: "uint32", flags: "uint32", time: "uint32", extra: "uintptr" }),
+    mouseStruct: koffi.struct("SpeakKitMouseLlHook", { x: "int32", y: "int32", mouseData: "uint32", flags: "uint32", time: "uint32", extra: "uintptr" }),
     callbackType,
+    installMouse: (callback) => SetWindowsHookExW(14, callback, GetModuleHandleW(null), 0),
     install: (callback) => SetWindowsHookExW(WH_KEYBOARD_LL, callback, GetModuleHandleW(null), 0),
     callNext: (code, wParam, lParam) => Number(CallNextHookEx(null, code, wParam, lParam)),
     remove: (h) => void UnhookWindowsHookEx(h),

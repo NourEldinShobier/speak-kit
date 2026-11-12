@@ -44,6 +44,20 @@ export interface DictationStatus {
   /** The model failed to download or load. */
   modelError?: string;
   historyCount: number;
+  /** This system has a mouse hook, so a mouse button can be a shortcut. */
+  mouseButtons: boolean;
+  /** `process.platform` of the app, for the options that exist on Windows only. */
+  platform: string;
+  /** Pause all shortcuts is on: keys pass through. Not saved; a restart starts unpaused. */
+  paused: boolean;
+  /** The reader's global shortcuts, so a recorder can warn about a clash before saving. */
+  readerShortcuts: Record<string, string>;
+  /** The last change was refused because the shortcut is already used. */
+  rejected?: { slot: import("./conflicts").Slot; with: import("./conflicts").Slot };
+  /** The feature that holds the microphone now, when one does. */
+  micOwner?: string;
+  /** Who held the microphone when the last dictation press was ignored. */
+  errorOwner?: string;
 }
 
 export interface HistoryItem {
@@ -51,16 +65,18 @@ export interface HistoryItem {
   at: number;
   text: string;
   app?: string;
+  /** "raw": dictated with clean-up off. "printed": handed to a command, never pasted. */
+  kind?: "raw" | "printed";
 }
 
 /** What the HUD page draws. */
 export type HudView =
   | { kind: "ready"; hotkey: string }
-  | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string }
+  | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string; /** Name of the key that cancels this recording, when one does. */ cancel?: string }
   | { kind: "transcribing" }
   | { kind: "pasted" }
   | { kind: "copied"; reason: "clipboard" | "elevated" | "secure-input" }
-  | { kind: "notice"; text: string }
+  | { kind: "notice"; text: string; action?: { label: string; id: HudAction } }
   | { kind: "error"; text: string; icon: "microphone-off" | "download" | "alert-triangle" | "shield-check" | "lock"; action?: { label: string; id: HudAction } };
 
 export interface DictationBridge {
@@ -76,6 +92,12 @@ export interface DictationBridge {
   historyClear(): Promise<void>;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
+  /** Pause all shortcuts (true) or resume them. The returned status shows the state once keys are released. */
+  setPaused(on: boolean): Promise<DictationStatus>;
+  /** Types the last dictation into the window in front. */
+  pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed">;
+  /** Brings back the recording cancelled in the last minute. */
+  undoCancel(): Promise<boolean>;
   /** Opens the operating system's sound input settings. */
   openSoundSettings(): Promise<void>;
   onStatus(cb: (s: DictationStatus) => void): () => void;
@@ -107,6 +129,9 @@ export const DICTATION_ARGS = {
   historyRemove: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64))]),
   historyClear: v.tuple([]),
   retry: v.tuple([]),
+  setPaused: v.tuple([v.boolean()]),
+  pasteLast: v.tuple([]),
+  undoCancel: v.tuple([]),
   openSoundSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 

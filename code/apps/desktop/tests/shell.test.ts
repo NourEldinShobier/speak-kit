@@ -321,7 +321,14 @@ describe("tray and lifecycle", () => {
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
-    expect(labels.filter((n) => !/^(Dictation|Hold )/.test(n))).toEqual(["Open Speak Kit", "Load the voice engine now", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+    expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts)/.test(n))).toEqual([
+      "Open Speak Kit",
+      "Load the voice engine now",
+      "Do not disturb",
+      "Settings",
+      "Check for updates",
+      "Quit Speak Kit",
+    ]);
     expect(await hook<string>("trayState")).toMatch(/^asleep\|Speak Kit - Unloaded \(wakes on play\)$/);
 
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());

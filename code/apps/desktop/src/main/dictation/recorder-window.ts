@@ -28,3 +28,12 @@ export function openRecorderWindow({ page, micAllowed }: RecorderWindowOptions):
   });
   return w;
 }
+
+/** What the recorder host needs of its window: the page's web contents and a safe destroy. */
+export const recorderHandle = (w: BrowserWindow) => ({
+  contents: w.webContents,
+  destroy: () => !w.isDestroyed() && w.destroy(),
+  get destroyed() {
+    return w.isDestroyed();
+  },
+});

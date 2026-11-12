@@ -113,4 +113,27 @@ describe("HUD presenter", () => {
     p.onState(state({ status: "idle", notice: { kind: "inserted" } }));
     expect(shown.at(-1)).toEqual({ kind: "copied", reason: "clipboard" });
   });
+
+  it("says the keyboard was reconnected only while a recording is locked, then goes back to the recording", () => {
+    const { p, shown } = setup();
+    p.reconnected();
+    expect(shown).toEqual([]);
+    vi.setSystemTime(5_000);
+    p.onState(state({ status: "locked" }));
+    vi.advanceTimersByTime(200);
+    p.reconnected();
+    expect(shown.at(-1)).toEqual({ kind: "notice", text: "Keyboard reconnected. Still recording. Press Ctrl Alt Space to finish." });
+    vi.advanceTimersByTime(4000);
+    expect(shown.at(-1)).toMatchObject({ kind: "recording", locked: true });
+  });
+
+  it("a toast goes away by itself and a failed one is an error pill", () => {
+    const { p, shown } = setup();
+    p.toast("Pasted into the window it came from");
+    expect(shown.at(-1)).toEqual({ kind: "notice", text: "Pasted into the window it came from" });
+    vi.advanceTimersByTime(4000);
+    expect(shown.at(-1)).toBe("hide");
+    p.toast("Nothing was pasted, the text stays on the clipboard", "error");
+    expect(shown.at(-1)).toMatchObject({ kind: "error", text: "Nothing was pasted, the text stays on the clipboard" });
+  });
 });

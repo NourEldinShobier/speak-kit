@@ -2,6 +2,9 @@
 
 /* Hotkey: keycaps, then Change. */
 .dict-hotkey {
+  /* One width in every state (keycaps, recorder, messages), so nothing moves while the row changes and the text beside it keeps its column. */
+  inline-size: 360px;
+  max-inline-size: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -34,6 +37,23 @@
   block-size: 8px;
   border-radius: 50%;
   background: var(--text-primary);
+}
+.dict-hotkey__chips {
+  display: inline-flex;
+  gap: 4px;
+}
+.dict-hotkey__unset {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.dict-hotkey__note {
+  flex-basis: 100%;
+  text-align: end;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.dict-hotkey__note--ok {
+  color: var(--tag-green);
 }
 .dict-hotkey__problem {
   flex-basis: 100%;
@@ -313,4 +333,98 @@
   flex-direction: column;
   min-inline-size: 0;
   font-size: 13px;
+}
+/* The mode explainer: a keycap per kind of press, and a badge per rule. */
+.dict-frames {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dict-frame {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 140px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.dict-frame__cap {
+  display: inline-flex;
+  gap: 6px;
+}
+.dict-frame__cap i {
+  inline-size: 44px;
+  block-size: 28px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--stroke-control);
+  background: var(--surface-card);
+  animation: dict-press 2.4s ease-in-out infinite;
+}
+.dict-frame[data-kind="double"] .dict-frame__cap i:nth-child(2) {
+  animation-delay: 0.3s;
+}
+@keyframes dict-press {
+  0%,
+  60%,
+  100% {
+    transform: none;
+    background: var(--surface-card);
+  }
+  20%,
+  45% {
+    transform: translateY(2px);
+    background: var(--text-primary);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dict-frame__cap i {
+    animation: none;
+  }
+  .dict-frame[data-kind="hold"] .dict-frame__cap i,
+  .dict-frame[data-kind="double"] .dict-frame__cap i:first-child {
+    background: var(--text-primary);
+  }
+}
+.dict-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke-control);
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The fold that opens the advanced options. */
+.dict-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  margin-block: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 12px;
+  background: var(--surface-card);
+  text-align: start;
+  cursor: pointer;
+  color: var(--text-primary);
+  font: inherit;
+}
+.dict-fold b {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+.dict-fold small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.dict-fold:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
 }

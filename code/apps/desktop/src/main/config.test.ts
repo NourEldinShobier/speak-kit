@@ -104,4 +104,14 @@ describe("settings repair and backup", () => {
     c.save();
     expect(readFileSync(path.join(dir, "config.json"), "utf8")).toBe(newer);
   });
+
+  it("writes keys in alphabetical order", async () => {
+    const c = await openConfig(dir);
+    c.config.setupDone = true;
+    c.save();
+    const keys = Object.keys(onDisk());
+    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b, "en")));
+    const nested = Object.keys(onDisk().dictation);
+    expect(nested).toEqual([...nested].sort((a, b) => a.localeCompare(b, "en")));
+  });
 });

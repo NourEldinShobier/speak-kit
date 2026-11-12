@@ -25,6 +25,7 @@ import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 import { createScreenVision } from "./screen-vision";
+import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
 import { createVoiceChat } from "./voice-chat/service";
 
@@ -105,13 +106,22 @@ const mainWindow: MainWindow = new MainWindow(config, {
   },
 });
 const screenVision = createScreenVision();
+const micOwners = createMicOwners();
 const voiceChat = createVoiceChat({
   store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
   config,
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
-  look: screenVision.look,
+  // Dictation waits while a screen look has the microphone busy with its own session.
+  look: async (...a: Parameters<typeof screenVision.look>) => {
+    const release = micOwners.claim("Screen look");
+    try {
+      return await screenVision.look(...a);
+    } finally {
+      release();
+    }
+  },
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -154,7 +164,7 @@ function onDeepLink(link: DeepLink) {
       if (!runtime.server) void runtime.start(state.token || undefined).then(publish);
     },
     showWindow: () => mainWindow.show(),
-    navigate: () => mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" }),
+    navigate: (sub) => mainWindow.sendUi({ type: "nav", page: "settings", sub }),
   });
 }
 
@@ -223,7 +233,8 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      dictation: { dataDir, modelsDir, sttWorker },
+      version: app.getVersion(),
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
     },
   );
 }
@@ -258,10 +269,16 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   app.on("window-all-closed", () => {
     /* stay alive in the tray */
   });
-  app.on("will-quit", () => {
-    desktop?.dispose();
+  let cleaned = false;
+  app.on("will-quit", (event) => {
+    if (cleaned) return;
+    cleaned = true;
+    // Quit again once the control server has removed its discovery file, so a quit never leaves a token behind (capped, so it cannot hold the quit).
+    event.preventDefault();
+    const controlDown = Promise.race([Promise.resolve(desktop?.dispose()), new Promise((r) => setTimeout(r, 2000))]);
     screenVision.dispose();
     void runtime.shutdown();
+    void controlDown.finally(() => app.quit());
   });
 
   app.whenReady().then(async () => {

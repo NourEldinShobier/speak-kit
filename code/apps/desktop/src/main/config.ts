@@ -3,6 +3,7 @@ import path from "node:path";
 import { chmod, constants, copyFile } from "node:fs/promises";
 import type { Config } from "../shared/schemas";
 import { loadSettings, noticeOf, type SettingsNotice } from "../shared/settings/settings-file";
+import { sortKeys } from "../shared/control/settings-registry";
 import { setAsideIfCorrupt } from "./set-aside";
 
 interface ConfigStore {
@@ -45,7 +46,7 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
       // A file from a newer app is never rewritten.
       if (loaded.newerVersion !== null) return;
       const keep = envPort ? { ...config, preferredPort: loadSettings(store.store).config.preferredPort } : config;
-      store.set(keep as Record<string, unknown>);
+      store.set(sortKeys(keep) as Record<string, unknown>);
     },
   };
 }

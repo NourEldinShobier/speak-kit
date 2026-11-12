@@ -31,7 +31,18 @@ describe("HUD pill", () => {
   it("shows a lock and the stop hint when locked", () => {
     const h = html({ kind: "recording", locked: true, startedAt: Date.now(), level: 0, hotkey: "x" });
     expect(h).not.toContain("hud__dot");
-    expect(h).toContain("Press the hotkey to stop");
+    expect(h).toContain("Recording locked. Press x to finish.");
+    expect(h).toContain("Cancel");
+  });
+
+  it("shows the cancel key instead of a button while a toggled recording runs", () => {
+    const h = html({ kind: "recording", locked: true, startedAt: 0, level: 0, hotkey: "x", cancel: "Esc" });
+    expect(h).toContain("Press the hotkey to stop, Esc cancels");
+    expect(h).not.toContain(">Cancel<");
+  });
+
+  it("offers Undo on a cancelled notice", () => {
+    expect(html({ kind: "notice", text: "Cancelled", action: { label: "Undo", id: "undo-cancel" } })).toContain("Undo");
   });
 
   it("makes every bar at least 3 px tall, even in silence", () => {

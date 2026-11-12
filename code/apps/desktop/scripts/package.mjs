@@ -48,11 +48,11 @@ run("pnpm", ["exec", "vp", "build"], desktop, { SPEAKKIT_PACKAGE: "1" }); // SPE
 console.log("== stage");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(path.join(stage, "dist/worker"), { recursive: true });
-for (const d of ["main", "preload", "renderer"]) cpSync(path.join(desktop, "dist", d), path.join(stage, "dist", d), { recursive: true });
+for (const d of ["main", "preload", "renderer", "cli"]) cpSync(path.join(desktop, "dist", d), path.join(stage, "dist", d), { recursive: true });
 cpSync(path.join(code, "packages/engine/dist/worker.js"), path.join(stage, "dist/worker/worker.js"));
 cpSync(path.join(code, "packages/engine/dist/stt-worker.js"), path.join(stage, "dist/worker/stt-worker.js"));
 
-const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
+const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/cli/speakkit.js", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
 const needed = new Set(built.flatMap((f) => importedPackages(readFileSync(path.join(stage, f), "utf8"))));
 const engineDir = path.join(code, "packages/engine");
 const dependencies = {};

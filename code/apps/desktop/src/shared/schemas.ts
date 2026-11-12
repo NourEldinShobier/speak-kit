@@ -89,6 +89,8 @@ export const ConfigSchema = v.object({
   notifications: fb(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
   autoUpdate: bool(true),
+  /** The local control server for the command line and the MCP server. */
+  controlServer: bool(true),
   shortcuts: fb(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
   // Saved ids of the form `cb_` plus 8 hex digits name voices that no longer exist; they become the default voice.
@@ -121,6 +123,7 @@ export const ConfigPatchSchema = v.partial(
     notifications: NotificationsSchema,
     doNotDisturb: v.boolean(),
     autoUpdate: v.boolean(),
+    controlServer: v.boolean(),
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
