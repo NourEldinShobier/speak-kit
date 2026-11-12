@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { normalizeSite } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
 
@@ -72,6 +73,14 @@ const modeEntries = {
   id,
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
   apps: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)),
+  /** Website host names; a name that is not one is dropped, a repeated one kept once. Modes saved before sites existed have none. */
+  sites: v.fallback(
+    v.pipe(
+      v.array(v.pipe(v.string(), v.transform(normalizeSite))),
+      v.transform((l) => [...new Set(l.filter(Boolean))].slice(0, 50)),
+    ),
+    [],
+  ),
   insertMode: v.picklist(["paste", "type", "copy"]),
   capitals: v.picklist(["keep", "sentence", "lower"]),
   end: v.picklist(["keep", "no-full-stop"]),
@@ -80,7 +89,7 @@ const modeEntries = {
 type ModeOut = v.InferOutput<ReturnType<typeof v.object<typeof modeEntries & { terms: typeof termList }>>>;
 // The built-in default mode lists no apps and keeps its name; no other mode may take that name.
 const nameFree = (m: ModeOut): boolean => m.id === DEFAULT_ID || lower(m.name) !== "default";
-const settleDefault = (m: ModeOut): ModeOut => (m.id === DEFAULT_ID ? { ...m, name: "Default", apps: [] } : m);
+const settleDefault = (m: ModeOut): ModeOut => (m.id === DEFAULT_ID ? { ...m, name: "Default", apps: [], sites: [] } : m);
 const Mode = v.pipe(v.object({ ...modeEntries, terms: termList }), v.check(nameFree, "That name is taken"), v.transform(settleDefault));
 const LenientMode = v.pipe(v.object({ ...modeEntries, terms: lenient(Term, MAX_TERMS, termKeys) }), v.check(nameFree), v.transform(settleDefault));
 const modeKeys = (m: { id: string; name: string }) => [`i:${m.id}`, `n:${lower(m.name)}`];

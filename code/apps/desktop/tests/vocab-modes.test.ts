@@ -428,3 +428,102 @@ describe("History page", () => {
     expect(await l.page.getByRole("list", { name: "Recent dictations" }).locator("li").count()).toBe(2);
   });
 });
+
+describe("Websites in a mode", () => {
+  const addMode = async (l: Launched, name: string) => {
+    await l.page.getByRole("button", { name: "Add mode" }).click();
+    const d = l.page.getByRole("dialog", { name: "Add a mode" });
+    await d.getByLabel("Name").fill(name);
+    await d.getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("heading", { name, exact: true, level: 1 }).waitFor();
+  };
+
+  it("adds a website as a host name, refuses text that is not one, moves it from another mode and removes it", async () => {
+    const l = await start();
+    await open(l, "Modes");
+    await addMode(l, "Mail");
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    const dialog = l.page.getByRole("dialog", { name: "Add a website to Mail" });
+    await dialog.getByLabel("Website").fill("two words");
+    await dialog.getByText("That is not a website address.").waitFor();
+    expect(await dialog.getByRole("button", { name: "Add website" }).isDisabled()).toBe(true);
+    await dialog.getByLabel("Website").fill("https://www.Mail.Google.com/inbox");
+    await dialog.getByRole("button", { name: "Add website" }).click();
+    await expect.poll(async () => (await settings(l)).modes[0]?.sites).toEqual(["mail.google.com"]);
+    await l.page.getByRole("button", { name: "Remove mail.google.com" }).waitFor();
+
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    await l.page.getByRole("dialog", { name: "Add a website to Mail" }).getByLabel("Website").fill("mail.google.com");
+    await l.page.getByText("mail.google.com is already in this mode.").waitFor();
+    await l.page.getByRole("dialog", { name: "Add a website to Mail" }).getByRole("button", { name: "Cancel" }).click();
+
+    await l.page.getByRole("button", { name: "Modes", exact: true }).click();
+    await addMode(l, "Work");
+    await l.page.getByRole("button", { name: "Add website" }).click();
+    const second = l.page.getByRole("dialog", { name: "Add a website to Work" });
+    await second.getByLabel("Website").fill("mail.google.com");
+    await second.getByText("mail.google.com is in Mail now. It moves to this mode.").waitFor();
+    await second.getByRole("button", { name: "Add website" }).click();
+    await expect
+      .poll(async () => (await settings(l)).modes.map((m: { name: string; sites: string[] }) => [m.name, m.sites]))
+      .toEqual([
+        ["Mail", []],
+        ["Work", ["mail.google.com"]],
+      ]);
+    await l.page.getByRole("button", { name: "Remove mail.google.com" }).click();
+    await expect.poll(async () => (await settings(l)).modes[1]?.sites).toEqual([]);
+  });
+});
+
+describe("Installed-app picker", () => {
+  const APPS = JSON.stringify([
+    { key: "slack", name: "Slack" },
+    { key: "putty", name: "PuTTY" },
+    { key: "code", name: "Visual Studio Code" },
+  ]);
+
+  it("offers installed programs in the mode's Add app dialog, narrows them as you type and skips the ones already added", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
+    await open(l, "Modes");
+    await l.page.getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("dialog", { name: "Add a mode" }).getByLabel("Name").fill("Chat");
+    await l.page.getByRole("dialog", { name: "Add a mode" }).getByRole("button", { name: "Add mode" }).click();
+    await l.page.getByRole("heading", { name: "Chat", exact: true, level: 1 }).waitFor();
+    await l.page.getByRole("button", { name: "Add app" }).first().click();
+    const dialog = l.page.getByRole("dialog", { name: "Add an app to Chat" });
+    const list = dialog.getByRole("group", { name: "Installed apps" });
+    await list.getByRole("button", { name: "Use PuTTY" }).waitFor();
+    expect(await list.getByRole("button").count()).toBe(3);
+    await dialog.getByLabel("Program name").fill("sla");
+    await list.getByRole("button", { name: "Use Slack" }).waitFor();
+    expect(await list.getByRole("button").count()).toBe(1);
+    await dialog.getByLabel("Program name").fill("zzz");
+    await dialog.getByText('No installed app matches "zzz". You can still add the name you typed.').waitFor();
+    await dialog.getByLabel("Program name").fill("sla");
+    await list.getByRole("button", { name: "Use Slack" }).click();
+    expect(await dialog.getByLabel("Program name").inputValue()).toBe("slack");
+    await dialog.getByRole("button", { name: "Add app" }).click();
+    await expect.poll(async () => (await settings(l)).modes[0]?.apps).toEqual(["slack"]);
+
+    await l.page.getByRole("button", { name: "Add app" }).first().click();
+    await l.page.getByRole("dialog", { name: "Add an app to Chat" }).getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use Slack" }).waitFor({ state: "detached" });
+  });
+
+  it("adds a program to the insert-method table with one click on an installed app", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
+    await open(l, "Dictation");
+    await l.page.getByRole("textbox", { name: "Program name" }).focus();
+    await l.page.getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use PuTTY" }).click();
+    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("putty");
+  });
+
+  it("says so and still lets the name be typed when no list can be made", async () => {
+    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: "not json" } });
+    await open(l, "Dictation");
+    await l.page.getByRole("textbox", { name: "Program name" }).focus();
+    await l.page.getByText("No installed apps found.").waitFor();
+    await l.page.getByRole("textbox", { name: "Program name" }).fill("wezterm");
+    await l.page.getByRole("textbox", { name: "Program name" }).press("Enter");
+    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("wezterm");
+  });
+});

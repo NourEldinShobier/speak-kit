@@ -20,6 +20,9 @@ import { createUpdates } from "./updates-service";
 import { setupControl } from "./control";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
+import { testEnv } from "./test-env";
+import { fixedInstalledApps } from "./installed-apps";
+import { realInstalledApps } from "./installed-apps/real";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
@@ -44,7 +47,7 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey"> & {
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "pageSite" | "readKey" | "hasKey"> & {
     /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
     micClaim: (name: string) => () => void;
   };
@@ -74,7 +77,8 @@ function stopForRestart(reading: ReturnType<typeof createReading>, exports: Retu
 
 /** The dictation IPC, and the permissions the hotkey needs. */
 function wireDictation(parent: DesktopOptions["parent"], dictation: DictationService): void {
-  registerDictationIpc(dictation, (c) => parent()?.webContents === c);
+  const fixture = testEnv().installedApps;
+  registerDictationIpc(dictation, (c) => parent()?.webContents === c, fixture === undefined ? realInstalledApps() : fixedInstalledApps(fixture));
   registerSpeechModelsIpc(dictation.speech, (c) => parent()?.webContents === c);
   watchPermissions(parent, dictation);
 }

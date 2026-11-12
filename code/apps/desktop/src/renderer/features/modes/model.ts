@@ -48,7 +48,13 @@ export const letterOf = (name: string): string => {
 export function modeRow(m: Mode, rewriteOn: boolean): ModeRow {
   const rewrite = m.rewrite && rewriteOn ? "Rewrite on" : "Rewrite off";
   if (m.id === "default") return { id: m.id, letter: "D", name: m.name, detail: "Every app that is not in another mode", chips: ["Shared words only", rewrite] };
-  return { id: m.id, letter: letterOf(m.name), name: m.name, detail: m.apps.map(appLabel).join(", ") || "No apps yet", chips: [plural(m.apps.length, "app"), plural(m.terms.length, "word"), rewrite] };
+  return {
+    id: m.id,
+    letter: letterOf(m.name),
+    name: m.name,
+    detail: [...m.apps.map(appLabel), ...m.sites].join(", ") || "No apps yet",
+    chips: [plural(m.apps.length, "app"), ...(m.sites.length ? [plural(m.sites.length, "site")] : []), plural(m.terms.length, "word"), rewrite],
+  };
 }
 
 export const WRITER = "OpenAI gpt-4o-mini";

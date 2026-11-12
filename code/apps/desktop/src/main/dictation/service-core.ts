@@ -18,7 +18,7 @@ import { createTranscriber } from "./stt";
 /** What the dictation core and its microphone window are wired to; the service lends these. */
 export interface CoreHost {
   ctx: Ctx;
-  o: Pick<DictationServiceOptions, "dataDir" | "micOwner" | "parent" | "test" | "trash" | "rewriter" | "readKey">;
+  o: Pick<DictationServiceOptions, "dataDir" | "micOwner" | "pageSite" | "parent" | "test" | "trash" | "rewriter" | "readKey">;
   /** The words were not sent because the model cannot read a prompt. */
   onPromptDropped(): void;
   /** The service's public parts: the speech engine, the models, the HUD, the microphone state, and the test switch that refuses the microphone. */
@@ -65,7 +65,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     keepClip: (clip) => (h.failure.clip = clip),
     // Only the stage name and a reason: spoken text never reaches a log.
     log: (stage, why) => ctx.log.warn(`dictation stage ${stage}`, why),
-    inserter: createInserterPort(h.os, h.inserted),
+    inserter: createInserterPort(h.os, h.inserted, o.pageSite),
     hotkeys: h.hotkeys,
     storage: files.storage,
     audio: files.audio,

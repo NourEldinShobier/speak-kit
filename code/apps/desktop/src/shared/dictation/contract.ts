@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import type { HistoryStats, MicStatus } from "@speakkit/dictation";
+import type { HistoryStats, InstalledApp, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
 import { DICTATION_LANGUAGES, DICTATION_MODELS, DictationPatchSchema, modelId } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
@@ -165,6 +165,8 @@ export interface DictationBridge {
   vocabImport(): Promise<{ format: "json" | "txt" | "csv"; text: string; name: string } | null>;
   /** Saves `text` as a file the person names; the path, or null when cancelled. */
   vocabExport(format: "json" | "txt" | "csv", text: string): Promise<string | null>;
+  /** The programs installed on this computer, found the first time it is asked; `refresh` scans again. */
+  installedApps(refresh?: boolean): Promise<{ apps: InstalledApp[]; available: boolean }>;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
   /** Pause all shortcuts (true) or resume them. The returned status shows the state once keys are released. */
@@ -262,6 +264,7 @@ export const DICTATION_ARGS = {
   vocabImport: v.tuple([]),
   vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
   openMicrophoneSettings: v.tuple([]),
+  installedApps: v.tuple([v.optional(v.boolean())]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

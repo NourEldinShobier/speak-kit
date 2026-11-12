@@ -10,6 +10,7 @@ import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
 import { lateAutomation } from "./automation";
+import { createActivePage } from "./page-context";
 import type { Logger } from "./context";
 import { removeDownloads } from "./downloads";
 import { listenWithFallback } from "./ports";
@@ -51,6 +52,8 @@ export class ServerRuntime {
   #d: RuntimeDeps;
   /** What scripts and AI apps may do; the server is created before the reader, which is attached later. */
   readonly automation = lateAutomation();
+  /** The page the browser extension reports; dictation reads it to pick a mode by website. */
+  readonly page = createActivePage({ now: Date.now });
   #server: Srv | null = null;
   #engine: TtsEngine | null = null; // outlives token/port changes; recreated on retry
   #firstEngine = true;
@@ -108,6 +111,7 @@ export class ServerRuntime {
           port,
           version: state.version,
           voiceChat: this.#d.voiceChat,
+          pageContext: this.page,
           automation: this.automation.host,
           ...(token ? { token } : {}),
           onError: (e) => this.#onServerError(e),

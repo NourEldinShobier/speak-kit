@@ -51,3 +51,16 @@ describe("testEnv openaiBaseUrl", () => {
     expect(testEnv().openaiBaseUrl).toBeUndefined();
   });
 });
+
+describe("testEnv installedApps", () => {
+  it("is honoured by a source checkout in test mode only", () => {
+    vi.stubEnv("SPEAKKIT_INSTALLED_APPS", "[]");
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    expect(testEnv().installedApps).toBe("[]");
+    vi.stubEnv("SPEAKKIT_TEST", "");
+    expect(testEnv().installedApps).toBeUndefined();
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    app.isPackaged = true;
+    expect(testEnv().installedApps).toBeUndefined();
+  });
+});
