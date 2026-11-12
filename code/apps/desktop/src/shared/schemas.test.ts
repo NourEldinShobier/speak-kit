@@ -23,7 +23,11 @@ describe("config defaults and repair", () => {
 
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {
     const c = parseConfig({ shortcuts: { "read-selection": "S", stop: "alt+ctrl+q", "play-pause": 12 } });
-    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space" });
+    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+R" });
+  });
+
+  it("a config saved before the record shortcut existed gets its default", () => {
+    expect(parseConfig({ shortcuts: { "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space", stop: "Ctrl+Alt+X" } }).shortcuts["record-toggle"]).toBe("Ctrl+Alt+R");
   });
 
   it("loads a saved config that still has the removed clipboard keys and drops them", () => {

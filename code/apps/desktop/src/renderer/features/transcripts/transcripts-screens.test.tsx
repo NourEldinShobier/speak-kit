@@ -7,6 +7,7 @@ vi.hoisted(() => {
 });
 
 import { Marked } from "./Marked";
+import { RecorderCard } from "./RecorderCard";
 import { TranscriptRow } from "./TranscriptRow";
 
 const NOW = new Date(2026, 10, 12, 15, 0).getTime();
@@ -97,5 +98,15 @@ describe("marked text", () => {
   it("wraps each typed word; text without a query is left alone", () => {
     expect(renderToStaticMarkup(<Marked text="Pay the invoice" query="pay" />)).toBe('<mark class="tr-mark">Pay</mark> the invoice');
     expect(renderToStaticMarkup(<Marked text="Pay the invoice" query="" />)).toBe("Pay the invoice");
+  });
+});
+
+describe("recorder card", () => {
+  it("offers the language, with the saved one chosen and Auto-detect as the default", () => {
+    const view = { config: { language: "de" } } as never;
+    expect(renderToStaticMarkup(<RecorderCard recording={null} settings={view} onClose={noop} />)).toContain("German");
+    const h = renderToStaticMarkup(<RecorderCard recording={null} settings={null} onClose={noop} />);
+    expect(h).toContain("Language");
+    expect(h).toContain("Auto-detect");
   });
 });

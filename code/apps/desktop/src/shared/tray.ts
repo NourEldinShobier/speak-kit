@@ -71,6 +71,37 @@ export type TrayAction =
   | "get-models"
   | "quit";
 
+export type TrayItem =
+  | { type: "separator" }
+  | { type: "submenu"; label: string; items: TrayItem[] }
+  | { type: "models"; label: string; rows: ModelRow[] }
+  | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
+
+export const RECENT_ROWS = 5;
+const RECENT_CHARS = 48;
+
+/** One line of a dictation for a menu row: whitespace folded, cut with an ellipsis. */
+export const recentLabel = (text: string): string => {
+  const one = text.replaceAll(/\s+/g, " ").trim();
+  return one.length > RECENT_CHARS ? `${one.slice(0, RECENT_CHARS - 1)}…` : one;
+};
+
+const WAITING = { starting: "Starting recording...", saving: "Saving recording...", transcribing: "Transcribing..." } as const;
+
+/** One row that follows the recorder: it starts a recording when ready, stops it while recording, and waits (disabled) while the recording is saved and transcribed. */
+function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
+  if (phase === "ready") return item("record-start", "Record a conversation");
+  if (phase === "recording") return item("record-stop", "Stop recording");
+  if (phase === "done") return item("record-start", "Done. Record a conversation");
+  return item("record-start", WAITING[phase], { enabled: false });
+}
+
+/** What a press of the record shortcut does: it stops a recording, starts one when idle, and does nothing while a recording is starting, being saved or transcribed. */
+export function recordToggle(phase: NonNullable<TrayContext["recorder"]>["phase"]): "start" | "stop" | "none" {
+  if (phase === "recording") return "stop";
+  return phase === "ready" || phase === "done" ? "start" : "none";
+}
+
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */
 export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
 

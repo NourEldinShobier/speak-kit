@@ -326,6 +326,20 @@ describe("record a conversation", () => {
     await until(async () => (await transcriptsHook(l, "phase")) === "ready");
   });
 
+  it("the record shortcut starts a recording and stops and saves it when pressed again", async () => {
+    const dir = tmp("mic");
+    const tone = wav(path.join(dir, "mic.wav"), 20);
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: tone } });
+    await hook(l, "dictation.say", "shortcut words");
+    expect(await hook<string[]>(l, "registeredShortcuts")).toContain("Ctrl+Alt+R");
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await until(async () => (await transcriptsHook(l, "phase")) === "recording");
+    await l.page.waitForTimeout(2000);
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await openTranscripts(l);
+    await l.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+  });
+
   it("a crash while recording leaves a recovered recording with Open and Transcribe now", async () => {
     const dir = tmp("mic");
     const userData = tmp("data");

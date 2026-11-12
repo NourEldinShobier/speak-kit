@@ -135,3 +135,6 @@ export function segmentAt(starts: readonly number[], sec: number): number {
   for (let i = 0; i < starts.length; i++) if (starts[i]! <= sec) found = i;
   return found;
 }
+
+/** The names of the transcript languages; Auto picks the language from the audio. */
+export const LANGUAGES: Record<string, string> = { auto: "Auto-detect", en: "English", de: "German", ar: "Arabic" };

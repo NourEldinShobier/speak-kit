@@ -4,9 +4,7 @@ import { FORMAT_LIST, MAX_HOURS } from "@speakkit/transcripts/pure";
 import type { Picked, SettingsView } from "../../../shared/transcripts/contract";
 import { TRANSCRIPT_LANGUAGES } from "../../../shared/transcripts/settings";
 import { attempt, transcripts } from "./api";
-import { sizeText } from "./model";
-
-const LANGUAGES: Record<string, string> = { auto: "Auto-detect", en: "English", de: "German", ar: "Arabic" };
+import { LANGUAGES, sizeText } from "./model";
 
 type Chosen = Extract<Picked, { ok: true }>;
 

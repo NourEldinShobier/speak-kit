@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createTranscripts, nodeFs, type Fs, type Outcome, type Transcripts } from "@speakkit/transcripts";
 import type { Push } from "../../shared/transcripts/contract";
+import { recordToggle } from "../../shared/tray";
 import { policyOf } from "../../shared/transcripts/settings";
 import type { Ctx } from "../context";
 import type { FilePorts } from "./decode";
@@ -48,6 +49,8 @@ export interface TranscriptsService {
   phase(): TrayPhase;
   stopRecording(): Promise<Outcome<{ id: string }>>;
   startRecording(): Promise<Outcome<{ id: string }>>;
+  /** The global record shortcut: stops a running recording, starts one when idle. */
+  toggleRecording(): Promise<unknown>;
   dispose(): Promise<void>;
 }
 
@@ -87,6 +90,14 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     phase: () => livePhase(live),
     startRecording: handlers.recordStart,
     stopRecording: handlers.recordStop,
+    toggleRecording: async () => {
+      const a = recordToggle(livePhase(live));
+      if (a === "stop") return handlers.recordStop();
+      if (a === "none") return undefined;
+      const r = await handlers.recordStart();
+      ctx.showWindow();
+      return r;
+    },
     async dispose() {
       clearInterval(sweepTimer);
       const t = await ready;
