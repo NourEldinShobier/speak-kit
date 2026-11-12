@@ -39,6 +39,14 @@ describe("live transcriber", () => {
     expect(m.got).toEqual([1250]);
   });
 
+  it("lets go of a long silence and still puts speech after ten quiet minutes at its place on the timeline", async () => {
+    const m = model();
+    const t = createLiveTranscriber({ narrator: m.narrator, log: () => undefined });
+    for (let i = 0; i < 600; i++) t.push(quiet(1000));
+    feed(t, speech(1000));
+    expect(await t.finish()).toEqual([{ text: "w1", startMs: 599_750, endMs: 601_000 }]);
+  });
+
   it("waits while the person is still speaking, and sends the open stretch at the end", async () => {
     const m = model();
     const t = createLiveTranscriber({ narrator: m.narrator, log: () => undefined });

@@ -3,6 +3,8 @@ import { engineOf } from "../narration/engine";
 import type { Narrator } from "../recording";
 
 const RATE = 16_000;
+/** Audio kept while no speech was found: enough for the stretch finder to pad the start of speech that begins next. */
+const SILENCE_TAIL_MS = 2000;
 
 export interface LiveOptions {
   narrator: Narrator;
@@ -69,9 +71,11 @@ export function createLiveTranscriber(o: LiveOptions): LiveTranscriber {
     const pcm = joined(parts, held);
     const offsetMs = (before / RATE) * 1000;
     const totalMs = (held / RATE) * 1000;
-    const done = finishedStretches(findSegments(pcm, { rate: RATE }), { final, totalMs, closeGapMs, maxStretchMs });
+    const found = findSegments(pcm, { rate: RATE });
+    const done = finishedStretches(found, { final, totalMs, closeGapMs, maxStretchMs });
     for (const seg of done) send(pcm, seg, offsetMs);
-    const upTo = final ? totalMs : (done.at(-1)?.endMs ?? 0);
+    // Silence is not kept: it would be joined and scanned again at every look, and a long quiet capture would slow the app down.
+    const upTo = final ? totalMs : (done.at(-1)?.endMs ?? (found.length ? 0 : Math.max(0, totalMs - SILENCE_TAIL_MS)));
     const cut = Math.min(held, Math.floor((upTo / 1000) * RATE));
     if (cut > 0) {
       parts = [pcm.slice(cut)];
