@@ -1,9 +1,11 @@
 import { chunkPcm, QUIET_PEAK } from "./capture/policy";
 import { skipPauses } from "./capture/outage";
 import type { History } from "./history";
+import { applyMode, resolveMode } from "./modes/modes";
+import { rewritePass, type RewriteOutcome } from "./modes/rewrite";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
-import { stripTailCredit } from "./tail-filter";
+import { buildPrompt, soundsLikeRules } from "./vocabulary";
 import type { Settings } from "./settings";
 import type { CaptureResult, Clip, DictationDeps, DictationErrorCode, Notice, TranscribeResult } from "./types";
 
@@ -19,7 +21,7 @@ export interface Job {
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
 
 export interface Context {
-  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock" | "keepClip" | "log">;
+  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock" | "audio" | "rewriter">;
   history: History;
   settings: Settings;
   /** Called when the text is ready and insertion starts. */
@@ -103,115 +105,53 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
   }
 }
 
-const windowNow = (ctx: Context) => within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => foreground(ctx.deps.inserter));
-
-/** The window the key was pressed in and the one in front now. With "return to the app" on, a different window in front is replaced by the first; `lost` says that did not work. */
-async function windows(ctx: Context, job: Job): Promise<{ target: Target | undefined; current: Target | undefined; lost: boolean }> {
-  const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
-  const current = await windowNow(ctx);
-  const focus = ctx.deps.inserter.focus;
-  const moved = !!target && !!current && current.id !== target.id && !current.passwordField;
-  if (!ctx.settings.returnToApp || !moved || !focus) return { target, current, lost: false };
-  const back = await within(ctx, { name: "return-to-app", ms: STAGE_MS, fallback: false }, () => focus(target));
-  return { target, current: back ? await windowNow(ctx) : current, lost: !back };
-}
-
-function kindOf(clip: Clip, job: Job): "interrupted" | "restored" | undefined {
-  if (clip.interrupted) return "interrupted";
-  return job.restored ? "restored" : undefined;
-}
-
-async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number; droppedMs: number | undefined }): Promise<Outcome> {
-  const { clip, heard, text, transcribeMs, droppedMs } = said;
-  const { target, current, lost } = await windows(ctx, job);
-  const plan = planPaste({ target, current, settings: ctx.settings, interrupted: clip.interrupted === true });
+async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; settings: Settings; rewrite?: RewriteOutcome }): Promise<Outcome> {
+  const { clip, heard, text } = said;
+  const target = await job.target;
+  const current = await foreground(ctx.deps.inserter);
+  const plan = planPaste({ target, current, settings: said.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
   // The text is in History before anything is sent, so an insertion that fails or a window that cannot be reached loses nothing.
   const app = (current ?? target)?.exe;
   // Saved before inserting, so the text survives an insertion that fails.
-  const name = (current ?? target)?.name;
-  const kind = kindOf(clip, job);
-  const entryId = await within(ctx, { name: "history", ms: STAGE_MS, fallback: undefined }, () =>
-    ctx.history.add({
-      at: ctx.deps.clock.now(),
-      text,
-      raw: heard.text,
-      durationMs: Math.round((clip.pcm.length / clip.sampleRate) * 1000),
-      ...(app !== undefined && { app }),
-      ...(heard.language !== undefined && { language: heard.language }),
-      ...(heard.model !== undefined && { model: heard.model }),
-      ...(kind && { kind }),
-      ...(name !== undefined && { displayName: name }),
-      timings: { transcribeMs, ...(droppedMs && { pausesDroppedMs: droppedMs }) },
-      outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
-    }),
-  );
-  const failed = (error: "focus-failed" | "insert-failed"): Outcome => {
-    if (entryId) void ctx.history.update(entryId, { outcome: "failed" });
-    return { error };
-  };
-  if (lost) return failed("focus-failed");
-  const done = await ctx.deps.inserter.insert({ text, plan });
-  if (!done.ok) return failed("insert-failed");
-  return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
-}
-
-async function printed(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string }): Promise<undefined> {
-  const { clip, heard, text } = said;
-  await ctx.history.add({
+  const id = await ctx.history.add({
     at: ctx.deps.clock.now(),
     text,
     raw: heard.text,
     durationMs: Math.round((clip.pcm.length / clip.sampleRate) * 1000),
     ...(heard.language !== undefined && { language: heard.language }),
     ...(heard.model !== undefined && { model: heard.model }),
-    kind: "printed",
+    ...(said.rewrite && { rewrite: said.rewrite }),
   });
-  job.print?.({ ok: true, text });
-  return undefined;
+  if (id && ctx.settings.keepRecordings && ctx.deps.audio) {
+    const audio = await ctx.deps.audio.save(id, clip).catch(() => undefined);
+    if (audio) await ctx.history.patch(id, { audio });
+  }
+  const done = await ctx.deps.inserter.insert({ text, plan });
+  if (!done.ok) return { error: "insert-failed" };
+  return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
 }
 
-/** Recording to inserted text: silence check, transcription, text rules, insertion plan, history. */
+/** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
   if (!clip) return undefined;
-  if (clip.peak < QUIET_PEAK) {
-    ctx.deps.keepClip?.(clip, "silent");
-    return { error: "mic-silent" };
-  }
-  if (clip.interrupted) ctx.deps.keepClip?.(clip, "interrupted");
-  const heardFrom = ctx.deps.clock.now();
-  const said = await hear(ctx, clip);
-  const transcribeMs = ctx.deps.clock.now() - heardFrom;
-  if (!said.ok) {
-    ctx.deps.keepClip?.(clip, "failed");
-    return { error: said.code === "failed" ? "transcribe-failed" : said.code };
-  }
-  const heard = { ...said, text: stripTailCredit(said.text, clip.pcm, clip.sampleRate) };
-  const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
+  if (clip.peak === 0) return { error: "mic-silent" };
+  const mode = resolveMode(ctx.settings.modes, (await job.target)?.exe);
+  const eff = applyMode(ctx.settings, mode);
+  const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
+  const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language, ...(prompt && { prompt }) });
+  if (!heard.ok) return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
+  const language = heard.language ?? ctx.settings.language;
+  let text = applyRules(heard.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language });
   if (!text) return { notice: { kind: "no-speech" } };
   if (job.print) return printed(ctx, job, { clip, heard, text });
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs });
-}
-
-/** Why a job that was meant to print produced no text. */
-export function failureOf(outcome: Outcome | undefined): CaptureResult {
-  if (outcome && "error" in outcome) return { ok: false, code: outcome.error };
-  return { ok: false, code: outcome ? "no-speech" : "mic-failed" };
-}
-
-/** Types the newest non-empty history entry into the window in front. The entry was saved before the dictation was inserted, so it is never older text. */
-export async function pasteLast(ctx: Pick<Context, "deps" | "history" | "settings">): Promise<"pasted" | "copied" | "empty" | "failed"> {
-  const entry = (await ctx.history.list()).find((e) => e.text.trim());
-  if (!entry) return "empty";
-  const current = await foreground(ctx.deps.inserter);
-  const plan = planPaste({ target: current, current, settings: ctx.settings, interrupted: false });
-  if (plan.method === "refuse") return "failed";
-  try {
-    if (!(await ctx.deps.inserter.insert({ text: entry.text, plan })).ok) return "failed";
-  } catch {
-    return "failed";
+  let rewrite: RewriteOutcome | undefined;
+  if (eff.rewrite && ctx.settings.rewrite.enabled && ctx.deps.rewriter) {
+    const r = await rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock });
+    text = r.text;
+    rewrite = r.outcome;
   }
-  return plan.method === "copy" ? "copied" : "pasted";
+  return insert(ctx, job, { clip, heard, text, settings: eff, ...(rewrite && { rewrite }) });
 }

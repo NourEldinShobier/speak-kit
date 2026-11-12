@@ -5,15 +5,14 @@
  */
 export { createDictation } from "./dictation";
 export { defaultSettings, type InsertMode, type Replacement, type Retention, type Settings } from "./settings";
-export type { HistoryEntry, HistoryQuery } from "./history";
-export { historyStats, normalize, rank, type HistoryStats } from "./history-search";
-export * from "./mic";
-export * from "./capture";
-export * from "./ducking";
+export type { HistoryEntry, HistoryHit, HistoryStats, HistoryStatus, RemoveReport, Version } from "./history";
+export { historyStats, MAX_AUDIO_BYTES, planEviction, timeLeft, WINDOW_MS } from "./history";
+export * from "./vocabulary";
+export * from "./modes";
+export { applyRules, traceRules, isNumbersOnly, FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES, type RulesOptions, type RulesTrace } from "./rules";
 export type { CopyReason, PastePlan, Target } from "./paste-plan";
 export type {
-  CaptureHandle,
-  CaptureResult,
+  AudioStore,
   Clip,
   Clock,
   Dictation,

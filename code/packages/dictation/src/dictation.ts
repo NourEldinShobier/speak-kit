@@ -1,6 +1,5 @@
-import { TAIL_MIN_MS, tailDone } from "./capture/policy";
-import { createHistory, type History } from "./history";
-import { planPaste, type Target } from "./paste-plan";
+import { createHistory, historyStats, type History } from "./history";
+import type { Target } from "./paste-plan";
 import { foreground, runJob, type Job, type Outcome } from "./pipeline";
 import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
@@ -56,15 +55,25 @@ class Runtime implements Dictation {
   constructor(deps: DictationDeps) {
     this.deps = deps;
     this.settings = { ...defaultSettings, ...deps.settings };
-    this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention });
+    this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention, ...(deps.audio && { audio: deps.audio }), terms: () => this.settings.terms });
     this.history = {
       list: (query) => this.store.list(query),
+      get: (id) => this.store.get(id),
       copy: (id) => this.copy(id),
-      insert: (id) => this.insertAgain(id),
+      recent: async (n) => (await this.store.list({ limit: n })).map(({ via: _via, ...e }) => e),
       remove: (id) => this.store.remove(id),
       removeMany: (ids) => this.store.removeMany(ids),
       stats: () => this.store.stats(),
       clear: () => this.store.clear(),
+      stats: async () => historyStats(await this.store.list()),
+      status: () => this.store.status(),
+      addVersion: (id, v) => this.store.addVersion(id, v),
+      useVersion: (id, vid) => this.store.useVersion(id, vid),
+      audio: async (id) => {
+        const file = (await this.store.get(id))?.audio;
+        return file ? ((await this.deps.audio?.load(file).catch(() => undefined)) ?? undefined) : undefined;
+      },
+      dropAudio: (files) => this.store.dropAudio(files),
     };
     this.lastState = JSON.stringify(this.state());
     this.live = this.install();
