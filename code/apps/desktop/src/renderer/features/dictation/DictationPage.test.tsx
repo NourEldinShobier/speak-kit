@@ -61,6 +61,8 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   modelReady: true,
   historyCount: 128,
   paused: false,
+  mouseButtons: true,
+  platform: "win32",
   readerShortcuts: {},
   ...over,
 });

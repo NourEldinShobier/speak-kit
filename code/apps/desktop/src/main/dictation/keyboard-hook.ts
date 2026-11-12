@@ -201,10 +201,11 @@ export class KeyboardHook implements HotkeySource {
     setImmediate(() => {
       if (this.#run !== r) return;
       for (const e of events) r.handlers.onEvent(id === PRIMARY ? e : { ...e, chord: id });
-      if (events.some((e) => e.kind === "up")) {
-        r.clickUntil = this.#now() + this.#clickWatchMs;
-        if (this.#backend.installMouse) this.#syncMouse(r);
-      }
+      // Clicks matter while a chord is held (a click discards the press) and for a moment after it (a click ends a double-tap window).
+      if (events.some((e) => e.kind === "down")) r.clickUntil = Infinity;
+      else if (events.some((e) => e.kind === "up")) r.clickUntil = this.#now() + this.#clickWatchMs;
+      else return;
+      if (this.#backend.installMouse) this.#syncMouse(r);
     });
   }
 

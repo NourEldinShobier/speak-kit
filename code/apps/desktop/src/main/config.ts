@@ -19,7 +19,11 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
   const store = new Store<Record<string, unknown>>({ name: "config", cwd, clearInvalidConfig: false });
   const config = parseConfig(store.store);
   // A field that had to be replaced by its default: the file as it was is kept next to it before the next save rewrites it.
-  await keepInvalidAside(store.path, store.store, config).catch(() => null);
+  try {
+    await keepInvalidAside(store.path, store.store, config);
+  } catch {
+    // Keeping a copy is a courtesy: the app starts either way.
+  }
   const envPort = Number(process.env.SPEAKKIT_PORT);
   if (envPort) config.preferredPort = envPort;
   return {

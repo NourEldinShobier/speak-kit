@@ -23,15 +23,15 @@ export interface PartsHost {
   changed(): void;
   refreshCount(): Promise<void>;
   download(): void;
-  undoCancel(): Promise<boolean>;
 }
 
 /** The pieces of the service that are not the dictation itself: pause and paste last, the history, and the buttons that act on the last dictation. */
 export function createParts(h: PartsHost) {
+  const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, foreground: h.foreground, rules: h.rules, changed: h.changed });
   return {
-    controls: new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, foreground: h.foreground, rules: h.rules, changed: h.changed }),
+    controls,
     history: new DictationHistory({ ready: h.ready, core: h.core, changed: h.refreshCount }),
-    actions: createActions({ ready: h.ready, failure: h.failure, core: h.core, state: h.state, presenter: h.presenter, download: h.download, undoCancel: h.undoCancel }),
+    actions: createActions({ ready: h.ready, failure: h.failure, core: h.core, state: h.state, presenter: h.presenter, download: h.download, undoCancel: async () => controls.undoCancel() }),
   };
 }
 

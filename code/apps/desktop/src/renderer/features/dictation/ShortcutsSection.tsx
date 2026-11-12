@@ -113,7 +113,7 @@ function PauseRules({ s }: { s: DictationStatus }) {
 function Advanced({ s }: { s: DictationStatus }) {
   const c = s.settings;
   const [open, setOpen] = useState(false);
-  const share = shareAvailable(c.mode);
+  const share = shareAvailable(c.mode, s.platform);
   const cancels = c.mode === "toggle" || c.mode === "tap-or-hold";
   return (
     <>
@@ -158,6 +158,11 @@ function Advanced({ s }: { s: DictationStatus }) {
   );
 }
 
+function mouseNote(s: DictationStatus): string {
+  if (!s.mouseButtons) return "Mouse buttons as shortcuts are not available on this computer yet.";
+  return s.settings.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut.";
+}
+
 function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) => Promise<boolean> }) {
   const c = s.settings;
   return (
@@ -189,7 +194,7 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
       <SettingRow
         className="lm-row--control"
         label="Mouse button"
-        description={c.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut."}
+        description={mouseNote(s)}
         control={
           <HotkeyRecorder
             slot="mouse"
@@ -197,6 +202,7 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
             value={c.mouseButton}
             mouse
             remove
+            disabled={!s.mouseButtons}
             addLabel="Choose button"
             status={s}
             save={(mouseButton) => patch({ mouseButton: mouseButton as typeof c.mouseButton })}

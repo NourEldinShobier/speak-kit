@@ -107,7 +107,6 @@ export class DictationService {
       changed: () => this.#push(true),
       refreshCount: () => this.#refreshCount(),
       download: () => this.#downloadFromHud(),
-      undoCancel: async () => this.controls.undoCancel(),
     });
     ({ controls: this.controls, history: this.history } = parts);
     ({ retry: this.retry, openSoundSettings: this.openSoundSettings, hudAction: this.hudAction } = parts.actions);
@@ -188,6 +187,7 @@ export class DictationService {
       models: this.models,
       historyCount: this.#count,
       paused: this.controls.paused,
+      mouseButtons: this.os?.hotkey.mouse === true,
       readerShortcuts: { ...this.#ctx.config.shortcuts },
       rejected: this.#rejected,
       micOwner: this.#o.micOwner?.(),

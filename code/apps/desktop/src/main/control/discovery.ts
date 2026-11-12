@@ -1,4 +1,3 @@
-import { readFileSync, rmSync } from "node:fs";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as v from "valibot";
@@ -56,13 +55,4 @@ export async function readDiscovery(file: string, alive: (pid: number) => boolea
 export async function removeDiscovery(file: string, pid: number): Promise<void> {
   const d = await readDiscovery(file, () => true);
   if (d?.pid === pid) await rm(file, { force: true });
-}
-
-/** The same as `removeDiscovery`, for the moment the app quits: the process may end before an asynchronous removal runs. */
-export function removeDiscoverySync(file: string, pid: number): void {
-  try {
-    if ((JSON.parse(readFileSync(file, "utf8")) as { pid?: number }).pid === pid) rmSync(file, { force: true });
-  } catch {
-    // Nothing to remove: the file is missing or not ours.
-  }
 }

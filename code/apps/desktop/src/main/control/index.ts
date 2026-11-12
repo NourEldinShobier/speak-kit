@@ -3,7 +3,6 @@ import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
 import type { Reading } from "../reader/service";
 import { createCommands, type ControlDeps } from "./commands";
-import { discoveryFile, removeDiscoverySync } from "./discovery";
 import { createControlServer } from "./server";
 
 interface Parts {
@@ -82,9 +81,6 @@ export function setupControl(ctx: Ctx, p: Parts) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.controlServer !== undefined) sync();
     },
-    dispose: () => {
-      removeDiscoverySync(discoveryFile(p.dataDir), process.pid);
-      return server.stop();
-    },
+    dispose: () => server.stop(),
   };
 }
