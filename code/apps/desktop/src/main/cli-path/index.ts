@@ -10,8 +10,10 @@ export interface CommandLine {
 
 /** The parts that touch the operating system, so the rules above them run in a test. */
 export interface WindowsBoundary {
-  /** The user PATH exactly as stored (variables not expanded), or undefined when the user has none. */
+  /** The user PATH exactly as stored (variables not expanded), or undefined when the user has none. Rejects when the value could not be read, so a failure is never taken for an empty PATH. */
   readPath(): Promise<string | undefined>;
+  /** Keeps the PATH as it was before the first change, so a bad edit can be put back by hand. Never overwrites a copy that is already there. */
+  backupPath(value: string): Promise<void>;
   /** Stores it as an expandable string and tells running programs the environment changed. */
   writePath(value: string): Promise<void>;
   /** The folder the launcher was put on the PATH for, kept by the app between runs. */
@@ -31,7 +33,13 @@ export function windowsCommandLine(shipped: Shipped, b: WindowsBoundary): Comman
   const sep = ";";
   const status = async (): Promise<CommandLineState> => {
     if (!shipped.dir) return UNAVAILABLE;
-    const [path, marked] = [(await b.readPath()) ?? "", await b.marker.read()];
+    let path: string;
+    try {
+      path = (await b.readPath()) ?? "";
+    } catch {
+      return { kind: "needs-repair", why: "Your PATH could not be read." };
+    }
+    const marked = await b.marker.read();
     const here = hasEntry(path, shipped.dir, sep);
     if (marked === undefined && !here) return { kind: "not-installed" };
     if (marked !== undefined && marked.toLowerCase() !== shipped.dir.toLowerCase()) return { kind: "needs-repair", why: "Speak Kit was moved since the command-line tool was installed." };
@@ -43,7 +51,9 @@ export function windowsCommandLine(shipped: Shipped, b: WindowsBoundary): Comman
     status,
     async install() {
       if (!shipped.dir) return UNAVAILABLE;
-      let path = (await b.readPath()) ?? "";
+      const stored = await b.readPath();
+      let path = stored ?? "";
+      if (stored !== undefined) await b.backupPath(stored);
       const marked = await b.marker.read();
       if (marked !== undefined && marked.toLowerCase() !== shipped.dir.toLowerCase()) path = removeEntry(path, marked, sep);
       await b.writePath(addEntry(path, shipped.dir, sep));
@@ -77,6 +87,8 @@ export interface MacBoundary {
 export const MAC_SPOTS = (home: string) => ["/usr/local/bin", `${home}/.local/bin`];
 
 const launcherText = (shim: string) => `#!/bin/sh\nexec "${shim}" "$@"\n`;
+/** A launcher this app writes, whichever copy of the app it points at; a file of the person's own, or of another program, is not. */
+const isLauncher = (text: string) => /^#!\/bin\/sh\nexec ".*\/speakkit" "\$@"\n?$/.test(text);
 
 /**
  * macOS: a two-line launcher in /usr/local/bin, or in ~/.local/bin when the first cannot be written. The shipped script finds the app from its own location,
@@ -88,7 +100,7 @@ export function macCommandLine(shipped: { shim: string | undefined; home: string
     if (!shipped.shim) return UNAVAILABLE;
     for (const file of spots) {
       const text = await b.read(file);
-      if (text === undefined) continue;
+      if (text === undefined || !isLauncher(text)) continue;
       if (!text.includes(`"${shipped.shim}"`)) return { kind: "needs-repair", why: "The launcher points at a copy of Speak Kit that is not this one." };
       const folder = file.slice(0, -"/speakkit".length);
       return b.pathFolders().includes(folder) ? { kind: "installed", where: file } : { kind: "needs-path", where: file, folder };
@@ -100,6 +112,8 @@ export function macCommandLine(shipped: { shim: string | undefined; home: string
     async install() {
       if (!shipped.shim) return UNAVAILABLE;
       for (const file of spots) {
+        const there = await b.read(file);
+        if (there !== undefined && !isLauncher(there)) continue; // somebody else's speakkit: left alone
         try {
           await b.writeExecutable(file, launcherText(shipped.shim));
           return await status();
@@ -110,7 +124,10 @@ export function macCommandLine(shipped: { shim: string | undefined; home: string
       return { kind: "needs-repair", why: "No folder for the launcher could be written." };
     },
     async remove() {
-      for (const file of spots) await b.remove(file);
+      for (const file of spots) {
+        const text = await b.read(file);
+        if (text !== undefined && shipped.shim && text.includes(`"${shipped.shim}"`)) await b.remove(file);
+      }
       return status();
     },
   };
