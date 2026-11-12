@@ -298,3 +298,30 @@
   inline-size: 100%;
   justify-content: center;
 }
+
+.sk-compare {
+  overflow-x: auto;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+}
+.sk-compare table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sk-compare th,
+.sk-compare td {
+  padding: 8px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--stroke-control);
+  overflow-wrap: anywhere;
+}
+.sk-compare tbody th {
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sk-compare tr:last-child > * {
+  border-bottom: 0;
+}

@@ -6,7 +6,7 @@ import { ImportDialog } from "./ImportDialog";
 import { ModelCardView } from "./ModelCards";
 import { Performance } from "./Performance";
 import { DiskSpace, LanguageTable } from "./Tables";
-import { deleteConfirm, DEFAULT_FILTER, hiddenLine, languageName, recommendationText, SORT_OPTIONS, visibleModels, type Filter } from "../../speech-text";
+import { compareTable, deleteConfirm, DEFAULT_FILTER, hiddenLine, languageName, recommendationText, SORT_OPTIONS, visibleModels, type Filter } from "../../speech-text";
 import type { Run } from "./run";
 import { useSpeechModels } from "./useSpeechModels";
 import "./speech-models.css";
@@ -158,6 +158,50 @@ function Status({ v, message, clear, run }: { v: SpeechModelsView; message: stri
   );
 }
 
+/** The models side by side. Figures measured in different languages are shown, never ranked against each other. */
+function CompareDialog({ open, cards, onClose }: { open: boolean; cards: ModelCard[]; onClose(): void }) {
+  const t = compareTable(cards);
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Compare models"
+      width={720}
+      footer={
+        <Button data-autofocus onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div className="sk-compare" role="region" aria-label="Model comparison" tabIndex={0}>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" aria-label="Fact" />
+              {t.names.map((n) => (
+                <th key={n} scope="col">
+                  {n}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {t.rows.map((r) => (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                {r.cells.map((c, i) => (
+                  <td key={t.names[i]}>{c}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {t.mixedTests && <p className="sk-modal-text">These accuracy figures were measured in different languages. Compare them only within one language.</p>}
+    </Modal>
+  );
+}
+
 function DeleteDialog({ card, v, onClose, run }: { card: ModelCard | null; v: SpeechModelsView; onClose(): void; run: Run }) {
   const confirm = card ? deleteConfirm(card, v) : null;
   const remove = () => {
@@ -204,6 +248,7 @@ function ModelsSection({
   state: { busy: boolean; message: string | null; clear(): void; found: FoundView[]; setDeleting(c: ModelCard): void; setImporting(): void };
 }) {
   const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
+  const [comparing, setComparing] = useState(false);
   const { shown, hidden } = visibleModels(v.models, filter);
   const advice = (a: string) => run(() => (a === "open-proxy-settings" ? models.openProxySettings() : models.openModelsFolder()));
   return (
@@ -222,10 +267,16 @@ function ModelsSection({
       {shown.length === 0 && <p className="sk-engines-section__foot">No model matches this filter.</p>}
       {filter.downloadedOnly && hidden > 0 && <p className="sk-engines-section__foot">{hiddenLine(hidden)}</p>}
       <div className="sk-engines-section__actions">
+        {shown.length > 1 && (
+          <Button iconLeft="arrows-horizontal" onClick={() => setComparing(true)}>
+            Compare models
+          </Button>
+        )}
         <Button iconLeft="upload" onClick={state.setImporting}>
           Import a model file
         </Button>
       </div>
+      <CompareDialog open={comparing} cards={shown} onClose={() => setComparing(false)} />
     </section>
   );
 }

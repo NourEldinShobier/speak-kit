@@ -3,6 +3,7 @@ import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contra
 import {
   accuracyPercent,
   accuracyText,
+  compareTable,
   deleteConfirm,
   deviceLine,
   etaText,
@@ -193,5 +194,35 @@ describe("bars", () => {
     expect(speedPercent(card({ speedSeconds: 40 }))).toBe(0);
     expect(speedPercent(card({ speedSeconds: 0 }))).toBe(100);
     expect(speedPercent(omit(card(), "speedSeconds"))).toBeUndefined();
+  });
+});
+
+describe("compareTable", () => {
+  const a = card({ name: "Whisper", recommendedFor: ["de", "ar"], inUse: true, installed: true, languages: ["auto", "en", "de"] });
+  const b = card({
+    name: "Parakeet",
+    installed: false,
+    bytes: 355_615_679,
+    speedSeconds: 1,
+    accuracy: { oneIn: 18, testLanguage: "en", source: "x" },
+    recommendedFor: [],
+    license: { name: "CC BY 4.0", url: "" },
+  });
+  it("lines the facts up one column per model, with the test language in every accuracy cell", () => {
+    const t = compareTable([a, b]);
+    expect(t.names).toEqual(["Whisper", "Parakeet"]);
+    expect(t.rows.find((r) => r.label === "Accuracy")!.cells).toEqual(["About 1 wrong word in 25 (English test)", "About 1 wrong word in 18 (English test)"]);
+    expect(t.rows.find((r) => r.label === "File size")!.cells).toEqual(["574 MB", "356 MB"]);
+    expect(t.rows.find((r) => r.label === "Speed")!.cells).toEqual(["About 2 seconds", "Under a second"]);
+    expect(t.rows.find((r) => r.label === "Recommended")!.cells).toEqual(["German and Arabic", "Not for a language"]);
+    expect(t.rows.find((r) => r.label === "Status")!.cells).toEqual(["In use", "Not downloaded"]);
+    expect(t.rows.find((r) => r.label === "Licence")!.cells).toEqual(["MIT", "CC BY 4.0"]);
+    expect(t.mixedTests).toBe(false);
+  });
+  it("flags figures measured in different languages and says Not measured for a missing one", () => {
+    const de = card({ accuracy: { oneIn: 20, testLanguage: "de", source: "x" } });
+    expect(compareTable([a, de]).mixedTests).toBe(true);
+    expect(compareTable([a, omit(b, "accuracy")]).mixedTests).toBe(false);
+    expect(compareTable([a, omit(b, "accuracy")]).rows[0]!.cells[1]).toBe("Not measured");
   });
 });
