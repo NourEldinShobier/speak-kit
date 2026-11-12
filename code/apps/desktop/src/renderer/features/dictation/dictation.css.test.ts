@@ -22,3 +22,11 @@ describe("dictation styles", () => {
     expect(rule(".dict-hist__sr")).toContain("position: absolute");
   });
 });
+
+describe("the dictation pill and Reduce motion", () => {
+  const hud = readFileSync(new URL("./hud.css", import.meta.url), "utf8").replace(/\r\n/g, "\n");
+  it("stops the level-bar transition and the spinner when the page is marked reduce", () => {
+    expect(hud).toMatch(/:root\[data-reduce-motion="on"\] \.hud__bars i \{\s*transition: none;/);
+    expect(hud).toMatch(/:root\[data-reduce-motion="on"\] \.hud \.lm-spin \{\s*animation: none;/);
+  });
+});

@@ -189,6 +189,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
+      if (patch.reduceMotion !== undefined) dictation.motionChanged();
       control.onConfigPatch(patch);
     },
     dictation,

@@ -1,7 +1,7 @@
-type Size = [number, number];
+type Size = number[];
 
 interface Movable {
-  getContentSize(): Size;
+  getContentSize(): number[];
   setContentSize(width: number, height: number): void;
   isMaximized(): boolean;
   isFullScreen(): boolean;
@@ -22,7 +22,7 @@ export function createSizeGuard(win: Movable) {
       before = null;
       if (!was || win.isMaximized() || win.isFullScreen()) return;
       const now = win.getContentSize();
-      if (now[0] !== was[0] || now[1] !== was[1]) win.setContentSize(was[0], was[1]);
+      if (now[0] !== was[0] || now[1] !== was[1]) win.setContentSize(was[0]!, was[1]!);
     },
   };
 }

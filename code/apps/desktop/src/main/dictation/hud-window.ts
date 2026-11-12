@@ -11,6 +11,8 @@ export interface HudWindowOptions {
   height?: number | undefined;
   /** The page talks to the app through the preload bridge (the app's own HUD page); the built-in page needs none. */
   bridge?: boolean | undefined;
+  /** Reduce motion as it is right now (the app setting, else the operating system); read when the page loads. */
+  reduceMotion?: (() => boolean) | undefined;
 }
 
 // Logical properties only (check-css); colours stay literal because this page is outside the app's stylesheet.
@@ -24,6 +26,7 @@ body[data-kind=notice]::before{inline-size:8px;background:rgb(120 200 140)}
 body[data-kind=notice][data-tone=error]::before{background:rgb(240 110 110)}
 body[data-kind=notice]::after{content:attr(data-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @keyframes wait{50%{opacity:.35}}
+html[data-reduce-motion=on] body::before{transition:none;animation:none}
 </style><body></body>`;
 
 export const HUD_PAGE_URL = `data:text/html;charset=utf-8,${encodeURIComponent(PAGE)}`;
@@ -45,11 +48,14 @@ export function stateScript(state: HudState): string {
   })()`;
 }
 
+/** Puts the reduce-motion decision on the page, where its style sheet reads it. */
+export const motionScript = (on: boolean): string => `document.documentElement.setAttribute("data-reduce-motion", ${JSON.stringify(on ? "on" : "off")})`;
+
 /**
  * A small always-on-top window that ignores the mouse and cannot take focus: `focusable: false` keeps it from being activated, `showInactive` keeps
  * the foreground window foreground, and the "screen-saver" level keeps it above full-screen windowed apps (on macOS also a panel on every Space).
  */
-export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, bridge = false }: HudWindowOptions = {}): HudWindow {
+export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, bridge = false, reduceMotion }: HudWindowOptions = {}): HudWindow {
   let settle!: { resolve(): void; reject(e: unknown): void };
   const ready = new Promise<void>((resolve, reject) => (settle = { resolve, reject }));
   const w = createSecureWindow(
@@ -71,6 +77,9 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
     },
     () => settle.resolve(),
   );
+  let reduce = reduceMotion?.() ?? false;
+  const applyMotion = () => void w.webContents.executeJavaScript(motionScript(reduce)).catch(() => {}); // the page can be gone
+  w.webContents.on("did-finish-load", applyMotion);
   raiseAboveEverything(w, hudChrome(process.platform));
   w.setIgnoreMouseEvents(true);
   w.loadURL(page).catch(settle.reject);
@@ -81,6 +90,10 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
       return w.isDestroyed();
     },
     owns: (contents) => contents === w.webContents,
+    setReduceMotion(on) {
+      reduce = on;
+      if (!w.isDestroyed()) applyMotion();
+    },
     push(state) {
       if (state.kind === "view") {
         // Buttons in the pill need the mouse; everything else lets clicks fall through to the app underneath.
