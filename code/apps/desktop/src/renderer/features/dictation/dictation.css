@@ -2,6 +2,9 @@
 
 /* Hotkey: keycaps, then Change. */
 .dict-hotkey {
+  /* One width in every state (keycaps, recorder, messages), so nothing moves while the row changes and the text beside it keeps its column. */
+  inline-size: 360px;
+  max-inline-size: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

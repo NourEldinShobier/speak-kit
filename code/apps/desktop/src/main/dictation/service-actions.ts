@@ -41,11 +41,12 @@ export function createActions(h: Host) {
     await shell.openExternal(blocked ? "ms-settings:privacy-microphone" : "ms-settings:sound");
   };
   const hudAction = (a: HudAction): void => {
-    h.presenter.dismiss();
+    if (a !== "cancel-recording") h.presenter.dismiss();
     if (a === "retry") void retry();
     else if (a === "download") h.download();
     else if (a === "sound-settings") void openSoundSettings();
     else if (a === "undo-cancel") void h.undoCancel();
+    else if (a === "cancel-recording") h.core()?.cancel();
   };
   return { retry, openSoundSettings, hudAction };
 }
