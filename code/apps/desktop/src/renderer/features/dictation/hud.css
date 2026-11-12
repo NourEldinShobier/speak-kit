@@ -1,16 +1,4 @@
-/* The HUD pill: 40 high, dark, level bars and a timer while recording. The page is transparent; the window is a little larger than the pill so its shadow is not cut off. */
-html,
-body,
-#root {
-  block-size: 100%;
-  margin: 0;
-  background: transparent;
-  overflow: hidden;
-}
-#root {
-  display: grid;
-  place-items: center;
-}
+/* The HUD pill: 40 high, dark, level bars and a timer while recording. The window is a little larger than the pill so its shadow is not cut off. */
 .hud {
   display: flex;
   align-items: center;

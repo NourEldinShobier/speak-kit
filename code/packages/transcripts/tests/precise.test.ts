@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { checkFile, decodeWav, encodeWav16k, failures, knownExtension, provisionalTitle, SearchIndex, snippetAround, sniff, wavInfo } from "../src";
+import { checkFile, decodeWav, encodeWav16k, failures, knownExtension, provisionalTitle, SearchIndex, snippetAround, sniff, wavInfo, WavError, WavTooLong } from "../src";
 
 describe("BM25 scores", () => {
   const docs = () => {
@@ -182,6 +182,25 @@ describe("WAVE files", () => {
     expect([...out]).toEqual([5, 6, 7, 9 | 0].slice(0, 3));
     out[0] = 99;
     expect(odd[44]).toBe(5);
+  });
+
+  const wavAt = (rate: number, bytes: number) => {
+    const b = new Uint8Array(44 + bytes);
+    b.set(encodeWav16k(new Int16Array(0)).subarray(0, 44));
+    const dv = new DataView(b.buffer);
+    dv.setUint32(24, rate, true);
+    dv.setUint32(40, bytes, true);
+    return b;
+  };
+
+  test("a header with a rate outside 8 kHz to 768 kHz is refused before any output is allocated", () => {
+    for (const rate of [0, 1, 7999, 768_001, 0xffffffff]) expect(() => decodeWav(wavAt(rate, 200_000))).toThrow(WavError);
+    expect(decodeWav(wavAt(8000, 16)).length).toBe(16);
+  });
+
+  test("a file that would convert to over four hours is refused as too long before the output is allocated", () => {
+    // 8 kHz mono 16-bit: 4 hours is 230,400,000 bytes of samples.
+    expect(() => decodeWav(wavAt(8000, 230_416_000))).toThrow(WavTooLong);
   });
 
   test("44.1 kHz audio comes out at 16 kHz with its level kept, edges included", () => {
