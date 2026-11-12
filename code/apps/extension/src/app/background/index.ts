@@ -5,6 +5,7 @@ import { parseInbound } from "../../shared/schemas";
 import { onCommand } from "./commands";
 import { clearHealth } from "./connection";
 import { menuLog, menusStale, onMenuClick, rebuildMenus } from "./menus";
+import { watchFrontPage } from "./page";
 import { OFFSCREEN_URL } from "./offscreen";
 import { handleOffscreen, reconcilePlayer } from "./player";
 import { KNOWN_TYPES, routeSafely } from "./router";
@@ -73,3 +74,4 @@ chrome.tabs.onRemoved.addListener((tabId) => void onTabRemoved(tabId));
 chrome.tabs.onReplaced.addListener((added, removed) => void onTabReplaced(added, removed));
 chrome.tabs.onUpdated.addListener((tabId, info) => void onTabUpdated(tabId, info)); // a reload carries no url, only status "loading"
 void reconcilePlayer();
+watchFrontPage();
