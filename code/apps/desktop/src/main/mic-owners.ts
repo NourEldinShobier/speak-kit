@@ -11,4 +11,3 @@ export function createMicOwners() {
     owner: (): string | undefined => [...held.values()][0],
   };
 }
-export type MicOwners = ReturnType<typeof createMicOwners>;

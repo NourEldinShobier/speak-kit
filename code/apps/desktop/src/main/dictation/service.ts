@@ -326,6 +326,7 @@ export class DictationService {
   /** Key releases may have gone to another desktop while the screen was locked or the computer slept. */
   resync(): void {
     this.os?.hotkey.resync();
+    this.presenter.reconnected();
   }
 
   toggle(): void {

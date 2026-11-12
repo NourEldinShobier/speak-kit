@@ -34,7 +34,7 @@ const Hint = ({ children }: { children: ReactNode }) => <span className="hud__hi
 
 function recordingHint(view: Extract<HudView, { kind: "recording" }>): string {
   if (view.cancel) return `Press the hotkey to stop, ${view.cancel} cancels`;
-  return view.locked ? "Press the hotkey to stop" : "Release to finish";
+  return view.locked ? `Recording locked. Press ${view.hotkey} to finish.` : "Release to finish";
 }
 
 function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) {
@@ -44,6 +44,11 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
       <Bars level={view.level} />
       <Elapsed since={view.startedAt} />
       <Hint>{recordingHint(view)}</Hint>
+      {view.locked && !view.cancel && (
+        <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction("cancel-recording"))}>
+          Cancel
+        </button>
+      )}
     </>
   );
 }

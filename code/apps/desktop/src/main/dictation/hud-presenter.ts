@@ -75,7 +75,12 @@ export class HudPresenter {
   toast(text: string, tone: "ok" | "error" = "ok"): void {
     clearTimeout(this.#ready);
     this.#show(tone === "error" ? { kind: "error", text, icon: "alert-triangle" } : { kind: "notice", text });
-    this.#ready = setTimeout(() => this.#show(null), READY_MS + 1000);
+    this.#ready = setTimeout(() => this.#render(), READY_MS + 1000);
+  }
+
+  /** The keyboard listener was rebuilt (after the lock screen or sleep): say so when a recording is still running. */
+  reconnected(): void {
+    if (this.#state.status === "locked") this.toast(`Keyboard reconnected. Still recording. Press ${hotkeyText(this.#d.hotkey())} to finish.`);
   }
 
   dismiss(): void {
