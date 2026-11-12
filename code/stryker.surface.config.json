@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.stryker.surface.config.ts", "related": false },
+  "mutate": [
+    "apps/desktop/src/shared/settings/{external-edit,resources}.ts",
+    "apps/desktop/src/shared/{release-notes,tray-notices}.ts",
+    "apps/desktop/src/main/{resources,single-instance,window-size-guard,window-motion}.ts",
+    "!**/*.test.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress", "json"],
+  "jsonReporter": { "fileName": "reports/mutation/surface.json" },
+  "incremental": true,
+  "incrementalFile": "reports/stryker-surface-incremental.json",
+  "tempDirName": "node_modules/.stryker-tmp-surface",
+  "thresholds": { "high": 90, "low": 80, "break": 80 },
+  "timeoutMS": 10000,
+  "concurrency": 4,
+  "ignoreStatic": false
+}

@@ -99,3 +99,20 @@ describe("size guard", () => {
     ]);
   });
 });
+
+describe("size guard, one side at a time", () => {
+  it("restores when only the width changed, or only the height", () => {
+    for (const changed of [
+      [1500, 800],
+      [1280, 900],
+    ] as const) {
+      const w = fakeWindow([1280, 800]);
+      const g = createSizeGuard(w);
+      g.willMove();
+      w.scale = 2;
+      w.size = [changed[0], changed[1]];
+      g.moved();
+      expect(w.sets).toEqual([[1280, 800]]);
+    }
+  });
+});

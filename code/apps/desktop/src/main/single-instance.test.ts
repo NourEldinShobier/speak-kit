@@ -90,3 +90,60 @@ describe("running version file", () => {
     await rm(dir, { recursive: true, force: true });
   });
 });
+
+describe("isNewer in detail", () => {
+  it("compares versions with a different number of parts", () => {
+    expect(isNewer("1.0.1", "1.0")).toBe(true);
+    expect(isNewer("1.0", "1.0.1")).toBe(false);
+    expect(isNewer("1", "1.0.0")).toBe(false);
+    expect(isNewer("1.0.0", "1")).toBe(false);
+    expect(isNewer("2", "1.9.9")).toBe(true);
+  });
+  it("a part that is not a number counts as zero", () => {
+    expect(isNewer("1.x.0", "1.0.0")).toBe(false);
+    expect(isNewer("1.1.0", "1.x.0")).toBe(true);
+  });
+  it("a pre-release tag does not make a higher version lower", () => {
+    expect(isNewer("1.1.0-beta.1", "1.0.0")).toBe(true);
+    expect(isNewer("1.0.0-beta.2", "1.0.0-beta.1")).toBe(false);
+  });
+});
+
+describe("stopGuard detail", () => {
+  it("does not keep the process alive", () => {
+    let unrefs = 0;
+    const real = globalThis.setTimeout;
+    globalThis.setTimeout = ((fn: () => void, ms: number) => ({ unref: () => void unrefs++, ref: () => {}, fn, ms })) as never;
+    try {
+      stopGuard(() => {}, 5);
+    } finally {
+      globalThis.setTimeout = real;
+    }
+    expect(unrefs).toBe(1);
+  });
+});
+
+describe("running version file detail", () => {
+  it("keeps the pid next to the version and reads nothing from a file of the wrong shape", async () => {
+    const { writeFile, readFile } = await import("node:fs/promises");
+    const dir = await mkdtemp(path.join(tmpdir(), "speakkit-inst-"));
+    await writeRunningVersion(dir, "2.0.0");
+    expect(JSON.parse(await readFile(path.join(dir, "instance.json"), "utf8"))).toEqual({ version: "2.0.0", pid: process.pid });
+    await writeFile(path.join(dir, "instance.json"), JSON.stringify({ version: 3 }));
+    expect(await readRunningVersion(dir)).toBeNull();
+    await writeFile(path.join(dir, "instance.json"), "not json");
+    expect(await readRunningVersion(dir)).toBeNull();
+    await rm(dir, { recursive: true, force: true });
+  });
+});
+
+describe("acquireInstance detail", () => {
+  it("waits the step between tries and stops after the window with the default step", async () => {
+    const waits: number[] = [];
+    let tries = 0;
+    const ok = await acquireInstance({ tryLock: () => (tries++, false), runningVersion: async () => "0.1.0", ownVersion: "1.0.0", wait: async (ms) => void waits.push(ms), replaceMs: 3000 });
+    expect(ok).toBe(false);
+    expect(waits).toEqual([1000, 1000, 1000]);
+    expect(tries).toBe(4);
+  });
+});
