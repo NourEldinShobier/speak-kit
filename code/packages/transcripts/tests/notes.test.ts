@@ -234,3 +234,61 @@ describe("pure notes helpers", () => {
     expect(viewOf({}, false)).toBeUndefined();
   });
 });
+
+describe("notes pass guards", () => {
+  const gate = () => {
+    let release!: () => void;
+    const open = new Promise<void>((r) => (release = r));
+    return { open, release };
+  };
+
+  test("a transcript deleted while its notes are written leaves no notes file", async () => {
+    const g = gate();
+    const s = await setup(
+      () =>
+        async (...a) => (await g.open, GOOD(...a)),
+    );
+    const t = await s.t;
+    const id = await imported(t);
+    await t.remove(id);
+    g.release();
+    await t.dispose();
+    expect([...s.fs.files.keys()].filter((f) => f.includes(".notes.json"))).toEqual([]);
+  });
+
+  test("the writer's title replaces the title the transcript got on its own", async () => {
+    const s = await setup(() => GOOD);
+    const t = await s.t;
+    const id = await imported(t);
+    await notesState(t, id, "ready");
+    expect((await t.get(id))!.title).toBe("Weekly sync");
+    expect(t.list({ search: "Weekly" })).toHaveLength(1);
+  });
+
+  test("a title the person chose is kept", async () => {
+    const g = gate();
+    const s = await setup(
+      () =>
+        async (...a) => (await g.open, GOOD(...a)),
+    );
+    const t = await s.t;
+    const id = await imported(t);
+    await t.rename(id, "My own name");
+    g.release();
+    await notesState(t, id, "ready");
+    expect((await t.get(id))!.title).toBe("My own name");
+  });
+
+  test("quitting stops a notes pass that is waiting on the writer", async () => {
+    let seen: AbortSignal | undefined;
+    const s = await setup(() => (_segments, signal) => {
+      seen = signal;
+      return new Promise((_r, reject) => signal?.addEventListener("abort", () => reject(new Error("aborted"))));
+    });
+    const t = await s.t;
+    await imported(t);
+    await vi.waitFor(() => expect(seen).toBeDefined());
+    await t.dispose();
+    expect(seen!.aborted).toBe(true);
+  });
+});

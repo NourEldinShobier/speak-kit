@@ -61,8 +61,10 @@ function exporting({ ready, ports: p }: HandlerEnv): Part<"copyText" | "save" | 
   return {
     copyText: async (id, range) => {
       const d = await (await ready).get(id);
-      if (d) p.clipboard.writeText(plainText(range ? d.segments.filter((s) => s.start >= range.from && s.start < range.to) : d.segments));
-      return !!d;
+      const segments = d && (range ? d.segments.filter((s) => s.start >= range.from && s.start < range.to) : d.segments);
+      if (!segments?.length) return false;
+      p.clipboard.writeText(plainText(segments));
+      return true;
     },
     save: async (id, format: Format): Promise<Outcome<SavedFile>> => {
       const r = await (await ready).save(id, format);

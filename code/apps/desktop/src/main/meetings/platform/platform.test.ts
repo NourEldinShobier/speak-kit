@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { appNameOfPath, macosPlatform, parseWindows, type CoreAudio } from "./macos";
+import { appNameOfPath, loadCoreAudio, macosPlatform, parseWindows, type CoreAudio } from "./macos";
 import type { Exec } from "./types";
 import { exeOfConsentKey, micUsersOf, parseConsent, parseProcesses, windowsPlatform } from "./windows";
 
@@ -152,10 +152,21 @@ describe("macOS microphone use", () => {
     expect(p.capabilities().micFollowsCallApp).toBe("available");
   });
 
-  it("stops claiming the microphone lookup once the system refuses it", async () => {
-    const p = macosPlatform({ exec: run, audio: async () => audio(new Error("older macOS")) });
+  it("stops claiming the microphone lookup once CoreAudio cannot be loaded", async () => {
+    const p = macosPlatform({
+      exec: run,
+      audio: async () => {
+        throw new Error("no koffi");
+      },
+    });
     expect(await p.callAppMic({ pid: 5 })).toBeNull();
     expect(p.capabilities().micFollowsCallApp).toBe("unavailable");
+  });
+
+  it("keeps the microphone lookup on when a single lookup fails", async () => {
+    const p = macosPlatform({ exec: run, audio: async () => audio(new Error("process gone")) });
+    expect(await p.callAppMic({ pid: 5 })).toBeNull();
+    expect(p.capabilities().micFollowsCallApp).toBe("available");
   });
 
   it("skips a process that ended before its name was read, and probes nothing when no input runs", async () => {
@@ -168,5 +179,32 @@ describe("macOS microphone use", () => {
     expect(await ended.probe()).toEqual({ micUsers: [], windows: [] });
     const quiet = macosPlatform({ exec: run, audio: async () => audio([]) });
     expect(await quiet.probe()).toEqual({ micUsers: [], windows: [] });
+  });
+});
+
+describe("CoreAudio process list", () => {
+  const fourcc = (s: string) => (s.charCodeAt(0) << 24) | (s.charCodeAt(1) << 16) | (s.charCodeAt(2) << 8) | s.charCodeAt(3);
+  // Objects 10, 11 and 12; object 11 exits before its reads. 10 and 12 run an input, with pids 100 and 120.
+  const koffi = {
+    struct: () => {},
+    load: () => ({
+      func: (sig: string) =>
+        sig.includes("GetPropertyDataSize")
+          ? (_o: number, a: { selector: number }, _q: number, _x: null, size: number[]) => {
+              size[0] = a.selector === fourcc("prs#") ? 12 : 4;
+              return 0;
+            }
+          : (o: number, a: { selector: number }, _q: number, _x: null, _s: number[], buf: Buffer) => {
+              if (a.selector === fourcc("prs#")) [10, 11, 12].forEach((v, i) => buf.writeUInt32LE(v, i * 4));
+              else if (o === 11) return -1;
+              else if (a.selector === fourcc("ppid")) buf.writeInt32LE(o * 10, 0);
+              else if (a.selector === fourcc("piri")) buf.writeUInt32LE(1, 0);
+              return 0;
+            },
+    }),
+  };
+
+  it("skips a process that vanished mid-read and still lists the others", () => {
+    expect(loadCoreAudio(koffi as never).processesUsingInput()).toEqual([100, 120]);
   });
 });

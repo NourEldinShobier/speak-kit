@@ -13,10 +13,11 @@ export function transcriptNotes(o: { on(): boolean; writer: string; complete(sys
   };
   return () =>
     o.on()
-      ? async (segments) => {
+      ? async (segments, signal) => {
           const out = await writeNotes(
             deps,
             segments.map((s) => ({ start: s.start, text: s.text })),
+            signal,
           );
           return out.ok ? { ok: true, notes: out.notes, writer: out.writer } : out;
         }

@@ -23,7 +23,7 @@ export type NotesState = NotesView["state"];
 export type SummariseResult = { ok: true; notes: Omit<NoteDoc, "writer" | "at">; writer: string } | { ok: false; failure: WriterFailure };
 
 /** The writer. It owns the key, the network and the model; every failure comes back as a result with a message. */
-export type Summarise = (segments: readonly Segment[]) => Promise<SummariseResult>;
+export type Summarise = (segments: readonly Segment[], signal?: AbortSignal) => Promise<SummariseResult>;
 
 /** What is saved next to the words: the last good notes and the last failure, so a failed pass never removes notes already written. */
 export interface NotesRecord {

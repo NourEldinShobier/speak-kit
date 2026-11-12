@@ -2,6 +2,7 @@ import type { Outcome, TranscriptsDeps } from "./api";
 import { failures } from "./formats";
 import type { NoteDoc, SummariseResult } from "./notes";
 import type { Store } from "./store";
+import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
 
 const OFF: Failure = { code: "notes", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." };
@@ -15,8 +16,11 @@ const failureOf = (r: SummariseResult | undefined): Failure | undefined => {
 
 interface Ctx {
   d: Pick<TranscriptsDeps, "notes" | "now" | "changed">;
+  /** Fires when the app quits, so a pass waiting on the writer stops. */
+  quit: AbortSignal;
+  reindex(e: Entry): Promise<void>;
   store: Store;
-  settle(id: string, patch: { notes?: Entry["notes"] }): Promise<unknown>;
+  settle(id: string, patch: { notes?: Entry["notes"]; title?: string }): Promise<Entry | undefined>;
   writing: Set<string>;
   failure(e: unknown): Failure;
 }
@@ -25,7 +29,7 @@ interface Ctx {
  * One notes pass for a transcript. The words and the audio are never an output: a failure is saved next to the last good notes and the transcript stays
  * as it was. Every failure is a result with a message, never a throw.
  */
-export function notesRunner({ d, store, settle, writing, failure }: Ctx): (id: string) => Promise<Outcome> {
+export function notesRunner({ d, quit, reindex, store, settle, writing, failure }: Ctx): (id: string) => Promise<Outcome> {
   return async (id) => {
     const summarise = d.notes?.();
     const e = store.get(id);
@@ -36,12 +40,18 @@ export function notesRunner({ d, store, settle, writing, failure }: Ctx): (id: s
     writing.add(id);
     d.changed();
     try {
-      const r = await summarise(segments).catch(() => undefined);
+      const r = await summarise(segments, quit).catch(() => undefined);
+      // Deleted while the writer ran: saving now would leave the words behind in a notes file nobody can reach.
+      const now = store.get(id);
+      if (!now) return { ok: false, failure: failures.failed() };
       const bad = failureOf(r);
       const prev = await store.notes(id);
       const doc: NoteDoc | undefined = r?.ok ? { ...r.notes, writer: r.writer, at: d.now() } : prev?.doc;
       await store.saveNotes(id, { ...(doc && { doc }), ...(bad && { failure: bad }) });
-      await settle(id, { notes: bad ? "failed" : "ready" });
+      // The writer's title replaces only the one the transcript got on its own, never a name the person chose.
+      const own = now.title === provisionalTitle({ source: now.source, ...(now.sourceName && { name: now.sourceName }), at: now.createdAt });
+      const next = await settle(id, { notes: bad ? "failed" : "ready", ...(r?.ok && own && { title: r.notes.title.slice(0, 200) }) });
+      if (next && next.title !== now.title) await reindex(next);
       return bad ? { ok: false, failure: bad } : { ok: true };
     } catch (err) {
       return { ok: false, failure: failure(err) };
