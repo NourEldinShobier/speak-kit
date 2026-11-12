@@ -182,7 +182,7 @@ class Runtime implements Dictation {
       case "finish-recording":
         return this.finishRecording(effect.id, effect.raw === true);
       case "discard-recording":
-        return this.discardRecording(effect.id, effect.cancelled);
+        return this.discardRecording(effect.id, effect.cancelled, effect.why);
       default:
         return effect satisfies never;
     }
@@ -220,8 +220,8 @@ class Runtime implements Dictation {
     });
   }
 
-  private discardRecording(id: number, cancelled: boolean): void {
-    const target = this.targets.get(id);
+  private discardRecording(id: number, cancelled: boolean, why?: string): void {
+    if (why) this.deps.log?.("discard", why);
     this.targets.delete(id);
     if (cancelled) this.flash({ notice: { kind: "cancelled", restorable: true } });
     void this.inRecorderOrder(async () => {
