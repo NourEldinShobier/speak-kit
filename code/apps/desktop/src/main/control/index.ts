@@ -1,4 +1,7 @@
+import type { AutomationHost } from "@speakkit/server";
 import { SLOT_NAMES } from "../../shared/dictation/conflicts";
+import "../../shared/settings/builtin-experiments";
+import { experiments, toggled } from "../../shared/settings/experiments";
 import type { ConfigPatch } from "../../shared/schemas";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
@@ -8,6 +11,7 @@ import { createControlServer } from "./server";
 
 interface Parts {
   reading: Pick<Reading, "readText" | "command">;
+  automation: AutomationHost;
   dictation: DictationService;
   dataDir: string;
   version: string;
@@ -64,6 +68,20 @@ function controlDeps(ctx: Ctx, p: Parts, sync: () => void): ControlDeps {
     }),
     readText: (text) => p.reading.readText(text, "text"),
     readerCommand: (c) => p.reading.command(c),
+    automation: p.automation,
+    voices: async () => (await ctx.server.voices()).voices.map((v) => ({ id: v.id, name: v.name })),
+    labs: {
+      known: (id) => {
+        const e = experiments().find((x) => x.id === id);
+        if (!e) return "no";
+        return e.audience === "dev" && ctx.state.packaged ? "dev-only" : "yes";
+      },
+      set: async (id, on) => {
+        ctx.config.experiments = toggled(ctx.config.experiments, id, on);
+        ctx.saveConfig();
+        ctx.publish();
+      },
+    },
     voice: {
       get: () => ctx.config.voice,
       set: (id) => {

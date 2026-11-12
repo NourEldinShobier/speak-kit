@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { readStoredHistory } from "@speakkit/dictation";
 import { fail, LIMITS, type Reply } from "../shared/control/contract";
 import { discoveryFile, portOpen, processAlive, readDiscovery } from "../main/control/discovery";
 import { serveMcp } from "./mcp";
+import { diskSources, runRead } from "./reads";
 import { userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
 
@@ -46,6 +47,25 @@ const io: Io = {
       return null; // a file that cannot be read is not an empty history
     }
   },
+  reads: diskSources(dir),
+  async readConfig() {
+    try {
+      return JSON.parse(await readFile(path.join(dir, "config.json"), "utf8"));
+    } catch {
+      return undefined; // missing or damaged: the list shows every experiment off, and nothing is written
+    }
+  },
+  async file(name) {
+    try {
+      const s = await stat(name);
+      if (!s.isFile()) return { kind: "none" };
+      if (s.size > LIMITS.speakFileBytes) return { kind: "too-large" };
+      return { kind: "text", text: await readFile(name, "utf8") };
+    } catch {
+      return { kind: "none" }; // not a path (a sentence, a name too long for the system): the words are the text
+    }
+  },
+  sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   async post(d, req, timeoutMs): Promise<Reply> {
     const res = await fetch(`http://127.0.0.1:${d.port}/control`, {
       method: "POST",
@@ -63,13 +83,20 @@ const io: Io = {
 };
 
 if (process.argv[2] === "mcp")
-  await serveMcp(process.stdin, process.stdout, async (req) => {
-    const d = await io.discovery();
-    if (!d) return fail("not-running", "Speak Kit is not running.");
-    try {
-      return await io.post(d, req, LIMITS.timeoutMs);
-    } catch {
-      return fail("not-running", "Speak Kit did not answer.");
-    }
+  await serveMcp(process.stdin, process.stdout, {
+    async call(req) {
+      const d = await io.discovery();
+      if (!d) return fail("not-running", "Speak Kit is not running.");
+      try {
+        return await io.post(d, req, LIMITS.timeoutMs);
+      } catch {
+        return fail("not-running", "Speak Kit did not answer.");
+      }
+    },
+    read: (r) => runRead(r, io.reads),
+    async flags() {
+      const stored = ((await io.readConfig()) as { mcpTools?: unknown } | undefined)?.mcpTools;
+      return stored && typeof stored === "object" ? (stored as Record<string, boolean>) : {};
+    },
   });
 else process.exitCode = await runCli(process.argv.slice(2), io);

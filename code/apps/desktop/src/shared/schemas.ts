@@ -89,6 +89,8 @@ export const ConfigSchema = v.object({
   reduceMotion: fb(v.picklist(MOTION_CHOICES), "system"),
   updateChannel: fb(v.picklist(UPDATE_CHANNELS), "stable"),
   experiments: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
+  /** MCP tools the person switched on or off; a tool not listed uses its default. */
+  mcpTools: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
   appliedMigrations: fb(v.array(v.pipe(v.string(), v.maxLength(64))), []),
   configVersion: fb(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
   idleUnload: fb(v.picklist(IDLE_CHOICES), "5"),
@@ -131,6 +133,7 @@ export const ConfigPatchSchema = v.partial(
     reduceMotion: v.picklist(MOTION_CHOICES),
     updateChannel: v.picklist(UPDATE_CHANNELS),
     experiments: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
+    mcpTools: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
     idleUnload: v.picklist(IDLE_CHOICES),
     loadAtStart: v.boolean(),
     batterySaver: v.boolean(),
