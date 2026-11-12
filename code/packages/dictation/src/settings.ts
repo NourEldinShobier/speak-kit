@@ -3,7 +3,8 @@ import type { Term } from "./vocabulary/terms";
 
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
 export type InsertMode = "paste" | "type" | "copy";
-export type Replacement = { from: string; to: string };
+/** `matchCase`: only the exact capitals match; without it capital letters are ignored. */
+export type Replacement = { from: string; to: string; matchCase?: boolean | undefined };
 
 export interface Settings {
   /** Key id as the hotkey source reports it, for example "ControlRight". A single key; a modifier is fine. */

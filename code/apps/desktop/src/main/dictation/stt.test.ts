@@ -157,3 +157,24 @@ describe("model views", () => {
     expect(parakeet).toMatchObject({ tag: "Fast", languages: ["auto", "en", "de"] });
   });
 });
+
+describe("transcriber and the word list", () => {
+  it("sends the words to a model that reads them", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes, Grafana" });
+    expect(stt.calls()[0]!.prompt).toBe("Kubernetes, Grafana");
+  });
+
+  it("drops the words for a model that cannot read them, says so once per dictation, and still transcribes", async () => {
+    const stt = new FakeStt();
+    await stt.load("parakeet-tdt-0.6b-v3-q4_0");
+    let dropped = 0;
+    const t = createTranscriber({ stt, model: () => "parakeet-tdt-0.6b-v3-q4_0", onFailedClip: () => undefined, onPromptDropped: () => dropped++ });
+    stt.say({ text: "kept working" });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes" })).toMatchObject({ ok: true, text: "kept working" });
+    expect(stt.calls()[0]).not.toHaveProperty("prompt");
+    expect(dropped).toBe(1);
+    await t.transcribe({ clip: clip([0.1]), language: "en" });
+    expect(dropped).toBe(1);
+  });
+});

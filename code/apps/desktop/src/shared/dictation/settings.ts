@@ -10,7 +10,7 @@ export const MAX_REPLACEMENTS = 100;
 export const MAX_TERMS = 500;
 export const MAX_MODES = 24;
 
-export type Replacement = { from: string; to: string };
+export type Replacement = { from: string; to: string; matchCase?: boolean | undefined };
 const id = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
 const Term = v.object({ id, word: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), soundsLike: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(20)) });
 const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), spoken: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)) });
@@ -59,7 +59,7 @@ export type Cleanup = v.InferOutput<typeof CleanupSchema>;
 
 /** The rewrite pass is off until the person turns it on, because the text leaves the computer. */
 export const RewriteSchema = v.fallback(v.object({ enabled: bool(false), deadlineMs: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)), 4000) }), { enabled: false, deadlineMs: 4000 });
-const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)) });
+const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)), matchCase: v.optional(v.boolean()) });
 const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTKEY);
 // A bad entry is dropped, the rest of the list stays.
 const replacements = v.fallback(

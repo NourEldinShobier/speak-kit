@@ -21,6 +21,7 @@ export function createOpenAiRewriter(o: Options): Rewriter {
     async rewrite({ text, signal }) {
       const key = await o.readKey();
       if (!key) throw new Error("no key");
+      signal.throwIfAborted(); // the deadline may have passed while the key was read
       const res = await doFetch(`${o.baseUrl ?? OPENAI_BASE_URL}/v1/chat/completions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

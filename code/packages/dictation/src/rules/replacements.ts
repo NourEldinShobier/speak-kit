@@ -16,17 +16,17 @@ const INSIDE = String.raw`(?:(?![${UNSPACED}])[\p{L}\p{N}_])`;
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") or in an unspaced script has no such edge.
-function pattern(from: string): RegExp {
+function pattern(from: string, matchCase: boolean): RegExp {
   const before = edge(from.charAt(0)) ? `(?<!${INSIDE})` : "";
   const after = edge(from.charAt(from.length - 1)) ? `(?!${INSIDE})` : "";
-  return new RegExp(`${before}${escape(from)}${after}`, "giu");
+  return new RegExp(`${before}${escape(from)}${after}`, matchCase ? "gu" : "giu");
 }
 
 function hits(text: string, rules: Replacement[]): Hit[] {
   const all: Hit[] = [];
   rules.forEach((rule, order) => {
     if (!rule.from.trim()) return;
-    for (const m of text.matchAll(pattern(rule.from))) all.push({ start: m.index, end: m.index + m[0].length, to: rule.to, order });
+    for (const m of text.matchAll(pattern(rule.from, rule.matchCase === true))) all.push({ start: m.index, end: m.index + m[0].length, to: rule.to, order });
   });
   // Longest wins, then the earlier start, then the earlier rule. A hit that overlaps a kept one is dropped.
   all.sort((a, b) => b.end - b.start - (a.end - a.start) || a.start - b.start || a.order - b.order);

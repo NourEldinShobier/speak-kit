@@ -3,7 +3,23 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "auto", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
+const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
+const DEFAULTS = {
+  enabled: false,
+  hotkey: "ControlRight",
+  mode: "hold",
+  language: "auto",
+  model: "large-v3-turbo-q5_0",
+  retention: "7d",
+  replacements: [],
+  terms: [],
+  readAs: [],
+  prompt: true,
+  cleanup: CLEANUP,
+  modes: [],
+  rewrite: { enabled: false, deadlineMs: 4000 },
+  keepRecordings: false,
+};
 
 describe("dictation config", () => {
   it("is off, on Right Ctrl, hold to talk, for 7 days, until the person turns it on", () => {
@@ -53,5 +69,42 @@ describe("what the renderer may change", () => {
     ["more than 100 replacements", { replacements: Array.from({ length: 101 }, () => ({ from: "a", to: "b" })) }],
   ])("refuses %s", (_why, patch) => {
     expect(v.safeParse(DictationPatchSchema, patch).success).toBe(false);
+  });
+});
+
+describe("vocabulary, modes and rewrite in the config", () => {
+  it("loads a dictation section from before they existed with every new field at its default", () => {
+    const old = parseConfig({ dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] } }).dictation;
+    expect(old).toEqual({ ...DEFAULTS, enabled: true, language: "de", retention: "30d", replacements: [{ from: "a", to: "b" }] });
+  });
+
+  it("keeps good words and drops each bad one, trimming and capping at 500", () => {
+    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "" , soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
+    expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([{ id: "a", word: "Kubernetes", soundsLike: ["cooper netties"] }]);
+    const many = Array.from({ length: 600 }, (_, i) => ({ id: `i${i}`, word: `w${i}`, soundsLike: [] }));
+    expect(v.parse(DictationConfigSchema, { terms: many }).terms).toHaveLength(500);
+    expect(v.parse(DictationConfigSchema, { terms: "no" }).terms).toEqual([]);
+  });
+
+  it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
+    const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
+    const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"] }]);
+  });
+
+  it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
+    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false, lowercase: true });
+    expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
+  });
+
+  it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {
+    const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
+    expect(ok({ terms: [{ id: "a", word: "w", soundsLike: [] }], prompt: false, keepRecordings: true })).toBe(true);
+    expect(ok({ terms: Array.from({ length: 501 }, (_, i) => ({ id: `i${i}`, word: "w", soundsLike: [] })) })).toBe(false);
+    expect(ok({ rewrite: { enabled: true, deadlineMs: 20_000 } })).toBe(false);
+    expect(ok({ cleanup: { fillers: true } })).toBe(false);
+    expect(ok({ unknown: 1 })).toBe(false);
   });
 });
