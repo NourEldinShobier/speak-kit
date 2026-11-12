@@ -5,6 +5,7 @@ import * as v from "valibot";
  *
  *   GET  /v1/voice-chat/status   -> 200 VoiceChatStatus
  *   POST /v1/voice-chat/session  -> 200 VoiceChatSession | VoiceChatError (no request body; at most 10 per minute, then 429 "rate-limited")
+ *   POST /v1/voice-chat/mic      -> 204, body { held }: the conversation holds the microphone (true, repeated every few seconds) or let it go (false)
  *
  * Error HTTP status per code: no-key 409, key-rejected 424, no-credit 402, rate-limited 429, offline 503, unavailable 502 (503 when the app has no voice chat service).
  */
@@ -71,6 +72,10 @@ const parser =
     const r = v.safeParse(schema, x);
     return r.success ? r.output : undefined;
   };
+/** Seconds between two "held" reports of a conversation; the app lets the claim lapse after three missed ones. */
+export const VOICE_MIC_BEAT_MS = 10_000;
+/** The parsed body of POST /v1/voice-chat/mic, or undefined when it does not match. */
+export const parseVoiceChatMic = parser(v.strictObject({ held: v.boolean() }));
 /** Returns the parsed answer of GET /v1/voice-chat/status, or undefined when it does not match. */
 export const parseVoiceChatStatus = parser(voiceChatStatusSchema);
 /** Returns the parsed answer of POST /v1/voice-chat/session, or undefined when it does not match. */

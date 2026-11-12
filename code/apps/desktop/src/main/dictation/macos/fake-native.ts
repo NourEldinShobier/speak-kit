@@ -6,6 +6,8 @@ const initialState = () => ({
   flags: 0,
   secure: false,
   front: { pid: 501, bundleId: "com.apple.TextEdit", name: "TextEdit" } as Frontmost | null,
+  /** Window bounds by process id; a process not listed has no window on screen. */
+  windows: new Map<number, { x: number; y: number; width: number; height: number }>(),
   seq: 1,
   types: [] as string[],
   posted: [] as Array<{ keycode: number; down: boolean; flags: number } | { units: number[] }>,
@@ -18,15 +20,15 @@ const initialState = () => ({
   running: new Map<number, Frontmost>(),
 });
 
-export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
-  let handler: ((e: TapEvent) => boolean) | undefined;
+export function fakeMacNative(opts: { refuseTap?: boolean; refuseMouseTap?: boolean } = {}) {
+  const handlers: Partial<Record<"keys" | "mouse", (e: TapEvent) => boolean>> = {};
   const calls = { taps: 0, removed: 0 };
   const state = initialState();
   const native: MacNative = {
-    createTap(onEvent) {
-      if (opts.refuseTap) throw new Error("tap refused");
+    createTap(onEvent, events = "keys") {
+      if (opts.refuseTap || (opts.refuseMouseTap && events === "mouse")) throw new Error("tap refused");
       calls.taps++;
-      handler = onEvent;
+      handlers[events] = onEvent;
       return { remove: () => void calls.removed++ };
     },
     keyIsDown: (code) => state.down.has(code),
@@ -43,6 +45,7 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
     },
     secureInput: () => state.secure,
     frontmost: () => state.front,
+    windowBounds: (pid) => state.windows.get(pid) ?? null,
     activate(pid) {
       state.activated.push(pid);
       const app = state.running.get(pid);
@@ -64,6 +67,8 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
     state,
     calls,
     /** Delivers one event to the installed tap and returns whether it was swallowed. */
-    send: (e: Partial<TapEvent> & { keycode: number }) => handler!({ type: 10, flags: 0, userData: 0, ...e }),
+    send: (e: Partial<TapEvent> & { keycode: number }) => handlers.keys!({ type: 10, flags: 0, userData: 0, ...e }),
+    /** Delivers one mouse button event (type 3 right down, 4 right up, 25 other down, 26 other up) to the mouse tap. */
+    sendMouse: (e: Partial<TapEvent> & { type: number; keycode: number }) => handlers.mouse!({ flags: 0, userData: 0, ...e }),
   };
 }

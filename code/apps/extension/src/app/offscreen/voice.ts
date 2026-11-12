@@ -12,6 +12,7 @@ import {
   eventProblem,
   initialView,
   Looker,
+  MicLease,
   isLive,
   mintSession,
   reduceVoice,
@@ -63,6 +64,7 @@ class Session {
   });
   /** The looks of this conversation at the screen, named to the app once. */
   private readonly looker = new Looker({ app: () => this.cfg, dispatch: (e) => this.dispatch(e), touch: () => this.idle.touch(), phase: () => this.view.phase });
+  private readonly lease = new MicLease(() => ({ fetch: (i, init) => fetch(i, init), ...this.cfg }));
   private rt: Realtime | undefined;
   private stream: MediaStream | undefined;
   private instructions = "";
@@ -119,9 +121,7 @@ class Session {
     this.dispatch(e);
     if (this.view.phase !== "ended") this.dispatch({ t: "end" });
   }
-  private fail(problem: VoiceProblem) {
-    this.finish({ t: "problem", problem });
-  }
+  private fail = (problem: VoiceProblem) => this.finish({ t: "problem", problem });
 
   async start(page: VoicePage) {
     this.letGo = holdWorker(
@@ -140,6 +140,7 @@ class Session {
     const stream = await this.microphone();
     if (!stream || this.dead) return stream?.getTracks().forEach((t) => t.stop());
     this.stream = stream;
+    this.lease.start();
     for (const t of stream.getAudioTracks()) t.addEventListener("ended", () => void this.micEnded()); // unplugged, or the permission was taken back
     if (minted.expiresAt * 1000 < Date.now() + 5000) minted = await this.mint(); // the permission window took its time
     if (this.dead) return;
@@ -286,9 +287,7 @@ class Session {
   micLive = () => this.stream?.getAudioTracks().filter((t) => t.readyState === "live").length ?? 0;
   bytesSent = () => this.rt?.bytesSent() ?? Promise.resolve(0);
   /** Test hook: the microphone device went away. */
-  unplug() {
-    this.stream?.getAudioTracks().forEach((t) => t.dispatchEvent(new Event("ended")));
-  }
+  unplug = () => this.stream?.getAudioTracks().forEach((t) => t.dispatchEvent(new Event("ended")));
 
   /** Releases the microphone, the peer connection and every timer. Safe to call twice. */
   teardown() {
@@ -298,6 +297,7 @@ class Session {
     this.turns.stop();
     clearInterval(this.levels);
     this.letGo?.();
+    this.lease.stop();
     this.micAnswer?.(false);
     this.rt?.close();
     this.stream?.getTracks().forEach((t) => t.stop());

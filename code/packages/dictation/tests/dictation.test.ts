@@ -166,6 +166,32 @@ describe("stray keys", () => {
     expect(r.dictation.state()).toEqual({ status: "idle" });
   });
 
+  it("logs why a chord discarded the press, and says nothing for a plain short tap", async () => {
+    const lines: string[] = [];
+    const r = await rig({ keepReady: true }, undefined, { log: (stage, why) => void lines.push(`${stage}: ${why}`) });
+    await r.hold(100);
+    await r.time.advance(500);
+    expect(lines).toEqual([]);
+    r.press();
+    await r.time.advance(50);
+    r.keys.send("KeyC", true, r.time.clock.now());
+    await r.time.advance(50);
+    expect(lines).toEqual(["discard: chord"]);
+  });
+
+  it("a chord still stops the recorder when the log sink throws", async () => {
+    const r = await rig({ keepReady: true }, undefined, {
+      log: () => {
+        throw new Error("log closed");
+      },
+    });
+    r.press();
+    await r.time.advance(50);
+    r.keys.send("KeyC", true, r.time.clock.now());
+    await r.time.advance(50);
+    expect(r.rec.log).toEqual(["start:450", "discard"]);
+  });
+
   it("a long hold ignores a stray key and keeps the audio", async () => {
     const r = await rig();
     r.press();

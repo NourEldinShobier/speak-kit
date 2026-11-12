@@ -6,6 +6,7 @@ type Koffi = (typeof import("koffi"))["default"];
 /** What an event tap reports for one key event. `type` is a CGEventType; `flags` the CGEventFlags including device-dependent bits. */
 export interface TapEvent {
   type: number;
+  /** For mouse events the button number (0 left, 1 right, 2 middle, 3 and up the side buttons). */
   keycode: number;
   flags: number;
   userData: number;
@@ -26,7 +27,7 @@ export type AccessState = "granted" | "denied" | "unknown";
 /** The macOS calls dictation needs, typed. Every other macOS file takes this as its only dependency, which is also how tests replace it. */
 export interface MacNative {
   /** Installs an active (able to swallow) session event tap on the main run loop. `onEvent` returns true to swallow. Throws when macOS refuses the tap (no Accessibility or Input Monitoring permission). */
-  createTap(onEvent: (e: TapEvent) => boolean): MacTap;
+  createTap(onEvent: (e: TapEvent) => boolean, events?: "keys" | "mouse"): MacTap;
   /** Whether the physical key is down right now (HID state, so events this app swallowed still count). */
   keyIsDown(keycode: number): boolean;
   /** CGEventFlags of the modifiers held right now. */
@@ -38,6 +39,8 @@ export interface MacNative {
   /** True while a password field (or anything else) has switched on secure keyboard input. */
   secureInput(): boolean;
   frontmost(): Frontmost | null;
+  /** Bounds (in points, top-left origin) of the front-most normal window of this process, or null when it has none on screen. */
+  windowBounds(pid: number): { x: number; y: number; width: number; height: number } | null;
   /** Brings the app with this process id to the front. False when it is gone or refuses. */
   activate(pid: number): boolean;
   pasteboard: {
@@ -59,6 +62,9 @@ const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
 const TAP_MASK = (1n << 10n) | (1n << 11n) | (1n << 12n); // key down, key up, flags changed
+// left, right and other mouse button down and up; moves, drags and the wheel are not in the mask, so they are never read
+const MOUSE_MASK = (1n << 1n) | (1n << 2n) | (1n << 3n) | (1n << 4n) | (1n << 25n) | (1n << 26n);
+const MOUSE_BUTTON_FIELD = 3;
 const IOHID_LISTEN_EVENT = 1;
 const IOHID_GRANTED = 0;
 const IOHID_DENIED = 1;
@@ -72,7 +78,7 @@ export async function loadMacNative(): Promise<MacNative> {
 }
 
 function bind(koffi: Koffi): MacNative {
-  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
+  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...windowApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
 }
 
 /** Attaching a mach port to the main run loop, and taking it off and freeing it again. */
@@ -109,7 +115,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
   const CGEventGetIntegerValueField = cg.func("int64 CGEventGetIntegerValueField(void *event, uint32 field)");
   const CGEventGetFlags = cg.func("uint64 CGEventGetFlags(void *event)");
   return {
-    createTap(onEvent) {
+    createTap(onEvent, events = "keys") {
       let tap: unknown = null;
       let removed = false;
       const callback = koffi.register(
@@ -119,7 +125,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
             reenable: () => tap && !removed && CGEventTapEnable(tap, true),
             read: (e, t) => ({
               type: t,
-              keycode: Number(CGEventGetIntegerValueField(e, KEYBOARD_KEYCODE_FIELD)),
+              keycode: Number(CGEventGetIntegerValueField(e, events === "mouse" ? MOUSE_BUTTON_FIELD : KEYBOARD_KEYCODE_FIELD)),
               flags: Number(CGEventGetFlags(e)),
               userData: Number(CGEventGetIntegerValueField(e, USER_DATA_FIELD)),
             }),
@@ -127,7 +133,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
           }),
         koffi.pointer(TapProc),
       );
-      tap = CGEventTapCreate(SESSION_TAP, 0, 0, TAP_MASK, callback, null);
+      tap = CGEventTapCreate(SESSION_TAP, 0, 0, events === "mouse" ? MOUSE_MASK : TAP_MASK, callback, null);
       if (!tap) {
         koffi.unregister(callback);
         throw new Error("CGEventTapCreate refused the event tap");
@@ -198,6 +204,49 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
   return {
     secureInput: () => IsSecureEventInputEnabled(),
     inputMonitoring: { status: () => states[IOHIDCheckAccess(IOHID_LISTEN_EVENT)] ?? "unknown", request: () => IOHIDRequestAccess(IOHID_LISTEN_EVENT) },
+  };
+}
+
+/** Window list from CoreGraphics: the windows come front to back, so the first normal one (layer 0) owned by the process is the one in view. */
+function windowApi(koffi: Koffi): Pick<MacNative, "windowBounds"> {
+  const cf = koffi.load(FW("CoreFoundation"));
+  const cg = koffi.load(FW("CoreGraphics"));
+  koffi.struct("SpeakKitRect", { x: "double", y: "double", width: "double", height: "double" });
+  const CFStringCreateWithCString = cf.func("void *CFStringCreateWithCString(void *alloc, const char *text, uint32 encoding)");
+  const CFArrayGetCount = cf.func("int64 CFArrayGetCount(void *array)");
+  const CFArrayGetValueAtIndex = cf.func("void *CFArrayGetValueAtIndex(void *array, int64 index)");
+  const CFDictionaryGetValue = cf.func("void *CFDictionaryGetValue(void *dict, void *key)");
+  const CFNumberGetValue = cf.func("bool CFNumberGetValue(void *number, int32 type, _Out_ int64 *out)");
+  const CFRelease = cf.func("void CFRelease(void *object)");
+  const CGWindowListCopyWindowInfo = cg.func("void *CGWindowListCopyWindowInfo(uint32 option, uint32 relativeTo)");
+  const CGRectMakeWithDictionaryRepresentation = cg.func("bool CGRectMakeWithDictionaryRepresentation(void *dict, _Out_ SpeakKitRect *rect)");
+  const ON_SCREEN_ONLY = 1;
+  const EXCLUDE_DESKTOP_ELEMENTS = 16;
+  const SINT64 = 4;
+  return {
+    windowBounds(pid) {
+      const key = (name: string) => CFStringCreateWithCString(null, name, UTF8);
+      const keys = { pid: key("kCGWindowOwnerPID"), layer: key("kCGWindowLayer"), bounds: key("kCGWindowBounds") };
+      const list = CGWindowListCopyWindowInfo(ON_SCREEN_ONLY | EXCLUDE_DESKTOP_ELEMENTS, 0);
+      try {
+        const number = (info: unknown, k: unknown) => {
+          const out = [0];
+          const value = CFDictionaryGetValue(info, k);
+          return value && CFNumberGetValue(value, SINT64, out) ? Number(out[0]) : undefined;
+        };
+        for (let i = 0, n = list ? Number(CFArrayGetCount(list)) : 0; i < n; i++) {
+          const info = CFArrayGetValueAtIndex(list, i);
+          if (number(info, keys.pid) !== pid || number(info, keys.layer) !== 0) continue;
+          const dict = CFDictionaryGetValue(info, keys.bounds);
+          const rect = { x: 0, y: 0, width: 0, height: 0 };
+          if (dict && CGRectMakeWithDictionaryRepresentation(dict, rect)) return rect;
+        }
+        return null;
+      } finally {
+        if (list) CFRelease(list);
+        for (const k of Object.values(keys)) CFRelease(k);
+      }
+    },
   };
 }
 

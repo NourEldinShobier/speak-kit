@@ -41,7 +41,10 @@ export type SessionEvent =
   /** Recording `id` reached `MAX_RECORDING_MS`. */
   | { type: "limit"; id: number };
 
-export type Effect = { type: "start-recording"; id: number; prerollMs: number } | { type: "finish-recording"; id: number; raw?: true } | { type: "discard-recording"; id: number; cancelled: boolean };
+export type Effect =
+  | { type: "start-recording"; id: number; prerollMs: number }
+  | { type: "finish-recording"; id: number; raw?: true }
+  | { type: "discard-recording"; id: number; cancelled: boolean; why?: "chord" };
 
 export interface Step {
   session: Session;
@@ -106,7 +109,7 @@ function otherKey(session: Session, cfg: Config, event: KeyEvent): Step {
   if (c.kind === "toggle" && event.key === cfg.cancelKey) return { ...to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }), consumed: true };
   if (c.kind === "armed") return { ...to(session, idle), consumed: false };
   if (c.kind === "hold" && event.at - c.pressedAt < holdMs(cfg))
-    return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false }), consumed: false };
+    return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false, why: "chord" }), consumed: false };
   return { ...same(session), consumed: false };
 }
 
