@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { checkAccelerator, DEFAULT_SHORTCUTS, duplicateIds, normalize, recordKey, showAccelerator, suggestAlternative } from "./shortcuts";
+import { checkAccelerator, DEFAULT_SHORTCUTS, duplicateIds, normalize, recordKey, resetText, showAccelerator, suggestAlternative } from "./shortcuts";
 
 const key = (code: string, mods: Partial<{ ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean }> = {}, platform = "win32") =>
   recordKey({ code, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, ...mods }, platform);
@@ -68,5 +68,11 @@ describe("recorder", () => {
     expect(key("KeyA", { metaKey: true, ctrlKey: true })).toEqual({ kind: "invalid", reason: { code: "shortcut-meta-key", args: { platform: "win32" } } });
     expect(key("KeyA", { metaKey: true, ctrlKey: true }, "darwin")).toEqual({ kind: "invalid", reason: { code: "shortcut-meta-key", args: { platform: "darwin" } } });
     expect(key("IntlRo", { ctrlKey: true, altKey: true })).toEqual({ kind: "invalid", reason: { code: "shortcut-bad-key" } });
+  });
+});
+
+describe("resetText", () => {
+  it("lists every default key", () => {
+    expect(resetText("win32")).toBe("Ctrl+Alt+S, Space, X and R");
   });
 });

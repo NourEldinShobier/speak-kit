@@ -26,6 +26,10 @@ describe("settings search", () => {
     expect(searchSettings("Accessibility", label)[0]!.page).toBe("accessibility");
   });
 
+  it("finds the record shortcut", () => {
+    expect(searchSettings("record", label)[0]!.rows.map((x) => x.id)).toContain("shortcuts/record-toggle");
+  });
+
   it("groups by page", () => {
     const g = searchSettings("log", label);
     expect(new Set(g.map((x) => x.page)).size).toBe(g.length);

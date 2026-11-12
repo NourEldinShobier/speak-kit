@@ -26,6 +26,7 @@ export const SETTING_ROWS: readonly SettingRowDef[] = [
   r("shortcuts/read-selection", "Read selection", "hotkey global keys"),
   r("shortcuts/play-pause", "Play or pause", "hotkey global keys"),
   r("shortcuts/stop", "Stop reading", "hotkey global keys"),
+  r("shortcuts/record-toggle", "Record a conversation", "hotkey global keys microphone"),
   r("notifications/events", "Notification events", "toast bell sound"),
   r("notifications/dnd", "Do not disturb", "quiet silence mute"),
   r("accessibility/motion", "Reduce motion", "animation fade still"),

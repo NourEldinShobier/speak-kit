@@ -3,7 +3,7 @@ import { Banner, Button, Kbd, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import type { DesktopError } from "../../../shared/errors";
 import { errorText } from "../../error-text";
-import { recordKey, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../../../shared/shortcuts";
+import { recordKey, resetText, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../../../shared/shortcuts";
 import { api, Page } from "../../ui";
 
 const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
@@ -131,12 +131,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
         {SHORTCUT_IDS.map((id) => (
           <ShortcutRow key={id} s={s} id={id} recording={recording === id} problem={problemFor(id, attempt, s.shortcuts.conflicts[id])} onChange={() => toggle(id)} onUse={(acc) => apply(id, acc)} />
         ))}
-        <SettingRow
-          className="lm-row--control"
-          label="Reset all"
-          description={`Back to ${showAccelerator("Ctrl+Alt", s.platform, "global")}+S, Space, X and C.`}
-          control={<Button onClick={() => api.resetShortcuts()}>Reset</Button>}
-        />
+        <SettingRow className="lm-row--control" label="Reset all" description={`Back to ${resetText(s.platform)}.`} control={<Button onClick={() => api.resetShortcuts()}>Reset</Button>} />
       </SettingsSection>
       <SettingsSection title="In this app">
         <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" platform={s.platform} scope="app" />} />

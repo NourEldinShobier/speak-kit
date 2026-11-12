@@ -19,6 +19,14 @@ export const SHORTCUT_LABELS: Record<ShortcutId, { title: string; description: s
   "record-toggle": { title: "Record a conversation", description: "Starts a recording of the microphone, and stops and saves it when pressed again." },
 };
 
+/** "Ctrl+Alt+S, Space, X and R", built from the defaults. */
+export const resetText = (platform: string): string => {
+  const keys = SHORTCUT_IDS.map((id) => DEFAULT_SHORTCUTS[id]);
+  const head = showAccelerator(keys[0]!, platform, "global");
+  const rest = keys.slice(1).map((k) => showAccelerator(k, platform, "global").split("+").pop()!);
+  return `${head}, ${rest.slice(0, -1).join(", ")} and ${rest.at(-1)}`;
+};
+
 const MODIFIERS = ["Ctrl", "Alt", "Shift"] as const;
 const NAMED = new Set(["Space", "Tab", "Backspace", "Delete", "Insert", "Enter", "Up", "Down", "Left", "Right", "Home", "End", "PageUp", "PageDown"]);
 
