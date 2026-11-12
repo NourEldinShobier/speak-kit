@@ -182,8 +182,8 @@ describe("transcripts service", () => {
     await done(h, id);
     expect(await h.copyText(id, { from: 0, to: 0.5 })).toBe(true);
     expect(t.clip.at(-1)).toBe("alpha beta");
-    expect(await h.copyText(id, { from: 100, to: 200 })).toBe(true);
-    expect(t.clip.at(-1)).toBe("");
+    expect(await h.copyText(id, { from: 100, to: 200 })).toBe(false);
+    expect(t.clip.at(-1)).toBe("alpha beta");
   });
 
   it("writes notes through the handler and keeps the transcript when the writer fails", async () => {

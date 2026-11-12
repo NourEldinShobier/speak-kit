@@ -88,7 +88,8 @@ export function parseNotes(text: string, lines: readonly NoteLine[]): Notes | un
     return t && typeof c?.start === "number" && Number.isFinite(c.start) && c.start >= 0 ? [{ start: c.start, title: t }] : [];
   });
   raw.sort((a, b) => a.start - b.start);
-  return { title, summary, chapters: chapterText(lines, raw) };
+  // A chapter that starts after the last word has nothing to copy or show.
+  return { title, summary, chapters: chapterText(lines, raw).filter((c) => c.text.trim()) };
 }
 
 /** The words said inside each chapter: from its start to the next chapter's start (the last runs to the end). */
@@ -106,9 +107,12 @@ export function chapterText(lines: readonly NoteLine[], chapters: readonly { sta
 }
 
 /** The notes pass: the summary, the title and the chapters, written once from the transcript. Every failure is an outcome with a message, never a throw. */
-export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[]): Promise<NotesOutcome> {
+export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], signal?: AbortSignal): Promise<NotesOutcome> {
   if (!lines.some((l) => l.text.trim())) return failure("empty");
   const own = new AbortController();
+  const stop = () => own.abort();
+  if (signal?.aborted) stop();
+  signal?.addEventListener("abort", stop, { once: true });
   const timer = setTimeout(() => own.abort(), deps.timeoutMs ?? 60_000);
   let r: CompleteResult;
   try {
@@ -117,6 +121,7 @@ export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[]): P
     r = { ok: false, code: own.signal.aborted ? "offline" : "unavailable" };
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", stop);
   }
   if (own.signal.aborted && !r.ok) return failure("timeout");
   if (!r.ok) return failure(r.code);

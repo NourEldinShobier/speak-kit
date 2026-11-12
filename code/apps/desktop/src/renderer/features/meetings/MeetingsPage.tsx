@@ -125,10 +125,10 @@ function Apps({ v, set, onAdd }: { v: SettingsView; set(v: SettingsView): void; 
 
 function Notes({ v, patch }: { v: SettingsView; patch(p: MeetingsPatch): void }) {
   return (
-    <SettingsSection title="Notes" description="A title, a two sentence summary and chapters for each meeting.">
+    <SettingsSection title="Notes" description="A title, a two sentence summary and chapters for each finished transcript.">
       <SettingRow
         label="Write notes with OpenAI"
-        description="Off by default. When on, the text of a finished meeting is sent to OpenAI with your key. Audio is never sent. If it fails, you keep the transcript."
+        description="Off by default. When on, the text of every finished transcript is sent to OpenAI with your key: meetings, imported audio files and dictated recordings. Audio is never sent. If it fails, you keep the transcript."
         control={<Toggle aria-label="Write notes with OpenAI" checked={v.config.summary} onChange={(summary) => patch({ summary })} />}
       />
       {v.config.summary && !v.keySaved ? (

@@ -187,6 +187,18 @@ describe("notes", () => {
     });
   });
 
+  it("drops a chapter that starts after the last word", () => {
+    const answer = JSON.stringify({
+      title: "T",
+      summary: "S.",
+      chapters: [
+        { start: 0, title: "Plan" },
+        { start: 9999, title: "Past the end" },
+      ],
+    });
+    expect(parseNotes(answer, lines)?.chapters.map((c) => c.title)).toEqual(["Plan"]);
+  });
+
   it("refuses an answer without a title or summary, or that is not JSON", () => {
     expect(parseNotes("sure!", lines)).toBeUndefined();
     expect(parseNotes(JSON.stringify({ title: "x" }), lines)).toBeUndefined();

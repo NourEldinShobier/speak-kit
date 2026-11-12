@@ -76,17 +76,28 @@ export function loadCoreAudio(koffi: Koffi): CoreAudio {
   const pidOf = (object: number) => b.read(object, { selector: PROCESS_PID }, 4).readInt32LE(0);
   return {
     inputDeviceName(pid) {
-      const object = processes().find((o) => pidOf(o) === pid);
+      const object = processes().find((o) => {
+        try {
+          return pidOf(o) === pid;
+        } catch {
+          return false;
+        }
+      });
       const devices = { selector: PROCESS_DEVICES, scope: INPUT_SCOPE };
       const bytes = object === undefined ? 0 : b.size(object, devices);
       if (object === undefined || bytes < 4) return null;
       const ref = b.pointer(b.read(b.read(object, devices, bytes).readUInt32LE(0), { selector: OBJECT_NAME }, 8));
       return ref ? b.text(ref) : null;
     },
+    // A process can exit between the list and its reads; that one process is skipped, the rest still count.
     processesUsingInput: () =>
-      processes()
-        .filter((o) => b.read(o, { selector: PROCESS_RUNNING_INPUT }, 4).readUInt32LE(0) !== 0)
-        .map(pidOf),
+      processes().flatMap((o) => {
+        try {
+          return b.read(o, { selector: PROCESS_RUNNING_INPUT }, 4).readUInt32LE(0) !== 0 ? [pidOf(o)] : [];
+        } catch {
+          return [];
+        }
+      }),
   };
 }
 
@@ -172,10 +183,14 @@ export function macosPlatform(d: MacDeps): MeetingsPlatform {
     async callAppMic({ pid }) {
       try {
         audio ??= await d.audio();
-        return audio.inputDeviceName(pid);
       } catch {
         named = false;
         return null;
+      }
+      try {
+        return audio.inputDeviceName(pid);
+      } catch {
+        return null; // this one lookup failed (the app may have just quit); the feature stays on
       }
     },
   };

@@ -53,7 +53,8 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
 
   const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, writing, now: d.now(), policy: d.policy(), snippet });
 
-  const notesPass = notesRunner({ d, store, settle, writing, failure });
+  const quit = new AbortController();
+  const notesPass = notesRunner({ d, quit: quit.signal, reindex: indexOne, store, settle, writing, failure });
 
   async function job(id: string, signal: AbortSignal): Promise<void> {
     const e = store.get(id);
@@ -307,6 +308,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     storage: () => ({ audioBytes: audioTotal(store.list().concat(store.list(true))), count: store.list().length, trashed: store.list(true).length }),
     async dispose() {
       queue.stopAll("quit");
+      quit.abort();
       await idle;
       await notesIdle;
     },
