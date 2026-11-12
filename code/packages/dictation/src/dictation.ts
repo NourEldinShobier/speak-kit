@@ -1,6 +1,6 @@
 import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
-import type { Target } from "./paste-plan";
+import { planPaste, type Target } from "./paste-plan";
 import { foreground, runJob, type Job, type Outcome } from "./pipeline";
 import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
@@ -55,6 +55,7 @@ class Runtime implements Dictation {
     this.history = {
       list: (query) => this.store.list(query),
       copy: (id) => this.copy(id),
+      insert: (id) => this.insertAgain(id),
       remove: (id) => this.store.remove(id),
       removeMany: (ids) => this.store.removeMany(ids),
       stats: () => this.store.stats(),
@@ -269,6 +270,22 @@ class Runtime implements Dictation {
     if (text === this.lastState) return;
     this.lastState = text;
     for (const listener of this.listeners) listener(state);
+  }
+
+  private async insertAgain(id: string): Promise<boolean> {
+    const entry = await this.store.get(id);
+    if (!entry || this.disposed) return false;
+    const target = await foreground(this.deps.inserter);
+    const plan = planPaste({ target, current: target, settings: this.settings, interrupted: false });
+    if (plan.method === "refuse") return false;
+    let ok = false;
+    try {
+      ok = (await this.deps.inserter.insert({ text: entry.text, plan })).ok;
+    } catch {
+      // The text stays in History; the caller reports that it did not go in.
+    }
+    if (ok) await this.store.update(id, { outcome: plan.method === "copy" ? "copied" : "sent" });
+    return ok;
   }
 
   private async copy(id: string): Promise<boolean> {

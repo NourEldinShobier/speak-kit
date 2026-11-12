@@ -326,6 +326,7 @@ export class DictationService {
     } else if (a === "sound-settings") void this.openSoundSettings();
     else if (a === "restore") this.core?.restore();
     else if (a === "copy-last") void this.history.copyLast();
+    else if (a === "paste-again") void this.history.pasteLast();
   }
 
   /** Key releases may have gone to another desktop while the screen was locked or the computer slept. */

@@ -67,10 +67,13 @@ describe("errors", () => {
     expect(errorView("transcribe-failed", false)).not.toHaveProperty("action");
   });
 
+  it("offers Try again for a failed insertion without needing a kept recording, because the text is in History", () => {
+    expect(errorView("insert-failed", false)).toMatchObject({ text: "Could not insert the text. It is in History", action: { label: "Try again", id: "paste-again" } });
+  });
+
   it("explains the errors that have nothing to press", () => {
     expect(errorView("mic-busy", false)).toMatchObject({ text: "Another app is using the microphone" });
     expect(errorView("password-field", false)).toMatchObject({ icon: "lock", text: "Not typed into a password field" });
-    expect(errorView("insert-failed", false)).toMatchObject({ text: "Could not insert the text" });
     expect(errorView("hotkey-failed", false)).toMatchObject({ text: "The hotkey could not start" });
     expect(errorView("model-loading", false)).toMatchObject({ icon: "download" });
     expect(errorView("model-loading", false)).not.toHaveProperty("action");

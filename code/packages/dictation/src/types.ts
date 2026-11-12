@@ -121,6 +121,8 @@ export interface Dictation {
     list(query?: HistoryQuery): Promise<HistoryEntry[]>;
     /** Puts the saved text on the clipboard. */
     copy(id: string): Promise<boolean>;
+    /** Inserts the saved text again into the window in front now, the way a new dictation would; false when it could not be inserted. */
+    insert(id: string): Promise<boolean>;
     remove(id: string): Promise<void>;
     removeMany(ids: readonly string[]): Promise<void>;
     stats(): Promise<HistoryStats>;

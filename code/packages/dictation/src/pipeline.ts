@@ -3,6 +3,7 @@ import { skipPauses } from "./capture/outage";
 import type { History } from "./history";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
+import { stripTailCredit } from "./tail-filter";
 import type { Settings } from "./settings";
 import type { Clip, DictationDeps, DictationErrorCode, Notice, TranscribeResult } from "./types";
 
@@ -165,12 +166,13 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   }
   if (clip.interrupted) ctx.deps.keepClip?.(clip, "interrupted");
   const heardFrom = ctx.deps.clock.now();
-  const heard = await hear(ctx, clip);
+  const said = await hear(ctx, clip);
   const transcribeMs = ctx.deps.clock.now() - heardFrom;
-  if (!heard.ok) {
+  if (!said.ok) {
     ctx.deps.keepClip?.(clip, "failed");
-    return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
+    return { error: said.code === "failed" ? "transcribe-failed" : said.code };
   }
+  const heard = { ...said, text: stripTailCredit(said.text, clip.pcm, clip.sampleRate) };
   const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
   if (!text) return { notice: { kind: "no-speech" } };
   ctx.inserting();

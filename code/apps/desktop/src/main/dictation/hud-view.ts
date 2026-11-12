@@ -39,7 +39,7 @@ const ERRORS: Record<string, [text: string, icon: Icon, action?: Button]> = {
   "model-failed": ["The speech model could not be loaded", "alert-triangle", TRY_AGAIN],
   "transcribe-failed": ["Could not transcribe", "alert-triangle", TRY_AGAIN],
   "password-field": ["Not typed into a password field", "lock"],
-  "insert-failed": ["Could not insert the text", "alert-triangle"],
+  "insert-failed": ["Could not insert the text. It is in History", "alert-triangle", { label: "Try again", id: "paste-again" }],
   "hotkey-failed": ["The hotkey could not start", "alert-triangle"],
 };
 
