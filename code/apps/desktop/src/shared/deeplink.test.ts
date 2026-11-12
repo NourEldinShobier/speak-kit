@@ -7,14 +7,13 @@ describe("deep links", () => {
     expect(parseDeepLink("speakkit://pair")).toEqual({ kind: "pair" });
     expect(parseDeepLink("speakkit://pair/?token=abc")).toEqual({ kind: "pair" });
   });
-  it("accepts a known lab and nothing else under lab", () => {
-    expect(parseDeepLink("speakkit://lab/verbose-log")).toEqual({ kind: "lab", id: "verbose-log" });
-    for (const bad of ["speakkit://lab", "speakkit://lab/", "speakkit://lab/nope", "speakkit://lab/toString", "speakkit://lab/verbose-log/x"]) expect(parseDeepLink(bad)).toBeNull();
-  });
-  it("opens Experiments for a lab link", () => {
+  it("opens a lab by id, and refuses an id that is not one", () => {
+    expect(parseDeepLink("speakkit://lab/caption-export")).toEqual({ kind: "lab", id: "caption-export" });
+    expect(parseDeepLink("speakkit://lab/caption-export/?on=1")).toEqual({ kind: "lab", id: "caption-export" });
+    for (const bad of ["speakkit://lab", "speakkit://lab/", "speakkit://lab/Bad_Id", "speakkit://lab/-x", "speakkit://lab/a/b", `speakkit://lab/${"a".repeat(65)}`]) expect(parseDeepLink(bad)).toBeNull();
     const calls: string[] = [];
-    handleDeepLink({ kind: "lab", id: "verbose-log" }, { ensureServer: () => {}, showWindow: () => calls.push("show"), navigate: (p) => calls.push(`nav:${p}`) });
-    expect(calls).toEqual(["show", "nav:experiments"]);
+    handleDeepLink({ kind: "lab", id: "caption-export" }, { ensureServer: () => calls.push("server"), showWindow: () => calls.push("show"), navigate: (p) => calls.push(`nav:${p}`) });
+    expect(calls).toEqual(["server", "show", "nav:experiments"]);
   });
   it("rejects other schemes, hosts and credentials", () => {
     for (const bad of [

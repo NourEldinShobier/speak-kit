@@ -1,8 +1,8 @@
 import { isLabId, type LabId } from "./labs";
 
-export type DeepLink = { kind: "launch" } | { kind: "pair" } | { kind: "lab"; id: LabId };
+export type DeepLink = { kind: "launch" } | { kind: "pair" } | { kind: "settings"; page: SettingsSub } | { kind: "lab"; id: string };
 
-/** Parses speakkit://launch, speakkit://pair and speakkit://lab/<id> (a known lab). Anything else (other schemes, hosts, credentials) is ignored; query and path are never used, so a link cannot carry a token. */
+/** Parses speakkit://launch, speakkit://pair, speakkit://settings/<page> and speakkit://lab/<id>. Anything else (other schemes, hosts, credentials, an unknown page) is ignored; the query is never used, so a link cannot carry a token or change a switch. */
 export function parseDeepLink(raw: string): DeepLink | null {
   let u: URL;
   try {
@@ -16,6 +16,10 @@ export function parseDeepLink(raw: string): DeepLink | null {
   if (u.hostname === "lab") {
     const id = u.pathname.slice(1);
     return isLabId(id) ? { kind: "lab", id } : null;
+  }
+  if (u.hostname === "lab") {
+    const id = u.pathname.replace(/^\/+|\/+$/g, "");
+    return /^[a-z0-9][a-z0-9-]{0,63}$/.test(id) ? { kind: "lab", id } : null;
   }
   return null;
 }
@@ -37,10 +41,11 @@ interface DeepLinkActions {
   ensureServer(): void;
 }
 
-/** launch: bring the app up. pair: same, then open the Browser page where the token lives. lab: open Experiments. */
+/** launch: bring the app up. pair: same, then open the Browser page where the token lives. settings and lab: same, then open that page (a lab opens Experiments); a link never changes a setting. */
 export function handleDeepLink(link: DeepLink, a: DeepLinkActions): void {
   a.ensureServer();
   a.showWindow();
   if (link.kind === "pair") a.navigate("browser");
-  if (link.kind === "lab") a.navigate("experiments");
+  else if (link.kind === "settings") a.navigate(link.page);
+  else if (link.kind === "lab") a.navigate("experiments");
 }

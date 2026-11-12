@@ -1,5 +1,5 @@
 import { app, type BrowserWindow } from "electron";
-import type { TtsEngine } from "@speakkit/engine";
+import os from "node:os";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -18,6 +18,8 @@ import { desktopAutomation } from "./automation";
 import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
+import { realCommandLine } from "./cli-path/real";
+import { setupControl } from "./control";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { testEnv } from "./test-env";
@@ -101,14 +103,7 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
 /** The IPC methods the desktop features add. */
 function desktopHandlers(
   ctx: Ctx,
-  f: {
-    reading: ReturnType<typeof createReading>;
-    exports: ReturnType<typeof createExports>;
-    updates: ReturnType<typeof createUpdates>;
-    shortcuts: ReturnType<typeof setupShortcuts>;
-    test: boolean;
-    resources: Api["resources"];
-  },
+  f: { reading: ReturnType<typeof createReading>; exports: ReturnType<typeof createExports>; updates: ReturnType<typeof createUpdates>; shortcuts: ReturnType<typeof setupShortcuts>; control: ReturnType<typeof setupControl>; test: boolean },
 ) {
   return {
     ...engineHandlers(ctx),
@@ -116,6 +111,7 @@ function desktopHandlers(
     ...f.updates.handlers,
     ...f.shortcuts.handlers,
     ...readerHandlers(f.reading),
+    ...f.control.handlers,
     installExtension: () => installExtension(!f.test),
     resources: f.resources,
   } satisfies Partial<Api>;
@@ -191,12 +187,15 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
-  const control = setupControl(ctx, { reading, automation: automation.host, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  const control = setupControl(ctx, {
+    reading,
+    automation: automation.host,
+    commandLine: realCommandLine({ platform: process.platform, shippedDir: app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined, userData: o.dictation.dataDir, home: os.homedir() }), dictation, dataDir: o.dictation.dataDir, version: o.version });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
     /** Called by the IPC layer: is this webContents our mini player? */

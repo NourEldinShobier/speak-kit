@@ -6,12 +6,16 @@ import type { ConfigPatch } from "../../shared/schemas";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
 import type { Reading } from "../reader/service";
+import type { AutomationInfo, CommandLineAction } from "../../shared/control/info";
+import type { CommandLine } from "../cli-path";
 import { createCommands, type ControlDeps } from "./commands";
+import { discoveryFile } from "./discovery";
 import { createControlServer } from "./server";
 
 interface Parts {
   reading: Pick<Reading, "readText" | "command">;
   automation: AutomationHost;
+  commandLine: CommandLine;
   dictation: DictationService;
   dataDir: string;
   version: string;
@@ -109,8 +113,15 @@ export function setupControl(ctx: Ctx, p: Parts) {
   const sync = (): void => void (ctx.config.controlServer ? server.start() : server.stop()).catch((e) => ctx.log.warn("control server", String(e)));
   const server = createControlServer({ dataDir: p.dataDir, version: p.version, dispatch: createCommands(controlDeps(ctx, p, sync)) });
   sync();
+  const info = async (): Promise<AutomationInfo> => ({ running: server.running, discoveryFile: discoveryFile(p.dataDir), commandLine: await p.commandLine.status() });
   return {
     server,
+    /** The IPC methods of the Automation page. */
+    handlers: {
+      automationInfo: info,
+      resetControlToken: async () => (await server.resetToken(), info()),
+      commandLine: async (action: CommandLineAction) => (await p.commandLine[action](), info()),
+    },
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.controlServer !== undefined) sync();
     },

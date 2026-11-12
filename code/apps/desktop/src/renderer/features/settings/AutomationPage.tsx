@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { Button, OptInCard, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
+import { useCallback, useEffect, useState } from "react";
+import { Banner, Button, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
+import { ERROR_CODES } from "../../../shared/control/contract";
+import type { AutomationInfo, CommandLineAction } from "../../../shared/control/info";
 import type { AppState } from "../../../shared/ipc";
-import { api, cleanError, Page } from "../../ui";
+import { api, Page } from "../../ui";
+import { COMMAND_ROWS, commandLineView, DEEP_LINKS, discoveryPath, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, toolRows, TRY_COMMAND } from "./automation";
 
 /** A command or text in a well, with the button that copies it. The label says Copied for a moment. */
 function CopyBox({ text, label = "Copy", name }: { text: string; label?: string; name: string }) {
@@ -51,222 +54,199 @@ function useAutomation(s: AppState) {
   return { info, loadError, error, busy, load, run };
 }
 
-type Busy = string | null;
+type Load = { phase: "loading" } | { phase: "error" } | { phase: "ready"; info: AutomationInfo };
 
-function TerminalRows({ terminal, busy, act }: { terminal: ReturnType<typeof automationView>["cli"]["terminal"]; busy: Busy; act: (kind: AutomationCliAction) => void }) {
-  if (!terminal) return null;
-  if (terminal.working) {
-    return (
-      <SettingRow
-        className="lm-row--control"
-        label="Terminal output"
-        description="Prints in the window you ran it from. No extra window opens and nothing flashes."
-        data-testid="automation-terminal"
-        control={
-          <div className="sk-row-actions">
-            <StatusPill tone="green">Working</StatusPill>
-            <Button loading={busy === "test"} disabled={busy !== null} onClick={() => act("test")}>
-              Test in terminal
-            </Button>
-          </div>
-        }
-      />
+/** The facts the page reads from the app, with a way to ask again and to run an action that returns the new facts. */
+function useInfo() {
+  const [load, setLoad] = useState<Load>({ phase: "loading" });
+  const [failed, setFailed] = useState<string | null>(null);
+  const read = useCallback(() => {
+    setLoad({ phase: "loading" });
+    api.automationInfo().then(
+      (info) => setLoad({ phase: "ready", info }),
+      () => setLoad({ phase: "error" }),
     );
-  }
+  }, []);
+  useEffect(read, [read]);
+  const run = async (what: () => Promise<AutomationInfo>, message: string) => {
+    setFailed(null);
+    try {
+      setLoad({ phase: "ready", info: await what() });
+    } catch {
+      setFailed(message);
+    }
+  };
+  return { load, read, run, failed };
+}
+
+function CommandLineRow({ info, version, busy, onAction }: { info: AutomationInfo; version: string; busy: boolean; onAction(a: CommandLineAction): void }) {
+  const v = commandLineView(info.commandLine, version);
   return (
     <SettingRow
-      className="lm-row--control"
-      label="Terminal output is off"
-      description={<span className="sk-problem">{terminal.problem}</span>}
-      data-testid="automation-terminal"
+      label={
+        <span className="sk-row-actions">
+          speakkit <StatusPill tone={v.pill.tone}>{v.pill.text}</StatusPill>
+        </span>
+      }
+      description={v.text}
       control={
-        <Button variant="primary" loading={busy === "install"} disabled={busy !== null} onClick={() => act("install")}>
-          Repair
-        </Button>
+        v.action ? (
+          <Button variant={v.action.do === "install" ? "primary" : "secondary"} disabled={busy} onClick={() => onAction(v.action!.do)}>
+            {v.action.label}
+          </Button>
+        ) : null
       }
     />
   );
 }
 
-function CliSection({ info, busy, run, platform }: { info: AutomationInfo; busy: string | null; run: (key: string, call: () => Promise<AutomationInfo>) => void; platform: string }) {
-  const v = automationView(info).cli;
-  const act = (kind: AutomationCliAction) => run(kind, () => api.automationCli(kind));
+function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppState; info: AutomationInfo | null; onAction(a: CommandLineAction): void; onReset(): void; failed: string | null }) {
   return (
-    <SettingsSection title="Command-line tool" description="The speakkit command reads text aloud and answers questions about Speak Kit from a terminal or a script.">
-      <SettingRow
-        className="lm-row--control"
-        label={
-          <span className="sk-inline">
-            speakkit <StatusPill tone={v.pill.tone === "amber" ? "orange" : v.pill.tone}>{v.pill.label}</StatusPill>
-          </span>
-        }
-        description={v.line}
-        data-testid="automation-cli"
-        control={
-          v.action && (
-            <Button variant={v.action.primary ? "primary" : "secondary"} loading={busy === v.action.kind} disabled={busy !== null} onClick={() => act(v.action!.kind)}>
-              {v.action.label}
-            </Button>
-          )
-        }
-      />
-      <TerminalRows terminal={v.terminal} busy={busy} act={act} />
-      {info.cli?.needsNewTerminal && (
-        <SettingRow
-          label="Open a new terminal"
-          description={platform === "darwin" ? "Terminals that are already open keep their old PATH." : "Terminals and apps that are already open keep their old PATH."}
-        />
-      )}
-    </SettingsSection>
-  );
-}
-
-function Capabilities() {
-  return (
-    <SettingsSection title="What this version can do" description="Scripts and the browser extension read this list instead of guessing from the version number.">
-      <div className="sk-pad sk-chips" data-testid="automation-capabilities">
-        {capabilityChips().map((c) =>
-          c.parked ? (
-            <span key={c.name} className="sk-chip sk-chip--parked">
-              {c.name} · parked
-            </span>
-          ) : (
-            <span key={c.name} className="sk-chip">
-              <Icon name="check" size={14} />
-              {c.name}
-            </span>
-          ),
-        )}
-      </div>
-      <CopyBox text={COMMANDS.capabilities} name="the capabilities command" />
-    </SettingsSection>
-  );
-}
-
-function ErrorCodes() {
-  return (
-    <SettingsSection title="Error codes" description="Every error says what went wrong in a short code, so a script can react to it.">
-      <div role="table" aria-label="Error codes" data-testid="automation-errors">
-        {AUTOMATION_ERROR_CODES.map((code) => (
-          <div role="row" key={code} className="sk-errrow">
-            <code role="cell" className="sk-errrow__code">
-              {code}
-            </code>
-            <span role="cell">{AUTOMATION_ERROR_TEXT[code]}</span>
-          </div>
-        ))}
-      </div>
-    </SettingsSection>
-  );
-}
-
-function SkillSection({ info, busy, run }: { info: AutomationInfo; busy: string | null; run: (key: string, call: () => Promise<AutomationInfo>) => void }) {
-  const v = automationView(info).skill;
-  return (
-    <SettingsSection title="Agent skill" description="A short guide that teaches an AI agent the speakkit commands.">
-      <SettingRow
-        className="lm-row--control"
-        label={v.title}
-        description={v.line}
-        data-testid="automation-skill"
-        control={
-          <div className="sk-row-actions">
-            {v.pill && <StatusPill tone={v.pill.tone === "amber" ? "orange" : v.pill.tone}>{v.pill.label}</StatusPill>}
-            <Button variant={v.action.primary ? "primary" : "secondary"} loading={busy === "skill"} disabled={busy !== null} onClick={() => run("skill", () => api.automationSkill())}>
-              {v.action.label}
-            </Button>
-          </div>
-        }
-      />
-      <CopyBox text={COMMANDS.installSkill} label="Copy install command" name="the skill install command" />
-    </SettingsSection>
-  );
-}
-
-function Reference() {
-  return (
-    <>
-      <SettingsSection title="Print without speaking" description="For scripts: see how a text would be split into sentences. Nothing is spoken or queued.">
-        <CopyBox text={COMMANDS.print} name="the print command" />
-      </SettingsSection>
-      <SettingsSection title="Speak a file" description="Turns a text file into audio with the same export as the app.">
-        <CopyBox text={COMMANDS.speakFile} name="the speak a file command" />
-        <SettingRow label="File size" description="Files up to 64 MiB are read. A bigger file stops before anything is spoken." control={<StatusPill>64 MiB</StatusPill>} />
-      </SettingsSection>
-      <SettingsSection title="Read-only commands" description="status, queue, voices and capabilities only look; they change nothing and never start a reading.">
-        <SettingRow
-          label="Status, queue and voices"
-          description="Need Speak Kit to be running. capabilities also answers while it is closed."
-          control={<StatusPill tone="green">Read only</StatusPill>}
-        />
-      </SettingsSection>
-    </>
-  );
-}
-
-function Limits({ view }: { view: ReturnType<typeof automationView> }) {
-  return (
-    <SettingsSection title="Local server limits" description="Other apps on this computer reach Speak Kit through a private local server. Limits keep it from being overloaded.">
-      <div data-testid="automation-limits" data-offline={view.limitsOffline}>
-        {view.limits.map((l) => (
-          <SettingRow key={l.label} label={l.label} description={l.description} control={<StatusPill>{l.value}</StatusPill>} />
-        ))}
-      </div>
-    </SettingsSection>
-  );
-}
-
-function LiveTranscription() {
-  return (
-    <SettingsSection title="Live transcription" description="Parked: needs live transcription, which can lose the first sentence. Apps get the full text after you finish.">
-      <SettingRow
-        label={
-          <span className="sk-inline">
-            Send live text to other apps <StatusPill>Parked</StatusPill>
-          </span>
-        }
-        description="Only finished sentences, never half words. Local apps with your token only."
-        control={<Toggle aria-label="Send live text to other apps" checked={false} disabled />}
-      />
-    </SettingsSection>
-  );
-}
-
-export function AutomationPage({ s }: { s: AppState }) {
-  const { info, loadError, error, busy, load, run } = useAutomation(s);
-  const view = info && automationView(info);
-  return (
-    <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
-      {!on && (
-        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void api.patchConfig({ controlServer: true })}>
-          The command-line tool and the MCP server need it. It only answers on this computer. Speak Kit itself works without it.
-        </OptInCard>
-      )}
-      {error && (
-        <Banner tone="error" title="That did not work">
-          {error}
+    <SettingsSection title="Command-line tool">
+      {failed && (
+        <Banner tone="error" title="That did not work" action={<Button onClick={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")}>Try again</Button>}>
+          {failed}
         </Banner>
       )}
-      {loadError && (
-        <EmptyState icon="alert-circle" title="Could not read the automation settings" primary={{ label: "Try again", onClick: load }}>
-          {loadError}
-        </EmptyState>
+      {info && <CommandLineRow info={info} version={s.version} busy={false} onAction={onAction} />}
+      <SettingRow
+        label="Try it"
+        description="Prints what Speak Kit is doing right now."
+        control={
+          <div className="sk-row-actions">
+            {code(TRY_COMMAND)}
+            <CopyButton text={TRY_COMMAND} label="Copy the command" />
+          </div>
+        }
+      />
+      <div className="sk-pad" data-testid="automation-commands">
+        <b>What it can do</b>
+        <ul className="sk-exit">
+          {COMMAND_ROWS.map((r) => (
+            <li key={r.usage}>
+              {code(r.usage)} <span>{r.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="sk-pad" data-testid="automation-exit-codes">
+        <b>JSON output and exit codes</b>
+        <p>Add --json to any command for output a script can read. The exit code says what happened.</p>
+        <ul className="sk-exit">
+          {EXIT_ROWS.map((r) => (
+            <li key={r.code}>
+              {code(String(r.code))} <span>{r.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="sk-pad" data-testid="automation-errors">
+        <b>Error codes</b>
+        <p>With --json a failure names its code. These are all of them.</p>
+        <ul className="sk-exit">
+          {ERROR_CODES.map((c) => (
+            <li key={c}>
+              {code(c)} <span>{ERROR_ROWS[c]}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <SettingRow
+        label="Discovery file"
+        description="Scripts find the local server here. It holds a port and a private token, so keep it out of shared folders."
+        control={
+          <div className="sk-row-actions">
+            {code(discoveryPath(s.platform))}
+            <Button onClick={() => void api.openPath("data")}>Show file</Button>
+            <Button onClick={onReset}>Reset token</Button>
+          </div>
+        }
+      />
+    </SettingsSection>
+  );
+}
+
+function McpSection({ s }: { s: AppState }) {
+  const on = s.config.controlServer;
+  return (
+    <SettingsSection title="MCP server">
+      <SettingRow
+        label={
+          <span className="sk-row-actions">
+            Let AI apps use Speak Kit <StatusPill tone={on ? "green" : "neutral"}>{on ? "Running" : "Off"}</StatusPill>
+          </span>
+        }
+        description="Only this computer can connect."
+        control={<Toggle aria-label="Let AI apps use Speak Kit" checked={on} onChange={(v) => void api.patchConfig({ controlServer: v })} />}
+      />
+      {toolRows(s.config.mcpTools).map((t) => (
+        <SettingRow
+          key={t.name}
+          label={code(t.name)}
+          description={`${t.description}${t.private ? " Off until you turn it on." : ""}`}
+          control={<Toggle aria-label={t.title} checked={t.on} disabled={!on} onChange={(v) => void api.patchConfig({ mcpTools: { ...s.config.mcpTools, [t.name]: v } })} />}
+        />
+      ))}
+      <div className="sk-pad">
+        <b>Add it to your AI app</b>
+        <p>Paste this into the MCP settings of the app. It finds the token on its own, so none is written here.</p>
+        <pre className="sk-code sk-code--block" aria-label="MCP settings block">
+          {MCP_CONFIG}
+        </pre>
+        <CopyButton text={MCP_CONFIG} label="Copy the MCP block" />
+      </div>
+    </SettingsSection>
+  );
+}
+
+function Links() {
+  return (
+    <SettingsSection title="Deep links" description="Links only open a page in Speak Kit. They never start a reading or change a setting.">
+      {DEEP_LINKS.map((l) => (
+        <SettingRow key={l.url} label={l.url} description={l.text} control={<CopyButton text={l.url} label={`Copy ${l.url}`} />} />
+      ))}
+    </SettingsSection>
+  );
+}
+
+/** Settings > Automation: the command-line tool, the MCP server with a switch for each tool, and the deep links. */
+export function AutomationPage({ s }: { s: AppState }) {
+  const { load, read, run, failed } = useInfo();
+  const info = load.phase === "ready" ? load.info : null;
+  return (
+    <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
+      {!s.config.controlServer && (
+        <Banner
+          tone="warning"
+          title="The local server is not running"
+          action={
+            <Button variant="primary" onClick={() => void api.patchConfig({ controlServer: true })}>
+              Start server
+            </Button>
+          }
+        >
+          The command-line tool and the MCP server need it. Speak Kit itself works without it.
+        </Banner>
       )}
-      {!info && !loadError && <Skeleton lines={[420, 360, 300, 380]} shimmer />}
-      {info && view && (
-        <>
-          <CliSection info={info} busy={busy} run={run} platform={s.platform} />
-          <Capabilities />
-          <SettingsSection title="Connect an AI app" description="Add this to the MCP settings of an AI app so it can read aloud with Speak Kit. It runs on this computer and needs no account.">
-            <CopyBox text={info.mcpConfig} label="Copy MCP config" name="the MCP configuration" />
-          </SettingsSection>
-          <Reference />
-          <ErrorCodes />
-          <Limits view={view} />
-          <LiveTranscription />
-          <SkillSection info={info} busy={busy} run={run} />
-        </>
+      {load.phase === "error" && (
+        <Banner tone="error" title="Could not read the command-line tool" action={<Button onClick={read}>Try again</Button>}>
+          Speak Kit did not answer. The rest of this page still works.
+        </Banner>
       )}
+      {load.phase === "loading" && (
+        <p role="status" className="sk-pad">
+          Loading…
+        </p>
+      )}
+      <CommandLineSection
+        s={s}
+        info={info}
+        failed={failed}
+        onAction={(a) => void run(() => api.commandLine(a), "The command-line tool could not be changed. Close other terminals and try again.")}
+        onReset={() => void run(() => api.resetControlToken(), "The token could not be reset.")}
+      />
+      <McpSection s={s} />
+      <Links />
     </Page>
   );
 }

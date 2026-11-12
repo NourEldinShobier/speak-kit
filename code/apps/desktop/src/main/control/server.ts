@@ -18,6 +18,8 @@ export interface ControlServer {
   readonly running: boolean;
   start(): Promise<void>;
   stop(): Promise<void>;
+  /** A new token, written to the discovery file at once. Whoever holds the old one is refused from now on. No-op while stopped. */
+  resetToken(): Promise<void>;
 }
 
 const same = (a: string, b: string): boolean => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -52,9 +54,9 @@ function readBody(req: http.IncomingMessage): Promise<string | null> {
   });
 }
 
-async function handle(o: Options & { token: string }, req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+async function handle(o: Options & { token(): string }, req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const auth = req.headers.authorization ?? "";
-  if (req.method !== "POST" || req.url !== "/control" || !auth.startsWith("Bearer ") || !same(auth.slice(7), o.token)) return void res.writeHead(404).end();
+  if (req.method !== "POST" || req.url !== "/control" || !auth.startsWith("Bearer ") || !same(auth.slice(7), o.token())) return void res.writeHead(404).end();
   const body = await readBody(req);
   if (body === null) return send(res, 413, fail("too-large", "The request is larger than the limit."));
   let parsed: ControlRequest;
@@ -78,7 +80,7 @@ async function handle(o: Options & { token: string }, req: http.IncomingMessage,
  * nothing tells a probe that a server is here. The port and the token are published in the discovery file while it runs.
  */
 export function createControlServer(o: Options): ControlServer {
-  const token = randomBytes(32).toString("hex");
+  let token = randomBytes(32).toString("hex");
   let server: http.Server | undefined;
   let port = 0;
 
@@ -91,7 +93,7 @@ export function createControlServer(o: Options): ControlServer {
     },
     async start() {
       if (server) return;
-      const s = http.createServer((req, res) => void handle({ ...o, token }, req, res));
+      const s = http.createServer((req, res) => void handle({ ...o, token: () => token }, req, res));
       s.requestTimeout = LIMITS.printWaitMs * 6;
       await new Promise<void>((resolve, reject) => {
         s.once("error", reject);
@@ -100,6 +102,10 @@ export function createControlServer(o: Options): ControlServer {
       server = s;
       port = (s.address() as { port: number }).port;
       await writeDiscovery(discoveryFile(o.dataDir), { port, token, pid: process.pid, version: o.version });
+    },
+    async resetToken() {
+      token = randomBytes(32).toString("hex");
+      if (server) await writeDiscovery(discoveryFile(o.dataDir), { port, token, pid: process.pid, version: o.version });
     },
     async stop() {
       const s = server;
