@@ -9,7 +9,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync,
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ICO_SIZES, macIconPng, winIconPng } from "./icons-lib.mjs";
-import { icoFromPngs, importedPackages } from "./stage-lib.mjs";
+import { icoFromPngs, importedPackages, keepWhisperPackage } from "./stage-lib.mjs";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const code = path.resolve(desktop, "../..");
@@ -125,8 +125,7 @@ if (existsSync(ort)) {
 }
 // whisper.node: the speech worker loads the Vulkan addon on Windows (falling back to the plain CPU one) and the Metal one on macOS; the CUDA addon (125 MB), the WASM build and other CPUs are never loaded.
 const fugood = path.join(stage, "node_modules/@fugood");
-const keepFugood = (d) => d === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(d);
-if (existsSync(fugood)) for (const d of readdirSync(fugood)) if (!keepFugood(d)) rm(path.join(fugood, d));
+if (existsSync(fugood)) for (const d of readdirSync(fugood)) if (!keepWhisperPackage(d, mac)) rm(path.join(fugood, d));
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
 if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ? d.startsWith("darwin_") : d === "win32_x64")) rm(path.join(koffiBuild, d));
 

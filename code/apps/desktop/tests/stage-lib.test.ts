@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { foreignMacArch, icoFromPngs, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, icoFromPngs, importedPackages, keepWhisperPackage, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -53,5 +54,41 @@ describe("foreignMacArch", () => {
     expect(foreignMacArch("darwin_x64", "arm64")).toBe(true);
     expect(foreignMacArch("darwin_arm64", "arm64")).toBe(false);
     for (const d of ["win32_x64", "linux-x64", "sharp-wasm32"]) expect(foreignMacArch(d, "arm64")).toBe(false);
+  });
+});
+
+describe("keepWhisperPackage", () => {
+  it("keeps the loader and both macOS builds on a Mac, and nothing for Windows", () => {
+    for (const d of ["whisper.node", "node-whisper-darwin-arm64", "node-whisper-darwin-x64"]) expect(keepWhisperPackage(d, true)).toBe(true);
+    for (const d of ["node-whisper-win32-x64", "node-whisper-win32-x64-vulkan", "node-whisper-win32-x64-cuda", "node-whisper-linux-x64", "node-whisper-wasm"])
+      expect(keepWhisperPackage(d, true)).toBe(false);
+  });
+
+  it("keeps the loader, the Vulkan and the CPU build on Windows, and drops CUDA, WASM and macOS", () => {
+    for (const d of ["whisper.node", "node-whisper-win32-x64", "node-whisper-win32-x64-vulkan"]) expect(keepWhisperPackage(d, false)).toBe(true);
+    for (const d of ["node-whisper-win32-x64-cuda", "node-whisper-win32-arm64", "node-whisper-darwin-arm64", "node-whisper-wasm"]) expect(keepWhisperPackage(d, false)).toBe(false);
+  });
+});
+
+describe("the lockfile and the macOS packaging config", () => {
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
+
+  it("pins the Metal whisper builds and the koffi builds for both Mac architectures", () => {
+    const lock = read("../../../pnpm-lock.yaml");
+    for (const pkg of ["@fugood/node-whisper-darwin-arm64@1.2.0-rc.2", "@fugood/node-whisper-darwin-x64@1.2.0-rc.2", "@koromix/koffi-darwin-arm64@", "@koromix/koffi-darwin-x64@"])
+      expect(lock).toContain(pkg);
+  });
+
+  it("builds a hardened-runtime app with the entitlements the engines need and the usage descriptions the system shows", () => {
+    const yml = read("../electron-builder.yml");
+    expect(yml).toContain("hardenedRuntime: true");
+    expect(yml).toContain("entitlements: build/entitlements.mac.plist");
+    expect(yml).toContain("entitlementsInherit: build/entitlements.mac.inherit.plist");
+    for (const key of ["NSMicrophoneUsageDescription", "NSAppleEventsUsageDescription", "NSScreenCaptureUsageDescription"]) expect(yml).toContain(key);
+    expect(yml).toContain("identity: null"); // unsigned builds keep working
+    for (const file of ["../build/entitlements.mac.plist", "../build/entitlements.mac.inherit.plist"]) {
+      const plist = read(file);
+      for (const key of ["allow-jit", "allow-unsigned-executable-memory", "disable-library-validation", "device.audio-input"]) expect(plist).toContain(key);
+    }
   });
 });

@@ -278,8 +278,37 @@ jobs:
           path: code/apps/desktop/test-results
           if-no-files-found: ignore
 
+  # The macOS side of the platform layer: key tap, paste keys, permissions, packaging helpers. Pure and unit tests against fakes, and the type-check;
+  # the Windows `desktop` job owns the Electron end-to-end tests.
+  mac:
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    defaults:
+      run:
+        working-directory: code
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: code/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Type-check (tsrs)
+        run: pnpm run typecheck
+      - name: Platform layer tests
+        working-directory: code/apps/desktop
+        run: pnpm exec vp test run src/main/dictation src/main/system src/main/login-item.test.ts src/shared/dictation src/shared/permissions src/shared/shortcuts.test.ts tests/stage-lib.test.ts
+
   ci-ok:
-    needs: [changes, static, unit, e2e-extension, desktop]
+    needs: [changes, static, unit, e2e-extension, desktop, mac]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -39,7 +39,9 @@ exports.default = async function afterPack(context) {
 
   // Loose native libraries are not covered by --deep: sign each before sealing the bundle.
   const natives = readdirSync(modules, { recursive: true }).filter((f) => /\.(node|dylib)$/.test(f));
-  for (const f of natives) execFileSync("codesign", ["--force", "--sign", "-", path.join(modules, f)], { stdio: "inherit" });
-  execFileSync("codesign", ["--force", "--deep", "--sign", "-", app], { stdio: "inherit" });
+  for (const f of natives) execFileSync("codesign", ["--force", "--sign", "-", "--options", "runtime", path.join(modules, f)], { stdio: "inherit" });
+  // The same hardened runtime and entitlements a Developer ID signature will carry (see electron-builder.yml), so ad-hoc builds behave the same way.
+  const entitlements = path.join(__dirname, "../build/entitlements.mac.plist");
+  execFileSync("codesign", ["--force", "--deep", "--sign", "-", "--options", "runtime", "--entitlements", entitlements, app], { stdio: "inherit" });
   execFileSync("codesign", ["--verify", "--deep", "--strict", app], { stdio: "inherit" });
 };
