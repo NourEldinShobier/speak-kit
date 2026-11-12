@@ -16,6 +16,10 @@ export const dictationTestHook = (d: DictationService) => ({
   denyMic: (on: boolean) => void (d.micDenied = on),
   /** What each transcription was given: language, samples and loudest sample. */
   calls: () => d.fake?.calls().map(({ language, samples, peak }) => ({ language, samples, peak })) ?? [],
+  /** What the writer of the rewrite pass does with the next dictation. */
+  rewrite: (mode: "ok" | "hang" | "fail") => void (d.fakeRewrite = mode),
+  /** The files the open and save dialogs return; null cancels. */
+  files: (p: { open?: string | null; save?: string | null }) => void Object.assign(d.scriptedFiles, p),
   status: () => d.status(),
   hud: () => d.presenter.shown,
   /** Puts any pill on the HUD (design check). */

@@ -55,10 +55,7 @@ class Runtime implements Dictation {
       status: () => this.store.status(),
       addVersion: (id, v) => this.store.addVersion(id, v),
       useVersion: (id, vid) => this.store.useVersion(id, vid),
-      audio: async (id) => {
-        const file = (await this.store.get(id))?.audio;
-        return file ? ((await this.deps.audio?.load(file).catch(() => undefined)) ?? undefined) : undefined;
-      },
+      audio: (id) => this.recording(id),
       dropAudio: (files) => this.store.dropAudio(files),
     };
     this.lastState = JSON.stringify(this.state());
@@ -235,6 +232,17 @@ class Runtime implements Dictation {
     if (text === this.lastState) return;
     this.lastState = text;
     for (const listener of this.listeners) listener(state);
+  }
+
+  /** The kept recording of an entry; a recording that cannot be read is no recording. */
+  private async recording(id: string): Promise<Clip | undefined> {
+    const file = (await this.store.get(id))?.audio;
+    if (!file || !this.deps.audio) return undefined;
+    try {
+      return await this.deps.audio.load(file);
+    } catch {
+      return undefined;
+    }
   }
 
   private async copy(id: string): Promise<boolean> {

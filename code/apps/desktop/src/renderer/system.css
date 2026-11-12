@@ -143,3 +143,14 @@
 .lm-popover .lm-banner__actions {
   margin-inline-start: auto;
 }
+.sk-export__files {
+  margin: 0 0 8px;
+  padding-inline-start: 18px;
+  font-size: 13px;
+  line-height: 18px;
+}
+.sk-export__chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

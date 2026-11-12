@@ -92,7 +92,7 @@ export class FakeStt implements Stt {
     );
   }
 
-  async transcribe(pcm: Int16Array, language: SttLanguage, signal?: AbortSignal, prompt?: string): Promise<Transcript> {
+  async transcribe(pcm: Int16Array, language: SttLanguage, { signal, prompt }: { signal?: AbortSignal; prompt?: string } = {}): Promise<Transcript> {
     if (this.#state !== "ready") throw new EngineNotReadyError(this.#state as never);
     this.#calls.push({ language, samples: pcm.length, peak: pcm.reduce((m, x) => Math.max(m, Math.abs(x)), 0), pcm: [...pcm], ...(prompt && { prompt }) });
     if (this.#script.hang) {

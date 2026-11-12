@@ -41,12 +41,21 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: parse(DictationConfigSchema, { enabled: true, hotkey: "ControlLeft+AltLeft+Space", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [{ from: "gonna", to: "going to" }] }),
+  settings: parse(DictationConfigSchema, {
+    enabled: true,
+    hotkey: "ControlLeft+AltLeft+Space",
+    mode: "hold",
+    language: "en",
+    model: "large-v3-turbo-q5_0",
+    retention: "7d",
+    replacements: [{ from: "gonna", to: "going to" }],
+  }),
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,
   historyCount: 128,
   historyStatus: "ok",
+  historyRev: 0,
   keptRecordings: 0,
   rewriteKey: false,
   ...over,
@@ -175,22 +184,44 @@ describe("first run card", () => {
 });
 
 describe("history page", () => {
-  it("shows the empty state with the hotkey", () => {
+  it("shows the empty state with the hotkey, and no totals", () => {
     current.status = status({ historyCount: 0 });
-    const html = renderToStaticMarkup(<DictationHistoryPage back={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />);
     expect(text(html)).toContain("Nothing dictated yet");
     expect(text(html)).toContain("Hold the hotkey in any app and speak. What you dictate shows up here for 7 days.");
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Clear all/);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*(<svg[^>]*>.*?<\/svg>)?\s*Copy recent/);
+    expect(text(html)).not.toContain("Listening time");
   });
 
-  it("has the way back, the lead and a search field before the entries have loaded", () => {
+  it("has the lead, the search field and the two views before the entries have loaded", () => {
     current.status = status();
-    const html = renderToStaticMarkup(<DictationHistoryPage back={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />);
     const t = text(html);
-    expect(t).toContain("Dictation history");
-    expect(t).toContain("What you dictated, saved on this computer for 7 days.");
+    expect(t).toContain("History What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
-    expect(t).toContain("Clear all");
+    expect(t).toContain("Final text");
+    expect(t).toContain("Side by side");
+    expect(t).toContain("Copy recent");
+    expect(html).toContain('aria-label="More history actions"');
+  });
+
+  it("warns when the file came from a newer Speak Kit, with a way to check for updates", () => {
+    current.status = status({ historyStatus: "newer" });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    expect(t).toContain("This history was saved by a newer Speak Kit");
+    expect(t).toContain("left unchanged and a copy was made");
+    expect(t).toContain("Check for updates");
+    current.status = status();
+    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).not.toContain("newer Speak Kit");
+  });
+
+  it("reports recordings the Recycle Bin would not take, with the count", () => {
+    current.status = status({ keptRecordings: 2 });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    expect(t).toContain("A recording could not be moved to the Recycle Bin");
+    expect(t).toContain("2 files are still in Speak Kit");
+    current.status = status({ keptRecordings: 1 });
+    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).toContain("The file is still in");
   });
 });
 

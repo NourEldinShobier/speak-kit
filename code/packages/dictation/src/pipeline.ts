@@ -53,13 +53,20 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
     ...(heard.model !== undefined && { model: heard.model }),
     ...(said.rewrite && { rewrite: said.rewrite }),
   });
-  if (id && ctx.settings.keepRecordings && ctx.deps.audio) {
-    const audio = await ctx.deps.audio.save(id, clip).catch(() => undefined);
-    if (audio) await ctx.history.patch(id, { audio });
-  }
+  if (id && ctx.settings.keepRecordings && ctx.deps.audio) await keepRecording(ctx, id, clip);
   const done = await ctx.deps.inserter.insert({ text, plan });
   if (!done.ok) return { error: "insert-failed" };
   return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
+}
+
+/** Keeps the audio next to the history entry. A recording that cannot be saved leaves the entry without one; the dictation goes on. */
+async function keepRecording(ctx: Context, id: string, clip: Clip): Promise<void> {
+  try {
+    const audio = await ctx.deps.audio?.save(id, clip);
+    if (audio) await ctx.history.patch(id, { audio });
+  } catch {
+    // no recording for this entry
+  }
 }
 
 /** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */

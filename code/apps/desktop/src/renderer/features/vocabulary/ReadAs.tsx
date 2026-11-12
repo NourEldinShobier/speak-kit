@@ -2,7 +2,7 @@ import { useState } from "react";
 import { addPronunciation, applyReadAs, MAX_PRONUNCIATIONS, MAX_SPOKEN, MAX_WRITTEN, type Pronunciation } from "@speakkit/dictation";
 import { Banner, Button, EmptyState, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation/api";
+import { dictation } from "../dictation-bridge";
 import { usePlayer } from "../../pages";
 import { pronunciationCount } from "./model";
 import { useLive } from "./useLive";
@@ -59,7 +59,16 @@ function AddDialog({ open, list, onClose, onSave }: { open: boolean; list: reado
         }}
       >
         <TextInput label="Written as" placeholder="GIF" value={written} onChange={(e) => setWritten(e.target.value)} data-autofocus="" autoComplete="off" spellCheck={false} />
-        <TextInput label="Read as" hint="Spell it the way it should sound." placeholder="jiff" value={spoken} onChange={(e) => setSpoken(e.target.value)} error={error} autoComplete="off" spellCheck={false} />
+        <TextInput
+          label="Read as"
+          hint="Spell it the way it should sound."
+          placeholder="jiff"
+          value={spoken}
+          onChange={(e) => setSpoken(e.target.value)}
+          error={error}
+          autoComplete="off"
+          spellCheck={false}
+        />
         <button type="submit" hidden />
       </form>
     </Modal>
@@ -103,7 +112,14 @@ export function ReadAs({ s, voice }: { s: DictationStatus; voice: string }) {
         ) : (
           <div className="lm-card vocab-card">
             <div className="vocab-bar">
-              <TextInput icon="search" aria-label="Search pronunciations" placeholder="Search pronunciations" value={query} onChange={(e) => setQuery(e.target.value)} frameClassName="vocab-bar__search" />
+              <TextInput
+                icon="search"
+                aria-label="Search pronunciations"
+                placeholder="Search pronunciations"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                frameClassName="vocab-bar__search"
+              />
               <Button variant="primary" iconLeft="plus" onClick={() => setAdding(true)} disabled={list.length >= MAX_PRONUNCIATIONS}>
                 Add pronunciation
               </Button>
@@ -124,7 +140,13 @@ export function ReadAs({ s, voice }: { s: DictationStatus; voice: string }) {
                     <Icon name="arrow-right" size={14} className="vocab-arrow" />
                     <span className="vocab-pron__read">{p.spoken}</span>
                     <span className="vocab-row__acts is-visible">
-                      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Play sample of ${p.written}`} aria-pressed={playing === p.id} onClick={() => void toggle(voice, p.spoken, p.id)}>
+                      <button
+                        type="button"
+                        className="lm-btn lm-btn--icon lm-btn--secondary"
+                        aria-label={`Play sample of ${p.written}`}
+                        aria-pressed={playing === p.id}
+                        onClick={() => void toggle(voice, p.spoken, p.id)}
+                      >
                         <Icon name={playing === p.id ? "player-pause" : "player-play"} size={14} />
                       </button>
                       <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Delete ${p.written}`} onClick={() => update((cur) => cur.filter((x) => x.id !== p.id))}>

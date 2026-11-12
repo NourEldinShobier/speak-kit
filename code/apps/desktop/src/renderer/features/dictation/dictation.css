@@ -291,3 +291,269 @@
   gap: 6px;
   margin-block-start: 12px;
 }
+
+/* History: totals, notices, views, recordings. */
+.dict-hist__head-acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dict-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-stats__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dict-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.dict-stats__grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-inline-start: 1px solid var(--stroke-hairline);
+}
+.dict-stats__grid > div:first-child {
+  border-inline-start: 0;
+}
+.dict-stats__grid dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-stats__grid dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dict-hist__body {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dict-hist__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.dict-hist__tag {
+  color: var(--text-secondary);
+}
+.dict-hist__mark {
+  background: var(--surface-well);
+  border-radius: 4px;
+  padding-inline: 2px;
+  color: inherit;
+}
+.dict-hist__thead,
+.dict-hist__row--side {
+  display: grid;
+  grid-template-columns: 96px 1fr 1fr 80px;
+  gap: 24px;
+  align-items: start;
+}
+.dict-hist__thead {
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  background: var(--surface-well);
+  border-block-end: 1px solid var(--stroke-hairline);
+}
+.dict-hist__text--raw {
+  color: var(--text-secondary);
+}
+.dict-hist__rec {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-block-start: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  cursor: pointer;
+}
+.dict-hist__rec:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.dict-rec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  background: var(--surface-well);
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.dict-rec__player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dict-rec__bar {
+  flex: 1;
+  min-inline-size: 120px;
+  accent-color: var(--cta);
+}
+.dict-rec__time,
+.dict-rec__kept,
+.dict-rec__meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dict-rec__err {
+  color: var(--tag-red);
+  font-size: 12px;
+}
+.dict-rec__vhead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.dict-rec__vhead b {
+  color: var(--text-primary);
+}
+.dict-rec__versions ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-rec__version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+}
+.dict-rec__vtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  font-size: 13px;
+}
+.dict-rec__vtext span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dict-rec__inuse {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.dict-rec__again {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-rec__again-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dict-rec__spacer {
+  flex: 1;
+}
+.dict-rec__running {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.dict-recent {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dict-recent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.dict-recent li + li {
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.dict-recent__text {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+}
+.dict-keep {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dict-keep__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.dict-keep__list {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+/* The 960 px window: totals in two rows, side by side text stacks, header buttons wrap. */
+@media (max-width: 1000px) {
+  .dict-stats__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dict-stats__grid > div:nth-child(3) {
+    border-inline-start: 0;
+  }
+  .dict-stats__grid > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--stroke-hairline);
+  }
+  .dict-hist__thead {
+    display: none;
+  }
+  .dict-hist__row--side {
+    grid-template-columns: 76px 1fr 80px;
+  }
+  .dict-hist__row--side .dict-hist__text {
+    grid-column: 2 / 3;
+  }
+  .dict-hist__head-acts {
+    flex-wrap: wrap;
+  }
+  .dict-hist__search {
+    inline-size: auto;
+    flex: 1;
+  }
+}

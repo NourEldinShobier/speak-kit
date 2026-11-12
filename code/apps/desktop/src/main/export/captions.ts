@@ -1,3 +1,5 @@
+import { headingsOf } from "../../shared/export";
+
 /** Captions and chapter markers for an exported reading. Pure: times and text in, file contents out. */
 
 export interface Cue {
@@ -42,11 +44,6 @@ export function toVtt(cues: readonly Cue[]): string {
     .map((c) => `${stamp(c.startMs, ".")} --> ${stamp(c.endMs, ".")}\n${esc(c.text)}\n`)
     .join("\n")}`;
 }
-
-const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t#]*$/gm;
-
-/** Markdown headings of the text. */
-export const headingsOf = (text: string): string[] => [...text.matchAll(HEADING)].map((m) => (m[1] ?? "").replace(/\s+/g, " ").trim()).filter(Boolean);
 
 /**
  * One chapter per heading, starting where the sentence that holds the heading starts. A heading with no sentence found (cut off by the length limit) gives no chapter.

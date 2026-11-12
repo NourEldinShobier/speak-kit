@@ -4,8 +4,8 @@ import { exportVocabulary, importVocabulary, type ExportFormat } from "@speakkit
 import { Banner, Button, DropdownMenu, DropdownMenuItem, Modal, Segmented } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { dictation } from "../dictation/api";
-import { useDictation } from "../dictation/useDictation";
+import { dictation } from "../dictation-bridge";
+import { useDictation } from "../dictation-bridge";
 import { HeardAs } from "./HeardAs";
 import { importView, type ImportView } from "./model";
 import { ReadAs } from "./ReadAs";
@@ -17,7 +17,17 @@ const LEAD = "Teach Speak Kit the names and terms you use. One list helps dictat
 
 function ResultDialog({ view, onClose }: { view: ImportView | null; onClose(): void }) {
   return (
-    <Modal open={view !== null} onClose={onClose} title={view?.title ?? ""} width={480} footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
+    <Modal
+      open={view !== null}
+      onClose={onClose}
+      title={view?.title ?? ""}
+      width={480}
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Done
+        </Button>
+      }
+    >
       {view ? (
         <div className="vocab-result">
           {view.body.map((line) => (

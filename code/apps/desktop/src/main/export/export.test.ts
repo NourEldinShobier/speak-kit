@@ -200,7 +200,19 @@ describe("ExportJobs", () => {
 describe("captions and chapters", () => {
   const timed = (over: Partial<ExportJob> = {}): ExportServer =>
     fakeServer({
-      exportStatus: async () => ({ id: "srv1", state: "done", done: 2, total: 2, durationMs: 2000, sentenceMs: [[0, 800], [1000, 1900]], ...over }) satisfies ExportJob,
+      exportStatus: async () =>
+        ({
+          id: "srv1",
+          state: "done",
+          done: 2,
+          total: 2,
+          durationMs: 2000,
+          sentenceMs: [
+            [0, 800],
+            [1000, 1900],
+          ],
+          ...over,
+        }) satisfies ExportJob,
     }).server;
   const text = "# Intro\nFirst sentence here.\n# Next\nSecond sentence here.";
 
@@ -229,7 +241,18 @@ describe("captions and chapters", () => {
 
   it("puts one chapter per heading into an MP3, counted on the finished export", async () => {
     const dir = tmp();
-    const { j, done } = jobs(timed({ done: 4, total: 4, sentenceMs: [[0, 500], [600, 1000], [1100, 1500], [1600, 1900]] }));
+    const { j, done } = jobs(
+      timed({
+        done: 4,
+        total: 4,
+        sentenceMs: [
+          [0, 500],
+          [600, 1000],
+          [1100, 1500],
+          [1600, 1900],
+        ],
+      }),
+    );
     await j.start(opts(dir, { text, format: "mp3", chapters: true }));
     await until(() => done.length === 1);
     const file = readFileSync(path.join(dir, "reading.mp3"));
@@ -240,7 +263,18 @@ describe("captions and chapters", () => {
 
   it("ignores chapters for a WAV file, which cannot hold them", async () => {
     const dir = tmp();
-    const { j, done } = jobs(timed({ done: 4, total: 4, sentenceMs: [[0, 500], [600, 1000], [1100, 1500], [1600, 1900]] }));
+    const { j, done } = jobs(
+      timed({
+        done: 4,
+        total: 4,
+        sentenceMs: [
+          [0, 500],
+          [600, 1000],
+          [1100, 1500],
+          [1600, 1900],
+        ],
+      }),
+    );
     await j.start(opts(dir, { text, format: "wav", chapters: true }));
     await until(() => done.length === 1);
     expect(readFileSync(path.join(dir, "reading.wav")).subarray(0, 4).toString("latin1")).toBe("RIFF");
@@ -273,7 +307,14 @@ describe("captions and chapters", () => {
     const server: ExportServer = { ...base, startExport: async (req) => (sent.push(req.sentences), base.startExport(req)) };
     const changes: ExportView[][] = [];
     const done: ExportView[] = [];
-    const j = new ExportJobs({ server, pollMs: 1, mp3: async () => new Uint8Array(), onChange: (v) => changes.push(v), onDone: (v) => done.push({ ...v }), spoken: (s) => s.replace("k8s", "kubernetes") });
+    const j = new ExportJobs({
+      server,
+      pollMs: 1,
+      mp3: async () => new Uint8Array(),
+      onChange: (v) => changes.push(v),
+      onDone: (v) => done.push({ ...v }),
+      spoken: (s) => s.replace("k8s", "kubernetes"),
+    });
     await j.start(opts(dir, { text: "Deploy to k8s now. Second sentence here.", captions: "srt" }));
     await until(() => done.length === 1);
     expect(sent[0]![0]).toBe("Deploy to kubernetes now.");

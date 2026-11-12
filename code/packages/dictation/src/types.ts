@@ -48,7 +48,11 @@ export type TranscribeResult = { ok: true; text: string; language?: string; mode
 
 export interface Transcriber {
   /** Empty text means no speech was found. */
-  transcribe(req: { clip: Clip; language: string; /** Words to bias the model towards; empty when there are none or the switch is off. The port drops it for a model that cannot read one. */ prompt?: string }): Promise<TranscribeResult>;
+  transcribe(req: {
+    clip: Clip;
+    language: string;
+    /** Words to bias the model towards; empty when there are none or the switch is off. The port drops it for a model that cannot read one. */ prompt?: string;
+  }): Promise<TranscribeResult>;
 }
 
 export interface Inserter {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Chip, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { dictation } from "../dictation/api";
+import { dictation } from "../dictation-bridge";
 import { cleanupRows, LANGUAGE_NAMES } from "./model";
 import { RulesTester } from "./RulesTester";
 

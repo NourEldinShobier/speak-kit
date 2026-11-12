@@ -7,4 +7,4 @@ export { RulesTester } from "./RulesTester";
 export { Cleanup } from "./Cleanup";
 export { WordDialog } from "./WordDialog";
 export { useLive } from "./useLive";
-export { cleanupRows, expiryText } from "./model";
+export { cleanupRows } from "./model";

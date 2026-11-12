@@ -117,7 +117,14 @@ export function fakeInserter() {
 
 export function fakeStorage(initial?: unknown) {
   // `value` is the list of entries (the file's first format loads too); `raw` is exactly what was last saved.
-  const state: { value: unknown; raw: unknown; saves: number; failSave: boolean; failLoad: boolean; preserved: string[] } = { value: initial, raw: undefined, saves: 0, failSave: false, failLoad: false, preserved: [] };
+  const state: { value: unknown; raw: unknown; saves: number; failSave: boolean; failLoad: boolean; preserved: string[] } = {
+    value: initial,
+    raw: undefined,
+    saves: 0,
+    failSave: false,
+    failLoad: false,
+    preserved: [],
+  };
   const storage: HistoryStorage = {
     async load() {
       if (state.failLoad) throw new Error("unreadable");

@@ -1,18 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  addMode,
-  applyMode,
-  clampDeadline,
-  defaultMode,
-  defaultSettings,
-  keepsFacts,
-  removeMode,
-  resolveMode,
-  rewritePass,
-  setApps,
-  type Mode,
-  type Rewriter,
-} from "../src";
+import { addMode, applyMode, clampDeadline, defaultMode, defaultSettings, keepsFacts, removeMode, resolveMode, rewritePass, setApps, type Mode, type Rewriter } from "../src";
 import { fakeClock, flush, rig, target } from "./fakes";
 
 const mode = (extra: Partial<Mode>): Mode => ({ ...defaultMode(), id: "x", name: "X", ...extra });
@@ -24,7 +11,12 @@ describe("modes", () => {
     expect(addMode([defaultMode()], " ")).toEqual({ ok: false, error: "empty" });
     expect(addMode([defaultMode()], "x".repeat(41))).toEqual({ ok: false, error: "too-long" });
     expect(addMode([defaultMode()], "default")).toEqual({ ok: false, error: "duplicate" });
-    expect(addMode(Array.from({ length: 24 }, (_, i) => mode({ id: `m${i}`, name: `n${i}` })), "one more")).toEqual({ ok: false, error: "full" });
+    expect(
+      addMode(
+        Array.from({ length: 24 }, (_, i) => mode({ id: `m${i}`, name: `n${i}` })),
+        "one more",
+      ),
+    ).toEqual({ ok: false, error: "full" });
   });
 
   it("never removes the default mode", () => {
@@ -89,7 +81,17 @@ describe("rewrite pass", () => {
   it("falls back on an error, an empty answer and a writer that throws at once", async () => {
     expect((await (await run({ rewrite: async () => Promise.reject(new Error("401")) })).p).outcome).toBe("failed");
     expect((await (await run({ rewrite: async () => "  " })).p).outcome).toBe("failed");
-    expect((await (await run({ rewrite: () => { throw new Error("sync"); } })).p).outcome).toBe("failed");
+    expect(
+      (
+        await (
+          await run({
+            rewrite: () => {
+              throw new Error("sync");
+            },
+          })
+        ).p
+      ).outcome,
+    ).toBe("failed");
   });
 
   it("never sends numbers-only text", async () => {

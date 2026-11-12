@@ -62,6 +62,6 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => later(<ModesPage />),
   vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),
-  history: ({ dispatch }) => later(<HistoryPage back={() => dispatch({ type: "go", page: "dictation" })} />),
+  history: ({ dispatch }) => later(<HistoryPage openDictation={() => dispatch({ type: "go", page: "dictation" })} />),
   capture: () => <StubPage page="capture" />,
 };

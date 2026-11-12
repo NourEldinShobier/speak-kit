@@ -42,7 +42,11 @@ export const removeMode = (modes: readonly Mode[], id: string): Mode[] => (id ==
 /** An app belongs to one mode: adding it to a mode takes it from any other. */
 export function setApps(modes: readonly Mode[], id: string, apps: readonly string[]): Mode[] {
   const mine = [...new Set(apps.map(exeKey).filter(Boolean))];
-  return modes.map((m) => (m.id === id ? { ...m, apps: mine } : id === DEFAULT_MODE_ID ? m : { ...m, apps: m.apps.filter((a) => !mine.includes(a)) }));
+  return modes.map((m) => {
+    if (m.id === id) return { ...m, apps: mine };
+    // The default mode lists no apps; any other mode gives up the ones that moved.
+    return id === DEFAULT_MODE_ID ? m : { ...m, apps: m.apps.filter((a) => !mine.includes(a)) };
+  });
 }
 
 /** The mode for a program: the first that lists it, else the default. */

@@ -162,7 +162,10 @@ describe("export and import", () => {
   it("writes everything as json with a version, words only as text and replacements as csv", () => {
     expect(JSON.parse(exportVocabulary(vocab, "json"))).toEqual({
       version: 1,
-      terms: [{ word: "Kubernetes", soundsLike: ["cooper netties", "kuber nettys"] }, { word: "Grafana", soundsLike: [] }],
+      terms: [
+        { word: "Kubernetes", soundsLike: ["cooper netties", "kuber nettys"] },
+        { word: "Grafana", soundsLike: [] },
+      ],
       replacements: [{ from: "a, b", to: 'say "hi"' }],
     });
     expect(exportVocabulary(vocab, "txt")).toBe("Kubernetes | cooper netties, kuber nettys\nGrafana");

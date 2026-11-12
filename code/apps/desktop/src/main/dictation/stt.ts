@@ -15,7 +15,7 @@ export interface Stt {
   downloaded(id: SttModelId): Promise<boolean>;
   load(id: SttModelId, progress?: (fraction: number) => void): Promise<void>;
   warm(id: SttModelId): Promise<void>;
-  transcribe(pcm: Int16Array, language: SttLanguage, signal?: AbortSignal, prompt?: string): Promise<Transcript>;
+  transcribe(pcm: Int16Array, language: SttLanguage, opts?: { signal?: AbortSignal; prompt?: string }): Promise<Transcript>;
   unload(): Promise<void>;
 }
 
@@ -83,7 +83,8 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
 }
 
 /** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
-export async function heard({ stt, model, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps, clip: Clip, language: string, prompt?: string): Promise<TranscribeResult> {
+export async function heard({ stt, model, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps, req: { clip: Clip; language: string; prompt?: string | undefined }): Promise<TranscribeResult> {
+  const { clip, language, prompt } = req;
   const id = model();
   const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
   const lang = (supported.includes(language) ? language : "auto") as SttLanguage;
@@ -92,7 +93,7 @@ export async function heard({ stt, model, deadlineMs = transcribeDeadlineMs, onP
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(new Error("transcription timed out")), deadlineMs(clip.pcm.length / clip.sampleRate));
   try {
-    const t = await stt.transcribe(to16(clip.pcm), lang, stop.signal, sent);
+    const t = await stt.transcribe(to16(clip.pcm), lang, { signal: stop.signal, ...(sent && { prompt: sent }) });
     return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
   } catch (e) {
     if (stop.signal.aborted) {
@@ -122,7 +123,7 @@ export function createTranscriber(deps: TranscriberDeps): Transcriber {
       const waiting = await whyNotReady(deps);
       if (waiting) return waiting === "model-missing" ? { ok: false, code: waiting } : keep(waiting);
       try {
-        return await heard(deps, clip, language, prompt);
+        return await heard(deps, { clip, language, prompt });
       } catch (e) {
         return keep(e instanceof EngineNotReadyError ? "model-loading" : "failed");
       }

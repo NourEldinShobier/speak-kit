@@ -20,6 +20,15 @@ const listLines = (s: string): number => (s.match(/^\s*(?:[-*•]|\d+[.)])\s/gm)
 /** A rewrite may change wording, never the figures or the shape of a list the person dictated. */
 export const keepsFacts = (original: string, rewritten: string): boolean => digits(original) === digits(rewritten) && listLines(original) === listLines(rewritten);
 
+/** The writer's answer, or null when it throws (also at once, before any await). */
+async function ask(rewriter: Rewriter, text: string, signal: AbortSignal): Promise<string | null> {
+  try {
+    return await rewriter.rewrite({ text, signal });
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Runs the rewrite with a hard deadline that covers everything, finding the writer included. Whatever goes wrong (no answer in time, an error,
  * an empty answer, changed figures) gives back the text as said. Numbers-only text is never sent.
@@ -36,9 +45,9 @@ export async function rewritePass(req: { text: string; rewriter: Rewriter; deadl
     });
   });
   try {
-    const answer = await Promise.race([(async () => rewriter.rewrite({ text: text.trimEnd(), signal: ac.signal }))().catch(() => "failed" as const), late]);
+    const answer = await Promise.race([ask(rewriter, text.trimEnd(), ac.signal), late]);
     if (answer === "deadline") return { text, outcome: "deadline" };
-    if (answer === "failed" || !answer.trim()) return { text, outcome: "failed" };
+    if (answer === null || !answer.trim()) return { text, outcome: "failed" };
     const next = answer.trim();
     if (!keepsFacts(text, next)) return { text, outcome: "changed-facts" };
     // The text came with its trailing space (or not); the rewrite keeps that.

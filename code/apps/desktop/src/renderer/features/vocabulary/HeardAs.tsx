@@ -3,7 +3,7 @@ import { MAX_TERMS, removeTerm, soundsLikeRules, type Term } from "@speakkit/dic
 import { Banner, Button, Chip, EmptyState, Icon, Select, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_REPLACEMENTS, type Replacement } from "../../../shared/dictation/settings";
-import { dictation } from "../dictation/api";
+import { dictation } from "../dictation-bridge";
 import { filterTerms, promptSummary, wordCount } from "./model";
 import { RulesTester } from "./RulesTester";
 import { useLive } from "./useLive";
@@ -11,7 +11,23 @@ import { WordDialog } from "./WordDialog";
 
 const SHOWN = 6;
 
-function WordRow({ term, first, last, canMove, onEdit, onDelete, onMove }: { term: Term; first: boolean; last: boolean; canMove: boolean; onEdit(): void; onDelete(): void; onMove(by: -1 | 1): void }) {
+function WordRow({
+  term,
+  first,
+  last,
+  canMove,
+  onEdit,
+  onDelete,
+  onMove,
+}: {
+  term: Term;
+  first: boolean;
+  last: boolean;
+  canMove: boolean;
+  onEdit(): void;
+  onDelete(): void;
+  onMove(by: -1 | 1): void;
+}) {
   return (
     <li className="lm-row vocab-row" data-term={term.id}>
       <span className="vocab-row__word">{term.word}</span>
@@ -150,7 +166,9 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
         <SettingRow
           label="Send words to the speech model"
           description={sum.line}
-          control={<Toggle aria-label="Send words to the speech model" checked={supported && s.settings.prompt} disabled={!supported} onChange={(prompt) => void dictation.patchSettings({ prompt })} />}
+          control={
+            <Toggle aria-label="Send words to the speech model" checked={supported && s.settings.prompt} disabled={!supported} onChange={(prompt) => void dictation.patchSettings({ prompt })} />
+          }
         />
         {sum.note ? (
           <Banner tone={supported ? "info" : "warning"} role="status">
@@ -207,7 +225,9 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
         <span className="vocab-count">
           {list.length} of {MAX_REPLACEMENTS} rules
         </span>
-        <p className="lm-section__desc">Swap a phrase for other text after you speak it. Leave Replace with empty to delete the phrase. The longest phrase wins, and a replacement is never replaced again.</p>
+        <p className="lm-section__desc">
+          Swap a phrase for other text after you speak it. Leave Replace with empty to delete the phrase. The longest phrase wins, and a replacement is never replaced again.
+        </p>
       </header>
       <div className="lm-card">
         <div className="vocab-rule vocab-rule--head" aria-hidden="true">
@@ -230,7 +250,14 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
         >
           <TextInput aria-label="When I say" placeholder="When I say" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={80} frameClassName="vocab-rule__field" />
           <Icon name="arrow-right" size={14} className="vocab-arrow" />
-          <TextInput aria-label="Replace with" placeholder="Replace with" value={to} onChange={(e) => setTo(e.target.value)} maxLength={200} frameClassName="vocab-rule__field vocab-rule__field--wide" />
+          <TextInput
+            aria-label="Replace with"
+            placeholder="Replace with"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            maxLength={200}
+            frameClassName="vocab-rule__field vocab-rule__field--wide"
+          />
           <Select label="Capital letters" size="sm" value={matchCase ? "match" : "ignore"} options={CASE} onChange={(v) => setMatchCase(v === "match")} />
           <Button type="submit" variant="primary" disabled={!from.trim() || list.length >= MAX_REPLACEMENTS}>
             Add

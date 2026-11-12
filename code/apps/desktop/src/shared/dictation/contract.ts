@@ -47,6 +47,8 @@ export interface DictationStatus {
   historyCount: number;
   /** "newer": history.json was written by a newer Speak Kit; it is left unchanged, a copy was made, and nothing is saved this session. */
   historyStatus: "ok" | "newer";
+  /** Changes whenever an entry changes without the count changing (a version added or chosen, a recording removed), so the History page reloads. */
+  historyRev: number;
   /** Recordings the Recycle Bin would not take: they are still on disk. */
   keptRecordings: number;
   /** An OpenAI key is saved, so the rewrite pass can run. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { importVocabulary, type Term } from "@speakkit/dictation";
-import { changedWords, checkDraft, cleanupRows, expiryText, filterTerms, importView, promptSummary, testStages, wordCount } from "./model";
+import { changedWords, checkDraft, cleanupRows, filterTerms, importView, promptSummary, testStages, wordCount } from "./model";
 
 const t = (id: string, word: string, soundsLike: string[] = []): Term => ({ id, word, soundsLike });
 const cleanup = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: false, lowercase: false, stripFinalStop: false };
@@ -150,19 +150,5 @@ describe("import result wording", () => {
   it("explains a file that cannot be read or comes from a newer version", () => {
     expect(importView(importVocabulary(base, "{", "json"), "bad.json")).toMatchObject({ failed: true, body: ["bad.json is not a file Speak Kit can read. Nothing was added."] });
     expect(importView(importVocabulary(base, '{"version":9}', "json"), "n.json").body[0]).toContain("newer Speak Kit");
-  });
-});
-
-describe("expiry text", () => {
-  it("rounds up to the unit the person understands", () => {
-    expect(expiryText(null)).toBe("Kept for ever");
-    expect(expiryText(10_000)).toBe("Removed in less than a minute");
-    expect(expiryText(61_000)).toBe("Removed in 2 minutes");
-    expect(expiryText(60_000)).toBe("Removed in 1 minute");
-    expect(expiryText(3 * 3_600_000 - 1)).toBe("Removed in 3 hours");
-    expect(expiryText(86_400_000 - 1)).toBe("Removed in 24 hours");
-    expect(expiryText(86_400_000)).toBe("Removed in 1 day");
-    expect(expiryText(86_400_001)).toBe("Removed in 2 days");
-    expect(expiryText(3 * 3_600_000, "Audio removed")).toBe("Audio removed in 3 hours");
   });
 });
