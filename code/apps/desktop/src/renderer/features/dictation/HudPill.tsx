@@ -32,13 +32,18 @@ const Bars = ({ level }: { level: number }) => (
 const Lead = ({ name, tone }: { name: IconName; tone?: "error" }) => <Icon name={name} size={14} className={tone ? "hud__icon hud__icon--error" : "hud__icon"} />;
 const Hint = ({ children }: { children: ReactNode }) => <span className="hud__hint">{children}</span>;
 
+function recordingHint(view: Extract<HudView, { kind: "recording" }>): string {
+  if (view.cancel) return `Press the hotkey to stop, ${view.cancel} cancels`;
+  return view.locked ? "Press the hotkey to stop" : "Release to finish";
+}
+
 function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) {
   return (
     <>
       {view.locked ? <Lead name="lock" /> : <i className="hud__dot" />}
       <Bars level={view.level} />
       <Elapsed since={view.startedAt} />
-      <Hint>{view.cancel ? `Press the hotkey to stop, ${view.cancel} cancels` : view.locked ? "Press the hotkey to stop" : "Release to finish"}</Hint>
+      <Hint>{recordingHint(view)}</Hint>
     </>
   );
 }

@@ -90,7 +90,15 @@ export class HudPresenter {
 
   #render(): void {
     clearTimeout(this.#ready);
-    const next = hudViewFor({ state: this.#state, hotkey: this.#d.hotkey(), startedAt: this.#startedAt, level: this.#level, insertedAsCopy: this.#d.insertedAsCopy(), canRetry: this.#d.canRetry(), ...(this.#d.cancelLabel && { cancelLabel: this.#d.cancelLabel() }) });
+    const next = hudViewFor({
+      state: this.#state,
+      hotkey: this.#d.hotkey(),
+      startedAt: this.#startedAt,
+      level: this.#level,
+      insertedAsCopy: this.#d.insertedAsCopy(),
+      canRetry: this.#d.canRetry(),
+      ...(this.#d.cancelLabel && { cancelLabel: this.#d.cancelLabel() }),
+    });
     if (busy(this.#state)) this.#clearSticky();
     if (next?.kind === "error" && next.action) this.#stick(next);
     const view = this.#sticky ?? next;

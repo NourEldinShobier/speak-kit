@@ -4,6 +4,9 @@ import { pathToFileURL } from "node:url";
 import type { DictationState, Settings } from "@speakkit/dictation";
 import type { DictationStatus } from "../../shared/dictation/contract";
 import type { DictationConfig } from "../../shared/dictation/settings";
+import { firstClash, type Shortcuts } from "../../shared/dictation/conflicts";
+import type { DictationConfig as Config } from "../../shared/dictation/settings";
+import { hotkeySlots, type DictationPatch } from "../../shared/dictation/settings";
 import type { ModelManager } from "./models";
 import type { HotkeyLayout } from "./hotkey-source";
 
@@ -82,3 +85,18 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   ...(micOwner && { micOwner }),
   ...(state.status === "error" && state.owner && { errorOwner: state.owner }),
 });
+
+const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+
+/** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
+export function shortcutClash(cfg: Config, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {
+  const touched = (Object.keys(SLOT_OF) as (keyof typeof SLOT_OF)[]).filter((k) => patch[k] !== undefined);
+  if (touched.length === 0) return undefined;
+  const next = { ...cfg, ...Object.fromEntries(Object.entries(patch).filter(([, x]) => x !== undefined)) } as Config;
+  const bad = firstClash({ ...hotkeySlots(next), ...reader });
+  if (!bad) return undefined;
+  const own = new Set<string>(touched.map((k) => SLOT_OF[k]));
+  const [a, b] = bad;
+  if (own.has(a)) return { slot: a, with: b };
+  return own.has(b) ? { slot: b, with: a } : undefined;
+}

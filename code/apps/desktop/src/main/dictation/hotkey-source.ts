@@ -48,115 +48,148 @@ interface Deps {
 
 const EMPTY: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: CANCEL_KEY, share: false };
 const chordOf = (hotkey: string, share: boolean): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!), ...(share && { share: true }) });
+const defaultAfter = (ms: number, fn: () => void): (() => void) => {
+  const t = setTimeout(fn, ms);
+  t.unref?.();
+  return () => clearTimeout(t);
+};
 
 /**
  * Turns the OS hook (a few chords, events on the event loop) into the key stream dictation's session reads. Each chord reads as one key named after
  * its whole shortcut string, so the session needs no notion of chords. The hook is only installed while enabled and not paused.
  */
-export function createHotkeys({ os, now, onFault, changed, after = (ms, fn) => (setTimeout(fn, ms).unref?.(), () => undefined) }: Deps): SwitchableHotkeys {
-  let handler: ((e: KeyEvent) => boolean) | undefined;
-  let layout = EMPTY;
-  let enabled = false;
-  let grab = false;
-  let paused = false;
-  let lastFault = -Infinity;
-  let pasteLast: (() => void) | undefined;
-  let waiting: (() => void) | undefined;
-  let generation = 0;
+class Hotkeys implements SwitchableHotkeys {
+  readonly #d: Required<Pick<Deps, "os" | "now" | "after">> & Pick<Deps, "onFault" | "changed">;
+  #handler: ((e: KeyEvent) => boolean) | undefined;
+  #layout = EMPTY;
+  #enabled = false;
+  #grab = false;
+  #paused = false;
+  #lastFault = -Infinity;
+  #pasteLast: (() => void) | undefined;
+  #waiting: (() => void) | undefined;
+  #generation = 0;
 
-  const emit = (key: string, down: boolean) => handler?.({ key, down, at: now() });
-  const nameOf = (chord: string | undefined): string | undefined => (chord === undefined ? layout.hotkey : chord === "second" ? layout.second : chord === "mouse" ? layout.mouse : chord === "raw" ? layout.raw : undefined);
-  const onEvent = (e: HotkeyEvent) => {
+  constructor(d: Deps) {
+    this.#d = { ...d, after: d.after ?? defaultAfter };
+  }
+
+  get paused(): boolean {
+    return this.#paused;
+  }
+  get active(): boolean {
+    return this.#d.os.active;
+  }
+
+  async subscribe(h: (e: KeyEvent) => boolean): Promise<() => void> {
+    this.#handler = h;
+    return () => {
+      this.#handler = undefined;
+      this.#d.os.stop();
+    };
+  }
+
+  enable(on: boolean): boolean {
+    this.#enabled = on;
+    return this.#run() || !on;
+  }
+
+  layout(l: HotkeyLayout): void {
+    this.#layout = l;
+    if (this.#enabled && !this.#paused) this.#run();
+  }
+
+  setCancelGrab(on: boolean): void {
+    if (this.#grab === on) return;
+    this.#grab = on;
+    if (this.#enabled && !this.#paused && this.#d.os.active) this.#d.os.grab(on ? [cancelVk(this.#layout.cancelKey)] : []);
+  }
+
+  onPasteLast(cb: () => void): void {
+    this.#pasteLast = cb;
+  }
+
+  pause(on: boolean): void {
+    if (on) {
+      this.#generation++;
+      this.#waiting?.();
+      this.#waiting = undefined;
+      this.#paused = true;
+      this.#d.os.stop();
+    } else if (this.#paused) this.#resume();
+  }
+
+  dispose(): void {
+    this.#waiting?.();
+    this.#d.os.stop();
+  }
+
+  #emit(key: string, down: boolean): void {
+    this.#handler?.({ key, down, at: this.#d.now() });
+  }
+
+  /** The name the session knows a chord by: its shortcut string. */
+  #nameOf(chord: string | undefined): string | undefined {
+    const l = this.#layout;
+    return chord === undefined ? l.hotkey : { second: l.second, mouse: l.mouse, raw: l.raw }[chord];
+  }
+
+  readonly #onEvent = (e: HotkeyEvent): void => {
     if (e.chord === "pasteLast") {
-      if (e.kind === "down") pasteLast?.();
+      if (e.kind === "down") this.#pasteLast?.();
       return;
     }
     if (e.kind === "down" || e.kind === "up") {
-      const name = nameOf(e.chord);
-      if (name) emit(name, e.kind === "down");
-    } else if (!e.chord) emit(e.vk === cancelVk(layout.cancelKey) ? layout.cancelKey : keyOfVk(e.vk), true);
-  };
-  const fault = (e: unknown) => {
-    const at = now();
-    const retry = enabled && !paused && at - lastFault > REINSTALL_GAP_MS;
-    lastFault = at;
-    onFault?.(e, retry && run());
-  };
-  const extras = (): Record<string, Chord> => {
-    const out: Record<string, Chord> = {};
-    if (layout.second) out.second = chordOf(layout.second, layout.share);
-    if (layout.mouse) out.mouse = chordOf(layout.mouse, false);
-    if (layout.raw) out.raw = chordOf(layout.raw, layout.share);
-    if (layout.pasteLast) out.pasteLast = chordOf(layout.pasteLast, false);
-    return out;
-  };
-  const run = (): boolean => {
-    os.stop();
-    if (!enabled || paused || !handler || !layout.hotkey) return false;
-    os.grab(grab ? [cancelVk(layout.cancelKey)] : []);
-    os.setExtraChords?.(extras());
-    return os.start(chordOf(layout.hotkey, layout.share), { onEvent, onFault: fault }).ok;
+      const name = this.#nameOf(e.chord);
+      if (name) this.#emit(name, e.kind === "down");
+    } else if (!e.chord) this.#emit(e.vk === cancelVk(this.#layout.cancelKey) ? this.#layout.cancelKey : keyOfVk(e.vk), true);
   };
 
-  const resume = () => {
-    waiting?.();
-    const mine = ++generation;
+  readonly #onFault = (e: unknown): void => {
+    const at = this.#d.now();
+    const retry = this.#enabled && !this.#paused && at - this.#lastFault > REINSTALL_GAP_MS;
+    this.#lastFault = at;
+    this.#d.onFault?.(e, retry && this.#run());
+  };
+
+  #extras(): Record<string, Chord> {
+    const l = this.#layout;
+    const out: Record<string, Chord> = {};
+    if (l.second) out.second = chordOf(l.second, l.share);
+    if (l.mouse) out.mouse = chordOf(l.mouse, false);
+    if (l.raw) out.raw = chordOf(l.raw, l.share);
+    if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast, false);
+    return out;
+  }
+
+  #run(): boolean {
+    const { os } = this.#d;
+    os.stop();
+    if (!this.#enabled || this.#paused || !this.#handler || !this.#layout.hotkey) return false;
+    os.grab(this.#grab ? [cancelVk(this.#layout.cancelKey)] : []);
+    os.setExtraChords?.(this.#extras());
+    return os.start(chordOf(this.#layout.hotkey, this.#layout.share), { onEvent: this.#onEvent, onFault: this.#onFault }).ok;
+  }
+
+  /** Resumes once no key is held, so a key held through the pause never counts as a press. */
+  #resume(): void {
+    this.#waiting?.();
+    const mine = ++this.#generation;
     const tryNow = () => {
-      waiting = undefined;
-      if (!paused || mine !== generation) return;
-      if (os.anyKeyDown?.()) {
-        waiting = after(RESUME_POLL_MS, tryNow);
+      this.#waiting = undefined;
+      if (!this.#paused || mine !== this.#generation) return;
+      if (this.#d.os.anyKeyDown?.()) {
+        this.#waiting = this.#d.after(RESUME_POLL_MS, tryNow);
         return;
       }
-      paused = false;
-      if (enabled) run();
-      changed?.();
+      this.#paused = false;
+      if (this.#enabled) this.#run();
+      this.#d.changed?.();
     };
     tryNow();
-  };
+  }
+}
 
-  return {
-    subscribe: async (h) => {
-      handler = h;
-      return () => {
-        handler = undefined;
-        os.stop();
-      };
-    },
-    enable(on) {
-      enabled = on;
-      return run() || !on;
-    },
-    layout(l) {
-      layout = l;
-      if (enabled && !paused) run();
-    },
-    setCancelGrab(on) {
-      if (grab === on) return;
-      grab = on;
-      if (enabled && !paused && os.active) os.grab(on ? [cancelVk(layout.cancelKey)] : []);
-    },
-    pause(on) {
-      if (on) {
-        generation++;
-        waiting?.();
-        waiting = undefined;
-        paused = true;
-        os.stop();
-      } else if (paused) resume();
-    },
-    get paused() {
-      return paused;
-    },
-    get active() {
-      return os.active;
-    },
-    onPasteLast(cb) {
-      pasteLast = cb;
-    },
-    dispose() {
-      waiting?.();
-      os.stop();
-    },
-  };
+export function createHotkeys(deps: Deps): SwitchableHotkeys {
+  return new Hotkeys(deps);
 }

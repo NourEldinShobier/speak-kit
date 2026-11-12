@@ -155,7 +155,12 @@ export class KeyboardHook implements HotkeySource {
   resync(): void {
     const r = this.#run;
     if (!r) return;
-    for (const [id, t] of r.trackers) this.#emit(r, id, t.rebuild((vk) => this.#backend.keyIsDown(vk)));
+    for (const [id, t] of r.trackers)
+      this.#emit(
+        r,
+        id,
+        t.rebuild((vk) => this.#backend.keyIsDown(vk)),
+      );
   }
 
   #build(r: Run): void {
@@ -174,7 +179,10 @@ export class KeyboardHook implements HotkeySource {
     const want = this.#backend.installMouse !== undefined && (this.#usesMouse() || this.#now() < r.clickUntil);
     if (want && !r.mouse) {
       try {
-        r.mouse = this.#backend.installMouse!((c) => this.#click(r, c), (e) => this.#mouseFault(r, e));
+        r.mouse = this.#backend.installMouse!(
+          (c) => this.#click(r, c),
+          (e) => this.#mouseFault(r, e),
+        );
       } catch {
         r.mouse = null; // keyboard shortcuts keep working without it
       }

@@ -54,10 +54,10 @@ function useKeyCapture(active: boolean, handlers: CaptureHandlers): void {
 }
 
 /** While `active`, the next mouse button press is the shortcut. The left button is refused, and the page never sees the click. */
-function useButtonCapture(active: boolean, on: (key: string) => void, refused: (why: Refusal) => void, stop: () => void): void {
-  const pick = useEffectEvent(on);
-  const refuse = useEffectEvent(refused);
-  const cancel = useEffectEvent(stop);
+function useButtonCapture(active: boolean, h: { pick(key: string): void; refused(why: Refusal): void; stop(): void }): void {
+  const pick = useEffectEvent(h.pick);
+  const refuse = useEffectEvent(h.refused);
+  const cancel = useEffectEvent(h.stop);
   useEffect(() => {
     if (!active) return;
     const swallow = (e: Event) => (e.preventDefault(), e.stopPropagation());
@@ -69,7 +69,9 @@ function useButtonCapture(active: boolean, on: (key: string) => void, refused: (
       else refuse(r.refusal);
     };
     const key = (e: KeyboardEvent) => {
-      if (e.code === "Escape") (swallow(e), cancel());
+      if (e.code !== "Escape") return;
+      swallow(e);
+      cancel();
     };
     window.addEventListener("mousedown", down, true);
     window.addEventListener("contextmenu", swallow, true);
@@ -148,12 +150,7 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
     refused: (why) => setNote(why ? { kind: "refused", text: REFUSAL_TEXT[why] } : null),
     stop,
   });
-  useButtonCapture(
-    recording && !!mouse,
-    (key) => void commit(key),
-    (why) => setNote({ kind: "refused", text: REFUSAL_TEXT[why] }),
-    stop,
-  );
+  useButtonCapture(recording && !!mouse, { pick: (key) => void commit(key), refused: (why) => setNote({ kind: "refused", text: REFUSAL_TEXT[why] }), stop });
 
   const line = note && <RecorderLine note={note} value={value} ready={status.hotkeyReady} />;
   if (recording)
@@ -171,33 +168,50 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
     );
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
-      {value ? (
-        <>
-          <Chips value={value} />
-          <Button aria-label={`Change ${label}`} onClick={() => (setNote(null), setRecording(true))}>
-            Change
-          </Button>
-          {restore !== undefined && (
-            <Button aria-label={`Restore the default ${label}`} disabled={value === restore} onClick={() => void commit(restore)}>
-              Restore default
-            </Button>
-          )}
-          {remove && (
-            <Button aria-label={`Remove ${label}`} onClick={() => void commit("")}>
-              Remove
-            </Button>
-          )}
-        </>
-      ) : (
-        <>
-          <span className="dict-hotkey__unset">Not set</span>
-          <Button aria-label={`${addLabel}: ${label}`} onClick={() => (setNote(null), setRecording(true))}>
-            {addLabel}
-          </Button>
-        </>
-      )}
+      <Resting label={label} value={value} addLabel={addLabel} restore={restore} remove={remove} start={() => (setNote(null), setRecording(true))} commit={(v) => void commit(v)} />
       {line}
     </div>
+  );
+}
+
+interface RestingProps {
+  label: string;
+  value: string;
+  addLabel: string;
+  restore: string | undefined;
+  remove: boolean | undefined;
+  start(): void;
+  commit(value: string): void;
+}
+
+/** The row when nothing is being recorded: keycaps with Change (and Restore default or Remove), or Not set with an add button. */
+function Resting({ label, value, addLabel, restore, remove, start, commit }: RestingProps) {
+  if (!value)
+    return (
+      <>
+        <span className="dict-hotkey__unset">Not set</span>
+        <Button aria-label={`${addLabel}: ${label}`} onClick={start}>
+          {addLabel}
+        </Button>
+      </>
+    );
+  return (
+    <>
+      <Chips value={value} />
+      <Button aria-label={`Change ${label}`} onClick={start}>
+        Change
+      </Button>
+      {restore !== undefined && (
+        <Button aria-label={`Restore the default ${label}`} disabled={value === restore} onClick={() => commit(restore)}>
+          Restore default
+        </Button>
+      )}
+      {remove && (
+        <Button aria-label={`Remove ${label}`} onClick={() => commit("")}>
+          Remove
+        </Button>
+      )}
+    </>
   );
 }
 

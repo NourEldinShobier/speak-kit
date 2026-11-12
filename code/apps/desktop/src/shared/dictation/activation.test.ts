@@ -131,7 +131,18 @@ describe("recorder model", () => {
 describe("activation config", () => {
   it("loads a file from before these settings existed with their defaults, keeping the old mode", () => {
     const c = parseConfig({ dictation: { enabled: true, hotkey: "F9", mode: "toggle" } }).dictation;
-    expect(c).toMatchObject({ enabled: true, hotkey: "F9", mode: "toggle", holdMs: 300, secondHotkey: "", rawHotkey: "", mouseButton: "", pasteLastHotkey: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape", shareHotkey: false });
+    expect(c).toMatchObject({
+      enabled: true,
+      hotkey: "F9",
+      mode: "toggle",
+      holdMs: 300,
+      secondHotkey: "",
+      rawHotkey: "",
+      mouseButton: "",
+      pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
+      cancelKey: "Escape",
+      shareHotkey: false,
+    });
   });
 
   it("keeps every new mode and falls back from an unknown one", () => {

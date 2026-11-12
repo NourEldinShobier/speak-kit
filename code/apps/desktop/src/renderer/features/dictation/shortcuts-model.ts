@@ -53,9 +53,11 @@ export function modeRules(mode: Mode, holdMs: number): ModeRule[] {
 
 export const modeTitle = (mode: Mode): string => MODE_OPTIONS.find((o) => o.value === mode)?.label ?? "";
 
+const FRAMES: Record<Mode, ("hold" | "tap" | "double")[]> = { hold: ["hold", "double"], "hold-only": ["hold"], toggle: ["tap"], "double-tap": ["double"], "tap-or-hold": ["hold", "tap"] };
+
 /** Which keycap frames the explainer shows: the second frame is the press that lasts, the first is the short tap. */
 export function explainerFrames(mode: Mode): ("hold" | "tap" | "double")[] {
-  return mode === "double-tap" ? ["double"] : mode === "toggle" ? ["tap"] : mode === "hold-only" ? ["hold"] : mode === "tap-or-hold" ? ["hold", "tap"] : ["hold", "double"];
+  return FRAMES[mode];
 }
 
 export const shareAvailable = (mode: Mode): { ok: boolean; reason: string } =>
@@ -71,4 +73,15 @@ export function allShortcuts(s: DictationStatus): Shortcuts {
 
 export const conflictText = (hotkey: string, other: Slot): string => `${hotkeyText(hotkey)} is already the ${SLOT_NAMES[other]}. Pick another shortcut.`;
 
-export const resetNoticeText = { "left-click": "The saved left mouse button was reset to the default shortcut. The left button cannot be a shortcut.", clash: "Two shortcuts shared a key, so the extra one was cleared." } as const;
+export const resetNoticeText = {
+  "left-click": "The saved left mouse button was reset to the default shortcut. The left button cannot be a shortcut.",
+  clash: "Two shortcuts shared a key, so the extra one was cleared.",
+} as const;
+
+/** "game.exe, Editor" as a list: trimmed, without empty entries, at most 50. */
+export const parseApps = (text: string): string[] =>
+  text
+    .split(",")
+    .map((a) => a.trim())
+    .filter(Boolean)
+    .slice(0, 50);

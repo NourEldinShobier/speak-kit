@@ -5,13 +5,15 @@ import { hotkeyText } from "../../../shared/dictation/keys";
 import type { DictationPatch } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
-import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
+import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, parseApps, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
 
 const patch = (p: DictationPatch) => dictation.patchSettings(p);
 
+const FRAME_LABEL = { hold: "Hold, then let go", tap: "Tap, then tap again", double: "Press twice quickly" } as const;
+
 /** The keycap and the timeline for one kind of press. Static under reduced motion. */
 function Frame({ kind }: { kind: "hold" | "tap" | "double" }) {
-  const label = kind === "hold" ? "Hold, then let go" : kind === "tap" ? "Tap, then tap again" : "Press twice quickly";
+  const label = FRAME_LABEL[kind];
   return (
     <figure className="dict-frame" data-kind={kind}>
       <span className="dict-frame__cap" aria-hidden="true">
@@ -34,7 +36,10 @@ function Explainer({ s }: { s: DictationStatus }) {
         ))}
       </div>
       {!s.supported && (
-        <SettingRow label="Not available on this computer yet" description="Shortcuts need a system-wide key listener, which this platform does not have yet. The settings are kept for when it arrives." />
+        <SettingRow
+          label="Not available on this computer yet"
+          description="Shortcuts need a system-wide key listener, which this platform does not have yet. The settings are kept for when it arrives."
+        />
       )}
       {rules.map((r) => (
         <SettingRow key={r.label} label={r.label} description={r.text} control={<span className="dict-badge">{r.badge}</span>} />
@@ -66,9 +71,26 @@ function AdvancedKeysDialog({ ask, close }: { ask: { hotkey: string; resolve(ok:
   );
 }
 
+const PAUSE_MODE_OPTIONS = [
+  { value: "off", label: "Never" },
+  { value: "block", label: "In these programs" },
+  { value: "allow", label: "Everywhere except these" },
+];
+
+function PauseApps({ rules, save }: { rules: DictationStatus["settings"]["pauseRules"]; save: (next: Partial<typeof rules>) => void }) {
+  const [apps, setApps] = useState(rules.apps.join(", "));
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Programs"
+      description="Program file names separated by commas, for example game.exe, editor"
+      control={<TextInput aria-label="Programs" value={apps} maxLength={800} onChange={(e) => setApps(e.target.value)} onBlur={() => save({ apps: parseApps(apps) })} />}
+    />
+  );
+}
+
 function PauseRules({ s }: { s: DictationStatus }) {
   const r = s.settings.pauseRules;
-  const [apps, setApps] = useState(r.apps.join(", "));
   const save = (next: Partial<typeof r>) => void patch({ pauseRules: { ...r, ...next } });
   return (
     <>
@@ -76,43 +98,9 @@ function PauseRules({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Pause in some programs (experimental)"
         description="Keys pass through to the program in front while a rule matches. Test it with your games before relying on it."
-        control={
-          <Select
-            label="Pause in some programs"
-            value={r.mode}
-            onChange={(mode) => save({ mode: mode as typeof r.mode })}
-            options={[
-              { value: "off", label: "Never" },
-              { value: "block", label: "In these programs" },
-              { value: "allow", label: "Everywhere except these" },
-            ]}
-          />
-        }
+        control={<Select label="Pause in some programs" value={r.mode} onChange={(mode) => save({ mode: mode as typeof r.mode })} options={PAUSE_MODE_OPTIONS} />}
       />
-      {r.mode !== "off" && (
-        <SettingRow
-          className="lm-row--control"
-          label="Programs"
-          description="Program file names separated by commas, for example game.exe, editor"
-          control={
-            <TextInput
-              aria-label="Programs"
-              value={apps}
-              maxLength={800}
-              onChange={(e) => setApps(e.target.value)}
-              onBlur={() =>
-                save({
-                  apps: apps
-                    .split(",")
-                    .map((a) => a.trim())
-                    .filter(Boolean)
-                    .slice(0, 50),
-                })
-              }
-            />
-          }
-        />
-      )}
+      {r.mode !== "off" && <PauseApps rules={r} save={save} />}
       <SettingRow
         label="Pause in full-screen programs (experimental)"
         description="A program that covers the whole screen gets every key."
@@ -170,71 +158,103 @@ function Advanced({ s }: { s: DictationStatus }) {
   );
 }
 
+function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) => Promise<boolean> }) {
+  const c = s.settings;
+  return (
+    <SettingsSection title="Dictation shortcut" description={shortcutLead[c.mode]}>
+      <SettingRow
+        className="lm-row--control"
+        label="Dictation shortcut"
+        description="Starts and stops dictation in every app."
+        control={<HotkeyRecorder slot="dictation" label="Dictation shortcut" value={c.hotkey} restore="ControlRight" status={s} save={(hotkey) => patch({ hotkey })} confirmAdvanced={confirm} />}
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Shortcut mode"
+        description="How the shortcut starts and stops a dictation."
+        control={<Select label="Shortcut mode" value={c.mode} onChange={(m) => void patch({ mode: m as typeof c.mode })} options={MODE_OPTIONS} />}
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Hold time"
+        description="A press shorter than this is ignored. No tone, nothing pasted."
+        control={<Select label="Hold time" value={String(c.holdMs)} onChange={(ms) => void patch({ holdMs: Number(ms) as typeof c.holdMs })} options={HOLD_TIME_OPTIONS} />}
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Second shortcut"
+        description="For a laptop keyboard and an external one. Either starts dictation, and the one you pressed ends it."
+        control={<HotkeyRecorder slot="second" label="Second shortcut" value={c.secondHotkey} remove status={s} save={(secondHotkey) => patch({ secondHotkey })} confirmAdvanced={confirm} />}
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Mouse button"
+        description={c.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut."}
+        control={
+          <HotkeyRecorder
+            slot="mouse"
+            label="Mouse button"
+            value={c.mouseButton}
+            mouse
+            remove
+            addLabel="Choose button"
+            status={s}
+            save={(mouseButton) => patch({ mouseButton: mouseButton as typeof c.mouseButton })}
+          />
+        }
+      />
+    </SettingsSection>
+  );
+}
+
+function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) => Promise<boolean> }) {
+  const c = s.settings;
+  return (
+    <SettingsSection title="Other shortcuts">
+      <SettingRow
+        className="lm-row--control"
+        label="Dictate without processing"
+        description="The same dictation with clean-up and replacements off. Not set until you record one."
+        control={<HotkeyRecorder slot="raw" label="Dictate without processing" value={c.rawHotkey} remove status={s} save={(rawHotkey) => patch({ rawHotkey })} confirmAdvanced={confirm} />}
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Paste last dictation"
+        description="Types the last dictation again into the window in front."
+        control={
+          <HotkeyRecorder
+            slot="pasteLast"
+            label="Paste last dictation"
+            value={c.pasteLastHotkey}
+            restore="ControlLeft+AltLeft+KeyV"
+            status={s}
+            save={(pasteLastHotkey) => patch({ pasteLastHotkey })}
+            confirmAdvanced={confirm}
+          />
+        }
+      />
+    </SettingsSection>
+  );
+}
+
 /** Dictation shortcut, mode, hold time, second shortcut, mouse button, the explainer, the advanced fold and the other shortcuts. */
 export function ShortcutsSections({ s }: { s: DictationStatus }) {
-  const c = s.settings;
   const [ask, setAsk] = useState<{ hotkey: string; resolve(ok: boolean): void } | null>(null);
   const confirm = (hotkey: string) => new Promise<boolean>((resolve) => setAsk({ hotkey, resolve }));
   const close = (ok: boolean) => (ask?.resolve(ok), setAsk(null));
-  const mode = MODE_OPTIONS.find((o) => o.value === c.mode);
+  const notice = s.settings.resetNotice;
   return (
     <>
-      {c.resetNotice && (
+      {notice && (
         <Banner tone="warning" title="A shortcut was reset" action={<Button onClick={() => void patch({})}>Dismiss</Button>}>
-          {resetNoticeText[c.resetNotice]}
+          {resetNoticeText[notice]}
         </Banner>
       )}
-      <SettingsSection title="Dictation shortcut" description={shortcutLead[c.mode]}>
-        <SettingRow
-          className="lm-row--control"
-          label="Dictation shortcut"
-          description="Starts and stops dictation in every app."
-          control={<HotkeyRecorder slot="dictation" label="Dictation shortcut" value={c.hotkey} restore="ControlRight" status={s} save={(hotkey) => patch({ hotkey })} confirmAdvanced={confirm} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Shortcut mode"
-          description="How the shortcut starts and stops a dictation."
-          control={<Select label="Shortcut mode" value={mode?.value ?? "hold"} onChange={(m) => void patch({ mode: m as typeof c.mode })} options={MODE_OPTIONS} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Hold time"
-          description="A press shorter than this is ignored. No tone, nothing pasted."
-          control={<Select label="Hold time" value={String(c.holdMs)} onChange={(ms) => void patch({ holdMs: Number(ms) as typeof c.holdMs })} options={HOLD_TIME_OPTIONS} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Second shortcut"
-          description="For a laptop keyboard and an external one. Either starts dictation, and the one you pressed ends it."
-          control={<HotkeyRecorder slot="second" label="Second shortcut" value={c.secondHotkey} remove status={s} save={(secondHotkey) => patch({ secondHotkey })} confirmAdvanced={confirm} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Mouse button"
-          description={c.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut."}
-          control={
-            <HotkeyRecorder slot="mouse" label="Mouse button" value={c.mouseButton} mouse remove addLabel="Choose button" status={s} save={(mouseButton) => patch({ mouseButton: mouseButton as typeof c.mouseButton })} />
-          }
-        />
-      </SettingsSection>
+      <Primary s={s} confirm={confirm} />
       <Explainer s={s} />
       <Advanced s={s} />
       <AdvancedKeysDialog ask={ask} close={close} />
-      <SettingsSection title="Other shortcuts">
-        <SettingRow
-          className="lm-row--control"
-          label="Dictate without processing"
-          description="The same dictation with clean-up and replacements off. Not set until you record one."
-          control={<HotkeyRecorder slot="raw" label="Dictate without processing" value={c.rawHotkey} remove status={s} save={(rawHotkey) => patch({ rawHotkey })} confirmAdvanced={confirm} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Paste last dictation"
-          description="Types the last dictation again into the window in front."
-          control={<HotkeyRecorder slot="pasteLast" label="Paste last dictation" value={c.pasteLastHotkey} restore="ControlLeft+AltLeft+KeyV" status={s} save={(pasteLastHotkey) => patch({ pasteLastHotkey })} confirmAdvanced={confirm} />}
-        />
-      </SettingsSection>
+      <Others s={s} confirm={confirm} />
     </>
   );
 }

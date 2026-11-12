@@ -61,6 +61,8 @@ export interface HistoryItem {
   at: number;
   text: string;
   app?: string;
+  /** "raw": dictated with clean-up off. */
+  kind?: "raw";
 }
 
 /** What the HUD page draws. */
