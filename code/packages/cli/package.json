@@ -1,0 +1,20 @@
+{
+  "name": "@speakkit/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vp test"
+  },
+  "dependencies": {
+    "@speakkit/protocol": "workspace:*",
+    "valibot": "catalog:"
+  },
+  "devDependencies": {
+    "@speakkit/engine": "workspace:*",
+    "@speakkit/server": "workspace:*"
+  }
+}

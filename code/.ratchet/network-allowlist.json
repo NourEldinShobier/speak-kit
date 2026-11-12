@@ -12,6 +12,7 @@
     "apps/extension/src/features/voicechat/VoiceChatSection.tsx": "the options card asks the app on 127.0.0.1 whether an OpenAI key is set",
     "apps/extension/src/features/voicechat/mint.ts": "voice chat: asks the Speak Kit app on 127.0.0.1 for a short-lived OpenAI client secret and for whether a key is set",
     "apps/extension/src/features/voicechat/realtime.ts": "voice chat: trades the WebRTC offer for the answer at OpenAI, authorised by the client secret only",
+    "packages/cli/src/client.ts": "the speakkit command and its MCP server talk to the desktop app on 127.0.0.1 only",
     "packages/engine/src/worker.ts": "kokoro-js downloads the model files from Hugging Face on first use",
     "packages/player/src/chunk.ts": "player requests speech chunks from 127.0.0.1"
   },

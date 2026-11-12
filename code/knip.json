@@ -15,6 +15,7 @@
         "src/main/dictation/index.ts",
         "src/preload/index.ts",
         "src/main/export/mp3-worker.ts",
+        "src/cli/main.ts",
         "src/main/library/parse/worker.ts",
         "src/renderer/*.html",
         "src/renderer/*.tsx",
@@ -40,6 +41,9 @@
     },
     "packages/server": {
       "entry": ["bench/*.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}"]
+    },
+    "packages/cli": {
+      "entry": ["**/*.test.{ts,tsx}"]
     },
     "packages/engine": {
       "entry": ["src/worker.ts", "src/stt/worker.ts", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}"]
