@@ -18,7 +18,8 @@ const fake = vi.hoisted(() => {
       getLoginItemSettings: (o: Options = {}) => {
         const want = key(o);
         const on = !!s.entry && s.entry.path === want.path && s.entry.args.join(" ") === want.args.join(" ");
-        return { openAtLogin: on, executableWillLaunchAtLogin: on && s.approved, status: s.status };
+        const launchItems = s.entry ? [{ name: "Speak Kit", path: s.entry.path, args: s.entry.args, scope: "user", enabled: s.approved }] : [];
+        return { openAtLogin: on, executableWillLaunchAtLogin: on && s.approved, status: s.status, launchItems };
       },
     },
   };
@@ -26,7 +27,7 @@ const fake = vi.hoisted(() => {
 
 vi.mock("electron", () => ({ app: fake.app }));
 
-import { isLaunchAtLogin, setLaunchAtLogin } from "./login-item";
+import { isLaunchAtLogin, repairLaunchAtLogin, setLaunchAtLogin } from "./login-item";
 
 const original = { platform: process.platform, portable: process.env.PORTABLE_EXECUTABLE_FILE };
 
@@ -82,5 +83,42 @@ describe("launch at login", () => {
     expect(isLaunchAtLogin(false)).toBe(false);
     fake.s.status = "enabled";
     expect(isLaunchAtLogin(false)).toBe(true);
+  });
+
+  describe("repairing a stale entry", () => {
+    it("re-registers an entry that points at an old install path", () => {
+      process.env.PORTABLE_EXECUTABLE_FILE = "C:/Apps/Speak Kit/new.exe";
+      fake.s.entry = { path: "C:/Apps/Speak Kit/old.exe", args: [] };
+      expect(repairLaunchAtLogin(false)).toBe(true);
+      expect(fake.s.entry?.path).toBe("C:/Apps/Speak Kit/new.exe");
+      expect(isLaunchAtLogin(false)).toBe(true);
+    });
+
+    it("leaves an entry that already points at the running exe, ignoring case and slashes", () => {
+      process.env.PORTABLE_EXECUTABLE_FILE = "C:/Apps/Speak Kit/app.exe";
+      const stored = String.raw`c:\apps\speak kit\APP.exe`;
+      fake.s.entry = { path: stored, args: [] };
+      expect(repairLaunchAtLogin(false)).toBe(false);
+      expect(fake.s.entry.path).toBe(stored);
+    });
+
+    it("does nothing when launch at login is off", () => {
+      expect(repairLaunchAtLogin(false)).toBe(false);
+      expect(fake.s.entry).toBeNull();
+    });
+
+    it("does not switch on an entry the person disabled in Startup apps", () => {
+      process.env.PORTABLE_EXECUTABLE_FILE = "C:/Apps/new.exe";
+      fake.s.entry = { path: "C:/Apps/old.exe", args: [] };
+      fake.s.approved = false;
+      expect(repairLaunchAtLogin(false)).toBe(false);
+      expect(fake.s.entry.path).toBe("C:/Apps/old.exe");
+    });
+
+    it("is not used on macOS", () => {
+      Object.defineProperty(process, "platform", { value: "darwin" });
+      fake.s.entry = { path: "C:/Apps/old.exe", args: [] };
+      expect(repairLaunchAtLogin(false)).toBe(false);
+    });
   });
 });

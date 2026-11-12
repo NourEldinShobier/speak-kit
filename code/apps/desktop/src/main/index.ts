@@ -16,7 +16,7 @@ import { frameBatch } from "./frame-batch";
 import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
 import { watchConfigFile } from "./config-watch";
 import { acquireInstance, classifySecondLaunch, clearRunningVersion, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
-import { isLaunchAtLogin, openedAtLogin } from "./login-item";
+import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
@@ -326,6 +326,7 @@ if (!mayRun) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
+    if (config.setupDone && !process.env.SPEAKKIT_USER_DATA) repairLaunchAtLogin(config.startMinimized);
     watchPower();
     watchPairingActivity();
     const appHandlers = createAppHandlers(handlerDeps());
