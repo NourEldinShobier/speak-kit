@@ -138,7 +138,7 @@ describe("Engines page", () => {
         .getByRole("cell")
         .first()
         .textContent(),
-    ).toBe("Whisper Large v3 Turbo");
+    ).toBe("Whisper Small (5-bit)");
   });
 
   it("the Downloaded filter keeps the installed models and says how many are hidden", async () => {
