@@ -23,7 +23,7 @@ export function PrivacyTab({ s }: { s: CaptureStatus }) {
         <SettingRow
           className="lm-row--control"
           label="Input log"
-          description="Clicks and drawing with their times, so a recording can follow what you pointed at. Which keys you press is never saved."
+          description="When you draw, switch the pen on or off or change what is recorded, with the time, saved next to the capture. Which keys you press and what you type is never saved, and clicks in other programs are not recorded."
           control={
             <Select
               label="Input log"
