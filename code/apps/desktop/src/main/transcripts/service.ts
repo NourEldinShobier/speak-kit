@@ -55,6 +55,7 @@ export interface TranscriptsService {
 }
 
 const HOUR = 3_600_000;
+const STARTED = "Recording started. Recording other people can need their consent, and the rules depend on where you live.";
 
 /** The store and the recorder of transcripts, wired to the engine, the OS ports and the window. */
 export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): TranscriptsService {
@@ -83,6 +84,13 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
   const session = core.then((t) => recorderOf({ ctx, ports: p, transcripts: t, live }));
   const sweepTimer = setInterval(() => void core.then((t) => t.sweep()), HOUR);
   sweepTimer.unref();
+  /** A shortcut press that did nothing leaves a notice in the window and an entry in the bell. */
+  const tell = (text: string) => {
+    live.notice = text;
+    ctx.addActivity("error", "Recording", text);
+    ctx.publish();
+    live.send();
+  };
   const handlers = createHandlers({ ready, session, ports: p, cfg, folder, saveConfig: () => ctx.saveConfig(), live: () => live.snapshot(), clearNotice: () => void (live.notice = undefined) });
   return {
     handlers,
@@ -92,11 +100,22 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     stopRecording: handlers.recordStop,
     toggleRecording: async () => {
       const a = recordToggle(livePhase(live));
-      if (a === "stop") return handlers.recordStop();
-      if (a === "none") return undefined;
-      const r = await handlers.recordStart();
-      ctx.showWindow();
-      return r;
+      if (a === "stop") {
+        if (live.notice === STARTED) live.notice = undefined;
+        return handlers.recordStop();
+      }
+      if (a === "none") return tell("Wait until the recording is saved, then press the shortcut again.");
+      try {
+        const r = await handlers.recordStart();
+        if (!r.ok) return tell(r.failure.message);
+        live.notice = STARTED;
+        live.send();
+        ctx.showWindow();
+        ctx.sendUi({ type: "nav", page: "history" });
+        return r;
+      } catch (e) {
+        return tell(e instanceof Error ? e.message : "The recording could not start.");
+      }
     },
     async dispose() {
       clearInterval(sweepTimer);

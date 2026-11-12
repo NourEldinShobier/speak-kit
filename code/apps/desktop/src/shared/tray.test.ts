@@ -111,10 +111,10 @@ describe("tray menu, recorder", () => {
     expect(row("done")).toEqual({ type: "item", action: "record-start", label: "Done. Record a conversation", enabled: true });
   });
 
-  it("waits, disabled, while it starts, saves and transcribes, so it never stays greyed once that is over", () => {
+  it("waits, disabled, while it starts and saves; a transcript being made does not grey it", () => {
     expect(row("starting")).toMatchObject({ label: "Starting recording...", enabled: false });
     expect(row("saving")).toMatchObject({ label: "Saving recording...", enabled: false });
-    expect(row("transcribing")).toMatchObject({ label: "Transcribing...", enabled: false });
+    expect(row("transcribing")).toMatchObject({ label: "Record a conversation", enabled: true });
     expect(row("ready")).toMatchObject({ enabled: true });
   });
 
@@ -233,10 +233,11 @@ describe("tray meeting row", () => {
 });
 
 describe("record shortcut", () => {
-  it("stops while recording, starts when idle or done, ignores the busy phases", () => {
+  it("stops while recording, starts when idle, done or only a transcript is running, ignores starting and saving", () => {
     expect(recordToggle("recording")).toBe("stop");
     expect(recordToggle("ready")).toBe("start");
     expect(recordToggle("done")).toBe("start");
-    expect(["starting", "saving", "transcribing"].map((p) => recordToggle(p as never))).toEqual(["none", "none", "none"]);
+    expect(["starting", "saving"].map((p) => recordToggle(p as never))).toEqual(["none", "none"]);
+    expect(recordToggle("transcribing")).toBe("start");
   });
 });

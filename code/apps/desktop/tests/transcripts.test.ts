@@ -340,6 +340,47 @@ describe("record a conversation", () => {
     await l.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
   });
 
+  it("the shortcut from Home opens the recorder with its recording sign and the consent reminder", async () => {
+    const dir = tmp("mic");
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 20) } });
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await l.page.getByRole("timer", { name: "Recording time" }).waitFor();
+    await l.page.getByText(/Recording started\. Recording other people can need their consent/).waitFor();
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await until(async () => (await transcriptsHook(l, "phase")) !== "recording");
+  });
+
+  it("the shortcut with a refused microphone says why instead of doing nothing", async () => {
+    const dir = tmp("mic");
+    const { l } = await app({ env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 5) } });
+    await transcriptsHook(l, "denyMic", true);
+    await hook(l, "pressShortcut", "Ctrl+Alt+R");
+    await openTranscripts(l);
+    await l.page
+      .getByText(/cannot use the microphone/)
+      .first()
+      .waitFor();
+    expect(await transcriptsHook(l, "phase")).toBe("ready");
+  });
+
+  it("German picked in the recorder is saved and is the language of the new transcript", async () => {
+    const dir = tmp("mic");
+    const userData = tmp("data");
+    const { l } = await app({ userData, env: { SPEAKKIT_FAKE_MIC: wav(path.join(dir, "mic.wav"), 20) } });
+    await openTranscripts(l);
+    await l.page.getByRole("button", { name: "Record a conversation" }).first().click();
+    await l.page.getByRole("combobox", { name: "Language" }).click();
+    await l.page.getByRole("option", { name: "German" }).click();
+    await until(async () => JSON.parse(readFileSync(path.join(userData, "config.json"), "utf8")).transcripts?.language === "de");
+    await l.page.getByRole("button", { name: "Start recording" }).click();
+    await l.page.getByRole("timer", { name: "Recording time" }).waitFor();
+    await l.page.waitForTimeout(1500);
+    await l.page.getByRole("button", { name: "Stop and save" }).click();
+    await l.page.locator('[data-testid="transcript-row"][data-status="done"]').waitFor();
+    const rows = await l.page.evaluate(() => (window as unknown as { speakkitTranscripts: { list(): Promise<{ language: string }[]> } }).speakkitTranscripts.list());
+    expect(rows.map((r) => r.language)).toEqual(["de"]);
+  });
+
   it("a crash while recording leaves a recovered recording with Open and Transcribe now", async () => {
     const dir = tmp("mic");
     const userData = tmp("data");
