@@ -14,10 +14,10 @@ import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
-import { watchConfigFile } from "./config-watch";
+import { watchSettings } from "./config-watch";
 import { motionNow, windowMotion } from "./window-motion";
-import { createTrayNotices, NOTICE_TTL_MS, noticeText } from "../shared/tray-notices";
-import { acquireInstance, classifySecondLaunch, clearRunningVersion, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
+import { createNoticeCenter } from "./tray-notice";
+import { claimInstance, registerProtocol } from "./instance";
 import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
@@ -82,21 +82,16 @@ const state: AppState = {
 };
 
 let nextActivityId = 1;
-const trayNotices = createTrayNotices();
+let desktop: ReturnType<typeof setupDesktop> | null = null;
 // The window is built after the first activity lines are written (settings that were repaired): until then nobody is looking.
 let windowVisible = () => false;
-let noticeTimer: NodeJS.Timeout | undefined;
+const trayNotices = createNoticeCenter(
+  () => desktop?.refreshTray(),
+  () => windowVisible(),
+);
 const addActivity = (kind: Activity["kind"], title: string, body: string) => {
   state.activity = [{ id: nextActivityId++, atMs: Date.now(), kind, title, body }, ...state.activity].slice(0, 20);
-  // A problem while the window is closed stays in the tray menu until the window opens or ten minutes pass.
-  const note = noticeText({ kind, title });
-  if (note && !windowVisible()) {
-    trayNotices.add(note);
-    desktop?.refreshTray();
-    clearTimeout(noticeTimer);
-    noticeTimer = setTimeout(() => desktop?.refreshTray(), NOTICE_TTL_MS + 1000);
-    noticeTimer.unref();
-  }
+  trayNotices.report(kind, title);
 };
 
 const unreadable = (what: string, file: string) =>
@@ -109,12 +104,9 @@ const serverApi = new ServerApi(
   () => `http://127.0.0.1:${state.port}`,
   () => state.token,
 );
-let desktop: ReturnType<typeof setupDesktop> | null = null;
-
 const mainWindow: MainWindow = new MainWindow(config, {
   onVisible: () => {
     trayNotices.clear();
-    desktop?.refreshTray();
     if (!performance.getEntriesByName("window:shown").length) performance.mark("window:shown");
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
@@ -161,14 +153,6 @@ const sendState = frameBatch(() => {
 function publish(): AppState {
   sendState();
   return state;
-}
-
-const PROTOCOL = "speakkit";
-function registerProtocol() {
-  // Tests run with an isolated userData; do not touch the user's registry then.
-  if (process.env.SPEAKKIT_USER_DATA && !process.env.SPEAKKIT_REGISTER_PROTOCOL) return;
-  if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-  else app.setAsDefaultProtocolClient(PROTOCOL);
 }
 
 function onDeepLink(link: DeepLink) {
@@ -222,25 +206,6 @@ function handlerDeps(): HandlerDeps {
   };
 }
 
-function watchSettingsFile() {
-  return watchConfigFile({
-    file: store.path,
-    current: () => config,
-    keep: process.env.SPEAKKIT_PORT ? ["preferredPort"] : [],
-    onEdit: (edit) => {
-      if (edit.kind === "newer") return;
-      addActivity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);
-      log.warn("settings file edited outside the app", edit.keys.join(","), edit.repaired.length ? `repaired: ${edit.repaired.join(",")}` : "");
-      applyExternalConfig(handlerDeps(), edit.patch);
-    },
-    onUnreadable: () => {
-      addActivity("info", "Settings file could not be read", "The file was edited and is not valid. The app keeps the settings it has.");
-      log.warn("settings file edited outside the app is not valid; keeping the running settings");
-      publish();
-    },
-  });
-}
-
 function startDesktop() {
   return setupDesktop(
     {
@@ -277,25 +242,15 @@ function startDesktop() {
 
 // `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
 const QUIT_FLAG = "--quit";
-// A newer install waits for an older running copy it asks to leave; a copy that is stuck leaves by itself after the stop guard.
-const ownVersion = app.getVersion();
-const lock = () => app.requestSingleInstanceLock({ version: ownVersion });
-const mayRun = process.argv.includes(QUIT_FLAG)
-  ? (lock(), false)
-  : await acquireInstance({ tryLock: lock, runningVersion: () => readRunningVersion(dataDir), ownVersion, wait: (ms) => new Promise((r) => setTimeout(r, ms)) });
-if (!mayRun) {
+const instance = await claimInstance(dataDir, process.argv);
+if (!instance.mayRun) {
   app.quit();
 } else {
-  void writeRunningVersion(dataDir, ownVersion);
-  app.on("will-quit", () => void clearRunningVersion(dataDir));
+  instance.announce();
   registerProtocol();
-  app.on("second-instance", (_e, argv, _cwd, incoming) => {
-    const why = classifySecondLaunch(argv, ownVersion, incoming);
-    if (why !== "open") {
-      mainWindow.quit();
-      stopGuard(() => app.exit(0));
-      return;
-    }
+  app.on("second-instance", (...a) => {
+    const argv = a[1];
+    if (instance.onSecondLaunch(argv, a[3], () => mainWindow.quit())) return;
     const link = findDeepLink(argv);
     if (link) onDeepLink(link);
     else mainWindow.show();
@@ -356,7 +311,15 @@ if (!mayRun) {
     watchPower();
     watchPairingActivity();
     const appHandlers = createAppHandlers(handlerDeps());
-    const settingsWatch = watchSettingsFile();
+    const settingsWatch = watchSettings({
+      file: store.path,
+      config,
+      keepPort: !!process.env.SPEAKKIT_PORT,
+      apply: (patch) => applyExternalConfig(handlerDeps(), patch),
+      activity: addActivity,
+      log,
+      publish,
+    });
     app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     runtime.automation.attach(desktop.automation);
