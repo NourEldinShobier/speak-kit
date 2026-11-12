@@ -107,11 +107,41 @@ describe("system ducker (Windows)", () => {
     expect(h.sent.filter((l) => l === "name")).toHaveLength(2);
   });
 
-  it("does nothing on a platform without audio control", async () => {
-    const d = createSystemDucker({ mode: () => "lower", speakersOnly: () => true, platform: "linux" });
+  it("does nothing on a platform without audio control, not even through the macOS script", async () => {
+    const ran: string[] = [];
+    const d = createSystemDucker({ mode: () => "lower", speakersOnly: () => true, platform: "linux", osa: async (s) => (ran.push(s), "50") });
     await d.begin();
     await d.end();
     d.dispose();
+    expect(ran).toEqual([]);
+  });
+
+  it("trusts a reading of the device up to 30 s and asks again after", async () => {
+    let t = 20_000;
+    const h = fakeHelper();
+    const d = createSystemDucker({ mode: () => "mute", speakersOnly: () => true, platform: "win32", start: h.start, now: () => t });
+    await d.begin();
+    await d.end();
+    t = 25_000;
+    await d.begin();
+    await d.end();
+    expect(h.sent.filter((l) => l === "name")).toHaveLength(1);
+    t = 50_000;
+    await d.begin();
+    await d.end();
+    expect(h.sent.filter((l) => l === "name")).toHaveLength(1);
+    t = 50_001;
+    await d.begin();
+    expect(h.sent.filter((l) => l === "name")).toHaveLength(2);
+  });
+
+  it("stops the helper when disposed", async () => {
+    let killed = 0;
+    const base = fakeHelper();
+    const d = createSystemDucker({ mode: () => "mute", speakersOnly: () => false, platform: "win32", start: () => ({ ...base.start(), kill: () => void killed++ }) });
+    await d.begin();
+    d.dispose();
+    expect(killed).toBe(1);
   });
 });
 

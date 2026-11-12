@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { BASE_PROFILE, profileFor } from "./app-profile";
+import { BASE_PROFILE, isChromiumBrowser, majorOf, profileFor } from "./app-profile";
 import type { ForegroundInfo } from "./types";
 
 const win = (exe: string | null): ForegroundInfo => ({ hwnd: "1", pid: 1, exe, className: "X", elevated: false });
@@ -63,5 +63,57 @@ describe("browsers built on Chromium 155 and 156", () => {
     expect(profileFor(browser("notepad.exe", "155.0.1")).shortcut).toBe("ctrl-v");
     expect(profileFor(browser("chrome.exe", "155.0.1"), [{ exe: "chrome", profile: { shortcut: "ctrl-v" } }]).shortcut).toBe("ctrl-v");
     expect(profileFor(browser("chrome.exe", "155.0.1"), [{ exe: "chrome", profile: { preDelayMs: 50 } }])).toEqual({ shortcut: "type", preDelayMs: 50, restoreDelayMs: 500 });
+  });
+});
+
+describe("built-in rules", () => {
+  const terminals = ["windowsterminal", "wt", "conhost", "mintty", "alacritty", "wezterm-gui", "kitty", "tabby", "putty", "conemu64", "conemu"];
+  const remote = ["mstsc", "msrdc", "msrdcw", "com.microsoft.rdc.macos", "com.apple.screensharing", "com.teamviewer.teamviewer", "com.parsecgaming.parsec"];
+
+  it("paste into every terminal with Ctrl+Shift+V, with or without .exe and in any case", () => {
+    for (const t of terminals) {
+      expect(profileFor(win(t)).shortcut).toBe("ctrl-shift-v");
+      expect(profileFor(win(`${t.toUpperCase()}.EXE`)).shortcut).toBe("ctrl-shift-v");
+    }
+  });
+
+  it("give every remote desktop client 400 ms before the keys and 3 s before the clipboard returns", () => {
+    for (const r of remote) expect(profileFor(win(r))).toEqual({ shortcut: "ctrl-v", preDelayMs: 400, restoreDelayMs: 3000 });
+  });
+
+  it("keep plain Ctrl+V for Java programs", () => {
+    for (const j of ["java", "javaw.exe"]) expect(profileFor(win(j)).shortcut).toBe("ctrl-v");
+  });
+
+  it("type for every Chromium browser on 155, by name and by bundle id", () => {
+    const names = [
+      "chrome",
+      "msedge",
+      "brave",
+      "vivaldi",
+      "opera",
+      "chromium",
+      "arc",
+      "com.google.chrome",
+      "com.microsoft.edgemac",
+      "com.brave.browser",
+      "com.vivaldi.vivaldi",
+      "com.operasoftware.opera",
+      "company.thebrowser.browser",
+      "org.chromium.chromium",
+    ];
+    for (const n of names) expect(profileFor({ ...win(n), version: "155.1" }).shortcut).toBe("type");
+    expect(profileFor({ ...win("firefox.exe"), version: "155.1" }).shortcut).toBe("ctrl-v");
+  });
+
+  it("read the first number of a version, and nothing from text that does not start with one", () => {
+    expect(majorOf("155.0.7000.1")).toBe(155);
+    expect(majorOf(" v156")).toBe(156);
+    expect(majorOf("9999")).toBe(9999);
+    expect(majorOf("12345.1")).toBeUndefined();
+    expect(majorOf("x155")).toBeUndefined();
+    expect(majorOf(undefined)).toBeUndefined();
+    expect(isChromiumBrowser(null)).toBe(false);
+    expect(isChromiumBrowser("Chrome.EXE")).toBe(true);
   });
 });
