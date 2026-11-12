@@ -5,6 +5,28 @@ export const SPEECH_IDLE_CHOICES = [5, 15, 30, 60, 0] as const;
 export const DEVICE_VALUES = ["auto", "gpu", "cpu"] as const;
 export const SPOKEN_LANGUAGE_CODES = ["en", "de", "ar", "fr", "es", "it", "pt", "nl", "pl", "tr", "ru", "uk", "lt", "sv", "hi", "ja", "ko", "zh"] as const;
 
+export const SPOKEN_LANGUAGE_LABELS: Readonly<Record<string, string>> = {
+  auto: "Detect automatically",
+  en: "English",
+  de: "German",
+  ar: "Arabic",
+  fr: "French",
+  es: "Spanish",
+  it: "Italian",
+  pt: "Portuguese",
+  nl: "Dutch",
+  pl: "Polish",
+  tr: "Turkish",
+  ru: "Russian",
+  uk: "Ukrainian",
+  lt: "Lithuanian",
+  sv: "Swedish",
+  hi: "Hindi",
+  ja: "Japanese",
+  ko: "Korean",
+  zh: "Chinese",
+};
+
 const bool = (d: boolean) => v.fallback(v.boolean(), d);
 const short = (n: number) => v.pipe(v.string(), v.maxLength(n));
 

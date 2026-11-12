@@ -5,6 +5,7 @@ import {
   AutoSwitch,
   STT_MODELS,
   adoptFound,
+  checkFloor,
   deleteModelFiles,
   diskUse,
   findModelsOnDisk,
@@ -146,6 +147,12 @@ export class SpeechModels {
 
   hardware(): Hardware | undefined {
     return this.#hw;
+  }
+
+  /** Set when this computer lacks what the engine needs: the engine code is then never loaded and the page says what is missing. */
+  floorMessage(): string | undefined {
+    const v = this.#hw && checkFloor(this.#hw);
+    return v && !v.ok ? v.message : undefined;
   }
 
   async refreshDisk(): Promise<void> {

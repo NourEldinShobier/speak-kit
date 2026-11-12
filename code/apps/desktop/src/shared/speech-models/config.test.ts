@@ -1,9 +1,9 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
-import { DEVICE_CHOICES, IDLE_CHOICES, LANGUAGES, STT_MODELS } from "@speakkit/engine";
+import { AUTO_LABEL, DEVICE_CHOICES, IDLE_CHOICES, LANGUAGES, STT_MODELS } from "@speakkit/engine";
 import { DICTATION_LANGUAGES, DICTATION_MODELS } from "../dictation/settings";
 import { parseConfig } from "../schemas";
-import { DEVICE_VALUES, EnginesConfigSchema, SPEECH_IDLE_CHOICES, SPOKEN_LANGUAGE_CODES } from "./config";
+import { DEVICE_VALUES, EnginesConfigSchema, SPEECH_IDLE_CHOICES, SPOKEN_LANGUAGE_CODES, SPOKEN_LANGUAGE_LABELS } from "./config";
 
 const DEFAULTS = { device: "auto", idleMinutes: 15, failedDevices: [], timedDevices: {}, releaseOnClose: false, autoSwitch: { enabled: false, rules: [] }, dismissedHints: [], skippedModel: false, lastUsed: {} };
 
@@ -56,6 +56,7 @@ describe("constants shared with the renderer match the engine", () => {
     expect([...SPEECH_IDLE_CHOICES]).toEqual([...IDLE_CHOICES]);
     expect([...DEVICE_VALUES]).toEqual([...DEVICE_CHOICES]);
     expect([...SPOKEN_LANGUAGE_CODES]).toEqual(LANGUAGES.map((l) => l.code));
+    expect(SPOKEN_LANGUAGE_LABELS).toEqual({ auto: AUTO_LABEL, ...Object.fromEntries(LANGUAGES.map((l) => [l.code, l.label])) });
     expect([...DICTATION_LANGUAGES]).toEqual(["auto", ...LANGUAGES.map((l) => l.code)]);
   });
 
