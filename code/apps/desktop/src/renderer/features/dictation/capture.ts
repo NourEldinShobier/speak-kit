@@ -56,6 +56,15 @@ export class ClipBuffer {
     while (this.#ring.length > 1 && this.#ringLen - this.#ring[0]!.length >= this.#ringMax) this.#ringLen -= this.#ring.shift()!.length;
   }
 
+  /** Adds `ms` of silence to the running recording, for the moment the microphone was away. */
+  pad(ms: number): void {
+    if (!this.#clip) return;
+    const silence = new Float32Array(Math.round((this.#rate * ms) / 1000));
+    if (!silence.length) return;
+    this.#clip.push(silence);
+    this.#offer(silence);
+  }
+
   /** Starts a recording that begins with the last `prerollMs` of what was heard. */
   start(prerollMs: number): void {
     const want = Math.round((this.#rate * prerollMs) / 1000);

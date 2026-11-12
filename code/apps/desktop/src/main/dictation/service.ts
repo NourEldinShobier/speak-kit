@@ -21,6 +21,7 @@ import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRec
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
+import { createSystemDucker } from "./ducking";
 import { cancelGrab, cleanField, createRecovery, onStateChange, prepareModel, sleepBlock, warmCaret } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
@@ -75,6 +76,7 @@ export class DictationService {
   #audio: AudioStore | undefined;
   #spool: Spool | undefined;
   #typing = false;
+  readonly #ducker = createSystemDucker({ mode: () => this.#cfg.duckAudio, speakersOnly: () => this.#cfg.duckSpeakersOnly });
   #recover: (() => void) | undefined;
   /** Tests only: what the scripted writer does with the next dictation. */
   fakeRewrite: "ok" | "hang" | "fail" = "ok";
@@ -174,11 +176,20 @@ export class DictationService {
   #onState(s: DictationState): void {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, typing: this.#typing, now: Date.now() });
+    const was = this.state;
     this.state = s;
     this.#sleep(s.status === "recording" || s.status === "locked");
+    this.#duck(was, s);
     if (s.status === "idle" && s.notice) void this.history.refresh();
     this.presenter.onState(s);
     this.#push(true);
+  }
+
+  /** Other audio goes quiet for the length of a recording, and comes back when it ends. */
+  #duck(prev: DictationState, next: DictationState): void {
+    const live = (x: DictationState) => x.status === "recording" || x.status === "locked";
+    if (live(next) && !live(prev)) void this.#ducker.begin();
+    else if (!live(next) && live(prev)) void this.#ducker.end();
   }
 
   // ---- status ------------------------------------------------------------------------------------------------
@@ -342,6 +353,7 @@ export class DictationService {
     this.speech.dispose();
     this.#throttle.dispose();
     this.#sleep(false);
+    await this.#ducker.end().finally(() => this.#ducker.dispose());
     this.controls.dispose();
     this.#hotkeys?.dispose();
     this.#stopPower?.();

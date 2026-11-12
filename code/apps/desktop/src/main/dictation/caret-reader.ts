@@ -83,7 +83,7 @@ interface Deps {
 }
 
 /** Asks a line-per-answer helper one question at a time. A helper that does not answer in time is killed and started again by the next read. */
-function createLineClient(start: () => LineProcess, timeoutMs: number) {
+export function createLineClient(start: () => LineProcess, timeoutMs: number) {
   let proc: LineProcess | undefined;
   let ready = false;
   const waiting: ((line: string) => void)[] = [];
@@ -105,7 +105,7 @@ function createLineClient(start: () => LineProcess, timeoutMs: number) {
 
   return {
     open,
-    ask(): Promise<string> {
+    ask(line = "read"): Promise<string> {
       const p = open();
       return new Promise<string>((resolve) => {
         const timer = setTimeout(() => {
@@ -116,7 +116,7 @@ function createLineClient(start: () => LineProcess, timeoutMs: number) {
           clearTimeout(timer);
           resolve(line);
         });
-        p.write("read");
+        p.write(line);
       });
     },
     close() {
@@ -152,31 +152,38 @@ const NL = String.fromCharCode(10);
 export function systemCaretReader(): CaretReader {
   return createCaretReader({
     platform: process.platform,
-    start() {
-      const script = Buffer.from(WINDOWS_LOOP, "utf16le").toString("base64");
-      const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", script], {
-        env: launchEnv(),
-        windowsHide: true,
-        stdio: ["pipe", "pipe", "ignore"],
-      });
-      let buffer = "";
-      let lines: (line: string) => void = () => undefined;
-      child.stdout.setEncoding("utf8");
-      child.stdout.on("data", (d: string) => {
-        buffer += d;
-        for (let i = buffer.indexOf(NL); i >= 0; i = buffer.indexOf(NL)) {
-          lines(buffer.slice(0, i));
-          buffer = buffer.slice(i + 1);
-        }
-      });
-      child.stdin.on("error", () => undefined);
-      return {
-        write: (line) => void child.stdin.write(line + NL),
-        onLine: (fn) => void (lines = fn),
-        onExit: (fn) => void child.once("exit", fn),
-        kill: () => void child.kill(),
-      };
-    },
-    once: (script) => new Promise((resolve, reject) => execFile("osascript", ["-e", script], { timeout: 1500, env: launchEnv() }, (err, out) => (err ? reject(err) : resolve(out)))),
+    start: () => spawnPowerShellLoop(WINDOWS_LOOP),
+    once: osascript,
   });
+}
+
+/** Runs one AppleScript and gives what it printed. */
+export const osascript = (script: string, timeout = 1500): Promise<string> =>
+  new Promise((resolve, reject) => execFile("osascript", ["-e", script], { timeout, env: launchEnv() }, (err, out) => (err ? reject(err) : resolve(out))));
+
+/** PowerShell kept alive with a script that answers one line per line; the script goes in the command line, so no file is written. */
+export function spawnPowerShellLoop(script: string): LineProcess {
+  const encoded = Buffer.from(script, "utf16le").toString("base64");
+  const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], {
+    env: launchEnv(),
+    windowsHide: true,
+    stdio: ["pipe", "pipe", "ignore"],
+  });
+  let buffer = "";
+  let lines: (line: string) => void = () => undefined;
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (d: string) => {
+    buffer += d;
+    for (let i = buffer.indexOf(NL); i >= 0; i = buffer.indexOf(NL)) {
+      lines(buffer.slice(0, i).trimEnd());
+      buffer = buffer.slice(i + 1);
+    }
+  });
+  child.stdin.on("error", () => undefined);
+  return {
+    write: (line) => void child.stdin.write(line + NL),
+    onLine: (fn) => void (lines = fn),
+    onExit: (fn) => void child.once("exit", fn),
+    kill: () => void child.kill(),
+  };
 }

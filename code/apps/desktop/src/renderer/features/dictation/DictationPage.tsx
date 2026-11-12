@@ -3,6 +3,7 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
 import { dictation, platformName } from "./api";
+import { OtherAudioCard } from "./OtherAudioCard";
 import { AppRulesCard, FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { MicExclusions } from "./MicExclusions";
 import { FirstRunCard } from "./FirstRunCard";
@@ -120,6 +121,7 @@ function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void
       <MicExclusions list={s.settings.micExclusions} />
       <OutputCard s={s} />
       <FeedbackCard s={s} />
+      <OtherAudioCard s={s} />
       <AppRulesCard s={s} />
       <ModelList status={s} />
       <Cleanup s={s} />

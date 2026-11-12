@@ -2,7 +2,7 @@ export type DuckMode = "nothing" | "mute" | "lower" | "pause";
 export type OutputKind = "speakers" | "headphones" | "unknown";
 
 const HEADPHONES = /headphone|headset|earphone|earbuds|airpods|buds|bluetooth|hands-free/i;
-const SPEAKERS = /speaker|monitor|display|hdmi|built-in|internal/i;
+const SPEAKERS = /speaker|monitor|display|hdmi|built-?in|internal/i;
 
 /** Guesses the output from its name. Unknown counts as speakers, because a microphone next to a loudspeaker is the case that needs ducking. */
 export function classifyOutput(label: string | undefined): OutputKind {

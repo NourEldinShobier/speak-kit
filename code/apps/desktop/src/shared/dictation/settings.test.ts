@@ -43,6 +43,8 @@ const DEFAULTS = {
   sounds: { enabled: false, volume: 50 },
   indicator: "bottom",
   audioCapMb: 512,
+  duckAudio: "nothing",
+  duckSpeakersOnly: true,
 };
 
 describe("dictation config", () => {
@@ -88,6 +90,15 @@ describe("settings added after the first release", () => {
       dictation: { smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
     }).dictation;
     expect(got).toMatchObject({ smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("other audio is left alone and only muted for speakers by default, a file without the fields loads that way and a bad mode falls back", () => {
+    expect(parseConfig({ dictation: { enabled: true } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    expect(parseConfig({ dictation: { duckAudio: "lower", duckSpeakersOnly: false } }).dictation).toMatchObject({ duckAudio: "lower", duckSpeakersOnly: false });
+    expect(parseConfig({ dictation: { duckAudio: "silence", duckSpeakersOnly: "no" } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ duckAudio: "pause", duckSpeakersOnly: false })).toBe(true);
+    expect(ok({ duckAudio: "silence" })).toBe(false);
   });
 
   it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {

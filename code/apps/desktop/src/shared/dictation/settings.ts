@@ -20,6 +20,7 @@ export const modelId = v.union([
   ),
 ]);
 export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
+export const DUCK_MODES = ["nothing", "mute", "lower", "pause"] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
@@ -201,6 +202,10 @@ const CORE_KEYS = {
   sounds: v.fallback(SoundsSchema, { enabled: false, volume: 50 }),
   indicator: v.fallback(v.picklist(INDICATORS), "bottom"),
   audioCapMb: v.fallback(v.picklist(AUDIO_CAPS_MB), 512),
+  /** What happens to other audio while a recording runs. */
+  duckAudio: v.fallback(v.picklist(DUCK_MODES), "nothing"),
+  /** Leave other audio alone when the sound goes to headphones, which the microphone cannot hear. */
+  duckSpeakersOnly: bool(true),
 };
 const MouseOne = /(^|\+)Mouse1(\+|$)/;
 const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; transformHotkey: string; cancelKey: string }): Shortcuts => ({
@@ -322,6 +327,8 @@ export const DictationPatchSchema = v.partial(
     sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),
     indicator: v.picklist(INDICATORS),
     audioCapMb: v.picklist(AUDIO_CAPS_MB),
+    duckAudio: v.picklist(DUCK_MODES),
+    duckSpeakersOnly: v.boolean(),
   }),
 );
 export type DictationPatch = v.InferOutput<typeof DictationPatchSchema>;

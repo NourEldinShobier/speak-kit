@@ -15,6 +15,8 @@ const BLOCK = 1280;
 const BLOCK_MS = (BLOCK / RATE) * 1000;
 /** Released-when-idle microphones stay open this long after a recording, so a quick second press (the double tap that locks) finds it open. */
 const IDLE_GRACE_MS = 1000;
+/** A microphone that is back within this long is bridged with silence; a longer drop cuts the take short. */
+const MAX_BRIDGE_MS = 200;
 
 const WORKLET = `class Tap extends AudioWorkletProcessor {
   buf = new Float32Array(${BLOCK}); n = 0;
@@ -43,6 +45,8 @@ const watch = createSilenceWatch();
 let live: Live | null = null;
 let opening: Promise<Live> | null = null;
 let interrupted = false;
+/** When the microphone ended during a recording; cleared by the first sound after it comes back. */
+let gapAt: number | undefined;
 let warm: ReturnType<typeof setTimeout> | undefined;
 let config: RecorderMicConfig = { saved: "", exclusions: [], avoidBluetooth: true, keepMs: 0 };
 let reopenedForSilence = false;
@@ -119,6 +123,13 @@ async function openMic(): Promise<Live> {
 }
 
 function onBlock(block: Float32Array, deviceId: string): void {
+  if (gapAt !== undefined && buffer.recording) {
+    // A short drop is filled with silence so the take keeps its timing; a longer one cuts the take short.
+    const gap = Date.now() - gapAt;
+    if (gap <= MAX_BRIDGE_MS) buffer.pad(gap);
+    else interrupted = true;
+    gapAt = undefined;
+  }
   buffer.push(block);
   if (buffer.recording || meterOn) dictation.recorder.level(levelOf(block));
   const verdict = watch.feed(isDigitalSilence(block), BLOCK_MS);
@@ -148,9 +159,11 @@ function onSilence(deviceId: string): void {
 }
 
 function onEnded(mic: Live): void {
-  interrupted ||= buffer.recording;
+  if (buffer.recording && live === mic) gapAt ??= Date.now();
+  else interrupted ||= buffer.recording;
   if (live !== mic) return;
   closeMic();
+  if (buffer.recording) void ensureOpen().catch(() => reopener.run()); // reopen at once, so a short drop can be bridged
   // A microphone kept ready that vanished is reopened in the background; one released when idle is simply opened by the next press.
   if (config.keepMs !== 0 || meterOn) reopener.run();
 }
@@ -227,14 +240,16 @@ async function start(prerollMs: number, mic: RecorderMicConfig): Promise<Recorde
     return { ok: false, code: micCode(e) };
   }
   interrupted = false;
+  gapAt = undefined;
   buffer.start(prerollMs);
   return { ok: true, device: { label: live.label, bluetooth: live.bluetooth } };
 }
 
 function stop(): RecorderResult {
   const r = buffer.stop();
-  const lost = interrupted;
+  const lost = interrupted || gapAt !== undefined;
   interrupted = false;
+  gapAt = undefined;
   if (live) cool();
   return { ok: true, pcm: r?.pcm ?? new Float32Array(0), sampleRate: RATE, peak: r?.peak ?? 0, ...(lost && { interrupted: true }) };
 }

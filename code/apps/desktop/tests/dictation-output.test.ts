@@ -43,6 +43,18 @@ describe("Dictation output settings page", () => {
     expect(saved(l).sounds).toEqual({ enabled: true, volume: 50 });
   });
 
+  it("saves what happens to other audio, and the speakers-only switch appears only when something is done", async () => {
+    const l = await start();
+    expect(await l.page.getByRole("switch", { name: "Only for speakers" }).count()).toBe(0);
+    await l.page.getByRole("combobox", { name: "Other audio while dictating" }).click();
+    await l.page.getByRole("option", { name: "Lower the volume" }).click();
+    await until(() => saved(l).duckAudio === "lower");
+    const only = l.page.getByRole("switch", { name: "Only for speakers" });
+    expect(await only.getAttribute("aria-checked")).toBe("true");
+    await only.click();
+    await until(() => saved(l).duckSpeakersOnly === false);
+  });
+
   it("saves smart spacing from the Output card", async () => {
     const l = await start();
     const toggle = l.page.getByRole("switch", { name: "Space before the text" });
