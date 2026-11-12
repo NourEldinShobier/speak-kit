@@ -45,6 +45,7 @@ interface StatusParts {
   models: ModelManager;
   historyCount: number;
   historyStatus: DictationStatus["historyStatus"];
+  historyCopy?: string | undefined;
   historyRev: number;
   keptRecordings: number;
   rewriteKey: boolean;
@@ -62,6 +63,7 @@ export const dictationStatus = ({
   models,
   historyCount,
   historyStatus,
+  historyCopy,
   historyRev,
   keptRecordings,
   rewriteKey,
@@ -81,6 +83,7 @@ export const dictationStatus = ({
   ...(models.error && { modelError: models.error }),
   historyCount,
   historyStatus,
+  ...(historyCopy && { historyCopy }),
   historyRev,
   keptRecordings,
   rewriteKey,

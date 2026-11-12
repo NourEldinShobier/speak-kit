@@ -120,13 +120,18 @@ export function Toolbar({ search, setSearch, view, setView, empty }: { search: s
   );
 }
 
-/** The two notices above the list: a file from a newer Speak Kit, and recordings the Recycle Bin would not take. */
+/** The notices above the list: a file from a newer Speak Kit, a file that could not be read, and recordings the Recycle Bin would not take. */
 export function Notices({ s }: { s: DictationStatus }) {
   return (
     <>
       {s.historyStatus === "newer" ? (
         <Banner tone="warning" title="This history was saved by a newer Speak Kit" action={<Button onClick={() => void api.updateAction("check")}>Check for updates</Button>}>
           It is left unchanged and a copy was made next to it. Nothing is saved to it until you update, so what you dictate now is not kept after you quit.
+        </Banner>
+      ) : null}
+      {s.historyStatus === "unreadable" ? (
+        <Banner tone="warning" title="The history file could not be read">
+          {s.historyCopy ? `A copy was kept as ${s.historyCopy} next to it. ` : ""}The history starts empty, and what you dictate from now on replaces the unreadable file.
         </Banner>
       ) : null}
       {s.keptRecordings > 0 ? (

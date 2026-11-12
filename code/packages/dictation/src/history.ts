@@ -57,7 +57,7 @@ export interface RemoveReport {
   kept: string[];
 }
 
-export type HistoryStatus = "ok" | "newer";
+export type HistoryStatus = "ok" | "newer" | "unreadable";
 
 export interface History {
   /** Resolves to the new entry's id, or undefined when nothing is kept (retention "off"). */
@@ -76,8 +76,10 @@ export interface History {
   useVersion(id: string, versionId: string): Promise<boolean>;
   /** Forgets recordings that were deleted from disk. The entries keep their text. */
   dropAudio(files: readonly string[]): Promise<void>;
-  /** "newer": the file was written by a newer version of the app; it is left alone and the history stays empty in this session. */
+  /** "newer": the file was written by a newer version of the app; it is left alone and the history stays empty in this session. "unreadable": the file was not a history; a copy was kept and the history starts empty. */
   status(): HistoryStatus;
+  /** The name of the copy kept for a newer or unreadable file, when one was made. */
+  preservedAs(): string | undefined;
 }
 
 const DAY_MS = 86_400_000;
@@ -94,17 +96,19 @@ const isEntry = (v: unknown): v is HistoryEntry => {
   return typeof e === "object" && e !== null && typeof e.id === "string" && typeof e.at === "number" && typeof e.text === "string" && typeof e.raw === "string" && typeof e.durationMs === "number";
 };
 
-type Parsed = { entries: HistoryEntry[]; newer: boolean };
+type Parsed = { entries: HistoryEntry[]; state: HistoryStatus };
 
 // Stored data is untrusted: keep what has the right shape, newest first. A bare array is the first format; an object carries a version.
 function parse(stored: unknown): Parsed {
   let list: unknown = stored;
   if (!Array.isArray(stored) && typeof stored === "object" && stored !== null) {
     const o = stored as { version?: unknown; entries?: unknown };
-    if (typeof o.version === "number" && o.version > HISTORY_VERSION) return { entries: [], newer: true };
+    if (typeof o.version === "number" && o.version > HISTORY_VERSION) return { entries: [], state: "newer" };
     list = o.entries;
   }
-  return { entries: Array.isArray(list) ? list.filter(isEntry).sort((a, b) => b.at - a.at) : [], newer: false };
+  // Anything that is neither a list nor an object carrying one is not a history at all.
+  if (!Array.isArray(list)) return { entries: [], state: "unreadable" };
+  return { entries: list.filter(isEntry).sort((a, b) => b.at - a.at), state: "ok" };
 }
 
 function keep(all: HistoryEntry[], now: number, retention: Retention): HistoryEntry[] {
@@ -138,7 +142,8 @@ class Store implements History {
   private entries: HistoryEntry[] = [];
   private loading: Promise<void> | undefined;
   private writes: Promise<void> = Promise.resolve();
-  private newer = false;
+  private state: HistoryStatus = "ok";
+  private copy: string | undefined;
   private readonly deps: Deps;
 
   constructor(deps: Deps) {
@@ -150,18 +155,25 @@ class Store implements History {
       try {
         const p = parse(await this.deps.storage.load());
         this.entries = p.entries;
-        this.newer = p.newer;
-        if (p.newer) await this.deps.storage.preserve?.("newer");
+        this.state = p.state;
       } catch {
-        // Unreadable storage leaves the history empty; the next save replaces it.
+        // Storage that cannot be read leaves the history empty; the next save replaces it.
+        this.state = "unreadable";
+      }
+      if (this.state === "ok") return;
+      try {
+        this.copy = (await this.deps.storage.preserve?.(this.state)) || undefined;
+      } catch {
+        // the notice still shows, without a file name
       }
     })());
   }
 
-  status = (): HistoryStatus => (this.newer ? "newer" : "ok");
+  status = (): HistoryStatus => this.state;
+  preservedAs = (): string | undefined => this.copy;
 
   private save(): Promise<void> {
-    if (this.newer) return this.writes; // a newer app's file is never overwritten
+    if (this.state === "newer") return this.writes; // a newer app's file is never overwritten
     const snapshot = { version: HISTORY_VERSION, entries: this.entries };
     this.writes = this.writes.then(async () => {
       try {

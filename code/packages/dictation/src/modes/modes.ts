@@ -24,13 +24,19 @@ export const MAX_MODE_NAME = 40;
 
 export const defaultMode = (): Mode => ({ id: DEFAULT_MODE_ID, name: "Default", apps: [], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: false, terms: [] });
 
+/** The list with the default mode in it, first: the one that was saved, or the built-in one when nothing about it was ever changed. */
+export const withDefault = (modes: readonly Mode[]): Mode[] => [modes.find((m) => m.id === DEFAULT_MODE_ID) ?? defaultMode(), ...modes.filter((m) => m.id !== DEFAULT_MODE_ID)];
+
+/** The list as saved: the default mode only when the person changed something about it, so a config that never touched it stays as it was. */
+export const withoutPristineDefault = (modes: readonly Mode[]): Mode[] => modes.filter((m) => m.id !== DEFAULT_MODE_ID || JSON.stringify(m) !== JSON.stringify(defaultMode()));
+
 export type ModeError = "empty" | "too-long" | "duplicate" | "full";
 
 export function addMode(modes: readonly Mode[], name: string): { ok: true; modes: Mode[]; mode: Mode } | { ok: false; error: ModeError } {
   const n = name.trim();
   if (!n) return { ok: false, error: "empty" };
   if ([...n].length > MAX_MODE_NAME) return { ok: false, error: "too-long" };
-  if (modes.some((m) => m.name.toLowerCase() === n.toLowerCase())) return { ok: false, error: "duplicate" };
+  if (n.toLowerCase() === defaultMode().name.toLowerCase() || modes.some((m) => m.name.toLowerCase() === n.toLowerCase())) return { ok: false, error: "duplicate" };
   if (modes.length >= MAX_MODES) return { ok: false, error: "full" };
   const mode: Mode = { ...defaultMode(), id: `m${Date.now().toString(36)}${modes.length}`, name: n, capitals: "keep" };
   return { ok: true, modes: [...modes, mode], mode };

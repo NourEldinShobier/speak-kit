@@ -78,6 +78,7 @@ export class DictationService {
       core: () => this.core,
       audio: () => this.#audio,
       cfg: () => this.#cfg,
+      dictating: () => this.state.status !== "idle" && this.state.status !== "error",
       stt: this.stt,
       files: this.#files,
       push: () => this.#push(true),

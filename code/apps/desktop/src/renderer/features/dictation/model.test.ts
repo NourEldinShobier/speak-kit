@@ -172,6 +172,7 @@ describe("history numbers and tags", () => {
     expect(rewriteTag("numbers-only", 4000)).toBe("Not rewritten, only numbers");
     expect(rewriteTag("failed", 4000)).toContain("could not be reached");
     expect(rewriteTag("changed-facts", 4000)).toContain("changed a number");
+    expect(rewriteTag("changed-style", 4000)).toContain("capital letters");
     expect(rewriteTag(undefined, 4000)).toBeUndefined();
   });
 });

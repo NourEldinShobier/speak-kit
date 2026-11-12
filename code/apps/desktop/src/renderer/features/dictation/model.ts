@@ -169,6 +169,8 @@ export function rewriteTag(outcome: HistoryItem["rewrite"], deadlineMs: number):
       return "Not rewritten, only numbers";
     case "changed-facts":
       return "Pasted as said, the rewrite changed a number";
+    case "changed-style":
+      return "Pasted as said, the rewrite changed capital letters";
     default:
       return undefined;
   }

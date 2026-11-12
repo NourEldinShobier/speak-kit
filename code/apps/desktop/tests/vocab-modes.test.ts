@@ -263,6 +263,23 @@ describe("Modes page", () => {
   });
 });
 
+describe("Default mode", () => {
+  it("opens a detail page where the rewrite pass can be turned on for apps outside every mode, and saves it once", async () => {
+    const l = await start();
+    await l.page.evaluate(() => window.speakkitDictation.patchSettings({ rewrite: { enabled: true, deadlineMs: 4000 } }));
+    await open(l, "Modes");
+    await l.page.locator("[data-mode=default]").click();
+    await l.page.getByRole("heading", { name: "Default", exact: true, level: 1 }).waitFor();
+    expect(await l.page.getByRole("button", { name: "Delete mode" }).count()).toBe(0);
+    await l.page.getByRole("combobox", { name: "Rewrite pass" }).click();
+    await l.page.getByRole("option", { name: "On" }).click();
+    await expect.poll(async () => (await settings(l)).modes.filter((m) => m.id === "default").map((m) => m.rewrite)).toEqual([true]);
+    await l.page.getByRole("button", { name: "Modes", exact: true }).click();
+    expect(await l.page.getByRole("list", { name: "Modes" }).locator("li").count()).toBe(1);
+    expect(await l.page.locator("[data-mode=default] .lm-chip").allTextContents()).toEqual(["Shared words only", "Rewrite on"]);
+  });
+});
+
 describe("History page", () => {
   const seed = (dir: string, entries: object[], wav = false) => {
     writeFileSync(path.join(dir, "dictation-history.json"), JSON.stringify({ version: 1, entries }));
@@ -358,6 +375,15 @@ describe("History page", () => {
     await l.page.getByText("This history was saved by a newer Speak Kit").waitFor();
     await l.page.getByRole("button", { name: "Check for updates" }).waitFor();
     expect(JSON.parse(readFileSync(path.join(userData, "dictation-history.json"), "utf8")).version).toBe(99);
+  });
+
+  it("says so when the history file cannot be read, and keeps a copy of it", async () => {
+    const userData = tmp();
+    writeFileSync(path.join(userData, "dictation-history.json"), "{ half a file");
+    const l = await start({ userData });
+    await open(l, "History");
+    await l.page.getByText("The history file could not be read").waitFor();
+    await l.page.getByText(/A copy was kept as dictation-history\.unreadable-\d+\.json/).waitFor();
   });
 
   it("keeps the file and says so when the Recycle Bin refuses a recording", async () => {

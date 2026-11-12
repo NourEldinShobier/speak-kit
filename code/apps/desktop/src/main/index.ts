@@ -83,6 +83,12 @@ const addActivity = (kind: Activity["kind"], title: string, body: string) => {
 const unreadable = (what: string, file: string) =>
   addActivity("error", `${what} could not be read`, `Speak Kit started from defaults. The old file is kept as ${path.basename(file)} in ${path.dirname(file)}.`);
 if (store.recovered) unreadable("Settings", store.recovered);
+if (store.dropped.count)
+  addActivity(
+    "error",
+    `${store.dropped.count} dictation ${store.dropped.count === 1 ? "entry" : "entries"} could not be read`,
+    `Words, modes or replacements in Settings were broken or repeated and were left out.${store.dropped.copy ? ` The old file is kept as ${path.basename(store.dropped.copy)}.` : ""}`,
+  );
 
 const sinks = new Set<(s: AppState) => void>();
 const serverApi = new ServerApi(

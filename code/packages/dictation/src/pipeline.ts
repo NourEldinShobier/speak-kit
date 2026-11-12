@@ -1,6 +1,6 @@
 import type { History } from "./history";
 import { applyMode, resolveMode } from "./modes/modes";
-import { rewritePass, type RewriteOutcome } from "./modes/rewrite";
+import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
 import { buildPrompt, soundsLikeRules } from "./vocabulary";
@@ -69,6 +69,13 @@ async function keepRecording(ctx: Context, id: string, clip: Clip): Promise<void
   }
 }
 
+const rewriteStyle = (s: Pick<Settings, "lowercase" | "autoCapitalize" | "stripFinalStop">): RewriteStyle => {
+  let capitals: RewriteStyle["capitals"] = "keep";
+  if (s.lowercase) capitals = "lower";
+  else if (s.autoCapitalize) capitals = "sentence";
+  return { capitals, stripFinalStop: s.stripFinalStop };
+};
+
 /** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
@@ -85,7 +92,13 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   ctx.inserting();
   let rewrite: RewriteOutcome | undefined;
   if (eff.rewrite && ctx.settings.rewrite.enabled && ctx.deps.rewriter) {
-    const r = await rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock });
+    const r = await rewritePass({
+      text,
+      rewriter: ctx.deps.rewriter,
+      deadlineMs: ctx.settings.rewrite.deadlineMs,
+      clock: ctx.deps.clock,
+      style: rewriteStyle(eff),
+    });
     text = r.text;
     rewrite = r.outcome;
   }

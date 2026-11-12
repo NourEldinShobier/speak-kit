@@ -215,6 +215,16 @@ describe("history page", () => {
     expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).not.toContain("newer Speak Kit");
   });
 
+  it("tells the person when the history file could not be read, naming the kept copy", () => {
+    current.status = status({ historyStatus: "unreadable", historyCopy: "history.unreadable-5.json" });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    expect(t).toContain("The history file could not be read");
+    expect(t).toContain("A copy was kept as history.unreadable-5.json next to it.");
+    current.status = status({ historyStatus: "unreadable" });
+    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).not.toContain("A copy was kept");
+    current.status = status();
+  });
+
   it("reports recordings the Recycle Bin would not take, with the count", () => {
     current.status = status({ keptRecordings: 2 });
     const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));

@@ -4,7 +4,7 @@ import type { HistoryStorage } from "@speakkit/dictation";
 
 /**
  * One JSON file, written whole through a temporary file so a crash never leaves half a history. A missing file is an empty history. A file that does not
- * parse, or that a newer version of the app wrote, is copied next to itself first (`preserve`) so nothing the person had is lost.
+ * parse throws on load; that one and a file a newer version of the app wrote are copied next to themselves (`preserve`) so nothing the person had is lost.
  */
 export function createHistoryStorage(file: string, now: () => number = Date.now): HistoryStorage {
   return {
@@ -15,12 +15,7 @@ export function createHistoryStorage(file: string, now: () => number = Date.now)
       } catch {
         return [];
       }
-      try {
-        return JSON.parse(text);
-      } catch {
-        await this.preserve?.("unreadable");
-        return [];
-      }
+      return JSON.parse(text); // a file that is not JSON throws; the history reports it as unreadable and keeps a copy
     },
     async save(value) {
       await mkdir(path.dirname(file), { recursive: true });
@@ -33,8 +28,9 @@ export function createHistoryStorage(file: string, now: () => number = Date.now)
       const copy = `${file.slice(0, file.length - ext.length)}.${reason}-${now()}${ext}`;
       try {
         await copyFile(file, copy);
+        return path.basename(copy);
       } catch {
-        // Nothing to keep when the file is already gone.
+        return undefined; // nothing to keep when the file is already gone
       }
     },
   };

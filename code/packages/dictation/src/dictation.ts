@@ -53,6 +53,7 @@ class Runtime implements Dictation {
       clear: () => this.store.clear(),
       stats: async () => historyStats(await this.store.list()),
       status: () => this.store.status(),
+      preservedAs: () => this.store.preservedAs(),
       addVersion: (id, v) => this.store.addVersion(id, v),
       useVersion: (id, vid) => this.store.useVersion(id, vid),
       audio: (id) => this.recording(id),

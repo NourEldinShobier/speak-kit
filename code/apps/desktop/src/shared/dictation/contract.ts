@@ -45,8 +45,10 @@ export interface DictationStatus {
   /** The model failed to download or load. */
   modelError?: string;
   historyCount: number;
-  /** "newer": history.json was written by a newer Speak Kit; it is left unchanged, a copy was made, and nothing is saved this session. */
-  historyStatus: "ok" | "newer";
+  /** "newer": history.json was written by a newer Speak Kit; it is left unchanged, a copy was made, and nothing is saved this session. "unreadable": it was not a history; a copy was made and the history starts empty. */
+  historyStatus: "ok" | "newer" | "unreadable";
+  /** The file name of the copy kept for a newer or unreadable history file. */
+  historyCopy?: string;
   /** Changes whenever an entry changes without the count changing (a version added or chosen, a recording removed), so the History page reloads. */
   historyRev: number;
   /** Recordings the Recycle Bin would not take: they are still on disk. */
@@ -56,7 +58,7 @@ export interface DictationStatus {
   /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
   promptDropped?: boolean;
   /** "Transcribe again" for one entry, while it runs or after it failed; absent otherwise. */
-  redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" };
+  redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" | "busy" };
 }
 
 export interface HistoryVersion {

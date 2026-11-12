@@ -26,11 +26,14 @@ describe("history storage", () => {
     expect(await readFile(file, "utf8")).toBe("[1]");
   });
 
-  it("treats a file that is not JSON as an empty history and keeps a copy of it first", async () => {
+  it("throws on a file that is not JSON, so the history reports it, and a copy then keeps it", async () => {
     const file = path.join(dir, "h.json");
     await writeFile(file, "{ half a fi");
-    expect(await createHistoryStorage(file, () => 5).load()).toEqual([]);
+    const s = createHistoryStorage(file, () => 5);
+    await expect(s.load()).rejects.toThrow();
+    expect(await s.preserve?.("unreadable")).toBe("h.unreadable-5.json");
     expect(await readFile(path.join(dir, "h.unreadable-5.json"), "utf8")).toBe("{ half a fi");
+    expect(await createHistoryStorage(path.join(dir, "none.json")).preserve?.("unreadable")).toBeUndefined();
   });
 
   it("copies a file on request without touching the original, and does not fail when there is nothing to copy", async () => {

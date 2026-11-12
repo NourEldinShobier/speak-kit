@@ -64,8 +64,8 @@ export interface Inserter {
 export interface HistoryStorage {
   load(): Promise<unknown>;
   save(value: unknown): Promise<void>;
-  /** Keeps a copy of the file as it is, before the app goes on without it (a newer or unreadable file). */
-  preserve?(reason: "newer" | "unreadable"): Promise<void>;
+  /** Keeps a copy of the file as it is, before the app goes on without it (a newer or unreadable file); gives the copy's name. */
+  preserve?(reason: "newer" | "unreadable"): Promise<string | undefined | void>;
 }
 
 /** Recordings kept next to the history. */
@@ -134,6 +134,7 @@ export interface Dictation {
     clear(): Promise<RemoveReport>;
     stats(): Promise<HistoryStats>;
     status(): HistoryStatus;
+    preservedAs(): string | undefined;
     addVersion(id: string, v: { model: string; at: number; text: string; ms: number }): Promise<string | undefined>;
     useVersion(id: string, versionId: string): Promise<boolean>;
     /** The kept recording of an entry, or undefined. */
