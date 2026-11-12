@@ -21,6 +21,8 @@ export interface Media {
   /** The video encoder fell back to the processor. */
   softwareEncoder?: boolean;
   windowRect?: Rect;
+  /** Labels of the controls in the window in front when the recording ended (agent context); undefined when off or unreadable. */
+  context?: string | undefined;
 }
 
 export interface SessionState {

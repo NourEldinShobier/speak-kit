@@ -80,6 +80,13 @@ function pickArea(v: OverlayView) {
   const box = el("div", "ov-box ov-box--area");
   const badge = el("div", "ov-badge");
   box.append(badge);
+  // the eight handles of the rectangle, drawn while it is dragged out
+  for (const at of ["nw", "n", "ne", "e", "se", "s", "sw", "w"]) {
+    const handle = el("span", "ov-handle");
+    handle.dataset.at = at;
+    handle.setAttribute("aria-hidden", "true");
+    box.append(handle);
+  }
   box.hidden = true;
   root.append(box);
   let from: { x: number; y: number } | null = null;

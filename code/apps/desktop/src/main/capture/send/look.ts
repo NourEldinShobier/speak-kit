@@ -15,10 +15,12 @@ export interface Picture {
 export const coverFile = (r: Pick<CaptureRecord, "kind" | "media" | "sheet" | "edits">): string | undefined => (r.kind === "screenshot" ? shownFile(r, r.media) : r.sheet);
 
 /** What the voice chat reads: the picture and the words said while recording, marked as a capture so the model does not take it for the live screen. */
-export function lookOfCapture(r: Pick<CaptureRecord, "title" | "words">, pic: Picture): ScreenLook {
-  const text = (r.words ?? [])
+export function lookOfCapture(r: Pick<CaptureRecord, "title" | "words" | "context">, pic: Picture): ScreenLook {
+  const said = (r.words ?? [])
     .map((w) => w.text)
     .join(" ")
     .slice(0, MAX_TEXT);
+  const controls = r.context ? `Controls on screen when the recording ended:\n${r.context}` : "";
+  const text = [said, controls].filter(Boolean).join("\n\n");
   return { image: pic.base64, width: pic.width, height: pic.height, text, ocr: text ? "ok" : "empty", target: r.title.slice(0, 120), scope: "capture" };
 }

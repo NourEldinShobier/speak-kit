@@ -93,3 +93,34 @@ body,
   inset: 0;
   cursor: crosshair;
 }
+
+.ov-handle {
+  position: absolute;
+  inline-size: 10px;
+  block-size: 10px;
+  box-sizing: border-box;
+  border: 1px solid #201e25;
+  border-radius: 2px;
+  background: #ffffff;
+  pointer-events: none;
+}
+.ov-handle[data-at^="n"] {
+  inset-block-start: -5px;
+}
+.ov-handle[data-at^="s"] {
+  inset-block-end: -5px;
+}
+.ov-handle[data-at$="w"] {
+  inset-inline-start: -5px;
+}
+.ov-handle[data-at$="e"] {
+  inset-inline-end: -5px;
+}
+.ov-handle[data-at="n"],
+.ov-handle[data-at="s"] {
+  inset-inline-start: calc(50% - 5px);
+}
+.ov-handle[data-at="e"],
+.ov-handle[data-at="w"] {
+  inset-block-start: calc(50% - 5px);
+}

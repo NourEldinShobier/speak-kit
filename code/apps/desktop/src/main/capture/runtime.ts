@@ -6,6 +6,7 @@ import { CapsuleActionSchema, type CapsuleAction, type CapturePhase } from "../.
 import { noticeFor, type Notice, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
+import { createAgentContext } from "./context";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
 import { capsuleHandlers } from "./capsule-actions";
@@ -15,7 +16,6 @@ import { createFence, type Fence } from "./fence";
 import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { AfterCapture } from "./after-capture";
 import { NoticeBoard } from "./notice-board";
-import type { FakeRecorderOptions } from "./fake";
 import type { GestureAction } from "./gesture";
 import type { ShiftAction } from "./gesture/shift-ink";
 import type { History } from "./history";
@@ -57,8 +57,10 @@ export class CaptureRuntime {
   readonly controller: CaptureController;
   readonly #d: RuntimeDeps;
   #session: Session;
-  readonly #holder: RecorderHolder;
+  /** The recorder window; tests script it. */
+  readonly recorder: RecorderHolder;
   readonly #place: Placement;
+  readonly #context: () => Promise<string | undefined>;
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
   #after!: AfterCapture;
@@ -73,7 +75,7 @@ export class CaptureRuntime {
     this.#d = deps;
     this.#board = new NoticeBoard({ showInCapsule: (n) => this.controller.after(n && { kind: "failed", notice: n }), publish: () => deps.publish() });
     this.#guards = createRecordingGuards({ notify: (n) => this.notify(n), log: (l) => deps.ctx.log.warn(l), params: () => ({ os: deps.platform.os }), session: () => this.#session });
-    this.#holder = new RecorderHolder({
+    this.recorder = new RecorderHolder({
       recorder: deps.recorder,
       distDir: deps.distDir,
       narration: () => this.#settings.narration,
@@ -83,6 +85,7 @@ export class CaptureRuntime {
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
     });
+    this.#context = createAgentContext({ enabled: () => this.#settings.experiments.agentContext, os: deps.platform.os });
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();
@@ -147,7 +150,7 @@ export class CaptureRuntime {
 
   #makeSession(): Session {
     const d = this.#d;
-    const holder = this.#holder;
+    const holder = this.recorder;
     const epoch = this.#epoch;
     return createSession(
       createSessionPorts({
@@ -183,13 +186,9 @@ export class CaptureRuntime {
           this.controller.micMissing = true;
         },
         noticeParams: () => ({ os: d.platform.os, days: this.#settings.retentionDays }),
+        context: this.#context,
       }),
     );
-  }
-
-  /** Tests only: tells the scripted recorder what to do. */
-  scriptRecorder(o: FakeRecorderOptions) {
-    this.#holder.script(o);
   }
 
   /** The folder changed: a new session on the new files. */
@@ -342,6 +341,6 @@ export class CaptureRuntime {
     this.#session.discard();
     this.#targets.dispose();
     this.controller.dispose();
-    this.#holder.dispose();
+    this.recorder.dispose();
   }
 }
