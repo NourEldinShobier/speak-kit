@@ -3,6 +3,7 @@ import { Banner, Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { NETWORK_HOSTS, NO_TELEMETRY, WHEN_LABEL } from "../../../shared/settings/network";
 import { MIC_ACCESS_TEXT, type MicAccess } from "../../../shared/settings/permissions";
+import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { rowAttr } from "./focus";
 
@@ -27,13 +28,14 @@ function useMic(): MicAccess | null {
 }
 
 export function NetworkTable() {
+  const { t } = useT();
   return (
     <table className="sk-notify" data-testid="network-table">
       <thead>
         <tr>
-          <th scope="col">Address</th>
-          <th scope="col">Why</th>
-          <th scope="col">When</th>
+          <th scope="col">{t("privacy.address")}</th>
+          <th scope="col">{t("privacy.why")}</th>
+          <th scope="col">{t("privacy.when")}</th>
         </tr>
       </thead>
       <tbody>
@@ -50,36 +52,34 @@ export function NetworkTable() {
 }
 
 export function PrivacyPage({ s }: { s: AppState }) {
+  const { t } = useT();
   const mic = useMic();
   const blocked = mic === "denied" || mic === "restricted";
   return (
-    <Page title="Privacy" lead="What stays on this computer.">
-      <SettingsSection title="Your data">
-        <SettingRow {...rowAttr("privacy/telemetry")} label="Telemetry" description={NO_TELEMETRY} control={<span>Off, always</span>} />
-        <SettingRow
-          label="Library, audio and dictation"
-          description={`Kept in ${s.platform === "darwin" ? "~/Library/Application Support" : "your user data folder"} and not uploaded, except voice chat audio you send with your own key.`}
-        />
+    <Page title={t("privacy.title")} lead={t("privacy.lead")}>
+      <SettingsSection title={t("privacy.data")}>
+        <SettingRow {...rowAttr("privacy/telemetry")} label={t("privacy.telemetry")} description={NO_TELEMETRY} control={<span>{t("privacy.telemetryOff")}</span>} />
+        <SettingRow label={t("privacy.library")} description={t(s.platform === "darwin" ? "privacy.libraryMac" : "privacy.libraryWin")} />
       </SettingsSection>
-      <SettingsSection title="Permissions">
+      <SettingsSection title={t("privacy.permissions")}>
         <SettingRow
           {...rowAttr("privacy/microphone")}
-          label="Microphone access"
-          description="Needed for dictation and voice chat. Dictation audio is processed on this computer. Voice chat sends audio to OpenAI with your own key."
+          label={t("privacy.mic")}
+          description={t("privacy.micHint")}
           control={
             <div className="sk-row-actions">
-              <span data-testid="mic-status">{mic ? MIC_ACCESS_TEXT[mic] : "Checking..."}</span>
-              <Button onClick={() => api.openSystemSettings("microphone")}>{s.platform === "darwin" ? "Open System Settings" : "Open Windows settings"}</Button>
+              <span data-testid="mic-status">{mic ? MIC_ACCESS_TEXT[mic] : t("privacy.checking")}</span>
+              <Button onClick={() => api.openSystemSettings("microphone")}>{t(s.platform === "darwin" ? "privacy.openMac" : "privacy.openWin")}</Button>
             </div>
           }
         />
       </SettingsSection>
       {blocked && (
-        <Banner tone="warning" title="The microphone is blocked">
-          Dictation and voice chat cannot hear you until you allow Speak Kit in the system settings.
+        <Banner tone="warning" title={t("privacy.blockedTitle")}>
+          {t("privacy.blockedBody")}
         </Banner>
       )}
-      <SettingsSection title="Network" description="The only addresses Speak Kit can reach.">
+      <SettingsSection title={t("privacy.network")} description={t("privacy.networkHint")}>
         <div {...rowAttr("privacy/network")} className="sk-pad">
           <NetworkTable />
         </div>

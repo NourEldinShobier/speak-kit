@@ -3,12 +3,14 @@ import { Banner, Button, OptInCard, SettingRow, SettingsSection, StatusPill, Tog
 import { ERROR_CODES } from "../../../shared/control/contract";
 import type { AutomationInfo, CommandLineAction } from "../../../shared/control/info";
 import type { AppState } from "../../../shared/ipc";
+import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
 import { change } from "./change";
 
 /** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
-function CopyButton({ text, label, caption = "Copy" }: { text: string; label: string; caption?: string }) {
+function CopyButton({ text, label, caption }: { text: string; label: string; caption?: string }) {
+  const { t } = useT();
   const [done, setDone] = useState(false);
   return (
     <Button
@@ -24,7 +26,7 @@ function CopyButton({ text, label, caption = "Copy" }: { text: string; label: st
         setTimeout(() => setDone(false), 1500);
       }}
     >
-      {done ? "Copied" : caption}
+      {done ? t("automation.copied") : (caption ?? t("automation.copy"))}
     </Button>
   );
 }
@@ -80,10 +82,11 @@ function CommandLineRow({ info, version, busy, onAction }: { info: AutomationInf
 
 /** What the tool can do, how it ends and which errors it names: the reference a script author reads. */
 function Reference() {
+  const { t } = useT();
   return (
     <>
       <div className="sk-pad" data-testid="automation-commands">
-        <b>What it can do</b>
+        <b>{t("automation.referenceWhat")}</b>
         <ul className="sk-exit">
           {COMMAND_ROWS.map((r) => (
             <li key={r.usage}>
@@ -93,8 +96,8 @@ function Reference() {
         </ul>
       </div>
       <div className="sk-pad" data-testid="automation-exit-codes">
-        <b>JSON output and exit codes</b>
-        <p>Add --json to any command for output a script can read. The exit code says what happened.</p>
+        <b>{t("automation.referenceJson")}</b>
+        <p>{t("automation.referenceJsonHint")}</p>
         <ul className="sk-exit">
           {EXIT_ROWS.map((r) => (
             <li key={r.code}>
@@ -104,8 +107,8 @@ function Reference() {
         </ul>
       </div>
       <div className="sk-pad" data-testid="automation-errors">
-        <b>Error codes</b>
-        <p>With --json a failure names its code. These are all of them.</p>
+        <b>{t("automation.referenceErrors")}</b>
+        <p>{t("automation.referenceErrorsHint")}</p>
         <ul className="sk-exit">
           {ERROR_CODES.map((c) => (
             <li key={c}>
@@ -119,12 +122,13 @@ function Reference() {
 }
 
 function SkillRow({ info, onInstall }: { info: AutomationInfo; onInstall(): void }) {
+  const { t } = useT();
   const v = skillView(info.skill);
   return (
     <SettingRow
       label={
         <span className="sk-row-actions">
-          Agent skill <StatusPill tone={v.pill.tone}>{v.pill.text}</StatusPill>
+          {t("automation.skill")} <StatusPill tone={v.pill.tone}>{v.pill.text}</StatusPill>
         </span>
       }
       description={v.text}
@@ -135,7 +139,7 @@ function SkillRow({ info, onInstall }: { info: AutomationInfo; onInstall(): void
               {v.action.label}
             </Button>
           )}
-          <CopyButton text={SKILL_COMMAND} label="Copy the skill install command" caption="Copy install" />
+          <CopyButton text={SKILL_COMMAND} label={t("automation.copySkill")} caption={t("automation.copyInstall")} />
         </div>
       }
     />
@@ -144,14 +148,15 @@ function SkillRow({ info, onInstall }: { info: AutomationInfo; onInstall(): void
 
 /** What went wrong, with the command to do it by hand when there is one, and a way to try again. */
 export function FailedBanner({ message, manual, onRetry }: { message: string; manual: string | null; onRetry(): void }) {
+  const { t } = useT();
   return (
     <Banner
       tone="error"
-      title="That did not work"
+      title={t("automation.failed")}
       action={
         <span className="sk-row-actions">
-          {manual && <CopyButton text={manual} label="Copy the command" caption="Copy command" />}
-          <Button onClick={onRetry}>Try again</Button>
+          {manual && <CopyButton text={manual} label={t("automation.copyCommand")} caption={t("automation.copyCommandCaption")} />}
+          <Button onClick={onRetry}>{t("automation.tryAgain")}</Button>
         </span>
       }
     >
@@ -171,21 +176,22 @@ interface SectionProps {
 }
 
 function CommandLineSection({ s, info, onAction, onReset, onSkill, onTerminal, failed }: SectionProps) {
+  const { t } = useT();
   const installed = info?.commandLine.kind === "installed" || info?.commandLine.kind === "needs-path";
   const manual = info && !installed ? info.manualInstall : null;
   return (
-    <SettingsSection title="Command-line tool">
+    <SettingsSection title={t("automation.cli")}>
       {failed && <FailedBanner message={failed} manual={manual} onRetry={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")} />}
       {info && <CommandLineRow info={info} version={s.version} busy={false} onAction={onAction} />}
       <SettingRow
-        label="Try it"
-        description="Prints what Speak Kit is doing right now."
+        label={t("automation.tryIt")}
+        description={t("automation.tryItHint")}
         control={
           <div className="sk-row-actions">
             {code(TRY_COMMAND)}
-            <CopyButton text={TRY_COMMAND} label="Copy the command" />
+            <CopyButton text={TRY_COMMAND} label={t("automation.copyCommand")} />
             <Button disabled={!installed} onClick={onTerminal}>
-              Test in terminal
+              {t("automation.testTerminal")}
             </Button>
           </div>
         }
@@ -193,13 +199,13 @@ function CommandLineSection({ s, info, onAction, onReset, onSkill, onTerminal, f
       {info && <SkillRow info={info} onInstall={onSkill} />}
       <Reference />
       <SettingRow
-        label="Discovery file"
-        description="Scripts find the local server here. It holds a port and a private token, so keep it out of shared folders."
+        label={t("automation.discovery")}
+        description={t("automation.discoveryHint")}
         control={
           <div className="sk-row-actions">
             {code(info?.discoveryFile ?? "control.json")}
-            <Button onClick={() => void api.openPath("data")}>Show file</Button>
-            <Button onClick={onReset}>Reset token</Button>
+            <Button onClick={() => void api.openPath("data")}>{t("automation.showFile")}</Button>
+            <Button onClick={onReset}>{t("automation.resetToken")}</Button>
           </div>
         }
       />
@@ -208,43 +214,45 @@ function CommandLineSection({ s, info, onAction, onReset, onSkill, onTerminal, f
 }
 
 function McpSection({ s }: { s: AppState }) {
+  const { t } = useT();
   const on = s.config.controlServer;
   return (
-    <SettingsSection title="MCP server">
+    <SettingsSection title={t("automation.mcp")}>
       <SettingRow
         label={
           <span className="sk-row-actions">
-            Let AI apps use Speak Kit <StatusPill tone={on ? "green" : "neutral"}>{on ? "Running" : "Off"}</StatusPill>
+            {t("automation.letAi")} <StatusPill tone={on ? "green" : "neutral"}>{on ? t("automation.on") : t("automation.off")}</StatusPill>
           </span>
         }
-        description="Only this computer can connect."
-        control={<Toggle aria-label="Let AI apps use Speak Kit" checked={on} onChange={(v) => void change({ controlServer: v })} />}
+        description={t("automation.onlyHere")}
+        control={<Toggle aria-label={t("automation.letAi")} checked={on} onChange={(v) => void change({ controlServer: v })} />}
       />
-      {toolRows(s.config.mcpTools).map((t) => (
+      {toolRows(s.config.mcpTools).map((tool) => (
         <SettingRow
-          key={t.name}
-          label={code(t.name)}
-          description={`${t.description}${t.private ? " Off until you turn it on." : ""}`}
-          control={<Toggle aria-label={t.title} checked={t.on} disabled={!on} onChange={(v) => void change({ mcpTools: { ...s.config.mcpTools, [t.name]: v } })} />}
+          key={tool.name}
+          label={code(tool.name)}
+          description={`${tool.description}${tool.private ? ` ${t("automation.offUntil")}` : ""}`}
+          control={<Toggle aria-label={tool.title} checked={tool.on} disabled={!on} onChange={(v) => void change({ mcpTools: { ...s.config.mcpTools, [tool.name]: v } })} />}
         />
       ))}
       <div className="sk-pad">
-        <b>Add it to your AI app</b>
-        <p>Paste this into the MCP settings of the app. It finds the token on its own, so none is written here.</p>
-        <pre className="sk-code sk-code--block" aria-label="MCP settings block">
+        <b>{t("automation.addToAi")}</b>
+        <p>{t("automation.addToAiHint")}</p>
+        <pre className="sk-code sk-code--block" aria-label={t("automation.mcpBlock")}>
           {MCP_CONFIG}
         </pre>
-        <CopyButton text={MCP_CONFIG} label="Copy the MCP block" />
+        <CopyButton text={MCP_CONFIG} label={t("automation.copyMcp")} />
       </div>
     </SettingsSection>
   );
 }
 
 function Links() {
+  const { t } = useT();
   return (
-    <SettingsSection title="Deep links" description="Links only open a page in Speak Kit. They never start a reading or change a setting.">
+    <SettingsSection title={t("automation.links")} description={t("automation.linksHint")}>
       {DEEP_LINKS.map((l) => (
-        <SettingRow key={l.url} label={l.url} description={l.text} control={<CopyButton text={l.url} label={`Copy ${l.url}`} />} />
+        <SettingRow key={l.url} label={l.url} description={l.text} control={<CopyButton text={l.url} label={t("automation.copyLink", { url: l.url })} />} />
       ))}
     </SettingsSection>
   );
@@ -252,33 +260,34 @@ function Links() {
 
 /** Settings > Automation: the command-line tool, the MCP server with a switch for each tool, and the deep links. */
 export function AutomationPage({ s }: { s: AppState }) {
+  const { t } = useT();
   const { load, read, run, failed } = useInfo();
   const info = load.phase === "ready" ? load.info : null;
   return (
-    <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
+    <Page title={t("automation.title")} lead={t("automation.lead")}>
       {!s.config.controlServer && (
-        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void change({ controlServer: true })}>
-          The command-line tool and the MCP server need it. It only answers on this computer. Speak Kit itself works without it.
+        <OptInCard icon="terminal" title={t("automation.serverOff")} enableLabel={t("automation.startServer")} onEnable={() => void change({ controlServer: true })}>
+          {t("automation.serverOffBody")}
         </OptInCard>
       )}
       {load.phase === "error" && (
-        <Banner tone="error" title="Could not read the command-line tool" action={<Button onClick={read}>Try again</Button>}>
-          Speak Kit did not answer. The rest of this page still works.
+        <Banner tone="error" title={t("automation.readFailed")} action={<Button onClick={read}>{t("automation.tryAgain")}</Button>}>
+          {t("automation.readFailedBody")}
         </Banner>
       )}
       {load.phase === "loading" && (
         <p role="status" className="sk-pad">
-          Loading…
+          {t("automation.loading")}
         </p>
       )}
       <CommandLineSection
         s={s}
         info={info}
         failed={failed}
-        onSkill={() => void run(() => api.installAgentSkill(), "The skill file could not be written. Check that your home folder can be written to.")}
-        onTerminal={() => void run(() => api.testInTerminal(), "No terminal could be opened. Open one yourself and run the command.")}
-        onAction={(a) => void run(() => api.commandLine(a), "The command-line tool could not be changed. Close other terminals and try again.")}
-        onReset={() => void run(() => api.resetControlToken(), "The token could not be reset.")}
+        onSkill={() => void run(() => api.installAgentSkill(), t("automation.skillFailed"))}
+        onTerminal={() => void run(() => api.testInTerminal(), t("automation.terminalFailed"))}
+        onAction={(a) => void run(() => api.commandLine(a), t("automation.cliFailed"))}
+        onReset={() => void run(() => api.resetControlToken(), t("automation.tokenFailed"))}
       />
       <McpSection s={s} />
       <Links />
