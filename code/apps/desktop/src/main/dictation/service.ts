@@ -15,7 +15,7 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { clock, coreSettings, dictationStatus } from "./service-support";
+import { clock, coreSettings, dictationStatus, soundSettingsUrl } from "./service-support";
 import { openRecorderWindow } from "./recorder-window";
 import { createTranscriber, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
@@ -97,7 +97,7 @@ export class DictationService {
     return this.#ctx.config.dictation;
   }
   get supported(): boolean {
-    return this.os?.supported ?? process.platform === "win32";
+    return this.os?.supported ?? (process.platform === "win32" || process.platform === "darwin");
   }
   get hotkeyActive(): boolean {
     return this.#hotkeys?.active ?? false;
@@ -309,9 +309,9 @@ export class DictationService {
   }
 
   async openSoundSettings(): Promise<void> {
-    if (process.platform !== "win32") return;
     const blocked = this.#lastError === "mic-denied" || this.#lastError === "mic-silent";
-    await shell.openExternal(blocked ? "ms-settings:privacy-microphone" : "ms-settings:sound");
+    const url = soundSettingsUrl(process.platform, blocked);
+    if (url) await shell.openExternal(url);
   }
 
   /** True when `contents` is the HUD page: only it may press the HUD buttons. */
