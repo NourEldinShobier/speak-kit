@@ -14,8 +14,8 @@ export interface HistoryEntry {
   durationMs: number;
   language?: string;
   model?: string;
-  /** "raw": dictated with clean-up off. Missing for ordinary entries. */
-  kind?: "raw";
+  /** "raw": dictated with clean-up off. "printed": handed to a command and never pasted. Missing for ordinary entries. */
+  kind?: "raw" | "printed";
 }
 
 export type NewEntry = Omit<HistoryEntry, "id">;

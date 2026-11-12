@@ -164,7 +164,7 @@ function onDeepLink(link: DeepLink) {
       if (!runtime.server) void runtime.start(state.token || undefined).then(publish);
     },
     showWindow: () => mainWindow.show(),
-    navigate: () => mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" }),
+    navigate: (sub) => mainWindow.sendUi({ type: "nav", page: "settings", sub }),
   });
 }
 
@@ -233,6 +233,7 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
+      version: app.getVersion(),
       dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
     },
   );

@@ -1,8 +1,8 @@
 import Store from "electron-store";
 import path from "node:path";
-import { chmod, constants, copyFile } from "node:fs/promises";
-import type { Config } from "../shared/schemas";
-import { loadSettings, noticeOf, type SettingsNotice } from "../shared/settings/settings-file";
+import { parseConfig, type Config } from "../shared/schemas";
+import { sortKeys } from "../shared/control/settings-registry";
+import { keepInvalidAside } from "./config-repair";
 import { setAsideIfCorrupt } from "./set-aside";
 
 interface ConfigStore {
@@ -31,9 +31,9 @@ async function backupOriginal(from: string, to: string): Promise<void> {
 export async function openConfig(cwd: string): Promise<ConfigStore> {
   const recovered = await setAsideIfCorrupt(path.join(cwd, "config.json"));
   const store = new Store<Record<string, unknown>>({ name: "config", cwd, clearInvalidConfig: false });
-  const loaded = loadSettings(store.store);
-  const config = loaded.config;
-  if (loaded.needsBackup) await backupOriginal(store.path, path.join(cwd, BACKUP));
+  const config = parseConfig(store.store);
+  // A field that had to be replaced by its default: the file as it was is kept next to it before the next save rewrites it.
+  await keepInvalidAside(store.path, store.store, config).catch(() => null);
   const envPort = Number(process.env.SPEAKKIT_PORT);
   if (envPort) config.preferredPort = envPort;
   return {
@@ -42,10 +42,8 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
     recovered,
     notice: noticeOf(loaded),
     save: () => {
-      // A file from a newer app is never rewritten.
-      if (loaded.newerVersion !== null) return;
-      const keep = envPort ? { ...config, preferredPort: loadSettings(store.store).config.preferredPort } : config;
-      store.set(keep as Record<string, unknown>);
+      const keep = envPort ? { ...config, preferredPort: parseConfig(store.store).preferredPort } : config;
+      store.set(sortKeys(keep) as Record<string, unknown>);
     },
   };
 }

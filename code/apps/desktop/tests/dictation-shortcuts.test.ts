@@ -132,12 +132,13 @@ describe("Dictation shortcuts page", () => {
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 680));
     await l.page.waitForFunction(() => innerWidth === 960);
     expect(await l.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const overflow = await l.page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>(".dict-hotkey .lm-btn")].filter((b) => {
-        const row = b.closest(".lm-row")!.getBoundingClientRect();
-        const r = b.getBoundingClientRect();
-        return r.right > row.right || r.left < row.left;
-      }).length,
+    const overflow = await l.page.evaluate(
+      () =>
+        [...document.querySelectorAll<HTMLElement>(".dict-hotkey .lm-btn")].filter((b) => {
+          const row = b.closest(".lm-row")!.getBoundingClientRect();
+          const r = b.getBoundingClientRect();
+          return r.right > row.right || r.left < row.left;
+        }).length,
     );
     expect(overflow).toBe(0);
     expect((await l.page.getByRole("button", { name: "Change Dictation shortcut" }).boundingBox())!.height).toBe(36);

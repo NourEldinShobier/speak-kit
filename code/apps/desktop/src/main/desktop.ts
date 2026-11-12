@@ -16,6 +16,7 @@ import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
+import { setupControl } from "./control";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
@@ -32,6 +33,8 @@ interface DesktopOptions {
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
   fakeUpdate?: string | undefined;
+  /** The app version, for the control server. */
+  version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner">;
 }
@@ -74,12 +77,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  const permissions = setupPermissions(
-    () => o.parent()?.webContents,
-    (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
-  );
-  // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
-  app.on("browser-window-focus", permissions.refresh);
+  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
 
   const handlers = {
     ...engineHandlers(ctx),
@@ -97,12 +95,13 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
-      if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
+      control.onConfigPatch(patch);
     },
     onEngineState: engineAnnouncer(ctx, toasts),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
     dispose: () => {
+      void control.dispose();
       shortcuts.unregisterAll();
       reading.dispose();
       exports.dispose();

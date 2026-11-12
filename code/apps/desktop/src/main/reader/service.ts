@@ -12,7 +12,7 @@ import { ReaderController } from "./controller";
 /** The finished or failed mini player stays this long, then goes away. */
 const LINGER_MS = 6000;
 
-interface Reading {
+export interface Reading {
   readonly controller: ReaderController;
   readSelection(): Promise<void>;
   readText(text: string, source: ReaderSource): boolean;

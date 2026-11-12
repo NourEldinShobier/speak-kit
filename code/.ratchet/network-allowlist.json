@@ -1,5 +1,6 @@
 {
   "files": {
+    "apps/desktop/src/cli/bin.ts": "command line: talks to the running Speak Kit app on 127.0.0.1 with the token from its discovery file",
     "apps/desktop/src/main/library/public-fetch.ts": "URL import: fetches the page the user typed, public addresses only (undici with a lookup that refuses private ranges)",
     "apps/desktop/src/main/server-api.ts": "desktop main talks to its own loopback server on 127.0.0.1",
     "apps/desktop/src/main/updates-service.ts": "electron-updater checks GitHub Releases for a new version",

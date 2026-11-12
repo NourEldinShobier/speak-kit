@@ -70,38 +70,28 @@ describe("openConfig", () => {
   });
 });
 
-describe("settings repair and backup", () => {
-  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", closeAction: "quit" });
-
-  it("names the invalid field, keeps the others, and backs up the exact original bytes once before the first save", async () => {
-    writeFileSync(path.join(dir, "config.json"), raw);
+describe("settings file care", () => {
+  it("keeps a file with a damaged value aside as config.json.invalid, then loads the default for it", async () => {
+    const text = JSON.stringify({ setupDone: true, speed: 99, dictation: { mode: "sideways", enabled: true } });
+    writeFileSync(path.join(dir, "config.json"), text);
     const c = await openConfig(dir);
-    expect(c.notice).toEqual({ kind: "repaired", fields: ["idleUnload"] });
-    expect(c.config).toMatchObject({ idleUnload: "5", closeAction: "quit" });
-    c.save();
-    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
-    expect(onDisk()).toMatchObject({ idleUnload: "5", configVersion: 1 });
-    writeFileSync(path.join(dir, "config.json"), "{}");
-    c.save();
-    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
+    expect(c.config).toMatchObject({ speed: 1, dictation: { mode: "hold", enabled: true } });
+    expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(text);
   });
 
-  it("a healthy file is not backed up", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true }));
-    const c = await openConfig(dir);
-    expect(c.notice).toBeNull();
-    c.save();
-    expect(existsSync(path.join(dir, "config.backup.json"))).toBe(false);
+  it("keeps nothing aside for a file that only lacks newer keys or has an unknown one", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, somethingOld: 1, dictation: { enabled: true } }));
+    await openConfig(dir);
+    expect(() => readFileSync(path.join(dir, "config.json.invalid"))).toThrow();
   });
 
-  it("a file from a newer app is read, flagged and never rewritten", async () => {
-    const newer = JSON.stringify({ configVersion: 9, setupDone: true, speed: 2 });
-    writeFileSync(path.join(dir, "config.json"), newer);
+  it("writes keys in alphabetical order", async () => {
     const c = await openConfig(dir);
-    expect(c.notice).toEqual({ kind: "newer", version: 9 });
-    expect(c.config.speed).toBe(2);
-    c.config.speed = 1;
+    c.config.setupDone = true;
     c.save();
-    expect(readFileSync(path.join(dir, "config.json"), "utf8")).toBe(newer);
+    const keys = Object.keys(onDisk());
+    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b, "en")));
+    const nested = Object.keys(onDisk().dictation);
+    expect(nested).toEqual([...nested].sort((a, b) => a.localeCompare(b, "en")));
   });
 });

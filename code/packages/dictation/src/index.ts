@@ -8,6 +8,8 @@ export { defaultSettings, type InsertMode, type Mode, type Replacement, type Ret
 export type { HistoryEntry } from "./history";
 export type { CopyReason, PastePlan, Target } from "./paste-plan";
 export type {
+  CaptureHandle,
+  CaptureResult,
   Clip,
   Clock,
   Dictation,
