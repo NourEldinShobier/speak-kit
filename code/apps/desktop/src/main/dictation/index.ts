@@ -36,6 +36,8 @@ export interface DictationOs {
   focus(hwnd: string): Promise<boolean>;
   /** Resolves once the user's old clipboard is back after a paste. */
   settled(): Promise<void>;
+  /** Ends typing in progress after the piece being sent; the text stays on the clipboard. */
+  cancelTyping(): void;
   /** Stops the hotkey, puts the clipboard back at once and destroys the HUD window. */
   dispose(): Promise<void>;
 }
@@ -75,6 +77,7 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     insert: (text, opts) => inserter.insert(text, opts),
     focus: (hwnd) => platform.input.focus(hwnd),
     settled: () => inserter.settled(),
+    cancelTyping: () => inserter.cancelTyping(),
     async dispose() {
       platform.dispose();
       caret.dispose();

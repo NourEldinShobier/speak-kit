@@ -15,6 +15,11 @@ const RIGHT_OPTION = 61;
 const RIGHT_OPTION_BIT = 0x40;
 const F9 = 101;
 
+/** Typing yields to the event loop between pieces, which the fake timers hold back until they are run. */
+const finished = async <T>(p: Promise<T>): Promise<T> => {
+  for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(0);
+  return p;
+};
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
@@ -191,11 +196,18 @@ describe("macOS foreground and paste keys", () => {
     expect(createMacInput(fake.native).pressPaste("ctrl-v")).toBe(true);
   });
 
-  it("types text as Unicode events and a newline as Return", () => {
+  it("types text as Unicode events and a newline as Shift+Return", async () => {
     const fake = fakeMacNative();
     const input = createMacInput(fake.native);
-    expect(input.type("a\r\nb")).toBe(true);
-    expect(fake.state.posted).toEqual([{ units: [97] }, { keycode: 36, down: true, flags: 0 }, { keycode: 36, down: false, flags: 0 }, { units: [98] }]);
+    expect(await finished(input.type("a\r\nb"))).toBe("done");
+    expect(fake.state.posted).toEqual([{ units: [97] }, { keycode: 36, down: true, flags: 0x20000 }, { keycode: 36, down: false, flags: 0x20000 }, { units: [98] }]);
+  });
+
+  it("stops typing between lines when asked", async () => {
+    const fake = fakeMacNative();
+    let calls = 0;
+    expect(await finished(createMacInput(fake.native).type("a\nb\nc", () => ++calls > 1))).toBe("stopped");
+    expect(fake.state.posted).toEqual([{ units: [97] }]);
   });
 
   it("splits long text into events of at most 20 units and keeps a surrogate pair together", () => {
@@ -206,10 +218,10 @@ describe("macOS foreground and paste keys", () => {
     expect(chunks("x".repeat(45)).map((p) => p.length)).toEqual([20, 20, 5]);
   });
 
-  it("stops typing when the system stops taking events", () => {
+  it("stops typing when the system stops taking events", async () => {
     const fake = fakeMacNative();
     fake.state.acceptPosts = 1;
-    expect(createMacInput(fake.native).type("x".repeat(60))).toBe(false);
+    expect(await finished(createMacInput(fake.native).type("x".repeat(60)))).toBe("rejected");
   });
 
   it("reports the modifiers held, by name", () => {

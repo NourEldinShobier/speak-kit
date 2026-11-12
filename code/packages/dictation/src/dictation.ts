@@ -136,7 +136,16 @@ class Runtime implements Dictation {
     return begins;
   }
 
+  /** The cancel key (or a cancel from a button) while the text is going in: typing stops and the text stays on the clipboard. */
+  private cancelsInsert(event: SessionEvent): boolean {
+    if (this.pending === 0 || this.phase !== "pasting" || !this.deps.inserter.cancel) return false;
+    const cancel = event.type === "cancel" || (event.type === "key" && event.down && event.key === this.settings.cancelKey);
+    if (cancel) this.deps.inserter.cancel();
+    return cancel;
+  }
+
   private dispatch(event: SessionEvent): boolean {
+    if (this.cancelsInsert(event)) return true;
     if (this.micTaken(event)) return true;
     const step = reduce(this.session, event, this.settings);
     this.session = step.session;

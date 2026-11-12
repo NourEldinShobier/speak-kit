@@ -174,7 +174,7 @@ export class DictationService {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     this.state = s;
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
-    this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
+    this.#hotkeys?.setCancelGrab((s.status === "recording" && s.mode === "toggle") || s.status === "pasting");
     if (s.status === "error") this.#failure.error = s.code;
     this.#sleep(s.status === "recording" || s.status === "locked");
     if (s.status === "idle" && s.notice) void this.history.refresh();

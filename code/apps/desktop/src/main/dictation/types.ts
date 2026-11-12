@@ -108,7 +108,10 @@ export interface InsertOptions {
   mode?: "paste" | "keep" | "copy" | "type";
 }
 
-export type CopyReason = "copy-only" | "elevated-target" | "foreground-changed" | "keys-rejected" | "modifiers-held" | "no-foreground" | "secure-input" | "unsupported-platform";
+/** How typing ended: all of it, a key the system refused, or the person stopped it. */
+export type TypeResult = "done" | "rejected" | "stopped";
+
+export type CopyReason = "copy-only" | "elevated-target" | "foreground-changed" | "keys-rejected" | "modifiers-held" | "no-foreground" | "secure-input" | "typing-stopped" | "unsupported-platform";
 
 export type InsertResult =
   /** The keys were accepted by Windows. The target app may still ignore them; nothing can confirm it did not. */
@@ -139,8 +142,11 @@ export interface InputPort {
   pressPaste(key: PasteKey): boolean;
   /** Brings a window to the front and says whether it is in front within half a second. */
   focus(hwnd: string): Promise<boolean>;
-  /** Types the text as Unicode key events without touching the clipboard. False when the system did not accept every key. */
-  type(text: string): boolean;
+  /**
+   * Types the text as Unicode key events without touching the clipboard, in pieces; a line break is Shift+Enter, so a chat box that sends on Enter gets a
+   * new line instead. `stopped` is asked between pieces: when it says true typing ends there ("stopped"). "rejected": the system did not accept every key.
+   */
+  type(text: string, stopped?: () => boolean): Promise<TypeResult>;
   /** Changes whenever any program writes the clipboard. */
   clipboardSequence(): number;
   /** What the clipboard holds now: `files` (a file list, which a copy through Electron cannot keep), how many `formats` it has, and which privacy marks its owner put on it. */

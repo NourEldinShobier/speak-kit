@@ -109,11 +109,17 @@ export function fakeInserter() {
     caret: undefined as CaretContext | undefined,
     caretThrows: false,
     caretReads: 0,
+    cancels: 0,
+    /** Holds `insert` until released, to stand in for typing that takes a while. */
+    hold: undefined as Promise<void> | undefined,
   };
   const inserter: Inserter = {
     async target() {
       if (state.targetThrows) throw new Error("no window");
       return state.current;
+    },
+    cancel() {
+      state.cancels++;
     },
     async caret() {
       state.caretReads++;
@@ -122,6 +128,7 @@ export function fakeInserter() {
     },
     async insert(req) {
       inserted.push(req);
+      await state.hold;
       return state.result;
     },
   };

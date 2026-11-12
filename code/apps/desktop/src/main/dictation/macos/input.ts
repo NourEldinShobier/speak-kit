@@ -1,3 +1,4 @@
+import { setImmediate as yieldToLoop } from "node:timers/promises";
 import { CLIPBOARD_PRIVACY_MARKS, type ForegroundInfo, type InputPort } from "../types";
 import { FLAG_ALT, FLAG_COMMAND, FLAG_SHIFT, MAC_KEY_RETURN, MAC_KEY_V } from "./keymap";
 import type { MacNative } from "./native";
@@ -74,13 +75,15 @@ export function createMacInput(native: MacNative): InputPort {
       return false;
     },
     focus: (hwnd) => focusApp(native, Number(hwnd)),
-    type(text) {
+    async type(text, stopped) {
       const lines = text.replaceAll("\r\n", "\n").split("\n");
       for (const [i, line] of lines.entries()) {
-        if (i > 0 && !press(MAC_KEY_RETURN, 0)) return false;
-        for (const c of chunks(line)) if (!native.postUnits(c)) return false;
+        await yieldToLoop();
+        if (stopped?.()) return "stopped";
+        if (i > 0 && !press(MAC_KEY_RETURN, FLAG_SHIFT)) return "rejected";
+        for (const c of chunks(line)) if (!native.postUnits(c)) return "rejected";
       }
-      return true;
+      return "done";
     },
     clipboardSequence: () => native.pasteboard.changeCount(),
     clipboardTraits() {

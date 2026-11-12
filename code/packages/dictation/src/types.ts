@@ -66,6 +66,8 @@ export interface Inserter {
   focus?(target: Target): Promise<boolean>;
   /** The character before the caret in the focused field and whether text is selected; undefined when the platform cannot read it. */
   caret?(): Promise<CaretContext | undefined>;
+  /** Ends typing that is in progress; the text stays on the clipboard. Called when the cancel key is pressed while the text is going in. */
+  cancel?(): void;
   insert(req: { text: string; plan: Exclude<PastePlan, { method: "refuse" }> }): Promise<{ ok: true } | { ok: false; code: "rejected" | "failed" }>;
 }
 
