@@ -1,4 +1,4 @@
-import { saveExport } from "@speakkit/transcripts";
+import { footerOf, saveExport } from "@speakkit/transcripts";
 import { failure, FAILED, temporaryTitle, type Meetings, type MeetingsDeps, type Row } from "./api";
 import { CopyCursor, linesText } from "./cursor";
 import { EventLog } from "./events";
@@ -200,12 +200,15 @@ export async function createMeetings(d: MeetingsDeps): Promise<Meetings> {
     async writeFiles(id) {
       const e = store.get(id);
       if (!e) return { ok: false, failure: FAILED };
-      const last = (await store.notes(id)).at(-1);
+      const versions = await store.notes(id);
+      const last = versions.at(-1);
       const paths: string[] = [];
       try {
         paths.push((await saveExport(d.fs, d.exportDir(), e.title, "txt", linesText(await store.transcript(id)))).path);
         if (last) {
-          const body = [last.title, "", last.summary, "", ...last.chapters.flatMap((c) => [c.title, c.text, ""])].join("\n");
+          // The footer names the model that wrote the summary, also when the vocabulary was applied to it afterwards.
+          const writer = versions.findLast((v) => v.kind === "summary")?.writer ?? last.writer;
+          const body = [last.title, "", last.summary, "", ...last.chapters.flatMap((c) => [c.title, c.text, ""]), footerOf(writer), ""].join("\n");
           paths.push((await saveExport(d.fs, d.exportDir(), `${e.title} notes`, "txt", body)).path);
         }
       } catch (err) {

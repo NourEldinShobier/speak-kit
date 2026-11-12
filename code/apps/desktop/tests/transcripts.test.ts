@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -149,6 +151,50 @@ describe("import", () => {
     await l.page.getByRole("button", { name: "Show in folder" }).click();
     await until(async () => (await transcriptsHook(l, "revealed")).length === 1);
     expect((await transcriptsHook(l, "revealed"))[0]).toContain("weekly planning (2).md");
+  });
+
+  it("with notes on, a finished transcript gets a summary naming the writer, chapters with Copy section, and the writer's name in the export", async () => {
+    const dir = tmp("in");
+    const answer = JSON.stringify({
+      title: "Invoice talk",
+      summary: "They discuss the invoice. Nothing else comes up.",
+      chapters: [
+        { start: 0, title: "The invoice" },
+        { start: 30, title: "Wrap up" },
+      ],
+    });
+    const server: Server = createServer((req, res) => {
+      req.resume();
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(req.url === "/v1/chat/completions" ? JSON.stringify({ choices: [{ message: { content: answer } }] }) : JSON.stringify({ data: [] }));
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    try {
+      const { l, exportDir } = await app({ config: { meetings: { summary: true } }, env: { SPEAKKIT_OPENAI_BASE_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}` } });
+      await l.page.getByRole("link", { name: "Voice chat" }).click();
+      await l.page.getByLabel("OpenAI API key").fill("sk-proj-E2E_good_key-0123456789abcdef");
+      await l.page.getByRole("button", { name: "Save", exact: true }).click();
+      await l.page.getByTestId("voice-chat-notice").waitFor();
+      await hook(l, "dictation.say", "We talk about the invoice today");
+      await openTranscripts(l);
+      await importFile(l, wav(path.join(dir, "weekly_planning.wav"), 70));
+      const row = l.page.locator('[data-testid="transcript-row"]').first();
+      await row.getByRole("button", { name: "Open: weekly planning" }).click();
+      await l.page.getByText("They discuss the invoice. Nothing else comes up.").waitFor();
+      await l.page.getByText(/Written by OpenAI/).waitFor();
+      await l.page.getByText("2 chapters").waitFor();
+      await l.page.getByRole("button", { name: "Copy section: The invoice" }).click();
+      expect(await transcriptsHook(l, "clipboard")).toContain("We talk about the invoice today");
+      await shot(l, "summary");
+      await l.page.getByRole("button", { name: "Export" }).click();
+      await l.page.getByRole("menuitem", { name: "Save as Markdown" }).click();
+      await l.page.getByText("Saved as weekly planning.md.").waitFor();
+      const md = readFileSync(path.join(exportDir, "weekly planning.md"), "utf8");
+      expect(md).toContain("## Summary");
+      expect(md).toMatch(/_Summary written by OpenAI .+\._/);
+    } finally {
+      server.close();
+    }
   });
 
   it("an MP3 goes through the decoder page and is transcribed with its real length", async () => {

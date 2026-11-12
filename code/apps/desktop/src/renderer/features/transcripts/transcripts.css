@@ -516,3 +516,14 @@
 .tr-path {
   overflow-wrap: anywhere;
 }
+
+.tr-notes__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tr-notes__foot > .mt-writer {
+  min-width: 0;
+  margin: 0;
+}

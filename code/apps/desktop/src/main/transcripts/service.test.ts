@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import path from "node:path";
-import { encodeWav16k, type Fs } from "@speakkit/transcripts";
+import { encodeWav16k, type Fs, type Summarise } from "@speakkit/transcripts";
 import type { Push } from "../../shared/transcripts/contract";
 import { parseConfig } from "../../shared/schemas";
 import type { Ctx } from "../context";
@@ -24,7 +24,7 @@ function memFs() {
 
 const tone = (sec: number) => Int16Array.from({ length: sec * 16000 }, (_, i) => Math.round(Math.sin(i / 20) * 5000));
 
-function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object } = {}) {
+function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object; notes?: () => Summarise | undefined } = {}) {
   const { fs, files } = memFs();
   const pushes: Push[] = [];
   // The schema hands out one shared default object: a test that changes a setting must not change it for the next.
@@ -89,6 +89,7 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     model: () => "large-v3-turbo-q5_0",
     modelName: () => ({ name: "Whisper Large v3 Turbo", installed: true }),
     dictationBusy: over.busy ?? (() => false),
+    ...(over.notes && { notes: over.notes }),
     files: files2,
     mic,
     dialog: { pickFile: async () => pick, pickFolder: async () => dir },
@@ -199,6 +200,33 @@ describe("transcripts service", () => {
     expect(await h.copyText(id)).toBe(true);
     expect(t.clip).toEqual(["hello world"]);
     expect(await h.copyText("nope")).toBe(false);
+  });
+
+  it("Copy section copies only the words said inside the chapter", async () => {
+    const t = setup({ stt: { transcribe: async () => ({ text: "alpha beta", speech: true }) } });
+    const h = t.service.handlers;
+    const id = ((await h.importFile({ path: "/in/talk.wav", language: "auto" })) as { id: string }).id;
+    await done(h, id);
+    expect(await h.copyText(id, { from: 0, to: 0.5 })).toBe(true);
+    expect(t.clip.at(-1)).toBe("alpha beta");
+    expect(await h.copyText(id, { from: 100, to: 200 })).toBe(false);
+    expect(t.clip.at(-1)).toBe("alpha beta");
+  });
+
+  it("writes notes through the handler and keeps the transcript when the writer fails", async () => {
+    let fail = true;
+    const t = setup({
+      notes: () => async () =>
+        fail ? { ok: false, failure: { code: "x", message: "OpenAI is busy. The transcript is unchanged." } } : { ok: true, writer: "W", notes: { title: "T", summary: "One. Two.", chapters: [] } },
+    });
+    const h = t.service.handlers;
+    const id = ((await h.importFile({ path: "/in/talk.wav", language: "auto" })) as { id: string }).id;
+    await done(h, id);
+    await vi.waitFor(async () => expect((await h.get(id))!.notes?.state).toBe("failed"));
+    expect((await h.get(id))!.segments[0]!.text).toBe("hello world");
+    fail = false;
+    expect(await h.writeNotes(id)).toEqual({ ok: true });
+    expect((await h.get(id))!.notes).toMatchObject({ state: "ready", doc: { title: "T", writer: "W" } });
   });
 
   it("save writes into the folder, never over a file, and reveal selects the saved file", async () => {

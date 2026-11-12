@@ -2,6 +2,7 @@ import type { Format } from "./export";
 import type { Saved } from "./files";
 import type { Fs } from "./fs";
 import type { JobDeps } from "./job";
+import type { NotesState, NotesView, Summarise } from "./notes";
 import type { Policy } from "./retention";
 import type { ExportedFile, Failure, Segment, Source, Status } from "./types";
 
@@ -26,6 +27,8 @@ export interface TranscriptsDeps {
   recycle?(file: string): Promise<void>;
   /** Tells the person about something that could not be done on a file. */
   warn?(message: string): void;
+  /** The notes writer, or nothing when notes are off or there is no key. Asked each time a transcript finishes and each time notes are regenerated. */
+  notes?(): Summarise | undefined;
   deadlineMs?: JobDeps["deadlineMs"];
   chunks?: JobDeps["chunks"];
 }
@@ -50,12 +53,15 @@ export interface Row {
   queued?: number;
   /** For a search: the words around the first match. */
   snippet?: string;
+  /** Where the notes are: being written, written or failed. Absent when none were ever asked for. */
+  notesState?: NotesState;
 }
 
 export interface Detail extends Row {
   segments: Segment[];
   /** Files this app exported for it, with the hash recorded at the time. */
   exports: ExportedFile[];
+  notes?: NotesView;
 }
 
 export type Outcome<T = object> = ({ ok: true } & T) | { ok: false; failure: Failure };
@@ -74,6 +80,8 @@ export interface Transcripts {
   /** Continues an interrupted, cancelled or failed job after the chunks already done; a recovered recording is first turned into audio. */
   resume(id: string): Promise<Outcome>;
   cancel(id: string): Promise<void>;
+  /** Writes the notes again. The words and the audio are never touched; a failure keeps the notes written before. */
+  writeNotes(id: string): Promise<Outcome>;
   rename(id: string, title: string): Promise<void>;
   trash(id: string): Promise<void>;
   restore(id: string): Promise<void>;

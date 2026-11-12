@@ -4,6 +4,7 @@
  */
 export { createTranscripts, type Detail, type Outcome, type Row, type Transcripts, type TranscriptsDeps } from "./transcripts";
 export { nodeFs, DiskFullError, type Fs } from "./fs";
+export { footerOf, notesBlock, viewOf, type NoteDoc, type NotesRecord, type NotesState, type NotesView, type Summarise, type SummariseResult } from "./notes";
 export { FORMATS, clock, cues, plainText, render, type Format } from "./export";
 export { findMatches, snippetAround, tokenize, SearchIndex, type Match } from "./search";
 export { checkFile, failures, knownExtension, sniff, AUDIO_FORMATS, FORMAT_LIST, MAX_BYTES, MAX_COMPRESSED_BYTES, MAX_HOURS, type AudioFormat, type Check } from "./formats";

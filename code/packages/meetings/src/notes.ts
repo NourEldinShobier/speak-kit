@@ -1,4 +1,4 @@
-import type { Line, NoteVersion } from "./store";
+import type { NoteVersion } from "./store";
 import type { Failure } from "./types";
 
 export type CompleteResult = { ok: true; text: string } | { ok: false; code: "no-key" | "key-rejected" | "no-credit" | "rate-limited" | "offline" | "unavailable" };
@@ -10,6 +10,13 @@ export interface NotesDeps {
   writer: string;
   /** How long the pass may take; the transcript stays as it is when it is exceeded. */
   timeoutMs?: number;
+}
+
+/** One spoken line as the writer reads it. A line without `who` comes from one speaker (an imported file or a dictated recording). */
+export interface NoteLine {
+  start: number;
+  text: string;
+  who?: string;
 }
 
 export interface Notes {
@@ -48,19 +55,21 @@ export const stamp = (sec: number): string => {
 };
 
 /** The transcript as the writer reads it: one line per entry with the time and who spoke. Too long is cut in the middle. */
-export function promptText(lines: readonly Line[], max = MAX_PROMPT_CHARS): string {
-  const all = lines.map((l) => `[${stamp(l.start)}] ${l.who}: ${l.text}`).join("\n");
+export function promptText(lines: readonly NoteLine[], max = MAX_PROMPT_CHARS): string {
+  const all = lines.map((l) => `[${stamp(l.start)}] ${l.who ? `${l.who}: ` : ""}${l.text}`).join("\n");
   if (all.length <= max) return all;
   const half = Math.floor(max / 2);
   return `${all.slice(0, half)}\n[... part of the meeting left out ...]\n${all.slice(-half)}`;
 }
 
-const SYSTEM = `You write notes for a meeting transcript. The speakers are "You" (the person who recorded) and "Them" (everyone else on the call). Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
+const SPEAKERS = `The speakers are "You" (the person who recorded) and "Them" (everyone else on the call). `;
+const system = (lines: readonly NoteLine[]) =>
+  `You write notes for a transcript. ${lines.some((l) => l.who) ? SPEAKERS : ""}Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
 /** The writer's JSON, tolerating a code fence around it. Chapters are put in time order and given the words said inside them. */
-export function parseNotes(text: string, lines: readonly Line[]): Notes | undefined {
+export function parseNotes(text: string, lines: readonly NoteLine[]): Notes | undefined {
   const body = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -79,11 +88,12 @@ export function parseNotes(text: string, lines: readonly Line[]): Notes | undefi
     return t && typeof c?.start === "number" && Number.isFinite(c.start) && c.start >= 0 ? [{ start: c.start, title: t }] : [];
   });
   raw.sort((a, b) => a.start - b.start);
-  return { title, summary, chapters: chapterText(lines, raw) };
+  // A chapter that starts after the last word has nothing to copy or show.
+  return { title, summary, chapters: chapterText(lines, raw).filter((c) => c.text.trim()) };
 }
 
 /** The words said inside each chapter: from its start to the next chapter's start (the last runs to the end). */
-export function chapterText(lines: readonly Line[], chapters: readonly { start: number; title: string }[]): Notes["chapters"] {
+export function chapterText(lines: readonly NoteLine[], chapters: readonly { start: number; title: string }[]): Notes["chapters"] {
   return chapters.map((c, i) => {
     const end = chapters[i + 1]?.start ?? Infinity;
     return {
@@ -97,17 +107,21 @@ export function chapterText(lines: readonly Line[], chapters: readonly { start: 
 }
 
 /** The notes pass: the summary, the title and the chapters, written once from the transcript. Every failure is an outcome with a message, never a throw. */
-export async function writeNotes(deps: NotesDeps, lines: readonly Line[]): Promise<NotesOutcome> {
+export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], signal?: AbortSignal): Promise<NotesOutcome> {
   if (!lines.some((l) => l.text.trim())) return failure("empty");
   const own = new AbortController();
+  const stop = () => own.abort();
+  if (signal?.aborted) stop();
+  signal?.addEventListener("abort", stop, { once: true });
   const timer = setTimeout(() => own.abort(), deps.timeoutMs ?? 60_000);
   let r: CompleteResult;
   try {
-    r = await deps.complete(SYSTEM, promptText(lines), own.signal);
+    r = await deps.complete(system(lines), promptText(lines), own.signal);
   } catch {
     r = { ok: false, code: own.signal.aborted ? "offline" : "unavailable" };
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", stop);
   }
   if (own.signal.aborted && !r.ok) return failure("timeout");
   if (!r.ok) return failure(r.code);

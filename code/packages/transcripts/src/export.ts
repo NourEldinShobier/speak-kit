@@ -1,9 +1,10 @@
+import { notesBlock, type NoteDoc } from "./notes";
 import type { Entry, Segment } from "./types";
 
 export const FORMATS = ["txt", "md", "srt", "vtt", "json"] as const;
 export type Format = (typeof FORMATS)[number];
 
-type Doc = Pick<Entry, "title" | "createdAt" | "durationSec" | "language" | "model" | "source" | "sourceName"> & { segments: readonly Segment[] };
+type Doc = Pick<Entry, "title" | "createdAt" | "durationSec" | "language" | "model" | "source" | "sourceName"> & { segments: readonly Segment[]; notes?: NoteDoc | undefined };
 
 const pad = (n: number, w = 2) => String(n).padStart(w, "0");
 
@@ -60,7 +61,7 @@ const when = (t: number) => new Date(t).toISOString().slice(0, 16).replace("T", 
 export function render(format: Format, d: Doc): string {
   switch (format) {
     case "txt":
-      return `${d.title}\n${when(d.createdAt)}\n\n${d.segments.map((s) => `[${clock(s.start)}] ${s.text.trim()}`).join("\n")}\n`;
+      return `${d.title}\n${when(d.createdAt)}\n\n${d.notes ? `${notesBlock(d.notes, false).join("\n")}\n` : ""}${d.segments.map((s) => `[${clock(s.start)}] ${s.text.trim()}`).join("\n")}\n`;
     case "md":
       return [
         `# ${d.title}`,
@@ -70,6 +71,7 @@ export function render(format: Format, d: Doc): string {
         `- Language: ${d.language}`,
         `- Source: ${d.source === "file" ? (d.sourceName ?? "audio file") : "microphone"}`,
         "",
+        ...(d.notes ? notesBlock(d.notes, true) : []),
         ...d.segments.flatMap((s) => [`**${clock(s.start)}** ${s.text.trim()}`, ""]),
       ].join("\n");
     case "srt":
@@ -81,7 +83,7 @@ export function render(format: Format, d: Doc): string {
         .map((c) => `${stamp(c.start, ".")} --> ${stamp(c.end, ".")}\n${c.text.replace(/-->/g, "->")}\n`)
         .join("\n")}`;
     case "json":
-      return `${JSON.stringify({ title: d.title, createdAt: d.createdAt, durationSec: d.durationSec, language: d.language, model: d.model, source: d.source, segments: d.segments }, null, 2)}\n`;
+      return `${JSON.stringify({ title: d.title, createdAt: d.createdAt, durationSec: d.durationSec, language: d.language, model: d.model, source: d.source, ...(d.notes && { summary: d.notes.summary, chapters: d.notes.chapters.map(({ start, title }) => ({ start, title })), summaryWriter: d.notes.writer }), segments: d.segments }, null, 2)}\n`;
   }
 }
 
