@@ -32,6 +32,8 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
     toasts: () => shownToasts.map(({ title, body, silent }) => ({ title, body, silent })),
     /** The file the settings import dialog returns; null cancels. */
     settingsFile: (f: string | null) => void (scriptedSettingsFile.open = f),
+    /** The answer to "also turn on settings that reach beyond the app?" during an import. */
+    settingsConfirm: (on: boolean) => void (scriptedSettingsFile.confirm = on),
     clickToast: (i: number) => shownToasts[i]?.onClick?.(),
     installs,
     trayItems: () => tray.items().map((i) => ({ label: i.label, enabled: i.enabled, type: i.type, checked: i.checked })),

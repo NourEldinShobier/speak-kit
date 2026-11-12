@@ -42,6 +42,7 @@ import { setupTranscripts } from "./transcripts";
 import { transcriptNotes } from "./transcripts/notes";
 import { NOTES_MODEL } from "./voice-chat/service";
 import { setupMeetings } from "./meetings";
+import { areaPatcher } from "./settings-areas";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
 import { cachedHardware, collectResources, speechModelName } from "./resources";
@@ -243,6 +244,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     streams: desktopStreams(ctx, { stt: dictation.stt, dictation: () => dictation }),
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
+    /** Stores the settings of one feature area through the feature that owns it. */
+    patchArea: areaPatcher(ctx, { capture, transcripts, meetings: () => meetings }),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();

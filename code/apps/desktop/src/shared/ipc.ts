@@ -15,10 +15,10 @@ import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } fro
 export type { Config, ConfigPatch } from "./schemas";
 
 /** The answer to a change of settings made through the one validator. */
-export type SettingsResult = { ok: true } | { ok: false; message: string };
+export type SettingsResult = { ok: true } | { ok: false; message: string; shortcut?: Extract<ShortcutResult, { ok: false }> };
 
-/** What importing a settings file did: how many settings were applied and which names were left out. */
-export type ImportOutcome = { status: "imported"; applied: number; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
+/** What importing a settings file did: how many settings were applied, which of them differ from before, and which names were left out. */
+export type ImportOutcome = { status: "imported"; applied: number; changed: string[]; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
 export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "capture", "settings"] as const;
 export const SETTINGS_SUBS = [
   "general",

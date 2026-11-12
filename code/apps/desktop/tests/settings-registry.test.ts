@@ -21,6 +21,7 @@ const openGeneral = async (l: Launched, settings = "Settings", general = "Genera
   await l.page.getByRole("link", { name: settings }).click();
   await l.page.getByRole("heading", { name: general, exact: true, level: 1 }).waitFor();
 };
+const confirmImport = (l: Launched, on: boolean) => l.app.evaluate((_e, v) => (globalThis as unknown as { __speakkit: { settingsConfirm(on: boolean): void } }).__speakkit.settingsConfirm(v), on);
 const pickFile = (l: Launched, file: string | null) => l.app.evaluate((_e, f) => (globalThis as unknown as { __speakkit: { settingsFile(f: string | null): void } }).__speakkit.settingsFile(f), file);
 
 describe("interface language", () => {
@@ -54,7 +55,7 @@ describe("settings import", () => {
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await pickFile(l, file);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText("Imported 3 settings. Left out: speed, setupDone.").waitFor();
+    await l.page.getByText("Imported 3 settings. Changed: voice, startMinimized, dictation.mode. Left out: speed, setupDone.").waitFor();
     await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella", startMinimized: true, setupDone: true, dictation: { mode: "toggle" } });
     expect(configOf(l).speed).not.toBe(99);
   }, 60_000);
@@ -72,5 +73,54 @@ describe("settings import", () => {
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
     await l.page.getByRole("button", { name: "Import", exact: true }).waitFor();
     expect(await l.page.getByText("Could not import").count()).toBe(1);
+  }, 60_000);
+
+  it("restores the settings of every feature area, and leaves out what belongs to this install", async () => {
+    const l = await start({ config: DONE });
+    const file = path.join(mkdtempSync(path.join(tmpdir(), "speakkit-import-")), "settings.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        voiceChatVoice: "alloy",
+        shortcuts: { stop: "Ctrl+Alt+Y" },
+        capture: { target: "window", consented: true, folder: "C:/elsewhere" },
+        transcripts: { textDays: 90 },
+        meetings: { stopWhenEnds: false },
+        engines: { releaseOnClose: true },
+      }),
+    );
+    await openGeneral(l);
+    await l.page.getByRole("button", { name: "Advanced" }).click();
+    await pickFile(l, file);
+    await l.page.getByRole("button", { name: "Import", exact: true }).click();
+    await l.page.getByText(/^Imported 6 settings\. Changed: .*Left out: capture\.consented, capture\.folder\.$/).waitFor();
+    await expect
+      .poll(() => configOf(l))
+      .toMatchObject({
+        voiceChatVoice: "alloy",
+        shortcuts: { stop: "Ctrl+Alt+Y" },
+        capture: { target: "window", consented: false },
+        transcripts: { textDays: 90 },
+        meetings: { stopWhenEnds: false },
+        engines: { releaseOnClose: true },
+      });
+    expect(configOf(l).capture.folder).not.toBe("C:/elsewhere");
+  }, 60_000);
+
+  it("asks before the control server, experiments and tool access are switched on, and leaves them out when declined", async () => {
+    const l = await start({ config: { ...DONE, controlServer: false } });
+    const file = path.join(mkdtempSync(path.join(tmpdir(), "speakkit-import-")), "settings.json");
+    writeFileSync(file, JSON.stringify({ controlServer: true, voice: "af_bella" }));
+    await openGeneral(l);
+    await l.page.getByRole("button", { name: "Advanced" }).click();
+    await pickFile(l, file);
+    await confirmImport(l, false);
+    await l.page.getByRole("button", { name: "Import", exact: true }).click();
+    await l.page.getByText("Imported 1 settings. Changed: voice. Left out: controlServer.").waitFor();
+    await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella", controlServer: false });
+    await confirmImport(l, true);
+    await l.page.getByRole("button", { name: "Import", exact: true }).click();
+    await l.page.getByText("Imported 2 settings. Changed: controlServer.").waitFor();
+    await expect.poll(() => configOf(l).controlServer).toBe(true);
   }, 60_000);
 });
