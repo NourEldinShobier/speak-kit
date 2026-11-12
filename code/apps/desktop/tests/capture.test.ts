@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
@@ -572,5 +572,175 @@ describe("own windows and real screen capture", () => {
     await untilShare("hidden", (n) => n < 0.05);
     await hook(l, "hideOwnWindows", false);
     await untilShare("visible again", (n) => n > 0.9);
+  });
+});
+
+describe("zooming a recording", () => {
+  const ZOOM = { ...ON, capture: { ...ON.capture, experiments: { zoomExport: true } } };
+  const seed = () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
+    dirs.push(userData);
+    const dir = path.join(userData, "captures", "z1");
+    mkdirSync(path.join(dir, "frames"), { recursive: true });
+    const png = makePng(320, 200);
+    const frames = [0, 2000, 4000].map((ms) => path.join("frames", `f-${String(ms).padStart(8, "0")}.jpg`));
+    for (const f of frames) writeFileSync(path.join(dir, f), png);
+    writeFileSync(path.join(dir, "video.webm"), "video");
+    writeFileSync(path.join(dir, "sheet.jpg"), png);
+    const rest = Array.from({ length: 6 }, (_, i) => ({ atMs: 3000 + i * 200, x: 0.5, y: 0.5 }));
+    writeFileSync(path.join(dir, "pointer.json"), JSON.stringify(rest));
+    const record = {
+      id: "z1",
+      kind: "recording",
+      title: "Checkout flow",
+      at: Date.now(),
+      dir: "z1",
+      durationMs: 6000,
+      bytes: png.length,
+      media: "video.webm",
+      frames,
+      sheet: "sheet.jpg",
+      chips: ["saved"],
+    };
+    writeFileSync(path.join(userData, "captures", "index.json"), JSON.stringify([record]));
+    return { userData, dir };
+  };
+  const index = (userData: string) => JSON.parse(readFileSync(path.join(userData, "captures", "index.json"), "utf8"))[0];
+  const openDetail = async (l: Launched) => {
+    await open(l);
+    await l.page.getByRole("button", { name: /^Open Checkout flow/ }).click();
+    await l.page.getByTestId("capture-detail").waitFor();
+  };
+
+  it("offers the zoom only while the experiment is on", async () => {
+    const { userData } = seed();
+    const l = await start({ config: ON, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Trim video" }).waitFor();
+    expect(await l.page.getByRole("button", { name: "Zoom video" }).count()).toBe(0);
+  });
+
+  it("adds a zoom by hand, saves the zoomed video next to the original and shows its contact sheet", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ZOOM, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Zoom video" }).click();
+    const panel = l.page.getByRole("region", { name: "Zoom video" });
+    await panel.waitFor();
+    await panel.getByText(/No zoom yet/).waitFor();
+    const end = panel.getByRole("slider", { name: "Zoom end" });
+    await end.focus();
+    await l.page.keyboard.press("ArrowRight");
+    await panel.getByRole("button", { name: "Add zoom" }).click();
+    await panel.getByRole("list", { name: "Zooms" }).waitFor();
+    await panel.getByRole("button", { name: "Save zoomed video" }).click();
+    await panel.waitFor({ state: "detached" });
+    await until(async () => index(userData).media === "video-zoom.webm");
+    expect(index(userData)).toMatchObject({ zoom: [{ startMs: 0, endMs: 4500, x: 0.5, y: 0.5, scale: 2 }], zoomSheet: "sheet-zoom.jpg" });
+    expect(readFileSync(path.join(dir, "video.webm"), "utf8")).toBe("video");
+    expect(existsSync(path.join(dir, "video-zoom.webm"))).toBe(true);
+    expect(existsSync(path.join(dir, "sheet-zoom.jpg"))).toBe(true);
+    await l.page.getByRole("button", { name: "Zoom video" }).click();
+    await l.page.getByRole("img", { name: "Contact sheet of the zoomed parts" }).waitFor();
+  });
+
+  it("suggests a zoom where the pointer rested, and Remove zoom puts the video back", async () => {
+    const { userData } = seed();
+    const l = await start({ config: ZOOM, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Zoom video" }).click();
+    const panel = l.page.getByRole("region", { name: "Zoom video" });
+    await panel.getByRole("button", { name: "Suggest zooms" }).click();
+    await panel.getByText("0:03 to 0:05, 2x at 50% across, 50% down").waitFor();
+    await panel.getByRole("button", { name: "Save zoomed video" }).click();
+    await until(async () => index(userData).media === "video-zoom.webm");
+    expect(index(userData).zoom).toEqual([{ startMs: 3000, endMs: 4800, x: 0.5, y: 0.5, scale: 2 }]);
+    await l.page.getByRole("button", { name: "Zoom video" }).click();
+    await l.page.getByRole("button", { name: "Remove the zoom at 0:03" }).click();
+    await l.page.getByRole("button", { name: "Remove zoom" }).click();
+    await until(async () => index(userData).media === "video.webm");
+    expect(index(userData)).toMatchObject({ zoom: [], zoomSheet: "" });
+  });
+
+  it("says so when there is nothing to suggest, and Cancel leaves the video alone", async () => {
+    const { userData, dir } = seed();
+    rmSync(path.join(dir, "pointer.json"));
+    const l = await start({ config: ZOOM, userData });
+    await openDetail(l);
+    await l.page.getByRole("button", { name: "Zoom video" }).click();
+    const panel = l.page.getByRole("region", { name: "Zoom video" });
+    await panel.getByRole("button", { name: "Suggest zooms" }).click();
+    await panel.getByText("No zoom to suggest").waitFor();
+    await panel.getByRole("button", { name: "Cancel" }).click();
+    await panel.waitFor({ state: "detached" });
+    expect(index(userData).media).toBe("video.webm");
+  });
+});
+
+describe("page context in a capture", () => {
+  const PAGE = { ...ON, capture: { ...ON.capture, experiments: { pageContext: true } } };
+  const post = (l: Launched, events: unknown[], origin?: string) =>
+    fetch(`http://127.0.0.1:${l.port}/v1/capture/page-context`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${readFileSync(path.join(l.userData, "token"), "utf8").trim()}`, "content-type": "application/json", ...(origin && { origin }) },
+      body: JSON.stringify({ page: { url: "http://localhost:3000/orders?token=x", title: "Orders" }, events }),
+    });
+  const recorded = async (l: Launched) => {
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await post(l, [
+      { type: "click", at: Date.now(), element: { tag: "button", label: "Pay now" } },
+      { type: "console-error", at: Date.now(), message: "Cannot read total" },
+      { type: "failed-request", at: Date.now(), method: "POST", url: "/api/pay?card=1", status: 500 },
+    ]);
+    await hook(l, "stop");
+    await until(async () => (await phase(l)) === "idle" && (await hook<{ items: unknown[] }>(l, "state")).items.length > 0);
+    return JSON.parse(readFileSync(path.join(l.userData, "captures", "index.json"), "utf8"))[0] as { context?: string };
+  };
+
+  it("keeps what a development page reported during the recording, without queries or typed text", async () => {
+    const l = await start({ config: PAGE });
+    await open(l);
+    const r = await recorded(l);
+    expect(r.context).toContain("Page events from http://localhost:3000/orders\n");
+    expect(r.context).toContain('click button "Pay now"');
+    expect(r.context).toContain("console error: Cannot read total");
+    expect(r.context).toContain("request failed: POST /api/pay 500");
+    expect(r.context).not.toContain("token=");
+    expect(r.context).not.toContain("card=1");
+  });
+
+  it("lets a page on this computer post with the token from the browser, and refuses other pages", async () => {
+    const l = await start({ config: PAGE });
+    expect((await post(l, [], "http://localhost:3000")).status).toBe(202);
+    expect((await post(l, [], "https://example.com")).status).toBe(403);
+  });
+
+  it("keeps nothing while the experiment is off", async () => {
+    const l = await start({ config: ON });
+    await open(l);
+    expect((await recorded(l)).context).toBeUndefined();
+  });
+});
+
+describe("speech engine for narration", () => {
+  const ENGINES = { ...ON, capture: { ...ON.capture, experiments: { speechEngines: true } } };
+
+  it("offers the live engine and the Windows recognizer, and keeps the choice", async () => {
+    const l = await start({ config: ENGINES });
+    await l.page.getByRole("link", { name: "Capture" }).click();
+    await l.page.getByRole("tab", { name: "Settings" }).click();
+    await l.page.getByRole("combobox", { name: "Speech engine" }).click();
+    const options = await l.page.getByRole("option").allTextContents();
+    expect(options).toEqual(process.platform === "win32" ? ["Dictation model", "Dictation model, live", "Windows speech", "Command"] : ["Dictation model", "Dictation model, live", "Command"]);
+    await l.page.getByRole("option", { name: "Dictation model, live" }).click();
+    await until(async () => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture?.narrationEngine === "live");
+  });
+
+  it("makes a capture with the live engine on (the scripted microphone is silent, so no words)", async () => {
+    const l = await start({ config: { ...ENGINES, capture: { ...ENGINES.capture, narrationEngine: "live" } } });
+    await open(l);
+    await record(l);
+    expect((await hook<{ items: unknown[] }>(l, "state")).items).toHaveLength(1);
   });
 });
