@@ -7,9 +7,9 @@ export interface Phrase {
   join: Join;
 }
 
-const FOLD: Record<string, string> = { a: "aàáâãäå", e: "eèéêë", i: "iìíîï", o: "oòóôõö", u: "uùúûü", n: "nñ", c: "cç" };
+const FOLD: Record<string, string> = { a: "aàáâãäå", e: "eèéêë", i: "iìíîïı", o: "oòóôõö", u: "uùúûü", n: "nñ", c: "cç", s: "sş", g: "gğ" };
 
-export const plain = (s: string): string => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ");
+export const plain = (s: string): string => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/ı/g, "i").replace(/\s+/g, " ");
 
 const wordPattern = (phrase: string): string =>
   phrase

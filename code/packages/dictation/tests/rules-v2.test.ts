@@ -96,7 +96,7 @@ describe("rules by language", () => {
     expect(run("hola nueva línea mundo", { spokenFormatting: true, language: "es" })).toBe("hola\nmundo");
     expect(run("usuario arroba ejemplo", { spokenSymbols: true, language: "es" })).toBe("usuario@ejemplo");
     expect(run("مرحبا فاصلة عالم", { spokenSymbols: true, language: "ar" })).toBe("مرحبا، عالم");
-    expect(run("one comma two", { spokenSymbols: true, language: "fr" })).toBe("one comma two");
+    expect(run("one comma two", { spokenSymbols: true, language: "ja" })).toBe("one comma two");
   });
 
   it("keeps German umlauts and quote marks through every stage", () => {
@@ -126,7 +126,7 @@ describe("rules tester", () => {
 
   it("says which switches were skipped for the language", () => {
     expect(traceRules("hallo", { ...opts, language: "ar" }).notes).toEqual(["fillers-language", "formatting-language"]);
-    expect(traceRules("hallo", { ...opts, language: "fr" }).notes).toEqual(["fillers-language", "formatting-language", "symbols-language"]);
+    expect(traceRules("hallo", { ...opts, language: "ja" }).notes).toEqual(["fillers-language", "formatting-language", "symbols-language"]);
   });
 
   it("marks noise tags and numbers-only text", () => {
