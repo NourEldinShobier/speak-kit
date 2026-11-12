@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import type { Page, SettingsSub } from "../shared/ipc";
 import { appState } from "./app-state.fixture";
 
@@ -7,8 +7,11 @@ vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
+import { loadLocale, LOCALES } from "../shared/i18n";
 import { LocaleProvider } from "./i18n";
 import { Sidebar } from "./Sidebar";
+
+beforeAll(() => Promise.all(LOCALES.map(loadLocale)));
 
 const render = (page: Page, sub: SettingsSub = "general") =>
   renderToStaticMarkup(<Sidebar s={appState()} hidden={false} page={page} sub={sub} recent={[]} go={() => {}} onCloseSettings={() => {}} onOpenRecent={() => {}} onOpenExport={() => {}} />);

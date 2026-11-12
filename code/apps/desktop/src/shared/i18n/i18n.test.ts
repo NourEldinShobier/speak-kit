@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vite-plus/test";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
+import { LOCALES as _L } from "./index";
 import { MENU, SETTINGS_NAV } from "../../renderer/routes";
 import { EN } from "./en";
-import { directionOf, languageOptions, LOCALES, NATIVE_NAMES, resolveLocale, TABLES, translate, translateOr, type StringKey } from "./index";
+import { directionOf, languageOptions, loadLocale, LOCALES, NATIVE_NAMES, resolveLocale, TABLES, translate, translateOr, type StringKey } from "./index";
+
+beforeAll(() => Promise.all(LOCALES.map(loadLocale)));
 
 const keys = Object.keys(EN) as StringKey[];
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();

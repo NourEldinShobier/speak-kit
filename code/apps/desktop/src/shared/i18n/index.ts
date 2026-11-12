@@ -1,8 +1,4 @@
 import { EN, type StringKey } from "./en";
-import { AR } from "./ar";
-import { DE } from "./de";
-import { ES } from "./es";
-import { FR } from "./fr";
 
 export type { StringKey };
 
@@ -12,7 +8,22 @@ export type Locale = (typeof LOCALES)[number];
 /** What the Language setting stores. */
 export const LANGUAGE_CHOICES = ["system", ...LOCALES] as const;
 
-export const TABLES: Record<Locale, Record<StringKey, string>> = { en: EN, es: ES, de: DE, fr: FR, ar: AR };
+type Table = Record<StringKey, string>;
+
+/** The tables loaded so far: English always, the others after `loadLocale` (they stay out of the first bundle). */
+export const TABLES = { en: EN } as Record<Locale, Table>;
+
+const LOADERS: Record<Exclude<Locale, "en">, () => Promise<Table>> = {
+  es: () => import("./es").then((m) => m.ES),
+  de: () => import("./de").then((m) => m.DE),
+  fr: () => import("./fr").then((m) => m.FR),
+  ar: () => import("./ar").then((m) => m.AR),
+};
+
+/** Loads a language's table; until it is loaded `translate` shows English. */
+export async function loadLocale(locale: Locale): Promise<void> {
+  if (locale !== "en" && !TABLES[locale]) TABLES[locale] = await LOADERS[locale]();
+}
 
 /** Each language in its own name, for the language select. */
 export const NATIVE_NAMES: Record<Locale, string> = { en: "English", es: "Español", de: "Deutsch", fr: "Français", ar: "العربية" };
@@ -36,7 +47,7 @@ export function resolveLocale(choice: string, systemLanguages: readonly string[]
 
 /** The text for a key, with `{name}` placeholders filled in (a number in the language's own digits and grouping; pass an id such as a port as a string); a string a table lacks shows its English. */
 export function translate(locale: Locale, key: StringKey, vars?: Readonly<Record<string, string | number>>): string {
-  const text = TABLES[locale][key] || EN[key];
+  const text = TABLES[locale]?.[key] || EN[key];
   return vars ? text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? shown(locale, vars[name]!) : m)) : text;
 }
 

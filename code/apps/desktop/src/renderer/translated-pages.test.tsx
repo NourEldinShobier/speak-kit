@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { parseConfig } from "../shared/schemas";
 import { appState } from "./app-state.fixture";
 
@@ -9,10 +9,13 @@ vi.hoisted(() => {
 });
 
 import { Home } from "./HomePage";
+import { loadLocale, LOCALES } from "../shared/i18n";
 import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
 import { QuickTopics, SettingsResults } from "./features/settings";
 import type { ReactNode } from "react";
+
+beforeAll(() => Promise.all(LOCALES.map(loadLocale)));
 
 const es = (node: ReactNode) => renderToStaticMarkup(<LocaleProvider choice="es">{node}</LocaleProvider>);
 const settings = (sub: Parameters<typeof Settings>[0]["sub"], config = {}, over = {}) =>
