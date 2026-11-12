@@ -19,7 +19,9 @@ export { Select, PopoverSurface, Popover, Dialog, Modal } from "./react/overlay"
 export type { SelectOption, SelectProps, PopoverProps, DialogProps, ModalProps } from "./react/overlay";
 export { Tabs, Segmented, SidebarNav, NavItem, NavSection, Stepper } from "./react/nav";
 export type { TabItem, TabsProps, SegmentedItem, SegmentedProps, NavItemProps, StepperProps } from "./react/nav";
-export { SettingRow, SettingsSection, ListRow, EmptyState, OptInCard, SourceCard, Composer } from "./react/settings";
-export type { SettingRowProps, SettingsSectionProps, ListRowProps, EmptyStateProps, OptInCardProps, SourceCardProps, ComposerProps } from "./react/settings";
+export { SettingRow, SettingsSection, ListRow, EmptyState, SourceCard, Composer } from "./react/settings";
+export type { SettingRowProps, SettingsSectionProps, ListRowProps, EmptyStateProps, SourceCardProps, ComposerProps } from "./react/settings";
+export { OptInCard } from "./react/opt-in";
+export type { OptInCardProps } from "./react/opt-in";
 export type { IconName } from "./icons";
 export { ICON_DATA, isIconName } from "./icons";

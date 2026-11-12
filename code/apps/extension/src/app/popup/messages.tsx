@@ -30,7 +30,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   offline: (m, a) => ({
     icon: "power",
     title: "Speak Kit isn't running",
-    body: "Open the Speak Kit desktop app and this popup connects.",
+    body: "Open the Speak Kit app and this popup connects.",
     primary: { label: m.launch === "starting" ? "Starting..." : "Open Speak Kit", onClick: a.openApp },
     secondary: { label: "Download the app", onClick: a.download },
     launchNote: true,
@@ -39,7 +39,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   token: (_m, a) => ({
     icon: "link",
     title: "Pair Speak Kit with this browser",
-    body: "The pairing token no longer matches, usually after reinstalling the app or the extension.",
+    body: "The pairing token no longer matches, usually after a reinstall.",
     primary: { label: "Re-pair", onClick: a.options },
     secondary: { label: "Open Speak Kit", onClick: a.openApp },
     launchNote: true,
@@ -48,7 +48,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   version: (_m, a) => ({
     icon: "refresh",
     title: "Speak Kit needs an update",
-    body: "The app and extension use different protocol versions. Install the latest of both; settings are kept.",
+    body: "App and extension versions do not match. Install the latest of both; settings are kept.",
     primary: { label: "Download the latest app", onClick: a.download },
     secondary: { label: "Check again", onClick: a.recheck },
     footer: { right: "Troubleshooting", onRight: a.help },
@@ -70,7 +70,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   fileurl: (_m, a) => ({
     icon: "file-text",
     title: "Allow access to file URLs",
-    body: "Chrome needs one more permission for local files. Turn on “Allow access to file URLs” in extension settings.",
+    body: "To read local files, turn on “Allow access to file URLs” in the extension settings.",
     primary: { label: "Open extension settings", onClick: a.extSettings },
     secondary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
