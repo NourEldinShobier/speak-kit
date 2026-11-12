@@ -179,7 +179,7 @@ describe("import", () => {
       await openTranscripts(l);
       await importFile(l, wav(path.join(dir, "weekly_planning.wav"), 70));
       const row = l.page.locator('[data-testid="transcript-row"]').first();
-      await row.getByRole("button", { name: "Open: weekly planning" }).click();
+      await row.getByRole("button", { name: /^Open: / }).click();
       await l.page.getByText("They discuss the invoice. Nothing else comes up.").waitFor();
       await l.page.getByText(/Written by OpenAI/).waitFor();
       await l.page.getByText("2 chapters").waitFor();
@@ -188,8 +188,8 @@ describe("import", () => {
       await shot(l, "summary");
       await l.page.getByRole("button", { name: "Export" }).click();
       await l.page.getByRole("menuitem", { name: "Save as Markdown" }).click();
-      await l.page.getByText("Saved as weekly planning.md.").waitFor();
-      const md = readFileSync(path.join(exportDir, "weekly planning.md"), "utf8");
+      await l.page.getByText("Saved as Invoice talk.md.").waitFor();
+      const md = readFileSync(path.join(exportDir, "Invoice talk.md"), "utf8");
       expect(md).toContain("## Summary");
       expect(md).toMatch(/_Summary written by OpenAI .+\._/);
     } finally {
