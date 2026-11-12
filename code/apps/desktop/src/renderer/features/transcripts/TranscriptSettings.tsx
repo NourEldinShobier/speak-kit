@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Banner, Button, Modal, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { SettingsView } from "../../../shared/transcripts/contract";
-import { AUDIO_DAYS, TEXT_DAYS, TRASH_DAYS, type TranscriptsPatch } from "../../../shared/transcripts/settings";
+import { AUDIO_CAP_BYTES, AUDIO_DAYS, TEXT_DAYS, TRASH_DAYS, type TranscriptsPatch } from "../../../shared/transcripts/settings";
 import { transcripts } from "./api";
 import { sizeText } from "./model";
 import { usePush, useSettingsView } from "./useTranscripts";
@@ -117,7 +117,7 @@ function InUse({ view, onDeleteAudio }: { view: SettingsView; onDeleteAudio(): v
       <SettingRow
         className="lm-row--control"
         label="In use now"
-        description={`${s.count} ${s.count === 1 ? "transcript" : "transcripts"}, ${sizeText(s.audioBytes)} of audio, ${s.trashed} in Trash.`}
+        description={`${s.count} ${s.count === 1 ? "transcript" : "transcripts"}, ${sizeText(s.audioBytes)} of audio (the oldest goes first above ${sizeText(AUDIO_CAP_BYTES)}), ${s.trashed} in Trash.`}
         control={
           <Button variant="danger" disabled={s.audioBytes === 0} onClick={onDeleteAudio}>
             Delete all audio

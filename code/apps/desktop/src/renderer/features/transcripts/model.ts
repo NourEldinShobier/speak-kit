@@ -1,4 +1,4 @@
-import { clock, type Row } from "@speakkit/transcripts/pure";
+import type { Row } from "@speakkit/transcripts/pure";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86_400_000;
@@ -110,8 +110,6 @@ export function pieces(text: string, ranges: readonly { from: number; to: number
 
 /** "2 of 4" for the search inside a transcript, "No matches" when there are none. */
 export const matchText = (current: number, total: number): string => (total === 0 ? "No matches" : `${current + 1} of ${total}`);
-
-export const clockText = clock;
 
 /** The words of a search found in a stretch of text, for the snippet under a result: every typed word, case ignored, wherever it starts a word. */
 export function marked(text: string, query: string): Piece[] {
