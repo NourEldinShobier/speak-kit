@@ -24,8 +24,10 @@
 .apps-item + .apps-item {
   border-block-start: 1px solid var(--stroke-control);
 }
-.apps-item:hover {
-  background: var(--chip-gray);
+@media (hover: hover) and (pointer: fine) {
+  .apps-item:hover {
+    background: var(--chip-gray);
+  }
 }
 .apps-item:focus-visible {
   outline: 2px solid var(--stroke-focus-field);
