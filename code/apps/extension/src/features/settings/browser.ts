@@ -34,6 +34,19 @@ export async function getCommands(): Promise<chrome.commands.Command[]> {
   }
 }
 
+const TABS: chrome.permissions.Permissions = { permissions: ["tabs"] };
+/** The optional "tabs" permission, which lets the extension read the address of the page in front. */
+const tabsCall = async (f: (p: typeof TABS) => Promise<boolean>) => {
+  try {
+    return await f(TABS);
+  } catch {
+    return false; // no permissions API, or the user dismissed the prompt
+  }
+};
+export const hasTabsPermission = () => tabsCall((p) => chrome.permissions.contains(p));
+export const requestTabsPermission = () => tabsCall((p) => chrome.permissions.request(p));
+export const removeTabsPermission = () => tabsCall((p) => chrome.permissions.remove(p));
+
 /** Open http(s) tabs, most recently used first. Empty without the tabs API. */
 export async function recentWebTabs(): Promise<chrome.tabs.Tab[]> {
   try {
