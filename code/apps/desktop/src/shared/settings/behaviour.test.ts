@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { closeHint, effectiveCloseAction, KEYBOARD_MAP, reduceMotion, showTrayIcon } from "./behaviour";
+import { closeHint, closeOutcome, effectiveCloseAction, KEYBOARD_MAP, reduceMotion, showTrayIcon } from "./behaviour";
 import { NETWORK_HOSTS } from "./network";
 
 describe("close and tray", () => {
@@ -47,5 +47,24 @@ describe("keyboard map", () => {
       { keys: "Ctrl+K", does: "Open the command palette" },
       { keys: "Alt+Left, Alt+Right", does: "Go back or forward" },
     ]);
+  });
+});
+
+describe("closing with work running", () => {
+  it("asks before a quit that would lose an export or reading", () => {
+    expect(closeOutcome({ closeAction: "quit", hideTrayIcon: false }, true)).toBe("confirm-quit");
+    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: true }, true)).toBe("confirm-quit");
+  });
+
+  it("quits at once when idle and hides regardless of work", () => {
+    expect(closeOutcome({ closeAction: "quit", hideTrayIcon: false }, false)).toBe("quit");
+    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true)).toBe("hide");
+  });
+});
+
+describe("privacy copy", () => {
+  it("names the one case where audio leaves the computer", async () => {
+    const { NO_TELEMETRY } = await import("./network");
+    expect(NO_TELEMETRY).toContain("except voice chat");
   });
 });

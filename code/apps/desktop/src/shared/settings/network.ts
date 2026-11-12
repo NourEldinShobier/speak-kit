@@ -16,4 +16,4 @@ export const NETWORK_HOSTS: readonly NetworkHost[] = [
 
 export const WHEN_LABEL: Record<NetworkHost["when"], string> = { always: "Automatic", "on-use": "When you use it", "on-request": "When you ask" };
 
-export const NO_TELEMETRY = "Speak Kit sends no usage data, crash reports or analytics. Your text and audio stay on this computer.";
+export const NO_TELEMETRY = "Speak Kit sends no usage data, crash reports or analytics. Your text and audio stay on this computer, except voice chat, which sends audio to OpenAI with your own key.";

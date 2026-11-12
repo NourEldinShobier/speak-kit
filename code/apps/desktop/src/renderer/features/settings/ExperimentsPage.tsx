@@ -4,7 +4,7 @@ import type { AppState } from "../../../shared/ipc";
 import "../../../shared/settings/builtin-experiments";
 import { experiments, groupExperiments, needsRestart, toggled, visibleExperiments, type Experiment } from "../../../shared/settings/experiments";
 import { api, Page } from "../../ui";
-import { rowAttr } from "./focus";
+import { arrowTarget, rowAttr } from "./focus";
 
 function Card({ e, on, onToggle }: { e: Experiment; on: boolean; onToggle(): void }) {
   return (
@@ -61,6 +61,15 @@ function ConfirmOn({ e, onCancel, onConfirm }: { e: Experiment | null; onCancel(
   );
 }
 
+/** Arrow keys, Home and End move between the cards' buttons; Tab still reaches each one. */
+function moveBetweenCards(e: React.KeyboardEvent<HTMLElement>) {
+  const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(".sk-exp button")];
+  const to = arrowTarget(e.key, buttons.indexOf(e.target as HTMLButtonElement), buttons.length);
+  if (to === null) return;
+  e.preventDefault();
+  buttons[to]?.focus();
+}
+
 export function ExperimentsPage({ s }: { s: AppState }) {
   const [confirm, setConfirm] = useState<Experiment | null>(null);
   const [restart, setRestart] = useState(false);
@@ -74,7 +83,7 @@ export function ExperimentsPage({ s }: { s: AppState }) {
   return (
     <Page title="Experiments" lead="Early features that may change or disappear. Each one is off until you turn it on.">
       {restart && <RestartBanner />}
-      <div {...rowAttr("experiments/list")} className="sk-exps">
+      <div {...rowAttr("experiments/list")} className="sk-exps" onKeyDown={moveBetweenCards}>
         {list.length === 0 && (
           <EmptyState icon="flask" title="No experiments right now">
             New early features show up here when a version has them.

@@ -48,25 +48,7 @@ function Appearance({ c }: { c: Config }) {
             />
           }
         />
-        <SettingRow
-          {...rowAttr("general/appearance")}
-          className="lm-row--control"
-          label="Theme"
-          description="Follow the system, or always use the light theme."
-          control={
-            <Select
-              label="Theme"
-              value={c.appearance}
-              onChange={(v) => patch({ appearance: v as Config["appearance"] })}
-              options={[
-                { value: "system", label: "System" },
-                { value: "light", label: "Light" },
-              ]}
-            />
-          }
-        />
       </SettingsSection>
-      <p className="sk-note">Speak Kit has a light theme only. A dark theme is not offered, so System stays light even when the system is dark.</p>
     </>
   );
 }
@@ -105,7 +87,7 @@ function Tray({ s }: { s: AppState }) {
 
 export function GeneralPage({ s }: { s: AppState }) {
   return (
-    <Page title="General" lead="Startup, language, appearance and the tray.">
+    <Page title="General" lead="Startup, language and the tray.">
       <Startup s={s} />
       <Appearance c={s.config} />
       <Tray s={s} />

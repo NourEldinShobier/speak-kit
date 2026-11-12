@@ -23,7 +23,7 @@ export function SettingsFrame({ s, sub, children }: { s: AppState; sub: Settings
           <Banner
             tone={n.kind === "newer" ? "warning" : "info"}
             title={n.kind === "newer" ? "Settings file is from a newer version" : "Some settings were reset"}
-            action={<Button onClick={() => api.dismissSettingsNotice()}>Dismiss</Button>}
+            action={n.kind === "newer" ? undefined : <Button onClick={() => api.dismissSettingsNotice()}>Dismiss</Button>}
           >
             {noticeText(n)}
           </Banner>

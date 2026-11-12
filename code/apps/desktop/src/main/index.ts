@@ -99,6 +99,10 @@ const mainWindow: MainWindow = new MainWindow(config, {
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
   onHidden: () => runtime.stopPolling(),
+  busy: () => {
+    const w = desktop?.runningWork();
+    return !!w && (w.reading || w.exports > 0);
+  },
 });
 const screenVision = createScreenVision();
 const voiceChat = createVoiceChat({

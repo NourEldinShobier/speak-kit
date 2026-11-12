@@ -83,12 +83,12 @@ describe("About", () => {
 const pageWith = (sub: Parameters<typeof Settings>[0]["sub"], over: Partial<Parameters<typeof appState>[0]> = {}) => renderToStaticMarkup(<Settings s={appState(over)} sub={sub} />);
 
 describe("settings pages of the surface package", () => {
-  it("General has six basic rows and an Advanced fold that starts closed", () => {
+  it("General has five basic rows and an Advanced fold that starts closed", () => {
     const html = pageWith("general");
-    expect((html.match(/data-setting-row="general\/(launch|minimized|appearance|language|close|tray)"/g) ?? []).length).toBe(6);
+    expect((html.match(/data-setting-row="general\/(launch|minimized|language|close|tray)"/g) ?? []).length).toBe(5);
     expect(html).toMatch(/aria-expanded="false"[^>]*aria-controls="advanced-general"/);
     expect(html).toContain('id="advanced-general" hidden=""');
-    expect(html).toContain("A dark theme is not offered");
+    expect(html).not.toContain("Theme");
   });
 
   it("the tray hint explains the way back when the tray icon is hidden", () => {
@@ -146,6 +146,13 @@ describe("settings pages of the surface package", () => {
   });
 
   it("a newer settings file shows a warning", () => {
-    expect(pageWith("general", { settingsNotice: { kind: "newer", version: 5 } })).toContain("newer version");
+    const html = pageWith("general", { settingsNotice: { kind: "newer", version: 5 } });
+    expect(html).toContain("newer version");
+    expect(html).toContain("are not saved");
+    expect(html).not.toContain("Dismiss");
+  });
+
+  it("a repaired-settings notice can still be dismissed", () => {
+    expect(pageWith("general", { settingsNotice: { kind: "repaired", fields: ["speed"] } })).toContain("Dismiss");
   });
 });

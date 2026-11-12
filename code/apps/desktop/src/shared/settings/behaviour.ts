@@ -5,6 +5,12 @@ export function effectiveCloseAction(c: Pick<Config, "closeAction" | "hideTrayIc
   return c.hideTrayIcon ? "quit" : c.closeAction;
 }
 
+/** What closing the window does right now: running work (an export, a reading) is confirmed before a quit. */
+export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, busy: boolean): "hide" | "quit" | "confirm-quit" {
+  const a = effectiveCloseAction(c);
+  return a === "quit" && busy ? "confirm-quit" : a;
+}
+
 /** The tray icon is shown unless hidden by the user. */
 export const showTrayIcon = (c: Pick<Config, "hideTrayIcon">): boolean => !c.hideTrayIcon;
 
