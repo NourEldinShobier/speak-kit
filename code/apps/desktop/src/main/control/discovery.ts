@@ -68,6 +68,7 @@ export const portOpen = (port: number, timeoutMs = 500): Promise<boolean> =>
 /** Removes the file on quit, but only while it still belongs to this process: a newer instance may have replaced it. Synchronous, so a quit in progress cannot skip it. */
 export function removeDiscovery(file: string, pid: number): void {
   try {
+    // oxlint-disable-next-line node/no-sync -- a quit in progress cannot wait for a promise
     if ((JSON.parse(readFileSync(file, "utf8")) as Partial<Discovery>).pid === pid) rmSync(file, { force: true });
   } catch {
     // Missing or damaged: nothing of ours to remove.
