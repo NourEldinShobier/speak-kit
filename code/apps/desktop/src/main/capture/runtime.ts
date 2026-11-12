@@ -290,6 +290,12 @@ export class CaptureRuntime {
     });
   }
 
+  /** Tests only: presses a button of the capsule. */
+  pressCapsule(action: CapsuleAction) {
+    this.#capsuleHandlers()[action]();
+    this.controller.update();
+  }
+
   #fromCapsule(sender: WebContents, action: unknown) {
     const parsed = v.safeParse(CapsuleActionSchema, action);
     if (!parsed.success || !this.controller.owns(sender)) return;

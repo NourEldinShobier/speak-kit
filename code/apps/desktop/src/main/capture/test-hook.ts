@@ -1,3 +1,4 @@
+import type { CapsuleAction } from "../../shared/capture/contract";
 import type { CaptureService } from "./service";
 import type { FakeRecorderOptions } from "./fake";
 
@@ -15,5 +16,9 @@ export const captureTestHook = (c: CaptureService) => ({
   /** What the scripted recorder does on the next recordings: how many frames it makes, whether the microphone is missing. */
   script: (o: FakeRecorderOptions) => c.runtime.scriptRecorder(o),
   /** Same as pressing the capture key: "down" then "up" starts, a quick "down" "up" while recording stops. */
+  /** Same as pressing a button of the capsule. */
+  capsule: (action: CapsuleAction) => c.runtime.pressCapsule(action),
+  /** The voice chat reads the capture that waits for it (what the look call does); the inbox is empty afterwards. */
+  readSent: () => c.testInbox().take(),
   key: (kind: "down" | "up" | "escape") => c.keys.press({ kind }),
 });

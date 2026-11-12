@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { deflateSync } from "node:zlib";
 import { launch, removeDir, type Launched } from "./harness";
 
 const running: Launched[] = [];
@@ -204,5 +205,172 @@ describe("experiments", () => {
     await until(async () => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8")).capture?.experiments?.screenshots === true);
     await card.getByRole("button", { name: /Turn off/ }).click();
     await card.getByRole("button", { name: /Turn on/ }).waitFor();
+  });
+});
+
+/** A small PNG made here: a grey picture with a lighter band, so an edit is easy to tell from the original. */
+function makePng(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (b: Buffer) => {
+    let c = 0xffffffff;
+    for (const x of b) c = crcTable[(c ^ x) & 0xff]! ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc(body), body.length + 4);
+    return out;
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8);
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width * 3; x++) rows[y * (width * 3 + 1) + 1 + x] = y > height / 3 && y < (2 * height) / 3 ? 220 : 120;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", header), chunk("IDAT", deflateSync(rows)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+describe("editing a screenshot", () => {
+  const seed = () => {
+    const userData = mkdtempSync(path.join(tmpdir(), "speakkit-capture-"));
+    dirs.push(userData);
+    const dir = path.join(userData, "captures", "s1");
+    mkdirSync(dir, { recursive: true });
+    const png = makePng(320, 200);
+    writeFileSync(path.join(dir, "shot.png"), png);
+    const record = { id: "s1", kind: "screenshot", title: "Screenshot - Display 1", at: Date.now(), dir: "s1", bytes: png.length, media: "shot.png", frames: [], chips: ["saved", "copied"] };
+    writeFileSync(path.join(userData, "captures", "index.json"), JSON.stringify([record]));
+    return { userData, dir };
+  };
+  const openEditor = async (l: Launched) => {
+    await open(l);
+    await l.page.getByRole("button", { name: /^Open Screenshot/ }).click();
+    await l.page.getByTestId("capture-detail").waitFor();
+    await l.page.getByRole("button", { name: /^Edit picture at/ }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor();
+  };
+
+  it("draws a rectangle with the mouse, saves a copy next to the original, and shows it as edited", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    const save = l.page.getByRole("button", { name: "Save a copy" });
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.getByRole("button", { name: "Rectangle" }).click();
+    const canvas = l.page.getByLabel(/^Picture, 320 by 200/);
+    const box = (await canvas.boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 4 });
+    await l.page.mouse.up();
+    expect(await save.isDisabled()).toBe(false);
+    await l.page.getByRole("button", { name: "Undo" }).click();
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.getByRole("button", { name: "Redo" }).click();
+    await save.click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    await l.page.getByText("Picture (edited)").waitFor();
+    const edited = readFileSync(path.join(dir, "edit-shot.png"));
+    expect([...edited.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(edited.equals(readFileSync(path.join(dir, "shot.png")))).toBe(false);
+    expect(JSON.parse(readFileSync(path.join(userData, "captures", "index.json"), "utf8"))[0].edits).toEqual({ "shot.png": "edit-shot.png" });
+  });
+
+  it("draws with the keyboard alone: arrows move, Space marks the two corners", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    await l.page.getByRole("button", { name: "Highlight" }).click();
+    await l.page.getByLabel(/^Picture, 320 by 200/).focus();
+    await l.page.keyboard.press("Space");
+    for (let i = 0; i < 5; i++) await l.page.keyboard.press("ArrowRight");
+    for (let i = 0; i < 4; i++) await l.page.keyboard.press("ArrowDown");
+    await l.page.keyboard.press("Space");
+    const save = l.page.getByRole("button", { name: "Save a copy" });
+    expect(await save.isDisabled()).toBe(false);
+    await l.page.keyboard.press("Control+z");
+    expect(await save.isDisabled()).toBe(true);
+    await l.page.keyboard.press("Control+y");
+    await save.click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    expect(existsSync(path.join(dir, "edit-shot.png"))).toBe(true);
+  });
+
+  it("cropping saves a smaller picture and Cancel leaves the original alone", async () => {
+    const { userData, dir } = seed();
+    const l = await start({ config: ON, userData });
+    await openEditor(l);
+    await l.page.getByRole("button", { name: "Cancel" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    expect(existsSync(path.join(dir, "edit-shot.png"))).toBe(false);
+    await l.page.getByRole("button", { name: /^Edit picture at/ }).click();
+    await l.page.getByRole("button", { name: "Crop" }).click();
+    const box = (await l.page.getByLabel(/^Picture, 320 by 200/).boundingBox())!;
+    await l.page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.25);
+    await l.page.mouse.down();
+    await l.page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.75, { steps: 3 });
+    await l.page.mouse.up();
+    await l.page.getByText(/^Crop 160 by 100/).waitFor();
+    await l.page.getByRole("button", { name: "Save a copy" }).click();
+    await l.page.getByRole("dialog", { name: "Edit picture" }).waitFor({ state: "detached" });
+    const edited = readFileSync(path.join(dir, "edit-shot.png"));
+    expect([edited.readUInt32BE(16), edited.readUInt32BE(20)]).toEqual([160, 100]);
+  });
+});
+
+describe("send to Voice chat", () => {
+  const SEND = { ...ON, capture: { ...ON.capture, autoSend: "3s" } };
+  const capsule = async (l: Launched) => (await hook<{ capsule: { kind: string; held?: boolean; canUndo?: boolean } | null }>(l, "state")).capsule;
+  const startSend = async (l: Launched) => {
+    await open(l);
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await hook(l, "stop");
+    await until(async () => (await capsule(l))?.kind === "countdown");
+  };
+
+  it("counts down, sends, and Undo takes the capture back before Voice chat read it", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await until(async () => (await capsule(l))?.kind === "sent", 10_000);
+    expect(await capsule(l)).toMatchObject({ kind: "sent", canUndo: true });
+    await hook(l, "capsule", "undo");
+    expect((await capsule(l))?.kind).toBe("undone");
+    expect(await hook(l, "readSent")).toEqual({ ok: false, code: "no-capture" });
+  });
+
+  it("Hold stops the countdown, Send now sends it, and a read capture cannot be undone", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await hook(l, "capsule", "hold");
+    expect(await capsule(l)).toMatchObject({ kind: "countdown", held: true });
+    await new Promise((r) => setTimeout(r, 3500));
+    expect(await capsule(l)).toMatchObject({ kind: "countdown", held: true });
+    await hook(l, "capsule", "send-now");
+    await until(async () => (await capsule(l))?.kind === "sent");
+    const read = await hook<{ ok: boolean; look?: { scope: string; image: string } }>(l, "readSent");
+    expect(read.ok).toBe(true);
+    expect(read.look?.scope).toBe("capture");
+    expect(read.look?.image.length).toBeGreaterThan(0);
+    await until(async () => (await capsule(l))?.canUndo === false);
+    await hook(l, "capsule", "undo");
+    expect((await capsule(l))?.kind).toBe("sent");
+    expect((await hook<{ items: { chips: string[] }[] }>(l, "state")).items[0]!.chips).toContain("sent");
+  });
+
+  it("Undo inside the countdown sends nothing", async () => {
+    const l = await start({ config: SEND });
+    await startSend(l);
+    await hook(l, "capsule", "undo");
+    await new Promise((r) => setTimeout(r, 3500));
+    expect((await capsule(l))?.kind).toBe("undone");
+    expect(await hook(l, "readSent")).toEqual({ ok: false, code: "no-capture" });
   });
 });

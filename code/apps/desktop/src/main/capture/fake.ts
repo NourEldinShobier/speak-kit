@@ -1,3 +1,4 @@
+import { nativeImage } from "electron";
 import type { RecorderCommand, RecorderData, RecorderResult } from "../../shared/capture/contract";
 import type { RecorderHost } from "./recorder-host";
 
@@ -5,6 +6,9 @@ type Omit2<T> = T extends unknown ? Omit<T, "id"> : never;
 
 /** A tiny but valid JPEG header-less blob: only the bytes matter to the bundle, nothing decodes it. */
 const BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+
+/** A real small JPEG, for the contact sheet: what is sent to the voice chat is decoded, so it must be a picture. */
+const sheetJpeg = () => new Uint8Array(nativeImage.createFromBitmap(Buffer.alloc(16 * 16 * 4, 200), { width: 16, height: 16 }).toJPEG(80));
 
 export interface FakeRecorderOptions {
   /** Frames to make during a recording. 0 makes a recording that fails with no pictures. */
@@ -41,7 +45,7 @@ export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { opti
         return { ok: true, micOk: !host.options.noMic };
       }
       if (cmd.op === "stop") return { ok: true, durationMs: Math.max(1000, Date.now() - startedAt), frames: host.options.frames ?? 3 };
-      if (cmd.op === "sheet") return { ok: true, jpeg: BYTES };
+      if (cmd.op === "sheet") return { ok: true, jpeg: sheetJpeg() };
       return { ok: true };
     },
   };
