@@ -422,6 +422,8 @@ describe("settings through the commands", () => {
     expect(validateChange({ "dictation.mode": "sideways" })).toMatchObject({ ok: false });
     expect(validateChange({ "dictation.rawHotkey": "KeyA" })).toMatchObject({ ok: false });
     expect(validateChange({ nope: 1 })).toMatchObject({ ok: false });
+    expect(validateChange({ "dictation.mode": "toggle" }, COMMAND_LINE_KEYS)).toMatchObject({ ok: false, message: "dictation.mode cannot be changed from the command line." });
+    expect(validateChange({ "dictation.retention": "forever" }, COMMAND_LINE_KEYS)).toMatchObject({ ok: false });
     expect(validateChange({ voice: "x" }, COMMAND_LINE_KEYS)).toMatchObject({ ok: true });
     expect(validateChange({ language: "en" }, COMMAND_LINE_KEYS)).toEqual({ ok: false, message: "language cannot be changed from the command line." });
   });
