@@ -97,7 +97,10 @@ const mainWindow: MainWindow = new MainWindow(config, {
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
-  onHidden: () => runtime.stopPolling(),
+  onHidden: () => {
+    runtime.stopPolling();
+    desktop?.onWindowHidden();
+  },
 });
 const screenVision = createScreenVision();
 const voiceChat = createVoiceChat({

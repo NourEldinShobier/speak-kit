@@ -21,5 +21,7 @@ export const dictationTestHook = (d: DictationService) => ({
   /** Puts any pill on the HUD (design check). */
   showHud: (view: HudView) => d.os?.hud.show({ kind: "view", view }),
   hotkeyActive: () => d.hotkeyActive,
+  /** Whether the level meter is holding the microphone open. */
+  meterOn: () => d.mic.meter,
   state: () => d.state,
 });

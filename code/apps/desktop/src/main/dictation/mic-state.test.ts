@@ -2,17 +2,19 @@ import { describe, expect, it } from "vite-plus/test";
 import { MicState, METER_LEASE_MS } from "./mic-state";
 
 function rig(enabled = true) {
+  const shown = { on: true };
   const calls: boolean[] = [];
   const timers: { ms: number; fn: () => void; live: boolean }[] = [];
   const state = new MicState(true, () => ({ devices: async () => undefined, configure: async (meter) => void calls.push(meter) }), {
     enabled: () => enabled,
+    windowShown: () => shown.on,
     after: (ms, fn) => {
       const t = { ms, fn, live: true };
       timers.push(t);
       return () => (t.live = false);
     },
   });
-  return { state, calls, timers, fire: () => timers.filter((t) => t.live).forEach((t) => t.fn()) };
+  return { state, shown, calls, timers, fire: () => timers.filter((t) => t.live).forEach((t) => t.fn()) };
 }
 
 describe("MicState meter", () => {
@@ -31,6 +33,14 @@ describe("MicState meter", () => {
     expect(r.calls).toEqual([]);
     expect(r.state.meter).toBe(false);
     expect(r.timers).toEqual([]);
+  });
+
+  it("does nothing while the window is hidden or minimized, however the page renews", async () => {
+    const r = rig();
+    r.shown.on = false;
+    await r.state.setMeter(true);
+    expect(r.calls).toEqual([]);
+    expect(r.state.meter).toBe(false);
   });
 
   it("switches the meter off when the page stops renewing it (hidden, reloaded or crashed)", async () => {
@@ -69,6 +79,18 @@ describe("MicState meter", () => {
     await r.state.setMeter(true);
     await r.state.refresh();
     expect(r.calls).toEqual([false, true, true]);
+  });
+});
+
+describe("MicState list", () => {
+  it("asks the microphone window for the inputs only while dictation is on", async () => {
+    let asked = 0;
+    const mk = (on: boolean) =>
+      new MicState(true, () => ({ devices: async () => void asked++, configure: async () => undefined }), { enabled: () => on, windowShown: () => true, after: () => () => undefined });
+    await mk(false).list();
+    expect(asked).toBe(0);
+    await mk(true).list();
+    expect(asked).toBe(1);
   });
 });
 

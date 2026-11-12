@@ -92,6 +92,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       if (patch.doNotDisturb !== undefined) ctx.publish();
     },
     onEngineState: announceEngine,
+    /** The app window was hidden or minimized: the level meter lets go of the microphone at once. */
+    onWindowHidden: () => void dictation.mic.setMeter(false),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
     dispose: () => {

@@ -15,7 +15,7 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { appOverrides, clock, coreSettings, dictationStatus, keepOpenMs } from "./service-support";
+import { appOverrides, clock, coreSettings, dictationStatus, keepOpenMs, touchesMicrophone, windowShown } from "./service-support";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import { createSleepBlock } from "./sleep-block";
@@ -40,7 +40,6 @@ export interface DictationServiceOptions {
 }
 
 const PUSH_MS = 200;
-const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
 /**
  * Dictation in the desktop app: the key hook, the microphone window, the speech engine, the HUD and the history, wired to the core and shown to
  * the Settings pages. Nothing runs (no hook, no microphone window, no model in memory) until the person turns dictation on.
@@ -65,7 +64,7 @@ export class DictationService {
   #replay: ReplayRecorder | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
-  readonly mic = new MicState(process.platform === "win32", () => this.#recorder, { enabled: () => this.#cfg.enabled, after: (ms, fn) => clock.after(ms, fn) });
+  readonly mic = new MicState(process.platform === "win32", () => this.#recorder, { enabled: () => this.#cfg.enabled, windowShown: () => windowShown(this.#o.parent()), after: clock.after });
   readonly #sleep = createSleepBlock(
     powerSaveBlocker,
     () => this.#cfg.blockSleep,
@@ -222,7 +221,7 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.setHotkey(this.#cfg.hotkey);
     if (patch.retention !== undefined) void this.history.refresh();
-    if (this.#cfg.enabled && MIC_KEYS.some((k) => k in patch)) void this.mic.refresh();
+    if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
     this.#push(true);
     return this.status();
   }

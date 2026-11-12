@@ -70,7 +70,7 @@ function CaptureRows({ c }: { c: DictationStatus["settings"] }) {
 
 export function MicrophoneCard({ s }: { s: DictationStatus }) {
   const c = s.settings;
-  useEffect(() => void dictation.micDevices(), []);
+  useEffect(() => void dictation.micDevices(), [s.enabled]);
   const line = micLine(s.mic, true);
   const options = micOptions(s.devices, c.microphone);
   return (

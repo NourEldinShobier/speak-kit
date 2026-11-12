@@ -97,3 +97,11 @@ export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, 
   mic,
   devices,
 });
+
+const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
+
+/** True when a settings change needs the microphone window told (which input, and whether it stays open). */
+export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) => k in patch);
+
+/** The app window is on screen: not hidden to the tray, not minimized, not gone. */
+export const windowShown = (w: { isDestroyed(): boolean; isVisible(): boolean; isMinimized(): boolean } | null): boolean => !!w && !w.isDestroyed() && w.isVisible() && !w.isMinimized();
