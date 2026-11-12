@@ -21,7 +21,7 @@ const PAGES = [
 /** Names of keys and commands, which are the same in every language. */
 const SAME_EVERYWHERE = new Set(["Esc", "speakkit", "Promise"]);
 
-/** Text a reader sees that is written in the source instead of coming from the string table. */
+/** Limit: a regex scan of JSX text on one line and quoted attributes; it misses multi-line text, template literals, ternary strings and `attr={"..."}`. Text a reader sees that is written in the source instead of coming from the string table. */
 function literals(source: string): string[] {
   const found: string[] = [];
   for (const m of source.matchAll(/>\s*([^<>{}\n]*[A-Za-z]{2}[^<>{}\n]*)\s*</g)) found.push(m[1]!.trim());

@@ -47,6 +47,7 @@ describe("string tables", () => {
   it("writes a number in the grouping of the language and leaves a string as it is", () => {
     expect(translate("en", "fold.count", { n: 1234 })).toBe("1,234 settings");
     expect(translate("de", "fold.count", { n: 1234 })).toBe("1.234 Einstellungen");
+    expect(translate("ar", "fold.count", { n: 1234 })).toBe("1,234 إعدادات");
     expect(translate("fr", "home.portBusy", { port: "47615" })).toBe("Le port 47615 est utilisé");
   });
 });
