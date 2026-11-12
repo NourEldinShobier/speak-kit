@@ -1,3 +1,4 @@
+import type { Summarise } from "@speakkit/transcripts";
 import { app, ipcMain, type BrowserWindow } from "electron";
 import type { Ctx } from "../context";
 import type { DictationService } from "../dictation/service";
@@ -13,6 +14,8 @@ export interface TranscriptsOptions {
   parent(): BrowserWindow | null;
   /** The speech engine and model are dictation's: transcripts borrow them. */
   dictation: DictationService;
+  /** The notes writer, or nothing when notes are off (the Meetings setting also governs transcripts). */
+  notes?(): Summarise | undefined;
   /** The test hook is on: the file chooser is replaced by what the test sets, and the microphone can be refused. */
   test: boolean;
   /** Called when the recorder or a job changes state (the tray follows). */
@@ -39,6 +42,7 @@ export function setupTranscripts(ctx: Ctx, o: TranscriptsOptions): TranscriptsFe
       return { name: m?.name ?? "Speech model", installed: !!m?.installed };
     },
     dictationBusy: () => o.dictation.state.status !== "idle" && o.dictation.state.status !== "error",
+    ...(o.notes && { notes: o.notes }),
     files: diskFiles(decoder.decodeInPage),
     mic,
     dialog: dialogs(o.test, sw),

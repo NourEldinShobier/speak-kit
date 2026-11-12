@@ -7,7 +7,7 @@ export interface Segment {
 
 export type Source = "file" | "microphone";
 export type Status = "recording" | "queued" | "transcribing" | "done" | "failed" | "interrupted" | "cancelled";
-export type FailureCode = "unsupported" | "too-large" | "too-long" | "decode-failed" | "engine-missing" | "engine-loading" | "disk-full" | "failed";
+export type FailureCode = "unsupported" | "too-large" | "too-long" | "decode-failed" | "engine-missing" | "engine-loading" | "disk-full" | "notes" | "failed";
 
 export interface Failure {
   code: FailureCode;

@@ -5,6 +5,7 @@ import type { Push, SettingsView } from "../../../shared/transcripts/contract";
 import { transcripts } from "./api";
 import { ExportNotice, type ExportResult } from "./ExportMenu";
 import { audioText, dateText, lengthText, segmentAt } from "./model";
+import { ChapterList, SummaryCard } from "./TranscriptNotes";
 import { Find, Head, Lines, PAGE } from "./TranscriptParts";
 import { audioDaysLeft } from "./TranscriptRow";
 
@@ -113,6 +114,8 @@ function Ready({ detail: d, props, reload }: { detail: Detail; props: Props; rel
           {d.status === "failed" ? (d.failure?.message ?? "It failed.") : "What is below is what has been transcribed so far."}
         </Banner>
       ) : null}
+      <SummaryCard detail={d} reload={reload} />
+      <ChapterList detail={d} onCopied={() => setResult({ kind: "copied" })} />
       <Find query={query} setQuery={setQuery} current={f.current} total={f.matches.length} onStep={f.step} onJump={f.jump} />
       <Words detail={d} unfinished={unfinished}>
         <Lines detail={d} query={query} matches={f.matches} current={f.current} limit={f.limit} setLimit={f.setLimit} />

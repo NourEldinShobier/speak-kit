@@ -10,7 +10,8 @@ import { createGate, JobQueue, QueueFullError } from "./queue";
 import { sweep, audioTotal } from "./retention";
 import { SearchIndex } from "./search";
 import { recordingApi } from "./recording";
-import { viewOf, type NoteDoc } from "./notes";
+import { viewOf } from "./notes";
+import { notesRunner } from "./notes-pass";
 import { openStore, type Store } from "./store";
 import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
@@ -52,38 +53,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
 
   const row = (e: Entry, snippet?: string): Row => toRow(e, { queue, spooled, writing, now: d.now(), policy: d.policy(), snippet });
 
-  const NOTES_OFF: Failure = { code: "failed", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." };
-  const NOTHING_TO_SUMMARISE: Failure = { code: "failed", message: "There is nothing to write notes from: no words were heard." };
-
-  /** One notes pass. The words and the audio are never an output: a failure is saved next to the last good notes and the transcript stays as it was. */
-  async function notesPass(id: string): Promise<Outcome> {
-    const summarise = d.notes?.();
-    const e = store.get(id);
-    if (!summarise) return { ok: false, failure: NOTES_OFF };
-    if (!e || e.status !== "done" || writing.has(id)) return { ok: false, failure: failures.failed() };
-    const segments = await store.segments(id);
-    if (!segments.some((s) => s.text.trim())) return { ok: false, failure: NOTHING_TO_SUMMARISE };
-    writing.add(id);
-    d.changed();
-    try {
-      let r: Awaited<ReturnType<typeof summarise>>;
-      try {
-        r = await summarise(segments, new AbortController().signal);
-      } catch {
-        r = { ok: false, failure: { code: "failed", message: "The notes could not be written. The transcript is unchanged." } };
-      }
-      const prev = await store.notes(id);
-      const doc: NoteDoc | undefined = r.ok ? { ...r.notes, writer: r.writer, at: d.now() } : prev?.doc;
-      await store.saveNotes(id, { ...(doc && { doc }), ...(!r.ok && { failure: r.failure }) });
-      await settle(id, { notes: r.ok ? "ready" : "failed" });
-      return r.ok ? { ok: true } : r;
-    } catch (err) {
-      return { ok: false, failure: failure(err) };
-    } finally {
-      writing.delete(id);
-      d.changed();
-    }
-  }
+  const notesPass = notesRunner({ d, store, settle, writing, failure });
 
   async function job(id: string, signal: AbortSignal): Promise<void> {
     const e = store.get(id);

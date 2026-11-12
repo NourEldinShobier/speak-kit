@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createTranscripts, nodeFs, type Fs, type Outcome, type Transcripts } from "@speakkit/transcripts";
+import { createTranscripts, nodeFs, type Fs, type Outcome, type Summarise, type Transcripts } from "@speakkit/transcripts";
 import type { Push } from "../../shared/transcripts/contract";
 import { policyOf } from "../../shared/transcripts/settings";
 import type { Ctx } from "../context";
@@ -22,6 +22,8 @@ export interface TranscriptsPorts {
   modelName(): { name: string; installed: boolean };
   /** Dictation is recording or transcribing. */
   dictationBusy(): boolean;
+  /** The notes writer, or nothing when notes are off or there is no key. */
+  notes?(): Summarise | undefined;
   files: Omit<FilePorts, "decodeInPage"> & { decodeInPage: FilePorts["decodeInPage"] };
   mic: MicPort;
   dialog: { pickFile(): Promise<string | null>; pickFolder(): Promise<string | null> };
@@ -69,6 +71,7 @@ export function createTranscriptsService(ctx: Ctx, p: TranscriptsPorts): Transcr
     model: p.model,
     policy: () => policyOf(cfg()),
     exportDir: folder,
+    ...(p.notes && { notes: p.notes }),
     changed: () => live.changed(),
     recycle: (f) => p.shell.trash(f),
     warn: (text) => {
