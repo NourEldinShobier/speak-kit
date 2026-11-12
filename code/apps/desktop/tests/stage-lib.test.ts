@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { foreignMacArch, icoFromPngs, importedPackages, keepWhisperPackage, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, icoFromPngs, importedPackages, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -90,5 +90,31 @@ describe("the lockfile and the macOS packaging config", () => {
       const plist = read(file);
       for (const key of ["allow-jit", "allow-unsigned-executable-memory", "disable-library-validation", "device.audio-input"]) expect(plist).toContain(key);
     }
+  });
+});
+
+describe("macSigningPlan", () => {
+  it("signs helpers with the inherited entitlements, frameworks with none, and the main app last with the full set and no --deep", () => {
+    const plan = macSigningPlan({
+      app: "/o/Speak Kit.app",
+      nested: ["/o/Speak Kit.app/Contents/Frameworks/Helper.app", "/o/Speak Kit.app/Contents/Frameworks/Electron Framework.framework"],
+      entitlements: "main.plist",
+      inherit: "inherit.plist",
+    });
+    const base = ["--force", "--sign", "-", "--options", "runtime"];
+    expect(plan).toEqual([
+      [...base, "--entitlements", "inherit.plist", "/o/Speak Kit.app/Contents/Frameworks/Helper.app"],
+      [...base, "/o/Speak Kit.app/Contents/Frameworks/Electron Framework.framework"],
+      [...base, "--entitlements", "main.plist", "/o/Speak Kit.app"],
+    ]);
+    expect(plan.flat()).not.toContain("--deep");
+  });
+
+  it("signs a loose library with no entitlements", () => {
+    expect(macSigningPlan({ app: "a.app", nested: ["x/libffmpeg.dylib"], entitlements: "m", inherit: "i" })[0]).toEqual(["--force", "--sign", "-", "--options", "runtime", "x/libffmpeg.dylib"]);
+  });
+
+  it("signs only the app when there is nothing nested", () => {
+    expect(macSigningPlan({ app: "a.app", nested: [], entitlements: "m", inherit: "i" })).toHaveLength(1);
   });
 });

@@ -4,11 +4,14 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import type { Replacement } from "../../../shared/dictation/settings";
 import { MAX_REPLACEMENTS } from "../../../shared/dictation/settings";
 import { Page } from "../../ui";
-import { dictation } from "./api";
+import { dictation, platformName } from "./api";
 import { FirstRunCard } from "./FirstRunCard";
 import { HotkeyRecorder } from "./HotkeyRecorder";
 import { entriesText, hotkeyHelp, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
 import { ModelList } from "./ModelList";
+import { PermissionGuide } from "./PermissionGuide";
+import { hotkeyFailedCopy } from "./permissions-model";
+import { usePermissions } from "./usePermissions";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
@@ -145,12 +148,14 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
 /** Settings > Dictation. While the speech model is being downloaded or loaded the page shows that card first. */
 export function DictationPage({ openHistory }: { openHistory: () => void }) {
   const s = useDictation();
+  const permissions = usePermissions();
   if (!s)
     return (
       <Page title="Dictation" lead={LEAD}>
         {null}
       </Page>
     );
+  const failed = hotkeyFailedCopy(platformName(), permissions?.guides.dictation.next ?? null);
   const selected = s.models.find((m) => m.selected);
   // The first card shows while the chosen model cannot be used yet. A second model downloading, or failing, does not take the page away.
   const loading = !s.modelReady && !s.models.some((m) => m.progress);
@@ -163,10 +168,11 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
         </Banner>
       )}
       {s.hotkeyFailed && (
-        <Banner tone="error" title="The hotkey could not start">
-          Dictation does not hear the hotkey. Turn Dictation off and on again; if that does not help, restart Speak Kit.
+        <Banner tone="error" title={failed.title}>
+          {failed.text}
         </Banner>
       )}
+      <PermissionGuide status={permissions} onAct={(id, action) => void (action === "request" ? window.speakkitPermissions?.request(id) : window.speakkitPermissions?.openSettings(id))} />
       {!settingUp && s.modelError && (
         <Banner tone="error" title="The speech model could not be set up">
           {s.modelError}

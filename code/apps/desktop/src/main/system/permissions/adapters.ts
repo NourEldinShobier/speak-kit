@@ -25,13 +25,15 @@ const MAC_PANES: Record<PermissionId, string> = {
 };
 
 export function macAdapter(prefs: Prefs, inputMonitoring: () => Promise<MacInputMonitoring>): PermissionsAdapter {
+  // The system never reports a refusal for Accessibility, so a prompt we showed and a still-untrusted app mean the person said no.
+  let accessibilityAsked = false;
   return {
     platform: "darwin",
     async read(id) {
       switch (id) {
-        // The system does not say "refused" for Accessibility, only "not trusted": the prompt is still worth showing.
         case "accessibility":
-          return prefs.isTrustedAccessibilityClient(false) ? "granted" : "not-determined";
+          if (prefs.isTrustedAccessibilityClient(false)) return "granted";
+          return accessibilityAsked ? "denied" : "not-determined";
         case "input-monitoring": {
           const s = (await inputMonitoring()).status();
           return s === "unknown" ? "not-determined" : s;
@@ -45,6 +47,7 @@ export function macAdapter(prefs: Prefs, inputMonitoring: () => Promise<MacInput
     async prompt(id) {
       switch (id) {
         case "accessibility":
+          accessibilityAsked = true;
           prefs.isTrustedAccessibilityClient(true);
           return true;
         case "input-monitoring":

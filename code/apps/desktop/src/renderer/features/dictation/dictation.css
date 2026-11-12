@@ -291,3 +291,26 @@
   gap: 6px;
   margin-block-start: 12px;
 }
+
+/* Permission guide. */
+.dict-perms {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dict-perms__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-block-size: 36px;
+}
+.dict-perms__text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-size: 13px;
+}

@@ -17,14 +17,14 @@ const initialState = () => ({
 
 export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
   let handler: ((e: TapEvent) => boolean) | undefined;
-  const calls = { taps: 0, removed: 0, enabled: 0 };
+  const calls = { taps: 0, removed: 0 };
   const state = initialState();
   const native: MacNative = {
     createTap(onEvent) {
       if (opts.refuseTap) throw new Error("tap refused");
       calls.taps++;
       handler = onEvent;
-      return { enable: () => void calls.enabled++, remove: () => void calls.removed++ };
+      return { remove: () => void calls.removed++ };
     },
     keyIsDown: (code) => state.down.has(code),
     modifierFlags: () => state.flags,

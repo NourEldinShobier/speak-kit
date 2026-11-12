@@ -32,6 +32,9 @@ const actionFor = (id: PermissionId, state: PermissionState): GuideAction => {
   return "open-settings";
 };
 
+/** The key tap needs Input Monitoring and Accessibility; once both are allowed (or not needed here) a hotkey that failed to start can be tried again. */
+export const hotkeyPermissionsReady = (states: Record<PermissionId, PermissionState>): boolean => ready(states["input-monitoring"]) && ready(states.accessibility);
+
 /** The first-use steps for a feature, in the order the system should be asked. A state the system could not read ("unknown") counts as open, never as granted. */
 export function guideFor(states: Record<PermissionId, PermissionState>, feature: PermissionFeature): Guide {
   const steps = FEATURE_PERMISSIONS[feature].map((id): GuideStep => ({ id, state: states[id], action: actionFor(id, states[id]) }));

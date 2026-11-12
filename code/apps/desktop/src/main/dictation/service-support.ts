@@ -35,6 +35,9 @@ interface StatusParts {
 }
 
 /** What the Settings page and the tray are told about dictation. */
+/** Try the hotkey again only when it failed, dictation is on, and the permissions it needs were just allowed. */
+export const shouldRetryHotkey = (s: { failed: boolean; enabled: boolean; permitted: boolean }): boolean => s.failed && s.enabled && s.permitted;
+
 export const dictationStatus = ({ supported, config, hotkeyReady, hotkeyFailed, state, models, historyCount }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
