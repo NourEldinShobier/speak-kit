@@ -83,5 +83,8 @@ export function footerText(count: number, c: { textDays: number; audioHours: num
   return `${plural(count, "meeting", "meetings")}. ${kept} and audio is deleted after ${hours}.`;
 }
 
-export const sizeText = (bytes: number): string =>
-  bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : bytes >= 1024 ** 2 ? `${Math.round(bytes / 1024 ** 2)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+export function sizeText(bytes: number): string {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  if (bytes >= 1024 ** 2) return `${Math.round(bytes / 1024 ** 2)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}

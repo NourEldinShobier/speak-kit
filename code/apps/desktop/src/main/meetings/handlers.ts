@@ -97,25 +97,28 @@ function recording(env: HandlerEnv): Pick<Handlers, "start" | "stop" | "push"> {
   };
 }
 
+/** What the settings page shows now. */
+async function settingsView(env: HandlerEnv): Promise<SettingsView> {
+  const { ports, cfg } = env;
+  const n = env.core.notice();
+  const rows = env.core.list();
+  return {
+    config: { ...cfg() },
+    providers: providerViews(cfg(), addedProviders(cfg())),
+    folder: env.folder(),
+    storage: { audioBytes: rows.reduce((t, r) => t + r.audioBytes, 0), count: rows.length },
+    notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
+    capabilities: ports.platform.capabilities(),
+    callApp: env.watch.activeCall ?? null,
+    keySaved: await ports.keySaved(),
+    invalid: [],
+  };
+}
+
 /** The settings page. */
 function settingsOf(env: HandlerEnv): Pick<Handlers, "settings" | "patchSettings" | "setPolicy" | "addApp" | "removeApp" | "chooseFolder" | "openFolder" | "devices"> {
   const { ports, cfg } = env;
-  const view = async (): Promise<SettingsView> => {
-    const n = env.core.notice();
-    const rows = env.core.list();
-    const call = env.watch.activeCall;
-    return {
-      config: { ...cfg() },
-      providers: providerViews(cfg(), addedProviders(cfg())),
-      folder: env.folder(),
-      storage: { audioBytes: rows.reduce((t, r) => t + r.audioBytes, 0), count: rows.length },
-      notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
-      capabilities: ports.platform.capabilities(),
-      callApp: call ?? null,
-      keySaved: await ports.keySaved(),
-      invalid: [],
-    };
-  };
+  const view = () => settingsView(env);
   const change = async (apply: () => void): Promise<SettingsView> => {
     apply();
     env.saveConfig();

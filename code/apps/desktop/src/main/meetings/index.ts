@@ -10,7 +10,7 @@ import { createCapsuleWindow, createRecorderHost, displaysNow } from "./hosts";
 import { macosPlatform, loadCoreAudio } from "./platform/macos";
 import type { Exec, MeetingsPlatform } from "./platform/types";
 import { windowsPlatform } from "./platform/windows";
-import { createMeetingsService, type MeetingsService } from "./service";
+import { createMeetingsService, type MeetingsPorts, type MeetingsService } from "./service";
 import type { VoiceChat } from "../voice-chat/service";
 import { NOTES_MODEL } from "../voice-chat/service";
 
@@ -51,25 +51,10 @@ const NONE: MeetingsPlatform = {
   callAppMic: async () => null,
 };
 
-/** Meetings in the desktop app: the store, the hidden recording page, the capsule window, the call watch, and the IPC the History and Settings pages call. */
-export function setupMeetings(ctx: Ctx, o: MeetingsOptions): MeetingsFeature {
-  let micDenied = false;
-  let override: MeetingsPlatform | null = null;
-  const real = o.test ? NONE : realPlatform();
-  // The platform can be swapped by a test; the service always asks the current one.
-  const platform: MeetingsPlatform = { capabilities: () => (override ?? real).capabilities(), probe: () => (override ?? real).probe(), callAppMic: (a) => (override ?? real).callAppMic(a) };
-  const recorder = createRecorderHost({ ipcMain, distDir: o.distDir, micAllowed: () => !micDenied });
-  let service: MeetingsService | undefined;
-  const open = createCapsuleWindow({
-    ipcMain,
-    distDir: o.distDir,
-    events: {
-      action: (a) => void service?.act(a),
-      interactive: (on) => service?.capsule.interactive(on),
-      drag: (dx, dy, end) => service?.capsule.drag(dx, dy, end),
-    },
-  });
-  service = createMeetingsService(ctx, {
+/** What the service needs from Electron: paths, dialogs, the clipboard, the shortcut, the windows and the OpenAI key. */
+function meetingsPorts(ctx: Ctx, o: MeetingsOptions, w: { platform: MeetingsPlatform; recorder: ReturnType<typeof createRecorderHost>; open: ReturnType<typeof createCapsuleWindow> }): MeetingsPorts {
+  const { platform, recorder, open } = w;
+  return {
     dataDir: app.getPath("userData"),
     documentsDir: app.getPath("documents"),
     stt: o.dictation.stt,
@@ -108,25 +93,53 @@ export function setupMeetings(ctx: Ctx, o: MeetingsOptions): MeetingsFeature {
       ctx.showWindow();
       ctx.sendUi({ type: "open-meeting", id });
     },
+  };
+}
+
+/** The capsule follows the screens; the returned function stops it. */
+function followDisplays(onChange: () => void): () => void {
+  screen.on("display-added", onChange);
+  screen.on("display-removed", onChange);
+  screen.on("display-metrics-changed", onChange);
+  return () => {
+    screen.off("display-added", onChange);
+    screen.off("display-removed", onChange);
+    screen.off("display-metrics-changed", onChange);
+  };
+}
+
+/** Meetings in the desktop app: the store, the hidden recording page, the capsule window, the call watch, and the IPC the History and Settings pages call. */
+export function setupMeetings(ctx: Ctx, o: MeetingsOptions): MeetingsFeature {
+  let micDenied = false;
+  let override: MeetingsPlatform | null = null;
+  const real = o.test ? NONE : realPlatform();
+  // The platform can be swapped by a test; the service always asks the current one.
+  const platform: MeetingsPlatform = { capabilities: () => (override ?? real).capabilities(), probe: () => (override ?? real).probe(), callAppMic: (a) => (override ?? real).callAppMic(a) };
+  const recorder = createRecorderHost({ ipcMain, distDir: o.distDir, micAllowed: () => !micDenied });
+  let service: MeetingsService | undefined;
+  const open = createCapsuleWindow({
+    ipcMain,
+    distDir: o.distDir,
+    events: {
+      action: (a) => void service?.act(a),
+      interactive: (on) => service?.capsule.interactive(on),
+      drag: (dx, dy, end) => service?.capsule.drag(dx, dy, end),
+    },
   });
+  service = createMeetingsService(ctx, meetingsPorts(ctx, o, { platform, recorder, open }));
   const svc = service;
   registerValidatedIpc<MeetingsMethod>(ipcMain, {
     methods: MEETINGS_METHODS,
     channel: meetingsChannel,
     args: MEETINGS_ARGS,
-    handler: (m) => (svc.handlers as unknown as Record<string, unknown>)[m] as (...a: unknown[]) => unknown,
+    handler: (m) => svc.handlers[m] as (...a: unknown[]) => unknown,
     trusted: (e) => o.parent()?.webContents === e.sender,
   });
-  const onDisplays = () => svc.capsule.displaysChanged();
-  screen.on("display-added", onDisplays);
-  screen.on("display-removed", onDisplays);
-  screen.on("display-metrics-changed", onDisplays);
+  const stopDisplays = followDisplays(() => svc.capsule.displaysChanged());
   return {
     ...svc,
     async dispose() {
-      screen.off("display-added", onDisplays);
-      screen.off("display-removed", onDisplays);
-      screen.off("display-metrics-changed", onDisplays);
+      stopDisplays();
       await svc.dispose();
     },
     testHook: { denyMic: (on) => void (micDenied = on), platform: (p) => void (override = p), shortcuts: () => [] },

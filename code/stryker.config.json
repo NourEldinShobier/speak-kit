@@ -3,7 +3,15 @@
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.stryker.config.ts", "related": false },
-  "mutate": ["packages/dictation/src/**/*.ts", "packages/transcripts/src/**/*.ts", "!packages/transcripts/src/fs.ts"],
+  "mutate": [
+    "packages/dictation/src/**/*.ts",
+    "packages/transcripts/src/**/*.ts",
+    "!packages/transcripts/src/fs.ts",
+    "packages/meetings/src/**/*.ts",
+    "!packages/meetings/src/index.ts",
+    "!packages/meetings/src/pure.ts",
+    "!packages/meetings/src/types.ts"
+  ],
   "coverageAnalysis": "perTest",
   "reporters": ["clear-text", "progress", "html", "json"],
   "htmlReporter": { "fileName": "reports/mutation/index.html" },

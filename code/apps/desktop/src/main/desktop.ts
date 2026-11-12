@@ -74,6 +74,32 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
   app.on("browser-window-focus", permissions.refresh);
 }
 
+/** Stops every feature; resolves once the control server is down. */
+function disposeAll(p: {
+  control: { dispose(): Promise<void> };
+  shortcuts: { unregisterAll(): void };
+  reading: { dispose(): void };
+  exports: { dispose(): void };
+  updates: { dispose(): void };
+  tray: { dispose(): void };
+  dictation: { dispose(): unknown };
+  capture: { dispose(): void };
+  transcripts: { dispose(): unknown };
+  meetings: { dispose(): unknown } | undefined;
+}): Promise<void> {
+  const controlDown = p.control.dispose();
+  p.shortcuts.unregisterAll();
+  p.reading.dispose();
+  p.exports.dispose();
+  p.updates.dispose();
+  p.tray.dispose();
+  void p.dictation.dispose();
+  p.capture.dispose();
+  void p.transcripts.dispose();
+  void p.meetings?.dispose();
+  return controlDown;
+}
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -121,19 +147,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: (): Promise<void> => {
-      const controlDown = control.dispose();
-      shortcuts.unregisterAll();
-      reading.dispose();
-      exports.dispose();
-      updates.dispose();
-      tray.dispose();
-      void dictation.dispose();
-      capture.dispose();
-      void transcripts.dispose();
-      void meetings?.dispose();
-      return controlDown;
-    },
+    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, capture, transcripts, meetings }),
     testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

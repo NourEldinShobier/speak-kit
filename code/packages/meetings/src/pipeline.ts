@@ -126,6 +126,7 @@ export function createPipeline(c: PipelineContext) {
         await patch(id, { status: bad.interrupted ? "interrupted" : "failed", failure: bad.failure });
         return;
       }
+      if (!store.get(id)) return; // removed while transcribing: write nothing
       await store.putTranscript(id, merge(you.lines, them.lines));
       await patch(id, { status: "done", failure: undefined as never });
       const done = store.get(id)!;

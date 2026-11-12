@@ -103,11 +103,11 @@ describe("Settings, Meetings", () => {
     await l.page.getByRole("button", { name: "Add app", exact: true }).click();
     const dialog = l.page.getByRole("dialog", { name: "Add an app for calls" });
     await dialog.getByRole("textbox", { name: "App name" }).fill("Whereby");
-    await dialog.getByRole("textbox", { name: "Meeting link" }).fill("https://whereby.com/a");
+    await dialog.getByRole("textbox", { name: "Meeting link" }).fill("https://meet.example.com/a");
     await dialog.getByText("too short to name one meeting").waitFor();
     expect(await dialog.getByRole("button", { name: "Add app" }).isDisabled()).toBe(true);
     await shot(l, "add-app");
-    await dialog.getByRole("textbox", { name: "Meeting link" }).fill("https://whereby.com/my-room-name");
+    await dialog.getByRole("textbox", { name: "Meeting link" }).fill("https://meet.example.com/my-room-name");
     await dialog.getByRole("button", { name: "Add app" }).click();
     await dialog.waitFor({ state: "detached" });
     await l.page.getByRole("combobox", { name: "What to do for Whereby" }).waitFor();

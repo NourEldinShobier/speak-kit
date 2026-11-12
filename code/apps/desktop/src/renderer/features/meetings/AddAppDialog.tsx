@@ -13,6 +13,53 @@ interface Props {
   onAdded(): void;
 }
 
+function Notes({ linkProblem, error }: { linkProblem: string | null; error: string | undefined }) {
+  return (
+    <>
+      {linkProblem ? (
+        <p className="mt-error" role="alert">
+          {linkProblem}
+        </p>
+      ) : (
+        <p className="mt-hint">{LINK_RULE}</p>
+      )}
+      {error ? (
+        <p className="mt-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function Field({ label, aria, error, ...rest }: { label: string; aria: string; error?: boolean; value: string; placeholder: string; onChange(v: string): void; "data-autofocus"?: boolean }) {
+  const { onChange, ...input } = rest;
+  return (
+    <label className="mt-field">
+      <span>{label}</span>
+      <TextInput aria-label={aria} aria-invalid={error} onChange={(e) => onChange(e.target.value)} {...input} />
+    </label>
+  );
+}
+
+/** The answer, or null when the call itself failed. */
+const submit = (f: { name: string; exe: string; link: string }): Promise<AddAppResult | null> =>
+  meetings.addApp({ name: f.name, ...(f.exe.trim() && { exe: f.exe.trim() }), ...(f.link.trim() && { link: f.link.trim() }) }).then(
+    (x) => x,
+    () => null,
+  );
+
+function Footer({ ready, onCancel, onAdd }: { ready: boolean; onCancel(): void; onAdd(): void }) {
+  return (
+    <>
+      <Button onClick={onCancel}>Cancel</Button>
+      <Button variant="primary" disabled={!ready} onClick={onAdd}>
+        Add app
+      </Button>
+    </>
+  );
+}
+
 /** Add an app for calls: its name, the program, or the full link of a meeting. The Add button waits until what is typed can work. */
 export function AddAppDialog({ open, onClose, onAdded }: Props) {
   const [name, setName] = useState("");
@@ -22,6 +69,7 @@ export function AddAppDialog({ open, onClose, onAdded }: Props) {
   const parsed = link.trim() ? parseLink(link) : null;
   const linkProblem = parsed && !parsed.ok ? LINK_MESSAGES[parsed.problem] : null;
   const ready = name.trim() !== "" && (exe.trim() !== "" || (parsed?.ok ?? false)) && !linkProblem;
+  const typing = (set: (v: string) => void) => (v: string) => (set(v), setError(null));
   const reset = () => {
     setName("");
     setExe("");
@@ -33,52 +81,19 @@ export function AddAppDialog({ open, onClose, onAdded }: Props) {
     onClose();
   };
   const add = async () => {
-    const r: AddAppResult | null = await meetings.addApp({ name, ...(exe.trim() && { exe: exe.trim() }), ...(link.trim() && { link: link.trim() }) }).catch(() => null);
+    const r = await submit({ name, exe, link });
     if (!r) return setError({ field: "name", message: "The app could not be added. Try again." });
     if (!r.ok) return setError({ field: r.field, message: r.message });
     reset();
     onAdded();
   };
   return (
-    <Modal
-      open={open}
-      onClose={close}
-      title="Add an app for calls"
-      width={440}
-      footer={
-        <>
-          <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" disabled={!ready} onClick={() => void add()}>
-            Add app
-          </Button>
-        </>
-      }
-    >
+    <Modal open={open} onClose={close} title="Add an app for calls" width={440} footer={<Footer ready={ready} onCancel={close} onAdd={() => void add()} />}>
       <div className="mt-form">
-        <label className="mt-field">
-          <span>Name</span>
-          <TextInput aria-label="App name" value={name} data-autofocus onChange={(e) => (setName(e.target.value), setError(null))} placeholder="Whereby" />
-        </label>
-        <label className="mt-field">
-          <span>Program name on this computer</span>
-          <TextInput aria-label="Program name" value={exe} onChange={(e) => (setExe(e.target.value), setError(null))} placeholder="whereby.exe" />
-        </label>
-        <label className="mt-field">
-          <span>Or the full link of a meeting</span>
-          <TextInput aria-label="Meeting link" value={link} aria-invalid={!!linkProblem} onChange={(e) => (setLink(e.target.value), setError(null))} placeholder="https://whereby.com/my-room" />
-        </label>
-        {linkProblem ? (
-          <p className="mt-error" role="alert">
-            {linkProblem}
-          </p>
-        ) : (
-          <p className="mt-hint">{LINK_RULE}</p>
-        )}
-        {error ? (
-          <p className="mt-error" role="alert">
-            {error.message}
-          </p>
-        ) : null}
+        <Field label="Name" aria="App name" value={name} data-autofocus placeholder="Whereby" onChange={typing(setName)} />
+        <Field label="Program name on this computer" aria="Program name" value={exe} placeholder="whereby.exe" onChange={typing(setExe)} />
+        <Field label="Or the full link of a meeting" aria="Meeting link" value={link} error={!!linkProblem} placeholder="https://example.com/my-room" onChange={typing(setLink)} />
+        <Notes linkProblem={linkProblem} error={error?.message} />
       </div>
     </Modal>
   );

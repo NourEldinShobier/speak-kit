@@ -19,8 +19,12 @@ const POLICY_OPTIONS = [
   { value: "never", label: "Never offer" },
 ];
 
-const hoursLabel = (h: number) => (h < 24 ? `${h} ${h === 1 ? "hour" : "hours"}` : `${h / 24} ${h === 24 ? "day" : "days"}`);
-const daysLabel = (n: number) => (n === 0 ? "Forever" : n === 365 ? "1 year" : `${n} days`);
+const unit = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const hoursLabel = (h: number) => (h < 24 ? unit(h, "hour", "hours") : unit(h / 24, "day", "days"));
+function daysLabel(n: number): string {
+  if (n === 0) return "Forever";
+  return n === 365 ? "1 year" : `${n} days`;
+}
 
 function Calls({ v, patch, platform }: { v: SettingsView; patch(p: MeetingsPatch): void; platform: string }) {
   const c = v.config;
@@ -138,6 +142,36 @@ function Notes({ v, patch }: { v: SettingsView; patch(p: MeetingsPatch): void })
 
 const hoursOptions = AUDIO_HOURS.map((h) => ({ value: String(h), label: hoursLabel(h) }));
 
+function DaysRow({ label, value, choices, onChange }: { label: string; value: number; choices: readonly number[]; onChange(n: number): void }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label={label}
+      control={<Select label={label} value={String(value)} options={choices.map((n) => ({ value: String(n), label: daysLabel(n) }))} onChange={(x) => onChange(Number(x))} />}
+    />
+  );
+}
+
+function FolderRow({ folder, set }: { folder: string; set(v: SettingsView): void }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Save files in"
+      description={
+        <>
+          <span className="tr-path">{folder}</span>. Files never replace one that already exists.
+        </>
+      }
+      control={
+        <div className="sk-row-actions">
+          <Button onClick={() => void meetings.chooseFolder().then((x) => x && set(x))}>Change</Button>
+          <Button onClick={() => void meetings.openFolder()}>Open folder</Button>
+        </div>
+      }
+    />
+  );
+}
+
 function Keep({ v, patch, set }: { v: SettingsView; patch(p: MeetingsPatch): void; set(v: SettingsView): void }) {
   const c = v.config;
   return (
@@ -148,46 +182,10 @@ function Keep({ v, patch, set }: { v: SettingsView; patch(p: MeetingsPatch): voi
         description="Counted from the end of the meeting. Each meeting in the list shows when its audio goes."
         control={<Select label="Delete audio after" value={String(c.audioHours)} options={hoursOptions} onChange={(x) => patch({ audioHours: Number(x) as (typeof AUDIO_HOURS)[number] })} />}
       />
-      <SettingRow
-        className="lm-row--control"
-        label="Move transcripts to Trash after"
-        control={
-          <Select
-            label="Move transcripts to Trash after"
-            value={String(c.textDays)}
-            options={MEETING_TEXT_DAYS.map((n) => ({ value: String(n), label: daysLabel(n) }))}
-            onChange={(x) => patch({ textDays: Number(x) as (typeof MEETING_TEXT_DAYS)[number] })}
-          />
-        }
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Trash keeps meetings for"
-        control={
-          <Select
-            label="Trash keeps meetings for"
-            value={String(c.trashDays)}
-            options={MEETING_TRASH_DAYS.map((n) => ({ value: String(n), label: daysLabel(n) }))}
-            onChange={(x) => patch({ trashDays: Number(x) as (typeof MEETING_TRASH_DAYS)[number] })}
-          />
-        }
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Save files in"
-        description={
-          <>
-            <span className="tr-path">{v.folder}</span>. Files never replace one that already exists.
-          </>
-        }
-        control={
-          <div className="sk-row-actions">
-            <Button onClick={() => void meetings.chooseFolder().then((x) => x && set(x))}>Change</Button>
-            <Button onClick={() => void meetings.openFolder()}>Open folder</Button>
-          </div>
-        }
-      />
-      <SettingRow label="In use now" description={`${v.storage.count} ${v.storage.count === 1 ? "meeting" : "meetings"}, ${sizeText(v.storage.audioBytes)} of audio.`} />
+      <DaysRow label="Move transcripts to Trash after" value={c.textDays} choices={MEETING_TEXT_DAYS} onChange={(n) => patch({ textDays: n as (typeof MEETING_TEXT_DAYS)[number] })} />
+      <DaysRow label="Trash keeps meetings for" value={c.trashDays} choices={MEETING_TRASH_DAYS} onChange={(n) => patch({ trashDays: n as (typeof MEETING_TRASH_DAYS)[number] })} />
+      <FolderRow folder={v.folder} set={set} />
+      <SettingRow label="In use now" description={`${unit(v.storage.count, "meeting", "meetings")}, ${sizeText(v.storage.audioBytes)} of audio.`} />
     </SettingsSection>
   );
 }

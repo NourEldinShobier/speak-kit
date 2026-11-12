@@ -1,4 +1,5 @@
 import { LoopbackSupervisor, MicGuard, MicPicker, type Failure, type Meetings, type Outcome } from "@speakkit/meetings";
+import { ignore } from "./ignore";
 import type { RecordingView, SystemAudio } from "../../shared/meetings/contract";
 import type { RecorderPort } from "./hosts";
 
@@ -24,6 +25,7 @@ const MIC_MESSAGES: Record<string, string> = {
 };
 
 const NO_SYSTEM = "The sound of the call could not be recorded on this computer, so only your microphone is in the recording.";
+const fallbackNote = (why: string | undefined) => (why === "fallback" ? FALLBACK_MIC : undefined);
 const FALLBACK_MIC = "The system could not say which microphone the call app uses, so the saved microphone is used.";
 const SIX_HOURS = 6 * 3600;
 const SOUND = 0.02;
@@ -111,7 +113,7 @@ export class MeetingRecording {
       return this.#abandon({ code: r.code, message: MIC_MESSAGES[r.code]! });
     }
     this.#system = r.system ?? "unavailable";
-    this.#note = this.#system === "unavailable" ? NO_SYSTEM : mic.why === "fallback" ? FALLBACK_MIC : undefined;
+    this.#note = this.#system === "unavailable" ? NO_SYSTEM : fallbackNote(mic.why);
     this.#startedAt = this.#d.now();
     this.#phase = "recording";
     this.#d.changed(this.view());
@@ -142,7 +144,7 @@ export class MeetingRecording {
     if (this.#phase !== "recording") return;
     if (track === "you") return void (await this.#autoStop("The microphone was disconnected. What was recorded is saved."));
     if (this.#loopback.ended(this.#d.now()) === "wait") return;
-    const r = await this.#d.recorder.reopenSystem().catch(() => undefined);
+    const r = await this.#d.recorder.reopenSystem().catch(ignore);
     if (!r || !r.ok || r.system !== "on") {
       this.#system = "unavailable";
       this.#note = NO_SYSTEM;
@@ -163,7 +165,7 @@ export class MeetingRecording {
     this.#phase = "saving";
     this.#d.changed(this.view());
     this.#ending = (async () => {
-      await this.#d.recorder.stop().catch(() => {});
+      await this.#d.recorder.stop().catch(ignore);
       await this.#pending;
       const r = await this.#d.core.end(id);
       this.#phase = undefined;

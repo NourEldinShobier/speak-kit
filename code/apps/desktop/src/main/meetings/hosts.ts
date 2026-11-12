@@ -101,6 +101,20 @@ export interface CapsuleEvents {
   drag(dx: number, dy: number, end: boolean): void;
 }
 
+const CAPSULE_WINDOW = {
+  ...CAPSULE_SIZE,
+  show: false,
+  frame: false,
+  transparent: true,
+  focusable: false,
+  skipTaskbar: true,
+  alwaysOnTop: true,
+  hasShadow: false,
+  resizable: false,
+  movable: false,
+  backgroundColor: "#00000000",
+};
+
 /**
  * The capsule window: transparent, always on top, never takes keyboard focus, hidden from screen captures, and click-through until the page says the pointer is on
  * the pill. The page's messages are accepted only from this window.
@@ -113,26 +127,11 @@ export function createCapsuleWindow(o: { ipcMain: IpcMain; distDir: string; even
     if (from(e) && a.success) o.events.action(a.output as CapsuleAction);
   });
   o.ipcMain.on(CAPSULE_INTERACTIVE, (e, on: unknown) => from(e) && typeof on === "boolean" && o.events.interactive(on));
-  o.ipcMain.on(CAPSULE_DRAG, (e, dx: unknown, dy: unknown, end: unknown) => {
+  o.ipcMain.on(CAPSULE_DRAG, (e, ...[dx, dy, end]: unknown[]) => {
     if (from(e) && typeof dx === "number" && typeof dy === "number" && Number.isFinite(dx) && Number.isFinite(dy) && typeof end === "boolean") o.events.drag(dx, dy, end);
   });
   return () => {
-    const w = createSecureWindow(
-      {
-        ...CAPSULE_SIZE,
-        show: false,
-        frame: false,
-        transparent: true,
-        focusable: false,
-        skipTaskbar: true,
-        alwaysOnTop: true,
-        hasShadow: false,
-        resizable: false,
-        movable: false,
-        backgroundColor: "#00000000",
-      },
-      () => {},
-    );
+    const w = createSecureWindow(CAPSULE_WINDOW, () => {});
     current = w;
     w.setContentProtection(true);
     w.setAlwaysOnTop(true, "screen-saver");

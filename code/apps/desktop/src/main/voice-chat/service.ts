@@ -21,14 +21,10 @@ interface Deps {
   look?: VoiceChatService["look"];
 }
 
-/** The voice chat of the app: the saved key, its test, the voice, and the minting the local server calls. The key goes only to OpenAI. */
-export function createVoiceChat(d: Deps) {
+/** The part the local server calls: the key check and the minting. */
+function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }): VoiceChatService {
   const { store, config, log } = d;
-  const net = () => ({ baseUrl: d.baseUrl ?? OPENAI_BASE_URL, fetch: d.fetch ?? fetch });
-
-  const status = async (): Promise<VoiceChatKeyStatus> => ({ hasKey: await store.has(), canEncrypt: store.canEncrypt() });
-
-  const server: VoiceChatService = {
+  return {
     hasKey: () => store.has(),
     mint: async (signal) => {
       const key = await store.read();
@@ -43,6 +39,16 @@ export function createVoiceChat(d: Deps) {
     },
     ...(d.look && { look: d.look }),
   };
+}
+
+/** The voice chat of the app: the saved key, its test, the voice, and the minting the local server calls. The key goes only to OpenAI. */
+export function createVoiceChat(d: Deps) {
+  const { store, config, log } = d;
+  const net = () => ({ baseUrl: d.baseUrl ?? OPENAI_BASE_URL, fetch: d.fetch ?? fetch });
+
+  const status = async (): Promise<VoiceChatKeyStatus> => ({ hasKey: await store.has(), canEncrypt: store.canEncrypt() });
+
+  const server = serverOf(d, net);
 
   return {
     server,

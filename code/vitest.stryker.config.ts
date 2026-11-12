@@ -6,6 +6,6 @@ export default defineConfig({
   define: { __TEST__: "false", __TEST_CODE__: "true" },
   test: {
     testTimeout: 20_000,
-    include: ["packages/dictation/tests/**/*.test.ts", "packages/transcripts/tests/**/*.test.ts"],
+    include: ["packages/dictation/tests/**/*.test.ts", "packages/transcripts/tests/**/*.test.ts", "packages/meetings/tests/**/*.test.ts"],
   },
 });
