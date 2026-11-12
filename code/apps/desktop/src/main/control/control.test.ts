@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CaptureHandle, CaptureResult } from "@speakkit/dictation";
+import type { AutomationErrorCode } from "@speakkit/protocol";
+import { AutomationFault } from "@speakkit/server";
 import { CAPABILITIES, CONTROL_VERSION, ERROR_CODES, EXIT, exitFor, fail, LIMITS, ok, type ControlRequest, type Reply } from "../../shared/control/contract";
 import { skillText } from "../../shared/control/skill";
 import { COMMAND_LINE_KEYS, sortKeys, validateChange } from "../../shared/control/settings-registry";
@@ -35,9 +37,9 @@ describe("contract", () => {
   });
 
   it("lists the typed error codes and what this version can do, for feature detection", () => {
-    expect(ERROR_CODES).toEqual(["usage", "not-running", "refused", "busy", "no-speech", "cancelled", "unsupported", "too-large", "timeout", "unauthorized", "failed"]);
-    expect(CAPABILITIES.features).toMatchObject({ print: true, raw: true, history: true, meetings: false, liveStream: false });
-    expect(CAPABILITIES.limits).toEqual({ requestBytes: 65536, replyBytes: 1048576, timeoutMs: 10000, printWaitMs: 60000, speakFileBytes: 67108864 });
+    expect(ERROR_CODES).toEqual(["usage", "not-running", "refused", "busy", "no-speech", "cancelled", "unsupported", "too-large", "timeout", "unauthorized", "model-missing", "queue-full", "failed"]);
+    expect(CAPABILITIES.features).toMatchObject({ print: true, raw: true, history: true, meetings: true, capture: true, speak: true, queue: true, labs: true });
+    expect(CAPABILITIES.limits).toEqual({ requestBytes: 524288, replyBytes: 1048576, timeoutMs: 10000, printWaitMs: 60000, speakFileBytes: 67108864 });
   });
 });
 
@@ -126,6 +128,25 @@ function fakeCapture(result: CaptureResult): CaptureHandle & { finished: number;
   return h;
 }
 
+/** A stand-in for the reading host: the text decides what it refuses, like the real one's guards. */
+function fakeHost(log: string[]): ControlDeps["automation"] {
+  const refuse: Record<string, AutomationErrorCode> = { model: "model_missing", busy: "busy", full: "queue_full", broken: "failed" };
+  return {
+    status: () => ({ status: "idle", title: "", index: 0, total: 0, elapsedMs: 0, totalMs: 0, queued: 0 }),
+    queue: () => ({ current: null, items: [{ id: "q1", title: "Later", chars: 5, addedAtMs: 1 }] }),
+    speak: async (r) => {
+      log.push(`host:speak:${r.text}:${r.mode}:${r.dryRun === true}`);
+      if (refuse[r.text]) throw new AutomationFault(refuse[r.text]!);
+      const parts = r.text.split(/(?<=\.)\s+/);
+      return r.dryRun ? { id: "", position: 0, sentences: parts.length, estimatedMs: 100, parts } : { id: "r1", position: r.mode === "queue" ? 1 : 0, sentences: parts.length, estimatedMs: 100 };
+    },
+    stop: (clear) => (log.push(`host:stop:${clear}`), { status: "idle", title: "", index: 0, total: 0, elapsedMs: 0, totalMs: 0, queued: 0 }),
+    startExport: async (r) => (log.push(`host:export:${r.text}:${r.out}`), { id: "e1", stage: "rendering", progress: 0 }),
+    exportStatus: (id) => (id === "e1" ? { id, stage: "done", progress: 1, path: "C:/a.mp3" } : undefined),
+    subscribe: () => () => {},
+  };
+}
+
 function deps(over: Partial<ControlDeps> = {}) {
   const log: string[] = [];
   const config: Record<string, unknown> = { voice: "af_heart", speed: 1 };
@@ -139,6 +160,12 @@ function deps(over: Partial<ControlDeps> = {}) {
     status: () => ({ dictation: { supported: true, enabled: true, phase, paused: false }, reader: { status: "idle" }, voice: String(config.voice) }),
     readText: (t) => (log.push(`read:${t}`), t !== "refuse"),
     readerCommand: (c) => void log.push(`reader:${c.type}`),
+    automation: fakeHost(log),
+    voices: async () => [{ id: "af_heart", name: "Heart" }],
+    labs: {
+      known: (id) => ({ "caption-export": "yes", "live-dictation-preview": "dev-only" } as Record<string, "yes" | "dev-only">)[id] ?? "no",
+      set: async (id, on) => (log.push(`labs:${id}:${on}`), id === "boom" ? "Not now." : undefined),
+    },
     voice: { get: () => String(config.voice), set: (id) => void (config.voice = id) },
     dictation: {
       supported: () => true,
@@ -186,7 +213,8 @@ describe("commands", () => {
   it("pause, resume and stop are the reader commands, and repeating them is harmless", async () => {
     const t = deps();
     for (const c of ["pause", "pause", "resume", "stop"] as const) expect(await call(t.run, c)).toMatchObject({ ok: true });
-    expect(t.log).toEqual(["reader:pause", "reader:pause", "reader:resume", "reader:stop"]);
+    expect(await call(t.run, "stop", { keepQueue: true })).toMatchObject({ ok: true });
+    expect(t.log).toEqual(["reader:pause", "reader:pause", "reader:resume", "host:stop:true", "host:stop:false"]);
   });
 
   it("shows and sets the voice, refusing an empty or very long id", async () => {
@@ -286,10 +314,46 @@ describe("commands", () => {
     expect(t.log).toEqual(["history::20", "history:hello:200", "history::1"]);
   });
 
-  it("says meetings and speak are unsupported in this version", async () => {
+  it("speaks now, queues, prints the sentences and starts a file export; the export is asked for by its id", async () => {
     const t = deps();
-    expect(await call(t.run, "meetings")).toMatchObject({ ok: false, error: { code: "unsupported" } });
-    expect(await call(t.run, "speak")).toMatchObject({ ok: false, error: { code: "unsupported" } });
+    expect(await call(t.run, "speak", { text: " Hello. World. " })).toMatchObject({ ok: true, data: { id: "r1", position: 0 } });
+    expect(await call(t.run, "speak", { text: "Later", queue: true })).toMatchObject({ ok: true, data: { position: 1 } });
+    expect(await call(t.run, "speak", { text: "One. Two.", print: true })).toMatchObject({ ok: true, data: { sentences: 2, parts: ["One.", "Two."] } });
+    expect(await call(t.run, "speak", { text: "Save me", out: "C:/a.mp3" })).toMatchObject({ ok: true, data: { export: { id: "e1", stage: "rendering" } } });
+    expect(await call(t.run, "speak", { exportId: "e1" })).toMatchObject({ ok: true, data: { export: { stage: "done", path: "C:/a.mp3" } } });
+    expect(t.log).toEqual(["host:speak:Hello. World.:replace:false", "host:speak:Later:queue:false", "host:speak:One. Two.:replace:true", "host:export:Save me:C:/a.mp3"]);
+  });
+
+  it("refuses speak with no text, a missing out name, an unknown export and text over the limit, and names a host refusal by its code", async () => {
+    const t = deps();
+    expect(await call(t.run, "speak", { text: "  " })).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(await call(t.run, "speak", { text: "x", out: "" })).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(await call(t.run, "speak", { exportId: "nope" })).toMatchObject({ ok: false, error: { code: "failed" } });
+    expect(await call(t.run, "speak", { text: "x".repeat(100_001) })).toMatchObject({ ok: false, error: { code: "too-large" } });
+    expect(await call(t.run, "speak", { text: "x".repeat(100_000), print: true })).toMatchObject({ ok: true });
+    for (const [text, code] of [
+      ["model", "model-missing"],
+      ["busy", "busy"],
+      ["full", "queue-full"],
+      ["broken", "failed"],
+    ] as const) {
+      expect(await call(t.run, "speak", { text })).toMatchObject({ ok: false, error: { code } });
+    }
+  });
+
+  it("shows the waiting list and the voices with the current one", async () => {
+    const t = deps();
+    expect(await call(t.run, "queue")).toMatchObject({ ok: true, data: { current: null, items: [{ id: "q1", title: "Later" }] } });
+    expect(await call(t.run, "voices")).toMatchObject({ ok: true, data: { voices: [{ id: "af_heart", name: "Heart" }], current: "af_heart" } });
+  });
+
+  it("turns an experiment on or off, and refuses an unknown one, a developer one and a missing value", async () => {
+    const t = deps();
+    expect(await call(t.run, "labs", { id: "caption-export", on: true })).toMatchObject({ ok: true, data: { id: "caption-export", on: true } });
+    expect(await call(t.run, "labs", { id: "nope", on: true })).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(await call(t.run, "labs", { id: "live-dictation-preview", on: true })).toMatchObject({ ok: false, error: { code: "refused" } });
+    expect(await call(t.run, "labs", { id: "caption-export" })).toMatchObject({ ok: false, error: { code: "usage" } });
+    expect(t.log).toEqual(["labs:caption-export:true"]);
   });
 
   it("prints the skill pinned to the app version", async () => {

@@ -7,12 +7,26 @@ export const CONTROL_VERSION = 1;
 export const EXIT = { ok: 0, failed: 1, usage: 2, notRunning: 3, noSpeech: 4 } as const;
 export type Exit = (typeof EXIT)[keyof typeof EXIT];
 
-export const ERROR_CODES = ["usage", "not-running", "refused", "busy", "no-speech", "cancelled", "unsupported", "too-large", "timeout", "unauthorized", "failed"] as const;
+export const ERROR_CODES = [
+  "usage",
+  "not-running",
+  "refused",
+  "busy",
+  "no-speech",
+  "cancelled",
+  "unsupported",
+  "too-large",
+  "timeout",
+  "unauthorized",
+  "model-missing",
+  "queue-full",
+  "failed",
+] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export const LIMITS = {
   /** Largest request body the server reads. */
-  requestBytes: 64 * 1024,
+  requestBytes: 512 * 1024,
   /** Largest reply the server sends. */
   replyBytes: 1024 * 1024,
   /** Every command but a print capture ends within this. */
@@ -23,13 +37,16 @@ export const LIMITS = {
   speakFileBytes: 64 * 1024 * 1024,
 } as const;
 
-export const COMMANDS = ["capabilities", "status", "read", "pause", "resume", "stop", "voice", "dictate", "settings", "history", "meetings", "speak", "skill"] as const;
+export const COMMANDS = ["capabilities", "status", "read", "pause", "resume", "stop", "voice", "voices", "queue", "speak", "dictate", "settings", "labs", "history", "skill"] as const;
 export type Command = (typeof COMMANDS)[number];
+
+/** Commands the command line answers from the files in the data folder, so they work with the app closed and never start it. */
+export const LOCAL_COMMANDS = ["meetings", "capture"] as const;
 
 /** What this version can do, so a script or the browser extension asks instead of comparing version numbers. */
 export const CAPABILITIES = {
-  commands: [...COMMANDS],
-  features: { print: true, raw: true, settings: true, history: true, meetings: false, speak: false, liveStream: false, mcp: true },
+  commands: [...COMMANDS, ...LOCAL_COMMANDS],
+  features: { print: true, raw: true, settings: true, history: true, meetings: true, capture: true, speak: true, queue: true, labs: true, liveStream: true, mcp: true },
   errors: [...ERROR_CODES],
   limits: LIMITS,
 } as const;

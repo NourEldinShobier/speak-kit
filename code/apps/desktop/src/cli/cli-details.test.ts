@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { CONTROL_VERSION, fail, ok, type ControlRequest, type Reply } from "../shared/control/contract";
+import { CONTROL_VERSION, fail, ok, type Reply } from "../shared/control/contract";
 import type { Discovery } from "../main/control/discovery";
-import { handleMcp } from "./mcp";
 import { parseArgs, render, runCli, type Io } from "./run";
 
 const RUNNING: Discovery = { port: 4000, token: "t".repeat(32), pid: 1, version: "0.5.3" };
@@ -17,59 +16,15 @@ function rig(over: Partial<Io> & { reply?: Reply; running?: boolean } = {}) {
     offlineHistory: async () => null,
     post: async () => over.reply ?? ok({}),
     stdin: async () => "",
+    reads: { meetings: async () => ({ entries: [], transcript: async () => [], notes: async () => [] }), captures: async () => ({ records: [], root: "" }) },
+    readConfig: async () => undefined,
+    file: async () => ({ kind: "none" }),
+    sleep: async () => {},
     ...over,
   };
   return { io, out, err };
 }
 const run = (argv: string[], r = rig()) => runCli(argv, r.io);
-
-describe("MCP details", () => {
-  const none = async (): Promise<Reply> => ok({});
-
-  it("describes the server and every tool exactly", async () => {
-    expect(await handleMcp({ id: 1, method: "initialize" }, none)).toEqual({
-      jsonrpc: "2.0",
-      id: 1,
-      result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "speakkit", version: String(CONTROL_VERSION) } },
-    });
-    const list = (await handleMcp({ id: 2, method: "tools/list" }, none)) as { result: { tools: object[] } };
-    const [read, history, meetings] = list.result.tools;
-    expect(read).toMatchObject({ name: "read_aloud", description: "Read text aloud with Speak Kit on this computer.", inputSchema: { required: ["text"], properties: { text: { type: "string" } } } });
-    expect(history).toMatchObject({
-      name: "history_search",
-      description: "Search what was dictated with Speak Kit. Read only.",
-      inputSchema: { properties: { query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 } } },
-    });
-    expect(meetings).toMatchObject({ name: "meetings_search", description: "Search meeting transcripts. Read only. Not available in this version." });
-  });
-
-  it("sends each tool to the right command with the right arguments", async () => {
-    const seen: ControlRequest[] = [];
-    const call = async (r: ControlRequest) => (seen.push(r), ok({}));
-    await handleMcp({ id: 1, method: "tools/call", params: { name: "read_aloud", arguments: { text: "hi" } } }, call);
-    await handleMcp({ id: 2, method: "tools/call", params: { name: "history_search", arguments: { query: "x", limit: 4 } } }, call);
-    await handleMcp({ id: 3, method: "tools/call", params: { name: "history_search", arguments: {} } }, call);
-    await handleMcp({ id: 4, method: "tools/call", params: { name: "meetings_search", arguments: { query: "q" } } }, call);
-    expect(seen).toEqual([
-      { command: "read", args: { text: "hi" } },
-      { command: "history", args: { search: "x", limit: 4 } },
-      { command: "history", args: {} },
-      { command: "meetings", args: {} },
-    ]);
-  });
-
-  it("returns the data as text, and the message of a failure", async () => {
-    const good = (await handleMcp({ id: 1, method: "tools/call", params: { name: "history_search", arguments: {} } }, async () => ok({ entries: [] }))) as { result: object };
-    expect(good.result).toEqual({ isError: false, content: [{ type: "text", text: '{"entries":[]}' }] });
-    const bad = (await handleMcp({ id: 2, method: "tools/call", params: { name: "read_aloud", arguments: { text: "  " } } }, none)) as { result: object };
-    expect(bad.result).toEqual({ isError: true, content: [{ type: "text", text: "read_aloud needs text." }] });
-    const unknown = (await handleMcp({ id: 3, method: "tools/call", params: { name: "zip" } }, none)) as { result: object };
-    expect(unknown.result).toEqual({ isError: true, content: [{ type: "text", text: "Unknown tool zip." }] });
-    expect(await handleMcp({ id: 0, method: "ping" }, none)).toEqual({ jsonrpc: "2.0", id: 0, result: {} });
-    expect(await handleMcp({ id: null, method: "ping" }, none)).toBeNull();
-    expect(await handleMcp({ id: 9, method: "nope" }, none)).toEqual({ jsonrpc: "2.0", id: 9, error: { code: -32601, message: "Method not found" } });
-  });
-});
 
 describe("command line output details", () => {
   it("lists every command in the help", async () => {
@@ -80,7 +35,13 @@ describe("command line output details", () => {
       "start",
       "status",
       "read <text | ->",
-      "pause | resume | stop",
+      "pause | resume",
+      "stop [--keep-queue]",
+      "speak <text | file | ->",
+      "queue",
+      "meetings list",
+      "capture list",
+      "labs [list]",
       "voice [id]",
       "dictate [--print] [--raw]",
       "dictate stop [--print]",

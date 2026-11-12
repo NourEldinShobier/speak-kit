@@ -1,5 +1,7 @@
 import type { CaptureHandle, CaptureResult } from "@speakkit/dictation";
-import { CAPABILITIES, CONTROL_VERSION, fail, LIMITS, ok, type Command, type ControlRequest, type Reply } from "../../shared/control/contract";
+import { AUTOMATION_LIMITS, type AutomationErrorCode } from "@speakkit/protocol";
+import { AutomationFault, type AutomationHost } from "@speakkit/server";
+import { CAPABILITIES, CONTROL_VERSION, fail, LIMITS, ok, type Command, type ControlRequest, type ErrorCode, type Reply } from "../../shared/control/contract";
 import { skillText } from "../../shared/control/skill";
 import { COMMAND_LINE_KEYS, validateChange, type SettingsChange } from "../../shared/control/settings-registry";
 import type { ReaderCommand } from "../../shared/reader";
@@ -19,6 +21,11 @@ export interface ControlDeps {
   readText(text: string): boolean;
   readerCommand(c: ReaderCommand): void;
   voice: { get(): string; set(id: string): void };
+  /** Reading with a waiting list, print mode and file export: the same host the local API uses. */
+  automation: AutomationHost;
+  voices(): Promise<{ id: string; name: string }[]>;
+  /** Experiments by their ids. `set` resolves to the message of a refusal, or nothing when the change was saved. */
+  labs: { set(id: string, on: boolean): Promise<string | void>; known(id: string): "yes" | "dev-only" | "no" };
   dictation: {
     supported(): boolean;
     capture(opts: { raw: boolean }): CaptureHandle;
@@ -42,6 +49,23 @@ export interface ControlDeps {
 }
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+
+const FAULT: Record<AutomationErrorCode, ErrorCode> = {
+  model_missing: "model-missing",
+  busy: "busy",
+  permission_denied: "refused",
+  too_large: "too-large",
+  unsupported: "unsupported",
+  queue_full: "queue-full",
+  invalid_input: "usage",
+  not_running: "not-running",
+  token_rejected: "unauthorized",
+  timeout: "timeout",
+  failed: "failed",
+};
+
+/** A refusal of the reading host as the reply the command line prints; anything else is a failure the person cannot act on. */
+const faultReply = (e: unknown): Reply => (e instanceof AutomationFault ? fail(FAULT[e.code], e.message) : fail("failed", "The command failed."));
 
 /** Waits for a capture, up to `ms`. A capture that takes longer is cancelled, so it cannot outlive the command that wanted it. */
 async function awaitCapture(c: CaptureHandle, ms: number): Promise<CaptureResult> {
@@ -135,10 +159,33 @@ function createSettings(d: ControlDeps): Handler {
   };
 }
 
+/** `speak`: now, after what is waiting, as a print of the sentences, or into an audio file whose progress a later call asks for by its id. */
+function createSpeak(d: ControlDeps): Handler {
+  return async (a) => {
+    try {
+      const exportId = str(a.exportId);
+      if (exportId !== undefined) {
+        const job = d.automation.exportStatus(exportId);
+        return job ? ok({ export: job }) : fail("failed", "There is no such export.");
+      }
+      const text = str(a.text)?.trim();
+      if (!text) return fail("usage", "speak needs some text.");
+      if (text.length > AUTOMATION_LIMITS.maxTextChars) return fail("too-large", `The text is over ${AUTOMATION_LIMITS.maxTextChars.toLocaleString("en")} characters.`);
+      if (a.out !== undefined) {
+        const out = str(a.out);
+        return out ? ok({ export: await d.automation.startExport({ text, out }) }) : fail("usage", "--out needs a file name.");
+      }
+      return ok(await d.automation.speak({ text, mode: a.queue === true ? "queue" : "replace", ...(a.print === true && { dryRun: true }) }));
+    } catch (e) {
+      return faultReply(e);
+    }
+  };
+}
+
 /** The commands of the control server, the command line and the MCP server: one place, so they cannot drift apart. */
 export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise<Reply> {
   const reader =
-    (type: "pause" | "resume" | "stop"): Handler =>
+    (type: "pause" | "resume"): Handler =>
     () => (d.readerCommand({ type }), ok({}));
   const handlers: Record<Command, Handler> = {
     capabilities: () => ok({ app: d.version, ...CAPABILITIES }),
@@ -150,7 +197,7 @@ export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise
     },
     pause: reader("pause"),
     resume: reader("resume"),
-    stop: reader("stop"),
+    stop: (a) => (d.automation.stop(a.keepQueue !== true), ok({})),
     voice: (a) => {
       const id = str(a.set);
       if (id === undefined) return ok({ voice: d.voice.get() });
@@ -158,6 +205,8 @@ export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise
       d.voice.set(id);
       return ok({ voice: id });
     },
+    voices: async () => ok({ voices: await d.voices(), current: d.voice.get() }),
+    queue: () => ok(d.automation.queue()),
     dictate: createDictate(d),
     settings: createSettings(d),
     history: async (a) => {
@@ -165,8 +214,16 @@ export function createCommands(d: ControlDeps): (req: ControlRequest) => Promise
       const search = str(a.search);
       return ok({ entries: await d.history.list({ limit, ...(search && { search }) }) });
     },
-    meetings: () => fail("unsupported", "Meetings are not available in this version."),
-    speak: () => fail("unsupported", "Speaking a file to audio is not available in this version."),
+    labs: async (a) => {
+      const id = str(a.id);
+      if (id === undefined || typeof a.on !== "boolean") return fail("usage", "labs needs an experiment id and on or off.");
+      const known = d.labs.known(id);
+      if (known === "no") return fail("usage", `There is no experiment "${id}". Run speakkit labs list to see them.`);
+      if (known === "dev-only") return fail("refused", `"${id}" is only available in a build run from source.`);
+      const refused = await d.labs.set(id, a.on);
+      return refused ? fail("refused", refused) : ok({ id, on: a.on });
+    },
+    speak: createSpeak(d),
     skill: () => ok({ text: skillText(CONTROL_VERSION, d.version) }),
   };
   return async (req) => handlers[req.command](req.args ?? {});

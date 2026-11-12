@@ -190,9 +190,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   let meetings: ReturnType<typeof setupMeetings> | undefined;
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
-  registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
-  watchPermissions(o.parent, dictation);
-  const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  wireDictation(o.parent, dictation);
+  const control = setupControl(ctx, { reading, automation: automation.host, dictation, dataDir: o.dictation.dataDir, version: o.version });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
