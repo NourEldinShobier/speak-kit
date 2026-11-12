@@ -396,8 +396,11 @@ describe("record a conversation", () => {
     await hook(l, "pressShortcut", "Ctrl+Alt+R");
     await l.page.getByRole("timer", { name: "Recording time" }).waitFor();
     await l.page.getByText(/Recording started\. Recording other people can need their consent/).waitFor();
-    await hook(l, "pressShortcut", "Ctrl+Alt+R");
-    await until(async () => (await transcriptsHook(l, "phase")) !== "recording");
+    // Presses less than 400 ms apart are one press (key repeat): press again until the recording stops, in case the start was quicker than that.
+    await until(async () => {
+      await hook(l, "pressShortcut", "Ctrl+Alt+R");
+      return (await transcriptsHook(l, "phase")) !== "recording";
+    });
   });
 
   it("the shortcut with a refused microphone says why instead of doing nothing", async () => {
