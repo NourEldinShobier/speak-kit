@@ -68,7 +68,7 @@ function IdleActions({ m, a }: { m: PopupModel; a: PopupActions }) {
         </Button>
       </div>
       {m.hidden && <Button onClick={a.showOnPage}>Show on this page</Button>}
-      <p className="pp-hint">{m.engine === "unloaded" ? "The voice wakes when you press play. Select text to read just that part." : "Select text on the page to read just that part."}</p>
+      <p className="pp-hint">{m.engine === "unloaded" ? "The voice wakes when you press play. Select text to read just that part." : "Select text to read just that part."}</p>
     </section>
   );
 }
