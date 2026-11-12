@@ -1,4 +1,5 @@
 import { chunkPcm, QUIET_PEAK } from "./capture/policy";
+import { skipPauses } from "./capture/outage";
 import type { History } from "./history";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
@@ -61,7 +62,19 @@ const peakOf = (pcm: Float32Array): number => {
 };
 
 /** Transcribes a take of any length: a long one goes to the model in pieces, pieces with no sound are skipped, and the texts are joined. */
-async function hear(ctx: Context, clip: Clip): Promise<TranscribeResult> {
+async function hear(ctx: Context, clip: Clip): Promise<TranscribeResult & { droppedMs?: number }> {
+  if (ctx.settings.skipPauses) {
+    const cut = skipPauses(clip.pcm, clip.sampleRate);
+    if (cut.droppedMs > 0) {
+      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm });
+      // Trimming only helps when it kept the speech: an empty answer or a failure is tried again on the whole recording.
+      if (r.ok && r.text) return { ...r, droppedMs: cut.droppedMs };
+    }
+  }
+  return hearAll(ctx, clip);
+}
+
+async function hearAll(ctx: Context, clip: Clip): Promise<TranscribeResult> {
   const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language });
   const pieces = chunkPcm(clip.pcm, clip.sampleRate);
   if (pieces.length === 1) return req(clip);
@@ -107,8 +120,8 @@ function kindOf(clip: Clip, job: Job): "interrupted" | "restored" | undefined {
   return job.restored ? "restored" : undefined;
 }
 
-async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number }): Promise<Outcome> {
-  const { clip, heard, text, transcribeMs } = said;
+async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; text: string; transcribeMs: number; droppedMs: number | undefined }): Promise<Outcome> {
+  const { clip, heard, text, transcribeMs, droppedMs } = said;
   const { target, current, lost } = await windows(ctx, job);
   const plan = planPaste({ target, current, settings: ctx.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
@@ -128,7 +141,7 @@ async function insert(ctx: Context, job: Job, said: { clip: Clip; heard: Heard; 
       ...(heard.model !== undefined && { model: heard.model }),
       ...(kind && { kind }),
       ...(name !== undefined && { displayName: name }),
-      timings: { transcribeMs },
+      timings: { transcribeMs, ...(droppedMs && { pausesDroppedMs: droppedMs }) },
       outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
     }),
   );
@@ -161,5 +174,5 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const text = applyRules(heard.text, { ...ctx.settings, language: heard.language ?? ctx.settings.language });
   if (!text) return { notice: { kind: "no-speech" } };
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text, transcribeMs });
+  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs });
 }

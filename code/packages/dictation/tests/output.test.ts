@@ -363,3 +363,52 @@ describe("logs never carry spoken words", () => {
     expect(lines[0]).toBe("window: timeout");
   });
 });
+
+describe("skip long pauses", () => {
+  /** Speech, a ten second pause, speech: 1 s of tone, 10 s of exact silence, 1 s of tone. */
+  const tone = (seconds: number) => Float32Array.from({ length: 16000 * seconds }, (_, i) => 0.5 * Math.sin((2 * Math.PI * 440 * i) / 16000));
+  const pause = (): Clip => {
+    const pcm = tone(12);
+    pcm.fill(0, 16000, 16000 * 11);
+    return { pcm, sampleRate: 16000, peak: 0.5 };
+  };
+
+  it("sends the model the shortened recording and notes how much was cut", async () => {
+    const r = await rig({ keepReady: true, skipPauses: true });
+    r.rec.state.clip = pause();
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.stt.calls).toEqual([{ language: "auto", samples: 16000 * 12 - 16000 * 7.2 }]);
+    expect((await r.dictation.history.list())[0]?.timings?.pausesDroppedMs).toBe(7200);
+  });
+
+  it("is off by default: the model hears the whole recording", async () => {
+    const r = await rig();
+    r.rec.state.clip = pause();
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.stt.calls).toEqual([{ language: "auto", samples: 16000 * 12 }]);
+    expect((await r.dictation.history.list())[0]?.timings).toEqual({ transcribeMs: 0 });
+  });
+
+  it("goes back to the whole recording when the shortened one is heard as nothing", async () => {
+    const r = await rig({ keepReady: true, skipPauses: true });
+    r.rec.state.clip = pause();
+    r.stt.state.queue = [
+      { ok: true, text: "" },
+      { ok: true, text: "whole clip text" },
+    ];
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.stt.calls.map((c) => c.samples)).toEqual([16000 * 12 - 16000 * 7.2, 16000 * 12]);
+    expect((await r.dictation.history.list())[0]?.text).toContain("Whole clip text");
+  });
+
+  it("keeps a recording without a long pause as it is", async () => {
+    const r = await rig({ keepReady: true, skipPauses: true });
+    r.rec.state.clip = { pcm: tone(3), sampleRate: 16000, peak: 0.5 };
+    await r.hold(1000);
+    await r.time.advance(300);
+    expect(r.stt.calls).toEqual([{ language: "auto", samples: 48000 }]);
+  });
+});

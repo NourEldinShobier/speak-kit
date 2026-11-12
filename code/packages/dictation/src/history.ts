@@ -21,7 +21,7 @@ export interface HistoryEntry {
   displayName?: string;
   /** Only when a rewrite ran: its name and, if it failed, why (the plain text was inserted instead). */
   mode?: { name: string; failure?: string };
-  timings?: { transcribeMs?: number; insertMs?: number };
+  timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
   /** What really happened to the text. */
   outcome?: "sent" | "copied" | "failed";
 }
