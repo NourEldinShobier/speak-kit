@@ -15,11 +15,15 @@ const card = (over: Partial<ModelCard>): ModelCard => ({
   license: { name: "MIT", url: "" },
   origin: "builtin",
   diskBytes: 0,
-  accuracy: { oneIn: 25, testLanguage: "en", source: "x" },
+  accuracy: [
+    { language: "en", wrong: 4, of: 100 },
+    { language: "de", wrong: 1, of: 12 },
+  ],
   speedSeconds: 2,
+  sha256: "00",
   ...over,
 });
-const parakeet = card({ id: "parakeet-tdt-0.6b-v3-q4_0", name: "Parakeet v3", bytes: 355_615_679, speedSeconds: 1, accuracy: { oneIn: 18, testLanguage: "en", source: "x" } });
+const parakeet = card({ id: "parakeet-tdt-0.6b-v3-q4_0", name: "Parakeet v3", bytes: 355_615_679, speedSeconds: 1, accuracy: [{ language: "en", wrong: 5, of: 90 }] });
 const whisper = card({});
 const view = {
   models: [whisper, parakeet],
@@ -49,6 +53,9 @@ describe("languageChoice", () => {
     expect(c.model.name).toBe("Parakeet v3");
     expect(c.detail).toBe("Uses Parakeet v3, 356 MB. Very fast. 1 wrong word in 18 (English test).");
     expect(c.noDownload).toBe(false);
+  });
+  it("shows the figure of the chosen language when the model was measured in it", () => {
+    expect(languageChoice(view, "de")!.detail).toBe("Uses Whisper Large v3 Turbo, 574 MB. 1 wrong word in 12 (German test).");
   });
   it("detecting the language says it is slower and can mistranscribe close languages", () => {
     expect(languageChoice(view, "auto")!.detail).toBe("Uses Whisper Large v3 Turbo, 574 MB. Slower, handles mixed languages. It can mistranscribe close languages.");

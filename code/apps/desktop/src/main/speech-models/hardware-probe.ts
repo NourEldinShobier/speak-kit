@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type { GpuInfo, Hardware } from "@speakkit/engine";
 
 /** System boundary: runs a program and returns its output; throws on failure or timeout. */
@@ -88,4 +89,23 @@ export async function probeHardware(env: ProbeEnv): Promise<Hardware> {
     // unknown hardware: the floor check lets it through and the engine's own errors speak for themselves
   }
   return base;
+}
+
+const HardwareSchema = v.object({
+  platform: v.picklist(["win32", "darwin", "linux"]),
+  arch: v.string(),
+  avx2: v.optional(v.boolean()),
+  cores: v.optional(v.number()),
+  memoryGb: v.optional(v.number()),
+  gpu: v.optional(v.object({ name: v.string(), driver: v.string(), integrated: v.exactOptional(v.boolean()) })),
+});
+
+/** The computer a JSON text describes (the end-to-end run's SPEAKKIT_HARDWARE, so a spec sees the same recommendations on every machine), or undefined when the text is not one. */
+export function parseHardware(text: string): Hardware | undefined {
+  try {
+    const r = v.safeParse(HardwareSchema, JSON.parse(text));
+    return r.success ? r.output : undefined;
+  } catch {
+    return undefined;
+  }
 }

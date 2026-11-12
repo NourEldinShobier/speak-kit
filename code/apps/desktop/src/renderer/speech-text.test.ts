@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
 import {
+  accuracyIn,
   accuracyPercent,
   accuracyText,
+  compareLanguages,
   compareTable,
+  defaultCompare,
   deleteConfirm,
   deviceLine,
   etaText,
@@ -14,9 +17,12 @@ import {
   memoryText,
   recommendationText,
   recommendedText,
+  sampleText,
+  secondsText,
   sizeText,
   speedPercent,
   speedText,
+  togglePicked,
   transferText,
   visibleModels,
   DEFAULT_FILTER,
@@ -35,8 +41,12 @@ const card = (over: Partial<ModelCard> = {}): ModelCard => ({
   license: { name: "MIT", url: "" },
   origin: "builtin",
   diskBytes: 574_041_195,
-  accuracy: { oneIn: 25, testLanguage: "en", source: "published English benchmark" },
+  accuracy: [
+    { language: "en", wrong: 4, of: 100 },
+    { language: "de", wrong: 1, of: 12 },
+  ],
   speedSeconds: 2,
+  sha256: "00",
   ...over,
 });
 const omit = <K extends keyof ModelCard>(c: ModelCard, k: K): ModelCard => {
@@ -54,13 +64,36 @@ describe("texts", () => {
   });
   it("accuracy always names the test language; a model without a figure says not measured", () => {
     expect(accuracyText(card())).toBe("About 1 wrong word in 25 (English test)");
-    expect(accuracyText(card({ accuracy: { oneIn: 12, testLanguage: "de", source: "x" } }))).toBe("About 1 wrong word in 12 (German test)");
+    expect(accuracyText(card(), "de")).toBe("About 1 wrong word in 12 (German test)");
+    expect(accuracyText(card(), "ar")).toBe("About 1 wrong word in 25 (English test)");
+    expect(accuracyText(card({ accuracy: [{ language: "de", wrong: 1, of: 20 }] }), "ar")).toBe("About 1 wrong word in 20 (German test)");
     expect(accuracyText(omit(card(), "accuracy"))).toBe("Not measured");
+  });
+  it("a sample with no wrong word says so instead of inventing a rate", () => {
+    expect(accuracyText(card({ accuracy: [{ language: "en", wrong: 0, of: 79 }] }))).toBe("No wrong word in 79 test words (English test)");
+  });
+  it("one language only, with the missing ones named", () => {
+    expect(accuracyIn(card(), "de")).toBe("About 1 wrong word in 12 (German test)");
+    expect(accuracyIn(card(), "ar")).toBe("Not measured in Arabic");
+  });
+  it("names what the figures rest on", () => {
+    expect(sampleText({ recordings: { en: 4, de: 4, ar: 4 }, words: { en: 79, de: 80, ar: 60 }, machine: "one test computer" })).toBe(
+      "Measured by us on a small sample: 4 English (79 words), 4 German (80 words) and 4 Arabic (60 words) recordings, on one test computer. A computer with a slower processor or card is slower, and other speech will differ.",
+    );
   });
   it("speed", () => {
     expect(speedText(card())).toBe("About 2 seconds");
     expect(speedText(parakeet)).toBe("Under a second");
     expect(speedText(omit(card(), "speedSeconds"))).toBe("Not measured");
+    expect(speedText(card({ speedSeconds: 0.7, speedOnCpuSeconds: 3.7 }))).toBe("Under a second with a graphics card, about 3.7 seconds on the CPU alone");
+  });
+  it("seconds are named for what they are", () => {
+    expect(secondsText(0.5)).toBe("Under a second");
+    expect(secondsText(1)).toBe("Under a second");
+    expect(secondsText(1.1)).toBe("About 1.1 seconds");
+    expect(secondsText(9.9)).toBe("About 9.9 seconds");
+    expect(secondsText(10)).toBe("About 10 seconds");
+    expect(secondsText(89.6)).toBe("About 90 seconds");
   });
   it("languages", () => {
     expect(languagesText(["auto", "en", "de", "ar", "fr"])).toBe("English, German, Arabic and more");
@@ -146,6 +179,7 @@ const base = (over: Partial<SpeechModelsView> = {}): SpeechModelsView => ({
   table: [],
   names: { "parakeet-tdt-0.6b-v3-q4_0": "Parakeet v3" },
   dictationLanguage: "en",
+  sample: { recordings: { en: 4, de: 4, ar: 4 }, words: { en: 79, de: 80, ar: 60 }, machine: "one test computer" },
   idleMinutes: 15,
   device: { choice: "auto", failed: [], movedToCpuByMemory: false, cpuWarning: false },
   disk: { total: 0, folder: "" },
@@ -184,7 +218,8 @@ describe("recommendation, device and hardware lines", () => {
 describe("bars", () => {
   it("accuracy is the share of words heard right", () => {
     expect(accuracyPercent(card())).toBe(96);
-    expect(accuracyPercent(card({ accuracy: { oneIn: 18, testLanguage: "en", source: "x" } }))).toBe(94);
+    expect(accuracyPercent(card(), "de")).toBe(92);
+    expect(accuracyPercent(card({ accuracy: [{ language: "en", wrong: 0, of: 79 }] }))).toBe(100);
     expect(accuracyPercent(omit(card(), "accuracy"))).toBeUndefined();
   });
   it("speed is the share of a ten second sentence that is saved, between 0 and 100", () => {
@@ -204,7 +239,7 @@ describe("compareTable", () => {
     installed: false,
     bytes: 355_615_679,
     speedSeconds: 1,
-    accuracy: { oneIn: 18, testLanguage: "en", source: "x" },
+    accuracy: [{ language: "en", wrong: 5, of: 90 }],
     recommendedFor: [],
     license: { name: "CC BY 4.0", url: "" },
   });
@@ -217,12 +252,35 @@ describe("compareTable", () => {
     expect(t.rows.find((r) => r.label === "Recommended")!.cells).toEqual(["German and Arabic", "Not for a language"]);
     expect(t.rows.find((r) => r.label === "Status")!.cells).toEqual(["In use", "Not downloaded"]);
     expect(t.rows.find((r) => r.label === "Licence")!.cells).toEqual(["MIT", "CC BY 4.0"]);
-    expect(t.mixedTests).toBe(false);
   });
-  it("flags figures measured in different languages and says Not measured for a missing one", () => {
-    const de = card({ accuracy: { oneIn: 20, testLanguage: "de", source: "x" } });
-    expect(compareTable([a, de]).mixedTests).toBe(true);
-    expect(compareTable([a, omit(b, "accuracy")]).mixedTests).toBe(false);
-    expect(compareTable([a, omit(b, "accuracy")]).rows[0]!.cells[1]).toBe("Not measured");
+  it("shows one test language for every column and says Not measured in it for a model that was not run on it", () => {
+    expect(compareTable([a, b], "de").rows[0]!.cells).toEqual(["About 1 wrong word in 12 (German test)", "Not measured in German"]);
+  });
+});
+
+describe("compare picker", () => {
+  const rec = card({ id: "r", recommendedFor: ["en"] });
+  const use = card({ id: "u", inUse: true });
+  const plain = (id: string) => card({ id });
+  it("starts with the model in use, then the recommended ones, then the rest, up to four", () => {
+    expect(defaultCompare([plain("a"), rec, plain("b"), use, plain("c")])).toEqual(["u", "r", "a", "b"]);
+    expect(defaultCompare([plain("a"), plain("b")])).toEqual(["a", "b"]);
+    expect(defaultCompare([plain("a"), plain("b"), plain("c")], 2)).toEqual(["a", "b"]);
+  });
+  it("lists each language once, as measured", () => {
+    expect(compareLanguages([card(), card({ accuracy: [{ language: "ar", wrong: 1, of: 9 }] }), omit(card(), "accuracy")])).toEqual(["en", "de", "ar"]);
+  });
+  it("adds a model while there is room and removes it on the next click", () => {
+    expect(togglePicked(["a", "b"], "c")).toEqual(["a", "b", "c"]);
+    expect(togglePicked(["a", "b", "c"], "b")).toEqual(["a", "c"]);
+    expect(togglePicked(["a", "b", "c", "d"], "e")).toEqual(["a", "b", "c", "d"]);
+    expect(togglePicked(["a"], "b", 1)).toEqual(["a"]);
+  });
+  it("puts the models recommended for the chosen language first", () => {
+    const de = card({ id: "de", recommendedFor: ["de"] });
+    const en = card({ id: "en", recommendedFor: ["en"] });
+    const none = card({ id: "none" });
+    expect(visibleModels([none, en, de], { ...DEFAULT_FILTER, language: "de" }).shown.map((m) => m.id)).toEqual(["de", "none", "en"]);
+    expect(visibleModels([none, en, de], DEFAULT_FILTER).shown.map((m) => m.id)).toEqual(["en", "de", "none"]);
   });
 });

@@ -16,7 +16,7 @@ export interface LanguageChoice {
   language: string;
   title: string;
   model: ModelCard;
-  /** "Uses Parakeet v3, 356 MB. Very fast, about 1 wrong word in 18." */
+  /** "Uses Parakeet v3, 356 MB. Very fast. 1 wrong word in 18 (English test)." */
   detail: string;
   /** The model is already on this computer (installed, or found on disk): nothing to download. */
   noDownload: boolean;
@@ -30,7 +30,7 @@ export function languageChoice(view: SpeechModelsView, language: string, foundId
   const model = row && view.models.find((m) => m.id === row.recommended);
   if (!row || !model) return undefined;
   const speed = model.speedSeconds !== undefined && model.speedSeconds <= 1 ? "Very fast. " : "";
-  const quality = model.accuracy ? `${accuracyText(model).replace(/^About /, "")}.` : "";
+  const quality = model.accuracy ? `${accuracyText(model, language).replace(/^About /, "")}.` : "";
   const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}`.trim();
   return { language, title: languageName(language), model, detail, noDownload: model.installed || foundIds.includes(model.id) };
 }

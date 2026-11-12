@@ -1,5 +1,5 @@
 import { SPOKEN_LANGUAGE_LABELS } from "../shared/speech-models/config";
-import type { ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
+import type { AccuracyFigure, ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
 
 export const languageName = (code: string): string => SPOKEN_LANGUAGE_LABELS[code] ?? code;
 
@@ -9,23 +9,53 @@ export function sizeText(bytes: number): string {
   return `${Math.round(bytes / 1e6)} MB`;
 }
 
-/** "About 1 wrong word in 25 (English test)". The test language is always named, so figures of different languages are never lined up on one scale. */
-export function accuracyText(c: ModelCard): string {
-  if (!c.accuracy) return "Not measured";
-  return `About 1 wrong word in ${c.accuracy.oneIn} (${languageName(c.accuracy.testLanguage)} test)`;
+/** The figure of one language, or undefined when the model was not run on it. */
+export const figureIn = (c: ModelCard, language: string): AccuracyFigure | undefined => c.accuracy?.find((f) => f.language === language);
+
+/** The figure shown on a card: the language asked for when the model was run on it, else English, else any. */
+const shownFigure = (c: ModelCard, language: string): AccuracyFigure | undefined => figureIn(c, language) ?? figureIn(c, "en") ?? c.accuracy?.[0];
+
+/** "About 1 wrong word in 25 (English test)" or, when the sample had none, "No wrong word in 79 test words (English test)". */
+export function figureText(f: AccuracyFigure): string {
+  const test = `${languageName(f.language)} test`;
+  return f.wrong === 0 ? `No wrong word in ${f.of} test words (${test})` : `About 1 wrong word in ${Math.round(f.of / f.wrong)} (${test})`;
 }
 
-/** Share of words heard right, from "1 wrong word in N": the length of the accuracy bar. */
-export const accuracyPercent = (c: ModelCard): number | undefined => (c.accuracy ? Math.round((1 - 1 / c.accuracy.oneIn) * 100) : undefined);
+/** "About 1 wrong word in 25 (English test)". The test language is always named, so figures of different languages are never lined up on one scale. */
+export function accuracyText(c: ModelCard, language = "en"): string {
+  const f = shownFigure(c, language);
+  return f ? figureText(f) : "Not measured";
+}
+
+/** Strictly one language, for the compare table: a model that was not run on it says so. */
+export function accuracyIn(c: ModelCard, language: string): string {
+  const f = figureIn(c, language);
+  return f ? figureText(f) : `Not measured in ${languageName(language)}`;
+}
+
+/** Share of words heard right in the test recordings: the length of the accuracy bar. */
+export function accuracyPercent(c: ModelCard, language = "en"): number | undefined {
+  const f = shownFigure(c, language);
+  return f ? Math.round((1 - f.wrong / f.of) * 100) : undefined;
+}
 
 /** Share of a ten second sentence's time that is saved: the length of the speed bar (2 seconds is 80, 10 or more is 0). */
 export const speedPercent = (c: ModelCard): number | undefined => (c.speedSeconds === undefined ? undefined : Math.round(Math.min(1, Math.max(0, 1 - c.speedSeconds / 10)) * 100));
 
-/** "Under a second" / "About 2 seconds". */
+/** "Under a second" / "About 2.5 seconds" / "About 90 seconds": whole seconds from ten up. */
+export const secondsText = (n: number): string => (n <= 1 ? "Under a second" : `About ${n < 10 ? n : Math.round(n)} seconds`);
+
+/** "Under a second" / "About 2 seconds on this computer's graphics card, 5 seconds on the CPU alone". */
 export function speedText(c: ModelCard): string {
   if (c.speedSeconds === undefined) return "Not measured";
-  if (c.speedSeconds <= 1) return "Under a second";
-  return `About ${c.speedSeconds} seconds`;
+  if (c.speedOnCpuSeconds === undefined) return secondsText(c.speedSeconds);
+  return `${secondsText(c.speedSeconds)} with a graphics card, ${secondsText(c.speedOnCpuSeconds).toLowerCase()} on the CPU alone`;
+}
+
+/** The sentence that goes next to every measured figure: what it rests on. */
+export function sampleText(s: SpeechModelsView["sample"]): string {
+  const part = (code: string) => `${s.recordings[code]} ${languageName(code)} (${s.words[code]} words)`;
+  return `Measured by us on a small sample: ${part("en")}, ${part("de")} and ${part("ar")} recordings, on ${s.machine}. A computer with a slower processor or card is slower, and other speech will differ.`;
 }
 
 /** "English, German, Arabic and more". Automatic detection is not a language. */
@@ -110,7 +140,8 @@ export const DEFAULT_FILTER: Filter = { downloadedOnly: false, language: "all", 
 export function visibleModels(models: readonly ModelCard[], f: Filter): { shown: ModelCard[]; hidden: number } {
   const byLanguage = models.filter((m) => f.language === "all" || m.languages.includes(f.language));
   const filtered = f.downloadedOnly ? byLanguage.filter((m) => m.installed) : byLanguage;
-  const keys: Record<Filter["sort"], (m: ModelCard) => number> = { recommended: () => 0, size: (m) => m.bytes, speed: (m) => m.speedSeconds ?? Infinity };
+  const recommended = (m: ModelCard) => Number(!(f.language === "all" ? m.recommendedFor.length > 0 : m.recommendedFor.includes(f.language)));
+  const keys: Record<Filter["sort"], (m: ModelCard) => number> = { recommended, size: (m) => m.bytes, speed: (m) => m.speedSeconds ?? Infinity };
   const key = keys[f.sort];
   const shown = filtered
     .map((m, i) => ({ m, i }))
@@ -130,7 +161,7 @@ export function recommendationText(v: SpeechModelsView): { title: string; body: 
   if (!r) return undefined;
   const name = v.names[r.model] ?? r.model;
   const card = v.models.find((m) => m.id === r.model);
-  const speed = card ? ` ${speedText(card)} on this computer.` : "";
+  const speed = card?.speedSeconds !== undefined ? ` ${secondsText(card.speedSeconds)} on this computer.` : "";
   return { title: `For ${languageName(r.language)}, we recommend ${name}`, body: `You dictate in ${languageName(r.language)}.${speed}`, model: r.model };
 }
 
@@ -160,22 +191,42 @@ function statusText(c: ModelCard): string {
   return c.installed ? "Installed" : "Not downloaded";
 }
 
+export const MAX_COMPARED = 4;
+
+/** What the compare picker starts with: the model in use, then the recommended ones, then the rest, up to the limit. */
+export function defaultCompare(cards: readonly ModelCard[], max = MAX_COMPARED): string[] {
+  const rank = (c: ModelCard) => {
+    if (c.inUse) return 0;
+    return c.recommendedFor.length > 0 ? 1 : 2;
+  };
+  return cards
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i)
+    .slice(0, max)
+    .map((x) => x.c.id);
+}
+
+/** Languages some model was measured in: the choices of the compare table's test language. */
+export const compareLanguages = (cards: readonly ModelCard[]): string[] => [...new Set(cards.flatMap((c) => c.accuracy?.map((f) => f.language) ?? []))];
+
+/** The picked ids after a click: a model leaves the list, or joins it while there is room. */
+export function togglePicked(picked: readonly string[], id: string, max = MAX_COMPARED): string[] {
+  if (picked.includes(id)) return picked.filter((x) => x !== id);
+  return picked.length < max ? [...picked, id] : [...picked];
+}
+
 export interface CompareTable {
   names: string[];
   rows: { label: string; cells: string[] }[];
-  /** The accuracy figures were measured in different languages: the table says so instead of lining them up. */
-  mixedTests: boolean;
 }
 
-/** Side by side: the same facts as the cards, one column per model in the order given. Accuracy keeps its test language in every cell. */
-export function compareTable(cards: readonly ModelCard[]): CompareTable {
-  const tests = new Set(cards.map((c) => c.accuracy?.testLanguage).filter((t) => t !== undefined));
+/** Side by side: the same facts as the cards, one column per model in the order given. Accuracy is for one test language, named in every cell. */
+export function compareTable(cards: readonly ModelCard[], language = "en"): CompareTable {
   const row = (label: string, f: (c: ModelCard) => string) => ({ label, cells: cards.map(f) });
   return {
     names: cards.map((c) => c.name),
-    mixedTests: tests.size > 1,
     rows: [
-      row("Accuracy", accuracyText),
+      row("Accuracy", (c) => accuracyIn(c, language)),
       row("Speed", speedText),
       row("Languages", (c) => languagesText(c.languages, 6)),
       row("File size", (c) => sizeText(c.bytes)),

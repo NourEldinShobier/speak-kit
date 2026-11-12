@@ -5,6 +5,7 @@ import type { Ctx } from "../context";
 import { ModelManager } from "../dictation/models";
 import type { Stt } from "../dictation/stt";
 import { modelFetch } from "./download-fetch";
+import { parseHardware } from "./hardware-probe";
 import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "./ports";
 import { SpeechModels, type SttExtras } from "./service";
 
@@ -68,9 +69,9 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
       a.ctx.saveConfig();
       a.configure();
     },
-    recording: a.recording,
-    dictationSupported: a.supported,
-    hardware: probeThisComputer,
+    recording: () => isRecording(a.svc.state),
+    dictationSupported: () => a.svc.supported,
+    hardware: async () => (a.o.test && process.env.SPEAKKIT_HARDWARE && parseHardware(process.env.SPEAKKIT_HARDWARE)) || probeThisComputer(),
     pickFile: (title) => pickModelFile(a.o.parent(), title),
     openFolder,
     openProxySettings,

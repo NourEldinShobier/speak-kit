@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseMacGraphics, parseWindowsProbe, pickGpu, probeHardware, type ProbeEnv } from "./hardware-probe";
+import { parseHardware, parseMacGraphics, parseWindowsProbe, pickGpu, probeHardware, type ProbeEnv } from "./hardware-probe";
 
 const GB = 1024 ** 3;
 const win = (stdout: string | Error): ProbeEnv => ({
@@ -160,5 +160,23 @@ describe("pickGpu names", () => {
   });
   it("a card without a name or driver is read as empty, not a crash", () => {
     expect(parseWindowsProbe(JSON.stringify({ avx2: true, gpus: [{ Name: 5, DriverVersion: null }] })).gpu).toBeUndefined();
+  });
+});
+
+describe("parseHardware", () => {
+  it("reads a computer with and without a card", () => {
+    expect(parseHardware('{"platform":"win32","arch":"x64","avx2":true,"cores":8,"memoryGb":16}')).toEqual({ platform: "win32", arch: "x64", avx2: true, cores: 8, memoryGb: 16 });
+    expect(parseHardware('{"platform":"darwin","arch":"arm64","gpu":{"name":"Apple M2","driver":"24.1","integrated":false}}')).toEqual({
+      platform: "darwin",
+      arch: "arm64",
+      gpu: { name: "Apple M2", driver: "24.1", integrated: false },
+    });
+  });
+  it("is undefined for text that is not JSON, not an object, or the wrong shape", () => {
+    expect(parseHardware("not json")).toBeUndefined();
+    expect(parseHardware("[]")).toBeUndefined();
+    expect(parseHardware('{"platform":"beos","arch":"x64"}')).toBeUndefined();
+    expect(parseHardware('{"platform":"win32"}')).toBeUndefined();
+    expect(parseHardware('{"platform":"win32","arch":"x64","cores":"many"}')).toBeUndefined();
   });
 });

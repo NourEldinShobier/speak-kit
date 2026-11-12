@@ -1,7 +1,27 @@
-import { PREFERRED_MODEL, accurateModelFits, checkFloor, languageTable, newerModelHint, resolveLanguage, type Hardware, type LanguageRow, type SttModel, type TransferInfo } from "@speakkit/engine";
+import {
+  MEASUREMENT_SAMPLE,
+  PREFERRED_MODEL,
+  PREFERRED_MODEL_CPU,
+  STT_MODELS,
+  accurateModelFits,
+  checkFloor,
+  cpuFloorModel,
+  hasFastGraphics,
+  languageTable,
+  newerModelHint,
+  quickOn,
+  resolveLanguage,
+  tenSecondSeconds,
+  wrongWords,
+  type Hardware,
+  type LanguageRow,
+  type SttLanguage,
+  type SttModel,
+  type TransferInfo,
+} from "@speakkit/engine";
 import type { DownloadError } from "@speakkit/engine";
 import type { EnginesConfig } from "../../shared/speech-models/config";
-import type { DeviceView, ModelCard, SpeechModelsView } from "../../shared/speech-models/contract";
+import type { AccuracyFigure, DeviceView, ModelCard, SpeechModelsView, TableRow } from "../../shared/speech-models/contract";
 
 /** Everything the page shows is computed from these inputs, so the whole page state can be tested without Electron or an engine. */
 export interface ViewInput {
@@ -38,12 +58,17 @@ export interface ViewInput {
 const PLATFORMS = { win32: "win32", darwin: "darwin" } as const;
 const platformOf = (p: NodeJS.Platform): "win32" | "darwin" | "linux" => PLATFORMS[p as keyof typeof PLATFORMS] ?? "linux";
 
-/** What is wrong with running on this computer, per model: nothing, or the sentence the card shows. */
+const FLOOR_MODEL = cpuFloorModel(STT_MODELS);
+
+/** Fast graphics, or not known yet: the figures and recommendations for a computer with a card are the ones to show until the probe says otherwise. */
+const quickGraphics = (i: Pick<ViewInput, "hardware">): boolean => !i.hardware || hasFastGraphics(i.hardware);
+
+/** What is wrong with running on this computer, per model: nothing, or the sentence the card shows. A model that is quick enough on the CPU alone is never blocked. */
 function blockedReason(m: SttModel, hw: Hardware | undefined, installed: boolean): string | undefined {
   const floor = hw ? checkFloor(hw) : ({ ok: true } as const);
   if (!floor.ok) return floor.message;
-  const fits = hw ? accurateModelFits(hw) : ({ fits: true } as const);
-  return !fits.fits && m.engine === "whisper" && m.origin === "builtin" && !installed ? fits.reason : undefined;
+  const fits = hw ? accurateModelFits(hw, FLOOR_MODEL?.name) : ({ fits: true } as const);
+  return !fits.fits && m.origin === "builtin" && !installed && !quickOn(m, "cpu") ? fits.reason : undefined;
 }
 
 function transferOf(i: ViewInput, id: string): ModelCard["transfer"] {
@@ -51,6 +76,15 @@ function transferOf(i: ViewInput, id: string): ModelCard["transfer"] {
   if (t) return { state: t.state, fraction: t.fraction, ...(t.etaSeconds !== undefined && { etaSeconds: t.etaSeconds }) };
   return i.preparing === id ? { state: "preparing", fraction: 1 } : undefined;
 }
+
+/** One figure per language the model was run on. */
+function figuresOf(m: SttModel): AccuracyFigure[] {
+  return STT_LANGUAGE_FIGURES.flatMap((language) => {
+    const w = wrongWords(m, language);
+    return w ? [{ language, ...w }] : [];
+  });
+}
+const STT_LANGUAGE_FIGURES: readonly SttLanguage[] = ["en", "de", "ar"];
 
 function cardOf(m: SttModel, i: ViewInput, rows: readonly LanguageRow[]): ModelCard {
   const installed = i.installed.has(m.id);
@@ -67,15 +101,21 @@ function cardOf(m: SttModel, i: ViewInput, rows: readonly LanguageRow[]): ModelC
     license: m.license,
     origin: m.origin,
     diskBytes: i.diskPerModel[m.id] ?? 0,
+    sha256: m.sha256,
   };
   return { ...card, ...infoOf(m, i), ...stateOf(m, i, installed) };
 }
 
 /** Facts about the model itself: how good and how fast it is, what it takes in memory (only when measured here), and a language note. */
 function infoOf(m: SttModel, i: ViewInput): Partial<ModelCard> {
+  const device = quickGraphics(i) ? "gpu" : "cpu";
+  const here = tenSecondSeconds(m, device);
+  const cpu = tenSecondSeconds(m, "cpu");
+  const accuracy = figuresOf(m);
   return {
-    ...(m.accuracy && { accuracy: { oneIn: m.accuracy.wrongWordOneIn, testLanguage: m.accuracy.testLanguage, source: m.accuracy.source } }),
-    ...(m.speedSeconds !== undefined && { speedSeconds: m.speedSeconds }),
+    ...(accuracy.length > 0 && { accuracy }),
+    ...(here !== undefined && { speedSeconds: here }),
+    ...(device === "gpu" && cpu !== undefined && { speedOnCpuSeconds: cpu }),
     ...(i.measured?.id === m.id && { memory: { mb: i.measured.mb, setup: i.measured.setup } }),
     ...(i.languageNote?.model === m.id && { languageNote: i.languageNote.text }),
   };
@@ -127,12 +167,27 @@ function floorOf(hw: Hardware | undefined): string | undefined {
   if (!hw) return undefined;
   const floor = checkFloor(hw);
   if (!floor.ok) return floor.message;
-  const fits = accurateModelFits(hw);
+  const fits = accurateModelFits(hw, FLOOR_MODEL?.name);
   return fits.fits ? undefined : fits.reason;
 }
 
+function tableRow(r: LanguageRow, catalog: readonly SttModel[], cpuRows: readonly LanguageRow[]): TableRow {
+  const w = wrongWords(catalog.find((m) => m.id === r.recommended) ?? {}, r.language);
+  const cpuOnly = cpuRows.find((c) => c.language === r.language)?.recommended;
+  const cpuSeconds = tenSecondSeconds(catalog.find((m) => m.id === cpuOnly) ?? {}, "cpu");
+  return {
+    language: r.language,
+    recommended: r.recommended,
+    alsoWorks: r.alsoWorks,
+    ...(w && { figure: { language: r.language, ...w } }),
+    ...(cpuOnly && { cpuOnly }),
+    ...(cpuSeconds !== undefined && { cpuSeconds }),
+  };
+}
+
 export function buildView(i: ViewInput): SpeechModelsView {
-  const rows = languageTable(i.catalog, PREFERRED_MODEL);
+  const rows = languageTable(i.catalog, quickGraphics(i) ? PREFERRED_MODEL : PREFERRED_MODEL_CPU);
+  const cpuRows = languageTable(i.catalog, PREFERRED_MODEL_CPU);
   const current = i.catalog.find((m) => m.id === i.selected);
   const rec = rows.find((r) => r.language === i.language)?.recommended;
   const newer = newerModelHint(i.catalog, i.installed, i.config.dismissedHints);
@@ -140,9 +195,10 @@ export function buildView(i: ViewInput): SpeechModelsView {
   const floor = floorOf(i.hardware);
   return {
     models: ordered(i.catalog.map((m) => cardOf(m, i, rows))),
-    table: rows.map((r) => ({ language: r.language, recommended: r.recommended, alsoWorks: r.alsoWorks })),
+    table: rows.map((r) => tableRow(r, i.catalog, cpuRows)),
     names: Object.fromEntries(i.catalog.map((m) => [m.id, m.name])),
     dictationLanguage: current ? resolveLanguage(current, i.language).language : i.language,
+    sample: { recordings: { ...MEASUREMENT_SAMPLE.recordings }, words: { ...MEASUREMENT_SAMPLE.words }, machine: MEASUREMENT_SAMPLE.machine },
     idleMinutes: i.config.idleMinutes,
     device: deviceOf(i),
     disk: { total: i.diskTotal, folder: i.folder },
@@ -155,7 +211,7 @@ export function buildView(i: ViewInput): SpeechModelsView {
     platform: platformOf(i.platform),
     ...(rec && current && rec !== current.id && !i.installed.has(rec) && { recommendation: { model: rec, language: i.language } }),
     ...(newer && { newer: { id: newer.id, name: newer.name } }),
-    ...(floor && { floor: { message: floor } }),
+    ...(floor && { floor: { message: floor, ...(FLOOR_MODEL && { useModel: FLOOR_MODEL.id }) } }),
     ...(i.switching && { switching: i.switching }),
   };
 }
