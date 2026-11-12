@@ -8,6 +8,8 @@ export interface PieceRecorder {
   startSegment(frameEveryMs: number): void;
   endSegment(): Promise<void>;
   stop(): void;
+  /** How many pieces and pictures are held now (for tests and diagnostics). */
+  held(): { pieces: number; frames: number };
 }
 
 interface Piece {
@@ -122,6 +124,7 @@ export function createReplayBuffer(d: ReplayBufferDeps): ReplayBuffer {
       begin();
       return clip;
     },
+    held: () => ({ pieces: pieces.length, frames: frames.length }),
     stop() {
       if (timer !== undefined) clear(timer);
       timer = undefined;

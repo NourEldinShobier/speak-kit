@@ -181,4 +181,46 @@ describe("suggested zooms", () => {
     expect(await suggestZoom((await setup({ record: { kind: "screenshot" } })).deps, "r1")).toEqual([]);
     expect(await suggestZoom(t.deps, "gone")).toEqual([]);
   });
+
+  it("take a pointer sample and a stroke at the very start of the trimmed copy, and none before it", async () => {
+    const t = await setup({ record: { trim: { startMs: 1000, endMs: 4000 }, media: "video-trim.webm" } });
+    await t.bundle.writeFile("r1", "pointer.json", JSON.stringify([{ atMs: 999, x: 0.9, y: 0.9 }, { atMs: 1000, x: 0.2, y: 0.7 }]));
+    await t.bundle.writeFile("r1", "events.json", JSON.stringify([{ atMs: 999, kind: "ink-start" }, { atMs: 1000, kind: "ink-start" }, { atMs: 1500, kind: "ink-end" }]));
+    expect(await suggestZoom(t.deps, "r1")).toEqual([region(0, 2000, { x: 0.2, y: 0.7 })]);
+  });
+
+  it("leave out a pointer sample and a stroke after the end of the trimmed copy", async () => {
+    const t = await setup({ record: { trim: { startMs: 1000, endMs: 4000 }, media: "video-trim.webm" } });
+    const late = Array.from({ length: 6 }, (_, i) => ({ atMs: 4200 + i * 200, x: 0.5, y: 0.5 }));
+    await t.bundle.writeFile("r1", "pointer.json", JSON.stringify(late));
+    await t.bundle.writeFile("r1", "events.json", JSON.stringify([{ atMs: 4500, kind: "ink-start" }]));
+    expect(await suggestZoom(t.deps, "r1")).toEqual([]);
+  });
+
+  it("zoom nothing when the video to start from is missing or empty, and when the zoom comes back empty", async () => {
+    const gone = await setup({ record: { trim: { startMs: 1000, endMs: 4000 }, media: "video-trim.webm" } });
+    expect(await applyZoom(gone.deps, "r1", [region(0, 1500)])).toBe(false);
+    const empty = await setup();
+    await empty.bundle.writeFile("r1", "video.webm", "");
+    expect(await applyZoom(empty.deps, "r1", [region(0, 1500)])).toBe(false);
+    const nothing = await setup({ video: async () => new Uint8Array() });
+    expect(await applyZoom(nothing.deps, "r1", [region(0, 1500)])).toBe(false);
+    expect((await nothing.store.get("r1"))!.media).toBe("video.webm");
+  });
+
+  it("make no sheet when it comes back empty, and when no picture of a zoomed part exists", async () => {
+    const empty = await setup({ sheet: async () => new Uint8Array() });
+    expect(await applyZoom(empty.deps, "r1", [region(0, 1500)])).toBe(true);
+    expect((await empty.store.get("r1"))!.zoomSheet).toBe("");
+    const bare = await setup();
+    await rm(path.join(dir, "r1", "frames"), { recursive: true });
+    expect(await applyZoom(bare.deps, "r1", [region(0, 1500)])).toBe(true);
+    expect((await bare.store.get("r1"))!.zoomSheet).toBe("");
+  });
+
+  it("treat an empty pointer file as no suggestions", async () => {
+    const t = await setup();
+    await t.bundle.writeFile("r1", "pointer.json", "");
+    expect(await suggestZoom(t.deps, "r1")).toEqual([]);
+  });
 });
