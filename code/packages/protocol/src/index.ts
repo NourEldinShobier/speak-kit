@@ -19,3 +19,39 @@ export type { VoiceDown, VoicePage, VoicePhase, VoiceProblem, VoiceUp, VoiceUsag
 export { clock, compareNames, plural } from "./format";
 export * from "./voice-chat-app";
 export * from "./screen-look";
+export {
+  AUTOMATION_COMMANDS,
+  AUTOMATION_ERROR_CODES,
+  AUTOMATION_ERROR_STATUS,
+  AUTOMATION_ERROR_TEXT,
+  AUTOMATION_LIMITS,
+  EXIT_CODES,
+  automationErrorSchema,
+  automationExportRequestSchema,
+  automationExportSchema,
+  automationLimitsSchema,
+  automationQueueSchema,
+  automationSpeakRequestSchema,
+  automationSpeakResultSchema,
+  automationStatusSchema,
+  automationStopRequestSchema,
+  capabilities,
+  capabilitiesSchema,
+  exitCodeFor,
+} from "./automation";
+export type {
+  AutomationCommand,
+  AutomationError,
+  AutomationErrorCode,
+  AutomationExport,
+  AutomationExportRequest,
+  AutomationLimits,
+  AutomationQueue,
+  AutomationQueueItem,
+  AutomationSpeakRequest,
+  AutomationSpeakResult,
+  AutomationStatus,
+  Capabilities,
+  CommandState,
+  ReadingStatus,
+} from "./automation";
