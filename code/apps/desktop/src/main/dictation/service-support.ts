@@ -90,10 +90,8 @@ export const dictationStatus = ({
   ...(redo && { redo }),
 });
 
-const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
-
-/** True when a settings change needs the microphone window told (which input, and whether it stays open). */
-export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) => k in patch);
-
-/** The app window is on screen: not hidden to the tray, not minimized, not gone. */
-export const windowShown = (w: { isDestroyed(): boolean; isVisible(): boolean; isMinimized(): boolean } | null): boolean => !!w && !w.isDestroyed() && w.isVisible() && !w.isMinimized();
+/** The system page for the microphone (when access is the problem) or for sound in general. */
+export function soundSettingsUrl(micBlocked: boolean, platform: string = process.platform): string {
+  if (platform === "darwin") return micBlocked ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone" : "x-apple.systempreferences:com.apple.preference.sound";
+  return micBlocked ? "ms-settings:privacy-microphone" : "ms-settings:sound";
+}

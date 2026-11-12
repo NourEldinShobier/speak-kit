@@ -1,5 +1,5 @@
 /** One-shot: the page that opens Vocabulary can ask for a tab, and the page takes it once when it mounts. */
-import type { VocabularyTab } from "./VocabularyPage";
+export type VocabularyTab = "heard" | "read";
 
 let wanted: VocabularyTab | null = null;
 

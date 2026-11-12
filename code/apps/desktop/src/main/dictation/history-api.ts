@@ -1,7 +1,20 @@
 import { dialog, type BrowserWindow } from "electron";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { applyMode, applyRules, defaultSettings, resolveMode, soundsLikeRules, timeLeft, type AudioStore, type Dictation, type HistoryHit, type Clip, type Settings, type TranscribeResult } from "@speakkit/dictation";
+import {
+  applyMode,
+  applyRules,
+  defaultSettings,
+  resolveMode,
+  soundsLikeRules,
+  timeLeft,
+  type AudioStore,
+  type Dictation,
+  type HistoryHit,
+  type Clip,
+  type Settings,
+  type TranscribeResult,
+} from "@speakkit/dictation";
 import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
 import { encodeWav } from "./audio-store";

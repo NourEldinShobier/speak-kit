@@ -47,6 +47,12 @@ export const CAPTION_OPTIONS = [
   { value: "vtt", label: "WebVTT (subtitles for web players)" },
 ];
 
+function chaptersNote(wav: boolean, headings: number): string {
+  if (wav) return "WAV files cannot hold chapter markers. Captions still work.";
+  if (!headings) return "No headings found. A heading is a line that starts with #.";
+  return `${headings} ${headings === 1 ? "heading" : "headings"} found in the text.`;
+}
+
 /** Captions and chapter markers: both off by default. WAV cannot hold chapters, and the line says so. */
 function ExtrasFields({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
   const { format, captions, chapters, text } = st.form;
@@ -63,11 +69,7 @@ function ExtrasFields({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
         <div className="sk-export__chapters">
           <Checkbox label="Add chapter markers" checked={!wav && chapters} disabled={wav} onChange={(e) => dispatch({ type: "edit", patch: { chapters: e.target.checked } })} />
           <span className="sk-modal-text" data-testid="chapters-note">
-            {wav
-              ? "WAV files cannot hold chapter markers. Captions still work."
-              : headings
-                ? `${headings} ${headings === 1 ? "heading" : "headings"} found in the text.`
-                : "No headings found. A heading is a line that starts with #."}
+            {chaptersNote(wav, headings)}
           </span>
         </div>
       </div>

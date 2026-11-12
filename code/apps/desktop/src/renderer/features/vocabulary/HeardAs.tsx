@@ -11,15 +11,7 @@ import { WordDialog } from "./WordDialog";
 
 const SHOWN = 6;
 
-function WordRow({
-  term,
-  first,
-  last,
-  canMove,
-  onEdit,
-  onDelete,
-  onMove,
-}: {
+interface RowProps {
   term: Term;
   first: boolean;
   last: boolean;
@@ -27,7 +19,11 @@ function WordRow({
   onEdit(): void;
   onDelete(): void;
   onMove(by: -1 | 1): void;
-}) {
+}
+
+const iconBtn = "lm-btn lm-btn--icon lm-btn--secondary";
+
+function WordRow({ term, first, last, canMove, onEdit, onDelete, onMove }: RowProps) {
   return (
     <li className="lm-row vocab-row" data-term={term.id}>
       <span className="vocab-row__word">{term.word}</span>
@@ -39,18 +35,18 @@ function WordRow({
       <span className="vocab-row__acts">
         {canMove ? (
           <>
-            <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Move ${term.word} up`} disabled={first} onClick={() => onMove(-1)}>
+            <button type="button" className={iconBtn} aria-label={`Move ${term.word} up`} disabled={first} onClick={() => onMove(-1)}>
               <Icon name="arrow-up" size={14} />
             </button>
-            <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Move ${term.word} down`} disabled={last} onClick={() => onMove(1)}>
+            <button type="button" className={iconBtn} aria-label={`Move ${term.word} down`} disabled={last} onClick={() => onMove(1)}>
               <Icon name="arrow-down" size={14} />
             </button>
           </>
         ) : null}
-        <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Edit ${term.word}`} onClick={onEdit}>
+        <button type="button" className={iconBtn} aria-label={`Edit ${term.word}`} onClick={onEdit}>
           <Icon name="pencil" size={14} />
         </button>
-        <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Delete ${term.word}`} onClick={onDelete}>
+        <button type="button" className={iconBtn} aria-label={`Delete ${term.word}`} onClick={onDelete}>
           <Icon name="trash" size={14} />
         </button>
       </span>
@@ -58,23 +54,101 @@ function WordRow({
   );
 }
 
+/** A word moves one place up or down; the first and last stay put. */
+function moved(list: Term[], id: string, by: -1 | 1): Term[] {
+  const i = list.findIndex((t) => t.id === id);
+  const j = i + by;
+  if (i < 0 || j < 0 || j >= list.length) return list;
+  const next = [...list];
+  [next[i], next[j]] = [next[j]!, next[i]!];
+  return next;
+}
+
+interface ListProps {
+  shown: Term[];
+  scroll: boolean;
+  canMove: boolean;
+  update(change: (t: Term[]) => Term[]): void;
+  onEdit(t: Term): void;
+}
+
+function WordList({ shown, scroll, canMove, update, onEdit }: ListProps) {
+  if (shown.length === 0) return <p className="vocab-empty-line">Nothing matches that search.</p>;
+  return (
+    <ul className={`vocab-list${scroll ? " vocab-list--scroll" : ""}`} aria-label="Your words" tabIndex={scroll ? 0 : undefined}>
+      {shown.map((t, i) => (
+        <WordRow
+          key={t.id}
+          term={t}
+          first={i === 0}
+          last={i === shown.length - 1}
+          canMove={canMove}
+          onEdit={() => onEdit(t)}
+          onDelete={() => update((list) => removeTerm(list, t.id))}
+          onMove={(by) => update((list) => moved(list, t.id, by))}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function EmptyWords({ onAdd, onImport }: { onAdd(): void; onImport(): void }) {
+  return (
+    <div className="lm-card">
+      <EmptyState icon="book-2" title="No words yet">
+        Add the names and terms you use, or import a list.
+        <div className="vocab-empty-acts">
+          <Button variant="primary" iconLeft="plus" onClick={onAdd}>
+            Add word
+          </Button>
+          <Button iconLeft="upload" onClick={onImport}>
+            Import a list
+          </Button>
+        </div>
+      </EmptyState>
+    </div>
+  );
+}
+
+interface CardProps {
+  terms: Term[];
+  update(change: (t: Term[]) => Term[]): void;
+  onAdd(): void;
+  onEdit(t: Term): void;
+  query: string;
+  setQuery(q: string): void;
+}
+
+function WordsBody({ terms, update, onAdd, onEdit, query, setQuery }: CardProps) {
+  const [all, setAll] = useState(false);
+  const found = filterTerms(terms, query);
+  const expanded = all || !!query;
+  const shown = expanded ? found : found.slice(0, SHOWN);
+  return (
+    <div className="lm-card vocab-card">
+      <div className="vocab-bar">
+        <TextInput icon="search" aria-label="Search your words" placeholder="Search your words" value={query} onChange={(e) => setQuery(e.target.value)} frameClassName="vocab-bar__search" />
+        <Button variant="primary" iconLeft="plus" onClick={onAdd} disabled={terms.length >= MAX_TERMS}>
+          Add word
+        </Button>
+      </div>
+      <WordList shown={shown} scroll={expanded} canMove={all && !query.trim()} update={update} onEdit={onEdit} />
+      <div className="vocab-foot">
+        <span>{`Showing ${shown.length} of ${terms.length} words.`}</span>
+        {!query && terms.length > SHOWN ? (
+          <Button size="sm" onClick={() => setAll((a) => !a)}>
+            {all ? "Show fewer" : "Show all"}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** Words and names, with how the model tends to hear them. The list is edited by row id. */
 export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(change: (t: Term[]) => Term[]): void; onImport(): void }) {
   const [query, setQuery] = useState("");
-  const [all, setAll] = useState(false);
   const [dialog, setDialog] = useState<{ editing?: Term } | null>(null);
-  const found = filterTerms(terms, query);
-  const shown = all || query ? found : found.slice(0, SHOWN);
-  const reorderable = !query.trim();
-  const move = (id: string, by: -1 | 1) =>
-    update((list) => {
-      const i = list.findIndex((t) => t.id === id);
-      const j = i + by;
-      if (i < 0 || j < 0 || j >= list.length) return list;
-      const next = [...list];
-      [next[i], next[j]] = [next[j]!, next[i]!];
-      return next;
-    });
   return (
     <section className="lm-section" aria-labelledby="vocab-words">
       <header className="lm-section__head vocab-head">
@@ -87,54 +161,9 @@ export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(c
         <p className="lm-section__desc">When dictation gets a word wrong, add it here, with how it sounds if you know.</p>
       </header>
       {terms.length === 0 ? (
-        <div className="lm-card">
-          <EmptyState icon="book-2" title="No words yet">
-            Add the names and terms you use, or import a list.
-            <div className="vocab-empty-acts">
-              <Button variant="primary" iconLeft="plus" onClick={() => setDialog({})}>
-                Add word
-              </Button>
-              <Button iconLeft="upload" onClick={onImport}>
-                Import a list
-              </Button>
-            </div>
-          </EmptyState>
-        </div>
+        <EmptyWords onAdd={() => setDialog({})} onImport={onImport} />
       ) : (
-        <div className="lm-card vocab-card">
-          <div className="vocab-bar">
-            <TextInput icon="search" aria-label="Search your words" placeholder="Search your words" value={query} onChange={(e) => setQuery(e.target.value)} frameClassName="vocab-bar__search" />
-            <Button variant="primary" iconLeft="plus" onClick={() => setDialog({})} disabled={terms.length >= MAX_TERMS}>
-              Add word
-            </Button>
-          </div>
-          {shown.length === 0 ? (
-            <p className="vocab-empty-line">Nothing matches that search.</p>
-          ) : (
-            <ul className={`vocab-list${all || query ? " vocab-list--scroll" : ""}`} aria-label="Your words" tabIndex={all || query ? 0 : undefined}>
-              {shown.map((t, i) => (
-                <WordRow
-                  key={t.id}
-                  term={t}
-                  first={i === 0}
-                  last={i === shown.length - 1}
-                  canMove={reorderable && all}
-                  onEdit={() => setDialog({ editing: t })}
-                  onDelete={() => update((list) => removeTerm(list, t.id))}
-                  onMove={(by) => move(t.id, by)}
-                />
-              ))}
-            </ul>
-          )}
-          <div className="vocab-foot">
-            <span>{`Showing ${shown.length} of ${terms.length} words.`}</span>
-            {!query && terms.length > SHOWN ? (
-              <Button size="sm" onClick={() => setAll((a) => !a)}>
-                {all ? "Show fewer" : "Show all"}
-              </Button>
-            ) : null}
-          </div>
-        </div>
+        <WordsBody terms={terms} update={update} onAdd={() => setDialog({})} onEdit={(t) => setDialog({ editing: t })} query={query} setQuery={setQuery} />
       )}
       <WordDialog
         open={dialog !== null}
@@ -154,7 +183,7 @@ export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(c
 /** The switch that sends the words to the speech model, and what it reads. */
 export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly Term[] }) {
   const model = s.models.find((m) => m.selected);
-  const sum = promptSummary(terms, s.settings.model, s.settings.prompt, model?.name ?? "This speech model");
+  const sum = promptSummary(terms, { model: s.settings.model, on: s.settings.prompt, modelName: model?.name ?? "This speech model" });
   const supported = sum.state !== "unsupported";
   return (
     <section className="lm-section" aria-label="Speech model prompt">
@@ -195,27 +224,46 @@ function RuleRow({ r, onChange, onDelete }: { r: Replacement; onChange(next: Rep
       <Icon name="arrow-right" size={14} className="vocab-arrow" />
       <span className="vocab-rule__to">{r.to || <em>Deletes the phrase</em>}</span>
       <Select label={`Capital letters for ${r.from}`} size="sm" value={r.matchCase ? "match" : "ignore"} options={CASE} onChange={(v) => onChange({ ...r, matchCase: v === "match" })} />
-      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Delete replacement ${r.from}`} onClick={onDelete}>
+      <button type="button" className={iconBtn} aria-label={`Delete replacement ${r.from}`} onClick={onDelete}>
         <Icon name="trash" size={14} />
       </button>
     </li>
   );
 }
 
-/** Replacements: a phrase and what it becomes. An empty "Replace with" deletes the phrase. */
-export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onShowWords(): void }) {
-  const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => dictation.patchSettings({ replacements: next }));
+function AddRule({ full, onAdd }: { full: boolean; onAdd(r: Replacement): void }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [matchCase, setMatchCase] = useState(false);
-  const derived = soundsLikeRules(s.settings.terms).length;
-  const add = () => {
-    const key = from.trim();
-    if (!key || list.length >= MAX_REPLACEMENTS) return;
-    update((cur) => [...cur.filter((r) => r.from.toLowerCase() !== key.toLowerCase()), { from: key, to, ...(matchCase && { matchCase: true }) }]);
+  const submit = () => {
+    if (!from.trim() || full) return;
+    onAdd({ from: from.trim(), to, ...(matchCase && { matchCase: true }) });
     setFrom("");
     setTo("");
   };
+  return (
+    <form
+      className="lm-row vocab-rule vocab-rule--add"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <TextInput aria-label="When I say" placeholder="When I say" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={80} frameClassName="vocab-rule__field" />
+      <Icon name="arrow-right" size={14} className="vocab-arrow" />
+      <TextInput aria-label="Replace with" placeholder="Replace with" value={to} onChange={(e) => setTo(e.target.value)} maxLength={200} frameClassName="vocab-rule__field vocab-rule__field--wide" />
+      <Select label="Capital letters" size="sm" value={matchCase ? "match" : "ignore"} options={CASE} onChange={(v) => setMatchCase(v === "match")} />
+      <Button type="submit" variant="primary" disabled={!from.trim() || full}>
+        Add
+      </Button>
+    </form>
+  );
+}
+
+/** Replacements: a phrase and what it becomes. An empty "Replace with" deletes the phrase. */
+export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onShowWords(): void }) {
+  const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => dictation.patchSettings({ replacements: next }));
+  const derived = soundsLikeRules(s.settings.terms).length;
   return (
     <section className="lm-section" aria-labelledby="vocab-repl">
       <header className="lm-section__head vocab-head">
@@ -241,28 +289,7 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
             <RuleRow key={r.from} r={r} onChange={(next) => update((cur) => cur.map((x) => (x.from === r.from ? next : x)))} onDelete={() => update((cur) => cur.filter((x) => x.from !== r.from))} />
           ))}
         </ul>
-        <form
-          className="lm-row vocab-rule vocab-rule--add"
-          onSubmit={(e) => {
-            e.preventDefault();
-            add();
-          }}
-        >
-          <TextInput aria-label="When I say" placeholder="When I say" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={80} frameClassName="vocab-rule__field" />
-          <Icon name="arrow-right" size={14} className="vocab-arrow" />
-          <TextInput
-            aria-label="Replace with"
-            placeholder="Replace with"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            maxLength={200}
-            frameClassName="vocab-rule__field vocab-rule__field--wide"
-          />
-          <Select label="Capital letters" size="sm" value={matchCase ? "match" : "ignore"} options={CASE} onChange={(v) => setMatchCase(v === "match")} />
-          <Button type="submit" variant="primary" disabled={!from.trim() || list.length >= MAX_REPLACEMENTS}>
-            Add
-          </Button>
-        </form>
+        <AddRule full={list.length >= MAX_REPLACEMENTS} onAdd={(r) => update((cur) => [...cur.filter((x) => x.from.toLowerCase() !== r.from.toLowerCase()), r])} />
         {derived ? (
           <p className="vocab-note">
             {derived} more {derived === 1 ? "rule comes" : "rules come"} from the sounds-like spellings of your words.{" "}

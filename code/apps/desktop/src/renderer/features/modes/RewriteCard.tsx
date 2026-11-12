@@ -1,58 +1,56 @@
 import { useState } from "react";
-import { Banner, Button, Modal, Select, SettingRow, Toggle } from "@speakkit/ui";
+import { Banner, Button, Modal, Select, SettingRow } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { dictation } from "../dictation-bridge";
 import { deadlineLabel, DEADLINES, WRITER } from "./model";
+import { Toggle } from "@speakkit/ui";
+
+function OptInBody({ hasKey, deadline, onDeadline }: { hasKey: boolean; deadline: number; onDeadline(ms: number): void }) {
+  return (
+    <div className="modes-optin">
+      {!hasKey ? (
+        <Banner tone="warning" title="No OpenAI key saved">
+          Save your OpenAI key on the Voice chat page first. The writer needs it.
+        </Banner>
+      ) : null}
+      <ul className="modes-optin__list">
+        <li>
+          <b>Your text leaves this computer.</b> After a dictation is heard, its text is sent to the writer to be tidied. Without the rewrite pass, dictation never leaves your computer.
+        </li>
+        <li>
+          <b>Writer:</b> {WRITER}, with the key you saved for voice chat.
+        </li>
+        <li>
+          <b>If the writer is slow</b>, the text is pasted as you said it. Text that is only numbers is never sent.
+        </li>
+      </ul>
+      <SettingRow
+        className="lm-row--control"
+        label="Give up after"
+        description="The longest dictation waits for the writer."
+        control={<Select label="Give up after" value={String(deadline)} onChange={(v) => onDeadline(Number(v))} options={DEADLINES.map((d) => ({ value: String(d), label: deadlineLabel(d) }))} />}
+      />
+    </div>
+  );
+}
 
 function OptInDialog({ open, s, onClose }: { open: boolean; s: DictationStatus; onClose(): void }) {
   const [deadline, setDeadline] = useState<number>(s.settings.rewrite.deadlineMs);
-  const hasKey = s.rewriteKey;
+  const turnOn = () => {
+    void dictation.patchSettings({ rewrite: { enabled: true, deadlineMs: deadline } });
+    onClose();
+  };
+  const footer = (
+    <>
+      <Button onClick={onClose}>Cancel</Button>
+      <Button variant="primary" disabled={!s.rewriteKey} onClick={turnOn}>
+        Turn on rewrite pass
+      </Button>
+    </>
+  );
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Turn on the rewrite pass?"
-      width={480}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="primary"
-            disabled={!hasKey}
-            onClick={() => {
-              void dictation.patchSettings({ rewrite: { enabled: true, deadlineMs: deadline } });
-              onClose();
-            }}
-          >
-            Turn on rewrite pass
-          </Button>
-        </>
-      }
-    >
-      <div className="modes-optin">
-        {!hasKey ? (
-          <Banner tone="warning" title="No OpenAI key saved">
-            Save your OpenAI key on the Voice chat page first. The writer needs it.
-          </Banner>
-        ) : null}
-        <ul className="modes-optin__list">
-          <li>
-            <b>Your text leaves this computer.</b> After a dictation is heard, its text is sent to the writer to be tidied. Without the rewrite pass, dictation never leaves your computer.
-          </li>
-          <li>
-            <b>Writer:</b> {WRITER}, with the key you saved for voice chat.
-          </li>
-          <li>
-            <b>If the writer is slow</b>, the text is pasted as you said it. Text that is only numbers is never sent.
-          </li>
-        </ul>
-        <SettingRow
-          className="lm-row--control"
-          label="Give up after"
-          description="The longest dictation waits for the writer."
-          control={<Select label="Give up after" value={String(deadline)} onChange={(v) => setDeadline(Number(v))} options={DEADLINES.map((d) => ({ value: String(d), label: deadlineLabel(d) }))} />}
-        />
-      </div>
+    <Modal open={open} onClose={onClose} title="Turn on the rewrite pass?" width={480} footer={footer}>
+      <OptInBody hasKey={s.rewriteKey} deadline={deadline} onDeadline={setDeadline} />
     </Modal>
   );
 }

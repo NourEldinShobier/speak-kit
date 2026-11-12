@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { takeVocabularyTab } from "./tab-request";
+import { takeVocabularyTab, type VocabularyTab } from "../../vocabulary-tab";
 import { exportVocabulary, importVocabulary, type ExportFormat } from "@speakkit/dictation";
 import { Banner, Button, DropdownMenu, DropdownMenuItem, Modal, Segmented } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
@@ -10,8 +10,6 @@ import { HeardAs } from "./HeardAs";
 import { importView, type ImportView } from "./model";
 import { ReadAs } from "./ReadAs";
 import "./vocabulary.css";
-
-export type VocabularyTab = "heard" | "read";
 
 const LEAD = "Teach Speak Kit the names and terms you use. One list helps dictation, History search and the reader.";
 

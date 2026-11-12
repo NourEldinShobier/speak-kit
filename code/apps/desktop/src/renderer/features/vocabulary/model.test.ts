@@ -51,7 +51,7 @@ describe("speech model prompt card", () => {
   const terms = Array.from({ length: 60 }, (_, i) => t(`i${i}`, `Longword${i}`));
 
   it("says how many words and characters the model reads and that the rest still work", () => {
-    const s = promptSummary(terms, "large-v3-turbo-q5_0", true, "Whisper");
+    const s = promptSummary(terms, { model: "large-v3-turbo-q5_0", on: true, modelName: "Whisper" });
     expect(s.state).toBe("on");
     expect(s.line).toMatch(/^\d+ of 60 words read by the model, \d+ of 500 characters\.$/);
     expect(s.plan.included).toBeLessThan(60);
@@ -59,14 +59,14 @@ describe("speech model prompt card", () => {
   });
 
   it("is off when the switch is off, empty with no words, and has no note when everything fits", () => {
-    expect(promptSummary(terms, "large-v3-turbo-q5_0", false, "W").state).toBe("off");
-    expect(promptSummary([], "large-v3-turbo-q5_0", true, "W").state).toBe("empty");
-    expect(promptSummary([t("a", "One")], "large-v3-turbo-q5_0", true, "W")).toMatchObject({ line: "1 of 1 word read by the model, 3 of 500 characters." });
-    expect(promptSummary([t("a", "One")], "large-v3-turbo-q5_0", true, "W").note).toBeUndefined();
+    expect(promptSummary(terms, { model: "large-v3-turbo-q5_0", on: false, modelName: "W" }).state).toBe("off");
+    expect(promptSummary([], { model: "large-v3-turbo-q5_0", on: true, modelName: "W" }).state).toBe("empty");
+    expect(promptSummary([t("a", "One")], { model: "large-v3-turbo-q5_0", on: true, modelName: "W" })).toMatchObject({ line: "1 of 1 word read by the model, 3 of 500 characters." });
+    expect(promptSummary([t("a", "One")], { model: "large-v3-turbo-q5_0", on: true, modelName: "W" }).note).toBeUndefined();
   });
 
   it("is not used by a model that cannot read it, and says nothing is blocked", () => {
-    const s = promptSummary(terms, "parakeet-tdt-0.6b-v3-q4_0", true, "Parakeet v3");
+    const s = promptSummary(terms, { model: "parakeet-tdt-0.6b-v3-q4_0", on: true, modelName: "Parakeet v3" });
     expect(s).toMatchObject({ state: "unsupported", note: "Parakeet v3 cannot read a word list. Your words still work through replacements, and nothing is blocked." });
   });
 });

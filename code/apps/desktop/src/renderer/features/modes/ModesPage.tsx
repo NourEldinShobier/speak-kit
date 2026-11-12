@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { addMode, DEFAULT_MODE_ID, defaultMode, removeMode, setApps, type Mode } from "@speakkit/dictation";
+import { addMode, DEFAULT_MODE_ID, defaultMode, removeMode, setApps, type Mode, type ModeError } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { dictation } from "../dictation-bridge";
-import { useDictation } from "../dictation-bridge";
+import { dictation, useDictation } from "../dictation-bridge";
 import { useLive } from "../vocabulary";
-import "../vocabulary/vocabulary.css";
 import { ModeDetail } from "./ModeDetail";
 import { modeRow } from "./model";
 import { RewriteCard } from "./RewriteCard";
@@ -14,19 +12,17 @@ import "./modes.css";
 
 const LEAD = "A mode sets how dictation behaves in the apps you put in it: how text is inserted, capital letters, the end of the sentence, its own words and an optional rewrite.";
 
+const NAME_ERRORS: Record<ModeError, string> = {
+  empty: "",
+  duplicate: "A mode with this name already exists.",
+  "too-long": "Mode names can be up to 40 characters.",
+  full: "There are too many modes.",
+};
+
 function AddModeDialog({ open, modes, onClose, onAdd }: { open: boolean; modes: readonly Mode[]; onClose(): void; onAdd(next: Mode[], created: Mode): void }) {
   const [name, setName] = useState("");
   const result = name.trim() ? addMode(modes, name) : null;
-  const error =
-    result && !result.ok
-      ? result.error === "duplicate"
-        ? "A mode with this name already exists."
-        : result.error === "too-long"
-          ? "Mode names can be up to 40 characters."
-          : result.error === "full"
-            ? "There are too many modes."
-            : undefined
-      : undefined;
+  const error = result && !result.ok ? NAME_ERRORS[result.error] : undefined;
   const submit = () => {
     if (!result?.ok) return;
     onAdd(result.modes, result.mode);
@@ -62,6 +58,106 @@ function AddModeDialog({ open, modes, onClose, onAdd }: { open: boolean; modes: 
   );
 }
 
+function ModeRow({ mode, rewriteOn, onOpen }: { mode: Mode; rewriteOn: boolean; onOpen(): void }) {
+  const r = modeRow(mode, rewriteOn);
+  const isDefault = mode.id === DEFAULT_MODE_ID;
+  const inner = (
+    <>
+      <span className="modes-tile" aria-hidden="true">
+        {r.letter}
+      </span>
+      <span className="modes-row__text">
+        <b>{r.name}</b>
+        <span>{r.detail}</span>
+      </span>
+      <span className="modes-row__chips">
+        {r.chips.map((c) => (
+          <Chip key={c}>{c}</Chip>
+        ))}
+      </span>
+      {isDefault ? <span className="modes-row__spacer" /> : <Icon name="chevron-right" size={14} className="vocab-arrow" />}
+    </>
+  );
+  return (
+    <li data-mode={r.id}>
+      {isDefault ? (
+        <div className="lm-row modes-row">{inner}</div>
+      ) : (
+        <button type="button" className="lm-row modes-row modes-row--btn" aria-label={`${r.name}, ${r.detail}`} onClick={onOpen}>
+          {inner}
+        </button>
+      )}
+    </li>
+  );
+}
+
+const withoutDefault = (list: readonly Mode[]): Mode[] => list.filter((m) => m.id !== DEFAULT_MODE_ID);
+
+function ModeList({ s, all, onOpen, onAdd }: { s: DictationStatus; all: Mode[]; onOpen(id: string): void; onAdd(): void }) {
+  return (
+    <Page
+      title="Modes"
+      lead={LEAD}
+      action={
+        <Button variant="primary" iconLeft="plus" onClick={onAdd}>
+          Add mode
+        </Button>
+      }
+    >
+      <ul className="lm-card modes-list" aria-label="Modes">
+        {all.map((m) => (
+          <ModeRow key={m.id} mode={m} rewriteOn={s.settings.rewrite.enabled} onOpen={() => onOpen(m.id)} />
+        ))}
+      </ul>
+      <RewriteCard s={s} />
+      <p className="modes-note" role="note">
+        Words from Vocabulary work in every mode. A mode&apos;s own words win when both spell the same thing differently.
+      </p>
+    </Page>
+  );
+}
+
+function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(change: (m: Mode[]) => Mode[]): void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const current = open ? modes.find((m) => m.id === open) : undefined;
+  if (current)
+    return (
+      <ModeDetail
+        s={s}
+        mode={current}
+        others={modes}
+        onBack={() => setOpen(null)}
+        onChange={(next) => update((list) => list.map((m) => (m.id === next.id ? next : m)))}
+        onApps={(apps) => update((list) => withoutDefault(setApps([defaultMode(), ...list], current.id, apps)))}
+        onDelete={() => {
+          update((list) => withoutDefault(removeMode([defaultMode(), ...list], current.id)));
+          setOpen(null);
+        }}
+      />
+    );
+  const all = [defaultMode(), ...modes];
+  return (
+    <>
+      <ModeList s={s} all={all} onOpen={setOpen} onAdd={() => setAdding(true)} />
+      <AddModeDialog
+        open={adding}
+        modes={all}
+        onClose={() => setAdding(false)}
+        onAdd={(next, created) => {
+          update(() => withoutDefault(next));
+          setOpen(created.id);
+        }}
+      />
+    </>
+  );
+}
+
+function Loaded({ s }: { s: DictationStatus }) {
+  const [modes, update] = useLive<Mode>(s.settings.modes, (next) => dictation.patchSettings({ modes: next }));
+  return <List s={s} modes={modes} update={update} />;
+}
+
 /** Modes: which apps get which dictation behaviour. */
 export function ModesPage() {
   const s = useDictation();
@@ -72,78 +168,4 @@ export function ModesPage() {
       </Page>
     );
   return <Loaded s={s} />;
-}
-
-function Loaded({ s }: { s: DictationStatus }) {
-  const [modes, update] = useLive<Mode>(s.settings.modes, (next) => dictation.patchSettings({ modes: next }));
-  const [open, setOpen] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const all = [defaultMode(), ...modes];
-  const current = open ? modes.find((m) => m.id === open) : undefined;
-  const rewriteOn = s.settings.rewrite.enabled;
-  if (current)
-    return (
-      <ModeDetail
-        s={s}
-        mode={current}
-        onBack={() => setOpen(null)}
-        onChange={(next) => update((list) => list.map((m) => (m.id === next.id ? next : m)))}
-        onApps={(apps) => update((list) => setApps([defaultMode(), ...list], current.id, apps).filter((m) => m.id !== DEFAULT_MODE_ID))}
-        onDelete={() => {
-          update((list) => removeMode([defaultMode(), ...list], current.id).filter((m) => m.id !== DEFAULT_MODE_ID));
-          setOpen(null);
-        }}
-        others={modes}
-      />
-    );
-  return (
-    <Page
-      title="Modes"
-      lead={LEAD}
-      action={
-        <Button variant="primary" iconLeft="plus" onClick={() => setAdding(true)}>
-          Add mode
-        </Button>
-      }
-    >
-      <ul className="lm-card modes-list" aria-label="Modes">
-        {all.map((m) => {
-          const r = modeRow(m, rewriteOn);
-          const inner = (
-            <>
-              <span className="modes-tile" aria-hidden="true">
-                {r.letter}
-              </span>
-              <span className="modes-row__text">
-                <b>{r.name}</b>
-                <span>{r.detail}</span>
-              </span>
-              <span className="modes-row__chips">
-                {r.chips.map((c) => (
-                  <Chip key={c}>{c}</Chip>
-                ))}
-              </span>
-              {m.id === DEFAULT_MODE_ID ? <span className="modes-row__spacer" /> : <Icon name="chevron-right" size={14} className="vocab-arrow" />}
-            </>
-          );
-          return (
-            <li key={r.id} data-mode={r.id}>
-              {m.id === DEFAULT_MODE_ID ? (
-                <div className="lm-row modes-row">{inner}</div>
-              ) : (
-                <button type="button" className="lm-row modes-row modes-row--btn" aria-label={`${r.name}, ${r.detail}`} onClick={() => setOpen(m.id)}>
-                  {inner}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <RewriteCard s={s} />
-      <p className="modes-note" role="note">
-        Words from Vocabulary work in every mode. A mode&apos;s own words win when both spell the same thing differently.
-      </p>
-      <AddModeDialog open={adding} modes={all} onClose={() => setAdding(false)} onAdd={(next, created) => (update(() => next.filter((m) => m.id !== DEFAULT_MODE_ID)), setOpen(created.id))} />
-    </Page>
-  );
 }
