@@ -142,6 +142,33 @@ describe("files from another version", () => {
     expect(store.state.saves).toBe(0);
   });
 
+  it("reports a file that is not a history as unreadable with the name of the kept copy, and keeps working", async () => {
+    for (const junk of [null, 5, "text", { version: 1 }, { entries: "x" }]) {
+      const { history, store, time } = setup({ stored: junk });
+      expect(await history.list()).toEqual([]);
+      expect(history.status()).toBe("unreadable");
+      expect(history.preservedAs()).toBe("history.unreadable-1.json");
+      expect(store.state.preserved).toEqual(["unreadable"]);
+      await history.add(entry(time.clock.now(), "fresh"));
+      expect(store.state.saves).toBe(1);
+    }
+  });
+
+  it("reports storage that throws on load as unreadable, and a failing copy leaves the notice without a name", async () => {
+    const { history, store } = setup();
+    store.state.failLoad = true;
+    store.storage.preserve = async () => Promise.reject(new Error("disk full"));
+    expect(await history.list()).toEqual([]);
+    expect(history.status()).toBe("unreadable");
+    expect(history.preservedAs()).toBeUndefined();
+  });
+
+  it("names the copy of a newer file", async () => {
+    const { history } = setup({ stored: { version: 99, entries: [] } });
+    await history.list();
+    expect(history.preservedAs()).toBe("history.newer-1.json");
+  });
+
   it("loads the first format (a bare list) and writes the versioned one", async () => {
     const { history, store, time } = setup({ stored: [{ id: "a", at: 100 * DAY - 1000, text: "old", raw: "old", durationMs: 5 }] });
     expect((await history.list()).map((e) => e.text)).toEqual(["old"]);

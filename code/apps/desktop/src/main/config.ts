@@ -1,5 +1,7 @@
 import Store from "electron-store";
+import { copyFile } from "node:fs/promises";
 import path from "node:path";
+import { countDropped } from "../shared/dictation/settings";
 import { parseConfig, type Config } from "../shared/schemas";
 import { sortKeys } from "../shared/control/settings-registry";
 import { keepInvalidAside } from "./config-repair";
@@ -11,19 +13,18 @@ interface ConfigStore {
   path: string;
   /** Where an unreadable config.json was moved to (the app then started from defaults), else null. */
   recovered: string | null;
-  /** Bad fields repaired or a file from a newer app, for the banner in Settings. */
-  notice: SettingsNotice | null;
+  /** Dictation entries (words, modes, replacements) the file had that loading left out, and the copy of the file kept because of it. */
+  dropped: { count: number; copy: string | null };
 }
 
-const BACKUP = "config.backup.json";
-
-/** The exact original bytes, kept once (an existing backup is never replaced), before the first save that repairs or migrates. Owner-only where the system has modes. */
-async function backupOriginal(from: string, to: string): Promise<void> {
+/** config.json as it is, next to itself, before a save writes it without the entries that were dropped. */
+async function keepCopy(file: string): Promise<string | null> {
+  const copy = file.replace(/\.json$/, `.dropped-${Date.now()}.json`);
   try {
-    await copyFile(from, to, constants.COPYFILE_EXCL);
-    await chmod(to, 0o600);
+    await copyFile(file, copy);
+    return copy;
   } catch {
-    /* already backed up, or no file yet: saving settings must not depend on it */
+    return null;
   }
 }
 
@@ -32,19 +33,15 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
   const recovered = await setAsideIfCorrupt(path.join(cwd, "config.json"));
   const store = new Store<Record<string, unknown>>({ name: "config", cwd, clearInvalidConfig: false });
   const config = parseConfig(store.store);
-  // A field that had to be replaced by its default: the file as it was is kept next to it before the next save rewrites it.
-  try {
-    await keepInvalidAside(store.path, store.store, config);
-  } catch {
-    // Keeping a copy is a courtesy: the app starts either way.
-  }
+  const count = countDropped(store.store.dictation);
+  const copy = count ? await keepCopy(store.path) : null;
   const envPort = Number(process.env.SPEAKKIT_PORT);
   if (envPort) config.preferredPort = envPort;
   return {
     config,
     path: store.path,
     recovered,
-    notice: noticeOf(loaded),
+    dropped: { count, copy },
     save: () => {
       const keep = envPort ? { ...config, preferredPort: parseConfig(store.store).preferredPort } : config;
       store.set(sortKeys(keep) as Record<string, unknown>);

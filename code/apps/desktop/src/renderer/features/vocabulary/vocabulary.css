@@ -75,10 +75,14 @@
   gap: 8px;
   opacity: 0;
 }
-.vocab-row:hover .vocab-row__acts,
 .vocab-row:focus-within .vocab-row__acts,
 .vocab-row__acts.is-visible {
   opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .vocab-row:hover .vocab-row__acts {
+    opacity: 1;
+  }
 }
 .vocab-foot {
   display: flex;

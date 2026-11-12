@@ -114,6 +114,7 @@ function Versions({ item, s }: { item: HistoryItem; s: DictationStatus }) {
 function failureText(s: DictationStatus, error: string | undefined, model: string): string {
   if (error === "model-missing") return `${modelName(s, model)} is not installed.`;
   if (error === "no-audio") return "The recording is not there any more.";
+  if (error === "busy") return "Finish the dictation in progress, then try again.";
   return `${modelName(s, model)} could not transcribe this recording.`;
 }
 

@@ -27,8 +27,13 @@
   padding-inline: var(--card-pad-x, 16px);
   cursor: pointer;
 }
-.modes-row--btn:hover {
-  background: var(--fill-hover);
+@media (hover: hover) and (pointer: fine) {
+  .modes-row--btn:hover {
+    background: var(--fill-hover);
+  }
+  .modes-word:hover .vocab-row__acts {
+    opacity: 1;
+  }
 }
 .modes-row--btn:focus-visible {
   outline: 2px solid var(--stroke-focus-field);
@@ -67,9 +72,6 @@
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-.modes-row__spacer {
-  inline-size: 16px;
 }
 .modes-note {
   margin: 0;
@@ -172,7 +174,6 @@
   background: var(--chip-orange);
   color: var(--tag-orange);
 }
-.modes-word:hover .vocab-row__acts,
 .modes-word:focus-within .vocab-row__acts {
   opacity: 1;
 }

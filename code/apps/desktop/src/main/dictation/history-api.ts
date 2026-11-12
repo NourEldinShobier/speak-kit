@@ -51,6 +51,8 @@ interface Deps {
   core(): Dictation | undefined;
   audio(): AudioStore | undefined;
   cfg(): DictationConfig;
+  /** A dictation is recording, transcribing or inserting: the speech engine is in use. */
+  dictating(): boolean;
   stt: Stt;
   files: FilePickers;
   /** Sends the status to the window. */
@@ -66,14 +68,16 @@ export class HistoryApi {
   #rev = 0;
   #redo: DictationStatus["redo"];
   #redoAbort: AbortController | undefined;
+  /** The last "Transcribe again" work, until it has finished and put the chosen model back. A cancel stops waiting for it, not the work. */
+  #settling: Promise<void> | undefined;
 
   constructor(deps: Deps) {
     this.d = deps;
   }
 
   /** What the status carries of the history beyond its size. */
-  parts(): { keptRecordings: number; historyRev: number; redo: DictationStatus["redo"] } {
-    return { keptRecordings: this.#kept, historyRev: this.#rev, redo: this.#redo };
+  parts(): { keptRecordings: number; historyRev: number; redo: DictationStatus["redo"]; historyCopy: string | undefined } {
+    return { keptRecordings: this.#kept, historyRev: this.#rev, redo: this.#redo, historyCopy: this.d.core()?.history.preservedAs() };
   }
 
   #item(e: HistoryHit, now: number): HistoryItem {
@@ -210,7 +214,16 @@ export class HistoryApi {
         if (model !== selected) await this.d.stt.load(selected).catch(() => this.d.warn("dictation model not restored", selected));
       }
     };
-    return Promise.race([work(), cancelled]);
+    const running = work();
+    const settled: Promise<void> = running.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.#settling = settled;
+    void settled.then(() => {
+      if (this.#settling === settled) this.#settling = undefined;
+    });
+    return Promise.race([running, cancelled]);
   }
 
   /** The text of a new version: what the model heard, put through the same rules and words as a live dictation into the same program. */
@@ -226,9 +239,12 @@ export class HistoryApi {
    */
   async retranscribe(id: string, model: DictationModelId): Promise<void> {
     await this.d.ready();
+    await this.#settling; // a cancelled run may still be putting the chosen model back
     const core = this.d.core();
     if (this.#redo?.state === "running" || !core) return;
-    const fail = (error: "model-missing" | "failed" | "no-audio") => this.#setRedo({ id, model, state: "failed", error });
+    const fail = (error: "model-missing" | "failed" | "no-audio" | "busy") => this.#setRedo({ id, model, state: "failed", error });
+    // The speech engine is shared: swapping its model under a live dictation would run that dictation on the wrong one.
+    if (this.d.dictating()) return fail("busy");
     this.#setRedo({ id, model, state: "running" });
     const abort = (this.#redoAbort = new AbortController());
     try {
@@ -238,7 +254,10 @@ export class HistoryApi {
       if (!(await this.d.stt.downloaded(model))) return fail("model-missing");
       const started = Date.now();
       const result = await this.#run(model, clip, abort);
-      if (result === "cancelled") return this.#setRedo(undefined);
+      if (result === "cancelled") {
+        await this.#settling; // stays "running" until the chosen model is back
+        return this.#setRedo(undefined);
+      }
       if (!result.ok || !result.text) return fail("failed");
       await core.history.addVersion(id, { model, at: Date.now(), text: this.#versionText(result.text, result.language, entry.app), ms: Date.now() - started });
       this.#rev++;

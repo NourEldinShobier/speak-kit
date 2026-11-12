@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vite-plus/test";
-import { addMode, applyMode, clampDeadline, defaultMode, defaultSettings, keepsFacts, removeMode, resolveMode, rewritePass, setApps, type Mode, type Rewriter } from "../src";
+import {
+  addMode,
+  applyMode,
+  clampDeadline,
+  defaultMode,
+  defaultSettings,
+  keepsFacts,
+  removeMode,
+  resolveMode,
+  rewritePass,
+  setApps,
+  withDefault,
+  withoutPristineDefault,
+  type Mode,
+  type Rewriter,
+} from "../src";
 import { fakeClock, flush, rig, target } from "./fakes";
 
 const mode = (extra: Partial<Mode>): Mode => ({ ...defaultMode(), id: "x", name: "X", ...extra });
@@ -11,12 +26,32 @@ describe("modes", () => {
     expect(addMode([defaultMode()], " ")).toEqual({ ok: false, error: "empty" });
     expect(addMode([defaultMode()], "x".repeat(41))).toEqual({ ok: false, error: "too-long" });
     expect(addMode([defaultMode()], "default")).toEqual({ ok: false, error: "duplicate" });
+    expect(addMode([], " DEFAULT ")).toEqual({ ok: false, error: "duplicate" });
     expect(
       addMode(
         Array.from({ length: 24 }, (_, i) => mode({ id: `m${i}`, name: `n${i}` })),
         "one more",
       ),
     ).toEqual({ ok: false, error: "full" });
+  });
+
+  it("puts the saved default mode first, or builds one when none was saved", () => {
+    const saved = { ...defaultMode(), rewrite: true };
+    expect(withDefault([mode({ id: "a" }), saved, mode({ id: "b" })]).map((m) => m.id)).toEqual(["default", "a", "b"]);
+    expect(withDefault([mode({ id: "a" }), saved])[0]?.rewrite).toBe(true);
+    expect(withDefault([mode({ id: "a" })]).map((m) => [m.id, m.rewrite])).toEqual([
+      ["default", false],
+      ["a", false],
+    ]);
+    expect(withDefault([])).toEqual([defaultMode()]);
+    expect(withoutPristineDefault([defaultMode(), mode({ id: "a" })]).map((m) => m.id)).toEqual(["a"]);
+    expect(withoutPristineDefault([{ ...defaultMode(), rewrite: true }, mode({ id: "a" })]).map((m) => m.id)).toEqual(["default", "a"]);
+  });
+
+  it("uses the rewrite choice saved on the default mode for apps outside every mode", () => {
+    const list = [{ ...defaultMode(), rewrite: true }, mode({ id: "t", apps: ["slack"] })];
+    expect(applyMode(defaultSettings, resolveMode(list, "notepad.exe")).rewrite).toBe(true);
+    expect(applyMode(defaultSettings, resolveMode(list, "slack.exe")).rewrite).toBe(false);
   });
 
   it("never removes the default mode", () => {
@@ -106,6 +141,24 @@ describe("rewrite pass", () => {
     expect(keepsFacts("- a\n- b", "a and b")).toBe(false);
     expect(keepsFacts("1. a\n2. b", "1. A\n2. B")).toBe(true);
     expect(keepsFacts("pay 5 now", "Pay 5 now")).toBe(true);
+  });
+
+  it("keeps lower case and the missing final full stop the mode chose, whatever the writer returns", async () => {
+    const loud: Rewriter = { rewrite: async () => "Hello There." };
+    const lower = await rewritePass({ text: "hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "lower", stripFinalStop: true } });
+    expect(lower).toEqual({ text: "hello there ", outcome: "rewritten" });
+    const stop = await rewritePass({ text: "Hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: true } });
+    expect(stop.text).toBe("Hello There ");
+  });
+
+  it("drops a rewrite that moved capitals in a mode that keeps them as spoken, and tells the writer the style", async () => {
+    let seen: unknown;
+    const rw: Rewriter = { rewrite: async ({ style }) => ((seen = style), "Hello there") };
+    const style = { capitals: "keep", stripFinalStop: false } as const;
+    expect(await rewritePass({ text: "hello there ", rewriter: rw, deadlineMs: 4000, clock: fakeClock().clock, style })).toEqual({ text: "hello there ", outcome: "changed-style" });
+    expect(seen).toEqual(style);
+    const same: Rewriter = { rewrite: async () => "hello there, friend" };
+    expect((await rewritePass({ text: "hello there ", rewriter: same, deadlineMs: 4000, clock: fakeClock().clock, style })).outcome).toBe("rewritten");
   });
 
   it("clamps the deadline to 1 to 15 seconds and falls back to 4 for nonsense", () => {

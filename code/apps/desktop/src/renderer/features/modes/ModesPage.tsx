@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addMode, DEFAULT_MODE_ID, defaultMode, removeMode, setApps, type Mode, type ModeError } from "@speakkit/dictation";
+import { addMode, removeMode, setApps, withDefault, withoutPristineDefault, type Mode, type ModeError } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
@@ -60,7 +60,6 @@ function AddModeDialog({ open, modes, onClose, onAdd }: { open: boolean; modes: 
 
 function ModeRow({ mode, rewriteOn, onOpen }: { mode: Mode; rewriteOn: boolean; onOpen(): void }) {
   const r = modeRow(mode, rewriteOn);
-  const isDefault = mode.id === DEFAULT_MODE_ID;
   const inner = (
     <>
       <span className="modes-tile" aria-hidden="true">
@@ -75,23 +74,17 @@ function ModeRow({ mode, rewriteOn, onOpen }: { mode: Mode; rewriteOn: boolean; 
           <Chip key={c}>{c}</Chip>
         ))}
       </span>
-      {isDefault ? <span className="modes-row__spacer" /> : <Icon name="chevron-right" size={14} className="vocab-arrow" />}
+      <Icon name="chevron-right" size={14} className="vocab-arrow" />
     </>
   );
   return (
     <li data-mode={r.id}>
-      {isDefault ? (
-        <div className="lm-row modes-row">{inner}</div>
-      ) : (
-        <button type="button" className="lm-row modes-row modes-row--btn" aria-label={`${r.name}, ${r.detail}`} onClick={onOpen}>
-          {inner}
-        </button>
-      )}
+      <button type="button" className="lm-row modes-row modes-row--btn" aria-label={`${r.name}, ${r.detail}`} onClick={onOpen}>
+        {inner}
+      </button>
     </li>
   );
 }
-
-const withoutDefault = (list: readonly Mode[]): Mode[] => list.filter((m) => m.id !== DEFAULT_MODE_ID);
 
 function ModeList({ s, all, onOpen, onAdd }: { s: DictationStatus; all: Mode[]; onOpen(id: string): void; onAdd(): void }) {
   return (
@@ -120,23 +113,25 @@ function ModeList({ s, all, onOpen, onAdd }: { s: DictationStatus; all: Mode[]; 
 function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(change: (m: Mode[]) => Mode[]): void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const current = open ? modes.find((m) => m.id === open) : undefined;
+  const all = withDefault(modes);
+  // Changes start from the list with the default mode in it, so its choices are saved with the rest.
+  const change = (f: (m: Mode[]) => Mode[]) => update((list) => withoutPristineDefault(f(withDefault(list))));
+  const current = open ? all.find((m) => m.id === open) : undefined;
   if (current)
     return (
       <ModeDetail
         s={s}
         mode={current}
-        others={modes}
+        others={all}
         onBack={() => setOpen(null)}
-        onChange={(next) => update((list) => list.map((m) => (m.id === next.id ? next : m)))}
-        onApps={(apps) => update((list) => withoutDefault(setApps([defaultMode(), ...list], current.id, apps)))}
+        onChange={(next) => change((list) => list.map((m) => (m.id === next.id ? next : m)))}
+        onApps={(apps) => change((list) => setApps(list, current.id, apps))}
         onDelete={() => {
-          update((list) => withoutDefault(removeMode([defaultMode(), ...list], current.id)));
+          change((list) => removeMode(list, current.id));
           setOpen(null);
         }}
       />
     );
-  const all = [defaultMode(), ...modes];
   return (
     <>
       <ModeList s={s} all={all} onOpen={setOpen} onAdd={() => setAdding(true)} />
@@ -145,7 +140,7 @@ function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(
         modes={all}
         onClose={() => setAdding(false)}
         onAdd={(next, created) => {
-          update(() => withoutDefault(next));
+          update(() => withoutPristineDefault(next));
           setOpen(created.id);
         }}
       />

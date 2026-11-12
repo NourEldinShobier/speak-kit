@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
-import { DictationConfigSchema, DictationPatchSchema } from "./settings";
+import { countDropped, DictationConfigSchema, DictationPatchSchema } from "./settings";
 
 const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
 const DEFAULTS = {
@@ -108,5 +108,66 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(ok({ rewrite: { enabled: true, deadlineMs: 20_000 } })).toBe(false);
     expect(ok({ cleanup: { fillers: true } })).toBe(false);
     expect(ok({ unknown: 1 })).toBe(false);
+  });
+
+  it("keeps the rest of a mode when one of its words is broken, instead of losing the whole mode", () => {
+    const mode = { id: "m1", name: "Code", apps: ["code"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
+    const good = { id: "t1", word: "pnpm", soundsLike: [] };
+    const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
+    expect(got).toEqual([{ ...mode, terms: [good] }]);
+  });
+
+  it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {
+    const a = { id: "a", word: "Kubernetes", soundsLike: [] };
+    expect(v.parse(DictationConfigSchema, { terms: [a, { ...a, id: "b", word: "kubernetes" }, { ...a, word: "Other" }] }).terms).toEqual([a]);
+    const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
+    expect(ok({ terms: [a, { ...a, id: "b", word: "KUBERNETES" }] })).toBe(false);
+    expect(ok({ terms: [a, { ...a, word: "Other" }] })).toBe(false);
+    const m = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [a, { ...a, id: "z" }] };
+    expect(ok({ modes: [m] })).toBe(false);
+    const clean = { ...m, terms: [a] };
+    expect(ok({ modes: [clean, { ...clean, id: "m2", name: "code" }] })).toBe(false);
+    expect(ok({ modes: [clean, { ...clean, name: "Chat" }] })).toBe(false);
+    expect(ok({ modes: [clean, { ...clean, id: "m2", name: "Chat" }] })).toBe(true);
+    expect(
+      ok({
+        readAs: [
+          { id: "r", written: "a", spoken: "b" },
+          { id: "r", written: "c", spoken: "d" },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps the default mode under its own name with no apps and refuses another mode called Default", () => {
+    const base = { apps: ["code"], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: true, terms: [] };
+    const saved = v.parse(DictationConfigSchema, {
+      modes: [
+        { ...base, id: "default", name: "Anything" },
+        { ...base, id: "m1", name: "DEFAULT" },
+      ],
+    }).modes;
+    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [] }]);
+    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "m1", name: " default " }] }).success).toBe(false);
+    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Default" }] }).success).toBe(true);
+  });
+});
+
+describe("entries that loading leaves out", () => {
+  const mode = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
+  it("counts broken and repeated entries in every list, and broken words inside a kept mode", () => {
+    expect(countDropped(undefined)).toBe(0);
+    expect(countDropped({})).toBe(0);
+    expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }] })).toBe(0);
+    expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }, { id: "b" }, "junk", { id: "c", word: "X", soundsLike: [] }] })).toBe(3);
+    expect(countDropped({ readAs: [{ id: "r" }], replacements: [{ from: "", to: "b" }] })).toBe(2);
+    expect(
+      countDropped({
+        modes: [
+          { ...mode, terms: [{ id: "t", word: "w", soundsLike: [] }, { id: "u" }] },
+          { ...mode, id: "m2", capitals: "shout", terms: [{ id: "x" }] },
+        ],
+      }),
+    ).toBe(2);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createOpenAiRewriter, REWRITE_MODEL } from "./openai-rewriter";
+import { createOpenAiRewriter, instructions, REWRITE_MODEL } from "./openai-rewriter";
 
 const reply =
   (body: unknown, status = 200) =>
@@ -41,5 +41,14 @@ describe("OpenAI rewriter", () => {
     const p = w.rewrite({ text: "x", signal: ac.signal });
     ac.abort();
     await expect(p).rejects.toThrow("aborted");
+  });
+
+  it("tells the model the mode's capital and full-stop choices, and asks for capitals only when the mode wants them", () => {
+    expect(instructions()).toContain("capital letters");
+    expect(instructions({ capitals: "sentence", stripFinalStop: false })).toContain("capital letters");
+    expect(instructions({ capitals: "lower", stripFinalStop: false })).toContain("lower case");
+    expect(instructions({ capitals: "lower", stripFinalStop: false })).not.toContain("capital letters");
+    expect(instructions({ capitals: "keep", stripFinalStop: true })).toContain("Do not change any capital");
+    expect(instructions({ capitals: "keep", stripFinalStop: true })).toContain("Do not end the text with a full stop");
   });
 });

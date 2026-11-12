@@ -48,11 +48,13 @@ function missingLanguage(opts: RulesOptions, spoken: string): Note[] {
   return notes;
 }
 
+/** Only the last character of the whole dictation: a single full stop, never part of "..." or an abbreviation like "e.g.". */
+export const dropFinalStop = (text: string): string => text.replace(/(?<!\.\p{L})(?<!\.)\.(?=\s*$)/u, "");
+
 /** Capitals, the final full stop and the space after the text. */
 function finish(text: string, opts: RulesOptions): string {
   let out = opts.autoCapitalize && !opts.lowercase ? capitalize(text) : text;
-  // Only the last character of the whole dictation: a single full stop, never part of "..." or an abbreviation like "e.g.".
-  if (opts.stripFinalStop) out = out.replace(/(?<!\.\p{L})(?<!\.)\.(?=\s*$)/u, "");
+  if (opts.stripFinalStop) out = dropFinalStop(out);
   if (!out.trim()) return "";
   return opts.trailingSpace && !/\s$/.test(out) ? `${out} ` : out;
 }

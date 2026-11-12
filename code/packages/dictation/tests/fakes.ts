@@ -138,6 +138,7 @@ export function fakeStorage(initial?: unknown) {
     },
     async preserve(reason) {
       state.preserved.push(reason);
+      return `history.${reason}-${state.preserved.length}.json`;
     },
   };
   return { storage, state };

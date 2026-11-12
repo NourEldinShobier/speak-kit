@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { overridesShared, type Mode, type Term } from "@speakkit/dictation";
+import { DEFAULT_MODE_ID, overridesShared, type Mode, type Term } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
@@ -184,8 +184,30 @@ function AppsCard({ mode, onApps, onAdd }: { mode: Mode; onApps(apps: string[]):
   );
 }
 
-function Behaviour({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady: boolean; onChange(next: Mode): void }) {
+function RewriteRow({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady: boolean; onChange(next: Mode): void }) {
   const rewriteNote = rewriteReady ? "Tidies the text with the writer after it is heard." : "Off in this mode. Set up the writer on the Modes page first.";
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Rewrite pass"
+      description={rewriteNote}
+      control={
+        <Select
+          label="Rewrite pass"
+          value={mode.rewrite && rewriteReady ? "on" : "off"}
+          disabled={!rewriteReady}
+          onChange={(v) => onChange({ ...mode, rewrite: v === "on" })}
+          options={[
+            { value: "off", label: "Off" },
+            { value: "on", label: "On" },
+          ]}
+        />
+      }
+    />
+  );
+}
+
+function Behaviour({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady: boolean; onChange(next: Mode): void }) {
   return (
     <div className="lm-card">
       <SettingRow
@@ -206,23 +228,7 @@ function Behaviour({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady:
         description="Full stop or nothing after the last word."
         control={<Select label="End of dictation" value={mode.end} onChange={(v) => onChange({ ...mode, end: v as Mode["end"] })} options={ENDS} />}
       />
-      <SettingRow
-        className="lm-row--control"
-        label="Rewrite pass"
-        description={rewriteNote}
-        control={
-          <Select
-            label="Rewrite pass"
-            value={mode.rewrite && rewriteReady ? "on" : "off"}
-            disabled={!rewriteReady}
-            onChange={(v) => onChange({ ...mode, rewrite: v === "on" })}
-            options={[
-              { value: "off", label: "Off" },
-              { value: "on", label: "On" },
-            ]}
-          />
-        }
-      />
+      <RewriteRow mode={mode} rewriteReady={rewriteReady} onChange={onChange} />
     </div>
   );
 }
@@ -241,6 +247,18 @@ export interface ModeDetailProps {
 export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onDelete }: ModeDetailProps) {
   const [addApp, setAddApp] = useState(false);
   const [asking, setAsking] = useState(false);
+  // The default mode takes every app no other mode lists and uses the settings of the Dictation page; only its rewrite choice is its own.
+  if (mode.id === DEFAULT_MODE_ID)
+    return (
+      <Page title={mode.name} lead="How dictation behaves in every app that is not in another mode.">
+        <button type="button" className="modes-back" onClick={onBack}>
+          <Icon name="arrow-left" size={12} /> Modes
+        </button>
+        <div className="lm-card">
+          <RewriteRow mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
+        </div>
+      </Page>
+    );
   return (
     <Page
       title={mode.name}
