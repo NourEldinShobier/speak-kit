@@ -169,6 +169,21 @@ describe("start of playback", () => {
     expect(player.state()).toMatchObject({ status: "error", error: { code } });
   });
 
+  it("maps a 404 carrying the token-rejected code to token-rejected", async () => {
+    const body = JSON.stringify({ error: { code: "token-rejected", message: "missing or wrong token" } });
+    const { player } = rig(() => new Response(body, { status: 404 }));
+    player.command({ cmd: "play", doc: doc(["One."]) });
+    await settle();
+    expect(player.state()).toMatchObject({ status: "error", error: { code: "token-rejected" } });
+  });
+
+  it("keeps a bare 404 as synthesis-failed", async () => {
+    const { player } = rig(() => new Response("", { status: 404 }));
+    player.command({ cmd: "play", doc: doc(["One."]) });
+    await settle();
+    expect(player.state()).toMatchObject({ status: "error", error: { code: "synthesis-failed" } });
+  });
+
   it("maps an error frame to its code", async () => {
     const { player } = rig(() => new Response(encodeFrame({ type: "error", code: "engine-not-ready", message: "loading" }) as BodyInit));
     player.command({ cmd: "play", doc: doc(["One."]) });

@@ -41,7 +41,7 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
   });
   if (!r.current()) return;
   if (!res.ok || !res.body) {
-    const e = mapHttpError(res.status);
+    const e = mapHttpError(res.status, await res.json().catch(() => null));
     throw new StreamError(e.code, e.message);
   }
   const reader = res.body.getReader();
