@@ -190,6 +190,8 @@ describe("history page", () => {
     expect(t).toContain("What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
     expect(t).toContain("Clear all");
+    expect(t).toContain("Statistics");
+    expect(t).toContain("Select");
   });
 });
 
@@ -211,6 +213,31 @@ describe("history rows", () => {
     expect(html).toContain("data-copied");
     expect(row(false)).toContain('<span class="dict-hist__sr" role="status"></span>');
     expect(row(false)).not.toContain("data-copied");
+  });
+});
+
+describe("history rows, details and selection", () => {
+  const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report" };
+  const html = (item: object, selection?: { checked: boolean; toggle: () => void }) =>
+    renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
+
+  it("shows the program's own name and a note for an interrupted entry that was only copied", () => {
+    const h = html({ app: "code.exe", appName: "Visual Studio Code", kind: "interrupted", outcome: "copied" });
+    expect(h).toContain("Visual Studio Code");
+    expect(h).toContain(">Cut short<");
+    expect(h).toContain(">Copied only<");
+  });
+
+  it("says when the text could not be inserted, and tags nothing for a normal entry", () => {
+    expect(html({ outcome: "failed" })).toContain(">Not inserted<");
+    expect(html({ outcome: "sent" })).not.toContain("dict-hist__tag");
+  });
+
+  it("has a named checkbox only in selection mode", () => {
+    expect(html({})).not.toContain('type="checkbox"');
+    const h = html({}, { checked: true, toggle: () => undefined });
+    expect(h).toContain('aria-label="Select: Send the report"');
+    expect(h).toContain("checked");
   });
 });
 

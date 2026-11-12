@@ -209,8 +209,43 @@
   justify-content: space-between;
   gap: 16px;
 }
+.dict-hist__bar > .lm-field {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 480px;
+}
 .dict-hist__search {
-  inline-size: 480px;
+  inline-size: 100%;
+}
+.dict-hist__tools {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.dict-hist__tag {
+  margin-inline-start: 8px;
+  vertical-align: 1px;
+}
+.dict-stats {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.dict-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+.dict-stats dt {
+  color: var(--text-secondary);
+}
+.dict-stats dd {
+  margin: 0;
+  font-weight: 500;
+}
+.dict-stats__apps {
+  margin: 12px 0 0;
 }
 .dict-clear {
   color: var(--tag-red);

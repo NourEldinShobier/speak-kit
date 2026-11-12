@@ -1,22 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, EmptyState, Icon, Kbd, Modal, TextInput } from "@speakkit/ui";
+import { Badge, Checkbox, EmptyState, Icon, Kbd } from "@speakkit/ui";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import { hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation } from "./api";
-import { appName, emptyHint, entryLabel, focusAfterDelete, groupByDay, historyFooter, historyLead, timeText } from "./model";
+import { emptyHint, entryLabel, focusAfterDelete, groupByDay, historyFooter, historyLead, rowApp, rowTags, timeText, toggled } from "./model";
+import { HistoryDialogs, type HistoryDialog } from "./HistoryDialogs";
+import { Toolbar } from "./HistoryToolbar";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
+/** Selection mode of a row: whether it is ticked and how to tick it. */
+interface Selection {
+  checked: boolean;
+  toggle: () => void;
+}
+
 /** One entry. Both buttons stay in place after a copy (focus stays on the button); the live region announces it. Names carry the entry's words. */
-export function HistoryRow({ item, copied, onCopy, onDelete }: { item: HistoryItem; copied: boolean; onCopy: () => void; onDelete: () => void }) {
+export function HistoryRow({ item, copied, onCopy, onDelete, selection }: { item: HistoryItem; copied: boolean; onCopy: () => void; onDelete: () => void; selection?: Selection }) {
   const label = entryLabel(item.text);
+  const tags = rowTags(item);
   return (
     <div className="lm-row dict-hist__row" data-testid="history-row" data-row={item.id}>
+      {selection && <Checkbox aria-label={`Select: ${label}`} checked={selection.checked} onChange={selection.toggle} />}
       <div className="dict-hist__when">
         <span>{timeText(item.at)}</span>
-        <span className="dict-hist__app">{appName(item.app)}</span>
+        <span className="dict-hist__app">{rowApp(item)}</span>
       </div>
-      <p className="dict-hist__text">{item.text}</p>
+      <p className="dict-hist__text">
+        {item.text}
+        {tags.map((t) => (
+          <Badge key={t} className="dict-hist__tag">
+            {t}
+          </Badge>
+        ))}
+      </p>
       <div className="dict-hist__acts" data-copied={copied || undefined}>
         <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Copy: ${label}`} onClick={onCopy}>
           <Icon name={copied ? "check" : "copy"} size={14} />
@@ -47,31 +64,8 @@ function Empty({ s }: { s: DictationStatus | null }) {
   );
 }
 
-function ClearDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Clear all dictation history?"
-      width={400}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="danger" onClick={onConfirm}>
-            Clear history
-          </Button>
-        </>
-      }
-    >
-      <p className="sk-modal-text" style={{ margin: 0 }}>
-        This deletes {count} {count === 1 ? "entry" : "entries"} from this computer. It does not change text already typed into other apps. You cannot undo it.
-      </p>
-    </Modal>
-  );
-}
-
 /** The history entries, newest first, in day groups; `copied` is the entry whose text was just copied. */
-function Groups({ items, load }: { items: HistoryItem[]; load: () => void }) {
+function Groups({ items, load, picked, toggle }: { items: HistoryItem[]; load: () => void; picked: ReadonlySet<string> | null; toggle: (id: string) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const groups = useMemo(() => groupByDay(items, Date.now()), [items]);
   // Where focus goes once the list has reloaded after a delete: an entry id, or null for the page's own controls.
@@ -102,45 +96,23 @@ function Groups({ items, load }: { items: HistoryItem[]; load: () => void }) {
       <h3 className="dict-hist__day">{g.label}</h3>
       <div className="lm-card">
         {g.items.map((item) => (
-          <HistoryRow key={item.id} item={item} copied={copied === item.id} onCopy={() => void copy(item.id)} onDelete={() => void remove(item.id)} />
+          <HistoryRow
+            key={item.id}
+            item={item}
+            copied={copied === item.id}
+            onCopy={() => void copy(item.id)}
+            onDelete={() => void remove(item.id)}
+            {...(picked && { selection: { checked: picked.has(item.id), toggle: () => toggle(item.id) } })}
+          />
         ))}
       </div>
     </section>
   ));
 }
 
-function Toolbar({ search, setSearch, empty, onClear }: { search: string; setSearch: (s: string) => void; empty: boolean; onClear: () => void }) {
+function Head({ back, retention }: { back: () => void; retention: DictationStatus["settings"]["retention"] }) {
   return (
-    <div className="dict-hist__bar">
-      <TextInput
-        icon="search"
-        aria-label="Search what you dictated"
-        placeholder="Search what you dictated"
-        value={search}
-        disabled={empty}
-        onChange={(e) => setSearch(e.target.value)}
-        frameClassName="dict-hist__search"
-      />
-      <Button className="dict-clear" disabled={empty} onClick={onClear}>
-        Clear all
-      </Button>
-    </div>
-  );
-}
-
-/** Settings > Dictation > history: what was dictated, searchable, with copy, delete and clear all. */
-export function DictationHistoryPage({ back }: { back: () => void }) {
-  const s = useDictation();
-  const [items, setItems] = useState<HistoryItem[] | null>(null);
-  const [search, setSearch] = useState("");
-  const [asking, setAsking] = useState(false);
-  const total = s?.historyCount ?? 0;
-  const retention = s?.settings.retention ?? "7d";
-  const load = useCallback(() => void dictation.historyList(search.trim() || undefined).then(setItems), [search]);
-  useEffect(load, [load, total]);
-
-  return (
-    <div className="sk-page dict-hist">
+    <>
       <button type="button" className="dict-back" onClick={back}>
         <Icon name="arrow-left" size={12} /> Dictation
       </button>
@@ -148,24 +120,75 @@ export function DictationHistoryPage({ back }: { back: () => void }) {
         <h1>Dictation history</h1>
         <p>{historyLead(retention)}</p>
       </div>
-      <Toolbar search={search} setSearch={setSearch} empty={total === 0} onClear={() => setAsking(true)} />
+    </>
+  );
+}
+
+/** The entries matching the search, reloaded when the search or the number of entries changes. */
+function useItems(search: string, total: number) {
+  const [items, setItems] = useState<HistoryItem[] | null>(null);
+  const load = useCallback(() => void dictation.historyList(search.trim() || undefined).then(setItems), [search]);
+  useEffect(load, [load, total]);
+  return { items, setItems, load };
+}
+
+/** Which entries are ticked while selecting; null when selection is off. */
+function useSelection(items: HistoryItem[] | null) {
+  const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
+  return {
+    picked,
+    setPicked,
+    setSelecting: (on: boolean) => setPicked(on ? new Set() : null),
+    selectAll: () => setPicked(new Set((items ?? []).map((i) => i.id))),
+    toggle: (id: string) => setPicked((p) => toggled(p, id)),
+  };
+}
+
+/** Settings > Dictation > history: what was dictated, searchable, with copy, delete, bulk delete, statistics and clear all. */
+export function DictationHistoryPage({ back }: { back: () => void }) {
+  const s = useDictation();
+  const [search, setSearch] = useState("");
+  const [dialog, setDialog] = useState<HistoryDialog>(null);
+  const total = s?.historyCount ?? 0;
+  const retention = s?.settings.retention ?? "7d";
+  const { items, setItems, load } = useItems(search, total);
+  const sel = useSelection(items);
+  const close = () => setDialog(null);
+  return (
+    <div className="sk-page dict-hist">
+      <Head back={back} retention={retention} />
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        empty={total === 0}
+        onClear={() => setDialog("clear")}
+        onStats={() => setDialog("stats")}
+        picked={sel.picked}
+        shown={items?.length ?? 0}
+        setSelecting={sel.setSelecting}
+        selectAll={sel.selectAll}
+        onDeleteSelected={() => setDialog("delete")}
+      />
       {total === 0 ? (
         <Empty s={s} />
       ) : (
         <>
-          <Groups items={items ?? []} load={load} />
+          <Groups items={items ?? []} load={load} picked={sel.picked} toggle={sel.toggle} />
           {items?.length === 0 && <p className="dict-hist__none">Nothing matches that search.</p>}
           <p className="dict-hist__foot">{historyFooter(items?.length ?? 0, total, retention)}</p>
         </>
       )}
-      <ClearDialog
-        open={asking}
-        count={total}
-        onClose={() => setAsking(false)}
-        onConfirm={async () => {
-          await dictation.historyClear();
-          setAsking(false);
-          setItems([]);
+      <HistoryDialogs
+        dialog={dialog}
+        close={close}
+        total={total}
+        picked={sel.picked}
+        onChanged={(cleared) => {
+          if (cleared) setItems([]);
+          else {
+            sel.setPicked(new Set());
+            load();
+          }
         }}
       />
     </div>

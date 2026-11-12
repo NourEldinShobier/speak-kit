@@ -45,14 +45,20 @@ export interface HistoryStats {
   listeningMs: number;
   /** Programs dictated into, most used first. */
   topApps: { app: string; count: number }[];
+  /** What happened to the text: pasted (also entries from before the outcome was kept), only copied, or not inserted. */
+  outcomes: { pasted: number; copied: number; failed: number };
 }
 
 /** Totals over what History holds. No streaks, no goals: just what was done. */
-export function historyStats(entries: readonly { text: string; durationMs: number; app?: string }[]): HistoryStats {
+export function historyStats(entries: readonly { text: string; durationMs: number; app?: string; outcome?: "sent" | "copied" | "failed" }[]): HistoryStats {
   const apps = new Map<string, number>();
   let wordCount = 0;
   let listeningMs = 0;
+  const outcomes = { pasted: 0, copied: 0, failed: 0 };
   for (const e of entries) {
+    if (e.outcome === "copied") outcomes.copied++;
+    else if (e.outcome === "failed") outcomes.failed++;
+    else outcomes.pasted++;
     wordCount += e.text.match(/\S+/g)?.length ?? 0;
     listeningMs += e.durationMs;
     if (e.app) apps.set(e.app, (apps.get(e.app) ?? 0) + 1);
@@ -61,5 +67,5 @@ export function historyStats(entries: readonly { text: string; durationMs: numbe
     .map(([app, count]) => ({ app, count }))
     .sort((a, b) => b.count - a.count || a.app.localeCompare(b.app))
     .slice(0, 5);
-  return { dictations: entries.length, words: wordCount, listeningMs, topApps };
+  return { dictations: entries.length, words: wordCount, listeningMs, topApps, outcomes };
 }

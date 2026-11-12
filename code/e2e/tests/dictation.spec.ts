@@ -238,6 +238,45 @@ function dictationSpec() {
     });
   });
 
+  test.describe("dictation history page @slow", () => {
+    const entry = (n: number, extra: object = {}) => ({
+      id: `${Date.now() - n}-0`,
+      at: Date.now() - n * 1000,
+      text: `Entry number ${n}`,
+      raw: `entry ${n}`,
+      app: "notepad.exe",
+      durationMs: 2000,
+      ...extra,
+    });
+
+    test("rows show details, several can be selected and deleted at once, and the statistics add up", async () => {
+      const history = JSON.stringify([entry(1, { outcome: "sent" }), entry(2, { outcome: "copied", kind: "interrupted" }), entry(3, { outcome: "failed", displayName: "Notes" }), entry(4)]);
+      const rig = await startRig({ files: { "dictation-history.json": history } });
+      try {
+        await rig.page.getByRole("link", { name: "History", exact: true }).click();
+        await expect(rig.page.getByTestId("history-row")).toHaveCount(4);
+        await expect(rig.page.getByText("Copied only", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Cut short", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Not inserted", { exact: true })).toBeVisible();
+        await expect(rig.page.getByText("Notes", { exact: true })).toBeVisible();
+
+        await rig.page.getByRole("button", { name: "Statistics" }).click();
+        await expect(rig.page.getByRole("dialog", { name: "Dictation statistics" })).toContainText("Dictations4");
+        await rig.page.getByRole("button", { name: "Close" }).click();
+
+        await rig.page.getByRole("button", { name: "Select", exact: true }).click();
+        await rig.page.getByRole("checkbox", { name: "Select: Entry number 1" }).check({ force: true });
+        await rig.page.getByRole("checkbox", { name: "Select: Entry number 2" }).check({ force: true });
+        await rig.page.getByRole("button", { name: "Delete selected (2)" }).click();
+        await rig.page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+        await expect(rig.page.getByTestId("history-row")).toHaveCount(2);
+        expect((await rig.bridge("historyList")).map((i) => i.text).sort()).toEqual(["Entry number 3", "Entry number 4"]);
+      } finally {
+        await rig.close();
+      }
+    });
+  });
+
   test.describe("dictation, first run @slow", () => {
     test("turning dictation on without a model shows the download card, then the settings once it is ready", async () => {
       const rig = await startRig({ dictation: { enabled: false } });

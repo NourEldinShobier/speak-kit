@@ -3,7 +3,7 @@ import type { HistoryItem } from "../../shared/dictation/contract";
 import { friendlyAppName } from "./app-name";
 
 const RECENT = 5;
-const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, topApps: [] };
+const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
 
 interface Deps {
   core(): Dictation | undefined;
