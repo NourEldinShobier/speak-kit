@@ -51,16 +51,12 @@ export function timerText(sec: number): string {
   return h ? `${h}:${mm}:${two(s % 60)}` : `${mm}:${two(s % 60)}`;
 }
 
-const MARKS: Record<string, string> = { teams: "Tm", zoom: "Zm", meet: "Gm", slack: "Sl", discord: "Dc", manual: "Mt" };
-
-/** The two letters of an app's mark in a row. */
-export const markOf = (providerId: string, name: string): string =>
-  MARKS[providerId] ??
-  (name
+/** The two letters of the mark of an app that has no glyph. */
+export const markOf = (name: string): string =>
+  name
     .trim()
     .slice(0, 2)
-    .replace(/^./, (c) => c.toUpperCase()) ||
-    "Mt");
+    .replace(/^./, (c) => c.toUpperCase()) || "Mt";
 
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
