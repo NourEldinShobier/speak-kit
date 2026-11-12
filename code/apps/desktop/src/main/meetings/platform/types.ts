@@ -9,8 +9,8 @@ export interface MeetingsPlatform {
   capabilities(): Capabilities;
   /** Who uses the microphone and which windows are open, right now. Never throws: an unreadable system is an empty probe. */
   probe(): Promise<Probe>;
-  /** The microphone the call app has open (a device id), or null when the system cannot say. */
-  callAppMic(app: { pid: number; exe: string }): Promise<string | null>;
+  /** The name of the microphone the call app has open, or null when the system cannot say. The caller matches the name to a device. */
+  callAppMic(app: { pid: number }): Promise<string | null>;
 }
 
 /** Runs a program and returns what it printed; rejects on a non-zero exit or after `timeoutMs`. */

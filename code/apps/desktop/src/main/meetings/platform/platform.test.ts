@@ -87,7 +87,7 @@ describe("Windows microphone use", () => {
   it("says what Windows cannot tell: the call app's microphone and output", async () => {
     const p = windowsPlatform(exec({}));
     expect(p.capabilities()).toEqual({ platform: "win32", systemAudio: "available", callDetection: "available", micFollowsCallApp: "unavailable", callAppOutput: "unavailable" });
-    expect(await p.callAppMic({ pid: 1, exe: "zoom" })).toBeNull();
+    expect(await p.callAppMic({ pid: 1 })).toBeNull();
   });
 });
 
@@ -108,10 +108,14 @@ describe("macOS microphone use", () => {
     expect(parseWindows("oops")).toEqual([]);
   });
 
-  const audio = (pids: number[] | Error): CoreAudio => ({
+  const audio = (pids: number[] | Error, names: Record<number, string | null> = {}): CoreAudio => ({
     processesUsingInput() {
       if (pids instanceof Error) throw pids;
       return pids;
+    },
+    inputDeviceName(pid) {
+      if (pids instanceof Error) throw pids;
+      return names[pid] ?? null;
     },
   });
   const run: Exec = async (file, args) =>
@@ -138,6 +142,20 @@ describe("macOS microphone use", () => {
     const p = macosPlatform({ exec: run, audio: async () => audio(new Error("older macOS")) });
     expect(await p.probe()).toEqual({ micUsers: [], windows: [] });
     expect(p.capabilities().callDetection).toBe("unavailable");
+  });
+
+  it("names the microphone a call app has open, and says nothing for an app with none", async () => {
+    const p = macosPlatform({ exec: run, audio: async () => audio([5], { 5: "MacBook Pro Microphone" }) });
+    expect(p.capabilities().micFollowsCallApp).toBe("available");
+    expect(await p.callAppMic({ pid: 5 })).toBe("MacBook Pro Microphone");
+    expect(await p.callAppMic({ pid: 9 })).toBeNull();
+    expect(p.capabilities().micFollowsCallApp).toBe("available");
+  });
+
+  it("stops claiming the microphone lookup once the system refuses it", async () => {
+    const p = macosPlatform({ exec: run, audio: async () => audio(new Error("older macOS")) });
+    expect(await p.callAppMic({ pid: 5 })).toBeNull();
+    expect(p.capabilities().micFollowsCallApp).toBe("unavailable");
   });
 
   it("skips a process that ended before its name was read, and probes nothing when no input runs", async () => {

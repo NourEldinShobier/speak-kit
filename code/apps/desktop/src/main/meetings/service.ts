@@ -134,13 +134,23 @@ async function showFiles(core: Meetings, p: MeetingsPorts, id: string): Promise<
   if (files[0]) p.shell.reveal(files[0]);
 }
 
+/** The input device the call app has open: the system names it, and the page's own list turns the name into the id the microphone is opened with. */
+export async function callAppInput(p: Pick<MeetingsPorts, "platform" | "devices">, pid: () => number | undefined): Promise<string | null> {
+  const id = pid();
+  if (id === undefined) return null;
+  const name = (await p.platform.callAppMic({ pid: id }))?.trim().toLowerCase();
+  if (!name) return null;
+  const { inputs } = await p.devices();
+  return inputs.find((i) => i.label.trim().toLowerCase() === name)?.id ?? null;
+}
+
 /** The recording and the call watch that sit on the meetings core. */
 function connect(core: Meetings, e: Shared): Parts {
   const { ctx, p, cfg } = e;
-  const recording = new MeetingRecording({
+  const recording: MeetingRecording = new MeetingRecording({
     core,
     recorder: p.recorder,
-    picker: new MicPicker({ dictationDevice: "", callAppDevice: async () => null }),
+    picker: new MicPicker({ dictationDevice: "", callAppDevice: () => callAppInput(p, () => recording.pid) }),
     now: e.now,
     // Without a way to read the call app's microphone, "follows the call app" means the dictation microphone, and the page says so.
     micSetting: () => (cfg().mic === "call-app" && p.platform.capabilities().micFollowsCallApp !== "available" ? "dictation" : cfg().mic),

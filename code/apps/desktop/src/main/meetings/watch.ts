@@ -74,7 +74,7 @@ export class CallWatch {
     // A call that starts while something is being recorded is not offered: one recording at a time.
     if (this.#d.recording.active) return;
     const action = this.#offers.started(session);
-    if (action.kind === "record") void this.#d.recording.start({ providerId: session.providerId, providerName: session.providerName, sessionId: session.id });
+    if (action.kind === "record") void this.#d.recording.start({ providerId: session.providerId, providerName: session.providerName, sessionId: session.id, pid: session.pid });
   }
 
   #callEnded(sessionId: string): void {
@@ -122,7 +122,7 @@ export class CallWatch {
       case "record": {
         const s = this.#sessions.get(a.sessionId);
         this.#offers.accepted(a.sessionId);
-        if (s) await this.#d.recording.start({ providerId: s.providerId, providerName: s.providerName, sessionId: s.id });
+        if (s) await this.#d.recording.start({ providerId: s.providerId, providerName: s.providerName, sessionId: s.id, pid: s.pid });
         break;
       }
       case "dismiss":

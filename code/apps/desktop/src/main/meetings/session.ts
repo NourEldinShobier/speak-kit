@@ -42,6 +42,7 @@ export class MeetingRecording {
   #id: string | undefined;
   #app = "";
   #forSession: string | undefined;
+  #pid: number | undefined;
   #phase: RecordingView["phase"] | undefined;
   #startedAt = 0;
   #levels = { you: 0, them: 0 };
@@ -65,6 +66,11 @@ export class MeetingRecording {
   /** The call this recording belongs to; undefined for one started by hand. */
   get session(): string | undefined {
     return this.#forSession;
+  }
+
+  /** The process of the call app being recorded; undefined for a recording started by hand. */
+  get pid(): number | undefined {
+    return this.#pid;
   }
 
   view(): RecordingView | null {
@@ -93,11 +99,12 @@ export class MeetingRecording {
     this.#d.changed(this.view());
   }
 
-  async start(app: { providerId: string; providerName: string; sessionId?: string }): Promise<Outcome<{ id: string }>> {
+  async start(app: { providerId: string; providerName: string; sessionId?: string; pid?: number }): Promise<Outcome<{ id: string }>> {
     if (this.#phase) return { ok: false, failure: { code: "busy", message: "A meeting is already being recorded." } };
     this.#phase = "starting";
     this.#app = app.providerName;
     this.#forSession = app.sessionId;
+    this.#pid = app.pid;
     this.#levels = { you: 0, them: 0 };
     this.#system = "off";
     this.#note = undefined;
