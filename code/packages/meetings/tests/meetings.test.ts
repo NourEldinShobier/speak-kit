@@ -132,6 +132,34 @@ describe("a meeting from start to transcript", () => {
     expect([...t.fs.files.keys()].filter((k) => k.includes(b.id))).toEqual([]);
   });
 
+  it("keeps a meeting listed when its files could not be deleted, so deleting again works", async () => {
+    const t = setup();
+    const m = await t.open();
+    const b = await m.begin({ providerId: "zoom", providerName: "Zoom" });
+    if (!b.ok) throw new Error();
+    await m.append(b.id, "you", tone(2), 0);
+    await m.end(b.id);
+    await settled(m, b.id);
+    t.fs.failRemove = /you\.pcm|you\.wav|transcript/;
+    await expect(m.remove(b.id)).rejects.toThrow();
+    expect(m.list().map((r) => r.id)).toEqual([b.id]);
+    t.fs.failRemove = undefined;
+    await m.remove(b.id);
+    expect(m.list()).toEqual([]);
+    expect([...t.fs.files.keys()].filter((k) => k.includes(b.id))).toEqual([]);
+  });
+
+  it("refuses to delete a meeting that is still being recorded unless its recording gives up", async () => {
+    const t = setup();
+    const m = await t.open();
+    const b = await m.begin({ providerId: "zoom", providerName: "Zoom" });
+    if (!b.ok) throw new Error();
+    await m.remove(b.id);
+    expect(m.list()).toHaveLength(1);
+    await m.remove(b.id, { abandon: true });
+    expect(m.list()).toEqual([]);
+  });
+
   it("answers a repeated or unknown end with a failure, not a crash", async () => {
     const t = setup({ texts: ["a b c", "d e f"] });
     const m = await t.open();

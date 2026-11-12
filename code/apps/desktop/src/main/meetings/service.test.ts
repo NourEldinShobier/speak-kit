@@ -50,8 +50,11 @@ class FakeRecorder implements RecorderPort {
   chunk: Parameters<RecorderPort["onChunk"]>[0] = () => {};
   level: Parameters<RecorderPort["onLevel"]>[0] = () => {};
   ended: Parameters<RecorderPort["onEnded"]>[0] = () => {};
+  /** Holds the answer of start() until it is released. */
+  gate: Promise<void> | undefined;
   async start(o: { micDevice: string; system: boolean }) {
     this.starts.push(o);
+    await this.gate;
     return this.startResult;
   }
   async stop() {
@@ -81,11 +84,12 @@ const zoomCall = { micUsers: [{ pid: 10, exe: "zoom" }], windows: [{ pid: 10, ex
 const slackCall = { micUsers: [{ pid: 20, exe: "slack" }], windows: [{ pid: 20, exe: "slack", title: "Huddle" }] };
 const quiet = { micUsers: [], windows: [] };
 
-function harness(o: { texts?: string[] } = {}) {
+function harness(o: { texts?: string[]; fs?: MemFs; at?: number } = {}) {
   const config = parseConfig({});
-  const fs = new MemFs();
+  const fs = o.fs ?? new MemFs();
   const recorder = new FakeRecorder();
-  const probe = { current: quiet as { micUsers: { pid: number; exe: string }[]; windows: { pid: number; exe: string; title: string }[] } };
+  const probe = { current: quiet as { micUsers: { pid: number; exe: string }[]; windows: { pid: number; exe: string; title: string }[] }, calls: 0, gate: undefined as Promise<void> | undefined };
+  const devicesCalls = { n: 0 };
   const pushes: Push[] = [];
   const revealed: string[] = [];
   const opened: string[] = [];
@@ -94,7 +98,7 @@ function harness(o: { texts?: string[] } = {}) {
   const texts = o.texts ?? ["we ship on friday", "sounds good to me"];
   const platform: MeetingsPlatform = {
     capabilities: () => ({ platform: "win32", systemAudio: "available", callDetection: "available", micFollowsCallApp: "unavailable", callAppOutput: "unavailable" }),
-    probe: async () => probe.current,
+    probe: async () => (probe.calls++, await probe.gate, probe.current),
     callAppMic: async () => null,
   };
   const win = { at: { x: 0, y: 0 }, shown: false, through: false, sent: [] as (CapsuleView | null)[], destroyed: false };
@@ -110,7 +114,7 @@ function harness(o: { texts?: string[] } = {}) {
       return win.destroyed;
     },
   };
-  let t = new Date(2026, 10, 3, 14, 5).getTime();
+  let t = o.at ?? new Date(2026, 10, 3, 14, 5).getTime();
   let id = 0;
   const stt = {
     status: () => ({ state: "ready" }),
@@ -138,7 +142,7 @@ function harness(o: { texts?: string[] } = {}) {
     shell: { reveal: (f) => void revealed.push(f), openFolder: async () => {} },
     dialog: { pickFolder: async () => null },
     shortcut: { register: (a) => (registered.push(a), true), unregister: () => {} },
-    devices: async () => ({ inputs: [], outputs: [{ id: "d", label: "Speakers", isDefault: true }] }),
+    devices: async () => (devicesCalls.n++, { inputs: [], outputs: [{ id: "d", label: "Speakers", isDefault: true }] }),
     push: (p) => void pushes.push(p),
     changed: () => {},
     openMeeting: (m) => void opened.push(m),
@@ -151,7 +155,7 @@ function harness(o: { texts?: string[] } = {}) {
   };
   const svc: MeetingsService = createMeetingsService(ctx, ports);
   const advance = (ms: number) => void (t += ms);
-  return { svc, config, fs, recorder, probe, pushes, revealed, opened, registered, activity, advance, win };
+  return { svc, config, fs, recorder, probe, devicesCalls, now: () => t, pushes, revealed, opened, registered, activity, advance, win };
 }
 
 const settled = async (h: ReturnType<typeof harness>, id: string) => {
@@ -208,6 +212,32 @@ describe("calls and the offer", () => {
     h.advance(10_000);
     await h.svc.pollNow();
     expect(h.svc.capsuleView()).toMatchObject({ kind: "offer" });
+  });
+
+  it("Never offer saves the policy for the app and opens Settings", async () => {
+    const h = harness();
+    h.probe.current = zoomCall;
+    await h.svc.pollNow();
+    const offer = h.svc.capsuleView() as Extract<CapsuleView, { kind: "offer" }>;
+    await h.svc.act({ type: "dismiss", sessionId: offer.sessionId, how: "never" });
+    expect(h.config.meetings.policies.zoom).toBe("never");
+    expect(h.opened).toContain("settings");
+    expect(h.svc.capsuleView()).toBeNull();
+  });
+
+  it("does not start a second look at the system while the first one is still running", async () => {
+    const h = harness();
+    let release!: () => void;
+    h.probe.gate = new Promise<void>((r) => (release = r));
+    const a = h.svc.pollNow();
+    const b = h.svc.pollNow();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(h.probe.calls).toBe(1);
+    release();
+    await Promise.all([a, b]);
+    h.probe.gate = undefined;
+    await h.svc.pollNow();
+    expect(h.probe.calls).toBe(2);
   });
 
   it("never offers for an app set to Never offer, and records at once for Always record", async () => {
@@ -291,6 +321,58 @@ describe("recording a call", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(h.recorder.stops).toBe(1);
     expect((await settled(h, id)).status).toBe("done");
+  });
+
+  it("takes the call-ended prompt away when the recording was stopped by hand", async () => {
+    const h = harness();
+    await record(h);
+    h.probe.current = quiet;
+    h.advance(10_000);
+    await h.svc.pollNow();
+    expect(h.svc.capsuleView()).toMatchObject({ kind: "ending" });
+    await h.svc.stop();
+    await h.svc.tickNow();
+    expect(h.svc.capsuleView()).toBeNull();
+  });
+
+  it("closes the recording page when the start fails, so the microphone is not left on", async () => {
+    const h = harness();
+    h.recorder.startResult = { ok: false, code: "mic-failed" };
+    await h.svc.start();
+    expect(h.recorder.stops).toBe(1);
+    expect((await h.svc.core).list()).toEqual([]);
+  });
+
+  it("a stop while the microphone is still opening ends the meeting and does not record afterwards", async () => {
+    const h = harness();
+    let open!: () => void;
+    h.recorder.gate = new Promise<void>((r) => (open = r));
+    const started = h.svc.start();
+    await new Promise((r) => setTimeout(r, 20));
+    const stopped = h.svc.stop();
+    open();
+    expect(await started).toMatchObject({ ok: false });
+    await stopped;
+    expect(h.svc.phase()).not.toBe("recording");
+    expect(h.svc.capsuleView()).toBeNull();
+    expect(h.recorder.stops).toBeGreaterThanOrEqual(2);
+    expect(await h.svc.start()).toMatchObject({ ok: true });
+  });
+
+  it("uses the dictation microphone when the setting follows the call app but the system cannot say", async () => {
+    const h = harness();
+    h.config.meetings.mic = "call-app";
+    await h.svc.start();
+    expect(h.recorder.starts[0]).toEqual({ micDevice: "", system: true });
+    expect(h.svc.capsuleView()).toMatchObject({ kind: "recording" });
+    expect((h.svc.capsuleView() as { note?: string }).note).toBeUndefined();
+  });
+
+  it("looks at the output devices once per recording, not every second", async () => {
+    const h = harness();
+    await h.svc.start();
+    for (let i = 0; i < 5; i++) await h.svc.tickNow();
+    expect(h.devicesCalls.n).toBe(1);
   });
 
   it("keeps recording when the person says the meeting goes on", async () => {
@@ -485,5 +567,23 @@ describe("settings", () => {
     expect((await h.svc.handlers.stop()).ok).toBe(false);
     await h.svc.handlers.start();
     expect((await h.svc.handlers.start()).ok).toBe(false);
+  });
+});
+
+describe("retention at startup", () => {
+  it("removes audio past its deadline as soon as the app opens, without waiting for the hourly sweep", async () => {
+    const first = harness();
+    await first.svc.start();
+    first.recorder.chunk("you", tone(2), 0);
+    first.advance(2000);
+    const done = (await first.svc.stop()) as { ok: boolean; id: string };
+    if (!done.ok) throw new Error("stop");
+    await settled(first, done.id);
+    await first.svc.dispose();
+    const again = harness({ fs: first.fs, at: first.now() + 48 * 3_600_000 });
+    const core = await again.svc.core;
+    for (let i = 0; i < 100 && core.list()[0]!.audioBytes > 0; i++) await new Promise((r) => setTimeout(r, 5));
+    expect(core.list()[0]!.audioBytes).toBe(0);
+    await again.svc.dispose();
   });
 });
