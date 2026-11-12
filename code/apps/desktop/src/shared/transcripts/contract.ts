@@ -23,6 +23,8 @@ export interface Push {
   recording: RecordingView | null;
   /** Changes with every change to the transcripts, so a window knows to fetch again. */
   tick: number;
+  /** Why a recording ended by itself (microphone gone, disk full, time limit); shown until the person closes it or starts another. */
+  notice?: string;
 }
 
 export type Picked = { ok: true; path: string; name: string; bytes: number } | { ok: false; name: string; failure: Failure };

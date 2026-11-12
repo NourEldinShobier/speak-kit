@@ -21,6 +21,7 @@ import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
+import { setupTranscripts } from "./transcripts";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -69,7 +70,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   ctx.state.reader = IDLE_READER;
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
@@ -112,8 +114,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
-      capture.dispose();
+      void transcripts.dispose();
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest }),
   };
 }
