@@ -1,4 +1,4 @@
-import { checkFile, decodeWavAsync, failures, MAX_HOURS, RATE, type Failure } from "@speakkit/transcripts";
+import { checkFile, decodeWavAsync, failures, MAX_HOURS, RATE, WavTooLong, type Failure } from "@speakkit/transcripts";
 import type { DecoderResult, Picked } from "../../shared/transcripts/contract";
 
 /** What reading a file needs from the outside: the disk, and a page that decodes compressed audio (the browser engine has the codecs). */
@@ -66,8 +66,8 @@ export async function decodeFile(file: string, ports: FilePorts): Promise<Decode
       }
       pcm = r.pcm;
     }
-  } catch {
-    return { ok: false, failure: failures.decode(name) };
+  } catch (e) {
+    return { ok: false, failure: e instanceof WavTooLong ? failures.tooLong() : failures.decode(name) };
   }
   if (pcm.length / RATE > MAX_HOURS * 3600) return { ok: false, failure: failures.tooLong() };
   if (pcm.length === 0) return { ok: false, failure: failures.decode(name) };

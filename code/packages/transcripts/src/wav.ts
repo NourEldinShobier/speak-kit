@@ -1,6 +1,13 @@
 import { RATE } from "./chunker";
+import { MAX_HOURS } from "./formats";
 
 export class WavError extends Error {}
+/** The file would convert to more audio than the import limit allows. */
+export class WavTooLong extends WavError {}
+
+/** Header sample rates a real file has; anything else is a damaged or hostile header, and a low one would multiply the output size. */
+const MIN_RATE = 8000;
+const MAX_RATE = 768_000;
 
 export interface WavInfo {
   format: number;
@@ -73,9 +80,11 @@ function* convert(buf: Uint8Array): Generator<void, Int16Array> {
   if (format === 1 && channels === 1 && bits === 16 && rate === RATE) {
     return new Int16Array(buf.buffer.slice(buf.byteOffset + dataStart, buf.byteOffset + dataStart + frames * 2));
   }
+  if (rate < MIN_RATE || rate > MAX_RATE) throw new WavError(`unsupported sample rate ${rate}`);
   const at = frameReader(buf, info);
   const ratio = rate / RATE;
   const n = Math.floor(frames / ratio);
+  if (n / RATE > MAX_HOURS * 3600) throw new WavTooLong("too long");
   const out = new Int16Array(n);
   const w = Math.max(1, Math.round(ratio));
   const half = w >> 1;

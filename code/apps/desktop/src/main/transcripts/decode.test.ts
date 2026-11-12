@@ -61,6 +61,19 @@ describe("decode", () => {
     expect(p.pageCalls).toBe(0);
   });
 
+  it("a WAVE header that would expand to over four hours is a too-long failure, and a header with a bad rate a decode failure", async () => {
+    const hdr = (rate: number, bytes: number) => {
+      const b = new Uint8Array(44 + bytes);
+      b.set(encodeWav16k(new Int16Array(0)).subarray(0, 44));
+      const dv = new DataView(b.buffer);
+      dv.setUint32(24, rate, true);
+      dv.setUint32(40, bytes, true);
+      return b;
+    };
+    expect(await decodeFile("/a/x.wav", ports({ "/a/x.wav": hdr(8000, 230_416_000) }))).toMatchObject({ ok: false, failure: { code: "too-long" } });
+    expect(await decodeFile("/a/x.wav", ports({ "/a/x.wav": hdr(1, 4000) }))).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
+  });
+
   it("other formats go through the page", async () => {
     const p = ports({ "/a/x.mp3": MP3 });
     const r = await decodeFile("/a/x.mp3", p);
