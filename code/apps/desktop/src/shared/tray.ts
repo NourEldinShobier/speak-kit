@@ -17,6 +17,8 @@ export interface TrayContext {
   shortcuts: Bindings;
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
+  /** The system theme of the taskbar or menu bar is dark. */
+  darkTaskbar?: boolean;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
   dictation?: {
     enabled: boolean;
@@ -42,6 +44,9 @@ export function trayIconState(c: TrayContext): TrayState {
   if (c.reader.status === "playing" || c.reader.status === "preparing" || c.exportsRunning > 0) return "working";
   return engine;
 }
+
+/** Windows draws a separate icon for a dark taskbar; the macOS menu bar tints a template image itself, so it has one variant. */
+export const trayIconVariant = (c: TrayContext): "light" | "dark" => (c.platform === "win32" && c.darkTaskbar ? "dark" : "light");
 
 export function trayTooltipFor(c: TrayContext): string {
   const r = c.reader;

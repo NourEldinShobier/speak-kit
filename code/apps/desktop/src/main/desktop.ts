@@ -1,4 +1,5 @@
 import { app, type BrowserWindow } from "electron";
+import type { TtsEngine } from "@speakkit/engine";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -28,6 +29,8 @@ import { setupTranscripts } from "./transcripts";
 import { setupMeetings } from "./meetings";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
+import { collectResources } from "./resources";
+import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
 interface DesktopOptions {
   parent: () => BrowserWindow | null;
@@ -43,6 +46,8 @@ interface DesktopOptions {
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  /** The voice engine, for the memory it holds (Settings, Performance). */
+  voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
   voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
@@ -86,7 +91,14 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
 /** The IPC methods the desktop features add. */
 function desktopHandlers(
   ctx: Ctx,
-  f: { reading: ReturnType<typeof createReading>; exports: ReturnType<typeof createExports>; updates: ReturnType<typeof createUpdates>; shortcuts: ReturnType<typeof setupShortcuts>; test: boolean },
+  f: {
+    reading: ReturnType<typeof createReading>;
+    exports: ReturnType<typeof createExports>;
+    updates: ReturnType<typeof createUpdates>;
+    shortcuts: ReturnType<typeof setupShortcuts>;
+    test: boolean;
+    resources: Api["resources"];
+  },
 ) {
   return {
     ...engineHandlers(ctx),
@@ -95,6 +107,7 @@ function desktopHandlers(
     ...f.shortcuts.handlers,
     ...readerHandlers(f.reading),
     installExtension: () => installExtension(!f.test),
+    resources: f.resources,
   } satisfies Partial<Api>;
 }
 
@@ -122,6 +135,19 @@ function disposeAll(p: {
   void p.transcripts.dispose();
   void p.meetings?.dispose();
   return controlDown;
+}
+
+/** Memory per process and model, read when the Performance page asks. */
+function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dictation: DictationService) {
+  return collectResources({
+    processes: () => app.getAppMetrics().map((m) => ({ type: m.type, name: m.name, workingSetKb: m.memory.workingSetSize, cpu: m.cpu.percentCPUUsage })),
+    voice: () => ({ state: ctx.state.health?.engine.state, name: "Kokoro-82M", pid: (voiceEngine() as { workerPid?: number } | null)?.workerPid }),
+    speech: () => dictation.speech.resourceUse(),
+    memoryOf,
+    hardware: probeThisComputer,
+    platform: process.platform === "darwin" ? "darwin" : "win32",
+    arch: process.arch,
+  });
 }
 
 /**
@@ -152,7 +178,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
     /** Called by the IPC layer: is this webContents our mini player? */

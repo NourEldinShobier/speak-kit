@@ -185,6 +185,7 @@ export const ARGS = {
   storage: v.tuple([]),
   deleteDownloads: v.tuple([]),
   metrics: v.tuple([]),
+  resources: v.tuple([]),
   hideWindow: v.tuple([]),
   quit: v.tuple([]),
   setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),

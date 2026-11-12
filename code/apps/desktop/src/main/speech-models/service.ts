@@ -339,6 +339,12 @@ export class SpeechModels {
     return this.view();
   }
 
+  /** What the Performance page shows about the speech model: its name, state, the process that holds it and where it runs. */
+  resourceUse(): { name: string; state: string; pid: number | undefined; backend: "gpu" | "cpu" | undefined } {
+    const id = this.#dict.model;
+    return { name: this.#lib.find(id as SttModelId)?.name ?? id, state: this.#d.stt.status().state, pid: this.#d.stt.workerPid, backend: this.#d.stt.backend };
+  }
+
   openProxySettings(): Promise<void> {
     return this.#d.openProxySettings();
   }
