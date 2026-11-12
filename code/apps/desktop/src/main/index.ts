@@ -10,7 +10,7 @@ import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
-import { openConfig } from "./config";
+import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { createAppHandlers, metrics } from "./handlers";
@@ -85,6 +85,7 @@ const addActivity = (kind: Activity["kind"], title: string, body: string) => {
 const unreadable = (what: string, file: string) =>
   addActivity("error", `${what} could not be read`, `Speak Kit started from defaults. The old file is kept as ${path.basename(file)} in ${path.dirname(file)}.`);
 if (store.recovered) unreadable("Settings", store.recovered);
+for (const n of droppedNotices(store.dropped)) addActivity("error", n.title, n.body);
 
 const sinks = new Set<(s: AppState) => void>();
 const serverApi = new ServerApi(
@@ -107,8 +108,9 @@ const mainWindow: MainWindow = new MainWindow(config, {
 });
 const screenVision = createScreenVision();
 const micOwners = createMicOwners();
+const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
-  store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
+  store: keyStore,
   config,
   saveConfig: store.save,
   log,
@@ -227,7 +229,7 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
     },
   );
 }

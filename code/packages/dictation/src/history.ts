@@ -1,12 +1,24 @@
 import { normalize, rank, type HistoryStats, historyStats } from "./history-search";
+import type { RewriteOutcome } from "./modes/rewrite";
 import type { Retention } from "./settings";
 import type { Clock, HistoryStorage } from "./types";
+import { matchTerms, type Term } from "./vocabulary/terms";
+
+/** One transcription of a recording. The first is what dictation made; more come from "Transcribe again". */
+export interface Version {
+  id: string;
+  model: string;
+  at: number;
+  text: string;
+  /** How long the model took. */
+  ms: number;
+}
 
 export interface HistoryEntry {
   id: string;
   /** When it was dictated, in the clock's milliseconds. */
   at: number;
-  /** What was inserted. */
+  /** What was inserted (or, after "Use this text", what the chosen version says). */
   text: string;
   /** What the speech engine heard. */
   raw: string;
@@ -24,17 +36,40 @@ export interface HistoryEntry {
   timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
   /** What really happened to the text. */
   outcome?: "sent" | "copied" | "failed";
+  /** What the rewrite pass did, when the mode asked for one. */
+  rewrite?: RewriteOutcome;
+  /** The kept recording, by the name the audio store knows it under. */
+  audio?: string;
+  /** The recording was removed on its own (the size limit) while the text stays. */
+  audioRemoved?: boolean;
+  versions?: Version[];
+  /** The version whose text is in use. */
+  version?: string;
 }
 
 export type NewEntry = Omit<HistoryEntry, "id">;
 
 export interface HistoryQuery {
-  /** Every word must be found in the text or the program name, in any case and without accents; the best matches come first. */
+  /** Every word must be found in the text or the program name, in any case and without accents; the best matches come first. A sounds-like spelling of a vocabulary word finds that word too. */
   search?: string;
   /** Other spellings for a word of the search (from the person's vocabulary). */
   aliases?: Readonly<Record<string, readonly string[]>>;
   limit?: number;
 }
+
+export type HistoryHit = HistoryEntry & { via?: { word: string; heard: string } };
+
+/** Where recordings live. Moving a file to the Recycle Bin can fail; the history keeps the file then and says so. */
+export interface AudioTrash {
+  trash(file: string): Promise<boolean>;
+}
+
+export interface RemoveReport {
+  /** Recordings that could not be moved to the Recycle Bin and are still on disk. */
+  kept: string[];
+}
+
+export type HistoryStatus = "ok" | "newer" | "unreadable";
 
 export interface History {
   /** Resolves the new entry's id; undefined when retention is off. */
@@ -42,28 +77,55 @@ export interface History {
   /** Corrects what is known only after the text was sent (what really happened to it). */
   update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void>;
   /** Newest first, with expired entries already gone. */
-  list(query?: HistoryQuery): Promise<HistoryEntry[]>;
+  list(query?: HistoryQuery): Promise<HistoryHit[]>;
   get(id: string): Promise<HistoryEntry | undefined>;
-  remove(id: string): Promise<void>;
-  removeMany(ids: readonly string[]): Promise<void>;
+  remove(id: string): Promise<RemoveReport>;
+  removeMany(ids: readonly string[]): Promise<RemoveReport>;
   stats(): Promise<HistoryStats>;
-  clear(): Promise<void>;
+  clear(): Promise<RemoveReport>;
   /** Drops what the retention no longer allows. */
-  prune(): Promise<void>;
+  prune(): Promise<RemoveReport>;
+  patch(id: string, patch: Partial<Pick<HistoryEntry, "audio" | "audioRemoved" | "versions" | "version" | "text">>): Promise<void>;
+  /** Adds a version made by "Transcribe again"; the text in use does not change. */
+  addVersion(id: string, v: Omit<Version, "id">): Promise<string | undefined>;
+  /** Makes one version's text the entry's text. */
+  useVersion(id: string, versionId: string): Promise<boolean>;
+  /** Forgets recordings that were deleted from disk. The entries keep their text. */
+  dropAudio(files: readonly string[]): Promise<void>;
+  /** "newer": the file was written by a newer version of the app; it is left alone and the history stays empty in this session. "unreadable": the file was not a history; a copy was kept and the history starts empty. */
+  status(): HistoryStatus;
+  /** The name of the copy kept for a newer or unreadable file, when one was made. */
+  preservedAs(): string | undefined;
 }
 
 const DAY_MS = 86_400_000;
-const WINDOW_MS: Record<Retention, number> = { off: 0, "24h": DAY_MS, "7d": 7 * DAY_MS, "30d": 30 * DAY_MS, forever: Infinity };
+export const WINDOW_MS: Record<Retention, number> = { off: 0, "24h": DAY_MS, "7d": 7 * DAY_MS, "30d": 30 * DAY_MS, forever: Infinity };
 /** Hard cap, whatever the retention says. */
 export const MAX_ENTRIES = 500;
+export const HISTORY_VERSION = 1;
+
+/** Milliseconds left before the entry is removed; Infinity when it is kept for ever. */
+export const timeLeft = (e: Pick<HistoryEntry, "at">, now: number, retention: Retention): number => (retention === "forever" ? Infinity : Math.max(0, e.at + WINDOW_MS[retention] - now));
 
 const isEntry = (v: unknown): v is HistoryEntry => {
   const e = v as Partial<Record<keyof HistoryEntry, unknown>> | null;
   return typeof e === "object" && e !== null && typeof e.id === "string" && typeof e.at === "number" && typeof e.text === "string" && typeof e.raw === "string" && typeof e.durationMs === "number";
 };
 
-// Stored data is untrusted: keep what has the right shape, newest first.
-const parse = (stored: unknown): HistoryEntry[] => (Array.isArray(stored) ? stored.filter(isEntry).sort((a, b) => b.at - a.at) : []);
+type Parsed = { entries: HistoryEntry[]; state: HistoryStatus };
+
+// Stored data is untrusted: keep what has the right shape, newest first. A bare array is the first format; an object carries a version.
+function parse(stored: unknown): Parsed {
+  let list: unknown = stored;
+  if (!Array.isArray(stored) && typeof stored === "object" && stored !== null) {
+    const o = stored as { version?: unknown; entries?: unknown };
+    if (typeof o.version === "number" && o.version > HISTORY_VERSION) return { entries: [], state: "newer" };
+    list = o.entries;
+  }
+  // Anything that is neither a list nor an object carrying one is not a history at all.
+  if (!Array.isArray(list)) return { entries: [], state: "unreadable" };
+  return { entries: list.filter(isEntry).sort((a, b) => b.at - a.at), state: "ok" };
+}
 
 function keep(all: HistoryEntry[], now: number, retention: Retention): HistoryEntry[] {
   if (retention === "off") return [];
@@ -87,7 +149,7 @@ const keyOf = (e: HistoryEntry): string => {
 /** What `list` would return for stored data read straight from the file, without the app: the same shape check, retention and search. An unknown retention counts as the default. */
 export function readStoredHistory(stored: unknown, o: { now: number; retention: unknown; search?: string; limit?: number }): HistoryEntry[] {
   const retention = typeof o.retention === "string" && o.retention in WINDOW_MS ? (o.retention as Retention) : "7d";
-  const kept = keep(parse(stored), o.now, retention);
+  const kept = keep(parse(stored).entries, o.now, retention);
   const found = o.search ? kept.filter((e) => rank(keyOf(e), o.search!) > 0) : kept;
   return found.slice(0, o.limit ?? found.length);
 }
@@ -96,13 +158,17 @@ interface Deps {
   storage: HistoryStorage;
   clock: Clock;
   retention: () => Retention;
+  audio?: AudioTrash;
+  /** The vocabulary, for finding a word by its sounds-like spelling. */
+  terms?: () => readonly Term[];
 }
 
 class Store implements History {
   private entries: HistoryEntry[] = [];
   private loading: Promise<void> | undefined;
   private writes: Promise<void> = Promise.resolve();
-
+  private state: HistoryStatus = "ok";
+  private copy: string | undefined;
   private readonly deps: Deps;
 
   constructor(deps: Deps) {
@@ -112,15 +178,28 @@ class Store implements History {
   private ready(): Promise<void> {
     return (this.loading ??= (async () => {
       try {
-        this.entries = parse(await this.deps.storage.load());
+        const p = parse(await this.deps.storage.load());
+        this.entries = p.entries;
+        this.state = p.state;
       } catch {
-        // Unreadable storage leaves the history empty; the next save replaces it.
+        // Storage that cannot be read leaves the history empty; the next save replaces it.
+        this.state = "unreadable";
+      }
+      if (this.state === "ok") return;
+      try {
+        this.copy = (await this.deps.storage.preserve?.(this.state)) || undefined;
+      } catch {
+        // the notice still shows, without a file name
       }
     })());
   }
 
+  status = (): HistoryStatus => this.state;
+  preservedAs = (): string | undefined => this.copy;
+
   private save(): Promise<void> {
-    const snapshot = this.entries;
+    if (this.state === "newer") return this.writes; // a newer app's file is never overwritten
+    const snapshot = { version: HISTORY_VERSION, entries: this.entries };
     this.writes = this.writes.then(async () => {
       try {
         await this.deps.storage.save(snapshot);
@@ -131,21 +210,105 @@ class Store implements History {
     return this.writes;
   }
 
-  prune = async (): Promise<void> => {
+  /** Moves the recordings of removed entries to the Recycle Bin; one that cannot be moved stays on disk and is reported. */
+  private async dispose(gone: HistoryEntry[]): Promise<RemoveReport> {
+    const kept: string[] = [];
+    for (const e of gone) {
+      if (!e.audio || !this.deps.audio) continue;
+      let ok = false;
+      try {
+        ok = await this.deps.audio.trash(e.audio);
+      } catch {
+        ok = false;
+      }
+      if (!ok) kept.push(e.audio);
+    }
+    return { kept };
+  }
+
+  prune = async (): Promise<RemoveReport> => {
     await this.ready();
     const kept = keep(this.entries, this.deps.clock.now(), this.deps.retention());
-    if (kept.length === this.entries.length) return;
+    if (kept.length === this.entries.length) return { kept: [] };
+    const gone = this.entries.filter((e) => !kept.includes(e));
     this.entries = kept;
     await this.save();
+    return this.dispose(gone);
   };
 
   async add(entry: NewEntry): Promise<string | undefined> {
     await this.prune();
     if (this.deps.retention() === "off") return undefined;
     const id = freshId(this.entries, entry.at);
-    this.entries = [{ ...entry, id }, ...this.entries].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    const evicted = [{ ...entry, id }, ...this.entries].sort((a, b) => b.at - a.at);
+    this.entries = evicted.slice(0, MAX_ENTRIES);
     await this.save();
+    await this.dispose(evicted.slice(MAX_ENTRIES));
     return id;
+  }
+
+  async list(query: HistoryQuery = {}): Promise<HistoryHit[]> {
+    await this.prune();
+    const { search } = query;
+    let found: HistoryHit[] = this.entries;
+    if (search?.trim()) {
+      const terms = matchTerms(this.deps.terms?.() ?? [], search);
+      found = [];
+      const scored: { e: HistoryHit; score: number }[] = [];
+      for (const e of this.entries) {
+        const score = rank(keyOf(e), search, query.aliases);
+        if (score > 0) scored.push({ e, score });
+        else {
+          const hit = terms.find((a) => e.text.toLowerCase().includes(a.term.word.toLowerCase()));
+          if (hit) scored.push({ e: { ...e, via: { word: hit.term.word, heard: hit.via } }, score: 1 });
+        }
+      }
+      // Entries are newest first already and the sort is stable, so equal scores stay newest first.
+      found = scored.sort((a, b) => b.score - a.score).map((x) => x.e);
+    }
+    return found.slice(0, query.limit ?? found.length);
+  }
+
+  async get(id: string): Promise<HistoryEntry | undefined> {
+    await this.prune();
+    return this.entries.find((e) => e.id === id);
+  }
+
+  async remove(id: string): Promise<RemoveReport> {
+    await this.ready();
+    const gone = this.entries.filter((e) => e.id === id);
+    this.entries = this.entries.filter((e) => e.id !== id);
+    await this.save();
+    return this.dispose(gone);
+  }
+
+  async clear(): Promise<RemoveReport> {
+    await this.ready();
+    const gone = this.entries;
+    this.entries = [];
+    await this.save();
+    return this.dispose(gone);
+  }
+
+  async patch(id: string, patch: Parameters<History["patch"]>[1]): Promise<void> {
+    await this.ready();
+    if (!this.entries.some((e) => e.id === id)) return;
+    this.entries = this.entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
+    await this.save();
+  }
+
+  async removeMany(ids: readonly string[]): Promise<RemoveReport> {
+    await this.ready();
+    const drop = new Set(ids);
+    const gone = this.entries.filter((e) => drop.has(e.id));
+    this.entries = this.entries.filter((e) => !drop.has(e.id));
+    await this.save();
+    return this.dispose(gone);
+  }
+
+  async stats(): Promise<HistoryStats> {
+    await this.prune();
+    return historyStats(this.entries);
   }
 
   async update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void> {
@@ -155,48 +318,50 @@ class Store implements History {
     await this.save();
   }
 
-  async list(query: HistoryQuery = {}): Promise<HistoryEntry[]> {
-    await this.prune();
-    const { search } = query;
-    const found = search?.trim()
-      ? this.entries
-          .map((e) => ({ e, score: rank(keyOf(e), search, query.aliases) }))
-          .filter((x) => x.score > 0)
-          // Entries are newest first already and the sort is stable, so equal scores stay newest first.
-          .sort((a, b) => b.score - a.score)
-          .map((x) => x.e)
-      : this.entries;
-    return found.slice(0, query.limit ?? found.length);
-  }
-
-  async get(id: string): Promise<HistoryEntry | undefined> {
-    await this.prune();
-    return this.entries.find((e) => e.id === id);
-  }
-
-  async remove(id: string): Promise<void> {
+  async addVersion(id: string, v: Omit<Version, "id">): Promise<string | undefined> {
     await this.ready();
-    this.entries = this.entries.filter((e) => e.id !== id);
-    await this.save();
+    const e = this.entries.find((x) => x.id === id);
+    if (!e) return undefined;
+    // The first version is what dictation made, so it exists before any other does.
+    const first: Version = { id: "v1", model: e.model ?? "", at: e.at, text: e.versions?.[0]?.text ?? e.text, ms: 0 };
+    const all = e.versions ?? [first];
+    const vid = `v${all.length + 1}`;
+    await this.patch(id, { versions: [...all, { ...v, id: vid }], version: e.version ?? first.id });
+    return vid;
   }
 
-  async removeMany(ids: readonly string[]): Promise<void> {
+  async useVersion(id: string, versionId: string): Promise<boolean> {
     await this.ready();
-    const drop = new Set(ids);
-    this.entries = this.entries.filter((e) => !drop.has(e.id));
-    await this.save();
+    const v = this.entries.find((e) => e.id === id)?.versions?.find((x) => x.id === versionId);
+    if (!v) return false;
+    await this.patch(id, { text: v.text, version: v.id });
+    return true;
   }
 
-  async stats(): Promise<HistoryStats> {
-    await this.prune();
-    return historyStats(this.entries);
-  }
-
-  async clear(): Promise<void> {
+  async dropAudio(files: readonly string[]): Promise<void> {
     await this.ready();
-    this.entries = [];
+    if (!this.entries.some((e) => e.audio && files.includes(e.audio))) return;
+    this.entries = this.entries.map((e) => {
+      if (!e.audio || !files.includes(e.audio)) return e;
+      const { audio: _gone, ...rest } = e;
+      return { ...rest, audioRemoved: true };
+    });
     await this.save();
   }
 }
 
 export const createHistory = (deps: Deps): History => new Store(deps);
+
+export const MAX_AUDIO_BYTES = 512 * 1024 * 1024;
+
+/** Which recordings to delete so the folder fits the limit after `incoming` bytes are added: the oldest first. */
+export function planEviction(files: readonly { file: string; bytes: number; at: number }[], limit: number, incoming: number): string[] {
+  let total = files.reduce((n, f) => n + f.bytes, 0) + incoming;
+  const out: string[] = [];
+  for (const f of [...files].sort((a, b) => a.at - b.at)) {
+    if (total <= limit) break;
+    out.push(f.file);
+    total -= f.bytes;
+  }
+  return out;
+}

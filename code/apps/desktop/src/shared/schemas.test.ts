@@ -41,7 +41,7 @@ describe("config defaults and repair", () => {
     const c = parseConfig({ notifications: { "export-done": { toast: false }, "update-ready": "yes" }, exportPrefs: { format: "ogg", mp3Kbps: 192, folder: 5 } });
     expect(c.notifications["export-done"]).toEqual({ toast: false, bell: true, sound: false });
     expect(c.notifications["update-ready"]).toEqual({ toast: true, bell: true, sound: false });
-    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "" });
+    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "", captions: "none", chapters: false });
   });
 });
 

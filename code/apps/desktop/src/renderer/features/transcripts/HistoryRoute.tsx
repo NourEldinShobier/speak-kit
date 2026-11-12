@@ -232,7 +232,7 @@ function TranscriptsPage({ push, setTab, openSettings }: PageProps) {
 }
 
 /** History: the Dictations tab (the existing dictation history) and the Transcripts tab. */
-export function HistoryRoute({ openSettings }: { openSettings(): void }) {
+export function HistoryRoute({ openSettings, openDictation }: { openSettings(): void; openDictation(): void }) {
   const push = usePush();
   const [tab, setTab] = useState<Tab>("dictations");
   const lead = useDictationLead();
@@ -245,7 +245,7 @@ export function HistoryRoute({ openSettings }: { openSettings(): void }) {
   return (
     <Frame tab={tab} setTab={setTab} lead={lead}>
       <Suspense fallback={null}>
-        <DictationHistory embedded />
+        <DictationHistory embedded openSettings={openDictation} />
       </Suspense>
     </Frame>
   );

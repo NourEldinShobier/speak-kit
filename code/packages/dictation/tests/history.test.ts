@@ -251,7 +251,7 @@ describe("storage", () => {
         load: async () => [],
         save: async (v) => {
           await new Promise((r) => setTimeout(r, saved.length === 0 ? 20 : 0));
-          saved.push((v as unknown[]).length);
+          saved.push((v as { entries: unknown[] }).entries.length);
         },
       },
       clock: time.clock,

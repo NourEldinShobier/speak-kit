@@ -1,26 +1,28 @@
 import { ipcMain } from "electron";
-import path from "node:path";
-import { createDictation, type Dictation } from "@speakkit/dictation";
+import { createDictation, type AudioStore, type Dictation } from "@speakkit/dictation";
 import { MIC_LEVEL_EVENT } from "../../shared/dictation/channels";
 import type { RecorderEvent } from "../../shared/dictation/contract";
 import type { Ctx } from "../context";
 import type { DictationService, DictationServiceOptions } from "./service";
 import type { SwitchableHotkeys } from "./hotkey-source";
-import { createHistoryStorage } from "./history-storage";
 import type { DictationOs, InsertResult } from "./index";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { createRecorderHost, type RecorderHost } from "./recorder";
 import { openRecorderWindow, recorderHandle } from "./recorder-window";
 import { clock, coreSettings, keepOpenMs } from "./service-support";
+import { createOpenAiRewriter } from "./openai-rewriter";
+import { historyFiles, scriptedRewriter, trashViaShell } from "./service-wiring";
 import type { Failure } from "./service-parts";
 import { createTranscriber } from "./stt";
 
 /** What the dictation core and its microphone window are wired to; the service lends these. */
 export interface CoreHost {
   ctx: Ctx;
-  o: Pick<DictationServiceOptions, "dataDir" | "micOwner" | "parent">;
+  o: Pick<DictationServiceOptions, "dataDir" | "micOwner" | "parent" | "test" | "trash" | "rewriter" | "readKey">;
+  /** The words were not sent because the model cannot read a prompt. */
+  onPromptDropped(): void;
   /** The service's public parts: the speech engine, the models, the HUD, the microphone state, and the test switch that refuses the microphone. */
-  svc: Pick<DictationService, "stt" | "models" | "presenter" | "mic" | "micDenied">;
+  svc: Pick<DictationService, "stt" | "models" | "presenter" | "mic" | "micDenied" | "fakeRewrite">;
   failure: Failure;
   os: DictationOs;
   hotkeys: SwitchableHotkeys;
@@ -31,7 +33,7 @@ export interface CoreHost {
 }
 
 /** The microphone window and the dictation core over it, with the speech engine, the inserter and the history file. */
-export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictation } {
+export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictation; audio: AudioStore } {
   const { ctx, o, svc } = h;
   const cfg = () => ctx.config.dictation;
   const recorder = createRecorderHost({
@@ -45,7 +47,9 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     open: () => recorderHandle(openRecorderWindow({ page: h.page("recorder.html"), micAllowed: () => !svc.micDenied })),
   });
   h.failure.replay = new ReplayRecorder(recorder);
-  const core = createDictation({
+  let core: Dictation | undefined;
+  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, (gone) => void core?.history.dropAudio(gone));
+  core = createDictation({
     clock,
     recorder: h.failure.replay,
     transcriber: createTranscriber({
@@ -54,15 +58,18 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
       sentencePause: () => cfg().sentencePause,
       onFailedClip: (c) => (h.failure.clip = c),
       onModelError: (d) => svc.models.report(d),
+      onPromptDropped: h.onPromptDropped,
     }),
     keepClip: (clip) => (h.failure.clip = clip),
     // Only the stage name and a reason: spoken text never reaches a log.
     log: (stage, why) => ctx.log.warn(`dictation stage ${stage}`, why),
     inserter: createInserterPort(h.os, h.inserted),
     hotkeys: h.hotkeys,
-    storage: createHistoryStorage(path.join(o.dataDir, "dictation-history.json")),
+    storage: files.storage,
+    audio: files.audio,
+    rewriter: o.rewriter ?? (__TEST_CODE__ && o.test ? scriptedRewriter(() => svc.fakeRewrite) : createOpenAiRewriter({ readKey: async () => (await o.readKey?.()) ?? null })),
     settings: coreSettings(cfg()),
     ...(o.micOwner && { micOwner: o.micOwner }),
   });
-  return { recorder, core };
+  return { recorder, core, audio: files.audio };
 }

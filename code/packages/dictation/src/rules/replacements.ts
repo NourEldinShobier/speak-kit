@@ -7,21 +7,26 @@ interface Hit {
   order: number;
 }
 
+// Scripts written without spaces between words: a phrase next to them has no word edge to respect.
+const UNSPACED = String.raw`\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}`;
 const WORD = /[\p{L}\p{N}_]/u;
+const UNSPACED_CHAR = new RegExp(`[${UNSPACED}]`, "u");
+const edge = (ch: string): boolean => WORD.test(ch) && !UNSPACED_CHAR.test(ch);
+const INSIDE = String.raw`(?:(?![${UNSPACED}])[\p{L}\p{N}_])`;
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") has no such edge.
-function pattern(from: string): RegExp {
-  const before = WORD.test(from.charAt(0)) ? "(?<![\\p{L}\\p{N}_])" : "";
-  const after = WORD.test(from.charAt(from.length - 1)) ? "(?![\\p{L}\\p{N}_])" : "";
-  return new RegExp(`${before}${escape(from)}${after}`, "giu");
+// A phrase that starts or ends with a letter must not match inside a longer word; one that ends in a symbol ("c++") or in an unspaced script has no such edge.
+function pattern(from: string, matchCase: boolean): RegExp {
+  const before = edge(from.charAt(0)) ? `(?<!${INSIDE})` : "";
+  const after = edge(from.charAt(from.length - 1)) ? `(?!${INSIDE})` : "";
+  return new RegExp(`${before}${escape(from)}${after}`, matchCase ? "gu" : "giu");
 }
 
 function hits(text: string, rules: Replacement[]): Hit[] {
   const all: Hit[] = [];
   rules.forEach((rule, order) => {
     if (!rule.from.trim()) return;
-    for (const m of text.matchAll(pattern(rule.from))) all.push({ start: m.index, end: m.index + m[0].length, to: rule.to, order });
+    for (const m of text.matchAll(pattern(rule.from, rule.matchCase === true))) all.push({ start: m.index, end: m.index + m[0].length, to: rule.to, order });
   });
   // Longest wins, then the earlier start, then the earlier rule. A hit that overlaps a kept one is dropped.
   all.sort((a, b) => b.end - b.start - (a.end - a.start) || a.start - b.start || a.order - b.order);

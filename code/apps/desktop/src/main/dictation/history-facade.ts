@@ -3,7 +3,7 @@ import type { HistoryItem } from "../../shared/dictation/contract";
 import { friendlyAppName } from "./app-name";
 
 const RECENT = 5;
-const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
+const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
 
 interface Deps {
   core(): Dictation | undefined;
@@ -55,7 +55,9 @@ export class HistoryFacade {
       id: e.id,
       at: e.at,
       text: e.text,
+      raw: e.raw,
       durationMs: e.durationMs,
+      expiresInMs: null,
       ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
       ...(e.kind && { kind: e.kind }),
       ...(e.outcome && { outcome: e.outcome }),

@@ -16,7 +16,13 @@ export interface ExportOptions {
   name: string;
   /** Only set after the user answered "File exists". */
   conflict?: ExportConflict;
+  /** A caption file next to the audio. Off when missing. */
+  captions?: ExportCaptions;
+  /** Chapter markers from the headings of the text; MP3 only (a WAV file cannot hold them). */
+  chapters?: boolean;
 }
+
+export type ExportCaptions = "none" | "srt" | "vtt";
 
 export type ExportStage = "rendering" | "encoding" | "saving" | "done" | "cancelled" | "error";
 
@@ -30,10 +36,18 @@ export interface ExportView {
   /** Sentences rendered / total, while rendering. */
   done: number;
   total: number;
+  /** What the job will write besides the audio, for the progress view. */
+  captions?: ExportCaptions;
+  chapters?: boolean;
   /** Final file, set when it is saved. */
   path?: string;
   bytes?: number;
   durationMs?: number;
+  /** The caption file written next to the audio, and how many captions it has. */
+  captionsPath?: string;
+  captionCount?: number;
+  /** Chapter markers written into the audio. */
+  chapterCount?: number;
   error?: DesktopError;
 }
 
@@ -67,3 +81,8 @@ export function estimateBytes(text: string, speed: number, format: ExportPrefs["
   const sec = estimateMs(text, speed) / 1000;
   return Math.round(format === "wav" ? sec * 24000 * 2 + 44 : (sec * kbps * 1000) / 8);
 }
+
+const HEADING = /^[ 	]{0,3}#{1,6}[ 	]+(.+?)[ 	#]*$/gm;
+
+/** Markdown headings of the text: lines that start with 1 to 6 # and a space. The export turns each into a chapter marker. */
+export const headingsOf = (text: string): string[] => [...text.matchAll(HEADING)].map((m) => (m[1] ?? "").replace(/\s+/g, " ").trim()).filter(Boolean);

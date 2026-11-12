@@ -43,6 +43,8 @@ export interface HistoryStats {
   dictations: number;
   words: number;
   listeningMs: number;
+  /** Words per minute of speaking time, not of time between dictations. */
+  wordsPerMinute: number;
   /** Programs dictated into, most used first. */
   topApps: { app: string; count: number }[];
   /** What happened to the text: pasted (also entries from before the outcome was kept), only copied, or not inserted. */
@@ -67,5 +69,5 @@ export function historyStats(entries: readonly { text: string; durationMs: numbe
     .map(([app, count]) => ({ app, count }))
     .sort((a, b) => b.count - a.count || a.app.localeCompare(b.app))
     .slice(0, 5);
-  return { dictations: entries.length, words: wordCount, listeningMs, topApps, outcomes };
+  return { dictations: entries.length, words: wordCount, listeningMs, wordsPerMinute: listeningMs > 0 ? Math.round(wordCount / (listeningMs / 60_000)) : 0, topApps, outcomes };
 }

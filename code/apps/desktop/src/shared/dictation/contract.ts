@@ -3,6 +3,7 @@ import type { HistoryStats, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
 import { DICTATION_MODELS, DictationPatchSchema } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
+import type { RewriteOutcome } from "@speakkit/dictation";
 
 export type { DictationMethod, HudAction } from "./channels";
 export type { DictationModelId } from "./settings";
@@ -63,6 +64,28 @@ export interface DictationStatus {
   mic: MicStatus;
   /** Microphones the system lists, for the picker; empty until the list was asked for. */
   devices: MicDeviceView[];
+  /** "newer": history.json was written by a newer Speak Kit; it is left unchanged, a copy was made, and nothing is saved this session. "unreadable": it was not a history; a copy was made and the history starts empty. */
+  historyStatus: "ok" | "newer" | "unreadable";
+  /** The file name of the copy kept for a newer or unreadable history file. */
+  historyCopy?: string;
+  /** Changes whenever an entry changes without the count changing (a version added or chosen, a recording removed), so the History page reloads. */
+  historyRev: number;
+  /** Recordings the Recycle Bin would not take: they are still on disk. */
+  keptRecordings: number;
+  /** An OpenAI key is saved, so the rewrite pass can run. */
+  rewriteKey: boolean;
+  /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
+  promptDropped?: boolean;
+  /** "Transcribe again" for one entry, while it runs or after it failed; absent otherwise. */
+  redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" | "busy" };
+}
+
+export interface HistoryVersion {
+  id: string;
+  model: string;
+  at: number;
+  text: string;
+  ms: number;
 }
 
 export interface HistoryItem {
@@ -73,11 +96,27 @@ export interface HistoryItem {
   app?: string;
   /** Friendly name of that program. */
   appName?: string;
-  durationMs?: number;
   /** "raw": dictated with clean-up off. "printed": handed to a command, never pasted. "interrupted": the recording was cut short. */
   kind?: "raw" | "printed" | "interrupted";
   outcome?: "sent" | "copied" | "failed";
+  /** What the speech model heard, before the clean-up. */
+  raw: string;
+  model?: string;
+  durationMs: number;
+  rewrite?: RewriteOutcome;
+  /** Milliseconds until the entry is removed; null when it is kept for ever. */
+  expiresInMs: number | null;
+  /** The entry has a kept recording. */
+  recording?: boolean;
+  recordingRemoved?: boolean;
+  versions?: HistoryVersion[];
+  /** The version in use. */
+  version?: string;
+  /** The search matched this vocabulary word through one of its sounds-like spellings. */
+  via?: { word: string; heard: string };
 }
+
+export type { HistoryStats };
 
 /** What the HUD page draws. */
 export type HudView =
@@ -107,6 +146,23 @@ export interface DictationBridge {
   /** Starts or stops the level meter of the Audio card; the microphone is open only while it is on. */
   micMeter(on: boolean): Promise<void>;
   onMicLevel(cb: (n: number) => void): () => void;
+  /** The last `n` entries, newest first. */
+  historyRecent(n: number): Promise<HistoryItem[]>;
+  historyUseVersion(id: string, versionId: string): Promise<boolean>;
+  /** Transcribes the kept recording again with `model`; progress and failure arrive in the status (`redo`). */
+  historyRetranscribe(id: string, model: DictationModelId): Promise<void>;
+  historyCancelRetranscribe(): Promise<void>;
+  /** The kept recording as a WAV file's bytes; null when there is none. */
+  historyAudio(id: string): Promise<Uint8Array | null>;
+  historyDeleteRecording(id: string): Promise<void>;
+  /** Saves the history as a JSON file the person chooses; the path, or null when cancelled. */
+  historyExport(): Promise<string | null>;
+  /** Hides the Recycle Bin and newer-file notices. */
+  historyDismissNotice(): Promise<void>;
+  /** Asks for a file to import; null when cancelled. */
+  vocabImport(): Promise<{ format: "json" | "txt" | "csv"; text: string; name: string } | null>;
+  /** Saves `text` as a file the person names; the path, or null when cancelled. */
+  vocabExport(format: "json" | "txt" | "csv", text: string): Promise<string | null>;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
   /** Pause all shortcuts (true) or resume them. The returned status shows the state once keys are released. */
@@ -171,6 +227,7 @@ export type RecorderResult =
   | { ok: false; code: "mic-denied" | "mic-missing" | "mic-busy" | "mic-failed" };
 
 const text = v.pipe(v.string(), v.maxLength(200));
+const id = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
 export const DICTATION_ARGS = {
   status: v.tuple([]),
   setEnabled: v.tuple([v.boolean()]),
@@ -178,8 +235,8 @@ export const DICTATION_ARGS = {
   downloadModel: v.tuple([v.picklist(DICTATION_MODELS)]),
   cancelDownload: v.tuple([]),
   historyList: v.tuple([v.optional(text)]),
-  historyCopy: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64))]),
-  historyRemove: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(64))]),
+  historyCopy: v.tuple([id]),
+  historyRemove: v.tuple([id]),
   historyClear: v.tuple([]),
   historyRemoveMany: v.tuple([v.pipe(v.array(v.pipe(v.string(), v.minLength(1), v.maxLength(64))), v.maxLength(500))]),
   historyStats: v.tuple([]),
@@ -190,6 +247,16 @@ export const DICTATION_ARGS = {
   pasteLast: v.tuple([]),
   undoCancel: v.tuple([]),
   openSoundSettings: v.tuple([]),
+  historyRecent: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50))]),
+  historyUseVersion: v.tuple([id, id]),
+  historyRetranscribe: v.tuple([id, v.picklist(DICTATION_MODELS)]),
+  historyCancelRetranscribe: v.tuple([]),
+  historyAudio: v.tuple([id]),
+  historyDeleteRecording: v.tuple([id]),
+  historyExport: v.tuple([]),
+  historyDismissNotice: v.tuple([]),
+  vocabImport: v.tuple([]),
+  vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

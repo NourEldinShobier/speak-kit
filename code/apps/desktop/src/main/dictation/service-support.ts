@@ -45,6 +45,12 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   insertMode: c.output === "copy" ? "copy" : "paste",
   returnToApp: c.returnToApp,
   appModes: Object.fromEntries(Object.entries(c.appRules).map(([exe, r]) => [exe, insertModeOf(r.method)])),
+  ...c.cleanup,
+  terms: c.terms,
+  prompt: c.prompt,
+  modes: c.modes,
+  rewrite: c.rewrite,
+  keepRecordings: c.keepRecordings,
 });
 
 /** What the key hook listens for. Sharing the keys with other programs is only offered in Hold mode, because a hands-free mode cannot keep the other program's key held. */
@@ -102,7 +108,26 @@ interface StatusParts {
   micOwner: string | undefined;
   mic: MicStatus;
   devices: MicDeviceView[];
+  notes: HistoryNotes;
 }
+
+/** What the History page is told beyond the entries: the file notices, recordings, the rewrite key and the word-list note. */
+interface HistoryNotes {
+  historyStatus: DictationStatus["historyStatus"];
+  historyCopy?: string | undefined;
+  historyRev: number;
+  keptRecordings: number;
+  rewriteKey: boolean;
+  promptDropped: boolean;
+  redo: DictationStatus["redo"];
+}
+
+const historyNotes = ({ historyCopy, promptDropped, redo, ...rest }: HistoryNotes) => ({
+  ...rest,
+  ...(historyCopy && { historyCopy }),
+  ...(promptDropped && { promptDropped: true }),
+  ...(redo && { redo }),
+});
 
 /** Try the hotkey again only when it failed, dictation is on, and the permissions it needs were just allowed. */
 export const shouldRetryHotkey = (s: { failed: boolean; enabled: boolean; permitted: boolean }): boolean => s.failed && s.enabled && s.permitted;
@@ -123,6 +148,7 @@ export const dictationStatus = ({
   mouseButtons,
   mic,
   devices,
+  notes,
 }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
@@ -145,6 +171,7 @@ export const dictationStatus = ({
   ...(state.status === "error" && state.owner && { errorOwner: state.owner }),
   mic,
   devices,
+  ...historyNotes(notes),
 });
 
 const MAC_MIC_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";

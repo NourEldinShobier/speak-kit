@@ -1,10 +1,12 @@
-import { powerMonitor, powerSaveBlocker, type BrowserWindow, type WebContents } from "electron";
+import { powerMonitor, powerSaveBlocker, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Dictation, DictationState } from "@speakkit/dictation";
+import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
-import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
+import { STATUS_EVENT } from "../../shared/dictation/channels";
 import type { DictationStatus, RecorderEvent } from "../../shared/dictation/contract";
+import type { DictationServiceOptions } from "./service-options";
+import { filePickers, type HistoryApi } from "./history-api";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
@@ -23,22 +25,7 @@ import { createSleepBlock } from "./sleep-block";
 import type { Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
-export interface DictationServiceOptions {
-  dataDir: string;
-  modelsDir: string;
-  /** Directory of the bundled main-process files; the renderer pages sit in ../renderer. */
-  distDir: string;
-  /** The speech worker file (dist/worker/stt-worker.js when built, the source file in development). */
-  sttWorker: URL;
-  parent(): BrowserWindow | null;
-  /** The test hook is on: a scripted speech engine replaces the real one and the microphone can be refused. */
-  test: boolean;
-  /** Tests only. */
-  os?: DictationOs;
-  stt?: Stt;
-  /** The feature that holds the microphone now (screen look, voice chat), or undefined. Dictation waits for it. */
-  micOwner?: () => string | undefined;
-}
+export type { DictationServiceOptions } from "./service-options";
 
 const PUSH_MS = 200;
 /**
@@ -55,10 +42,11 @@ export class DictationService {
   readonly presenter: HudPresenter;
   readonly controls: Parts["controls"];
   readonly history: Parts["history"];
+  /** What the History page and the vocabulary files need beyond the count and the recent texts. */
+  readonly records: HistoryApi;
   readonly #failure: Failure = { clip: undefined, error: "", replay: undefined };
-  readonly retry: () => Promise<void>;
-  readonly openSoundSettings: () => Promise<void>;
-  readonly hudAction: (a: HudAction) => void;
+  /** The buttons that act on the last dictation or the HUD: retry, open the sound settings, press a HUD button. */
+  readonly actions: Parts["actions"];
   readonly ready: Promise<void>;
   /** Tests only: the microphone window refuses the microphone while this is set. */
   micDenied = false;
@@ -75,6 +63,11 @@ export class DictationService {
     () => this.#cfg.blockSleep,
     (why) => this.#ctx.log.warn("dictation sleep block", why),
   );
+  #audio: AudioStore | undefined;
+  /** Tests only: what the scripted writer does with the next dictation. */
+  fakeRewrite: "ok" | "hang" | "fail" = "ok";
+  /** Tests only: the files the pickers return (null is a cancelled dialog). */
+  readonly scriptedFiles: { open: string | null; save: string | null } = { open: null, save: null };
   #lastInsert: InsertResult | undefined;
   #rejected: DictationStatus["rejected"];
   readonly #throttle = createThrottle(() => this.#send(), PUSH_MS);
@@ -112,9 +105,14 @@ export class DictationService {
       rules: () => (this.#cfg.enabled ? this.#cfg.pauseRules : undefined),
       changed: () => this.#push(true),
       download: () => this.#downloadFromHud(),
+      audio: () => this.#audio,
+      cfg: () => this.#cfg,
+      stt: this.stt,
+      files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),
+      warn: (title, detail) => this.#ctx.log.warn(title, detail),
+      key: o,
     });
-    ({ controls: this.controls, history: this.history } = parts);
-    ({ retry: this.retry, openSoundSettings: this.openSoundSettings, hudAction: this.hudAction } = parts.actions);
+    ({ controls: this.controls, history: this.history, records: this.records, actions: this.actions } = parts);
     // No key hook was ever built when this fails: turning dictation on cannot work either.
     this.ready = this.#init().catch((e) => {
       this.#ctx.log.error("dictation could not start", String(e));
@@ -151,12 +149,13 @@ export class DictationService {
       page,
       onMicEvent: (e) => this.#onMicEvent(e),
       inserted: (r) => (this.#lastInsert = r),
+      onPromptDropped: () => this.records.setPromptDropped(true),
     });
-    ({ recorder: this.#recorder, core: this.core } = built);
+    ({ recorder: this.#recorder, core: this.core, audio: this.#audio } = built);
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await this.models.refresh();
-    await this.history.refresh();
+    await Promise.all([this.history.refresh(), this.records.refreshKey()]);
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
@@ -182,6 +181,7 @@ export class DictationService {
       state: this.state,
       models: this.models,
       historyCount: this.history.count,
+      notes: this.records.parts(),
       paused: this.controls.paused,
       mouseButtons: this.os?.hotkey.mouse === true,
       readerShortcuts: { ...this.#ctx.config.shortcuts },
@@ -223,6 +223,7 @@ export class DictationService {
     if (this.#rejected) return this.status();
     Object.assign(this.#cfg, rest);
     delete this.#cfg.resetNotice; // any change dismisses the notice about a reset shortcut
+    if (model || patch.prompt !== undefined || patch.terms) this.records.setPromptDropped(false);
     if (model && model !== this.#cfg.model) await this.models.switchTo(model); // only an installed model can be chosen
     if (!supportsLanguage(this.#cfg.model, this.#cfg.language)) this.#cfg.language = "auto";
     this.#ctx.saveConfig();

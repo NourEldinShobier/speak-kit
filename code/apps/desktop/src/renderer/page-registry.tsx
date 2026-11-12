@@ -10,10 +10,10 @@ import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
 import { VoiceChatPage } from "./features/voice-chat";
 import { VoicesPage } from "./features/voices";
+import { requestVocabularyTab } from "./vocabulary-tab";
 import { Home } from "./HomePage";
 import type { MenuPage } from "./routes";
 import type { OpenDoc, ShellAction } from "./shell-model";
-import { StubPage } from "./StubPage";
 
 export interface PageProps {
   s: AppState;
@@ -26,6 +26,8 @@ export interface PageProps {
 const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
 // History holds the dictation history and the transcripts; it is rarely opened too.
 const HistoryPage = lazy(() => import("./features/transcripts").then((m) => ({ default: m.HistoryRoute })));
+const VocabularyPage = lazy(() => import("./features/vocabulary").then((m) => ({ default: m.VocabularyPage })));
+const ModesPage = lazy(() => import("./features/modes").then((m) => ({ default: m.ModesPage })));
 const later = (node: React.ReactNode) => <Suspense fallback={null}>{node}</Suspense>;
 
 /** The library list and the reader share one route: opening a reading swaps the list for the reader. */
@@ -47,12 +49,20 @@ function LibraryRoute({ s, dispatch, doc }: PageProps) {
 export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   home: ({ s, dispatch }) => <Home s={s} go={(p) => dispatch(p === "engines" ? { type: "go", page: "engines" } : { type: "go", page: "settings", sub: "browser" })} />,
   library: LibraryRoute,
-  voices: ({ s }) => <VoicesPage s={s} />,
+  voices: ({ s, dispatch }) => (
+    <VoicesPage
+      s={s}
+      onFixPronunciation={() => {
+        requestVocabularyTab("read");
+        dispatch({ type: "go", page: "vocabulary" });
+      }}
+    />
+  ),
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
   engines: ({ s }) => <EnginesPage s={s} />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
-  modes: () => <StubPage page="modes" />,
-  vocabulary: () => <StubPage page="vocabulary" />,
-  history: ({ dispatch }) => later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} />),
+  modes: () => later(<ModesPage />),
+  vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),
+  history: ({ dispatch }) => later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} openDictation={() => dispatch({ type: "go", page: "dictation" })} />),
   capture: () => later(<CapturePage />),
 };

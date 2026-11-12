@@ -1,5 +1,6 @@
-import type { HistoryEntry, HistoryQuery } from "./history";
+import type { AudioTrash, HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus, RemoveReport } from "./history";
 import type { HistoryStats } from "./history-search";
+import type { Rewriter } from "./modes/rewrite";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
 import type { Settings } from "./settings";
 
@@ -50,7 +51,11 @@ export type TranscribeResult = { ok: true; text: string; language?: string; mode
 
 export interface Transcriber {
   /** Empty text means no speech was found. */
-  transcribe(req: { clip: Clip; language: string }): Promise<TranscribeResult>;
+  transcribe(req: {
+    clip: Clip;
+    language: string;
+    /** Words to bias the model towards; empty when there are none or the switch is off. The port drops it for a model that cannot read one. */ prompt?: string;
+  }): Promise<TranscribeResult>;
 }
 
 export interface Inserter {
@@ -64,6 +69,15 @@ export interface Inserter {
 export interface HistoryStorage {
   load(): Promise<unknown>;
   save(value: unknown): Promise<void>;
+  /** Keeps a copy of the file as it is, before the app goes on without it (a newer or unreadable file); gives the copy's name. */
+  preserve?(reason: "newer" | "unreadable"): Promise<string | undefined | void>;
+}
+
+/** Recordings kept next to the history. */
+export interface AudioStore extends AudioTrash {
+  /** Saves the clip; undefined when it could not be written (the history entry then has no recording). */
+  save(id: string, clip: Clip): Promise<string | undefined>;
+  load(file: string): Promise<Clip | undefined>;
 }
 
 export type DictationErrorCode =
@@ -102,6 +116,10 @@ export interface DictationDeps {
   keepClip?(clip: Clip, why: "silent" | "interrupted" | "failed"): void;
   /** One line per stage that failed or ran out of time and passed its input on. Never receives spoken text. */
   log?(stage: string, why: string): void;
+  /** Where recordings are kept; without it nothing is recorded whatever the setting says. */
+  audio?: AudioStore;
+  /** The writer for modes that rewrite; without it a rewrite is skipped. */
+  rewriter?: Rewriter;
   /** Starting values; later changes go through `configure`. Missing keys take `defaultSettings`. */
   settings?: Partial<Settings>;
   /** The feature that holds the microphone right now (voice chat, a screen look, a capture), or undefined when it is free. Dictation does not start while one does. */
@@ -137,15 +155,25 @@ export interface Dictation {
   /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */
   pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed">;
   history: {
-    list(query?: HistoryQuery): Promise<HistoryEntry[]>;
+    list(query?: HistoryQuery): Promise<HistoryHit[]>;
+    get(id: string): Promise<HistoryEntry | undefined>;
     /** Puts the saved text on the clipboard. */
     copy(id: string): Promise<boolean>;
     /** Inserts the saved text again into the window in front now, the way a new dictation would; false when it could not be inserted. */
     insert(id: string): Promise<boolean>;
-    remove(id: string): Promise<void>;
-    removeMany(ids: readonly string[]): Promise<void>;
+    /** The last `n` texts, newest first, for "Copy recent". */
+    recent(n: number): Promise<HistoryEntry[]>;
+    remove(id: string): Promise<RemoveReport>;
+    removeMany(ids: readonly string[]): Promise<RemoveReport>;
+    clear(): Promise<RemoveReport>;
     stats(): Promise<HistoryStats>;
-    clear(): Promise<void>;
+    status(): HistoryStatus;
+    preservedAs(): string | undefined;
+    addVersion(id: string, v: { model: string; at: number; text: string; ms: number }): Promise<string | undefined>;
+    useVersion(id: string, versionId: string): Promise<boolean>;
+    /** The kept recording of an entry, or undefined. */
+    audio(id: string): Promise<Clip | undefined>;
+    dropAudio(files: readonly string[]): Promise<void>;
   };
   dispose(): void;
 }

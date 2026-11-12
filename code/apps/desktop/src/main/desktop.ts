@@ -38,7 +38,7 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({

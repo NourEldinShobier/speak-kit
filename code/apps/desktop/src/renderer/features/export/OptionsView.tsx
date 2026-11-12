@@ -1,5 +1,5 @@
-import { Banner, Button, Select, TextInput } from "@speakkit/ui";
-import { estimateBytes, type ExportConflict, type ExportTarget } from "../../../shared/export";
+import { Banner, Button, Checkbox, Select, TextInput } from "@speakkit/ui";
+import { estimateBytes, headingsOf, type ExportCaptions, type ExportConflict, type ExportTarget } from "../../../shared/export";
 import type { AppState } from "../../../shared/ipc";
 import { MP3_KBPS } from "../../../shared/schemas";
 import { api, formatBytes } from "../../ui";
@@ -41,6 +41,42 @@ function FormatField({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
   );
 }
 
+export const CAPTION_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "srt", label: "SRT (subtitles for most video players)" },
+  { value: "vtt", label: "WebVTT (subtitles for web players)" },
+];
+
+function chaptersNote(wav: boolean, headings: number): string {
+  if (wav) return "WAV files cannot hold chapter markers. Captions still work.";
+  if (!headings) return "No headings found. A heading is a line that starts with #.";
+  return `${headings} ${headings === 1 ? "heading" : "headings"} found in the text.`;
+}
+
+/** Captions and chapter markers: both off by default. WAV cannot hold chapters, and the line says so. */
+function ExtrasFields({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
+  const { format, captions, chapters, text } = st.form;
+  const headings = headingsOf(text).length;
+  const wav = format === "wav";
+  return (
+    <>
+      <div className="sk-field">
+        <span>Captions</span>
+        <Select label="Captions" value={captions} onChange={(v) => dispatch({ type: "edit", patch: { captions: v as ExportCaptions } })} options={CAPTION_OPTIONS} />
+      </div>
+      <div className="sk-field">
+        <span>Chapters</span>
+        <div className="sk-export__chapters">
+          <Checkbox label="Add chapter markers" checked={!wav && chapters} disabled={wav} onChange={(e) => dispatch({ type: "edit", patch: { chapters: e.target.checked } })} />
+          <span className="sk-modal-text" data-testid="chapters-note">
+            {chaptersNote(wav, headings)}
+          </span>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function FolderField({ st, dispatch }: Pick<ViewProps, "st" | "dispatch">) {
   const { dir } = st.form;
   const browse = async () => dispatch({ type: "edit", patch: { dir: (await api.pickFolder(dir)) ?? dir } });
@@ -75,6 +111,7 @@ function OptionsBody({ s, st, dispatch }: Pick<ViewProps, "s" | "st" | "dispatch
         <textarea className="sk-area" aria-label="Text to export" value={text} onChange={(e) => edit({ text: e.target.value })} rows={5} />
       </label>
       <FormatField st={st} dispatch={dispatch} />
+      <ExtrasFields st={st} dispatch={dispatch} />
       <div className="sk-field">
         <span>Voice</span>
         <Select label="Voice" value={voice} onChange={(v) => edit({ voice: v })} options={voiceOptions} />

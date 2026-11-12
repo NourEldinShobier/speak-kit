@@ -8,24 +8,34 @@ import type { DictationService } from "./service";
 type Handlers = Pick<DictationBridge, DictationMethod>;
 
 const handlersOf = (d: DictationService): Handlers => ({
-  status: async () => (await d.ready, d.status()),
+  status: async () => (await d.ready, await d.records.refreshKey(), d.status()),
   setEnabled: (on) => d.setEnabled(on),
   patchSettings: (patch) => d.patchSettings(patch),
   downloadModel: (id) => d.download(id),
   cancelDownload: () => d.cancelDownload(),
-  historyList: (search) => d.history.list(search),
+  historyList: (search) => d.records.list(search),
   historyCopy: (id) => d.history.copy(id),
-  historyRemove: (id) => d.history.remove([id]),
-  historyClear: () => d.history.clear(),
-  historyRemoveMany: (ids) => d.history.remove(ids),
-  historyStats: () => d.history.stats(),
+  historyRemove: (id) => d.records.remove([id]),
+  historyClear: () => d.records.clear(),
+  historyRemoveMany: (ids) => d.records.remove(ids),
   micDevices: async () => (await d.ready, await d.mic.list(), d.status()),
   micMeter: async (on) => (await d.ready, d.mic.setMeter(on)),
-  retry: () => d.retry(),
+  retry: () => d.actions.retry(),
   setPaused: async (on) => (await d.ready, d.controls.setPaused(on), d.status()),
   pasteLast: async () => (await d.ready, d.controls.pasteLast()),
   undoCancel: async () => (await d.ready, d.controls.undoCancel()),
-  openSoundSettings: () => d.openSoundSettings(),
+  openSoundSettings: () => d.actions.openSoundSettings(),
+  historyStats: () => d.records.stats(),
+  historyRecent: (n) => d.records.recent(n),
+  historyUseVersion: (id, vid) => d.records.useVersion(id, vid),
+  historyRetranscribe: (id, model) => d.records.retranscribe(id, model),
+  historyCancelRetranscribe: () => d.records.cancelRetranscribe(),
+  historyAudio: (id) => d.records.audio(id),
+  historyDeleteRecording: (id) => d.records.deleteRecording(id),
+  historyExport: () => d.records.export(),
+  historyDismissNotice: () => d.records.dismissNotice(),
+  vocabImport: () => d.records.vocabImport(),
+  vocabExport: (format, text) => d.records.vocabExport(format, text),
 });
 
 /** The Settings pages call these (only the app window may); the HUD page may only press its own buttons. Arguments are checked before any handler runs. */
@@ -40,6 +50,6 @@ export function registerDictationIpc(d: DictationService, isAppWindow: (contents
   });
   ipcMain.on(HUD_ACTION, (e, action) => {
     const parsed = v.safeParse(HudActionSchema, action);
-    if (parsed.success && d.ownsHud(e.sender)) d.hudAction(parsed.output);
+    if (parsed.success && d.ownsHud(e.sender)) d.actions.hudAction(parsed.output);
   });
 }

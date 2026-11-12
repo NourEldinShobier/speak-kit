@@ -1,6 +1,6 @@
 import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
-import { copyEntry, insertEntry } from "./history-actions";
+import { historyApi } from "./history-actions";
 import type { Target } from "./paste-plan";
 import { failureOf, foreground, pasteLast, runJob, type Job, type Outcome } from "./pipeline";
 import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
@@ -57,16 +57,8 @@ class Runtime implements Dictation {
   constructor(deps: DictationDeps) {
     this.deps = deps;
     this.settings = { ...defaultSettings, ...deps.settings };
-    this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention });
-    this.history = {
-      list: (query) => this.store.list(query),
-      copy: (id) => copyEntry({ store: this.store, deps: this.deps }, id),
-      insert: (id) => (this.disposed ? Promise.resolve(false) : insertEntry({ store: this.store, deps: this.deps, settings: this.settings }, id)),
-      remove: (id) => this.store.remove(id),
-      removeMany: (ids) => this.store.removeMany(ids),
-      stats: () => this.store.stats(),
-      clear: () => this.store.clear(),
-    };
+    this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention, ...(deps.audio && { audio: deps.audio }), terms: () => this.settings.terms });
+    this.history = historyApi({ store: this.store, deps: this.deps, settings: () => this.settings, disposed: () => this.disposed });
     this.lastState = JSON.stringify(this.state());
     this.live = this.install();
   }

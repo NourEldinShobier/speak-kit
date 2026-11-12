@@ -5,13 +5,19 @@
  */
 export { createDictation } from "./dictation";
 export { defaultSettings, type InsertMode, type Mode, type Replacement, type Retention, type Settings } from "./settings";
-export { readStoredHistory, type HistoryEntry, type HistoryQuery } from "./history";
+export type { HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus, RemoveReport, Version } from "./history";
+export { MAX_AUDIO_BYTES, planEviction, readStoredHistory, timeLeft, WINDOW_MS } from "./history";
 export { historyStats, normalize, rank, type HistoryStats } from "./history-search";
 export * from "./mic";
 export * from "./capture";
 export * from "./ducking";
+export * from "./vocabulary";
+export * from "./modes";
+export type { Mode as WritingMode } from "./modes";
+export { applyReplacements, applyRules, traceRules, isNumbersOnly, FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES, type RulesOptions, type RulesTrace } from "./rules";
 export type { CopyReason, PastePlan, Target } from "./paste-plan";
 export type {
+  AudioStore,
   CaptureHandle,
   CaptureResult,
   Clip,

@@ -16,6 +16,8 @@ export interface Call {
   samples: number;
   peak: number;
   pcm: number[];
+  /** The words sent along; absent when none were. */
+  prompt?: string;
 }
 
 const ALL = ["large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"];
@@ -90,9 +92,9 @@ export class FakeStt implements Stt {
     );
   }
 
-  async transcribe(pcm: Int16Array, language: SttLanguage, signal?: AbortSignal): Promise<Transcript> {
+  async transcribe(pcm: Int16Array, language: SttLanguage, { signal, prompt }: { signal?: AbortSignal; prompt?: string } = {}): Promise<Transcript> {
     if (this.#state !== "ready") throw new EngineNotReadyError(this.#state as never);
-    this.#calls.push({ language, samples: pcm.length, peak: pcm.reduce((m, x) => Math.max(m, Math.abs(x)), 0), pcm: [...pcm] });
+    this.#calls.push({ language, samples: pcm.length, peak: pcm.reduce((m, x) => Math.max(m, Math.abs(x)), 0), pcm: [...pcm], ...(prompt && { prompt }) });
     if (this.#script.hang) {
       this.#script.hang = false;
       await new Promise<never>((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason), { once: true }));

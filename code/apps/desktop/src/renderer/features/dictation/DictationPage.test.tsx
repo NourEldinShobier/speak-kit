@@ -54,6 +54,10 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   readerShortcuts: {},
   mic: { kind: "ready", label: "Microphone Array" },
   devices: [],
+  historyStatus: "ok",
+  historyRev: 0,
+  keptRecordings: 0,
+  rewriteKey: false,
   ...over,
 });
 const page = (s: DictationStatus | null, open = () => undefined) => ((current.status = s), renderToStaticMarkup(<DictationPage openHistory={open} />));
@@ -80,7 +84,7 @@ describe("Settings > Dictation", () => {
     expect(text(page(null))).toContain("Dictation Hold a key, speak");
   });
 
-  it("lists the general settings, the models, the replacements, the test field and the history", () => {
+  it("lists the general settings, the models, the clean-up rules, the test field and the history", () => {
     const t = text(page(status()));
     for (const s of [
       "General",
@@ -103,9 +107,9 @@ describe("Settings > Dictation", () => {
       "Nothing is skipped by name.",
       "Speech model",
       "Whisper Large v3 Turbo",
-      "Replacements",
-      "gonna",
-      "going to",
+      "Clean-up",
+      "Remove filler words",
+      "Try a sentence",
       "Test dictation",
       "History",
       "View history",
@@ -121,7 +125,7 @@ describe("Settings > Dictation", () => {
     expect(html.match(/>Default</g)).toHaveLength(1);
     expect(html).toMatch(/<input[^>]*aria-label="Whisper Large v3 Turbo"[^>]*checked/);
     expect(html).toMatch(/<input[^>]*disabled[^>]*aria-label="Parakeet v3"/);
-    expect(html).not.toContain("lm-field__label"); // the replacement fields carry no visible label
+    expect(html).not.toContain("lm-field__label"); // the tester field carries no visible label
   });
 
   it("shows a download in progress with Cancel and the size done", () => {
@@ -137,7 +141,8 @@ describe("Settings > Dictation", () => {
         { ...parakeet, installed: true, selected: true },
       ],
     });
-    expect(page(onParakeet)).not.toContain("Arabic");
+    // The language list is the Language select; the clean-up scope chips name Arabic for the rules that have a table.
+    expect(text(page(onParakeet)).match(/Arabic/g)).toHaveLength(1);
   });
 
   it("says when dictation cannot run on this platform, and the switch is disabled", () => {
@@ -149,25 +154,25 @@ describe("Settings > Dictation", () => {
   it("shows the set-up card instead of the settings while the chosen model is not installed", () => {
     const t = text(page(status({ models: [{ ...turbo, installed: false, progress: { kind: "downloading", fraction: 0.63, etaSeconds: 60 } }, parakeet], modelReady: false, modelInstalled: false })));
     expect(t).toContain("Set up dictation");
-    expect(t).not.toContain("Replacements");
+    expect(t).not.toContain("Clean-up");
   });
 
   it("does not take the page away while a second model downloads", () => {
     const t = text(page(status({ modelReady: false, models: [turbo, { ...parakeet, progress: { kind: "downloading", fraction: 0.1 } }] })));
-    expect(t).toContain("Replacements");
+    expect(t).toContain("Clean-up");
     expect(t).not.toContain("Set up dictation");
   });
 
   it("shows a failed second download as a notice on the page", () => {
     const t = text(page(status({ modelError: "The download was cut off." })));
     expect(t).toContain("The speech model could not be set up The download was cut off.");
-    expect(t).toContain("Replacements");
+    expect(t).toContain("Clean-up");
   });
 
   it("shows only the card when the chosen model is loading", () => {
     const t = text(page(status({ modelReady: false })));
     expect(t).toContain("Preparing the model");
-    expect(t).not.toContain("Replacements");
+    expect(t).not.toContain("Clean-up");
   });
 });
 
@@ -198,29 +203,61 @@ describe("first run card", () => {
 });
 
 describe("history page", () => {
-  it("shows the empty state with the hotkey", () => {
+  it("shows the empty state with the hotkey, and no totals", () => {
     current.status = status({ historyCount: 0 });
-    const html = renderToStaticMarkup(<DictationHistoryPage back={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />);
     expect(text(html)).toContain("Nothing dictated yet");
     expect(text(html)).toContain("Hold the hotkey in any app and speak. What you dictate shows up here for 7 days.");
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Clear all/);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*(<svg[^>]*>.*?<\/svg>)?\s*Copy recent/);
+    expect(text(html)).not.toContain("Listening time");
   });
 
-  it("has the way back, the lead and a search field before the entries have loaded", () => {
+  it("has the lead, the search field and the two views before the entries have loaded", () => {
     current.status = status();
-    const html = renderToStaticMarkup(<DictationHistoryPage back={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />);
     const t = text(html);
-    expect(t).toContain("Dictation history");
-    expect(t).toContain("What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
     expect(t).toContain("Clear all");
     expect(t).toContain("Statistics");
     expect(t).toContain("Select");
+    expect(t).toContain("Final text");
+    expect(t).toContain("Side by side");
+    expect(t).toContain("Copy recent");
+    expect(html).toContain('aria-label="More history actions"');
+  });
+
+  it("warns when the file came from a newer Speak Kit, with a way to check for updates", () => {
+    current.status = status({ historyStatus: "newer" });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
+    expect(t).toContain("This history was saved by a newer Speak Kit");
+    expect(t).toContain("left unchanged and a copy was made");
+    expect(t).toContain("Check for updates");
+    current.status = status();
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).not.toContain("newer Speak Kit");
+  });
+
+  it("tells the person when the history file could not be read, naming the kept copy", () => {
+    current.status = status({ historyStatus: "unreadable", historyCopy: "history.unreadable-5.json" });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
+    expect(t).toContain("The history file could not be read");
+    expect(t).toContain("A copy was kept as history.unreadable-5.json next to it.");
+    current.status = status({ historyStatus: "unreadable" });
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).not.toContain("A copy was kept");
+    current.status = status();
+  });
+
+  it("reports recordings the Recycle Bin would not take, with the count", () => {
+    current.status = status({ keptRecordings: 2 });
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
+    expect(t).toContain("A recording could not be moved to the Recycle Bin");
+    expect(t).toContain("2 files are still in Speak Kit");
+    current.status = status({ keptRecordings: 1 });
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).toContain("The file is still in");
   });
 });
 
 describe("history rows", () => {
-  const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", app: "chrome.exe" };
+  const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", raw: "send the report to dana by friday", durationMs: 3000, expiresInMs: null, app: "chrome.exe" };
   const row = (copied: boolean) => renderToStaticMarkup(<HistoryRow item={item} copied={copied} onCopy={() => undefined} onDelete={() => undefined} />);
 
   it("names both buttons after the entry, so a screen reader can tell the rows apart", () => {
@@ -241,7 +278,7 @@ describe("history rows", () => {
 });
 
 describe("history rows, details and selection", () => {
-  const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report" };
+  const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report", raw: "send the report", durationMs: 3000, expiresInMs: null };
   const html = (item: object, selection?: { checked: boolean; toggle: () => void }) =>
     renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
 
@@ -262,13 +299,5 @@ describe("history rows, details and selection", () => {
     const h = html({}, { checked: true, toggle: () => undefined });
     expect(h).toContain('aria-label="Select: Send the report"');
     expect(h).toContain("checked");
-  });
-});
-
-describe("replacement rows", () => {
-  it("use the full-size icon button, not the small one", () => {
-    const html = page(status());
-    expect(html).toContain('class="lm-btn lm-btn--icon dict-repl__del"');
-    expect(html).not.toContain("lm-btn--sm dict-repl__del");
   });
 });

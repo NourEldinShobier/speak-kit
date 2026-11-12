@@ -87,11 +87,11 @@ export function fakeRecorder() {
 }
 
 export function fakeTranscriber(text = "hello world") {
-  const calls: { language: string; samples: number }[] = [];
+  const calls: { language: string; samples: number; prompt?: string }[] = [];
   const state = { result: { ok: true, text } as TranscribeResult, gate: undefined as Promise<void> | undefined, queue: [] as TranscribeResult[] };
   const transcriber: Transcriber = {
-    async transcribe({ clip, language }) {
-      calls.push({ language, samples: clip.pcm.length });
+    async transcribe({ clip, language, prompt }) {
+      calls.push({ language, samples: clip.pcm.length, ...(prompt !== undefined && { prompt }) });
       await state.gate;
       return state.queue.shift() ?? state.result;
     },
@@ -116,7 +116,15 @@ export function fakeInserter() {
 }
 
 export function fakeStorage(initial?: unknown) {
-  const state = { value: initial, saves: 0, failSave: false, failLoad: false };
+  // `value` is the list of entries (the file's first format loads too); `raw` is exactly what was last saved.
+  const state: { value: unknown; raw: unknown; saves: number; failSave: boolean; failLoad: boolean; preserved: string[] } = {
+    value: initial,
+    raw: undefined,
+    saves: 0,
+    failSave: false,
+    failLoad: false,
+    preserved: [],
+  };
   const storage: HistoryStorage = {
     async load() {
       if (state.failLoad) throw new Error("unreadable");
@@ -125,14 +133,19 @@ export function fakeStorage(initial?: unknown) {
     async save(value) {
       state.saves++;
       if (state.failSave) throw new Error("disk full");
-      state.value = value;
+      state.raw = value;
+      state.value = (value as { entries?: unknown }).entries ?? value;
+    },
+    async preserve(reason) {
+      state.preserved.push(reason);
+      return `history.${reason}-${state.preserved.length}.json`;
     },
   };
   return { storage, state };
 }
 
 /** A dictation wired to fakes at every boundary, with the hotkey installed. */
-export async function rig(settings: Partial<Settings> = { keepReady: true }, storage = fakeStorage()) {
+export async function rig(settings: Partial<Settings> = { keepReady: true }, storage = fakeStorage(), extra: Partial<DictationDeps> = {}) {
   const time = fakeClock();
   const keys = fakeKeyboard();
   const rec = fakeRecorder();
@@ -146,6 +159,7 @@ export async function rig(settings: Partial<Settings> = { keepReady: true }, sto
     hotkeys: keys.source,
     storage: storage.storage,
     settings: { keepReady: true, ...settings },
+    ...extra,
   };
   const dictation: Dictation = createDictation(deps);
   await dictation.ready();

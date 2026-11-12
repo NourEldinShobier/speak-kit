@@ -147,3 +147,100 @@ export function toggled(picked: ReadonlySet<string> | null, id: string): Set<str
   if (!next.delete(id)) next.add(id);
   return next;
 }
+
+export interface Mark {
+  text: string;
+  /** The word differs from the other side. */
+  changed: boolean;
+}
+
+const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}@]/gu, "");
+
+/** Words of `a` marked when `b` does not have them in the same place (longest common run of words, ignoring case and punctuation). */
+function diff(a: string[], b: string[]): boolean[] {
+  const n = a.length;
+  const m = b.length;
+  const len = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => 0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) len[i]![j] = norm(a[i]!) && norm(a[i]!) === norm(b[j]!) ? len[i + 1]![j + 1]! + 1 : Math.max(len[i + 1]![j]!, len[i]![j + 1]!);
+  const changed = Array.from({ length: n }, () => true);
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (norm(a[i]!) && norm(a[i]!) === norm(b[j]!)) {
+      changed[i] = false;
+      i++;
+      j++;
+    } else if (len[i + 1]![j]! >= len[i]![j + 1]!) i++;
+    else j++;
+  }
+  return changed;
+}
+
+const split = (s: string): string[] => s.match(/\S+/g) ?? [];
+
+/** What the model heard and what was pasted, each with the words that changed marked. Very long texts are compared in full too: the sizes are small (a dictation). */
+export function markChanges(heard: string, pasted: string): { heard: Mark[]; pasted: Mark[] } {
+  const a = split(heard);
+  const b = split(pasted);
+  if (a.length * b.length > 250_000) return { heard: a.map((text) => ({ text, changed: false })), pasted: b.map((text) => ({ text, changed: false })) };
+  const ca = diff(a, b);
+  const cb = diff(b, a);
+  return { heard: a.map((text, i) => ({ text, changed: ca[i]! })), pasted: b.map((text, i) => ({ text, changed: cb[i]! })) };
+}
+
+/** "38 min", "1 h 5 min", "45 s" for the stats strip. */
+export function listeningText(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const min = Math.round(s / 60);
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
+}
+
+export const numberText = (n: number): string => n.toLocaleString("en-US");
+
+/** The tag under an entry that went through the rewrite pass, or nothing. */
+export function rewriteTag(outcome: HistoryItem["rewrite"], deadlineMs: number): string | undefined {
+  switch (outcome) {
+    case "rewritten":
+      return "Rewritten";
+    case "deadline":
+      return `Pasted as said after ${deadlineMs / 1000} seconds`;
+    case "failed":
+      return "Pasted as said, the writer could not be reached";
+    case "numbers-only":
+      return "Not rewritten, only numbers";
+    case "changed-facts":
+      return "Pasted as said, the rewrite changed a number";
+    case "changed-style":
+      return "Pasted as said, the rewrite changed capital letters";
+    default:
+      return undefined;
+  }
+}
+
+/** "0:06" for a recording length. */
+export function clockText(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+
+/** "Removed in 3 days" under each history entry. */
+export function expiryText(ms: number | null, what = "Removed"): string {
+  if (ms === null) return "Kept for ever";
+  if (ms < MIN) return `${what} in less than a minute`;
+  if (ms < HOUR) return `${what} in ${plural(Math.ceil(ms / MIN), "minute")}`;
+  if (ms < DAY) return `${what} in ${plural(Math.ceil(ms / HOUR), "hour")}`;
+  return `${what} in ${plural(Math.ceil(ms / DAY), "day")}`;
+}
+
+/** The heading above the totals. */
+export function statsTitle(retention: DictationConfig["retention"]): string {
+  if (retention === "forever") return "All time";
+  if (retention === "off") return "Now";
+  return `Last ${RETENTION_OPTIONS.find((o) => o.value === retention)?.label.toLowerCase()}`;
+}
