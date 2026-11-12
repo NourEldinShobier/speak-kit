@@ -1,3 +1,4 @@
+/* oxlint-disable typescript/no-explicit-any, max-lines-per-function -- sent to the browser as text: one self-contained function over untyped page objects */
 /**
  * The script a development page includes to report clicks, console errors and failed requests to the local server:
  * `<script src="http://127.0.0.1:PORT/v1/capture/page-context/sdk.js" data-token="TOKEN"></script>`.
@@ -43,7 +44,12 @@ export function pageSdk(w: any, d: any): void {
     if (!el || el.nodeType !== 1) return;
     const tag = tagOf(el);
     const typed = tag === "input" || tag === "textarea" || tag === "select";
-    const label = typed ? "" : String(el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const label = typed
+      ? ""
+      : String(el.getAttribute("aria-label") || el.textContent || "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 80);
     const role = el.getAttribute("role");
     add({ type: "click", at: Date.now(), element: { tag, ...(role && { role: String(role).slice(0, 32) }), ...(label && { label }), path: pathOf(el) } });
   };

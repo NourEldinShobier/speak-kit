@@ -1,5 +1,6 @@
 import { nativeImage } from "electron";
 import { randomBytes } from "node:crypto";
+import type { TimeRange } from "./page-context";
 import type { NoticeParams, Notice } from "../../shared/capture/notices";
 import type { CaptureConfig } from "../../shared/capture/settings";
 import { writeCapture } from "./clipboard-out";
@@ -23,7 +24,7 @@ export interface SessionWiring {
   fence: Fence;
   recorder: RecorderHolder;
   settings(): CaptureConfig;
-  context(sourceId?: string): Promise<string | undefined>;
+  context(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
   events(): InputEvent[];
   /** False once the session this was made for was replaced: what it finishes later is not shown or copied. */
   current(): boolean;

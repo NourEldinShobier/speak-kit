@@ -7,6 +7,7 @@ import type { CaptureConfig } from "../../shared/capture/settings";
 import type { Ctx } from "../context";
 import { createAgentContext } from "./context";
 import { createEventLog } from "./events";
+import { createPageContext, type TimeRange } from "./page-context";
 import { Placement } from "./placement";
 import { RecorderHolder } from "./recorder-holder";
 import { capsuleHandlers } from "./capsule-actions";
@@ -59,7 +60,7 @@ export class CaptureRuntime {
   /** The recorder window; tests script it. */
   readonly recorder: RecorderHolder;
   readonly #place: Placement;
-  readonly #context: (sourceId?: string) => Promise<string | undefined>;
+  readonly #context: (sourceId: string | undefined, range: TimeRange) => Promise<string | undefined>;
   readonly #events = createEventLog({ now, startedAt: () => this.#session.state.startedAt, mode: () => this.#settings.inputLog });
   readonly #targets: TargetPicker;
   readonly #board: NoticeBoard;
@@ -87,7 +88,9 @@ export class CaptureRuntime {
       id: () => this.#session.state.id,
       log: (l) => deps.ctx.log.warn(l),
     });
-    this.#context = createAgentContext({ enabled: () => this.#settings.experiments.agentContext, os: deps.platform.os });
+    const windowText = createAgentContext({ enabled: () => this.#settings.experiments.agentContext, os: deps.platform.os });
+    const pageText = createPageContext({ enabled: () => this.#settings.experiments.pageContext, events: (r) => deps.ctx.server.pageEvents(r.from, r.to) });
+    this.#context = async (sourceId, range) => [await windowText(sourceId), await pageText(range)].filter(Boolean).join("\n\n") || undefined;
     this.#place = new Placement({ platform: deps.platform, state: () => this.#session.state, relocate: () => this.controller.relocate() });
     this.#targets = new TargetPicker({ platform: deps.platform, distDir: deps.distDir, settings: () => this.#settings, saveConfig: () => deps.ctx.saveConfig() });
     this.#session = this.#makeSession();

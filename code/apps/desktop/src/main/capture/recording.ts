@@ -1,3 +1,4 @@
+import type { TimeRange } from "./page-context";
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
 import type { RecorderResult } from "../../shared/capture/contract";
 import type { CaptureConfig } from "../../shared/capture/settings";
@@ -53,7 +54,7 @@ export interface RecordingDeps {
   micMissing(): void;
   noticeParams(): NoticeParams;
   /** The agent context text, or undefined when the experiment is off. */
-  context?(sourceId?: string): Promise<string | undefined>;
+  context?(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
   /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
   events?(): InputEvent[];
 }
@@ -115,7 +116,7 @@ class RecorderPorts {
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     // read first: stopping the recorder can change which window is in front
-    const context = await d.context?.(this.#current?.resolved.sourceId);
+    const context = await d.context?.(this.#current?.resolved.sourceId, { from: this.#current?.startedAt ?? d.now(), to: d.now() });
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
     d.fence.close();

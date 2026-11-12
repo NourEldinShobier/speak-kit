@@ -123,12 +123,17 @@ describe("page context routes", () => {
 });
 
 describe("page context from the browser", () => {
-  const fromPage = (c: Ctx, origin: string, path = "/v1/capture/page-context") => fetch(`${c.base}${path}`, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } });
+  const fromPage = (c: Ctx, origin: string, path = "/v1/capture/page-context") =>
+    fetch(`${c.base}${path}`, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } });
 
   it("answers the preflight of a page on this computer, for this route only", async () => {
     const c = (ctx = await start());
     const ok = await fromPage(c, "http://localhost:3000");
-    expect([ok.status, ok.headers.get("access-control-allow-origin"), ok.headers.get("access-control-allow-headers")]).toEqual([204, "http://localhost:3000", "Authorization, Content-Type, X-SpeakKit-Replace"]);
+    expect([ok.status, ok.headers.get("access-control-allow-origin"), ok.headers.get("access-control-allow-headers")]).toEqual([
+      204,
+      "http://localhost:3000",
+      "Authorization, Content-Type, X-SpeakKit-Replace",
+    ]);
     expect((await fromPage(c, "https://example.com")).status).toBe(403);
     expect((await fromPage(c, "http://localhost.evil.com")).status).toBe(403);
     expect((await fromPage(c, "http://localhost:3000", "/v1/speak")).status).toBe(403);
