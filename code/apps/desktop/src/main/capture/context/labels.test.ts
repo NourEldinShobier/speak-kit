@@ -54,6 +54,23 @@ describe("agent context labels", () => {
     expect(labelsOf(long).length).toBe(MAX_TEXT_CHARS);
   });
 
+  it("accepts every label role on either system, and only at the start of the role name", () => {
+    const roles = ["Window", "Button", "MenuItem", "TabItem", "CheckBox", "RadioButton", "ComboBox", "Hyperlink", "Edit", "Slider", "ToolBar", "Menu"];
+    for (const role of roles) expect(labelsOf([n(`ControlType.${role}`, "x")])).toBe(`${role.toLowerCase()}: x`);
+    for (const role of ["PopUpButton", "Link", "TextField", "Button", "Menu", "MenuItem", "CheckBox", "RadioButton", "ComboBox", "Slider", "Window", "ToolBar"])
+      expect(labelsOf([n(`AX${role}`, "x")])).toBe(`${role.toLowerCase()}: x`);
+    // a prefix that is not at the start is not stripped, so these roles are not label roles
+    expect(labelsOf([n("XControlType.Button", "x"), n("AXAXButton", "y"), n("XAXButton", "z")])).toBe("");
+  });
+
+  it("keeps a label of exactly 80 characters whole", () => {
+    expect(labelsOf([n("ControlType.Button", "y".repeat(MAX_LABEL_CHARS))])).toBe(`button: ${"y".repeat(MAX_LABEL_CHARS)}`);
+  });
+
+  it("goes on after a skipped password field only at a shallower or equal level", () => {
+    expect(labelsOf([n("ControlType.Edit", "Password", 1, true), n("ControlType.Button", "inside", 2), n("ControlType.Button", "same level", 1)])).toBe("button: same level");
+  });
+
   it("is empty for no controls", () => {
     expect(labelsOf([])).toBe("");
   });

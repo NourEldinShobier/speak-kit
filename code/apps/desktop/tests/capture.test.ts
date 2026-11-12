@@ -425,3 +425,60 @@ describe("input log", () => {
     expect(existsSync(path.join(l.userData, "captures", dir, "events.json"))).toBe(false);
   });
 });
+
+describe.runIf(process.platform === "win32")("own windows and real screen capture", () => {
+  it("the app window is absent from a real capture of the screen while recording, and present again after", async () => {
+    const l = await start({ config: ON });
+    await l.app.evaluate(({ BrowserWindow }) => {
+      const w = BrowserWindow.getAllWindows()[0]!;
+      w.setBounds({ x: 80, y: 80, width: 640, height: 480 });
+      w.setAlwaysOnTop(true, "screen-saver");
+      w.show();
+      w.focus();
+    });
+    await l.page.evaluate(() => {
+      const d = document.createElement("div");
+      d.style.cssText = "position:fixed;inset:0;background:#00ff00;z-index:2147483647";
+      document.body.append(d);
+    });
+    await new Promise((r) => setTimeout(r, 1200));
+    // the share of the middle of the window in the real capture that is the vivid green of the page
+    const greenShare = () =>
+      l.app.evaluate(async ({ BrowserWindow, desktopCapturer, screen }) => {
+        const b = BrowserWindow.getAllWindows()[0]!.getBounds();
+        const d = screen.getDisplayMatching(b);
+        const sf = d.scaleFactor;
+        const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: Math.round(d.size.width * sf), height: Math.round(d.size.height * sf) } });
+        const src = sources.find((s) => s.display_id === String(d.id)) ?? sources[0]!;
+        const img = src.thumbnail;
+        const { width } = img.getSize();
+        const bmp = img.toBitmap();
+        let green = 0;
+        let total = 0;
+        const x0 = Math.round((b.x - d.bounds.x + b.width / 2 - 100) * sf);
+        const y0 = Math.round((b.y - d.bounds.y + b.height / 2 - 100) * sf);
+        for (let y = y0; y < y0 + 200; y += 4)
+          for (let x = x0; x < x0 + 200; x += 4) {
+            const i = (y * width + x) * 4;
+            total++;
+            if (bmp[i + 1]! > 200 && bmp[i]! < 60 && bmp[i + 2]! < 60) green++;
+          }
+        return green / total;
+      });
+    // the real screen takes a moment to show a change: wait for it
+    const seen: string[] = [];
+    const untilShare = (step: string, ok: (n: number) => boolean) =>
+      until(async () => {
+        const n = await greenShare();
+        seen.push(`${step}:${n.toFixed(2)}`);
+        return ok(n);
+      }, 8000).catch((e: unknown) => {
+        throw new Error(`${String(e)} ${seen.slice(-6).join(" ")}`);
+      });
+    await untilShare("visible", (n) => n > 0.9);
+    await hook(l, "hideOwnWindows", true);
+    await untilShare("hidden", (n) => n < 0.05);
+    await hook(l, "hideOwnWindows", false);
+    await untilShare("visible again", (n) => n > 0.9);
+  });
+});

@@ -1,5 +1,6 @@
 import type { CapsuleAction } from "../../shared/capture/contract";
 import type { CaptureService } from "./service";
+import { hideOwnWindows } from "./windows";
 import type { FakeRecorderOptions } from "./fake";
 
 /** SPEAKKIT_TEST hooks for capture: run a whole capture with the scripted recorder and read what the session, the capsule and the files hold. */
@@ -16,6 +17,8 @@ export const captureTestHook = (c: CaptureService) => ({
   /** What the scripted recorder does on the next recordings: how many frames it makes, whether the microphone is missing. */
   script: (o: FakeRecorderOptions) => c.runtime.recorder.script(o),
   /** Same as pressing the capture key: "down" then "up" starts, a quick "down" "up" while recording stops. */
+  /** What the app does to its own windows while recording: out of any screen capture (true) or back in (false). */
+  hideOwnWindows: (on: boolean) => hideOwnWindows(on),
   /** Same as pressing the screen recording key. */
   record: () => c.runtime.toggleScreenRecording(),
   /** Whether narration was asked for in each recording started so far. */
