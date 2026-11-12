@@ -9,6 +9,8 @@ export interface JobDeps {
   transcribe(pcm: Int16Array, language: string, signal: AbortSignal): Promise<ChunkResult>;
   /** Resolves when dictation is not using the engine. Called before every chunk, so a dictation waits at most one chunk. Must resolve early when `signal` aborts. */
   clear?(signal: AbortSignal): Promise<void>;
+  /** Resolves when dictation wants the engine while a chunk runs: that chunk is stopped and run again once `clear` allows. Must resolve early when `signal` aborts. */
+  preempt?(signal: AbortSignal): Promise<void>;
   /** How long one chunk of this many seconds may take before the engine is taken to be hung. */
   deadlineMs?(sec: number): number;
   /** After every chunk, with all segments so far. The caller saves them: that is the checkpoint a resume starts from. */
@@ -36,12 +38,14 @@ export interface JobResult {
 /** The reason a chunk is aborted with when the engine took too long: the caller then restarts the engine. */
 export const HUNG = "transcription timed out";
 
+const PREEMPTED = Symbol("preempted");
+
 const defaultDeadline = (sec: number) => 20_000 + Math.ceil(sec) * 6_000;
 
 /**
  * Transcribes audio chunk by chunk and keeps what it has: a cancel, a quit or a failure returns the segments done so far with the number of chunks done, and a later
  * run with that `resume` continues from there. A chunk that fails is tried once more; a missing or still loading model stops the job at once. Every chunk waits for
- * `clear`, which is how dictation goes first.
+ * `clear`; a chunk that is already running gives way too (see `preempt`) and is run again afterwards, which is how dictation goes first.
  */
 export async function runJob(deps: JobDeps, { pcm, language, resume, signal }: JobStart): Promise<JobResult> {
   const plan = planChunks(pcm, deps.chunks);
@@ -56,10 +60,14 @@ export async function runJob(deps: JobDeps, { pcm, language, resume, signal }: J
     if (signal.aborted) return stopped();
     const { from, to } = plan[done]!;
     const part = pcm.subarray(from, to);
-    let r: ChunkResult = { ok: false, code: "failed" };
-    for (let attempt = 0; attempt < 2 && !r.ok && r.code === "failed"; attempt++) {
+    let r: ChunkResult | typeof PREEMPTED = { ok: false, code: "failed" };
+    for (let attempt = 0; attempt < 2 && r !== PREEMPTED && !r.ok && r.code === "failed"; attempt++) {
       if (signal.aborted) return stopped();
       r = await once(deps, part, language, signal, (to - from) / RATE);
+    }
+    if (r === PREEMPTED) {
+      if (signal.aborted) return stopped();
+      continue; // the same chunk again, after `clear`
     }
     // A chunk that finished is kept even if the stop came while it ran; a failed one during a stop is just the stop.
     if (!r.ok && signal.aborted) return stopped();
@@ -79,16 +87,24 @@ export async function runJob(deps: JobDeps, { pcm, language, resume, signal }: J
   return result("done");
 }
 
-async function once(deps: JobDeps, part: Int16Array, language: string, signal: AbortSignal, sec: number): Promise<ChunkResult> {
+async function once(deps: JobDeps, part: Int16Array, language: string, signal: AbortSignal, sec: number): Promise<ChunkResult | typeof PREEMPTED> {
   const own = new AbortController();
+  let preempted = false;
   const relay = () => own.abort(signal.reason);
   signal.addEventListener("abort", relay, { once: true });
   const timer = setTimeout(() => own.abort(new Error(HUNG)), (deps.deadlineMs ?? defaultDeadline)(sec));
+  void deps.preempt?.(own.signal).then(() => {
+    if (own.signal.aborted) return;
+    preempted = true;
+    own.abort(new Error("dictation goes first"));
+  });
   try {
-    return await deps.transcribe(part, language, own.signal);
+    const r = await deps.transcribe(part, language, own.signal);
+    return r.ok || !preempted ? r : PREEMPTED;
   } catch {
-    return { ok: false, code: "failed" };
+    return preempted ? PREEMPTED : { ok: false, code: "failed" };
   } finally {
+    own.abort(); // ends the preempt watch
     clearTimeout(timer);
     signal.removeEventListener("abort", relay);
   }

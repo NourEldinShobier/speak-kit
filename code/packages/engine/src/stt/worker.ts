@@ -1,6 +1,7 @@
 // Runs as a child process (see channel.ts). Plain Node-runnable TS (type stripping): no enums, no extensionless relative value imports.
 import * as v from "valibot";
 import type { ParakeetContext, WhisperContext, WhisperVadContext } from "@fugood/whisper.node";
+import { runControl } from "./run-control.ts";
 import { speechRange } from "./speech-range.ts"; // the extension is what node needs to run this file as it is, without a build
 import { hostPort } from "../host-port.ts";
 import type { SttFromWorker, SttToWorker, SttWorkerInit } from "./worker-protocol";
@@ -26,10 +27,16 @@ let vad: WhisperVadContext;
 
 const ab = (a: Int16Array) => a.buffer.slice(a.byteOffset, a.byteOffset + a.byteLength) as ArrayBuffer;
 
+const control = runControl((e) =>
+  process.stderr.write(`could not stop the speech job: ${e instanceof Error ? e.message : String(e)}
+`),
+); // the job then runs to its end and its answer is dropped
+
 async function recognize(pcm: Int16Array, language: string, prompt?: string): Promise<string> {
   const opts = { maxThreads: init.threads };
-  const { promise } =
+  const { promise, stop } =
     init.engine === "parakeet" ? (model as ParakeetContext).transcribeData(ab(pcm), opts) : (model as WhisperContext).transcribeData(ab(pcm), { ...opts, language, ...(prompt && { prompt }) });
+  control.attach(stop);
   return (await promise).result.trim();
 }
 
@@ -80,15 +87,19 @@ async function load(): Promise<void> {
   });
 }
 
-async function run(m: SttToWorker): Promise<void> {
+async function run(m: Extract<SttToWorker, { type: "transcribe" }>): Promise<void> {
+  if (!control.start(m.id)) return;
   try {
     const segs = await vad.detectSpeechData(ab(m.pcm), VAD);
+    if (control.aborted()) return;
     const range = speechRange(segs, m.pcm.length);
     if (!range) return send({ type: "result", id: m.id, text: "", speech: false });
     const text = await recognize(m.pcm.subarray(range.from, range.to), m.language, m.prompt);
     send({ type: "result", id: m.id, text, speech: true });
   } catch (e) {
     send({ type: "error", id: m.id, message: e instanceof Error ? e.message : String(e) });
+  } finally {
+    control.end();
   }
 }
 
@@ -97,6 +108,7 @@ let chain: Promise<void> = load().catch((e) => {
   send({ type: "fatal", message: e instanceof Error ? e.message : String(e) });
 });
 port.onMessage((m: SttToWorker) => {
+  if (m.type === "abort") return control.abort(m.id); // not queued behind the running job: it is the one to stop
   chain = chain.then(() => (model ? run(m) : send({ type: "error", id: m.id, message: "speech model failed to load" })));
 });
 process.on("disconnect", () => process.exit(0)); // the app went away

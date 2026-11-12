@@ -23,6 +23,15 @@ else
     gpuKind: vk === "1" && !init.modelPath.includes("igpu") ? "discrete" : "integrated",
   });
 process.on("message", (m) => {
+  if (m.type === "abort")
+    return (
+      process.env.SPEAKKIT_FAKE_LOG &&
+      appendFileSync(
+        process.env.SPEAKKIT_FAKE_LOG,
+        `abort id=${m.id}
+`,
+      )
+    );
   if (m.pcm[0] === 999) return;
   if (m.pcm.every((s) => s === 0)) return process.send({ type: "result", id: m.id, text: "", speech: false });
   process.send({ type: "result", id: m.id, text: `${init.engine}:${m.pcm.length}:${m.language}${m.prompt ? `:prompt=${m.prompt}` : ""}`, speech: true });
