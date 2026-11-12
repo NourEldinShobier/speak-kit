@@ -27,6 +27,8 @@ interface Deps {
   models?(): readonly SttModel[];
   /** One transfer per model; a second request for a model that is downloading joins it. */
   transfers?: Transfers;
+  /** Why the speech engine cannot start on this computer (a processor without the needed instructions); nothing is loaded or downloaded then. */
+  blocked?(): string | undefined;
 }
 
 /**
@@ -88,6 +90,8 @@ export class ModelManager {
   #reload(keepError: boolean): void {
     const id = this.#d.selected();
     if (!this.isInstalled(id) || this.#d.stt.status().state === "ready") return;
+    const blocked = this.#d.blocked?.();
+    if (blocked) return void this.report(blocked);
     void this.#d.stt.warm(id as SttModelId).then(() => {
       const s = this.#d.stt.status();
       if (s.state === "error") this.error = s.detail ?? "The speech model could not be loaded.";
@@ -104,6 +108,8 @@ export class ModelManager {
 
   /** Downloads (if needed) and loads the model, and makes it the one dictation uses. A second call for the same model joins the first. */
   async download(id: DictationModelId): Promise<void> {
+    const blocked = this.#d.blocked?.();
+    if (blocked) return this.report(blocked);
     if (this.#job && this.#job.id !== id) return;
     if (this.#job?.id === id) return void (await this.#running);
     this.#running = this.#download(id);

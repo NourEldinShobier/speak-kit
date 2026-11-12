@@ -223,6 +223,31 @@ function scripted() {
   return { stt, starts, finish: () => finish?.(), failWith: (e: Error) => (fail = e) };
 }
 
+describe("hardware floor", () => {
+  const blockedSetup = () => {
+    const stt = new FakeStt();
+    const state = { selected: TURBO as DictationModelId, changes: 0 };
+    const m = new ModelManager({ stt, selected: () => state.selected, select: (id) => (state.selected = id), changed: () => void state.changes++, blocked: () => "needs AVX2" });
+    return { stt, m, state };
+  };
+  it("loads nothing and shows the reason instead of starting the engine", async () => {
+    const { stt, m } = blockedSetup();
+    await m.refresh();
+    m.warm();
+    expect(stt.status().state).toBe("unloaded");
+    expect(m.error).toBe("needs AVX2");
+  });
+  it("downloads nothing either", async () => {
+    const { stt, m } = blockedSetup();
+    await stt.setInstalled(PARAKEET, false);
+    await m.refresh();
+    await m.download(PARAKEET);
+    expect(m.busy).toBe(false);
+    expect(m.error).toBe("needs AVX2");
+    expect(stt.status().state).toBe("unloaded");
+  });
+});
+
 describe("model manager downloads", () => {
   const make = (stt: Stt) => {
     const state = { selected: TURBO as DictationModelId };

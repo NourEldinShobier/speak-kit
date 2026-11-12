@@ -101,6 +101,7 @@ export class DictationService {
       changed: (soon) => this.#push(soon),
       models: () => this.speech.catalog(),
       transfers: new Transfers(),
+      blocked: () => this.speech.floorMessage(),
     });
     this.speech = new SpeechModels({
       modelsDir: o.modelsDir,
