@@ -20,6 +20,9 @@ import { createUpdates } from "./updates-service";
 import { setupControl } from "./control";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
+import { testEnv } from "./test-env";
+import { fixedInstalledApps } from "./installed-apps";
+import { realInstalledApps } from "./installed-apps/real";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
@@ -68,7 +71,8 @@ function stopForRestart(reading: ReturnType<typeof createReading>, exports: Retu
 
 /** The dictation IPC, and the permissions the hotkey needs. */
 function wireDictation(parent: DesktopOptions["parent"], dictation: DictationService): void {
-  registerDictationIpc(dictation, (c) => parent()?.webContents === c);
+  const fixture = testEnv().installedApps;
+  registerDictationIpc(dictation, (c) => parent()?.webContents === c, fixture === undefined ? realInstalledApps() : fixedInstalledApps(fixture));
   registerSpeechModelsIpc(dictation.speech, (c) => parent()?.webContents === c);
   watchPermissions(parent, dictation);
 }

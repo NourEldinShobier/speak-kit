@@ -4,11 +4,12 @@ import * as v from "valibot";
 import { DICTATION_METHODS, dictationChannel, HUD_ACTION, type DictationMethod } from "../../shared/dictation/channels";
 import { DICTATION_ARGS, HudActionSchema, type DictationBridge } from "../../shared/dictation/contract";
 import { registerValidatedIpc } from "../ipc-register";
+import type { InstalledApps } from "../installed-apps";
 import type { DictationService } from "./service";
 
 type Handlers = Pick<DictationBridge, DictationMethod>;
 
-const handlersOf = (d: DictationService): Handlers => ({
+const handlersOf = (d: DictationService, apps: InstalledApps): Handlers => ({
   status: async () => (await d.ready, await d.records.refreshKey(), d.status()),
   setEnabled: (on) => d.setEnabled(on),
   patchSettings: (patch) => d.patchSettings(patch),
@@ -38,11 +39,12 @@ const handlersOf = (d: DictationService): Handlers => ({
   historyDismissNotice: () => d.records.dismissNotice(),
   vocabImport: () => d.records.vocabImport(),
   vocabExport: (format, text) => d.records.vocabExport(format, text),
+  installedApps: (refresh) => apps.list(refresh),
 });
 
 /** The Settings pages call these (only the app window may); the HUD page may only press its own buttons. Arguments are checked before any handler runs. */
-export function registerDictationIpc(d: DictationService, isAppWindow: (contents: Electron.WebContents) => boolean): void {
-  const handlers = handlersOf(d);
+export function registerDictationIpc(d: DictationService, isAppWindow: (contents: Electron.WebContents) => boolean, apps: InstalledApps): void {
+  const handlers = handlersOf(d, apps);
   registerValidatedIpc<DictationMethod>(ipcMain, {
     methods: DICTATION_METHODS,
     channel: dictationChannel,
