@@ -16,6 +16,8 @@ import { createReplay, replayWanted } from ".";
 export interface ReplayControl {
   /** Starts or stops the buffer to match the settings and whether a capture is running. */
   sync(): Promise<void>;
+  /** The screen it keeps changed or went away: it starts again on the screen there is now. */
+  rearm(onlyIfMoved?: boolean): Promise<void>;
   /** A capture starts: the buffer stops and starts again when the capture is saved. */
   pause(): Promise<void>;
   save(): void;
@@ -71,14 +73,18 @@ export function createReplayControl(o: ReplayControlDeps, host: ReplayHost): Rep
     o.ctx.saveConfig();
     o.publish();
   };
+  const apply = async () => {
+    const want = replayWanted(settings(), o.platform.supported) && host.phase === "idle";
+    if (want && !replay.on) {
+      // a buffer that cannot start is turned off, so it does not try again at every change
+      if (!(await replay.arm())) turnOff();
+    } else if (!want && replay.on) await replay.disarm();
+  };
   return {
-    sync: () =>
+    sync: () => queued(apply),
+    rearm: (onlyIfMoved) =>
       queued(async () => {
-        const want = replayWanted(settings(), o.platform.supported) && host.phase === "idle";
-        if (want && !replay.on) {
-          // a buffer that cannot start is turned off, so it does not try again at every change
-          if (!(await replay.arm())) turnOff();
-        } else if (!want && replay.on) await replay.disarm();
+        if (replay.on && !(await replay.rearm(onlyIfMoved))) turnOff();
       }),
     pause: () => queued(() => replay.disarm()),
     save: () => void replay.save(),

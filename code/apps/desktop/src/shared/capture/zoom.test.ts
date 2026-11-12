@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
-import { addSample, autoRegions, cropAt, cropOfRegion, fractionIn, inPixels, normalizeRegions, ZOOM, ZoomRegionsSchema, zoomCells, type PointerSample, type ZoomRegion } from "./zoom";
+import { addClick, addSample, autoRegions, cropAt, cropOfRegion, fractionIn, inPixels, normalizeRegions, ZOOM, ZoomRegionsSchema, zoomCells, type PointerSample, type ZoomRegion } from "./zoom";
 
 const region = (startMs: number, endMs: number, o: Partial<ZoomRegion> = {}): ZoomRegion => ({ startMs, endMs, x: 0.5, y: 0.5, scale: 2, ...o });
 const still = (from: number, to: number, x: number, y: number): PointerSample[] => Array.from({ length: (to - from) / 200 + 1 }, (_, i) => ({ atMs: from + i * 200, x, y }));
@@ -73,6 +73,23 @@ describe("autoRegions", () => {
     expect(autoRegions(still(0, 1000, 0.5, 0.5), [1000], 10_000)).toEqual([region(0, 1800), region(1800, 3000)]);
     expect(autoRegions([], [1000], 10_000)).toEqual([]);
   });
+  it("zooms at a click from a moment before it, at the place where it was", () => {
+    expect(autoRegions([{ atMs: 4000, x: 0.3, y: 0.6, click: true }], [], 10_000)).toEqual([region(3700, 6000, { x: 0.3, y: 0.6 })]);
+    expect(autoRegions([{ atMs: 100, x: 0.3, y: 0.6, click: true }], [], 10_000)).toEqual([region(0, 2100, { x: 0.3, y: 0.6 })]);
+  });
+  it("keeps one zoom going for clicks that follow close to the same place, and starts another for a click elsewhere", () => {
+    const near = [
+      { atMs: 4000, x: 0.3, y: 0.6, click: true },
+      { atMs: 5000, x: 0.32, y: 0.6, click: true },
+    ];
+    expect(autoRegions(near, [], 20_000)).toEqual([region(3700, 7000, { x: 0.3, y: 0.6 })]);
+    const far = [near[0]!, { atMs: 5000, x: 0.9, y: 0.9, click: true }];
+    expect(autoRegions(far, [], 20_000)).toEqual([region(3700, 6000, { x: 0.3, y: 0.6 }), region(6000, 7000, { x: 0.9, y: 0.9 })]);
+  });
+  it("does not let a run of clicks hold one zoom for more than five seconds", () => {
+    const run = Array.from({ length: 10 }, (_, i) => ({ atMs: 4000 + i * 1000, x: 0.3, y: 0.6, click: true }));
+    expect(autoRegions(run, [], 60_000)[0]).toEqual(region(3700, 8700, { x: 0.3, y: 0.6 }));
+  });
   it("holds a long rest for at most five seconds", () => {
     expect(autoRegions(still(0, 10_000, 0.5, 0.5), [], 20_000)).toEqual([region(0, 5000)]);
   });
@@ -85,6 +102,18 @@ describe("pointer samples", () => {
     expect(s.map((p) => p.atMs)).toEqual([0, 200, 400]);
     const full: PointerSample[] = Array.from({ length: ZOOM.maxSamples }, (_, i) => ({ atMs: i * 200, x: 0, y: 0 }));
     addSample(full, { atMs: ZOOM.maxSamples * 200, x: 0, y: 0 });
+    expect(full.length).toBe(ZOOM.maxSamples);
+  });
+  it("notes every click at once, also between two samples, and stops at the cap", () => {
+    const s: PointerSample[] = [];
+    addSample(s, { atMs: 0, x: 0, y: 0 });
+    addClick(s, { atMs: 50, x: 0.5, y: 0.5 });
+    expect(s).toEqual([
+      { atMs: 0, x: 0, y: 0 },
+      { atMs: 50, x: 0.5, y: 0.5, click: true },
+    ]);
+    const full: PointerSample[] = Array.from({ length: ZOOM.maxSamples }, (_, i) => ({ atMs: i, x: 0, y: 0 }));
+    addClick(full, { atMs: 1, x: 0, y: 0 });
     expect(full.length).toBe(ZOOM.maxSamples);
   });
   it("finds where a desktop point falls in the recorded rectangle", () => {

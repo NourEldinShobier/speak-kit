@@ -38,6 +38,7 @@ export class Run {
     // Electron takes the screen source through the legacy "mandatory" constraint; the DOM types do not know it.
     const constraints: MediaStreamConstraints = { audio: false, video: { mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: sourceId, maxFrameRate: 15 } } as MediaTrackConstraints };
     this.#stream = await navigator.mediaDevices.getUserMedia(constraints);
+    this.#stream.getTracks().forEach((t) => (t.onended = () => this.#send({ kind: "lost" })));
     this.video.srcObject = this.#stream;
     await this.video.play();
     this.#crop = crop;
@@ -68,6 +69,8 @@ export class Run {
   }
 
   #startEncoder(): void {
+    // A recorder still running would keep writing into the new piece: only one encoder runs at a time.
+    if (this.#recorder && this.#recorder.state !== "inactive") this.#recorder.stop();
     const stream = this.canvas.captureStream(10);
     const segment = this.segment;
     for (const [i, mimeType] of MIME.entries()) {

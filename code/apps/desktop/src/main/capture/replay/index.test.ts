@@ -52,12 +52,13 @@ function setup(o: Options = {}) {
       return { ok: true };
     },
   } as unknown as RecorderHost;
+  let screens = [
+    { id: "1", name: "Left", bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
+    { id: "2", name: "Right", bounds: { x: 1000, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
+  ];
   const platform = {
     os: "win32",
-    displays: () => [
-      { id: "1", name: "Left", bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
-      { id: "2", name: "Right", bounds: { x: 1000, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
-    ],
+    displays: () => screens,
     resolve: async (t: { displayId: string }) => (o.noScreen ? undefined : { sourceId: `screen:${t.displayId}`, title: "Left" }),
   } as unknown as CapturePlatform;
   const bundle = createBundle(dir);
@@ -77,10 +78,41 @@ function setup(o: Options = {}) {
     newId: () => `r${++n}`,
     log: (l) => logs.push(l),
   });
-  return { replay, calls, events, notices, saved, logs, store, bundle };
+  return { replay, calls, events, notices, saved, logs, store, bundle, unplugFirst: () => void (screens = screens.slice(1)) };
 }
 
 describe("replay buffer", () => {
+  it("starts again on the screen there is now when the one it kept went away, and leaves it alone while that screen is still there", async () => {
+    const t = setup();
+    await t.replay.arm();
+    expect(await t.replay.rearm(true)).toBe(true);
+    expect(t.calls.map((c) => c.op)).toEqual(["replay-start"]);
+    t.unplugFirst();
+    expect(await t.replay.rearm(true)).toBe(true);
+    expect(t.calls.map((c) => c.op)).toEqual(["replay-start", "replay-stop", "replay-start"]);
+    expect(t.calls[2]).toMatchObject({ sourceId: "screen:2" });
+    expect(t.replay.on).toBe(true);
+  });
+
+  it("starts again even on the same screen when asked to (after the computer slept), and does nothing while it is off", async () => {
+    const t = setup();
+    expect(await t.replay.rearm()).toBe(false);
+    expect(t.calls).toEqual([]);
+    await t.replay.arm();
+    await t.replay.rearm();
+    expect(t.calls.map((c) => c.op)).toEqual(["replay-start", "replay-stop", "replay-start"]);
+  });
+
+  it("is off, with a notice, when it cannot start on the new screen", async () => {
+    const o: Options = {};
+    const t = setup(o);
+    await t.replay.arm();
+    o.start = { ok: false, code: "source" };
+    t.unplugFirst();
+    expect(await t.replay.rearm(true)).toBe(false);
+    expect([t.replay.on, t.notices.map((n) => n.code)]).toEqual([false, ["failed"]]);
+  });
+
   it("starts on the first screen, with this app's own windows kept out of it", async () => {
     const t = setup();
     expect(await t.replay.arm()).toBe(true);

@@ -21,7 +21,7 @@ export const ZOOM_SHEET = "sheet-zoom.jpg";
 const baseVideo = (r: CaptureRecord): string => (r.trim ? "video-trim.webm" : "video.webm");
 const lengthOf = (r: CaptureRecord): number => (r.trim ? r.trim.endMs - r.trim.startMs : (r.durationMs ?? 0));
 
-const PointerFile = v.array(v.object({ atMs: v.number(), x: v.number(), y: v.number() }));
+const PointerFile = v.array(v.object({ atMs: v.number(), x: v.number(), y: v.number(), click: v.optional(v.boolean()) }));
 const EventsFile = v.array(v.object({ atMs: v.number(), kind: v.string() }));
 
 async function readJson<T>(d: ZoomDeps, file: { dir: string; name: string }, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> {
@@ -36,7 +36,7 @@ async function readJson<T>(d: ZoomDeps, file: { dir: string; name: string }, sch
   }
 }
 
-/** Zooms chosen from where the pointer rested and where the pen drew, on the timeline of the video shown. */
+/** Zooms chosen from where you clicked, where the pointer rested and where the pen drew, on the timeline of the video shown. */
 export async function suggestZoom(d: ZoomDeps, id: string): Promise<ZoomRegion[]> {
   const r = await d.store.get(id);
   if (!r || r.kind !== "recording" || r.finishing) return [];

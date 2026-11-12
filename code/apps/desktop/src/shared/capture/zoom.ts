@@ -14,6 +14,8 @@ export interface PointerSample {
   atMs: number;
   x: number;
   y: number;
+  /** The left button was pressed here: a place and a time, nothing about what was clicked. */
+  click?: boolean | undefined;
 }
 
 export interface FrameRect {
@@ -38,6 +40,9 @@ export const ZOOM = {
   /** A zoom stays this long after the pointer rests, and a drawn stroke zooms for this long. */
   holdMs: 800,
   inkMs: 2000,
+  /** A click zooms from this long before it, so the picture has arrived when the button goes down, until `clickMs` after it. */
+  clickLeadMs: 300,
+  clickMs: 2000,
   maxAutoMs: 5000,
   /** At most one pointer sample is kept per this many milliseconds, and at most this many in all. */
   sampleEveryMs: 200,
@@ -86,7 +91,7 @@ export function cropAt(regions: readonly ZoomRegion[], atMs: number): FrameRect 
 /** A fraction rectangle in the pixels of a picture. */
 export const inPixels = (c: FrameRect, width: number, height: number): FrameRect => ({ x: c.x * width, y: c.y * height, width: c.width * width, height: c.height * height });
 
-const near = (a: PointerSample, b: PointerSample) => Math.hypot(a.x - b.x, a.y - b.y) <= ZOOM.restRadius;
+const near = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y) <= ZOOM.restRadius;
 
 /** Moments where the pointer stayed put: runs of samples within the rest radius of the first one that last at least `dwellMs`. */
 function rests(samples: readonly PointerSample[]): { startMs: number; endMs: number; x: number; y: number }[] {
@@ -107,9 +112,20 @@ function rests(samples: readonly PointerSample[]): { startMs: number; endMs: num
 const pointerAt = (samples: readonly PointerSample[], atMs: number): PointerSample | undefined =>
   samples.reduce<PointerSample | undefined>((best, p) => (!best || Math.abs(p.atMs - atMs) < Math.abs(best.atMs - atMs) ? p : best), undefined);
 
+/** One zoom per click, from just before it; clicks that follow close to the same place keep that zoom going instead of starting another. */
+function fromClicks(samples: readonly PointerSample[]): ZoomRegion[] {
+  const out: ZoomRegion[] = [];
+  for (const c of samples.filter((s) => s.click)) {
+    const prev = out[out.length - 1];
+    if (prev && c.atMs <= prev.endMs && near(prev, c)) prev.endMs = Math.min(c.atMs + ZOOM.clickMs, prev.startMs + ZOOM.maxAutoMs);
+    else out.push({ startMs: Math.max(0, c.atMs - ZOOM.clickLeadMs), endMs: c.atMs + ZOOM.clickMs, x: c.x, y: c.y, scale: ZOOM.defaultScale });
+  }
+  return out;
+}
+
 /**
- * Zooms chosen from the pointer: one where it rests (it holds a little after it moves on), and one where a stroke was drawn with the pen. Clicks are
- * not seen, so where the pointer rests stands for where the person looked. The result is in time order and does not overlap.
+ * Zooms chosen from the pointer: one at each click, one where it rests (it holds a little after it moves on), and one where a stroke was drawn with the
+ * pen. Where regions overlap the earlier one is kept. The result is in time order and does not overlap.
  */
 export function autoRegions(samples: readonly PointerSample[], inkStarts: readonly number[], durationMs: number): ZoomRegion[] {
   const fromRests = rests(samples).map((r) => ({ startMs: r.startMs, endMs: Math.min(r.endMs + ZOOM.holdMs, r.startMs + ZOOM.maxAutoMs), x: r.x, y: r.y, scale: ZOOM.defaultScale }));
@@ -117,7 +133,7 @@ export function autoRegions(samples: readonly PointerSample[], inkStarts: readon
     const p = pointerAt(samples, at);
     return p ? [{ startMs: at, endMs: at + ZOOM.inkMs, x: p.x, y: p.y, scale: ZOOM.defaultScale }] : [];
   });
-  return normalizeRegions([...fromRests, ...fromInk], durationMs);
+  return normalizeRegions([...fromClicks(samples), ...fromRests, ...fromInk], durationMs);
 }
 
 /** Keeps at most one pointer sample per `sampleEveryMs`, in order, up to the cap. */
@@ -125,6 +141,11 @@ export function addSample(samples: PointerSample[], s: PointerSample): void {
   const last = samples[samples.length - 1];
   if (samples.length >= ZOOM.maxSamples || (last && s.atMs - last.atMs < ZOOM.sampleEveryMs)) return;
   samples.push(s);
+}
+
+/** Notes a click: always kept (a click is rare and is the best sign of where to look), up to the cap. */
+export function addClick(samples: PointerSample[], s: Omit<PointerSample, "click">): void {
+  if (samples.length < ZOOM.maxSamples) samples.push({ ...s, click: true });
 }
 
 /** Where a desktop point falls in a recorded rectangle, as fractions; undefined outside it. */

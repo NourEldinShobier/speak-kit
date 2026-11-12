@@ -10,7 +10,7 @@ interface Props {
   onCancel(): void;
   /** Resolves true when the video was zoomed (no regions: put back as it was). */
   onSave(regions: ZoomRegion[]): Promise<boolean>;
-  /** Zooms chosen from where the pointer rested and where the pen drew. */
+  /** Zooms chosen from where you clicked, where the pointer rested and where the pen drew. */
   onSuggest(): Promise<ZoomRegion[]>;
 }
 
@@ -34,7 +34,8 @@ function Preview({ detail, region }: { detail: CaptureDetail; region: ZoomRegion
 }
 
 function RegionList({ regions, onRemove }: { regions: ZoomRegion[]; onRemove(i: number): void }) {
-  if (!regions.length) return <p className="cap-detail__meta">No zoom yet. Set a start, an end and a place, then add it. Or let Speak Kit suggest zooms from where the pointer rested.</p>;
+  if (!regions.length)
+    return <p className="cap-detail__meta">No zoom yet. Set a start, an end and a place, then add it. Or let Speak Kit suggest zooms from where you clicked and where the pointer rested.</p>;
   return (
     <ul className="cap-zoom__list" aria-label="Zooms">
       {regions.map((r, i) => (

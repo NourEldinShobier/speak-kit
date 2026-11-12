@@ -10,6 +10,7 @@ import type { HotkeySource } from "../dictation/types";
 import { resyncOnPower } from "../dictation/power-resync";
 import { History } from "./history";
 import { recorderEditing } from "./zoom/host";
+import { lazyClicks } from "./pointer/clicks";
 import { CaptureKeys } from "./keys";
 import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
@@ -74,6 +75,7 @@ export class CaptureService {
       inbox: o.inbox,
       distDir: o.distDir,
       recorder: o.recorder,
+      clicks: o.hotkeySource && lazyClicks(o.hotkeySource, (l) => ctx.log.warn(l)),
       publish: () => void this.#publish(),
       refresh: () => void this.#refresh(),
     });
@@ -86,7 +88,10 @@ export class CaptureService {
       onReplay: () => this.runtime.replay.save(),
       log: (l) => ctx.log.warn(l),
     });
-    this.#stopPower = resyncOnPower(powerMonitor, () => this.keys.resync());
+    this.#stopPower = resyncOnPower(powerMonitor, () => {
+      this.keys.resync();
+      void this.runtime.replay.rearm();
+    });
     this.ready = this.#init();
   }
 

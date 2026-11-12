@@ -40,6 +40,8 @@ export interface Replay {
   readonly saving: boolean;
   /** Starts keeping the screen of the first display, where the indicator is. False when it could not start. */
   arm(): Promise<boolean>;
+  /** Starts again on the first display. With `onlyIfMoved` it does nothing while that is still the display being kept. */
+  rearm(onlyIfMoved?: boolean): Promise<boolean>;
   /** Stops keeping it and drops what was kept. */
   disarm(): Promise<void>;
   /** Saves the last 15 seconds as a capture; undefined when nothing could be saved. */
@@ -87,7 +89,7 @@ function failed(d: ReplayDeps, why: string, notice: Notice = noticeFor("failed")
 }
 
 /** Starts the recorder on the first display (the capsule is there too, so the indicator is where the recording is); the title of the capture, or false. */
-async function startRecorder(d: ReplayDeps): Promise<string | false> {
+async function startRecorder(d: ReplayDeps): Promise<{ title: string; displayId: string } | false> {
   const display = d.platform.displays()[0];
   const resolved = display && (await d.platform.resolve({ kind: "screen", displayId: display.id }));
   if (!resolved) return failed(d, "no picture of the screen");
@@ -101,9 +103,21 @@ async function startRecorder(d: ReplayDeps): Promise<string | false> {
     segmentMs: REPLAY.segmentMs,
   } as const;
   const r = await d.host().call(start, START_TIMEOUT_MS);
-  if (r.ok) return `Replay · ${resolved.title}`;
+  if (r.ok) return { title: `Replay · ${resolved.title}`, displayId: display.id };
   d.hideOwnWindows(false);
   return failed(d, `the recorder could not start (${r.code})`, noticeFor(r.code === "denied" ? "permission-denied" : "failed", { os: d.platform.os }));
+}
+
+/** Asks the recorder for the last 15 seconds and saves them as a capture; undefined (with a notice) when that did not work. */
+async function saveClip(d: ReplayDeps, title: string): Promise<CaptureRecord | undefined> {
+  try {
+    const r = await d.host().call({ op: "replay-save" }, SAVE_TIMEOUT_MS);
+    if (r.ok && r.clip?.videos.length) return await writeReplay(d, r.clip, title);
+    d.notify(noticeFor("nothing-recorded"));
+  } catch (e) {
+    failed(d, `the replay could not be saved (${String(e)})`);
+  }
+  return undefined;
 }
 
 /**
@@ -114,26 +128,12 @@ export function createReplay(d: ReplayDeps): Replay {
   let on = false;
   let saving = false;
   let title = "Replay";
+  let displayId: string | undefined;
   const set = (patch: { on?: boolean; saving?: boolean }) => {
     on = patch.on ?? on;
     saving = patch.saving ?? saving;
     d.changed();
   };
-
-  async function save(): Promise<CaptureRecord | undefined> {
-    if (!on || saving) return undefined;
-    set({ saving: true });
-    try {
-      const r = await d.host().call({ op: "replay-save" }, SAVE_TIMEOUT_MS);
-      if (r.ok && r.clip?.videos.length) return await writeReplay(d, r.clip, title);
-      d.notify(noticeFor("nothing-recorded"));
-    } catch (e) {
-      failed(d, `the replay could not be saved (${String(e)})`);
-    } finally {
-      set({ saving: false });
-    }
-    return undefined;
-  }
 
   return {
     get on() {
@@ -146,9 +146,14 @@ export function createReplay(d: ReplayDeps): Replay {
       if (on) return true;
       const started = await startRecorder(d);
       if (started === false) return false;
-      title = started;
+      ({ title, displayId } = started);
       set({ on: true });
       return true;
+    },
+    async rearm(onlyIfMoved) {
+      if (!on || (onlyIfMoved && d.platform.displays()[0]?.id === displayId)) return on;
+      await this.disarm();
+      return this.arm();
     },
     async disarm() {
       if (!on) return;
@@ -156,6 +161,14 @@ export function createReplay(d: ReplayDeps): Replay {
       d.hideOwnWindows(false);
       set({ on: false, saving: false });
     },
-    save,
+    async save() {
+      if (!on || saving) return undefined;
+      set({ saving: true });
+      try {
+        return await saveClip(d, title);
+      } finally {
+        set({ saving: false });
+      }
+    },
   };
 }

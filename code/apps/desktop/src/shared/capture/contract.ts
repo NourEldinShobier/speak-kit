@@ -100,7 +100,7 @@ export interface CaptureBridge {
   trim(id: string, startMs: number, endMs: number): Promise<boolean>;
   /** Makes the video show these parts closer (none: the video as it was); false when it cannot be done. The original video stays. */
   zoom(id: string, regions: ZoomRegion[]): Promise<boolean>;
-  /** Zooms chosen from where the pointer rested and where the pen drew; empty when nothing was noted. */
+  /** Zooms chosen from where you clicked, where the pointer rested and where the pen drew; empty when nothing was noted. */
   suggestZoom(id: string): Promise<ZoomRegion[]>;
   onStatus(cb: (s: CaptureStatus) => void): () => void;
 }
@@ -231,7 +231,12 @@ export type RecorderResult =
   | { ok: false; code: "source" | "encoder" | "denied" };
 
 /** What the recorder streams to main while it runs, so nothing waits in memory and a crash loses at most a second. */
-export type RecorderPayload = { kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; segment: number; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array };
+export type RecorderPayload =
+  | { kind: "frame"; atMs: number; jpeg: Uint8Array }
+  | { kind: "video"; segment: number; chunk: Uint8Array }
+  | { kind: "audio"; chunk: Int16Array }
+  /** The screen being recorded went away (its video track ended). */
+  | { kind: "lost" };
 /** Each piece carries the generation of the recording it belongs to (see the fence in main). */
 export type RecorderData = RecorderPayload & { gen: number };
 
@@ -263,4 +268,5 @@ export const RecorderDataSchema = v.variant("kind", [
   v.object({ gen, kind: v.literal("frame"), atMs: count, jpeg: bytes }),
   v.object({ gen, kind: v.literal("video"), segment: v.pipe(v.number(), v.integer(), v.minValue(1)), chunk: bytes }),
   v.object({ gen, kind: v.literal("audio"), chunk: v.instance(Int16Array) }),
+  v.object({ gen, kind: v.literal("lost") }),
 ]);
