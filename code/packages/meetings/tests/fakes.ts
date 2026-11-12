@@ -61,6 +61,7 @@ export function clock(start = 1_700_000_000_000) {
     advance: (ms: number) => (t += ms),
     sleep: async (ms: number) => {
       t += ms;
+      await new Promise((r) => setTimeout(r, 0));
     },
   };
 }

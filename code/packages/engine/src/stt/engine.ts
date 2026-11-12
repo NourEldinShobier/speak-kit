@@ -154,8 +154,9 @@ export class WhisperStt implements SpeechToText {
     const id = this.#next++;
     return new Promise((resolve, reject) => {
       const onAbort = () => {
-        // The worker finishes the job (under half a second) and its answer is dropped.
-        if (this.#jobs.delete(id)) reject(signal!.reason);
+        if (!this.#jobs.delete(id)) return;
+        host.post({ type: "abort", id });
+        reject(signal!.reason);
       };
       const settle =
         <T>(f: (x: T) => void) =>

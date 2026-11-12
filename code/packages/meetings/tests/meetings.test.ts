@@ -408,4 +408,28 @@ describe("dictation goes first", () => {
     const { id } = await record(m, t.c);
     expect((await settled(m, id)).status).toBe("done");
   });
+
+  it("stops a chunk already running when dictation starts, and runs it again afterwards", async () => {
+    let busy = false;
+    let calls = 0;
+    const t = setup({
+      texts: ["unused"],
+      busy: () => busy,
+      transcribe: async (_p, _l, signal) => {
+        if (++calls === 1) {
+          busy = true;
+          await new Promise((r) => signal.addEventListener("abort", r, { once: true }));
+          setTimeout(() => (busy = false), 20);
+          throw signal.reason;
+        }
+        return { ok: true, text: "said it", speech: true };
+      },
+    });
+    const m = await t.open();
+    const { id } = await record(m, t.c);
+    const g = await settled(m, id);
+    expect(g.status).toBe("done");
+    expect(g.lines.map((l) => l.text)).toEqual(["said it", "said it"]);
+    expect(calls).toBe(3);
+  });
 });

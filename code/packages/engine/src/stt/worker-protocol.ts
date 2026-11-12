@@ -9,7 +9,10 @@ export interface SttWorkerInit {
   warmup: boolean;
 }
 
-export type SttToWorker = { type: "transcribe"; id: number; pcm: Int16Array; language: string; /** Words to steer a Whisper model towards; the other engine ignores it. */ prompt?: string };
+export type SttToWorker =
+  | { type: "transcribe"; id: number; pcm: Int16Array; language: string; /** Words to steer a Whisper model towards; the other engine ignores it. */ prompt?: string }
+  /** Stops that job: at once when it is running, before it starts when it still waits. Its answer is not sent. */
+  | { type: "abort"; id: number };
 
 export type SttFromWorker =
   | { type: "status"; state: "loading" }

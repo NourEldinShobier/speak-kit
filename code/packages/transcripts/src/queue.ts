@@ -92,3 +92,15 @@ export function createGate({ busy, sleep, pollMs = 200 }: GateOptions): (signal:
     while (busy() && !signal.aborted) await sleep(pollMs);
   };
 }
+
+/** The other half of the gate: `preempt` resolves as soon as dictation is busy (or the signal aborts), so a chunk already running can give way. */
+export function createPreempt({ busy, sleep, pollMs = 200 }: GateOptions): (signal: AbortSignal) => Promise<void> {
+  return async (signal) => {
+    while (!busy() && !signal.aborted) await sleep(pollMs);
+  };
+}
+
+/** Both halves for one `busy`: `clear` before a chunk, `preempt` during it. */
+export function createGates(o: GateOptions): { clear: (signal: AbortSignal) => Promise<void>; preempt: (signal: AbortSignal) => Promise<void> } {
+  return { clear: createGate(o), preempt: createPreempt(o) };
+}
