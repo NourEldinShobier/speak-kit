@@ -23,7 +23,8 @@ export interface PageProps {
 
 // Dictation is rarely opened: its pages, styles and code load on first use.
 const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
-const HistoryPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationHistoryPage })));
+// History holds the dictation history and the transcripts; it is rarely opened too.
+const HistoryPage = lazy(() => import("./features/transcripts").then((m) => ({ default: m.HistoryRoute })));
 const later = (node: React.ReactNode) => <Suspense fallback={null}>{node}</Suspense>;
 
 /** The library list and the reader share one route: opening a reading swaps the list for the reader. */
@@ -51,6 +52,6 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => <StubPage page="modes" />,
   vocabulary: () => <StubPage page="vocabulary" />,
-  history: ({ dispatch }) => later(<HistoryPage back={() => dispatch({ type: "go", page: "dictation" })} />),
+  history: ({ dispatch }) => later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} />),
   capture: () => <StubPage page="capture" />,
 };

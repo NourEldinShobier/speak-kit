@@ -18,7 +18,7 @@ export function wavInfo(buf: Uint8Array): WavInfo {
   const tag = (o: number) => String.fromCharCode(...buf.subarray(o, o + 4));
   if (buf.length < 12 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new WavError("not a WAVE file");
   let fmt: Omit<WavInfo, "dataStart" | "dataEnd"> | undefined;
-  for (let o = 12; o + 8 <= buf.length; ) {
+  for (let o = 12; o + 8 <= buf.length;) {
     const size = dv.getUint32(o + 4, true);
     const body = o + 8;
     if (tag(o) === "fmt " && body + 16 <= buf.length) {

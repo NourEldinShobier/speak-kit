@@ -67,7 +67,10 @@ export function setupTranscripts(ctx: Ctx, o: TranscriptsOptions): TranscriptsFe
         if (o.test && nextPick !== undefined) return nextPick;
         const r = await dialog.showOpenDialog({
           properties: ["openFile"],
-          filters: [{ name: "Audio", extensions: ["wav", "mp3", "m4a", "mp4", "flac", "ogg", "oga", "opus", "aac"] }, { name: "All files", extensions: ["*"] }],
+          filters: [
+            { name: "Audio", extensions: ["wav", "mp3", "m4a", "mp4", "flac", "ogg", "oga", "opus", "aac"] },
+            { name: "All files", extensions: ["*"] },
+          ],
         });
         return r.canceled ? null : (r.filePaths[0] ?? null);
       },
