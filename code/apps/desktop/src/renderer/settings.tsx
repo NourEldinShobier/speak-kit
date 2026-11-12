@@ -8,6 +8,8 @@ import type { AppState, SettingsSub } from "../shared/ipc";
 import { api, Page } from "./ui";
 import { BrowserPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
 import { StubPage } from "./StubPage";
+import { registerCaptureExperiments } from "./features/capture";
+import { ExperimentsPage } from "./features/experiments";
 import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
 
@@ -55,6 +57,8 @@ function About({ s }: { s: AppState }) {
   );
 }
 
+registerCaptureExperiments();
+
 const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   general: GeneralPage,
   voice: VoicePage,
@@ -66,7 +70,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   privacy: () => <StubPage setting="privacy" />,
   meetings: () => <StubPage setting="meetings" />,
   automation: () => <StubPage setting="automation" />,
-  experiments: () => <StubPage setting="experiments" />,
+  experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: () => <StubPage setting="diagnostics" />,
   about: About,

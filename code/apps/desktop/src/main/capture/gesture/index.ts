@@ -66,3 +66,11 @@ export function createGesture(): Gesture {
     },
   };
 }
+
+/** True when two hotkeys cannot both work: the same keys, or one chord inside the other (the key hook cannot tell them apart). */
+export function chordsConflict(a: string, b: string): boolean {
+  const x = new Set(a.split("+"));
+  const y = new Set(b.split("+"));
+  const inside = (small: Set<string>, big: Set<string>) => [...small].every((k) => big.has(k));
+  return inside(x, y) || inside(y, x);
+}

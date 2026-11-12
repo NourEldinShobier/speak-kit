@@ -21,6 +21,10 @@ export interface CaptureStatus {
   enabled: boolean;
   hotkeyReady: boolean;
   hotkeyFailed?: boolean;
+  /** Why the hotkey the person chose was not taken (it belongs to Dictation). */
+  hotkeyNote?: string;
+  /** The first capture needs the person to read and accept what is recorded. */
+  consentRequired?: boolean;
   phase: CapturePhase;
   /** macOS Screen Recording permission; "not-needed" elsewhere. */
   permission: "granted" | "denied" | "not-determined" | "not-needed";
@@ -100,7 +104,10 @@ export const CAPTURE_ARGS = {
 
 /** What the picker overlay draws. Rectangles are in device-independent pixels of the overlay's display. */
 export interface OverlayView {
-  mode: "screen" | "window" | "area";
+  mode: "screen" | "window" | "area" | "ink";
+  /** Ink mode: how long a stroke stays, 0 for until cleared; whether the pointer leaves a glowing trail. */
+  inkFadeMs?: number;
+  trail?: boolean;
   display: { id: string; name: string; width: number; height: number; scaleFactor: number };
   windows: { id: string; title: string; x: number; y: number; width: number; height: number }[];
   /** Why the picker is open: a first capture, or a switch while recording. */
@@ -116,7 +123,23 @@ export const OverlayResultSchema = v.nullable(
 );
 export type OverlayResult = v.InferOutput<typeof OverlayResultSchema>;
 
-export const CapsuleActionSchema = v.picklist(["pen", "stop", "discard", "discard-keep", "discard-confirm", "open", "send", "hold", "undo", "send-now", "retry", "dismiss", "switch"]);
+export const CapsuleActionSchema = v.picklist([
+  "pen",
+  "stop",
+  "discard",
+  "discard-keep",
+  "discard-confirm",
+  "open",
+  "send",
+  "hold",
+  "undo",
+  "send-now",
+  "retry",
+  "dismiss",
+  "switch",
+  "copy-again",
+  "copy-path",
+]);
 export type CapsuleAction = v.InferOutput<typeof CapsuleActionSchema>;
 
 type Crop = { x: number; y: number; width: number; height: number };
@@ -126,11 +149,49 @@ export type RecorderCommand =
   | { id: number; op: "start"; sourceId: string; crop?: Crop; narration: boolean; frameEveryMs: number; maxSide: number }
   | { id: number; op: "switch"; sourceId: string; crop?: Crop }
   | { id: number; op: "stop" }
-  | { id: number; op: "abort" };
+  | { id: number; op: "abort" }
+  | { id: number; op: "sheet"; jpegs: Uint8Array[]; columns: number; cellWidth: number; cellHeight: number };
 
 export type RecorderResult =
-  | { ok: true; micOk?: boolean; durationMs?: number; softwareEncoder?: boolean; frames?: number; width?: number; height?: number }
+  | {
+      ok: true;
+      micOk?: boolean | undefined;
+      durationMs?: number | undefined;
+      softwareEncoder?: boolean | undefined;
+      frames?: number | undefined;
+      width?: number | undefined;
+      height?: number | undefined;
+      jpeg?: Uint8Array | undefined;
+      segments?: number | undefined;
+    }
   | { ok: false; code: "source" | "encoder" | "denied" };
 
 /** What the recorder streams to main while it runs, so nothing waits in memory and a crash loses at most a second. */
-export type RecorderData = { kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array };
+export type RecorderData = { kind: "frame"; atMs: number; jpeg: Uint8Array } | { kind: "video"; segment: number; chunk: Uint8Array } | { kind: "audio"; chunk: Int16Array };
+
+const bytes = v.instance(Uint8Array);
+const count = v.pipe(v.number(), v.finite());
+
+export const RecorderReplySchema = v.tuple([
+  v.pipe(v.number(), v.integer()),
+  v.union([
+    v.object({
+      ok: v.literal(true),
+      micOk: v.optional(v.boolean()),
+      durationMs: v.optional(count),
+      softwareEncoder: v.optional(v.boolean()),
+      frames: v.optional(count),
+      width: v.optional(count),
+      height: v.optional(count),
+      jpeg: v.optional(bytes),
+      segments: v.optional(count),
+    }),
+    v.object({ ok: v.literal(false), code: v.picklist(["source", "encoder", "denied"]) }),
+  ]),
+]);
+
+export const RecorderDataSchema = v.variant("kind", [
+  v.object({ kind: v.literal("frame"), atMs: count, jpeg: bytes }),
+  v.object({ kind: v.literal("video"), segment: v.pipe(v.number(), v.integer(), v.minValue(1)), chunk: bytes }),
+  v.object({ kind: v.literal("audio"), chunk: v.instance(Int16Array) }),
+]);

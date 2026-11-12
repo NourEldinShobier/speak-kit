@@ -1,3 +1,5 @@
+export { digitalSilence } from "../../../shared/capture/audio";
+
 /** One spoken stretch on the capture timeline (milliseconds since the capture started). */
 export interface Segment {
   startMs: number;
@@ -67,14 +69,6 @@ export function findSegments(pcm: Int16Array, o: SegmentOptions): Segment[] {
   return mergeRuns(runs, mergeGapMs)
     .filter((s) => s.endMs - s.startMs >= minMs)
     .map((s) => ({ startMs: Math.max(0, s.startMs - padMs), endMs: Math.min(totalMs, s.endMs + padMs) }));
-}
-
-/** True when the last `ms` of the track is digital silence (every sample zero or one step off): the device is open but delivering nothing. */
-export function digitalSilence(pcm: Int16Array, rate: number, ms: number): boolean {
-  const n = Math.round((rate * ms) / 1000);
-  if (n <= 0 || pcm.length < n) return false;
-  for (let i = pcm.length - n; i < pcm.length; i++) if (Math.abs(pcm[i]!) > 1) return false;
-  return true;
 }
 
 /** Words of one transcribed stretch, spread over the stretch by their length (the speech engine gives text only, so times inside a stretch are an estimate). */

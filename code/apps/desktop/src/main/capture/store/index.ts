@@ -52,11 +52,14 @@ async function loadAll(fs: StoreFs, file: string): Promise<CaptureRecord[]> {
 const haystack = (r: CaptureRecord) => `${r.title} ${r.words?.map((w) => w.text).join(" ") ?? ""}`.toLowerCase();
 
 /** The index of captures (index.json). Every change reads the file again inside a queue, so two changes at once, or a sweep that began earlier, cannot write an old list back. */
+/** Keeps the queue going after a failed change; the failure itself reaches the caller. */
+const settle = (): void => undefined;
+
 export function createStore(fs: StoreFs, file: string): CaptureStore {
   let chain: Promise<unknown> = Promise.resolve();
   const exclusive = <T>(fn: () => Promise<T>): Promise<T> => {
     const run = chain.then(fn, fn);
-    chain = run.catch(() => {});
+    chain = run.then(settle, settle);
     return run;
   };
   const load = () => loadAll(fs, file);
@@ -96,24 +99,4 @@ export function createStore(fs: StoreFs, file: string): CaptureStore {
   };
 }
 
-const DAY = 86_400_000;
-
-/** "Today", "Yesterday" or a date, in the person's time zone. */
-export function dayLabel(at: number, now: number, locale = "en-US"): string {
-  const start = (t: number) => new Date(new Date(t).getFullYear(), new Date(t).getMonth(), new Date(t).getDate()).getTime();
-  const diff = Math.round((start(now) - start(at)) / DAY);
-  if (diff <= 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  return new Date(at).toLocaleDateString(locale, { month: "short", day: "numeric", ...(new Date(at).getFullYear() !== new Date(now).getFullYear() && { year: "numeric" }) });
-}
-
-export function groupByDay(items: readonly CaptureRecord[], now: number, locale?: string): { label: string; items: CaptureRecord[] }[] {
-  const groups: { label: string; items: CaptureRecord[] }[] = [];
-  for (const r of items) {
-    const label = dayLabel(r.at, now, locale);
-    const last = groups[groups.length - 1];
-    if (last?.label === label) last.items.push(r);
-    else groups.push({ label, items: [r] });
-  }
-  return groups;
-}
+export { dayLabel, groupByDay } from "../../../shared/capture/days";

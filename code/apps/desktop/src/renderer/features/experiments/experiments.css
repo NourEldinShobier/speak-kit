@@ -1,0 +1,62 @@
+/* Experiments: cards in groups, each with badges, a guard line and one button on the right. */
+.exp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.exp-group__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.exp-group__lead {
+  margin: -8px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.exp-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+.exp-card__text {
+  flex: 1;
+  min-inline-size: 0;
+}
+.exp-card__text p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.exp-card__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.exp-card__text .exp-card__guard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9a3412;
+}
+.exp-badge {
+  font-size: 11px;
+  font-weight: 500;
+}
+.exp-badge--new {
+  background: #201e25;
+  color: var(--text-on-accent);
+}
+.exp-badge--experimental {
+  background: #fef3c7;
+  color: #92400e;
+}
+.exp-badge--developer {
+  background: var(--kbd-fill);
+  color: var(--text-secondary);
+}

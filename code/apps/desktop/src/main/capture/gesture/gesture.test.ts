@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createGesture } from "./index";
+import { chordsConflict, createGesture } from "./index";
 
 const down = { kind: "down" } as const;
 const up = { kind: "up" } as const;
@@ -60,5 +60,17 @@ describe("capture key gesture", () => {
     g.reset();
     expect(g.down).toBe(false);
     expect(g.event(down, 10, false)).toEqual(["arm"]);
+  });
+});
+
+describe("hotkey conflicts", () => {
+  it("finds the same key, a chord inside a chord, and the reverse", () => {
+    expect(chordsConflict("ControlRight", "ControlRight")).toBe(true);
+    expect(chordsConflict("ControlRight", "ControlRight+F9")).toBe(true);
+    expect(chordsConflict("ControlLeft+ShiftLeft+F9", "F9")).toBe(true);
+  });
+  it("lets different keys live together", () => {
+    expect(chordsConflict("F9", "ControlRight")).toBe(false);
+    expect(chordsConflict("ControlLeft+F9", "ControlRight+F9")).toBe(false);
   });
 });

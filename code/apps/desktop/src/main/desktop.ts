@@ -15,6 +15,7 @@ import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { createUpdates } from "./updates-service";
+import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
@@ -59,10 +60,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
   // Restart now: what is running stops first; quitAndInstall then quits the app itself.
-  const stopWork = () => {
-    reading.controller.command({ type: "stop" });
-    exports.dispose();
-  };
+  const stopWork = () => (reading.controller.command({ type: "stop" }), exports.dispose());
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
@@ -75,6 +73,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   ctx.state.update ??= UPDATE_UNSUPPORTED;
 
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
   const permissions = setupPermissions(
     () => o.parent()?.webContents,
     (s) => void dictation.retryHotkey(hotkeyPermissionsReady(s.states)),
@@ -109,7 +108,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       updates.dispose();
       tray.dispose();
       void dictation.dispose();
+      capture.dispose();
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, installs: () => installedByTest }),
   };
 }
