@@ -6,6 +6,13 @@ export default defineConfig({
   define: { __TEST__: "false", __TEST_CODE__: "true" },
   test: {
     testTimeout: 20_000,
-    include: ["packages/dictation/tests/**/*.test.ts", "packages/transcripts/tests/**/*.test.ts"],
+    include: [
+      "packages/dictation/tests/**/*.test.ts",
+      "packages/transcripts/tests/**/*.test.ts",
+      "packages/engine/tests/{languages,download-error,transfers,device-hardware-idle,switching,model-files,stt-download-hosts,compare}.test.ts",
+      "apps/desktop/src/main/speech-models/{view,hardware-probe,layout}.test.ts",
+      "apps/desktop/src/renderer/speech-text.test.ts",
+      "apps/desktop/src/renderer/features/wizard/dictation-step.test.ts",
+    ],
   },
 });

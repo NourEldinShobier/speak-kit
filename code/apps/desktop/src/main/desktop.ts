@@ -21,6 +21,7 @@ import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
+import { registerSpeechModelsIpc } from "./speech-models/ipc";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
 import { fakeUpdater } from "./updates-fake";
@@ -63,6 +64,7 @@ function stopForRestart(reading: ReturnType<typeof createReading>, exports: Retu
 /** The dictation IPC, and the permissions the hotkey needs. */
 function wireDictation(parent: DesktopOptions["parent"], dictation: DictationService): void {
   registerDictationIpc(dictation, (c) => parent()?.webContents === c);
+  registerSpeechModelsIpc(dictation.speech, (c) => parent()?.webContents === c);
   watchPermissions(parent, dictation);
 }
 
@@ -74,6 +76,21 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
   );
   // Nothing tells the app when a switch is flipped in System Settings: read again when the person comes back to the app.
   app.on("browser-window-focus", permissions.refresh);
+}
+
+/** The IPC methods the desktop features add. */
+function desktopHandlers(
+  ctx: Ctx,
+  f: { reading: ReturnType<typeof createReading>; exports: ReturnType<typeof createExports>; updates: ReturnType<typeof createUpdates>; shortcuts: ReturnType<typeof setupShortcuts>; test: boolean },
+) {
+  return {
+    ...engineHandlers(ctx),
+    ...f.exports.handlers,
+    ...f.updates.handlers,
+    ...f.shortcuts.handlers,
+    ...readerHandlers(f.reading),
+    installExtension: () => installExtension(!f.test),
+  } satisfies Partial<Api>;
 }
 
 /**
@@ -98,14 +115,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   return {
-    handlers: {
-      ...engineHandlers(ctx),
-      ...exports.handlers,
-      ...updates.handlers,
-      ...shortcuts.handlers,
-      ...readerHandlers(reading),
-      installExtension: () => installExtension(!o.test),
-    } satisfies Partial<Api>,
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Reacts to a Settings change. */
@@ -114,9 +124,11 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
       control.onConfigPatch(patch);
     },
+    dictation,
     onEngineState: engineAnnouncer(ctx, toasts),
     onWindowHidden: () => void dictation.mic.setMeter(false), // hidden or minimized: the level meter lets go of the microphone at once
-    runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
+    /** A reading or an export is running: a quit would lose it. */
+    busy: () => ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing" || exports.runningCount() > 0,
     refreshTray: () => tray.refresh(),
     /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
     finishCapture: () => capture.finishForQuit(),

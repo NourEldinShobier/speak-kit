@@ -15,6 +15,7 @@ import {
   type Settings,
   type TranscribeResult,
 } from "@speakkit/dictation";
+import { languageLabel, type SttLanguage } from "@speakkit/engine";
 import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
 import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
 import { friendlyAppName } from "./app-name";
@@ -47,6 +48,12 @@ export function filePickers(parent: () => BrowserWindow | null, scripted?: { ope
   };
 }
 
+/** The name of the model that heard an entry and the language it was told (a label); absent for entries from before these were stored. */
+const heardBy = (e: HistoryHit, catalog: Deps["catalog"]) => ({
+  ...(e.model && { model: catalog?.().find((m) => m.id === e.model)?.name ?? e.model }),
+  ...(e.language && { language: languageLabel(e.language as SttLanguage) }),
+});
+
 interface Deps {
   ready(): Promise<unknown>;
   core(): Dictation | undefined;
@@ -55,6 +62,8 @@ interface Deps {
   /** A dictation is recording, transcribing or inserting: the speech engine is in use. */
   dictating(): boolean;
   stt: Stt;
+  /** Every speech model, to show the name of the one that heard an entry. */
+  catalog?(): readonly { id: string; name: string }[];
   files: FilePickers;
   /** Sends the status to the window. */
   push(): void;
@@ -109,6 +118,7 @@ export class HistoryApi {
   #item(e: HistoryHit, now: number): HistoryItem {
     const left = timeLeft(e, now, this.d.cfg().retention);
     return {
+      ...heardBy(e, this.d.catalog),
       id: e.id,
       at: e.at,
       text: e.text,
@@ -118,7 +128,6 @@ export class HistoryApi {
       ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
       ...(e.kind && { kind: e.kind }),
       ...(e.outcome && { outcome: e.outcome }),
-      ...(e.model && { model: e.model }),
       ...(e.rewrite && { rewrite: e.rewrite }),
       ...(e.audio && { recording: true }),
       ...(e.audioRemoved && { recordingRemoved: true }),

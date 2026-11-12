@@ -13,7 +13,7 @@ export type SttToWorker = { type: "transcribe"; id: number; pcm: Int16Array; lan
 
 export type SttFromWorker =
   | { type: "status"; state: "loading" }
-  | { type: "status"; state: "ready"; backend: "gpu" | "cpu"; gpuKind?: "discrete" | "integrated"; devices?: number }
+  | { type: "status"; state: "ready"; backend: "gpu" | "cpu"; gpuKind?: "discrete" | "integrated"; devices?: number; gpuFallback?: string; warmupMs?: number }
   | { type: "fatal"; message: string }
   | { type: "result"; id: number; text: string; speech: boolean }
   | { type: "error"; id: number; message: string };

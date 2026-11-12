@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { DictationModelId } from "../../shared/dictation/settings";
+import { DownloadError } from "@speakkit/engine";
 import { ModelManager, supportsLanguage } from "./models";
+import type { Stt } from "./stt";
 import { FakeStt } from "./stt-fake";
 
 const TURBO: DictationModelId = "large-v3-turbo-q5_0";
@@ -64,12 +66,14 @@ describe("model manager", () => {
     expect(m.error).toBeUndefined();
   });
 
-  it("ignores a second download while one runs", async () => {
+  it("a download asked for while another runs does not start a second transfer", async () => {
     const { stt, m } = setup();
     await stt.setInstalled(PARAKEET, false);
     const first = m.download(PARAKEET);
     await until(() => m.busy);
     await m.download(TURBO);
+    expect(m.queued).toBe(TURBO);
+    m.unqueue();
     stt.finishDownload();
     await first;
     expect(stt.status().state).toBe("ready");
@@ -185,6 +189,172 @@ describe("languages", () => {
     expect(supportsLanguage(PARAKEET, "ar")).toBe(false);
     expect(supportsLanguage(PARAKEET, "de")).toBe(true);
     expect(supportsLanguage(TURBO, "ar")).toBe(true);
+  });
+});
+
+describe("languages and unknown models", () => {
+  it("Parakeet cannot detect the language, Whisper can; a model that is not in the list only handles English", () => {
+    expect(supportsLanguage(PARAKEET, "auto")).toBe(false);
+    expect(supportsLanguage(TURBO, "auto")).toBe(true);
+    expect(supportsLanguage("custom-0123456789ab", "en")).toBe(true);
+    expect(supportsLanguage("custom-0123456789ab", "de")).toBe(false);
+  });
+});
+
+/** An engine whose download is scripted: it pauses on the signal like the real one and fails or finishes when the test says. */
+function scripted() {
+  const base = new FakeStt();
+  const have = new Set<string>();
+  let finish: (() => void) | undefined;
+  let fail: Error | undefined;
+  const starts: number[] = [];
+  const stt = Object.assign(base, {
+    downloaded: async (id: string) => have.has(id),
+    download: (id: string, o: { signal?: AbortSignal; progress?: (f: number) => void } = {}) =>
+      new Promise<void>((resolve, reject) => {
+        starts.push(starts.length);
+        o.progress?.(0.5);
+        if (fail) return reject(fail);
+        finish = () => (have.add(id), resolve());
+        o.signal?.addEventListener("abort", () => reject(o.signal!.reason), { once: true });
+      }),
+    load: async (id: string) => {
+      if (!have.has(id)) throw new Error("not downloaded");
+    },
+  });
+  return { stt, starts, finish: () => finish?.(), failWith: (e: Error) => (fail = e) };
+}
+
+describe("hardware floor", () => {
+  const blockedSetup = () => {
+    const stt = new FakeStt();
+    const state = { selected: TURBO as DictationModelId, changes: 0 };
+    const m = new ModelManager({ stt, selected: () => state.selected, select: (id) => (state.selected = id), changed: () => void state.changes++, blocked: () => "needs AVX2" });
+    return { stt, m, state };
+  };
+  it("loads nothing and shows the reason instead of starting the engine", async () => {
+    const { stt, m } = blockedSetup();
+    await m.refresh();
+    m.warm();
+    expect(stt.status().state).toBe("unloaded");
+    expect(m.error).toBe("needs AVX2");
+  });
+  it("downloads nothing either", async () => {
+    const { stt, m } = blockedSetup();
+    await stt.setInstalled(PARAKEET, false);
+    await m.refresh();
+    await m.download(PARAKEET);
+    expect(m.busy).toBe(false);
+    expect(m.error).toBe("needs AVX2");
+    expect(stt.status().state).toBe("unloaded");
+  });
+});
+
+describe("model manager downloads", () => {
+  const make = (stt: Stt) => {
+    const state = { selected: TURBO as DictationModelId };
+    return { state, m: new ModelManager({ stt, selected: () => state.selected, select: (id) => (state.selected = id), changed: () => {} }) };
+  };
+
+  it("a second request for the model that is downloading joins it instead of starting another transfer", async () => {
+    const { stt, starts, finish } = scripted();
+    const { m } = make(stt);
+    const a = m.download(PARAKEET);
+    const b = m.download(PARAKEET);
+    await until(() => starts.length > 0);
+    expect(starts).toHaveLength(1);
+    finish();
+    await Promise.all([a, b]);
+    expect(m.isInstalled(PARAKEET)).toBe(true);
+  });
+
+  it("pause keeps the download and shows it as paused; resume continues it and the model gets selected", async () => {
+    const { stt, starts, finish } = scripted();
+    const { m, state } = make(stt);
+    const done = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    m.pause(PARAKEET);
+    await until(() => m.views().find((v) => v.id === PARAKEET)?.progress?.kind === "paused");
+    expect(m.views().find((v) => v.id === PARAKEET)!.progress).toEqual({ kind: "paused", fraction: 0.5 });
+    m.resume(PARAKEET);
+    await until(() => starts.length === 2);
+    finish();
+    await done;
+    expect(state.selected).toBe(PARAKEET);
+  });
+
+  it("a failure names the host and is kept for the page; the next attempt clears it", async () => {
+    const { stt, failWith } = scripted();
+    const { m } = make(stt);
+    failWith(new DownloadError({ kind: "unreachable", host: "huggingface.co", keptBytes: 214, message: "Could not reach the model server huggingface.co." }));
+    await m.download(PARAKEET);
+    expect(m.failure?.id).toBe(PARAKEET);
+    expect(m.failure?.error.host).toBe("huggingface.co");
+    expect(m.error).toContain("huggingface.co");
+    expect(m.busy).toBe(false);
+    failWith(undefined as never);
+    const again = m.download(PARAKEET);
+    expect(m.failure).toBeUndefined();
+    m.transfers.cancel(PARAKEET);
+    await again;
+  });
+
+  it("cancel stops the download without an error", async () => {
+    const { stt, starts } = scripted();
+    const { m } = make(stt);
+    const done = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    await m.cancel();
+    await done;
+    expect(m.error).toBeUndefined();
+    expect(m.failure).toBeUndefined();
+    expect(m.isInstalled(PARAKEET)).toBe(false);
+  });
+
+  it("another model asked for during a download waits, then starts when the first one ends", async () => {
+    const { stt, starts, finish } = scripted();
+    const { m, state } = make(stt);
+    const first = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    await m.download(TURBO);
+    expect(starts).toHaveLength(1);
+    expect(m.queued).toBe(TURBO);
+    finish();
+    await first;
+    await until(() => starts.length === 2);
+    expect(m.queued).toBeUndefined();
+    expect(state.selected).toBe(PARAKEET);
+    finish();
+    await until(() => state.selected === TURBO);
+  });
+
+  it("cancelling the running download drops the one that waited", async () => {
+    const { stt, starts } = scripted();
+    const { m } = make(stt);
+    const first = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    await m.download(TURBO);
+    await m.cancel();
+    await first;
+    expect(m.queued).toBeUndefined();
+    expect(starts).toHaveLength(1);
+  });
+
+  it("a finished download does not load or choose its model while a switch to another model runs", async () => {
+    const { stt, starts, finish } = scripted();
+    const loads: string[] = [];
+    const real = stt.load;
+    stt.load = async (id: string) => (loads.push(id), real(id));
+    const state = { selected: TURBO as DictationModelId, switching: false };
+    const m = new ModelManager({ stt, selected: () => state.selected, select: (id) => (state.selected = id), changed: () => {}, switching: () => state.switching });
+    const done = m.download(PARAKEET);
+    await until(() => starts.length === 1);
+    state.switching = true;
+    finish();
+    await done;
+    expect(state.selected).toBe(TURBO);
+    expect(loads).not.toContain(PARAKEET);
+    expect(m.isInstalled(PARAKEET)).toBe(true);
   });
 });
 

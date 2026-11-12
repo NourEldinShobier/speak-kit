@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Clip } from "@speakkit/dictation";
-import { EngineNotReadyError } from "@speakkit/engine";
+import { EngineNotReadyError, STT_MODELS } from "@speakkit/engine";
+import type { DictationModelId } from "../../shared/dictation/settings";
 import { createTranscriber, modelViews, transcribeDeadlineMs } from "./stt";
 import { FakeStt } from "./stt-fake";
 
@@ -34,9 +35,16 @@ describe("transcriber", () => {
     expect(await t.transcribe({ clip: clip([0.1]), language: "auto" })).not.toHaveProperty("language");
   });
 
-  it("falls back to detection for a language the model lacks", async () => {
+  it("uses English for a language the model lacks, and for detection on a model that cannot detect", async () => {
     const { stt, t } = await ready("parakeet-tdt-0.6b-v3-q4_0");
     await t.transcribe({ clip: clip([0.1]), language: "ar" });
+    await t.transcribe({ clip: clip([0.1]), language: "auto" });
+    expect(stt.calls().map((c) => c.language)).toEqual(["en", "en"]);
+  });
+
+  it("keeps automatic detection on a model that detects", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([0.1]), language: "auto" });
     expect(stt.calls()[0]!.language).toBe("auto");
   });
 
@@ -142,19 +150,26 @@ describe("transcriber", () => {
 });
 
 describe("model views", () => {
-  const installed = { "large-v3-turbo-q5_0": true, "parakeet-tdt-0.6b-v3-q4_0": false };
+  const installed: Record<string, boolean> = { "large-v3-turbo-q5_0": true, "parakeet-tdt-0.6b-v3-q4_0": false };
+  type State = Parameters<typeof modelViews>[2];
+  const views = (selected: DictationModelId, job: State["job"], transfers: State["transfers"] = []) =>
+    modelViews(STT_MODELS, selected, { isInstalled: (id) => installed[id] ?? false, job, transfers });
   it("attaches progress to the model being downloaded only", () => {
-    const views = modelViews("large-v3-turbo-q5_0", installed, { id: "parakeet-tdt-0.6b-v3-q4_0", kind: "downloading", fraction: 0.38, etaSeconds: 120 });
-    expect(views[0]).not.toHaveProperty("progress");
-    expect(views[1]!.progress).toEqual({ kind: "downloading", fraction: 0.38, etaSeconds: 120 });
+    const v = views("large-v3-turbo-q5_0", { id: "parakeet-tdt-0.6b-v3-q4_0", kind: "downloading", fraction: 0.38, etaSeconds: 120 });
+    expect(v[0]).not.toHaveProperty("progress");
+    expect(v[1]!.progress).toEqual({ kind: "downloading", fraction: 0.38, etaSeconds: 120 });
   });
   it("shows a model being loaded as preparing, without a fraction", () => {
-    expect(modelViews("large-v3-turbo-q5_0", installed, { id: "large-v3-turbo-q5_0", kind: "preparing", fraction: 1 })[0]!.progress).toEqual({ kind: "preparing" });
+    expect(views("large-v3-turbo-q5_0", { id: "large-v3-turbo-q5_0", kind: "preparing", fraction: 1 })[0]!.progress).toEqual({ kind: "preparing" });
+  });
+  it("shows a paused download with how far it got, even when no job runs", () => {
+    expect(views("large-v3-turbo-q5_0", null, [{ id: "parakeet-tdt-0.6b-v3-q4_0", state: "paused", fraction: 0.6 }])[1]!.progress).toEqual({ kind: "paused", fraction: 0.6 });
   });
   it("names the languages each model understands and its size", () => {
-    const [turbo, parakeet] = modelViews("large-v3-turbo-q5_0", installed, null);
-    expect(turbo).toMatchObject({ tag: "Accurate", bytes: 574_041_195, languages: ["auto", "en", "de", "ar"] });
-    expect(parakeet).toMatchObject({ tag: "Fast", languages: ["auto", "en", "de"] });
+    const [turbo, parakeet] = views("large-v3-turbo-q5_0", null);
+    expect(turbo).toMatchObject({ name: "Whisper Large v3 Turbo", tag: "Accurate", bytes: 574_041_195 });
+    expect(turbo!.languages).toContain("lt");
+    expect(parakeet).toMatchObject({ name: "Parakeet v3", tag: "Fast", languages: ["en", "de"] });
   });
 });
 

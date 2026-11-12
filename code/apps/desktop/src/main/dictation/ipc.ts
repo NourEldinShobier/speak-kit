@@ -1,3 +1,4 @@
+import { openMicrophoneSettings } from "./mic-settings";
 import { ipcMain } from "electron";
 import * as v from "valibot";
 import { DICTATION_METHODS, dictationChannel, HUD_ACTION, type DictationMethod } from "../../shared/dictation/channels";
@@ -25,6 +26,7 @@ const handlersOf = (d: DictationService): Handlers => ({
   pasteLast: async () => (await d.ready, d.controls.pasteLast()),
   undoCancel: async () => (await d.ready, d.controls.undoCancel()),
   openSoundSettings: () => d.actions.openSoundSettings(),
+  openMicrophoneSettings: () => openMicrophoneSettings(),
   historyStats: () => d.records.stats(),
   historyRecent: (n) => d.records.recent(n),
   historyUseVersion: (id, vid) => d.records.useVersion(id, vid),

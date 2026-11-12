@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { captureBridge } from "../shared/capture/preload-api";
 import { dictationBridge } from "../shared/dictation/preload-api";
 import { permissionsBridge } from "../shared/permissions/preload-api";
+import { speechModelsBridge } from "../shared/speech-models/preload-api";
 import { libraryBridge } from "../shared/library/preload-api";
 import { transcriptsBridge } from "../shared/transcripts/preload-api";
 import { setPlatformEarly } from "./platform-attr";
@@ -26,5 +27,6 @@ contextBridge.exposeInMainWorld(
   "speakkitTranscripts",
   transcriptsBridge(ipcRenderer, (f) => webUtils.getPathForFile(f)),
 );
+contextBridge.exposeInMainWorld("speakkitModels", speechModelsBridge(ipcRenderer));
 
 setPlatformEarly(document, process.platform);

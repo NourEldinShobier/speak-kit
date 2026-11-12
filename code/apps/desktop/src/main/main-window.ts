@@ -20,6 +20,8 @@ interface MainWindowEvents {
   onHidden(): void;
   /** Something is still running (an export or a reading) that a quit would lose. */
   busy(): boolean;
+  /** The window was destroyed to free memory (not by a quit). */
+  onReleased?(): void;
 }
 
 /**
@@ -134,13 +136,15 @@ export class MainWindow {
     w.on("restore", () => this.#events.onVisible());
     w.on("hide", () => {
       this.#events.onHidden();
-      if (HIDE_DESTROY_MS > 0) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), HIDE_DESTROY_MS);
+      const delay = this.#config.engines.releaseOnClose ? 0 : HIDE_DESTROY_MS; // the setting asks for the memory back at once
+      if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
     w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;
+      if (!this.quitting) this.#events.onReleased?.();
     });
     void w.loadFile(path.join(here, "../renderer/index.html"));
   }

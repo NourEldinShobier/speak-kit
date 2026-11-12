@@ -47,6 +47,11 @@ function RowWhen({ item, label, open, onToggle }: { item: HistoryItem; label: st
     <div className="dict-hist__when">
       <span>{timeText(item.at)}</span>
       <span className="dict-hist__app">{rowApp(item)}</span>
+      {item.model ? (
+        <span className="dict-hist__app" data-testid="history-model">
+          {[item.model, item.language].filter(Boolean).join(", ")}
+        </span>
+      ) : null}
       {item.recording && onToggle ? (
         <button type="button" className="dict-hist__rec" aria-expanded={open} aria-label={`Recording of: ${label}`} onClick={onToggle}>
           <Icon name="player-play" size={10} /> {clockText(item.durationMs)}

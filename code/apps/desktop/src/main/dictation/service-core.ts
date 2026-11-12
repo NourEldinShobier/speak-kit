@@ -22,7 +22,7 @@ export interface CoreHost {
   /** The words were not sent because the model cannot read a prompt. */
   onPromptDropped(): void;
   /** The service's public parts: the speech engine, the models, the HUD, the microphone state, and the test switch that refuses the microphone. */
-  svc: Pick<DictationService, "stt" | "models" | "presenter" | "mic" | "micDenied" | "fakeRewrite">;
+  svc: Pick<DictationService, "stt" | "speech" | "models" | "presenter" | "mic" | "micDenied" | "fakeRewrite">;
   failure: Failure;
   os: DictationOs;
   hotkeys: SwitchableHotkeys;
@@ -55,6 +55,8 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     transcriber: createTranscriber({
       stt: svc.stt,
       model: () => cfg().model,
+      models: () => svc.speech.catalog(),
+      onUsed: (id) => svc.speech.used(id),
       sentencePause: () => cfg().sentencePause,
       onFailedClip: (c) => (h.failure.clip = c),
       onModelError: (d) => svc.models.report(d),

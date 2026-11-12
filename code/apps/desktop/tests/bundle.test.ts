@@ -49,12 +49,13 @@ describe("renderer bundle", () => {
 
 /**
  * Gzip bytes of what a window loads up front: its script, the chunks it preloads and its stylesheets (the lazy PDF, OCR, dictation and worker chunks are not counted). Current size plus 10 %.
- * index: 201,500 to 206,000 for the capture settings schema, the capture cards on the Experiments page and the capture page entry.
+ * index: 216,000 to 225,000 for the speech models bridge types, config schemas and the setup window dictation step wiring.
+ * Before that, 201,500 to 206,000 for the capture settings schema, the capture cards on the Experiments page and the capture page entry.
  * Before that, 193,500 to 201,500 for the Accessibility, Privacy, Experiments, Diagnostics and About pages, settings search and the file notices (7 KB of real code).
  * index: 191,000 to 193,500 for the page and settings registries, the stub pages and the new command palette (0.8 KB over the old budget).
  * Before that, 185,500 to 191,000 for dictation's entry in Settings, its config schema and the shared-chunk split of its lazy page (3.2 KB; main was already 1.4 KB over).
  */
-const RENDERER_BUDGET_BYTES = { index: 216_000, mini: 133_000 };
+const RENDERER_BUDGET_BYTES = { index: 225_000, mini: 133_000 };
 
 describe("renderer bundles", () => {
   it.each(Object.entries(RENDERER_BUDGET_BYTES))(

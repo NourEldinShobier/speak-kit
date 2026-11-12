@@ -27,6 +27,8 @@ export interface TrayContext {
   };
   /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
   recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
+  /** The downloaded speech models, for the quick switch. Absent when none is downloaded. */
+  speechModels?: { models: { id: string; name: string; inUse: boolean }[]; switching?: { name: string }; recording: boolean };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -72,11 +74,14 @@ export type TrayAction =
   | "settings"
   | "check-updates"
   | "restart-update"
+  | "cancel-switch"
+  | "get-models"
   | "quit";
 
 export type TrayItem =
   | { type: "separator" }
   | { type: "submenu"; label: string; items: TrayItem[] }
+  | { type: "models"; label: string; rows: ModelRow[] }
   | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string };
 
 export const RECENT_ROWS = 5;
@@ -96,6 +101,27 @@ function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item:
   if (phase === "recording") return item("record-stop", "Stop recording");
   if (phase === "done") return item("record-start", "Done. Record a conversation");
   return item("record-start", WAITING[phase], { enabled: false });
+}
+
+/** A row of the Speech model submenu: a model to switch to, or a plain row. */
+export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
+
+/** The Speech model submenu: downloaded models only, the one in use marked. While one is checked before switching the old one stays in use and the switch can be cancelled; during a recording the rows are greyed. */
+export function speechModelRows(m: NonNullable<TrayContext["speechModels"]>): ModelRow[] {
+  const rows: ModelRow[] = [];
+  if (m.recording) rows.push({ type: "header", label: "Finish the recording first, then switch" });
+  else if (m.switching) rows.push({ type: "header", label: `${m.switching.name} is checked before switching. The current model stays in use.` });
+  const locked = m.recording || !!m.switching;
+  for (const x of m.models) rows.push({ type: "model", id: x.id, label: x.name, checked: x.inUse, enabled: !locked });
+  if (m.switching) rows.push({ type: "action", action: "cancel-switch", label: "Cancel the switch" });
+  rows.push({ type: "action", action: "get-models", label: "Get more models in Engines" });
+  return rows;
+}
+
+/** The Speech model submenu, only where dictation runs and a model is downloaded. */
+function speechModelItems(c: TrayContext): TrayItem[] {
+  const m = c.speechModels;
+  return c.dictation && m && m.models.length > 0 ? [{ type: "models", label: "Speech model", rows: speechModelRows(m) }] : [];
 }
 
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
@@ -118,6 +144,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
+  rows.push(...speechModelItems(c));
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));

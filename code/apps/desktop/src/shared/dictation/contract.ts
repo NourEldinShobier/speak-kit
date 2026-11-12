@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import type { HistoryStats, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
-import { DICTATION_MODELS, DictationPatchSchema } from "./settings";
+import { DICTATION_MODELS, DictationPatchSchema, modelId } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
 import type { RewriteOutcome } from "@speakkit/dictation";
 
@@ -21,7 +21,7 @@ export interface ModelView {
   selected: boolean;
   /** Languages it understands. */
   languages: string[];
-  progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" };
+  progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" } | { kind: "paused"; fraction: number };
 }
 
 export type DictationPhase = "idle" | "recording" | "locked" | "transcribing" | "pasting" | "error";
@@ -114,6 +114,8 @@ export interface HistoryItem {
   version?: string;
   /** The search matched this vocabulary word through one of its sounds-like spellings. */
   via?: { word: string; heard: string };
+  /** Name of the speech model that heard it, and the language it was told (a label); absent for entries from before these were stored. */
+  language?: string;
 }
 
 export type { HistoryStats };
@@ -173,6 +175,8 @@ export interface DictationBridge {
   undoCancel(): Promise<boolean>;
   /** Opens the operating system's sound input settings. */
   openSoundSettings(): Promise<void>;
+  /** Opens the operating system's microphone permission page. */
+  openMicrophoneSettings(): Promise<void>;
   onStatus(cb: (s: DictationStatus) => void): () => void;
   /** HUD page and microphone window. */
   onHud(cb: (v: HudView) => void): () => void;
@@ -249,7 +253,7 @@ export const DICTATION_ARGS = {
   openSoundSettings: v.tuple([]),
   historyRecent: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50))]),
   historyUseVersion: v.tuple([id, id]),
-  historyRetranscribe: v.tuple([id, v.picklist(DICTATION_MODELS)]),
+  historyRetranscribe: v.tuple([id, modelId]),
   historyCancelRetranscribe: v.tuple([]),
   historyAudio: v.tuple([id]),
   historyDeleteRecording: v.tuple([id]),
@@ -257,6 +261,7 @@ export const DICTATION_ARGS = {
   historyDismissNotice: v.tuple([]),
   vocabImport: v.tuple([]),
   vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
+  openMicrophoneSettings: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

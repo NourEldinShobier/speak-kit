@@ -1,6 +1,7 @@
 import type { HistoryStats } from "@speakkit/dictation";
 import type { HistoryItem, ModelView } from "../../../shared/dictation/contract";
-import type { DictationConfig } from "../../../shared/dictation/settings";
+import { DICTATION_LANGUAGES, type DictationConfig } from "../../../shared/dictation/settings";
+import { SPOKEN_LANGUAGE_LABELS } from "../../../shared/speech-models/config";
 
 export const RETENTION_OPTIONS: { value: DictationConfig["retention"]; label: string }[] = [
   { value: "off", label: "Do not keep" },
@@ -10,12 +11,7 @@ export const RETENTION_OPTIONS: { value: DictationConfig["retention"]; label: st
   { value: "forever", label: "Forever" },
 ];
 
-export const LANGUAGE_OPTIONS: { value: DictationConfig["language"]; label: string }[] = [
-  { value: "auto", label: "Detect automatically" },
-  { value: "en", label: "English" },
-  { value: "de", label: "German" },
-  { value: "ar", label: "Arabic" },
-];
+export const LANGUAGE_OPTIONS: { value: DictationConfig["language"]; label: string }[] = DICTATION_LANGUAGES.map((value) => ({ value, label: SPOKEN_LANGUAGE_LABELS[value] ?? value }));
 
 export const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
 

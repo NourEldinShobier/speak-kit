@@ -29,6 +29,8 @@ export interface PartsHost {
   audio(): AudioStore | undefined;
   cfg(): DictationConfig;
   stt: Stt;
+  /** Every speech model, to show the name of the one that heard an entry. */
+  catalog(): readonly { id: string; name: string }[];
   files: FilePickers;
   warn(title: string, detail: string): void;
   /** Where the saved-key question and the test hook are answered. */
@@ -46,6 +48,7 @@ export function createParts(h: PartsHost) {
     cfg: h.cfg,
     dictating: () => h.state().status !== "idle" && h.state().status !== "error",
     stt: h.stt,
+    catalog: h.catalog,
     files: h.files,
     push: h.changed,
     refreshCount: () => history.refresh(),

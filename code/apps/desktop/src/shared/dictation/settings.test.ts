@@ -16,7 +16,7 @@ const DEFAULTS = {
   cancelKey: "Escape",
   shareHotkey: false,
   pauseRules: { mode: "off", apps: [], fullscreen: false },
-  language: "auto",
+  language: "en",
   model: "large-v3-turbo-q5_0",
   retention: "7d",
   replacements: [],
@@ -82,7 +82,7 @@ describe("what the renderer may change", () => {
     ["turning dictation on (it has its own call)", { enabled: true }],
     ["an unknown key", { anything: 1 }],
     ["a hotkey that is not allowed", { hotkey: "KeyA" }],
-    ["an unknown language", { language: "fr" }],
+    ["an unknown language", { language: "tlh" }],
     ["an unknown model", { model: "other" }],
     ["a replacement without text", { replacements: [{ from: "", to: "x" }] }],
     ["more than 100 replacements", { replacements: Array.from({ length: 101 }, () => ({ from: "a", to: "b" })) }],
@@ -238,5 +238,19 @@ describe("entries that loading leaves out", () => {
         ],
       }),
     ).toBe(2);
+  });
+});
+
+describe("languages and models", () => {
+  it("starts on an explicit language, never on automatic detection", () => {
+    expect(parseConfig({}).dictation.language).toBe("en");
+  });
+  it("keeps an automatic choice a person made earlier", () => {
+    expect(parseConfig({ dictation: { language: "auto" } }).dictation.language).toBe("auto");
+  });
+  it("accepts an added model by its fingerprint id and nothing else that is not in the catalog", () => {
+    expect(parseConfig({ dictation: { model: "custom-0123456789ab" } }).dictation.model).toBe("custom-0123456789ab");
+    expect(parseConfig({ dictation: { model: "custom-xyz" } }).dictation.model).toBe("large-v3-turbo-q5_0");
+    expect(parseConfig({ dictation: { model: "../../evil" } }).dictation.model).toBe("large-v3-turbo-q5_0");
   });
 });

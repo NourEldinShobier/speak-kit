@@ -205,3 +205,6 @@ export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) =
 
 /** The app window is on screen: not hidden to the tray, not minimized, not gone. */
 export const windowShown = (w: { isDestroyed(): boolean; isVisible(): boolean; isMinimized(): boolean } | null): boolean => !!w && !w.isDestroyed() && w.isVisible() && !w.isMinimized();
+
+/** A recording is running (held, toggled or locked). */
+export const isRecording = (s: { status: string }): boolean => s.status === "recording" || s.status === "locked";

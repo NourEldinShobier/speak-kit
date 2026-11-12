@@ -34,7 +34,7 @@ async function recognize(pcm: Int16Array, language: string, prompt?: string): Pr
 async function load(): Promise<void> {
   send({ type: "status", state: "loading" });
   const w = await import("@fugood/whisper.node");
-  const variant = process.platform === "darwin" ? "default" : "vulkan"; // macOS has Metal in the default addon; Windows and Linux use the Vulkan addon, which falls back to the default one when missing
+  const variant = process.platform === "darwin" || !init.gpu ? "default" : "vulkan"; // macOS has Metal in the default addon; Windows and Linux use the Vulkan addon (which falls back to the default one when missing), except when the CPU was chosen: then no graphics runtime is loaded at all
   await w.loadWhisperModule(variant);
   // Without a listener whisper.cpp prints a page of model details to stderr; keep errors, and read which device it picked (type 1 is a discrete GPU, 2 an integrated one).
   let gpuKind: "discrete" | "integrated" | undefined;
@@ -51,19 +51,31 @@ async function load(): Promise<void> {
   await w.toggleNativeLog(true);
   vad = await w.initWhisperVad({ filePath: init.vadPath });
   const open = (useGpu: boolean) => (init.engine === "parakeet" ? w.initParakeet({ filePath: init.modelPath, useGpu }, variant) : w.initWhisper({ filePath: init.modelPath, useGpu }, variant));
+  let gpuFallback: string | undefined;
   try {
     model = await open(init.gpu);
   } catch (e) {
     if (!init.gpu) throw e;
+    gpuFallback = e instanceof Error ? e.message : String(e);
     gpuKind = undefined;
     decided = true; // no usable GPU (driver, memory): run the same model on the CPU
     model = await open(false);
   }
   for (let i = 0; i < 60 && init.gpu && !decided; i++) await new Promise((r) => setTimeout(r, 50));
   // The first inference after a load compiles GPU kernels (seconds, measured); pay it here, not on the user's first dictation.
+  const t0 = Date.now();
   if (init.warmup) await recognize(new Int16Array(SAMPLE_RATE), "en").catch(() => "");
+  const warmupMs = Date.now() - t0;
   // whisper.cpp also falls back to the CPU on its own when it finds no GPU; then no GPU line was logged.
-  send({ type: "status", state: "ready", backend: gpuKind ? "gpu" : "cpu", ...(gpuKind && { gpuKind }), ...(devices !== undefined && { devices }) });
+  send({
+    type: "status",
+    state: "ready",
+    backend: gpuKind ? "gpu" : "cpu",
+    ...(gpuKind && { gpuKind }),
+    ...(devices !== undefined && { devices }),
+    ...(gpuFallback && { gpuFallback }),
+    ...(init.warmup && { warmupMs }),
+  });
 }
 
 async function run(m: SttToWorker): Promise<void> {

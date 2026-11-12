@@ -75,6 +75,8 @@ export interface ForegroundInfo {
   /** File name of the program, e.g. "WindowsTerminal.exe"; null when the process could not be opened. */
   exe: string | null;
   className: string;
+  /** Keyboard layout of the window as a language code ("de", "en"); absent where the platform cannot tell. */
+  layout?: string;
   /** True when the window's program runs with higher rights than this app (Windows then drops our key presses). */
   elevated: boolean;
   /** Where the window is on the screen; used to tell a full-screen program. */

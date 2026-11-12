@@ -2,21 +2,22 @@ import { powerMonitor, powerSaveBlocker, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
-import { WhisperStt } from "@speakkit/engine";
 import { STATUS_EVENT } from "../../shared/dictation/channels";
+import { SPEECH_MODELS_EVENT } from "../../shared/speech-models/channels";
+import type { SpeechModels } from "../speech-models/service";
+import { createSpeechParts, startSpeech } from "../speech-models/wiring";
 import type { DictationStatus, RecorderEvent } from "../../shared/dictation/contract";
 import type { DictationServiceOptions } from "./service-options";
 import { filePickers, type HistoryApi } from "./history-api";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
-import { HudPresenter } from "./hud-presenter";
+import { createPresenter, type HudPresenter } from "./hud-presenter";
 import { createDictationOs, type DictationOs, type HudWindow, type InsertResult } from "./index";
-import { ModelManager, settle, supportsLanguage } from "./models";
+import { settle, supportsLanguage, type ModelManager } from "./models";
 import { resyncOnPower } from "./power-resync";
 import type { RecorderHost } from "./recorder";
-import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, shortcutClash, shouldRetryHotkey, touchesMicrophone, windowShown } from "./service-support";
-import { keyLabel } from "../../shared/dictation/keys";
+import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, shouldRetryHotkey, touchesMicrophone, windowShown } from "./service-support";
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { MicState } from "./mic-state";
@@ -39,6 +40,7 @@ export class DictationService {
   readonly stt: Stt;
   readonly fake: FakeStt | undefined;
   readonly models: ModelManager;
+  readonly speech: SpeechModels;
   readonly presenter: HudPresenter;
   readonly controls: Parts["controls"];
   readonly history: Parts["history"];
@@ -72,6 +74,7 @@ export class DictationService {
   #rejected: DictationStatus["rejected"];
   readonly #throttle = createThrottle(() => this.#send(), PUSH_MS);
   #stopPower: (() => void) | undefined;
+  #stopSpeech: (() => void) | undefined;
 
   constructor(ctx: Ctx, o: DictationServiceOptions, onChange: () => void) {
     this.#ctx = ctx;
@@ -79,21 +82,9 @@ export class DictationService {
     this.#onChange = onChange;
     // SPEAKKIT_REAL_STT keeps the real engine in a test run (a manual check against the models on this computer).
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
-    this.stt = o.stt ?? this.fake ?? new WhisperStt({ modelsDir: o.modelsDir, workerUrl: o.sttWorker });
-    this.models = new ModelManager({
-      stt: this.stt,
-      selected: () => this.#cfg.model,
-      select: (id) => this.#choose(id),
-      changed: (soon) => this.#push(soon),
-    });
-    this.presenter = new HudPresenter({
-      hud: () => this.os?.hud,
-      hotkey: () => this.#cfg.hotkey,
-      canRetry: () => !!this.#failure.clip,
-      cancelLabel: () => keyLabel(this.#cfg.cancelKey === "Escape" ? "Esc" : this.#cfg.cancelKey),
-      insertedAsCopy: () => this.#lastInsert?.status === "copied",
-      secureInput: () => this.#lastInsert?.status === "copied" && this.#lastInsert.reason === "secure-input",
-    });
+    const sp = createSpeechParts({ ctx, o, stt: o.stt ?? this.fake, svc: this, select: (id) => this.#choose(id), push: (soon) => this.#push(soon) });
+    [this.stt, this.models, this.speech] = [sp.stt, sp.models, sp.speech];
+    this.presenter = createPresenter({ os: () => this.os, cfg: () => this.#cfg, failure: this.#failure, lastInsert: () => this.#lastInsert });
     const parts = createParts({
       ready: () => this.ready,
       failure: this.#failure,
@@ -108,6 +99,7 @@ export class DictationService {
       audio: () => this.#audio,
       cfg: () => this.#cfg,
       stt: this.stt,
+      catalog: () => this.speech.catalog(),
       files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),
       warn: (title, detail) => this.#ctx.log.warn(title, detail),
       key: o,
@@ -156,10 +148,12 @@ export class DictationService {
     await this.core.ready();
     await this.models.refresh();
     await Promise.all([this.history.refresh(), this.records.refreshKey()]);
+    this.#stopSpeech = startSpeech(this.speech, os, () => this.#cfg.enabled);
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
   #onState(s: DictationState): void {
+    if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     this.state = s;
     // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
     this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
@@ -200,7 +194,10 @@ export class DictationService {
 
   #send(): void {
     const contents = this.#o.parent()?.webContents;
-    if (contents && !contents.isDestroyed()) contents.send(STATUS_EVENT, this.status());
+    if (contents && !contents.isDestroyed()) {
+      contents.send(STATUS_EVENT, this.status());
+      contents.send(SPEECH_MODELS_EVENT, this.speech.view());
+    }
     this.#onChange();
   }
 
@@ -211,7 +208,7 @@ export class DictationService {
 
   #choose(id: DictationModelId): void {
     this.#cfg.model = id;
-    if (!supportsLanguage(id, this.#cfg.language)) this.#cfg.language = "auto";
+    if (!supportsLanguage(id, this.#cfg.language, this.speech.catalog())) this.#cfg.language = "en";
     this.#ctx.saveConfig();
   }
 
@@ -225,7 +222,7 @@ export class DictationService {
     delete this.#cfg.resetNotice; // any change dismisses the notice about a reset shortcut
     if (model || patch.prompt !== undefined || patch.terms) this.records.setPromptDropped(false);
     if (model && model !== this.#cfg.model) await this.models.switchTo(model); // only an installed model can be chosen
-    if (!supportsLanguage(this.#cfg.model, this.#cfg.language)) this.#cfg.language = "auto";
+    if (!supportsLanguage(this.#cfg.model, this.#cfg.language, this.speech.catalog())) this.#cfg.language = "en";
     this.#ctx.saveConfig();
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.layout(hotkeyLayout(this.#cfg));
@@ -284,8 +281,10 @@ export class DictationService {
     this.#setHotkeyFailed(!ready);
     void this.#recorder?.prepare().then(() => this.mic.refresh());
     await this.models.refresh();
-    if (this.models.installed) this.models.warm();
-    else void this.models.download(this.#cfg.model);
+    // At launch (quiet) with release-when-idle on, the model stays on disk: the first dictation loads it (the page says that takes longer).
+    if (this.models.installed) {
+      if (!quiet || this.#ctx.config.engines.idleMinutes === 0) this.models.warm();
+    } else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
     if (!quiet && ready) this.presenter.flashReady();
   }
 
@@ -334,6 +333,8 @@ export class DictationService {
   }
 
   async dispose(): Promise<void> {
+    this.#stopSpeech?.();
+    this.speech.dispose();
     this.#throttle.dispose();
     this.#sleep(false);
     this.controls.dispose();

@@ -54,7 +54,7 @@ describe("shell", () => {
     expect((await box(l, ".sk-setup__stepper")).height).toBe(52);
     expect((await box(l, ".sk-setup__col")).width).toBe(720);
     expect((await box(l, ".sk-setup__foot")).height).toBe(64);
-    expect(await l.page.locator(".lm-step").count()).toBe(4);
+    expect(await l.page.locator(".lm-step").count()).toBe(5);
   });
 
   it("setup window: white page, 20 px under the stepper, unclipped card rings, 16 px footer buttons", async () => {
@@ -86,6 +86,7 @@ describe("shell", () => {
     const l = await start();
     await l.page.getByRole("button", { name: /Get started/ }).click();
     await l.page.getByRole("button", { name: /^Continue/ }).click();
+    await l.page.getByRole("button", { name: "Skip dictation" }).click();
     await l.page.getByRole("heading", { name: "Connect your browser" }).waitFor();
     await l.page.getByRole("button", { name: "Test connection" }).click();
     await l.page.getByText("Waiting for the extension's first call").waitFor();
@@ -321,7 +322,7 @@ describe("tray and lifecycle", () => {
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
-    expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts)/.test(n))).toEqual([
+    expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts|Speech model)/.test(n))).toEqual([
       "Open Speak Kit",
       "Load the voice engine now",
       "Do not disturb",

@@ -18,6 +18,14 @@ interface TrayParts {
   retryEngine(): Promise<unknown>;
 }
 
+/** The downloaded speech models for the tray quick switch; nothing when none is downloaded. */
+function speechModelsContext(dictation: DictationService): Pick<TrayContext, "speechModels"> {
+  const v = dictation.speech.view();
+  const models = v.models.filter((m) => m.installed).map((m) => ({ id: m.id, name: m.name, inUse: m.inUse }));
+  if (models.length === 0) return {};
+  return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
+}
+
 /** What the menu is built from: the shared state plus the live counts of the features. */
 function trayContext(ctx: Ctx, { exports, dictation, transcripts }: Pick<TrayParts, "exports" | "dictation" | "transcripts">): TrayContext {
   return {
@@ -33,6 +41,7 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts }: Pick<TrayPar
     ...(dictation.status().supported && {
       dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused, recent: dictation.history.recent() },
     }),
+    ...speechModelsContext(dictation),
   };
 }
 
@@ -71,11 +80,16 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
       ctx.showWindow();
       ctx.sendUi({ type: "nav", page: "settings", sub: "general" });
     },
+    "cancel-switch": () => void dictation.speech.cancelSwitch(),
+    "get-models": () => {
+      ctx.showWindow();
+      ctx.sendUi({ type: "nav", page: "engines" });
+    },
     "check-updates": () => void updates.updates.checkAndDownload(),
     "restart-update": () => void updates.updates.installNow(),
     quit: requestQuit,
   };
-  const tray = createTray(context, actions);
+  const tray = createTray(context, actions, (id) => void dictation.speech.use(id));
   tray.setVisible(showTrayIcon(ctx.config));
   ctx.sinks.add(() => tray.refresh());
   return tray;

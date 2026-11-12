@@ -1,6 +1,9 @@
 import type { DictationState } from "@speakkit/dictation";
+import type { DictationConfig } from "../../shared/dictation/settings";
+import type { DictationOs, InsertResult } from "./index";
+import type { Failure } from "./service-actions";
 import type { HudView } from "../../shared/dictation/contract";
-import { hotkeyText } from "../../shared/dictation/keys";
+import { hotkeyText, keyLabel } from "../../shared/dictation/keys";
 import { errorView, hudViewFor } from "./hud-view";
 import type { Hud } from "./hud";
 
@@ -138,4 +141,19 @@ export class HudPresenter {
     if (view) hud?.show({ kind: "view", view });
     else hud?.hide();
   }
+}
+
+/** The presenter of a dictation service: what it shows comes from the dictation OS, the config, the last failure and the last insert. */
+export function createPresenter(h: { os(): DictationOs | undefined; cfg(): DictationConfig; failure: Failure; lastInsert(): InsertResult | undefined }): HudPresenter {
+  return new HudPresenter({
+    hud: () => h.os()?.hud,
+    hotkey: () => h.cfg().hotkey,
+    canRetry: () => !!h.failure.clip,
+    cancelLabel: () => keyLabel(h.cfg().cancelKey === "Escape" ? "Esc" : h.cfg().cancelKey),
+    insertedAsCopy: () => h.lastInsert()?.status === "copied",
+    secureInput: () => {
+      const r = h.lastInsert();
+      return r?.status === "copied" && r.reason === "secure-input";
+    },
+  });
 }

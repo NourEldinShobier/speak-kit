@@ -82,6 +82,24 @@ function Versions({ s }: { s: AppState }) {
   );
 }
 
+/** Run setup again: downloaded models and settings stay, the first-run steps are shown again from the model step. */
+function SetupSection() {
+  return (
+    <SettingsSection title="Setup" description="Go through the first-run steps again, from the model step: voice model, dictation language, practice and the browser extension.">
+      <SettingRow
+        className="lm-row--control"
+        label="Run setup again"
+        description="Downloaded models and your settings are kept."
+        control={
+          <Button aria-label="Run setup again" onClick={() => void api.patchConfig({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
+            Run setup again
+          </Button>
+        }
+      />
+    </SettingsSection>
+  );
+}
+
 function Support() {
   return (
     <SettingsSection title="Support">
@@ -138,6 +156,7 @@ export function AboutPage({ s }: { s: AppState }) {
       }
     >
       <Versions s={s} />
+      <SetupSection />
       <UpdatesSection s={s} />
       <SettingsSection title="Network" description="Speak Kit sends no analytics. These are the only addresses it can reach.">
         <div {...rowAttr("about/network")} className="sk-pad">

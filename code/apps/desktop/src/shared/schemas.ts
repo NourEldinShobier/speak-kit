@@ -5,6 +5,7 @@ import { UPDATE_ACTIONS } from "./updates";
 import { DictationConfigSchema } from "./dictation/settings";
 import { CaptureConfigSchema } from "./capture/settings";
 import { TranscriptsConfigSchema } from "./transcripts/settings";
+import { EnginesConfigSchema } from "./speech-models/config";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
 /** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
@@ -76,6 +77,8 @@ const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 export const ConfigSchema = v.object({
   setupDone: bool(false),
   setupSkipped: bool(false),
+  /** The setup step the person was on when the window closed, so setup resumes there. */
+  setupStep: fb(v.picklist([0, 1, 2, 3, 4]), 0),
   preferredPort: fb(port, DEFAULT_PORT),
   startMinimized: bool(false),
   language: fb(v.picklist(["system", "en"]), "system"),
@@ -104,6 +107,7 @@ export const ConfigSchema = v.object({
   dictation: fb(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
   capture: fb(CaptureConfigSchema, v.parse(CaptureConfigSchema, {})),
   transcripts: fb(TranscriptsConfigSchema, v.parse(TranscriptsConfigSchema, {})),
+  engines: fb(EnginesConfigSchema, v.parse(EnginesConfigSchema, {})),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 
@@ -115,6 +119,7 @@ export const ConfigPatchSchema = v.partial(
   v.strictObject({
     setupDone: v.boolean(),
     setupSkipped: v.boolean(),
+    setupStep: v.picklist([0, 1, 2, 3, 4]),
     startMinimized: v.boolean(),
     language: v.picklist(["system", "en"]),
     appearance: v.picklist(APPEARANCES),

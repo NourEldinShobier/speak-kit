@@ -38,10 +38,10 @@ export function DoneStep({ s, skipped, onBack }: { s: AppState; skipped: boolean
     );
   }, [engineState]);
   const on = playing === voice && !!voice;
-  const open = () => api.patchConfig({ setupDone: true, setupSkipped: skipped });
+  const open = () => api.patchConfig({ setupDone: true, setupSkipped: skipped, setupStep: 0 });
   return (
     <Frame
-      at={3}
+      at={4}
       title={skipped ? "Setup is finished" : "You're all set"}
       sub={skipped ? "You can connect the browser extension later from Browser." : "Kokoro is ready. Press play to hear your voice."}
       foot={
