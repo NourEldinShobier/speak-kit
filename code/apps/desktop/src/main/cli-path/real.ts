@@ -4,7 +4,8 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { macCommandLine, windowsCommandLine, type CommandLine, type MacBoundary, type WindowsBoundary } from "./index";
 
-const run = promisify(execFile);
+const exec = promisify(execFile);
+const run = (file: string, args: string[]) => exec(file, args, { timeout: 15_000, windowsHide: true });
 const KEY = "HKCU\\Environment";
 
 /** The value of `Path` from the text `reg query` prints: "    Path    REG_EXPAND_SZ    C:\a;%USERPROFILE%\b". */
@@ -34,10 +35,15 @@ const broadcast = () =>
 function windowsBoundary(markerFile: string): WindowsBoundary {
   return {
     async readPath() {
+      // The key always exists, so a failed query is a real failure; a Path value missing from the listing is the person having none. Asking for the value by name would fail in a language-dependent way when it is missing.
+      return parseRegQuery((await run("reg.exe", ["query", KEY])).stdout);
+    },
+    async backupPath(value) {
       try {
-        return parseRegQuery((await run("reg.exe", ["query", KEY, "/v", "Path"])).stdout);
-      } catch {
-        return undefined; // the user has no Path value yet
+        await mkdir(path.dirname(markerFile), { recursive: true });
+        await writeFile(`${markerFile}.path-backup`, value, { flag: "wx" });
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
       }
     },
     async writePath(value) {

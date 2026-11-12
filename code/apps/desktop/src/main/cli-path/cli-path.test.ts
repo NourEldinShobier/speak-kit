@@ -26,14 +26,16 @@ describe("PATH list editing", () => {
   it("reads the Path value from reg query output", () => {
     expect(parseRegQuery("\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    REG_EXPAND_SZ    C:\\a;%USERPROFILE%\\b\r\n\r\n")).toBe("C:\\a;%USERPROFILE%\\b");
     expect(parseRegQuery("    Path    REG_SZ    C:\\a")).toBe("C:\\a");
+    expect(parseRegQuery("HKEY_CURRENT_USER\\Environment\r\n    TEMP    REG_EXPAND_SZ    C:\\t\r\n    PATHEXT    REG_SZ    .EXE\r\n")).toBeUndefined();
     expect(parseRegQuery("ERROR: The system was unable to find the specified registry key or value.")).toBeUndefined();
   });
 });
 
-function win(initial: string | undefined, marker: string | undefined, files: string[] = []) {
-  const s = { path: initial, marker, files: new Set(files), writes: [] as string[] };
+function win(initial: string | undefined, marker: string | undefined, files: string[] = [], readFails = false) {
+  const s = { path: initial, marker, files: new Set(files), writes: [] as string[], backups: [] as string[] };
   const b: WindowsBoundary = {
-    readPath: async () => s.path,
+    readPath: async () => (readFails ? Promise.reject(new Error("reg.exe failed")) : s.path),
+    backupPath: async (v) => void s.backups.push(v),
     writePath: async (v) => void (s.writes.push(v), (s.path = v)),
     marker: { read: async () => s.marker, write: async (d) => void (s.marker = d), clear: async () => void (s.marker = undefined) },
     exists: async (f) => s.files.has(f),
@@ -81,6 +83,25 @@ describe("Windows command-line tool", () => {
 
     const nofile = win(DIR, DIR, []);
     expect(await windowsCommandLine({ dir: DIR }, nofile.b).status()).toEqual({ kind: "needs-repair", why: "The launcher file is missing." });
+  });
+
+  it("never replaces the PATH when it could not be read: install fails, nothing is written, and the page can still be shown", async () => {
+    const w = win("C:\\a", undefined, [`${DIR}\\speakkit.cmd`], true);
+    const cli = windowsCommandLine({ dir: DIR }, w.b);
+    await expect(cli.install()).rejects.toThrow("reg.exe failed");
+    await expect(cli.remove()).rejects.toThrow("reg.exe failed");
+    expect(w.s.writes).toEqual([]);
+    expect(w.s.marker).toBeUndefined();
+    expect(await cli.status()).toEqual({ kind: "needs-repair", why: "Your PATH could not be read." });
+  });
+
+  it("keeps a copy of the PATH as it was before it writes, and none when the person had no PATH", async () => {
+    const had = win("C:\\a;%X%", undefined, [`${DIR}\\speakkit.cmd`]);
+    await windowsCommandLine({ dir: DIR }, had.b).install();
+    expect(had.s.backups).toEqual(["C:\\a;%X%"]);
+    const none = win(undefined, undefined, [`${DIR}\\speakkit.cmd`]);
+    await windowsCommandLine({ dir: DIR }, none.b).install();
+    expect(none.s.backups).toEqual([]);
   });
 
   it("remove clears a stale marker entry too", async () => {
@@ -132,6 +153,29 @@ describe("macOS command-line tool", () => {
     expect(await cli.install()).toMatchObject({ kind: "installed" });
     expect(await cli.remove()).toEqual({ kind: "not-installed" });
     expect(m.s.files).toEqual({});
+  });
+
+  it("removes only a launcher that points at this app, and leaves a file of the person's own in both folders", async () => {
+    const own = "#!/bin/sh\necho mine\n";
+    const m = mac({ "/usr/local/bin/speakkit": own, "/Users/a/.local/bin/speakkit": `#!/bin/sh\nexec "${SHIM}" "$@"\n` }, ["/usr/local/bin"]);
+    const cli = macCommandLine({ shim: SHIM, home: "/Users/a" }, m.b);
+    expect(await cli.remove()).toEqual({ kind: "not-installed" });
+    expect(m.s.files).toEqual({ "/usr/local/bin/speakkit": own });
+    const other = mac({ "/usr/local/bin/speakkit": '#!/bin/sh\nexec "/Old/speakkit" "$@"\n' }, []);
+    await macCommandLine({ shim: SHIM, home: "/Users/a" }, other.b).remove();
+    expect(Object.keys(other.s.files)).toEqual(["/usr/local/bin/speakkit"]);
+  });
+
+  it("install does not overwrite a file of the person's own: it uses the next folder, or says none could be written", async () => {
+    const own = "#!/bin/sh\necho mine\n";
+    const m = mac({ "/usr/local/bin/speakkit": own }, ["/usr/local/bin"]);
+    const cli = macCommandLine({ shim: SHIM, home: "/Users/a" }, m.b);
+    expect(await cli.status()).toEqual({ kind: "not-installed" });
+    expect(await cli.install()).toEqual({ kind: "needs-path", where: "/Users/a/.local/bin/speakkit", folder: "/Users/a/.local/bin" });
+    expect(m.s.files["/usr/local/bin/speakkit"]).toBe(own);
+    const both = mac({ "/usr/local/bin/speakkit": own, "/Users/a/.local/bin/speakkit": own }, []);
+    expect(await macCommandLine({ shim: SHIM, home: "/Users/a" }, both.b).install()).toEqual({ kind: "needs-repair", why: "No folder for the launcher could be written." });
+    expect(both.s.files["/Users/a/.local/bin/speakkit"]).toBe(own);
   });
 
   it("is not available without the shipped script", async () => {
