@@ -6,10 +6,14 @@ const terminal: AppOverride["profile"] = { shortcut: "ctrl-shift-v" };
 // Remote desktop clients sync the clipboard to the other machine after the fact: give them time before the keys and before the old clipboard returns.
 const remote: AppOverride["profile"] = { preDelayMs: 400, restoreDelayMs: 3000 };
 
+// macOS programs are named by bundle identifier. Terminals there paste with plain Command+V, so only remote desktop clients need a rule.
+const MAC_REMOTE = ["com.microsoft.rdc.macos", "com.apple.screensharing", "com.teamviewer.teamviewer", "com.parsecgaming.parsec"];
+
 /** Programs that need something other than Ctrl+V right away. Java programs (games) only understand plain Ctrl+V, even inside a terminal-like window. */
 export const DEFAULT_OVERRIDES: readonly AppOverride[] = [
   ...["windowsterminal", "wt", "conhost", "mintty", "alacritty", "wezterm-gui", "kitty", "tabby", "putty", "conemu64", "conemu"].map((exe) => ({ exe, profile: terminal })),
   ...["mstsc", "msrdc", "msrdcw"].map((exe) => ({ exe, profile: remote })),
+  ...MAC_REMOTE.map((exe) => ({ exe, profile: remote })),
   ...["java", "javaw"].map((exe) => ({ exe, profile: { shortcut: "ctrl-v" } satisfies AppOverride["profile"] })),
 ];
 

@@ -1,4 +1,4 @@
-/** Windows virtual-key code of one physical key. Left and right modifiers are separate codes (VK.rightCtrl, not VK.ctrl). */
+/** Windows virtual-key code of one physical key (macOS key codes are translated to these, so hotkeys are stored the same on both). Left and right modifiers are separate codes (VK.rightCtrl, not VK.ctrl). */
 export type VirtualKey = number;
 
 /** Common keys for chords. The low-level hook reports the left and right modifier codes, never the generic ones. */
@@ -84,7 +84,7 @@ export interface InsertOptions {
   mode?: "paste" | "keep" | "copy" | "type";
 }
 
-export type CopyReason = "copy-only" | "elevated-target" | "foreground-changed" | "keys-rejected" | "modifiers-held" | "no-foreground" | "unsupported-platform";
+export type CopyReason = "copy-only" | "elevated-target" | "foreground-changed" | "keys-rejected" | "modifiers-held" | "no-foreground" | "secure-input" | "unsupported-platform";
 
 export type InsertResult =
   /** The keys were accepted by Windows. The target app may still ignore them; nothing can confirm it did not. */
@@ -107,6 +107,8 @@ export interface InputPort {
   foreground(): ForegroundInfo | null;
   /** True when the focused control is a password field this platform can recognise. */
   passwordFocused(): boolean;
+  /** True while the system blocks synthesized keys for secure input (macOS password fields and secure keyboard entry): the text is only copied. Absent where there is no such state. */
+  secureInput?(): boolean;
   /** Names of the Shift, Alt and Win keys that are down right now. */
   heldModifiers(): string[];
   /** Presses Ctrl+V (with Shift when asked) as scan codes. False when the system did not accept every key; keys already pressed are released again. */
