@@ -42,6 +42,9 @@ const HEX_ALLOWED = new Set([
   "packages/ui/src/tokens.ts",
   "packages/ui/src/logo-data.ts",
   "apps/extension/src/features/highlight/colors.ts",
+  "apps/extension/src/app/mic/mic.css",
+  "apps/extension/src/features/launcher/launcher.css",
+  "apps/extension/src/features/voicechat/pill.css",
   "apps/extension/src/testing/fixtures.ts",
 ]);
 
