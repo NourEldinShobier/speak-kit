@@ -59,16 +59,14 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const reading = createReading(ctx, toasts, () => tray.refresh());
   const exports = createExports(ctx, toasts, { parent: o.parent, workerFile: new URL("./mp3-worker.js", `file://${path.resolve(o.distDir)}/`), onChange: () => tray.refresh() });
   let installedByTest = 0;
-  // Restart now: what is running stops first; quitAndInstall then quits the app itself.
   const stopWork = () => {
+    // Restart now: what is running stops first; quitAndInstall then quits the app itself.
     reading.controller.command({ type: "stop" });
     exports.dispose();
   };
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
 
   const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
-
-  const announceEngine = engineAnnouncer(ctx, toasts);
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const tray = setupTray(ctx, { reading, exports, updates, dictation, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
@@ -101,7 +99,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
     },
-    onEngineState: announceEngine,
+    onEngineState: engineAnnouncer(ctx, toasts),
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),
     refreshTray: () => tray.refresh(),
     dispose: () => {
