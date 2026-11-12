@@ -2,6 +2,8 @@ import { BrowserWindow, type BrowserWindowConstructorOptions, type Session } fro
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { windowMotion } from "./window-motion";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const guarded = new WeakSet<Session>();
@@ -38,6 +40,7 @@ export function createSecureWindow(options: BrowserWindowConstructorOptions, onL
   w.setMenuBarVisibility(false);
   w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   w.webContents.on("will-navigate", (e) => e.preventDefault());
+  windowMotion.add(w);
   w.webContents.on("did-finish-load", () => onLoaded(w));
   return w;
 }

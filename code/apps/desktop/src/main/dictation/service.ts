@@ -1,5 +1,4 @@
-import { powerMonitor, powerSaveBlocker, systemPreferences, type WebContents } from "electron";
-import { reduceMotion } from "../../shared/settings/behaviour";
+import { powerMonitor, powerSaveBlocker, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
@@ -121,7 +120,7 @@ export class DictationService {
       this.#o.os ??
       (await createDictationOs({
         overrides: () => appOverrides(this.#cfg.appRules),
-        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, reduceMotion: () => this.#reduceMotion() },
+        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true },
         onHudWindow: (w) => (this.#hudWindow = w),
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
@@ -344,14 +343,6 @@ export class DictationService {
   }
 
   /** True when `contents` is the HUD page: only it may press the HUD buttons. */
-  /** Reduce motion as the pill should show it: the app setting, else what the operating system asks. */
-  #reduceMotion = (): boolean => reduceMotion(this.#ctx.config.reduceMotion, systemPreferences.getAnimationSettings().prefersReducedMotion) === "on";
-
-  /** The Reduce motion setting changed. */
-  motionChanged(): void {
-    this.#hudWindow?.setReduceMotion?.(this.#reduceMotion());
-  }
-
   ownsHud = (contents: WebContents): boolean => !!this.#hudWindow?.owns?.(contents);
 
   hudAction(a: HudAction): void {

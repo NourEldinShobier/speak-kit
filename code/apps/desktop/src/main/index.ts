@@ -15,6 +15,7 @@ import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
 import { watchConfigFile } from "./config-watch";
+import { motionNow, windowMotion } from "./window-motion";
 import { createTrayNotices, NOTICE_TTL_MS, noticeText } from "../shared/tray-notices";
 import { acquireInstance, classifySecondLaunch, clearRunningVersion, readRunningVersion, stopGuard, writeRunningVersion } from "./single-instance";
 import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
@@ -140,6 +141,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 windowVisible = () => mainWindow.isVisible();
+windowMotion.set(motionNow(config.reduceMotion));
 const screenVision = createScreenVision();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({

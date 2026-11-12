@@ -2350,3 +2350,13 @@ button.lm-listrow {
     backdrop-filter: none !important;
   }
 }
+
+/* Reduce motion chosen in Settings; the operating system preference is handled by the component styles */
+:root[data-reduce-motion="on"] *,
+:root[data-reduce-motion="on"] *::before,
+:root[data-reduce-motion="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
