@@ -54,6 +54,7 @@ describe("POST /v1/voice-chat/look", () => {
     ["unsupported", 501],
     ["capture-failed", 502],
     ["unavailable", 503],
+    ["no-capture", 404],
   ];
   it("covers every error code of the protocol", () => {
     expect(CASES.map(([c]) => c)).toEqual([...LOOK_ERROR_CODES]);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { CaptureStatus } from "../../../shared/capture/contract";
-import { INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
+import { AUTO_SEND, INK_FADE_MS, RETENTION_DAYS, TARGET_KINDS } from "../../../shared/capture/settings";
 import { HotkeyRecorder } from "../dictation";
 import { capture } from "./api";
 import { INK_LABEL, RETENTION_LABEL } from "./format";
@@ -99,6 +99,19 @@ function Saving({ s }: { s: CaptureStatus }) {
   return (
     <SettingsSection title="Saving">
       <SettingRow className="lm-row--control" label="Save captures in" description={s.folder} control={<Button onClick={() => void capture.chooseFolder()}>Choose folder</Button>} />
+      <SettingRow
+        className="lm-row--control"
+        label="Send to Voice chat"
+        description="After a recording is saved, the capsule counts down and then lets Voice chat read it. Hold or Undo until it is read."
+        control={
+          <Select
+            label="Send to Voice chat"
+            value={c.autoSend}
+            onChange={(autoSend) => void capture.patchSettings({ autoSend: autoSend as (typeof AUTO_SEND)[number] })}
+            options={opts(AUTO_SEND, (a) => (a === "off" ? "Off" : `After ${a.replace("s", " seconds")}`))}
+          />
+        }
+      />
       <SettingRow
         className="lm-row--control"
         label="Keep captures"

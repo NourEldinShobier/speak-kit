@@ -1,4 +1,4 @@
-import type { LookRequest, ScreenLook } from "@speakkit/protocol";
+import type { LookRequest, LookScope, ScreenLook } from "@speakkit/protocol";
 import type { LookResult } from "@speakkit/server";
 import { Consent } from "./consent";
 import type { Ocr, OcrResult } from "./ocr";
@@ -33,7 +33,7 @@ export interface ScreenPlatform {
 
 /** The question of the first look of a conversation, and of the first look at the whole screen. Resolves false on "Not now", on closing the card, on its own timeout and when `signal` aborts. */
 export interface ConsentCard {
-  ask(signal: AbortSignal, scope: LookRequest["scope"]): Promise<boolean>;
+  ask(signal: AbortSignal, scope: LookScope): Promise<boolean>;
 }
 
 /** The visible sign that Speak Kit is looking: shown for the whole look, hidden a moment after. */
@@ -63,7 +63,7 @@ const ocrStatus = (read: OcrResult, text: string): ScreenLook["ocr"] => {
 };
 
 /** The picture and its text, or the code of why there is none. */
-async function capture({ platform, ocr }: LookDeps, scope: LookRequest["scope"]): Promise<ScreenLook | Code> {
+async function capture({ platform, ocr }: LookDeps, scope: LookScope): Promise<ScreenLook | Code> {
   const windows = scope === "window" ? await platform.windows() : [];
   const plan = planCapture({ scope, displays: platform.displays(), cursor: platform.cursor(), windows, foreground: platform.foreground() });
   if (!plan.ok) return plan.code;
@@ -90,6 +90,8 @@ export function createLook(deps: LookDeps) {
 
   return {
     async look({ session, scope }: LookRequest, signal: AbortSignal): Promise<LookResult> {
+      // a capture the user sent is not taken from the screen: the capture inbox answers it
+      if (scope === "capture") return fail("no-capture");
       if (!platform.supported) return fail("unsupported");
       if (busy) return fail("busy");
       busy = true;

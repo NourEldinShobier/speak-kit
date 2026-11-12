@@ -66,7 +66,7 @@ const TEXT: Record<Exclude<NoticeCode, "no-space" | "cleaned-up">, Text> = {
     body: "Speak Kit could not hear the microphone, so only the screen was recorded. Check the microphone in Audio settings.",
     action: "open-audio",
   },
-  "send-failed": { tone: "error", title: "Couldn't send to Voice chat", body: "Voice chat isn't open. The capture is saved and copied.", action: "retry" },
+  "send-failed": { tone: "error", title: "Couldn't send to Voice chat", body: "The picture of this capture could not be read. It is saved and copied.", action: "retry" },
   "protected-window": { tone: "warning", title: "This window is protected", body: "It shows black in a recording. Record the whole screen instead.", action: "record-screen" },
   "permission-denied": { tone: "error", title: "Speak Kit cannot see the screen", body: "Allow Speak Kit under Screen Recording in System Settings, then try again.", action: "open-permissions" },
   unsupported: { tone: "info", title: "Capture is not available here", body: "This computer cannot record the screen with Speak Kit yet.", action: "ok" },

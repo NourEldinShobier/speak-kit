@@ -68,7 +68,7 @@ interface DesktopOptions {
   /** The voice engine, for the memory it holds (Settings, Performance). */
   voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
-  voiceChat: Pick<VoiceChat, "complete" | "status">;
+  voiceChat: Pick<VoiceChat, "complete" | "status" | "captureInbox">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
@@ -230,7 +230,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     version: o.version,
   });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, inbox: o.voiceChat.captureInbox, test: o.test });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test }),

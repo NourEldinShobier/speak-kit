@@ -140,6 +140,12 @@ export class History {
     return true;
   }
 
+  /** The capture was handed to the voice chat: the list shows it. */
+  async markSent(id: string): Promise<void> {
+    const r = await this.store.get(id);
+    if (r && !r.chips.includes("sent")) await this.store.update(id, { chips: [...r.chips, "sent"] });
+  }
+
   async reveal(id: string): Promise<void> {
     const r = await this.store.get(id);
     if (r) shell.showItemInFolder(path.join(this.bundle.dir(r.dir), r.media || "."));

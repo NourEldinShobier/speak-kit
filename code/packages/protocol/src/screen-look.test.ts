@@ -15,6 +15,12 @@ describe("screen look schemas", () => {
     },
   );
 
+  it("accepts the capture scope in a request and a look", () => {
+    expect(parseLookRequest({ session: "s1", scope: "capture" })).toEqual({ session: "s1", scope: "capture" });
+    expect(parseScreenLook({ ...look, scope: "capture" })?.scope).toBe("capture");
+    expect(parseLookError({ code: "no-capture" })).toBe("no-capture");
+  });
+
   it("accepts a look, with or without the black flag", () => {
     expect(parseScreenLook(look)).toEqual(look);
     expect(parseScreenLook({ ...look, image: "", black: "black" })?.black).toBe("black");

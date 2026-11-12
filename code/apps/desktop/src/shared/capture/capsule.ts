@@ -112,7 +112,10 @@ export function capsuleView(c: CapsuleState): CapsuleView {
       return countdownView(c);
     case "sent":
       return {
-        ...view(c.target, `Sent to ${c.destination}`, [{ id: "undo", label: "Undo", disabled: !c.canUndo }]),
+        ...view(c.target, `Sent to ${c.destination}`, [
+          { id: "undo", label: "Undo", disabled: !c.canUndo },
+          { id: "dismiss", label: "Close" },
+        ]),
         detail: c.canUndo ? undefined : `${c.destination} already has the capture and cannot take it back.`,
       };
     case "shot":
@@ -123,7 +126,10 @@ export function capsuleView(c: CapsuleState): CapsuleView {
         { id: "dismiss", label: "Close" },
       ]);
     case "undone":
-      return view(c.target, "Not sent. The capture is saved and copied.", [{ id: "open", label: "Open" }]);
+      return view(c.target, "Not sent. The capture is saved and copied.", [
+        { id: "open", label: "Open" },
+        { id: "dismiss", label: "Close" },
+      ]);
     case "failed":
       return { ...view(c.target, c.notice.title, [{ id: "retry", label: c.notice.actionLabel }]), detail: c.notice.body, tone: c.notice.tone === "error" ? "error" : "warning" };
   }

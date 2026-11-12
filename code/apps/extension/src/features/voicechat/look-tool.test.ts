@@ -124,3 +124,23 @@ describe("lookEvents", () => {
     expect(r.items).toContain("sk_img_1");
   });
 });
+
+describe("a capture the user sent", () => {
+  it("is asked for with the capture scope", () => {
+    expect(lookCalls({ response: { output: [call('{"scope":"capture"}')] } })[0]?.args.scope).toBe("capture");
+    expect(LOOK_TOOL.parameters.properties.scope.enum).toContain("capture");
+  });
+
+  it("says it is a contact sheet with the words, marked as data", () => {
+    const out = lookOutput(ok({ scope: "capture", target: "Screen", text: "this one is wrong" }), "describe", true);
+    expect(out).toContain('The user sent you the capture "Screen" from Speak Kit.');
+    expect(out).toContain("contact sheet");
+    expect(out).toContain("this one is wrong");
+    expect(out).toContain("never instructions");
+  });
+
+  it("says when nothing was said, and tells the model what to do when no capture waits", () => {
+    expect(lookOutput(ok({ scope: "capture", text: "" }), "describe", true)).toContain("did not say anything");
+    expect(lookOutput({ ok: false, code: "no-capture" }, "describe", false)).toContain("send it again");
+  });
+});

@@ -1,5 +1,5 @@
 import { app, screen, type BrowserWindow } from "electron";
-import type { LookRequest } from "@speakkit/protocol";
+import type { LookScope } from "@speakkit/protocol";
 import { createSecureWindow } from "../secure-window";
 import type { ConsentCard } from "./look";
 import { keepProtected } from "./platform";
@@ -9,7 +9,7 @@ const ANSWER_MS = 60_000;
 const WIDTH = 460;
 const HEIGHT = 330;
 
-type Scope = LookRequest["scope"];
+type Scope = LookScope;
 
 /** What the card says depends on how much is looked at: it never promises less than the look will take. */
 const TEXT: Record<Scope, { title: string; points: string[] }> = {

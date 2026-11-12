@@ -13,7 +13,7 @@ const MESSAGE: Record<VoiceChatErrorCode, string> = {
   unavailable: "voice chat is not available",
 };
 
-const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503 };
+const LOOK_STATUS: Record<LookErrorCode, number> = { declined: 403, "no-window": 404, busy: 409, "rate-limited": 429, unsupported: 501, "capture-failed": 502, unavailable: 503, "no-capture": 404 };
 const LOOK_MESSAGE: Record<LookErrorCode, string> = {
   declined: "the user did not allow looking at the screen",
   "no-window": "there is no window to look at",
@@ -22,6 +22,7 @@ const LOOK_MESSAGE: Record<LookErrorCode, string> = {
   unsupported: "looking at the screen is not supported on this computer yet",
   "capture-failed": "the screen could not be captured",
   unavailable: "looking at the screen is not available",
+  "no-capture": "there is no capture waiting to be read",
 };
 
 function failLook(res: ServerResponse, code: LookErrorCode): void {
