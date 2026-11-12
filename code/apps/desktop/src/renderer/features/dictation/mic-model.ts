@@ -1,5 +1,5 @@
 import type { MicStatus } from "@speakkit/dictation";
-import type { DictationConfig, PasteMethod } from "../../../shared/dictation/settings";
+import { MAX_EXCLUSIONS, type DictationConfig, type PasteMethod } from "../../../shared/dictation/settings";
 
 export const OUTPUT_OPTIONS = [
   { id: "restore", label: "Paste and restore" },
@@ -51,4 +51,11 @@ export function micLine(mic: MicStatus, canOpenPrivacy: boolean): { text: string
     case "lost":
       return { text: "The microphone was lost and could not be reopened. Plug it in again.", problem: true, link: false };
   }
+}
+
+/** Adds a word to the list when it is new (any case) and the list has room; returns the list unchanged otherwise. */
+export function withExclusion(list: readonly string[], word: string): string[] {
+  const w = word.trim().slice(0, 60);
+  if (!w || list.length >= MAX_EXCLUSIONS || list.some((x) => x.toLowerCase() === w.toLowerCase())) return [...list];
+  return [...list, w];
 }

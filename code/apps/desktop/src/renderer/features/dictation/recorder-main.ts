@@ -62,7 +62,8 @@ const reopener = createReopener({
     const t = setTimeout(fn, ms);
     return () => clearTimeout(t);
   },
-  onEvent: (e) => dictation.recorder.event(e.type === "recovered" ? { type: "lost" } : e),
+  // "recovered" needs no report of its own: the open that succeeded already said which microphone is in use.
+  onEvent: (e) => e.type !== "recovered" && dictation.recorder.event(e),
 });
 
 async function listDevices(): Promise<MicDevice[]> {
@@ -151,7 +152,7 @@ function onEnded(mic: Live): void {
   if (live !== mic) return;
   closeMic();
   // A microphone kept ready that vanished is reopened in the background; one released when idle is simply opened by the next press.
-  if (config.keepMs !== 0) reopener.run();
+  if (config.keepMs !== 0 || meterOn) reopener.run();
 }
 
 function closeMic() {
@@ -188,16 +189,27 @@ async function announceDevices(): Promise<void> {
   }
 }
 
-async function meter(on: boolean, mic: RecorderMicConfig): Promise<RecorderResult> {
+const sameDevice = (a: RecorderMicConfig, b: RecorderMicConfig) => a.saved === b.saved && a.avoidBluetooth === b.avoidBluetooth && a.exclusions.join("\n") === b.exclusions.join("\n");
+
+/** Applies new settings at once: another microphone choice reopens, and the microphone is open exactly while it is kept ready or the level meter is on. */
+async function configure(on: boolean, mic: RecorderMicConfig): Promise<RecorderResult> {
+  const changed = !sameDevice(config, mic);
   meterOn = on;
   config = mic;
-  if (!on) {
-    if (live && !buffer.recording) cool();
+  if (buffer.recording) return { ok: true }; // takes effect at the next start
+  if (changed) {
+    reopener.cancel();
+    silent.clear();
+    closeMic();
+  }
+  if (!on && mic.keepMs === 0) {
+    if (live) cool();
     return { ok: true };
   }
   clearTimeout(warm);
   try {
     live ??= await ensureOpen();
+    if (!on) cool();
     return { ok: true };
   } catch (e) {
     meterOn = false;
@@ -232,7 +244,7 @@ navigator.mediaDevices.addEventListener("devicechange", () => {
   silent.clear();
   reopenedForSilence = false;
   if (live && !buffer.recording) closeMic();
-  if (config.keepMs !== 0 && !live) void tryOpen();
+  if ((config.keepMs !== 0 || meterOn) && !live) void tryOpen();
 });
 
 dictation.recorder.onCommand((c: RecorderCommand) => {
@@ -241,7 +253,7 @@ dictation.recorder.onCommand((c: RecorderCommand) => {
     if (c.op === "start") result = await start(c.prerollMs, c.mic);
     else if (c.op === "stop") result = stop();
     else if (c.op === "devices") await announceDevices();
-    else if (c.op === "meter") result = await meter(c.on, c.mic);
+    else if (c.op === "configure") result = await configure(c.meter, c.mic);
     else if (c.op === "discard") {
       buffer.discard();
       if (live) cool();

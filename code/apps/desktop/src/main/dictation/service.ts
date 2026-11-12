@@ -42,6 +42,7 @@ export interface DictationServiceOptions {
 }
 
 const PUSH_MS = 200;
+const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
 /**
  * Dictation in the desktop app: the key hook, the microphone window, the speech engine, the HUD and the history, wired to the core and shown to
  * the Settings pages. Nothing runs (no hook, no microphone window, no model in memory) until the person turns dictation on.
@@ -71,7 +72,7 @@ export class DictationService {
   #recorder: RecorderHost | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
-  readonly mic = new MicState(process.platform === "win32", () => this.#recorder);
+  readonly mic = new MicState(process.platform === "win32", () => this.#recorder, { enabled: () => this.#cfg.enabled, after: (ms, fn) => clock.after(ms, fn) });
   readonly #sleep = createSleepBlock(
     powerSaveBlocker,
     () => this.#cfg.blockSleep,
@@ -251,6 +252,7 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.setHotkey(this.#cfg.hotkey);
     if (patch.retention !== undefined) void this.history.refresh();
+    if (this.#cfg.enabled && MIC_KEYS.some((k) => k in patch)) void this.mic.refresh();
     this.#push(true);
     return this.status();
   }
@@ -301,7 +303,7 @@ export class DictationService {
     const ready = this.#hotkeys.enable(true);
     this.controls.watch();
     this.#setHotkeyFailed(!ready);
-    void this.#recorder?.prepare();
+    void this.#recorder?.prepare().then(() => this.mic.refresh());
     await this.models.refresh();
     if (this.models.installed) this.models.warm();
     else void this.models.download(this.#cfg.model);
@@ -314,6 +316,7 @@ export class DictationService {
     this.controls.watch();
     this.#setHotkeyFailed(false);
     this.#recorder?.close();
+    this.mic.reset();
     this.presenter.dismiss();
     this.os?.hud.dispose(); // the HUD window goes now; the next recording makes a new one
     await this.models.unload();

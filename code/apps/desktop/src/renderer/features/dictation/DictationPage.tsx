@@ -6,6 +6,7 @@ import { MAX_REPLACEMENTS } from "../../../shared/dictation/settings";
 import { Page } from "../../ui";
 import { dictation } from "./api";
 import { AppRulesCard, MicrophoneCard, OutputCard } from "./AudioCards";
+import { MicExclusions } from "./MicExclusions";
 import { FirstRunCard } from "./FirstRunCard";
 import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
 import { ModelList } from "./ModelList";
@@ -159,6 +160,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
         <>
           <General s={s} />
           <MicrophoneCard s={s} />
+          <MicExclusions list={s.settings.micExclusions} />
           <OutputCard s={s} />
           <AppRulesCard s={s} />
           <ModelList status={s} />

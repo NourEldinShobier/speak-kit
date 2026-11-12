@@ -3,19 +3,22 @@ import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, T
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
+import { watchMeter } from "./meter-watch";
 import { KEEP_READY_MINUTES, METHOD_OPTIONS, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
 
 const BARS = 24;
+/** Auto means "no saved device". The select cannot hold an empty value, so it is stored as this word and mapped back. */
+const AUTO = "auto";
 
 /** Live input level, drawn only while the page is visible: the microphone is open for the meter and let go when the person leaves. */
 function Meter() {
   const [level, setLevel] = useState(0);
   useEffect(() => {
-    void dictation.micMeter(true);
     const off = dictation.onMicLevel(setLevel);
+    const stop = watchMeter(dictation, document, window);
     return () => {
       off();
-      void dictation.micMeter(false);
+      stop();
     };
   }, []);
   const lit = Math.round(level * BARS);
@@ -30,9 +33,39 @@ function Meter() {
 
 /** Automatic first, then what is plugged in. A saved device that is not plugged in stays listed, so the choice is not lost silently. */
 function micOptions(devices: DictationStatus["devices"], saved: string) {
-  const options = [{ value: "", label: "Automatic" }, ...devices.map((d) => ({ value: d.id, label: d.label || "Microphone" }))];
+  const options = [{ value: AUTO, label: "Automatic" }, ...devices.map((d) => ({ value: d.id, label: d.label || "Microphone" }))];
   if (saved && !devices.some((d) => d.id === saved)) options.push({ value: saved, label: "Saved microphone (not connected)" });
   return options;
+}
+
+function MicProblem({ s, line }: { s: DictationStatus; line: ReturnType<typeof micLine> }) {
+  return (
+    <Banner tone="warning" title={line.text} action={line.link ? <Button onClick={() => void dictation.openSoundSettings()}>Open privacy settings</Button> : undefined}>
+      {s.mic.kind === "blocked" ? "Windows has a microphone privacy switch. When it is off, apps get silence." : "Check the connection, then try again."}
+    </Banner>
+  );
+}
+
+function CaptureRows({ c }: { c: DictationStatus["settings"] }) {
+  return (
+    <>
+      <SettingRow
+        label="End-of-sentence pause"
+        description="Adds a short silence after you stop, for the speech models that need it to finish the last sentence."
+        control={<Toggle aria-label="End-of-sentence pause" checked={c.sentencePause} onChange={(sentencePause) => void dictation.patchSettings({ sentencePause })} />}
+      />
+      <SettingRow
+        label="Keep the computer awake while recording"
+        description="Stops sleep during a recording. It is released when you stop."
+        control={<Toggle aria-label="Keep the computer awake while recording" checked={c.blockSleep} onChange={(blockSleep) => void dictation.patchSettings({ blockSleep })} />}
+      />
+      <SettingRow
+        label="Skip long pauses"
+        description="Cuts the middle out of long pauses before the speech is decoded, which is faster on slow computers. If nothing is heard that way, the whole recording is used."
+        control={<Toggle aria-label="Skip long pauses" checked={c.skipPauses} onChange={(skipPauses) => void dictation.patchSettings({ skipPauses })} />}
+      />
+    </>
+  );
 }
 
 export function MicrophoneCard({ s }: { s: DictationStatus }) {
@@ -46,14 +79,12 @@ export function MicrophoneCard({ s }: { s: DictationStatus }) {
         className="lm-row--control"
         label="Microphone"
         description="Automatic uses the system default and never picks a virtual or phone input."
-        control={<Select label="Microphone" value={c.microphone} onChange={(microphone) => void dictation.patchSettings({ microphone })} options={options} />}
+        control={
+          <Select label="Microphone" value={c.microphone || AUTO} onChange={(microphone) => void dictation.patchSettings({ microphone: microphone === AUTO ? "" : microphone })} options={options} />
+        }
       />
       <SettingRow className="lm-row--control" label="Input level" description={line.text} control={<Meter />} />
-      {line.problem && (
-        <Banner tone="warning" title={line.text} action={line.link ? <Button onClick={() => void dictation.openSoundSettings()}>Open privacy settings</Button> : undefined}>
-          {s.mic.kind === "blocked" ? "Windows has a microphone privacy switch. When it is off, apps get silence." : "Check the connection, then try again."}
-        </Banner>
-      )}
+      {line.problem && <MicProblem s={s} line={line} />}
       <SettingRow
         label="Avoid headset microphones"
         description="A Bluetooth headset switches to a call profile when its microphone opens, which makes music and calls sound worse. Speak Kit uses the built-in or a wired microphone instead, unless you pick the headset above."
@@ -72,16 +103,7 @@ export function MicrophoneCard({ s }: { s: DictationStatus }) {
           control={<Select label="Stay open for" value={String(c.keepReadyMinutes)} onChange={(v) => void dictation.patchSettings({ keepReadyMinutes: Number(v) })} options={KEEP_READY_MINUTES} />}
         />
       )}
-      <SettingRow
-        label="End-of-sentence pause"
-        description="Adds a short silence after you stop, for the speech models that need it to finish the last sentence."
-        control={<Toggle aria-label="End-of-sentence pause" checked={c.sentencePause} onChange={(sentencePause) => void dictation.patchSettings({ sentencePause })} />}
-      />
-      <SettingRow
-        label="Keep the computer awake while recording"
-        description="Stops sleep during a recording. It is released when you stop."
-        control={<Toggle aria-label="Keep the computer awake while recording" checked={c.blockSleep} onChange={(blockSleep) => void dictation.patchSettings({ blockSleep })} />}
-      />
+      <CaptureRows c={c} />
     </SettingsSection>
   );
 }
@@ -154,7 +176,7 @@ export function AppRulesCard({ s }: { s: DictationStatus }) {
           add();
         }}
       >
-        <TextInput aria-label="Program name" placeholder="Program, for example putty" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} frameClassName="dict-rule__field" />
+        <TextInput aria-label="Program name" placeholder="Program, for example putty" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className="dict-rule__field" />
         <Button type="submit" variant="primary" disabled={!name.trim()}>
           Add
         </Button>

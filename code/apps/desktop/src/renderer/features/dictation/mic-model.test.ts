@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
+import { micLine, OUTPUT_HELP, OUTPUT_OPTIONS, withExclusion } from "./mic-model";
 
 describe("micLine", () => {
   it("names the microphone in use and is not a problem", () => {
@@ -33,5 +33,20 @@ describe("output options", () => {
   it("are paste and restore, paste and keep, copy only, each with a line", () => {
     expect(OUTPUT_OPTIONS.map((o) => o.id)).toEqual(["restore", "keep", "copy"]);
     for (const o of OUTPUT_OPTIONS) expect(OUTPUT_HELP[o.id].length).toBeGreaterThan(10);
+  });
+});
+
+describe("withExclusion", () => {
+  it("adds a trimmed word", () => {
+    expect(withExclusion(["webcam"], "  yeti ")).toEqual(["webcam", "yeti"]);
+  });
+  it("ignores blank words and repeats in any case", () => {
+    expect(withExclusion(["Webcam"], "webcam")).toEqual(["Webcam"]);
+    expect(withExclusion([], "   ")).toEqual([]);
+  });
+  it("stops at the limit and cuts a very long word to 60 letters", () => {
+    const full = Array.from({ length: 20 }, (_, i) => `m${i}`);
+    expect(withExclusion(full, "extra")).toEqual(full);
+    expect(withExclusion([], "x".repeat(500))[0]).toHaveLength(60);
   });
 });

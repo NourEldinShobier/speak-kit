@@ -198,3 +198,29 @@ describe("recorder host microphone settings and events", () => {
     }
   });
 });
+
+describe("recorder host without a window", () => {
+  it("does not open a window just to let the microphone go", async () => {
+    const s = setup();
+    await s.host.configure(false);
+    expect(s.pages).toHaveLength(0);
+  });
+
+  it("opens one to turn the meter on and sends the current settings with it", async () => {
+    const s = setup();
+    const done = s.host.configure(true);
+    s.from(REC_READY);
+    await vi.waitFor(() => expect(s.contents.sent).toHaveLength(1));
+    expect(s.contents.sent[0]).toMatchObject({ op: "configure", meter: true, mic: { saved: "dev-1", keepMs: -1 } });
+    s.from(REC_REPLY, s.contents.sent[0]!.id, { ok: true });
+    await done;
+  });
+
+  it("opens no window after it was disposed (the app is quitting)", async () => {
+    const s = setup();
+    s.host.dispose();
+    await s.host.configure(true);
+    expect(await s.host.start({ prerollMs: 0 })).toEqual({ ok: false, code: "mic-failed" });
+    expect(s.pages).toHaveLength(0);
+  });
+});
