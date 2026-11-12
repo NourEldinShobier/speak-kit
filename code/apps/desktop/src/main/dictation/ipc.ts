@@ -30,7 +30,7 @@ const handlersOf = (d: DictationService): Handlers => ({
   historyStats: () => d.records.stats(),
   historyRecent: (n) => d.records.recent(n),
   historyUseVersion: (id, vid) => d.records.useVersion(id, vid),
-  historyRetranscribe: (id, model) => d.records.retranscribe(id, model),
+  historyRetranscribe: (id, model, language) => d.records.retranscribe(id, model, language),
   historyCancelRetranscribe: () => d.records.cancelRetranscribe(),
   historyAudio: (id) => d.records.audio(id),
   historyDeleteRecording: (id) => d.records.deleteRecording(id),

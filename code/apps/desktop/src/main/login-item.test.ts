@@ -7,7 +7,7 @@ interface Options {
 
 /** A stand-in for the Windows Run key: the entry reads back as enabled only when the path and args match what was registered. */
 const fake = vi.hoisted(() => {
-  const s = { entry: null as { path: string; args: string[] } | null, approved: true, status: undefined as string | undefined, opened: false };
+  const s = { entry: null as { path: string; args: string[]; enabled?: boolean } | null, approved: true, status: undefined as string | undefined, opened: false };
   const key = (o: Options) => ({ path: o.path ?? "C:/electron/electron.exe", args: o.args ?? [] });
   return {
     s,
@@ -23,7 +23,7 @@ const fake = vi.hoisted(() => {
           executableWillLaunchAtLogin: on && s.approved,
           status: s.status,
           wasOpenedAtLogin: s.opened,
-          launchItems: s.entry ? [{ name: "Speak Kit", path: s.entry.path, args: s.entry.args, enabled: true }] : [],
+          launchItems: s.entry ? [{ name: "Speak Kit", path: s.entry.path, args: s.entry.args, enabled: s.entry.enabled ?? true }] : [],
         };
       },
     },
@@ -100,6 +100,21 @@ describe("repair after an update moved the program", () => {
     fake.s.entry = { path: OLD, args: ["--hidden"] };
     expect(repairLoginItem(true)).toBe(true);
     expect(fake.s.entry).toEqual({ path: "C:/Users/me/AppData/Local/Programs/Speak Kit/Speak Kit.exe", args: ["--hidden"] });
+  });
+
+  it("leaves an old entry alone that the person switched off in Windows Startup apps", () => {
+    fake.s.entry = { path: OLD, args: [], enabled: false };
+    expect(repairLoginItem(false)).toBe(false);
+    expect(fake.s.entry.path).toBe(OLD);
+    expect(
+      staleEntries(
+        [
+          { path: OLD, enabled: false },
+          { path: OLD, enabled: true },
+        ],
+        "C:/Apps/Speak Kit/Speak Kit.exe",
+      ),
+    ).toEqual([{ path: OLD, enabled: true }]);
   });
 
   it("does nothing when the entry already holds the running path, or when there is no entry", () => {

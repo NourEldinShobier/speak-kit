@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import type { HistoryStats, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
-import { DICTATION_MODELS, DictationPatchSchema, modelId } from "./settings";
+import { DICTATION_LANGUAGES, DICTATION_MODELS, DictationPatchSchema, modelId } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
 import type { RewriteOutcome } from "@speakkit/dictation";
 
@@ -151,8 +151,8 @@ export interface DictationBridge {
   /** The last `n` entries, newest first. */
   historyRecent(n: number): Promise<HistoryItem[]>;
   historyUseVersion(id: string, versionId: string): Promise<boolean>;
-  /** Transcribes the kept recording again with `model`; progress and failure arrive in the status (`redo`). */
-  historyRetranscribe(id: string, model: DictationModelId): Promise<void>;
+  /** Transcribes the kept recording again with `model` and, for this run only, `language` (the dictation language when absent); progress and failure arrive in the status (`redo`). */
+  historyRetranscribe(id: string, model: DictationModelId, language?: DictationConfig["language"]): Promise<void>;
   historyCancelRetranscribe(): Promise<void>;
   /** The kept recording as a WAV file's bytes; null when there is none. */
   historyAudio(id: string): Promise<Uint8Array | null>;
@@ -253,7 +253,7 @@ export const DICTATION_ARGS = {
   openSoundSettings: v.tuple([]),
   historyRecent: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50))]),
   historyUseVersion: v.tuple([id, id]),
-  historyRetranscribe: v.tuple([id, modelId]),
+  historyRetranscribe: v.tuple([id, modelId, v.optional(v.picklist(DICTATION_LANGUAGES))]),
   historyCancelRetranscribe: v.tuple([]),
   historyAudio: v.tuple([id]),
   historyDeleteRecording: v.tuple([id]),

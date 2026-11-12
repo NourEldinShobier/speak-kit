@@ -13,11 +13,12 @@ const gate = () => {
 
 function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ text: string; speech: boolean }> } = {}) {
   const loads: string[] = [];
+  const languages: string[] = [];
   const versions: unknown[] = [];
   const stt = {
     downloaded: async () => true,
     load: async (id: string) => void loads.push(id),
-    transcribe: opts.transcribe ?? (async () => ({ text: "again", speech: true })),
+    transcribe: async (_pcm: unknown, language: string) => (languages.push(language), (opts.transcribe ?? (async () => ({ text: "again", speech: true })))()),
     unload: async () => {},
     warm: async () => {},
     status: () => ({ state: "ready" }),
@@ -47,7 +48,7 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
     warn: () => {},
     key: { test: false },
   });
-  return { api, loads, versions, cfg };
+  return { api, loads, versions, cfg, languages };
 }
 
 const other = (cfg: { model: string }) => (cfg.model === "parakeet-tdt-0.6b-v3-q4_0" ? "large-v3-turbo-q5_0" : "parakeet-tdt-0.6b-v3-q4_0") as "large-v3-turbo-q5_0";
@@ -67,6 +68,15 @@ describe("Transcribe again", () => {
     expect(loads).toEqual([other(cfg), cfg.model]);
     expect(versions).toHaveLength(1);
     expect(api.parts().redo).toBeUndefined();
+  });
+
+  it("runs in the language chosen for this run only, and in the dictation language when none is given", async () => {
+    const { api, languages, cfg } = rig();
+    cfg.language = "en";
+    await api.retranscribe("a", "large-v3-turbo-q5_0", "de");
+    await api.retranscribe("a", "large-v3-turbo-q5_0");
+    expect(languages).toEqual(["de", "en"]);
+    expect(cfg.language).toBe("en");
   });
 
   it("stays running after a cancel until the chosen model is back, and a second run waits for it", async () => {
