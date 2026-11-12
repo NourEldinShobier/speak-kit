@@ -71,6 +71,13 @@ function begin(session: Session, cfg: Config, press: Press): Out {
   return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: cfg.duck ? 0 : PREROLL_MS }] };
 }
 
+/** A recording started by a command, not by a key: no key is down, so the next press of the shortcut ends it. */
+function started(session: Session, cfg: Config, at: number): Out {
+  const out = begin(session, { ...cfg, mode: "toggle" }, { key: cfg.hotkey, raw: false, at });
+  const c = out.session.capture;
+  return c.kind === "toggle" ? { ...out, session: { ...out.session, capture: { ...c, down: false } } } : out;
+}
+
 function release(session: Session, cfg: Config, at: number): Out {
   const c = session.capture;
   if (c.kind !== "hold") return same(session);
@@ -108,7 +115,7 @@ function otherKey(session: Session, cfg: Config, event: KeyEvent): Step {
 
 function control(session: Session, cfg: Config, event: Extract<SessionEvent, { type: "start" | "stop" | "cancel" }>): Out {
   const c = session.capture;
-  if (event.type === "start") return c.kind === "idle" || c.kind === "armed" ? begin(session, { ...cfg, mode: "toggle" }, { key: cfg.hotkey, raw: false, at: event.at }) : same(session);
+  if (event.type === "start") return c.kind === "idle" || c.kind === "armed" ? started(session, cfg, event.at) : same(session);
   if (c.kind !== "hold" && c.kind !== "toggle" && c.kind !== "locked") return same(session);
   if (event.type === "stop") return to(session, idle, finish(c));
   return event.type === "cancel" ? to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }) : same(session);

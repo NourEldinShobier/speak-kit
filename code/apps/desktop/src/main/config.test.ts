@@ -69,3 +69,29 @@ describe("openConfig", () => {
     expect(onDisk()).toMatchObject({ setupDone: true, preferredPort: 50000 });
   });
 });
+
+describe("settings file care", () => {
+  it("keeps a file with a damaged value aside as config.json.invalid, then loads the default for it", async () => {
+    const text = JSON.stringify({ setupDone: true, speed: 99, dictation: { mode: "sideways", enabled: true } });
+    writeFileSync(path.join(dir, "config.json"), text);
+    const c = await openConfig(dir);
+    expect(c.config).toMatchObject({ speed: 1, dictation: { mode: "hold", enabled: true } });
+    expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(text);
+  });
+
+  it("keeps nothing aside for a file that only lacks newer keys or has an unknown one", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, somethingOld: 1, dictation: { enabled: true } }));
+    await openConfig(dir);
+    expect(() => readFileSync(path.join(dir, "config.json.invalid"))).toThrow();
+  });
+
+  it("writes keys in alphabetical order", async () => {
+    const c = await openConfig(dir);
+    c.config.setupDone = true;
+    c.save();
+    const keys = Object.keys(onDisk());
+    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b, "en")));
+    const nested = Object.keys(onDisk().dictation);
+    expect(nested).toEqual([...nested].sort((a, b) => a.localeCompare(b, "en")));
+  });
+});

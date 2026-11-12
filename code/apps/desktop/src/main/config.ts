@@ -1,6 +1,8 @@
 import Store from "electron-store";
 import path from "node:path";
 import { parseConfig, type Config } from "../shared/schemas";
+import { sortKeys } from "../shared/control/settings-registry";
+import { keepInvalidAside } from "./config-repair";
 import { setAsideIfCorrupt } from "./set-aside";
 
 interface ConfigStore {
@@ -16,6 +18,8 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
   const recovered = await setAsideIfCorrupt(path.join(cwd, "config.json"));
   const store = new Store<Record<string, unknown>>({ name: "config", cwd, clearInvalidConfig: false });
   const config = parseConfig(store.store);
+  // A field that had to be replaced by its default: the file as it was is kept next to it before the next save rewrites it.
+  await keepInvalidAside(store.path, store.store, config).catch(() => null);
   const envPort = Number(process.env.SPEAKKIT_PORT);
   if (envPort) config.preferredPort = envPort;
   return {
@@ -24,7 +28,7 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
     recovered,
     save: () => {
       const keep = envPort ? { ...config, preferredPort: parseConfig(store.store).preferredPort } : config;
-      store.set(keep as Record<string, unknown>);
+      store.set(sortKeys(keep) as Record<string, unknown>);
     },
   };
 }

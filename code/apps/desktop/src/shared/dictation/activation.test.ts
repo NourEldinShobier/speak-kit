@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
-import { findConflict, firstClash } from "./conflicts";
+import { ACCELERATOR_SLOTS, findConflict, firstClash, HOOK_SLOTS, SLOT_NAMES } from "./conflicts";
 import { cancelVk, hotkeyLabels, isMouseKey, KEY_VK, unsupportedKey, usesAdvancedKey, validCancelKey, validHotkey } from "./keys";
 import { interpretButton, interpretKeys } from "./recorder-model";
 import { DictationPatchSchema } from "./settings";
@@ -84,6 +84,62 @@ describe("conflicts", () => {
     expect(findConflict(all, "dictation", "ControlRight")).toBeUndefined();
     expect(firstClash(all)).toBeUndefined();
     expect(firstClash({ dictation: "F9", raw: "F9" })).toEqual(["dictation", "raw"]);
+  });
+});
+
+describe("conflict names and accelerators", () => {
+  it("names every shortcut the way the page does", () => {
+    expect(SLOT_NAMES).toEqual({
+      dictation: "Dictation shortcut",
+      second: "Second shortcut",
+      mouse: "Mouse button",
+      raw: "Dictate without processing",
+      pasteLast: "Paste last dictation",
+      cancel: "Cancel key",
+      "read-selection": "Read selection",
+      "play-pause": "Play or pause",
+      stop: "Stop reading",
+    });
+    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(9);
+  });
+
+  it("reads accelerator spellings: Ctrl, Control, Option, Shift, Super, Meta, Win, letters, digits and named keys", () => {
+    const base = { "play-pause": "" };
+    for (const [accel, chord] of [
+      ["Ctrl+Alt+S", "ControlLeft+AltLeft+KeyS"],
+      ["control+option+1", "ControlRight+AltRight+Digit1"],
+      ["Shift+Super+KeyQ", "ShiftLeft+MetaLeft+KeyQ"],
+      ["Meta+Shift+F9", "MetaRight+ShiftRight+F9"],
+      ["Win+Ctrl+Space", "MetaLeft+ControlLeft+Space"],
+    ] as const) {
+      expect(findConflict({ ...base, stop: accel }, "second", chord)).toBe("stop");
+    }
+    expect(findConflict({ stop: "Ctrl+Alt+S" }, "second", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
+    expect(findConflict({ stop: "Ctrl+Alt+1" }, "second", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
+  });
+
+  it("does not clash an accelerator with another accelerator slot unless the keys are the same set", () => {
+    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Alt+Ctrl+X")).toBe("stop");
+    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+Y")).toBeUndefined();
+    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+X+Y")).toBeUndefined();
+  });
+
+  it("the cancel key clashes with a chord that contains it and with nothing else", () => {
+    expect(findConflict({ raw: "ControlLeft+Pause" }, "cancel", "Pause")).toBe("raw");
+    expect(findConflict({ raw: "ControlLeft+Pause" }, "cancel", "F5")).toBeUndefined();
+    expect(findConflict({ cancel: "F5" }, "raw", "ControlLeft+F5")).toBe("cancel");
+  });
+
+  it("two chords clash when one is inside the other on the same sides, not when the sides differ", () => {
+    expect(findConflict({ dictation: "ControlLeft+AltLeft+Space" }, "raw", "ControlLeft+AltLeft")).toBe("dictation");
+    expect(findConflict({ dictation: "ControlLeft+AltLeft+Space" }, "raw", "ControlRight+AltLeft")).toBeUndefined();
+    expect(findConflict({ dictation: "F9" }, "raw", "ControlLeft+AltLeft+F9")).toBe("dictation");
+  });
+
+  it("firstClash returns the pair in the order of the stored slots", () => {
+    expect(firstClash({ dictation: "F9", second: "F8", raw: "F8" })).toEqual(["second", "raw"]);
+    expect(firstClash({})).toBeUndefined();
+    expect(firstClash({ dictation: "", raw: "" })).toBeUndefined();
   });
 });
 

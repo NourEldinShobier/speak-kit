@@ -24,6 +24,9 @@ files:
   - "!**/node_modules/.bin"
 
 extraResources:
+  # The command line: speakkit.cmd (Windows) and speakkit (macOS) start the app own runtime in Node mode on dist/cli/speakkit.js and pass its exit code on.
+  - from: cli-shim
+    to: bin
   # The Chrome extension, unpacked, for "Load unpacked" (Settings > Browser > Install the extension).
   - from: ../extension/dist-pack
     to: extension

@@ -61,8 +61,8 @@ export interface HistoryItem {
   at: number;
   text: string;
   app?: string;
-  /** "raw": dictated with clean-up off. */
-  kind?: "raw";
+  /** "raw": dictated with clean-up off. "printed": handed to a command, never pasted. */
+  kind?: "raw" | "printed";
 }
 
 /** What the HUD page draws. */

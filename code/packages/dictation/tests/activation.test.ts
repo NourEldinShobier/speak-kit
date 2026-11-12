@@ -215,3 +215,76 @@ describe("undo cancel and paste last", () => {
     expect(await r.d.pasteLast()).toBe("failed");
   });
 });
+
+describe("capture for a command", () => {
+  const rig = (text = "hello world") => {
+    const r = ports({ text: () => text });
+    return r;
+  };
+
+  it("hands the text to the caller, saves it as printed and never pastes it", async () => {
+    const r = rig();
+    await r.d.ready();
+    const c = r.d.capture();
+    await r.clock.advance(500);
+    c.finish();
+    await r.clock.advance(2000);
+    expect(await c.result).toEqual({ ok: true, text: "Hello world " });
+    expect(r.inserted).toEqual([]);
+    expect((await r.d.history.list())[0]).toMatchObject({ kind: "printed", text: "Hello world " });
+  });
+
+  it("with raw on, keeps the text as spoken", async () => {
+    const r = rig("um hello comma");
+    await r.d.ready();
+    const c = r.d.capture({ raw: true });
+    await r.clock.advance(500);
+    c.finish();
+    await r.clock.advance(2000);
+    expect(await c.result).toEqual({ ok: true, text: "um hello comma" });
+  });
+
+  it("ends with cancelled when cancelled, and the capture is free again", async () => {
+    const r = rig();
+    await r.d.ready();
+    const c = r.d.capture();
+    await r.clock.advance(200);
+    c.cancel();
+    expect(await c.result).toEqual({ ok: false, code: "cancelled" });
+    await r.clock.advance(100);
+    expect(r.d.state().status).toBe("idle");
+  });
+
+  it("is busy while a recording or another capture is running, and the running one is not disturbed", async () => {
+    const r = rig();
+    await r.d.ready();
+    const first = r.d.capture();
+    const second = r.d.capture();
+    expect(await second.result).toEqual({ ok: false, code: "busy" });
+    second.finish();
+    expect(r.d.state().status).toBe("recording");
+    first.cancel();
+    expect(await first.result).toEqual({ ok: false, code: "cancelled" });
+  });
+
+  it("belongs to the command when the shortcut ends it", async () => {
+    const r = rig();
+    await r.d.ready();
+    const c = r.d.capture();
+    await r.clock.advance(500);
+    r.keys.send("ControlRight", true, r.clock.clock.now());
+    await r.clock.advance(2000);
+    expect(await c.result).toEqual({ ok: true, text: "Hello world " });
+    expect(r.inserted).toEqual([]);
+  });
+
+  it("says no-speech for silence the speech engine labels as noise", async () => {
+    const r = rig("[BLANK_AUDIO]");
+    await r.d.ready();
+    const c = r.d.capture();
+    await r.clock.advance(300);
+    c.finish();
+    await r.clock.advance(2000);
+    expect(await c.result).toEqual({ ok: false, code: "no-speech" });
+  });
+});

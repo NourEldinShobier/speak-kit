@@ -15,6 +15,8 @@ const electronProcesses = (): Plugin => ({
     await nodeBuild("src/main/export/mp3-worker.ts", "dist/main", "es", "mp3-worker.js", { empty: false });
     await nodeBuild("src/main/library/parse/worker.ts", "dist/main", "es", "parse-worker.js", { empty: false });
     await nodeBuild("src/preload/index.ts", "dist/preload", "cjs", "index.cjs");
+    // The command line and the MCP server: one file, run by the app own runtime in Node mode.
+    await nodeBuild("src/cli/bin.ts", "dist/cli", "es", "speakkit.js");
   },
 });
 
