@@ -1,12 +1,13 @@
 /**
  * Settings page registry: ONE line per settings page id in SETTINGS_PAGES below. To build one, create renderer/features/<name>/
- * (public interface in index.ts) and replace that line's `StubPage`. The sidebar list lives in routes.ts. Main pages have their registry in page-registry.tsx.
+ * (public interface in index.ts). The sidebar list lives in routes.ts. Main pages have their registry in page-registry.tsx.
  */
 import type { ComponentType } from "react";
 import type { AppState, SettingsSub } from "../shared/ipc";
 import {
   AboutPage,
   AccessibilityPage,
+  AutomationPage,
   BrowserPage,
   DiagnosticsPage,
   ExperimentsPage,
@@ -20,7 +21,6 @@ import {
   VoicePage,
 } from "./features/settings";
 import { MeetingsPage } from "./features/meetings";
-import { StubPage } from "./StubPage";
 import { registerCaptureExperiments } from "./features/capture";
 import "./settings.css";
 
@@ -36,7 +36,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   storage: StoragePage,
   privacy: PrivacyPage,
   meetings: MeetingsPage,
-  automation: () => <StubPage setting="automation" />,
+  automation: AutomationPage,
   experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: DiagnosticsPage,

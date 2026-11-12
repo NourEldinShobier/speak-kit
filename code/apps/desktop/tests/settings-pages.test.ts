@@ -46,6 +46,36 @@ describe("settings search and the Advanced fold", () => {
   });
 });
 
+describe("automation", () => {
+  it("shows the server, the command-line tool and the deep links; turning the server off shows the warning and Start server turns it back on", async () => {
+    const l = await start({ config: DONE });
+    await openSettings(l, "Automation");
+    await l.page.getByText("speakkit status --json").waitFor();
+    await l.page.getByRole("button", { name: "Copy speakkit://settings/shortcuts" }).waitFor();
+    await l.page.getByRole("switch", { name: "Local server" }).click();
+    await l.page.getByText("The local server is not running").waitFor();
+    expect(configOf(l).controlServer).toBe(false);
+    await l.page.getByRole("button", { name: "Start server" }).click();
+    await l.page.getByText("The local server is not running").waitFor({ state: "detached" });
+    expect(configOf(l).controlServer).toBe(true);
+  });
+});
+
+describe("shell layout", () => {
+  it("opening Dictation leaves the shell at the full window width", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("link", { name: "Dictation", exact: true }).click();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true, level: 1 }).waitFor();
+    const box = await l.page.evaluate(() => {
+      const r = document.querySelector(".sk-body")!.getBoundingClientRect();
+      return { x: r.x, w: r.width, win: window.innerWidth };
+    });
+    expect(box.x).toBe(0);
+    expect(box.w).toBe(box.win);
+  });
+});
+
 describe("experiments", () => {
   it("every card starts off; turning one on asks first, saves the flag and shows On", async () => {
     const l = await start({ config: DONE });

@@ -69,14 +69,14 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
     items: [
       { id: "performance", label: "Performance", icon: "cpu", lead: "Memory and battery use.", keywords: "memory idle unload ram battery startup" },
       { id: "storage", label: "Storage", icon: "folder", lead: "Models, audio and data on this computer.", keywords: "models disk" },
-      { id: "privacy", label: "Privacy", icon: "shield-check", lead: "What stays on this computer.", keywords: "data local telemetry permissions" },
+      { id: "privacy", label: "Privacy", icon: "lock", lead: "What stays on this computer.", keywords: "data local telemetry permissions" },
     ],
   },
   {
     group: "Features",
     items: [
-      { id: "meetings", label: "Meetings", icon: "users", lead: "Record and transcribe meetings.", keywords: "calendar transcript record" },
-      { id: "automation", label: "Automation", icon: "plug", lead: "Let other tools control Speak Kit.", keywords: "api scripts url hooks" },
+      { id: "meetings", label: "Meetings", icon: "video", lead: "Record and transcribe meetings.", keywords: "calendar transcript record" },
+      { id: "automation", label: "Automation", icon: "terminal", lead: "Let other tools control Speak Kit.", keywords: "api scripts url hooks" },
       { id: "experiments", label: "Experiments", icon: "flask", lead: "Features that are still being tried out.", keywords: "beta labs" },
     ],
   },
@@ -84,7 +84,7 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
     group: "App",
     items: [
       { id: "browser", label: "Browser integration", icon: "world", lead: "Pair the browser extension.", keywords: "port token pair extension chrome" },
-      { id: "diagnostics", label: "Diagnostics", icon: "bug", lead: "Logs and checks for when something goes wrong.", keywords: "logs debug problem" },
+      { id: "diagnostics", label: "Diagnostics", icon: "activity", lead: "Logs and checks for when something goes wrong.", keywords: "logs debug problem" },
       { id: "about", label: "About", icon: "info-circle", lead: "Speak Kit reads text out loud on your own computer.", keywords: "version update" },
     ],
   },

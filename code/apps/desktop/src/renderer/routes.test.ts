@@ -36,3 +36,10 @@ describe("filterSettingsNav", () => {
     expect(ids("zzzz")).toEqual([]);
   });
 });
+
+describe("settings icons", () => {
+  it("use the lock, camera, prompt and pulse glyphs of the design", () => {
+    const icon = (id: string) => SETTINGS_NAV.flatMap((g) => g.items).find((i) => i.id === id)?.icon;
+    expect([icon("privacy"), icon("meetings"), icon("automation"), icon("diagnostics")]).toEqual(["lock", "video", "terminal", "activity"]);
+  });
+});
