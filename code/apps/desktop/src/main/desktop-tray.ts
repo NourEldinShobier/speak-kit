@@ -3,6 +3,7 @@ import type { Ctx } from "./context";
 import type { createExports } from "./export/service";
 import type { createReading } from "./reader/service";
 import { createTray } from "./tray";
+import { showTrayIcon } from "../shared/settings/behaviour";
 import type { createUpdates } from "./updates-service";
 import type { DictationService } from "./dictation/service";
 
@@ -56,6 +57,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     quit: requestQuit,
   };
   const tray = createTray(context, actions);
+  tray.setVisible(showTrayIcon(ctx.config));
   ctx.sinks.add(() => tray.refresh());
   return tray;
 }

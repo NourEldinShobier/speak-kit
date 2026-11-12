@@ -14,6 +14,7 @@ import { createExports } from "./export/service";
 import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
+import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
 import { registerDictationIpc } from "./dictation/ipc";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
@@ -98,6 +99,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
+      if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
     },
     onEngineState: announceEngine,
     runningWork: () => ({ reading: ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing", exports: exports.runningCount() }),

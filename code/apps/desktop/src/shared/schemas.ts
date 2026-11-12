@@ -151,8 +151,8 @@ const ExportOptionsSchema = v.object({
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
 });
 
-const EXTERNAL_LINKS = ["webstore"] as const;
-const OPEN_PATHS = ["models", "logs"] as const;
+const EXTERNAL_LINKS = ["webstore", "release-notes", "issues", "security"] as const;
+const OPEN_PATHS = ["models", "logs", "data"] as const;
 
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
 export const ARGS = {
@@ -200,4 +200,11 @@ export const ARGS = {
   voiceChatRemoveKey: v.tuple([]),
   voiceChatTestKey: v.tuple([]),
   voiceChatSetVoice: v.tuple([v.picklist(VOICE_CHAT_VOICES)]),
+  diagnosticsLog: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(0))]),
+  diagnosticsReport: v.tuple([]),
+  clearActivity: v.tuple([]),
+  dismissSettingsNotice: v.tuple([]),
+  micAccess: v.tuple([]),
+  openSystemSettings: v.tuple([v.literal("microphone")]),
+  restartApp: v.tuple([]),
 } as const;

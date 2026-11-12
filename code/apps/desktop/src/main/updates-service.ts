@@ -43,7 +43,8 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
       if (feedUrl) u.setFeedURL?.({ provider: "generic", url: feedUrl });
       return u;
     },
-    latestRelease: manualFake ? fakeRelease(manualFake) : () => githubLatestRelease(fetch),
+    latestRelease: manualFake ? fakeRelease(manualFake) : (early) => githubLatestRelease(fetch, early),
+    early: () => ctx.config.updateChannel === "early",
     onState: (s) => setState(s),
     onReady: (version) => {
       ctx.addActivity("update", "Update ready", `Speak Kit ${version} is downloaded. Restart when it suits you.`);
