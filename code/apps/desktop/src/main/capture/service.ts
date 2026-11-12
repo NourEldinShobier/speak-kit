@@ -142,7 +142,10 @@ export class CaptureService {
   #publish(): CaptureStatus {
     const status = this.status();
     if (this.runtime.phase === "recording") this.#releaseMic ??= this.#o.micClaim?.("Screen capture");
-    else (this.#releaseMic?.(), (this.#releaseMic = undefined));
+    else if (this.#releaseMic) {
+      this.#releaseMic();
+      this.#releaseMic = undefined;
+    }
     const w = this.#o.parent();
     if (w && !w.isDestroyed()) w.webContents.send(CAPTURE_STATUS_EVENT, status);
     return status;
