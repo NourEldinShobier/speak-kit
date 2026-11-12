@@ -10,8 +10,6 @@ const GLYPHS: Record<string, string> = {
   manual: "M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1 -6 0z M6 11a6 6 0 0 0 12 0 M12 17v3",
 };
 
-export const hasGlyph = (providerId: string): boolean => providerId in GLYPHS;
-
 /** The app's glyph in a row, or its two-letter mark for an app that has no glyph. */
 export function ProviderMark({ providerId, name }: { providerId: string; name: string }) {
   const d = GLYPHS[providerId];
