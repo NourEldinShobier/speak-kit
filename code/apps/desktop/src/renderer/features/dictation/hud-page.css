@@ -1,0 +1,13 @@
+/* The HUD window's own page: transparent and clipped. Kept out of hud.css so the pill drawing can be imported by the app window. */
+html,
+body,
+#root {
+  block-size: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#root {
+  display: grid;
+  place-items: center;
+}

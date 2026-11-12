@@ -77,3 +77,12 @@ describe("timer", () => {
     expect([0, 999, 1000, 4000, 59_999, 60_000, 83_000, -5].map(clock)).toEqual(["0:00", "0:00", "0:01", "0:04", "0:59", "1:00", "1:23", "0:00"]);
   });
 });
+
+describe("pill stylesheet", () => {
+  it("does not restyle the page: the app window imports the pill, so only the HUD entry may set html, body and #root", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync(new URL("./hud.css", import.meta.url), "utf8");
+    expect(css).not.toMatch(/^(html|body|#root)\b/m);
+    expect(readFileSync(new URL("./hud-main.tsx", import.meta.url), "utf8")).toContain('import "./hud-page.css"');
+  });
+});
