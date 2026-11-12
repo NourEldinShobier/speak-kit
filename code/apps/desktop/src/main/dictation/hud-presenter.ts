@@ -15,6 +15,7 @@ const STICKY_MS = 12_000;
 interface Deps {
   hud(): Hud | undefined;
   hotkey(): string;
+  platform: NodeJS.Platform;
   canRetry(): boolean;
   /** Label of the key that cancels a toggled recording. */
   cancelLabel?(): string;
@@ -67,7 +68,7 @@ export class HudPresenter {
 
   /** The "Dictation ready" pill after dictation is turned on; it goes away by itself. */
   flashReady(): void {
-    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey(), process.platform) });
+    this.#show({ kind: "ready", hotkey: hotkeyText(this.#d.hotkey(), this.#d.platform) });
     this.#ready = setTimeout(() => this.#shown?.kind === "ready" && this.#show(null), READY_MS);
   }
 
@@ -87,7 +88,7 @@ export class HudPresenter {
 
   /** The keyboard listener was rebuilt (after the lock screen or sleep): say so when a recording is still running. */
   reconnected(): void {
-    if (this.#state.status === "locked") this.toast(`Keyboard reconnected. Still recording. Press ${hotkeyText(this.#d.hotkey())} to finish.`);
+    if (this.#state.status === "locked") this.toast(`Keyboard reconnected. Still recording. Press ${hotkeyText(this.#d.hotkey(), this.#d.platform)} to finish.`);
   }
 
   dismiss(): void {
@@ -105,6 +106,7 @@ export class HudPresenter {
     const next = hudViewFor({
       state: this.#state,
       hotkey: this.#d.hotkey(),
+      platform: this.#d.platform,
       startedAt: this.#startedAt,
       level: this.#level,
       insertedAsCopy: this.#d.insertedAsCopy(),
@@ -152,6 +154,7 @@ export function createPresenter(h: { os(): DictationOs | undefined; cfg(): Dicta
   return new HudPresenter({
     hud: () => h.os()?.hud,
     hotkey: () => h.cfg().hotkey,
+    platform: process.platform,
     indicator: () => h.cfg().indicator,
     canRetry: () => !!h.failure.clip,
     cancelLabel: () => keyLabel(h.cfg().cancelKey === "Escape" ? "Esc" : h.cfg().cancelKey),

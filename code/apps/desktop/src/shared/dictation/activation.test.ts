@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { ACCELERATOR_SLOTS, findConflict, firstClash, HOOK_SLOTS, SLOT_NAMES } from "./conflicts";
 import { cancelVk, hotkeyLabels, isMouseKey, KEY_VK, unsupportedKey, usesAdvancedKey, validCancelKey, validHotkey } from "./keys";
@@ -208,9 +208,22 @@ describe("activation config", () => {
     expect(parseConfig({ dictation: { mode: "hybrid" } }).dictation.mode).toBe("hold");
   });
 
-  it("resets a saved left button to the default and says so", () => {
-    const c = parseConfig({ dictation: { hotkey: "Mouse1", mouseButton: "Mouse1", secondHotkey: "ControlLeft+Mouse1" } }).dictation;
-    expect(c).toMatchObject({ hotkey: "ControlRight", mouseButton: "", secondHotkey: "", resetNotice: "left-click" });
+  describe("resets a saved left button to the default of the platform and says so", () => {
+    const realPlatform = process.platform;
+    afterEach(() => {
+      Object.defineProperty(process, "platform", { value: realPlatform });
+      vi.resetModules();
+    });
+    it.each([
+      ["win32", "ControlRight"],
+      ["darwin", "AltRight"],
+    ] as const)("%s", async (platform, hotkey) => {
+      Object.defineProperty(process, "platform", { value: platform });
+      vi.resetModules();
+      const { parseConfig: parse } = await import("../schemas");
+      const c = parse({ dictation: { hotkey: "Mouse1", mouseButton: "Mouse1", secondHotkey: "ControlLeft+Mouse1" } }).dictation;
+      expect(c).toMatchObject({ hotkey, mouseButton: "", secondHotkey: "", resetNotice: "left-click" });
+    });
   });
 
   it("clears an optional shortcut that shares a key with the dictation shortcut, and says so", () => {

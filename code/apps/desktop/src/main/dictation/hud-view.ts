@@ -5,6 +5,8 @@ import type { HudView } from "../../shared/dictation/contract";
 export interface HudInput {
   state: DictationState;
   hotkey: string;
+  /** Decides the key names: "Ctrl Alt" or "Control Option". */
+  platform: NodeJS.Platform;
   /** When the current recording began (the HUD counts up from it). */
   startedAt: number;
   level: number;
@@ -79,11 +81,11 @@ export function hudViewFor(i: HudInput): HudView | null {
         locked: s.mode === "toggle",
         startedAt: i.startedAt,
         level: i.level,
-        hotkey: hotkeyText(i.hotkey, process.platform),
+        hotkey: hotkeyText(i.hotkey, i.platform),
         ...(s.mode === "toggle" && i.cancelLabel && { cancel: i.cancelLabel }),
       };
     case "locked":
-      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, process.platform) };
+      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, i.platform) };
     case "transcribing":
     case "pasting":
       return { kind: "transcribing" };
