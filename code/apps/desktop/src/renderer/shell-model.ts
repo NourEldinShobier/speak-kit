@@ -21,7 +21,6 @@ export interface ShellState {
   quit: boolean;
   exporting: ExportOpen | null;
   doc: OpenDoc | null;
-  recent: string[];
 }
 
 export type ShellAction =
@@ -34,12 +33,11 @@ export type ShellAction =
   | { type: "toggle-palette" }
   | { type: "quit"; open: boolean }
   | { type: "export"; open: ExportOpen | null }
-  | { type: "open-doc"; doc: OpenDoc | null }
-  | { type: "remember"; text: string };
+  | { type: "open-doc"; doc: OpenDoc | null };
 
 export const MAX_RECENT = 5;
 
-export const initShell = (recent: string[]): ShellState => ({
+export const initShell = (): ShellState => ({
   hist: [{ page: "home", sub: "general" }],
   at: 0,
   side: true,
@@ -47,7 +45,6 @@ export const initShell = (recent: string[]): ShellState => ({
   quit: false,
   exporting: null,
   doc: null,
-  recent,
 });
 
 export const currentLoc = (s: ShellState): Loc => s.hist[s.at]!;
@@ -67,10 +64,18 @@ function go(s: ShellState, page: Page, sub?: SettingsSub): ShellState {
   return moveTo(s, s.at + 1, [...s.hist.slice(0, s.at + 1), next]);
 }
 
-/** The text kept in "Recent": one line, 80 characters, newest first, no repeats; blank text changes nothing. */
-export function rememberRecent(recent: string[], text: string): string[] {
-  const t = text.trim().replace(/\s+/g, " ").slice(0, 80);
-  return t ? [t, ...recent.filter((r) => r !== t)].slice(0, MAX_RECENT) : recent;
+export interface RecentReading {
+  id: string;
+  title: string;
+}
+
+/** The readings opened most recently, newest first, at most five; a reading never opened is not listed. */
+export function recentReadings(docs: { id: string; title: string; openedAt?: number }[]): RecentReading[] {
+  return docs
+    .filter((d): d is typeof d & { openedAt: number } => d.openedAt !== undefined)
+    .sort((a, b) => b.openedAt - a.openedAt)
+    .slice(0, MAX_RECENT)
+    .map(({ id, title }) => ({ id, title }));
 }
 
 /** Leaves Settings for the page that was open before it (the entry just before it; sections never add entries), dropping the Settings entry. */
@@ -97,8 +102,6 @@ function flagReducer(s: ShellState, a: Exclude<ShellAction, NavAction>): ShellSt
       return { ...s, exporting: a.open };
     case "open-doc":
       return { ...s, doc: a.doc };
-    case "remember":
-      return { ...s, recent: rememberRecent(s.recent, a.text) };
     default: {
       const unreachable: never = a;
       return unreachable;

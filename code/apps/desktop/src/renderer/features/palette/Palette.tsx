@@ -132,6 +132,12 @@ function usePalette(onRun: (c: Command) => void, onClose: () => void) {
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (flat.length) setAt((at + (e.key === "ArrowDown" ? 1 : -1) + flat.length) % flat.length);
+    } else if (e.key === "Tab") {
+      // aria-modal: Tab cycles inside the dialog instead of reaching the page behind it.
+      const f = [...e.currentTarget.querySelectorAll<HTMLElement>("input, button")];
+      const i = f.indexOf(document.activeElement as HTMLElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length]?.focus();
     } else if (e.key === "Enter") {
       e.preventDefault();
       const c = flat[at];
@@ -191,6 +197,12 @@ function Footer({ count }: { count: number | null }) {
 /** Command palette. Ctrl K or the title-bar search opens it. */
 export function Palette({ onRun, onClose }: { onRun: (c: Command) => void; onClose: () => void }) {
   const p = usePalette(onRun, onClose);
+  // Escape works wherever focus is, e.g. after a click on the backdrop moved it out of the dialog.
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && onClose();
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [onClose]);
   const searching = p.q.trim() !== "";
   const count = p.view.flat.length;
   return (

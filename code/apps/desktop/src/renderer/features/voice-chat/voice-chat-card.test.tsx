@@ -175,7 +175,8 @@ describe("card markup", () => {
 
   it("the whole card lists the voice and the model as plain text", () => {
     const html = renderToStaticMarkup(<VoiceChatCard s={appState()} />);
-    expect(html).toContain("Voice chat");
+    expect(html).not.toMatch(/>Voice chat</);
+    expect(html).toContain(">OpenAI account<");
     expect(html).toContain("Model: gpt-realtime-2.1");
     expect(html).toContain("Marin");
   });

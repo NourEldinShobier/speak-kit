@@ -94,3 +94,13 @@ const ALL_MENU = MENU.flatMap((g) => g.items);
 const ALL_SETTINGS = SETTINGS_NAV.flatMap((g) => g.items);
 export const menuItem = (page: MenuPage): MenuItemDef => ALL_MENU.find((i) => i.page === page)!;
 export const settingsItem = (id: SettingsSub): SettingsItemDef => ALL_SETTINGS.find((i) => i.id === id)!;
+
+/** The Settings rows whose label or keywords contain every word typed; groups left empty are dropped. */
+export function filterSettingsNav(q: string): typeof SETTINGS_NAV {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return SETTINGS_NAV;
+  return SETTINGS_NAV.map((g) => ({
+    group: g.group,
+    items: g.items.filter((i) => words.every((w) => `${i.label} ${i.keywords}`.toLowerCase().includes(w))),
+  })).filter((g) => g.items.length > 0);
+}

@@ -44,6 +44,27 @@ describe("sidebar", () => {
     expect(html).not.toContain("New reading");
     expect(html).not.toContain("Browser");
   });
+  it("lists recent readings by title in place of the empty hint", () => {
+    const html = renderToStaticMarkup(
+      <Sidebar
+        s={appState()}
+        hidden={false}
+        page="home"
+        sub="general"
+        recent={[{ id: "d1", title: "Chapter 4 draft" }]}
+        go={() => {}}
+        onCloseSettings={() => {}}
+        onOpenRecent={() => {}}
+        onOpenExport={() => {}}
+      />,
+    );
+    expect(html).toContain("Chapter 4 draft");
+    expect(html).not.toContain("appear here");
+    expect(render("home")).toContain("Readings you open appear here.");
+  });
+  it("has a Settings search field", () => {
+    expect(render("settings")).toContain('aria-label="Search settings"');
+  });
   it("marks only the open page", () => {
     expect(render("home").match(/aria-current="page"/g)).toHaveLength(1);
   });
