@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { LineProcess } from "./caret-reader";
-import { createPageAddress, parseAddress } from "./page-address";
+import { createPageAddress, parseAddress, systemPageAddress, WINDOWS_ADDRESS_LOOP } from "./page-address";
 import type { ForegroundInfo } from "./types";
 
 const fg = (exe: string | null): ForegroundInfo => ({ hwnd: "1", pid: 1, exe, className: "X", elevated: false });
@@ -68,5 +68,31 @@ describe("page address", () => {
     expect(parseAddress("url:https://a.com/x?y=1")).toBe("https://a.com/x?y=1");
     expect(parseAddress("url:")).toBeUndefined();
     expect(parseAddress("none")).toBeUndefined();
+  });
+});
+
+describe("page address scripts", () => {
+  it("looks for an edit field named like an address bar and reads its value on Windows", () => {
+    for (const part of ["ControlViewWalker", "FocusedElement", "ControlType]::Edit", "(?i)address|url|location", "ValuePattern", "'url:' + "]) expect(WINDOWS_ADDRESS_LOOP).toContain(part);
+  });
+
+  it("names Safari and every Chromium browser in the macOS script", async () => {
+    const ran: string[] = [];
+    const a = createPageAddress({
+      platform: "darwin",
+      start: () => ({ write: () => undefined, onLine: () => undefined, onExit: () => undefined, kill: () => undefined }),
+      once: async (s) => (ran.push(s), "none"),
+    });
+    await a.read(fg("com.apple.Safari"));
+    for (const b of ["Safari", "Google Chrome", "Brave Browser", "Microsoft Edge", "Arc", "Vivaldi", "Chromium"]) expect(ran[0]).toContain(`"${b}"`);
+    expect(ran[0]).toContain("URL of active tab of front window");
+  });
+
+  it("starts nothing until the first read of a browser", () => {
+    systemPageAddress().dispose();
+  });
+
+  it("answers undefined on a system without a reader", async () => {
+    expect(await createPageAddress({ platform: "linux", start: helper("url:x").start, once: async () => "url:x" }).read(fg("chrome.exe"))).toBeUndefined();
   });
 });

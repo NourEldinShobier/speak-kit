@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vite-plus/test";
-import { windowsAudio } from "./windows-audio";
+import { WINDOWS_AUDIO_LOOP, windowsAudio } from "./windows-audio";
 
 /** A helper that answers from a table; every command it was sent is logged. */
 function helper(answers: Record<string, string | string[]>) {
   const sent: string[] = [];
+  const slept: number[] = [];
   const queues = new Map(Object.entries(answers).map(([k, v]) => [k, Array.isArray(v) ? [...v] : [v]]));
   const ask = async (command: string) => {
     sent.push(command);
     const q = queues.get(command.split(" ")[0]!);
     return (q && q.length > 1 ? q.shift() : q?.[0]) ?? "error";
   };
-  return { sent, audio: windowsAudio(ask, async () => undefined) };
+  return { sent, slept, audio: windowsAudio(ask, async (ms) => void slept.push(ms)) };
 }
 
 describe("windows audio", () => {
@@ -63,5 +64,47 @@ describe("windows audio", () => {
     expect(await helper({ name: "Speakers (Realtek(R) Audio)" }).audio.output()).toBe("speakers");
     expect(await helper({ name: "Headphones (WH-1000XM4 Hands-Free)" }).audio.output()).toBe("headphones");
     expect(await helper({ name: "" }).audio.output()).toBe("unknown");
+  });
+});
+
+describe("windows audio timing", () => {
+  it("waits between the steps of a ramp but not after the last one", async () => {
+    const h = helper({ volume: "0.8", setvolume: "ok" });
+    await h.audio.volume.ramp(0.2, 120);
+    expect(h.slept).toEqual([40, 40]);
+    const one = helper({ volume: "0.8", setvolume: "ok" });
+    await one.audio.volume.ramp(0.2, 40);
+    expect(one.slept).toEqual([]);
+  });
+
+  it("reads the peak four times 60 ms apart, stops at the first sound, and a peak exactly at the limit is silence", async () => {
+    const quiet = helper({ peak: "0.002" });
+    expect(await quiet.audio.media.playing()).toBe(false);
+    expect(quiet.slept).toEqual([60, 60, 60]);
+    const loud = helper({ peak: ["0", "0.0021"] });
+    expect(await loud.audio.media.playing()).toBe(true);
+    expect(loud.slept).toEqual([60]);
+  });
+
+  it("rejects a peak that is not a number", async () => {
+    await expect(helper({ peak: "error" }).audio.media.playing()).rejects.toThrow("peak failed");
+  });
+
+  it("carries the Core Audio script", () => {
+    for (const part of [
+      "IAudioEndpointVolume",
+      "IAudioMeterInformation",
+      "GetMasterVolumeLevelScalar",
+      "SetMute",
+      "keybd_event(0xB3",
+      "'playpause'",
+      "'setvolume'",
+      "'peak'",
+      "'name'",
+      "'muted'",
+      "'setmuted'",
+      "'volume'",
+    ])
+      expect(WINDOWS_AUDIO_LOOP).toContain(part);
   });
 });

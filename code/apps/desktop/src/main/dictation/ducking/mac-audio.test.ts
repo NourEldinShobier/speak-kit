@@ -3,11 +3,13 @@ import { macAudio, parseMacOutput } from "./mac-audio";
 
 function osa(answer: (script: string) => string) {
   const ran: string[] = [];
+  const slept: number[] = [];
   return {
     ran,
+    slept,
     audio: macAudio(
       async (s) => (ran.push(s), answer(s)),
-      async () => undefined,
+      async (ms) => void slept.push(ms),
     ),
   };
 }
@@ -76,5 +78,41 @@ describe("mac audio", () => {
     const pods = osa(() => report([{ _name: "AirPods Pro", coreaudio_device_transport: "coreaudio_device_type_bluetooth", coreaudio_default_audio_output_device: "spaudio_yes" }]));
     expect(await pods.audio.output()).toBe("headphones");
     expect(await osa(() => "{}").audio.output()).toBe("unknown");
+  });
+});
+
+describe("mac audio scripts and timing", () => {
+  it("asks for the mute state and the playing app with the right scripts", async () => {
+    const m = osa((s) => (s.includes("player state") ? "Music\n" : "false"));
+    expect(await m.audio.volume.muted()).toBe(false);
+    expect(await m.audio.media.playing()).toBe(true);
+    expect(m.ran[0]).toBe("output muted of (get volume settings)");
+    for (const part of ['application "Spotify" is running', 'application "Music" is running', 'tell application "Spotify" to if player state is playing then set r to "Spotify"', "return r"])
+      expect(m.ran[1]).toContain(part);
+  });
+
+  it("reads the default output with system_profiler", async () => {
+    const m = osa(() => "{}");
+    await m.audio.output();
+    expect(m.ran).toEqual(['do shell script "system_profiler SPAudioDataType -json"']);
+  });
+
+  it("waits between ramp steps but not after the last, and one step for a short ramp", async () => {
+    const m = osa(() => "80");
+    await m.audio.volume.ramp(0.2, 120);
+    expect(m.slept).toEqual([40, 40]);
+    const one = osa(() => "80");
+    await one.audio.volume.ramp(0.2, 40);
+    expect(one.slept).toEqual([]);
+  });
+
+  it("keeps the transport out of the label when the report names none, and strips the prefix only at the start", () => {
+    expect(parseMacOutput(report([{ _name: "Speakers", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe("Speakers");
+    expect(parseMacOutput(report([{ _name: "X", coreaudio_device_transport: "xcoreaudio_device_type_usb", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe(
+      "X xcoreaudio_device_type_usb",
+    );
+    expect(parseMacOutput(report([{ coreaudio_device_transport: "coreaudio_device_type_usb", coreaudio_default_audio_output_device: "spaudio_yes" }]))).toBe("usb");
+    expect(parseMacOutput(JSON.stringify({ SPAudioDataType: [{}, { _items: [{ _name: "A", coreaudio_default_audio_output_device: "spaudio_yes" }] }] }))).toBe("A");
+    expect(parseMacOutput(JSON.stringify({}))).toBeUndefined();
   });
 });

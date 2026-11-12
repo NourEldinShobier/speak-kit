@@ -35,11 +35,12 @@ export function createProgramVersions(read: (fg: ForegroundInfo) => Promise<stri
   return { warm: (fg) => void lookup(fg), lookup };
 }
 
-const run = (file: string, args: string[]): Promise<string> =>
+type Run = (file: string, args: string[]) => Promise<string>;
+const execute: Run = (file, args) =>
   new Promise((resolve, reject) => execFile(file, args, { timeout: 2000, env: launchEnv(), windowsHide: true }, (err, out) => (err ? reject(err) : resolve(out.trim()))));
 
 /** Windows: the product version of the program's main file. macOS: the version of the application bundle the process runs from. */
-export async function readSystemVersion(fg: ForegroundInfo, platform: NodeJS.Platform = process.platform): Promise<string | undefined> {
+export async function readSystemVersion(fg: ForegroundInfo, platform: NodeJS.Platform = process.platform, run: Run = execute): Promise<string | undefined> {
   if (platform === "win32") {
     const out = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `(Get-Process -Id ${Math.trunc(fg.pid)}).MainModule.FileVersionInfo.ProductVersion`]);
     return out || undefined;
@@ -47,7 +48,8 @@ export async function readSystemVersion(fg: ForegroundInfo, platform: NodeJS.Pla
   if (platform === "darwin") {
     const path = await run("ps", ["-p", String(Math.trunc(fg.pid)), "-o", "comm="]);
     const bundle = /^(.*?\.app)(\/|$)/.exec(path)?.[1];
-    return bundle ? (await run("mdls", ["-raw", "-name", "kMDItemVersion", bundle])) || undefined : undefined;
+    const version = bundle ? await run("mdls", ["-raw", "-name", "kMDItemVersion", bundle]) : "";
+    return version && version !== "(null)" ? version : undefined;
   }
   return undefined;
 }
