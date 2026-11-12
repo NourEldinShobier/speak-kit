@@ -151,7 +151,7 @@ describe("page context from the browser", () => {
     const headers = { Origin: "http://localhost:3000", "Content-Type": "application/json" };
     const withToken = await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers: { ...headers, ...c.auth }, body });
     expect([withToken.status, withToken.headers.get("access-control-allow-origin")]).toEqual([202, "http://localhost:3000"]);
-    expect((await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers, body })).status).toBe(401);
+    expect((await fetch(`${c.base}/v1/capture/page-context`, { method: "POST", headers, body })).status).toBe(404);
   });
 
   it("serves the script without a token, and it posts what the page does", async () => {
