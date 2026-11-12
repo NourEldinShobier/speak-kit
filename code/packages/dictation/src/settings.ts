@@ -58,6 +58,8 @@ export interface Settings {
   prompt: boolean;
   modes: Mode[];
   rewrite: { enabled: boolean; deadlineMs: number };
+  /** Adds a space before the text when the character before the caret is a letter, digit or closing punctuation. */
+  smartSpacing: boolean;
   /** Keep the audio of each dictation next to its history entry (needs an audio store). */
   keepRecordings: boolean;
 }
@@ -92,5 +94,6 @@ export const defaultSettings: Readonly<Settings> = {
   prompt: true,
   modes: [],
   rewrite: { enabled: false, deadlineMs: 4000 },
+  smartSpacing: false,
   keepRecordings: false,
 };
