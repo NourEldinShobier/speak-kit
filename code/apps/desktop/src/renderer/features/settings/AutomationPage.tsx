@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { AUTOMATION_ERROR_CODES, AUTOMATION_ERROR_TEXT } from "@speakkit/protocol";
-import { Banner, Button, EmptyState, Icon, SettingRow, SettingsSection, Skeleton, StatusPill, Toggle } from "@speakkit/ui";
-import { automationView, capabilityChips, COMMANDS, type AutomationInfo, type AutomationCliAction } from "../../../shared/automation";
+import { useState } from "react";
+import { Button, OptInCard, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { api, cleanError, Page } from "../../ui";
 
@@ -239,10 +237,10 @@ export function AutomationPage({ s }: { s: AppState }) {
   const view = info && automationView(info);
   return (
     <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
-      {!s.port && (
-        <Banner tone="warning" title="The local server is not running">
-          Commands cannot reach Speak Kit until it starts. The limits below are the built-in ones.
-        </Banner>
+      {!on && (
+        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void api.patchConfig({ controlServer: true })}>
+          The command-line tool and the MCP server need it. It only answers on this computer. Speak Kit itself works without it.
+        </OptInCard>
       )}
       {error && (
         <Banner tone="error" title="That did not work">

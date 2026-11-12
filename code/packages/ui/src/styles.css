@@ -2077,6 +2077,46 @@ button.lm-listrow {
   display: flex;
   gap: 8px;
 }
+.lm-optin {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+}
+.lm-optin__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-control);
+  background: var(--surface-well);
+  color: var(--text-secondary);
+}
+.lm-optin__text {
+  flex: 1;
+  min-width: 0;
+}
+.lm-optin__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.lm-optin__body {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.lm-optin > .lm-btn {
+  flex: none;
+}
 .lm-stepper {
   display: flex;
   align-items: center;

@@ -53,10 +53,10 @@ describe("automation", () => {
     await l.page.getByText("speakkit status --json").waitFor();
     await l.page.getByRole("button", { name: "Copy speakkit://settings/shortcuts" }).waitFor();
     await l.page.getByRole("switch", { name: "Local server" }).click();
-    await l.page.getByText("The local server is not running").waitFor();
+    await l.page.getByText("The local server is off").waitFor();
     expect(configOf(l).controlServer).toBe(false);
     await l.page.getByRole("button", { name: "Start server" }).click();
-    await l.page.getByText("The local server is not running").waitFor({ state: "detached" });
+    await l.page.getByText("The local server is off").waitFor({ state: "detached" });
     expect(configOf(l).controlServer).toBe(true);
   });
 });
