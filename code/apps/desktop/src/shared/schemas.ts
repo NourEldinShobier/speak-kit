@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { DEFAULT_PORT, DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICES } from "@speakkit/protocol";
 import { normalizeApiKey } from "./voice-chat";
 import { UPDATE_ACTIONS } from "./updates";
+import { LAB_IDS, type LabId } from "./labs";
 import { DictationConfigSchema } from "./dictation/settings";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 
@@ -52,6 +53,9 @@ const ExportPrefsSchema = v.fallback(
 );
 export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
 
+const labsEntries = Object.fromEntries(LAB_IDS.map((id) => [id, bool(false)])) as Record<LabId, ReturnType<typeof bool>>;
+const LabsSchema = v.fallback(v.object(labsEntries), v.parse(v.object(labsEntries), {}));
+
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
@@ -74,11 +78,26 @@ export const ConfigSchema = v.object({
   speed: v.fallback(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
   voiceChatVoice: v.fallback(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
   dictation: v.fallback(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
+  labs: LabsSchema,
+  showDeveloperLabs: bool(false),
 });
 export type Config = v.InferOutput<typeof ConfigSchema>;
 
 /** Parse whatever is on disk into a full Config; bad or missing fields take their defaults. */
 export const parseConfig = (raw: unknown): Config => v.parse(ConfigSchema, raw && typeof raw === "object" ? raw : {});
+
+const isRecord = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
+
+/** Dotted paths of known settings whose stored value was replaced or normalised by parsing; unknown keys are ignored, not reported. */
+export function repairedKeys(raw: unknown, parsed: unknown, prefix = ""): string[] {
+  if (!isRecord(raw) || !isRecord(parsed)) return [];
+  return Object.keys(raw).flatMap((k) => {
+    if (!(k in parsed)) return [];
+    const [r, p] = [raw[k], parsed[k]];
+    if (isRecord(r) && isRecord(p)) return repairedKeys(r, p, `${prefix}${k}.`);
+    return JSON.stringify(r) === JSON.stringify(p) ? [] : [`${prefix}${k}`];
+  });
+}
 
 /** The renderer may change these keys only. */
 export const ConfigPatchSchema = v.partial(
@@ -96,6 +115,8 @@ export const ConfigPatchSchema = v.partial(
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
+    labs: LabsSchema,
+    showDeveloperLabs: v.boolean(),
   }),
 );
 export type ConfigPatch = v.InferOutput<typeof ConfigPatchSchema>;

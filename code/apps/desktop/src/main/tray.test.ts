@@ -62,6 +62,7 @@ const base = (over: Partial<TrayContext> = {}): TrayContext => ({
   update: UPDATE_UNSUPPORTED,
   exportsRunning: 0,
   doNotDisturb: false,
+  hidden: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ...over,
 });
@@ -89,6 +90,21 @@ describe("tray wiring", () => {
     expect(t.tray.summary()).toBe(`normal|${t.fake.tip}`);
     expect(t.tray.summary().startsWith("normal|")).toBe(true);
     expect(labels(t)).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+  });
+
+  it("shows no icon while the hide lab is on, and brings it back with its current state", () => {
+    const t = setup(base({ hidden: true }));
+    expect(mocks.state.trays).toHaveLength(0);
+    t.set(base({ hidden: false, doNotDisturb: true }));
+    t.tray.refresh();
+    expect(mocks.state.trays).toHaveLength(1);
+    expect(mocks.state.trays[0]!.menu!.items.find((i) => i.label === "Do not disturb")).toMatchObject({ checked: true });
+    t.set(base({ hidden: true }));
+    t.tray.refresh();
+    expect(mocks.state.trays[0]!.destroyed).toBe(true);
+    t.tray.refresh();
+    expect(mocks.state.trays).toHaveLength(1);
+    t.tray.dispose();
   });
 
   it("turns menu rows into native items: accelerators that do not register, a checkbox for Do not disturb, disabled rows", () => {

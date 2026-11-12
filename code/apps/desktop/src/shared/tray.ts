@@ -14,6 +14,8 @@ export interface TrayContext {
   update: UpdateState;
   exportsRunning: number;
   doNotDisturb: boolean;
+  /** The hide-tray-icon lab is on: no icon is shown. */
+  hidden: boolean;
   shortcuts: Bindings;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
   dictation?: { enabled: boolean; hotkey: string };

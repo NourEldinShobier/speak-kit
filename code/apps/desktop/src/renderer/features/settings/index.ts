@@ -8,3 +8,4 @@ export { NotificationsPage } from "./NotificationsPage";
 export { MemoryPage } from "./MemoryPage";
 export { BrowserPage } from "./BrowserPage";
 export { StoragePage } from "./StoragePage";
+export { ExperimentsPage } from "./ExperimentsPage";

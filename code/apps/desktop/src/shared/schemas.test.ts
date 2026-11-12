@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
-import { ARGS, ConfigPatchSchema, parseConfig } from "./schemas";
+import { ARGS, ConfigPatchSchema, parseConfig, repairedKeys } from "./schemas";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 describe("config defaults and repair", () => {
@@ -102,5 +102,39 @@ describe("voice chat", () => {
   it("setVoice accepts the Realtime voices only", () => {
     expect(v.safeParse(ARGS.voiceChatSetVoice, ["verse"]).success).toBe(true);
     expect(v.safeParse(ARGS.voiceChatSetVoice, ["af_heart"]).success).toBe(false);
+  });
+});
+
+describe("labs and settings repair", () => {
+  it("an older file without labs starts with every lab off and developer labs hidden", () => {
+    const c = parseConfig({ setupDone: true, speed: 1.5 });
+    expect(c.labs).toEqual({ "hide-tray-icon": false, "verbose-log": false });
+    expect(c.showDeveloperLabs).toBe(false);
+  });
+  it("keeps valid labs, defaults the wrong ones and drops unknown ids", () => {
+    expect(parseConfig({ labs: { "verbose-log": true, "hide-tray-icon": "yes", gone: true } }).labs).toEqual({ "verbose-log": true, "hide-tray-icon": false });
+    expect(parseConfig({ labs: null }).labs).toEqual({ "hide-tray-icon": false, "verbose-log": false });
+    expect(parseConfig({ labs: [true] }).labs).toEqual({ "hide-tray-icon": false, "verbose-log": false });
+  });
+  it("replaces null and wrong types field by field and keeps the good fields", () => {
+    const c = parseConfig({ setupDone: true, speed: null, voice: 5, preferredPort: "1", idleUnload: ["1"], notifications: 3, startMinimized: "no", language: null });
+    expect(c).toMatchObject({ setupDone: true, speed: 1, voice: "af_heart", preferredPort: 47615, idleUnload: "5", startMinimized: false, language: "system" });
+    expect(c.notifications["export-done"]).toEqual({ toast: true, bell: true, sound: false });
+  });
+  it.each([[null], [[]], ["text"], [7], [undefined]])("a top-level %j gives all defaults", (raw) => {
+    expect(parseConfig(raw)).toEqual(parseConfig({}));
+  });
+  it("ignores unknown keys", () => {
+    expect(parseConfig({ setupDone: true, futureThing: { a: 1 } })).not.toHaveProperty("futureThing");
+  });
+  it("names the stored fields that were replaced, with dotted paths, and not unknown keys", () => {
+    const raw = { setupDone: true, speed: "fast", futureThing: 1, notifications: { "export-done": { toast: "x", bell: true, sound: false } }, labs: { "verbose-log": true } };
+    expect(repairedKeys(raw, parseConfig(raw)).sort()).toEqual(["notifications.export-done.toast", "speed"]);
+  });
+  it("names a whole object that was replaced and nothing for non-objects", () => {
+    const raw = { dictation: "yes" };
+    expect(repairedKeys(raw, parseConfig(raw))).toEqual(["dictation"]);
+    expect(repairedKeys(null, parseConfig(null))).toEqual([]);
+    expect(repairedKeys(parseConfig({}), parseConfig({}))).toEqual([]);
   });
 });

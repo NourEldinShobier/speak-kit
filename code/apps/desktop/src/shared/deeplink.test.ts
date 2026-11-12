@@ -7,6 +7,15 @@ describe("deep links", () => {
     expect(parseDeepLink("speakkit://pair")).toEqual({ kind: "pair" });
     expect(parseDeepLink("speakkit://pair/?token=abc")).toEqual({ kind: "pair" });
   });
+  it("accepts a known lab and nothing else under lab", () => {
+    expect(parseDeepLink("speakkit://lab/verbose-log")).toEqual({ kind: "lab", id: "verbose-log" });
+    for (const bad of ["speakkit://lab", "speakkit://lab/", "speakkit://lab/nope", "speakkit://lab/toString", "speakkit://lab/verbose-log/x"]) expect(parseDeepLink(bad)).toBeNull();
+  });
+  it("opens Experiments for a lab link", () => {
+    const calls: string[] = [];
+    handleDeepLink({ kind: "lab", id: "verbose-log" }, { ensureServer: () => {}, showWindow: () => calls.push("show"), navigate: (p) => calls.push(`nav:${p}`) });
+    expect(calls).toEqual(["show", "nav:experiments"]);
+  });
   it("rejects other schemes, hosts and credentials", () => {
     for (const bad of ["https://launch", "speakkit://settings", "speakkit://", "speakkit://u:p@launch", "speakkit://launch:80", "nonsense", ""]) expect(parseDeepLink(bad)).toBeNull();
   });

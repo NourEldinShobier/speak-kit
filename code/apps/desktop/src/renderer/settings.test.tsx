@@ -33,6 +33,19 @@ describe("settings navigation", () => {
   });
 });
 
+describe("Experiments", () => {
+  it("lists the everyday labs with a named switch and hides developer ones", () => {
+    const html = page("experiments");
+    expect(html).toContain('aria-label="Hide the tray icon"');
+    expect(html).toContain('aria-label="Show developer experiments"');
+    expect(html).not.toContain("Detailed log");
+  });
+  it("shows developer labs once asked, with their stored state", () => {
+    const html = page("experiments", { showDeveloperLabs: true, labs: { "verbose-log": true } });
+    expect(html).toMatch(/aria-label="Detailed log"[^>]*aria-checked="true"|aria-checked="true"[^>]*aria-label="Detailed log"/);
+  });
+});
+
 describe("General", () => {
   it("shows startup, appearance and tray settings", () => {
     const html = page("general");

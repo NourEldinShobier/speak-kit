@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 import { Button, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState, SettingsSub } from "../shared/ipc";
 import { api, Page } from "./ui";
-import { BrowserPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
+import { BrowserPage, ExperimentsPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
 import { StubPage } from "./StubPage";
 import { UpdateCard } from "./UpdateCard";
 import "./settings.css";
@@ -66,7 +66,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   privacy: () => <StubPage setting="privacy" />,
   meetings: () => <StubPage setting="meetings" />,
   automation: () => <StubPage setting="automation" />,
-  experiments: () => <StubPage setting="experiments" />,
+  experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: () => <StubPage setting="diagnostics" />,
   about: About,

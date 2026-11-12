@@ -50,6 +50,24 @@ describe("openConfig", () => {
     expect(c.config).toMatchObject({ setupDone: true, voice: "af_heart", speed: 1.5 });
   });
 
+  it.each([
+    ["null", "null"],
+    ["an array", "[1,2]"],
+    ["a number", "7"],
+  ])("sets aside a file that is valid JSON but %s, so it is never overwritten", async (_n, text) => {
+    writeFileSync(path.join(dir, "config.json"), text);
+    const c = await openConfig(dir);
+    expect(c.recovered).toBe(path.join(dir, "config.json.bad"));
+    expect(readFileSync(path.join(dir, "config.json.bad"), "utf8")).toBe(text);
+  });
+
+  it("keeps a wrong field out of the way of the rest and does not rewrite unknown keys it never read", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, speed: null, labs: { "verbose-log": true } }));
+    const c = await openConfig(dir);
+    expect(c.recovered).toBeNull();
+    expect(c.config).toMatchObject({ setupDone: true, speed: 1, labs: { "verbose-log": true, "hide-tray-icon": false } });
+  });
+
   it("saves changes so the next start sees them", async () => {
     const c = await openConfig(dir);
     c.config.setupDone = true;

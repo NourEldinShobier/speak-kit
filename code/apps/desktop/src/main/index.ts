@@ -11,6 +11,8 @@ import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
 import { openConfig } from "./config";
+import { readLabs, runLabsCli } from "./labs-cli";
+import { labsArgs } from "../shared/labs";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { createAppHandlers, metrics } from "./handlers";
@@ -53,6 +55,10 @@ const logsDir = path.join(dataDir, "logs");
 const sttWorker = await sttWorkerUrl(here);
 const store = await openConfig(dataDir);
 const config = store.config;
+const applyLabs = () => {
+  log.transports.file.level = config.labs["verbose-log"] ? "debug" : "info";
+};
+applyLabs();
 
 const state: AppState = {
   version: app.getVersion(),
@@ -149,7 +155,7 @@ function onDeepLink(link: DeepLink) {
       if (!runtime.server) void runtime.start(state.token || undefined).then(publish);
     },
     showWindow: () => mainWindow.show(),
-    navigate: () => mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" }),
+    navigate: (sub) => mainWindow.sendUi({ type: "nav", page: "settings", sub }),
   });
 }
 
@@ -189,7 +195,10 @@ function createHandlers() {
     modelsDir,
     logsDir,
     addActivity,
-    onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
+    onConfigPatch: (patch) => {
+      desktop?.onConfigPatch(patch);
+      if (patch.labs) applyLabs();
+    },
   });
 }
 
@@ -225,12 +234,24 @@ function startDesktop() {
 
 // `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
 const QUIT_FLAG = "--quit";
-if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
+const labsCode = await runLabsCli(process.argv, dataDir, (l) => process.stdout.write(l + "\n"));
+if (labsCode !== null) {
+  app.requestSingleInstanceLock(); // a running app is told by the lock to re-read the file
+  app.exit(labsCode);
+} else if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
   app.quit();
 } else {
   registerProtocol();
   app.on("second-instance", (_e, argv) => {
     if (argv.includes(QUIT_FLAG)) return mainWindow.quit();
+    if (labsArgs(argv)) {
+      void readLabs(dataDir).then((labs) => {
+        config.labs = labs;
+        applyLabs();
+        publish();
+      });
+      return;
+    }
     const link = findDeepLink(argv);
     if (link) onDeepLink(link);
     else mainWindow.show();
@@ -299,6 +320,7 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
     await runtime.start(test.token);
     performance.mark("server:listening");
     if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" });
+    if (boot?.kind === "lab") mainWindow.sendUi({ type: "nav", page: "settings", sub: "experiments" });
     publish();
   });
 }

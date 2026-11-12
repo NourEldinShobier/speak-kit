@@ -24,6 +24,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, requ
     update: ctx.state.update,
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
+    hidden: ctx.config.labs["hide-tray-icon"],
     shortcuts: ctx.config.shortcuts,
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey } }),
   });
