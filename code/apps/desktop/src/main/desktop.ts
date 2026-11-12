@@ -42,11 +42,12 @@ interface DesktopOptions {
   /** The app version, for the control server. */
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey">;
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "readKey" | "hasKey"> & {
+    /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
+    micClaim: (name: string) => () => void;
+  };
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
   voiceChat: Pick<VoiceChat, "complete" | "status">;
-  /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
-  micClaim: (name: string) => () => void;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -151,7 +152,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.micClaim });
+  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),

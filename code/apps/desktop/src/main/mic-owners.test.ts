@@ -9,7 +9,11 @@ function clock() {
     timers: { set: (fn: () => void, ms: number) => (pending.set(++id, { at: now + ms, fn }), id), clear: (t: unknown) => void pending.delete(t as number) },
     advance(ms: number) {
       now += ms;
-      for (const [k, t] of [...pending]) if (t.at <= now) (pending.delete(k), t.fn());
+      for (const [k, t] of pending) {
+        if (t.at > now) continue;
+        pending.delete(k);
+        t.fn();
+      }
     },
   };
 }
@@ -56,6 +60,20 @@ describe("microphone owners", () => {
     beat(false);
     expect(o.owner()).toBeUndefined();
     beat(false);
+    expect(o.owner()).toBeUndefined();
+  });
+});
+
+describe("voice chat claims", () => {
+  it("holds the microphone during a look and through a lease, under different names", async () => {
+    const o = createMicOwners();
+    const seen: (string | undefined)[] = [];
+    const vc = o.voiceChat(async () => void seen.push(o.owner()));
+    await vc.look();
+    expect(seen).toEqual(["Screen look"]);
+    vc.mic(true);
+    expect(o.owner()).toBe("Voice chat");
+    vc.mic(false);
     expect(o.owner()).toBeUndefined();
   });
 });

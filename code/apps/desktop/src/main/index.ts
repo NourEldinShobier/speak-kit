@@ -25,7 +25,6 @@ import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv } from "./test-env";
 import { createScreenVision } from "./screen-vision";
-import { VOICE_MIC_BEAT_MS } from "@speakkit/protocol";
 import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
 import { createVoiceChat } from "./voice-chat/service";
@@ -114,10 +113,8 @@ const voiceChat = createVoiceChat({
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
-  // Dictation waits while a screen look has the microphone busy with its own session.
-  look: micOwners.holding("Screen look", screenVision.look),
-  // The conversation runs in the browser and reports now and then; the claim lapses when the reports stop.
-  mic: micOwners.lease("Voice chat", VOICE_MIC_BEAT_MS * 3),
+  // Dictation waits while a screen look or a conversation in the browser holds the microphone.
+  ...micOwners.voiceChat(screenVision.look),
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
@@ -230,9 +227,8 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, micClaim: micOwners.claim, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
       voiceChat,
-      micClaim: micOwners.claim,
     },
   );
 }

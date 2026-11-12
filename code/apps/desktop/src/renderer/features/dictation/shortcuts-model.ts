@@ -88,3 +88,10 @@ export const parseApps = (text: string): string[] =>
     .map((a) => a.trim())
     .filter(Boolean)
     .slice(0, 50);
+
+/** macOS tells which app is in front but not how big its window is, so a full-screen program cannot be told there. */
+export function fullscreenPause(platform: string): { ok: boolean; description: string } {
+  return platform === "darwin"
+    ? { ok: false, description: "Not available on macOS yet: the system does not say whether a program covers the screen." }
+    : { ok: true, description: "A program that covers the whole screen gets every key." };
+}

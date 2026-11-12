@@ -357,7 +357,13 @@ describe("macOS mouse buttons as hotkeys", () => {
   it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
     const fake = fakeMacNative();
     const faults: unknown[] = [];
-    const hook = installMouseTap(fake.native, () => { throw new Error("boom"); }, (e) => void faults.push(e));
+    const hook = installMouseTap(
+      fake.native,
+      () => {
+        throw new Error("boom");
+      },
+      (e) => void faults.push(e),
+    );
     expect(fake.sendMouse({ type: 25, keycode: SIDE_BUTTON })).toBe(false);
     await vi.advanceTimersByTimeAsync(0);
     expect(fake.calls.removed).toBe(1);

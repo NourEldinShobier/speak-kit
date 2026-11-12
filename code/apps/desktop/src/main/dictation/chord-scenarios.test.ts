@@ -23,7 +23,8 @@ const KEYS: Record<string, number> = {
 };
 const NAMES = Object.fromEntries(Object.entries(KEYS).map(([n, vk]) => [vk, n]));
 
-const show = (d: Decision): string => `${d.swallow ? "S" : "-"}${d.mask ? "M" : "-"}:${d.events.map((e) => (e.kind === "other" || e.kind === "grabbed" ? `${e.kind} ${NAMES[e.vk]}` : e.kind)).join(",")}`;
+const show = (d: Decision): string =>
+  `${d.swallow ? "S" : "-"}${d.mask ? "M" : "-"}:${d.events.map((e) => (e.kind === "other" || e.kind === "grabbed" ? `${e.kind} ${NAMES[e.vk]}` : e.kind)).join(",")}`;
 
 function play(chord: Chord, script: string, grab: number[] = []): string[] {
   const t = createChordTracker(chord);

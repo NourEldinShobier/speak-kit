@@ -64,7 +64,6 @@ class Session {
   });
   /** The looks of this conversation at the screen, named to the app once. */
   private readonly looker = new Looker({ app: () => this.cfg, dispatch: (e) => this.dispatch(e), touch: () => this.idle.touch(), phase: () => this.view.phase });
-  /** Tells the app while this conversation holds the microphone. */
   private readonly lease = new MicLease(() => ({ fetch: (i, init) => fetch(i, init), ...this.cfg }));
   private rt: Realtime | undefined;
   private stream: MediaStream | undefined;
@@ -122,9 +121,7 @@ class Session {
     this.dispatch(e);
     if (this.view.phase !== "ended") this.dispatch({ t: "end" });
   }
-  private fail(problem: VoiceProblem) {
-    this.finish({ t: "problem", problem });
-  }
+  private fail = (problem: VoiceProblem) => this.finish({ t: "problem", problem });
 
   async start(page: VoicePage) {
     this.letGo = holdWorker(
@@ -290,9 +287,7 @@ class Session {
   micLive = () => this.stream?.getAudioTracks().filter((t) => t.readyState === "live").length ?? 0;
   bytesSent = () => this.rt?.bytesSent() ?? Promise.resolve(0);
   /** Test hook: the microphone device went away. */
-  unplug() {
-    this.stream?.getAudioTracks().forEach((t) => t.dispatchEvent(new Event("ended")));
-  }
+  unplug = () => this.stream?.getAudioTracks().forEach((t) => t.dispatchEvent(new Event("ended")));
 
   /** Releases the microphone, the peer connection and every timer. Safe to call twice. */
   teardown() {

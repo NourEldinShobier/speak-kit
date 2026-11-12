@@ -16,8 +16,24 @@ const BROKEN: Broken[] = [
   { name: "window read never answers", run: (r) => void (r.ins.inserter.target = never) },
   { name: "recording store throws", run: () => undefined, settings: { keepReady: true, keepRecordings: true }, extra: { audio: audio(async () => Promise.reject(new Error("disk"))) } },
   { name: "recording store returns nothing", run: () => undefined, settings: { keepReady: true, keepRecordings: true }, extra: { audio: audio(async () => undefined) } },
-  { name: "log sink throws", run: (r) => void (r.ins.inserter.target = never), extra: { log: () => { throw new Error("log closed"); } } },
-  { name: "keep-clip sink throws", run: () => undefined, extra: { keepClip: () => { throw new Error("full"); } } },
+  {
+    name: "log sink throws",
+    run: (r) => void (r.ins.inserter.target = never),
+    extra: {
+      log: () => {
+        throw new Error("log closed");
+      },
+    },
+  },
+  {
+    name: "keep-clip sink throws",
+    run: () => undefined,
+    extra: {
+      keepClip: () => {
+        throw new Error("full");
+      },
+    },
+  },
 ];
 
 describe("a failing optional dependency never stops the dictation", () => {

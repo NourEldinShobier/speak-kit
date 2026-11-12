@@ -8,7 +8,7 @@ vi.hoisted(() => {
 });
 
 import { ShortcutsSections } from "./ShortcutsSection";
-import { allShortcuts, conflictText, explainerFrames, isDefault, modeRules, parseApps, shareAvailable, shortcutLead } from "./shortcuts-model";
+import { allShortcuts, conflictText, explainerFrames, fullscreenPause, isDefault, modeRules, parseApps, shareAvailable, shortcutLead } from "./shortcuts-model";
 
 const base: DictationStatus = {
   supported: true,
@@ -143,6 +143,11 @@ describe("shortcut model", () => {
     expect(conflictText("ControlRight", "dictation")).toBe("Right Ctrl is already the Dictation shortcut. Pick another shortcut.");
     expect(isDefault("dictation", "ControlRight")).toBe(true);
     expect(isDefault("pasteLast", "F9")).toBe(false);
+  });
+
+  it("turns full-screen pausing off where the system cannot say, and says why", () => {
+    expect(fullscreenPause("win32")).toEqual({ ok: true, description: "A program that covers the whole screen gets every key." });
+    expect(fullscreenPause("darwin")).toEqual({ ok: false, description: "Not available on macOS yet: the system does not say whether a program covers the screen." });
   });
 
   it("reads the program list as typed: trimmed, no empty entries, at most 50", () => {

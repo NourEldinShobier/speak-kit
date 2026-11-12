@@ -41,7 +41,10 @@ export type SessionEvent =
   /** Recording `id` reached `MAX_RECORDING_MS`. */
   | { type: "limit"; id: number };
 
-export type Effect = { type: "start-recording"; id: number; prerollMs: number } | { type: "finish-recording"; id: number; raw?: true } | { type: "discard-recording"; id: number; cancelled: boolean; why?: "chord" };
+export type Effect =
+  | { type: "start-recording"; id: number; prerollMs: number }
+  | { type: "finish-recording"; id: number; raw?: true }
+  | { type: "discard-recording"; id: number; cancelled: boolean; why?: "chord" };
 
 export interface Step {
   session: Session;
