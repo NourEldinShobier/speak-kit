@@ -208,8 +208,7 @@ function dictationSpec() {
       const rig = await startRig({ dictation: { enabled: false } });
       try {
         await rig.hook("setInstalled", "large-v3-turbo-q5_0", false);
-        await rig.page.getByRole("link", { name: "Settings" }).click();
-        await rig.page.getByRole("link", { name: "Dictation" }).click();
+        await rig.page.getByRole("link", { name: "Dictation", exact: true }).click();
         await rig.page.getByRole("switch", { name: "Dictation" }).click();
         await rig.page.getByText("Set up dictation").waitFor();
         await expect(rig.page.getByText("Step 1 of 2")).toBeVisible();
