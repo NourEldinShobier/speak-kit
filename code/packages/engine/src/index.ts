@@ -12,4 +12,4 @@ export { KOKORO_VOICES } from "./voices";
 export { splitLong } from "./split";
 export { parseWav, wavHeader, type Wav } from "./wav";
 export { normalizeText } from "./text/normalize";
-export { DEFAULT_STT_MODEL, STT_MODELS, WhisperStt, type SpeechToText, type SttLanguage, type SttModel, type SttModelId, type SttOptions, type Transcript } from "./stt";
+export * from "./stt";

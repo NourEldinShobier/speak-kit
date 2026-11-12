@@ -92,7 +92,7 @@ describe("downloadModel", () => {
 
   it("deletes the partial file and throws on a checksum mismatch", async () => {
     body = Buffer.from("x".repeat(1000));
-    await expect(downloadModel({ ...file, url: base }, join(dir, "m.bin"))).rejects.toThrow(/checksum mismatch/);
+    await expect(downloadModel({ ...file, url: base }, join(dir, "m.bin"))).rejects.toThrow(/did not match its check value/);
     expect(await exists(join(dir, "m.bin"))).toBe(false);
     expect(await exists(join(dir, "m.bin.part"))).toBe(false);
   });
@@ -138,7 +138,7 @@ describe("downloadModel", () => {
 
     it("a complete partial file with the wrong content is deleted, not installed", async () => {
       await writeFile(join(dir, "m.bin.part"), Buffer.alloc(1000, 7));
-      await expect(downloadModel({ ...file, url: base }, join(dir, "m.bin"))).rejects.toThrow(/checksum mismatch/);
+      await expect(downloadModel({ ...file, url: base }, join(dir, "m.bin"))).rejects.toThrow(/did not match its check value/);
       expect(requests).toEqual([]);
       expect(await exists(join(dir, "m.bin.part"))).toBe(false);
     });
