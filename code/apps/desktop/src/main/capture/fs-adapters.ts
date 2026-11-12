@@ -1,26 +1,37 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { JournalFs } from "./journal";
 import type { StoreFs } from "./store";
 
-/** Writes a file so that a crash leaves the old content or the new, never half: a temp file in the same folder, then a rename. */
+/** Writes a file so that a crash or power loss leaves the old content or the new, never half or empty: a temp file in the same folder, flushed to disk, then a rename. */
 async function writeAtomic(file: string, text: string): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  await writeFile(tmp, text);
+  const fh = await open(tmp, "w");
+  try {
+    await fh.writeFile(text);
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
   await rename(tmp, file);
 }
 
+/** The text of a file, or undefined when there is none. Any other failure (no rights, a locked file) is thrown: it must not read as "empty". */
 async function readText(file: string): Promise<string | undefined> {
   try {
     return await readFile(file, "utf8");
-  } catch {
-    // a missing file is an empty answer
-    return undefined;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw e;
   }
 }
 
-export const storeFs: StoreFs = { read: readText, write: writeAtomic };
+export const storeFs: StoreFs = {
+  read: readText,
+  write: writeAtomic,
+  moveAside: (file) => rename(file, `${file}.damaged-${Date.now()}`),
+};
 
 export const journalFs: JournalFs = {
   write: writeAtomic,

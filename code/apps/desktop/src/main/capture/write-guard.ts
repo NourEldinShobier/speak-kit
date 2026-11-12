@@ -4,6 +4,8 @@ export interface WriteGuardDeps {
   notify(n: Notice): void;
   log(line: string): void;
   params?(): NoticeParams;
+  /** The first failed write of a capture: the recording is ending, since more chunks would only queue in memory. */
+  onFirstFailure?(): void;
 }
 
 export interface WriteGuard {
@@ -26,6 +28,7 @@ export function createWriteGuard(d: WriteGuardDeps): WriteGuard {
         if (failures === 1) {
           const n = noticeOfError(e, d.params?.());
           d.notify(n.code === "failed" ? noticeFor("write-failed", d.params?.()) : n);
+          d.onFirstFailure?.();
         }
       });
     },

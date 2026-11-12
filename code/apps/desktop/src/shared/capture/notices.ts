@@ -14,6 +14,7 @@ export type NoticeCode =
   | "hotkey-failed"
   | "write-failed"
   | "display-lost"
+  | "time-limit"
   | "failed";
 
 export type NoticeTone = "error" | "warning" | "info";
@@ -76,6 +77,7 @@ const TEXT: Record<Exclude<NoticeCode, "no-space" | "cleaned-up">, Text> = {
     body: "The capture folder stopped accepting files, so pictures or sound may be missing. Choose another folder for captures.",
     action: "choose-folder",
   },
+  "time-limit": { tone: "info", title: "Recording stopped at the time limit", body: "A capture can run for up to 4 hours. What was captured so far is saved.", action: "ok" },
   "display-lost": { tone: "warning", title: "The screen was disconnected", body: "Recording stopped and what was captured so far is saved.", action: "ok" },
   failed: { tone: "error", title: "The capture failed", body: "Nothing was saved. Try again; details are in the log.", action: "retry" },
 };

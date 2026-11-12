@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 /** The file system as the store sees it. `write` is atomic: the old file stays whole until the new one is complete. */
@@ -36,7 +36,13 @@ export function nodeFs(): Fs {
       const tmp = `${file}.${process.pid}.tmp`;
       try {
         await mkdir(path.dirname(file), { recursive: true });
-        await writeFile(tmp, data);
+        const fh = await open(tmp, "w");
+        try {
+          await fh.writeFile(data);
+          await fh.sync(); // a power cut must not leave an empty file under the final name
+        } finally {
+          await fh.close();
+        }
         await rename(tmp, file);
       } catch (e) {
         await rm(tmp, { force: true }).catch(() => {});

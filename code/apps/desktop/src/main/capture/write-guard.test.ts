@@ -26,6 +26,18 @@ describe("write guard", () => {
     expect(logs).toHaveLength(3);
     expect(logs[0]).toBe("capture write failed (1): EIO");
   });
+  it("tells the recording to end on the first failed write only, so later chunks do not queue", async () => {
+    const stops: number[] = [];
+    const guard = createWriteGuard({ notify: () => {}, log: () => {}, onFirstFailure: () => stops.push(1) });
+    guard.watch(Promise.reject(new Error("EIO")));
+    guard.watch(Promise.reject(new Error("EIO")));
+    await flush();
+    expect(stops).toEqual([1]);
+    guard.reset();
+    guard.watch(Promise.reject(new Error("EIO")));
+    await flush();
+    expect(stops).toEqual([1, 1]);
+  });
   it("says the disk is full for a full disk", async () => {
     const { guard, notices } = setup();
     guard.watch(Promise.reject(Object.assign(new Error("write failed"), { code: "ENOSPC" })));
