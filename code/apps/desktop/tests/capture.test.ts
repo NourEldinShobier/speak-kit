@@ -426,8 +426,10 @@ describe("input log", () => {
   });
 });
 
-describe.runIf(process.platform === "win32")("own windows and real screen capture", () => {
-  it("the app window is absent from a real capture of the screen while recording, and present again after", async () => {
+describe("own windows and real screen capture", () => {
+  it("the app window is absent from a real capture of the screen while recording, and present again after", async (t) => {
+    // macOS lets the app read the screen only after the person allowed it in System Settings: no such answer exists in a test run
+    if (process.platform !== "win32") t.skip();
     const l = await start({ config: ON });
     await l.app.evaluate(({ BrowserWindow }) => {
       const w = BrowserWindow.getAllWindows()[0]!;
