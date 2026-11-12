@@ -12,12 +12,13 @@ export interface CapsuleActionDeps {
   send: { hold(): void; sendNow(): void; undo(): void };
   /** Sends the capture that was just saved, at once. */
   sendLast(): void;
+  /** Picks another target and moves the recording to it. */
+  switchTarget(): void;
 }
 
 /** What each button of the capsule does. */
 export function capsuleHandlers(d: CapsuleActionDeps): Record<CapsuleAction, () => void> {
   const c = d.controller;
-  const nothing = () => undefined;
   return {
     pen: () => {
       c.pen = !c.pen;
@@ -37,6 +38,6 @@ export function capsuleHandlers(d: CapsuleActionDeps): Record<CapsuleAction, () 
     hold: () => d.send.hold(),
     undo: () => d.send.undo(),
     "send-now": () => d.send.sendNow(),
-    switch: nothing,
+    switch: d.switchTarget,
   };
 }

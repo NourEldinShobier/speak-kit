@@ -37,5 +37,5 @@ export function applyPatch(s: CaptureConfig, patch: CapturePatch, c: PatchContex
     hotkey !== undefined && changeHotkey(s, { which: "hotkey", next: hotkey }, c),
     screenshotHotkey !== undefined && changeHotkey(s, { which: "screenshotHotkey", next: screenshotHotkey }, c),
   ];
-  return { note: notes.find((n): n is string => typeof n === "string"), keysChanged: hotkey !== undefined || screenshotHotkey !== undefined || !!experiments };
+  return { note: notes.find((n): n is string => typeof n === "string"), keysChanged: hotkey !== undefined || screenshotHotkey !== undefined || !!experiments || patch.shiftInk !== undefined };
 }

@@ -77,6 +77,7 @@ function recordingView(c: Recording): CapsuleView {
     ]);
   const buttons: CapsuleButton[] = [
     { id: "pen", label: "Pen", pressed: c.pen },
+    { id: "switch", label: "Switch", disabled: !!c.switching },
     { id: "stop", label: "Stop", primary: true },
     { id: "discard", label: "Discard" },
   ];
