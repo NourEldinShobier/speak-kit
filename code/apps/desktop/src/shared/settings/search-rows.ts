@@ -16,7 +16,6 @@ const adv = (id: string, label: string, keywords = ""): SettingRowDef => ({ ...r
 export const SETTING_ROWS: readonly SettingRowDef[] = [
   r("general/launch", "Launch at login", "startup boot sign in"),
   r("general/minimized", "Start minimized to tray", "startup hidden"),
-  r("general/appearance", "Theme", "appearance light dark system colour"),
   r("general/language", "Language", "locale translation"),
   r("general/close", "Closing the window", "close quit exit hide tray"),
   r("general/tray", "Tray icon", "notification area menu bar hide"),

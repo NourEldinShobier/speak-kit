@@ -246,6 +246,19 @@ describe("export audio", () => {
     await list.getByText("1 export is rendering. Quitting stops:").waitFor();
     await list.getByText("The export is cancelled").waitFor();
   }, 60_000);
+
+  it("closing the window with Close quits set asks first while an export renders", async () => {
+    const dir = outDir();
+    const l = await start({ config: { ...DONE, closeAction: "quit", exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "700" } });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await writeNote(l);
+    await l.page.getByRole("button", { name: "Export", exact: true }).click();
+    await l.page.getByTestId("export-progress").waitFor();
+    await l.page.getByRole("button", { name: "Run in background" }).click();
+    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+    await l.page.getByRole("dialog", { name: "Quit Speak Kit?" }).getByText("1 export is rendering. Quitting stops:").waitFor();
+    expect(await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isVisible())).toBe(true);
+  }, 60_000);
 });
 
 describe("updates (electron-updater is replaced by a fake that reports a new version)", () => {

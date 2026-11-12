@@ -66,7 +66,8 @@ export function noticeOf(l: Pick<LoadedSettings, "invalidFields" | "newerVersion
 
 /** Plain-language line for the banner. */
 export function noticeText(n: SettingsNotice): string {
-  if (n.kind === "newer") return "Your settings file was saved by a newer version of Speak Kit. It is read but not changed, so nothing is lost if you go back.";
+  if (n.kind === "newer")
+    return "Your settings file was saved by a newer version of Speak Kit. It is read but not changed: changes you make now are not saved and are lost when Speak Kit closes. Update Speak Kit to edit settings.";
   const list = n.fields.slice(0, 4).join(", ") + (n.fields.length > 4 ? ` and ${n.fields.length - 4} more` : "");
   return `Some saved settings were not valid and use their defaults: ${list}. The original file is kept as a backup.`;
 }

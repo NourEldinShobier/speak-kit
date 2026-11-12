@@ -159,6 +159,15 @@ describe("the 960 px window and the tray", () => {
     }
   });
 
+  it("a settings file from a newer app keeps its warning and cannot be dismissed", async () => {
+    const l = await start({ config: { ...DONE, configVersion: 999 } });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await openSettings(l);
+    const notice = l.page.getByTestId("settings-notice");
+    await notice.getByText("are not saved").waitFor();
+    expect(await notice.getByRole("button", { name: "Dismiss" }).count()).toBe(0);
+  });
+
   it("with the tray icon hidden the close button quits the app", async () => {
     const l = await start({ config: { ...DONE, hideTrayIcon: true } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();

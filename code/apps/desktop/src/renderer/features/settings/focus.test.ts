@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isAdvancedRow, peekRow, requestRow, takeRow } from "./focus";
+import { arrowTarget, isAdvancedRow, peekRow, requestRow, takeRow } from "./focus";
 
 describe("requested row", () => {
   it("is read once", () => {
@@ -27,5 +27,22 @@ describe("row requests while the page is open", () => {
     off();
     requestRow("general/language");
     expect(n).toBe(1);
+  });
+});
+
+describe("arrow keys in a list", () => {
+  it("move by one and stop at the ends", () => {
+    expect(arrowTarget("ArrowDown", 0, 3)).toBe(1);
+    expect(arrowTarget("ArrowDown", 2, 3)).toBe(2);
+    expect(arrowTarget("ArrowUp", 0, 3)).toBe(0);
+    expect(arrowTarget("ArrowUp", 2, 3)).toBe(1);
+    expect(arrowTarget("Home", 2, 3)).toBe(0);
+    expect(arrowTarget("End", 0, 3)).toBe(2);
+  });
+
+  it("ignore other keys, an empty list and a target outside the list", () => {
+    expect(arrowTarget("a", 0, 3)).toBeNull();
+    expect(arrowTarget("ArrowDown", 0, 0)).toBeNull();
+    expect(arrowTarget("ArrowDown", -1, 3)).toBeNull();
   });
 });

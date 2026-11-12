@@ -65,6 +65,7 @@ export function createSettingsHandlers(d: SettingsDeps) {
       return d.publish();
     },
     dismissSettingsNotice: async () => {
+      if (d.state.settingsNotice?.kind === "newer") return d.publish(); // edits are being discarded; the warning stays
       d.state.settingsNotice = null;
       return d.publish();
     },

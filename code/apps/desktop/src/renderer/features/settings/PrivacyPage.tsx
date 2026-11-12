@@ -56,13 +56,16 @@ export function PrivacyPage({ s }: { s: AppState }) {
     <Page title="Privacy" lead="What stays on this computer.">
       <SettingsSection title="Your data">
         <SettingRow {...rowAttr("privacy/telemetry")} label="Telemetry" description={NO_TELEMETRY} control={<span>Off, always</span>} />
-        <SettingRow label="Library, audio and dictation" description={`Kept in ${s.platform === "darwin" ? "~/Library/Application Support" : "your user data folder"} and never uploaded.`} />
+        <SettingRow
+          label="Library, audio and dictation"
+          description={`Kept in ${s.platform === "darwin" ? "~/Library/Application Support" : "your user data folder"} and not uploaded, except voice chat audio you send with your own key.`}
+        />
       </SettingsSection>
       <SettingsSection title="Permissions">
         <SettingRow
           {...rowAttr("privacy/microphone")}
           label="Microphone access"
-          description="Needed for dictation and voice chat. Audio is processed on this computer."
+          description="Needed for dictation and voice chat. Dictation audio is processed on this computer. Voice chat sends audio to OpenAI with your own key."
           control={
             <div className="sk-row-actions">
               <span data-testid="mic-status">{mic ? MIC_ACCESS_TEXT[mic] : "Checking..."}</span>
