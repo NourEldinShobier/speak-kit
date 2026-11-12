@@ -4,8 +4,6 @@
  */
 export { VocabularyPage } from "./VocabularyPage";
 import "./vocabulary.css";
-export { RulesTester } from "./RulesTester";
 export { Cleanup } from "./Cleanup";
 export { WordDialog } from "./WordDialog";
 export { useLive } from "./useLive";
-export { cleanupRows } from "./model";
