@@ -193,12 +193,17 @@ html[data-platform="darwin"] .sk-title__r {
   color: var(--text-primary);
   flex: none;
 }
+.sk-side__head button,
+.sk-side__head input {
+  -webkit-app-region: no-drag;
+}
 .sk-side .lm-btn--icon {
   width: 28px;
   flex: none;
   justify-content: center;
 }
 .sk-side__head {
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -237,6 +242,7 @@ html[data-platform="darwin"] .sk-title__r {
 .sk-side__spacer {
   flex: 1;
   min-height: 12px;
+  -webkit-app-region: drag; /* the empty part of the sidebar moves the window like the title bar */
 }
 .sk-side > .lm-nav {
   flex: 1;
