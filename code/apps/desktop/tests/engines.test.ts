@@ -135,3 +135,18 @@ describe("Setup: dictation step", () => {
     expect(configOf(l).engines.skippedModel).toBe(true);
   });
 });
+
+describe("About: Run setup again", () => {
+  it("shows the setup window again from the model step and keeps downloaded models and settings", async () => {
+    const l = await start({ config: { ...DONE, dictation: { language: "de" } } });
+    await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("link", { name: "About" }).click();
+    await l.page.getByRole("button", { name: "Run setup again" }).click();
+    await l.page
+      .getByRole("heading", { name: /Download|Kokoro/ })
+      .first()
+      .waitFor();
+    await expect.poll(() => configOf(l).setupDone).toBe(false);
+    expect(configOf(l).dictation.language).toBe("de");
+  });
+});

@@ -96,3 +96,40 @@ describe("local failures", () => {
     expect(worthAnotherHost(incompleteFailure({ file: "m", url: URL1 }, 1, 2))).toBe(false);
   });
 });
+
+describe("details", () => {
+  it("is named, keeps its cause, and gives the advice of its kind", () => {
+    const cause = new Error("underlying");
+    const e = new DownloadError({ kind: "other", host: "h", keptBytes: 3, message: "m", cause });
+    expect(e.name).toBe("DownloadError");
+    expect(e.cause).toBe(cause);
+    expect(e.advice).toBe("try-again");
+    expect(new DownloadError({ kind: "other", host: "h", keptBytes: 0, message: "m" }).cause).toBeUndefined();
+    expect(incompleteFailure({ file: "m", url: URL1 }, 1, 2).advice).toBe("try-again");
+  });
+
+  it("finds the reason a few levels down the cause chain", () => {
+    const deep = Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("outer"), { cause: Object.assign(new Error("inner"), { code: "ECONNRESET" }) }) });
+    expect(toDownloadError(deep, URL1, 0).kind).toBe("unreachable");
+  });
+
+  it("says what to do about a full disk", () => {
+    expect(toDownloadError(Object.assign(new Error("x"), { code: "EACCES" }), URL1, 0).message).toBe(
+      "Speak Kit could not write the model to disk. Free some space or check that the models folder can be written to.",
+    );
+  });
+
+  it("451 is a block and 410 is a missing file", () => {
+    expect(httpFailure(451, URL1, 0).kind).toBe("blocked");
+    expect(httpFailure(410, URL1, 0).kind).toBe("not-found");
+    expect(httpFailure(500, URL1, 0).message).toBe("huggingface.co had a problem and answered HTTP 500. Try again in a few minutes.");
+  });
+
+  it("every network kind is worth another host, the local ones are not", () => {
+    for (const status of [401, 404, 502]) expect(worthAnotherHost(httpFailure(status, URL1, 0))).toBe(true);
+    expect(worthAnotherHost(toDownloadError(withCause("SELF_SIGNED_CERT_IN_CHAIN"), URL1, 0))).toBe(true);
+    expect(worthAnotherHost(httpFailure(407, URL1, 0))).toBe(false);
+    expect(worthAnotherHost(toDownloadError(Object.assign(new Error("x"), { code: "ENOSPC" }), URL1, 0))).toBe(false);
+    expect(worthAnotherHost(toDownloadError(new Error("weird"), URL1, 0))).toBe(false);
+  });
+});
