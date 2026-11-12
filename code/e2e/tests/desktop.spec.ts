@@ -73,7 +73,7 @@ test.describe("desktop companion, setup and memory @slow", () => {
     }
   });
 
-  test("Settings > Memory changes reach the server: idleUnloadAtMs follows 'Idle unload'", async ({ ext }) => {
+  test("Settings > Performance changes reach the server: idleUnloadAtMs follows 'Idle unload'", async ({ ext }) => {
     const d = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_TEST: "1" } });
     try {
       await d.page.getByRole("heading", { name: "Home" }).waitFor();
@@ -89,7 +89,7 @@ test.describe("desktop companion, setup and memory @slow", () => {
         await d.page.getByRole("option", { name }).click();
       };
       await d.page.getByRole("link", { name: "Settings" }).click();
-      await d.page.getByRole("link", { name: "Memory" }).click();
+      await d.page.getByRole("link", { name: "Performance" }).click();
       await pick("After 15 minutes");
       await expect.poll(async () => ((await due()) ?? 0) - Date.now(), { timeout: 10_000 }).toBeGreaterThan(14 * 60_000);
       await pick("After 1 minute");
@@ -168,8 +168,7 @@ test.describe("desktop voice chat key @slow", () => {
     try {
       const token = readFileSync(path.join(d.userData, "token"), "utf8").trim();
       const api = (method: string, route: string) => fetch(`http://127.0.0.1:${d.port}${route}`, { method, headers: { Authorization: `Bearer ${token}` } });
-      await d.page.getByRole("link", { name: "Settings" }).click();
-      await d.page.getByRole("link", { name: "Voice and playback" }).click();
+      await d.page.getByRole("link", { name: "Voice chat" }).click();
       const field = d.page.getByLabel("OpenAI API key");
       const notice = d.page.getByTestId("voice-chat-notice");
       const press = (name: string) => d.page.getByRole("button", { name, exact: true });

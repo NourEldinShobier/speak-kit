@@ -226,12 +226,13 @@
   padding-inline-end: 12px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px 16px;
 }
 .dict-hist__bar > .lm-field {
   flex: 1 1 auto;
-  min-inline-size: 0;
+  min-inline-size: 220px;
   max-inline-size: 480px;
 }
 .dict-hist__search {

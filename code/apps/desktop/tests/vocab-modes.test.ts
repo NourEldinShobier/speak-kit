@@ -324,8 +324,11 @@ describe("History page", () => {
     const l = await start({ userData });
     await l.page.evaluate(() => window.speakkitDictation.patchSettings({ terms: [{ id: "k", word: "Kubernetes", soundsLike: ["cooper netties"] }] }));
     await open(l, "History");
-    await l.page.getByText("Last 7 days").waitFor();
-    expect(await l.page.locator(".dict-stats__grid dd").allTextContents()).toEqual(["2", "11", "220", "3 s"]);
+    await l.page.getByRole("button", { name: "Statistics" }).click();
+    await l.page.getByText("Dictation statistics").waitFor();
+    await l.page.locator(".dict-stats dd").first().waitFor();
+    expect(await l.page.locator(".dict-stats dd").allTextContents()).toEqual(["2", "11", "3 s", "2", "0", "0"]);
+    await l.page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
     expect(await l.page.locator(".dict-hist__meta").first().textContent()).toContain("Removed in 7 days");
     expect(await l.page.getByText("Pasted as said after 4 seconds").count()).toBe(1);
 
