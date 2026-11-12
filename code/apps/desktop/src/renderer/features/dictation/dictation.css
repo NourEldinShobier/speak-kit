@@ -640,6 +640,11 @@
 .dict-rec__vhead b {
   color: var(--text-primary);
 }
+.dict-rec__vnote {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 .dict-rec__versions ul {
   margin: 8px 0 0;
   padding: 0;

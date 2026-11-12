@@ -3,7 +3,7 @@ import { Banner, Button, Icon, Select } from "@speakkit/ui";
 import type { DictationModelId, DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import type { DictationConfig } from "../../../shared/dictation/settings";
 import { dictation } from "./api";
-import { clockText, LANGUAGE_OPTIONS, timeText } from "./model";
+import { clockText, LANGUAGE_OPTIONS, timeText, versionsCapNote } from "./model";
 
 /** The recording's bytes from the main process as a blob URL that lives only while the row is open. */
 function useRecordingUrl(id: string) {
@@ -108,6 +108,7 @@ function Versions({ item, s }: { item: HistoryItem; s: DictationStatus }) {
           </li>
         ))}
       </ul>
+      {versionsCapNote(versions.length) ? <p className="dict-rec__vnote">{versionsCapNote(versions.length)}</p> : null}
     </div>
   );
 }

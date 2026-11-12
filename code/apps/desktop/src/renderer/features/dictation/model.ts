@@ -1,4 +1,4 @@
-import type { HistoryStats } from "@speakkit/dictation";
+import { MAX_VERSIONS, type HistoryStats } from "@speakkit/dictation";
 import type { HistoryItem, ModelView } from "../../../shared/dictation/contract";
 import { DICTATION_LANGUAGES, type DictationConfig } from "../../../shared/dictation/settings";
 import { SPOKEN_LANGUAGE_LABELS } from "../../../shared/speech-models/config";
@@ -12,6 +12,9 @@ export const RETENTION_OPTIONS: { value: DictationConfig["retention"]; label: st
 ];
 
 export const LANGUAGE_OPTIONS: { value: DictationConfig["language"]; label: string }[] = DICTATION_LANGUAGES.map((value) => ({ value, label: SPOKEN_LANGUAGE_LABELS[value] ?? value }));
+
+/** Shown once an entry holds the most versions: the next "Transcribe again" replaces the oldest one that is neither the original nor in use. */
+export const versionsCapNote = (count: number): string => (count >= MAX_VERSIONS ? "Oldest other version is replaced." : "");
 
 export const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
 

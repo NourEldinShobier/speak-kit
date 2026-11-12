@@ -164,7 +164,7 @@ interface Deps {
 }
 
 /** Versions kept per entry: the original plus four more. */
-const MAX_VERSIONS = 5;
+export const MAX_VERSIONS = 5;
 
 class Store implements History {
   private entries: HistoryEntry[] = [];
