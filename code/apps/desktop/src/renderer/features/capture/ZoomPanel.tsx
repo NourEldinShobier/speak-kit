@@ -19,7 +19,10 @@ const percent = (n: number) => `${Math.round(n * 100)}%`;
 
 /** The picture of the region: the frame nearest its start, with the part the zoom shows outlined. */
 function Preview({ detail, region }: { detail: CaptureDetail; region: ZoomRegion }) {
-  const frame = detail.frames.reduce<CaptureDetail["frames"][number] | undefined>((best, f) => (!best || Math.abs(f.atMs - region.startMs) < Math.abs(best.atMs - region.startMs) ? f : best), undefined);
+  const frame = detail.frames.reduce<CaptureDetail["frames"][number] | undefined>(
+    (best, f) => (!best || Math.abs(f.atMs - region.startMs) < Math.abs(best.atMs - region.startMs) ? f : best),
+    undefined,
+  );
   if (!frame) return null;
   const c = cropOfRegion(region);
   return (

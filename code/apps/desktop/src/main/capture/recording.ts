@@ -1,3 +1,4 @@
+import type { PointerTrack } from "./pointer";
 import type { LiveSession } from "./live-narrator";
 import type { TimeRange } from "./page-context";
 import type { Notice, NoticeParams } from "../../shared/capture/notices";
@@ -58,6 +59,8 @@ export interface RecordingDeps {
   context?(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
   /** Words made while the recording goes on (the live engine); absent or inactive, the whole track is transcribed afterwards. */
   live?: LiveSession;
+  /** Where the pointer was during this recording (for suggested zooms); absent or with the input log off, nothing is noted. */
+  pointer?: PointerTrack;
   /** The input events of this recording (drawing, pen, switches), taken once when the bundle is written. */
   events?(): InputEvent[];
 }
@@ -108,6 +111,7 @@ class RecorderPorts {
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
     d.live?.begin();
+    d.pointer?.start(resolved.bounds);
   }
 
   async swap(id: string, target: Target): Promise<void> {
@@ -115,12 +119,14 @@ class RecorderPorts {
     const r = await this.#d.host.call({ op: "switch", sourceId: resolved.sourceId, ...(resolved.crop && { crop: resolved.crop }) });
     if (!r.ok) throw new Error(REASON[r.code]);
     if (this.#current?.id === id) this.#current.resolved = resolved;
+    this.#d.pointer?.move(resolved.bounds);
   }
 
   async stop(id: string): Promise<Media> {
     const d = this.#d;
     // read first: stopping the recorder can change which window is in front
     const context = await d.context?.(this.#current?.resolved.sourceId, { from: this.#current?.startedAt ?? d.now(), to: d.now() });
+    d.pointer?.stop();
     const r = await d.host.call({ op: "stop" }, 60_000);
     // the recorder sends the last chunk before it answers, so nothing valid arrives after this
     d.fence.close();
@@ -146,6 +152,7 @@ class RecorderPorts {
     // A capture that began meanwhile is not this one's to clear.
     if (this.#current && this.#current.id !== id) return;
     this.#d.live?.cancel();
+    this.#d.pointer?.stop();
     this.#d.hideOwnWindows(false);
     this.#current = undefined;
   }
@@ -226,9 +233,11 @@ export interface Finished {
 }
 
 /** The input events of the recording, next to its pictures; no file when there were none. */
-async function writeEvents(d: Pick<RecordingDeps, "events" | "bundle">, id: string) {
+async function writeEvents(d: Pick<RecordingDeps, "events" | "pointer" | "bundle">, id: string) {
   const events = d.events?.() ?? [];
   if (events.length) await d.bundle.writeFile(id, "events.json", JSON.stringify(events));
+  const pointer = d.pointer?.take() ?? [];
+  if (pointer.length) await d.bundle.writeFile(id, "pointer.json", JSON.stringify(pointer));
 }
 
 export async function saveBundle(d: RecordingDeps, f: Finished): Promise<CaptureRecord> {

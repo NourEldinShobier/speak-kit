@@ -44,7 +44,10 @@ export async function suggestZoom(d: ZoomDeps, id: string): Promise<ZoomRegion[]
   const length = lengthOf(r);
   const inside = (atMs: number) => atMs >= 0 && atMs <= length;
   const pointer = ((await readJson(d, r.dir, "pointer.json", PointerFile)) ?? []).map((p) => ({ ...p, atMs: p.atMs - offset })).filter((p) => inside(p.atMs)) satisfies PointerSample[];
-  const ink = ((await readJson(d, r.dir, "events.json", EventsFile)) ?? []).filter((e) => e.kind === "ink-start").map((e) => e.atMs - offset).filter(inside);
+  const ink = ((await readJson(d, r.dir, "events.json", EventsFile)) ?? [])
+    .filter((e) => e.kind === "ink-start")
+    .map((e) => e.atMs - offset)
+    .filter(inside);
   return autoRegions(pointer, ink, length);
 }
 

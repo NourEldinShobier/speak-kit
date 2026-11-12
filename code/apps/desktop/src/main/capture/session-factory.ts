@@ -1,5 +1,6 @@
 import { nativeImage } from "electron";
 import { randomBytes } from "node:crypto";
+import type { PointerTrack } from "./pointer";
 import type { LiveSession } from "./live-narrator";
 import type { TimeRange } from "./page-context";
 import type { NoticeParams, Notice } from "../../shared/capture/notices";
@@ -28,6 +29,7 @@ export interface SessionWiring {
   context(sourceId: string | undefined, range: TimeRange): Promise<string | undefined>;
   events(): InputEvent[];
   live?: LiveSession;
+  pointer?: PointerTrack;
   /** False once the session this was made for was replaced: what it finishes later is not shown or copied. */
   current(): boolean;
   saved(record: CaptureRecord): void;
@@ -77,6 +79,7 @@ export function makeSession(w: SessionWiring): Session {
       context: w.context,
       events: w.events,
       ...(w.live && { live: w.live }),
+      ...(w.pointer && { pointer: w.pointer }),
     }),
   );
 }
