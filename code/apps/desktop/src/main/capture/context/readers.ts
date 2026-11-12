@@ -1,9 +1,9 @@
-import { execFile } from "node:child_process";
 import * as v from "valibot";
+import { runCommand } from "../command-narrator/node";
 import type { UiNode } from "./labels";
 
 /** Runs a program and gives back what it printed; rejects on a failure or after the time is up. */
-export type Run = (file: string, args: readonly string[], timeoutMs: number) => Promise<string>;
+export type Run = (file: string, args: string[], timeoutMs: number) => Promise<string>;
 
 export interface ContextReader {
   /** The controls of the window in front, or undefined when the system would not say (no permission, no window, a timeout). */
@@ -82,13 +82,13 @@ export function parseNodes(text: string): UiNode[] | undefined {
   return parsed.output.slice(0, MAX_NODES).map((n) => ({ role: n.role, name: n.name ?? undefined, secure: n.secure, depth: n.depth }));
 }
 
-const COMMANDS: Record<string, readonly [string, readonly string[]]> = {
+const COMMANDS: Record<string, readonly [string, string[]]> = {
   win32: ["powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_SCRIPT]],
   darwin: ["osascript", ["-l", "JavaScript", "-e", MAC_SCRIPT]],
 };
 
 /** The reader for this system, or undefined where there is none. `run` is the way programs are started (tests give a fake). */
-export function createContextReader(os: string, run: Run = runProgram): ContextReader | undefined {
+export function createContextReader(os: string, run: Run = runCommand): ContextReader | undefined {
   const via = COMMANDS[os];
   if (!via) return undefined;
   return {
@@ -101,10 +101,4 @@ export function createContextReader(os: string, run: Run = runProgram): ContextR
       }
     },
   };
-}
-
-function runProgram(file: string, args: readonly string[], timeoutMs: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(file, [...args], { timeout: timeoutMs, windowsHide: true, maxBuffer: 2_000_000 }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
-  });
 }
