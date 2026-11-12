@@ -30,6 +30,7 @@ import { setupMeetings } from "./meetings";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
 import { collectResources } from "./resources";
+import { motionNow, windowMotion } from "./window-motion";
 import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
 interface DesktopOptions {
@@ -189,7 +190,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
-      if (patch.reduceMotion !== undefined) dictation.motionChanged();
+      if (patch.reduceMotion !== undefined) windowMotion.set(motionNow(ctx.config.reduceMotion));
       control.onConfigPatch(patch);
     },
     dictation,
