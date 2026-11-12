@@ -63,6 +63,28 @@ describe("replay buffer: a rotation due while a save closes the piece", () => {
   });
 });
 
+describe("replay buffer memory", () => {
+  it("drops the oldest finished pieces once the video held is over the byte limit", async () => {
+    let now = 0;
+    let tick: (() => void) | undefined;
+    const run = { startedAt: 0, startSegment: () => {}, endSegment: async () => undefined, stop: () => {} };
+    const buffer = createReplayBuffer({ now: () => now, maxBytes: 25, setInterval: (fn) => ((tick = fn), 1) });
+    buffer.attach(run);
+    buffer.start(1000);
+    for (let i = 1; i <= 5; i++) {
+      buffer.onPayload({ kind: "video", segment: i, chunk: new Uint8Array(10).fill(i) });
+      now = i * 3000;
+      tick?.();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    // 10 bytes a piece: two finished pieces fit in 25 bytes, plus the one being recorded
+    expect(buffer.held().pieces).toBe(3);
+    now = 16_000;
+    const clip = await buffer.save();
+    expect(clip?.videos.map((v) => v[0])).toEqual([4, 5]);
+  });
+});
+
 describe("replay buffer", () => {
   it("gives the newest 15 seconds as video pieces with the pictures moved to the start of the clip, and goes on recording", async () => {
     const t = setup();

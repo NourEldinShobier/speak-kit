@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { clipPieces, clipTimes, keepPieces, REPLAY } from "./replay";
+import { clipPieces, clipTimes, fitBytes, keepPieces, REPLAY } from "./replay";
 
 const pieces = (n: number, lengthMs = 3000) => Array.from({ length: n }, (_, i) => ({ startMs: i * lengthMs, endMs: (i + 1) * lengthMs, n: i }));
 
@@ -33,5 +33,20 @@ describe("replay pieces", () => {
   it("moves picture times to the start of the clip and leaves out earlier pictures", () => {
     const frames = [{ atMs: 11_000 }, { atMs: 12_000 }, { atMs: 14_500 }];
     expect(clipTimes(frames, 12_000)).toEqual([{ atMs: 0 }, { atMs: 2500 }]);
+  });
+});
+
+describe("replay memory bound", () => {
+  const sized = (...bytes: number[]) => bytes.map((b, n) => ({ b, n }));
+  it("drops the oldest pieces until the rest fit", () => {
+    expect(fitBytes(sized(40, 40, 40, 40), (p) => p.b, 100).map((p) => p.n)).toEqual([2, 3]);
+    expect(fitBytes(sized(10, 10), (p) => p.b, 100).map((p) => p.n)).toEqual([0, 1]);
+  });
+  it("always keeps the newest piece, even when it alone is over the limit", () => {
+    expect(fitBytes(sized(10, 500), (p) => p.b, 100).map((p) => p.n)).toEqual([1]);
+    expect(fitBytes([], () => 1, 100)).toEqual([]);
+  });
+  it("holds 150 MiB", () => {
+    expect(REPLAY.maxBytes).toBe(157_286_400);
   });
 });
