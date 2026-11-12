@@ -5,6 +5,7 @@ import type { AutomationInfo, CommandLineAction } from "../../../shared/control/
 import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
+import { change } from "./change";
 
 /** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
 function CopyButton({ text, label, caption = "Copy" }: { text: string; label: string; caption?: string }) {
@@ -217,14 +218,14 @@ function McpSection({ s }: { s: AppState }) {
           </span>
         }
         description="Only this computer can connect."
-        control={<Toggle aria-label="Let AI apps use Speak Kit" checked={on} onChange={(v) => void api.patchConfig({ controlServer: v })} />}
+        control={<Toggle aria-label="Let AI apps use Speak Kit" checked={on} onChange={(v) => void change({ controlServer: v })} />}
       />
       {toolRows(s.config.mcpTools).map((t) => (
         <SettingRow
           key={t.name}
           label={code(t.name)}
           description={`${t.description}${t.private ? " Off until you turn it on." : ""}`}
-          control={<Toggle aria-label={t.title} checked={t.on} disabled={!on} onChange={(v) => void api.patchConfig({ mcpTools: { ...s.config.mcpTools, [t.name]: v } })} />}
+          control={<Toggle aria-label={t.title} checked={t.on} disabled={!on} onChange={(v) => void change({ mcpTools: { ...s.config.mcpTools, [t.name]: v } })} />}
         />
       ))}
       <div className="sk-pad">
@@ -256,7 +257,7 @@ export function AutomationPage({ s }: { s: AppState }) {
   return (
     <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
       {!s.config.controlServer && (
-        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void api.patchConfig({ controlServer: true })}>
+        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void change({ controlServer: true })}>
           The command-line tool and the MCP server need it. It only answers on this computer. Speak Kit itself works without it.
         </OptInCard>
       )}

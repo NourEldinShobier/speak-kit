@@ -3,6 +3,7 @@ import { Select, SettingRow, SettingsSection, Slider } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
+import { change } from "./change";
 import { CallRecordingCard } from "../meetings";
 
 export function VoicePage({ s }: { s: AppState }) {
@@ -25,7 +26,7 @@ export function VoicePage({ s }: { s: AppState }) {
             <Select
               label="Preview voice"
               value={s.config.voice}
-              onChange={(v) => api.patchConfig({ voice: v })}
+              onChange={(v) => change({ voice: v })}
               options={voices.length ? voices.map((v) => ({ value: v.id, label: v.name })) : [{ value: s.config.voice, label: s.config.voice }]}
             />
           }
@@ -33,7 +34,7 @@ export function VoicePage({ s }: { s: AppState }) {
         <SettingRow
           label="Speed"
           description={`${s.config.speed.toFixed(2)}x`}
-          control={<Slider aria-label="Preview speed" min={0.5} max={2} step={0.05} value={s.config.speed} onChange={(v) => api.patchConfig({ speed: v })} />}
+          control={<Slider aria-label="Preview speed" min={0.5} max={2} step={0.05} value={s.config.speed} onChange={(v) => change({ speed: v })} />}
         />
       </SettingsSection>
       <CallRecordingCard />

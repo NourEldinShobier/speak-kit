@@ -5,6 +5,7 @@ import type { Config } from "../../../shared/schemas";
 import { api, Page } from "../../ui";
 import { UpdateCard } from "../../UpdateCard";
 import { rowAttr } from "./focus";
+import { change } from "./change";
 import { NetworkTable } from "./PrivacyPage";
 
 const CHANNEL_LABEL: Record<Config["updateChannel"], string> = { stable: "Stable", early: "Early" };
@@ -23,7 +24,7 @@ function BackToStable({ open, onClose }: { open: boolean; onClose(): void }) {
             variant="primary"
             onClick={() => {
               onClose();
-              void api.patchConfig({ updateChannel: "stable" });
+              void change({ updateChannel: "stable" });
             }}
           >
             Switch to Stable
@@ -46,7 +47,7 @@ const CHANNEL_HINT: Record<Config["updateChannel"], string> = {
 function Channel({ s }: { s: AppState }) {
   const [ask, setAsk] = useState(false);
   const channel = s.config.updateChannel;
-  const change = (v: string) => (v === "stable" && channel === "early" ? setAsk(true) : void api.patchConfig({ updateChannel: v as Config["updateChannel"] }));
+  const pick = (v: string) => (v === "stable" && channel === "early" ? setAsk(true) : void change({ updateChannel: v as Config["updateChannel"] }));
   return (
     <>
       <SettingRow
@@ -58,7 +59,7 @@ function Channel({ s }: { s: AppState }) {
           <Select
             label="Update channel"
             value={channel}
-            onChange={change}
+            onChange={pick}
             options={[
               { value: "stable", label: CHANNEL_LABEL.stable },
               { value: "early", label: CHANNEL_LABEL.early },
@@ -91,7 +92,7 @@ function SetupSection() {
         label="Run setup again"
         description="Downloaded models and your settings are kept."
         control={
-          <Button aria-label="Run setup again" onClick={() => void api.patchConfig({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
+          <Button aria-label="Run setup again" onClick={() => void change({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
             Run setup again
           </Button>
         }
@@ -138,7 +139,7 @@ function UpdatesSection({ s }: { s: AppState }) {
       <SettingRow
         label="Check automatically"
         description="Once a day while Speak Kit runs."
-        control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => api.patchConfig({ autoUpdate: v })} />}
+        control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => change({ autoUpdate: v })} />}
       />
     </SettingsSection>
   );

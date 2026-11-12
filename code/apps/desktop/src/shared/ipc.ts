@@ -13,6 +13,12 @@ import type { SettingsNotice } from "./settings/settings-file";
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
 export type { Config, ConfigPatch } from "./schemas";
+
+/** The answer to a change of settings made through the one validator. */
+export type SettingsResult = { ok: true } | { ok: false; message: string };
+
+/** What importing a settings file did: how many settings were applied and which names were left out. */
+export type ImportOutcome = { status: "imported"; applied: number; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
 export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "capture", "settings"] as const;
 export const SETTINGS_SUBS = [
   "general",
@@ -121,6 +127,10 @@ export type UiEvent =
 export interface Api {
   state(): Promise<AppState>;
   patchConfig(patch: ConfigPatch): Promise<AppState>;
+  /** A change of settings from a Settings page: checked by the settings registry, the same one the command line uses. Keys are `voice`, `speed`... or `dictation.<key>`. */
+  applySettings(change: Record<string, unknown>): Promise<SettingsResult>;
+  /** Asks for a settings file and applies the settings in it that are valid. */
+  importSettings(): Promise<ImportOutcome>;
   setLaunchAtLogin(on: boolean): Promise<AppState>;
   setPort(port: number): Promise<AppState>;
   regenerateToken(): Promise<AppState>;
@@ -194,6 +204,8 @@ export interface Api {
 export const METHODS = [
   "state",
   "patchConfig",
+  "applySettings",
+  "importSettings",
   "setLaunchAtLogin",
   "setPort",
   "regenerateToken",

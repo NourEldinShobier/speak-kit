@@ -8,6 +8,7 @@ vi.hoisted(() => {
   (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
+import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
 import { SETTINGS_NAV } from "./routes";
 import { SETTINGS_SUBS } from "../shared/ipc";
@@ -30,6 +31,22 @@ describe("settings navigation", () => {
 
   it("builds every settings page: none is a placeholder", () => {
     for (const sub of SETTINGS_SUBS) expect(page(sub)).not.toContain("Coming soon");
+  });
+});
+
+describe("General in Spanish", () => {
+  it("shows the page in the chosen language, with the import row in the folded part", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider choice="es">
+        <Settings s={appState({ config: parseConfig({ setupDone: true, language: "es" }) })} sub="general" />
+      </LocaleProvider>,
+    );
+    for (const text of ["Abrir al iniciar sesión", "Idioma", "Al cerrar la ventana", "Importar ajustes"]) expect(html).toContain(text);
+    expect(html).not.toContain("Launch at login");
+  });
+
+  it("offers the import in English too", () => {
+    expect(page("general")).toContain("Import settings");
   });
 });
 

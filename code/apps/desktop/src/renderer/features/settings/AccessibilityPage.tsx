@@ -2,8 +2,9 @@ import { Kbd, Segmented, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import type { Config } from "../../../shared/schemas";
 import { KEYBOARD_MAP } from "../../../shared/settings/behaviour";
-import { api, Page } from "../../ui";
+import { Page } from "../../ui";
 import { rowAttr } from "./focus";
+import { change } from "./change";
 
 const MOTION = [
   { id: "system", label: "System" },
@@ -21,7 +22,7 @@ export function AccessibilityPage({ s }: { s: AppState }) {
           className="lm-row--control"
           label="Reduce motion"
           description="Still frames and short fades instead of movement. System follows the operating system."
-          control={<Segmented label="Reduce motion" items={MOTION} value={c.reduceMotion} onChange={(v) => api.patchConfig({ reduceMotion: v as Config["reduceMotion"] })} />}
+          control={<Segmented label="Reduce motion" items={MOTION} value={c.reduceMotion} onChange={(v) => change({ reduceMotion: v as Config["reduceMotion"] })} />}
         />
       </SettingsSection>
       <SettingsSection title="Keyboard map" description="Everything in Speak Kit can be reached without a mouse. Global keys are on the Shortcuts page.">

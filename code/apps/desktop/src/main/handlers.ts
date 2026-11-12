@@ -1,14 +1,17 @@
 import { app, clipboard, shell } from "electron";
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dirSize, measureDownloads } from "./downloads";
 import { isLaunchAtLogin, setLaunchAtLogin } from "./login-item";
 import type { Activity, Api, AppState, ExternalLink, Metrics, Method, StorageInfo } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
+import type { DictationStatus } from "../shared/dictation/contract";
+import type { DictationPatch } from "../shared/dictation/settings";
 import type { Config, ConfigPatch } from "../shared/schemas";
 import type { MainWindow } from "./main-window";
 import { emptyPairing } from "./pairing";
+import { applyChange, importSettings, type ChangeTargets } from "./settings-change";
 import { SETTINGS_LINKS, createSettingsHandlers } from "./settings-handlers";
 import type { ServerApi } from "./server-api";
 import type { ServerRuntime } from "./server-lifecycle";
@@ -30,6 +33,10 @@ export interface HandlerDeps {
   addActivity(kind: Activity["kind"], title: string, body: string): void;
   /** Settings changes the desktop features react to (Do Not Disturb). */
   onConfigPatch(patch: ConfigPatch): void;
+  /** Dictation settings, stored by the dictation feature; the shortcut it clashes with when refused. */
+  patchDictation(patch: DictationPatch): Promise<DictationStatus["rejected"]>;
+  /** The settings file the person picks to import; null when cancelled. */
+  pickSettingsFile(): Promise<string | null>;
 }
 
 function metrics(): Metrics {
@@ -72,6 +79,8 @@ async function patchConfig(d: HandlerDeps, patch: ConfigPatch) {
   return applyConfigChange(d, patch, setupWas);
 }
 
+const changeTargets = (d: HandlerDeps): ChangeTargets => ({ patchDictation: d.patchDictation, patchApp: (p) => patchConfig(d, p) });
+
 /** The settings file was edited outside the app: take the new values (they are already in the file, so nothing is saved). */
 export function applyExternalConfig(d: HandlerDeps, patch: Partial<Config>) {
   const setupWas = d.config.setupDone;
@@ -102,6 +111,8 @@ export function createAppHandlers(d: HandlerDeps) {
   return {
     state: async () => d.publish(),
     patchConfig: (patch) => patchConfig(d, patch),
+    applySettings: (change) => applyChange(changeTargets(d), change),
+    importSettings: () => importSettings({ pick: d.pickSettingsFile, read: (f) => readFile(f, "utf8") }, changeTargets(d)),
     setLaunchAtLogin: async (on) => {
       setLaunchAtLogin(on, config.startMinimized);
       return d.publish();

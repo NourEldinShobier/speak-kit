@@ -6,7 +6,9 @@ export default defineConfig({
   test: {
     testTimeout: 20_000,
     include: [
-      "apps/desktop/src/shared/settings/{external-edit,resources}.test.ts",
+      "apps/desktop/src/shared/settings/{external-edit,resources,import}.test.ts",
+      "apps/desktop/src/shared/i18n/i18n.test.ts",
+      "apps/desktop/src/main/settings-change.test.ts",
       "apps/desktop/src/shared/{release-notes,tray-notices}.test.ts",
       "apps/desktop/src/main/{resources,single-instance,window-size-guard,window-motion}.test.ts",
     ],
