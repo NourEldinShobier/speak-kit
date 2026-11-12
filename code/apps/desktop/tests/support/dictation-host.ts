@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { app, BrowserWindow, clipboard, ClipboardItem, nativeImage } from "electron";
+import { DEFAULT_DICTATION } from "../../src/shared/dictation/settings";
+import { runTransform } from "../../src/main/dictation/transform-run";
 import { createDictationOs, VK, type HotkeyEvent, type HudState, type InsertOptions } from "../../src/main/dictation";
 import { createKeyboardHook } from "../../src/main/dictation/keyboard-hook";
 import { CLIPBOARD_PRIVACY_MARKS } from "../../src/main/dictation/types";
@@ -62,6 +64,7 @@ async function build() {
     foreground: () => os.foreground(),
     insert: (text: string, options?: InsertOptions) => os.insert(text, options),
     insertTyping: (text: string) => osTyping.insert(text),
+    transform: (extra: { replacements?: { from: string; to: string }[] } = {}) => runTransform(os, { ...DEFAULT_DICTATION, language: "en", ...extra }),
     settled: () => os.settled(),
     hudShow: (s: HudState) => os.hud.show(s),
     hudUpdate: (s: HudState) => os.hud.update(s),
