@@ -6,13 +6,9 @@ import type { Device, SettingsView } from "../../../shared/meetings/contract";
 import type { MeetingsPatch } from "../../../shared/meetings/settings";
 import { attempt, meetings } from "./api";
 import { sizeText } from "./model";
+import { micChoice, recordChoice } from "./callRecordingChoices";
 import { usePush, useSettingsView } from "./useMeetings";
 import "./meetings.css";
-
-const RECORD_OPTIONS = [
-  { value: "call-app", label: "The call app only" },
-  { value: "system", label: "Everything this computer plays" },
-];
 
 interface Devices {
   inputs: Device[];
@@ -34,12 +30,6 @@ export function outputOptions(outputs: Device[]): { value: string; label: string
   return [{ value: "automatic", label: "Automatic" }, ...ranked.map((o) => ({ value: o.id, label: o.isDefault ? `${o.name} (default)` : o.name }))];
 }
 
-const micOptions = (inputs: Device[]) => [
-  { value: "dictation", label: "Same as dictation" },
-  { value: "call-app", label: "Follows the call app" },
-  ...inputs.map((i) => ({ value: i.id, label: i.label })),
-];
-
 function outputNote(v: SettingsView, outputs: Device[]): string {
   const def = outputs.find((o) => o.isDefault)?.label;
   if (v.callApp && v.capabilities.callAppOutput === "available") return `${v.callApp.name} is playing now. Speak Kit follows it if the call moves to another output.`;
@@ -48,8 +38,8 @@ function outputNote(v: SettingsView, outputs: Device[]): string {
 }
 
 function micNote(v: SettingsView): string {
-  if (v.config.mic === "call-app" && v.capabilities.micFollowsCallApp === "unavailable") {
-    return "This computer could not name the call app's microphone, so the saved one is used and Speak Kit tries again with growing waits.";
+  if (v.config.mic === "call-app" && v.capabilities.micFollowsCallApp !== "available") {
+    return "This computer cannot name the call app's microphone, so the dictation microphone is used.";
   }
   return "Your voice is saved on its own track, You. The call is saved on the Them track.";
 }
@@ -75,6 +65,42 @@ function Failed({ rows, reload }: { rows: Row[]; reload(): void }) {
   );
 }
 
+function CallRows({ view, devices, patch }: { view: SettingsView; devices: Devices; patch(p: MeetingsPatch): void }) {
+  const [record, mic] = [recordChoice(view), micChoice(view, devices.inputs)];
+  return (
+    <SettingsSection title="Call recording">
+      <SettingRow
+        className="lm-row--control"
+        label="Record"
+        description="What Speak Kit records when you record a call."
+        control={
+          <Select label="Record" value={record.value} options={record.options} disabled={record.options.length < 2} onChange={(recordSource) => patch({ recordSource: recordSource as "call-app" })} />
+        }
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Call sound comes from"
+        description={outputNote(view, devices.outputs)}
+        control={
+          <Select
+            label="Call sound comes from"
+            value={view.config.output}
+            options={outputOptions(devices.outputs)}
+            disabled={view.capabilities.callAppOutput === "unavailable"}
+            onChange={(output) => patch({ output })}
+          />
+        }
+      />
+      <SettingRow
+        className="lm-row--control"
+        label="Your microphone"
+        description={micNote(view)}
+        control={<Select label="Your microphone" value={mic.value} options={mic.options} onChange={(mic) => patch({ mic })} />}
+      />
+    </SettingsSection>
+  );
+}
+
 /** Settings > Voice and playback > Call recording: what is recorded, which output, which microphone; and the recordings that failed, each with Delete. */
 export function CallRecordingCard() {
   const { tick } = usePush();
@@ -88,34 +114,7 @@ export function CallRecordingCard() {
   const patch = (p: MeetingsPatch) => void meetings.patchSettings(p).then(set);
   return (
     <>
-      <SettingsSection title="Call recording">
-        <SettingRow
-          className="lm-row--control"
-          label="Record"
-          description="What Speak Kit records when you record a call."
-          control={<Select label="Record" value={view.config.recordSource} options={RECORD_OPTIONS} onChange={(recordSource) => patch({ recordSource: recordSource as "call-app" })} />}
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Call sound comes from"
-          description={outputNote(view, devices.outputs)}
-          control={
-            <Select
-              label="Call sound comes from"
-              value={view.config.output}
-              options={outputOptions(devices.outputs)}
-              disabled={view.capabilities.callAppOutput === "unavailable"}
-              onChange={(output) => patch({ output })}
-            />
-          }
-        />
-        <SettingRow
-          className="lm-row--control"
-          label="Your microphone"
-          description={micNote(view)}
-          control={<Select label="Your microphone" value={view.config.mic} options={micOptions(devices.inputs)} onChange={(mic) => patch({ mic })} />}
-        />
-      </SettingsSection>
+      <CallRows view={view} devices={devices} patch={patch} />
       <p className="tr-foot mt-foot">
         {view.capabilities.callAppOutput === "available"
           ? "Other apps, notifications and music are not recorded. Speak Kit checks where the call is playing every 2 seconds."

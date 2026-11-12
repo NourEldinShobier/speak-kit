@@ -85,8 +85,8 @@ export interface Meetings {
   rename(id: string, title: string): Promise<void>;
   trash(id: string): Promise<void>;
   restore(id: string): Promise<void>;
-  /** Deletes the meeting and every file of it, whatever its state (a failed one included). */
-  remove(id: string): Promise<void>;
+  /** Deletes the meeting and every file of it, whatever its state (a failed one included) except one still being recorded. Rejects when its files could not be deleted; the meeting stays listed then. */
+  remove(id: string, o?: { abandon?: boolean }): Promise<void>;
   sweep(): Promise<{ trashed: number; removed: number; audioDropped: number }>;
   since(seq: number, limit?: number): Since;
   ack(consumer: string, seq: number): Promise<void>;

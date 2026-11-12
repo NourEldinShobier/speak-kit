@@ -142,7 +142,8 @@ function connect(core: Meetings, e: Shared): Parts {
     recorder: p.recorder,
     picker: new MicPicker({ dictationDevice: "", callAppDevice: async () => null }),
     now: e.now,
-    micSetting: () => cfg().mic,
+    // Without a way to read the call app's microphone, "follows the call app" means the dictation microphone, and the page says so.
+    micSetting: () => (cfg().mic === "call-app" && p.platform.capabilities().micFollowsCallApp !== "available" ? "dictation" : cfg().mic),
     changed: e.onRecording,
     notice: e.onNotice,
   });
@@ -194,7 +195,8 @@ function registerShortcut(e: Shared): void {
 /** The polling of the system, the second-by-second work and the hourly sweep. */
 function startLoops(e: Shared, coreP: Promise<Meetings>, ready: Promise<Parts>) {
   let seen = 0;
-  void ready.then(({ core }) => (seen = core.since(0).latest));
+  // Audio past its deadline and expired items go at startup, not an hour later.
+  void ready.then(({ core }) => ((seen = core.since(0).latest), core.sweep())).catch(ignore);
   const settle = async () => {
     const { core, watch } = await ready;
     // A transcript that finished since the last look: the capsule says so.
@@ -204,9 +206,15 @@ function startLoops(e: Shared, coreP: Promise<Meetings>, ready: Promise<Parts>) 
     }
     seen = core.since(seen).latest;
   };
-  const poll = async () => (await ready).watch.poll().then(settle);
+  // A slow probe (a PowerShell start) is never overtaken by the next poll: polls that arrive meanwhile are skipped.
+  let probing: Promise<void> | undefined;
+  const poll = () => (probing ??= ready.then(({ watch }) => watch.poll().then(settle)).finally(() => (probing = undefined)));
   const second = () => ready.then(({ recording, watch }) => (recording.tick(), watch.tick(), settle()));
-  const timers = [setInterval(() => void poll().catch(ignore), e.p.pollMs ?? 4000), setInterval(() => void second(), e.p.tickMs ?? 1000), setInterval(() => void coreP.then((c) => c.sweep()), HOUR)];
+  const timers = [
+    setInterval(() => void poll().catch(ignore), e.p.pollMs ?? 4000),
+    setInterval(() => void second().catch(ignore), e.p.tickMs ?? 1000),
+    setInterval(() => void coreP.then((c) => c.sweep()).catch(ignore), HOUR),
+  ];
   timers.forEach((t) => t.unref());
   return { poll, second, stop: () => timers.forEach(clearInterval) };
 }
@@ -285,8 +293,10 @@ export function createMeetingsService(ctx: Ctx, p: MeetingsPorts): MeetingsServi
     providers: () => allProviders(addedProviders(cfg())),
     bump: () => (tick++, send()),
     onRecording: (v) => {
+      const began = !!v && !rec;
       rec = v;
-      if (v)
+      // Whether the person wears headphones is read once when a recording begins, not on every tick.
+      if (began)
         void p
           .devices()
           .then((d) => (headphones = HEADSET.test(d.outputs.find((o) => o.isDefault)?.label ?? "")))

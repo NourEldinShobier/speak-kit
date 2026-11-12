@@ -108,9 +108,16 @@ export class MeetingRecording {
     const id = (this.#id = begun.id);
     const mic = await this.#d.picker.choose(this.#d.micSetting());
     const r = await this.#d.recorder.start({ micDevice: mic.device, system: true }).catch(() => ({ ok: false as const, code: "mic-failed" as const }));
+    // Stopped by hand while the microphone was still opening: stop() already owns the meeting, so the late answer only closes what it opened.
+    if (this.#phase !== "starting") {
+      if (r.ok) await this.#d.recorder.stop().catch(ignore);
+      return { ok: false, failure: { code: "stopped", message: "The recording was stopped before it started." } };
+    }
     if (!r.ok) {
-      await this.#d.core.remove(id);
-      return this.#abandon({ code: r.code, message: MIC_MESSAGES[r.code]! });
+      // A start that timed out may still open the microphone later: close the page so the microphone is never left on.
+      await this.#d.recorder.stop().catch(ignore);
+      await this.#d.core.remove(id, { abandon: true }).catch(ignore);
+      return this.#abandon({ code: r.code, message: MIC_MESSAGES[r.code] ?? MIC_MESSAGES["mic-failed"]! });
     }
     this.#system = r.system ?? "unavailable";
     this.#note = this.#system === "unavailable" ? NO_SYSTEM : fallbackNote(mic.why);
@@ -131,8 +138,10 @@ export class MeetingRecording {
   #chunk(track: "you" | "them", pcm: Int16Array, at: number): void {
     if ((this.#phase !== "recording" && this.#phase !== "saving") || !this.#id) return;
     const id = this.#id;
+    const lost = () => void this.#autoStop("Recording stopped because it could not be saved. What was recorded so far is kept.");
     this.#pending = this.#pending.then(async () => {
-      const r = await this.#d.core.append(id, track, pcm, at);
+      const r = await this.#d.core.append(id, track, pcm, at).catch(() => undefined);
+      if (!r) return lost();
       if (!r.ok)
         void this.#autoStop(
           r.failure.code === "disk-full" ? "The disk is full. What was recorded so far is saved." : "Recording stopped because it could not be saved. What was recorded so far is kept.",
@@ -164,10 +173,15 @@ export class MeetingRecording {
     if (!this.#phase || !id) return Promise.resolve({ ok: false, failure: { code: "idle", message: "Nothing is being recorded." } });
     this.#phase = "saving";
     this.#d.changed(this.view());
-    this.#ending = (async () => {
-      await this.#d.recorder.stop().catch(ignore);
-      await this.#pending;
-      const r = await this.#d.core.end(id);
+    this.#ending = (async (): Promise<Outcome<{ id: string }>> => {
+      let r: Outcome<{ id: string }>;
+      try {
+        await this.#d.recorder.stop().catch(ignore);
+        await this.#pending;
+        r = await this.#d.core.end(id);
+      } catch {
+        r = { ok: false, failure: { code: "finalise-failed", message: "The recording could not be finished. What was recorded so far is kept." } };
+      }
       this.#phase = undefined;
       this.#id = undefined;
       this.#forSession = undefined;

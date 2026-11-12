@@ -230,13 +230,16 @@ export async function createMeetings(d: MeetingsDeps): Promise<Meetings> {
       const e = store.get(id);
       if (e) await pipe.reindex(e);
     },
-    async remove(id) {
+    async remove(id, o) {
+      // A meeting that is still being recorded is deleted by its recording only (when it gives up on starting).
+      if (store.get(id)?.status === "recording" && !o?.abandon) return;
       aborts.get(id)?.abort();
       writers.delete(id);
       cursors.delete(id);
       search.remove(id);
-      await store.removeFiles(id).catch(() => {});
-      await store.mutate((m) => void m.delete(id)).catch(() => {});
+      // The entry goes only after its files: a failed delete leaves the meeting listed, so it can be deleted again and retention still reaches it.
+      await store.removeFiles(id);
+      await store.mutate((m) => void m.delete(id));
       tick();
     },
     async sweep() {

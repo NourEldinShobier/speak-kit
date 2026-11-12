@@ -89,6 +89,8 @@ export class CallWatch {
 
   /** Once a second: counts the call-ended prompt down, expires the "ready" notice. */
   tick(): void {
+    // A recording stopped by hand (shortcut, tray) while the call-ended prompt shows: the prompt has nothing left to stop.
+    if (this.#ending && !this.#d.recording.active) this.#ending = undefined;
     const e = this.#ending;
     if (e && e.left !== null) {
       e.left -= 1;
@@ -124,8 +126,8 @@ export class CallWatch {
         break;
       }
       case "dismiss":
-        // "Never offer" sets the policy in Settings, where the person sees what it changes: this call is skipped and Settings opens.
-        this.#offers.dismissed(a.sessionId, a.how === "never" ? "this-call" : a.how);
+        // "Never offer" saves the policy for the app and opens Settings, where the person sees and can undo it.
+        this.#offers.dismissed(a.sessionId, a.how);
         if (a.how === "never") this.#d.openSettings();
         break;
       case "stop":

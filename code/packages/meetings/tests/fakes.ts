@@ -11,6 +11,8 @@ export class MemFs implements Fs {
   /** Writes to a path matching this fail with a plain error. */
   failOn: RegExp | undefined;
   full = false;
+  /** Removing a path matching this fails with a plain error. */
+  failRemove: RegExp | undefined;
   writeLog: string[] = [];
 
   async read(file: string) {
@@ -35,6 +37,7 @@ export class MemFs implements Fs {
     this.files.set(k(file), next);
   }
   async remove(file: string) {
+    if (this.failRemove?.test(k(file))) throw new Error("EIO");
     this.files.delete(k(file));
   }
   async rename(from: string, to: string) {
