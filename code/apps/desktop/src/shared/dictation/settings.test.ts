@@ -3,7 +3,49 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { countDropped, DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const DEFAULTS = { enabled: false, hotkey: "ControlRight", mode: "hold", language: "en", model: "large-v3-turbo-q5_0", retention: "7d", replacements: [] };
+const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
+const DEFAULTS = {
+  enabled: false,
+  hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
+  mode: "hold",
+  holdMs: 300,
+  secondHotkey: "",
+  mouseButton: "",
+  rawHotkey: "",
+  pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
+  cancelKey: "Escape",
+  shareHotkey: false,
+  pauseRules: { mode: "off", apps: [], fullscreen: false },
+  language: "en",
+  model: "large-v3-turbo-q5_0",
+  retention: "7d",
+  replacements: [],
+  microphone: "",
+  micExclusions: [],
+  avoidBluetooth: true,
+  keepReady: false,
+  keepReadyMinutes: 0,
+  sentencePause: true,
+  output: "restore",
+  returnToApp: true,
+  appRules: {},
+  blockSleep: true,
+  skipPauses: false,
+  terms: [],
+  readAs: [],
+  prompt: true,
+  cleanup: CLEANUP,
+  modes: [],
+  rewrite: { enabled: false, deadlineMs: 4000 },
+  keepRecordings: false,
+  smartSpacing: false,
+  transformHotkey: "",
+  sounds: { enabled: false, volume: 50 },
+  indicator: "bottom",
+  audioCapMb: 512,
+  duckAudio: "nothing",
+  duckSpeakersOnly: true,
+};
 
 describe("dictation config", () => {
   it("is off, on Right Ctrl, hold to talk, for 7 days, until the person turns it on", () => {
@@ -34,6 +76,43 @@ describe("dictation config", () => {
     ]);
     const many = Array.from({ length: 150 }, (_, i) => ({ from: `w${i}`, to: "x" }));
     expect(v.parse(DictationConfigSchema, { replacements: many }).replacements).toHaveLength(100);
+  });
+});
+
+describe("settings added after the first release", () => {
+  it("a file written before them loads with each at its default", () => {
+    const old = parseConfig({ dictation: { enabled: true, keepRecordings: true } }).dictation;
+    expect(old).toMatchObject({ smartSpacing: false, transformHotkey: "", sounds: { enabled: false, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("keeps good values and replaces each bad one with its default", () => {
+    const got = parseConfig({
+      dictation: { smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
+    }).dictation;
+    expect(got).toMatchObject({ smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("other audio is left alone and only muted for speakers by default, a file without the fields loads that way and a bad mode falls back", () => {
+    expect(parseConfig({ dictation: { enabled: true } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    expect(parseConfig({ dictation: { duckAudio: "lower", duckSpeakersOnly: false } }).dictation).toMatchObject({ duckAudio: "lower", duckSpeakersOnly: false });
+    expect(parseConfig({ dictation: { duckAudio: "silence", duckSpeakersOnly: "no" } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ duckAudio: "pause", duckSpeakersOnly: false })).toBe(true);
+    expect(ok({ duckAudio: "silence" })).toBe(false);
+  });
+
+  it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
+    const got = parseConfig({ dictation: { hotkey: "ControlLeft+AltLeft+KeyT", transformHotkey: "ControlLeft+AltLeft+KeyT" } }).dictation;
+    expect(got).toMatchObject({ transformHotkey: "", resetNotice: "clash" });
+  });
+
+  it("the renderer may change each of them and nothing else inside sounds", () => {
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ smartSpacing: true, indicator: "top", audioCapMb: 2048, sounds: { enabled: true, volume: 0 } })).toBe(true);
+    expect(ok({ indicator: "left" })).toBe(false);
+    expect(ok({ audioCapMb: 1 })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 101 } })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 5, theme: "x" } })).toBe(false);
   });
 });
 

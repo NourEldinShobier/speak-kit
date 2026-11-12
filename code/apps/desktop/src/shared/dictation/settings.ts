@@ -17,6 +17,7 @@ const modelId = v.union([
   ),
 ]);
 export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
+export const DUCK_MODES = ["nothing", "mute", "lower", "pause"] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
@@ -193,6 +194,28 @@ const CORE_KEYS = {
   modes: v.fallback(lenient(LenientMode, MAX_MODES, modeKeys), []),
   rewrite: RewriteSchema,
   keepRecordings: bool(false),
+  /** Add a space before the text when the character before the caret is a letter, digit or closing punctuation. */
+  smartSpacing: bool(false),
+  /** Cleans the text of the focused field with the dictation rules and puts it back; "" is off. */
+  transformHotkey: optionalHotkey(""),
+  /** Short tones when a recording starts, stops and fails. Off until the person turns them on; volume is 0 to 100. */
+  sounds: v.fallback(SoundsSchema, { enabled: false, volume: 50 }),
+  indicator: v.fallback(v.picklist(INDICATORS), "bottom"),
+  audioCapMb: v.fallback(v.picklist(AUDIO_CAPS_MB), 512),
+  /** What happens to other audio while a recording runs. */
+  duckAudio: v.fallback(v.picklist(DUCK_MODES), "nothing"),
+  /** Leave other audio alone when the sound goes to headphones, which the microphone cannot hear. */
+  duckSpeakersOnly: bool(true),
+};
+const MouseOne = /(^|\+)Mouse1(\+|$)/;
+const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; transformHotkey: string; cancelKey: string }): Shortcuts => ({
+  dictation: c.hotkey,
+  second: c.secondHotkey,
+  mouse: c.mouseButton,
+  raw: c.rawHotkey,
+  pasteLast: c.pasteLastHotkey,
+  transform: c.transformHotkey,
+  cancel: c.cancelKey,
 });
 export const DictationConfigSchema = v.pipe(
   // A saved left button as the shortcut would swallow every click: it goes back to the default and the page says why.
@@ -284,6 +307,13 @@ export const DictationPatchSchema = v.partial(
     modes: modeList,
     rewrite: v.strictObject({ enabled: v.boolean(), deadlineMs: v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)) }),
     keepRecordings: v.boolean(),
+    smartSpacing: v.boolean(),
+    transformHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
+    sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),
+    indicator: v.picklist(INDICATORS),
+    audioCapMb: v.picklist(AUDIO_CAPS_MB),
+    duckAudio: v.picklist(DUCK_MODES),
+    duckSpeakersOnly: v.boolean(),
   }),
 );
 export type DictationPatch = v.InferOutput<typeof DictationPatchSchema>;

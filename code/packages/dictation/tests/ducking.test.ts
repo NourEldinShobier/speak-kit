@@ -6,6 +6,8 @@ describe("classifyOutput", () => {
     expect(classifyOutput("Headphones (Realtek)")).toBe("headphones");
     expect(classifyOutput("WH-1000XM4 Hands-Free")).toBe("headphones");
     expect(classifyOutput("Speakers (Realtek)")).toBe("speakers");
+    expect(classifyOutput("MacBook Pro Speakers builtin")).toBe("speakers");
+    expect(classifyOutput("Output builtin")).toBe("speakers");
     expect(classifyOutput("Some DAC")).toBe("unknown");
     expect(classifyOutput(undefined)).toBe("unknown");
   });

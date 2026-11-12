@@ -3,8 +3,9 @@ import { Banner, Button, Segmented, Select, SettingRow, SettingsSection, Toggle 
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
-import { dictation } from "./api";
-import { AppRulesCard, MicrophoneCard, OutputCard } from "./AudioCards";
+import { dictation, platformName } from "./api";
+import { OtherAudioCard } from "./OtherAudioCard";
+import { AppRulesCard, FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { MicExclusions } from "./MicExclusions";
 import { FirstRunCard } from "./FirstRunCard";
 import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
@@ -71,6 +72,27 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
         control={<Button onClick={open}>View history</Button>}
       />
     </SettingsSection>
+  );
+}
+
+/** Every card of the page once the speech model is set up. */
+function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void }) {
+  return (
+    <>
+      <General s={s} />
+      <StatusCard s={s} />
+      <ShortcutsSections s={s} />
+      <MicrophoneCard s={s} />
+      <MicExclusions list={s.settings.micExclusions} />
+      <OutputCard s={s} />
+      <FeedbackCard s={s} />
+      <OtherAudioCard s={s} />
+      <AppRulesCard s={s} />
+      <ModelList status={s} />
+      <Cleanup s={s} />
+      <TestField />
+      <HistoryCard s={s} open={openHistory} />
+    </>
   );
 }
 

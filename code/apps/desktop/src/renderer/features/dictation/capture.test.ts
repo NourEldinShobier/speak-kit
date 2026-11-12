@@ -151,3 +151,25 @@ describe("microphone errors", () => {
     expect(micCode("boom")).toBe("mic-failed");
   });
 });
+
+describe("clip buffer silence padding", () => {
+  it("adds silence of the given length to a running recording and sends it on in the pieces", () => {
+    const pieces: Float32Array[] = [];
+    const b = new ClipBuffer(1000, 1000, { onPiece: (p) => pieces.push(p), ms: 100 });
+    b.start(0);
+    b.push(block(50, 1));
+    b.pad(70);
+    b.push(block(10, 1));
+    expect(pieces.map((p) => p.length)).toEqual([120]);
+    expect(b.stop()!.pcm).toHaveLength(130);
+  });
+
+  it("adds nothing when no recording runs or the gap rounds to no samples", () => {
+    const b = new ClipBuffer(1000, 1000);
+    b.pad(50);
+    b.start(0);
+    b.pad(0);
+    expect(b.stop()!.pcm).toHaveLength(0);
+    expect(b.stop()).toBeNull();
+  });
+});
