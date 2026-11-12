@@ -1,7 +1,7 @@
 import { hotkeyKeys } from "./keys";
 
-/** Every shortcut the app owns that a recorder can set. The first six are key chords read by the key hook, the last three are the reader's global accelerators ("Ctrl+Alt+S"). */
-export const HOOK_SLOTS = ["dictation", "second", "mouse", "raw", "pasteLast", "cancel"] as const;
+/** Every shortcut the app owns that a recorder can set. The first seven are key chords read by the key hook, the last three are the reader's global accelerators ("Ctrl+Alt+S"). */
+export const HOOK_SLOTS = ["dictation", "second", "mouse", "raw", "pasteLast", "transform", "cancel"] as const;
 export const ACCELERATOR_SLOTS = ["read-selection", "play-pause", "stop"] as const;
 export type Slot = (typeof HOOK_SLOTS)[number] | (typeof ACCELERATOR_SLOTS)[number];
 export type Shortcuts = Partial<Record<Slot, string>>;
@@ -12,6 +12,7 @@ export const SLOT_NAMES: Record<Slot, string> = {
   mouse: "Mouse button",
   raw: "Dictate without processing",
   pasteLast: "Paste last dictation",
+  transform: "Clean up the field",
   cancel: "Cancel key",
   "read-selection": "Read selection",
   "play-pause": "Play or pause",
