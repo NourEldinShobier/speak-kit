@@ -24,9 +24,9 @@ let vad: WhisperVadContext;
 
 const ab = (a: Int16Array) => a.buffer.slice(a.byteOffset, a.byteOffset + a.byteLength) as ArrayBuffer;
 
-async function recognize(pcm: Int16Array, language: string): Promise<string> {
+async function recognize(pcm: Int16Array, language: string, prompt?: string): Promise<string> {
   const opts = { maxThreads: init.threads };
-  const { promise } = init.engine === "parakeet" ? (model as ParakeetContext).transcribeData(ab(pcm), opts) : (model as WhisperContext).transcribeData(ab(pcm), { ...opts, language });
+  const { promise } = init.engine === "parakeet" ? (model as ParakeetContext).transcribeData(ab(pcm), opts) : (model as WhisperContext).transcribeData(ab(pcm), { ...opts, language, ...(prompt && { prompt }) });
   return (await promise).result.trim();
 }
 
@@ -70,7 +70,7 @@ async function run(m: SttToWorker): Promise<void> {
     const segs = await vad.detectSpeechData(ab(m.pcm), VAD);
     const range = speechRange(segs, m.pcm.length);
     if (!range) return send({ type: "result", id: m.id, text: "", speech: false });
-    const text = await recognize(m.pcm.subarray(range.from, range.to), m.language);
+    const text = await recognize(m.pcm.subarray(range.from, range.to), m.language, m.prompt);
     send({ type: "result", id: m.id, text, speech: true });
   } catch (e) {
     send({ type: "error", id: m.id, message: e instanceof Error ? e.message : String(e) });

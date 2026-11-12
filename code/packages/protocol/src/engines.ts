@@ -30,5 +30,7 @@ export interface ExportJob {
   done: number;
   total: number;
   durationMs: number;
+  /** Where each rendered sentence sits in the file: start and end of its speech in milliseconds (the silence after it is not counted). Grows as sentences finish. */
+  sentenceMs?: [number, number][];
   error?: string;
 }

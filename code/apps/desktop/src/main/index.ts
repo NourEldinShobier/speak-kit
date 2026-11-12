@@ -105,9 +105,9 @@ const mainWindow: MainWindow = new MainWindow(config, {
   },
 });
 const screenVision = createScreenVision();
-const micOwners = createMicOwners();
+const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
-  store: new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage),
+  store: keyStore,
   config,
   saveConfig: store.save,
   log,
@@ -232,8 +232,7 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      version: app.getVersion(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
+      dictation: { dataDir, modelsDir, sttWorker, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
     },
   );
 }

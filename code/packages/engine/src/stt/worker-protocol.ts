@@ -9,7 +9,7 @@ export interface SttWorkerInit {
   warmup: boolean;
 }
 
-export type SttToWorker = { type: "transcribe"; id: number; pcm: Int16Array; language: string };
+export type SttToWorker = { type: "transcribe"; id: number; pcm: Int16Array; language: string; /** Words to steer a Whisper model towards; the other engine ignores it. */ prompt?: string };
 
 export type SttFromWorker =
   | { type: "status"; state: "loading" }

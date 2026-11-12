@@ -15,7 +15,58 @@ export const MAX_APP_RULES = 50;
 export const MAX_EXCLUSIONS = 20;
 export const MAX_KEEP_READY_MINUTES = 120;
 
+export const MAX_TERMS = 500;
+export const MAX_MODES = 24;
+
 export type Replacement = { from: string; to: string };
+const id = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
+const Term = v.object({ id, word: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), soundsLike: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(20)) });
+const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), spoken: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)) });
+const Mode = v.object({
+  id,
+  name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
+  apps: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)),
+  insertMode: v.picklist(["paste", "type", "copy"]),
+  capitals: v.picklist(["keep", "sentence", "lower"]),
+  end: v.picklist(["keep", "no-full-stop"]),
+  rewrite: v.boolean(),
+  terms: v.pipe(v.array(Term), v.maxLength(MAX_TERMS)),
+});
+// A bad entry is dropped, the rest of the list stays.
+const lenient = <T extends v.GenericSchema>(item: T, max: number) =>
+  v.fallback(
+    v.pipe(
+      v.array(v.unknown()),
+      v.transform((items) =>
+        items
+          .flatMap((i) => {
+            const r = v.safeParse(item, i);
+            return r.success ? [r.output as v.InferOutput<T>] : [];
+          })
+          .slice(0, max),
+      ),
+    ),
+    [] as v.InferOutput<T>[],
+  );
+const bool = (d: boolean) => v.fallback(v.boolean(), d);
+
+/** The clean-up switches. Every one is on, as before they could be changed, except the two new transformations. */
+export const CleanupSchema = v.fallback(
+  v.object({
+    fillers: bool(true),
+    spokenSymbols: bool(true),
+    spokenFormatting: bool(true),
+    autoCapitalize: bool(true),
+    trailingSpace: bool(true),
+    lowercase: bool(false),
+    stripFinalStop: bool(false),
+  }),
+  { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false },
+);
+export type Cleanup = v.InferOutput<typeof CleanupSchema>;
+
+/** The rewrite pass is off until the person turns it on, because the text leaves the computer. */
+export const RewriteSchema = v.fallback(v.object({ enabled: bool(false), deadlineMs: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)), 4000) }), { enabled: false, deadlineMs: 4000 });
 const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)) });
 const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTKEY);
 /** "" is unset. */
@@ -88,22 +139,14 @@ const CORE_KEYS = {
   model: v.fallback(v.picklist(DICTATION_MODELS), DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
   replacements,
-  /** Device id of the chosen microphone; empty means the system default, never a virtual input. */
-  microphone: v.fallback(v.pipe(v.string(), v.maxLength(300)), ""),
-  micExclusions: exclusions,
-  avoidBluetooth: v.fallback(v.boolean(), true),
-  /** Keep the microphone open between recordings, for the audio before the key press. */
-  keepReady: v.fallback(v.boolean(), false),
-  /** Close an idle open microphone after this many minutes; 0 keeps it open while dictation is on. */
-  keepReadyMinutes: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)), 0),
-  /** Add a little silence after the speech for models that need it to end the last sentence. */
-  sentencePause: v.fallback(v.boolean(), true),
-  output: v.fallback(v.picklist(OUTPUTS), "restore"),
-  returnToApp: v.fallback(v.boolean(), true),
-  appRules,
-  /** Stop the computer from sleeping while a recording runs. */
-  blockSleep: v.fallback(v.boolean(), true),
-  skipPauses: v.fallback(v.boolean(), false),
+  terms: v.fallback(lenient(Term, MAX_TERMS), []),
+  readAs: v.fallback(lenient(Pronunciation, 200), []),
+  /** Send the words to the speech model as a prompt (models that cannot read one drop it). */
+  prompt: bool(true),
+  cleanup: CleanupSchema,
+  modes: v.fallback(lenient(Mode, MAX_MODES), []),
+  rewrite: RewriteSchema,
+  keepRecordings: bool(false),
 });
 export const DictationConfigSchema = v.pipe(
   // A saved left button as the shortcut would swallow every click: it goes back to the default and the page says why.
@@ -159,20 +202,13 @@ export const DictationPatchSchema = v.partial(
     model: v.picklist(DICTATION_MODELS),
     retention: v.picklist(RETENTIONS),
     replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
-    microphone: v.pipe(v.string(), v.maxLength(300)),
-    micExclusions: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)),
-    avoidBluetooth: v.boolean(),
-    keepReady: v.boolean(),
-    keepReadyMinutes: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)),
-    sentencePause: v.boolean(),
-    output: v.picklist(OUTPUTS),
-    returnToApp: v.boolean(),
-    appRules: v.pipe(
-      v.record(exeName, AppRule),
-      v.check((r) => Object.keys(r).length <= MAX_APP_RULES),
-    ),
-    blockSleep: v.boolean(),
-    skipPauses: v.boolean(),
+    terms: v.pipe(v.array(Term), v.maxLength(MAX_TERMS)),
+    readAs: v.pipe(v.array(Pronunciation), v.maxLength(200)),
+    prompt: v.boolean(),
+    cleanup: v.strictObject({ fillers: v.boolean(), spokenSymbols: v.boolean(), spokenFormatting: v.boolean(), autoCapitalize: v.boolean(), trailingSpace: v.boolean(), lowercase: v.boolean(), stripFinalStop: v.boolean() }),
+    modes: v.pipe(v.array(Mode), v.maxLength(MAX_MODES)),
+    rewrite: v.strictObject({ enabled: v.boolean(), deadlineMs: v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)) }),
+    keepRecordings: v.boolean(),
   }),
 );
 export type DictationPatch = v.InferOutput<typeof DictationPatchSchema>;

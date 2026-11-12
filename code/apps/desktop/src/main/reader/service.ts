@@ -1,3 +1,4 @@
+import { applyReadAs } from "@speakkit/dictation";
 import type { Ctx } from "../context";
 import { toDesktopError } from "../../shared/errors";
 import type { PreviewAudio } from "../../shared/ipc";
@@ -85,7 +86,7 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
   };
 
   const controller: ReaderController = new ReaderController({
-    synth: (req, signal): Promise<PreviewAudio> => ctx.server.speak(req, signal),
+    synth: (req, signal): Promise<PreviewAudio> => ctx.server.speak({ ...req, text: applyReadAs(req.text, ctx.config.dictation.readAs) }, signal),
     voice: () => ctx.config.voice,
     speed: () => ctx.config.speed,
     emit: onState,

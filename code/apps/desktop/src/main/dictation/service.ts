@@ -1,10 +1,13 @@
-import { ipcMain, powerMonitor, powerSaveBlocker, shell, type BrowserWindow, type WebContents } from "electron";
+import { dialog, ipcMain, powerMonitor, shell, type BrowserWindow, type WebContents } from "electron";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createDictation, type Clip, type Dictation, type DictationState } from "@speakkit/dictation";
+import { applyMode, applyRules, createDictation, defaultSettings, resolveMode, soundsLikeRules, timeLeft, type AudioStore, type Clip, type Dictation, type DictationState, type HistoryHit, type Rewriter, type Settings } from "@speakkit/dictation";
 import { WhisperStt } from "@speakkit/engine";
-import { MIC_LEVEL_EVENT, STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
-import type { DictationStatus, RecorderEvent } from "../../shared/dictation/contract";
+import { STATUS_EVENT, type HudAction } from "../../shared/dictation/channels";
+import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
+import { createAudioStore, encodeWav } from "./audio-store";
+import { createOpenAiRewriter } from "./openai-rewriter";
 import type { DictationConfig, DictationModelId, DictationPatch } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
 import { createHotkeys, type SwitchableHotkeys } from "./hotkey-source";
@@ -15,13 +18,9 @@ import { ModelManager, settle, supportsLanguage } from "./models";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { resyncOnPower } from "./power-resync";
 import { createRecorderHost, type RecorderHost } from "./recorder";
-import { appOverrides, clock, coreSettings, dictationStatus, keepOpenMs, touchesMicrophone, windowShown } from "./service-support";
-import { MicState } from "./mic-state";
-import { createThrottle } from "./throttle";
-import { createSleepBlock } from "./sleep-block";
-import { HistoryFacade } from "./history-facade";
-import { openRecorderPage } from "./recorder-window";
-import { createTranscriber, type Stt } from "./stt";
+import { clock, coreSettings, dictationStatus } from "./service-support";
+import { openRecorderWindow } from "./recorder-window";
+import { createTranscriber, heard, type Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
 export interface DictationServiceOptions {
@@ -34,11 +33,21 @@ export interface DictationServiceOptions {
   parent(): BrowserWindow | null;
   /** The test hook is on: a scripted speech engine replaces the real one and the microphone can be refused. */
   test: boolean;
+  /** The saved OpenAI key, for the rewrite pass. */
+  readKey?(): Promise<string | null>;
+  hasKey?(): Promise<boolean>;
   /** Tests only. */
   os?: DictationOs;
   stt?: Stt;
-  /** The feature that holds the microphone now (screen look, voice chat), or undefined. Dictation waits for it. */
-  micOwner?: () => string | undefined;
+  rewriter?: Rewriter;
+  trash?(file: string): Promise<boolean>;
+  /** Tests only: the file pickers, in place of the system dialogs. */
+  files?: FilePickers;
+}
+
+export interface FilePickers {
+  open(filters: { name: string; extensions: string[] }[]): Promise<string | null>;
+  save(defaultName: string, filters: { name: string; extensions: string[] }[]): Promise<string | null>;
 }
 
 const PUSH_MS = 200;
@@ -71,12 +80,16 @@ export class DictationService {
   #recorder: RecorderHost | undefined;
   #hudWindow: HudWindow | undefined;
   #hotkeyFailed = false;
-  readonly mic = new MicState(process.platform === "win32", () => this.#recorder, { enabled: () => this.#cfg.enabled, windowShown: () => windowShown(this.#o.parent()), after: clock.after });
-  readonly #sleep = createSleepBlock(
-    powerSaveBlocker,
-    () => this.#cfg.blockSleep,
-    (why) => this.#ctx.log.warn("dictation sleep block", why),
-  );
+  #kept = 0;
+  #promptDropped = false;
+  #redo: DictationStatus["redo"];
+  #redoAbort: AbortController | undefined;
+  #hasKey = false;
+  #audio: AudioStore | undefined;
+  /** Tests only: what the scripted writer does with the next dictation. */
+  fakeRewrite: "ok" | "hang" | "fail" = "ok";
+  readonly #files: FilePickers;
+  #count = 0;
   #lastInsert: InsertResult | undefined;
   #lastFailed: Clip | undefined;
   #lastError = "";
@@ -90,6 +103,20 @@ export class DictationService {
     // SPEAKKIT_REAL_STT keeps the real engine in a test run (a manual check against the models on this computer).
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
     this.stt = o.stt ?? this.fake ?? new WhisperStt({ modelsDir: o.modelsDir, workerUrl: o.sttWorker });
+    this.#files = o.files ?? {
+      open: async (filters) => {
+        const w = o.parent();
+        const opts = { properties: ["openFile" as const], filters };
+        const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+        return r.canceled ? null : (r.filePaths[0] ?? null);
+      },
+      save: async (defaultName, filters) => {
+        const w = o.parent();
+        const opts = { defaultPath: defaultName, filters };
+        const r = w ? await dialog.showSaveDialog(w, opts) : await dialog.showSaveDialog(opts);
+        return r.canceled || !r.filePath ? null : r.filePath;
+      },
+    };
     this.models = new ModelManager({
       stt: this.stt,
       selected: () => this.#cfg.model,
@@ -164,27 +191,49 @@ export class DictationService {
     this.core = createDictation({
       clock,
       recorder: this.#replay,
-      transcriber: createTranscriber({
-        stt: this.stt,
-        model: () => this.#cfg.model,
-        sentencePause: () => this.#cfg.sentencePause,
-        onFailedClip: (c) => (this.#lastFailed = c),
-        onModelError: (d) => this.models.report(d),
-      }),
-      keepClip: (clip) => (this.#lastFailed = clip),
-      // Only the stage name and a reason: spoken text never reaches a log.
-      log: (stage, why) => this.#ctx.log.warn(`dictation stage ${stage}`, why),
+      transcriber: createTranscriber({ stt: this.stt, model: () => this.#cfg.model, onFailedClip: (c) => (this.#lastFailed = c), onModelError: (d) => this.models.report(d), onPromptDropped: () => this.#setPromptDropped(true) }),
       inserter: createInserterPort(os, (r) => (this.#lastInsert = r)),
       hotkeys: this.#hotkeys,
       storage: createHistoryStorage(path.join(this.#o.dataDir, "dictation-history.json")),
+      audio: (this.#audio = createAudioStore({
+        dir: path.join(this.#o.dataDir, "dictation-audio"),
+        trash: this.#o.trash ?? ((f) => shell.trashItem(f).then(() => true, () => false)),
+        onEvicted: (files) => void this.core?.history.dropAudio(files),
+      })),
+      rewriter: this.#o.rewriter ?? this.#writer(),
       settings: coreSettings(this.#cfg),
       ...(this.#o.micOwner && { micOwner: this.#o.micOwner }),
     });
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await this.models.refresh();
-    await this.history.refresh();
+    await this.#refreshCount();
+    this.#hasKey = (await this.#o.hasKey?.()) ?? false;
     if (this.#cfg.enabled) await this.#enable(true, true);
+  }
+
+  #writer(): Rewriter {
+    if (__TEST_CODE__ && this.#o.test) {
+      return {
+        rewrite: ({ text, signal }) => {
+          if (this.fakeRewrite === "fail") return Promise.reject(new Error("scripted"));
+          if (this.fakeRewrite === "hang") return new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+          return Promise.resolve(`${text} [rewritten]`);
+        },
+      };
+    }
+    return createOpenAiRewriter({ readKey: async () => (await this.#o.readKey?.()) ?? null });
+  }
+
+  /** The key can be saved or removed on the Voice chat page at any time. */
+  async refreshKey(): Promise<void> {
+    this.#hasKey = (await this.#o.hasKey?.()) ?? false;
+  }
+
+  #setPromptDropped(on: boolean): void {
+    if (this.#promptDropped === on) return;
+    this.#promptDropped = on;
+    this.#push(true);
   }
 
   #onState(s: DictationState): void {
@@ -208,9 +257,12 @@ export class DictationService {
       hotkeyFailed: this.#hotkeyFailed,
       state: this.state,
       models: this.models,
-      historyCount: this.history.count,
-      mic: this.mic.status,
-      devices: this.mic.devices,
+      historyCount: this.#count,
+      historyStatus: this.core?.history.status() ?? "ok",
+      keptRecordings: this.#kept,
+      rewriteKey: this.#hasKey || (__TEST_CODE__ && this.#o.test),
+      promptDropped: this.#promptDropped,
+      redo: this.#redo,
     });
   }
 
@@ -244,7 +296,7 @@ export class DictationService {
     this.#rejected = shortcutClash(this.#cfg, rest, this.#ctx.config.shortcuts);
     if (this.#rejected) return this.status();
     Object.assign(this.#cfg, rest);
-    delete this.#cfg.resetNotice; // any change dismisses the notice about a reset shortcut
+    if (model || patch.prompt !== undefined || patch.terms) this.#promptDropped = false;
     if (model && model !== this.#cfg.model) await this.models.switchTo(model); // only an installed model can be chosen
     if (!supportsLanguage(this.#cfg.model, this.#cfg.language)) this.#cfg.language = "auto";
     this.#ctx.saveConfig();
@@ -333,6 +385,173 @@ export class DictationService {
   }
 
   // ---- history, retry, HUD buttons ---------------------------------------------------------------------------
+
+  #item(e: HistoryHit, now: number): HistoryItem {
+    const left = timeLeft(e, now, this.#cfg.retention);
+    return {
+      id: e.id,
+      at: e.at,
+      text: e.text,
+      raw: e.raw,
+      durationMs: e.durationMs,
+      expiresInMs: Number.isFinite(left) ? left : null,
+      ...(e.app && { app: e.app }),
+      ...(e.model && { model: e.model }),
+      ...(e.rewrite && { rewrite: e.rewrite }),
+      ...(e.audio && { recording: true }),
+      ...(e.audioRemoved && { recordingRemoved: true }),
+      ...(e.versions && { versions: e.versions }),
+      ...(e.version && { version: e.version }),
+      ...(e.via && { via: e.via }),
+    };
+  }
+
+  async historyList(search?: string): Promise<HistoryItem[]> {
+    await this.ready;
+    const items = (await this.core?.history.list(search ? { search } : undefined)) ?? [];
+    const now = Date.now();
+    return items.map((e) => this.#item(e, now));
+  }
+
+  async historyStats() {
+    await this.ready;
+    return (await this.core?.history.stats()) ?? { dictations: 0, words: 0, wordsPerMinute: 0, listeningMs: 0 };
+  }
+
+  async historyRecent(n: number): Promise<HistoryItem[]> {
+    await this.ready;
+    const now = Date.now();
+    return ((await this.core?.history.recent(n)) ?? []).map((e) => this.#item(e, now));
+  }
+
+  async historyCopy(id: string): Promise<boolean> {
+    await this.ready;
+    return (await this.core?.history.copy(id)) ?? false;
+  }
+
+  #noteKept(kept: string[]): void {
+    if (!kept.length) return;
+    this.#kept += kept.length;
+    this.#ctx.log.warn("dictation recording kept", `${kept.length} not moved to the Recycle Bin`);
+    this.#push(true);
+  }
+
+  async historyRemove(id: string): Promise<void> {
+    await this.ready;
+    this.#noteKept((await this.core?.history.remove(id))?.kept ?? []);
+    await this.#refreshCount();
+  }
+
+  async historyClear(): Promise<void> {
+    await this.ready;
+    this.#noteKept((await this.core?.history.clear())?.kept ?? []);
+    await this.#refreshCount();
+  }
+
+  async historyDismissNotice(): Promise<void> {
+    this.#kept = 0;
+    this.#push(true);
+  }
+
+  async historyUseVersion(id: string, versionId: string): Promise<boolean> {
+    await this.ready;
+    const ok = (await this.core?.history.useVersion(id, versionId)) ?? false;
+    this.#push(true);
+    return ok;
+  }
+
+  async historyAudio(id: string): Promise<Uint8Array | null> {
+    await this.ready;
+    const clip = await this.core?.history.audio(id);
+    return clip ? new Uint8Array(encodeWav(clip)) : null;
+  }
+
+  async historyDeleteRecording(id: string): Promise<void> {
+    await this.ready;
+    const file = (await this.core?.history.get(id))?.audio;
+    if (!file || !this.#audio) return;
+    if (await this.#audio.trash(file)) await this.core?.history.dropAudio([file]);
+    else this.#noteKept([file]);
+    this.#push(true);
+  }
+
+  async historyExport(): Promise<string | null> {
+    await this.ready;
+    const target = await this.#files.save("speakkit-history.json", [{ name: "JSON", extensions: ["json"] }]);
+    if (!target) return null;
+    const entries = (await this.core?.history.list()) ?? [];
+    await writeFile(target, JSON.stringify({ version: 1, entries: entries.map(({ id, at, text, raw, app, model, durationMs }) => ({ id, at, text, raw, app, model, durationMs })) }, null, 2));
+    return target;
+  }
+
+  async vocabImport() {
+    const file = await this.#files.open([{ name: "Word lists", extensions: ["json", "txt", "csv"] }]);
+    if (!file) return null;
+    if ((await stat(file)).size > 2_000_000) throw new Error("too-large");
+    const ext = path.extname(file).slice(1).toLowerCase();
+    return { format: (ext === "txt" || ext === "csv" ? ext : "json") as "json" | "txt" | "csv", text: await readFile(file, "utf8"), name: path.basename(file) };
+  }
+
+  async vocabExport(format: "json" | "txt" | "csv", text: string): Promise<string | null> {
+    const target = await this.#files.save(`speakkit-vocabulary.${format}`, [{ name: format.toUpperCase(), extensions: [format] }]);
+    if (!target) return null;
+    await writeFile(target, text, "utf8");
+    return target;
+  }
+
+  #setRedo(redo: DictationStatus["redo"]): void {
+    this.#redo = redo;
+    this.#push(true);
+  }
+
+  /**
+   * Transcribes a kept recording again with another (or the same) installed model and stores the result as a new version; the text in use does not
+   * change until the person picks it. A model that is not installed, a recording that is gone and an engine failure each end in a visible failed state.
+   */
+  async historyRetranscribe(id: string, model: DictationModelId): Promise<void> {
+    await this.ready;
+    if (this.#redo?.state === "running" || !this.core) return;
+    const fail = (error: "model-missing" | "failed" | "no-audio") => this.#setRedo({ id, model, state: "failed", error });
+    this.#setRedo({ id, model, state: "running" });
+    const abort = (this.#redoAbort = new AbortController());
+    const cancelled = new Promise<"cancelled">((resolve) => abort.signal.addEventListener("abort", () => resolve("cancelled"), { once: true }));
+    const selected = this.#cfg.model;
+    try {
+      const entry = await this.core.history.get(id);
+      const clip = await this.core.history.audio(id);
+      if (!entry || !clip) return fail("no-audio");
+      if (!(await this.stt.downloaded(model))) return fail("model-missing");
+      const started = Date.now();
+      const language = supportsLanguage(model, this.#cfg.language) ? this.#cfg.language : "auto";
+      const result = await Promise.race([
+        (async () => {
+          if (model !== selected) await this.stt.load(model);
+          try {
+            return await heard({ stt: this.stt, model: () => model, onFailedClip: () => undefined }, clip, language);
+          } finally {
+            if (model !== selected) await this.stt.load(selected).catch(() => undefined);
+          }
+        })(),
+        cancelled,
+      ]);
+      if (result === "cancelled") return this.#setRedo(undefined);
+      if (!result.ok || !result.text) return fail("failed");
+      const base: Settings = { ...defaultSettings, ...coreSettings(this.#cfg) };
+      const eff = applyMode(base, resolveMode(base.modes, entry.app));
+      const text = applyRules(result.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: result.language ?? this.#cfg.language });
+      await this.core.history.addVersion(id, { model, at: Date.now(), text: text.trimEnd(), ms: Date.now() - started });
+      this.#setRedo(undefined);
+    } catch {
+      fail("failed");
+    } finally {
+      if (this.#redoAbort === abort) this.#redoAbort = undefined;
+    }
+  }
+
+  async historyCancelRetranscribe(): Promise<void> {
+    this.#redoAbort?.abort();
+    if (this.#redo?.state === "failed") this.#setRedo(undefined);
+  }
 
   /** Runs the last recording that could not be transcribed once more, through the same pipeline as a live one. */
   async retry(): Promise<void> {

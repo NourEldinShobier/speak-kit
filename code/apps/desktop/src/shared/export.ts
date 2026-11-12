@@ -16,7 +16,13 @@ export interface ExportOptions {
   name: string;
   /** Only set after the user answered "File exists". */
   conflict?: ExportConflict;
+  /** A caption file next to the audio. Off when missing. */
+  captions?: ExportCaptions;
+  /** Chapter markers from the headings of the text; MP3 only (a WAV file cannot hold them). */
+  chapters?: boolean;
 }
+
+export type ExportCaptions = "none" | "srt" | "vtt";
 
 export type ExportStage = "rendering" | "encoding" | "saving" | "done" | "cancelled" | "error";
 
@@ -34,6 +40,11 @@ export interface ExportView {
   path?: string;
   bytes?: number;
   durationMs?: number;
+  /** The caption file written next to the audio, and how many captions it has. */
+  captionsPath?: string;
+  captionCount?: number;
+  /** Chapter markers written into the audio. */
+  chapterCount?: number;
   error?: DesktopError;
 }
 
