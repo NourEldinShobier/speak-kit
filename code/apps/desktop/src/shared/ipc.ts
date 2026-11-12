@@ -3,6 +3,7 @@ import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config, ConfigPatch } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
+import type { AutomationCliAction, AutomationInfo } from "./automation";
 import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
@@ -163,17 +164,11 @@ export interface Api {
   /** Asks OpenAI whether the saved key is accepted. */
   voiceChatTestKey(): Promise<VoiceChatTestResult>;
   voiceChatSetVoice(voice: VoiceChatVoice): Promise<AppState>;
-  /** The log lines since the last read; `lines` is null when the file did not grow, so the view stays as it is. */
-  diagnosticsLog(sinceSize: number): Promise<{ size: number; lines: string[] | null }>;
-  /** The redacted text Copy diagnostics puts on the clipboard. */
-  diagnosticsReport(): Promise<string>;
-  clearActivity(): Promise<AppState>;
-  dismissSettingsNotice(): Promise<AppState>;
-  micAccess(): Promise<MicAccess>;
-  /** Opens the operating system page where the microphone permission is changed; false when this system has none. */
-  openSystemSettings(which: "microphone"): Promise<boolean>;
-  /** Relaunches the app (an experiment that needs a restart). */
-  restartApp(): Promise<void>;
+  /** Automation settings: the command line tool, the agent skill and the server limits. Actions answer with the new info. */
+  automationInfo(): Promise<AutomationInfo>;
+  automationCli(action: AutomationCliAction): Promise<AutomationInfo>;
+  /** Writes (or updates) the agent skill under the user's skills folder. */
+  automationSkill(): Promise<AutomationInfo>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -215,13 +210,9 @@ export const METHODS = [
   "voiceChatRemoveKey",
   "voiceChatTestKey",
   "voiceChatSetVoice",
-  "diagnosticsLog",
-  "diagnosticsReport",
-  "clearActivity",
-  "dismissSettingsNotice",
-  "micAccess",
-  "openSystemSettings",
-  "restartApp",
+  "automationInfo",
+  "automationCli",
+  "automationSkill",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

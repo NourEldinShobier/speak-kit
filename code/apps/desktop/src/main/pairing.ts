@@ -1,6 +1,6 @@
 import dc from "node:diagnostics_channel";
 import type { IncomingMessage } from "node:http";
-import type { Pairing } from "../shared/ipc";
+import type { Activity, AppState, Pairing } from "../shared/ipc";
 
 /** Requests the app makes to its own server carry this header, so they never count as a browser pairing. */
 export const APP_CLIENT_HEADER = "x-speakkit-app";
@@ -38,4 +38,16 @@ export function watchPairing(p: Pairing, o: { token: () => string; port: () => n
   };
   dc.subscribe("http.server.request.start", fn);
   return () => dc.unsubscribe("http.server.request.start", fn);
+}
+
+/** Follows the state's pairing record: the first call of a client becomes an activity entry, and every change is published. */
+export function watchPairingActivity(state: Pick<AppState, "pairing" | "token" | "port">, o: { addActivity(kind: Activity["kind"], title: string, body: string): void; publish(): void }): () => void {
+  return watchPairing(state.pairing, {
+    token: () => state.token,
+    port: () => state.port,
+    onChange: () => {
+      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) o.addActivity("pair", "Browser paired", "An extension made its first call.");
+      o.publish();
+    },
+  });
 }

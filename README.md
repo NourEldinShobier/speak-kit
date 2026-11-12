@@ -39,6 +39,10 @@ Download from the [latest release](https://github.com/NourEldinShobier/speak-kit
 
 On first start the app downloads the voice model (about 180 MB) and walks you through setup. To connect the extension, copy the token in the app (Browser) and paste it in the extension under Options, General, Pairing token.
 
+## Command line and AI apps
+
+In the desktop app, Settings, Automation puts the `speakkit` command on your PATH (`speakkit speak "Hello"`, `speakkit speak notes.md --out notes.mp3`, `speakkit status`, `speakkit stop`). `speakkit mcp` is an MCP server for AI apps, and `speakkit skill install` teaches an AI agent the commands. All of it talks to the app on your own computer.
+
 ## Privacy
 
 Text is turned into speech on your computer. The local server listens on `127.0.0.1` only and needs a token. The only network traffic is the one-time model download and the update check against GitHub Releases, which you can turn off in Settings, About. No analytics, no accounts.

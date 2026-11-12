@@ -9,15 +9,18 @@ import { app } from "electron";
 export const testEnv = () => {
   const on = !app.isPackaged;
   const e = process.env;
+  const testing = on && !!e.SPEAKKIT_TEST;
   return {
     /** Installs the test hook (globalThis.__speakkit) and simulates the OS for shortcuts and toasts. */
-    hook: on && !!e.SPEAKKIT_TEST,
+    hook: testing,
     fakeUpdate: on ? e.SPEAKKIT_FAKE_UPDATE || undefined : undefined,
     token: on ? e.SPEAKKIT_TOKEN || undefined : undefined,
     /** Lets the library fetch pages from this machine (the e2e web server listens on loopback). */
-    allowLocalUrls: on && !!e.SPEAKKIT_TEST,
+    allowLocalUrls: testing,
     /** Fake OpenAI address for the voice chat end-to-end run; the key is sent there, so a normal or packaged build never reads it. */
-    openaiBaseUrl: on && e.SPEAKKIT_TEST ? e.SPEAKKIT_OPENAI_BASE_URL || undefined : undefined,
+    openaiBaseUrl: testing ? e.SPEAKKIT_OPENAI_BASE_URL || undefined : undefined,
+    /** A folder where the command line launcher keeps its user PATH and macOS bin folder instead of the registry and /usr/local/bin, and whose `home` folder replaces the user's home for the agent skill. */
+    launcherSandbox: testing ? e.SPEAKKIT_TEST_LAUNCHER_DIR || undefined : undefined,
     /** Feed address that replaces GitHub Releases; never read by a packaged build on the user's own data. */
     updateUrl: on || e.SPEAKKIT_USER_DATA ? e.SPEAKKIT_UPDATE_URL || undefined : undefined,
   };

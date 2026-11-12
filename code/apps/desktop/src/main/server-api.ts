@@ -1,11 +1,13 @@
 import * as v from "valibot";
 import {
   FrameDecoder,
+  automationLimitsSchema,
   engineListSchema,
   errorBodySchema,
   exportJobSchema,
   healthSchema,
   voiceListSchema,
+  type AutomationLimits,
   type EngineList,
   type ExportJob,
   type ExportRequest,
@@ -84,6 +86,7 @@ export class ServerApi {
 
   health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", { signal }));
   voices = (): Promise<VoiceList> => this.#json(voiceListSchema, this.#call("GET", "/v1/voices"));
+  limits = (): Promise<AutomationLimits> => this.#json(automationLimitsSchema, this.#call("GET", "/v1/limits"));
   engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
 
   startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));

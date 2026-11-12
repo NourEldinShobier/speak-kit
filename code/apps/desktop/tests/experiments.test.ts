@@ -69,6 +69,28 @@ describe("Experiments page", () => {
   });
 });
 
+describe("closing the window without a tray icon", () => {
+  const close = (l: Launched) => l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+  const visible = (l: Launched) => l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isVisible());
+
+  it.skipIf(process.platform === "darwin")("asks whether to quit, because nothing could bring a hidden window back", async () => {
+    const l = await start({ labs: { "hide-tray-icon": true } });
+    await close(l);
+    await l.page.getByText("Quit Speak Kit?").waitFor();
+    expect(await l.page.getByRole("button", { name: "Cancel" }).count()).toBe(1);
+    expect(await l.page.getByRole("button", { name: "Keep running in tray" }).count()).toBe(0);
+    expect(await visible(l)).toBe(true);
+    await l.page.getByRole("button", { name: "Cancel" }).click();
+    expect(await visible(l)).toBe(true);
+  });
+
+  it("with the tray icon shown, closing hides the window to the tray as before", async () => {
+    const l = await start();
+    await close(l);
+    await vi.waitFor(async () => expect(await visible(l)).toBe(false));
+  });
+});
+
 describe("every control has a name", () => {
   it("on each Settings page", async () => {
     const l = await start({ showDeveloperLabs: true });

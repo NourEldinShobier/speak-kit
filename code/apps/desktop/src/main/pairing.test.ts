@@ -1,6 +1,6 @@
 import dc from "node:diagnostics_channel";
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { APP_CLIENT_HEADER, authedCall, emptyPairing, watchPairing } from "./pairing";
+import { APP_CLIENT_HEADER, authedCall, emptyPairing, watchPairing, watchPairingActivity } from "./pairing";
 
 const req = (headers: Record<string, string>, localPort = 47615) => ({ headers, socket: { localPort } }) as never;
 const bearer = { authorization: "Bearer secret" };
@@ -43,5 +43,22 @@ describe("watchPairing", () => {
     stop = watchPairing(p, { token: () => "secret", port: () => 47615, onChange: () => {}, now: () => 1 });
     publish({ authorization: "Bearer nope" });
     expect(p).toEqual(emptyPairing());
+  });
+});
+
+describe("watchPairingActivity", () => {
+  let stop = () => {};
+  afterEach(() => stop());
+  const publishCall = (headers: Record<string, string>) => dc.channel("http.server.request.start").publish({ request: req(headers) });
+
+  it("adds one entry for the first call and publishes each change; the speakkit command (an app call) is not a browser", () => {
+    const state = { pairing: emptyPairing(), token: "secret", port: 47615 };
+    const added: string[] = [];
+    let published = 0;
+    stop = watchPairingActivity(state, { addActivity: (kind, title) => added.push(`${kind}:${title}`), publish: () => published++ });
+    publishCall({ ...bearer, [APP_CLIENT_HEADER]: "1" });
+    expect([added, published]).toEqual([[], 0]);
+    publishCall({ ...bearer, origin: "chrome-extension://abc" });
+    expect([added, published]).toEqual([["pair:Browser paired"], 1]);
   });
 });

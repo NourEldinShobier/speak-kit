@@ -38,7 +38,7 @@ The full suite is slow and uses fixed ports; CI runs it on every pull request. L
 | Area | Command (from `code/`) |
 |---|---|
 | One spec | `pnpm exec vp test run path/to/file.test.ts` |
-| A package | `cd packages/server && pnpm exec vp test run` (same for `engine`, `player`, `protocol`, `ui`) |
+| A package | `cd packages/server && pnpm exec vp test run` (same for `cli`, `engine`, `player`, `protocol`, `ui`) |
 | Desktop app | `cd apps/desktop && pnpm exec vp test run` |
 | Extension | `cd apps/extension && pnpm exec vp test run` |
 | Types | `pnpm typecheck` |
@@ -53,6 +53,7 @@ A bug fix starts with a failing test. Do not loosen a test or lint limit to get 
 | `code/apps/extension` | Chrome extension |
 | `code/apps/desktop` | Electron app |
 | `code/packages/server` | Loopback HTTP server and CLI |
+| `code/packages/cli` | The `speakkit` command, its MCP server, the agent skill text and the PATH launcher |
 | `code/packages/engine` | Engine interface, Kokoro in a child process |
 | `code/packages/player` | Shared gapless playback |
 | `code/packages/protocol` | API types, audio frame codec, extension messages |

@@ -1,5 +1,4 @@
 import { app, ipcMain, Menu, nativeTheme, powerMonitor, safeStorage } from "electron";
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { channel, METHODS, type Activity, type AppState, type Method } from "../shared/ipc";
@@ -11,8 +10,12 @@ import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
 import { openConfig } from "./config";
-import { readLabs, runLabsCli } from "./labs-cli";
+import { runLabsCli } from "./labs-cli";
+import { setupLabs } from "./labs-watch";
 import { labsArgs } from "../shared/labs";
+import { lateAutomation } from "./automation";
+import { setupAutomationPage } from "./automation/page-setup";
+import { mkdir } from "node:fs/promises";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
 import { createAppHandlers, metrics } from "./handlers";
@@ -21,7 +24,7 @@ import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
-import { emptyPairing, watchPairing } from "./pairing";
+import { emptyPairing, watchPairingActivity } from "./pairing";
 import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
@@ -56,10 +59,16 @@ const logsDir = path.join(dataDir, "logs");
 const sttWorker = await sttWorkerUrl(here);
 const store = await openConfig(dataDir);
 const config = store.config;
-const applyLabs = () => {
-  log.transports.file.level = config.labs["verbose-log"] ? "debug" : "info";
-};
-applyLabs();
+const labs = setupLabs({
+  config,
+  dataDir,
+  setVerbose: (on) => void (log.transports.file.level = on ? "debug" : "info"),
+  afterChange: (l) => {
+    desktop?.onConfigPatch({ labs: l });
+    publish();
+  },
+  warn: (m) => log.warn(m),
+});
 
 const state: AppState = {
   version: app.getVersion(),
@@ -112,8 +121,12 @@ const mainWindow: MainWindow = new MainWindow(config, {
     publish(); // a hidden window is not sent state; it catches up when it shows
   },
   onHidden: () => runtime.stopPolling(),
-  onReleased: () => desktop?.dictation.speech.windowReleased(),
+  onCloseWithoutTray: () => askToQuit(),
 });
+const askToQuit = () => {
+  mainWindow.show();
+  mainWindow.sendUi({ type: "confirm-quit" });
+};
 const screenVision = createScreenVision();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
@@ -132,6 +145,7 @@ const voiceChat = createVoiceChat({
     }
   },
 });
+const automation = lateAutomation();
 const runtime: ServerRuntime = new ServerRuntime({
   state,
   config,
@@ -141,6 +155,7 @@ const runtime: ServerRuntime = new ServerRuntime({
   log,
   api: serverApi,
   voiceChat: voiceChat.server,
+  automation: automation.host,
   publish,
   isVisible: () => mainWindow.isVisible(),
   onEngineState: (prev, next, detail) => desktop?.onEngineState(prev, next, detail),
@@ -188,17 +203,6 @@ function watchPower() {
   powerMonitor.on("on-ac", () => onPower(false));
 }
 
-function watchPairingActivity() {
-  watchPairing(state.pairing, {
-    token: () => state.token,
-    port: () => state.port,
-    onChange: () => {
-      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
-      publish();
-    },
-  });
-}
-
 function createHandlers() {
   return createAppHandlers({
     state,
@@ -215,7 +219,7 @@ function createHandlers() {
     addActivity,
     onConfigPatch: (patch) => {
       desktop?.onConfigPatch(patch);
-      if (patch.labs) applyLabs();
+      if (patch.labs) labs.apply();
     },
   });
 }
@@ -238,10 +242,7 @@ function startDesktop() {
     {
       parent: () => mainWindow.window,
       distDir: here,
-      requestQuit: () => {
-        mainWindow.show();
-        mainWindow.sendUi({ type: "confirm-quit" });
-      },
+      requestQuit: askToQuit,
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
@@ -264,14 +265,7 @@ if (labsCode !== null) {
   registerProtocol();
   app.on("second-instance", (_e, argv) => {
     if (argv.includes(QUIT_FLAG)) return mainWindow.quit();
-    if (labsArgs(argv)) {
-      void readLabs(dataDir).then((labs) => {
-        config.labs = labs;
-        applyLabs();
-        publish();
-      });
-      return;
-    }
+    if (labsArgs(argv)) return; // the labs command wrote the settings file; the file watcher applies it
     const link = findDeepLink(argv);
     if (link) onDeepLink(link);
     else mainWindow.show();
@@ -329,10 +323,13 @@ if (labsCode !== null) {
       onRecovered: (f) => unreadable("The library", f),
     });
     watchPower();
-    watchPairingActivity();
+    labs.watch();
+    watchPairingActivity(state, { addActivity, publish });
     const appHandlers = createHandlers();
     desktop = startDesktop();
-    const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
+    automation.attach(desktop.automation);
+    const automationPage = await setupAutomationPage({ here, dataDir, state, api: serverApi, test });
+    const handlers = { ...appHandlers, ...desktop.handlers, ...automationPage.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;
     registerValidatedIpc<Method>(ipcMain, {
       methods: METHODS,
       channel,
@@ -344,6 +341,7 @@ if (labsCode !== null) {
     if (test.hook)
       (globalThis as Record<string, unknown>).__speakkit = {
         metrics,
+        terminals: automationPage.terminals,
         marks: () => performance.getEntriesByType("mark").map((m) => ({ name: m.name, at: Math.round(m.startTime) })),
         ...desktop.testHook(),
       };

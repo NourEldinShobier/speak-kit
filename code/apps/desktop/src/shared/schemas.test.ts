@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
-import { ARGS, ConfigPatchSchema, parseConfig, repairedKeys } from "./schemas";
+import { ARGS, ConfigPatchSchema, applyConfigPatch, parseConfig, repairedKeys } from "./schemas";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 describe("config defaults and repair", () => {
@@ -136,5 +136,27 @@ describe("labs and settings repair", () => {
     expect(repairedKeys(raw, parseConfig(raw))).toEqual(["dictation"]);
     expect(repairedKeys(null, parseConfig(null))).toEqual([]);
     expect(repairedKeys(parseConfig({}), parseConfig({}))).toEqual([]);
+  });
+});
+
+describe("labs in a settings patch", () => {
+  const ok = (labs: unknown) => v.safeParse(ConfigPatchSchema, { labs }).success;
+  it("accepts one switch or all of them", () => {
+    expect(ok({ "verbose-log": true })).toBe(true);
+    expect(ok({ "verbose-log": true, "hide-tray-icon": false })).toBe(true);
+    expect(ok({})).toBe(true);
+  });
+  it.each([[null], ["on"], [[true]], [{ "verbose-log": "yes" }], [{ gone: true }], [{ "verbose-log": 1 }]])("refuses %j instead of turning it into defaults", (labs) => {
+    expect(ok(labs)).toBe(false);
+  });
+  it("a partial patch changes only the named switch", () => {
+    const c = parseConfig({ labs: { "hide-tray-icon": true } });
+    applyConfigPatch(c, { labs: { "verbose-log": true } });
+    expect(c.labs).toEqual({ "hide-tray-icon": true, "verbose-log": true });
+  });
+  it("applies the other fields as before", () => {
+    const c = parseConfig({});
+    applyConfigPatch(c, { speed: 2, doNotDisturb: true });
+    expect(c).toMatchObject({ speed: 2, doNotDisturb: true });
   });
 });
