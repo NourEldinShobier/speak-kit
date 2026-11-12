@@ -12,6 +12,7 @@ import {
   eventProblem,
   initialView,
   Looker,
+  MicLease,
   isLive,
   mintSession,
   reduceVoice,
@@ -63,6 +64,8 @@ class Session {
   });
   /** The looks of this conversation at the screen, named to the app once. */
   private readonly looker = new Looker({ app: () => this.cfg, dispatch: (e) => this.dispatch(e), touch: () => this.idle.touch(), phase: () => this.view.phase });
+  /** Tells the app while this conversation holds the microphone. */
+  private readonly lease = new MicLease(() => ({ fetch: (i, init) => fetch(i, init), ...this.cfg }));
   private rt: Realtime | undefined;
   private stream: MediaStream | undefined;
   private instructions = "";
@@ -140,6 +143,7 @@ class Session {
     const stream = await this.microphone();
     if (!stream || this.dead) return stream?.getTracks().forEach((t) => t.stop());
     this.stream = stream;
+    this.lease.start();
     for (const t of stream.getAudioTracks()) t.addEventListener("ended", () => void this.micEnded()); // unplugged, or the permission was taken back
     if (minted.expiresAt * 1000 < Date.now() + 5000) minted = await this.mint(); // the permission window took its time
     if (this.dead) return;
@@ -298,6 +302,7 @@ class Session {
     this.turns.stop();
     clearInterval(this.levels);
     this.letGo?.();
+    this.lease.stop();
     this.micAnswer?.(false);
     this.rt?.close();
     this.stream?.getTracks().forEach((t) => t.stop());

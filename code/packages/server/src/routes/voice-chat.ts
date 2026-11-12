@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { VOICE_CHAT_MODEL, parseLookRequest, type LookError, type LookErrorCode, type VoiceChatError, type VoiceChatErrorCode, type VoiceChatStatus } from "@speakkit/protocol";
+import { VOICE_CHAT_MODEL, parseLookRequest, parseVoiceChatMic, type LookError, type LookErrorCode, type VoiceChatError, type VoiceChatErrorCode, type VoiceChatStatus } from "@speakkit/protocol";
 import { HttpError, json, readBody } from "../http";
 import type { Route } from "../router";
 
@@ -66,6 +66,17 @@ export const voiceChatRoutes: Route[] = [
       if (!r.ok) return fail(res, r.code);
       const { clientSecret, expiresAt, voice } = r.session;
       json(res, 200, { clientSecret, expiresAt, model: VOICE_CHAT_MODEL, voice });
+    },
+  },
+  {
+    method: "POST",
+    path: "/v1/voice-chat/mic",
+    handle: async ({ req, res }, { voiceChat }) => {
+      const body = parseVoiceChatMic(await readBody(req, 256));
+      if (!body) throw new HttpError(400, "invalid-request", "expected { held }");
+      voiceChat?.mic?.(body.held);
+      res.statusCode = 204;
+      res.end();
     },
   },
   {

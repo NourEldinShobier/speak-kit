@@ -17,6 +17,8 @@ import { CaptureRuntime } from "./runtime";
 import { applyPatch } from "./settings-patch";
 
 export interface CaptureServiceOptions {
+  /** Claims the microphone while a capture records, so the dictation key says who has it instead of opening it twice. */
+  micClaim?: ((name: string) => () => void) | undefined;
   dataDir: string;
   distDir: string;
   parent(): BrowserWindow | null;
@@ -135,8 +137,12 @@ export class CaptureService {
     };
   }
 
+  #releaseMic: (() => void) | undefined;
+
   #publish(): CaptureStatus {
     const status = this.status();
+    if (this.runtime.phase === "recording") this.#releaseMic ??= this.#o.micClaim?.("Screen capture");
+    else (this.#releaseMic?.(), (this.#releaseMic = undefined));
     const w = this.#o.parent();
     if (w && !w.isDestroyed()) w.webContents.send(CAPTURE_STATUS_EVENT, status);
     return status;
