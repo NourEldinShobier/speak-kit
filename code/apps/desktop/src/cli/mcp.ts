@@ -35,6 +35,13 @@ const SCHEMAS: Record<string, object> = {
   capture_show: obj({ id: { type: "string", description: "An id, a title or latest." } }, ["id"]),
 };
 
+/** The tool switches from the settings file. With the control server off nothing is offered: the master switch covers the files this bridge reads as well as the app. */
+export function mcpFlags(config: unknown): Record<string, boolean> {
+  const c = (config ?? {}) as { controlServer?: unknown; mcpTools?: unknown };
+  if (c.controlServer === false) return Object.fromEntries(MCP_TOOLS.map((t) => [t.name, false]));
+  return c.mcpTools && typeof c.mcpTools === "object" ? (c.mcpTools as Record<string, boolean>) : {};
+}
+
 const tools = (flags: Record<string, boolean>) => MCP_TOOLS.filter((t) => toolOn(flags, t.name)).map((t) => ({ name: t.name, description: t.description, inputSchema: SCHEMAS[t.name] }));
 
 const asText = (r: { ok: boolean; text: string }) => ({ isError: !r.ok, content: [{ type: "text", text: r.text }] });
@@ -123,7 +130,13 @@ export async function serveMcp(input: Readable, output: Writable, ctx: McpContex
       output.write(`${JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } })}\n`);
       continue;
     }
-    const answer = await handleMcp(msg, ctx);
+    let answer: object | null;
+    try {
+      answer = await handleMcp(msg, ctx);
+    } catch {
+      // One failed call must not end the server: the AI app would lose the connection.
+      answer = msg.id === undefined || msg.id === null ? null : { jsonrpc: "2.0", id: msg.id, error: { code: -32603, message: "Speak Kit could not answer that request." } };
+    }
     if (answer) output.write(`${JSON.stringify(answer)}\n`);
   }
 }

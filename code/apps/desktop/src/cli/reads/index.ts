@@ -63,6 +63,11 @@ async function readCaptures(r: ReadRequest, src: Sources): Promise<ReadOutcome> 
 }
 
 /** Answers a read from the files in the data folder. Never starts the app, loads no model and changes no file. */
-export function runRead(r: ReadRequest, src: Sources): Promise<ReadOutcome> {
-  return r.command === "meetings" ? readMeetings(r, src) : readCaptures(r, src);
+export async function runRead(r: ReadRequest, src: Sources): Promise<ReadOutcome> {
+  try {
+    return await (r.command === "meetings" ? readMeetings(r, src) : readCaptures(r, src));
+  } catch (e) {
+    // A file that cannot be read (locked, damaged, a folder where a file should be) is a failed read, never an empty one and never a crash.
+    return { ok: false, code: "failed", message: `The saved ${r.command === "meetings" ? "meetings" : "captures"} could not be read${e instanceof Error && e.message ? ` (${e.message})` : ""}.` };
+  }
 }

@@ -25,7 +25,7 @@ export async function followExport(io: Io, d: Discovery, first: Reply): Promise<
     await io.sleep(300);
     reply = await io.post(d, { command: "speak", args: { exportId: job.id } }, LIMITS.timeoutMs);
   }
-  return reply;
+  return reply.ok ? fail("timeout", "The export was still running after 30 minutes. It continues in Speak Kit.") : reply;
 }
 
 /** Longest `--wait` follows a reading: an hour of polling every half second. */
@@ -38,7 +38,8 @@ export async function followReading(io: Io, d: Discovery, started: Reply): Promi
     const q = await io.post(d, { command: "queue", args: {} }, LIMITS.timeoutMs);
     if (!q.ok) return q;
     const { current, items } = q.data as { current: { status: string } | null; items: unknown[] };
-    if ((!current || ["idle", "finished", "error"].includes(current.status)) && items.length === 0) return started;
+    if (current?.status === "error") return fail("failed", "The reading failed.");
+    if ((!current || ["idle", "finished"].includes(current.status)) && items.length === 0) return started;
   }
-  return started;
+  return fail("timeout", "The reading was still going after an hour. It continues in Speak Kit.");
 }

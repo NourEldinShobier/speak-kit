@@ -256,6 +256,21 @@ describe("reads from the data folder change nothing", () => {
     expect(readdirSync(dir)).toEqual([]);
   });
 
+  it("reports a damaged meetings list and an unreadable capture index as failed reads, and leaves the files alone", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "sk-reads-"));
+    dirs.push(dir);
+    mkdirSync(path.join(dir, "meetings"), { recursive: true });
+    writeFileSync(path.join(dir, "meetings", "manifest.json"), "{not json");
+    mkdirSync(path.join(dir, "captures", "index.json"), { recursive: true });
+    const before = snapshot(dir);
+    const src = diskSources(dir);
+    expect(await runRead({ command: "meetings", action: "list" }, src)).toEqual({ ok: false, code: "failed", message: "The saved meetings could not be read (the meetings list file is damaged)." });
+    const captures = await runRead({ command: "capture", action: "list" }, src);
+    expect(captures).toMatchObject({ ok: false, code: "failed" });
+    expect(captures.ok ? "" : captures.message).toMatch(/^The saved captures could not be read \(.*EISDIR.*\)\.$/);
+    expect(snapshot(dir)).toEqual(before);
+  });
+
   it("uses the capture folder named in the settings file", async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "sk-reads-"));
     dirs.push(dir);

@@ -5,13 +5,13 @@ import path from "node:path";
 import { readStoredHistory } from "@speakkit/dictation";
 import { fail, LIMITS, type Reply } from "../shared/control/contract";
 import { discoveryFile, portOpen, processAlive, readDiscovery } from "../main/control/discovery";
-import { serveMcp } from "./mcp";
+import { mcpFlags, serveMcp } from "./mcp";
 import { diskSources, runRead } from "./reads";
-import { userDataDir } from "./paths";
+import { skillFilePath, userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
 
 /** Where Claude Code looks for a personal skill. */
-const skillFile = path.join(os.homedir(), ".claude", "skills", "speakkit", "SKILL.md");
+const skillFile = skillFilePath(os.homedir());
 const dir = userDataDir(process.env, process.platform, os.homedir());
 
 const io: Io = {
@@ -108,9 +108,6 @@ if (process.argv[2] === "mcp")
       }
     },
     read: (r) => runRead(r, io.reads),
-    async flags() {
-      const stored = ((await io.readConfig()) as { mcpTools?: unknown } | undefined)?.mcpTools;
-      return stored && typeof stored === "object" ? (stored as Record<string, boolean>) : {};
-    },
+    flags: async () => mcpFlags(await io.readConfig()),
   });
 else process.exitCode = await runCli(process.argv.slice(2), io);
