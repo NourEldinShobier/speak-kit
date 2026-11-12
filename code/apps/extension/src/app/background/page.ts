@@ -20,13 +20,9 @@ const ALARM = "page-context";
 export function watchFrontPage(): void {
   const send = () => void frontHost().then((h) => reporter.report(h));
   chrome.tabs.onActivated.addListener(send);
-  chrome.tabs.onUpdated.addListener((_id, info) => {
-    if (info.url || info.status === "complete") send();
-  });
+  chrome.tabs.onUpdated.addListener((_id, info) => info.url && send());
   chrome.windows.onFocusChanged.addListener(send);
-  chrome.alarms.onAlarm.addListener((a) => {
-    if (a.name === ALARM) send();
-  });
-  void chrome.alarms.get(ALARM).then((a) => (a ? undefined : chrome.alarms.create(ALARM, { periodInMinutes: 0.5 })));
+  chrome.alarms.onAlarm.addListener(send); // this is the only alarm
+  chrome.alarms.create(ALARM, { periodInMinutes: 0.5 }); // same name: replaces the earlier one
   send();
 }
