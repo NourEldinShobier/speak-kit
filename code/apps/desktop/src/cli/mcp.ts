@@ -91,7 +91,8 @@ const BUILD: Record<string, (a: Args) => Built> = {
 async function callTool(name: string, args: Args, ctx: McpContext) {
   if (MCP_TOOLS.some((t) => t.name === name) && !toolOn(await ctx.flags(), name))
     return asText({ ok: false, text: `The tool ${name} is turned off. Turn it on in Speak Kit under Settings, Automation.` });
-  const req = BUILD[name]?.(args) ?? `Unknown tool ${name}.`;
+  const req = Object.hasOwn(BUILD, name) ? BUILD[name]!(args) : undefined;
+  if (req === undefined) return content(fail("usage", `Unknown tool ${name}.`));
   if (typeof req === "string") return content(fail("usage", req));
   if ("read" in req) {
     const o = await ctx.read(req.read);
