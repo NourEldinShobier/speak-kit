@@ -3,12 +3,13 @@ import { friendlyAppName } from "./app-name";
 import type { DictationOs, InsertResult } from "./index";
 
 /** The `Inserter` port over the OS layer. `onResult` sees how each insert really ended (the OS layer can fall back to copying where the plan said paste). */
-export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void): Inserter {
+export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void, pageSite?: () => string | undefined): Inserter {
   return {
     async target() {
       const fg = os.foreground();
       const name = friendlyAppName(fg?.exe);
-      return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
+      const site = fg && pageSite?.();
+      return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), ...(site && { site }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
     },
     focus: (t) => os.focus(t.id),
     async insert({ text, plan }) {
