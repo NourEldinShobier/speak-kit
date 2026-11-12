@@ -3,10 +3,11 @@ import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@sp
 import type { AppState, ImportOutcome } from "../../../shared/ipc";
 import type { Config } from "../../../shared/schemas";
 import { closeHint, effectiveCloseAction } from "../../../shared/settings/behaviour";
+import { importMessage } from "../../../shared/settings/import-text";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { Advanced } from "./Advanced";
-import { change } from "./change";
+import { change, changeSystem } from "./change";
 import { rowAttr } from "./focus";
 
 function Startup({ s }: { s: AppState }) {
@@ -17,7 +18,7 @@ function Startup({ s }: { s: AppState }) {
         {...rowAttr("general/launch")}
         label={t("general.launch")}
         description={t("general.launchHint")}
-        control={<Toggle aria-label={t("general.launch")} checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
+        control={<Toggle aria-label={t("general.launch")} checked={s.launchAtLogin} onChange={(v) => changeSystem({ launchAtLogin: v })} />}
       />
       <SettingRow
         {...rowAttr("general/minimized")}
@@ -64,7 +65,7 @@ function Tray({ s }: { s: AppState }) {
         {...rowAttr("general/close")}
         className="lm-row--control"
         label={t("general.close")}
-        description={closeHint(c)}
+        description={t(closeHint(c))}
         control={
           <Select
             label={t("general.close")}
@@ -90,7 +91,7 @@ function Tray({ s }: { s: AppState }) {
 
 /** The row that imports a settings file, and what the import did. */
 function ImportRow() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const run = async () => {
@@ -115,11 +116,7 @@ function ImportRow() {
           </Button>
         }
       />
-      {outcome?.status === "imported" && (
-        <Banner role="status">
-          {outcome.skipped.length ? t("general.importSkipped", { n: outcome.applied, skipped: outcome.skipped.join(", ") }) : t("general.importDone", { n: outcome.applied })}
-        </Banner>
-      )}
+      {outcome?.status === "imported" && <Banner role="status">{importMessage(locale, outcome)}</Banner>}
       {outcome?.status === "failed" && <Banner tone="error">{t("general.importFailed", { message: outcome.message })}</Banner>}
     </>
   );

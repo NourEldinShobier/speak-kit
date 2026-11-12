@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { closeHint, closeOutcome, effectiveCloseAction, KEYBOARD_MAP, reduceMotion, showTrayIcon } from "./behaviour";
+import { translate } from "../i18n";
 import { NETWORK_HOSTS } from "./network";
 
 describe("close and tray", () => {
@@ -15,9 +16,13 @@ describe("close and tray", () => {
   });
 
   it("the hint says how to get back in when the tray is hidden", () => {
-    expect(closeHint({ closeAction: "hide", hideTrayIcon: true })).toBe("The tray icon is hidden, so closing the window quits Speak Kit. Start it again from the Start menu or Launchpad.");
-    expect(closeHint({ closeAction: "quit", hideTrayIcon: false })).toBe("Closing the window quits Speak Kit and stops the extension and the shortcuts.");
-    expect(closeHint({ closeAction: "hide", hideTrayIcon: false })).toBe("Keeps Speak Kit in the tray so the extension and the shortcuts keep working. Quit from the tray menu.");
+    expect(translate("en", closeHint({ closeAction: "hide", hideTrayIcon: true }))).toBe(
+      "The tray icon is hidden, so closing the window quits Speak Kit. Start it again from the Start menu or Launchpad.",
+    );
+    expect(translate("en", closeHint({ closeAction: "quit", hideTrayIcon: false }))).toBe("Closing the window quits Speak Kit and stops the extension and the shortcuts.");
+    expect(translate("es", closeHint({ closeAction: "hide", hideTrayIcon: false }))).toBe(
+      "Mantiene Speak Kit en la bandeja para que la extensión y los atajos sigan funcionando. Para salir, usa el menú de la bandeja.",
+    );
   });
 });
 

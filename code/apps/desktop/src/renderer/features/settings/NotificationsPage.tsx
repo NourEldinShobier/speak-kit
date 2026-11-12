@@ -1,38 +1,34 @@
 import { Banner, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotifyChannel, type NotifyEvent } from "../../../shared/schemas";
+import { useT } from "../../i18n";
 import { Page } from "../../ui";
 import { change } from "./change";
 
-const EVENT_LABEL: Record<NotifyEvent, string> = {
-  "reading-finished": "Reading finished",
-  "export-done": "Export finished",
-  "engine-error": "Voice engine problem",
-  "update-ready": "Update ready",
-};
-const CHANNEL_LABEL: Record<NotifyChannel, string> = { toast: "Toast", bell: "Bell", sound: "Sound" };
-
 /** Settings > Notifications: event by Toast, Bell and Sound, plus Do not disturb. */
 export function NotificationsPage({ s }: { s: AppState }) {
+  const { t } = useT();
   const c = s.config;
+  const eventLabel = (e: NotifyEvent) => t(`notify.${e}`);
+  const channelLabel = (ch: NotifyChannel) => t(`notify.${ch}`);
   const set = (event: NotifyEvent, channel: NotifyChannel, on: boolean) => change({ notifications: { ...c.notifications, [event]: { ...c.notifications[event], [channel]: on } } });
   return (
-    <Page title="Notifications" lead="A toast is a Windows notification. The bell is the list in the title bar. Clicking a toast opens the place it is about.">
-      <SettingsSection title="Do not disturb">
+    <Page title={t("notify.title")} lead={t("notify.lead")}>
+      <SettingsSection title={t("notify.dnd")}>
         <SettingRow
-          label="Do not disturb"
-          description="No toasts or sounds from Speak Kit. The bell still keeps a line for each event."
-          control={<Toggle aria-label="Do not disturb" checked={c.doNotDisturb} onChange={(v) => change({ doNotDisturb: v })} />}
+          label={t("notify.dnd")}
+          description={t("notify.dndHint")}
+          control={<Toggle aria-label={t("notify.dnd")} checked={c.doNotDisturb} onChange={(v) => change({ doNotDisturb: v })} />}
         />
       </SettingsSection>
-      <SettingsSection title="Events" description="At most one toast per task every 10 minutes.">
+      <SettingsSection title={t("notify.events")} description={t("notify.eventsHint")}>
         <table className="sk-notify" data-testid="notify-table">
           <thead>
             <tr>
-              <th scope="col">Event</th>
+              <th scope="col">{t("notify.event")}</th>
               {NOTIFY_CHANNELS.map((ch) => (
                 <th key={ch} scope="col">
-                  {CHANNEL_LABEL[ch]}
+                  {channelLabel(ch)}
                 </th>
               ))}
             </tr>
@@ -40,10 +36,10 @@ export function NotificationsPage({ s }: { s: AppState }) {
           <tbody>
             {NOTIFY_EVENTS.map((ev) => (
               <tr key={ev}>
-                <th scope="row">{EVENT_LABEL[ev]}</th>
+                <th scope="row">{eventLabel(ev)}</th>
                 {NOTIFY_CHANNELS.map((ch) => (
                   <td key={ch}>
-                    <Toggle aria-label={`${EVENT_LABEL[ev]}: ${CHANNEL_LABEL[ch]}`} checked={c.notifications[ev][ch]} onChange={(v) => set(ev, ch, v)} />
+                    <Toggle aria-label={`${eventLabel(ev)}: ${channelLabel(ch)}`} checked={c.notifications[ev][ch]} onChange={(v) => set(ev, ch, v)} />
                   </td>
                 ))}
               </tr>
@@ -51,8 +47,8 @@ export function NotificationsPage({ s }: { s: AppState }) {
           </tbody>
         </table>
       </SettingsSection>
-      <Banner tone="info" title="Windows Focus and Do Not Disturb also apply">
-        When Windows is in a focus session, toasts go straight to the notification center.
+      <Banner tone="info" title={t("notify.focusTitle")}>
+        {t("notify.focusBody")}
       </Banner>
     </Page>
   );

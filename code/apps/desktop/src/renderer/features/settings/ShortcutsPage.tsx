@@ -3,7 +3,8 @@ import { Banner, Button, Kbd, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import type { DesktopError } from "../../../shared/errors";
 import { errorText } from "../../error-text";
-import { recordKey, resetText, showAccelerator, SHORTCUT_IDS, SHORTCUT_LABELS, type ShortcutId } from "../../../shared/shortcuts";
+import { recordKey, resetText, showAccelerator, SHORTCUT_IDS, type ShortcutId } from "../../../shared/shortcuts";
+import { useT, type Translator } from "../../i18n";
 import { api, Page } from "../../ui";
 
 const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
@@ -25,12 +26,21 @@ interface Problem {
 
 type Conflict = AppState["shortcuts"]["conflicts"][ShortcutId];
 
-const clashText = (c: NonNullable<Conflict>) => (c.reason === "taken" ? `Another app is using ${c.accelerator}.` : `${c.accelerator} is already used by another Speak Kit action.`);
+const clashText = (t: Translator["t"], c: NonNullable<Conflict>) => t(c.reason === "taken" ? "shortcuts.taken" : "shortcuts.clash", { keys: c.accelerator });
 
 /** The message under a row: the last attempt on that row, else the clash found when the shortcuts were registered. */
-function problemFor(id: ShortcutId, attempt: Problem | null, clash: Conflict): Problem | null {
+function problemFor(t: Translator["t"], row: { id: ShortcutId; attempt: Problem | null; clash: Conflict }): Problem | null {
+  const { id, attempt, clash } = row;
   if (attempt?.id === id) return attempt;
-  return clash ? { id, text: clashText(clash), accelerator: clash.accelerator, suggestion: clash.suggestion } : null;
+  return clash ? { id, text: clashText(t, clash), accelerator: clash.accelerator, suggestion: clash.suggestion } : null;
+}
+
+/** Sets a shortcut through the settings registry; null when it was set, else what went wrong and the alternative the system offers. */
+async function setShortcut(id: ShortcutId, accelerator: string): Promise<Problem | null> {
+  const r = await api.applySettings({ [`shortcuts.${id}`]: accelerator });
+  if (r.ok) return null;
+  if (r.shortcut) return { id, text: errorText(r.shortcut.error), accelerator, suggestion: r.shortcut.conflict?.suggestion };
+  return { id, text: r.message, accelerator };
 }
 
 /** Listens for the new keys while a row is recording; Esc cancels, an unusable combination is reported, a good one is applied. */
@@ -65,32 +75,37 @@ interface RowProps {
 }
 
 function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
-  const label = SHORTCUT_LABELS[id];
+  const { t } = useT();
+  const name = t(`shortcut.${id}.title`);
   return (
     <div data-shortcut={id}>
       <SettingRow
         className="lm-row--control"
-        label={label.title}
-        description={label.description}
+        label={name}
+        description={t(`shortcut.${id}.description`)}
         control={
           <div className="sk-row-actions">
             {recording ? (
               <span className="sk-rec" role="status" data-testid="recording">
-                Press new keys <Kbd small>Esc</Kbd> to cancel
+                {t("shortcuts.pressNew")} <Kbd small>Esc</Kbd> {t("shortcuts.toCancel")}
               </span>
             ) : (
               <Keys accelerator={s.shortcuts.bindings[id]} platform={s.platform} scope="global" />
             )}
-            <Button aria-label={`Change ${label.title} shortcut`} onClick={onChange}>
-              {recording ? "Cancel" : "Change"}
+            <Button aria-label={t("shortcuts.changeLabel", { name })} onClick={onChange}>
+              {recording ? t("shortcuts.cancel") : t("shortcuts.change")}
             </Button>
           </div>
         }
       />
       {problem && (
         <div className="sk-pad" data-testid="shortcut-problem">
-          <Banner tone="warning" title={problem.text} action={problem.suggestion ? <Button onClick={() => onUse(problem.suggestion!)}>Use {problem.suggestion}</Button> : undefined}>
-            Speak Kit never takes a shortcut another app owns. Pick another combination or use the suggestion.
+          <Banner
+            tone="warning"
+            title={problem.text}
+            action={problem.suggestion ? <Button onClick={() => onUse(problem.suggestion!)}>{t("shortcuts.use", { keys: problem.suggestion })}</Button> : undefined}
+          >
+            {t("shortcuts.clashBody")}
           </Banner>
         </div>
       )}
@@ -100,14 +115,11 @@ function ShortcutRow({ s, id, recording, problem, onChange, onUse }: RowProps) {
 
 /** Settings > Shortcuts: global Ctrl+Alt keys with a recorder; a clash is named and offers one alternative, never a silent override. */
 export function ShortcutsPage({ s }: { s: AppState }) {
+  const { t } = useT();
   const [recording, setRecording] = useState<ShortcutId | null>(null);
   const [attempt, setAttempt] = useState<Problem | null>(null);
 
-  const apply = useCallback(async (id: ShortcutId, accelerator: string) => {
-    const r = await api.setShortcut(id, accelerator);
-    if (r.ok) setAttempt(null);
-    else setAttempt({ id, text: errorText(r.error), accelerator, suggestion: r.conflict?.suggestion });
-  }, []);
+  const apply = useCallback(async (id: ShortcutId, accelerator: string) => setAttempt(await setShortcut(id, accelerator)), []);
   const recorder = useMemo(
     () => ({
       cancel: () => setRecording(null),
@@ -126,15 +138,28 @@ export function ShortcutsPage({ s }: { s: AppState }) {
   };
 
   return (
-    <Page title="Shortcuts" lead="Global shortcuts work in any app. Click a shortcut, then press the new keys.">
-      <SettingsSection title="Global">
+    <Page title={t("shortcuts.title")} lead={t("shortcuts.lead")}>
+      <SettingsSection title={t("shortcuts.global")}>
         {SHORTCUT_IDS.map((id) => (
-          <ShortcutRow key={id} s={s} id={id} recording={recording === id} problem={problemFor(id, attempt, s.shortcuts.conflicts[id])} onChange={() => toggle(id)} onUse={(acc) => apply(id, acc)} />
+          <ShortcutRow
+            key={id}
+            s={s}
+            id={id}
+            recording={recording === id}
+            problem={problemFor(t, { id, attempt, clash: s.shortcuts.conflicts[id] })}
+            onChange={() => toggle(id)}
+            onUse={(acc) => apply(id, acc)}
+          />
         ))}
-        <SettingRow className="lm-row--control" label="Reset all" description={`Back to ${resetText(s.platform)}.`} control={<Button onClick={() => api.resetShortcuts()}>Reset</Button>} />
+        <SettingRow
+          className="lm-row--control"
+          label={t("shortcuts.resetAll")}
+          description={t("shortcuts.resetHint", { keys: resetText(s.platform, t("shortcuts.and")) })}
+          control={<Button onClick={() => api.resetShortcuts()}>{t("shortcuts.reset")}</Button>}
+        />
       </SettingsSection>
-      <SettingsSection title="In this app">
-        <SettingRow label="Search and commands" control={<Keys accelerator="Ctrl+K" platform={s.platform} scope="app" />} />
+      <SettingsSection title={t("shortcuts.inApp")}>
+        <SettingRow label={t("shortcuts.search")} control={<Keys accelerator="Ctrl+K" platform={s.platform} scope="app" />} />
       </SettingsSection>
     </Page>
   );
