@@ -454,7 +454,8 @@ describe("send to Voice chat", () => {
     await until(async () => (await capsule(l))?.canUndo === false);
     await hook(l, "capsule", "undo");
     expect((await capsule(l))?.kind).toBe("sent");
-    expect((await hook<{ items: { chips: string[] }[] }>(l, "state")).items[0]!.chips).toContain("sent");
+    // the list marks the capture a moment after the capsule says it was sent
+    await until(async () => (await hook<{ items: { chips: string[] }[] }>(l, "state")).items[0]!.chips.includes("sent"));
   });
 
   it("Undo inside the countdown sends nothing", async () => {

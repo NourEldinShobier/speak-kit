@@ -218,8 +218,8 @@ export class History {
 
   /** The capture was handed to the voice chat: the list shows it. */
   async markSent(id: string): Promise<void> {
-    const r = await this.store.get(id);
-    if (r && !r.chips.includes("sent")) await this.store.update(id, { chips: [...r.chips, "sent"] });
+    // mutate, not get + update: an Undo right after the send queues its unmark behind this, so the chip cannot come back after it was taken away
+    await this.store.mutate(id, (r) => ({ chips: r.chips.includes("sent") ? r.chips : [...r.chips, "sent"] }));
   }
 
   /** The capture was taken back from the voice chat. */
