@@ -1,3 +1,4 @@
+import { normalize, rank, type HistoryStats, historyStats } from "./history-search";
 import type { Retention } from "./settings";
 import type { Clock, HistoryStorage } from "./types";
 
@@ -14,13 +15,24 @@ export interface HistoryEntry {
   durationMs: number;
   language?: string;
   model?: string;
+  /** Absent for a normal dictation. "interrupted": the recording was cut short; "restored": brought back after a cancel. */
+  kind?: "interrupted" | "restored";
+  /** Name shown for the program, from its file description; the executable name stands in when there is none. */
+  displayName?: string;
+  /** Only when a rewrite ran: its name and, if it failed, why (the plain text was inserted instead). */
+  mode?: { name: string; failure?: string };
+  timings?: { transcribeMs?: number; insertMs?: number };
+  /** What really happened to the text. */
+  outcome?: "sent" | "copied";
 }
 
 export type NewEntry = Omit<HistoryEntry, "id">;
 
 export interface HistoryQuery {
-  /** Every word must appear in the text or the program name, in any case. */
+  /** Every word must be found in the text or the program name, in any case and without accents; the best matches come first. */
   search?: string;
+  /** Other spellings for a word of the search (from the person's vocabulary). */
+  aliases?: Readonly<Record<string, readonly string[]>>;
   limit?: number;
 }
 
@@ -30,6 +42,8 @@ export interface History {
   list(query?: HistoryQuery): Promise<HistoryEntry[]>;
   get(id: string): Promise<HistoryEntry | undefined>;
   remove(id: string): Promise<void>;
+  removeMany(ids: readonly string[]): Promise<void>;
+  stats(): Promise<HistoryStats>;
   clear(): Promise<void>;
   /** Drops what the retention no longer allows. */
   prune(): Promise<void>;
@@ -59,10 +73,13 @@ function freshId(entries: HistoryEntry[], at: number): string {
   return `${at}-${n}`;
 }
 
-function matches(e: HistoryEntry, search: string): boolean {
-  const hay = `${e.text}\n${e.app ?? ""}`.toLowerCase();
-  return (search.toLowerCase().match(/\S+/g) ?? []).every((word) => hay.includes(word));
-}
+// Search runs over a normalized copy of the text and program names, made once per entry and kept off the stored data.
+const keys = new WeakMap<HistoryEntry, string>();
+const keyOf = (e: HistoryEntry): string => {
+  let key = keys.get(e);
+  if (key === undefined) keys.set(e, (key = normalize([e.text, e.displayName ?? "", e.app ?? ""].join("\n"))));
+  return key;
+};
 
 interface Deps {
   storage: HistoryStorage;
@@ -121,7 +138,14 @@ class Store implements History {
   async list(query: HistoryQuery = {}): Promise<HistoryEntry[]> {
     await this.prune();
     const { search } = query;
-    const found = search ? this.entries.filter((e) => matches(e, search)) : this.entries;
+    const found = search?.trim()
+      ? this.entries
+          .map((e) => ({ e, score: rank(keyOf(e), search, query.aliases) }))
+          .filter((x) => x.score > 0)
+          // Entries are newest first already and the sort is stable, so equal scores stay newest first.
+          .sort((a, b) => b.score - a.score)
+          .map((x) => x.e)
+      : this.entries;
     return found.slice(0, query.limit ?? found.length);
   }
 
@@ -134,6 +158,18 @@ class Store implements History {
     await this.ready();
     this.entries = this.entries.filter((e) => e.id !== id);
     await this.save();
+  }
+
+  async removeMany(ids: readonly string[]): Promise<void> {
+    await this.ready();
+    const drop = new Set(ids);
+    this.entries = this.entries.filter((e) => !drop.has(e.id));
+    await this.save();
+  }
+
+  async stats(): Promise<HistoryStats> {
+    await this.prune();
+    return historyStats(this.entries);
   }
 
   async clear(): Promise<void> {

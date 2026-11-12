@@ -13,6 +13,12 @@ export interface Settings {
   language: string;
   /** Other audio is being ducked, so the recorder must not capture the moments before the press. */
   duck: boolean;
+  /** The microphone stays open between recordings, which gives pre-roll; off means it is released when idle. */
+  keepReady: boolean;
+  /** Paste leaves the dictated text on the clipboard instead of putting the old content back. */
+  keepOnClipboard: boolean;
+  /** At output time, bring the window the key was pressed in back to the front; paste nothing when that fails. */
+  returnToApp: boolean;
   insertMode: InsertMode;
   /** Insert mode per program, keyed by executable name such as "putty". */
   appModes: Record<string, InsertMode>;
@@ -31,6 +37,9 @@ export const defaultSettings: Readonly<Settings> = {
   mode: "hold",
   language: "auto",
   duck: false,
+  keepReady: false,
+  keepOnClipboard: false,
+  returnToApp: true,
   insertMode: "paste",
   appModes: {},
   fillers: true,

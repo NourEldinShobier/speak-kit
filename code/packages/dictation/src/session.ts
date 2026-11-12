@@ -1,17 +1,17 @@
+import { MAX_TAKE_MS, PREROLL_MS, prerollMs, TAIL_MIN_MS } from "./capture/policy";
 import type { Settings } from "./settings";
 
 /** Release before this is a short tap: nothing is kept. */
 export const HOLD_MS = 300;
 /** A second tap this soon after a short tap locks the recording. */
 export const DOUBLE_TAP_MS = 300;
-/** Audio kept from before the key press. */
-export const PREROLL_MS = 450;
-/** Recording continues this long after the key is released. */
-export const TAIL_MS = 200;
+export { PREROLL_MS };
+/** Recording continues at least this long after the key is released. */
+export const TAIL_MS = TAIL_MIN_MS;
 /** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
-export const MAX_RECORDING_MS = 5 * 60_000;
+export const MAX_RECORDING_MS = MAX_TAKE_MS;
 
-type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck">;
+type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck" | "keepReady">;
 
 export type Capture =
   | { kind: "idle" }
@@ -61,7 +61,7 @@ function begin(session: Session, cfg: Config, at: number): Out {
   const id = session.seq + 1;
   const lockUntil = session.capture.kind === "armed" ? session.capture.until : -Infinity;
   const capture: Capture = cfg.mode === "toggle" ? { kind: "toggle", id, down: true } : { kind: "hold", id, key: cfg.hotkey, pressedAt: at, lockUntil };
-  return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: cfg.duck ? 0 : PREROLL_MS }] };
+  return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: prerollMs({ keepReady: cfg.keepReady, ducking: cfg.duck }) }] };
 }
 
 function release(session: Session, c: Extract<Capture, { kind: "hold" }>, at: number): Out {

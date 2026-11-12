@@ -1,12 +1,18 @@
+import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
 import type { Target } from "./paste-plan";
 import { foreground, runJob, type Job, type Outcome } from "./pipeline";
-import { initialSession, MAX_RECORDING_MS, reduce, TAIL_MS, type Effect, type Session, type SessionEvent } from "./session";
+import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
 import type { Clip, Dictation, DictationDeps, DictationErrorCode, DictationState, Notice, Unsubscribe } from "./types";
 
 const ERROR_MS = 4000;
 const NOTICE_MS = 1200;
+/** How long a cancelled recording can still be brought back. */
+const RESTORE_MS = 10_000;
+const TAIL_POLL_MS = 50;
+
+const flashMs = (notice: Notice): number => (notice.kind === "cancelled" ? RESTORE_MS : NOTICE_MS);
 
 type Flash = { error: DictationErrorCode } | { notice: Notice };
 
@@ -27,6 +33,8 @@ class Runtime implements Dictation {
   private readonly failedStarts = new Set<number>();
   private readonly targets = new Map<number, Promise<Target | undefined>>();
   private pending = 0;
+  private cancelled: { clip: Clip; target: Promise<Target | undefined> } | undefined;
+  private cancelRestore: Unsubscribe | undefined;
   private phase: "transcribing" | "pasting" = "transcribing";
   private flashed: Flash | undefined;
   private cancelFlash: Unsubscribe | undefined;
@@ -48,6 +56,8 @@ class Runtime implements Dictation {
       list: (query) => this.store.list(query),
       copy: (id) => this.copy(id),
       remove: (id) => this.store.remove(id),
+      removeMany: (ids) => this.store.removeMany(ids),
+      stats: () => this.store.stats(),
       clear: () => this.store.clear(),
     };
     this.lastState = JSON.stringify(this.state());
@@ -103,11 +113,29 @@ class Runtime implements Dictation {
     this.dispatch({ type: "cancel" });
   }
 
+  restore(): void {
+    const kept = this.cancelled;
+    if (!kept || this.disposed) return;
+    this.forgetCancelled();
+    this.flashed = undefined;
+    this.cancelFlash?.();
+    this.pending++;
+    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(kept.clip), target: kept.target }));
+    this.emit();
+  }
+
+  private forgetCancelled(): void {
+    this.cancelled = undefined;
+    this.cancelRestore?.();
+    this.cancelRestore = undefined;
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.dispatch({ type: "cancel" });
     this.disposed = true;
     this.cancelFlash?.();
+    this.forgetCancelled();
     this.unsubscribe?.();
     this.listeners.clear();
   }
@@ -152,6 +180,7 @@ class Runtime implements Dictation {
   private startRecording(id: number, prerollMs: number): void {
     this.flashed = undefined;
     this.cancelFlash?.();
+    this.forgetCancelled();
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
@@ -165,12 +194,19 @@ class Runtime implements Dictation {
   }
 
   private discardRecording(id: number, cancelled: boolean): void {
+    const target = this.targets.get(id);
     this.targets.delete(id);
-    if (cancelled) this.flash({ notice: { kind: "cancelled" } });
+    if (cancelled) this.flash({ notice: { kind: "cancelled", restorable: true } });
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
       try {
-        await this.deps.recorder.discard();
+        if (!cancelled || this.disposed) return await this.deps.recorder.discard();
+        // A cancel keeps the audio for a few seconds, so a slip of the finger can be undone.
+        const clip = await this.deps.recorder.stop();
+        if (clip.peak > 0 && clip.pcm.length > 0 && this.session.seq === id) {
+          this.cancelled = { clip, target: target ?? Promise.resolve(undefined) };
+          this.cancelRestore = this.deps.clock.after(RESTORE_MS, () => this.forgetCancelled());
+        }
       } catch {
         // Nothing is left to discard if the recorder already stopped.
       }
@@ -181,12 +217,20 @@ class Runtime implements Dictation {
     this.pending++;
     const clip: Promise<Clip | undefined> = this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return undefined;
-      await new Promise<void>((resolve) => this.deps.clock.after(TAIL_MS, resolve));
+      await this.tail();
       return this.deps.recorder.stop();
     });
     const job: Job = { clip, target: this.targets.get(id) ?? Promise.resolve(undefined) };
     this.targets.delete(id);
     this.jobQueue = this.jobQueue.then(() => this.process(job));
+  }
+
+  /** Waits the minimum tail, then a little longer (up to the cap) while the person is still speaking. */
+  private async tail(): Promise<void> {
+    const from = this.deps.clock.now();
+    const wait = (ms: number) => new Promise<void>((resolve) => this.deps.clock.after(ms, resolve));
+    await wait(TAIL_MIN_MS);
+    while (!tailDone(this.deps.clock.now() - from, this.deps.recorder.speaking?.())) await wait(TAIL_POLL_MS);
   }
 
   private async process(job: Job): Promise<void> {
@@ -211,7 +255,8 @@ class Runtime implements Dictation {
   private flash(what: Flash): void {
     this.cancelFlash?.();
     this.flashed = what;
-    this.cancelFlash = this.deps.clock.after("error" in what ? ERROR_MS : NOTICE_MS, () => {
+    const ms = "error" in what ? ERROR_MS : flashMs(what.notice);
+    this.cancelFlash = this.deps.clock.after(ms, () => {
       this.flashed = undefined;
       this.emit();
     });
