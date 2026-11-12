@@ -41,7 +41,7 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
   });
   if (!r.current()) return;
   if (!res.ok || !res.body) {
-    const e = mapHttpError(res.status, await res.json().catch(() => null));
+    const e = mapHttpError(res.status, await errorBody(res));
     throw new StreamError(e.code, e.message);
   }
   const reader = res.body.getReader();
@@ -66,5 +66,14 @@ export async function readChunk(r: ChunkRequest): Promise<void> {
     }
   } finally {
     void reader.cancel().catch(() => {}); // the stream is already closed or errored
+  }
+}
+
+/** The parsed JSON error body of a failed response, or undefined when it is not JSON. */
+async function errorBody(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return undefined;
   }
 }
