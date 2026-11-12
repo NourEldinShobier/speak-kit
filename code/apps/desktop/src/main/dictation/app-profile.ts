@@ -17,12 +17,41 @@ export const DEFAULT_OVERRIDES: readonly AppOverride[] = [
   ...["java", "javaw"].map((exe) => ({ exe, profile: { shortcut: "ctrl-v" } satisfies AppOverride["profile"] })),
 ];
 
+// Chromium 155 and 156 ignore a paste that comes right after the clipboard was written; typing the text works. Later versions paste normally.
+const BROKEN_PASTE_MAJORS = [155, 156];
+const CHROMIUM_BROWSERS = new Set([
+  "chrome",
+  "msedge",
+  "brave",
+  "vivaldi",
+  "opera",
+  "chromium",
+  "arc",
+  "com.google.chrome",
+  "com.microsoft.edgemac",
+  "com.brave.browser",
+  "com.vivaldi.vivaldi",
+  "com.operasoftware.opera",
+  "company.thebrowser.browser",
+  "org.chromium.chromium",
+]);
+
 const stem = (name: string) => name.toLowerCase().replace(/\.exe$/, "");
+
+/** True for a browser built on Chromium: the only programs whose version is looked up. */
+export const isChromiumBrowser = (exe: string | null | undefined): boolean => !!exe && CHROMIUM_BROWSERS.has(stem(exe));
+
+/** The first number of a version string, or undefined. */
+export const majorOf = (version: string | undefined): number | undefined => {
+  const m = /^\s*v?(\d{1,4})(?:\.|$)/.exec(version ?? "");
+  return m ? Number(m[1]) : undefined;
+};
 
 /** How to paste into this window: the built-in rules, then the user's rules for the same program on top. No foreground window gets the base profile. */
 export function profileFor(info: ForegroundInfo | null, userOverrides: readonly AppOverride[] = []): PasteProfile {
   const exe = info?.exe ? stem(info.exe) : null;
   if (!exe) return BASE_PROFILE;
   const find = (list: readonly AppOverride[]) => list.find((o) => stem(o.exe) === exe)?.profile;
-  return { ...BASE_PROFILE, ...find(DEFAULT_OVERRIDES), ...find(userOverrides) };
+  const broken = isChromiumBrowser(exe) && BROKEN_PASTE_MAJORS.includes(majorOf(info?.version) ?? 0) ? ({ shortcut: "type" } satisfies AppOverride["profile"]) : undefined;
+  return { ...BASE_PROFILE, ...find(DEFAULT_OVERRIDES), ...broken, ...find(userOverrides) };
 }

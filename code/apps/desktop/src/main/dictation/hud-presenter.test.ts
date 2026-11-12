@@ -4,7 +4,7 @@ import type { HudView } from "../../shared/dictation/contract";
 import type { Hud, HudState } from "./hud";
 import { HudPresenter } from "./hud-presenter";
 
-function setup(over: { canRetry?: boolean; copied?: boolean } = {}) {
+function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" | "bottom" | "off" } = {}) {
   const shown: (HudView | "hide")[] = [];
   const updates: HudView[] = [];
   const hud = {
@@ -12,7 +12,13 @@ function setup(over: { canRetry?: boolean; copied?: boolean } = {}) {
     update: (s: HudState) => s.kind === "view" && updates.push(s.view),
     hide: () => shown.push("hide"),
   } as unknown as Hud;
-  const p = new HudPresenter({ hud: () => hud, hotkey: () => "ControlLeft+AltLeft+Space", canRetry: () => over.canRetry ?? false, insertedAsCopy: () => over.copied ?? false });
+  const p = new HudPresenter({
+    hud: () => hud,
+    hotkey: () => "ControlLeft+AltLeft+Space",
+    canRetry: () => over.canRetry ?? false,
+    insertedAsCopy: () => over.copied ?? false,
+    indicator: () => over.indicator ?? "bottom",
+  });
   return { p, shown, updates };
 }
 const state = (s: DictationState) => s;
@@ -28,6 +34,17 @@ describe("HUD presenter", () => {
     p.onState(state({ status: "idle" }));
     vi.advanceTimersByTime(500);
     expect(shown.filter((v) => v !== "hide")).toEqual([]);
+  });
+
+  it("draws no recording indicator when it is off, but still shows a failure the person must read", () => {
+    const { p, shown } = setup({ indicator: "off" });
+    p.onState(state({ status: "recording", mode: "hold" }));
+    vi.advanceTimersByTime(300);
+    p.onState(state({ status: "transcribing" }));
+    p.onState(state({ status: "idle", notice: { kind: "inserted" } }));
+    expect(shown.filter((v) => v !== "hide")).toEqual([]);
+    p.onState(state({ status: "error", code: "mic-denied" }));
+    expect(shown.filter((v) => v !== "hide").map((v) => (v as HudView).kind)).toEqual(["error"]);
   });
 
   it("shows a recording after the settle time, with the time it started", () => {

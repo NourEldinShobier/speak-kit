@@ -1,4 +1,4 @@
-import type { Clip, Clock, DictationDeps, HistoryStorage, HotkeySource, Inserter, KeyEvent, Recorder, Target, Transcriber, TranscribeResult } from "../src";
+import type { CaretContext, Clip, Clock, DictationDeps, HistoryStorage, HotkeySource, Inserter, KeyEvent, Recorder, Target, Transcriber, TranscribeResult } from "../src";
 import { createDictation, type Dictation } from "../src";
 import type { Settings } from "../src";
 
@@ -75,8 +75,8 @@ export function fakeRecorder() {
       await state.startGate;
       return state.startResult;
     },
-    async stop() {
-      log.push("stop");
+    async stop(opts) {
+      log.push(opts?.cancelled ? "stop:cancelled" : "stop");
       return state.clip;
     },
     async discard() {
@@ -101,14 +101,34 @@ export function fakeTranscriber(text = "hello world") {
 
 export function fakeInserter() {
   const inserted: { text: string; plan: Parameters<Inserter["insert"]>[0]["plan"] }[] = [];
-  const state = { current: target() as Target | undefined, result: { ok: true } as Awaited<ReturnType<Inserter["insert"]>>, targetThrows: false };
+  const state = {
+    current: target() as Target | undefined,
+    result: { ok: true } as Awaited<ReturnType<Inserter["insert"]>>,
+    targetThrows: false,
+    /** What the field around the caret looks like; undefined means the platform could not read it. */
+    caret: undefined as CaretContext | undefined,
+    caretThrows: false,
+    caretReads: 0,
+    cancels: 0,
+    /** Holds `insert` until released, to stand in for typing that takes a while. */
+    hold: undefined as Promise<void> | undefined,
+  };
   const inserter: Inserter = {
     async target() {
       if (state.targetThrows) throw new Error("no window");
       return state.current;
     },
+    cancel() {
+      state.cancels++;
+    },
+    async caret() {
+      state.caretReads++;
+      if (state.caretThrows) throw new Error("no field");
+      return state.caret;
+    },
     async insert(req) {
       inserted.push(req);
+      await state.hold;
       return state.result;
     },
   };

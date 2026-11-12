@@ -1,3 +1,4 @@
+import { setImmediate as yieldToLoop } from "node:timers/promises";
 import { CLIPBOARD_PRIVACY_MARKS, type ForegroundInfo, type InputPort } from "../types";
 import { FLAG_ALT, FLAG_COMMAND, FLAG_SHIFT, MAC_KEY_RETURN, MAC_KEY_V } from "./keymap";
 import type { MacNative } from "./native";
@@ -46,6 +47,17 @@ async function focusApp(native: MacNative, pid: number): Promise<boolean> {
   return false;
 }
 
+const typeVia = (native: MacNative, press: (code: number, flags: number) => boolean) => async (text: string, stopped?: () => boolean) => {
+  const lines = text.replaceAll("\r\n", "\n").split("\n");
+  for (const [i, line] of lines.entries()) {
+    await yieldToLoop();
+    if (stopped?.()) return "stopped";
+    if (i > 0 && !press(MAC_KEY_RETURN, FLAG_SHIFT)) return "rejected";
+    for (const c of chunks(line)) if (!native.postUnits(c)) return "rejected";
+  }
+  return "done";
+};
+
 export function createMacInput(native: MacNative, layout?: { current(): string | undefined }): InputPort {
   const press = (code: number, flags: number) => native.postKey(code, true, flags) && native.postKey(code, false, flags);
   return {
@@ -77,14 +89,7 @@ export function createMacInput(native: MacNative, layout?: { current(): string |
       return false;
     },
     focus: (hwnd) => focusApp(native, Number(hwnd)),
-    type(text) {
-      const lines = text.replaceAll("\r\n", "\n").split("\n");
-      for (const [i, line] of lines.entries()) {
-        if (i > 0 && !press(MAC_KEY_RETURN, 0)) return false;
-        for (const c of chunks(line)) if (!native.postUnits(c)) return false;
-      }
-      return true;
-    },
+    type: typeVia(native, press),
     clipboardSequence: () => native.pasteboard.changeCount(),
     clipboardTraits() {
       const types = native.pasteboard.types();

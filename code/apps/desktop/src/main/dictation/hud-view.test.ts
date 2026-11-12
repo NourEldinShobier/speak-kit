@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { DictationState } from "@speakkit/dictation";
-import { errorView, hudViewFor, type HudInput } from "./hud-view";
+import { errorView, failureLine, hudViewFor, type HudInput } from "./hud-view";
 
 const input = (state: DictationState, over: Partial<HudInput> = {}): HudInput => ({
   state,
@@ -86,5 +86,22 @@ describe("errors", () => {
 
   it("comes through the state", () => {
     expect(hudViewFor(input({ status: "error", code: "mic-missing" }))).toMatchObject({ kind: "error", text: "No microphone found" });
+  });
+});
+
+describe("the last failure on the Settings page", () => {
+  it("gives the words of the error and says Try again can run only when a take is kept", () => {
+    expect(failureLine("transcribe-failed", true)).toEqual({ text: "Could not transcribe", retry: true });
+    expect(failureLine("transcribe-failed", false)).toEqual({ text: "Could not transcribe", retry: false });
+  });
+  it("has no Try again for an error that has no take to run again", () => {
+    expect(failureLine("mic-denied", true)).toEqual({ text: "Microphone access is blocked", retry: false });
+    expect(failureLine("insert-failed", true).retry).toBe(false);
+  });
+  it("names the feature that held the microphone", () => {
+    expect(failureLine("mic-in-use", false, "Voice chat")).toEqual({ text: "Voice chat is using the microphone", retry: false });
+  });
+  it("has plain words for a code it does not know", () => {
+    expect(failureLine("nope", true)).toEqual({ text: "Dictation stopped working", retry: false });
   });
 });

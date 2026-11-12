@@ -6,6 +6,7 @@ import { Page } from "../../ui";
 import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
 import { AddSiteDialog, SitesCard } from "./SitesCard";
+import { ModeReplacements } from "./ModeReplacements";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
@@ -93,8 +94,7 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to the Default mode, and its {mode.terms.length === 1 ? "word is" : "words are"} removed.
-        You cannot undo it.
+        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to the Default mode, and its words and replacements are removed. You cannot undo it.
       </p>
     </Modal>
   );
@@ -282,6 +282,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
       <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
+      <ModeReplacements mode={mode} onChange={onChange} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />
       <AddSiteDialog open={addSite} mode={mode} others={others} onClose={() => setAddSite(false)} onSave={onSites} />
       <DeleteDialog open={asking} mode={mode} onClose={() => setAsking(false)} onConfirm={onDelete} />

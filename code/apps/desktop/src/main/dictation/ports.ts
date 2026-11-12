@@ -12,6 +12,8 @@ export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) 
       return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), ...(site && { site }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
     },
     focus: (t) => os.focus(t.id),
+    cancel: () => os.cancelTyping(),
+    ...(os.caret && { caret: () => os.caret!.read() }),
     async insert({ text, plan }) {
       const result = await os.insert(text, { mode: plan.method === "paste" && plan.keep ? "keep" : plan.method });
       onResult(result);
@@ -41,10 +43,10 @@ export class ReplayRecorder implements Recorder {
     return this.#clip ? ({ ok: true } as const) : this.#mic.start(req);
   }
 
-  async stop(): Promise<Clip> {
+  async stop(opts?: { cancelled?: boolean }): Promise<Clip> {
     const clip = this.#clip;
     this.#clip = undefined;
-    return clip ?? this.#mic.stop();
+    return clip ?? this.#mic.stop(opts);
   }
 
   speaking(): boolean {

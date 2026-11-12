@@ -55,6 +55,8 @@ const heardBy = (e: HistoryHit, catalog: Deps["catalog"]) => ({
 });
 
 interface Deps {
+  /** The whole history was cleared. */
+  cleared?(): void;
   ready(): Promise<unknown>;
   core(): Dictation | undefined;
   audio(): AudioStore | undefined;
@@ -127,6 +129,7 @@ export class HistoryApi {
       expiresInMs: Number.isFinite(left) ? left : null,
       ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
       ...(e.kind && { kind: e.kind }),
+      ...(e.timings && { timings: e.timings }),
       ...(e.outcome && { outcome: e.outcome }),
       ...(e.rewrite && { rewrite: e.rewrite }),
       ...(e.audio && { recording: true }),
@@ -176,6 +179,7 @@ export class HistoryApi {
   async clear(): Promise<void> {
     await this.d.ready();
     this.#noteKept((await this.d.core()?.history.clear())?.kept ?? []);
+    this.d.cleared?.();
     await this.d.refreshCount();
   }
 

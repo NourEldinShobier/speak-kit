@@ -38,6 +38,13 @@ const DEFAULTS = {
   modes: [],
   rewrite: { enabled: false, deadlineMs: 4000 },
   keepRecordings: false,
+  smartSpacing: false,
+  transformHotkey: "",
+  sounds: { enabled: false, volume: 50 },
+  indicator: "bottom",
+  audioCapMb: 512,
+  duckAudio: "nothing",
+  duckSpeakersOnly: true,
 };
 
 describe("dictation config", () => {
@@ -69,6 +76,56 @@ describe("dictation config", () => {
     ]);
     const many = Array.from({ length: 150 }, (_, i) => ({ from: `w${i}`, to: "x" }));
     expect(v.parse(DictationConfigSchema, { replacements: many }).replacements).toHaveLength(100);
+  });
+});
+
+describe("settings added after the first release", () => {
+  it("a file written before them loads with each at its default", () => {
+    const old = parseConfig({ dictation: { enabled: true, keepRecordings: true } }).dictation;
+    expect(old).toMatchObject({ smartSpacing: false, transformHotkey: "", sounds: { enabled: false, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("keeps good values and replaces each bad one with its default", () => {
+    const got = parseConfig({
+      dictation: { smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
+    }).dictation;
+    expect(got).toMatchObject({ smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+  });
+
+  it("other audio is left alone and only muted for speakers by default, a file without the fields loads that way and a bad mode falls back", () => {
+    expect(parseConfig({ dictation: { enabled: true } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    expect(parseConfig({ dictation: { duckAudio: "lower", duckSpeakersOnly: false } }).dictation).toMatchObject({ duckAudio: "lower", duckSpeakersOnly: false });
+    expect(parseConfig({ dictation: { duckAudio: "silence", duckSpeakersOnly: "no" } }).dictation).toMatchObject({ duckAudio: "nothing", duckSpeakersOnly: true });
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ duckAudio: "pause", duckSpeakersOnly: false })).toBe(true);
+    expect(ok({ duckAudio: "silence" })).toBe(false);
+  });
+
+  it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
+    const m = { id: "chat", name: "Chat", apps: ["slack"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
+    expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [], sites: [] });
+    expect(parseConfig({ dictation: { modes: [{ ...m, sites: ["GitHub.com ", "x.org"] }] } }).dictation.modes[0]!.sites).toEqual(["github.com", "x.org"]);
+    expect(parseConfig({ dictation: { modes: [{ ...m, sites: [3] }] } }).dictation.modes[0]!.sites).toEqual([]);
+    const got = parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }, { from: "", to: "x" }, 5, { from: "a", to: "b", matchCase: true }] }] } }).dictation
+      .modes[0]!.replacements;
+    expect(got).toEqual([
+      { from: "ship it", to: "deploy" },
+      { from: "a", to: "b", matchCase: true },
+    ]);
+  });
+
+  it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
+    const got = parseConfig({ dictation: { hotkey: "ControlLeft+AltLeft+KeyT", transformHotkey: "ControlLeft+AltLeft+KeyT" } }).dictation;
+    expect(got).toMatchObject({ transformHotkey: "", resetNotice: "clash" });
+  });
+
+  it("the renderer may change each of them and nothing else inside sounds", () => {
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ smartSpacing: true, indicator: "top", audioCapMb: 2048, sounds: { enabled: true, volume: 0 } })).toBe(true);
+    expect(ok({ indicator: "left" })).toBe(false);
+    expect(ok({ audioCapMb: 1 })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 101 } })).toBe(false);
+    expect(ok({ sounds: { enabled: true, volume: 5, theme: "x" } })).toBe(false);
   });
 });
 
@@ -160,7 +217,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
   it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
     const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
     const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
-    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [] }]);
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], replacements: [] }]);
   });
 
   it("gives a mode saved before websites existed an empty list, and keeps sites as host names, once each", () => {
@@ -193,7 +250,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     const mode = { id: "m1", name: "Code", apps: ["code"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
     const good = { id: "t1", word: "pnpm", soundsLike: [] };
     const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
-    expect(got).toEqual([{ ...mode, sites: [], terms: [good] }]);
+    expect(got).toEqual([{ ...mode, sites: [], replacements: [], terms: [good] }]);
   });
 
   it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {
@@ -226,7 +283,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
         { ...base, id: "m1", name: "DEFAULT" },
       ],
     }).modes;
-    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [], sites: [] }]);
+    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [], sites: [], replacements: [] }]);
     expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "m1", name: " default " }] }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Default" }] }).success).toBe(true);
   });

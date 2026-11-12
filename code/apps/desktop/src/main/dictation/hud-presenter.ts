@@ -1,11 +1,12 @@
 import type { DictationState } from "@speakkit/dictation";
-import type { DictationConfig } from "../../shared/dictation/settings";
+import type { DictationConfig, Indicator } from "../../shared/dictation/settings";
 import type { DictationOs, InsertResult } from "./index";
 import type { Failure } from "./service-actions";
 import type { HudView } from "../../shared/dictation/contract";
 import { hotkeyText, keyLabel } from "../../shared/dictation/keys";
 import { errorView, hudViewFor } from "./hud-view";
 import type { Hud } from "./hud";
+import { drawn } from "./hud-place";
 
 const SETTLE_MS = 150;
 const READY_MS = 2000;
@@ -19,6 +20,8 @@ interface Deps {
   cancelLabel?(): string;
   /** The last insert ended with the text on the clipboard only. */
   insertedAsCopy(): boolean;
+  /** The recording indicator is switched off: only what needs reading still shows. */
+  indicator?(): Indicator;
   secureInput?(): boolean;
 }
 
@@ -136,6 +139,7 @@ export class HudPresenter {
   }
 
   #show(view: HudView | null): void {
+    if (view && !drawn(this.#d.indicator?.() ?? "bottom", view)) view = null;
     this.#shown = view;
     const hud = this.#d.hud();
     if (view) hud?.show({ kind: "view", view });
@@ -148,6 +152,7 @@ export function createPresenter(h: { os(): DictationOs | undefined; cfg(): Dicta
   return new HudPresenter({
     hud: () => h.os()?.hud,
     hotkey: () => h.cfg().hotkey,
+    indicator: () => h.cfg().indicator,
     canRetry: () => !!h.failure.clip,
     cancelLabel: () => keyLabel(h.cfg().cancelKey === "Escape" ? "Esc" : h.cfg().cancelKey),
     insertedAsCopy: () => h.lastInsert()?.status === "copied",

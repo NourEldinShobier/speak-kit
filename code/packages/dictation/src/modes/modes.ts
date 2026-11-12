@@ -1,5 +1,5 @@
 import { exeKey } from "../paste-plan";
-import type { InsertMode, Settings } from "../settings";
+import type { InsertMode, Replacement, Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
 
 export type Capitals = "keep" | "sentence" | "lower";
@@ -18,13 +18,26 @@ export interface Mode {
   end: EndOfDictation;
   rewrite: boolean;
   terms: Term[];
+  /** Phrases swapped after speaking, only in this mode; they win over a shared replacement of the same phrase. */
+  replacements: Replacement[];
 }
 
 export const DEFAULT_MODE_ID = "default";
 export const MAX_MODES = 24;
 export const MAX_MODE_NAME = 40;
 
-export const defaultMode = (): Mode => ({ id: DEFAULT_MODE_ID, name: "Default", apps: [], sites: [], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: false, terms: [] });
+export const defaultMode = (): Mode => ({
+  id: DEFAULT_MODE_ID,
+  name: "Default",
+  apps: [],
+  sites: [],
+  insertMode: "paste",
+  capitals: "sentence",
+  end: "keep",
+  rewrite: false,
+  terms: [],
+  replacements: [],
+});
 
 /** The list with the default mode in it, first: the one that was saved, or the built-in one when nothing about it was ever changed. */
 export const withDefault = (modes: readonly Mode[]): Mode[] => [modes.find((m) => m.id === DEFAULT_MODE_ID) ?? defaultMode(), ...modes.filter((m) => m.id !== DEFAULT_MODE_ID)];
@@ -122,7 +135,13 @@ export function resolveMode(modes: readonly Mode[], exe: string | undefined, sit
   return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
 }
 
-export type ModeSettings = Pick<Settings, "autoCapitalize" | "lowercase" | "stripFinalStop" | "insertMode" | "terms">;
+export type ModeSettings = Pick<Settings, "autoCapitalize" | "lowercase" | "stripFinalStop" | "insertMode" | "terms" | "replacements">;
+
+/** Shared replacements plus a mode's own: for the same phrase (ignoring capitals) the mode's wins. */
+export function mergeReplacements(shared: readonly Replacement[], own: readonly Replacement[]): Replacement[] {
+  const taken = new Set(own.map((r) => r.from.toLowerCase()));
+  return [...shared.filter((r) => !taken.has(r.from.toLowerCase())), ...own];
+}
 
 /** The rule switches for one dictation: the person's settings, with the mode's own choices on top. The default mode changes nothing. */
 export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean } {
@@ -134,6 +153,7 @@ export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { re
     stripFinalStop: mode.end === "no-full-stop",
     insertMode: mode.insertMode,
     terms: mergeTerms(base.terms, mode.terms),
+    replacements: mergeReplacements(base.replacements, mode.replacements),
     rewrite: mode.rewrite,
   };
 }

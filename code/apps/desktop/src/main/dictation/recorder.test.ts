@@ -49,6 +49,19 @@ describe("recorder host", () => {
     expect(s.pages).toHaveLength(1);
   });
 
+  it("sends a tone to an open page and never opens a page for one", async () => {
+    const s = setup();
+    s.host.tone([{ at: 0, ms: 70, hz: 880, gain: 0.2 }]);
+    expect(s.pages).toHaveLength(0);
+    void s.host.prepare();
+    s.from(REC_READY);
+    await vi.waitFor(() => expect(s.pages).toHaveLength(1));
+    s.host.tone([]);
+    s.host.tone([{ at: 0, ms: 70, hz: 880, gain: 0.2 }]);
+    await vi.waitFor(() => expect(s.contents.sent).toHaveLength(1));
+    expect(s.contents.sent[0]).toMatchObject({ op: "tone", notes: [{ hz: 880 }] });
+  });
+
   it("reports a microphone problem with its code", async () => {
     const s = setup();
     const started = s.host.start({ prerollMs: 0 });

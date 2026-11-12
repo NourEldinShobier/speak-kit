@@ -1,4 +1,4 @@
-import { powerMonitor, powerSaveBlocker, type WebContents } from "electron";
+import { powerMonitor, type WebContents } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
@@ -17,12 +17,14 @@ import { createDictationOs, type DictationOs, type HudWindow, type InsertResult 
 import { settle, supportsLanguage, type ModelManager } from "./models";
 import { resyncOnPower } from "./power-resync";
 import type { RecorderHost } from "./recorder";
-import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, shouldRetryHotkey, touchesMicrophone, windowShown } from "./service-support";
+import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, touchesMicrophone, windowShown } from "./service-support";
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
+import { createHookFailure } from "./hook-failure";
+import { createOutputSide } from "./service-output";
+import { cleanField, createRecovery, onStateChange, prepareModel, warmCaret } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
-import { createSleepBlock } from "./sleep-block";
 import type { Stt } from "./stt";
 import { fakeStt, type FakeStt } from "./stt-fake";
 
@@ -58,14 +60,18 @@ export class DictationService {
   #hotkeys: SwitchableHotkeys | undefined;
   #recorder: RecorderHost | undefined;
   #hudWindow: HudWindow | undefined;
-  #hotkeyFailed = false;
+  readonly #hook = createHookFailure({
+    ready: () => this.ready,
+    enabled: () => this.#cfg.enabled,
+    alert: () => this.presenter.alert("hotkey-failed"),
+    changed: () => this.#push(true),
+    warn: (t, d) => this.#ctx.log.warn(t, d),
+    restart: () => this.#start(false),
+  });
   readonly mic = new MicState(process.platform === "win32", () => this.#recorder, { enabled: () => this.#cfg.enabled, windowShown: () => windowShown(this.#o.parent()), after: clock.after });
-  readonly #sleep = createSleepBlock(
-    powerSaveBlocker,
-    () => this.#cfg.blockSleep,
-    (why) => this.#ctx.log.warn("dictation sleep block", why),
-  );
   #audio: AudioStore | undefined;
+  readonly #output = createOutputSide({ cfg: () => this.#cfg, hotkeys: () => this.#hotkeys, state: () => this.state, warn: (t, d) => this.#ctx.log.warn(t, d) });
+  #recover: (() => void) | undefined;
   /** Tests only: what the scripted writer does with the next dictation. */
   fakeRewrite: "ok" | "hang" | "fail" = "ok";
   /** Tests only: the files the pickers return (null is a cancelled dialog). */
@@ -102,13 +108,14 @@ export class DictationService {
       catalog: () => this.speech.catalog(),
       files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),
       warn: (title, detail) => this.#ctx.log.warn(title, detail),
+      cleared: this.#output.cleared,
       key: o,
     });
     ({ controls: this.controls, history: this.history, records: this.records, actions: this.actions } = parts);
     // No key hook was ever built when this fails: turning dictation on cannot work either.
     this.ready = this.#init().catch((e) => {
       this.#ctx.log.error("dictation could not start", String(e));
-      this.#hotkeyFailed = true;
+      this.#hook.mark(true);
     });
   }
 
@@ -125,12 +132,14 @@ export class DictationService {
       this.#o.os ??
       (await createDictationOs({
         overrides: () => appOverrides(this.#cfg.appRules),
-        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true },
+        hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, place: () => (this.#cfg.indicator === "top" ? "top" : "bottom") },
         onHudWindow: (w) => (this.#hudWindow = w),
+        onTyping: (on) => this.#output.onTyping(on),
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
-    this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#onHookFault(e, recovered), changed: () => this.#push(true) });
+    this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#hook.onFault(e, recovered), changed: () => this.#push(true) });
     this.#hotkeys.onPasteLast(() => void this.controls.pasteLast());
+    this.#hotkeys.onTransform(() => void cleanField(this.os, this.#cfg, this.presenter));
     const built = buildCore({
       ctx: this.#ctx,
       o: this.#o,
@@ -144,21 +153,20 @@ export class DictationService {
       onPromptDropped: () => this.records.setPromptDropped(true),
     });
     ({ recorder: this.#recorder, core: this.core, audio: this.#audio } = built);
+    this.#output.attach(built.spool);
+    this.#recover = createRecovery({ spool: built, core: () => this.core, presenter: this.presenter, warn: (t, d) => this.#ctx.log.warn(t, d) });
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
-    await this.models.refresh();
-    await Promise.all([this.history.refresh(), this.records.refreshKey()]);
+    await Promise.all([this.models.refresh(), this.history.refresh(), this.records.refreshKey()]);
     this.#stopSpeech = startSpeech(this.speech, os, () => this.#cfg.enabled);
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
   #onState(s: DictationState): void {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
+    onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, typing: this.#output.typing(), now: Date.now() });
+    this.#output.onState(this.state, s);
     this.state = s;
-    // Escape cancels a toggled recording only; in a held or locked one it belongs to the app in front.
-    this.#hotkeys?.setCancelGrab(s.status === "recording" && s.mode === "toggle");
-    if (s.status === "error") this.#failure.error = s.code;
-    this.#sleep(s.status === "recording" || s.status === "locked");
     if (s.status === "idle" && s.notice) void this.history.refresh();
     this.presenter.onState(s);
     this.#push(true);
@@ -171,7 +179,7 @@ export class DictationService {
       supported: this.supported,
       config: this.#cfg,
       hotkeyReady: this.#hotkeys?.active ?? false,
-      hotkeyFailed: this.#hotkeyFailed,
+      hotkeyFailed: this.#hook.failed,
       state: this.state,
       models: this.models,
       historyCount: this.history.count,
@@ -183,6 +191,8 @@ export class DictationService {
       micOwner: this.#o.micOwner?.(),
       mic: this.mic.status,
       devices: this.mic.devices,
+      last: this.#failure.last,
+      canRetry: !!this.#failure.clip,
     });
   }
 
@@ -227,36 +237,22 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.layout(hotkeyLayout(this.#cfg));
     this.controls.watch();
+    warmCaret(this.os, this.#cfg);
     if (patch.retention !== undefined) void this.history.refresh();
     if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
     this.#push(true);
     return this.status();
   }
 
-  #onHookFault(e: unknown, recovered: boolean): void {
-    this.#ctx.log.warn("dictation hook failed", `${String(e)} (${recovered ? "reinstalled" : "not reinstalled"})`);
-    if (!this.#cfg.enabled) return; // switched off meanwhile: nothing to report
-    this.#setHotkeyFailed(!recovered);
-  }
-
-  #setHotkeyFailed(failed: boolean): void {
-    this.#hotkeyFailed = failed;
-    if (failed) this.presenter.alert("hotkey-failed");
-    this.#push(true);
-  }
-
   /** Starts the hotkey again after what blocked it was fixed (a permission was allowed). */
-  async retryHotkey(permitted: boolean): Promise<void> {
-    await this.ready;
-    if (shouldRetryHotkey({ failed: this.#hotkeyFailed, enabled: this.#cfg.enabled, permitted })) await this.#start(false);
-  }
+  retryHotkey = (permitted: boolean): Promise<void> => this.#hook.retry(permitted);
 
   async setEnabled(on: boolean): Promise<DictationStatus> {
     await this.ready;
     if (on && !this.supported) return this.status();
     if (on && !this.core) {
       // The key hook could not be built at start-up: saying "on" would only save a setting that does nothing.
-      this.#setHotkeyFailed(true);
+      this.#hook.set(true);
       return this.status();
     }
     this.#cfg.enabled = on;
@@ -275,16 +271,16 @@ export class DictationService {
   async #start(quiet: boolean): Promise<void> {
     if (!this.supported || !this.core || !this.#hotkeys) return;
     this.core.configure(coreSettings(this.#cfg));
+    warmCaret(this.os, this.#cfg);
     this.#hotkeys.layout(hotkeyLayout(this.#cfg));
     const ready = this.#hotkeys.enable(true);
     this.controls.watch();
-    this.#setHotkeyFailed(!ready);
+    this.#hook.set(!ready);
     void this.#recorder?.prepare().then(() => this.mic.refresh());
+    this.#recover?.();
     await this.models.refresh();
-    // At launch (quiet) with release-when-idle on, the model stays on disk: the first dictation loads it (the page says that takes longer).
-    if (this.models.installed) {
-      if (!quiet || this.#ctx.config.engines.idleMinutes === 0) this.models.warm();
-    } else if (!this.#ctx.config.engines.skippedModel) void this.models.download(this.#cfg.model);
+    const { idleMinutes, skippedModel } = this.#ctx.config.engines;
+    prepareModel(this.models, { quiet, idleMinutes, skipped: !!skippedModel, model: this.#cfg.model });
     if (!quiet && ready) this.presenter.flashReady();
   }
 
@@ -292,7 +288,7 @@ export class DictationService {
     this.core?.cancel();
     this.#hotkeys?.enable(false);
     this.controls.watch();
-    this.#setHotkeyFailed(false);
+    this.#hook.set(false);
     this.#recorder?.close();
     this.mic.reset();
     this.presenter.dismiss();
@@ -336,7 +332,7 @@ export class DictationService {
     this.#stopSpeech?.();
     this.speech.dispose();
     this.#throttle.dispose();
-    this.#sleep(false);
+    await this.#output.dispose();
     this.controls.dispose();
     this.#hotkeys?.dispose();
     this.#stopPower?.();

@@ -18,6 +18,7 @@ vi.mock("./api", () => ({
       },
       reply: (id: number, r: RecorderResult) => void h.replies.set(id, r),
       level: () => undefined,
+      chunk: () => undefined,
       ready: () => undefined,
       event: (e: RecorderEvent) => void h.events.push(e),
     },
@@ -40,6 +41,8 @@ function browser() {
   ];
   let failOpen = false;
   const node = () => ({ connect: (n: unknown) => n });
+  const taps: { onmessage?: (e: { data: Float32Array }) => void }[] = [];
+  const tones: { hz: number; start: number; stop: number; peak: number }[] = [];
   vi.stubGlobal("navigator", {
     mediaDevices: {
       enumerateDevices: async () => devices,
@@ -61,7 +64,22 @@ function browser() {
     class {
       audioWorklet = { addModule: async () => undefined };
       destination = {};
-      createGain = () => ({ gain: {}, connect: (n: unknown) => n });
+      currentTime = 1;
+      createGain = () => ({ gain: { setValueAtTime: () => undefined, linearRampToValueAtTime: () => undefined }, connect: (n: unknown) => n });
+      createOscillator = () => {
+        const tone = { hz: 0, start: 0, stop: 0, peak: 0 };
+        tones.push(tone);
+        return {
+          frequency: {
+            set value(hz: number) {
+              tone.hz = hz;
+            },
+          },
+          connect: (n: unknown) => n,
+          start: (t: number) => (tone.start = t),
+          stop: (t: number) => (tone.stop = t),
+        };
+      };
       createMediaStreamSource = node;
       close = async () => undefined;
     },
@@ -69,12 +87,18 @@ function browser() {
   vi.stubGlobal(
     "AudioWorkletNode",
     class {
-      port = {};
+      port: { onmessage?: (e: { data: Float32Array }) => void } = {};
+      constructor() {
+        taps.push(this.port);
+      }
       connect = (n: unknown) => n;
     },
   );
   return {
+    tones,
     opened,
+    /** Sound from the newest microphone stream: `n` samples of `level`. */
+    sound: (n: number, level = 0.5) => taps.at(-1)?.onmessage?.({ data: new Float32Array(n).fill(level) }),
     live: () => tracks.filter((t) => !t.stopped).length,
     unplug: () => tracks.filter((t) => !t.stopped).forEach((t) => t.ended?.()),
     plug: () => listeners["devicechange"]?.(),
@@ -128,6 +152,54 @@ describe("microphone page", () => {
     expect(b.live()).toBe(1);
     expect(h.events.map((e) => e.type)).not.toContain("lost");
     expect(cardAfter(h.events)).toEqual({ kind: "back", label: "Blue Yeti" });
+  });
+
+  it("a microphone that drops for under 200 ms in the middle of a recording is bridged with silence, and the take is not cut short", async () => {
+    await send({ op: "start", prerollMs: 0, mic: mic() });
+    b.sound(1600);
+    b.unplug();
+    await vi.advanceTimersByTimeAsync(100);
+    b.sound(1600);
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
+    expect(r.interrupted).toBeUndefined();
+    expect(r.pcm!).toHaveLength(1600 + 1600 + 1600); // 100 ms of silence between two 100 ms pieces
+    expect([r.pcm![1599], r.pcm![1600], r.pcm![3199], r.pcm![3200]]).toEqual([0.5, 0, 0, 0.5]);
+  });
+
+  it("a drop longer than 200 ms cuts the take short but the recording goes on with the microphone that came back", async () => {
+    await send({ op: "start", prerollMs: 0, mic: mic() });
+    b.sound(1600);
+    b.unplug();
+    await vi.advanceTimersByTimeAsync(300);
+    b.sound(1600);
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
+    expect(r.interrupted).toBe(true);
+    expect(r.pcm!).toHaveLength(3200);
+  });
+
+  it("a microphone that never comes back leaves the take cut short with what was heard", async () => {
+    await send({ op: "start", prerollMs: 0, mic: mic() });
+    b.sound(1600);
+    b.failNextOpens(true);
+    b.unplug();
+    await vi.advanceTimersByTimeAsync(50);
+    const r = (await send({ op: "stop" })) as Extract<RecorderResult, { ok: true }>;
+    expect(r.interrupted).toBe(true);
+    expect(r.pcm!).toHaveLength(1600);
+  });
+
+  it("plays a tone note by note on the speakers without opening the microphone", async () => {
+    await send({
+      op: "tone",
+      notes: [
+        { at: 0, ms: 70, hz: 880, gain: 0.2 },
+        { at: 100, ms: 60, hz: 440, gain: 0.2 },
+      ],
+    });
+    expect(b.tones.map((t) => t.hz)).toEqual([880, 440]);
+    expect(b.tones[1]!.start - b.tones[0]!.start).toBeCloseTo(0.1);
+    expect(b.opened).toEqual([]);
+    expect(h.replies.get(nextId - 1)).toEqual({ ok: true });
   });
 
   it("says 'lost' once after six failed tries, with one reconnecting report for the whole outage", async () => {

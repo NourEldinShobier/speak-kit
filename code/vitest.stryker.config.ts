@@ -17,6 +17,9 @@ export default defineConfig({
       "packages/engine/tests/host-port.test.ts",
       "apps/desktop/src/renderer/speech-text.test.ts",
       "apps/desktop/src/renderer/features/wizard/dictation-step.test.ts",
+      "apps/desktop/src/shared/dictation/sounds.test.ts",
+      "apps/desktop/src/main/dictation/{hud-place,transform-typed,spool,spool-edge,spooled-recorder,fixture-recorder,fixture-recorder-edge,app-profile,program-version,page-address}.test.ts",
+      "apps/desktop/src/main/dictation/ducking/*.test.ts",
     ],
   },
 });

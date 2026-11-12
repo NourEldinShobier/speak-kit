@@ -1,3 +1,4 @@
+import { setImmediate as yieldToLoop } from "node:timers/promises";
 import { CLIPBOARD_PRIVACY_MARKS, VK, type InputPort } from "../types";
 import type { Foreground } from "./foreground";
 import type { KeyInput, Win32 } from "./native";
@@ -32,6 +33,14 @@ const VK_INSERT = 0x2d;
 /** How long to wait for a window to come to the front, and how often to look. */
 const FOCUS_WAIT_MS = 500;
 const FOCUS_POLL_MS = 25;
+
+/** The text in pieces of at most `TYPE_CHUNK` characters, with line breaks as "\n". */
+export function typePieces(text: string): string[] {
+  const chars = [...text.replaceAll("\r\n", "\n")];
+  const out: string[] = [];
+  for (let i = 0; i < chars.length; i += TYPE_CHUNK) out.push(chars.slice(i, i + TYPE_CHUNK).join(""));
+  return out;
+}
 
 /** Another program may hold the clipboard open for a moment: try a few times, 10 ms apart. */
 async function addWhenFree(w: Win32, marks: readonly string[]): Promise<boolean> {
@@ -76,11 +85,11 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
     return false;
   };
 
+  // Shift+Enter: a chat box that sends on Enter takes it as a new line, and an editor takes it as one too.
+  const lineBreak = (): KeyInput[] => [event(0, VK.leftShift, 0), event(0, VK_RETURN, 0), event(KEYUP, VK_RETURN, 0), event(KEYUP, VK.leftShift, 0)];
   const unicode = (text: string): KeyInput[] =>
     [...text.replaceAll("\r\n", "\n")].flatMap((ch) =>
-      ch === "\n"
-        ? [event(0, VK_RETURN, 0), event(KEYUP, VK_RETURN, 0)]
-        : Array.from({ length: ch.length }, (_, i) => ch.charCodeAt(i)).flatMap((unit) => [event(UNICODE, 0, unit), event(UNICODE | KEYUP, 0, unit)]),
+      ch === "\n" ? lineBreak() : Array.from({ length: ch.length }, (_, i) => ch.charCodeAt(i)).flatMap((unit) => [event(UNICODE, 0, unit), event(UNICODE | KEYUP, 0, unit)]),
     );
 
   return {
@@ -97,13 +106,15 @@ export function createInput(w: Win32, fg: Foreground): InputPort {
       return sendAll([...ctrl, ...shift, { ...main, up: false }, { ...main, up: true }, ...ups]);
     },
     focus: (hwnd) => focusWindow(w, hwnd),
-    type(text) {
-      const events = unicode(text);
-      for (let i = 0; i < events.length; i += TYPE_CHUNK * 2) {
-        const chunk = events.slice(i, i + TYPE_CHUNK * 2);
-        if (w.sendInput(chunk) !== chunk.length) return false;
+    async type(text, stopped) {
+      for (const piece of typePieces(text)) {
+        // Between pieces the event loop runs, so a key press that asks to stop is seen before the next piece goes out.
+        await yieldToLoop();
+        if (stopped?.()) return "stopped";
+        const events = unicode(piece);
+        if (w.sendInput(events) !== events.length) return "rejected";
       }
-      return true;
+      return "done";
     },
     clipboardSequence: () => w.clipboardSequence(),
     clipboardTraits: () => ({ files: FILE_FORMATS.some((f) => w.clipboardHas(f)), formats: w.clipboardFormatCount(), marks: CLIPBOARD_PRIVACY_MARKS.filter((m) => w.clipboardHas(m)) }),

@@ -1,3 +1,4 @@
+import type { Note } from "./sounds";
 import * as v from "valibot";
 import type { HistoryStats, InstalledApp, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
@@ -76,6 +77,8 @@ export interface DictationStatus {
   rewriteKey: boolean;
   /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
   promptDropped?: boolean;
+  /** The newest failure, kept until a dictation works again or the person dismisses it: what it was in plain words, when, and whether Try again can run the take again. */
+  lastFailure?: { code: string; text: string; at: number; retry: boolean };
   /** "Transcribe again" for one entry, while it runs or after it failed; absent otherwise. */
   redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" | "busy" };
 }
@@ -97,7 +100,7 @@ export interface HistoryItem {
   /** Friendly name of that program. */
   appName?: string;
   /** "raw": dictated with clean-up off. "printed": handed to a command, never pasted. "interrupted": the recording was cut short. */
-  kind?: "raw" | "printed" | "interrupted";
+  kind?: "raw" | "printed" | "interrupted" | "restored";
   outcome?: "sent" | "copied" | "failed";
   /** What the speech model heard, before the clean-up. */
   raw: string;
@@ -106,6 +109,8 @@ export interface HistoryItem {
   rewrite?: RewriteOutcome;
   /** Milliseconds until the entry is removed; null when it is kept for ever. */
   expiresInMs: number | null;
+  /** How long the speech model took, and how much silence was cut before it ran. */
+  timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
   /** The entry has a kept recording. */
   recording?: boolean;
   recordingRemoved?: boolean;
@@ -187,10 +192,15 @@ export interface DictationBridge {
     onCommand(cb: (c: RecorderCommand) => void): () => void;
     reply(id: number, result: RecorderResult): void;
     level(n: number): void;
+    /** Samples of the running recording, in order. */
+    chunk(pcm: Float32Array): void;
     ready(): void;
     event(e: RecorderEvent): void;
   };
 }
+
+/** The microphone window records mono at this rate. */
+export const RECORDER_RATE = 16_000;
 
 export interface RecorderMicConfig {
   /** Chosen device id; empty for automatic. */
@@ -219,6 +229,8 @@ export type RecorderCommand =
   | { id: number; op: "discard" }
   | { id: number; op: "close" }
   | { id: number; op: "devices" }
+  /** Plays a short tone on the speakers; the notes come from `tonesFor`. */
+  | { id: number; op: "tone"; notes: Note[] }
   /** Applies the microphone settings at once: opens the microphone when it is to be kept ready or the level meter is on, lets it go otherwise. */
   | { id: number; op: "configure"; meter: boolean; mic: RecorderMicConfig };
 export type RecorderResult =

@@ -1,32 +1,21 @@
+import { createCancelledTake } from "./cancelled-take";
 import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
 import { historyApi } from "./history-actions";
 import type { Target } from "./paste-plan";
 import { failureOf, foreground, pasteLast, runJob, type Job, type Outcome } from "./pipeline";
+import { reportSettled, tryStart } from "./start";
 import { initialSession, MAX_RECORDING_MS, reduce, type Effect, type Session, type SessionEvent } from "./session";
 import { defaultSettings, type Settings } from "./settings";
 import type { CaptureHandle, CaptureResult, Clip, Dictation, DictationDeps, DictationErrorCode, DictationState, Notice, Unsubscribe } from "./types";
 
 const ERROR_MS = 4000;
 const NOTICE_MS = 1200;
-/** A cancelled recording can be brought back for this long. */
-const UNDO_MS = 60_000;
-/** How long the "Cancelled" notice with its Undo button stays on screen. */
-const UNDO_NOTICE_MS = 10_000;
+/** The "Cancelled" notice with its Undo button stays 10 seconds (see flashMs). */
 const TAIL_POLL_MS = 50;
-
-const flashMs = (notice: Notice): number => (notice.kind === "cancelled" && notice.undoable ? UNDO_NOTICE_MS : NOTICE_MS);
+const flashMs = (notice: Notice): number => (notice.kind === "cancelled" && notice.undoable ? 10_000 : NOTICE_MS);
 
 type Flash = { error: DictationErrorCode; owner?: string } | { notice: Notice };
-
-async function tryStart(deps: DictationDeps, prerollMs: number): Promise<DictationErrorCode | undefined> {
-  try {
-    const started = await deps.recorder.start({ prerollMs });
-    return started.ok ? undefined : started.code;
-  } catch {
-    return "mic-failed"; // a recorder that throws is a microphone that cannot be used
-  }
-}
 
 class Runtime implements Dictation {
   private settings: Settings;
@@ -41,15 +30,14 @@ class Runtime implements Dictation {
   private cancelFlash: Unsubscribe | undefined;
   private cancelLimit: Unsubscribe | undefined;
   private readonly captures = new Map<number, (r: CaptureResult) => void>();
-  private cancelledClip: Clip | undefined;
   private noUndo = false;
   private readonly rawCaptures = new Set<number>();
-  private dropCancelled: Unsubscribe | undefined;
   private readonly listeners = new Set<(state: DictationState) => void>();
   private lastState: string;
   private unsubscribe: Unsubscribe | undefined;
   private disposed = false;
   private readonly store: History;
+  private readonly cancelled: ReturnType<typeof createCancelledTake>;
   private readonly live: Promise<boolean>;
   readonly history: Dictation["history"];
   private readonly deps: DictationDeps;
@@ -57,6 +45,7 @@ class Runtime implements Dictation {
   constructor(deps: DictationDeps) {
     this.deps = deps;
     this.settings = { ...defaultSettings, ...deps.settings };
+    this.cancelled = createCancelledTake(deps.clock, (clip) => deps.settled?.(clip, true));
     this.store = createHistory({ storage: deps.storage, clock: deps.clock, retention: () => this.settings.retention, ...(deps.audio && { audio: deps.audio }), terms: () => this.settings.terms });
     this.history = historyApi({ store: this.store, deps: this.deps, settings: () => this.settings, disposed: () => this.disposed });
     this.lastState = JSON.stringify(this.state());
@@ -118,7 +107,7 @@ class Runtime implements Dictation {
     this.dispatch({ type: "cancel" });
     this.disposed = true;
     this.cancelFlash?.();
-    this.dropCancelled?.();
+    this.cancelled.release();
     this.unsubscribe?.();
     this.listeners.clear();
   }
@@ -134,7 +123,16 @@ class Runtime implements Dictation {
     return begins;
   }
 
+  /** The cancel key (or a cancel from a button) while the text is going in: typing stops and the text stays on the clipboard. */
+  private cancelsInsert(event: SessionEvent): boolean {
+    if (this.pending === 0 || this.phase !== "pasting" || !this.deps.inserter.cancel) return false;
+    const cancel = event.type === "cancel" || (event.type === "key" && event.down && event.key === this.settings.cancelKey);
+    if (cancel) this.deps.inserter.cancel();
+    return cancel;
+  }
+
   private dispatch(event: SessionEvent): boolean {
+    if (this.cancelsInsert(event)) return true;
     if (this.micTaken(event)) return true;
     const step = reduce(this.session, event, this.settings);
     this.session = step.session;
@@ -175,8 +173,7 @@ class Runtime implements Dictation {
   private startRecording(id: number, prerollMs: number): void {
     this.flashed = undefined;
     this.cancelFlash?.();
-    this.dropCancelled?.();
-    this.cancelledClip = undefined;
+    this.cancelled.release();
     this.endLimit();
     this.cancelLimit = this.deps.clock.after(MAX_RECORDING_MS, () => this.dispatch({ type: "limit", id }));
     this.targets.set(id, foreground(this.deps.inserter));
@@ -202,7 +199,7 @@ class Runtime implements Dictation {
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
       try {
-        if (cancelled && !this.noUndo) return this.keepCancelled(await this.deps.recorder.stop());
+        if (cancelled && !this.noUndo) return this.cancelled.keep(await this.deps.recorder.stop({ cancelled: true }));
         await this.deps.recorder.discard();
       } catch {
         // Nothing is left to discard if the recorder already stopped.
@@ -210,21 +207,20 @@ class Runtime implements Dictation {
     });
   }
 
-  private keepCancelled(clip: Clip): void {
-    this.dropCancelled?.();
-    this.cancelledClip = clip;
-    this.dropCancelled = this.deps.clock.after(UNDO_MS, () => (this.cancelledClip = undefined));
-  }
-
   undoCancel(): boolean {
-    const clip = this.cancelledClip;
-    if (!clip || this.disposed) return false;
-    this.cancelledClip = undefined;
-    this.dropCancelled?.();
+    if (!this.cancelled.held() || this.disposed) return false;
+    const clip = this.cancelled.take()!;
     this.pending++;
     this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: foreground(this.deps.inserter) }));
     this.emit();
     return true;
+  }
+
+  restore(clip: Clip): void {
+    if (this.disposed) return;
+    this.pending++;
+    this.jobQueue = this.jobQueue.then(() => this.process({ clip: Promise.resolve(clip), target: Promise.resolve(undefined), restored: true }));
+    this.emit();
   }
 
   pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed"> {
@@ -301,10 +297,20 @@ class Runtime implements Dictation {
       outcome = { error: "failed" }; // a port that throws must not stop the queue
     }
     this.pending--;
+    await this.settle(job, outcome);
     // Printed text settled its capture already; anything else that ends a capture settles it here.
     job.print?.(failureOf(outcome));
     if (outcome) this.flash(outcome);
     else this.emit();
+  }
+
+  private async settle(job: Job, outcome: Outcome | undefined): Promise<void> {
+    try {
+      const clip = await job.clip;
+      if (clip) reportSettled(this.deps, clip, outcome && "error" in outcome ? outcome.error : undefined);
+    } catch {
+      // the take never existed (the microphone failed to start): nothing to report
+    }
   }
 
   private insertingNow(): void {

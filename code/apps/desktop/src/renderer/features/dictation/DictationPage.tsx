@@ -3,7 +3,8 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
 import { dictation, platformName } from "./api";
-import { AppRulesCard, MicrophoneCard, OutputCard } from "./AudioCards";
+import { OtherAudioCard } from "./OtherAudioCard";
+import { AppRulesCard, FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { MicExclusions } from "./MicExclusions";
 import { FirstRunCard } from "./FirstRunCard";
 import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
@@ -12,6 +13,7 @@ import { PermissionGuide } from "./PermissionGuide";
 import { hotkeyFailedCopy } from "./permissions-model";
 import { usePermissions } from "./usePermissions";
 import { ShortcutsSections } from "./ShortcutsSection";
+import { failureTime, listenerStatus } from "./listener-model";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
@@ -34,6 +36,38 @@ function General({ s }: { s: DictationStatus }) {
         description="The language you speak."
         control={<Select label="Language" value={c.language} onChange={(language) => void dictation.patchSettings({ language: language as typeof c.language })} options={languages} />}
       />
+    </SettingsSection>
+  );
+}
+
+function StatusCard({ s }: { s: DictationStatus }) {
+  const l = listenerStatus(s);
+  const f = s.lastFailure;
+  return (
+    <SettingsSection title="Status">
+      <SettingRow
+        className="lm-row--control"
+        label="Shortcut"
+        description={l.detail}
+        control={
+          <span className="dict-status" data-tone={l.tone} role="status" aria-label={`Shortcut status: ${l.label}`}>
+            {l.label}
+          </span>
+        }
+      />
+      {f && (
+        <SettingRow
+          className="lm-row--control"
+          label="Last problem"
+          description={`${f.text}, ${failureTime(f.at, Date.now())}.`}
+          control={
+            <span className="dict-status__acts">
+              {f.retry && <Button onClick={() => dictation.hudAction("retry")}>Try again</Button>}
+              <Button onClick={() => dictation.hudAction("dismiss")}>Dismiss</Button>
+            </span>
+          }
+        />
+      )}
     </SettingsSection>
   );
 }
@@ -76,6 +110,27 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
   );
 }
 
+/** Every card of the page once the speech model is set up. */
+function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void }) {
+  return (
+    <>
+      <General s={s} />
+      <StatusCard s={s} />
+      <ShortcutsSections s={s} />
+      <MicrophoneCard s={s} />
+      <MicExclusions list={s.settings.micExclusions} />
+      <OutputCard s={s} />
+      <FeedbackCard s={s} />
+      <OtherAudioCard s={s} />
+      <AppRulesCard s={s} />
+      <ModelList status={s} />
+      <Cleanup s={s} />
+      <TestField />
+      <HistoryCard s={s} open={openHistory} />
+    </>
+  );
+}
+
 /** Settings > Dictation. While the speech model is being downloaded or loaded the page shows that card first. */
 export function DictationPage({ openHistory }: { openHistory: () => void }) {
   const s = useDictation();
@@ -109,22 +164,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
           {s.modelError}
         </Banner>
       )}
-      {settingUp ? (
-        <FirstRunCard status={s} />
-      ) : (
-        <>
-          <General s={s} />
-          <ShortcutsSections s={s} />
-          <MicrophoneCard s={s} />
-          <MicExclusions list={s.settings.micExclusions} />
-          <OutputCard s={s} />
-          <AppRulesCard s={s} />
-          <ModelList status={s} />
-          <Cleanup s={s} />
-          <TestField />
-          <HistoryCard s={s} open={openHistory} />
-        </>
-      )}
+      {settingUp ? <FirstRunCard status={s} /> : <Cards s={s} openHistory={openHistory} />}
     </Page>
   );
 }

@@ -2,6 +2,7 @@ import type { AudioTrash, HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus,
 import type { HistoryStats } from "./history-search";
 import type { Rewriter } from "./modes/rewrite";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
+import type { CaretContext } from "./spacing";
 import type { Settings } from "./settings";
 
 export type Unsubscribe = () => void;
@@ -40,7 +41,8 @@ export type MicErrorCode = "mic-denied" | "mic-missing" | "mic-busy" | "mic-fail
 export interface Recorder {
   /** Opens the microphone and keeps the last `prerollMs` before now. */
   start(req: { prerollMs: number }): Promise<{ ok: true } | { ok: false; code: MicErrorCode }>;
-  stop(): Promise<Clip>;
+  /** `cancelled`: the take is kept only for the undo minute, so a recorder that keeps audio on disk must not bring it back after a restart. */
+  stop(opts?: { cancelled?: boolean }): Promise<Clip>;
   discard(): Promise<void>;
   /** True while speech is coming in right now; lets the recording run on a little after the key is released. Absent when the recorder cannot tell. */
   speaking?(): boolean;
@@ -63,6 +65,10 @@ export interface Inserter {
   target(): Promise<Target | undefined>;
   /** Brings the window the key was pressed in back to the front and says whether it is in front within a short time. */
   focus?(target: Target): Promise<boolean>;
+  /** The character before the caret in the focused field and whether text is selected; undefined when the platform cannot read it. */
+  caret?(): Promise<CaretContext | undefined>;
+  /** Ends typing that is in progress; the text stays on the clipboard. Called when the cancel key is pressed while the text is going in. */
+  cancel?(): void;
   insert(req: { text: string; plan: Exclude<PastePlan, { method: "refuse" }> }): Promise<{ ok: true } | { ok: false; code: "rejected" | "failed" }>;
 }
 
@@ -114,6 +120,8 @@ export interface DictationDeps {
   storage: HistoryStorage;
   /** Called with audio that must not be lost: a take that came back silent or a recording cut short. */
   keepClip?(clip: Clip, why: "silent" | "interrupted" | "failed"): void;
+  /** Called once a take has been dealt with: `done` when its text is in the history (or there was no speech), false when it failed and the audio is still needed. Lets the app drop the copy of the take it kept on disk. */
+  settled?(clip: Clip, done: boolean): void;
   /** One line per stage that failed or ran out of time and passed its input on. Never receives spoken text. */
   log?(stage: string, why: string): void;
   /** Where recordings are kept; without it nothing is recorded whatever the setting says. */
@@ -150,6 +158,8 @@ export interface Dictation {
   cancel(): void;
   /** Runs the recording that was cancelled in the last minute through the pipeline. False when there is none. */
   undoCancel(): boolean;
+  /** Runs a take found on disk after the app stopped mid-recording through the pipeline. There is no window to paste into, so the text is copied and kept in the history as recovered. */
+  restore(clip: Clip): void;
   /** Starts a recording whose text goes to the caller instead of a window. Busy when a recording or a dictation is already running. */
   capture(opts?: { raw?: boolean }): CaptureHandle;
   /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */

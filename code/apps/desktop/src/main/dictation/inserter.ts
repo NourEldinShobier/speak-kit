@@ -1,4 +1,5 @@
 import { profileFor } from "./app-profile";
+import type { ProgramVersions } from "./program-version";
 import { createRestoreGuard, type ClipboardPort, type RestoreGuard } from "./restore-guard";
 import type { AppOverride, CopyReason, ForegroundInfo, InputPort, InsertOptions, InsertResult, PasteKey, PasteProfile } from "./types";
 
@@ -10,6 +11,10 @@ interface Deps {
   sleep?: ((ms: number) => Promise<void>) | undefined;
   /** False on a platform without key injection: every insert then only copies. */
   supported?: boolean | undefined;
+  /** Looks up the version of the browser in front, for the rule about Chromium versions that ignore a paste. */
+  versions?: Pick<ProgramVersions, "lookup"> | undefined;
+  /** True while keys are being typed, false when that ends: the cancel key is only taken from the program in front for that time. */
+  onTyping?: ((on: boolean) => void) | undefined;
 }
 
 /** How long to wait for the user to let go of Shift, Alt and Win before giving up and copying instead: Ctrl+V with Shift held is a different shortcut. */
@@ -31,15 +36,20 @@ export class Inserter {
   readonly #overrides: () => readonly AppOverride[];
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #supported: boolean;
+  readonly #onTyping: (on: boolean) => void;
+  readonly #versions: Pick<ProgramVersions, "lookup"> | undefined;
   readonly #guard: RestoreGuard;
   #chain: Promise<unknown> = Promise.resolve();
+  #stopTyping = false;
 
-  constructor({ input, clip, overrides, supported = true, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
+  constructor({ input, clip, overrides, supported = true, onTyping, versions, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: Deps) {
     this.#input = input;
     this.#clip = clip;
     this.#overrides = typeof overrides === "function" ? overrides : () => overrides ?? [];
     this.#sleep = sleep;
     this.#supported = supported;
+    this.#onTyping = onTyping ?? (() => undefined);
+    this.#versions = versions;
     this.#guard = createRestoreGuard(clip);
   }
 
@@ -53,6 +63,11 @@ export class Inserter {
     return result;
   }
 
+  /** Ends typing that is in progress after the piece being sent; the whole text then stays on the clipboard. Does nothing when nothing is being typed. */
+  cancelTyping(): void {
+    this.#stopTyping = true;
+  }
+
   /** Resolves once the old clipboard is back (or will never be restored). */
   settled(): Promise<void> {
     return this.#guard.settled();
@@ -63,8 +78,11 @@ export class Inserter {
   }
 
   async #run(text: string, opts: InsertOptions): Promise<InsertResult> {
+    this.#stopTyping = false;
     if (!this.#supported) return this.#copyOnly(text, "unsupported-platform");
-    const fg = this.#input.foreground();
+    const seen = this.#input.foreground();
+    const version = await this.#versions?.lookup(seen);
+    const fg = seen && version ? { ...seen, version } : seen;
     if (opts.mode === "copy" || profileFor(fg, this.#overrides()).shortcut === "copy") return this.#copyOnly(text, "copy-only");
     const blocked = this.#veto(fg, opts.target);
     if (blocked === "password-field") return { status: "refused", reason: blocked };
@@ -89,12 +107,25 @@ export class Inserter {
     if (!typing && !(await this.#stage(text))) return clipboardFailed;
     if (profile.preDelayMs) await this.#sleep(profile.preDelayMs);
     if (this.#input.foreground()?.hwnd !== fg.hwnd) return this.#keepCopy(text, typing, "foreground-changed");
-    const accepted = typing ? this.#input.type(text) : this.#input.pressPaste(pasteKey(profile.shortcut));
-    if (!accepted) return this.#keepCopy(text, typing, "keys-rejected");
-    if (typing) return { status: "typed" };
+    if (typing) return this.#typeIn(text);
+    if (!this.#input.pressPaste(pasteKey(profile.shortcut))) return this.#keepCopy(text, false, "keys-rejected");
     if (opts.mode === "keep") this.#guard.keep();
     else this.#guard.restoreAfter(profile.restoreDelayMs);
     return { status: "pasted" };
+  }
+
+  /** Types the text; when it is stopped or refused part way, the whole text is left on the clipboard. */
+  async #typeIn(text: string): Promise<InsertResult> {
+    this.#onTyping(true);
+    let how: Awaited<ReturnType<InputPort["type"]>>;
+    try {
+      how = await this.#input.type(text, () => this.#stopTyping);
+    } finally {
+      this.#onTyping(false);
+    }
+    this.#stopTyping = false;
+    if (how === "done") return { status: "typed" };
+    return this.#keepCopy(text, true, how === "stopped" ? "typing-stopped" : "keys-rejected");
   }
 
   async #stage(text: string): Promise<boolean> {

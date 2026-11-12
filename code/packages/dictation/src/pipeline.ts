@@ -5,6 +5,7 @@ import { applyMode, resolveMode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
+import { spaceBefore } from "./spacing";
 import { stripTailCredit } from "./tail-filter";
 import { buildPrompt, soundsLikeRules } from "./vocabulary";
 import type { Settings } from "./settings";
@@ -17,6 +18,8 @@ export interface Job {
   target: Promise<Target | undefined>;
   /** Dictated without text clean-up or replacements. */
   raw?: boolean;
+  /** A take found on disk after the app stopped in the middle of it; there is no window to paste into. */
+  restored?: boolean;
   /** The text goes here and not into a window; it is saved in the history as printed. */
   print?: (result: CaptureResult) => void;
 }
@@ -35,6 +38,8 @@ type Heard = Extract<TranscribeResult, { ok: true }>;
 
 /** Longest an optional step (a window read, the history write, bringing a window back) may hold the text up before it is passed on without it. */
 export const STAGE_MS = 2000;
+/** Reading the character before the caret is a nicety: when it takes longer the text goes in unchanged. */
+const CARET_MS = 700;
 
 /**
  * Runs one optional stage with a deadline. When it fails or runs out of time the caller gets `fallback` (the input it already had) and one log line
@@ -125,7 +130,8 @@ async function windows(ctx: Context, job: Job, settings: Settings): Promise<{ ta
   return { target, current: back ? await windowNow(ctx) : current, lost: !back };
 }
 
-function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | undefined {
+function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | "restored" | undefined {
+  if (job.restored) return "restored";
   if (clip.interrupted) return "interrupted";
   return job.raw ? "raw" : undefined;
 }
@@ -164,9 +170,16 @@ async function insert(ctx: Context, job: Job, said: Said & { settings: Settings;
     return { error };
   };
   if (lost) return failed("focus-failed");
-  const done = await ctx.deps.inserter.insert({ text, plan });
+  const done = await ctx.deps.inserter.insert({ text: await spaced(ctx, text, plan), plan });
   if (!done.ok) return failed("insert-failed");
   return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
+}
+
+/** The text with a space in front when smart spacing is on and the character before the caret asks for one; the history keeps the text without it. */
+async function spaced(ctx: Context, text: string, plan: ReturnType<typeof planPaste>): Promise<string> {
+  const read = ctx.deps.inserter.caret;
+  if (!ctx.settings.smartSpacing || !read || (plan.method !== "paste" && plan.method !== "type")) return text;
+  return spaceBefore(text, await within(ctx, { name: "caret", ms: CARET_MS, fallback: undefined }, () => read.call(ctx.deps.inserter)));
 }
 
 async function printed(ctx: Context, job: Job, said: Said): Promise<undefined> {

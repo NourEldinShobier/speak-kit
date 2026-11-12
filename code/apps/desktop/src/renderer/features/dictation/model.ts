@@ -110,8 +110,18 @@ export const rowApp = (item: Pick<HistoryItem, "app" | "appName">): string => it
 export function rowTags(item: Pick<HistoryItem, "kind" | "outcome">): string[] {
   const tags: string[] = [];
   if (item.kind === "interrupted") tags.push("Cut short");
+  if (item.kind === "restored") tags.push("Recovered");
   if (item.outcome === "copied") tags.push("Copied only");
   if (item.outcome === "failed") tags.push("Not inserted");
+  return tags;
+}
+
+/** How long the entry took to transcribe and how much silence was cut, as short notes; none for an entry from before they were stored. */
+export function timingTags(item: Pick<HistoryItem, "timings">): string[] {
+  const t = item.timings;
+  const tags: string[] = [];
+  if (t?.transcribeMs !== undefined) tags.push(`Transcribed in ${t.transcribeMs < 1000 ? `${Math.round(t.transcribeMs)} ms` : `${(t.transcribeMs / 1000).toFixed(1)} s`}`);
+  if (t?.pausesDroppedMs) tags.push(`${(t.pausesDroppedMs / 1000).toFixed(1)} s of silence skipped`);
   return tags;
 }
 

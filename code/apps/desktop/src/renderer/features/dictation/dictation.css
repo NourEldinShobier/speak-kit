@@ -735,6 +735,31 @@
   color: var(--text-secondary);
 }
 
+/* The state of the shortcut: a pill with a ring, the text says the state so colour is never the only signal. */
+.dict-status {
+  display: inline-flex;
+  align-items: center;
+  block-size: 36px;
+  padding-inline: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-label-on-white);
+  background: var(--surface-card);
+  white-space: nowrap;
+}
+.dict-status[data-tone="problem"] {
+  color: var(--destructive);
+}
+.dict-status[data-tone="off"] {
+  color: var(--text-secondary);
+}
+.dict-status__acts {
+  display: inline-flex;
+  gap: 8px;
+}
+
 /* The 960 px window: totals in two rows, side by side text stacks, header buttons wrap. */
 @media (max-width: 1000px) {
   .dict-stats__grid {

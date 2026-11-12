@@ -7,6 +7,7 @@ import { firstClash, type Shortcuts } from "../../shared/dictation/conflicts";
 import { hotkeySlots, type AppRule, type DictationConfig, type DictationPatch } from "../../shared/dictation/settings";
 import type { AppOverride } from "./types";
 import type { ModelManager } from "./models";
+import { failureLine } from "./hud-view";
 import type { HotkeyLayout } from "./hotkey-source";
 
 /** The speech worker is the built file (packaged) or the source file in the engine package (development), like the voice worker. */
@@ -51,6 +52,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   modes: c.modes,
   rewrite: c.rewrite,
   keepRecordings: c.keepRecordings,
+  smartSpacing: c.smartSpacing,
 });
 
 /** What the key hook listens for. Sharing the keys with other programs is only offered in Hold mode, because a hands-free mode cannot keep the other program's key held. */
@@ -60,6 +62,7 @@ export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
+  transform: c.transformHotkey,
   cancelKey: c.cancelKey,
   share: c.shareHotkey && c.mode === "hold-only",
 });
@@ -109,6 +112,9 @@ interface StatusParts {
   mic: MicStatus;
   devices: MicDeviceView[];
   notes: HistoryNotes;
+  last?: { code: string; at: number; owner?: string } | undefined;
+  /** A failed take is kept, so Try again can run it again. */
+  canRetry?: boolean;
 }
 
 /** What the History page is told beyond the entries: the file notices, recordings, the rewrite key and the word-list note. */
@@ -149,6 +155,8 @@ export const dictationStatus = ({
   mic,
   devices,
   notes,
+  last,
+  canRetry,
 }: StatusParts): DictationStatus => ({
   supported,
   enabled: config.enabled,
@@ -171,6 +179,7 @@ export const dictationStatus = ({
   ...(state.status === "error" && state.owner && { errorOwner: state.owner }),
   mic,
   devices,
+  ...(last && { lastFailure: { code: last.code, ...failureLine(last.code, canRetry === true, last.owner), at: last.at } }),
   ...historyNotes(notes),
 });
 
@@ -183,7 +192,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", transformHotkey: "transform", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {

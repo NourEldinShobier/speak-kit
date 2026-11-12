@@ -11,7 +11,7 @@ function fakeWindow() {
     destroyed: false,
     log,
     push: (s: HudState) => void log.push(`push ${JSON.stringify(s)}`),
-    showInactive: () => void log.push("show"),
+    showInactive: (place) => void log.push(place === "top" ? "show top" : "show"),
     hide: () => void log.push("hide"),
     destroy() {
       log.push("destroy");
@@ -40,6 +40,23 @@ const flush = () => vi.advanceTimersByTimeAsync(0);
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
+
+describe("hud window place", () => {
+  it("shows the window where the setting says at the time of the show", async () => {
+    let place: "top" | "bottom" = "top";
+    const windows: ReturnType<typeof fakeWindow>[] = [];
+    const hud = createHud({ open: () => (windows[windows.length] = fakeWindow()), place: () => place });
+    hud.show({ kind: "recording", level: 0 });
+    windows[0]!.load();
+    await flush();
+    expect(windows[0]!.log).toContain("show top");
+    hud.hide();
+    place = "bottom";
+    hud.show({ kind: "recording", level: 0 });
+    await flush();
+    expect(windows[0]!.log.filter((l) => l.startsWith("show"))).toEqual(["show top", "show"]);
+  });
+});
 
 describe("hud window lifecycle", () => {
   it("creates nothing until the first show", () => {

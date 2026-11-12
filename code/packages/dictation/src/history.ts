@@ -28,7 +28,7 @@ export interface HistoryEntry {
   language?: string;
   model?: string;
   /** Absent for a normal dictation. "raw": dictated with clean-up off. "printed": handed to a command and never pasted. "interrupted": the recording was cut short. */
-  kind?: "raw" | "printed" | "interrupted";
+  kind?: "raw" | "printed" | "interrupted" | "restored";
   /** Name shown for the program, from its file description; the executable name stands in when there is none. */
   displayName?: string;
   /** Only when a rewrite ran: its name and, if it failed, why (the plain text was inserted instead). */

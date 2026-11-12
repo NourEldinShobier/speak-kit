@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Toggle } from "@speakkit/ui";
+import { Button, Modal, Select, Toggle } from "@speakkit/ui";
 import type { HistoryStats } from "@speakkit/dictation";
 import { dictation } from "./api";
+import { AUDIO_CAPS_MB } from "../../../shared/dictation/settings";
 import { appName, statsRows } from "./model";
 
 export function ClearDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose: () => void; onConfirm: () => void }) {
@@ -79,11 +80,17 @@ export function DeleteSelectedDialog({ count, onClose, onConfirm }: { count: num
   );
 }
 
-export function RecordingsDialog({ open, on, onClose }: { open: boolean; on: boolean; onClose: () => void }) {
+const CAP_OPTIONS = AUDIO_CAPS_MB.map((mb) => ({ value: String(mb), label: mb >= 1024 ? `${mb / 1024} GB` : `${mb} MB` }));
+
+export function RecordingsDialog({ open, on, capMb, onClose }: { open: boolean; on: boolean; capMb: number; onClose: () => void }) {
   const [value, setValue] = useState(on);
+  const [cap, setCap] = useState(capMb);
   useEffect(() => {
-    if (open) setValue(on);
-  }, [open, on]);
+    if (open) {
+      setValue(on);
+      setCap(capMb);
+    }
+  }, [open, on, capMb]);
   return (
     <Modal
       open={open}
@@ -96,7 +103,7 @@ export function RecordingsDialog({ open, on, onClose }: { open: boolean; on: boo
           <Button
             variant="primary"
             onClick={() => {
-              void dictation.patchSettings({ keepRecordings: value });
+              void dictation.patchSettings({ keepRecordings: value, audioCapMb: cap as (typeof AUDIO_CAPS_MB)[number] });
               onClose();
             }}
           >
@@ -110,9 +117,13 @@ export function RecordingsDialog({ open, on, onClose }: { open: boolean; on: boo
           <span>Keep the audio of each dictation</span>
           <Toggle aria-label="Keep the audio of each dictation" checked={value} onChange={setValue} />
         </label>
+        <label className="dict-keep__row">
+          <span>Most space recordings may use</span>
+          <Select label="Most space recordings may use" value={String(cap)} onChange={(v) => setCap(Number(v))} options={CAP_OPTIONS} />
+        </label>
         <ul className="dict-keep__list">
           <li>Off until you turn it on.</li>
-          <li>Recordings use up to 512 MB. The oldest are removed first, and their entries keep the text.</li>
+          <li>The oldest recordings are removed first when they pass the size below, and their entries keep the text.</li>
           <li>A recording is deleted with its entry.</li>
           <li>Nothing leaves this computer.</li>
         </ul>
@@ -130,6 +141,7 @@ export function HistoryDialogs({
   total,
   picked,
   keepRecordings,
+  audioCapMb,
   onChanged,
 }: {
   dialog: HistoryDialog;
@@ -137,12 +149,13 @@ export function HistoryDialogs({
   total: number;
   picked: ReadonlySet<string> | null;
   keepRecordings: boolean;
+  audioCapMb: number;
   onChanged: (cleared: boolean) => void;
 }) {
   return (
     <>
       <StatsDialog open={dialog === "stats"} onClose={close} />
-      <RecordingsDialog open={dialog === "recordings"} on={keepRecordings} onClose={close} />
+      <RecordingsDialog open={dialog === "recordings"} on={keepRecordings} capMb={audioCapMb} onClose={close} />
       <DeleteSelectedDialog
         count={dialog === "delete" ? (picked?.size ?? 0) : 0}
         onClose={close}

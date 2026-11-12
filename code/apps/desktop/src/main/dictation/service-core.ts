@@ -6,8 +6,13 @@ import type { Ctx } from "../context";
 import type { DictationService, DictationServiceOptions } from "./service";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { DictationOs, InsertResult } from "./index";
+import path from "node:path";
+import { createFixtureRecorder } from "./fixture-recorder";
 import { createInserterPort, ReplayRecorder } from "./ports";
 import { createRecorderHost, type RecorderHost } from "./recorder";
+import { createSpool, type Spool } from "./spool";
+import { createSpooledRecorder, type SpooledRecorder } from "./spooled-recorder";
+import { RECORDER_RATE } from "../../shared/dictation/contract";
 import { openRecorderWindow, recorderHandle } from "./recorder-window";
 import { clock, coreSettings, keepOpenMs } from "./service-support";
 import { createOpenAiRewriter } from "./openai-rewriter";
@@ -33,11 +38,13 @@ export interface CoreHost {
 }
 
 /** The microphone window and the dictation core over it, with the speech engine, the inserter and the history file. */
-export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictation; audio: AudioStore } {
+export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictation; audio: AudioStore; spool: Spool; spooled: SpooledRecorder } {
   const { ctx, o, svc } = h;
   const cfg = () => ctx.config.dictation;
+  let spooled: SpooledRecorder | undefined;
   const recorder = createRecorderHost({
     ipcMain,
+    onChunk: (pcm) => spooled?.chunk(pcm),
     onLevel: (n) => {
       svc.presenter.setLevel(n);
       if (svc.mic.meter) o.parent()?.webContents.send(MIC_LEVEL_EVENT, n);
@@ -46,9 +53,13 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     onEvent: h.onMicEvent,
     open: () => recorderHandle(openRecorderWindow({ page: h.page("recorder.html"), micAllowed: () => !svc.micDenied })),
   });
-  h.failure.replay = new ReplayRecorder(recorder);
+  const spool = createSpool({ dir: path.join(o.dataDir, "dictation-spool") });
+  const kept = (spooled = createSpooledRecorder(recorder, spool, { rate: RECORDER_RATE, enabled: () => cfg().retention !== "off" }));
+  // Test builds only: SPEAKKIT_AUDIO_FIXTURE names a WAV file that stands in for the microphone.
+  const fixture = __TEST_CODE__ ? process.env["SPEAKKIT_AUDIO_FIXTURE"] : undefined;
+  h.failure.replay = new ReplayRecorder(fixture ? createFixtureRecorder(kept, fixture) : kept);
   let core: Dictation | undefined;
-  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, (gone) => void core?.history.dropAudio(gone));
+  const files = historyFiles(o.dataDir, o.trash ?? trashViaShell, { onEvicted: (gone) => void core?.history.dropAudio(gone), limitBytes: () => cfg().audioCapMb * 1024 * 1024 });
   core = createDictation({
     clock,
     recorder: h.failure.replay,
@@ -63,6 +74,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
       onPromptDropped: h.onPromptDropped,
     }),
     keepClip: (clip) => (h.failure.clip = clip),
+    settled: (clip, done) => kept.settled(clip, done),
     // Only the stage name and a reason: spoken text never reaches a log.
     log: (stage, why) => ctx.log.warn(`dictation stage ${stage}`, why),
     inserter: createInserterPort(h.os, h.inserted, o.pageSite),
@@ -73,5 +85,5 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     settings: coreSettings(cfg()),
     ...(o.micOwner && { micOwner: o.micOwner }),
   });
-  return { recorder, core, audio: files.audio };
+  return { recorder, core, audio: files.audio, spool, spooled: kept };
 }
