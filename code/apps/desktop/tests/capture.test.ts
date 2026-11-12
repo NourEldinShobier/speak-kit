@@ -398,3 +398,30 @@ describe("screen recording key", () => {
     expect(await phase(l)).toBe("idle");
   });
 });
+
+describe("input log", () => {
+  const withPen = async (l: Launched) => {
+    await open(l);
+    await hook(l, "start");
+    await until(async () => (await phase(l)) === "recording");
+    await hook(l, "capsule", "pen");
+    await hook(l, "capsule", "pen");
+    await hook(l, "stop");
+    await until(async () => (await phase(l)) === "idle" && (await hook<{ items: unknown[] }>(l, "state")).items.length > 0);
+    return (await hook<{ items: { dir: string }[] }>(l, "state")).items[0]!.dir;
+  };
+
+  it("keeps the pen events with their times next to the capture, and nothing else", async () => {
+    const l = await start({ config: ON });
+    const dir = await withPen(l);
+    const events = JSON.parse(readFileSync(path.join(l.userData, "captures", dir, "events.json"), "utf8")) as { atMs: number; kind: string }[];
+    expect(events.map((e) => e.kind)).toEqual(["pen-on", "pen-off"]);
+    expect(events.every((e) => Object.keys(e).sort().join() === "atMs,kind" && e.atMs >= 0)).toBe(true);
+  });
+
+  it("writes no file when the input log is off", async () => {
+    const l = await start({ config: { ...ON, capture: { ...ON.capture, inputLog: "off" } } });
+    const dir = await withPen(l);
+    expect(existsSync(path.join(l.userData, "captures", dir, "events.json"))).toBe(false);
+  });
+});
