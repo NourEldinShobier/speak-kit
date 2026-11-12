@@ -232,6 +232,16 @@ export class CaptureService {
     return this.history.reveal(id);
   }
 
+  source(id: string, file: string) {
+    return this.history.source(id, file);
+  }
+
+  async saveEdit(id: string, file: string, png: Uint8Array): Promise<boolean> {
+    const ok = await this.history.saveEdit(id, file, png);
+    if (ok) void this.#refresh();
+    return ok;
+  }
+
   async remove(id: string): Promise<void> {
     await this.history.remove(id);
     void this.#refresh();

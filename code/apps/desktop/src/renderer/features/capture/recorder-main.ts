@@ -1,5 +1,5 @@
 import { digitalSilence } from "../../../shared/capture/audio";
-import type { RecorderCommand, RecorderData, RecorderResult } from "../../../shared/capture/contract";
+import type { RecorderCommand, RecorderPayload, RecorderResult } from "../../../shared/capture/contract";
 import { MicTrack } from "./mic-track";
 import { Run } from "./recorder-run";
 
@@ -12,8 +12,7 @@ const bridge = window.speakkitCapture.recorder;
 const FIRST_FRAME_MS = 4000;
 /** The generation of the recording in progress; the main process refuses data that carries another one. */
 let gen = 0;
-const send = (d: DistributiveOmit<RecorderData, "gen">) => bridge.data({ ...d, gen } as RecorderData);
-type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
+const send = (d: RecorderPayload) => bridge.data({ ...d, gen });
 
 const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
 let run: Run | undefined;

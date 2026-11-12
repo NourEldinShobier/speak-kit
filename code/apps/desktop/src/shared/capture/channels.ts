@@ -16,6 +16,8 @@ export const CAPTURE_METHODS = [
   "dismissNotice",
   "dismissRecovery",
   "chooseFolder",
+  "source",
+  "saveEdit",
 ] as const;
 export type CaptureMethod = (typeof CAPTURE_METHODS)[number];
 export const captureChannel = (m: string) => `speakkit:capture:${m}`;
