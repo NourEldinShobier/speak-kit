@@ -76,7 +76,7 @@ describe("speech models view", () => {
     const cpu = buildView(input({ hardware: CPU_ONLY }));
     expect(cpu.recommendation).toEqual({ model: PARAKEET, language: "en" });
     expect(cpu.table.find((r) => r.language === "de")!.recommended).toBe(PARAKEET);
-    expect(cpu.table.find((r) => r.language === "ar")!.recommended).toBe(TURBO);
+    expect(cpu.table.find((r) => r.language === "ar")!.recommended).toBe("small-q5_1");
     const mac = buildView(input({ hardware: { platform: "darwin", arch: "arm64", cores: 10, memoryGb: 16 } }));
     expect(mac.table.find((r) => r.language === "en")!.recommended).toBe(LARGE);
   });
@@ -116,16 +116,22 @@ describe("speech models view", () => {
       language: "fr",
       recommended: TURBO,
       alsoWorks: ["tiny-q5_1", "tiny", "base-q5_1", "base", "small-q5_1", "small", "medium-q5_0", "medium", "large-v3-q5_0", "large-v3", "large-v3-turbo-q8_0", "large-v3-turbo"],
-      cpuOnly: TURBO,
-      cpuSeconds: 89.6,
+      cpuOnly: "base-q5_1",
+      cpuSeconds: 4.5,
     });
+  });
+
+  it("recommends on a computer without a card the fastest usable model for a language no model is quick in, with its speed", () => {
+    const v = buildView(input({ hardware: CPU_ONLY, language: "ar" }));
+    expect(v.table.find((r) => r.language === "ar")).toMatchObject({ recommended: "small-q5_1", cpuOnly: "small-q5_1", cpuSeconds: 16.8 });
+    expect(v.models.find((m) => m.id === "small-q5_1")).toMatchObject({ speedSeconds: 16.8 });
   });
 
   it("gives the measured speed for the kind of computer: both on one with a card, the CPU's alone on one without, and says what the figures rest on", () => {
     const turbo = (v: ReturnType<typeof buildView>) => v.models.find((m) => m.id === TURBO)!;
-    expect(turbo(buildView(input({ hardware: { ...CPU_ONLY, gpu: RTX } })))).toMatchObject({ speedSeconds: 0.2, speedOnCpuSeconds: 89.6 });
+    expect(turbo(buildView(input({ hardware: { ...CPU_ONLY, gpu: RTX } })))).toMatchObject({ speedSeconds: 0.2, speedOnCpuSeconds: 88 });
     const cpu = turbo(buildView(input({ hardware: CPU_ONLY })));
-    expect(cpu.speedSeconds).toBe(89.6);
+    expect(cpu.speedSeconds).toBe(88);
     expect(cpu.speedOnCpuSeconds).toBeUndefined();
     expect(turbo(buildView(input())).speedSeconds).toBe(0.2);
     expect(buildView(input()).sample).toEqual({

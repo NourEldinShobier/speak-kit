@@ -100,6 +100,19 @@ describe("recommendedPreference", () => {
     const models = [model("a", 100, ["auto", "en", "de"], { wrong: { en: { wrong: 1, of: 100 }, de: { wrong: 2, of: 100 } }, ms: quick })];
     expect(recommendedPreference(models, "gpu")).toEqual({ auto: "a", en: "a", de: "a" });
   });
+  it("falls back, for a language no model is quick in, to the fastest one accurate enough to use", () => {
+    const de = (wrong: number): Measured["wrong"] => ({ de: { wrong, of: 100 } });
+    const models = [
+      model("quick-english", 50, ["en"], { wrong: en(5), ms: quick }),
+      model("fast-but-wrong", 30, ["de"], { wrong: de(40), ms: ms(300, 400, 2000, 2000) }),
+      model("slower", 300, ["de"], { wrong: de(3), ms: ms(300, 400, 30000, 30000) }),
+      model("slowest", 900, ["de"], { wrong: de(1), ms: ms(300, 400, 90000, 90000) }),
+    ];
+    expect(recommendedPreference(models, "cpu")).toEqual({ en: "quick-english", de: "slower" });
+  });
+  it("lists no language when every model that handles it is too inaccurate", () => {
+    expect(recommendedPreference([model("bad", 1, ["en"], { wrong: en(60), ms: slowCpu })], "cpu")).toEqual({});
+  });
 });
 
 describe("cpuFloorModel", () => {

@@ -68,11 +68,21 @@ export function recommendFor(models: readonly SttModel[], language: SttLanguage,
   return scored.filter((x) => x.rate <= limit).sort((a, b) => a.m.bytes - b.m.bytes)[0]!.m;
 }
 
-/** Language code to model id for every language some quick model handles; the input of the language table. */
+/** The model for a language when none is quick on this kind of computer: the fastest one that is still accurate enough to use, so the person gets a model that works and the screens show how long it takes. */
+function fastestUsable(models: readonly SttModel[], language: SttLanguage, device: Device): SttModel | undefined {
+  const usable = models.flatMap((m) => {
+    const seconds = tenSecondSeconds(m, device);
+    const sc = score(m, language);
+    return m.origin === "builtin" && m.languages.includes(language) && (language !== "auto" || m.detects) && seconds !== undefined && sc && sc.rate <= USABLE_MAX_WER ? [{ m, seconds }] : [];
+  });
+  return usable.sort((a, b) => a.seconds - b.seconds)[0]?.m;
+}
+
+/** Language code to model id for every language some model can handle: the quick recommendation, else the fastest usable model. The input of the language table. */
 export function recommendedPreference(models: readonly SttModel[], device: Device): Record<string, string> {
   const out: Record<string, string> = {};
   for (const language of STT_LANGUAGE_CODES) {
-    const pick = recommendFor(models, language, device);
+    const pick = recommendFor(models, language, device) ?? fastestUsable(models, language, device);
     if (pick) out[language] = pick.id;
   }
   return out;

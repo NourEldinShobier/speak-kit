@@ -41,7 +41,7 @@ export function DiskSpace({ v, run, onDelete }: { v: SpeechModelsView; run: Run;
   );
 }
 
-/** "Parakeet v3, under a second" / "Whisper Large v3 Turbo, about 90 seconds": what runs without a card, and what that costs for ten seconds of speech. */
+/** "Parakeet v3, under a second" / "Whisper Large v3 Turbo, about 88 seconds": what runs without a card, and what that costs for ten seconds of speech. */
 function cpuText(v: SpeechModelsView, r: SpeechModelsView["table"][number]): string {
   if (!r.cpuOnly) return "Not measured";
   const name = v.names[r.cpuOnly] ?? r.cpuOnly;

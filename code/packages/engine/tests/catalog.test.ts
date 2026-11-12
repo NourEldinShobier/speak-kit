@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { DEFAULT_STT_MODEL, FEATURED_STT_MODELS, MEASUREMENT_SAMPLE, PREFERRED_MODEL, PREFERRED_MODEL_CPU, STT_MODELS, cpuFloorModel, wrongWords } from "../src";
+import { DEFAULT_STT_MODEL, FEATURED_STT_MODELS, MEASUREMENT_SAMPLE, PREFERRED_MODEL, PREFERRED_MODEL_CPU, STT_MODELS, cpuFloorModel, tenSecondSeconds, wrongWords } from "../src";
 
 describe("catalog entries", () => {
   it("has unique ids and files, a file name that matches its address, and a full SHA-256", () => {
@@ -68,9 +68,41 @@ describe("recommendations derived from the measurements", () => {
     });
   });
 
-  it("recommends, without one, only models quick on the CPU: Parakeet for English and German, nothing for the rest", () => {
-    expect(PREFERRED_MODEL_CPU).toEqual({ en: "parakeet-tdt-0.6b-v3-q4_0", de: "parakeet-tdt-0.6b-v3-q4_0" });
+  it("recommends, without one, Parakeet for English and German and the fastest usable model for each other language", () => {
+    expect(PREFERRED_MODEL_CPU).toMatchObject({ en: "parakeet-tdt-0.6b-v3-q4_0", de: "parakeet-tdt-0.6b-v3-q4_0", ar: "small-q5_1" });
+    expect(PREFERRED_MODEL_CPU.fr).toBe("base-q5_1");
     expect(cpuFloorModel(STT_MODELS)?.id).toBe("parakeet-tdt-0.6b-v3-q4_0");
+  });
+
+  it("never recommends the 90-second Turbo file for a language on the CPU", () => {
+    for (const id of Object.values(PREFERRED_MODEL_CPU))
+      expect(
+        tenSecondSeconds(
+          STT_MODELS.find((m) => m.id === id)!,
+          "cpu",
+        ),
+        id,
+      ).toBeLessThan(20);
+  });
+
+  it("credits the author and the conversion of Parakeet Ultra, which a third party converted", () => {
+    const ultra = STT_MODELS.find((m) => m.id === "parakeet-ultra-q8_0")!;
+    expect(ultra.description).toContain("Moondream");
+    expect(ultra.description).toContain("CC BY 4.0");
+    expect(ultra.description).toContain("converted");
+  });
+
+  it("describes models in line with their measured figures", () => {
+    const wrong = (id: string) =>
+      wrongWords(
+        STT_MODELS.find((m) => m.id === id)!,
+        "en",
+      )!.wrong;
+    expect(wrong("large-v3-q5_0")).toBeLessThan(wrong("large-v3-turbo-q5_0"));
+    expect(STT_MODELS.find((m) => m.id === "large-v3-q5_0")!.description).not.toContain("same accuracy");
+    const base = STT_MODELS.find((m) => m.id === "base-q5_1")!;
+    expect(wrongWords(base, "de")!.wrong / 90).toBeLessThan(wrongWords(base, "en")!.wrong / 79);
+    expect(base.description).not.toContain("German and Arabic");
   });
 
   it("recommends only models that handle the language", () => {
@@ -80,7 +112,7 @@ describe("recommendations derived from the measurements", () => {
   });
 
   it("lists the default, the recommended models and the floor model as the short list", () => {
-    expect([...FEATURED_STT_MODELS].sort()).toEqual(["large-v3-q5_0", "large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0"]);
+    expect([...FEATURED_STT_MODELS].sort()).toEqual(["base-q5_1", "large-v3-q5_0", "large-v3-turbo-q5_0", "parakeet-tdt-0.6b-v3-q4_0", "small-q5_1"]);
     expect(FEATURED_STT_MODELS.has(DEFAULT_STT_MODEL)).toBe(true);
   });
 });
