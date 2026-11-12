@@ -23,6 +23,8 @@ import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { DictationService, type DictationServiceOptions } from "./dictation/service";
 import { setupTranscripts } from "./transcripts";
+import { setupMeetings } from "./meetings";
+import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
 
 interface DesktopOptions {
@@ -39,6 +41,8 @@ interface DesktopOptions {
   version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner">;
+  /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
+  voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
@@ -85,11 +89,13 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh() });
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  let meetings: ReturnType<typeof setupMeetings> | undefined;
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   registerDictationIpc(dictation, (c) => o.parent()?.webContents === c);
   watchPermissions(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
+  meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test });
 
   return {
@@ -125,8 +131,9 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
       void dictation.dispose();
       capture.dispose();
       void transcripts.dispose();
+      void meetings?.dispose();
       return controlDown;
     },
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

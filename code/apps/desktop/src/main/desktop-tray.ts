@@ -7,6 +7,7 @@ import { showTrayIcon } from "../shared/settings/behaviour";
 import type { createUpdates } from "./updates-service";
 import type { DictationService } from "./dictation/service";
 import type { TranscriptsFeature } from "./transcripts";
+import type { MeetingsFeature } from "./meetings";
 
 interface TrayParts {
   reading: ReturnType<typeof createReading>;
@@ -14,12 +15,14 @@ interface TrayParts {
   updates: ReturnType<typeof createUpdates>;
   dictation: DictationService;
   transcripts: TranscriptsFeature;
+  /** Built after the tray (it reaches the tray only through a callback), so it is read when the menu is built. */
+  meetings(): MeetingsFeature | undefined;
   requestQuit(): void;
   retryEngine(): Promise<unknown>;
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, requestQuit, retryEngine }: TrayParts) {
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, requestQuit, retryEngine }: TrayParts) {
   const context = (): TrayContext => ({
     health: ctx.state.health,
     serverError: ctx.state.serverError,
@@ -30,6 +33,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     recorder: { phase: transcripts.phase() },
+    ...(ctx.config.meetings.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(ctx.config.meetings.shortcut && { shortcut: ctx.config.meetings.shortcut }) } }),
     ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
   });
   const openDictation = (page: "dictation" | "history") => () => {
@@ -42,6 +46,8 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     "pause-shortcuts": () => dictation.controls.setPaused(!dictation.controls.paused),
     "record-start": () => void transcripts.startRecording().then(() => ctx.showWindow()),
     "record-stop": () => void transcripts.stopRecording(),
+    "meeting-start": () => void meetings()?.start(),
+    "meeting-stop": () => void meetings()?.stop(),
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
     open: ctx.showWindow,

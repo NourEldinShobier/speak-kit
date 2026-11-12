@@ -228,6 +228,7 @@ function startDesktop() {
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
       dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner },
+      voiceChat,
     },
   );
 }

@@ -21,6 +21,8 @@ export interface TrayContext {
   dictation?: { enabled: boolean; hotkey: string; /** Pause all shortcuts is on. */ paused?: boolean; /** Key chord of Paste last, shown beside the row. */ pasteLast?: string };
   /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
   recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
+  /** Meeting recording; absent while the Meetings feature is off. `shortcut` is the optional start and stop shortcut. */
+  meetings?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing"; shortcut?: string };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -51,6 +53,8 @@ export type TrayAction =
   | "dictation-settings"
   | "record-start"
   | "record-stop"
+  | "meeting-start"
+  | "meeting-stop"
   | "open"
   | "pause"
   | "resume"
@@ -75,6 +79,16 @@ function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item:
   return item("record-start", WAITING[phase], { enabled: false });
 }
 
+const MEETING_WAITING = { starting: "Starting meeting recording...", saving: "Saving meeting...", transcribing: "Transcribing meeting..." } as const;
+
+/** One row that follows the meeting recording: starts one when ready, stops it while recording, and waits (disabled) while it is saved and transcribed. */
+function meetingRow(m: NonNullable<TrayContext["meetings"]>, item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
+  const hint = m.shortcut ? { hint: m.shortcut } : {};
+  if (m.phase === "ready") return item("meeting-start", "Record a meeting", hint);
+  if (m.phase === "recording") return item("meeting-stop", "Stop meeting recording", hint);
+  return item("meeting-start", MEETING_WAITING[m.phase], { enabled: false });
+}
+
 /** The short native menu (right click). One row changes with the engine and update state; reading rows appear while reading. */
 export function trayMenuModel(c: TrayContext): TrayItem[] {
   const engine = c.health?.engine.state;
@@ -93,6 +107,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
     rows.push(item("dictation-history", "Dictation history"), item("dictation-settings", "Dictation settings"));
   }
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
+  if (c.meetings) rows.push(meetingRow(c.meetings, item));
   if (reading) rows.push(item("pause", "Pause", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", "Resume", { hint: c.shortcuts["play-pause"] }), item("stop", "Stop", { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", "Load the voice engine now"));

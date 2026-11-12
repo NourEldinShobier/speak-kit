@@ -40,7 +40,8 @@ export {
   type VocabEntry,
 } from "./notes";
 export { CopyCursor, linesText } from "./cursor";
-export { MeetingSearch, highlightRanges } from "./search";
+export { MeetingSearch } from "./search";
+export { highlightRanges } from "./highlight";
 export { EventLog, type FinishedEvent, type Since } from "./events";
 export { createMeetings, temporaryTitle, type Detail, type Meetings, type MeetingsDeps, type Outcome, type Row } from "./meetings";
 export type { CallPolicy, CallSession, Failure, MicUser, OpenWindow, Probe, Provider } from "./types";

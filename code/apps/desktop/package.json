@@ -20,6 +20,7 @@
     "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
     "@speakkit/server": "workspace:*",
+    "@speakkit/meetings": "workspace:*",
     "@speakkit/transcripts": "workspace:*",
     "@speakkit/ui": "workspace:*",
     "electron-log": "catalog:",
