@@ -19,6 +19,7 @@ import {
   StoragePage,
   VoicePage,
 } from "./features/settings";
+import { MeetingsPage } from "./features/meetings";
 import { StubPage } from "./StubPage";
 import { registerCaptureExperiments } from "./features/capture";
 import "./settings.css";
@@ -34,7 +35,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   performance: MemoryPage,
   storage: StoragePage,
   privacy: PrivacyPage,
-  meetings: () => <StubPage setting="meetings" />,
+  meetings: MeetingsPage,
   automation: () => <StubPage setting="automation" />,
   experiments: ExperimentsPage,
   browser: BrowserPage,

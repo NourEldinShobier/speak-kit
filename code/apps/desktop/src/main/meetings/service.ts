@@ -48,6 +48,8 @@ export interface MeetingsPorts {
   changed(): void;
   /** Brings the app window to a meeting. */
   openMeeting(id: string): void;
+  /** Brings the app window to Settings > Meetings. */
+  openSettings(): void;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   newId?: () => string;
@@ -167,6 +169,7 @@ export function createMeetingsService(ctx: Ctx, p: MeetingsPorts): MeetingsServi
       show: (v) => capsule.show(v),
       now,
       open: p.openMeeting,
+      openSettings: p.openSettings,
       showFolder: (id) =>
         void core.get(id).then(async (d) => {
           const files = d?.files.length ? d.files : ((await core.writeFiles(id).then((r) => (r.ok ? r.paths : []))) ?? []);
@@ -187,7 +190,10 @@ export function createMeetingsService(ctx: Ctx, p: MeetingsPorts): MeetingsServi
   const settle = async () => {
     const { core, watch } = await ready;
     // A transcript that finished since the last look: the capsule says so.
-    for (const e of core.since(seen).events) watch.finished(e.meetingId, e.title);
+    for (const e of core.since(seen).events) {
+      const providerId = (await core.get(e.meetingId))?.providerId;
+      watch.finished(e.meetingId, e.title, providers().find((p) => p.id === providerId)?.mark ?? "Mt");
+    }
     seen = core.since(seen).latest;
   };
   const poll = async () => (await ready).watch.poll().then(settle);

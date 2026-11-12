@@ -88,7 +88,7 @@ export class Offers {
 /** What happens when the call ends while it is being recorded. */
 export type EndPlan = { kind: "countdown"; seconds: number } | { kind: "ask" } | { kind: "keep" };
 
-export const END_COUNTDOWN_SECONDS = 15;
+export const END_COUNTDOWN_SECONDS = 10;
 
 /** With "stop when the call ends" on, a countdown starts that the person can cancel; with it off, the person is asked; a recording started by hand for no call is left alone. */
 export function endPlan(o: { stopWhenEnds: boolean; forCall: boolean }): EndPlan {

@@ -6,3 +6,5 @@ export type { Detail, Outcome, Row } from "./api";
 export type { Line, MeetingEntry, MeetingStatus, NoteVersion, NotesState, Who } from "./store";
 export type { Since, FinishedEvent } from "./events";
 export type { Failure } from "./types";
+export { LINK_MESSAGES, parseLink, type LinkProblem } from "./providers";
+export { rankOutputs, type Output } from "./routing";

@@ -1,7 +1,7 @@
 import type { CapsuleView } from "../../shared/meetings/contract";
 import { displayAt, monitorKey, offsetOf, place, type DisplayInfo, type Saved } from "./placement";
 
-export const CAPSULE_SIZE = { width: 520, height: 132 } as const;
+export const CAPSULE_SIZE = { width: 520, height: 188 } as const;
 
 /** The window of the capsule as the host drives it. */
 export interface CapsuleWindow {

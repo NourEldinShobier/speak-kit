@@ -169,7 +169,7 @@ describe("offer", () => {
 
 describe("when the call ends", () => {
   it("counts down when stop-on-end is on, asks when it is off, and leaves a hand-started recording alone", () => {
-    expect(endPlan({ stopWhenEnds: true, forCall: true })).toEqual({ kind: "countdown", seconds: 15 });
+    expect(endPlan({ stopWhenEnds: true, forCall: true })).toEqual({ kind: "countdown", seconds: 10 });
     expect(endPlan({ stopWhenEnds: false, forCall: true })).toEqual({ kind: "ask" });
     expect(endPlan({ stopWhenEnds: true, forCall: false })).toEqual({ kind: "keep" });
   });

@@ -100,6 +100,10 @@ export function setupMeetings(ctx: Ctx, o: MeetingsOptions): MeetingsFeature {
       if (c && !c.isDestroyed()) c.send(MEETINGS_EVENT, p);
     },
     changed: o.onChange,
+    openSettings: () => {
+      ctx.showWindow();
+      ctx.sendUi({ type: "nav", page: "settings", sub: "meetings" });
+    },
     openMeeting: (id) => {
       ctx.showWindow();
       ctx.sendUi({ type: "open-meeting", id });

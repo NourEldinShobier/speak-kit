@@ -28,9 +28,9 @@ describe("settings navigation", () => {
   });
 
   it("shows a placeholder with an empty state for a page that is not built yet", () => {
-    const html = page("meetings");
+    const html = page("automation");
     expect(html).toContain("Coming soon");
-    expect(html).toContain("Record and transcribe meetings.");
+    expect(html).toContain("Let other tools control Speak Kit.");
   });
 });
 

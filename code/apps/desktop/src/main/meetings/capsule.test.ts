@@ -13,7 +13,7 @@ describe("placement", () => {
 
   it("uses the saved place on this monitor, kept fully on it", () => {
     expect(place(side, { [monitorKey(side)]: { x: 100, y: 200 } }, CAPSULE_SIZE)).toEqual({ x: 2020, y: 200, key: "2:1280x1000" });
-    expect(place(side, { [monitorKey(side)]: { x: 5000, y: 5000 } }, CAPSULE_SIZE)).toEqual({ x: 1920 + 1280 - 520, y: 1000 - 132, key: "2:1280x1000" });
+    expect(place(side, { [monitorKey(side)]: { x: 5000, y: 5000 } }, CAPSULE_SIZE)).toEqual({ x: 1920 + 1280 - 520, y: 1000 - 188, key: "2:1280x1000" });
     expect(place(side, { [monitorKey(side)]: { x: -50, y: -9 } }, CAPSULE_SIZE)).toMatchObject({ x: 1920, y: 0 });
   });
 
@@ -78,7 +78,7 @@ class Win implements CapsuleWindow {
   }
 }
 
-const offer: CapsuleView = { kind: "offer", sessionId: "s", app: "Zoom" };
+const offer: CapsuleView = { kind: "offer", sessionId: "s", app: "Zoom", mark: "Zm" };
 
 describe("capsule", () => {
   it("opens click-through on the monitor the pointer is on and shows the view", () => {
@@ -120,9 +120,9 @@ describe("capsule", () => {
     const f = fake();
     f.cap.show(offer);
     f.cap.drag(700, 0, false);
-    f.cap.drag(700, 900, true);
+    f.cap.drag(700, 800, true);
     expect(f.saved["2:1280x1000"]).toBeDefined();
-    expect(f.wins[0]!.at.y).toBe(1000 - 132);
+    expect(f.wins[0]!.at.y).toBe(1000 - 188);
     expect(f.wins[0]!.at.x).toBeGreaterThanOrEqual(1920);
   });
 

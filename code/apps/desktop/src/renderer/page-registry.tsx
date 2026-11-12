@@ -53,6 +53,7 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => <StubPage page="modes" />,
   vocabulary: () => <StubPage page="vocabulary" />,
-  history: ({ dispatch }) => later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} />),
+  history: ({ dispatch }) =>
+    later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} openMeetingSettings={() => dispatch({ type: "go", page: "settings", sub: "meetings" })} />),
   capture: () => later(<CapturePage />),
 };

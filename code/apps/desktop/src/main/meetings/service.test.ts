@@ -142,6 +142,7 @@ function harness(o: { texts?: string[] } = {}) {
     push: (p) => void pushes.push(p),
     changed: () => {},
     openMeeting: (m) => void opened.push(m),
+    openSettings: () => void opened.push("settings"),
     now: () => t,
     sleep: async (ms) => void (t += ms),
     newId: () => `m${++id}`,
@@ -282,8 +283,8 @@ describe("recording a call", () => {
     h.probe.current = quiet;
     h.advance(10_000);
     await h.svc.pollNow();
-    expect(h.svc.capsuleView()).toEqual({ kind: "ending", sessionId: expect.any(String), app: "Zoom", secondsLeft: 15 });
-    for (let i = 0; i < 14; i++) await h.svc.tickNow();
+    expect(h.svc.capsuleView()).toEqual({ kind: "ending", sessionId: expect.any(String), app: "Zoom", secondsLeft: 10 });
+    for (let i = 0; i < 9; i++) await h.svc.tickNow();
     await new Promise((r) => setTimeout(r, 5));
     expect(h.recorder.stops).toBe(0);
     await h.svc.tickNow();
