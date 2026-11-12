@@ -18,14 +18,16 @@ export interface FakeRecorderOptions {
 }
 
 /** The recorder window replaced by a scripted one, for tests: it streams frames and video bytes the way the page does and answers every command. */
-export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { options: FakeRecorderOptions; commands: string[] } {
+export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { options: FakeRecorderOptions; commands: string[]; starts: boolean[] } {
   let sink: ((d: RecorderData) => void) | undefined;
   let startedAt = 0;
   let gen = 0;
   const commands: string[] = [];
+  const starts: boolean[] = [];
   const host = {
     options: o,
     commands,
+    starts,
     prepare: async () => true,
     onData: (cb: (d: RecorderData) => void) => {
       sink = cb;
@@ -37,6 +39,7 @@ export function fakeRecorder(o: FakeRecorderOptions = {}): RecorderHost & { opti
       commands.push(cmd.op);
       if (cmd.op === "start") {
         gen = cmd.gen;
+        starts.push(cmd.narration);
         startedAt = Date.now();
         const n = host.options.frames ?? 3;
         for (let i = 0; i < n; i++) sink?.({ gen, kind: "frame", atMs: i * 1000, jpeg: BYTES });

@@ -44,6 +44,11 @@ export class RecorderHolder {
     if (fake?.options) Object.assign(fake.options, o);
   }
 
+  /** Tests only: whether narration was asked for in each recording the scripted recorder started. */
+  starts(): boolean[] {
+    return (this.#d.recorder as { starts?: boolean[] } | undefined)?.starts ?? [];
+  }
+
   dispose() {
     this.#host?.dispose();
   }

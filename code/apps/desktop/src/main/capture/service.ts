@@ -71,6 +71,7 @@ export class CaptureService {
       recording: () => this.runtime.phase === "recording",
       onAction: (a) => this.runtime.act(a),
       onShot: () => void this.runtime.shoot(),
+      onRecord: () => void this.runtime.toggleScreenRecording(),
       log: (l) => ctx.log.warn(l),
     });
     this.#stopPower = resyncOnPower(powerMonitor, () => this.keys.resync());
@@ -104,7 +105,7 @@ export class CaptureService {
   async #applyEnabled() {
     const s = this.#settings;
     const on = s.enabled && this.#o.platform.supported;
-    const ok = await this.keys.apply(on, { capture: s.hotkey, screenshot: s.experiments.screenshots ? s.screenshotHotkey : undefined, shiftInk: s.shiftInk });
+    const ok = await this.keys.apply(on, { capture: s.hotkey, screenshot: s.experiments.screenshots ? s.screenshotHotkey : undefined, recording: s.experiments.recording ? s.recordingHotkey : undefined, shiftInk: s.shiftInk });
     this.#hotkeyFailed = !ok;
     if (!on) {
       this.runtime.discard();

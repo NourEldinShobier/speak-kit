@@ -374,3 +374,27 @@ describe("send to Voice chat", () => {
     expect(await hook(l, "readSent")).toEqual({ ok: false, code: "no-capture" });
   });
 });
+
+describe("screen recording key", () => {
+  const REC = { ...ON, capture: { ...ON.capture, experiments: { recording: true } } };
+
+  it("starts a recording without narration and the next press stops and saves it", async () => {
+    const l = await start({ config: REC });
+    await open(l);
+    await hook(l, "record");
+    await until(async () => (await phase(l)) === "recording");
+    expect(await hook(l, "narrationFlags")).toEqual([false]);
+    await hook(l, "record");
+    await until(async () => (await phase(l)) === "idle" && (await hook<{ items: unknown[] }>(l, "state")).items.length > 0);
+    // the next capture with the capture key narrates again
+    await record(l);
+    expect(await hook(l, "narrationFlags")).toEqual([false, true]);
+  });
+
+  it("does nothing while the experiment is off", async () => {
+    const l = await start({ config: ON });
+    await open(l);
+    await hook(l, "record");
+    expect(await phase(l)).toBe("idle");
+  });
+});

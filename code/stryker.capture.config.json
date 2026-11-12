@@ -6,7 +6,10 @@
   "mutate": [
     "apps/desktop/src/main/capture/{autocrop,gesture,journal,keyframes,narration,privacy,retention,session,store}/*.ts",
     "apps/desktop/src/main/capture/{target-display,write-guard,notice-target,settings-patch}.ts",
+    "apps/desktop/src/main/capture/{send/auto-send,send/look,fence/index,context/index,context/labels,context/readers,command-narrator/index,command-narrator/commandline,edits/index,switch-flow}.ts",
+    "apps/desktop/src/main/voice-chat/capture-inbox.ts",
     "apps/desktop/src/renderer/features/capture/{audio-timeline,format}.ts",
+    "apps/desktop/src/renderer/features/capture/annotate/{model,keyboard,render}.ts",
     "!**/*.test.ts"
   ],
   "coverageAnalysis": "perTest",

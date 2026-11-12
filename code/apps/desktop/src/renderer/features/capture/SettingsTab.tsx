@@ -29,6 +29,14 @@ function General({ s }: { s: CaptureStatus }) {
         }
         control={<HotkeyRecorder label="Capture hotkey" value={c.hotkey} restore="F9" onRecording={setRecording} save={async (hotkey) => void (await capture.patchSettings({ hotkey }))} />}
       />
+      {c.experiments.recording ? (
+        <SettingRow
+          className="lm-row--control"
+          label="Screen recording key"
+          description="Press to start a recording of the screen without narration, press again to stop."
+          control={<HotkeyRecorder label="Screen recording hotkey" value={c.recordingHotkey} restore="F7" onRecording={setRecording} save={async (recordingHotkey) => void (await capture.patchSettings({ recordingHotkey }))} />}
+        />
+      ) : null}
       {s.hotkeyNote ? (
         <p className="cap-note" role="alert">
           {s.hotkeyNote} <Button onClick={() => void capture.patchSettings({ hotkey: "F9" })}>Restore F9</Button>

@@ -30,7 +30,7 @@ function fakeSource() {
   return s;
 }
 
-function setup(recording = true) {
+function setup(recording = true, onRecord = vi.fn()) {
   const sources: ReturnType<typeof fakeSource>[] = [];
   const actions: (GestureAction | ShiftAction)[] = [];
   const state = { recording };
@@ -43,9 +43,10 @@ function setup(recording = true) {
     recording: () => state.recording,
     onAction: (a) => actions.push(a),
     onShot: () => {},
+    onRecord,
     log: () => {},
   });
-  return { keys, sources, actions, state };
+  return { keys, sources, actions, state, onRecord };
 }
 
 describe("capture keys: Shift draws", () => {
@@ -97,6 +98,30 @@ describe("capture keys: Shift draws", () => {
     await t.keys.apply(true, { capture: "F9", screenshot: undefined, shiftInk: false });
     expect(t.sources[1]!.stopped).toBe(1);
     await t.keys.apply(true, { capture: "F9", screenshot: undefined, shiftInk: true });
+    t.keys.stop();
+    expect(t.sources.every((s) => !s.active)).toBe(true);
+  });
+});
+
+describe("capture keys: screen recording key", () => {
+  it("hooks the key only when it is given, and reports its release", async () => {
+    const t = setup();
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined });
+    expect(t.sources).toHaveLength(1);
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, recording: "F7" });
+    expect(t.sources).toHaveLength(2);
+    t.sources[1]!.handlers!.onEvent({ kind: "down" });
+    expect(t.onRecord).not.toHaveBeenCalled();
+    t.sources[1]!.handlers!.onEvent({ kind: "up" });
+    expect(t.onRecord).toHaveBeenCalledOnce();
+  });
+
+  it("stops the hook when the key is no longer given, and with stop()", async () => {
+    const t = setup();
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, recording: "F7" });
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined });
+    expect(t.sources[1]!.stopped).toBe(1);
+    await t.keys.apply(true, { capture: "F9", screenshot: undefined, recording: "F7" });
     t.keys.stop();
     expect(t.sources.every((s) => !s.active)).toBe(true);
   });
