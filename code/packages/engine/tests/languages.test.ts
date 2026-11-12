@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { LANGUAGES, PREFERRED_MODEL, STT_LANGUAGE_CODES, STT_MODELS, isSttLanguage, languageLabel, languageTable, resolveLanguage } from "../src";
+import { LANGUAGES, STT_LANGUAGE_CODES, isSttLanguage, languageLabel, languageTable, resolveLanguage } from "../src";
 
-const facts = STT_MODELS.map((m) => ({ id: m.id, languages: m.languages, detects: m.detects }));
-const whisper = facts[0]!;
-const parakeet = facts[1]!;
+const whisper = { id: "large-v3-turbo-q5_0", languages: STT_LANGUAGE_CODES, detects: true };
+const parakeet = { id: "parakeet-tdt-0.6b-v3-q4_0", languages: ["en", "de"] as const, detects: false };
+const facts = [whisper, parakeet];
+const PREFERRED_MODEL = { en: parakeet.id };
 
 describe("language table", () => {
   it("has exactly one recommended model for every language it lists", () => {
