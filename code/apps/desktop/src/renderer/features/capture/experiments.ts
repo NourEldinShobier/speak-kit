@@ -55,6 +55,16 @@ export function registerCaptureExperiments(): void {
 
   registerExperiment({
     ...GROUP,
+    id: "capture-speech-engines",
+    title: "Your own speech engine for narration",
+    description: "Make the words of a capture with a command you choose instead of the dictation model. Pick it under Capture settings.",
+    badges: ["Experimental"],
+    guard: "The recorded speech is written to a temporary file and handed to that program, nothing else. It is removed afterwards.",
+    useState: () => useCaptureExperiment("speechEngines"),
+  });
+
+  registerExperiment({
+    ...GROUP,
     id: "capture-playground",
     title: "Playground",
     description: "A page in Capture that shows every capsule state with sample data, for people building on Speak Kit.",

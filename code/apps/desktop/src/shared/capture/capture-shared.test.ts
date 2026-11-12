@@ -12,6 +12,13 @@ describe("capture settings", () => {
     expect(v.parse(CaptureConfigSchema, { autoSend: "10s" }).autoSend).toBe("10s");
     expect(v.parse(CaptureConfigSchema, { autoSend: "2m" }).autoSend).toBe("off");
   });
+  it("Shift ink and the speech command are off by default and an old config loads", () => {
+    const c = parseConfig({ setupDone: true, capture: { enabled: true } }).capture;
+    expect([c.shiftInk, c.narrationEngine, c.narrationCommand]).toEqual([false, "dictation", ""]);
+    expect(v.parse(CaptureConfigSchema, { narrationEngine: "cloud", narrationCommand: 5, shiftInk: "yes" })).toMatchObject({ shiftInk: false, narrationEngine: "dictation", narrationCommand: "" });
+    expect(v.safeParse(CapturePatchSchema, { narrationCommand: "x".repeat(501) }).success).toBe(false);
+    expect(v.safeParse(CapturePatchSchema, { narrationEngine: "command", narrationCommand: "stt {audio}", shiftInk: true }).success).toBe(true);
+  });
   it("turns the setting into seconds", () => {
     expect(AUTO_SEND.map(autoSendSeconds)).toEqual([0, 3, 5, 10]);
   });
