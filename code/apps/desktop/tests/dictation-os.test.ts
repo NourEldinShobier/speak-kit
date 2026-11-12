@@ -361,6 +361,67 @@ function dictationOsSpec() {
       });
     });
 
+    describe("typed line breaks", () => {
+      it("sends a line break as Shift+Enter, so a box that sends on Enter gets a new line", async () => {
+        await focusTarget();
+        await call.setClipboard("text");
+        await targetPage.evaluate(() => {
+          (window as unknown as { keys: unknown[] }).keys.length = 0;
+          (document.getElementById("t") as HTMLTextAreaElement).value = "";
+        });
+        expect(await call.insertTyping("one\ntwo")).toEqual({ status: "typed" });
+        await until(async () => (await typed()).replaceAll("\r\n", "\n") === "one\ntwo");
+        const enters = (await keysSeen()).filter((k) => k.key === "Enter");
+        expect(enters.length).toBeGreaterThan(0);
+        expect(enters.every((k) => k.shift)).toBe(true);
+      });
+    });
+
+    describe("clean up the field", () => {
+      const fill = (text: string, select: "none" | "all" | "first-word") =>
+        targetPage.evaluate(
+          ([value, how]) => {
+            const t = document.getElementById("t") as HTMLTextAreaElement;
+            t.value = value as string;
+            t.focus();
+            if (how === "none") t.setSelectionRange(t.value.length, t.value.length);
+            else if (how === "all") t.select();
+            else t.setSelectionRange(0, 5);
+          },
+          [text, select],
+        );
+
+      it("cleans the whole field when nothing is selected, and puts the user's clipboard back", async () => {
+        await focusTarget();
+        await call.setClipboard("text");
+        await fill("um so i went home", "none");
+        expect(await call.transform()).toEqual({ status: "changed" });
+        await until(async () => (await typed()) === "So i went home");
+        await until(async () => (await call.clipboardNow()).text === "the old clipboard");
+      });
+
+      it("cleans only the selection when there is one", async () => {
+        await focusTarget();
+        await call.setClipboard("text");
+        await fill("um so i went home", "first-word");
+        expect(await call.transform()).toEqual({ status: "changed" });
+        await until(async () => (await typed()) === "So i went home");
+      });
+
+      it("changes nothing and says so when the text is already clean", async () => {
+        await focusTarget();
+        await fill("Already clean.", "all");
+        expect(await call.transform()).toEqual({ status: "unchanged" });
+        expect(await typed()).toBe("Already clean.");
+      });
+
+      it("says the field is empty when there is nothing to read", async () => {
+        await focusTarget();
+        await fill("", "none");
+        expect(await call.transform()).toEqual({ status: "nothing-selected" });
+      });
+    });
+
     describe("password fields", () => {
       // A real Windows Forms password box in its own process; the foreground is taken the way the target window does it, by tapping a key first.
       const PASSWORD_FORM = [
