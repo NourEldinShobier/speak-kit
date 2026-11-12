@@ -25,6 +25,7 @@ export function watchConfigFile(o: WatchOptions): { dispose(): void } {
   const name = path.basename(o.file);
   let timer: NodeJS.Timeout | undefined;
   let badSince = 0;
+  let reported = false;
   const check = async () => {
     let text: string;
     try {
@@ -33,14 +34,22 @@ export function watchConfigFile(o: WatchOptions): { dispose(): void } {
       return; // being replaced: the next event reads it
     }
     const edit = readExternalEdit(o.current(), text, o.keep);
-    if (edit.kind === "same") badSince = 0;
-    else if (edit.kind === "unreadable") {
+    if (edit.kind === "same") {
+      badSince = 0;
+      reported = false;
+    } else if (edit.kind === "unreadable") {
       // An editor saving in two steps leaves a broken file for a moment; only a file that is still broken at the next check is reported.
-      if (badSince) o.onUnreadable?.();
+      if (badSince) {
+        // Once per broken state: the next file event or a valid file starts over.
+        if (!reported) o.onUnreadable?.();
+        reported = true;
+        return;
+      }
       badSince = Date.now();
       timer = setTimeout(() => void check(), (o.debounceMs ?? 400) * 2);
     } else {
       badSince = 0;
+      reported = false;
       o.onEdit(edit);
     }
   };
@@ -49,6 +58,8 @@ export function watchConfigFile(o: WatchOptions): { dispose(): void } {
     watcher = watch(dir, (_event, file) => {
       if (file && file !== name) return;
       clearTimeout(timer);
+      badSince = 0;
+      reported = false;
       timer = setTimeout(() => void check(), o.debounceMs ?? 400);
     });
     watcher.on("error", () => watcher?.close());

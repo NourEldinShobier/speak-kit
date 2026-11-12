@@ -33,7 +33,8 @@ import { NOTES_MODEL } from "./voice-chat/service";
 import { setupMeetings } from "./meetings";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
-import { collectResources } from "./resources";
+import { cachedHardware, collectResources, speechModelName } from "./resources";
+import type { SttExtras } from "./speech-models/service";
 import { motionNow, windowMotion } from "./window-motion";
 import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
@@ -147,13 +148,14 @@ function disposeAll(p: {
 }
 
 /** Memory per process and model, read when the Performance page asks. */
+const hardware = cachedHardware(probeThisComputer);
 function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dictation: DictationService) {
   return collectResources({
     processes: () => app.getAppMetrics().map((m) => ({ type: m.type, name: m.name, workingSetKb: m.memory.workingSetSize, cpu: m.cpu.percentCPUUsage })),
     voice: () => ({ state: ctx.state.health?.engine.state, name: "Kokoro-82M", pid: (voiceEngine() as { workerPid?: number } | null)?.workerPid }),
     speech: () => dictation.speech.resourceUse(),
     memoryOf,
-    hardware: probeThisComputer,
+    hardware,
     platform: process.platform === "darwin" ? "darwin" : "win32",
     arch: process.arch,
   });

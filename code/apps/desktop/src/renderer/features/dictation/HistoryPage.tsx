@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { HistoryStats } from "@speakkit/dictation";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, IconButton } from "@speakkit/ui";
+import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { dictation } from "./api";
@@ -78,7 +77,34 @@ function Groups({ items, load, view, s, openDictation }: { items: HistoryItem[];
     load();
   };
   return groups.map((g) => (
-    <Day key={g.label} g={g} view={view} s={s} copied={copied} open={open} setOpen={setOpen} openDictation={openDictation} copy={(id) => void copy(id)} remove={(id) => void remove(id)} />
+    <section key={g.label} className="dict-hist__group" onKeyDown={onArrowKeys('[aria-label^="Copy: "]')}>
+      <h3 className="dict-hist__day">{g.label}</h3>
+      <div className={`lm-card${view === "side" ? " dict-hist__side" : ""}`}>
+        {view === "side" ? (
+          <div className="dict-hist__thead" aria-hidden="true">
+            {THEAD.map((h, i) => (
+              <span key={i}>{h}</span>
+            ))}
+          </div>
+        ) : null}
+        {g.items.map((item) => (
+          <div key={item.id}>
+            <HistoryRow
+              item={item}
+              view={view}
+              copied={copied === item.id}
+              open={open === item.id}
+              rewriteDeadlineMs={s.settings.rewrite.deadlineMs}
+              onToggle={() => setOpen((o) => (o === item.id ? null : item.id))}
+              onCopy={() => void copy(item.id)}
+              onDelete={() => void remove(item.id)}
+              {...(picked && { selection: { checked: picked.has(item.id), toggle: () => toggle(item.id) } })}
+            />
+            {open === item.id && item.recording ? <RecordingPanel item={item} s={s} kept={expiryText(item.expiresInMs, "Kept for")} openDictation={openSettings} /> : null}
+          </div>
+        ))}
+      </div>
+    </section>
   ));
 }
 

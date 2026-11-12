@@ -45,7 +45,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cap-pill__dot {
+  :root:not([data-reduce-motion="off"]) .cap-pill__dot {
     animation: none;
   }
 }

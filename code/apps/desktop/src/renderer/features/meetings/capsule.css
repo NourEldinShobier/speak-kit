@@ -67,7 +67,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mc-dot {
+  :root:not([data-reduce-motion="off"]) .mc-dot {
     animation: none;
   }
 }

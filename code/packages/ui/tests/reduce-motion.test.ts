@@ -13,4 +13,12 @@ describe("Reduce motion in the shared style sheet", () => {
     expect(rule).toContain("::before");
     expect(rule).toContain("::after");
   });
+
+  test("the system preference rules do not apply when the app's own choice is Off", () => {
+    const start = css.indexOf("@media (prefers-reduced-motion: reduce) {");
+    const block = css.slice(start, css.indexOf("\n}\n", start));
+    const selectors = block.split("\n").filter((l) => /^  [^ /].*[,{]$/.test(l));
+    expect(selectors.length).toBeGreaterThan(5);
+    for (const l of selectors) expect(l).toMatch(/^  :root:not\(\[data-reduce-motion="off"\]\) /);
+  });
 });

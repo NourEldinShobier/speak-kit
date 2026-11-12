@@ -254,9 +254,7 @@ function startDesktop() {
   );
 }
 
-// `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
-const QUIT_FLAG = "--quit";
-const instance = await claimInstance(dataDir, process.argv);
+const instance = await claimInstance(dataDir, process.argv, { saving: () => desktop?.finishCapture(), cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
 if (!instance.mayRun) {
   app.quit();
 } else {

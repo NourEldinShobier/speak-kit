@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Icon, IconButton, Kbd, Popover } from "@speakkit/ui";
+import { Icon, IconButton, Kbd, Popover, onArrowKeys } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import { showAccelerator } from "../shared/shortcuts";
@@ -21,9 +21,9 @@ function Bell({ s }: { s: AppState }) {
         {s.activity.length === 0 ? (
           <span style={{ color: "var(--text-tertiary)" }}>All caught up.</span>
         ) : (
-          <div className="sk-activity">
+          <div className="sk-activity" onKeyDown={onArrowKeys(".sk-activity > div")}>
             {s.activity.map((a) => (
-              <div key={a.id}>
+              <div key={a.id} tabIndex={0}>
                 <b>{a.title}</b>
                 <span>
                   {a.body} {new Date(a.atMs).toLocaleTimeString()}

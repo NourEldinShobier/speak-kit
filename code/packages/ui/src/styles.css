@@ -2306,28 +2306,28 @@ button.lm-listrow {
 }
 /* ---------- reduced motion: fades only, loops stop ---------- */
 
-/* reduced motion: fades only, loops stop */
+/* reduced motion: fades only, loops stop; the app's own Off choice (data-reduce-motion=off) overrides the system preference */
 @media (prefers-reduced-motion: reduce) {
-  .lm *,
-  .lm *::before,
-  .lm *::after {
+  :root:not([data-reduce-motion="off"]) .lm *,
+  :root:not([data-reduce-motion="off"]) .lm *::before,
+  :root:not([data-reduce-motion="off"]) .lm *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: var(--lm-dur-instant) !important;
   }
-  .lm-toggle__knob,
-  .lm-progress__bar {
+  :root:not([data-reduce-motion="off"]) .lm-toggle__knob,
+  :root:not([data-reduce-motion="off"]) .lm-progress__bar {
     transition: none !important;
   }
   /* no press scale; colour fades stay */
-  .lm :active,
-  .lm-check__input:active + .lm-check__box {
+  :root:not([data-reduce-motion="off"]) .lm :active,
+  :root:not([data-reduce-motion="off"]) .lm-check__input:active + .lm-check__box {
     scale: 1 !important;
   }
-  .lm-spin,
-  .lm-skeleton.is-shimmer .lm-skeleton__line,
-  .lm-caret,
-  .lm-progress.is-indeterminate .lm-progress__bar {
+  :root:not([data-reduce-motion="off"]) .lm-spin,
+  :root:not([data-reduce-motion="off"]) .lm-skeleton.is-shimmer .lm-skeleton__line,
+  :root:not([data-reduce-motion="off"]) .lm-caret,
+  :root:not([data-reduce-motion="off"]) .lm-progress.is-indeterminate .lm-progress__bar {
     animation: none !important;
   }
 }
