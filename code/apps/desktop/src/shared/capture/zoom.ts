@@ -66,7 +66,11 @@ export const ZOOM = {
 
 const unit = v.pipe(v.number(), v.minValue(0), v.maxValue(1));
 const time = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(86_400_000));
-const PathSchema = v.pipe(v.array(v.object({ atMs: time, x: unit, y: unit })), v.maxLength(ZOOM.maxPath));
+const PathSchema = v.pipe(
+  v.array(v.object({ atMs: time, x: unit, y: unit })),
+  v.maxLength(ZOOM.maxPath),
+  v.check((p) => p.every((pt, i) => i === 0 || pt.atMs >= p[i - 1]!.atMs), "path points must be in time order"),
+);
 export const ZoomRegionSchema = v.object({
   startMs: time,
   endMs: time,
@@ -100,15 +104,28 @@ export const overrideRegions = (regions: readonly ZoomRegion[], manual: ZoomRegi
 export function followPath(samples: readonly PointerSample[], startMs: number, endMs: number): ZoomPoint[] {
   const inside = samples.filter((s) => s.atMs >= startMs && s.atMs <= endMs);
   const first = inside[0];
-  // a flick across the picture is not followed: the picture stays where the pointer was
-  const steady = inside.filter((s, i) => i === 0 || Math.hypot(s.x - inside[i - 1]!.x, s.y - inside[i - 1]!.y) <= ZOOM.followMaxJump);
+  // a flick across the picture is not followed: the picture stays where the pointer was. A far jump that the pointer settles at (the next sample is close to it) is a real move.
+  const far = (a: PointerSample, b: PointerSample): boolean => Math.hypot(a.x - b.x, a.y - b.y) > ZOOM.followMaxJump;
+  const steady: PointerSample[] = [];
+  inside.forEach((s, i) => {
+    const kept = steady[steady.length - 1];
+    const next = inside[i + 1];
+    if (!kept || !far(s, kept) || (next && !far(s, next))) steady.push(s);
+  });
   // a pointer that stays put gives no path: the region keeps its point
   if (inside.length < 2 || !steady.some((s) => Math.hypot(s.x - first!.x, s.y - first!.y) > ZOOM.followMinMove)) return [];
+  // a long region is thinned evenly (first and last kept) so the whole of it is still followed
+  const step = (steady.length - 1) / Math.max(1, Math.min(steady.length, ZOOM.maxPath) - 1);
+  const picked = Array.from({ length: Math.min(steady.length, ZOOM.maxPath) }, (_, i) => steady[Math.round(i * step)]!);
   let at = { x: inside[0]!.x, y: inside[0]!.y };
-  return steady.slice(0, ZOOM.maxPath).map((s) => {
+  const path = picked.map((s) => {
     at = { x: at.x + (s.x - at.x) * ZOOM.followSmoothing, y: at.y + (s.y - at.y) * ZOOM.followSmoothing };
     return { atMs: Math.round(s.atMs), x: at.x, y: at.y };
   });
+  // the picture ends on the real last position, not short of it
+  const last = picked[picked.length - 1]!;
+  path[path.length - 1] = { atMs: Math.round(last.atMs), x: last.x, y: last.y };
+  return path;
 }
 
 /** The point a region looks at in a moment: on its path, between the two nearest points, or its fixed point. */

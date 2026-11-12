@@ -4,7 +4,7 @@ export const REPLAY = {
   windowMs: 15_000,
   /** The video is cut into pieces of this length: each one can be played on its own, and the oldest piece is dropped whole. */
   segmentMs: 3000,
-  /** The most memory the buffer holds (video and pictures): above it the oldest finished pieces are dropped even if the window is no longer covered. */
+  /** The most memory the buffer holds (video pieces): above it the oldest finished pieces are dropped even if the window is no longer covered. */
   maxBytes: 150 * 1024 * 1024,
 } as const;
 
@@ -35,7 +35,7 @@ export function clipTimes<T extends { atMs: number }>(items: readonly T[], clipS
   return items.filter((x) => x.atMs >= clipStartMs).map((x) => ({ ...x, atMs: x.atMs - clipStartMs }));
 }
 
-/** The pieces that fit in `maxBytes`, newest first kept; the newest piece is always kept so a very high bitrate still gives a clip. */
+/** The pieces that fit in `maxBytes`, keeps the newest pieces that fit; the newest piece is always kept so a very high bitrate still gives a clip. */
 export function fitBytes<T>(pieces: readonly T[], size: (p: T) => number, maxBytes: number = REPLAY.maxBytes): T[] {
   let total = 0;
   let first = pieces.length;
