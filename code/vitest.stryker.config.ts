@@ -13,6 +13,8 @@ export default defineConfig({
       "packages/engine/tests/{languages,download-error,transfers,device-hardware-idle,switching,model-files,stt-download-hosts,compare}.test.ts",
       "apps/desktop/src/main/speech-models/{view,hardware-probe,layout}.test.ts",
       "apps/desktop/src/main/{mic-owners,dictation/chord-tracker,dictation/chord-scenarios,dictation/keyboard-hook,dictation/pause-rules}.test.ts",
+      "apps/desktop/src/main/dictation/macos/{macos,mouse-button}.test.ts",
+      "packages/engine/tests/host-port.test.ts",
       "apps/desktop/src/renderer/speech-text.test.ts",
       "apps/desktop/src/renderer/features/wizard/dictation-step.test.ts",
     ],

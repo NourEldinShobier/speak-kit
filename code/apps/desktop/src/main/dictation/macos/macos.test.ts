@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { createInserter } from "../inserter";
 import type { ClipboardPort } from "../restore-guard";
 import { VK, type HotkeyEvent } from "../types";
-import { installMouseTap, installTapHook, mouseButtonOf } from "./hook";
+import { installMouseTapHook, installTapHook } from "./hook";
 import { chunks, createMacInput } from "./input";
 import { fakeMacNative } from "./fake-native";
 import { createMacPlatformWith } from "./index";
@@ -143,6 +143,52 @@ describe("macOS hotkey through the event tap", () => {
     t.platform.hotkey.resync();
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+});
+
+describe("macOS mouse buttons through the mouse tap", () => {
+  const X1_DOWN = { type: 25, button: 3 };
+  const X1_UP = { type: 26, button: 3 };
+
+  it("makes a side button a hold-to-talk key and swallows it", async () => {
+    const t = started([0x05]);
+    expect(t.result).toEqual({ ok: true });
+    expect(t.fake.sendMouse(X1_DOWN)).toBe(true);
+    expect(t.fake.sendMouse(X1_UP)).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+
+  it("passes on events that are no button change", () => {
+    const t = started([0x05]);
+    expect(t.fake.sendMouse({ type: 5, button: 3 })).toBe(false);
+    expect(t.fake.sendMouse({ type: 25, button: 9 })).toBe(false);
+  });
+
+  it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
+    const fake = fakeMacNative();
+    const faults: unknown[] = [];
+    installMouseTapHook(
+      fake.native,
+      () => {
+        throw new Error("boom");
+      },
+      (e) => void faults.push(e),
+    );
+    expect(fake.sendMouse(X1_DOWN)).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(faults).toEqual([new Error("boom")]);
+    expect(fake.calls.removed).toBe(1);
+  });
+});
+
+describe("macOS password control", () => {
+  it("reports a focused password control through the input port", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native);
+    expect(input.passwordFocused()).toBe(false);
+    fake.state.passwordFocused = true;
+    expect(input.passwordFocused()).toBe(true);
   });
 });
 
@@ -317,6 +363,13 @@ describe("macOS insert through the inserter", () => {
     expect(t.text()).toBe("secret");
   });
 
+  it("refuses to type into a focused password control and sends no keys", async () => {
+    const t = insertSetup();
+    t.fake.state.passwordFocused = true;
+    expect(await t.ins.insert("secret")).toEqual({ status: "refused", reason: "password-field" });
+    expect(t.fake.state.posted).toEqual([]);
+  });
+
   it("only copies when the app changed since the key went down", async () => {
     const t = insertSetup();
     expect(await t.ins.insert("x", { target: "999" })).toEqual({ status: "copied", reason: "foreground-changed" });
@@ -333,21 +386,11 @@ describe("macOS mouse buttons as hotkeys", () => {
   const SIDE_BUTTON = 3; // button number 3 is the first side button, reported as Mouse4
   const MOUSE4 = 0x05;
 
-  it("maps button numbers to the codes the chords use, and ignores buttons it has no code for", () => {
-    expect(mouseButtonOf(3, 1)).toEqual({ vk: 0x02, down: true });
-    expect(mouseButtonOf(4, 1)).toEqual({ vk: 0x02, down: false });
-    expect(mouseButtonOf(25, 2)).toEqual({ vk: 0x04, down: true });
-    expect(mouseButtonOf(26, 3)).toEqual({ vk: 0x05, down: false });
-    expect(mouseButtonOf(25, 4)).toEqual({ vk: 0x06, down: true });
-    expect(mouseButtonOf(25, 7)).toBeUndefined();
-    expect(mouseButtonOf(5, 0)).toBeUndefined();
-  });
-
   it("is available, and a bound side button holds the dictation down and up, swallowed as a pair", async () => {
     const t = started([MOUSE4]);
     expect(t.platform.hotkey.mouse).toBe(true);
-    expect(t.fake.sendMouse({ type: 25, keycode: SIDE_BUTTON })).toBe(true);
-    expect(t.fake.sendMouse({ type: 26, keycode: SIDE_BUTTON })).toBe(true);
+    expect(t.fake.sendMouse({ type: 25, button: SIDE_BUTTON })).toBe(true);
+    expect(t.fake.sendMouse({ type: 26, button: SIDE_BUTTON })).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
   });
@@ -361,7 +404,7 @@ describe("macOS mouse buttons as hotkeys", () => {
     const t = started([VK.rightAlt]);
     t.fake.send({ type: FLAGS, keycode: RIGHT_OPTION, flags: RIGHT_OPTION_BIT });
     await vi.advanceTimersByTimeAsync(0);
-    expect(t.fake.sendMouse({ type: 1, keycode: 0 })).toBe(false);
+    expect(t.fake.sendMouse({ type: 1, button: 0 })).toBe(false);
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "other", vk: 0x01 }]);
   });
@@ -373,22 +416,5 @@ describe("macOS mouse buttons as hotkeys", () => {
     expect(platform.hotkey.start({ keys: [VK.rightAlt, MOUSE4] }, { onEvent: (e) => void events.push(e) })).toEqual({ ok: true });
     expect(fake.calls.taps).toBe(1);
     expect(platform.hotkey.active).toBe(true);
-  });
-
-  it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
-    const fake = fakeMacNative();
-    const faults: unknown[] = [];
-    const hook = installMouseTap(
-      fake.native,
-      () => {
-        throw new Error("boom");
-      },
-      (e) => void faults.push(e),
-    );
-    expect(fake.sendMouse({ type: 25, keycode: SIDE_BUTTON })).toBe(false);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(fake.calls.removed).toBe(1);
-    expect(faults).toHaveLength(1);
-    hook.uninstall();
   });
 });

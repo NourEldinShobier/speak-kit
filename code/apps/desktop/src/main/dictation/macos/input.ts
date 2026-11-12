@@ -57,8 +57,8 @@ export function createMacInput(native: MacNative, layout?: { current(): string |
       const bounds = native.windowBounds(f.pid);
       return { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", ...(code && { layout: code }), elevated: false, ...(bounds && { bounds }) };
     },
-    // Which control has focus needs Accessibility queries; secure input is the signal password fields give without them.
-    passwordFocused: () => false,
+    // Secure keyboard input (below) catches apps that switch it on; this asks Accessibility whether the focused control is a password field.
+    passwordFocused: () => native.passwordFocused(),
     secureInput: () => native.secureInput(),
     heldModifiers() {
       const flags = native.modifierFlags();

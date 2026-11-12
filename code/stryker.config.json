@@ -10,6 +10,8 @@
     "packages/engine/src/stt/{languages,download-error,transfers,device,hardware,idle,switching,model-files,compare}.ts",
     "apps/desktop/src/main/speech-models/{view,hardware-probe,layout}.ts",
     "apps/desktop/src/main/{mic-owners,dictation/chord-tracker,dictation/pause-rules}.ts",
+    "apps/desktop/src/main/dictation/macos/{hook,mouse-button}.ts",
+    "packages/engine/src/host-port.ts",
     "apps/desktop/src/renderer/speech-text.ts",
     "apps/desktop/src/renderer/features/wizard/dictation-step.ts",
     "packages/meetings/src/**/*.ts",

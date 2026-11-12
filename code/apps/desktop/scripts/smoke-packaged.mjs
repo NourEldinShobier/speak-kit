@@ -45,12 +45,12 @@ const running = () =>
         }).trim(),
       );
 
-// RunAsNode stays on while the model host starts with child_process.fork; the other three are hardened.
+// RunAsNode is off on macOS only (see fusePlan); the other three are hardened everywhere.
 const ENABLE = 49; // the fuse wire stores the ASCII digit "1" for on and "0" (48) for off
 const DISABLE = 48;
 const wire = await getCurrentFuseWire(mac ? exe.replace(/\.app\/.*$/, ".app") : exe);
 const fuses = {
-  RunAsNode: ENABLE,
+  RunAsNode: mac ? DISABLE : ENABLE,
   EnableNodeOptionsEnvironmentVariable: DISABLE,
   EnableNodeCliInspectArguments: DISABLE,
   EnableCookieEncryption: ENABLE,
@@ -122,10 +122,13 @@ try {
     check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
     check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
     check("bundles the speech worker next to the app", existsSync(path.join(resources, "app/dist/worker/stt-worker.js")));
-    // The speech worker runs from this same executable as plain Node (RunAsNode); its native whisper.cpp addon has to load there. No model needed.
-    const addonScript = `require("@fugood/whisper.node").loadWhisperModule(process.platform === "darwin" ? "default" : "vulkan").then(() => process.exit(0), (e) => (console.error(e), process.exit(1)))`;
-    const addon = spawnSync(exe, ["-e", addonScript], { cwd: path.join(resources, "app"), env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, encoding: "utf8", timeout: 60_000 });
-    check("loads the speech addon in the packaged runtime", addon.status === 0, addon.status === 0 ? "" : `${addon.stderr}`.trim().split(String.fromCharCode(10))[0]);
+    // The speech worker used to run from this same executable as plain Node; the command line still does on Windows, and its native whisper.cpp addon has to load there. No model needed.
+    // On macOS the binary cannot run as Node; the real-engine run loads the addon in the utility process instead.
+    if (!mac) {
+      const addonScript = `require("@fugood/whisper.node").loadWhisperModule(process.platform === "darwin" ? "default" : "vulkan").then(() => process.exit(0), (e) => (console.error(e), process.exit(1)))`;
+      const addon = spawnSync(exe, ["-e", addonScript], { cwd: path.join(resources, "app"), env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, encoding: "utf8", timeout: 60_000 });
+      check("loads the speech addon in the packaged runtime", addon.status === 0, addon.status === 0 ? "" : `${addon.stderr}`.trim().split(String.fromCharCode(10))[0]);
+    }
   }
 
   const q = spawn(exe, ["--quit"], { env, stdio: "ignore" });

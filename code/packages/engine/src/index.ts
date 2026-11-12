@@ -13,3 +13,4 @@ export { splitLong } from "./split";
 export { parseWav, wavHeader, type Wav } from "./wav";
 export { normalizeText } from "./text/normalize";
 export * from "./stt";
+export { setProcessSpawner, type Channel, type ProcessSpawner } from "./channel";

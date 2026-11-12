@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
 import * as v from "valibot";
+import { hostPort } from "./host-port.ts"; // the extension is what node needs to run this file as it is, without a build
 import type { FromWorker, ToWorker, WorkerInit } from "./worker-protocol";
 
 /** Parsed in the worker: a missing or malformed start-up config fails with a readable message, not a crash. */
@@ -21,7 +22,8 @@ const workerInitSchema: v.GenericSchema<unknown, WorkerInit> = v.object({
 // Two hosts: a worker_thread (parentPort) or a child process (IPC, init in env). Same protocol either way.
 const inProcess = parentPort === null;
 const init = v.parse(workerInitSchema, inProcess ? JSON.parse(process.env.SPEAKKIT_WORKER_INIT ?? "null") : workerData);
-const send = (m: FromWorker, transfer: ArrayBuffer[] = []) => (inProcess ? void process.send!(m) : parentPort!.postMessage(m, transfer));
+const port = hostPort();
+const send = (m: FromWorker, transfer: ArrayBuffer[] = []) => (inProcess ? port.send(m) : parentPort!.postMessage(m, transfer));
 
 import type { KokoroTTS } from "kokoro-js";
 
@@ -113,6 +115,6 @@ const onMessage = (m: ToWorker) => {
   else chain = chain.then(() => (tts ? run(m) : send({ type: "error", id: m.id, message: "engine failed to load" })));
 };
 if (inProcess) {
-  process.on("message", onMessage);
+  port.onMessage(onMessage);
   process.on("disconnect", () => process.exit(0)); // the server went away
 } else parentPort!.on("message", onMessage);
