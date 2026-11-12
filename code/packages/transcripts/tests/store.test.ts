@@ -125,6 +125,22 @@ describe("store", () => {
     expect(store.recoveredFrom).toBeDefined();
   });
 
+  test("a manifest that cannot be read is left untouched and nothing is written over it", async () => {
+    const fs = new MemFs();
+    fs.files.set(`${DIR}/manifest.json`, new TextEncoder().encode(JSON.stringify({ version: 1, entries: [] })));
+    const before = fs.text(`${DIR}/manifest.json`);
+    const locked = Object.assign(Object.create(fs), {
+      read: async () => {
+        throw Object.assign(new Error("busy"), { code: "EBUSY" });
+      },
+    });
+    const { store } = await open(locked);
+    expect(store.unreadable).toBe(true);
+    expect(store.list()).toEqual([]);
+    await expect(store.add({ title: "n", source: "file" })).rejects.toMatchObject({ code: "unreadable" });
+    expect(fs.text(`${DIR}/manifest.json`)).toBe(before);
+  });
+
   test("a manifest from a newer version is read but never written", async () => {
     const fs = new MemFs();
     const entry = { id: "x", title: "from the future", createdAt: 1, source: "file", status: "done", exports: [] };

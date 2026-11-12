@@ -2,7 +2,7 @@ import { RATE } from "./chunker";
 import type { Outcome, Row, Transcripts, TranscriptsDeps } from "./api";
 import { toRow } from "./row";
 import { render } from "./export";
-import { saveExport } from "./files";
+import { saveExport, sha256 } from "./files";
 import { DiskFullError } from "./fs";
 import { failures, MAX_HOURS } from "./formats";
 import { runJob } from "./job";
@@ -113,13 +113,36 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
     }
   };
 
+  /**
+   * Deletes a transcript for good. Files the app exported (when the person has not changed them) and its audio go to the recycle bin first; an export that
+   * cannot be recycled stays where it is and the person is told. Audio that cannot be recycled is deleted with the transcript.
+   */
+  async function purge(id: string) {
+    const e = store.get(id);
+    if (e && d.recycle) {
+      const kept: string[] = [];
+      for (const f of e.exports) {
+        const now = await d.fs.read(f.path).catch(() => undefined);
+        if (!now || sha256(now) !== f.sha256) continue;
+        await d.recycle(f.path).catch(() => void kept.push(f.path));
+      }
+      const audio = store.audioPath(id);
+      if (await d.fs.exists(audio).catch(() => false)) await d.recycle(audio).catch(() => {});
+      if (kept.length)
+        d.warn?.(
+          `${kept.length === 1 ? "An exported file" : `${kept.length} exported files`} could not be moved to the Recycle Bin and ${kept.length === 1 ? "was" : "were"} left where ${kept.length === 1 ? "it is" : "they are"}.`,
+        );
+    }
+    await store.remove(id);
+  }
+
   async function sweepNow() {
     const s = sweep([...store.list(), ...store.list(true)], d.now(), d.policy());
     for (const id of s.trash) {
       await store.trash(id);
       index.remove(id);
     }
-    for (const id of s.remove) await store.remove(id);
+    for (const id of s.remove) await purge(id);
     for (const id of s.dropAudio) await store.dropAudio(id);
     return { trashed: s.trash.length, removed: s.remove.length, audioDropped: s.dropAudio.length };
   }
@@ -133,7 +156,7 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
 
   return {
     ready,
-    notice: () => ({ newer: store.newer, ...(store.recoveredFrom && { recoveredFrom: store.recoveredFrom }) }),
+    notice: () => ({ newer: store.newer, ...(store.unreadable && { unreadable: true }), ...(store.recoveredFrom && { recoveredFrom: store.recoveredFrom }) }),
     list({ search, trashed = false }: { search?: string; trashed?: boolean } = {}) {
       const q = search?.trim();
       if (q && !trashed) {
@@ -226,13 +249,14 @@ export async function createTranscripts(d: TranscriptsDeps): Promise<Transcripts
       run(async () => {
         if (queue.cancel(id, "cancel")) await idle;
         index.remove(id);
-        await store.remove(id);
+        await purge(id);
       }),
     emptyTrash: () =>
       run(async () => {
         const ids = store.list(true).map((e) => e.id);
         for (const id of ids) index.remove(id);
-        return store.emptyTrash();
+        for (const id of ids) await purge(id);
+        return ids.length;
       }),
     async text(id, format) {
       const e = store.get(id);

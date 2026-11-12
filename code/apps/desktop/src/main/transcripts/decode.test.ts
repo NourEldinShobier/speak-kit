@@ -89,6 +89,13 @@ describe("decode", () => {
     ).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
   });
 
+  it("a decoder page that dies on a big file reports it as too large, on a small one as undecodable", async () => {
+    const lost = async () => ({ ok: false as const, code: "lost" as const });
+    const big = { ...ports({ "/a/x.mp3": MP3 }, lost), stat: async () => ({ size: 150 * 1024 ** 2 }) };
+    expect(await decodeFile("/a/x.mp3", big)).toMatchObject({ ok: false, failure: { code: "too-large" } });
+    expect(await decodeFile("/a/x.mp3", ports({ "/a/x.mp3": MP3 }, lost))).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
+  });
+
   it("decoded audio over four hours is refused, empty audio is a decode error", async () => {
     const long = ports({ "/a/x.mp3": MP3 }, async () => ({ ok: true, pcm: new Int16Array(4 * 3600 * 16000 + 1) }));
     expect(await decodeFile("/a/x.mp3", long)).toMatchObject({ ok: false, failure: { code: "too-long" } });

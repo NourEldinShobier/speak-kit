@@ -46,6 +46,7 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
   let ended: () => void = () => {};
   const mic: MicPort = { start: async () => ({ ok: true }), stop: async () => {}, onChunk: (cb) => (chunk = cb), onLevel: () => {}, onEnded: (cb) => (ended = cb) };
   const revealed: string[] = [];
+  const recycled: string[] = [];
   const clip: string[] = [];
   let pick: string | null = null;
   let dir: string | null = null;
@@ -73,10 +74,11 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     files: files2,
     mic,
     dialog: { pickFile: async () => pick, pickFolder: async () => dir },
-    shell: { reveal: (f) => void revealed.push(f), openFolder: async (d) => void revealed.push(`open ${d}`) },
+    shell: { reveal: (f) => void revealed.push(f), trash: async (f) => void recycled.push(f), openFolder: async (d) => void revealed.push(`open ${d}`) },
     clipboard: { writeText: (t) => void clip.push(t) },
     push: (p) => void pushes.push(p),
     changed: vi.fn(),
+    doneMs: 400,
     sleep: () => new Promise((r) => setTimeout(r, 0)),
     newId: () => `id${++n}`,
   });
@@ -87,6 +89,7 @@ function setup(over: { stt?: Partial<Stt>; busy?: () => boolean; config?: object
     pushes,
     ended: () => ended(),
     revealed,
+    recycled,
     clip,
     activity,
     chunk: (p: Int16Array) => chunk(p),
@@ -223,6 +226,17 @@ describe("transcripts service", () => {
     expect(await h.deleteAllAudio()).toBe(0);
   });
 
+  it("deleting a transcript for good sends its export to the Recycle Bin through the shell port", async () => {
+    const t = setup();
+    const h = t.service.handlers;
+    const id = ((await h.importFile({ path: "/in/talk.wav", language: "auto" })) as { id: string }).id;
+    await done(h, id);
+    const saved = (await h.save(id, "md")) as { path: string };
+    await h.trash(id);
+    await h.remove(id);
+    expect(t.recycled).toEqual([saved.path]);
+  });
+
   it("the tray phase follows the recorder and the job", async () => {
     let release!: () => void;
     const hold = new Promise<void>((r) => (release = r));
@@ -238,6 +252,7 @@ describe("transcripts service", () => {
     await stopping;
     await vi.waitFor(() => expect(t.service.phase()).toBe("transcribing"));
     release();
+    await vi.waitFor(() => expect(t.service.phase()).toBe("done"));
     await vi.waitFor(() => expect(t.service.phase()).toBe("ready"));
   });
 

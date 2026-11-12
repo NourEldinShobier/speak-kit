@@ -5,8 +5,8 @@ import type { Entry, Segment } from "./types";
 const VERSION = 1;
 
 export class StoreError extends Error {
-  readonly code: "newer-version" | "not-found";
-  constructor(code: "newer-version" | "not-found", message: string) {
+  readonly code: "newer-version" | "unreadable" | "not-found";
+  constructor(code: "newer-version" | "unreadable" | "not-found", message: string) {
     super(message);
     this.code = code;
   }
@@ -36,6 +36,8 @@ export class Store {
   newer = false;
   /** Where an unreadable manifest was moved to; undefined when it was fine. */
   recoveredFrom: string | undefined;
+  /** The manifest exists but could not be read (locked, no permission): nothing is written so it is not replaced. */
+  unreadable = false;
 
   constructor(o: StoreOptions) {
     this.#o = o;
@@ -44,7 +46,13 @@ export class Store {
   #p = (...parts: string[]) => path.join(this.#o.dir, ...parts);
 
   async open(): Promise<void> {
-    const raw = await this.#o.fs.read(this.#p("manifest.json"));
+    let raw: Uint8Array | undefined;
+    try {
+      raw = await this.#o.fs.read(this.#p("manifest.json"));
+    } catch {
+      this.unreadable = true;
+      return;
+    }
     if (!raw) return;
     let parsed: { version?: unknown; entries?: unknown };
     try {
@@ -88,6 +96,7 @@ export class Store {
   }
 
   async #commit(next: Map<string, Entry>): Promise<void> {
+    if (this.unreadable) throw new StoreError("unreadable", "The list of transcripts could not be opened.");
     if (this.newer) throw new StoreError("newer-version", "This data was saved by a newer version of Speak Kit.");
     await this.#o.fs.write(this.#p("manifest.json"), JSON.stringify({ version: VERSION, entries: [...next.values()] }));
     this.#entries = next;

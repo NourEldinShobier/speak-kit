@@ -93,6 +93,11 @@ function Notices({ push, settings, recovered, onOpen, onResume }: { push: Push; 
           Your transcripts were saved by a newer version. They are shown here but not changed. Update Speak Kit to edit them.
         </Banner>
       ) : null}
+      {settings?.notice.unreadable ? (
+        <Banner tone="warning" title="Transcripts could not be opened">
+          The list of transcripts is locked or not readable right now, so nothing is changed. Close other programs that use the folder and restart Speak Kit.
+        </Banner>
+      ) : null}
       {settings?.notice.recoveredFrom ? (
         <Banner tone="warning">The list of transcripts could not be read, so it was set aside and a new one started. Your audio and words may still be in the folder.</Banner>
       ) : null}

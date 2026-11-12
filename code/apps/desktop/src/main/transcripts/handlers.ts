@@ -86,7 +86,7 @@ function settingsOf(env: HandlerEnv): Part<"settings" | "patchSettings" | "choos
       folder: env.folder(),
       model: p.modelName(),
       storage: t.storage(),
-      notice: { newer: n.newer, ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
+      notice: { newer: n.newer, ...(n.unreadable && { unreadable: true }), ...(n.recoveredFrom && { recoveredFrom: n.recoveredFrom }) },
       supported: true,
     };
   };

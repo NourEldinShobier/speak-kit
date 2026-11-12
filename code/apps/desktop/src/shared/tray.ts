@@ -18,7 +18,7 @@ export interface TrayContext {
   /** Absent where dictation cannot run (no key hook on this platform yet). */
   dictation?: { enabled: boolean; hotkey: string };
   /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
-  recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" };
+  recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -66,6 +66,7 @@ const WAITING = { starting: "Starting recording...", saving: "Saving recording..
 function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
   if (phase === "ready") return item("record-start", "Record a conversation");
   if (phase === "recording") return item("record-stop", "Stop recording");
+  if (phase === "done") return item("record-start", "Done. Record a conversation");
   return item("record-start", WAITING[phase], { enabled: false });
 }
 

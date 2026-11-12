@@ -139,12 +139,12 @@ describe("file checks", () => {
     expect(sniff(new TextEncoder().encode("\0\0\0\0fty"))).toBeUndefined();
   });
 
-  test("size limits are inclusive: a WAVE up to 1 GiB, other formats up to 400 MiB", () => {
+  test("size limits are inclusive: a WAVE up to 1 GiB, other formats up to 200 MiB", () => {
     const wav = head("RIFF\0\0\0\0WAVE");
     expect(checkFile({ name: "a.wav", bytes: 1024 ** 3, head: wav })).toEqual({ ok: true, format: "wav" });
     expect(checkFile({ name: "a.wav", bytes: 1024 ** 3 + 1, head: wav })).toEqual({ ok: false, failure: failures.tooLarge("a.wav") });
-    expect(checkFile({ name: "a.flac", bytes: 400 * 1024 ** 2, head: head("fLaC") })).toEqual({ ok: true, format: "flac" });
-    expect(checkFile({ name: "a.flac", bytes: 400 * 1024 ** 2 + 1, head: head("fLaC") })).toEqual({ ok: false, failure: failures.tooLarge("a.flac") });
+    expect(checkFile({ name: "a.flac", bytes: 200 * 1024 ** 2, head: head("fLaC") })).toEqual({ ok: true, format: "flac" });
+    expect(checkFile({ name: "a.flac", bytes: 200 * 1024 ** 2 + 1, head: head("fLaC") })).toEqual({ ok: false, failure: failures.tooLarge("a.flac") });
     expect(checkFile({ name: "a.wav", bytes: 1, head: wav })).toEqual({ ok: true, format: "wav" });
   });
 });

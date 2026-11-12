@@ -85,6 +85,10 @@ describe("tray menu, recorder", () => {
     expect(row("recording")).toEqual({ type: "item", action: "record-stop", label: "Stop recording", enabled: true });
   });
 
+  it("says Done for a moment after a transcript finishes and still starts a new recording", () => {
+    expect(row("done")).toEqual({ type: "item", action: "record-start", label: "Done. Record a conversation", enabled: true });
+  });
+
   it("waits, disabled, while it starts, saves and transcribes, so it never stays greyed once that is over", () => {
     expect(row("starting")).toMatchObject({ label: "Starting recording...", enabled: false });
     expect(row("saving")).toMatchObject({ label: "Saving recording...", enabled: false });

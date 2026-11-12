@@ -4,7 +4,16 @@ import { clock, DIR, ids, MemFs, tone } from "./fakes";
 
 const OUT = "/export";
 
-function setup(over: { transcribe?: (n: number, pcm: Int16Array, lang: string) => Promise<ChunkResult> | ChunkResult; policy?: Policy; busy?: () => boolean; fs?: MemFs } = {}) {
+function setup(
+  over: {
+    transcribe?: (n: number, pcm: Int16Array, lang: string) => Promise<ChunkResult> | ChunkResult;
+    policy?: Policy;
+    busy?: () => boolean;
+    fs?: MemFs;
+    recycle?: (file: string) => Promise<void>;
+    warn?: (message: string) => void;
+  } = {},
+) {
   const fs = over.fs ?? new MemFs();
   const c = clock();
   const changed = vi.fn();
@@ -26,6 +35,8 @@ function setup(over: { transcribe?: (n: number, pcm: Int16Array, lang: string) =
       policy: () => over.policy ?? DEFAULT_POLICY,
       exportDir: () => OUT,
       changed,
+      ...(over.recycle && { recycle: over.recycle }),
+      ...(over.warn && { warn: over.warn }),
     });
   return { fs, c, changed, make, langs, calls: () => calls };
 }
@@ -460,6 +471,19 @@ describe("store notices", () => {
     expect(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" })).toMatchObject({ ok: false });
   });
 
+  test("a manifest that cannot be read is reported and left alone", async () => {
+    const fs = new MemFs();
+    fs.files.set(`${DIR}/manifest.json`, new TextEncoder().encode(JSON.stringify({ version: 1, entries: [] })));
+    const locked = Object.assign(Object.create(fs), {
+      read: async () => {
+        throw Object.assign(new Error("busy"), { code: "EBUSY" });
+      },
+    });
+    const t = await setup({ fs: locked }).make();
+    expect(t.notice()).toEqual({ newer: false, unreadable: true });
+    expect(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" })).toMatchObject({ ok: false });
+  });
+
   test("an unreadable manifest is reported with where it went", async () => {
     const fs = new MemFs();
     fs.files.set(`${DIR}/manifest.json`, new TextEncoder().encode("oops"));
@@ -531,6 +555,75 @@ describe("audio", () => {
     expect((await t.get(rec))!.audioBytes).toBeGreaterThan(0);
     release();
     await settled(t, rec, "done");
+  });
+
+  describe("recycle bin", () => {
+    const exported = async (over: Parameters<typeof setup>[0]) => {
+      const s = setup(over);
+      const t = await s.make();
+      const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
+      await settled(t, id, "done");
+      await t.save(id, "txt");
+      return { s, t, id };
+    };
+
+    test("deleting for good sends an untouched export to the recycle bin", async () => {
+      const recycled: string[] = [];
+      const { t, id } = await exported({ recycle: async (f) => void recycled.push(f.replaceAll("\\", "/")) });
+      await t.trash(id);
+      await t.remove(id);
+      expect(recycled).toEqual([`${OUT}/a.txt`]);
+      expect(await t.get(id)).toBeUndefined();
+    });
+
+    test("a file the person changed is not recycled", async () => {
+      const recycled: string[] = [];
+      const { s, t, id } = await exported({ recycle: async (f) => void recycled.push(f.replaceAll("\\", "/")) });
+      await s.fs.write(`${OUT}/a.txt`, "my own edits");
+      await t.trash(id);
+      await t.emptyTrash();
+      expect(recycled.some((f) => f.endsWith("a.txt"))).toBe(false);
+      expect(new TextDecoder().decode(await s.fs.read(`${OUT}/a.txt`))).toBe("my own edits");
+    });
+
+    test("an export that cannot be recycled stays in place and the person is told", async () => {
+      const warn = vi.fn();
+      const { s, t, id } = await exported({
+        recycle: async (f) => {
+          if (f.endsWith("a.txt")) throw new Error("locked");
+        },
+        warn,
+      });
+      await t.trash(id);
+      await t.remove(id);
+      expect(await s.fs.exists(`${OUT}/a.txt`)).toBe(true);
+      expect(warn).toHaveBeenCalledWith("An exported file could not be moved to the Recycle Bin and was left where it is.");
+      expect(await t.get(id)).toBeUndefined();
+    });
+
+    test("audio goes to the recycle bin too, and is deleted anyway when that fails", async () => {
+      const recycled: string[] = [];
+      let bin = true;
+      const s = setup({
+        transcribe: () => ({ ok: false, code: "engine-missing" }),
+        recycle: async (f) => {
+          if (!bin) throw new Error("no bin");
+          recycled.push(f.replaceAll("\\", "/"));
+        },
+      });
+      const t = await s.make();
+      const first = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
+      await settled(t, first, "failed");
+      await t.trash(first);
+      await t.remove(first);
+      expect(recycled).toEqual([expect.stringContaining(`${first}.wav`)]);
+      bin = false;
+      const id = idOf(await t.importAudio({ name: "b.wav", pcm: tone(5), language: "auto" }));
+      await settled(t, id, "failed");
+      await t.trash(id);
+      await t.remove(id);
+      expect([...s.fs.files.keys()].some((k) => k.endsWith(`${id}.wav`))).toBe(false);
+    });
   });
 
   test("a transcript's exports are listed on its detail", async () => {

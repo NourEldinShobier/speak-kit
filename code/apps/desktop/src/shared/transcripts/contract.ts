@@ -41,7 +41,7 @@ export interface SettingsView {
   model: ModelView;
   storage: { audioBytes: number; count: number; trashed: number };
   /** The manifest came from a newer version (nothing can be changed) or could not be read (it was set aside). */
-  notice: { newer: boolean; recoveredFrom?: string };
+  notice: { newer: boolean; unreadable?: boolean; recoveredFrom?: string };
   supported: boolean;
 }
 
@@ -97,7 +97,7 @@ export interface TranscriptsBridge {
 }
 
 export type DecoderCommand = { id: number; bytes: Uint8Array };
-export type DecoderResult = { ok: true; pcm: Int16Array } | { ok: false; code: "decode-failed" | "too-long" };
+export type DecoderResult = { ok: true; pcm: Int16Array } | { ok: false; code: "decode-failed" | "too-long" | "lost" };
 export type MicCommand = { id: number; op: "start" } | { id: number; op: "stop" };
 export type MicResult = { ok: true } | { ok: false; code: "mic-denied" | "mic-missing" | "mic-busy" | "mic-failed" };
 

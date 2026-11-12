@@ -276,8 +276,8 @@ describe("formats", () => {
 
   test("empty, too large for its kind", () => {
     expect(f("a.wav", 0, head("RIFF\0\0\0\0WAVE"))).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
-    expect(f("a.mp3", 400 * 1024 ** 2 + 1, head("ID3"))).toMatchObject({ ok: false, failure: { code: "too-large" } });
-    expect(f("a.mp3", 400 * 1024 ** 2, head("ID3"))).toEqual({ ok: true, format: "mp3" });
+    expect(f("a.mp3", 200 * 1024 ** 2 + 1, head("ID3"))).toMatchObject({ ok: false, failure: { code: "too-large" } });
+    expect(f("a.mp3", 200 * 1024 ** 2, head("ID3"))).toEqual({ ok: true, format: "mp3" });
     expect(f("a.wav", 1024 ** 3 + 1, head("RIFF\0\0\0\0WAVE"))).toMatchObject({ ok: false, failure: { code: "too-large" } });
     expect(f("a.wav", 900 * 1024 ** 2, head("RIFF\0\0\0\0WAVE"))).toEqual({ ok: true, format: "wav" });
   });

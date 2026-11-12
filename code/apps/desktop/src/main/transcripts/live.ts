@@ -10,12 +10,16 @@ export class Live {
   recording: RecordingView | null = null;
   notice: string | undefined;
   busy = false;
+  /** Until when the tray shows "Done" after the last transcript finished. */
+  doneUntil = 0;
   facade: Transcripts | undefined;
   #lastSend = 0;
   readonly #push: (p: Push) => void;
   readonly #changed: () => void;
+  readonly #doneMs: number;
 
-  constructor(push: (p: Push) => void, changed: () => void) {
+  constructor(push: (p: Push) => void, changed: () => void, doneMs = 5000) {
+    this.#doneMs = doneMs;
     this.#push = push;
     this.#changed = changed;
   }
@@ -33,7 +37,13 @@ export class Live {
   /** The transcripts changed: refresh `busy` and tell the window. */
   changed(): void {
     this.tick++;
+    const was = this.busy;
     this.busy = !!this.facade && this.facade.list().some((r) => r.status === "queued" || r.status === "transcribing");
+    if (this.busy) this.doneUntil = 0;
+    else if (was) {
+      this.doneUntil = Date.now() + this.#doneMs;
+      setTimeout(() => this.send(), this.#doneMs + 20).unref();
+    }
     this.send();
   }
 
