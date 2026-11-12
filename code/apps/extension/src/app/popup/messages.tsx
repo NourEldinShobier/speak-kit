@@ -22,7 +22,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   install: (_m, a) => ({
     icon: "download",
     title: "Install Speak Kit to listen",
-    body: "Speak Kit reads pages aloud with a voice that runs on this computer. Nothing is uploaded.",
+    body: "Speak Kit reads pages aloud with a voice that runs on this computer.",
     primary: { label: "Download Speak Kit for Windows", onClick: a.download },
     secondary: { label: "I already installed it", onClick: a.recheck },
     footer: { left: "Free. Works offline.", right: "Learn more", onRight: a.learn },
@@ -48,7 +48,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   version: (_m, a) => ({
     icon: "refresh",
     title: "Speak Kit needs an update",
-    body: "App and extension versions do not match. Install the latest of both; settings are kept.",
+    body: "App and extension versions differ. Install the latest of both.",
     primary: { label: "Download the latest app", onClick: a.download },
     secondary: { label: "Check again", onClick: a.recheck },
     footer: { right: "Troubleshooting", onRight: a.help },
@@ -56,21 +56,21 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   pdf: (_m, a) => ({
     icon: "file-text",
     title: "Chrome's PDF viewer can't be read",
-    body: "Extensions cannot read inside the PDF viewer. Copy the text and paste it into the app.",
+    body: "Extensions cannot read the PDF viewer. Copy the text and paste it in the app.",
     primary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
   }),
   unreadable: (_m, a) => ({
     icon: "lock-off",
     title: "Can't read this page",
-    body: "Chrome blocks extensions on its own pages (chrome://, Web Store). Open a website or paste text in the app.",
+    body: "Chrome blocks extensions on its own pages. Open a website or paste text in the app.",
     primary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
   }),
   fileurl: (_m, a) => ({
     icon: "file-text",
     title: "Allow access to file URLs",
-    body: "To read local files, turn on “Allow access to file URLs” in the extension settings.",
+    body: "Turn on “Allow access to file URLs” in the extension settings.",
     primary: { label: "Open extension settings", onClick: a.extSettings },
     secondary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
@@ -78,7 +78,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   "engine-missing": (_m, a) => ({
     icon: "alert-triangle",
     title: "The voice engine isn't ready",
-    body: "The Kokoro voice model is missing or failed to start. Open the app to repair it.",
+    body: "The Kokoro voice model is missing or failed. Open the app to repair it.",
     primary: { label: "Open Speak Kit", onClick: a.openApp },
     secondary: { label: "Check again", onClick: a.recheck },
     launchNote: true,
