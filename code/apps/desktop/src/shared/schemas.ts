@@ -181,6 +181,8 @@ export const ARGS = {
   automationInfo: v.tuple([]),
   resetControlToken: v.tuple([]),
   commandLine: v.tuple([v.picklist(["install", "remove"])]),
+  installAgentSkill: v.tuple([]),
+  testInTerminal: v.tuple([]),
   retryEngine: v.tuple([]),
   downloadModel: v.tuple([]),
   voices: v.tuple([]),

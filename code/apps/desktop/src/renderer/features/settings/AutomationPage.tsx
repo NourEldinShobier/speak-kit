@@ -4,10 +4,10 @@ import { ERROR_CODES } from "../../../shared/control/contract";
 import type { AutomationInfo, CommandLineAction } from "../../../shared/control/info";
 import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
-import { COMMAND_ROWS, commandLineView, DEEP_LINKS, discoveryPath, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, toolRows, TRY_COMMAND } from "./automation";
+import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
 
 /** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
-function CopyButton({ text, label }: { text: string; label: string }) {
+function CopyButton({ text, label, caption = "Copy" }: { text: string; label: string; caption?: string }) {
   const [done, setDone] = useState(false);
   return (
     <Button
@@ -23,7 +23,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         setTimeout(() => setDone(false), 1500);
       }}
     >
-      {done ? "Copied" : "Copy"}
+      {done ? "Copied" : caption}
     </Button>
   );
 }
@@ -44,10 +44,11 @@ function useInfo() {
     );
   }, []);
   useEffect(read, [read]);
-  const run = async (what: () => Promise<AutomationInfo>, message: string) => {
+  const run = async (what: () => Promise<AutomationInfo | void>, message: string) => {
     setFailed(null);
     try {
-      setLoad({ phase: "ready", info: await what() });
+      const next = await what();
+      if (next) setLoad({ phase: "ready", info: next });
     } catch {
       setFailed(message);
     }
@@ -116,14 +117,64 @@ function Reference() {
   );
 }
 
-function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppState; info: AutomationInfo | null; onAction(a: CommandLineAction): void; onReset(): void; failed: string | null }) {
+function SkillRow({ info, onInstall }: { info: AutomationInfo; onInstall(): void }) {
+  const v = skillView(info.skill);
+  return (
+    <SettingRow
+      label={
+        <span className="sk-row-actions">
+          Agent skill <StatusPill tone={v.pill.tone}>{v.pill.text}</StatusPill>
+        </span>
+      }
+      description={v.text}
+      control={
+        <div className="sk-row-actions">
+          {v.action && (
+            <Button variant="primary" onClick={onInstall}>
+              {v.action.label}
+            </Button>
+          )}
+          <CopyButton text={SKILL_COMMAND} label="Copy the skill install command" caption="Copy install" />
+        </div>
+      }
+    />
+  );
+}
+
+/** What went wrong, with the command to do it by hand when there is one, and a way to try again. */
+export function FailedBanner({ message, manual, onRetry }: { message: string; manual: string | null; onRetry(): void }) {
+  return (
+    <Banner
+      tone="error"
+      title="That did not work"
+      action={
+        <span className="sk-row-actions">
+          {manual && <CopyButton text={manual} label="Copy the command" caption="Copy command" />}
+          <Button onClick={onRetry}>Try again</Button>
+        </span>
+      }
+    >
+      {message}
+    </Banner>
+  );
+}
+
+interface SectionProps {
+  s: AppState;
+  info: AutomationInfo | null;
+  failed: string | null;
+  onAction(a: CommandLineAction): void;
+  onReset(): void;
+  onSkill(): void;
+  onTerminal(): void;
+}
+
+function CommandLineSection({ s, info, onAction, onReset, onSkill, onTerminal, failed }: SectionProps) {
+  const installed = info?.commandLine.kind === "installed" || info?.commandLine.kind === "needs-path";
+  const manual = info && !installed ? info.manualInstall : null;
   return (
     <SettingsSection title="Command-line tool">
-      {failed && (
-        <Banner tone="error" title="That did not work" action={<Button onClick={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")}>Try again</Button>}>
-          {failed}
-        </Banner>
-      )}
+      {failed && <FailedBanner message={failed} manual={manual} onRetry={() => info && onAction(info.commandLine.kind === "installed" ? "remove" : "install")} />}
       {info && <CommandLineRow info={info} version={s.version} busy={false} onAction={onAction} />}
       <SettingRow
         label="Try it"
@@ -132,16 +183,20 @@ function CommandLineSection({ s, info, onAction, onReset, failed }: { s: AppStat
           <div className="sk-row-actions">
             {code(TRY_COMMAND)}
             <CopyButton text={TRY_COMMAND} label="Copy the command" />
+            <Button disabled={!installed} onClick={onTerminal}>
+              Test in terminal
+            </Button>
           </div>
         }
       />
+      {info && <SkillRow info={info} onInstall={onSkill} />}
       <Reference />
       <SettingRow
         label="Discovery file"
         description="Scripts find the local server here. It holds a port and a private token, so keep it out of shared folders."
         control={
           <div className="sk-row-actions">
-            {code(discoveryPath(s.platform))}
+            {code(info?.discoveryFile ?? "control.json")}
             <Button onClick={() => void api.openPath("data")}>Show file</Button>
             <Button onClick={onReset}>Reset token</Button>
           </div>
@@ -227,6 +282,8 @@ export function AutomationPage({ s }: { s: AppState }) {
         s={s}
         info={info}
         failed={failed}
+        onSkill={() => void run(() => api.installAgentSkill(), "The skill file could not be written. Check that your home folder can be written to.")}
+        onTerminal={() => void run(() => api.testInTerminal(), "No terminal could be opened. Open one yourself and run the command.")}
         onAction={(a) => void run(() => api.commandLine(a), "The command-line tool could not be changed. Close other terminals and try again.")}
         onReset={() => void run(() => api.resetControlToken(), "The token could not be reset.")}
       />

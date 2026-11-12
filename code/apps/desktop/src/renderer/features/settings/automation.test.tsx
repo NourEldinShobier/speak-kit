@@ -9,15 +9,21 @@ import { ERROR_CODES } from "../../../shared/control/contract";
 import { MCP_TOOLS } from "../../../shared/control/mcp-tools";
 import { parseConfig } from "../../../shared/schemas";
 import { appState } from "../../app-state.fixture";
-import { AutomationPage } from "./AutomationPage";
-import { COMMAND_ROWS, commandLineView, DEEP_LINKS, discoveryPath, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, toolRows } from "./automation";
+import { Tabs } from "@speakkit/ui";
+import { AutomationPage, FailedBanner } from "./AutomationPage";
+import type { AgentSkillState } from "../../../shared/control/info";
+import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows } from "./automation";
 
 const state = (controlServer: boolean, platform = "win32", mcpTools = {}) => appState({ platform, config: parseConfig({ controlServer, mcpTools }) });
 
 describe("automation model", () => {
-  it("names the discovery file the way each system writes it", () => {
-    expect(discoveryPath("win32")).toBe("%APPDATA%\\Speak Kit\\control.json");
-    expect(discoveryPath("darwin")).toBe("~/Library/Application Support/Speak Kit/control.json");
+  it("says what the skill row shows and offers in each state", () => {
+    const at = (state: AgentSkillState["state"]) => skillView({ state, where: "C:/h/SKILL.md" });
+    expect(at("not-installed")).toMatchObject({ pill: { tone: "neutral", text: "Not installed" }, action: { label: "Install" } });
+    expect(at("up-to-date")).toEqual({ pill: { tone: "green", text: "Installed" }, text: "Up to date. The file is C:/h/SKILL.md", action: null });
+    expect(at("out-of-date")).toMatchObject({ pill: { tone: "orange", text: "Update available" }, action: { label: "Update" } });
+    expect(at("unreadable")).toMatchObject({ pill: { text: "Needs repair" }, action: { label: "Install" } });
+    expect(SKILL_COMMAND).toBe("speakkit skill install");
   });
 
   it("the MCP block starts the bridge by command and holds no token", () => {
@@ -56,6 +62,19 @@ describe("automation model", () => {
   });
 });
 
+describe("the failure banner", () => {
+  it("offers to copy the command that does it by hand, and to try again", () => {
+    const html = renderToStaticMarkup(<FailedBanner message="The command-line tool could not be changed." manual="mkdir -p ~/.local/bin" onRetry={() => {}} />);
+    expect(html).toContain("The command-line tool could not be changed.");
+    expect(html).toContain('aria-label="Copy the command"');
+    expect(html).toContain("Copy command");
+    expect(html).toContain("Try again");
+  });
+  it("offers no copy when there is nothing to do by hand", () => {
+    expect(renderToStaticMarkup(<FailedBanner message="x" manual={null} onRetry={() => {}} />)).not.toContain("Copy command");
+  });
+});
+
 describe("Automation page", () => {
   it("with the server running shows Running, no warning, the sections and a named switch for every tool", () => {
     const html = renderToStaticMarkup(<AutomationPage s={state(true)} />);
@@ -74,8 +93,25 @@ describe("Automation page", () => {
     const html = renderToStaticMarkup(<AutomationPage s={state(false, "darwin")} />);
     expect(html).toContain("The local server is not running");
     expect(html).toContain("Start server");
-    expect(html).toContain("Library/Application Support");
     expect(html).toMatch(/aria-label="Let AI apps use Speak Kit"/);
     expect(html.match(/disabled=""/g)?.length).toBeGreaterThanOrEqual(MCP_TOOLS.length);
+  });
+});
+
+describe("shared tabs", () => {
+  it("point at no panel that is not there, so a screen reader is not sent to nothing", () => {
+    const html = renderToStaticMarkup(
+      <Tabs
+        label="Parts"
+        items={[
+          { id: "a", label: "A" },
+          { id: "b", label: "B" },
+        ]}
+        value="a"
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain('role="tab"');
+    expect(html).not.toContain("aria-controls");
   });
 });

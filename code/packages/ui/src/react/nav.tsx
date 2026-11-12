@@ -23,7 +23,8 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
     <RTabs.Root value={value} onValueChange={onChange} activationMode="automatic">
       <RTabs.List aria-label={label} className={cx("lm-tabs", className)}>
         {items.map((it) => (
-          <RTabs.Trigger key={it.id} value={it.id} className="lm-tab">
+          // The panels live in the page, not in this component, so the reference Radix adds to a missing panel is left out.
+          <RTabs.Trigger key={it.id} value={it.id} className="lm-tab" aria-controls={undefined}>
             {it.label}
           </RTabs.Trigger>
         ))}

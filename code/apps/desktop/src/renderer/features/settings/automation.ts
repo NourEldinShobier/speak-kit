@@ -1,16 +1,11 @@
 import { EXIT, type ErrorCode } from "../../../shared/control/contract";
-import type { CommandLineAction, CommandLineState } from "../../../shared/control/info";
+import { TRY_COMMAND, type AgentSkillState, type CommandLineAction, type CommandLineState } from "../../../shared/control/info";
 import { MCP_TOOLS, toolOn, type McpTool } from "../../../shared/control/mcp-tools";
-
-/** Where the running app leaves the port and token for scripts, shown the way a person would type it on each system. */
-export function discoveryPath(platform: string): string {
-  return platform === "darwin" ? "~/Library/Application Support/Speak Kit/control.json" : "%APPDATA%\\Speak Kit\\control.json";
-}
 
 /** The block an AI app takes in its MCP settings. The tool starts the bridge itself and finds the token on its own, so none is written here. */
 export const MCP_CONFIG = JSON.stringify({ mcpServers: { speakkit: { command: "speakkit", args: ["mcp"] } } }, null, 2);
 
-export const TRY_COMMAND = "speakkit status --json";
+export { TRY_COMMAND };
 
 export const EXIT_ROWS: readonly { code: number; text: string }[] = [
   { code: EXIT.ok, text: "Done" },
@@ -78,6 +73,33 @@ export function commandLineView(s: CommandLineState, version: string): CommandLi
       };
     case "needs-repair":
       return { pill: { tone: "orange", text: "Needs repair" }, text: `${s.why} Repair puts it back.`, action: { label: "Repair", do: "install" } };
+  }
+}
+
+export interface SkillView {
+  pill: { tone: "green" | "neutral" | "orange"; text: string };
+  text: string;
+  action: { label: string } | null;
+}
+
+/** The command that writes the same skill file from a terminal, for the person who wants to run it themselves. */
+export const SKILL_COMMAND = "speakkit skill install";
+
+/** What the agent-skill row says and offers in each state. */
+export function skillView(s: AgentSkillState): SkillView {
+  switch (s.state) {
+    case "not-installed":
+      return {
+        pill: { tone: "neutral", text: "Not installed" },
+        text: "Teaches an AI agent such as Claude Code every speakkit command. Writes one file in your own folder.",
+        action: { label: "Install" },
+      };
+    case "up-to-date":
+      return { pill: { tone: "green", text: "Installed" }, text: `Up to date. The file is ${s.where}`, action: null };
+    case "out-of-date":
+      return { pill: { tone: "orange", text: "Update available" }, text: "The installed skill was written for another version of Speak Kit. Update replaces it.", action: { label: "Update" } };
+    case "unreadable":
+      return { pill: { tone: "orange", text: "Needs repair" }, text: "The skill file could not be read. Install writes it again.", action: { label: "Install" } };
   }
 }
 

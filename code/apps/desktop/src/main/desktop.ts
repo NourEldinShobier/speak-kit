@@ -20,6 +20,13 @@ import { setupTray } from "./desktop-tray";
 import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
 import { realCommandLine } from "./cli-path/real";
+import { agentSkill } from "./agent-skill";
+import { nodeSkillFs } from "./agent-skill/real";
+import { systemTerminal, type Terminal } from "./cli-terminal";
+import { skillFilePath } from "../cli/paths";
+import { skillText } from "../shared/control/skill";
+import { CONTROL_VERSION } from "../shared/control/contract";
+import { writeFile } from "node:fs/promises";
 import { setupControl } from "./control";
 import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
@@ -109,6 +116,24 @@ function desktopHandlers(
   } satisfies Partial<Api>;
 }
 
+/** The command-line tool, the agent skill and the terminal of the Automation page. A test run keeps the skill in its own folder and opens no window: the command that would have run is written to a file. */
+function commandLineTools(o: { test: boolean; version: string; dictation: { dataDir: string } }) {
+  const shippedDir = app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined;
+  const dataDir = o.dictation.dataDir;
+  return {
+    shippedDir,
+    commandLine: realCommandLine({ platform: process.platform, shippedDir, userData: dataDir, home: os.homedir() }),
+    agentSkill: agentSkill({
+      file: o.test ? path.join(dataDir, "agent-skill", "SKILL.md") : skillFilePath(os.homedir()),
+      text: () => skillText(CONTROL_VERSION, o.version),
+      fs: nodeSkillFs,
+    }),
+    terminal: o.test ? testTerminal(path.join(dataDir, "terminal-command.txt")) : systemTerminal(process.platform),
+  };
+}
+
+const testTerminal = (file: string): Terminal => ({ open: (command, extraPath) => writeFile(file, `${extraPath ?? ""}|${command}`) });
+
 /** Stops every feature; resolves once the control server is down. */
 function disposeAll(p: {
   control: { dispose(): Promise<void> };
@@ -161,7 +186,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const control = setupControl(ctx, {
     reading,
     automation: automation.host,
-    commandLine: realCommandLine({ platform: process.platform, shippedDir: app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined, userData: o.dictation.dataDir, home: os.homedir() }),
+    ...commandLineTools(o),
     dictation,
     dataDir: o.dictation.dataDir,
     version: o.version,
