@@ -23,6 +23,14 @@ describe("spaceBefore", () => {
     ["an emoji", "\u{1F600}"],
   ])("adds nothing after %s", (_name, before) => expect(spaceBefore("next", at(before))).toBe("next"));
 
+  it.each([".", ",", ";", ":", "!", "?", ")", "]", "}", "%", '"', "'", "’", "”", "»", "…"])("adds a space after the closing mark %s", (mark) => {
+    expect(spaceBefore("next", at(mark))).toBe(" next");
+  });
+
+  it.each(["(", "[", "{", "-", "/", "@", "#", "$"])("adds nothing after the opening or joining mark %s", (mark) => {
+    expect(spaceBefore("next", at(mark))).toBe("next");
+  });
+
   it("adds nothing when text is selected, because the paste replaces it", () => expect(spaceBefore("next", at("d", true))).toBe("next"));
   it("adds nothing when the field could not be read", () => expect(spaceBefore("next", undefined)).toBe("next"));
   it("adds nothing before text that starts with a space or punctuation", () => {
