@@ -342,6 +342,13 @@ describe("macOS insert through the inserter", () => {
     expect(t.text()).toBe("secret");
   });
 
+  it("refuses to type into a focused password control and sends no keys", async () => {
+    const t = insertSetup();
+    t.fake.state.passwordFocused = true;
+    expect(await t.ins.insert("secret")).toEqual({ status: "refused", reason: "password-field" });
+    expect(t.fake.state.posted).toEqual([]);
+  });
+
   it("only copies when the app changed since the key went down", async () => {
     const t = insertSetup();
     expect(await t.ins.insert("x", { target: "999" })).toEqual({ status: "copied", reason: "foreground-changed" });

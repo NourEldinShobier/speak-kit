@@ -211,11 +211,14 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
 }
 
 /** Accessibility: is the focused control a secure text field? Needs the Accessibility permission; without it the answer is no. */
+const AX_TIMEOUT_SECONDS = 0.25;
+
 function axApi(koffi: Koffi): Pick<MacNative, "passwordFocused"> {
   const ax = koffi.load(FW("ApplicationServices"));
   const cf = koffi.load(FW("CoreFoundation"));
   const AXIsProcessTrusted = ax.func("bool AXIsProcessTrusted()");
   const AXUIElementCreateSystemWide = ax.func("void *AXUIElementCreateSystemWide()");
+  const AXUIElementSetMessagingTimeout = ax.func("int32 AXUIElementSetMessagingTimeout(void *element, float seconds)");
   const AXUIElementCopyAttributeValue = ax.func("int32 AXUIElementCopyAttributeValue(void *element, void *attribute, _Out_ void **value)");
   const CFStringCreateWithCString = cf.func("void *CFStringCreateWithCString(void *alloc, const char *text, uint32 encoding)");
   const CFEqual = cf.func("bool CFEqual(void *a, void *b)");
@@ -230,6 +233,8 @@ function axApi(koffi: Koffi): Pick<MacNative, "passwordFocused"> {
     passwordFocused() {
       if (!AXIsProcessTrusted()) return false;
       const system = AXUIElementCreateSystemWide();
+      // A hung front app would otherwise block this thread for the default timeout (seconds); a timed-out query reads as "not a password field".
+      AXUIElementSetMessagingTimeout(system, AX_TIMEOUT_SECONDS);
       const focused = copy(system, "AXFocusedUIElement");
       CFRelease(system);
       if (!focused) return false;
