@@ -7,7 +7,7 @@ const gz = (file) => gzipSync(readFileSync(file), { level: 9 }).length;
 
 /** Budgets in KB of gzip. Pages count their JS and CSS as the HTML loads them (script + modulepreload), not chunks loaded later on demand. */
 export const BUDGET_KB = {
-  popup: 124, // new real code in the shared UI bundle: 123.1 KB measured
+  popup: 123,
   options: 123,
   sidepanel: 100,
   offscreen: 14,
