@@ -9,6 +9,8 @@ export interface Target {
   name?: string;
   elevated: boolean;
   passwordField: boolean;
+  /** Host name of the page in front when the program is a browser that reports it. */
+  site?: string;
 }
 
 export type CopyReason = "setting" | "elevated" | "focus-changed" | "interrupted" | "no-target" | "manual";

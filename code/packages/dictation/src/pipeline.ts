@@ -238,7 +238,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const silent = checkClip(ctx, clip);
   if (silent) return silent;
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
-  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe));
+  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.site));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
   const got = await transcribe(ctx, clip, prompt);
   if ("error" in got) return got;
