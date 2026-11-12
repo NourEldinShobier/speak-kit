@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useReducer, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { Avatar, Badge, Banner, Button, EmptyState, Select, StatusPill, TextInput, type Tone } from "@speakkit/ui";
+import { Avatar, Badge, Banner, Button, EmptyState, Select, StatusPill, TextInput, onArrowKeys, type Tone } from "@speakkit/ui";
 import { plural, type Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { usePlayer } from "../../pages";
@@ -98,7 +98,7 @@ interface GridProps {
 
 function VoiceGrid({ shown, defaultId, playing, tone, preview, onOpen }: GridProps) {
   return (
-    <div className="sk-voices" data-testid="voices">
+    <div className="sk-voices" data-testid="voices" onKeyDown={onArrowKeys(".sk-voice", true)}>
       {shown.map((v) => (
         <VoiceCard key={v.id} voice={v} tone={tone(v)} isDefault={v.id === defaultId} playing={playing === v.id} onPreview={() => preview(v)} onOpen={() => onOpen(v.id)} />
       ))}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Banner, Button, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
+import { Button, OptInCard, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
 import { DEEP_LINKS, discoveryPath, EXIT_ROWS, MCP_CONFIG, TRY_COMMAND } from "./automation";
@@ -109,17 +109,9 @@ export function AutomationPage({ s }: { s: AppState }) {
   return (
     <Page title="Automation" lead="Let scripts and AI apps use Speak Kit on this computer. Nothing here leaves your computer.">
       {!on && (
-        <Banner
-          tone="warning"
-          title="The local server is not running"
-          action={
-            <Button variant="primary" onClick={() => void api.patchConfig({ controlServer: true })}>
-              Start server
-            </Button>
-          }
-        >
-          The command-line tool and the MCP server need it. Speak Kit itself works without it.
-        </Banner>
+        <OptInCard icon="terminal" title="The local server is off" enableLabel="Start server" onEnable={() => void api.patchConfig({ controlServer: true })}>
+          The command-line tool and the MCP server need it. It only answers on this computer. Speak Kit itself works without it.
+        </OptInCard>
       )}
       <ServerSection on={on} />
       <CommandLineSection platform={s.platform} />

@@ -1,5 +1,5 @@
 import type { Dispatch } from "react";
-import { Button, EmptyState, Icon, ProgressBar, Select } from "@speakkit/ui";
+import { Button, EmptyState, Icon, ProgressBar, Select, onArrowKeys } from "@speakkit/ui";
 import { plural } from "@speakkit/protocol";
 import type { DocMeta, SearchHit } from "../../../shared/library/contract";
 import { DocRow } from "./DocRow";
@@ -92,7 +92,7 @@ interface BodyProps {
 function List({ view, ui, hits, speed, now, dispatch, open, refresh }: Omit<BodyProps, "loaded" | "pickFiles">) {
   const dialog = (kind: "rename" | "voice" | "delete", doc: DocMeta) => dispatch({ type: "dialog", dialog: { kind, doc } });
   return (
-    <ul className="lib-list">
+    <ul className="lib-list" onKeyDown={onArrowKeys(".lib-row__main")}>
       {view.visible.map((d) => (
         <DocRow
           key={d.id}

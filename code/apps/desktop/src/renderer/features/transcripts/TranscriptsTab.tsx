@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Row } from "@speakkit/transcripts/pure";
-import { Banner, Button, EmptyState, Skeleton, TextInput } from "@speakkit/ui";
+import { Banner, Button, EmptyState, Skeleton, TextInput, onArrowKeys } from "@speakkit/ui";
 import type { Push, SettingsView } from "../../../shared/transcripts/contract";
 import { transcripts } from "./api";
 import { ExportNotice, type ExportResult } from "./ExportMenu";
@@ -53,7 +53,7 @@ function Rows({
   const now = Date.now();
   const audioDays = settings?.config.audioDays ?? 7;
   return (
-    <div className="lm-card tr-list" role="list" aria-label="Transcripts">
+    <div className="lm-card tr-list" role="list" aria-label="Transcripts" onKeyDown={onArrowKeys(".tr-row__main")}>
       {rows.map((r) => (
         <div key={r.id} role="listitem">
           <TranscriptRow

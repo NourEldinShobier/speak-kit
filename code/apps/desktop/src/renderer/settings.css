@@ -264,16 +264,6 @@
   border-radius: 0;
 }
 
-/* Reduce motion chosen in Settings; the operating system preference is handled by the component styles */
-:root[data-reduce-motion="on"] *,
-:root[data-reduce-motion="on"] *::before,
-:root[data-reduce-motion="on"] *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
-}
-
 .sk-code {
   padding: 6px 10px;
   border-radius: var(--radius-control);

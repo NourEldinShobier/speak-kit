@@ -97,3 +97,13 @@ describe("stored values of the wrong type", () => {
     expect(noticeText({ kind: "repaired", fields: ["a", "b", "c", "d", "e"] })).toContain("a, b, c, d and 1 more");
   });
 });
+
+describe("the What is new notes", () => {
+  it("a file from before them loads an empty one, a stored one is kept, a broken one is repaired", () => {
+    expect(loadSettings({ autoUpdate: false }).config.whatsNew).toEqual({ version: "", notes: [] });
+    const kept = loadSettings({ whatsNew: { version: "0.4.0", notes: ["a"] } });
+    expect(kept.config.whatsNew).toEqual({ version: "0.4.0", notes: ["a"] });
+    expect(kept.needsBackup).toBe(false);
+    expect(loadSettings({ whatsNew: { version: 7, notes: "x" } }).config.whatsNew).toEqual({ version: "", notes: [] });
+  });
+});

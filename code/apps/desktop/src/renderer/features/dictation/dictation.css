@@ -415,11 +415,11 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dict-frame__cap i {
+  :root:not([data-reduce-motion="off"]) .dict-frame__cap i {
     animation: none;
   }
-  .dict-frame[data-kind="hold"] .dict-frame__cap i,
-  .dict-frame[data-kind="double"] .dict-frame__cap i:first-child {
+  :root:not([data-reduce-motion="off"]) .dict-frame[data-kind="hold"] .dict-frame__cap i,
+  :root:not([data-reduce-motion="off"]) .dict-frame[data-kind="double"] .dict-frame__cap i:first-child {
     background: var(--text-primary);
   }
 }

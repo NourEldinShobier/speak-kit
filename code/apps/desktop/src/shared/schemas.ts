@@ -73,6 +73,12 @@ export const CLOSE_ACTIONS = ["hide", "quit"] as const;
 export const MOTION_CHOICES = ["system", "on", "off"] as const;
 export const UPDATE_CHANNELS = ["stable", "early"] as const;
 
+const WhatsNewSchema = v.object({
+  version: fb(v.pipe(v.string(), v.maxLength(64)), ""),
+  notes: fb(v.array(v.pipe(v.string(), v.maxLength(200))), []),
+});
+export type WhatsNew = v.InferOutput<typeof WhatsNewSchema>;
+
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
@@ -98,6 +104,8 @@ export const ConfigSchema = v.object({
   notifications: fb(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
   autoUpdate: bool(true),
+  /** The notes of the update that was downloaded last, for the What is new page once that version runs. */
+  whatsNew: fb(WhatsNewSchema, () => v.parse(WhatsNewSchema, {})),
   /** The local control server for the command line and the MCP server. */
   controlServer: bool(true),
   shortcuts: fb(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
@@ -186,6 +194,7 @@ export const ARGS = {
   storage: v.tuple([]),
   deleteDownloads: v.tuple([]),
   metrics: v.tuple([]),
+  resources: v.tuple([]),
   hideWindow: v.tuple([]),
   quit: v.tuple([]),
   setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),

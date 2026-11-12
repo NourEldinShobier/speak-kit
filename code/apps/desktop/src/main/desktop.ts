@@ -1,4 +1,5 @@
 import { app, type BrowserWindow } from "electron";
+import type { TtsEngine } from "@speakkit/engine";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -33,6 +34,10 @@ import { NOTES_MODEL } from "./voice-chat/service";
 import { setupMeetings } from "./meetings";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
+import { cachedHardware, collectResources, speechModelName } from "./resources";
+import type { SttExtras } from "./speech-models/service";
+import { motionNow, windowMotion } from "./window-motion";
+import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
 interface DesktopOptions {
   parent: () => BrowserWindow | null;
@@ -51,6 +56,10 @@ interface DesktopOptions {
     /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
     micClaim: (name: string) => () => void;
   };
+  /** The notice the tray menu shows while the window is closed. */
+  trayNotice(): string | undefined;
+  /** The voice engine, for the memory it holds (Settings, Performance). */
+  voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
   voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
@@ -96,7 +105,14 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
 /** The IPC methods the desktop features add. */
 function desktopHandlers(
   ctx: Ctx,
-  f: { reading: ReturnType<typeof createReading>; exports: ReturnType<typeof createExports>; updates: ReturnType<typeof createUpdates>; shortcuts: ReturnType<typeof setupShortcuts>; test: boolean },
+  f: {
+    reading: ReturnType<typeof createReading>;
+    exports: ReturnType<typeof createExports>;
+    updates: ReturnType<typeof createUpdates>;
+    shortcuts: ReturnType<typeof setupShortcuts>;
+    test: boolean;
+    resources: Api["resources"];
+  },
 ) {
   return {
     ...engineHandlers(ctx),
@@ -105,6 +121,7 @@ function desktopHandlers(
     ...f.shortcuts.handlers,
     ...readerHandlers(f.reading),
     installExtension: () => installExtension(!f.test),
+    resources: f.resources,
   } satisfies Partial<Api>;
 }
 
@@ -134,6 +151,23 @@ function disposeAll(p: {
   return controlDown;
 }
 
+/** Memory per process and model, read when the Performance page asks. */
+const hardware = cachedHardware(probeThisComputer);
+function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dictation: DictationService) {
+  return collectResources({
+    processes: () => app.getAppMetrics().map((m) => ({ type: m.type, name: m.name, workingSetKb: m.memory.workingSetSize, cpu: m.cpu.percentCPUUsage })),
+    voice: () => ({ state: ctx.state.health?.engine.state, name: "Kokoro-82M", pid: (voiceEngine() as { workerPid?: number } | null)?.workerPid }),
+    speech: () => {
+      const stt = dictation.stt as typeof dictation.stt & SttExtras; // the real engine reports its process and backend
+      return { state: stt.status().state, name: speechModelName(ctx.config.dictation.model), pid: stt.workerPid, backend: stt.backend };
+    },
+    memoryOf,
+    hardware,
+    platform: process.platform === "darwin" ? "darwin" : "win32",
+    arch: process.arch,
+  });
+}
+
 /**
  * Everything beyond the server and the main window: global shortcuts, reading and the mini player, toasts,
  * exports, updates and the tray. `handlers` are the IPC methods these features add.
@@ -159,7 +193,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const notes = transcriptNotes({ on: () => ctx.config.meetings.summary, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = setupControl(ctx, { reading, dictation, dataDir: o.dictation.dataDir, version: o.version });
@@ -167,7 +201,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
     /** Called by the IPC layer: is this webContents our mini player? */
@@ -176,6 +210,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
+      if (patch.reduceMotion !== undefined) windowMotion.set(motionNow(ctx.config.reduceMotion));
       control.onConfigPatch(patch);
     },
     dictation,

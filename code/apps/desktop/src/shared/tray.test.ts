@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
 import { IDLE_READER, type ReaderState } from "./reader";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
-import { recordToggle, speechModelRows, trayIconState, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
+import { recordToggle, speechModelRows, trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
 
 const health = (state: EngineState): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state } });
 const reader = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READER, status, title: "Chapter one", index: 2, total: 9, source: "selection" });
@@ -229,6 +229,30 @@ describe("tray meeting row", () => {
   });
   it("has no meeting row when the feature is off", () => {
     expect(labels(ctx())).not.toContain("Record a meeting");
+  });
+});
+
+describe("tray notice", () => {
+  it("is the first row, above Open Speak Kit, and opens the app", () => {
+    const rows = trayMenuModel(ctx({ notice: "The voice engine failed to start" }));
+    expect(rows.slice(0, 3)).toEqual([
+      { type: "item", action: "open", label: "The voice engine failed to start", enabled: true },
+      { type: "separator" },
+      { type: "item", action: "open", label: "Open Speak Kit", enabled: true },
+    ]);
+  });
+
+  it("leaves the menu as it was without a notice", () => {
+    expect(trayMenuModel(ctx())[0]).toEqual({ type: "item", action: "open", label: "Open Speak Kit", enabled: true });
+  });
+});
+
+describe("tray icon variant", () => {
+  it("is dark only on Windows with a dark taskbar", () => {
+    expect(trayIconVariant(ctx({ platform: "win32", darkTaskbar: true }))).toBe("dark");
+    expect(trayIconVariant(ctx({ platform: "win32", darkTaskbar: false }))).toBe("light");
+    expect(trayIconVariant(ctx({ platform: "win32" }))).toBe("light");
+    expect(trayIconVariant(ctx({ platform: "darwin", darkTaskbar: true }))).toBe("light");
   });
 });
 

@@ -1,4 +1,4 @@
-import { app, type BrowserWindow } from "electron";
+import { app, screen, type BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STATE_EVENT, UI_EVENT, type AppState, type UiEvent } from "../shared/ipc";
@@ -6,9 +6,23 @@ import type { Config } from "../shared/schemas";
 import { closeOutcome } from "../shared/settings/behaviour";
 import { appIcon } from "./icon";
 import { createSecureWindow } from "./secure-window";
+import { createSizeGuard } from "./window-size-guard";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+/** A drag onto a monitor with another scale factor does not leave the window a different size. */
+function keepSizeOnMove(w: BrowserWindow): void {
+  const guard = createSizeGuard({
+    getContentSize: () => w.getContentSize(),
+    setContentSize: (a, b) => w.setContentSize(a, b),
+    isMaximized: () => w.isMaximized(),
+    isFullScreen: () => w.isFullScreen(),
+    scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
+  });
+  w.on("will-move", guard.willMove);
+  w.on("moved", guard.moved);
+}
 const TITLE = "Speak Kit";
 /** Window hidden this long (ms): destroy it. 0 disables. */
 const HIDE_DESTROY_MS = Number(process.env.SPEAKKIT_DESTROY_MS ?? 30_000);
@@ -142,6 +156,7 @@ export class MainWindow {
       if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
+    keepSizeOnMove(w);
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
     w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {

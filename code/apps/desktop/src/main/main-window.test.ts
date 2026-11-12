@@ -116,3 +116,11 @@ describe("MainWindow bar height and background", () => {
     expect([h.opts?.["backgroundColor"], h.bg, h.overlay]).toEqual(["#white", ["#white"], [32]]);
   });
 });
+
+describe("MainWindow dragging", () => {
+  it("watches the start and the end of a move so a move never resizes", () => {
+    make().create(false);
+    expect(typeof h.on["will-move"]).toBe("function");
+    expect(typeof h.on["moved"]).toBe("function");
+  });
+});

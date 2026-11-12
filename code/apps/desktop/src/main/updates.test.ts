@@ -256,7 +256,7 @@ describe("githubLatestRelease", () => {
 
   it("reads the version from the tag and keeps the release page", async () => {
     const r = await githubLatestRelease(answer(200, { tag_name: "v0.4.0", html_url: `${RELEASES_PAGE}tag/v0.4.0` }));
-    expect(r).toEqual({ version: "0.4.0", url: `${RELEASES_PAGE}tag/v0.4.0` });
+    expect(r).toEqual({ version: "0.4.0", url: `${RELEASES_PAGE}tag/v0.4.0`, notes: [] });
   });
 
   it("rejects an error status and a release page outside this project", async () => {
@@ -298,5 +298,49 @@ describe("updateMode and feedOverride", () => {
     expect(feedOverride("file:///c:/x")).toBeUndefined();
     expect(feedOverride("not a url")).toBeUndefined();
     expect(feedOverride(undefined)).toBeUndefined();
+  });
+});
+
+describe("release notes", () => {
+  it("carry the release lines from available to ready and into onReady", async () => {
+    const notes: string[][] = [];
+    const u = new FakeUpdater();
+    const up = new Updates({
+      mode: "auto",
+      currentVersion: "0.3.1",
+      load: async () => u,
+      onState: () => {},
+      onReady: (_v, n) => notes.push(n),
+      now: () => 42,
+      busy: () => false,
+      onBusy: () => {},
+      beforeInstall: () => {},
+    });
+    await up.check();
+    u.emit("update-available", { version: "0.4.0", releaseNotes: "* fix(tray): keep the menu open by @dev in #9\n* feat: new page by @dev in #10" });
+    expect(up.state).toEqual({ kind: "available", version: "0.4.0", notes: ["fix(tray): keep the menu open", "feat: new page"] });
+    await up.download();
+    u.emit("update-downloaded", { version: "0.4.0" });
+    expect(up.state).toEqual({ kind: "ready", version: "0.4.0", onQuit: false, notes: ["fix(tray): keep the menu open", "feat: new page"] });
+    expect(notes).toEqual([["fix(tray): keep the menu open", "feat: new page"]]);
+  });
+
+  it("are left out of the state when the release has none", async () => {
+    const t = setup();
+    await t.up.check();
+    t.u.emit("update-available", { version: "0.4.0", releaseNotes: null });
+    expect(t.up.state).toEqual({ kind: "available", version: "0.4.0" });
+  });
+
+  it("come with the manual (macOS) announcement", async () => {
+    const t = setup("manual", { latest: async () => ({ version: "0.9.0", url: `${RELEASES_PAGE}tag/v0.9.0`, notes: ["one"] }) });
+    await t.up.check();
+    expect(t.up.state).toEqual({ kind: "manual", version: "0.9.0", url: `${RELEASES_PAGE}tag/v0.9.0`, notes: ["one"] });
+  });
+
+  it("are read from the body of the GitHub release", async () => {
+    const body = { tag_name: "v0.9.0", html_url: `${RELEASES_PAGE}tag/v0.9.0`, body: "## What's Changed\n* fix: a thing by @x in #1\n**Full Changelog**: https://x" };
+    const f = (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+    expect((await githubLatestRelease(f)).notes).toEqual(["fix: a thing"]);
   });
 });

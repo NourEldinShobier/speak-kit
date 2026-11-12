@@ -120,7 +120,7 @@ describe("Settings, Meetings", () => {
     await l.page.getByRole("radio", { name: "Meetings" }).waitFor();
     await openSettings(l);
     await l.page.getByRole("switch", { name: "Offer to record calls" }).click();
-    await l.page.getByText("Meetings are off.").waitFor();
+    await l.page.getByText("Meetings are off").waitFor();
     expect(await l.page.getByRole("switch", { name: "Stop when the call ends" }).isDisabled()).toBe(true);
     await shot(l, "off");
     await l.page.keyboard.press("Escape");

@@ -4,6 +4,7 @@
  * It holds no app state and does no I/O.
  */
 export { Icon, Spinner, cx } from "./react/shared";
+export { arrowTarget, onArrowKeys } from "./react/arrow-keys";
 export { browserPlatform } from "./platform";
 export type { IconProps } from "./react/shared";
 export { ErrorBoundary } from "./react/error-boundary";
@@ -20,5 +21,7 @@ export { Tabs, Segmented, SidebarNav, NavItem, NavSection, Stepper } from "./rea
 export type { TabItem, TabsProps, SegmentedItem, SegmentedProps, NavItemProps, StepperProps } from "./react/nav";
 export { SettingRow, SettingsSection, ListRow, EmptyState, SourceCard, Composer } from "./react/settings";
 export type { SettingRowProps, SettingsSectionProps, ListRowProps, EmptyStateProps, SourceCardProps, ComposerProps } from "./react/settings";
+export { OptInCard } from "./react/opt-in";
+export type { OptInCardProps } from "./react/opt-in";
 export type { IconName } from "./icons";
 export { ICON_DATA, isIconName } from "./icons";

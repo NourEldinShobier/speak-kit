@@ -7,6 +7,7 @@ import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
 import type { MicAccess } from "./settings/permissions";
+import type { Resources } from "./settings/resources";
 import type { SettingsNotice } from "./settings/settings-file";
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
@@ -26,6 +27,7 @@ export const SETTINGS_SUBS = [
   "experiments",
   "browser",
   "diagnostics",
+  "whatsnew",
   "about",
 ] as const;
 export type Page = (typeof PAGES)[number];
@@ -133,6 +135,8 @@ export interface Api {
   /** Stops the engine and deletes the downloaded model, OCR data and exports. The library and settings stay. */
   deleteDownloads(): Promise<DownloadsReport>;
   metrics(): Promise<Metrics>;
+  /** Memory per process and per model, and what this computer offers (Settings, Performance). */
+  resources(): Promise<Resources>;
   hideWindow(): Promise<void>;
   /** Really quits (after the renderer's confirmation dialog). */
   quit(): Promise<void>;
@@ -194,6 +198,7 @@ export const METHODS = [
   "storage",
   "deleteDownloads",
   "metrics",
+  "resources",
   "hideWindow",
   "quit",
   "setShortcut",

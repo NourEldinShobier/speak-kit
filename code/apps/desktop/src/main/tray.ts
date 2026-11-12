@@ -1,5 +1,5 @@
 import { Menu, Tray, type MenuItemConstructorOptions } from "electron";
-import { trayIconState, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext, type TrayItem } from "../shared/tray";
+import { trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayAction, type TrayContext, type TrayItem } from "../shared/tray";
 import { trayIcon } from "./icon";
 
 type TrayHandlers = Record<TrayAction, () => void>;
@@ -67,14 +67,14 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   const refresh = () => {
     if (!tray) return;
     const c = context();
-    const icon = trayIconState(c);
+    const [icon, dark] = [trayIconState(c), trayIconVariant(c) === "dark"];
     const tip = trayTooltipFor(c);
     const items = trayMenuModel(c);
-    const key = JSON.stringify([icon, tip, items]);
+    const key = JSON.stringify([icon, dark, tip, items]);
     if (key === shown) return;
     shown = key;
     summary = `${icon}|${tip}`;
-    tray.setImage(trayIcon(icon));
+    tray.setImage(trayIcon(icon, dark));
     tray.setToolTip(tip);
     const template = menuTemplate({ items, run, mac, switchTo });
     menu = Menu.buildFromTemplate(template);

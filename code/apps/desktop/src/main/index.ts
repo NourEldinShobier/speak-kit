@@ -1,11 +1,10 @@
-import { app, ipcMain, Menu, nativeTheme, powerMonitor, safeStorage } from "electron";
+import { app, ipcMain, Menu, nativeTheme, safeStorage } from "electron";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { channel, METHODS, type Activity, type AppState, type Method } from "../shared/ipc";
 import { ARGS } from "../shared/schemas";
 import { findDeepLink, handleDeepLink, type DeepLink } from "../shared/deeplink";
-import { applyMemory } from "../shared/memory";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
@@ -14,18 +13,22 @@ import { chooseProcessMode } from "./cli-mode";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { createAppHandlers, metrics } from "./handlers";
+import { createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { watchSettings } from "./settings-watch";
+import { motionNow, windowMotion } from "./window-motion";
+import { createNoticeCenter } from "./tray-notice";
+import { claimInstance, registerProtocol } from "./instance";
 import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
-import { emptyPairing, watchPairing } from "./pairing";
-import { registerProtocol } from "./register-protocol";
+import { emptyPairing } from "./pairing";
+import { watchPairingActivity, watchPower } from "./watchers";
 import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
-import { testEnv } from "./test-env";
+import { testEnv, fakeMicSwitches } from "./test-env";
 import { createScreenVision } from "./screen-vision";
 import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
@@ -43,11 +46,7 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 // A wav file the microphone window records instead of a device (dictation end-to-end run).
-const fakeMic = test.hook ? process.env.SPEAKKIT_FAKE_MIC : undefined;
-if (fakeMic) {
-  app.commandLine.appendSwitch("use-fake-device-for-media-stream");
-  app.commandLine.appendSwitch("use-file-for-fake-audio-capture", fakeMic);
-}
+fakeMicSwitches(test.fakeMic);
 const dataDir = app.getPath("userData");
 await mkdir(dataDir, { recursive: true });
 const log = initLog(dataDir);
@@ -81,8 +80,16 @@ const state: AppState = {
 };
 
 let nextActivityId = 1;
+let desktop: ReturnType<typeof setupDesktop> | null = null;
+// The window is built after the first activity lines are written (settings that were repaired): until then nobody is looking.
+let windowVisible = () => false;
+const trayNotices = createNoticeCenter(
+  () => desktop?.refreshTray(),
+  () => windowVisible(),
+);
 const addActivity = (kind: Activity["kind"], title: string, body: string) => {
   state.activity = [{ id: nextActivityId++, atMs: Date.now(), kind, title, body }, ...state.activity].slice(0, 20);
+  trayNotices.report(kind, title);
 };
 
 const unreadable = (what: string, file: string) =>
@@ -95,10 +102,9 @@ const serverApi = new ServerApi(
   () => `http://127.0.0.1:${state.port}`,
   () => state.token,
 );
-let desktop: ReturnType<typeof setupDesktop> | null = null;
-
 const mainWindow: MainWindow = new MainWindow(config, {
   onVisible: () => {
+    trayNotices.clear();
     if (!performance.getEntriesByName("window:shown").length) performance.mark("window:shown");
     void runtime.refreshHealth();
     publish(); // a hidden window is not sent state; it catches up when it shows
@@ -108,6 +114,8 @@ const mainWindow: MainWindow = new MainWindow(config, {
   trayMissing: () => desktop?.trayMissing() ?? false,
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
+windowVisible = () => mainWindow.isVisible();
+windowMotion.set(motionNow(config.reduceMotion));
 const screenVision = createScreenVision();
 const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
@@ -157,30 +165,8 @@ function onDeepLink(link: DeepLink) {
   });
 }
 
-function watchPower() {
-  state.onBattery = powerMonitor.isOnBatteryPower();
-  const onPower = (battery: boolean) => {
-    state.onBattery = battery;
-    applyMemory(runtime.server, config, battery);
-    publish();
-  };
-  powerMonitor.on("on-battery", () => onPower(true));
-  powerMonitor.on("on-ac", () => onPower(false));
-}
-
-function watchPairingActivity() {
-  watchPairing(state.pairing, {
-    token: () => state.token,
-    port: () => state.port,
-    onChange: () => {
-      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
-      publish();
-    },
-  });
-}
-
-function createHandlers() {
-  return createAppHandlers({
+function handlerDeps(): HandlerDeps {
+  return {
     state,
     config,
     saveConfig: store.save,
@@ -194,7 +180,7 @@ function createHandlers() {
     logsDir,
     addActivity,
     onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
-  });
+  };
 }
 
 function startDesktop() {
@@ -223,6 +209,8 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
+      voiceEngine: () => runtime.engine,
+      trayNotice: () => trayNotices.current(),
       dictation: {
         dataDir,
         modelsDir,
@@ -238,14 +226,15 @@ function startDesktop() {
   );
 }
 
-// `Speak Kit.exe --quit` asks a running instance to exit cleanly (the packaged smoke test and scripts use it).
-const QUIT_FLAG = "--quit";
-if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
+const instance = await claimInstance(dataDir, process.argv, { saving: () => desktop?.finishCapture(), cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
+if (!instance.mayRun) {
   app.quit();
 } else {
+  instance.announce();
   registerProtocol();
-  app.on("second-instance", (_e, argv) => {
-    if (argv.includes(QUIT_FLAG)) return mainWindow.quit();
+  app.on("second-instance", (...a) => {
+    const argv = a[1];
+    if (instance.onSecondLaunch(argv, a[3], () => mainWindow.quit())) return;
     const link = findDeepLink(argv);
     if (link) onDeepLink(link);
     else mainWindow.show();
@@ -302,9 +291,11 @@ if (!app.requestSingleInstanceLock() || process.argv.includes(QUIT_FLAG)) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
-    watchPower();
-    watchPairingActivity();
-    const appHandlers = createHandlers();
+    watchPower({ state, config, runtime, publish });
+    watchPairingActivity({ state, addActivity, publish });
+    const appHandlers = createAppHandlers(handlerDeps());
+    const settingsWatch = watchSettings(handlerDeps(), store.path, log);
+    app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     runtime.automation.attach(desktop.automation);
     const handlers = { ...appHandlers, ...desktop.handlers } as unknown as Record<Method, (...a: unknown[]) => unknown>;

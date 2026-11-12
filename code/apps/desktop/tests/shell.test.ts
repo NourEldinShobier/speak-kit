@@ -193,7 +193,7 @@ describe("settings sidebar search and Recent", () => {
     await find.fill("zzzz");
     await nav.getByText("No settings match").waitFor();
     await find.fill("");
-    expect(await nav.getByRole("link").count()).toBe(14);
+    expect(await nav.getByRole("link").count()).toBe(15);
   });
 
   it("Recent shows its empty hint when no reading was opened", async () => {
