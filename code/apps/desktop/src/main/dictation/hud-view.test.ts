@@ -5,6 +5,7 @@ import { errorView, failureLine, hudViewFor, type HudInput } from "./hud-view";
 const input = (state: DictationState, over: Partial<HudInput> = {}): HudInput => ({
   state,
   hotkey: "ControlLeft+AltLeft+Space",
+  platform: "win32",
   startedAt: 5,
   level: 0.4,
   insertedAsCopy: false,
@@ -17,8 +18,11 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "idle" }))).toBeNull();
   });
 
-  it("shows a held recording as unlocked, with the level and the start time", () => {
-    expect(hudViewFor(input({ status: "recording", mode: "hold" }))).toEqual({ kind: "recording", locked: false, startedAt: 5, level: 0.4, hotkey: "Ctrl Alt Space" });
+  it.each([
+    ["win32", "Ctrl Alt Space"],
+    ["darwin", "Control Option Space"],
+  ] as const)("shows a held recording as unlocked, with the level, the start time and the %s key names", (platform, hotkey) => {
+    expect(hudViewFor(input({ status: "recording", mode: "hold" }, { platform }))).toEqual({ kind: "recording", locked: false, startedAt: 5, level: 0.4, hotkey });
   });
 
   it("shows a toggled recording and a locked one as locked", () => {

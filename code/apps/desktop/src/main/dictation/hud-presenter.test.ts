@@ -4,7 +4,7 @@ import type { HudView } from "../../shared/dictation/contract";
 import type { Hud, HudState } from "./hud";
 import { HudPresenter } from "./hud-presenter";
 
-function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" | "bottom" | "off" } = {}) {
+function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" | "bottom" | "off"; platform?: NodeJS.Platform } = {}) {
   const shown: (HudView | "hide")[] = [];
   const updates: HudView[] = [];
   const hud = {
@@ -15,6 +15,7 @@ function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" |
   const p = new HudPresenter({
     hud: () => hud,
     hotkey: () => "ControlLeft+AltLeft+Space",
+    platform: over.platform ?? "win32",
     canRetry: () => over.canRetry ?? false,
     insertedAsCopy: () => over.copied ?? false,
     indicator: () => over.indicator ?? "bottom",
@@ -47,12 +48,15 @@ describe("HUD presenter", () => {
     expect(shown.filter((v) => v !== "hide").map((v) => (v as HudView).kind)).toEqual(["error"]);
   });
 
-  it("shows a recording after the settle time, with the time it started", () => {
-    const { p, shown } = setup();
+  it.each([
+    ["win32", "Ctrl Alt Space"],
+    ["darwin", "Control Option Space"],
+  ] as const)("shows a recording after the settle time, with the time it started and %s key names", (platform, hotkey) => {
+    const { p, shown } = setup({ platform });
     vi.setSystemTime(10_000);
     p.onState(state({ status: "recording", mode: "hold" }));
     vi.advanceTimersByTime(200);
-    expect(shown).toEqual([{ kind: "recording", locked: false, startedAt: 10_000, level: 0, hotkey: "Ctrl Alt Space" }]);
+    expect(shown).toEqual([{ kind: "recording", locked: false, startedAt: 10_000, level: 0, hotkey }]);
   });
 
   it("passes the microphone level on while recording, and not otherwise", () => {
@@ -117,10 +121,13 @@ describe("HUD presenter", () => {
     expect(shown.at(-1)).toBe("hide");
   });
 
-  it("flashes Dictation ready for two seconds, with the hotkey", () => {
-    const { p, shown } = setup();
+  it.each([
+    ["win32", "Ctrl Alt Space"],
+    ["darwin", "Control Option Space"],
+  ] as const)("flashes Dictation ready for two seconds, with the hotkey in %s key names", (platform, hotkey) => {
+    const { p, shown } = setup({ platform });
     p.flashReady();
-    expect(shown).toEqual([{ kind: "ready", hotkey: "Ctrl Alt Space" }]);
+    expect(shown).toEqual([{ kind: "ready", hotkey }]);
     vi.advanceTimersByTime(2100);
     expect(shown.at(-1)).toBe("hide");
   });
@@ -131,15 +138,18 @@ describe("HUD presenter", () => {
     expect(shown.at(-1)).toEqual({ kind: "copied", reason: "clipboard" });
   });
 
-  it("says the keyboard was reconnected only while a recording is locked, then goes back to the recording", () => {
-    const { p, shown } = setup();
+  it.each([
+    ["win32", "Ctrl Alt Space"],
+    ["darwin", "Control Option Space"],
+  ] as const)("says the keyboard was reconnected only while a recording is locked, then goes back to the recording (%s)", (platform, keys) => {
+    const { p, shown } = setup({ platform });
     p.reconnected();
     expect(shown).toEqual([]);
     vi.setSystemTime(5_000);
     p.onState(state({ status: "locked" }));
     vi.advanceTimersByTime(200);
     p.reconnected();
-    expect(shown.at(-1)).toEqual({ kind: "notice", text: "Keyboard reconnected. Still recording. Press Ctrl Alt Space to finish." });
+    expect(shown.at(-1)).toEqual({ kind: "notice", text: `Keyboard reconnected. Still recording. Press ${keys} to finish.` });
     vi.advanceTimersByTime(4000);
     expect(shown.at(-1)).toMatchObject({ kind: "recording", locked: true });
   });
