@@ -16,4 +16,5 @@ export const DICTATION_MODELS = [
   "large-v3-turbo",
   "distil-large-v3",
   "parakeet-tdt-0.6b-v3-q8_0",
+  "parakeet-ultra-q8_0",
 ] as const;

@@ -106,6 +106,7 @@ describe("speech models view", () => {
         "large-v3-turbo",
         "distil-large-v3",
         "parakeet-tdt-0.6b-v3-q8_0",
+        "parakeet-ultra-q8_0",
       ],
       figure: { language: "en", wrong: 7, of: 79 },
       cpuOnly: PARAKEET,
@@ -174,7 +175,7 @@ describe("speech models view", () => {
     expect(v.models.find((m) => m.id === TURBO)!.blocked).toBe(message);
     expect(v.models.find((m) => m.id === "large-v3")!.blocked).toBe(message);
     expect(v.models.find((m) => m.id === "base")!.blocked).toBe(message);
-    for (const quick of [PARAKEET, "parakeet-tdt-0.6b-v3-q8_0", "tiny-q5_1", "tiny"]) expect(v.models.find((m) => m.id === quick)!.blocked, quick).toBeUndefined();
+    for (const quick of [PARAKEET, "parakeet-tdt-0.6b-v3-q8_0", "parakeet-ultra-q8_0", "tiny-q5_1", "tiny"]) expect(v.models.find((m) => m.id === quick)!.blocked, quick).toBeUndefined();
     expect(v.floor).toEqual({ message, useModel: PARAKEET });
   });
 
