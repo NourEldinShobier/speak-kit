@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { createInserter } from "../inserter";
 import type { ClipboardPort } from "../restore-guard";
 import { VK, type HotkeyEvent } from "../types";
-import { installTapHook } from "./hook";
+import { installMouseTapHook, installTapHook } from "./hook";
 import { chunks, createMacInput } from "./input";
 import { fakeMacNative } from "./fake-native";
 import { createMacPlatformWith } from "./index";
@@ -143,6 +143,52 @@ describe("macOS hotkey through the event tap", () => {
     t.platform.hotkey.resync();
     await vi.advanceTimersByTimeAsync(0);
     expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+});
+
+describe("macOS mouse buttons through the mouse tap", () => {
+  const X1_DOWN = { type: 25, button: 3 };
+  const X1_UP = { type: 26, button: 3 };
+
+  it("makes a side button a hold-to-talk key and swallows it", async () => {
+    const t = started([0x05]);
+    expect(t.result).toEqual({ ok: true });
+    expect(t.fake.sendMouse(X1_DOWN)).toBe(true);
+    expect(t.fake.sendMouse(X1_UP)).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+
+  it("passes on events that are no button change", () => {
+    const t = started([0x05]);
+    expect(t.fake.sendMouse({ type: 5, button: 3 })).toBe(false);
+    expect(t.fake.sendMouse({ type: 25, button: 9 })).toBe(false);
+  });
+
+  it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
+    const fake = fakeMacNative();
+    const faults: unknown[] = [];
+    installMouseTapHook(
+      fake.native,
+      () => {
+        throw new Error("boom");
+      },
+      (e) => void faults.push(e),
+    );
+    expect(fake.sendMouse(X1_DOWN)).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(faults).toEqual([new Error("boom")]);
+    expect(fake.calls.removed).toBe(1);
+  });
+});
+
+describe("macOS password control", () => {
+  it("reports a focused password control through the input port", () => {
+    const fake = fakeMacNative();
+    const input = createMacInput(fake.native);
+    expect(input.passwordFocused()).toBe(false);
+    fake.state.passwordFocused = true;
+    expect(input.passwordFocused()).toBe(true);
   });
 });
 

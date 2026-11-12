@@ -5,6 +5,7 @@ const initialState = () => ({
   down: new Set<number>(),
   flags: 0,
   secure: false,
+  passwordFocused: false,
   front: { pid: 501, bundleId: "com.apple.TextEdit", name: "TextEdit" } as Frontmost | null,
   seq: 1,
   types: [] as string[],
@@ -19,14 +20,14 @@ const initialState = () => ({
 });
 
 export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
-  let handler: ((e: TapEvent) => boolean) | undefined;
+  const handlers: Partial<Record<"keys" | "mouse", (e: TapEvent) => boolean>> = {};
   const calls = { taps: 0, removed: 0 };
   const state = initialState();
   const native: MacNative = {
-    createTap(onEvent) {
+    createTap(onEvent, kind = "keys") {
       if (opts.refuseTap) throw new Error("tap refused");
       calls.taps++;
-      handler = onEvent;
+      handlers[kind] = onEvent;
       return { remove: () => void calls.removed++ };
     },
     keyIsDown: (code) => state.down.has(code),
@@ -42,6 +43,7 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
       return true;
     },
     secureInput: () => state.secure,
+    passwordFocused: () => state.passwordFocused,
     frontmost: () => state.front,
     activate(pid) {
       state.activated.push(pid);
@@ -64,6 +66,8 @@ export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
     state,
     calls,
     /** Delivers one event to the installed tap and returns whether it was swallowed. */
-    send: (e: Partial<TapEvent> & { keycode: number }) => handler!({ type: 10, flags: 0, userData: 0, ...e }),
+    send: (e: Partial<TapEvent> & { keycode: number }) => handlers.keys!({ type: 10, flags: 0, userData: 0, button: 0, ...e }),
+    /** Delivers one mouse button event to the installed mouse tap and returns whether it was swallowed. */
+    sendMouse: (e: Partial<TapEvent> & { type: number }) => handlers.mouse!({ keycode: 0, flags: 0, userData: 0, button: 0, ...e }),
   };
 }

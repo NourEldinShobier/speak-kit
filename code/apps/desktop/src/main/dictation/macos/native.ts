@@ -9,6 +9,8 @@ export interface TapEvent {
   keycode: number;
   flags: number;
   userData: number;
+  /** Mouse button number (0 left, 1 right, 2 middle, 3 and 4 the side buttons); 0 for key events. */
+  button: number;
 }
 
 export interface MacTap {
@@ -25,8 +27,10 @@ export type AccessState = "granted" | "denied" | "unknown";
 
 /** The macOS calls dictation needs, typed. Every other macOS file takes this as its only dependency, which is also how tests replace it. */
 export interface MacNative {
-  /** Installs an active (able to swallow) session event tap on the main run loop. `onEvent` returns true to swallow. Throws when macOS refuses the tap (no Accessibility or Input Monitoring permission). */
-  createTap(onEvent: (e: TapEvent) => boolean): MacTap;
+  /** Installs an active (able to swallow) session event tap on the main run loop: key events, or button presses and releases for "mouse". `onEvent` returns true to swallow. Throws when macOS refuses the tap (no Accessibility or Input Monitoring permission). */
+  createTap(onEvent: (e: TapEvent) => boolean, kind?: "keys" | "mouse"): MacTap;
+  /** Whether the focused control of the front app is a password field (Accessibility query). False when it cannot be asked. */
+  passwordFocused(): boolean;
   /** Whether the physical key is down right now (HID state, so events this app swallowed still count). */
   keyIsDown(keycode: number): boolean;
   /** CGEventFlags of the modifiers held right now. */
@@ -58,7 +62,11 @@ const NS_ACTIVATE_IGNORING_OTHER_APPS = 2;
 const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
-const TAP_MASK = (1n << 10n) | (1n << 11n) | (1n << 12n); // key down, key up, flags changed
+const TAP_MASKS = {
+  keys: (1n << 10n) | (1n << 11n) | (1n << 12n), // key down, key up, flags changed
+  mouse: [1n, 2n, 3n, 4n, 25n, 26n].reduce((m, t) => m | (1n << t), 0n), // left, right and other button down and up
+};
+const MOUSE_BUTTON_FIELD = 3;
 const IOHID_LISTEN_EVENT = 1;
 const IOHID_GRANTED = 0;
 const IOHID_DENIED = 1;
@@ -72,7 +80,7 @@ export async function loadMacNative(): Promise<MacNative> {
 }
 
 function bind(koffi: Koffi): MacNative {
-  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi) };
+  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi), ...axApi(koffi) };
 }
 
 /** Attaching a mach port to the main run loop, and taking it off and freeing it again. */
@@ -109,7 +117,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
   const CGEventGetIntegerValueField = cg.func("int64 CGEventGetIntegerValueField(void *event, uint32 field)");
   const CGEventGetFlags = cg.func("uint64 CGEventGetFlags(void *event)");
   return {
-    createTap(onEvent) {
+    createTap(onEvent, kind = "keys") {
       let tap: unknown = null;
       let removed = false;
       const callback = koffi.register(
@@ -122,12 +130,13 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
               keycode: Number(CGEventGetIntegerValueField(e, KEYBOARD_KEYCODE_FIELD)),
               flags: Number(CGEventGetFlags(e)),
               userData: Number(CGEventGetIntegerValueField(e, USER_DATA_FIELD)),
+              button: kind === "mouse" ? Number(CGEventGetIntegerValueField(e, MOUSE_BUTTON_FIELD)) : 0,
             }),
             onEvent,
           }),
         koffi.pointer(TapProc),
       );
-      tap = CGEventTapCreate(SESSION_TAP, 0, 0, TAP_MASK, callback, null);
+      tap = CGEventTapCreate(SESSION_TAP, 0, 0, TAP_MASKS[kind], callback, null);
       if (!tap) {
         koffi.unregister(callback);
         throw new Error("CGEventTapCreate refused the event tap");
@@ -198,6 +207,37 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
   return {
     secureInput: () => IsSecureEventInputEnabled(),
     inputMonitoring: { status: () => states[IOHIDCheckAccess(IOHID_LISTEN_EVENT)] ?? "unknown", request: () => IOHIDRequestAccess(IOHID_LISTEN_EVENT) },
+  };
+}
+
+/** Accessibility: is the focused control a secure text field? Needs the Accessibility permission; without it the answer is no. */
+function axApi(koffi: Koffi): Pick<MacNative, "passwordFocused"> {
+  const ax = koffi.load(FW("ApplicationServices"));
+  const cf = koffi.load(FW("CoreFoundation"));
+  const AXIsProcessTrusted = ax.func("bool AXIsProcessTrusted()");
+  const AXUIElementCreateSystemWide = ax.func("void *AXUIElementCreateSystemWide()");
+  const AXUIElementCopyAttributeValue = ax.func("int32 AXUIElementCopyAttributeValue(void *element, void *attribute, _Out_ void **value)");
+  const CFStringCreateWithCString = cf.func("void *CFStringCreateWithCString(void *alloc, const char *text, uint32 encoding)");
+  const CFEqual = cf.func("bool CFEqual(void *a, void *b)");
+  const CFRelease = cf.func("void CFRelease(void *object)");
+  const names = new Map<string, unknown>();
+  const name = (text: string) => names.get(text) ?? (names.set(text, CFStringCreateWithCString(null, text, UTF8)), names.get(text));
+  const copy = (element: unknown, attribute: string): unknown => {
+    const out: unknown[] = [null];
+    return AXUIElementCopyAttributeValue(element, name(attribute), out) === 0 ? out[0] : null;
+  };
+  return {
+    passwordFocused() {
+      if (!AXIsProcessTrusted()) return false;
+      const system = AXUIElementCreateSystemWide();
+      const focused = copy(system, "AXFocusedUIElement");
+      CFRelease(system);
+      if (!focused) return false;
+      const subrole = copy(focused, "AXSubrole");
+      const secure = !!subrole && CFEqual(subrole, name("AXSecureTextField"));
+      for (const object of [subrole, focused]) if (object) CFRelease(object);
+      return secure;
+    },
   };
 }
 

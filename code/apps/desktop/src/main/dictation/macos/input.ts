@@ -54,8 +54,8 @@ export function createMacInput(native: MacNative): InputPort {
       // The window is not told apart from its app: a window switch inside one app goes unnoticed, an app switch does not.
       return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", elevated: false } : null;
     },
-    // Which control has focus needs Accessibility queries; secure input is the signal password fields give without them.
-    passwordFocused: () => false,
+    // Secure keyboard input (below) catches apps that switch it on; this asks Accessibility whether the focused control is a password field.
+    passwordFocused: () => native.passwordFocused(),
     secureInput: () => native.secureInput(),
     heldModifiers() {
       const flags = native.modifierFlags();

@@ -10,6 +10,7 @@ import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
+import { chooseProcessMode } from "./cli-mode";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
@@ -20,6 +21,7 @@ import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing, watchPairing } from "./pairing";
+import { registerProtocol } from "./register-protocol";
 import { ServerApi } from "./server-api";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
@@ -31,6 +33,7 @@ import { createVoiceChat } from "./voice-chat/service";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const test = testEnv();
+await chooseProcessMode(here);
 
 // Tests (and portable installs) isolate all state under one directory; this also scopes the single-instance lock.
 // Otherwise a fixed directory: a dev run and the installed app must share one userData, or each gets its own lock and two instances can run.
@@ -140,14 +143,6 @@ const sendState = frameBatch(() => {
 function publish(): AppState {
   sendState();
   return state;
-}
-
-const PROTOCOL = "speakkit";
-function registerProtocol() {
-  // Tests run with an isolated userData; do not touch the user's registry then.
-  if (process.env.SPEAKKIT_USER_DATA && !process.env.SPEAKKIT_REGISTER_PROTOCOL) return;
-  if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-  else app.setAsDefaultProtocolClient(PROTOCOL);
 }
 
 function onDeepLink(link: DeepLink) {

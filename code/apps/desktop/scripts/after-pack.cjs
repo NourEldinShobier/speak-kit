@@ -8,17 +8,15 @@ const path = require("node:path");
 const ARCHS = { 1: "x64", 3: "arm64" }; // electron-builder's Arch enum
 
 // Flipped here rather than through electron-builder's electronFuses option: that option runs after this hook, and changing the
-// binary after the ad-hoc signature below would invalidate it. RunAsNode stays on: the model host starts with child_process.fork.
+// binary after the ad-hoc signature below would invalidate it. See fusePlan for RunAsNode.
 async function setFuses(context) {
   const { flipFuses, FuseVersion, FuseV1Options } = await import("@electron/fuses");
+  const { fusePlan } = await import("./stage-lib.mjs");
   const mac = context.electronPlatformName === "darwin";
   const { productFilename } = context.packager.appInfo;
   await flipFuses(path.join(context.appOutDir, mac ? `${productFilename}.app` : `${productFilename}.exe`), {
     version: FuseVersion.V1,
-    [FuseV1Options.RunAsNode]: true,
-    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-    [FuseV1Options.EnableNodeCliInspectArguments]: false,
-    [FuseV1Options.EnableCookieEncryption]: true,
+    ...Object.fromEntries(Object.entries(fusePlan(mac)).map(([name, on]) => [FuseV1Options[name], on])),
   });
 }
 

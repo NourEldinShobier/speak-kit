@@ -62,3 +62,12 @@ export function macSigningPlan({ app, nested, entitlements, inherit }) {
   const sign = (target, plist) => ["--force", "--sign", "-", "--options", "runtime", ...(plist ? ["--entitlements", plist] : []), target];
   return [...nested.map((n) => sign(n, /\.(framework|dylib)$/.test(n) ? null : inherit)), sign(app, entitlements)];
 }
+
+/**
+ * The Electron fuses of a packaged app, by name. On macOS the app binary never runs as plain Node: the model host is a utility process and the command
+ * line is `Speak Kit --speakkit-cli`. Windows keeps RunAsNode because its app is a window program with no console, so the command line shim needs the
+ * binary in Node mode to have a terminal to write to.
+ */
+export function fusePlan(mac) {
+  return { RunAsNode: !mac, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableCookieEncryption: true };
+}
