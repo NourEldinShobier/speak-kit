@@ -103,10 +103,15 @@ export class FakeVoiceApp {
     for (const h of ["content-type", "x-speakkit-replace"]) if (req.headers[h]) headers[h] = String(req.headers[h]);
     const upstream = new AbortController();
     res.on("close", () => upstream.abort());
-    const r = await fetch(`http://127.0.0.1:${this.backend.port}${req.url}`, { method: req.method ?? "GET", headers, signal: upstream.signal, ...(body === undefined ? {} : { body }) }).catch(() => undefined);
+    const r = await fetch(`http://127.0.0.1:${this.backend.port}${req.url}`, { method: req.method ?? "GET", headers, signal: upstream.signal, ...(body === undefined ? {} : { body }) }).catch(
+      () => undefined,
+    );
     if (!r) return void res.destroy(); // the client left first
     res.writeHead(r.status, Object.fromEntries(r.headers));
-    if (r.body) Readable.fromWeb(r.body as never).on("error", () => res.destroy()).pipe(res);
+    if (r.body)
+      Readable.fromWeb(r.body as never)
+        .on("error", () => res.destroy())
+        .pipe(res);
     else res.end();
   }
 }
