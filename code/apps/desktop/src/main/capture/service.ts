@@ -14,6 +14,7 @@ import type { CapturePlatform } from "./platform/types";
 import type { RecorderHost } from "./recorder-host";
 import type { Narrator } from "./recording";
 import { CaptureRuntime } from "./runtime";
+import { createMicClaim } from "./mic-claim";
 import { applyPatch } from "./settings-patch";
 
 export interface CaptureServiceOptions {
@@ -137,15 +138,11 @@ export class CaptureService {
     };
   }
 
-  #releaseMic: (() => void) | undefined;
+  readonly #mic = createMicClaim((name) => this.#o.micClaim?.(name) ?? (() => undefined));
 
   #publish(): CaptureStatus {
     const status = this.status();
-    if (this.runtime.phase === "recording") this.#releaseMic ??= this.#o.micClaim?.("Screen capture");
-    else if (this.#releaseMic) {
-      this.#releaseMic();
-      this.#releaseMic = undefined;
-    }
+    this.#mic.sync(this.runtime.phase === "recording", this.#settings.narration);
     const w = this.#o.parent();
     if (w && !w.isDestroyed()) w.webContents.send(CAPTURE_STATUS_EVENT, status);
     return status;
@@ -265,6 +262,7 @@ export class CaptureService {
     this.#stopPower();
     if (this.#sweep) clearInterval(this.#sweep);
     this.keys.stop();
+    this.#mic.release();
     this.runtime.dispose();
   }
 }

@@ -16,14 +16,25 @@ export function isFullscreen(b: NonNullable<ForegroundInfo["bounds"]>, area: { x
   return b.width >= area.width && b.height >= area.height && b.x <= area.x && b.y <= area.y;
 }
 
+type Rect = { x: number; y: number; width: number; height: number };
+interface ScreenApi {
+  screenToDipRect(window: null, rect: Rect): Rect;
+  getDisplayMatching(rect: Rect): { bounds: Rect };
+}
+
+/** The window rectangle comes in physical pixels, the display bounds in DIPs: convert first, or every maximized window passes as full screen above 100% scaling. */
+export function coversDisplay(bounds: Rect, api: ScreenApi): boolean {
+  const dip = api.screenToDipRect(null, bounds);
+  return isFullscreen(dip, api.getDisplayMatching(dip).bounds);
+}
+
 /** Polls the program in front once a second while a pause rule is on, and says when the answer changes. Returns the stop function. */
 export function watchPauseRules(d: Deps): () => void {
   let paused = false;
   const check = () => {
     const rules = d.rules();
     const fg = d.foreground();
-    const area = fg?.bounds ? screen.getDisplayMatching(fg.bounds).bounds : undefined;
-    const now = !!rules && pausedFor(rules, fg && { exe: fg.exe, fullscreen: !!fg.bounds && !!area && isFullscreen(fg.bounds, area) });
+    const now = !!rules && pausedFor(rules, fg && { exe: fg.exe, fullscreen: !!fg.bounds && coversDisplay(fg.bounds, screen) });
     if (now === paused) return;
     paused = now;
     d.changed(now);

@@ -221,7 +221,11 @@ class Runtime implements Dictation {
   }
 
   private discardRecording(id: number, cancelled: boolean, why?: string): void {
-    if (why) this.deps.log?.("discard", why);
+    try {
+      if (why) this.deps.log?.("discard", why);
+    } catch {
+      // a broken log must not leave the recorder running
+    }
     this.targets.delete(id);
     if (cancelled) this.flash({ notice: { kind: "cancelled", restorable: true } });
     void this.inRecorderOrder(async () => {
