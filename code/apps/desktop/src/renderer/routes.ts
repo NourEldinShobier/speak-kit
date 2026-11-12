@@ -85,6 +85,7 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
     items: [
       { id: "browser", label: "Browser integration", icon: "world", lead: "Pair the browser extension.", keywords: "port token pair extension chrome" },
       { id: "diagnostics", label: "Diagnostics", icon: "activity", lead: "Logs and checks for when something goes wrong.", keywords: "logs debug problem" },
+      { id: "whatsnew", label: "What is new", icon: "sparkles", lead: "What changed in the version that is running.", keywords: "release notes changelog update version" },
       { id: "about", label: "About", icon: "info-circle", lead: "Speak Kit reads text out loud on your own computer.", keywords: "version update" },
     ],
   },

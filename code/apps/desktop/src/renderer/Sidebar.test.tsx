@@ -70,7 +70,7 @@ describe("sidebar", () => {
   });
   it("lists the 14 settings rows while in Settings, with one selected", () => {
     const html = render("settings", "privacy");
-    expect(html.match(/href="#settings-/g)).toHaveLength(14);
+    expect(html.match(/href="#settings-/g)).toHaveLength(15);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     expect(html).toContain("Close settings");
   });

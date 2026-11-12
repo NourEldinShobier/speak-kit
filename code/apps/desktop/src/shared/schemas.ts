@@ -74,6 +74,12 @@ const LabsSchema = v.fallback(v.object(labsEntries), v.parse(v.object(labsEntrie
 /** What the renderer may send for labs: any of the known switches, nothing else. A wrong type is refused, not turned into defaults. */
 const LabsPatchSchema = v.partial(v.strictObject(Object.fromEntries(LAB_IDS.map((id) => [id, v.boolean()])) as Record<LabId, v.BooleanSchema<undefined>>));
 
+const WhatsNewSchema = v.object({
+  version: fb(v.pipe(v.string(), v.maxLength(64)), ""),
+  notes: fb(v.array(v.pipe(v.string(), v.maxLength(200))), []),
+});
+export type WhatsNew = v.InferOutput<typeof WhatsNewSchema>;
+
 const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
 
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
@@ -99,6 +105,8 @@ export const ConfigSchema = v.object({
   notifications: fb(NotificationsSchema, v.parse(NotificationsSchema, {})),
   doNotDisturb: bool(false),
   autoUpdate: bool(true),
+  /** The notes of the update that was downloaded last, for the What is new page once that version runs. */
+  whatsNew: fb(WhatsNewSchema, () => v.parse(WhatsNewSchema, {})),
   /** The local control server for the command line and the MCP server. */
   controlServer: bool(true),
   shortcuts: v.fallback(ShortcutsSchema, v.parse(ShortcutsSchema, {})),

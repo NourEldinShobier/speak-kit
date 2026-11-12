@@ -4,10 +4,25 @@
  */
 import type { ComponentType } from "react";
 import type { AppState, SettingsSub } from "../shared/ipc";
-import { api, Page } from "./ui";
-import { AutomationPage, BrowserPage, ExperimentsPage, GeneralPage, MemoryPage, NotificationsPage, ShortcutsPage, StoragePage, VoicePage } from "./features/settings";
-import { StubPage } from "./StubPage";
-import { UpdateCard } from "./UpdateCard";
+import {
+  AboutPage,
+  AccessibilityPage,
+  AutomationPage,
+  BrowserPage,
+  DiagnosticsPage,
+  ExperimentsPage,
+  GeneralPage,
+  MemoryPage,
+  NotificationsPage,
+  PrivacyPage,
+  SettingsFrame,
+  ShortcutsPage,
+  StoragePage,
+  VoicePage,
+  WhatsNewPage,
+} from "./features/settings";
+import { MeetingsPage } from "./features/meetings";
+import { registerCaptureExperiments } from "./features/capture";
 import "./settings.css";
 
 /** Run setup again: downloaded models and settings stay, the first-run steps are shown again from the model step. */
@@ -89,6 +104,7 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   experiments: ExperimentsPage,
   browser: BrowserPage,
   diagnostics: DiagnosticsPage,
+  whatsnew: WhatsNewPage,
   about: AboutPage,
 };
 

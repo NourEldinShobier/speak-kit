@@ -46,7 +46,11 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
     latestRelease: manualFake ? fakeRelease(manualFake) : (early) => githubLatestRelease(fetch, early),
     early: () => ctx.config.updateChannel === "early",
     onState: (s) => setState(s),
-    onReady: (version) => {
+    onReady: (version, notes) => {
+      if (notes.length > 0) {
+        ctx.config.whatsNew = { version, notes };
+        ctx.saveConfig();
+      }
       ctx.addActivity("update", "Update ready", `Speak Kit ${version} is downloaded. Restart when it suits you.`);
       toasts.notify({
         event: "update-ready",

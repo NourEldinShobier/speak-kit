@@ -4,17 +4,17 @@ import type { AppState } from "./ipc";
 
 /**
  * Update flow shown by the title bar pill, the popover, the update card and the updating card. Updates are never forced.
- * "manual" is the macOS flow: the unsigned app cannot replace itself, so a newer release is only announced and its page opened.
+ * `notes` are the lines of the release (merged pull request titles), when the release has any. "manual" is the macOS flow: the unsigned app cannot replace itself, so a newer release is only announced and its page opened.
  */
 export type UpdateState =
   | { kind: "unsupported" }
   | { kind: "idle"; checkedAtMs: number | null }
   | { kind: "checking" }
-  | { kind: "available"; version: string }
+  | { kind: "available"; version: string; notes?: string[] }
   | { kind: "downloading"; version: string; percent: number }
-  | { kind: "ready"; version: string; onQuit: boolean }
+  | { kind: "ready"; version: string; onQuit: boolean; notes?: string[] }
   | { kind: "restarting"; version: string }
-  | { kind: "manual"; version: string; url: string }
+  | { kind: "manual"; version: string; url: string; notes?: string[] }
   | { kind: "error"; error: DesktopError; phase: "check" | "download" };
 
 export const UPDATE_UNSUPPORTED: UpdateState = { kind: "unsupported" };

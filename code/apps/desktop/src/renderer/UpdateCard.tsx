@@ -5,6 +5,18 @@ import { updateBlockers, type UpdateAction } from "../shared/updates";
 import { updateErrorText } from "./error-text";
 import { api } from "./ui";
 
+/** The lines of the release the update brings, when it has any. */
+function UpdateNotes({ notes }: { notes?: string[] | undefined }) {
+  if (!notes?.length) return null;
+  return (
+    <ul className="sk-notes" data-testid="update-notes" aria-label="What is in this update">
+      {notes.map((n, i) => (
+        <li key={i}>{n}</li>
+      ))}
+    </ul>
+  );
+}
+
 const act = (a: UpdateAction) => () => void api.updateAction(a);
 
 /** The update flow in one place (Settings > About and the title bar popover). Nothing here installs without a click. */
@@ -37,6 +49,7 @@ export function UpdateCard({ s }: { s: AppState }) {
           }
         >
           It downloads in the background. Nothing is installed until you say so.
+          <UpdateNotes notes={u.notes} />
         </Banner>
       );
     case "downloading":
@@ -93,6 +106,7 @@ export function UpdateCard({ s }: { s: AppState }) {
             }
           >
             {u.onQuit ? "It installs when you quit Speak Kit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
+            <UpdateNotes notes={u.notes} />
           </Banner>
         </div>
       );
@@ -115,6 +129,7 @@ export function UpdateCard({ s }: { s: AppState }) {
             }
           >
             This copy cannot replace itself. Download the new version from the release page and open it to update.
+            <UpdateNotes notes={u.notes} />
           </Banner>
         </div>
       );

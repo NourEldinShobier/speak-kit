@@ -22,7 +22,7 @@ describe("commands", () => {
   });
   it("has a page command for every menu item and a settings command for every settings page", () => {
     expect(all.filter((c) => c.group === "Pages")).toHaveLength(10);
-    expect(all.filter((c) => c.group === "Settings")).toHaveLength(14);
+    expect(all.filter((c) => c.group === "Settings")).toHaveLength(15);
   });
   it("builds readings with minutes and voices with a Voice hint", () => {
     expect(all.find((c) => c.id === "d-d1")).toMatchObject({ group: "Readings", hint: "2 min", action: { type: "open-doc", id: "d1" } });
