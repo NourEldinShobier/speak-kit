@@ -22,7 +22,7 @@ const electronProcesses = (): Plugin => ({
 
 // These files use what the whole machine shares: the clipboard, the keyboard and the window in front (dictation-os), the pixels of the real screen (capture),
 // and the CPU budgets (perf). Another Electron spec running beside them copies, types or covers the screen, so they run alone, after every other file.
-const ALONE = ["tests/dictation-os.test.ts", "tests/capture.test.ts", "tests/perf.test.ts"];
+const ALONE = ["tests/dictation-os.test.ts", "tests/capture.test.ts", "tests/screen-vision.test.ts", "tests/perf.test.ts"];
 
 export default defineConfig({
   root: path.join(root, "src/renderer"),

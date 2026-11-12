@@ -22,7 +22,7 @@ const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**
 // The ubuntu unit job sets SPEAKKIT_SKIP_DESKTOP: the desktop package needs Electron and runs in the Windows job. (A CLI --exclude does not reach projects that set their own exclude.)
 const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**", ...(process.env.SPEAKKIT_SKIP_DESKTOP ? ["apps/desktop/**"] : [])];
 
-const ALONE = ["apps/desktop/tests/dictation-os.test.ts", "apps/desktop/tests/capture.test.ts", "apps/desktop/tests/perf.test.ts"];
+const ALONE = ["apps/desktop/tests/dictation-os.test.ts", "apps/desktop/tests/capture.test.ts", "apps/desktop/tests/screen-vision.test.ts", "apps/desktop/tests/perf.test.ts"];
 
 export default defineConfig({
   // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
