@@ -323,11 +323,10 @@ describe("trash and undo", () => {
     await importFile(l, wav(path.join(dir, "two.wav"), 5));
     const rows = l.page.locator('[data-testid="transcript-row"]');
     await until(async () => (await rows.count()) === 2);
-    // The row's actions take pointer events only while the row is hovered. A row that moved under a still pointer (the second import finishing)
-    // keeps no hover, so move the pointer onto the button itself before the click's hit test.
+    // The row's actions take pointer events only while the row is hovered or has focus. Focus does not depend on where the pointer is
+    // (a row that moved under a still pointer keeps no hover), so focus the row before the click's hit test.
     const del = l.page.getByRole("button", { name: "Delete: one" });
-    await rows.filter({ hasText: "one" }).hover();
-    await del.hover({ force: true });
+    await rows.filter({ hasText: "one" }).getByRole("button", { name: "Open: one" }).focus();
     await del.click();
     await l.page.getByText("Moved to Trash: one").waitFor();
     await l.page.getByRole("button", { name: "Undo" }).click();

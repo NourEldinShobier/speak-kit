@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vite-plus/test";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { closeHint, closeOutcome, effectiveCloseAction, KEYBOARD_MAP, reduceMotion, showTrayIcon } from "./behaviour";
-import { translate } from "../i18n";
+import { loadLocale, translate } from "../i18n";
 import { NETWORK_HOSTS } from "./network";
+
+beforeAll(() => loadLocale("es"));
 
 describe("close and tray", () => {
   it("closing hides by default and quits when asked", () => {
