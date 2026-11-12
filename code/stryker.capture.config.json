@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.stryker.capture.config.ts", "related": false },
+  "mutate": [
+    "apps/desktop/src/main/capture/{autocrop,gesture,journal,keyframes,narration,privacy,retention,session,store}/*.ts",
+    "apps/desktop/src/main/capture/{target-display,write-guard,notice-target,settings-patch}.ts",
+    "apps/desktop/src/renderer/features/capture/{audio-timeline,format}.ts",
+    "!**/*.test.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress", "json"],
+  "jsonReporter": { "fileName": "reports/mutation/capture.json" },
+  "incremental": true,
+  "incrementalFile": "reports/stryker-capture-incremental.json",
+  "tempDirName": "node_modules/.stryker-tmp-capture",
+  "thresholds": { "high": 90, "low": 80, "break": 80 },
+  "timeoutMS": 10000,
+  "concurrency": 4,
+  "ignoreStatic": false
+}

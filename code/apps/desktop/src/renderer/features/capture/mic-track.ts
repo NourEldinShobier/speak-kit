@@ -1,3 +1,5 @@
+import { createAudioTimeline, type AudioTimeline } from "./audio-timeline";
+
 const RATE = 16_000;
 const BLOCK = 1280;
 /** One second of samples per message to the main process. */
@@ -36,15 +38,17 @@ export class MicTrack {
   #closed = false;
   readonly #send: (chunk: Int16Array) => void;
   readonly #silence: Silence;
+  readonly #timeline: AudioTimeline;
 
-  private constructor(send: (chunk: Int16Array) => void, silence: Silence) {
+  private constructor(send: (chunk: Int16Array) => void, silence: Silence, timeline: AudioTimeline) {
     this.#send = send;
     this.#silence = silence;
+    this.#timeline = timeline;
   }
 
   /** Opens the microphone; resolves undefined when it cannot be opened (no device, permission refused). */
-  static async open(send: (chunk: Int16Array) => void, silence: Silence): Promise<MicTrack | undefined> {
-    const t = new MicTrack(send, silence);
+  static async open(send: (chunk: Int16Array) => void, silence: Silence, startedAtMs: number): Promise<MicTrack | undefined> {
+    const t = new MicTrack(send, silence, createAudioTimeline(RATE, startedAtMs));
     try {
       await t.#start();
       return t;
@@ -73,6 +77,7 @@ export class MicTrack {
   }
 
   #push(block: Float32Array): void {
+    this.#padTo(block.length);
     const pcm = new Int16Array(block.length);
     for (let i = 0; i < block.length; i++) pcm[i] = Math.round(Math.max(-1, Math.min(1, block[i]!)) * 32767);
     this.#pending.push(pcm);
@@ -84,6 +89,18 @@ export class MicTrack {
     this.#recent = merged.length > keep ? merged.subarray(merged.length - keep) : merged;
     if (this.#pendingLen >= CHUNK) this.#drain();
     if (this.#silence(this.#recent, RATE, SILENT_MS) && performance.now() - this.#lastReopen > REOPEN_GAP_MS) void this.#reopen();
+  }
+
+  /** Silence for the time the track was not running (the microphone opens after the picture starts; a reopened device leaves a hole), so the sound stays where it was heard. */
+  #padTo(samples: number): void {
+    let pad = this.#timeline.padBefore(performance.now(), samples);
+    if (!pad) return;
+    if (this.#pendingLen) this.#drain();
+    while (pad > 0) {
+      const n = Math.min(pad, CHUNK);
+      this.#send(new Int16Array(n));
+      pad -= n;
+    }
   }
 
   #drain(): void {
