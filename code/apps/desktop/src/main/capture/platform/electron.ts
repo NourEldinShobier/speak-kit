@@ -83,7 +83,15 @@ class ElectronCapturePlatform implements CapturePlatform {
   async resolve(t: Target): Promise<Resolved | undefined> {
     if (t.kind === "window") {
       const rect = (await this.windows()).find((w) => w.id === t.windowId)?.rect;
-      return { sourceId: t.windowId, title: t.title, ...(rect && { windowRect: rect, bounds: rect }) };
+      const api = this.os === "win32" ? await (this.#api ??= loadWindowApi()) : undefined;
+      const handle = Number(t.windowId.split(":")[1]);
+      const currentBounds =
+        api &&
+        (() => {
+          const r = api.bounds(handle);
+          return r && screen.screenToDipRect(null, r);
+        });
+      return { sourceId: t.windowId, title: t.title, ...(rect && { windowRect: rect, bounds: rect }), ...(currentBounds && { currentBounds }) };
     }
     const d = displays().find((x) => x.id === t.displayId);
     const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });
