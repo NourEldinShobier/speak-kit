@@ -157,7 +157,7 @@ export function existsView(p: Pick<ViewProps, "dispatch" | "start" | "t"> & { ta
   };
   const body = (
     <p className="sk-modal-text" data-testid="export-exists">
-      <Rich text={p.t("export.exists", { name: p.target.path.split(/[\\/]/).pop() ?? "" })} />
+      <Rich text={p.t("export.exists", { name: (p.target.path.split(/[\\/]/).pop() ?? "").replaceAll("**", "*​*") })} />
     </p>
   );
   const footer = (
