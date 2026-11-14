@@ -5,7 +5,9 @@ import type { AppState } from "../../../shared/ipc";
 import { normalizeApiKey } from "../../../shared/voice-chat";
 import { api } from "../../ui";
 import { changeSystem } from "../../change";
-import { cardReducer, initCard, keyLine, KEY_HELP, NO_ENCRYPTION, type CardAction, type CardState } from "./voice-chat-model";
+import { cardReducer, initCard, keyLine, keyHelp, noEncryption, type CardAction, type CardState } from "./voice-chat-model";
+import "../../../shared/i18n/packs/voices";
+import { useT } from "../../i18n";
 
 const VOICE_OPTIONS = VOICE_CHAT_VOICES.map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }));
 type Dispatch = (a: CardAction) => void;
@@ -43,12 +45,13 @@ function useKeyActions(st: CardState, dispatch: Dispatch) {
 
 /** The key field. Its text is the only place the renderer holds a key, and Save empties it. */
 function KeyRow({ st, dispatch, save }: { st: CardState; dispatch: Dispatch; save: () => Promise<void> }) {
+  const { t } = useT();
   const canEncrypt = st.status?.canEncrypt !== false;
   return (
     <SettingRow
       className="lm-row--control"
-      label={<label htmlFor="voice-chat-key">OpenAI API key</label>}
-      description={canEncrypt ? KEY_HELP : NO_ENCRYPTION}
+      label={<label htmlFor="voice-chat-key">{t("vc.keyLabel")}</label>}
+      description={canEncrypt ? keyHelp() : noEncryption()}
       control={
         <div className="sk-vckey__field">
           <TextInput
@@ -56,14 +59,14 @@ function KeyRow({ st, dispatch, save }: { st: CardState; dispatch: Dispatch; sav
             className="sk-vckey__input"
             type={st.reveal ? "text" : "password"}
             value={st.draft}
-            placeholder={st.status?.hasKey ? "Saved" : "sk-..."}
+            placeholder={st.status?.hasKey ? t("vc.saved") : "sk-..."}
             disabled={!canEncrypt || st.busy !== null}
             autoComplete="off"
             spellCheck={false}
             onChange={(e) => dispatch({ type: "draft", text: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && st.draft && st.busy === null && void save()}
           />
-          {st.draft ? <IconButton name={st.reveal ? "eye-off" : "eye"} label={st.reveal ? "Hide key" : "Show key"} aria-pressed={st.reveal} onClick={() => dispatch({ type: "reveal" })} /> : null}
+          {st.draft ? <IconButton name={st.reveal ? "eye-off" : "eye"} label={t(st.reveal ? "vc.hide" : "vc.show")} aria-pressed={st.reveal} onClick={() => dispatch({ type: "reveal" })} /> : null}
         </div>
       }
     />
@@ -72,6 +75,7 @@ function KeyRow({ st, dispatch, save }: { st: CardState; dispatch: Dispatch; sav
 
 /** The key field and its three buttons; the tests render it with a given state. */
 export function VoiceChatKeyRows({ st, dispatch }: { st: CardState; dispatch: Dispatch }) {
+  const { t } = useT();
   const { save, test, remove } = useKeyActions(st, dispatch);
   const hasKey = !!st.status?.hasKey;
   const idle = st.busy === null;
@@ -90,13 +94,13 @@ export function VoiceChatKeyRows({ st, dispatch }: { st: CardState; dispatch: Di
         control={
           <>
             <Button variant="primary" loading={st.busy === "save"} disabled={st.status?.canEncrypt === false || !idle || !st.draft.trim()} onClick={() => void save()}>
-              Save
+              {t("vc.save")}
             </Button>
             <Button loading={st.busy === "test"} disabled={!hasKey || !idle} onClick={() => void test()}>
-              Test key
+              {t("vc.test")}
             </Button>
             <Button loading={st.busy === "remove"} disabled={!hasKey || !idle} onClick={() => void remove()}>
-              Remove key
+              {t("vc.remove")}
             </Button>
           </>
         }
@@ -107,6 +111,7 @@ export function VoiceChatKeyRows({ st, dispatch }: { st: CardState; dispatch: Di
 
 /** The Voice chat page body: the OpenAI key (kept encrypted by main, never shown again), the voice and the model. */
 export function VoiceChatCard({ s }: { s: AppState }) {
+  const { t } = useT();
   const [st, dispatch] = useReducer(cardReducer, undefined, initCard);
   useEffect(() => {
     api.voiceChatStatus().then(
@@ -115,14 +120,14 @@ export function VoiceChatCard({ s }: { s: AppState }) {
     );
   }, []);
   return (
-    <SettingsSection title="OpenAI account" description="Voice chat uses your own key.">
+    <SettingsSection title={t("vc.account")} description={t("vc.accountLead")}>
       <VoiceChatKeyRows st={st} dispatch={dispatch} />
       <SettingRow
         className="lm-row--control"
-        label="Voice"
-        control={<Select label="Voice chat voice" value={s.config.voiceChatVoice} onChange={(v) => void changeSystem({ voiceChatVoice: v as VoiceChatVoice })} options={VOICE_OPTIONS} />}
+        label={t("vc.voice")}
+        control={<Select label={t("vc.voiceAria")} value={s.config.voiceChatVoice} onChange={(v) => void changeSystem({ voiceChatVoice: v as VoiceChatVoice })} options={VOICE_OPTIONS} />}
       />
-      <SettingRow label={`Model: ${VOICE_CHAT_MODEL}`} />
+      <SettingRow label={t("vc.model", { model: VOICE_CHAT_MODEL })} />
     </SettingsSection>
   );
 }

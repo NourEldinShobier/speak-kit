@@ -1,4 +1,6 @@
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "../../../shared/voice-chat";
+import { at } from "../../../shared/i18n";
+import "../../../shared/i18n/packs/voices";
 
 export interface Notice {
   tone: "ok" | "error" | "info";
@@ -29,35 +31,25 @@ export type CardAction =
 
 export const initCard = (): CardState => ({ status: null, draft: "", reveal: false, busy: null, notice: null });
 
-export const NO_ENCRYPTION = "This computer cannot encrypt secrets, so Speak Kit cannot store a key here.";
-export const KEY_HELP = "Stored on this computer, encrypted by your operating system. Sent only to OpenAI.";
+export const noEncryption = (): string => at("vc.noEncryption");
+export const keyHelp = (): string => at("vc.help");
 
-const TEST_TEXT = {
-  "key-rejected": "OpenAI did not accept this key",
-  "no-credit": "Your OpenAI account has no credit",
-  "rate-limited": "OpenAI is limiting requests right now. Try again in a minute.",
-  offline: "Speak Kit could not reach OpenAI. Check your internet connection.",
-  unavailable: "OpenAI is not answering right now. Try again later.",
-  "no-key": "The saved key could not be read. Remove it and save it again.",
-} as const;
+const TEST_TEXT = { "key-rejected": "vc.t.rejected", "no-credit": "vc.t.noCredit", "rate-limited": "vc.t.rateLimited", offline: "vc.t.offline", unavailable: "vc.t.unavailable", "no-key": "vc.t.noKey" } as const;
 
-const SAVE_TEXT = {
-  "encryption-unavailable": NO_ENCRYPTION,
-  "save-failed": "The key could not be saved.",
-} as const;
+const SAVE_TEXT = { "encryption-unavailable": "vc.noEncryption", "save-failed": "vc.saveFailed" } as const;
 
 function afterSave(s: CardState, result: VoiceChatSaveResult): CardState {
-  if (result.ok) return { ...s, status: { hasKey: true, canEncrypt: true }, draft: "", reveal: false, busy: null, notice: { tone: "ok", text: "Key saved" } };
+  if (result.ok) return { ...s, status: { hasKey: true, canEncrypt: true }, draft: "", reveal: false, busy: null, notice: { tone: "ok", text: at("vc.keySaved") } };
   const status = result.code === "encryption-unavailable" && s.status ? { ...s.status, canEncrypt: false } : s.status;
-  return { ...s, busy: null, status, notice: { tone: "error", text: SAVE_TEXT[result.code] } };
+  return { ...s, busy: null, status, notice: { tone: "error", text: at(SAVE_TEXT[result.code]) } };
 }
 
 function afterTest(s: CardState, result: VoiceChatTestResult): CardState {
-  return { ...s, busy: null, notice: result.ok ? { tone: "ok", text: "OpenAI accepted this key" } : { tone: "error", text: TEST_TEXT[result.code] } };
+  return { ...s, busy: null, notice: result.ok ? { tone: "ok", text: at("vc.accepted") } : { tone: "error", text: at(TEST_TEXT[result.code]) } };
 }
 
 function afterRemove(s: CardState, status: VoiceChatKeyStatus): CardState {
-  return { ...s, busy: null, status, draft: "", reveal: false, notice: { tone: "info", text: "Key removed" } };
+  return { ...s, busy: null, status, draft: "", reveal: false, notice: { tone: "info", text: at("vc.keyRemoved") } };
 }
 
 export function cardReducer(s: CardState, a: CardAction): CardState {
@@ -69,9 +61,9 @@ export function cardReducer(s: CardState, a: CardAction): CardState {
     case "reveal":
       return { ...s, reveal: !s.reveal };
     case "invalid":
-      return { ...s, notice: { tone: "error", text: "That does not look like an OpenAI API key. It starts with sk-." } };
+      return { ...s, notice: { tone: "error", text: at("vc.invalid") } };
     case "busy":
-      return { ...s, busy: a.what, notice: a.what === "test" ? { tone: "info", text: "Checking the key with OpenAI" } : null };
+      return { ...s, busy: a.what, notice: a.what === "test" ? { tone: "info", text: at("vc.checking") } : null };
     case "saved":
       return s.busy === "save" ? afterSave(s, a.result) : s;
     case "tested":
@@ -79,7 +71,7 @@ export function cardReducer(s: CardState, a: CardAction): CardState {
     case "removed":
       return s.busy === "remove" ? afterRemove(s, a.status) : s;
     case "failed":
-      return { ...s, busy: null, notice: { tone: "error", text: "Speak Kit could not do that. Try again." } };
+      return { ...s, busy: null, notice: { tone: "error", text: at("vc.failed") } };
     default: {
       const unreachable: never = a;
       return unreachable;
@@ -89,6 +81,6 @@ export function cardReducer(s: CardState, a: CardAction): CardState {
 
 /** The state of the key in words, for the row label. */
 export function keyLine(s: CardState): string {
-  if (!s.status) return "Checking for a saved key";
-  return s.status.hasKey ? "Key saved" : "No key saved";
+  if (!s.status) return at("vc.lineChecking");
+  return s.status.hasKey ? at("vc.keySaved") : at("vc.lineNone");
 }

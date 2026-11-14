@@ -27,6 +27,10 @@ const PAGES = [
   "features/library/LibraryPage.tsx",
   "features/library/PasteDialog.tsx",
   "features/library/UrlDialog.tsx",
+  "features/voices/VoicesPage.tsx",
+  "features/voices/VoiceDrawer.tsx",
+  "features/voice-chat/VoiceChatCard.tsx",
+  "features/voice-chat/VoiceChatPage.tsx",
   "features/settings/AboutPage.tsx",
   "features/settings/AccessibilityPage.tsx",
   "features/settings/Advanced.tsx",
@@ -56,7 +60,7 @@ function literals(source: string): string[] {
   const found: string[] = [];
   for (const m of source.matchAll(/>\s*([^<>{}\n]*[A-Za-z]{2}[^<>{}\n]*)\s*</g)) found.push(m[1]!.trim());
   for (const m of source.matchAll(/\b(?:label|aria-label|title|placeholder|description|alt)="([^"]*[A-Za-z]{2}[^"]*)"/g)) found.push(m[1]!);
-  return found.filter((x) => !SAME_EVERYWHERE.has(x) && !/^;|&&|\|\||\?\s*\($/.test(x));
+  return found.filter((x) => !SAME_EVERYWHERE.has(x) && !/^;|^\)|&&|\|\||\?\s*\($/.test(x));
 }
 
 describe("interface text in the translated pages", () => {
