@@ -1,3 +1,4 @@
+import "../../../shared/i18n/packs/library";
 import type { LibraryBridge } from "../../../shared/library/contract";
 
 declare global {

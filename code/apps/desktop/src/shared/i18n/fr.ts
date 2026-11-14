@@ -1,4 +1,9 @@
 import type { StringKey } from "./en";
+import { FR_SHELL } from "./packs/fr/shell";
+import { FR_LIBRARY } from "./packs/fr/library";
+import { FR_APPS } from "./packs/fr/apps";
+import { FR_EXPERIMENTS } from "./packs/fr/experiments";
+import { FR_EXPORT } from "./packs/fr/export";
 
 export const FR: Record<StringKey, string> = {
   "nav.menu": "Menu",
@@ -232,4 +237,9 @@ export const FR: Record<StringKey, string> = {
   "title.back": "Précédent",
   "title.forward": "Suivant",
   "title.caughtUp": "Tout est à jour.",
+  ...FR_SHELL,
+  ...FR_LIBRARY,
+  ...FR_APPS,
+  ...FR_EXPERIMENTS,
+  ...FR_EXPORT,
 };

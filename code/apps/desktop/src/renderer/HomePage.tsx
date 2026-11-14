@@ -3,7 +3,8 @@ import type { AppState } from "../shared/ipc";
 import { DOT_CLASS, engineDetail, engineView } from "../shared/engine-view";
 import { errorText } from "./error-text";
 import { useT } from "./i18n";
-import { api, Page, TokenField } from "./ui";
+import { api, Page } from "./ui";
+import { TokenField } from "./TokenField";
 
 function ServerAlerts({ s }: { s: AppState }) {
   const { t } = useT();

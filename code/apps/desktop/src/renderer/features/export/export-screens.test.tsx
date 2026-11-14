@@ -7,6 +7,7 @@ vi.hoisted(() => {
 });
 
 import { appState } from "../../app-state.fixture";
+import { englishT } from "../../../shared/i18n";
 import { doneView, renderingView } from "./JobViews";
 import { initExport } from "./model";
 import { optionsView } from "./OptionsView";
@@ -15,7 +16,7 @@ const job: ExportView = { id: "x1", name: "chapter.mp3", stage: "rendering", pro
 const html = (n: React.ReactNode) => renderToStaticMarkup(<>{n}</>);
 
 describe("Export rendering view", () => {
-  const v = renderingView({ job, onClose() {}, dispatch() {} });
+  const v = renderingView({ job, onClose() {}, dispatch() {}, t: englishT });
 
   it("has a full-width 4 px progress bar between the status line and the hint", () => {
     const body = html(v.body);
@@ -28,16 +29,16 @@ describe("Export rendering view", () => {
 
 describe("Export rendering view with captions and chapters", () => {
   it("lists the files being written: the audio, the caption file and the chapter markers", () => {
-    const body = html(renderingView({ job: { ...job, captions: "srt", chapters: true }, onClose() {}, dispatch() {} }).body);
+    const body = html(renderingView({ job: { ...job, captions: "srt", chapters: true }, onClose() {}, dispatch() {}, t: englishT }).body);
     expect(body).toContain("chapter.mp3");
     expect(body).toContain("chapter.srt (captions)");
     expect(body).toContain("Chapter markers inside the audio");
-    expect(html(renderingView({ job, onClose() {}, dispatch() {} }).body)).not.toContain("captions)");
+    expect(html(renderingView({ job, onClose() {}, dispatch() {}, t: englishT }).body)).not.toContain("captions)");
   });
 
   it("says what was saved when it is done: two files with their counts", () => {
     const done: ExportView = { ...job, stage: "done", path: "C:/x/chapter.mp3", bytes: 2048, captionsPath: "C:/x/chapter.srt", captionCount: 12, chapterCount: 3 };
-    const body = html(doneView({ job: done, onClose() {}, dispatch() {} }).body);
+    const body = html(doneView({ job: done, onClose() {}, dispatch() {}, t: englishT }).body);
     expect(body).toContain("chapter.mp3 with 3 chapters");
     expect(body).toContain("chapter.srt with 12 captions");
   });
@@ -47,7 +48,7 @@ describe("Export options", () => {
   const view = (text: string, patch: Partial<ReturnType<typeof initExport>["form"]> = {}) => {
     const st = initExport(appState(), { text });
     st.form = { ...st.form, ...patch };
-    return html(optionsView({ s: appState(), st, dispatch() {}, onClose() {}, start() {} }).body);
+    return html(optionsView({ s: appState(), st, dispatch() {}, onClose() {}, start() {}, t: englishT }).body);
   };
 
   it("offers captions, off by default, and chapter markers with the number of headings found", () => {

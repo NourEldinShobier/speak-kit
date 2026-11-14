@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button, LoadingLabel, SettingRow, SettingsSection, StatusPill } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { InstallExtension } from "../../pages";
-import { api, TokenField } from "../../ui";
+import { api } from "../../ui";
+import { TokenField } from "../../TokenField";
 import { Back, Foot, Frame } from "./Frame";
 import { connectPhase, type ConnectPhase } from "./model";
 

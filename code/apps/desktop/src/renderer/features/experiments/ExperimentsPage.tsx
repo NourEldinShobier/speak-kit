@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Badge, Banner, Button, Icon, Modal } from "@speakkit/ui";
+import "../../../shared/i18n/packs/experiments";
+import { useT } from "../../i18n";
 import { experimentCards, groupedCards, type ExperimentCard } from "./registry";
 import "./experiments.css";
 
 function Confirm({ confirm, open, onClose, onYes }: { confirm: NonNullable<ExperimentCard["confirm"]>; open: boolean; onClose(): void; onYes(): void }) {
+  const { t } = useT();
   return (
     <Modal
       open={open}
@@ -12,7 +15,7 @@ function Confirm({ confirm, open, onClose, onYes }: { confirm: NonNullable<Exper
       width={440}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button variant="primary" data-autofocus onClick={onYes}>
             {confirm.confirmLabel}
           </Button>
@@ -25,6 +28,7 @@ function Confirm({ confirm, open, onClose, onYes }: { confirm: NonNullable<Exper
 }
 
 function Card({ card }: { card: ExperimentCard }) {
+  const { t } = useT();
   const st = card.useState();
   const [asking, setAsking] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -58,12 +62,12 @@ function Card({ card }: { card: ExperimentCard }) {
         {st.on && card.Extra ? <card.Extra /> : null}
         {failed ? (
           <p className="exp-card__guard" role="alert">
-            This could not be changed. Try again.
+            {t("exp.failed")}
           </p>
         ) : null}
       </div>
-      <Button aria-label={`${st.on ? "Turn off" : "Turn on"} ${card.title}`} disabled={!st.ready} onClick={press}>
-        {st.on ? "Turn off" : "Turn on"}
+      <Button aria-label={t(st.on ? "exp.turnOffTitle" : "exp.turnOnTitle", { title: card.title })} disabled={!st.ready} onClick={press}>
+        {st.on ? t("exp.turnOff") : t("exp.turnOn")}
       </Button>
       {card.confirm ? <Confirm confirm={card.confirm} open={asking} onClose={() => setAsking(false)} onYes={() => (setAsking(false), void change(true))} /> : null}
     </div>

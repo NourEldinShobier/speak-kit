@@ -3,6 +3,7 @@ import type { IconName } from "@speakkit/ui";
 import type { Page, SettingsSub } from "../../../shared/ipc";
 import type { DocMeta } from "../../../shared/library/contract";
 import { MENU, SETTINGS_NAV } from "../../routes";
+import { ENGLISH, type Translator } from "../../i18n";
 
 export type PaletteGroup = "Actions" | "Pages" | "Settings" | "Readings" | "Voices";
 export type PaletteAction =
@@ -37,72 +38,27 @@ export const MAX_RECENT_COMMANDS = 3;
 const MAX_RESULTS = 30;
 const READ_WORDS_PER_MIN = 160;
 
-const ACTIONS: Command[] = [
-  { id: "pause", group: "Actions", title: "Pause", does: "Pauses the reading that is playing.", icon: "player-pause", keywords: "stop playback", action: { type: "pause" } },
-  {
-    id: "toggle-reading",
-    group: "Actions",
-    title: "Play or pause reading",
-    does: "Plays or pauses the current reading.",
-    icon: "player-play",
-    keywords: "resume mini player",
-    action: { type: "toggle-reading" },
-  },
-  {
-    id: "export",
-    group: "Actions",
-    title: "Export audio",
-    does: "Opens the export dialog to save speech as an audio file.",
-    icon: "download",
-    keywords: "save mp3 wav file",
-    action: { type: "export" },
-  },
-  {
-    id: "load-engine",
-    group: "Actions",
-    title: "Load the voice engine now",
-    does: "Loads the voice engine into memory so the next reading starts at once.",
-    icon: "cpu",
-    keywords: "wake warm",
-    action: { type: "load-engine" },
-  },
-  { id: "dnd", group: "Actions", title: "Toggle Do not disturb", does: "Turns pop-ups and sounds off, or back on.", icon: "bell", keywords: "notifications quiet toast", action: { type: "dnd" } },
-  {
-    id: "check-updates",
-    group: "Actions",
-    title: "Check for updates",
-    does: "Looks for a newer version of Speak Kit.",
-    icon: "refresh",
-    keywords: "version upgrade",
-    action: { type: "check-updates" },
-  },
-  {
-    id: "install-extension",
-    group: "Actions",
-    title: "Install the extension",
-    does: "Opens Browser integration, where you add the extension.",
-    icon: "brand-chrome",
-    keywords: "chrome edge browser load unpacked",
-    action: { type: "install-extension" },
-  },
-  {
-    id: "copy-token",
-    group: "Actions",
-    title: "Copy pairing token",
-    does: "Copies the token the extension needs to the clipboard.",
-    icon: "copy",
-    keywords: "browser extension key",
-    action: { type: "copy-token" },
-  },
-  { id: "logs", group: "Actions", title: "Open log folder", does: "Shows the folder with the log files.", icon: "folder", keywords: "debug", action: { type: "open-logs" } },
-];
+const ACTION_ROWS = [
+  ["pause", "player-pause", "stop playback", "pause"],
+  ["toggle-reading", "player-play", "resume mini player", "toggle-reading"],
+  ["export", "download", "save mp3 wav file", "export"],
+  ["load-engine", "cpu", "wake warm", "load-engine"],
+  ["dnd", "bell", "notifications quiet toast", "dnd"],
+  ["check-updates", "refresh", "version upgrade", "check-updates"],
+  ["install-extension", "brand-chrome", "chrome edge browser load unpacked", "install-extension"],
+  ["copy-token", "copy", "browser extension key", "copy-token"],
+  ["logs", "folder", "debug", "open-logs"],
+] as const;
 
-const pageCommands = () => {
+const actionCommands = ({ t }: Translator): Command[] =>
+  ACTION_ROWS.map(([id, icon, keywords, type]) => ({ id, group: "Actions", title: t(`pal.${id}`), does: t(`pal.${id}Does`), icon, keywords, action: { type } as PaletteAction }));
+
+const pageCommands = ({ t, label }: Translator) => {
   const pages = MENU.flatMap((g) => g.items).map<Command>((i) => ({
     id: `page-${i.page}`,
     group: "Pages",
-    title: `Open ${i.label}`,
-    does: `Opens the ${i.label} page.`,
+    title: t("pal.openPage", { label: label(`page.${i.page}`, i.label) }),
+    does: t("pal.openPageDoes", { label: label(`page.${i.page}`, i.label) }),
     icon: i.icon,
     keywords: i.keywords,
     action: { type: "nav", page: i.page },
@@ -110,12 +66,12 @@ const pageCommands = () => {
   return pages;
 };
 
-const settingsCommands = () => {
+const settingsCommands = ({ t, label }: Translator) => {
   const settings = SETTINGS_NAV.flatMap((g) => g.items).map<Command>((i) => ({
     id: `s-${i.id}`,
     group: "Settings",
-    title: `Settings: ${i.label}`,
-    does: `Opens Settings on ${i.label}.`,
+    title: t("pal.openSetting", { label: label(`sub.${i.id}`, i.label) }),
+    does: t("pal.openSettingDoes", { label: label(`sub.${i.id}`, i.label) }),
     icon: i.icon,
     keywords: i.keywords,
     action: { type: "nav", page: "settings", sub: i.id },
@@ -123,13 +79,13 @@ const settingsCommands = () => {
   return settings;
 };
 
-const readingCommands = (docs: DocMeta[]) => {
+const readingCommands = (docs: DocMeta[], { t }: Translator) => {
   const readings = docs.map<Command>((d) => ({
     id: `d-${d.id}`,
     group: "Readings",
     title: d.title,
-    does: "Opens this reading in the Library.",
-    hint: `${Math.max(1, Math.round(d.wordCount / READ_WORDS_PER_MIN))} min`,
+    does: t("pal.readingDoes"),
+    hint: t("pal.minutes", { n: Math.max(1, Math.round(d.wordCount / READ_WORDS_PER_MIN)) }),
     icon: "book",
     keywords: d.origin,
     action: { type: "open-doc", id: d.id },
@@ -137,13 +93,13 @@ const readingCommands = (docs: DocMeta[]) => {
   return readings;
 };
 
-const voiceCommands = (voices: Voice[]) => {
+const voiceCommands = (voices: Voice[], { t }: Translator) => {
   const voiceCommands = voices.map<Command>((v) => ({
     id: `v-${v.id}`,
     group: "Voices",
     title: v.name,
-    does: "Plays a short sample of this voice.",
-    hint: "Voice",
+    does: t("pal.voiceDoes"),
+    hint: t("pal.voiceHint"),
     icon: "microphone",
     keywords: `voice preview ${v.id} ${v.lang === "en-US" ? "us" : "uk"} ${v.gender} ${v.traits ?? ""}`,
     action: { type: "preview", voice: v.id },
@@ -151,8 +107,9 @@ const voiceCommands = (voices: Voice[]) => {
   return voiceCommands;
 };
 
-export function buildCommands(voices: Voice[] = [], docs: DocMeta[] = []): Command[] {
-  return [...ACTIONS, ...pageCommands(), ...settingsCommands(), ...readingCommands(docs), ...voiceCommands(voices)];
+/** Every command in the given language (English by default); the group ids stay English, the screen translates them. */
+export function buildCommands(voices: Voice[] = [], docs: DocMeta[] = [], tr: Translator = ENGLISH): Command[] {
+  return [...actionCommands(tr), ...pageCommands(tr), ...settingsCommands(tr), ...readingCommands(docs, tr), ...voiceCommands(voices, tr)];
 }
 
 /** Cost of a title match: none at the start, 1 at a word start, 3 inside a word. */

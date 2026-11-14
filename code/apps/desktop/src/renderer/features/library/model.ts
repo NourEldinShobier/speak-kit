@@ -1,4 +1,6 @@
 import { compareNames } from "@speakkit/protocol";
+import "../../../shared/i18n/packs/library";
+import { englishT, ENGLISH_LANG, type Lang, type TFn } from "../../../shared/i18n";
 import type { DocMeta } from "../../../shared/library/contract";
 
 /** Speech at speed 1 reads about this many words a minute (15 characters a second, the player's estimate). */
@@ -26,24 +28,20 @@ export const estimateMs = (words: number, speed: number) => (words / (WORDS_PER_
 export { clock } from "@speakkit/protocol";
 
 /** 2h 15m, 37 min, under 1 min */
-export function span(ms: number): string {
+export function span(ms: number, t: TFn = englishT): string {
   const min = Math.round(ms / 60_000);
-  if (min < 1) return "under 1 min";
+  if (min < 1) return t("lib.spanUnder");
   const h = Math.floor(min / 60);
-  return h ? `${h}h ${min % 60}m` : `${min} min`;
+  return h ? t("lib.spanHours", { h, m: min % 60 }) : t("lib.spanMin", { n: min });
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 /** Today, Yesterday, Mon (within the last week), Oct 27 */
-export function dayLabel(ts: number, now: number): string {
+export function dayLabel(ts: number, now: number, { t, locale }: Lang = ENGLISH_LANG): string {
   const day = (t: number) => new Date(t).setHours(0, 0, 0, 0);
   const diff = Math.round((day(now) - day(ts)) / 86_400_000);
-  if (diff <= 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  const d = new Date(ts);
-  return diff < 7 ? DAYS[d.getDay()]! : `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  if (diff <= 0) return t("lib.today");
+  if (diff === 1) return t("lib.yesterday");
+  return new Intl.DateTimeFormat(locale, diff < 7 ? { weekday: "short" } : { month: "short", day: "numeric" }).format(ts);
 }
 
 const lastTouched = (d: DocMeta) => d.openedAt ?? d.addedAt;
@@ -79,18 +77,18 @@ interface RowStatus {
   label: string;
 }
 
-export function rowStatus(d: DocMeta, speed: number): RowStatus {
-  if (d.finished) return { kind: "finished", percent: 100, label: "Finished" };
-  if (d.openedAt === undefined && d.progress.fraction === 0) return { kind: "new", percent: 0, label: "New" };
+export function rowStatus(d: DocMeta, speed: number, t: TFn = englishT): RowStatus {
+  if (d.finished) return { kind: "finished", percent: 100, label: t("lib.finished") };
+  if (d.openedAt === undefined && d.progress.fraction === 0) return { kind: "new", percent: 0, label: t("lib.new") };
   const percent = Math.round(d.progress.fraction * 100);
-  return { kind: "progress", percent, label: `${percent}% · ${span(estimateMs(d.wordCount, speed) * (1 - d.progress.fraction))} left` };
+  return { kind: "progress", percent, label: t("lib.statusLeft", { percent, span: span(estimateMs(d.wordCount, speed) * (1 - d.progress.fraction), t) }) };
 }
 
 export const FORMAT_BADGE: Record<DocMeta["format"], string | null> = { pdf: "PDF", docx: "DOC", epub: "EPUB", markdown: "MD", html: "HTML", text: null, url: null };
 
-export function subtitle(d: DocMeta): string {
-  const base = d.source === "paste" ? "Pasted text" : d.origin;
-  return d.pages ? `${base} · ${d.pages} pages` : base;
+export function subtitle(d: DocMeta, t: TFn = englishT): string {
+  const base = d.source === "paste" ? t("lib.pastedText") : d.origin;
+  return d.pages ? t("lib.sourcePages", { source: base, n: d.pages }) : base;
 }
 
 /** Split text around case-insensitive matches of every query word: [text, isMatch] pieces, for highlighting. */

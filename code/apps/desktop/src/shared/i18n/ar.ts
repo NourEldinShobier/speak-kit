@@ -1,4 +1,9 @@
 import type { StringKey } from "./en";
+import { AR_SHELL } from "./packs/ar/shell";
+import { AR_LIBRARY } from "./packs/ar/library";
+import { AR_APPS } from "./packs/ar/apps";
+import { AR_EXPERIMENTS } from "./packs/ar/experiments";
+import { AR_EXPORT } from "./packs/ar/export";
 
 export const AR: Record<StringKey, string> = {
   "nav.menu": "القائمة",
@@ -232,4 +237,9 @@ export const AR: Record<StringKey, string> = {
   "title.back": "رجوع",
   "title.forward": "للأمام",
   "title.caughtUp": "لا جديد.",
+  ...AR_SHELL,
+  ...AR_LIBRARY,
+  ...AR_APPS,
+  ...AR_EXPERIMENTS,
+  ...AR_EXPORT,
 };
