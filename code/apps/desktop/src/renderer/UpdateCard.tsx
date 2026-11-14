@@ -1,15 +1,18 @@
 import { Banner, Button, LoadingLabel, Popover, ProgressBar, StatusPill } from "@speakkit/ui";
 import { useState } from "react";
+import { listOf } from "../shared/i18n";
 import type { AppState } from "../shared/ipc";
 import { updateBlockers, type UpdateAction } from "../shared/updates";
 import { updateErrorText } from "./error-text";
+import { useT } from "./i18n";
 import { api } from "./ui";
 
 /** The lines of the release the update brings, when it has any. */
 function UpdateNotes({ notes }: { notes?: string[] | undefined }) {
+  const { t } = useT();
   if (!notes?.length) return null;
   return (
-    <ul className="sk-notes" data-testid="update-notes" aria-label="What is in this update">
+    <ul className="sk-notes" data-testid="update-notes" aria-label={t("update.notes")}>
       {notes.map((n, i) => (
         <li key={i}>{n}</li>
       ))}
@@ -22,43 +25,42 @@ const act = (a: UpdateAction) => () => void api.updateAction(a);
 /** The update flow in one place (Settings > About and the title bar popover). Nothing here installs without a click. */
 export function UpdateCard({ s }: { s: AppState }) {
   const u = s.update;
+  const { t, locale } = useT();
   const [confirm, setConfirm] = useState(false);
   switch (u.kind) {
     case "unsupported":
-      return <p className="sk-modal-text">Updates are delivered to the installed app. This copy runs from a folder, so it does not update itself. The Windows installer keeps itself up to date.</p>;
+      return <p className="sk-modal-text">{t("update.unsupported")}</p>;
     case "idle":
       return (
         <div className="sk-row-actions" data-testid="update-idle">
-          <span>{u.checkedAtMs ? "Speak Kit is up to date." : "Speak Kit checks for updates in the background."}</span>
+          <span>{u.checkedAtMs ? t("update.upToDate") : t("update.background")}</span>
           <Button size="sm" onClick={act("check")}>
-            Check for updates
+            {t("update.check")}
           </Button>
         </div>
       );
     case "checking":
-      return <LoadingLabel>Checking for updates</LoadingLabel>;
+      return <LoadingLabel>{t("update.checking")}</LoadingLabel>;
     case "available":
       return (
         <Banner
           tone="info"
-          title={`Speak Kit ${u.version} is available`}
+          title={t("update.available", { version: u.version })}
           action={
             <Button size="sm" variant="primary" onClick={act("download")}>
-              Download
+              {t("update.download")}
             </Button>
           }
         >
-          It downloads in the background. Nothing is installed until you say so.
+          {t("update.availableBody")}
           <UpdateNotes notes={u.notes} />
         </Banner>
       );
     case "downloading":
       return (
         <div data-testid="update-downloading">
-          <p className="sk-modal-text">
-            Downloading {u.version}, {u.percent}%
-          </p>
-          <ProgressBar value={u.percent} label="Update download" />
+          <p className="sk-modal-text">{t("update.downloading", { version: u.version, percent: u.percent })}</p>
+          <ProgressBar value={u.percent} label={t("update.downloadLabel")} />
         </div>
       );
     case "ready": {
@@ -69,20 +71,23 @@ export function UpdateCard({ s }: { s: AppState }) {
           <div data-testid="update-confirm">
             <Banner
               tone="warning"
-              title={`Restart to install ${u.version}?`}
+              title={t("update.restartTitle", { version: u.version })}
               action={
                 <div className="sk-row-actions">
                   <Button size="sm" onClick={() => setConfirm(false)}>
-                    Keep working
+                    {t("update.keepWorking")}
                   </Button>
                   <Button size="sm" variant="danger" onClick={act("install-now-anyway")}>
-                    Restart anyway
+                    {t("update.restartAnyway")}
                   </Button>
                 </div>
               }
             >
-              {[b.reading && "The reading in progress stops", b.exports > 0 && (b.exports === 1 ? "The export is cancelled" : "The exports are cancelled")].filter(Boolean).join(" and ")}. Choose
-              Install when I quit to let it finish first.
+              {listOf(
+                locale,
+                [b.reading && t("update.stopsReading"), b.exports > 0 && t("update.stopsExports", { n: b.exports })].filter((x): x is string => !!x),
+              )}
+              . {t("update.chooseOnQuit")}
             </Banner>
           </div>
         );
@@ -91,21 +96,21 @@ export function UpdateCard({ s }: { s: AppState }) {
           <Banner
             tone="info"
             icon="circle-check"
-            title={`Speak Kit ${u.version} is ready`}
+            title={t("update.ready", { version: u.version })}
             action={
               <div className="sk-row-actions">
                 {!u.onQuit && (
                   <Button size="sm" onClick={act("install-on-quit")}>
-                    Install when I quit
+                    {t("update.installOnQuit")}
                   </Button>
                 )}
                 <Button size="sm" variant="primary" onClick={busy ? () => setConfirm(true) : act("install-now")}>
-                  Restart now
+                  {t("update.restartNow")}
                 </Button>
               </div>
             }
           >
-            {u.onQuit ? "It installs when you quit Speak Kit." : "Restarting closes the app for a moment, then it reopens where you left off. Readings and exports in progress stop."}
+            {u.onQuit ? t("update.onQuitBody") : t("update.restartBody")}
             <UpdateNotes notes={u.notes} />
           </Banner>
         </div>
@@ -116,38 +121,38 @@ export function UpdateCard({ s }: { s: AppState }) {
         <div data-testid="update-manual">
           <Banner
             tone="info"
-            title={`Speak Kit ${u.version} is available`}
+            title={t("update.available", { version: u.version })}
             action={
               <div className="sk-row-actions">
                 <Button size="sm" onClick={act("open-release")}>
-                  Release notes
+                  {t("nav.releaseNotes")}
                 </Button>
                 <Button size="sm" variant="primary" onClick={act("open-release")}>
-                  Download
+                  {t("update.download")}
                 </Button>
               </div>
             }
           >
-            This copy cannot replace itself. Download the new version from the release page and open it to update.
+            {t("update.manualBody")}
             <UpdateNotes notes={u.notes} />
           </Banner>
         </div>
       );
     case "restarting":
-      return <LoadingLabel>Restarting to install {u.version}</LoadingLabel>;
+      return <LoadingLabel>{t("update.restarting", { version: u.version })}</LoadingLabel>;
     case "error": {
-      const t = updateErrorText(u.error, u.phase);
+      const err = updateErrorText(u.error, u.phase);
       return (
         <Banner
           tone="error"
-          title={t.title}
+          title={err.title}
           action={
             <Button size="sm" onClick={act("check")}>
-              Try again
+              {t("common.tryAgain")}
             </Button>
           }
         >
-          {t.body}
+          {err.body}
         </Banner>
       );
     }
@@ -157,17 +162,18 @@ export function UpdateCard({ s }: { s: AppState }) {
 /** Green pill in the title bar once an update is downloaded; opens the same card in a popover. */
 export function UpdatePill({ s }: { s: AppState }) {
   const u = s.update;
+  const { t } = useT();
   if (u.kind !== "ready" && u.kind !== "manual") return null;
   return (
     <Popover
-      title={u.kind === "ready" ? "Update ready" : "Update available"}
+      title={u.kind === "ready" ? t("update.pillReady") : t("update.pillAvailable")}
       side="bottom"
       align="end"
       width={380}
-      trigger={(t) => (
-        <button type="button" className="sk-pillbtn" data-testid="update-pill" {...t}>
+      trigger={(tp) => (
+        <button type="button" className="sk-pillbtn" data-testid="update-pill" {...tp}>
           <StatusPill tone="green" icon="circle-check">
-            {u.kind === "ready" ? "Update ready" : "Update available"} · {u.version}
+            {u.kind === "ready" ? t("update.pillReady") : t("update.pillAvailable")} · {u.version}
           </StatusPill>
         </button>
       )}
@@ -179,12 +185,13 @@ export function UpdatePill({ s }: { s: AppState }) {
 
 /** Small card while the update installs. */
 export function UpdatingCard({ s }: { s: AppState }) {
+  const { t } = useT();
   if (s.update.kind !== "restarting") return null;
   return (
     <div className="sk-updating" role="status" data-testid="updating-card">
-      <b>Updating to {s.update.version}</b>
-      <span>Speak Kit will reopen where you left off.</span>
-      <ProgressBar thin label="Installing the update" />
+      <b>{t("update.updatingTo", { version: s.update.version })}</b>
+      <span>{t("update.reopens")}</span>
+      <ProgressBar thin label={t("update.installing")} />
     </div>
   );
 }

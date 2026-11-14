@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { Icon, Toast } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
+import { useT } from "../../i18n";
 import { api } from "../../ui";
 import { DeleteDialog, RenameDialog, VoiceDialog } from "./ItemDialogs";
 import { LibraryBody } from "./LibraryBody";
@@ -57,6 +58,7 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
   const speed = s.config.speed;
   const view = useMemo(() => libraryView(docs, { query: ui.query, filter: ui.filter, sort: ui.sort, hits, speed }), [docs, ui.query, ui.filter, ui.sort, hits, speed]);
   const { toast } = ui;
+  const { t } = useT();
   return (
     <div className="lib-wrap" {...actions.dragProps}>
       <div className="lib" data-testid="library">
@@ -67,14 +69,14 @@ export function LibraryPage({ s, onOpen }: { s: AppState; onOpen(id: string, aut
       {ui.dragging > 0 && (
         <div className="lib-drop" data-testid="drop-overlay" aria-live="polite">
           <Icon name="upload" size={32} />
-          <strong>Drop to add to your library</strong>
-          <span>PDF, DOCX, EPUB, Markdown, HTML and text files</span>
+          <strong>{t("lib.drop")}</strong>
+          <span>{t("lib.dropTypes")}</span>
         </div>
       )}
       <Dialogs ui={ui} voices={voices} s={s} actions={actions} dispatch={dispatch} />
       {toast && (
         <div className="lib-toast">
-          <Toast tone="success" action={toast.undo ? { label: "Undo", onClick: () => void actions.undo(toast.undo!) } : undefined}>
+          <Toast tone="success" action={toast.undo ? { label: t("lib.undo"), onClick: () => void actions.undo(toast.undo!) } : undefined}>
             {toast.text}
           </Toast>
         </div>

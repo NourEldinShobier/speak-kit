@@ -1,3 +1,5 @@
+import type { PackKey } from "./packs";
+
 /** Every interface string the translated screens use, in English; other languages must carry exactly these keys. */
 export const EN = {
   "nav.menu": "Menu",
@@ -233,4 +235,4 @@ export const EN = {
   "title.caughtUp": "All caught up.",
 } as const;
 
-export type StringKey = keyof typeof EN;
+export type StringKey = keyof typeof EN | PackKey;

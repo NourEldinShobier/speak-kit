@@ -2,6 +2,8 @@ import { useEffect, useRef, type Dispatch, type DragEvent } from "react";
 import { MAX_FILE_BYTES, type DocMeta, type ImportResult } from "../../../shared/library/contract";
 import { library } from "./api";
 import { errorText } from "../../error-text";
+import { useT } from "../../i18n";
+import type { TFn } from "../../../shared/i18n";
 import type { LibraryAction } from "./page-model";
 
 const TOAST_MS = 6000;
@@ -23,7 +25,7 @@ function useToast(dispatch: Dispatch<LibraryAction>) {
   };
 }
 
-const addedText = (doc: DocMeta) => (doc.needsOcr ? `Added "${doc.title}". It has no text layer: open it to run text recognition.` : `Added "${doc.title}".`);
+const addedText = (doc: DocMeta, t: TFn) => t(doc.needsOcr ? "lib.addedOcr" : "lib.added", { title: doc.title });
 const failureText = (r: Extract<ImportResult, { ok: false }>) => (r.name ? `${r.name}: ${errorText(r.error)}` : errorText(r.error));
 
 function dragProps(dispatch: Dispatch<LibraryAction>, addFiles: (files: File[]) => Promise<void>) {
@@ -41,13 +43,13 @@ function dragProps(dispatch: Dispatch<LibraryAction>, addFiles: (files: File[]) 
 
 type Say = (text: string, undo?: string) => void;
 
-function importer({ dispatch, refresh, say }: Pick<Deps, "dispatch" | "refresh"> & { say: Say }) {
+function importer({ dispatch, refresh, say, t }: Pick<Deps, "dispatch" | "refresh"> & { say: Say; t: TFn }) {
   const finish = async (results: ImportResult[]) => {
     const added = results.flatMap((r) => (r.ok ? [r.doc] : []));
     dispatch({ type: "problems", problems: results.flatMap((r) => (r.ok ? [] : [failureText(r)])) });
     await refresh();
-    if (added.length === 1) say(addedText(added[0]!));
-    else if (added.length > 1) say(`Added ${added.length} readings.`);
+    if (added.length === 1) say(addedText(added[0]!, t));
+    else if (added.length > 1) say(t("lib.addedMany", { n: added.length }));
   };
 
   const addFiles = async (files: File[]) =>
@@ -65,10 +67,11 @@ function importer({ dispatch, refresh, say }: Pick<Deps, "dispatch" | "refresh">
 
 /** Everything the page does to the stored readings: import, delete and undo, open; each one ends in the reducer or a refresh. */
 export function useLibraryActions({ dispatch, refresh, onOpen }: Deps) {
+  const { t } = useT();
   const say = useToast(dispatch);
   const close = () => dispatch({ type: "dialog", dialog: null });
 
-  const { finish, addFiles } = importer({ dispatch, refresh, say });
+  const { finish, addFiles } = importer({ dispatch, refresh, say, t });
 
   const open = (d: DocMeta, play = true) => onOpen(d.id, play);
 
@@ -83,7 +86,7 @@ export function useLibraryActions({ dispatch, refresh, onOpen }: Deps) {
       close();
       await library.remove(doc.id);
       await refresh();
-      say(`Deleted "${doc.title}".`, doc.id);
+      say(t("lib.deleted", { title: doc.title }), doc.id);
     },
     undo: async (id: string) => {
       dispatch({ type: "toast", toast: null });
@@ -94,12 +97,12 @@ export function useLibraryActions({ dispatch, refresh, onOpen }: Deps) {
       close();
       await refresh();
       if (play) open(doc);
-      else say(`Added "${doc.title}".`);
+      else say(t("lib.added", { title: doc.title }));
     },
     addedUrl: (doc: DocMeta) => {
       close();
       void refresh();
-      say(`Added "${doc.title}".`);
+      say(t("lib.added", { title: doc.title }));
     },
     changed: () => {
       close();

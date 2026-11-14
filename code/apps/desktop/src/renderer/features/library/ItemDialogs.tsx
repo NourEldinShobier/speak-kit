@@ -2,78 +2,79 @@ import { useEffect, useState } from "react";
 import { Button, Modal, Select, TextInput } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { DocMeta } from "../../../shared/library/contract";
+import { useT } from "../../i18n";
 import { library } from "./api";
 import { voiceOptions } from "./PasteDialog";
 
 export function RenameDialog({ doc, onClose, onDone }: { doc: DocMeta | null; onClose(): void; onDone(): void }) {
+  const { t } = useT();
   const [title, setTitle] = useState(doc?.title ?? "");
   return (
     <Modal
       open={!!doc}
       onClose={onClose}
-      title="Rename reading"
+      title={t("lib.renameTitle")}
       width={440}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button variant="primary" disabled={!title.trim()} onClick={() => doc && void library.rename(doc.id, title).then(onDone)}>
-            Save
+            {t("lib.save")}
           </Button>
         </>
       }
     >
-      <TextInput label="Title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus onFocus={(e) => e.currentTarget.select()} />
+      <TextInput label={t("lib.titleLabel")} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus onFocus={(e) => e.currentTarget.select()} />
     </Modal>
   );
 }
 
 export function VoiceDialog({ doc, voices, defaultVoice, onClose, onDone }: { doc: DocMeta | null; voices: Voice[]; defaultVoice: string; onClose(): void; onDone(): void }) {
+  const { t } = useT();
   const [voice, setVoice] = useState(doc?.voice ?? defaultVoice);
   const save = (v: string | null) => doc && void library.setVoice(doc.id, v).then(onDone);
   return (
     <Modal
       open={!!doc}
       onClose={onClose}
-      title="Voice for this reading"
+      title={t("lib.voiceTitle")}
       width={440}
       footer={
         <>
-          <Button onClick={() => save(null)}>Use the app voice</Button>
+          <Button onClick={() => save(null)}>{t("lib.useAppVoice")}</Button>
           <Button variant="primary" onClick={() => save(voice)}>
-            Save
+            {t("lib.save")}
           </Button>
         </>
       }
     >
-      <Select label="Voice" options={voiceOptions(voices)} value={voice} onChange={setVoice} />
+      <Select label={t("lib.voice")} options={voiceOptions(voices)} value={voice} onChange={setVoice} />
     </Modal>
   );
 }
 
 export function DeleteDialog({ doc, onClose, onConfirm }: { doc: DocMeta | null; onClose(): void; onConfirm(): void }) {
+  const { t: tr } = useT();
   // The dialog focuses its first control (the close button) on open; Cancel is the safe default.
   useEffect(() => {
     if (!doc) return;
     const t = setTimeout(() => document.querySelector<HTMLElement>("[data-default-focus]")?.focus(), 50);
     return () => clearTimeout(t);
   }, [doc]);
-  const copy =
-    doc?.source === "paste"
-      ? "Pasted text has no original file, so this is the only copy. You can undo for a few seconds."
-      : "The original file or page is not touched. Only the reading and its progress are removed from Speak Kit.";
+  const copy = doc?.source === "paste" ? tr("lib.deletePaste") : tr("lib.deleteFile");
   return (
     <Modal
       open={!!doc}
       onClose={onClose}
-      title={`Delete "${doc?.title ?? ""}"?`}
+      title={tr("lib.deleteTitle", { title: doc?.title ?? "" })}
       width={440}
       footer={
         <>
           <Button onClick={onClose} data-default-focus>
-            Cancel
+            {tr("common.cancel")}
           </Button>
           <Button variant="danger" onClick={onConfirm}>
-            Delete
+            {tr("lib.delete")}
           </Button>
         </>
       }

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vite-plus/test";
+import { beforeAll, describe, expect, it } from "vite-plus/test";
 import type { DocMeta } from "../../../shared/library/contract";
+import { loadLocale, translate } from "../../../shared/i18n";
 import { clock, continueDoc, dayLabel, estimateMs, filterDocs, highlightParts, rowStatus, sortDocs, span, subtitle } from "./model";
 
 const doc = (o: Partial<DocMeta>): DocMeta => ({
@@ -97,5 +98,18 @@ describe("highlightParts", () => {
       [" c", false],
     ]);
     expect(highlightParts("plain", " ")).toEqual([["plain", false]]);
+  });
+});
+
+describe("in another language", () => {
+  beforeAll(() => Promise.all([loadLocale("fr"), loadLocale("es")]));
+  const fr = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => translate("fr", key, vars);
+  it("writes a duration and the day names in the language", () => {
+    expect(span(8_100_000, fr)).toBe("2 h 15 min");
+    expect(span(0, fr)).toBe("moins de 1 min");
+    const now = new Date(2026, 10, 14, 12).getTime();
+    expect(dayLabel(now, now, { t: fr, locale: "fr" })).toBe("Aujourd’hui");
+    expect(dayLabel(new Date(2026, 10, 9, 12).getTime(), now, { t: (k, v) => translate("es", k, v), locale: "es" })).toBe("lun");
+    expect(dayLabel(new Date(2026, 9, 27, 12).getTime(), now)).toBe("Oct 27");
   });
 });

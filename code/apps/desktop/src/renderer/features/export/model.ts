@@ -1,3 +1,5 @@
+import "../../../shared/i18n/packs/export";
+import { englishT, type TFn } from "../../../shared/i18n";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import type { ExportCaptions, ExportStage, ExportTarget, ExportView } from "../../../shared/export";
@@ -98,13 +100,5 @@ export function exportViewKind(phase: ExportPhase, job: ExportView | undefined):
   return phase.kind === "exists" ? "exists" : "options";
 }
 
-const TITLES: Record<ExportViewKind, string> = {
-  options: "Export audio",
-  exists: "Export audio",
-  rendering: "Exporting audio",
-  done: "Export finished",
-  error: "Export failed",
-  cancelled: "Export cancelled",
-};
-
-export const exportTitle = (kind: ExportViewKind): string => TITLES[kind];
+/** The dialog title for a view, in the given language (English by default). */
+export const exportTitle = (kind: ExportViewKind, t: TFn = englishT): string => t(`export.title.${kind}`);

@@ -2,6 +2,7 @@ import { useReducer } from "react";
 import { Banner, Button, Modal, TextInput } from "@speakkit/ui";
 import type { DocMeta } from "../../../shared/library/contract";
 import { errorText } from "../../error-text";
+import { useT } from "../../i18n";
 import { library } from "./api";
 import { initUrl, urlReducer } from "./add-model";
 
@@ -13,17 +14,18 @@ interface UrlProps {
 }
 
 function FailedBanner({ message, details, onToggle }: { message: string; details: boolean; onToggle(): void }) {
+  const { t } = useT();
   return (
     <Banner
       tone="warning"
-      title="That page could not be added"
+      title={t("lib.urlFailTitle")}
       action={
         <Button size="sm" variant="ghost" onClick={onToggle}>
-          {details ? "Hide details" : "Details"}
+          {details ? t("lib.hideDetails") : t("lib.details")}
         </Button>
       }
     >
-      Some sites block automatic reading. Copy the article text and paste it instead.
+      {t("lib.urlFailBody")}
       {details && (
         <div className="lib-muted" data-testid="url-details">
           {message}
@@ -34,6 +36,7 @@ function FailedBanner({ message, details, onToggle }: { message: string; details
 }
 
 export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: UrlProps) {
+  const { t } = useT();
   const [st, dispatch] = useReducer(urlReducer, undefined, initUrl);
   const fetching = st.phase.kind === "fetching";
   const go = async () => {
@@ -48,18 +51,18 @@ export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: UrlProps) 
     <Modal
       open={open}
       onClose={onClose}
-      title="Add from a web address"
+      title={t("lib.urlTitle")}
       width={520}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           {failed ? (
             <Button variant="primary" onClick={onPasteInstead}>
-              Paste text instead
+              {t("lib.pasteInstead")}
             </Button>
           ) : (
             <Button variant="primary" loading={fetching} disabled={!st.url.trim() || fetching} onClick={() => void go()}>
-              {fetching ? "Fetching" : "Add"}
+              {fetching ? t("lib.fetching") : t("lib.addBtn")}
             </Button>
           )}
         </>
@@ -67,7 +70,7 @@ export function UrlDialog({ open, onClose, onAdded, onPasteInstead }: UrlProps) 
     >
       <div className="lib-form">
         <TextInput
-          label="Web address"
+          label={t("lib.urlLabel")}
           value={st.url}
           readOnly={fetching}
           onChange={(e) => dispatch({ type: "url", url: e.target.value })}

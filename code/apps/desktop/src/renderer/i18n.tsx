@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { loadLocale, resolveLocale, translate, translateOr, type Locale, type StringKey } from "../shared/i18n";
 
 export interface Translator {
@@ -10,7 +10,10 @@ export interface Translator {
 
 const make = (locale: Locale): Translator => ({ locale, t: (k, vars) => translate(locale, k, vars), label: (k, f) => translateOr(locale, k, f) });
 
-const Ctx = createContext<Translator>(make("en"));
+/** The English translator, for code that runs without a screen. */
+export const ENGLISH = make("en");
+
+const Ctx = createContext<Translator>(ENGLISH);
 
 /** Gives the screens below it the interface language chosen in Settings (English until one is provided). */
 export function LocaleProvider({ choice, children }: { choice: string; children: ReactNode }) {
@@ -25,5 +28,14 @@ export function LocaleProvider({ choice, children }: { choice: string; children:
   }, [locale]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
+
+/** Text with `**bold**` parts, which a translation keeps in its own word order. */
+export const Rich = ({ text }: { text: string }) => (
+  <>
+    {text.split("**").map((part, i) => (
+      <Fragment key={i}>{i % 2 ? <b>{part}</b> : part}</Fragment>
+    ))}
+  </>
+);
 
 export const useT = (): Translator => useContext(Ctx);

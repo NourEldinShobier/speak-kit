@@ -8,6 +8,25 @@ const PAGES = [
   "HomePage.tsx",
   "Sidebar.tsx",
   "TitleBar.tsx",
+  "QuitDialog.tsx",
+  "UpdateCard.tsx",
+  "ModelDownloadCard.tsx",
+  "pages.tsx",
+  "TokenField.tsx",
+  "features/palette/Palette.tsx",
+  "features/apps/AppSuggestions.tsx",
+  "features/experiments/ExperimentsPage.tsx",
+  "features/export/ExportDialog.tsx",
+  "features/export/ExportPill.tsx",
+  "features/export/JobViews.tsx",
+  "features/export/OptionsView.tsx",
+  "features/library/DocRow.tsx",
+  "features/library/ItemDialogs.tsx",
+  "features/library/LibraryBody.tsx",
+  "features/library/LibraryHead.tsx",
+  "features/library/LibraryPage.tsx",
+  "features/library/PasteDialog.tsx",
+  "features/library/UrlDialog.tsx",
   "features/settings/Advanced.tsx",
   "features/settings/AutomationPage.tsx",
   "features/settings/GeneralPage.tsx",
@@ -19,14 +38,14 @@ const PAGES = [
 ];
 
 /** Names of keys and commands, which are the same in every language. */
-const SAME_EVERYWHERE = new Set(["Esc", "speakkit", "Promise"]);
+const SAME_EVERYWHERE = new Set(["Esc", "Enter", "speakkit", "Promise", "document.querySelector", "https://example.com/article"]);
 
 /** Limit: a regex scan of JSX text on one line and quoted attributes; it misses multi-line text, template literals, ternary strings and `attr={"..."}`. Text a reader sees that is written in the source instead of coming from the string table. */
 function literals(source: string): string[] {
   const found: string[] = [];
   for (const m of source.matchAll(/>\s*([^<>{}\n]*[A-Za-z]{2}[^<>{}\n]*)\s*</g)) found.push(m[1]!.trim());
   for (const m of source.matchAll(/\b(?:label|aria-label|title|placeholder|description|alt)="([^"]*[A-Za-z]{2}[^"]*)"/g)) found.push(m[1]!);
-  return found.filter((x) => !SAME_EVERYWHERE.has(x) && !/^;|&&|\|\|/.test(x));
+  return found.filter((x) => !SAME_EVERYWHERE.has(x) && !/^;|&&|\|\||\?\s*\($/.test(x));
 }
 
 describe("interface text in the translated pages", () => {
