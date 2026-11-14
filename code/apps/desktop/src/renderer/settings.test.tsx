@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { parseConfig } from "../shared/schemas";
 import { appState } from "./app-state.fixture";
 
@@ -8,15 +8,22 @@ vi.hoisted(() => {
   (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
-import { loadLocale, LOCALES } from "../shared/i18n";
+import { loadLocale, LOCALES, setActiveLocale } from "../shared/i18n";
 import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
 import { SETTINGS_NAV } from "./routes";
 import { SETTINGS_SUBS } from "../shared/ipc";
 
-beforeAll(() => Promise.all(LOCALES.map(loadLocale)));
-
 const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => renderToStaticMarkup(<Settings s={appState({ config: parseConfig({ setupDone: true, ...config }) })} sub={sub} />);
+
+afterEach(() => setActiveLocale("en")); // a page in another language switches the language of text built outside a screen
+
+// The rarely opened pages load on first use: one pass starts their loads, and a tick later every page renders in full.
+beforeAll(async () => {
+  await Promise.all(LOCALES.map(loadLocale));
+  for (const sub of SETTINGS_SUBS) page(sub);
+  await new Promise((r) => setTimeout(r, 200));
+});
 
 describe("settings navigation", () => {
   it("lists the 15 pages in four groups", () => {
