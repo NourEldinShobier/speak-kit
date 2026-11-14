@@ -4,6 +4,7 @@ import { createSecureWindow } from "../secure-window";
 import { hudChrome, raiseAboveEverything } from "./hud-chrome";
 import { hudPosition } from "./hud-place";
 import type { HudState, HudWindow } from "./hud";
+import { activeLocale } from "../../shared/i18n";
 
 export interface HudWindowOptions {
   /** Page to load. The built-in page draws the states; a custom page reads `data-kind`, `data-tone` and `data-text` on <body> and `--hud-level` on <html>. */
@@ -86,7 +87,7 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
       if (state.kind === "view") {
         // Buttons in the pill need the mouse; everything else lets clicks fall through to the app underneath.
         w.setIgnoreMouseEvents(!(state.view.kind === "error" && state.view.action));
-        w.webContents.send(HUD_EVENT, state.view);
+        w.webContents.send(HUD_EVENT, { ...state.view, locale: activeLocale() });
         return;
       }
       w.webContents.executeJavaScript(stateScript(state)).catch(() => {

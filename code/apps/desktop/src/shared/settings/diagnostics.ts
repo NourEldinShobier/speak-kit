@@ -1,4 +1,6 @@
 import type { Activity } from "../ipc";
+import { at } from "../i18n";
+import "../i18n/packs/settings";
 
 export interface RedactContext {
   /** Home folder and user name of this computer; both are replaced. */
@@ -84,7 +86,14 @@ export function filterActivity(list: readonly Activity[], f: ActivityFilter): Ac
 
 /** Plain-language row: what happened, without the raw event. */
 export function activityRow(a: Activity): { title: string; detail: string } {
-  const prefix: Record<Activity["kind"], string> = { error: "Problem", pair: "Browser", info: "Note", export: "Export", update: "Update", reading: "Reading" };
+  const prefix: Record<Activity["kind"], string> = {
+    error: at("s.diag.kind.error"),
+    pair: at("s.diag.kind.pair"),
+    info: at("s.diag.kind.info"),
+    export: at("s.diag.kind.export"),
+    update: at("s.diag.kind.update"),
+    reading: at("s.diag.kind.reading"),
+  };
   return { title: a.title, detail: a.body ? `${prefix[a.kind]}: ${a.body}` : prefix[a.kind] };
 }
 

@@ -129,7 +129,7 @@ export interface HistoryItem {
 export type { HistoryStats };
 
 /** What the HUD page draws. */
-export type HudView =
+type HudBody =
   | { kind: "ready"; hotkey: string }
   | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string; /** Name of the key that cancels this recording, when one does. */ cancel?: string }
   | { kind: "transcribing" }
@@ -137,6 +137,9 @@ export type HudView =
   | { kind: "copied"; reason: "clipboard" | "elevated" | "secure-input" }
   | { kind: "notice"; text: string; action?: { label: string; id: HudAction } }
   | { kind: "error"; text: string; icon: "microphone-off" | "download" | "alert-triangle" | "shield-check" | "lock"; action?: { label: string; id: HudAction } };
+
+/** `locale` is the language of the words around the pill; main adds it when it sends a view. */
+export type HudView = HudBody & { locale?: string };
 
 export interface DictationBridge {
   status(): Promise<DictationStatus>;

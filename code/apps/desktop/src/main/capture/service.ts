@@ -20,6 +20,8 @@ import type { CaptureInbox } from "../voice-chat/capture-inbox";
 import { CaptureRuntime } from "./runtime";
 import { createMicClaim } from "./mic-claim";
 import { applyPatch } from "./settings-patch";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 export interface CaptureServiceOptions {
   /** Claims the microphone while a capture records, so the dictation key says who has it instead of opening it twice. */
@@ -212,7 +214,7 @@ export class CaptureService {
 
   async chooseFolder(): Promise<CaptureStatus> {
     const parent = this.#o.parent();
-    const options: Electron.OpenDialogOptions = { title: "Folder for captures", defaultPath: this.folder, properties: ["openDirectory", "createDirectory"] };
+    const options: Electron.OpenDialogOptions = { title: at("dialog.capturesFolder"), defaultPath: this.folder, properties: ["openDirectory", "createDirectory"] };
     const r = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
     const picked = r.canceled ? undefined : r.filePaths[0];
     if (!picked) return this.#refresh();

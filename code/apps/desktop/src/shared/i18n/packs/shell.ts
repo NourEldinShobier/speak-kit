@@ -116,4 +116,11 @@ export const SHELL = definePack({
   "token.starting": "starting…",
   "export.pillRow": "Exporting {name}, {percent}%",
   "export.barLabel": "Export of {name}",
+  "s.notice.newerTitle": "Settings file is from a newer version",
+  "s.notice.newerBody":
+    "Your settings file was saved by a newer version of Speak Kit. It is read but not changed: changes you make now are not saved and are lost when Speak Kit closes. Update Speak Kit to edit settings.",
+  "s.notice.resetTitle": "Some settings were reset",
+  "s.notice.resetBody": "Some saved settings were not valid and use their defaults: {list}. The original file is kept as a backup.",
+  "s.notice.more": "and {n} more",
+  "s.notice.dismiss": "Dismiss",
 });

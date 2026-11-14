@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Spinner, type IconName } from "@speakkit/ui";
 import type { HudAction, HudView } from "../../../shared/dictation/contract";
+import { directionOf, resolveLocale } from "../../../shared/i18n";
+import "../../../shared/i18n/packs/main";
+import { LocaleProvider, useT } from "../../i18n";
 import { dictation, platformName } from "./api";
 import "./hud.css";
 
@@ -32,21 +35,22 @@ const Bars = ({ level }: { level: number }) => (
 const Lead = ({ name, tone }: { name: IconName; tone?: "error" }) => <Icon name={name} size={14} className={tone ? "hud__icon hud__icon--error" : "hud__icon"} />;
 const Hint = ({ children }: { children: ReactNode }) => <span className="hud__hint">{children}</span>;
 
-function recordingHint(view: Extract<HudView, { kind: "recording" }>): string {
-  if (view.cancel) return `Press the hotkey to stop, ${view.cancel} cancels`;
-  return view.locked ? `Recording locked. Press ${view.hotkey} to finish.` : "Release to finish";
+function recordingHint(view: Extract<HudView, { kind: "recording" }>, t: ReturnType<typeof useT>["t"]): string {
+  if (view.cancel) return t("hud.stopHint", { cancel: view.cancel });
+  return view.locked ? t("hud.lockedHint", { key: view.hotkey }) : t("hud.release");
 }
 
 function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) {
+  const { t } = useT();
   return (
     <>
       {view.locked ? <Lead name="lock" /> : <i className="hud__dot" />}
       <Bars level={view.level} />
       <Elapsed since={view.startedAt} />
-      <Hint>{recordingHint(view)}</Hint>
+      <Hint>{recordingHint(view, t)}</Hint>
       {view.locked && !view.cancel && (
         <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction("cancel-recording"))}>
-          Cancel
+          {t("hud.cancelRecording")}
         </button>
       )}
     </>
@@ -54,12 +58,13 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
 }
 
 function Copied({ reason }: { reason: "clipboard" | "elevated" | "secure-input" }) {
-  const paste = <Hint>Press {platformName() === "darwin" ? "Cmd" : "Ctrl"} V to paste</Hint>;
+  const { t } = useT();
+  const paste = <Hint>{t("hud.pressPaste", { key: platformName() === "darwin" ? "Cmd" : "Ctrl" })}</Hint>;
   if (reason === "secure-input")
     return (
       <>
         <Lead name="lock" tone="error" />
-        <b>Copied, a password field or Secure Keyboard Entry is on</b>
+        <b>{t("hud.copiedSecure")}</b>
         {paste}
       </>
     );
@@ -67,13 +72,13 @@ function Copied({ reason }: { reason: "clipboard" | "elevated" | "secure-input" 
     return (
       <>
         <Lead name="shield-check" tone="error" />
-        <b>Copied, this app needs admin rights to paste</b>
+        <b>{t("hud.copiedAdmin")}</b>
       </>
     );
   return (
     <>
       <Lead name="copy" />
-      <b>Copied</b>
+      <b>{t("hud.copied")}</b>
       {paste}
     </>
   );
@@ -96,12 +101,13 @@ function Failure({ view }: { view: Extract<HudView, { kind: "error" }> }) {
 }
 
 function Content({ view }: { view: HudView }) {
+  const { t } = useT();
   switch (view.kind) {
     case "ready":
       return (
         <>
           <Lead name="microphone" />
-          <b>Dictation ready</b>
+          <b>{t("hud.ready")}</b>
           <Hint>{view.hotkey}</Hint>
         </>
       );
@@ -111,14 +117,14 @@ function Content({ view }: { view: HudView }) {
       return (
         <>
           <Spinner size={14} />
-          <b>Transcribing</b>
+          <b>{t("hud.transcribing")}</b>
         </>
       );
     case "pasted":
       return (
         <>
           <Lead name="check" />
-          <b>Sent</b>
+          <b>{t("hud.sent")}</b>
         </>
       );
     case "copied":
@@ -138,7 +144,7 @@ function Content({ view }: { view: HudView }) {
 /** One dark pill that states what dictation is doing. Only the error buttons take clicks; a click anywhere else on a failure dismisses it. */
 export function Pill({ view }: { view: HudView }) {
   return (
-    <div className="hud" data-kind={view.kind} role="status" onClick={() => view.kind === "error" && dictation.hudAction("dismiss")}>
+    <div className="hud" data-kind={view.kind} dir={directionOf(resolveLocale(view.locale ?? "en", []))} role="status" onClick={() => view.kind === "error" && dictation.hudAction("dismiss")}>
       <Content view={view} />
     </div>
   );
@@ -148,5 +154,9 @@ export function Pill({ view }: { view: HudView }) {
 export function HudPill() {
   const [view, setView] = useState<HudView | null>(null);
   useEffect(() => dictation.onHud(setView), []);
-  return view ? <Pill view={view} /> : null;
+  return view ? (
+    <LocaleProvider choice={view.locale ?? "en"}>
+      <Pill view={view} />
+    </LocaleProvider>
+  ) : null;
 }

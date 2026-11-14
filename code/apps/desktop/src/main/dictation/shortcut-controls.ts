@@ -4,6 +4,8 @@ import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
 import { watchPauseRules } from "./pause-watch";
 import type { ForegroundInfo } from "./types";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 interface Deps {
   hotkeys(): SwitchableHotkeys | undefined;
@@ -16,12 +18,7 @@ interface Deps {
   changed(): void;
 }
 
-const TOAST = {
-  pasted: "Pasted into the window it came from",
-  copied: "Copied, press Ctrl V to paste",
-  empty: "Nothing dictated yet",
-  failed: "Nothing was pasted, the text stays on the clipboard",
-} as const;
+const TOAST = { pasted: "hud.pasted", copied: "hud.copiedPaste", empty: "hud.empty", failed: "hud.pasteFailed" } as const;
 
 /** Pause all shortcuts (by hand or by the program in front), Paste last and Undo cancel: the actions that are not a dictation themselves. */
 export class ShortcutControls {
@@ -69,7 +66,7 @@ export class ShortcutControls {
 
   async pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed"> {
     const r = (await this.#d.core()?.pasteLast()) ?? "failed";
-    this.#d.presenter.toast(TOAST[r], r === "failed" ? "error" : "ok");
+    this.#d.presenter.toast(at(TOAST[r]), r === "failed" ? "error" : "ok");
     return r;
   }
 

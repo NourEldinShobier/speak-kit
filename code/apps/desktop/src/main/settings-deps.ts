@@ -4,6 +4,8 @@ import { filePickers } from "./dictation/history-api";
 import type { DictationService } from "./dictation/service";
 import type { HandlerDeps } from "./handlers";
 import { testEnv } from "./test-env";
+import { at } from "../shared/i18n";
+import "../shared/i18n/packs/main";
 
 /** What a test answers the settings import dialogs with: the file (null cancels) and whether the settings that reach beyond the app are applied. */
 export const scriptedSettingsFile = { open: null as string | null, save: null as string | null, confirm: false };
@@ -27,15 +29,15 @@ export function settingsChangeDeps(
     patchArea: (area, patch) => desktop()!.patchArea(area, patch),
     setShortcut: (id, accelerator) => desktop()!.handlers.setShortcut(id, accelerator),
     resetShortcuts: () => desktop()!.handlers.resetShortcuts(),
-    pickSettingsFile: () => files.open([{ name: "Settings", extensions: ["json"] }]),
+    pickSettingsFile: () => files.open([{ name: at("filter.settings"), extensions: ["json"] }]),
     confirmImport: async (what) => {
       if (scripted) return scriptedSettingsFile.confirm;
       const options = {
         type: "warning" as const,
-        title: "Import settings",
-        message: "This file also turns on settings that reach beyond Speak Kit.",
-        detail: `It would switch on: ${what.join("; ")}.`,
-        buttons: ["Leave them out", "Turn them on"],
+        title: at("dialog.importTitle"),
+        message: at("dialog.importMessage"),
+        detail: at("dialog.importDetail", { what: what.join("; ") }),
+        buttons: [at("dialog.leaveOut"), at("dialog.turnOn")],
         defaultId: 0,
         cancelId: 0,
         noLink: true,

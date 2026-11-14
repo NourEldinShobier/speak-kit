@@ -1,5 +1,7 @@
 import type { StringKey } from "./en";
 import { DE_SHELL } from "./packs/de/shell";
+import { DE_SETTINGS } from "./packs/de/settings";
+import { DE_MAIN } from "./packs/de/main";
 import { DE_LIBRARY } from "./packs/de/library";
 import { DE_APPS } from "./packs/de/apps";
 import { DE_EXPERIMENTS } from "./packs/de/experiments";
@@ -242,4 +244,6 @@ export const DE: Record<StringKey, string> = {
   ...DE_APPS,
   ...DE_EXPERIMENTS,
   ...DE_EXPORT,
+  ...DE_MAIN,
+  ...DE_SETTINGS,
 };

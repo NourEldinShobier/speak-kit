@@ -1,5 +1,5 @@
 import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { loadLocale, resolveLocale, translate, translateOr, type Locale, type StringKey } from "../shared/i18n";
+import { loadLocale, resolveLocale, setActiveLocale, translate, translateOr, type Locale, type StringKey } from "../shared/i18n";
 
 export interface Translator {
   locale: Locale;
@@ -19,6 +19,7 @@ const Ctx = createContext<Translator>(ENGLISH);
 export function LocaleProvider({ choice, children }: { choice: string; children: ReactNode }) {
   const system = typeof navigator === "undefined" ? [] : navigator.languages;
   const locale = resolveLocale(choice, system);
+  setActiveLocale(locale); // text built outside a screen (error sentences, the engine label) follows the same language
   const [value, setValue] = useState(() => make(locale));
   useEffect(() => {
     let live = true;

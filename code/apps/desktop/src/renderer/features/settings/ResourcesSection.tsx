@@ -3,6 +3,8 @@ import { Banner, Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import { deviceLines, modelText, type Resources } from "../../../shared/settings/resources";
 import { api, useVisible } from "../../ui";
 import { rowAttr } from "./focus";
+import "../../../shared/i18n/packs/settings";
+import { useT } from "../../i18n";
 
 type Reading = { kind: "loading" } | { kind: "error" } | { kind: "ready"; r: Resources };
 
@@ -45,12 +47,13 @@ function useResources(): { reading: Reading; retry(): void } {
 const mb = (n: number) => `${Math.round(n)} MB`;
 
 function Processes({ r }: { r: Resources }) {
+  const { t } = useT();
   return (
-    <SettingsSection title="By process">
+    <SettingsSection title={t("s.mem.byProcess")}>
       {r.rows.length === 0 ? (
-        <SettingRow label="No processes reported" description="The system returned no figures. Try again in a moment." />
+        <SettingRow label={t("s.mem.noProc")} description={t("s.mem.noProcHint")} />
       ) : (
-        r.rows.map((row) => <SettingRow key={row.label} label={row.label} description={`${row.cpu}% of one core`} control={<span data-testid={`resource-${row.label}`}>{mb(row.mb)}</span>} />)
+        r.rows.map((row) => <SettingRow key={row.label} label={row.label} description={t("s.mem.cpu", { cpu: row.cpu })} control={<span data-testid={`resource-${row.label}`}>{mb(row.mb)}</span>} />)
       )}
     </SettingsSection>
   );
@@ -58,38 +61,39 @@ function Processes({ r }: { r: Resources }) {
 
 /** Performance, Resources: memory of every Speak Kit process and of both models, and what this computer offers. */
 export function ResourcesSections() {
+  const { t } = useT();
   const { reading, retry } = useResources();
   if (reading.kind === "loading")
     return (
-      <SettingsSection title="Resources">
-        <SettingRow label="Reading memory use" description="This takes a moment." />
+      <SettingsSection title={t("s.mem.resources")}>
+        <SettingRow label={t("s.mem.reading")} description={t("s.mem.readingHint")} />
       </SettingsSection>
     );
   if (reading.kind === "error")
     return (
-      <SettingsSection title="Resources">
-        <Banner tone="error" title="Could not read memory use" action={<Button onClick={retry}>Try again</Button>}>
-          The system did not answer. Nothing else is affected.
+      <SettingsSection title={t("s.mem.resources")}>
+        <Banner tone="error" title={t("s.mem.readFailed")} action={<Button onClick={retry}>{t("common.tryAgain")}</Button>}>
+          {t("s.mem.readFailedHint")}
         </Banner>
       </SettingsSection>
     );
   const { r } = reading;
   return (
     <>
-      <SettingsSection title="Models in memory">
+      <SettingsSection title={t("s.mem.models")}>
         {r.models.map((m) => (
           <SettingRow
             key={m.kind}
             {...rowAttr(`performance/${m.kind}-model`)}
             label={m.name}
-            description={m.kind === "voice" ? "Reads text out loud" : "Types what you say"}
+            description={t(m.kind === "voice" ? "s.mem.voiceKind" : "s.mem.speechKind")}
             control={<span data-testid={`model-${m.kind}`}>{modelText(m)}</span>}
           />
         ))}
-        <SettingRow label="All of Speak Kit" description="Every process, this window included." control={<span data-testid="resource-total">{mb(r.totalMb)}</span>} />
+        <SettingRow label={t("s.mem.all")} description={t("s.mem.allHint")} control={<span data-testid="resource-total">{mb(r.totalMb)}</span>} />
       </SettingsSection>
       <Processes r={r} />
-      <SettingsSection title="This computer">
+      <SettingsSection title={t("s.diag.computer")}>
         {deviceLines(r.device).map((l, i) => (
           <SettingRow key={l.label} {...(i === 0 ? rowAttr("performance/device") : {})} label={l.label} control={<span data-testid={`device-${i}`}>{l.value}</span>} />
         ))}

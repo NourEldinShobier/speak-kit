@@ -117,4 +117,11 @@ export const FR_SHELL: Record<keyof typeof SHELL, string> = {
   "token.starting": "démarrage…",
   "export.pillRow": "Export de {name}, {percent} %",
   "export.barLabel": "Export de {name}",
+  "s.notice.newerTitle": "Le fichier de réglages provient d’une version plus récente",
+  "s.notice.newerBody":
+    "Votre fichier de réglages a été enregistré par une version plus récente de Speak Kit. Il est lu mais pas modifié : les changements faits maintenant ne sont pas enregistrés et sont perdus à la fermeture de Speak Kit. Mettez Speak Kit à jour pour modifier les réglages.",
+  "s.notice.resetTitle": "Certains réglages ont été réinitialisés",
+  "s.notice.resetBody": "Certains réglages enregistrés n’étaient pas valides et reprennent leurs valeurs par défaut : {list}. Le fichier d’origine est conservé comme sauvegarde.",
+  "s.notice.more": "et {n} autres",
+  "s.notice.dismiss": "Ignorer",
 };

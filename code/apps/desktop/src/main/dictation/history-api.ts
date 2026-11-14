@@ -23,6 +23,8 @@ import { encodeWav } from "./audio-store";
 import { supportsLanguage } from "./models";
 import { coreSettings } from "./service-support";
 import { heard, type Stt } from "./stt";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 export interface FilePickers {
   open(filters: { name: string; extensions: string[] }[]): Promise<string | null>;
@@ -223,7 +225,7 @@ export class HistoryApi {
   }
 
   async vocabImport() {
-    const file = await this.d.files.open([{ name: "Word lists", extensions: ["json", "txt", "csv"] }]);
+    const file = await this.d.files.open([{ name: at("filter.wordLists"), extensions: ["json", "txt", "csv"] }]);
     if (!file) return null;
     if ((await stat(file)).size > 2_000_000) throw new Error("too-large");
     const ext = path.extname(file).slice(1).toLowerCase();

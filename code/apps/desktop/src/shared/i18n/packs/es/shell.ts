@@ -117,4 +117,11 @@ export const ES_SHELL: Record<keyof typeof SHELL, string> = {
   "token.starting": "iniciando…",
   "export.pillRow": "Exportando {name}, {percent} %",
   "export.barLabel": "Exportación de {name}",
+  "s.notice.newerTitle": "El archivo de ajustes es de una versión más reciente",
+  "s.notice.newerBody":
+    "Tu archivo de ajustes lo guardó una versión más reciente de Speak Kit. Se lee pero no se modifica: los cambios que hagas ahora no se guardan y se pierden al cerrar Speak Kit. Actualiza Speak Kit para editar los ajustes.",
+  "s.notice.resetTitle": "Se restablecieron algunos ajustes",
+  "s.notice.resetBody": "Algunos ajustes guardados no eran válidos y usan sus valores predeterminados: {list}. El archivo original se conserva como copia de seguridad.",
+  "s.notice.more": "y {n} más",
+  "s.notice.dismiss": "Descartar",
 };

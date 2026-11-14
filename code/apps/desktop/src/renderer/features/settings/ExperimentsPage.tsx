@@ -7,57 +7,64 @@ import { api, Page } from "../../ui";
 import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";
 import { change } from "../../change";
+import "../../../shared/i18n/packs/settings";
+import { useT } from "../../i18n";
+import "../../../shared/i18n/packs/experiments";
 
 function Card({ e, on, onToggle }: { e: Experiment; on: boolean; onToggle(): void }) {
+  const { t, label } = useT();
+  const title = label(`s.exp.${e.id}.title`, e.title);
   return (
-    <article className="sk-exp" data-testid={`experiment-${e.id}`} aria-label={e.title}>
+    <article className="sk-exp" data-testid={`experiment-${e.id}`} aria-label={title}>
       <div className="sk-exp__head">
-        <b>{e.title}</b>
-        <Badge>Experimental</Badge>
-        {on && <Badge>On</Badge>}
+        <b>{title}</b>
+        <Badge>{t("s.exp.experimental")}</Badge>
+        {on && <Badge>{t("s.exp.on")}</Badge>}
       </div>
-      <p>{e.summary}</p>
-      <p className="sk-exp__warn">{e.warning}</p>
-      <p className="sk-exp__grad">{e.graduation}</p>
-      <Button onClick={onToggle}>{on ? "Turn off" : "Turn on"}</Button>
+      <p>{label(`s.exp.${e.id}.summary`, e.summary)}</p>
+      <p className="sk-exp__warn">{label(`s.exp.${e.id}.warning`, e.warning)}</p>
+      <p className="sk-exp__grad">{label(`s.exp.${e.id}.graduation`, e.graduation)}</p>
+      <Button onClick={onToggle}>{t(on ? "exp.turnOff" : "exp.turnOn")}</Button>
     </article>
   );
 }
 
 function RestartBanner() {
+  const { t } = useT();
   return (
     <Banner
       tone="info"
-      title="Restart needed"
+      title={t("s.exp.restartTitle")}
       action={
         <Button variant="primary" onClick={() => api.restartApp()}>
-          Restart now
+          {t("s.exp.restartNow")}
         </Button>
       }
     >
-      A change you made takes effect after Speak Kit restarts.
+      {t("s.exp.restartBody")}
     </Banner>
   );
 }
 
 function ConfirmOn({ e, onCancel, onConfirm }: { e: Experiment | null; onCancel(): void; onConfirm(e: Experiment): void }) {
+  const { t, label } = useT();
   return (
     <Modal
       open={e !== null}
       onClose={onCancel}
-      title={e ? `Turn on ${e.title}?` : ""}
+      title={e ? t("s.exp.confirmTitle", { title: label(`s.exp.${e.id}.title`, e.title) }) : ""}
       width={440}
       footer={
         <>
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onCancel}>{t("common.cancel")}</Button>
           <Button variant="primary" onClick={() => e && onConfirm(e)}>
-            Turn on
+            {t("exp.turnOn")}
           </Button>
         </>
       }
     >
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        {e?.warning}
+        {e && label(`s.exp.${e.id}.warning`, e.warning)}
       </p>
     </Modal>
   );
@@ -73,6 +80,7 @@ function moveBetweenCards(e: React.KeyboardEvent<HTMLElement>) {
 }
 
 export function ExperimentsPage({ s }: { s: AppState }) {
+  const { t, label } = useT();
   const [confirm, setConfirm] = useState<Experiment | null>(null);
   const [restart, setRestart] = useState(false);
   const flags = s.config.experiments;
@@ -83,17 +91,17 @@ export function ExperimentsPage({ s }: { s: AppState }) {
     await change({ experiments: next });
   };
   return (
-    <Page title="Experiments" lead="Early features that may change or disappear. Each one is off until you turn it on.">
+    <Page title={t("s.exp.title")} lead={t("s.exp.lead")}>
       {restart && <RestartBanner />}
       <div {...rowAttr("experiments/list")} className="sk-exps" onKeyDown={moveBetweenCards}>
         {list.length === 0 && experimentCards().length === 0 && (
-          <EmptyState icon="flask" title="No experiments right now">
-            New early features show up here when a version has them.
+          <EmptyState icon="flask" title={t("s.exp.empty")}>
+            {t("s.exp.emptyHint")}
           </EmptyState>
         )}
         {groupExperiments(list).map((g) => (
-          <section key={g.group} aria-label={g.group}>
-            <h3 className="sk-exps__group">{g.group}</h3>
+          <section key={g.group} aria-label={label(`group.${g.group}`, label(`s.exp.group.${g.group}`, g.group))}>
+            <h3 className="sk-exps__group">{label(`group.${g.group}`, label(`s.exp.group.${g.group}`, g.group))}</h3>
             {g.items.map((e) => (
               <Card key={e.id} e={e} on={flags[e.id] === true} onToggle={() => (flags[e.id] === true ? void set(e, false) : setConfirm(e))} />
             ))}
@@ -101,7 +109,7 @@ export function ExperimentsPage({ s }: { s: AppState }) {
         ))}
       </div>
       <ExperimentCards />
-      <p className="sk-note">Experiments are not covered by support. If one causes trouble, turn it off.</p>
+      <p className="sk-note">{t("s.exp.note")}</p>
       <ConfirmOn
         e={confirm}
         onCancel={() => setConfirm(null)}

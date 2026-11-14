@@ -5,6 +5,8 @@ import { EN } from "./en";
 import { PACK_EN } from "./pack";
 import "./packs/apps";
 import "./packs/shell";
+import "./packs/settings";
+import "./packs/main";
 import "./packs/experiments";
 import "./packs/export";
 import "./packs/library";

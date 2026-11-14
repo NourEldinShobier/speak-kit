@@ -13,13 +13,15 @@ import { restoreTakes } from "./restore-takes";
 import type { Spool } from "./spool";
 import type { SpooledRecorder } from "./spooled-recorder";
 import { runTransform, transformToast } from "./transform-run";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 /** Takes the last session left on disk go through dictation and end up copied and in the history; the person is told how many. Never rejects. */
 export async function recoverTakes(o: { spool: { spool: Spool; spooled: SpooledRecorder }; core: Dictation; presenter: HudPresenter; warn(title: string, detail: string): void }): Promise<void> {
   const { spool, core, presenter, warn } = o;
   try {
     const n = await restoreTakes(spool.spool, spool.spooled, core);
-    if (n > 0) presenter.toast(n === 1 ? "Recovered a recording from the last session" : `Recovered ${n} recordings from the last session`);
+    if (n > 0) presenter.toast(at("hud.recovered", { n }));
   } catch (e) {
     warn("dictation recovery failed", String(e));
   }

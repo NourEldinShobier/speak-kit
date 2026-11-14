@@ -117,4 +117,11 @@ export const DE_SHELL: Record<keyof typeof SHELL, string> = {
   "token.starting": "startet…",
   "export.pillRow": "{name} wird exportiert, {percent} %",
   "export.barLabel": "Export von {name}",
+  "s.notice.newerTitle": "Die Einstellungsdatei stammt von einer neueren Version",
+  "s.notice.newerBody":
+    "Deine Einstellungsdatei wurde von einer neueren Version von Speak Kit gespeichert. Sie wird gelesen, aber nicht verändert: Änderungen, die du jetzt machst, werden nicht gespeichert und gehen beim Schließen von Speak Kit verloren. Aktualisiere Speak Kit, um Einstellungen zu bearbeiten.",
+  "s.notice.resetTitle": "Einige Einstellungen wurden zurückgesetzt",
+  "s.notice.resetBody": "Einige gespeicherte Einstellungen waren ungültig und verwenden ihre Standardwerte: {list}. Die ursprüngliche Datei bleibt als Sicherung erhalten.",
+  "s.notice.more": "und {n} weitere",
+  "s.notice.dismiss": "Schließen",
 };

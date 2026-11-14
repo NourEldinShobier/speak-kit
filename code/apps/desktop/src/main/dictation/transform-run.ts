@@ -4,31 +4,33 @@ import { electronClipboard } from "../system/clipboard";
 import { sendCopyKeys, sendSelectAllKeys } from "../system/keys";
 import type { DictationOs } from "./index";
 import { transformTyped, typedTextRules, type TransformResult } from "./transform-typed";
+import { at, type StringKey } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** What the person is told, per result. */
-export const TRANSFORM_TOAST: Record<string, string> = {
-  changed: "Cleaned up the text",
-  "nothing-left": "Only filler words, nothing was changed",
-  "too-long": "The text is too long to clean up at once",
-  unchanged: "Nothing to clean up",
-  "nothing-selected": "Nothing to clean up, the field is empty",
-  "password-field": "Not used in a password field",
-  terminal: "Not used in a terminal",
-  elevated: "Cannot reach a window that runs as administrator",
-  "secure-input": "The program blocks keys, nothing was changed",
-  "no-window": "No window to clean up",
-  "copy-unstable": "The text changed while it was read, nothing was changed",
-  "window-changed": "The window changed, nothing was changed",
-  "not-inserted": "Could not paste the cleaned text, nothing was changed",
+export const TRANSFORM_TOAST: Record<string, StringKey> = {
+  changed: "hud.clean.changed",
+  "nothing-left": "hud.clean.nothingLeft",
+  "too-long": "hud.clean.tooLong",
+  unchanged: "hud.clean.unchanged",
+  "nothing-selected": "hud.clean.empty",
+  "password-field": "hud.clean.password",
+  terminal: "hud.clean.terminal",
+  elevated: "hud.clean.elevated",
+  "secure-input": "hud.clean.secure",
+  "no-window": "hud.clean.noWindow",
+  "copy-unstable": "hud.clean.unstable",
+  "window-changed": "hud.clean.windowChanged",
+  "not-inserted": "hud.clean.notInserted",
 };
 
 /** The field comes back as plain text, so formatting in a rich editor is lost; the undo shortcut brings it back. */
-const undoHint = (platform: string) => ` (${platform === "darwin" ? "Cmd" : "Ctrl"}+Z undoes it)`;
+const undoHint = (platform: string) => ` ${at("hud.clean.undo", { key: platform === "darwin" ? "Cmd" : "Ctrl" })}`;
 
 export const transformToast = (r: TransformResult, platform: string = process.platform): { text: string; tone: "ok" | "error" } => ({
-  text: (TRANSFORM_TOAST[r.status === "blocked" || r.status === "failed" ? r.reason : r.status] ?? "Nothing was changed") + (r.status === "changed" ? undoHint(platform) : ""),
+  text: at(TRANSFORM_TOAST[r.status === "blocked" || r.status === "failed" ? r.reason : r.status] ?? "hud.clean.default") + (r.status === "changed" ? undoHint(platform) : ""),
   tone: r.status === "changed" || r.status === "unchanged" ? "ok" : "error",
 });
 

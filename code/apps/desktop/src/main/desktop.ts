@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
+import { applyLanguage } from "../shared/i18n";
 import type { ShortcutId } from "../shared/shortcuts";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
@@ -230,6 +231,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  void applyLanguage(ctx.config.language, app.getPreferredSystemLanguages()).then(() => tray.refresh());
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
@@ -249,6 +251,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
+      if (patch.language !== undefined) void applyLanguage(patch.language, app.getPreferredSystemLanguages()).then(() => tray.refresh());
       if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
       if (patch.reduceMotion !== undefined) windowMotion.set(motionNow(ctx.config.reduceMotion));
       control.onConfigPatch(patch);

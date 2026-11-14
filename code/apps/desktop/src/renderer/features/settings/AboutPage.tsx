@@ -7,19 +7,22 @@ import { UpdateCard } from "../../UpdateCard";
 import { rowAttr } from "./focus";
 import { change } from "../../change";
 import { NetworkTable } from "./PrivacyPage";
+import "../../../shared/i18n/packs/settings";
+import { useT } from "../../i18n";
 
-const CHANNEL_LABEL: Record<Config["updateChannel"], string> = { stable: "Stable", early: "Early" };
+const CHANNEL_LABEL = { stable: "s.about.stable", early: "s.about.early" } as const;
 
 function BackToStable({ open, onClose }: { open: boolean; onClose(): void }) {
+  const { t } = useT();
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Go back to Stable?"
+      title={t("s.about.backTitle")}
       width={440}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button
             variant="primary"
             onClick={() => {
@@ -27,24 +30,22 @@ function BackToStable({ open, onClose }: { open: boolean; onClose(): void }) {
               void change({ updateChannel: "stable" });
             }}
           >
-            Switch to Stable
+            {t("s.about.switchStable")}
           </Button>
         </>
       }
     >
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        You stay on this early version until a stable release is newer than it. Nothing is downgraded.
+        {t("s.about.backBody")}
       </p>
     </Modal>
   );
 }
 
-const CHANNEL_HINT: Record<Config["updateChannel"], string> = {
-  stable: "Stable builds are tested before they are published.",
-  early: "Early builds come first and may have problems. Switching back to Stable keeps the version you have until a newer stable one is out.",
-};
+const CHANNEL_HINT = { stable: "s.about.hintStable", early: "s.about.hintEarly" } as const;
 
 function Channel({ s }: { s: AppState }) {
+  const { t } = useT();
   const [ask, setAsk] = useState(false);
   const channel = s.config.updateChannel;
   const pick = (v: string) => (v === "stable" && channel === "early" ? setAsk(true) : void change({ updateChannel: v as Config["updateChannel"] }));
@@ -53,16 +54,16 @@ function Channel({ s }: { s: AppState }) {
       <SettingRow
         {...rowAttr("about/channel")}
         className="lm-row--control"
-        label="Update channel"
-        description={CHANNEL_HINT[channel]}
+        label={t("s.about.channel")}
+        description={t(CHANNEL_HINT[channel])}
         control={
           <Select
-            label="Update channel"
+            label={t("s.about.channel")}
             value={channel}
             onChange={pick}
             options={[
-              { value: "stable", label: CHANNEL_LABEL.stable },
-              { value: "early", label: CHANNEL_LABEL.early },
+              { value: "stable", label: t(CHANNEL_LABEL.stable) },
+              { value: "early", label: t(CHANNEL_LABEL.early) },
             ]}
           />
         }
@@ -73,27 +74,29 @@ function Channel({ s }: { s: AppState }) {
 }
 
 function Versions({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
-    <SettingsSection title="Versions">
+    <SettingsSection title={t("s.about.versions")}>
       <SettingRow {...rowAttr("about/version")} label="Speak Kit" control={<span data-testid="about-version">{s.version}</span>} />
-      <SettingRow label="Voice engine" control={<span>Kokoro-82M</span>} />
-      <SettingRow label="Platform" control={<span>{s.platform}</span>} />
-      <SettingRow label="Channel" control={<span data-testid="about-channel">{CHANNEL_LABEL[s.config.updateChannel]}</span>} />
+      <SettingRow label={t("s.about.engine")} control={<span>Kokoro-82M</span>} />
+      <SettingRow label={t("s.about.platform")} control={<span>{s.platform}</span>} />
+      <SettingRow label={t("s.about.channelShort")} control={<span data-testid="about-channel">{t(CHANNEL_LABEL[s.config.updateChannel])}</span>} />
     </SettingsSection>
   );
 }
 
 /** Run setup again: downloaded models and settings stay, the first-run steps are shown again from the model step. */
 function SetupSection() {
+  const { t } = useT();
   return (
-    <SettingsSection title="Setup" description="Go through the first-run steps again, from the model step: voice model, dictation language, practice and the browser extension.">
+    <SettingsSection title={t("s.about.setup")} description={t("s.about.setupLead")}>
       <SettingRow
         className="lm-row--control"
-        label="Run setup again"
-        description="Downloaded models and your settings are kept."
+        label={t("s.about.runSetup")}
+        description={t("s.about.runSetupHint")}
         control={
-          <Button aria-label="Run setup again" onClick={() => void change({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
-            Run setup again
+          <Button aria-label={t("s.about.runSetup")} onClick={() => void change({ setupDone: false, setupSkipped: false, setupStep: 1 })}>
+            {t("s.about.runSetup")}
           </Button>
         }
       />
@@ -102,18 +105,19 @@ function SetupSection() {
 }
 
 function Support() {
+  const { t } = useT();
   return (
-    <SettingsSection title="Support">
+    <SettingsSection title={t("s.about.support")}>
       <SettingRow
-        label="Report a problem"
-        description="Include the text from Diagnostics, Copy diagnostics."
+        label={t("s.about.report")}
+        description={t("s.about.reportHint")}
         control={
           <div className="sk-row-actions">
             <Button iconLeft="external-link" onClick={() => api.openExternal("issues")}>
-              Open an issue
+              {t("s.about.openIssue")}
             </Button>
             <Button iconLeft="shield-check" onClick={() => api.openExternal("security")}>
-              Report a security issue
+              {t("s.about.reportSecurity")}
             </Button>
           </div>
         }
@@ -123,61 +127,49 @@ function Support() {
 }
 
 function UpdatesSection({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
-    <SettingsSection
-      title="Updates"
-      description={
-        s.platform === "darwin"
-          ? "Speak Kit looks for new versions on GitHub Releases. On macOS you download and install them yourself."
-          : "Updates come from GitHub Releases. They download in the background and are never installed without you."
-      }
-    >
+    <SettingsSection title={t("s.about.updates")} description={t(s.platform === "darwin" ? "s.about.updatesMac" : "s.about.updatesWin")}>
       <div {...rowAttr("about/updates")} className="sk-pad" data-testid="update-section">
         <UpdateCard s={s} />
       </div>
       <Channel s={s} />
       <SettingRow
-        label="Check automatically"
-        description="Once a day while Speak Kit runs."
-        control={<Toggle aria-label="Check for updates automatically" checked={s.config.autoUpdate} onChange={(v) => change({ autoUpdate: v })} />}
+        label={t("s.about.checkAuto")}
+        description={t("s.about.checkAutoHint")}
+        control={<Toggle aria-label={t("s.about.checkAutoAria")} checked={s.config.autoUpdate} onChange={(v) => change({ autoUpdate: v })} />}
       />
     </SettingsSection>
   );
 }
 
 export function AboutPage({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
     <Page
-      title="About"
-      lead="Speak Kit reads text out loud on your own computer."
+      title={t("s.about.title")}
+      lead={t("s.about.lead")}
       action={
         <Button iconLeft="external-link" onClick={() => api.openExternal("release-notes")}>
-          Release notes
+          {t("s.about.releaseNotes")}
         </Button>
       }
     >
       <Versions s={s} />
       <SetupSection />
       <UpdatesSection s={s} />
-      <SettingsSection title="Network" description="Speak Kit sends no analytics. These are the only addresses it can reach.">
+      <SettingsSection title={t("s.about.network")} description={t("s.about.networkLead")}>
         <div {...rowAttr("about/network")} className="sk-pad">
           <NetworkTable />
         </div>
       </SettingsSection>
-      <SettingsSection title="Uninstalling">
-        <SettingRow
-          label="Downloaded models"
-          description={
-            s.platform === "darwin"
-              ? "Before you drag Speak Kit to the Trash, use Settings > Storage > Delete downloaded models. Otherwise remove ~/Library/Application Support/@speakkit/desktop yourself."
-              : "Uninstalling Speak Kit removes the downloaded models. Your library and settings stay in the data folder."
-          }
-        />
+      <SettingsSection title={t("s.about.uninstall")}>
+        <SettingRow label={t("s.about.models")} description={t(s.platform === "darwin" ? "s.about.uninstallMac" : "s.about.uninstallWin")} />
       </SettingsSection>
       <Support />
       <div>
         <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
-          Open log folder
+          {t("s.about.openLogs")}
         </Button>
       </div>
     </Page>

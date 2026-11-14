@@ -27,18 +27,29 @@ const PAGES = [
   "features/library/LibraryPage.tsx",
   "features/library/PasteDialog.tsx",
   "features/library/UrlDialog.tsx",
+  "features/settings/AboutPage.tsx",
+  "features/settings/AccessibilityPage.tsx",
   "features/settings/Advanced.tsx",
   "features/settings/AutomationPage.tsx",
+  "features/settings/BrowserPage.tsx",
+  "features/settings/DeleteDownloadsDialog.tsx",
+  "features/settings/DiagnosticsPage.tsx",
+  "features/settings/ExperimentsPage.tsx",
   "features/settings/GeneralPage.tsx",
+  "features/settings/MemoryPage.tsx",
   "features/settings/NotificationsPage.tsx",
   "features/settings/PrivacyPage.tsx",
+  "features/settings/ResourcesSection.tsx",
+  "features/settings/SettingsFrame.tsx",
   "features/settings/SettingsSearch.tsx",
   "features/settings/ShortcutsPage.tsx",
+  "features/settings/StoragePage.tsx",
   "features/settings/VoicePage.tsx",
+  "features/settings/WhatsNewPage.tsx",
 ];
 
 /** Names of keys and commands, which are the same in every language. */
-const SAME_EVERYWHERE = new Set(["Esc", "Enter", "speakkit", "Promise", "document.querySelector", "https://example.com/article"]);
+const SAME_EVERYWHERE = new Set(["Speak Kit", "Kokoro-82M", "Esc", "Enter", "speakkit", "Promise", "document.querySelector", "https://example.com/article"]);
 
 /** Limit: a regex scan of JSX text on one line and quoted attributes; it misses multi-line text, template literals, ternary strings and `attr={"..."}`. Text a reader sees that is written in the source instead of coming from the string table. */
 function literals(source: string): string[] {

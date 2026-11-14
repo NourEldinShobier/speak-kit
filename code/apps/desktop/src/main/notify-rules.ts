@@ -1,5 +1,7 @@
 import type { EngineState } from "@speakkit/protocol";
 import type { NotifyEvent } from "../shared/schemas";
+import { at } from "../shared/i18n";
+import "../shared/i18n/packs/main";
 
 interface Notice {
   event: NotifyEvent;
@@ -11,6 +13,7 @@ interface Notice {
 
 /** What an engine state change is worth telling the user: only a failure. Becoming ready is never announced. */
 export function noticeFor(prev: EngineState | undefined, next: EngineState, detail: string | undefined): Notice | null {
-  if (next === "error" && prev !== "error") return { event: "engine-error", taskKey: "kokoro", title: "Voice engine problem", body: `${detail ?? "The engine stopped."} Click to open Speak Kit.` };
+  if (next === "error" && prev !== "error")
+    return { event: "engine-error", taskKey: "kokoro", title: at("toast.engineTitle"), body: at("toast.engineBody", { detail: detail ?? at("toast.engineStopped") }) };
   return null;
 }

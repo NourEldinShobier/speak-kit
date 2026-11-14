@@ -1,6 +1,8 @@
 import type { DictationState } from "@speakkit/dictation";
 import { hotkeyText } from "../../shared/dictation/keys";
 import type { HudView } from "../../shared/dictation/contract";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 export interface HudInput {
   state: DictationState;
@@ -29,37 +31,37 @@ const E = (text: string, icon: Extract<HudView, { kind: "error" }>["icon"], acti
 
 type Icon = Extract<HudView, { kind: "error" }>["icon"];
 type Button = NonNullable<Extract<HudView, { kind: "error" }>["action"]>;
-const SOUND: Button = { label: "Sound settings", id: "sound-settings" };
-const TRY_AGAIN: Button = { label: "Try again", id: "retry" };
+const sound = (): Button => ({ label: at("hud.soundSettings"), id: "sound-settings" });
+const tryAgain = (): Button => ({ label: at("hud.tryAgain"), id: "retry" });
 
 /** Words, icon and button of each error; a button of "retry" shows only while there is a recording to retry. */
-const ERRORS: Record<string, [text: string, icon: Icon, action?: Button]> = {
-  "mic-denied": ["Microphone access is blocked", "microphone-off", SOUND],
-  "mic-missing": ["No microphone found", "microphone-off", SOUND],
-  "mic-busy": ["Another app is using the microphone", "microphone-off"],
-  "mic-silent": ["Microphone is muted or too quiet", "microphone-off", SOUND],
-  "mic-in-use": ["Another feature is using the microphone", "microphone-off"],
-  "focus-failed": ["Could not return to the app. The text is in History", "alert-triangle", { label: "Copy", id: "copy-last" }],
-  "model-missing": ["Speech model missing", "download", { label: "Download", id: "download" }],
-  "model-loading": ["The speech model is still loading, try again in a moment", "download", TRY_AGAIN],
-  "model-failed": ["The speech model could not be loaded", "alert-triangle", TRY_AGAIN],
-  "transcribe-failed": ["Could not transcribe", "alert-triangle", TRY_AGAIN],
-  "password-field": ["Not typed into a password field", "lock"],
-  "insert-failed": ["Could not insert the text. It is in History", "alert-triangle", { label: "Try again", id: "paste-again" }],
-  "hotkey-failed": ["The hotkey could not start", "alert-triangle"],
-};
+const ERRORS = (): Record<string, [text: string, icon: Icon, action?: Button]> => ({
+  "mic-denied": [at("hud.err.micDenied"), "microphone-off", sound()],
+  "mic-missing": [at("hud.err.micMissing"), "microphone-off", sound()],
+  "mic-busy": [at("hud.err.micBusy"), "microphone-off"],
+  "mic-silent": [at("hud.err.micSilent"), "microphone-off", sound()],
+  "mic-in-use": [at("hud.err.micInUse"), "microphone-off"],
+  "focus-failed": [at("hud.err.focus"), "alert-triangle", { label: at("hud.copy"), id: "copy-last" }],
+  "model-missing": [at("hud.err.modelMissing"), "download", { label: at("hud.download"), id: "download" }],
+  "model-loading": [at("hud.err.modelLoading"), "download", tryAgain()],
+  "model-failed": [at("hud.err.modelFailed"), "alert-triangle", tryAgain()],
+  "transcribe-failed": [at("hud.err.transcribe"), "alert-triangle", tryAgain()],
+  "password-field": [at("hud.err.password"), "lock"],
+  "insert-failed": [at("hud.err.insert"), "alert-triangle", { label: at("hud.tryAgain"), id: "paste-again" }],
+  "hotkey-failed": [at("hud.err.hotkey"), "alert-triangle"],
+});
 
 /** Words and buttons for each error the core can end in. */
 export function errorView(code: string, canRetry: boolean, owner?: string): HudView {
-  if (code === "mic-in-use") return E(`${owner ?? "Another feature"} is using the microphone`, "microphone-off");
-  const [text, icon, action] = ERRORS[code] ?? ["Dictation stopped working", "alert-triangle"];
+  if (code === "mic-in-use") return E(owner ? at("hud.err.micInUseBy", { owner }) : at("hud.err.micInUse"), "microphone-off");
+  const [text, icon, action] = ERRORS()[code] ?? [at("hud.err.other"), "alert-triangle"];
   return E(text, icon, action?.id === "retry" && !canRetry ? undefined : action);
 }
 
 /** The words for an error and whether Try again can run the last take again, for the Settings page. */
 export function failureLine(code: string, canRetry: boolean, owner?: string): { text: string; retry: boolean } {
   const v = errorView(code, canRetry, owner);
-  return v.kind === "error" ? { text: v.text, retry: v.action?.id === "retry" } : { text: "Dictation stopped working", retry: false };
+  return v.kind === "error" ? { text: v.text, retry: v.action?.id === "retry" } : { text: at("hud.err.other"), retry: false };
 }
 
 /** The short message after a dictation ended (or none). */
@@ -67,8 +69,8 @@ function idleView(notice: Extract<DictationState, { status: "idle" }>["notice"],
   if (!notice) return null;
   if (notice.kind === "inserted") return insertedAsCopy ? { kind: "copied", reason: secureInput ? "secure-input" : "clipboard" } : { kind: "pasted" };
   if (notice.kind === "copied") return { kind: "copied", reason: notice.reason === "elevated" ? "elevated" : "clipboard" };
-  if (notice.kind === "cancelled") return { kind: "notice", text: "Cancelled", ...(notice.undoable && { action: { label: "Undo", id: "undo-cancel" as const } }) };
-  return { kind: "notice", text: "No speech heard" };
+  if (notice.kind === "cancelled") return { kind: "notice", text: at("hud.cancelled"), ...(notice.undoable && { action: { label: at("hud.undo"), id: "undo-cancel" as const } }) };
+  return { kind: "notice", text: at("hud.noSpeech") };
 }
 
 /** What the HUD shows for a dictation state, or null when it should be hidden. Idle with nothing to say hides. */
