@@ -8,6 +8,8 @@ import { exportRunning } from "../../shared/export";
 import type { ToastCenter } from "../toasts";
 import { ExportJobs, targetFor } from "./jobs";
 import { mp3InWorker } from "./mp3-runner";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 type ExportHandlers = Pick<Api, "exportCheck" | "exportStart" | "exportCancel" | "exportReveal" | "pickFolder">;
 
@@ -34,12 +36,12 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => 
       ctx.publish();
     },
     onDone: (v) => {
-      ctx.addActivity("export", "Export finished", `${v.name} is saved.`);
+      ctx.addActivity("export", at("toast.exportTitle"), at("toast.exportSaved", { name: v.name }));
       toasts.notify({
         event: "export-done",
         taskKey: v.id,
-        title: "Export finished",
-        body: `${v.name} is saved. Click to show it in its folder.`,
+        title: at("toast.exportTitle"),
+        body: at("toast.exportBody", { name: v.name }),
         onClick: () => v.path && shell.showItemInFolder(v.path),
       });
     },

@@ -2,6 +2,8 @@ import { clipboard, dialog, shell } from "electron";
 import { open, readFile, stat } from "node:fs/promises";
 import type { FilePorts } from "./decode";
 import type { TranscriptsPorts } from "./service";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 /** What a test sets instead of using the real file chooser, the file manager and the clipboard, and what it reads back. */
 export class TestSwitches {
@@ -33,9 +35,9 @@ export function diskFiles(decodeInPage: FilePorts["decodeInPage"]): FilePorts {
   };
 }
 
-const AUDIO_FILTERS = [
-  { name: "Audio", extensions: ["wav", "mp3", "m4a", "mp4", "flac", "ogg", "oga", "opus", "aac"] },
-  { name: "All files", extensions: ["*"] },
+const audioFilters = () => [
+  { name: at("filter.audio"), extensions: ["wav", "mp3", "m4a", "mp4", "flac", "ogg", "oga", "opus", "aac"] },
+  { name: at("filter.allFiles"), extensions: ["*"] },
 ];
 
 /** The file and folder choosers; with the test hook on, a test's answer replaces the dialog. */
@@ -45,7 +47,7 @@ export function dialogs(test: boolean, sw: TestSwitches): TranscriptsPorts["dial
     return r.canceled ? null : (r.filePaths[0] ?? null);
   };
   return {
-    pickFile: async () => (test && sw.nextPick !== undefined ? sw.nextPick : answer({ properties: ["openFile"], filters: AUDIO_FILTERS })),
+    pickFile: async () => (test && sw.nextPick !== undefined ? sw.nextPick : answer({ properties: ["openFile"], filters: audioFilters() })),
     pickFolder: async () => (test && sw.nextFolder !== undefined ? sw.nextFolder : answer({ properties: ["openDirectory", "createDirectory"] })),
   };
 }

@@ -1,5 +1,7 @@
 import * as v from "valibot";
 import { ConfigSchema, parseConfig, unwrappedField, type Config } from "../schemas";
+import { at } from "../i18n";
+import "../i18n/packs/shell";
 
 /** Format version written to config.json. A file with a higher number was written by a newer app and is never rewritten. */
 export const CONFIG_VERSION = 1;
@@ -66,8 +68,7 @@ export function noticeOf(l: Pick<LoadedSettings, "invalidFields" | "newerVersion
 
 /** Plain-language line for the banner. */
 export function noticeText(n: SettingsNotice): string {
-  if (n.kind === "newer")
-    return "Your settings file was saved by a newer version of Speak Kit. It is read but not changed: changes you make now are not saved and are lost when Speak Kit closes. Update Speak Kit to edit settings.";
-  const list = n.fields.slice(0, 4).join(", ") + (n.fields.length > 4 ? ` and ${n.fields.length - 4} more` : "");
-  return `Some saved settings were not valid and use their defaults: ${list}. The original file is kept as a backup.`;
+  if (n.kind === "newer") return at("s.notice.newerBody");
+  const list = n.fields.slice(0, 4).join(", ") + (n.fields.length > 4 ? ` ${at("s.notice.more", { n: n.fields.length - 4 })}` : "");
+  return at("s.notice.resetBody", { list });
 }

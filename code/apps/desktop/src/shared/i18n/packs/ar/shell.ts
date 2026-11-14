@@ -116,4 +116,10 @@ export const AR_SHELL: Record<keyof typeof SHELL, string> = {
   "token.starting": "جارٍ البدء…",
   "export.pillRow": "جارٍ تصدير {name}، {percent}%",
   "export.barLabel": "تصدير {name}",
+  "s.notice.newerTitle": "ملف الإعدادات من إصدار أحدث",
+  "s.notice.newerBody": "حُفظ ملف إعداداتك بواسطة إصدار أحدث من Speak Kit. يُقرأ ولا يُعدَّل: التغييرات التي تجريها الآن لا تُحفظ وتضيع عند إغلاق Speak Kit. حدّث Speak Kit لتعديل الإعدادات.",
+  "s.notice.resetTitle": "أُعيد ضبط بعض الإعدادات",
+  "s.notice.resetBody": "كانت بعض الإعدادات المحفوظة غير صالحة وتستخدم قيمها الافتراضية: {list}. يُحتفظ بالملف الأصلي نسخةً احتياطية.",
+  "s.notice.more": "و{n} أخرى",
+  "s.notice.dismiss": "تجاهل",
 };

@@ -4,6 +4,8 @@ import { EXTENSIONS } from "../../shared/library/contract";
 import { registerLibraryIpc } from "./ipc";
 import { parseInWorker } from "./parse/parse-runner";
 import { createLibrary } from "./service";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 interface LibrarySetup {
   dataDir: string;
@@ -26,7 +28,7 @@ export async function setupLibrary({ dataDir, window, target, allowLocalUrls, on
     ...(allowLocalUrls && { fetch }),
     chooseFiles: async () => {
       const win = window();
-      const opts = { properties: ["openFile", "multiSelections"] as ("openFile" | "multiSelections")[], filters: [{ name: "Readable files", extensions: [...EXTENSIONS] }] };
+      const opts = { properties: ["openFile", "multiSelections"] as ("openFile" | "multiSelections")[], filters: [{ name: at("filter.readable"), extensions: [...EXTENSIONS] }] };
       const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
       return r.canceled ? [] : r.filePaths;
     },

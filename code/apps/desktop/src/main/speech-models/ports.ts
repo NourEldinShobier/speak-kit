@@ -4,6 +4,8 @@ import path from "node:path";
 import { app, dialog, shell, type BrowserWindow } from "electron";
 import type { Hardware } from "@speakkit/engine";
 import { probeHardware, type RunProgram } from "./hardware-probe";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 const run: RunProgram = (file, args, timeoutMs) =>
   new Promise((resolve, reject) => {
@@ -52,8 +54,8 @@ export const pickModelFile = async (parent: BrowserWindow | null, title: string)
     title,
     properties: ["openFile"],
     filters: [
-      { name: "Speech model", extensions: ["bin", "gguf"] },
-      { name: "All files", extensions: ["*"] },
+      { name: at("filter.speechModel"), extensions: ["bin", "gguf"] },
+      { name: at("filter.allFiles"), extensions: ["*"] },
     ],
   };
   const r = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);

@@ -5,37 +5,44 @@ import { KEYBOARD_MAP } from "../../../shared/settings/behaviour";
 import { Page } from "../../ui";
 import { rowAttr } from "./focus";
 import { change } from "../../change";
+import "../../../shared/i18n/packs/settings";
+import { useT } from "../../i18n";
 
 const MOTION = [
-  { id: "system", label: "System" },
-  { id: "on", label: "Reduce" },
-  { id: "off", label: "Full" },
-];
+  { id: "system", label: "s.a11y.system" },
+  { id: "on", label: "s.a11y.reduceOn" },
+  { id: "off", label: "s.a11y.full" },
+] as const;
 
 export function AccessibilityPage({ s }: { s: AppState }) {
+  const { t, label } = useT();
   const c = s.config;
   return (
-    <Page title="Accessibility" lead="Make Speak Kit easier to see and hear.">
-      <SettingsSection title="Motion">
+    <Page title={t("s.a11y.title")} lead={t("s.a11y.lead")}>
+      <SettingsSection title={t("s.a11y.motion")}>
         <SettingRow
           {...rowAttr("accessibility/motion")}
           className="lm-row--control"
-          label="Reduce motion"
-          description="Still frames and short fades instead of movement. System follows the operating system."
-          control={<Segmented label="Reduce motion" items={MOTION} value={c.reduceMotion} onChange={(v) => change({ reduceMotion: v as Config["reduceMotion"] })} />}
+          label={t("s.a11y.reduce")}
+          description={t("s.a11y.reduceHint")}
+          control={
+            <Segmented
+              label={t("s.a11y.reduce")}
+              items={MOTION.map((m) => ({ id: m.id, label: t(m.label) }))}
+              value={c.reduceMotion}
+              onChange={(v) => change({ reduceMotion: v as Config["reduceMotion"] })}
+            />
+          }
         />
       </SettingsSection>
-      <SettingsSection title="Keyboard map" description="Everything in Speak Kit can be reached without a mouse. Global keys are on the Shortcuts page.">
+      <SettingsSection title={t("s.a11y.map")} description={t("s.a11y.mapLead")}>
         <div {...rowAttr("accessibility/keys")}>
-          {KEYBOARD_MAP.map((k) => (
-            <SettingRow key={k.keys} label={k.does} control={<Kbd>{k.keys}</Kbd>} />
+          {KEYBOARD_MAP.map((k, i) => (
+            <SettingRow key={k.keys} label={label(`s.a11y.does.${i}`, k.does)} control={<Kbd>{label(`s.a11y.keys.${i}`, k.keys)}</Kbd>} />
           ))}
         </div>
       </SettingsSection>
-      <p className="sk-note">
-        Not covered yet: no full session with a screen reader has been run on Windows or macOS. The dictation pill is a polite live region and says Recording, Transcribing or Failed. Report what does
-        not read well.
-      </p>
+      <p className="sk-note">{t("s.a11y.note")}</p>
     </Page>
   );
 }

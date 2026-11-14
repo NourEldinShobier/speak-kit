@@ -1,5 +1,7 @@
 import type { StringKey } from "./en";
 import { FR_SHELL } from "./packs/fr/shell";
+import { FR_SETTINGS } from "./packs/fr/settings";
+import { FR_MAIN } from "./packs/fr/main";
 import { FR_LIBRARY } from "./packs/fr/library";
 import { FR_APPS } from "./packs/fr/apps";
 import { FR_EXPERIMENTS } from "./packs/fr/experiments";
@@ -242,4 +244,6 @@ export const FR: Record<StringKey, string> = {
   ...FR_APPS,
   ...FR_EXPERIMENTS,
   ...FR_EXPORT,
+  ...FR_MAIN,
+  ...FR_SETTINGS,
 };

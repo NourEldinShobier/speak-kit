@@ -3,6 +3,9 @@ import type { HudView } from "../../shared/dictation/contract";
 import { hotkeyText } from "../../shared/dictation/keys";
 import { errorView, hudViewFor } from "./hud-view";
 import type { Hud } from "./hud";
+import { drawn } from "./hud-place";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 const SETTLE_MS = 150;
 const READY_MS = 2000;
@@ -82,7 +85,7 @@ export class HudPresenter {
 
   /** The keyboard listener was rebuilt (after the lock screen or sleep): say so when a recording is still running. */
   reconnected(): void {
-    if (this.#state.status === "locked") this.toast(`Keyboard reconnected. Still recording. Press ${hotkeyText(this.#d.hotkey(), this.#d.platform)} to finish.`);
+    if (this.#state.status === "locked") this.toast(at("hud.reconnected", { key: hotkeyText(this.#d.hotkey(), this.#d.platform) }));
   }
 
   dismiss(): void {

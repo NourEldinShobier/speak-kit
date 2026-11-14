@@ -1,5 +1,7 @@
 import type { ReaderState } from "../shared/reader";
 import { errorText } from "./error-text";
+import { at } from "../shared/i18n";
+import "../shared/i18n/packs/main";
 
 /** One line under the title in the mini player. */
 export const statusLine = (r: ReaderState): string => {
@@ -13,7 +15,7 @@ export const statusLine = (r: ReaderState): string => {
     case "finished":
       return "Finished";
     case "error":
-      return r.error ? errorText(r.error) : "Something went wrong";
+      return r.error ? errorText(r.error) : at("err.generic");
     default:
       return "";
   }

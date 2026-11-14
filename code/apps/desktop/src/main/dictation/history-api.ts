@@ -1,6 +1,60 @@
-import type { Dictation } from "@speakkit/dictation";
-import type { HistoryItem } from "../../shared/dictation/contract";
-import { historyItems } from "./service-support";
+import { dialog, type BrowserWindow } from "electron";
+import { readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  applyMode,
+  applyRules,
+  defaultSettings,
+  resolveMode,
+  soundsLikeRules,
+  timeLeft,
+  type AudioStore,
+  type Dictation,
+  type HistoryHit,
+  type Clip,
+  type Settings,
+  type TranscribeResult,
+} from "@speakkit/dictation";
+import { languageLabel, type SttLanguage } from "@speakkit/engine";
+import type { DictationStatus, HistoryItem } from "../../shared/dictation/contract";
+import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
+import { friendlyAppName } from "./app-name";
+import { encodeWav } from "./audio-store";
+import { supportsLanguage } from "./models";
+import { coreSettings } from "./service-support";
+import { heard, type Stt } from "./stt";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
+
+export interface FilePickers {
+  open(filters: { name: string; extensions: string[] }[]): Promise<string | null>;
+  save(defaultName: string, filters: { name: string; extensions: string[] }[]): Promise<string | null>;
+}
+
+/** The system file dialogs, or the scripted answers a test gives (null cancels). */
+export function filePickers(parent: () => BrowserWindow | null, scripted?: { open: string | null; save: string | null }): FilePickers {
+  if (scripted) return { open: async () => scripted.open, save: async () => scripted.save };
+  return {
+    open: async (filters) => {
+      const w = parent();
+      const opts = { properties: ["openFile" as const], filters };
+      const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+      return r.canceled ? null : (r.filePaths[0] ?? null);
+    },
+    save: async (defaultName, filters) => {
+      const w = parent();
+      const opts = { defaultPath: defaultName, filters };
+      const r = w ? await dialog.showSaveDialog(w, opts) : await dialog.showSaveDialog(opts);
+      return r.canceled || !r.filePath ? null : r.filePath;
+    },
+  };
+}
+
+/** The name of the model that heard an entry and the language it was told (a label); absent for entries from before these were stored. */
+const heardBy = (e: HistoryHit, catalog: Deps["catalog"]) => ({
+  ...(e.model && { model: catalog?.().find((m) => m.id === e.model)?.name ?? e.model }),
+  ...(e.language && { language: languageLabel(e.language as SttLanguage) }),
+});
 
 interface Deps {
   /** The whole history was cleared. */
@@ -96,7 +150,7 @@ export class HistoryApi {
   }
 
   async vocabImport() {
-    const file = await this.d.files.open([{ name: "Word lists", extensions: ["json", "txt", "csv"] }]);
+    const file = await this.d.files.open([{ name: at("filter.wordLists"), extensions: ["json", "txt", "csv"] }]);
     if (!file) return null;
     if ((await stat(file)).size > 2_000_000) throw new Error("too-large");
     const ext = path.extname(file).slice(1).toLowerCase();

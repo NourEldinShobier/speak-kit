@@ -1,5 +1,7 @@
 import type { StringKey } from "./en";
 import { ES_SHELL } from "./packs/es/shell";
+import { ES_SETTINGS } from "./packs/es/settings";
+import { ES_MAIN } from "./packs/es/main";
 import { ES_LIBRARY } from "./packs/es/library";
 import { ES_APPS } from "./packs/es/apps";
 import { ES_EXPERIMENTS } from "./packs/es/experiments";
@@ -242,4 +244,6 @@ export const ES: Record<StringKey, string> = {
   ...ES_APPS,
   ...ES_EXPERIMENTS,
   ...ES_EXPORT,
+  ...ES_MAIN,
+  ...ES_SETTINGS,
 };

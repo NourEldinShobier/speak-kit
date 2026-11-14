@@ -1,3 +1,6 @@
+import { at } from "../i18n";
+import "../i18n/packs/settings";
+import "../i18n/packs/main";
 /** One process as the operating system reports it (Electron's app metrics). */
 export interface ProcessSample {
   type: string;
@@ -18,15 +21,15 @@ export interface ResourceRow {
 export function processLabel(p: Pick<ProcessSample, "type" | "name">): string {
   switch (p.type) {
     case "Browser":
-      return "Speak Kit (main)";
+      return at("s.res.main");
     case "Tab":
-      return "Windows";
+      return at("s.res.windows");
     case "GPU":
-      return "Graphics";
+      return at("s.res.graphics");
     case "Utility":
-      return p.name?.trim() || "Helpers";
+      return p.name?.trim() || at("s.res.helpers");
     default:
-      return "Other";
+      return at("s.res.other");
   }
 }
 
@@ -78,26 +81,23 @@ const OS_NAME = { win32: "Windows", darwin: "macOS", linux: "Linux" } as const;
 /** Label and value pairs for the device section; a value that is not known says so instead of being left out. */
 export function deviceLines(d: DeviceInfo): { label: string; value: string }[] {
   return [
-    { label: "System", value: `${OS_NAME[d.platform]} (${d.arch})` },
-    { label: "Processor", value: d.cores ? `${d.cores} cores` : "Not known" },
-    { label: "Memory", value: d.ramGb ? `${d.ramGb} GB` : "Not known" },
-    { label: "Graphics card", value: d.gpu ?? "None found" },
-    { label: "Speech model runs on", value: d.speechRunsOn ?? "Not loaded" },
+    { label: at("s.res.system"), value: `${OS_NAME[d.platform]} (${d.arch})` },
+    { label: at("s.diag.processor"), value: d.cores ? at("s.diag.cores", { n: d.cores }) : at("s.res.notKnown") },
+    { label: at("s.res.memory"), value: d.ramGb ? `${d.ramGb} GB` : at("s.res.notKnown") },
+    { label: at("s.res.gpu"), value: d.gpu ?? at("s.res.noneFound") },
+    { label: at("s.res.speechOn"), value: d.speechRunsOn ? at(d.speechRunsOn === "CPU" ? "s.res.cpuName" : "s.res.gpuCard") : at("s.res.notLoaded") },
   ];
 }
 
-const STATE_TEXT: Record<ModelUse["state"], string> = {
-  loaded: "Loaded",
-  loading: "Loading",
-  unloaded: "Not loaded, wakes when needed",
-  missing: "Not downloaded",
-  error: "Failed to load",
-};
+const STATE_TEXT = { loaded: "s.res.loaded", loading: "s.res.loading", unloaded: "s.res.unloaded", missing: "engine.missing", error: "s.res.failed" } as const satisfies Record<
+  ModelUse["state"],
+  string
+>;
 
 /** One line for a model: its state, and its memory while it is loaded. */
 export function modelText(m: ModelUse): string {
-  if (m.state === "loaded") return m.mb === null ? STATE_TEXT.loaded : `${STATE_TEXT.loaded}, ${Math.round(m.mb)} MB`;
-  return STATE_TEXT[m.state];
+  if (m.state === "loaded") return m.mb === null ? at(STATE_TEXT.loaded) : at("s.res.loadedMb", { mb: Math.round(m.mb) });
+  return at(STATE_TEXT[m.state]);
 }
 
 /** An engine state (voice or speech) mapped to the few this page shows. */

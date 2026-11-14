@@ -4,9 +4,12 @@ import type { AppState, SettingsSub } from "../../../shared/ipc";
 import { noticeText } from "../../../shared/settings/settings-file";
 import { api } from "../../ui";
 import { revealRow, subscribeRow, takeRow } from "./focus";
+import "../../../shared/i18n/packs/shell";
+import { useT } from "../../i18n";
 
 /** Around every settings page: the notice about the settings file, and the ring on a row asked for by search. */
 export function SettingsFrame({ s, sub, children }: { s: AppState; sub: SettingsSub; children: ReactNode }) {
+  const { t } = useT();
   useEffect(() => {
     const reveal = () => {
       const id = takeRow();
@@ -22,8 +25,8 @@ export function SettingsFrame({ s, sub, children }: { s: AppState; sub: Settings
         <div className="sk-notice" data-testid="settings-notice">
           <Banner
             tone={n.kind === "newer" ? "warning" : "info"}
-            title={n.kind === "newer" ? "Settings file is from a newer version" : "Some settings were reset"}
-            action={n.kind === "newer" ? undefined : <Button onClick={() => api.dismissSettingsNotice()}>Dismiss</Button>}
+            title={t(n.kind === "newer" ? "s.notice.newerTitle" : "s.notice.resetTitle")}
+            action={n.kind === "newer" ? undefined : <Button onClick={() => api.dismissSettingsNotice()}>{t("s.notice.dismiss")}</Button>}
           >
             {noticeText(n)}
           </Banner>

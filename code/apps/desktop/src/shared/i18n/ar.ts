@@ -1,5 +1,7 @@
 import type { StringKey } from "./en";
 import { AR_SHELL } from "./packs/ar/shell";
+import { AR_SETTINGS } from "./packs/ar/settings";
+import { AR_MAIN } from "./packs/ar/main";
 import { AR_LIBRARY } from "./packs/ar/library";
 import { AR_APPS } from "./packs/ar/apps";
 import { AR_EXPERIMENTS } from "./packs/ar/experiments";
@@ -242,4 +244,6 @@ export const AR: Record<StringKey, string> = {
   ...AR_APPS,
   ...AR_EXPERIMENTS,
   ...AR_EXPORT,
+  ...AR_MAIN,
+  ...AR_SETTINGS,
 };
