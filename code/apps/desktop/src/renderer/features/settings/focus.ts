@@ -39,3 +39,13 @@ export function revealRow(root: ParentNode, id: string, ms = 2500): boolean {
   setTimeout(() => el.removeAttribute("data-focus-ring"), ms);
   return true;
 }
+
+/** Like revealRow, but keeps trying on animation frames for up to `within` ms: a lazy page or a fold may not have rendered the row yet. */
+export function revealRowWhenMounted(root: ParentNode, id: string, within = 1000): void {
+  const t0 = performance.now();
+  const tick = () => {
+    if (revealRow(root, id) || performance.now() - t0 > within) return;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(tick));
+}

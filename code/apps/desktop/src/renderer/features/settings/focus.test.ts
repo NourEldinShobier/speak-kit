@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vite-plus/test";
-import { arrowTarget, isAdvancedRow, peekRow, requestRow, takeRow } from "./focus";
+import { describe, expect, it, vi } from "vite-plus/test";
+import { arrowTarget, isAdvancedRow, peekRow, requestRow, revealRowWhenMounted, takeRow } from "./focus";
 
 describe("requested row", () => {
   it("is read once", () => {
@@ -44,5 +44,25 @@ describe("arrow keys in a list", () => {
     expect(arrowTarget("a", 0, 3)).toBeNull();
     expect(arrowTarget("ArrowDown", 0, 0)).toBeNull();
     expect(arrowTarget("ArrowDown", -1, 3)).toBeNull();
+  });
+});
+
+describe("revealing a row on a page that renders late", () => {
+  it("rings the row once it appears and not before", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("CSS", { escape: (v: string) => v });
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => setTimeout(cb, 16));
+    const attrs: string[] = [];
+    const el = { setAttribute: (k: string) => attrs.push(k), removeAttribute: () => undefined };
+    let mounted = false;
+    const root = { querySelector: () => (mounted ? el : null) } as unknown as ParentNode;
+    revealRowWhenMounted(root, "about/version");
+    vi.advanceTimersByTime(300);
+    expect(attrs).toEqual([]);
+    mounted = true;
+    vi.advanceTimersByTime(100);
+    expect(attrs).toEqual(["data-focus-ring"]);
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 });

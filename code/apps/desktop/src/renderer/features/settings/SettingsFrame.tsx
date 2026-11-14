@@ -3,7 +3,7 @@ import { Banner, Button } from "@speakkit/ui";
 import type { AppState, SettingsSub } from "../../../shared/ipc";
 import { noticeText } from "../../../shared/settings/settings-file";
 import { api } from "../../ui";
-import { revealRow, subscribeRow, takeRow } from "./focus";
+import { revealRowWhenMounted, subscribeRow, takeRow } from "./focus";
 import "../../../shared/i18n/packs/shell";
 import { useT } from "../../i18n";
 
@@ -13,7 +13,7 @@ export function SettingsFrame({ s, sub, children }: { s: AppState; sub: Settings
   useEffect(() => {
     const reveal = () => {
       const id = takeRow();
-      if (id) requestAnimationFrame(() => requestAnimationFrame(() => revealRow(document, id))); // after the fold has opened
+      if (id) revealRowWhenMounted(document, id); // after the fold has opened and a lazy page has rendered
     };
     reveal();
     return subscribeRow(() => queueMicrotask(reveal));
