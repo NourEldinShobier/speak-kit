@@ -4,14 +4,11 @@ import type { Voice } from "@speakkit/protocol";
 import { GRADE_TONE } from "./grade";
 import "./drawer.css";
 import { genderLabel, langLabel } from "./model";
+import "../../../shared/i18n/packs/voices";
+import { useT } from "../../i18n";
 
 /** One line per grade. The grades are the Kokoro project's overall ratings (A best, F worst); the engine's list folds F into D. */
-export const GRADE_NOTE: Record<Voice["quality"], string> = {
-  A: "Best overall rating in the Kokoro project's voice grades.",
-  B: "Second-best tier of the Kokoro project's overall voice grades.",
-  C: "Middle tier of the Kokoro project's overall voice grades.",
-  D: "Lowest tier of the Kokoro project's voice grades (D and F).",
-};
+export const GRADE_NOTE = { A: "v.grade.A", B: "v.grade.B", C: "v.grade.C", D: "v.grade.D" } as const satisfies Record<Voice["quality"], string>;
 
 interface Props {
   voice: Voice;
@@ -31,14 +28,15 @@ interface Props {
 type BarProps = Pick<Props, "position" | "total" | "onPrev" | "onNext" | "onClose">;
 
 function DrawerBar({ position, total, onPrev, onNext, onClose }: BarProps) {
+  const { t } = useT();
   return (
     <header className="sk-vdrawer__bar">
-      <IconButton name="chevron-left" label="Previous voice" disabled={position <= 1} onClick={onPrev} />
-      <IconButton name="chevron-right" label="Next voice" disabled={position >= total} onClick={onNext} />
+      <IconButton name="chevron-left" label={t("v.prev")} disabled={position <= 1} onClick={onPrev} />
+      <IconButton name="chevron-right" label={t("v.next")} disabled={position >= total} onClick={onNext} />
       <span className="sk-vdrawer__count" aria-live="polite">
-        {`${position} of ${total}`}
+        {t("v.count", { position, total })}
       </span>
-      <IconButton name="x" label="Close" onClick={onClose} />
+      <IconButton name="x" label={t("common.close")} onClick={onClose} />
     </header>
   );
 }
@@ -46,6 +44,7 @@ function DrawerBar({ position, total, onPrev, onNext, onClose }: BarProps) {
 type BodyProps = Pick<Props, "tone" | "isDefault" | "playing" | "onPreview" | "onMakeDefault"> & { voice: Voice; titleId: string };
 
 function DrawerBody({ voice: v, titleId, tone, isDefault, playing, onPreview, onMakeDefault }: BodyProps) {
+  const { t } = useT();
   return (
     <div className="sk-vdrawer__body">
       <div className="sk-vdrawer__who">
@@ -53,7 +52,7 @@ function DrawerBody({ voice: v, titleId, tone, isDefault, playing, onPreview, on
         <div>
           <h2 id={titleId} className="sk-vdrawer__name">
             {v.name}
-            {isDefault && <Badge>Default</Badge>}
+            {isDefault && <Badge>{t("v.default")}</Badge>}
           </h2>
           <p className="sk-vdrawer__meta">
             {langLabel(v)} · {genderLabel(v)}
@@ -61,15 +60,15 @@ function DrawerBody({ voice: v, titleId, tone, isDefault, playing, onPreview, on
         </div>
       </div>
       <div className="sk-vdrawer__grade">
-        <StatusPill tone={GRADE_TONE[v.quality]}>Grade {v.quality}</StatusPill>
-        <p>{GRADE_NOTE[v.quality]}</p>
+        <StatusPill tone={GRADE_TONE[v.quality]}>{t("v.gradeLabel", { grade: v.quality })}</StatusPill>
+        <p>{t(GRADE_NOTE[v.quality])}</p>
       </div>
       <div className="sk-vdrawer__actions">
-        <Button variant="primary" iconLeft={playing ? "player-stop" : "player-play"} aria-label={`${playing ? "Stop" : "Preview"} ${v.name}`} onClick={onPreview}>
-          {playing ? "Stop" : "Preview"}
+        <Button variant="primary" iconLeft={playing ? "player-stop" : "player-play"} aria-label={t(playing ? "v.stopAria" : "v.previewAria", { name: v.name })} onClick={onPreview}>
+          {t(playing ? "v.stop" : "v.preview")}
         </Button>
         <Button {...(isDefault ? { iconLeft: "check" as const } : {})} disabled={isDefault} onClick={onMakeDefault}>
-          {isDefault ? "Default voice" : "Make default"}
+          {t(isDefault ? "v.defaultVoice" : "v.makeDefault")}
         </Button>
       </div>
     </div>

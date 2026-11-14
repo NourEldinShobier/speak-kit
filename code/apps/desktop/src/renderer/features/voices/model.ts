@@ -1,19 +1,17 @@
 import type { Voice } from "@speakkit/protocol";
+import { at } from "../../../shared/i18n";
+import "../../../shared/i18n/packs/voices";
 
 export type VoiceFilter = "all" | "en-US" | "en-GB" | "female" | "male";
 
-export const VOICE_FILTERS: { id: VoiceFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "en-US", label: "US English" },
-  { id: "en-GB", label: "UK English" },
-  { id: "female", label: "Female" },
-  { id: "male", label: "Male" },
-];
+const FILTER_KEYS = { all: "v.f.all", "en-US": "v.f.en-US", "en-GB": "v.f.en-GB", female: "v.f.female", male: "v.f.male" } as const;
+const FILTER_VALUE_KEYS = { all: "v.fl.all", "en-US": "v.fl.en-US", "en-GB": "v.fl.en-GB", female: "v.fl.female", male: "v.fl.male" } as const;
 
-const FILTER_NAME: Record<VoiceFilter, string> = { all: "all", "en-US": "US English", "en-GB": "UK English", female: "female", male: "male" };
+/** The filters in the order the dropdown lists them, each with its label in the chosen language. */
+export const voiceFilters = (): { id: VoiceFilter; label: string }[] => (Object.keys(FILTER_KEYS) as VoiceFilter[]).map((id) => ({ id, label: at(FILTER_KEYS[id]) }));
 
 /** The text on the toolbar dropdown: "Voices: all". */
-export const voiceFilterLabel = (f: VoiceFilter): string => `Voices: ${FILTER_NAME[f]}`;
+export const voiceFilterLabel = (f: VoiceFilter): string => at(FILTER_VALUE_KEYS[f]);
 
 interface VoicesState {
   voices: Voice[];
@@ -54,5 +52,5 @@ export function filterVoices(voices: Voice[], query: string, filter: VoiceFilter
 
 export const previewText = (name: string): string => `Hello, I am ${name}. This is how I sound when reading to you.`;
 
-export const langLabel = (v: Voice): string => (v.lang === "en-US" ? "US English" : "UK English");
-export const genderLabel = (v: Voice): string => (v.gender === "female" ? "Female" : "Male");
+export const langLabel = (v: Voice): string => at(v.lang === "en-US" ? "v.f.en-US" : "v.f.en-GB");
+export const genderLabel = (v: Voice): string => at(v.gender === "female" ? "v.f.female" : "v.f.male");

@@ -1,5 +1,6 @@
 import type { StringKey } from "./en";
 import { FR_SHELL } from "./packs/fr/shell";
+import { FR_VOICES } from "./packs/fr/voices";
 import { FR_SETTINGS } from "./packs/fr/settings";
 import { FR_MAIN } from "./packs/fr/main";
 import { FR_LIBRARY } from "./packs/fr/library";
@@ -246,4 +247,5 @@ export const FR: Record<StringKey, string> = {
   ...FR_EXPORT,
   ...FR_MAIN,
   ...FR_SETTINGS,
+  ...FR_VOICES,
 };
