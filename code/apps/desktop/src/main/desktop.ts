@@ -231,7 +231,6 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
   let meetings: ReturnType<typeof setupMeetings> | undefined;
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
-  void applyLanguage(ctx.config.language, app.getPreferredSystemLanguages()).then(() => tray.refresh());
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
