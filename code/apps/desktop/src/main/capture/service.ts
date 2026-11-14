@@ -5,6 +5,7 @@ import { CAPTURE_STATUS_EVENT } from "../../shared/capture/channels";
 import type { CaptureDetail, CaptureItem, CaptureStatus, CopyWhat } from "../../shared/capture/contract";
 import { noticeFor, type NoticeAction } from "../../shared/capture/notices";
 import type { CaptureConfig, CapturePatch } from "../../shared/capture/settings";
+import { checkPickedFolder } from "../../shared/control/settings-registry";
 import type { Ctx } from "../context";
 import type { HotkeySource } from "../dictation/types";
 import { resyncOnPower } from "../dictation/power-resync";
@@ -214,7 +215,10 @@ export class CaptureService {
     const options: Electron.OpenDialogOptions = { title: "Folder for captures", defaultPath: this.folder, properties: ["openDirectory", "createDirectory"] };
     const r = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
     const picked = r.canceled ? undefined : r.filePaths[0];
-    return picked ? this.patchSettings({ folder: picked }) : this.#refresh();
+    if (!picked) return this.#refresh();
+    const checked = checkPickedFolder("capture", picked);
+    if (!checked.ok) throw new Error(checked.message);
+    return this.patchSettings(checked.patch as CapturePatch);
   }
 
   async start(): Promise<CaptureStatus> {

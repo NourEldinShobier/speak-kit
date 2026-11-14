@@ -15,6 +15,8 @@ export interface ChangeTargets {
   /** Capture, transcripts, meetings and engines keep their settings with the feature. */
   patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
   setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
+  /** Puts every shortcut back to its default. */
+  resetShortcuts(): Promise<unknown>;
   setLaunchAtLogin(on: boolean): Promise<unknown>;
   setVoiceChatVoice(voice: VoiceChatVoice): void;
   /** Restarts the server on the port; it throws when the port cannot be used. */
@@ -31,6 +33,7 @@ export async function applyChange(t: ChangeTargets, change: Readonly<Record<stri
     if (rejected) return { ok: false, message: `That shortcut is already used by ${SLOT_NAMES[rejected.with]}.` };
   }
   try {
+    if (checked.resetShortcuts) await t.resetShortcuts();
     for (const [id, accelerator] of Object.entries(checked.shortcuts)) {
       const r = await t.setShortcut(id as ShortcutId, accelerator);
       if (!r.ok) return { ok: false, message: "That shortcut cannot be used.", shortcut: r };

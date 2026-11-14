@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import type { FailedDevice } from "@speakkit/engine";
 import type { SpeechModelMethod } from "./channels";
-import { DEVICE_VALUES, SPEECH_IDLE_CHOICES } from "./config";
+import { DEVICE_VALUES } from "./config";
 
 export type { SpeechModelMethod } from "./channels";
 
@@ -137,10 +137,7 @@ export interface SpeechModelsBridge {
   cancelSwitch(): Promise<SpeechModelsView>;
   /** Deletes the model file in our folder; returns the bytes freed. */
   remove(id: string): Promise<number>;
-  setIdleMinutes(minutes: number): Promise<SpeechModelsView>;
-  setDevice(choice: DeviceValue): Promise<SpeechModelsView>;
   retryGraphicsCard(): Promise<SpeechModelsView>;
-  setReleaseOnClose(on: boolean): Promise<SpeechModelsView>;
   /** Opens the file dialog and imports the chosen file. */
   importFile(kind: "multilingual" | "english", name: string): Promise<ImportOutcome>;
   /** Opens the file dialog to find an imported model whose copy is missing. */
@@ -149,7 +146,6 @@ export interface SpeechModelsBridge {
   /** Read-only scan of the usual folders for files that are exactly a catalog model. */
   scanDisk(): Promise<FoundView[]>;
   adoptFound(ids: string[]): Promise<SpeechModelsView>;
-  setAutoSwitch(c: { enabled: boolean; rules: SwitchRuleView[] }): Promise<SpeechModelsView>;
   dismissNewer(id: string): Promise<SpeechModelsView>;
   continueWithoutModel(): Promise<SpeechModelsView>;
   /** Measures what the loaded model takes in memory now. */
@@ -161,13 +157,6 @@ export interface SpeechModelsBridge {
 
 const id = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
 const text = (n: number) => v.pipe(v.string(), v.maxLength(n));
-const Rule = v.strictObject({
-  id,
-  layout: v.optional(text(16)),
-  app: v.optional(text(80)),
-  model: id,
-  language: v.optional(text(8)),
-});
 
 export const SPEECH_MODEL_ARGS = {
   view: v.tuple([]),
@@ -178,16 +167,12 @@ export const SPEECH_MODEL_ARGS = {
   use: v.tuple([id]),
   cancelSwitch: v.tuple([]),
   remove: v.tuple([id]),
-  setIdleMinutes: v.tuple([v.picklist(SPEECH_IDLE_CHOICES)]),
-  setDevice: v.tuple([v.picklist(DEVICE_VALUES)]),
   retryGraphicsCard: v.tuple([]),
-  setReleaseOnClose: v.tuple([v.boolean()]),
   importFile: v.tuple([v.picklist(["multilingual", "english"]), text(60)]),
   locateFile: v.tuple([id]),
   removeImported: v.tuple([id]),
   scanDisk: v.tuple([]),
   adoptFound: v.tuple([v.pipe(v.array(id), v.maxLength(8))]),
-  setAutoSwitch: v.tuple([v.strictObject({ enabled: v.boolean(), rules: v.pipe(v.array(Rule), v.maxLength(20)) })]),
   dismissNewer: v.tuple([id]),
   continueWithoutModel: v.tuple([]),
   measureMemory: v.tuple([]),

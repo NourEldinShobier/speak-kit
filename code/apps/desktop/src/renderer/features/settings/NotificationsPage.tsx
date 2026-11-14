@@ -3,7 +3,7 @@ import type { AppState } from "../../../shared/ipc";
 import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotifyChannel, type NotifyEvent } from "../../../shared/schemas";
 import { useT } from "../../i18n";
 import { Page } from "../../ui";
-import { change } from "./change";
+import { change } from "../../change";
 
 /** Settings > Notifications: event by Toast, Bell and Sound, plus Do not disturb. */
 export function NotificationsPage({ s }: { s: AppState }) {

@@ -6,7 +6,7 @@ import { IDLE_CHOICES, type IdleChoice } from "../../../shared/schemas";
 import { EngineBadge } from "../../pages";
 import { api, Page, useVisible } from "../../ui";
 import { ResourcesSections } from "./ResourcesSection";
-import { change } from "./change";
+import { change } from "../../change";
 
 const IDLE_LABEL: Record<IdleChoice, string> = { "1": "After 1 minute", "5": "After 5 minutes", "15": "After 15 minutes", never: "Never" };
 

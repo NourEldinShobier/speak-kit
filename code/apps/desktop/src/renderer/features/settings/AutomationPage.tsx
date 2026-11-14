@@ -6,7 +6,7 @@ import type { AppState } from "../../../shared/ipc";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
-import { change } from "./change";
+import { change } from "../../change";
 
 /** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
 function CopyButton({ text, label, caption }: { text: string; label: string; caption?: string }) {

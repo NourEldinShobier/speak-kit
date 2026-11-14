@@ -86,3 +86,4 @@ export const EnginesPatchSchema = v.partial(
     autoSwitch: v.strictObject({ enabled: v.boolean(), rules: v.pipe(v.array(Rule), v.maxLength(20)) }),
   }),
 );
+export type EnginesPatch = v.InferOutput<typeof EnginesPatchSchema>;

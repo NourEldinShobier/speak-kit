@@ -14,6 +14,7 @@ function rig(rejected?: { slot: "dictation"; with: "pasteLast" }, clash = false)
       calls.push(["shortcut", [id, a]]);
       return clash ? { ok: false, error: { code: "unexpected", args: { detail: "x" } } } : { ok: true };
     },
+    resetShortcuts: async () => void calls.push(["resetShortcuts", null]),
     setLaunchAtLogin: async (on) => void calls.push(["login", on]),
     setVoiceChatVoice: (voice) => void calls.push(["voiceChat", voice]),
     setPort: async (n) => {
@@ -38,6 +39,21 @@ describe("applyChange", () => {
     const { calls, targets } = rig();
     await applyChange(targets, { speed: 1.25 });
     expect(calls).toEqual([["app", { speed: 1.25 }]]);
+  });
+
+  it("puts every shortcut back before it sets the ones named beside it", async () => {
+    const { calls, targets } = rig();
+    expect(await applyChange(targets, { shortcuts: "default", "shortcuts.stop": "Ctrl+Alt+Q" })).toEqual({ ok: true });
+    expect(calls).toEqual([
+      ["resetShortcuts", null],
+      ["shortcut", ["stop", "Ctrl+Alt+Q"]],
+    ]);
+  });
+
+  it("refuses anything but default for all shortcuts", async () => {
+    const { calls, targets } = rig();
+    expect(await applyChange(targets, { shortcuts: "Ctrl+Q" })).toEqual({ ok: false, message: 'shortcuts: only "default" is accepted.' });
+    expect(calls).toEqual([]);
   });
 
   it("refuses a value the page would refuse and stores nothing", async () => {

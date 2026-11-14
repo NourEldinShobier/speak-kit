@@ -4,6 +4,7 @@ import { plural, type Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { usePlayer } from "../../pages";
 import { api, cleanError, Page } from "../../ui";
+import { change } from "../../change";
 import type { DrawerState } from "./drawer";
 import { filterVoices, genderLabel, initVoices, langLabel, previewText, VOICE_FILTERS, voiceFilterLabel, voicesReducer, type VoiceFilter } from "./model";
 import { GRADE_TONE } from "./grade";
@@ -115,7 +116,7 @@ export function VoicesPage({ s, onFixPronunciation }: { s: AppState; onFixPronun
   const failure = error || st.error;
   const tone = (v: Voice) => AVATAR_TONES[st.voices.indexOf(v) % AVATAR_TONES.length]!;
   const preview = (v: Voice) => void toggle(v.id, previewText(v.name));
-  const makeDefault = (id: string) => void api.patchConfig({ voice: id }).catch((e) => dispatch({ type: "failed", message: cleanError(e) }));
+  const makeDefault = (id: string) => void change({ voice: id }).catch((e) => dispatch({ type: "failed", message: cleanError(e) }));
   return (
     <>
       <Page title="Voices" lead={lead(st.voices.length)} wide>

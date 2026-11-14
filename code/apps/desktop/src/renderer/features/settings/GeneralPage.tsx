@@ -8,7 +8,7 @@ import { importMessage } from "../../../shared/settings/import-text";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { Advanced } from "./Advanced";
-import { change, changeSystem } from "./change";
+import { change, changeSystem } from "../../change";
 import { rowAttr } from "./focus";
 
 function Startup({ s }: { s: AppState }) {

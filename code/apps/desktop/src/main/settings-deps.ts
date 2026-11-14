@@ -12,20 +12,21 @@ export const scriptedSettingsFile = { open: null as string | null, save: null as
 export interface SettingsDesktop {
   dictation: DictationService;
   patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
-  handlers: Pick<HandlerDeps, "setShortcut">;
+  handlers: Pick<HandlerDeps, "setShortcut" | "resetShortcuts">;
 }
 
 /** The things a change of settings needs from outside the shell: the desktop features, and the dialogs of an import. */
 export function settingsChangeDeps(
   desktop: () => SettingsDesktop | null,
   win: { readonly window: BrowserWindow | null },
-): Pick<HandlerDeps, "patchDictation" | "patchArea" | "setShortcut" | "pickSettingsFile" | "confirmImport"> {
+): Pick<HandlerDeps, "patchDictation" | "patchArea" | "setShortcut" | "resetShortcuts" | "pickSettingsFile" | "confirmImport"> {
   const scripted = __TEST_CODE__ && testEnv().hook;
   const files = filePickers(() => win.window, scripted ? scriptedSettingsFile : undefined);
   return {
     patchDictation: async (patch) => (await desktop()!.dictation.patchSettings(patch)).rejected,
     patchArea: (area, patch) => desktop()!.patchArea(area, patch),
     setShortcut: (id, accelerator) => desktop()!.handlers.setShortcut(id, accelerator),
+    resetShortcuts: () => desktop()!.handlers.resetShortcuts(),
     pickSettingsFile: () => files.open([{ name: "Settings", extensions: ["json"] }]),
     confirmImport: async (what) => {
       if (scripted) return scriptedSettingsFile.confirm;

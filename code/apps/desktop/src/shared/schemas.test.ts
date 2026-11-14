@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
 import { ARGS, ConfigPatchSchema, parseConfig } from "./schemas";
+import { validateChange } from "./control/settings-registry";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 describe("config defaults and repair", () => {
@@ -116,8 +117,8 @@ describe("voice chat", () => {
     expect(v.safeParse(ARGS.voiceChatSetKey, [42]).success).toBe(false);
   });
 
-  it("setVoice accepts the Realtime voices only", () => {
-    expect(v.safeParse(ARGS.voiceChatSetVoice, ["verse"]).success).toBe(true);
-    expect(v.safeParse(ARGS.voiceChatSetVoice, ["af_heart"]).success).toBe(false);
+  it("the registry accepts the Realtime voices only", () => {
+    expect(validateChange({ voiceChatVoice: "verse" }).ok).toBe(true);
+    expect(validateChange({ voiceChatVoice: "af_heart" }).ok).toBe(false);
   });
 });

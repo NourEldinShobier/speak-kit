@@ -245,7 +245,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Stores the settings of one feature area through the feature that owns it. */
-    patchArea: areaPatcher(ctx, { capture, transcripts, meetings: () => meetings }),
+    patchArea: areaPatcher({ speech: dictation.speech, capture, transcripts, meetings: () => meetings }),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();

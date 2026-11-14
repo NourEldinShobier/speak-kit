@@ -4,7 +4,7 @@ import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
-import { change } from "./change";
+import { change } from "../../change";
 import { CallRecordingCard } from "../meetings";
 
 export function VoicePage({ s }: { s: AppState }) {

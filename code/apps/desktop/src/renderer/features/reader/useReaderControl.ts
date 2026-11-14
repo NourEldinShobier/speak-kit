@@ -3,7 +3,7 @@ import { playbackRateFor, type PlayerConfig } from "@speakkit/player";
 import type { PlayerCommand, PlayerState, ReadDoc, SentenceStart } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
 import type { DocMeta } from "../../../shared/library/contract";
-import { api } from "../../ui";
+import { change } from "../../change";
 import { library } from "../library";
 import { fractionAt, SentenceClock, sleepMsPerMinute, SleepTimer, toReadDoc, type ProgressSaver, type ReaderDoc } from "./model";
 import type { ReaderAction, ReaderUi } from "./state";
@@ -100,7 +100,7 @@ export function useReaderControl(args: Args) {
   const changeSpeed = (v: number) => {
     dispatch({ type: "speed", speed: v });
     command({ cmd: "set-speed", speed: v });
-    void api.patchConfig({ speed: v });
+    void change({ speed: v });
   };
   const changeVoice = (v: string) => {
     dispatch({ type: "voice", voiceId: v });

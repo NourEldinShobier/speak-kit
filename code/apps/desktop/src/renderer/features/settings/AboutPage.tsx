@@ -5,7 +5,7 @@ import type { Config } from "../../../shared/schemas";
 import { api, Page } from "../../ui";
 import { UpdateCard } from "../../UpdateCard";
 import { rowAttr } from "./focus";
-import { change } from "./change";
+import { change } from "../../change";
 import { NetworkTable } from "./PrivacyPage";
 
 const CHANNEL_LABEL: Record<Config["updateChannel"], string> = { stable: "Stable", early: "Early" };

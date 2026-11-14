@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Banner, Button, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import { api, usePreview } from "../../ui";
+import { change } from "../../change";
 import { Back, Foot, Frame } from "./Frame";
 
 const SAMPLE = "Notes, documents and even voices lived on someone else's server, rented back to us by the month.";
@@ -21,7 +22,7 @@ function HandyToKnow({ s }: { s: AppState }) {
       <SettingRow
         label="Start in the tray"
         description="When it starts at sign-in, stay in the tray instead of opening a window."
-        control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => api.patchConfig({ startMinimized: v })} />}
+        control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => change({ startMinimized: v })} />}
       />
     </SettingsSection>
   );
@@ -38,7 +39,7 @@ export function DoneStep({ s, skipped, onBack }: { s: AppState; skipped: boolean
     );
   }, [engineState]);
   const on = playing === voice && !!voice;
-  const open = () => api.patchConfig({ setupDone: true, setupSkipped: skipped, setupStep: 0 });
+  const open = () => change({ setupDone: true, setupSkipped: skipped, setupStep: 0 });
   return (
     <Frame
       at={4}

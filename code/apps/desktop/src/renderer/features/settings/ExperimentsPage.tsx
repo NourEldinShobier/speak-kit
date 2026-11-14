@@ -6,7 +6,7 @@ import { experiments, groupExperiments, needsRestart, toggled, visibleExperiment
 import { api, Page } from "../../ui";
 import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";
-import { change } from "./change";
+import { change } from "../../change";
 
 function Card({ e, on, onToggle }: { e: Experiment; on: boolean; onToggle(): void }) {
   return (
