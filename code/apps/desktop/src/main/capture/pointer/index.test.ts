@@ -46,6 +46,21 @@ describe("pointer track", () => {
     expect(t.intervals).toEqual([100]);
   });
 
+  it("follows a window that moved, and keeps its last place when it cannot be found", () => {
+    const t = setup();
+    let now: typeof rect | undefined = rect;
+    t.track.start(rect, () => now);
+    now = { x: 400, y: 50, width: 200, height: 100 };
+    t.at(200, 500, 100);
+    now = undefined;
+    t.at(400, 450, 75);
+    expect(t.track.take()).toEqual([
+      { atMs: 0, x: 0.25, y: 0.5 },
+      { atMs: 200, x: 0.5, y: 0.5 },
+      { atMs: 400, x: 0.25, y: 0.25 },
+    ]);
+  });
+
   it("notes nothing while the pointer is outside the rectangle, and keeps at most one sample per 200 ms", () => {
     const t = setup();
     t.track.start(rect);

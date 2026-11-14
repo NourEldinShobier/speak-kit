@@ -11,6 +11,8 @@ export interface Resolved {
   windowRect?: Rect;
   /** The part of the desktop the recording shows, in device-independent pixels: where the pointer is found in the picture. */
   bounds?: Rect;
+  /** Where the recorded window is now, for a window that can be moved while it is recorded; undefined when it cannot be found. */
+  currentBounds?: () => Rect | undefined;
 }
 
 export interface Still {

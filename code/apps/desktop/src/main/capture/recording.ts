@@ -111,7 +111,7 @@ class RecorderPorts {
     if (d.settings().narration && !r.micOk) d.micMissing();
     this.#current = { id, resolved, startedAt: d.now(), micOk: !!r.micOk };
     d.live?.begin();
-    d.pointer?.start(resolved.bounds);
+    d.pointer?.start(resolved.bounds, resolved.currentBounds);
   }
 
   async swap(id: string, target: Target): Promise<void> {
@@ -119,7 +119,7 @@ class RecorderPorts {
     const r = await this.#d.host.call({ op: "switch", sourceId: resolved.sourceId, ...(resolved.crop && { crop: resolved.crop }) });
     if (!r.ok) throw new Error(REASON[r.code]);
     if (this.#current?.id === id) this.#current.resolved = resolved;
-    this.#d.pointer?.move(resolved.bounds);
+    this.#d.pointer?.move(resolved.bounds, resolved.currentBounds);
   }
 
   /** From the start of the recording to now. */

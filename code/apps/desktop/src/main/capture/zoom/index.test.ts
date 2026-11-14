@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import type { FrameRect, ZoomRegion } from "../../../shared/capture/zoom";
 import { createBundle } from "../bundle";
+import { createPointerTrack } from "../pointer";
 import { createStore, type CaptureRecord, type StoreFs } from "../store";
 import { applyZoom, suggestZoom, ZOOM_SHEET, ZOOM_VIDEO, type ZoomDeps } from ".";
 
@@ -169,6 +170,21 @@ describe("suggested zooms", () => {
     const t = await setup();
     await t.bundle.writeFile("r1", "pointer.json", JSON.stringify([{ atMs: 3000, x: 0.8, y: 0.2, click: true }]));
     expect(await suggestZoom(t.deps, "r1")).toEqual([region(2700, 5000, { x: 0.8, y: 0.2 })]);
+  });
+
+  it("point at the window where it is now when it moved during the recording", async () => {
+    const t = await setup();
+    let now = 0;
+    let cursor = { x: 0, y: 0 };
+    let window = { x: 100, y: 100, width: 400, height: 200 };
+    let press: () => void = () => {};
+    const track = createPointerTrack({ cursor: () => cursor, now: () => now, enabled: () => true, clicks: (fn) => ((press = fn), () => {}), setInterval: () => 1, clearInterval: () => {} });
+    track.start(window, () => window);
+    window = { x: 500, y: 300, width: 400, height: 200 };
+    [now, cursor] = [3000, { x: 580, y: 340 }];
+    press();
+    await t.bundle.writeFile("r1", "pointer.json", JSON.stringify(track.take()));
+    expect(await suggestZoom(t.deps, "r1")).toEqual([region(2700, 5000, { x: 0.2, y: 0.2 })]);
   });
 
   it("carry a smoothed path when the pointer moved after the click", async () => {

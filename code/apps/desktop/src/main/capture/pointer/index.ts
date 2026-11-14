@@ -13,10 +13,10 @@ export interface PointerTrackDeps {
 }
 
 export interface PointerTrack {
-  /** A recording starts on this rectangle of the desktop. */
-  start(rect: FrameRect | undefined): void;
+  /** A recording starts on this rectangle of the desktop; `current` reads where that rectangle is now, for a window that can be moved. */
+  start(rect: FrameRect | undefined, current?: () => FrameRect | undefined): void;
   /** The recording now shows another rectangle (a switch of target). */
-  move(rect: FrameRect | undefined): void;
+  move(rect: FrameRect | undefined, current?: () => FrameRect | undefined): void;
   stop(): void;
   /** The samples so far, and a clean track for the next recording. */
   take(): PointerSample[];
@@ -31,36 +31,40 @@ export function createPointerTrack(d: PointerTrackDeps): PointerTrack {
   const clear = d.clearInterval ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>));
   let samples: PointerSample[] = [];
   let rect: FrameRect | undefined;
+  let current: (() => FrameRect | undefined) | undefined;
   let startedAt = 0;
   let timer: unknown;
   let stopClicks: (() => void) | undefined;
+  /** The rectangle as it is now; a window that moved is followed, one that cannot be found keeps its last place. */
+  const where = () => (rect = current?.() ?? rect);
   const click = () => {
-    const p = rect && fractionIn(rect, d.cursor());
+    const p = where() && fractionIn(rect!, d.cursor());
     if (p) addClick(samples, { atMs: d.now() - startedAt, ...p });
   };
   const sample = () => {
-    const p = rect && fractionIn(rect, d.cursor());
+    const p = where() && fractionIn(rect!, d.cursor());
     if (p) addSample(samples, { atMs: d.now() - startedAt, ...p });
   };
   return {
-    start(r) {
+    start(r, now) {
       this.stop();
       samples = [];
       if (!d.enabled()) return;
-      [rect, startedAt] = [r, d.now()];
+      [rect, current, startedAt] = [r, now, d.now()];
       sample();
       timer = set(sample, ZOOM.sampleEveryMs / 2);
       stopClicks = d.clicks?.(click);
     },
-    move(r) {
-      if (timer !== undefined) rect = r;
+    move(r, now) {
+      if (timer === undefined) return;
+      [rect, current] = [r, now];
     },
     stop() {
       if (timer !== undefined) clear(timer);
       timer = undefined;
       stopClicks?.();
       stopClicks = undefined;
-      rect = undefined;
+      rect = current = undefined;
     },
     take() {
       const taken = samples;

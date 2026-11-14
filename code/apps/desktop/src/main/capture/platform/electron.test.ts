@@ -163,12 +163,16 @@ describe("resolve", () => {
   it("points a window at its own source with its rectangle", async () => {
     mocks.state.sources = [{ id: "window:10:0", name: "Editor", display_id: "", thumbnail: undefined }];
     mocks.state.winBounds = { 10: { x: 5, y: 5, width: 400, height: 300 } };
-    expect(await createElectronCapturePlatform("win32").resolve({ kind: "window", windowId: "window:10:0", title: "Editor" })).toEqual({
+    const r = await createElectronCapturePlatform("win32").resolve({ kind: "window", windowId: "window:10:0", title: "Editor" });
+    expect(r).toEqual({
       sourceId: "window:10:0",
       title: "Editor",
       windowRect: { x: 5, y: 5, width: 400, height: 300 },
       bounds: { x: 5, y: 5, width: 400, height: 300 },
+      currentBounds: expect.any(Function),
     });
+    mocks.state.winBounds = { 10: { x: 50, y: 60, width: 400, height: 300 } };
+    expect(r?.currentBounds?.()).toEqual({ x: 50, y: 60, width: 400, height: 300 });
   });
 });
 
