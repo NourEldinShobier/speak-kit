@@ -34,7 +34,14 @@ export const initCard = (): CardState => ({ status: null, draft: "", reveal: fal
 export const noEncryption = (): string => at("vc.noEncryption");
 export const keyHelp = (): string => at("vc.help");
 
-const TEST_TEXT = { "key-rejected": "vc.t.rejected", "no-credit": "vc.t.noCredit", "rate-limited": "vc.t.rateLimited", offline: "vc.t.offline", unavailable: "vc.t.unavailable", "no-key": "vc.t.noKey" } as const;
+const TEST_TEXT = {
+  "key-rejected": "vc.t.rejected",
+  "no-credit": "vc.t.noCredit",
+  "rate-limited": "vc.t.rateLimited",
+  offline: "vc.t.offline",
+  unavailable: "vc.t.unavailable",
+  "no-key": "vc.t.noKey",
+} as const;
 
 const SAVE_TEXT = { "encryption-unavailable": "vc.noEncryption", "save-failed": "vc.saveFailed" } as const;
 

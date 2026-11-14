@@ -52,7 +52,13 @@ function VoiceCard({ voice: v, tone, isDefault, playing: on, onPreview, onOpen }
       </div>
       <div className="sk-voice__t">{v.traits}</div>
       <div className="sk-voice__f">
-        <Button size="sm" variant={on ? "primary" : "secondary"} iconLeft={on ? "player-stop" : "player-play"} aria-label={t(on ? "v.stopAria" : "v.previewAria", { name: v.name })} onClick={onPreview}>
+        <Button
+          size="sm"
+          variant={on ? "primary" : "secondary"}
+          iconLeft={on ? "player-stop" : "player-play"}
+          aria-label={t(on ? "v.stopAria" : "v.previewAria", { name: v.name })}
+          onClick={onPreview}
+        >
           {t(on ? "v.stop" : "v.preview")}
         </Button>
         <StatusPill tone={GRADE_TONE[v.quality]}>{t("v.gradeLabel", { grade: v.quality })}</StatusPill>
@@ -89,7 +95,6 @@ function Toolbar({ query, filter, dispatch }: { query: string; filter: VoiceFilt
     </div>
   );
 }
-
 
 interface GridProps {
   shown: Voice[];

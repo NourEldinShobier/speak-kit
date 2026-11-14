@@ -1,4 +1,5 @@
-import { nativeTheme } from "electron";
+import { app, nativeTheme } from "electron";
+import { applyLanguage } from "../shared/i18n";
 import type { TrayAction, TrayContext } from "../shared/tray";
 import type { Ctx } from "./context";
 import type { createExports } from "./export/service";
@@ -101,6 +102,8 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     quit: requestQuit,
   };
   const tray = createTray(context, actions, (id) => void dictation.speech.use(id));
+  tray.setVisible(showTrayIcon(ctx.config));
+  void applyLanguage(ctx.config.language, app.getPreferredSystemLanguages()).then(tray.refresh); // the menu is rebuilt in the chosen language once its table has loaded
   ctx.sinks.add(() => tray.refresh());
   nativeTheme.on("updated", tray.refresh); // the taskbar theme changed
   return tray;

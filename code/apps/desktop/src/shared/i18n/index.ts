@@ -96,8 +96,6 @@ export const setActiveLocale = (locale: Locale): void => void (active = locale);
 export const activeLocale = (): Locale => active;
 /** The text for a key in the active language. */
 export const at: TFn = (key, vars) => translate(active, key, vars);
-/** Joins items as a list in the active language. */
-export const atList = (items: string[]): string => listOf(active, items);
 
 /** Makes `choice` (what the Language setting stores) the active language once its table is loaded; `system` is the list of the system's languages. */
 export async function applyLanguage(choice: string, system: readonly string[]): Promise<void> {
