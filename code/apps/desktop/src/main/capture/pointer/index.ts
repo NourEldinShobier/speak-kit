@@ -22,6 +22,15 @@ export interface PointerTrack {
   take(): PointerSample[];
 }
 
+/** The window call may throw while a window closes; that counts as not found. */
+const safely = (f: (() => FrameRect | undefined) | undefined): FrameRect | undefined => {
+  try {
+    return f?.();
+  } catch {
+    return undefined;
+  }
+};
+
 /**
  * Where the pointer was during a recording, as fractions of the recorded rectangle, a few times a second. Only places and times (a click is a place and a time too): never a key, what was clicked
  * or a window name. It notes nothing while the input log is off or while the pointer is outside the recorded rectangle.
@@ -36,7 +45,7 @@ export function createPointerTrack(d: PointerTrackDeps): PointerTrack {
   let timer: unknown;
   let stopClicks: (() => void) | undefined;
   /** The rectangle as it is now; a window that moved is followed, one that cannot be found keeps its last place. */
-  const where = () => (rect = current?.() ?? rect);
+  const where = () => (rect = safely(current) ?? rect);
   const click = () => {
     const p = where() && fractionIn(rect!, d.cursor());
     if (p) addClick(samples, { atMs: d.now() - startedAt, ...p });

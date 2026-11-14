@@ -70,7 +70,6 @@ export const CapturePatchSchema = v.partial(
     pointerTrail: v.boolean(),
     shiftInk: v.boolean(),
     inkFadeMs: v.picklist(INK_FADE_MS),
-    folder: v.pipe(v.string(), v.maxLength(1024)),
     retentionDays: v.picklist(RETENTION_DAYS),
     autoSend: v.picklist(AUTO_SEND),
     narrationEngine: v.picklist(NARRATION_ENGINES),
@@ -80,4 +79,5 @@ export const CapturePatchSchema = v.partial(
     experiments: v.partial(v.strictObject(Object.fromEntries(EXPERIMENT_IDS.map((id) => [id, v.boolean()])) as Record<ExperimentId, v.BooleanSchema<undefined>>)),
   }),
 );
-export type CapturePatch = v.InferOutput<typeof CapturePatchSchema>;
+/** The folder joins the patch only from the folder chooser, in the main process; a page or the command line cannot name it. */
+export type CapturePatch = v.InferOutput<typeof CapturePatchSchema> & { folder?: string };
