@@ -26,6 +26,7 @@ export const COMMAND_LINE_KEYS = ["voice", "speed", "controlServer"] as const;
 /** The folders the person picks in the operating system's chooser; the Settings pages cannot type one, so only a chooser's own answer may name them. */
 const FolderSchema = v.pipe(v.string(), v.maxLength(1024));
 const PICKED_SCHEMAS = {
+  capture: v.strictObject({ ...CapturePatchSchema.entries, folder: v.optional(FolderSchema) }),
   transcripts: v.strictObject({ ...TranscriptsPatchSchema.entries, folder: v.optional(FolderSchema) }),
   meetings: v.strictObject({ ...MeetingsPatchSchema.entries, folder: v.optional(FolderSchema) }),
 } as const;

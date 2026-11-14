@@ -123,6 +123,24 @@ describe("pointer track", () => {
     ]);
   });
 
+  it("places a click in the window's new position, and in its last one when the window call throws", () => {
+    const t = setup();
+    let now: () => typeof rect | undefined = () => rect;
+    t.track.start(rect, () => now());
+    now = () => ({ x: 400, y: 50, width: 200, height: 100 });
+    t.at(100, 500, 100);
+    t.click();
+    now = () => {
+      throw new Error("window gone");
+    };
+    t.at(200, 450, 75);
+    t.click();
+    expect(t.track.take().filter((p) => p.click)).toEqual([
+      { atMs: 100, x: 0.5, y: 0.5, click: true },
+      { atMs: 200, x: 0.25, y: 0.25, click: true },
+    ]);
+  });
+
   it("notes no click outside the recorded rectangle, and watches clicks only while it runs and the input log is on", () => {
     const t = setup();
     t.track.start(rect);

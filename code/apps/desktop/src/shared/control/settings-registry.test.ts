@@ -48,9 +48,10 @@ describe("validateChange beyond app settings", () => {
     expect(validateChange({ port: 47700 }, ["voice"]).ok).toBe(false);
   });
 
-  it("accepts a chosen folder for transcripts and meetings only from a chooser", () => {
+  it("accepts a chosen folder for capture, transcripts and meetings only from a chooser", () => {
     expect(validateChange({ "transcripts.folder": "D:/Talks" }).ok).toBe(false);
     expect(validateChange({ "meetings.folder": "D:/Calls" }).ok).toBe(false);
+    expect(validateChange({ "capture.folder": "D:/Shots" }).ok).toBe(false);
     expect(checkPickedFolder("transcripts", "D:/Talks")).toEqual({ ok: true, patch: { folder: "D:/Talks" } });
     expect(checkPickedFolder("meetings", "D:/Calls")).toEqual({ ok: true, patch: { folder: "D:/Calls" } });
     expect(checkPickedFolder("capture", "D:/Shots")).toEqual({ ok: true, patch: { folder: "D:/Shots" } });
