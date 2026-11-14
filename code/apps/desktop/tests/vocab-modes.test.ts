@@ -524,7 +524,7 @@ describe("Installed-app picker", () => {
     await list.getByRole("button", { name: "Use Slack" }).waitFor();
     expect(await list.getByRole("button").count()).toBe(1);
     await dialog.getByLabel("Program name").fill("zzz");
-    await dialog.getByText('No installed app matches "zzz". You can still add the name you typed.').waitFor();
+    await dialog.getByText(/No installed app matches .zzz.\. You can still add the name you typed\./).waitFor();
     await dialog.getByLabel("Program name").fill("sla");
     await list.getByRole("button", { name: "Use Slack" }).click();
     expect(await dialog.getByLabel("Program name").inputValue()).toBe("slack");
