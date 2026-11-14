@@ -1,29 +1,31 @@
 import { useState } from "react";
-import { Icon, IconButton, Kbd, Popover } from "@speakkit/ui";
+import { Icon, IconButton, Kbd, Popover, onArrowKeys } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { engineView } from "../shared/engine-view";
 import { showAccelerator } from "../shared/shortcuts";
+import { useT } from "./i18n";
 import { UpdatePill } from "./UpdateCard";
 
 function Bell({ s }: { s: AppState }) {
+  const { t: tr } = useT();
   const [seen, setSeen] = useState(0);
   const newest = s.activity[0]?.id ?? 0;
   return (
     <span className="sk-bell">
       <Popover
-        title="Notifications"
+        title={tr("notify.title")}
         side="bottom"
         align="end"
         width={340}
         onOpenChange={(o) => o && setSeen(newest)}
-        trigger={(t) => <IconButton name="bell" label="Notifications" size={28} {...t} />}
+        trigger={(t) => <IconButton name="bell" label={tr("notify.title")} size={28} {...t} />}
       >
         {s.activity.length === 0 ? (
-          <span style={{ color: "var(--text-tertiary)" }}>All caught up.</span>
+          <span style={{ color: "var(--text-tertiary)" }}>{tr("title.caughtUp")}</span>
         ) : (
-          <div className="sk-activity">
+          <div className="sk-activity" onKeyDown={onArrowKeys(".sk-activity > div")}>
             {s.activity.map((a) => (
-              <div key={a.id}>
+              <div key={a.id} tabIndex={0}>
                 <b>{a.title}</b>
                 <span>
                   {a.body} {new Date(a.atMs).toLocaleTimeString()}
@@ -50,17 +52,18 @@ export interface TitleBarProps {
 
 /** The 38 px bar: sidebar toggle and history, the search box that opens the palette, the engine status while it is not ready, update pill and notifications. */
 export function TitleBar(p: TitleBarProps) {
+  const { t } = useT();
   const v = engineView(p.s.health, p.s.serverError);
   return (
     <header className="sk-title">
       <div className="sk-title__l">
-        <IconButton name="layout-sidebar" label="Toggle sidebar" size={28} onClick={p.onToggleSide} />
-        <IconButton name="chevron-left" label="Back" size={28} disabled={!p.canBack} onClick={p.onBack} />
-        <IconButton name="chevron-right" label="Forward" size={28} disabled={!p.canFwd} onClick={p.onFwd} />
+        <IconButton name="layout-sidebar" label={t("title.toggleSidebar")} size={28} onClick={p.onToggleSide} />
+        <IconButton name="chevron-left" label={t("title.back")} size={28} disabled={!p.canBack} onClick={p.onBack} />
+        <IconButton name="chevron-right" label={t("title.forward")} size={28} disabled={!p.canFwd} onClick={p.onFwd} />
       </div>
-      <button className="sk-search" onClick={p.onSearch} aria-label="Search readings, voices and commands">
+      <button className="sk-search" onClick={p.onSearch} aria-label={t("title.search")}>
         <Icon name="search" size={16} />
-        <span>Search readings, voices and commands</span>
+        <span>{t("title.search")}</span>
         <Kbd small>{showAccelerator("Ctrl+K", p.s.platform, "app").replace("+", " ")}</Kbd>
       </button>
       <div className="sk-title__r">

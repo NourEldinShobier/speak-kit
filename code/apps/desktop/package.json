@@ -15,10 +15,13 @@
   "dependencies": {
     "@lingo-reader/epub-parser": "catalog:",
     "@mozilla/readability": "catalog:",
+    "@speakkit/dictation": "workspace:*",
     "@speakkit/engine": "workspace:*",
+    "@speakkit/meetings": "workspace:*",
     "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
     "@speakkit/server": "workspace:*",
+    "@speakkit/transcripts": "workspace:*",
     "@speakkit/ui": "workspace:*",
     "electron-log": "catalog:",
     "electron-store": "catalog:",
@@ -38,6 +41,7 @@
     "wasm-media-encoders": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@electron/fuses": "catalog:",
     "@resvg/resvg-js": "catalog:",
     "@types/react": "catalog:",

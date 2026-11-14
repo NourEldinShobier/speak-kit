@@ -1,0 +1,19 @@
+import type { VoiceDown } from "@speakkit/protocol";
+import { ignore } from "../../shared/ignore";
+
+/** Which tabs have a conversation and the ports their pages hold. Kept apart from voice.ts so the player and the offscreen helpers can ask without importing it. */
+export const voicePorts = new Map<number, chrome.runtime.Port>();
+/** Tabs whose session is open; the offscreen document stays while any is. */
+export const voiceTabs = new Set<number>();
+
+export const tell = (tabId: number, m: VoiceDown) => voicePorts.get(tabId)?.postMessage(m);
+/** Tells a page its conversation is over; a problem says it never started. */
+export const tellEnded = (tabId: number, problem?: "unavailable") => tell(tabId, { t: "view", view: { phase: "ended", muted: false, ...(problem ? { problem } : {}) } });
+
+/** A conversation exists only for its page: the pill shows "Conversation ended" and the document (microphone and peer connection) is closed. */
+export async function endVoice() {
+  if (!voiceTabs.size) return;
+  for (const tabId of voiceTabs) tellEnded(tabId);
+  voiceTabs.clear();
+  await chrome.offscreen.closeDocument().catch(ignore);
+}

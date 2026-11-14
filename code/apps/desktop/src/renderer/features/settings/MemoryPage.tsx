@@ -5,8 +5,13 @@ import { engineView } from "../../../shared/engine-view";
 import { IDLE_CHOICES, type IdleChoice } from "../../../shared/schemas";
 import { EngineBadge } from "../../pages";
 import { api, Page, useVisible } from "../../ui";
+import { ResourcesSections } from "./ResourcesSection";
+import { change } from "../../change";
+import "../../../shared/i18n/packs/settings";
+import { useT } from "../../i18n";
+import { activeLocale, at } from "../../../shared/i18n";
 
-const IDLE_LABEL: Record<IdleChoice, string> = { "1": "After 1 minute", "5": "After 5 minutes", "15": "After 15 minutes", never: "Never" };
+const IDLE_LABEL = { "1": "s.mem.idle1", "5": "s.mem.idle5", "15": "s.mem.idle15", never: "s.mem.never" } as const satisfies Record<IdleChoice, string>;
 
 /** Process memory, polled every 2 s while the window is visible. */
 function useMetrics(): Metrics | null {
@@ -31,65 +36,74 @@ function useMetrics(): Metrics | null {
 }
 
 function engineNote(v: ReturnType<typeof engineView>, unloadAtMs: number | undefined): string {
-  if (v.key === "ready" && unloadAtMs) return `Unloads at ${new Date(unloadAtMs).toLocaleTimeString()} if idle`;
-  if (v.key === "unloaded") return "0 MB in memory. Wakes on play.";
+  if (v.key === "ready" && unloadAtMs) return at("s.mem.unloadsAt", { time: new Date(unloadAtMs).toLocaleTimeString(activeLocale()) });
+  if (v.key === "unloaded") return at("s.mem.zero");
   return v.hint ?? "Kokoro-82M";
 }
 
 function RightNow({ s }: { s: AppState }) {
+  const { t } = useT();
   const m = useMetrics();
   const v = engineView(s.health, s.serverError);
   return (
-    <SettingsSection title="Right now">
+    <SettingsSection title={t("s.mem.rightNow")}>
       <SettingRow
         className={v.key === "unloaded" ? "lm-row--control" : undefined}
-        label="Voice engine"
+        label={t("s.about.engine")}
         description={engineNote(v, s.health?.engine.idleUnloadAtMs)}
         control={
           <div className="sk-row-actions">
             <span data-testid="memory-engine">
               <EngineBadge s={s} />
             </span>
-            {v.key === "unloaded" && <Button onClick={() => api.warmEngine()}>Load now</Button>}
+            {v.key === "unloaded" && <Button onClick={() => api.warmEngine()}>{t("s.mem.loadNow")}</Button>}
           </div>
         }
       />
-      <SettingRow label="Memory in use" description="All Speak Kit processes, this window included." control={<span data-testid="memory-rss">{m ? `${Math.round(m.totalMb)} MB` : "..."}</span>} />
+      <SettingRow label={t("s.mem.inUse")} description={t("s.mem.inUseHint")} control={<span data-testid="memory-rss">{m ? `${Math.round(m.totalMb)} MB` : "..."}</span>} />
     </SettingsSection>
   );
 }
 
 function Unloading({ s }: { s: AppState }) {
+  const { t } = useT();
   const c = s.config;
   return (
-    <SettingsSection title="Unloading">
+    <SettingsSection title={t("s.mem.unloading")}>
       <SettingRow
         className="lm-row--control"
-        label="Unload the model when idle"
-        description="Frees its memory after the last reading. The next play loads it again in a moment."
+        label={t("s.mem.unloadIdle")}
+        description={t("s.mem.unloadIdleHint")}
         control={
-          <Select label="Idle unload" value={c.idleUnload} onChange={(x) => api.patchConfig({ idleUnload: x as IdleChoice })} options={IDLE_CHOICES.map((x) => ({ value: x, label: IDLE_LABEL[x] }))} />
+          <Select
+            label={t("s.mem.idleSelect")}
+            value={c.idleUnload}
+            onChange={(x) => change({ idleUnload: x as IdleChoice })}
+            options={IDLE_CHOICES.map((x) => ({ value: x, label: t(IDLE_LABEL[x]) }))}
+          />
         }
       />
       <SettingRow
-        label="Load at startup"
-        description="Keep the model ready as soon as Speak Kit starts. Uses memory all day."
-        control={<Toggle aria-label="Load at startup" checked={c.loadAtStart} onChange={(x) => api.patchConfig({ loadAtStart: x })} />}
+        label={t("s.mem.startup")}
+        description={t("s.mem.startupHint")}
+        control={<Toggle aria-label={t("s.mem.startup")} checked={c.loadAtStart} onChange={(x) => change({ loadAtStart: x })} />}
       />
       <SettingRow
-        label="Battery saver"
-        description={s.onBattery ? "On battery now: the model unloads sooner." : "On battery, the model unloads sooner."}
-        control={<Toggle aria-label="Battery saver" checked={c.batterySaver} onChange={(x) => api.patchConfig({ batterySaver: x })} />}
+        label={t("s.mem.battery")}
+        description={t(s.onBattery ? "s.mem.batteryOn" : "s.mem.batteryOff")}
+        control={<Toggle aria-label={t("s.mem.battery")} checked={c.batterySaver} onChange={(x) => change({ batterySaver: x })} />}
       />
     </SettingsSection>
   );
 }
 
 export function MemoryPage({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
-    <Page title="Memory" lead="The voice model uses several hundred MB while loaded. Speak Kit loads it when you play and unloads it when idle.">
+    <Page title={t("s.mem.title")} lead={t("s.mem.lead")}>
       <RightNow s={s} />
       <Unloading s={s} />
+      <ResourcesSections />
     </Page>
   );
 }

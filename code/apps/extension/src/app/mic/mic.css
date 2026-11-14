@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  background: #fff;
+  color: #201e25;
+  font:
+    14px/20px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+}
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 28px;
+}
+h1 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+p {
+  margin: 0;
+  color: #5d5b66;
+}

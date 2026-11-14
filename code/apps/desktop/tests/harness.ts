@@ -10,8 +10,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export const appDir = path.resolve(here, "..");
 // Playwright lives in the e2e workspace package; desktop does not depend on it.
 const e2eRequire = createRequire(path.resolve(appDir, "../../e2e/package.json"));
-const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwright/test");
-const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
+export const { _electron } = e2eRequire("@playwright/test") as typeof import("@playwright/test");
+export const electronPath = createRequire(path.join(appDir, "package.json"))("electron") as string;
 
 // The root `vp test run` does not read this package's vite config: say here what starting a whole Electron app (and what follows) needs.
 // The e2e specs import this file too, outside vitest.
@@ -50,6 +50,8 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
     ...opts.env,
   });
   const app = await _electron.launch({ executablePath: electronPath, args: [appDir, ...(opts.args ?? [])], env });
+  // Taken now: a test that quits the app itself leaves a closed ElectronApplication, whose process() throws.
+  const proc = app.process();
   const page = await app.firstWindow();
   // The app window opens at 1280x800 unless the screen's work area is smaller (a hosted runner is 1024x768): it is then clamped to the screen
   // and the layout shrinks to the screen. Resizing after it opened is not clamped. The setup window is not resizable and fits any screen.
@@ -63,10 +65,27 @@ export async function launch(opts: { env?: Record<string, string>; config?: obje
     userData,
     port,
     cleanup: async () => {
-      await app.close().catch(() => {});
+      await endApp(app, proc, port);
       if (!opts.userData) await removeDir(userData);
     },
   };
 }
+
+/** Closes the app, or ends its process when the quit does not finish in time, so a stuck quit cannot hold the next test for a hook timeout. An app that is already closed is fine. */
+export const endApp = async (app: { close(): Promise<void> }, proc: { kill(): unknown }, port: number, waitMs = 20_000) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const closed = await Promise.race([
+    app.close().then(
+      () => true,
+      () => true,
+    ),
+    new Promise<boolean>((r) => (timer = setTimeout(() => r(false), waitMs))),
+  ]);
+  clearTimeout(timer);
+  if (!closed) {
+    console.warn(`the app did not quit within ${waitMs / 1000} s (port ${port}): ended it`);
+    proc.kill();
+  }
+};
 
 export const health = (port: number) => fetch(`http://127.0.0.1:${port}/v1/health`).then((r) => r.json() as Promise<{ app: string; engine: { state: string } }>);

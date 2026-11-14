@@ -6,11 +6,13 @@ import type { EngineId } from "./engines";
  * Requests whose Origin is an http(s) web page are rejected (CSRF / DNS rebinding); only no-Origin or chrome-extension:// origins pass.
  *
  *   GET  /v1/health        -> Health            (no auth)
- *   GET  /v1/auth/check    -> 204 | 401         (token check, used by the pairing UI)
+ *   GET  /v1/auth/check    -> 204 | 404         (a wrong or missing token answers 404 with the code token-rejected; the pairing UI reads it, used by the pairing UI)
  *   GET  /v1/voices        -> VoiceList
  *   POST /v1/speak         -> body SpeakRequest, response is a stream of frames (see frames.ts)
  *   POST /v1/engine/warm   -> 202, loads the model ahead of the first request (idempotent)
  *   POST /v1/engine/hold   -> body HoldRequest, 204; keeps a ready model loaded for at least `ms` more (0 clears). Sent while paused.
+ *   GET  /v1/voice-chat/status      -> VoiceChatStatus (see voice-chat.ts)
+ *   POST /v1/voice-chat/session     -> VoiceChatSession, or { code } (see voice-chat.ts)
  *   GET  /v1/engines                -> EngineList
  *   POST /v1/export                 -> body ExportRequest, 202 ExportJob; render sentences to one WAV
  *   GET  /v1/export/<id>            -> ExportJob (progress); GET /v1/export/<id>/audio streams the WAV; DELETE /v1/export/<id> cancels and removes it

@@ -61,6 +61,8 @@ describe("main process responsiveness", () => {
     l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await l.app.evaluate(({ app }) => app.getAppMetrics());
+    // "While idle" starts here: the app is up and shows Home. Starting the window and the server is the startup test's business and a shared runner can stall it for a second.
+    await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopReset(): void } }).__speakkit.loopReset());
     await new Promise((r) => setTimeout(r, 5000));
     const cpu = await l.app.evaluate(({ app }) => app.getAppMetrics().reduce((a, m) => a + m.cpu.percentCPUUsage, 0));
     const loop = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopDelay(): { p50Ms: number; p99Ms: number; maxMs: number } } }).__speakkit.loopDelay());

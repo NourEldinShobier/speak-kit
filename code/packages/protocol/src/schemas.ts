@@ -60,6 +60,7 @@ export const exportJobSchema: v.GenericSchema<unknown, ExportJob> = v.object({
   done: v.number(),
   total: v.number(),
   durationMs: v.number(),
+  sentenceMs: v.exactOptional(v.array(v.tuple([v.number(), v.number()]))),
   error: v.exactOptional(v.string()),
 });
 

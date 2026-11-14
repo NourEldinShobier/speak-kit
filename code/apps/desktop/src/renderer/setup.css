@@ -8,7 +8,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 0 0 6px; /* the 20 px logo is as far from the left edge as from the top (6 px in the 32 px bar) */
+  padding: 0;
+  padding-inline-start: 6px; /* the 20 px logo is as far from the left edge as from the top (6 px in the 32 px bar) */
   font-size: 12px;
   color: var(--text-secondary);
   -webkit-app-region: drag;
@@ -46,7 +47,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 20px 16px 12px; /* buttons 16 from the bottom, Back's box 12 from the left, the primary 20 from the right */
+  padding: 0 0 16px;
+  padding-inline: 12px 20px; /* buttons 16 from the bottom, Back's box 12 from the left, the primary 20 from the right */
   border-top: 1px solid var(--stroke-hairline);
 }
 .sk-setup__foot > div {
@@ -85,4 +87,139 @@
 /* Every row in a setup card has the same 14 px above and below (the token card's padding). */
 .sk-setup .lm-card .lm-row.lm-row {
   padding-block: var(--card-pad-y);
+}
+
+/* Dictation step of the setup window. */
+.sk-lang {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+.sk-lang legend {
+  padding: 0;
+  margin-block-end: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.sk-lang__row {
+  cursor: pointer;
+  align-items: flex-start;
+  gap: 16px;
+}
+.sk-lang__note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-checklist h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sk-checklist__ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tag-green);
+}
+.sk-checklist__foot {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-practice__key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.sk-practice__key span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.sk-practice__field {
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 96px;
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface-input);
+  border: 1px solid var(--stroke-field);
+  border-radius: var(--radius-control);
+}
+.sk-practice__field:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 1px;
+}
+.sk-practice__ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--tag-green);
+}
+.sk-practice__wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sk-practice__pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.sk-practice__pill p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--text-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.sk-linkbtn:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.sk-checklist__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sk-startup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  padding: 16px;
+  text-align: center;
+}
+.sk-startup h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.sk-startup p {
+  margin: 0;
+  max-width: 420px;
+  color: var(--text-secondary);
 }

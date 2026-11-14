@@ -1,10 +1,10 @@
 import { defineConfig } from "vite-plus";
 
-// `pnpm exec vp pack` emits dist/index.js and dist/worker.js. The worker is a separate file because it
-// runs in a worker_thread; pass its location to KokoroEngine({ workerUrl }) when index.js is bundled elsewhere.
+// `pnpm exec vp pack` emits dist/index.js, dist/worker.js and dist/stt-worker.js. The workers are separate files because they
+// run in their own thread or process; pass the location to KokoroEngine({ workerUrl }) or WhisperStt({ workerUrl }) when index.js is bundled elsewhere.
 export default defineConfig({
   pack: {
-    entry: { index: "src/index.ts", worker: "src/worker.ts" },
+    entry: { index: "src/index.ts", worker: "src/worker.ts", "stt-worker": "src/stt/worker.ts" },
     format: "esm",
     platform: "node",
     clean: true,

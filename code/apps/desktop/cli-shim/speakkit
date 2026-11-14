@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs the command line of Speak Kit and passes its exit code on.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+APP="$HERE/../../.."
+SPEAKKIT_APP="$APP" exec "$APP/Contents/MacOS/Speak Kit" --speakkit-cli "$@"

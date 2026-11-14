@@ -18,6 +18,7 @@ const model = (over: Partial<UiModel> = {}): UiModel => ({
   showBubble: true,
   showGutter: true,
   readerOpen: false,
+  voiceOpen: false,
   dismissed: false,
   ...over,
 });

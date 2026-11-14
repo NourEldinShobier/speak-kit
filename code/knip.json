@@ -2,21 +2,27 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vite.config.ts"],
+      "entry": ["scripts/*.mjs", "scripts/canary/*.test.mjs", "vitest.stryker.config.ts", "vitest.stryker.capture.config.ts", "vitest.stryker.cli.config.ts", "vitest.stryker.surface.config.ts"],
       "ignore": ["scripts/canary/*/**"]
     },
     "e2e": {
-      "entry": ["tests/**/*.spec.ts", "visual/*.{ts,mjs}", "**/*.test.{ts,tsx}"],
+      "entry": ["tests/**/*.spec.ts", "visual/*.{ts,mjs}", "live/*.mjs", "**/*.test.{ts,tsx}"],
       "project": ["**/*.{ts,mjs}"]
     },
     "apps/desktop": {
       "entry": [
         "src/main/index.ts",
+        "src/main/dictation/index.ts",
         "src/preload/index.ts",
+        "src/cli/bin.ts",
         "src/main/export/mp3-worker.ts",
         "src/main/library/parse/worker.ts",
         "src/renderer/*.html",
         "src/renderer/*.tsx",
+        "src/renderer/features/dictation/{hud-main.tsx,recorder-main.ts}",
+        "src/renderer/features/capture/{capsule-main.tsx,overlay-main.ts,recorder-main.ts}",
+        "src/renderer/features/transcripts/{decoder-main.ts,mic-main.ts}",
+        "src/renderer/features/meetings/{capsule-main.tsx,rec-main.ts}",
         "scripts/*.mjs",
         "tests/*.ts",
         "**/*.test.{ts,tsx}"
@@ -24,14 +30,23 @@
       "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "apps/extension": {
-      "entry": ["src/app/*/index.{ts,tsx}", "src/app/*/main.{ts,tsx}", "src/testing/entry.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}", "src/app/content/ui-entry.ts"],
+      "entry": [
+        "src/app/*/index.{ts,tsx}",
+        "src/app/*/main.{ts,tsx}",
+        "src/testing/entry.ts",
+        "scripts/*.mjs",
+        "**/*.test.{ts,tsx}",
+        "src/app/content/ui-entry.ts",
+        "src/app/content/voice.ts",
+        "src/app/offscreen/voice.ts"
+      ],
       "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"]
     },
     "packages/server": {
       "entry": ["bench/*.ts", "scripts/*.mjs", "**/*.test.{ts,tsx}"]
     },
     "packages/engine": {
-      "entry": ["src/worker.ts", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}"]
+      "entry": ["src/worker.ts", "src/stt/worker.ts", "tests/*.mjs", "bench/*.mjs", "**/*.test.{ts,tsx}"]
     },
     "packages/ui": {
       "entry": ["scripts/*", "**/*.test.{ts,tsx}"]
@@ -39,12 +54,15 @@
     "packages/player": {
       "entry": ["**/*.test.{ts,tsx}"]
     },
+    "packages/dictation": {
+      "entry": ["**/*.test.{ts,tsx}"]
+    },
     "packages/protocol": {
       "entry": ["**/*.test.{ts,tsx}"]
     },
     "tools/knip": {}
   },
-  "ignoreDependencies": ["electron-builder", "@tabler/icons-react", "@playwright/test"],
+  "ignoreDependencies": ["electron-builder", "@tabler/icons-react", "@playwright/test", "@axe-core/playwright"],
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["tasklist"]
 }

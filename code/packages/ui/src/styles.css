@@ -501,7 +501,8 @@
 .lx-btn-card {
   height: 28px;
   gap: 5px;
-  padding: 0 10px 0 8px;
+  padding-block: 0;
+  padding-inline: 8px 10px;
   font-size: 12.5px;
   line-height: 15px;
   letter-spacing: 0;
@@ -1546,7 +1547,7 @@
 .lm-tip > .lm-tooltip {
   position: absolute;
   z-index: 20;
-  left: 50%;
+  left: 50%; /* physical: centred with translateX */
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
   pointer-events: none;
@@ -2077,6 +2078,46 @@ button.lm-listrow {
   display: flex;
   gap: 8px;
 }
+.lm-optin {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+}
+.lm-optin__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-control);
+  background: var(--surface-well);
+  color: var(--text-secondary);
+}
+.lm-optin__text {
+  flex: 1;
+  min-width: 0;
+}
+.lm-optin__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.lm-optin__body {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.lm-optin > .lm-btn {
+  flex: none;
+}
 .lm-stepper {
   display: flex;
   align-items: center;
@@ -2266,28 +2307,28 @@ button.lm-listrow {
 }
 /* ---------- reduced motion: fades only, loops stop ---------- */
 
-/* reduced motion: fades only, loops stop */
+/* reduced motion: fades only, loops stop; the app's own Off choice (data-reduce-motion=off) overrides the system preference */
 @media (prefers-reduced-motion: reduce) {
-  .lm *,
-  .lm *::before,
-  .lm *::after {
+  :root:not([data-reduce-motion="off"]) .lm *,
+  :root:not([data-reduce-motion="off"]) .lm *::before,
+  :root:not([data-reduce-motion="off"]) .lm *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: var(--lm-dur-instant) !important;
   }
-  .lm-toggle__knob,
-  .lm-progress__bar {
+  :root:not([data-reduce-motion="off"]) .lm-toggle__knob,
+  :root:not([data-reduce-motion="off"]) .lm-progress__bar {
     transition: none !important;
   }
   /* no press scale; colour fades stay */
-  .lm :active,
-  .lm-check__input:active + .lm-check__box {
+  :root:not([data-reduce-motion="off"]) .lm :active,
+  :root:not([data-reduce-motion="off"]) .lm-check__input:active + .lm-check__box {
     scale: 1 !important;
   }
-  .lm-spin,
-  .lm-skeleton.is-shimmer .lm-skeleton__line,
-  .lm-caret,
-  .lm-progress.is-indeterminate .lm-progress__bar {
+  :root:not([data-reduce-motion="off"]) .lm-spin,
+  :root:not([data-reduce-motion="off"]) .lm-skeleton.is-shimmer .lm-skeleton__line,
+  :root:not([data-reduce-motion="off"]) .lm-caret,
+  :root:not([data-reduce-motion="off"]) .lm-progress.is-indeterminate .lm-progress__bar {
     animation: none !important;
   }
 }
@@ -2309,4 +2350,18 @@ button.lm-listrow {
   .lm * {
     backdrop-filter: none !important;
   }
+}
+
+/* Reduce motion chosen in Settings; the operating system preference is handled by the component styles */
+:root[data-reduce-motion="on"] *,
+:root[data-reduce-motion="on"] *::before,
+:root[data-reduce-motion="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.lx-flip:dir(rtl) {
+  transform: scaleX(-1);
 }

@@ -23,11 +23,9 @@ export function EngineRow({ engine: e, busy, onAction }: RowProps) {
       <div className="sk-engine__body">
         <div className="sk-engine__head">
           <b>{e.name}</b>
-          {d.pill.tone !== "green" && ( // the sidebar engine card already shows "Ready"
-            <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
-              {d.pill.label}
-            </StatusPill>
-          )}
+          <StatusPill tone={d.pill.tone} icon={d.pill.spinner ? "loader-2" : undefined}>
+            {d.pill.label}
+          </StatusPill>
         </div>
         <span>{ENGINE_BLURBS[e.id]}</span>
         {d.note && <span data-testid={`engine-note-${e.id}`}>{d.note}</span>}

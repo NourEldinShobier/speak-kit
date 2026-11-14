@@ -1,25 +1,28 @@
 import { Button, Modal } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { quitSummary } from "../shared/quit";
+import { useT } from "./i18n";
 import { api } from "./ui";
 
 /** Quit confirmation: says what stops and how to resume it; "Keep running in tray" is the safe choice. */
 export function QuitDialog({ s, open, playing, onClose }: { s: AppState; open: boolean; playing: boolean; onClose(): void }) {
-  const { lead, rows } = quitSummary(s, playing);
+  const lang = useT();
+  const { t } = lang;
+  const { lead, rows } = quitSummary(s, playing, lang);
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Quit Speak Kit?"
+      title={t("quit.title")}
       width={480}
       footer={
         <>
           <Button data-autofocus onClick={onClose}>
-            Keep running in tray
+            {t("quit.keep")}
           </Button>
           <span style={{ flex: 1 }} />
           <Button variant="danger" onClick={() => api.quit()}>
-            Quit
+            {t("quit.quit")}
           </Button>
         </>
       }

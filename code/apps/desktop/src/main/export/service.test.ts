@@ -74,7 +74,7 @@ describe("createExports", () => {
     const t = setup();
     const view = await t.ex.handlers.exportStart(options({ format: "mp3", mp3Kbps: 256 }));
     expect(view).toMatchObject({ name: "note.mp3", stage: "rendering" });
-    expect(t.ctx.config.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 256, folder: "" });
+    expect(t.ctx.config.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 256, folder: "", captions: "none", chapters: false });
     expect(t.ctx.saveConfig).toHaveBeenCalledTimes(1);
     await until(() => readdirSync(dir).includes("note.mp3"));
   });

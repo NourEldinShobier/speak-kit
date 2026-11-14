@@ -21,8 +21,8 @@ interface MessageSpec extends Omit<MsgProps, "note"> {
 const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageSpec> = {
   install: (_m, a) => ({
     icon: "download",
-    title: "Install Speak Kit to start listening",
-    body: "Speak Kit reads pages aloud with a voice that runs on this computer. Nothing you read is uploaded.",
+    title: "Install Speak Kit to listen",
+    body: "Speak Kit reads pages aloud with a voice that runs on this computer.",
     primary: { label: "Download Speak Kit for Windows", onClick: a.download },
     secondary: { label: "I already installed it", onClick: a.recheck },
     footer: { left: "Free. Works offline.", right: "Learn more", onRight: a.learn },
@@ -30,7 +30,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   offline: (m, a) => ({
     icon: "power",
     title: "Speak Kit isn't running",
-    body: "The extension reads with the Speak Kit desktop app on this computer. Open the app and this popup connects by itself.",
+    body: "Open the Speak Kit app and this popup connects.",
     primary: { label: m.launch === "starting" ? "Starting..." : "Open Speak Kit", onClick: a.openApp },
     secondary: { label: "Download the app", onClick: a.download },
     launchNote: true,
@@ -38,8 +38,8 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   }),
   token: (_m, a) => ({
     icon: "link",
-    title: "Pair Speak Kit with this browser again",
-    body: "The app and this browser no longer share a pairing token. This usually happens after reinstalling one of them.",
+    title: "Pair Speak Kit with this browser",
+    body: "The pairing token no longer matches, usually after a reinstall.",
     primary: { label: "Re-pair", onClick: a.options },
     secondary: { label: "Open Speak Kit", onClick: a.openApp },
     launchNote: true,
@@ -48,7 +48,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   version: (_m, a) => ({
     icon: "refresh",
     title: "Speak Kit needs an update",
-    body: "The app and this extension no longer speak the same version of the protocol. Install the latest release of both; your settings are kept.",
+    body: "App and extension versions differ. Install the latest of both.",
     primary: { label: "Download the latest app", onClick: a.download },
     secondary: { label: "Check again", onClick: a.recheck },
     footer: { right: "Troubleshooting", onRight: a.help },
@@ -56,21 +56,21 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   pdf: (_m, a) => ({
     icon: "file-text",
     title: "Chrome's PDF viewer can't be read",
-    body: "Extensions cannot reach text inside the PDF viewer. Select the text you want, copy it, and paste it into the app.",
+    body: "Extensions cannot read the PDF viewer. Copy the text and paste it in the app.",
     primary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
   }),
   unreadable: (_m, a) => ({
     icon: "lock-off",
     title: "Can't read this page",
-    body: "Chrome blocks extensions on its own pages (chrome://, the Web Store). Open a normal website or paste text into the app.",
+    body: "Chrome blocks extensions on its own pages. Open a website or paste text in the app.",
     primary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
   }),
   fileurl: (_m, a) => ({
     icon: "file-text",
     title: "Allow access to file URLs",
-    body: "Chrome needs one more permission to read local files. Turn on “Allow access to file URLs” in the extension settings.",
+    body: "Turn on “Allow access to file URLs” in the extension settings.",
     primary: { label: "Open extension settings", onClick: a.extSettings },
     secondary: { label: "Paste text in the app", onClick: a.openApp },
     launchNote: true,
@@ -78,7 +78,7 @@ const MESSAGES: Record<MessageView, (m: PopupModel, a: PopupActions) => MessageS
   "engine-missing": (_m, a) => ({
     icon: "alert-triangle",
     title: "The voice engine isn't ready",
-    body: "Speak Kit is running but the Kokoro voice model isn't installed or failed to start. Open the app to download or repair it.",
+    body: "The Kokoro voice model is missing or failed. Open the app to repair it.",
     primary: { label: "Open Speak Kit", onClick: a.openApp },
     secondary: { label: "Check again", onClick: a.recheck },
     launchNote: true,

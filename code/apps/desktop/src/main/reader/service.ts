@@ -1,3 +1,4 @@
+import { applyReadAs } from "@speakkit/dictation";
 import type { Ctx } from "../context";
 import { toDesktopError } from "../../shared/errors";
 import type { PreviewAudio } from "../../shared/ipc";
@@ -8,11 +9,13 @@ import { sendCopyKeys } from "../system/keys";
 import { electronClipboard } from "../system/clipboard";
 import { cornerOf, FloatWindow } from "../windows";
 import { ReaderController } from "./controller";
+import { at } from "../../shared/i18n";
+import "../../shared/i18n/packs/main";
 
 /** The finished or failed mini player stays this long, then goes away. */
 const LINGER_MS = 6000;
 
-interface Reading {
+export interface Reading {
   readonly controller: ReaderController;
   readSelection(): Promise<void>;
   readText(text: string, source: ReaderSource): boolean;
@@ -55,7 +58,7 @@ function finishNotifier(ctx: Ctx, toasts: ToastCenter) {
   return (s: ReaderState) => {
     if (s.status === "finished" && !notified) {
       notified = true;
-      toasts.notify({ event: "reading-finished", taskKey: s.title, title: "Finished reading", body: s.title, onClick: ctx.showWindow });
+      toasts.notify({ event: "reading-finished", taskKey: s.title, title: at("toast.readingTitle"), body: s.title, onClick: ctx.showWindow });
     } else if (s.status !== "finished") notified = false;
   };
 }
@@ -85,7 +88,7 @@ export function createReading(ctx: Ctx, toasts: ToastCenter, onChange: (r: Reade
   };
 
   const controller: ReaderController = new ReaderController({
-    synth: (req, signal): Promise<PreviewAudio> => ctx.server.speak(req, signal),
+    synth: (req, signal): Promise<PreviewAudio> => ctx.server.speak({ ...req, text: applyReadAs(req.text, ctx.config.dictation.readAs) }, signal),
     voice: () => ctx.config.voice,
     speed: () => ctx.config.speed,
     emit: onState,

@@ -1,0 +1,40 @@
+import type { Config } from "../schemas";
+
+/** What the close button does. With the tray icon hidden there is nothing to reopen a hidden window from, so closing quits. */
+export function effectiveCloseAction(c: Pick<Config, "closeAction" | "hideTrayIcon">, trayMissing = false): "hide" | "quit" {
+  return c.hideTrayIcon || trayMissing ? "quit" : c.closeAction;
+}
+
+/** What closing the window does right now: running work (an export, a reading) is confirmed before a quit. */
+export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, busy: boolean, trayMissing = false): "hide" | "quit" | "confirm-quit" {
+  const a = effectiveCloseAction(c, trayMissing);
+  return a === "quit" && busy ? "confirm-quit" : a;
+}
+
+/** The tray icon is shown unless hidden by the user. */
+export const showTrayIcon = (c: Pick<Config, "hideTrayIcon">): boolean => !c.hideTrayIcon;
+
+/** Which Settings row text describes the close behaviour; the hidden tray names the way back in. */
+export function closeHint(c: Pick<Config, "closeAction" | "hideTrayIcon">): "general.closeHintHidden" | "general.closeHintKeeps" | "general.closeHintQuits" {
+  if (c.hideTrayIcon) return "general.closeHintHidden";
+  return c.closeAction === "hide" ? "general.closeHintKeeps" : "general.closeHintQuits";
+}
+
+export type MotionMode = "on" | "off";
+
+/** Reduce motion: the app's own choice wins, otherwise the operating system's. */
+export function reduceMotion(choice: Config["reduceMotion"], osPrefersReduced: boolean): MotionMode {
+  if (choice === "on") return "on";
+  if (choice === "off") return "off";
+  return osPrefersReduced ? "on" : "off";
+}
+
+/** The in-app keys the Accessibility page lists. Global keys come from the Shortcuts page. */
+export const KEYBOARD_MAP: readonly { keys: string; does: string }[] = [
+  { keys: "Tab, Shift+Tab", does: "Move between controls" },
+  { keys: "Arrow keys", does: "Move inside lists, menus and tabs" },
+  { keys: "Enter or Space", does: "Press the focused button or toggle" },
+  { keys: "Escape", does: "Close a dialog or menu; leave Settings" },
+  { keys: "Ctrl+K", does: "Open the command palette" },
+  { keys: "Alt+Left, Alt+Right", does: "Go back or forward" },
+];

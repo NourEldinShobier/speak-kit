@@ -1,0 +1,19 @@
+{
+  "name": "@speakkit/meetings",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Meeting recording: call detection, offer policy, two-track recording, echo suppression, notes, retention, search and the finished-event log.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./pure": "./src/pure.ts"
+  },
+  "scripts": {
+    "test": "vp test run",
+    "typecheck": "tsrs --noEmit -p ."
+  },
+  "dependencies": {
+    "@speakkit/transcripts": "workspace:*"
+  }
+}

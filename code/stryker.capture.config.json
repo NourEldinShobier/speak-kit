@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.stryker.capture.config.ts", "related": false },
+  "mutate": [
+    "apps/desktop/src/main/capture/{autocrop,gesture,journal,keyframes,narration,privacy,retention,session,store}/*.ts",
+    "apps/desktop/src/main/capture/{target-display,write-guard,notice-target,settings-patch}.ts",
+    "apps/desktop/src/main/capture/{events/index,send/auto-send,send/look,fence/index,context/index,context/labels,context/readers,command-narrator/index,command-narrator/commandline,edits/index,switch-flow}.ts",
+    "apps/desktop/src/main/voice-chat/capture-inbox.ts",
+    "apps/desktop/src/main/capture/{page-context/index,live-narrator/index,windows-speech/index,context/combined,zoom/index,pointer/index,pointer/clicks,replay/index}.ts",
+    "apps/desktop/src/shared/capture/{zoom,replay}.ts",
+    "apps/desktop/src/renderer/features/capture/{audio-timeline,format,replay-buffer,page-script}.ts",
+    "apps/desktop/src/renderer/features/capture/annotate/{model,keyboard,render}.ts",
+    "!**/*.test.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress", "json"],
+  "jsonReporter": { "fileName": "reports/mutation/capture.json" },
+  "incremental": true,
+  "incrementalFile": "reports/stryker-capture-incremental.json",
+  "tempDirName": "node_modules/.stryker-tmp-capture",
+  "thresholds": { "high": 90, "low": 80, "break": 80 },
+  "timeoutMS": 10000,
+  "concurrency": 4,
+  "ignoreStatic": false
+}

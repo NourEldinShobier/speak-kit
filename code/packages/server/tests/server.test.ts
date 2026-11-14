@@ -80,7 +80,7 @@ describe("auth, Origin and Host", () => {
       ["GET", "/v1/voices"],
       ["POST", "/v1/speak"],
     ] as const) {
-      expect((await raw(ctx, m, p, { Host: `127.0.0.1:${ctx.server.port}` }, m === "POST" ? speakBody(["x"]) : undefined)).status).toBe(401);
+      expect((await raw(ctx, m, p, { Host: `127.0.0.1:${ctx.server.port}` }, m === "POST" ? speakBody(["x"]) : undefined)).status).toBe(404);
       expect(
         (
           await raw(ctx, m, p, {
@@ -88,7 +88,7 @@ describe("auth, Origin and Host", () => {
             Authorization: "Bearer nope",
           })
         ).status,
-      ).toBe(401);
+      ).toBe(404);
     }
     expect((await fetch(`${ctx.base}/v1/auth/check`, { headers: ctx.auth })).status).toBe(204);
     const bad = await raw(ctx, "GET", "/v1/auth/check", { Host: `127.0.0.1:${ctx.server.port}` });

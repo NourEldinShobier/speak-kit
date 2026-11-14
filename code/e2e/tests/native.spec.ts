@@ -31,10 +31,11 @@ test.describe("keyboard shortcuts as Chrome has them registered", () => {
       ["play-pause", "Play / pause", "Ctrl+Shift+Y"],
       ["read-selection", "Read selection or page", "Ctrl+Shift+S"],
       ["stop", "Stop reading", "Ctrl+Shift+X"],
+      ["voice-chat", "Talk to this page", "Alt+Shift+V"],
     ]);
     const keys = Object.values(manifest.commands).map((c) => c.suggested_key.default);
     expect(new Set(keys).size).toBe(keys.length);
-    expect(keys).toEqual(["Ctrl+Shift+S", "Ctrl+Shift+Y", "Ctrl+Shift+X"]);
+    expect(keys).toEqual(["Ctrl+Shift+S", "Ctrl+Shift+Y", "Ctrl+Shift+X", "Alt+Shift+V"]);
   });
 
   test("the options page and the popup show the keys Chrome reports", async ({ ext }) => {

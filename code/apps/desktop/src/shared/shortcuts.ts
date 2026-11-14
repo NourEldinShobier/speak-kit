@@ -1,7 +1,7 @@
 import type { DesktopError } from "./errors";
 
 /** Global shortcuts: ids, defaults and the pure rules (validation, conflicts, recording). Registration with the OS lives in main/shortcuts.ts. */
-export const SHORTCUT_IDS = ["read-selection", "play-pause", "stop"] as const;
+export const SHORTCUT_IDS = ["read-selection", "play-pause", "stop", "record-toggle"] as const;
 export type ShortcutId = (typeof SHORTCUT_IDS)[number];
 export type Bindings = Record<ShortcutId, string>;
 
@@ -9,12 +9,15 @@ export const DEFAULT_SHORTCUTS: Bindings = {
   "read-selection": "Ctrl+Alt+S",
   "play-pause": "Ctrl+Alt+Space",
   stop: "Ctrl+Alt+X",
+  "record-toggle": "Ctrl+Alt+R",
 };
 
-export const SHORTCUT_LABELS: Record<ShortcutId, { title: string; description: string }> = {
-  "read-selection": { title: "Read selection", description: "Reads the text selected in any app." },
-  "play-pause": { title: "Play or pause", description: "Pauses and resumes the current reading." },
-  stop: { title: "Stop", description: "Stops the reading and closes the mini player." },
+/** "Ctrl+Alt+S, Space, X and R", built from the defaults. */
+export const resetText = (platform: string, and = "and"): string => {
+  const keys = SHORTCUT_IDS.map((id) => DEFAULT_SHORTCUTS[id]);
+  const head = showAccelerator(keys[0]!, platform, "global");
+  const rest = keys.slice(1).map((k) => showAccelerator(k, platform, "global").split("+").pop()!);
+  return `${head}, ${rest.slice(0, -1).join(", ")} ${and} ${rest.at(-1)}`;
 };
 
 const MODIFIERS = ["Ctrl", "Alt", "Shift"] as const;

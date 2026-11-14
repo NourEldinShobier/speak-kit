@@ -1,32 +1,49 @@
-import { useReducer } from "react";
+import { lazy, Suspense, useReducer, useRef } from "react";
 import type { AppState } from "../../../shared/ipc";
+import { change } from "../../change";
 import { ConnectStep } from "./ConnectStep";
 import { DoneStep } from "./DoneStep";
 import { DownloadStep } from "./DownloadStep";
-import { initWizard, wizardReducer } from "./model";
+import { initWizard, wizardReducer, type WizardAction, type WizardStep } from "./model";
 import { WelcomeStep } from "./WelcomeStep";
 
-/** First-run setup: welcome, download, browser, done. */
+// The dictation step pulls in the dictation and engines code: it loads when setup gets there.
+const DictationStep = lazy(() => import("./DictationStep").then((m) => ({ default: m.DictationStep })));
+
+/** First-run setup: welcome, download, dictation, browser, done. Closing the window keeps the step, so setup opens again where it stopped. */
 export function Wizard({ s }: { s: AppState }) {
-  const [st, dispatch] = useReducer(wizardReducer, undefined, initWizard);
+  // Only a window that opened on the dictation step is a resumed one; arriving there from the step before is not.
+  const resumed = useRef(s.config.setupStep === 2).current;
+  const [st, dispatch] = useReducer(wizardReducer, s.config.setupStep as WizardStep, initWizard);
+  const go = (step: WizardStep) => {
+    void change({ setupStep: step });
+    dispatch({ type: "go", step });
+  };
+  const send = (a: WizardAction) => dispatch(a);
   switch (st.step) {
     case 0:
-      return <WelcomeStep onNext={() => dispatch({ type: "go", step: 1 })} />;
+      return <WelcomeStep onNext={() => go(1)} />;
     case 1:
-      return <DownloadStep s={s} onBack={() => dispatch({ type: "go", step: 0 })} onNext={() => dispatch({ type: "go", step: 2 })} />;
+      return <DownloadStep s={s} onBack={() => go(0)} onNext={() => go(2)} />;
     case 2:
+      return (
+        <Suspense fallback={null}>
+          <DictationStep resumed={resumed} onBack={() => go(1)} onNext={() => go(3)} />
+        </Suspense>
+      );
+    case 3:
       return (
         <ConnectStep
           s={s}
           copied={st.copied}
-          onCopied={() => dispatch({ type: "copied" })}
-          onBack={() => dispatch({ type: "go", step: 1 })}
-          onSkip={() => dispatch({ type: "finish-connect", skipped: true })}
-          onNext={() => dispatch({ type: "finish-connect", skipped: false })}
+          onCopied={() => send({ type: "copied" })}
+          onBack={() => go(2)}
+          onSkip={() => (void change({ setupStep: 4 }), send({ type: "finish-connect", skipped: true }))}
+          onNext={() => (void change({ setupStep: 4 }), send({ type: "finish-connect", skipped: false }))}
         />
       );
-    case 3:
-      return <DoneStep s={s} skipped={st.skipped} onBack={() => dispatch({ type: "go", step: 2 })} />;
+    case 4:
+      return <DoneStep s={s} skipped={st.skipped} onBack={() => go(3)} />;
     default: {
       const unreachable: never = st.step;
       return unreachable;

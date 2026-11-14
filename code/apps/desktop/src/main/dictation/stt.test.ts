@@ -1,0 +1,213 @@
+import { describe, expect, it } from "vite-plus/test";
+import type { Clip } from "@speakkit/dictation";
+import { EngineNotReadyError, STT_MODELS } from "@speakkit/engine";
+import type { DictationModelId } from "../../shared/dictation/settings";
+import { createTranscriber, modelViews, transcribeDeadlineMs } from "./stt";
+import { FakeStt } from "./stt-fake";
+
+const clip = (samples: number[], rate = 16_000): Clip => ({ pcm: Float32Array.from(samples), sampleRate: rate, peak: Math.max(...samples.map(Math.abs)) });
+
+async function ready(model = "large-v3-turbo-q5_0") {
+  const stt = new FakeStt();
+  await stt.load(model as never);
+  const failed: Clip[] = [];
+  const t = createTranscriber({ stt, model: () => model as never, onFailedClip: (c) => failed.push(c) });
+  return { stt, t, failed };
+}
+
+describe("transcriber", () => {
+  it("gives the audio to the engine as 16-bit samples and returns its text", async () => {
+    const { stt, t } = await ready();
+    stt.say({ text: " hello world " });
+    const got = await t.transcribe({ clip: clip([0, 0.5, -0.5, 1, -1, 2]), language: "en" });
+    expect(got).toEqual({ ok: true, text: "hello world", model: "large-v3-turbo-q5_0", language: "en" });
+    expect(stt.calls()).toEqual([{ language: "en", samples: 6, peak: 32767, pcm: [0, 16384, -16383, 32767, -32767, 32767] }]);
+  });
+
+  it("turns float samples into 16-bit values: signs kept, anything past full scale clamped", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([-1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, -2]), language: "en" });
+    expect(stt.calls()[0]!.pcm).toEqual([-32767, -16383, -8192, 0, 8192, 16384, 32767, 32767, -32767]);
+  });
+
+  it("leaves the language to the engine when it is automatic", async () => {
+    const { t } = await ready();
+    expect(await t.transcribe({ clip: clip([0.1]), language: "auto" })).not.toHaveProperty("language");
+  });
+
+  it("uses English for a language the model lacks, and for detection on a model that cannot detect", async () => {
+    const { stt, t } = await ready("parakeet-tdt-0.6b-v3-q4_0");
+    await t.transcribe({ clip: clip([0.1]), language: "ar" });
+    await t.transcribe({ clip: clip([0.1]), language: "auto" });
+    expect(stt.calls().map((c) => c.language)).toEqual(["en", "en"]);
+  });
+
+  it("keeps automatic detection on a model that detects", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([0.1]), language: "auto" });
+    expect(stt.calls()[0]!.language).toBe("auto");
+  });
+
+  it("returns empty text when the voice gate found no speech", async () => {
+    const { stt, t } = await ready();
+    stt.say({ text: "" });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en" })).toMatchObject({ ok: true, text: "" });
+  });
+
+  it("says the model is loading while it downloads or loads, and keeps the audio for a retry", async () => {
+    const stt = new FakeStt();
+    await stt.setInstalled("large-v3-turbo-q5_0", false);
+    const failed: Clip[] = [];
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c) });
+    const loading = stt.load("large-v3-turbo-q5_0");
+    const c = clip([0.1]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-loading" });
+    expect(failed).toEqual([c]);
+    stt.finishDownload();
+    await loading;
+  });
+
+  it("starts loading a model that is on disk but not loaded, says it is loading and keeps the audio", async () => {
+    const stt = new FakeStt();
+    const failed: Clip[] = [];
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c) });
+    const c = clip([0.1]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-loading" });
+    expect(failed).toEqual([c]);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(stt.status().state).toBe("ready");
+  });
+
+  it("reports a model whose load failed with the engine's reason, instead of trying to load it on every press", async () => {
+    const stt = new FakeStt();
+    stt.say({ loadError: "the whisper addon crashed" });
+    await stt.warm("large-v3-turbo-q5_0");
+    const failed: Clip[] = [];
+    const reasons: string[] = [];
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c), onModelError: (d) => reasons.push(d) });
+    const c = clip([0.1]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-failed" });
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-failed" });
+    expect(reasons).toEqual(["the whisper addon crashed", "the whisper addon crashed"]);
+    expect(failed).toEqual([c, c]);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(stt.status().state).toBe("error");
+  });
+
+  it("calls an errored model that is not on disk missing, not failed", async () => {
+    const stt = new FakeStt();
+    stt.say({ loadError: "download cut off" });
+    await stt.warm("large-v3-turbo-q5_0");
+    await stt.setInstalled("large-v3-turbo-q5_0", false);
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: () => undefined });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en" })).toEqual({ ok: false, code: "model-missing" });
+  });
+
+  it("says loading, and keeps the audio, when the worker went away between the status check and the job", async () => {
+    const { stt, t, failed } = await ready();
+    stt.transcribe = async () => {
+      throw new EngineNotReadyError("unloaded");
+    };
+    const c = clip([0.2]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-loading" });
+    expect(failed).toEqual([c]);
+  });
+
+  it("gives a hung engine a deadline: the worker is killed and loaded again, the audio is kept, the next recording works", async () => {
+    const stt = new FakeStt();
+    await stt.load("large-v3-turbo-q5_0");
+    const states: string[] = [];
+    stt.onStatus((s) => states.push(s.state));
+    const failed: Clip[] = [];
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c), deadlineMs: () => 20 });
+    stt.say({ hang: true });
+    const c = clip([0.3]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "failed" });
+    expect(failed).toEqual([c]);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(states).toEqual(["unloaded", "loading", "ready"]);
+    expect(await t.transcribe({ clip: clip([0.3]), language: "en" })).toMatchObject({ ok: true });
+  });
+
+  it("scales the deadline with the length of the clip", () => {
+    expect([transcribeDeadlineMs(0), transcribeDeadlineMs(0.2), transcribeDeadlineMs(15), transcribeDeadlineMs(120)]).toEqual([20_000, 26_000, 110_000, 740_000]);
+  });
+
+  it("says the model is missing when it is not on disk", async () => {
+    const stt = new FakeStt();
+    await stt.setInstalled("large-v3-turbo-q5_0", false);
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: () => undefined });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en" })).toEqual({ ok: false, code: "model-missing" });
+  });
+
+  it("reports a failing engine and keeps the audio for one retry", async () => {
+    const { stt, t, failed } = await ready();
+    stt.say({ fail: true });
+    const c = clip([0.2, 0.3]);
+    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "failed" });
+    expect(failed).toEqual([c]);
+  });
+});
+
+describe("model views", () => {
+  const installed: Record<string, boolean> = { "large-v3-turbo-q5_0": true, "parakeet-tdt-0.6b-v3-q4_0": false };
+  type State = Parameters<typeof modelViews>[2];
+  const views = (selected: DictationModelId, job: State["job"], transfers: State["transfers"] = []) =>
+    modelViews(STT_MODELS, selected, { isInstalled: (id) => installed[id] ?? false, job, transfers });
+  it("attaches progress to the model being downloaded only", () => {
+    const v = views("large-v3-turbo-q5_0", { id: "parakeet-tdt-0.6b-v3-q4_0", kind: "downloading", fraction: 0.38, etaSeconds: 120 });
+    expect(v[0]).not.toHaveProperty("progress");
+    expect(v[1]!.progress).toEqual({ kind: "downloading", fraction: 0.38, etaSeconds: 120 });
+  });
+  it("shows a model being loaded as preparing, without a fraction", () => {
+    expect(views("large-v3-turbo-q5_0", { id: "large-v3-turbo-q5_0", kind: "preparing", fraction: 1 })[0]!.progress).toEqual({ kind: "preparing" });
+  });
+  it("shows a paused download with how far it got, even when no job runs", () => {
+    expect(views("large-v3-turbo-q5_0", null, [{ id: "parakeet-tdt-0.6b-v3-q4_0", state: "paused", fraction: 0.6 }])[1]!.progress).toEqual({ kind: "paused", fraction: 0.6 });
+  });
+  it("names the languages each model understands and its size", () => {
+    const [turbo, parakeet] = views("large-v3-turbo-q5_0", null);
+    expect(turbo).toMatchObject({ name: "Whisper Large v3 Turbo", tag: "Accurate", bytes: 574_041_195 });
+    expect(turbo!.languages).toContain("lt");
+    expect(parakeet).toMatchObject({ name: "Parakeet v3", tag: "Fast", languages: ["en", "de"] });
+  });
+});
+
+describe("end-of-sentence pause", () => {
+  async function paused(model: string, on: boolean) {
+    const stt = new FakeStt();
+    await stt.load(model as never);
+    const t = createTranscriber({ stt, model: () => model as never, onFailedClip: () => undefined, sentencePause: () => on });
+    await t.transcribe({ clip: clip([0.5, 0.5], 1000), language: "en" });
+    return stt.calls()[0]!.samples;
+  }
+
+  it("adds 400 ms of silence for Parakeet when on", async () => {
+    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", true)).toBe(402);
+  });
+  it("adds nothing when off, or for Whisper", async () => {
+    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", false)).toBe(2);
+    expect(await paused("large-v3-turbo-q5_0", true)).toBe(2);
+  });
+});
+
+describe("transcriber and the word list", () => {
+  it("sends the words to a model that reads them", async () => {
+    const { stt, t } = await ready();
+    await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes, Grafana" });
+    expect(stt.calls()[0]!.prompt).toBe("Kubernetes, Grafana");
+  });
+
+  it("drops the words for a model that cannot read them, says so once per dictation, and still transcribes", async () => {
+    const stt = new FakeStt();
+    await stt.load("parakeet-tdt-0.6b-v3-q4_0");
+    let dropped = 0;
+    const t = createTranscriber({ stt, model: () => "parakeet-tdt-0.6b-v3-q4_0", onFailedClip: () => undefined, onPromptDropped: () => dropped++ });
+    stt.say({ text: "kept working" });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en", prompt: "Kubernetes" })).toMatchObject({ ok: true, text: "kept working" });
+    expect(stt.calls()[0]).not.toHaveProperty("prompt");
+    expect(dropped).toBe(1);
+    await t.transcribe({ clip: clip([0.1]), language: "en" });
+    expect(dropped).toBe(1);
+  });
+});

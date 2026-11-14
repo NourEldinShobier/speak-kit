@@ -3,11 +3,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Page } from "@playwright/test";
-import { test, expect, highlights } from "../support/ext";
+import { test, expect, highlights, type Ext } from "../support/ext";
 import { shell } from "../support/pages";
 import { readTab, stateOf } from "../support/probe";
 
 const view = (popup: Page) => popup.locator(".pp");
+
+/** Chrome grants file access to an extension loaded from the command line, so the switch "Allow access to file URLs" is off only by this override, in the worker and in every extension page. */
+async function withoutFileAccess(ext: Ext) {
+  const off = () => {
+    chrome.extension.isAllowedFileSchemeAccess = ((cb?: (ok: boolean) => void) => (cb ? cb(false) : Promise.resolve(false))) as typeof chrome.extension.isAllowedFileSchemeAccess;
+  };
+  await ext.sw.evaluate(off);
+  await ext.ctx.addInitScript(`if (location.protocol === "chrome-extension:") (${off})();`);
+}
 
 test.describe("pages the browser does not let an extension read", () => {
   test("PDF addresses in any case and with a query string get the PDF state, and a read is refused with no injection error", async ({ ext, app }) => {
@@ -30,10 +39,12 @@ test.describe("pages the browser does not let an extension read", () => {
     try {
       writeFileSync(join(dir, "local.html"), shell("Local file", `<main><p>FILETEXT ${"sentences saved on the local disk. ".repeat(3)}</p></main>`));
       await ext.pair(app);
+      await withoutFileAccess(ext);
       const page = await ext.ctx.newPage();
       await page.goto(pathToFileURL(join(dir, "local.html")).href);
       const popup = await ext.popup(page);
-      await expect(view(popup)).toHaveAttribute("data-view", /^(file|unreadable)$/);
+      // Without the "tabs" permission a popup opened as a Playwright tab has no activeTab grant, so it cannot see the file address; the "fileurl" view itself is covered by Popup.test.tsx.
+      await expect(view(popup)).toHaveAttribute("data-view", "unreadable");
       expect((await readTab(ext, page)).ok).toBe(false);
       await expect.poll(async () => (await stateOf(ext)).code).toMatch(/^(file-access|page-unreadable)$/);
       expect(app.engine.calls).toEqual([]);

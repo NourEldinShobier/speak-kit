@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
 import { ARGS, ConfigPatchSchema, parseConfig } from "./schemas";
+import { validateChange } from "./control/settings-registry";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 describe("config defaults and repair", () => {
@@ -23,7 +24,11 @@ describe("config defaults and repair", () => {
 
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {
     const c = parseConfig({ shortcuts: { "read-selection": "S", stop: "alt+ctrl+q", "play-pause": 12 } });
-    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space" });
+    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+R" });
+  });
+
+  it("a config saved before the record shortcut existed gets its default", () => {
+    expect(parseConfig({ shortcuts: { "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space", stop: "Ctrl+Alt+X" } }).shortcuts["record-toggle"]).toBe("Ctrl+Alt+R");
   });
 
   it("loads a saved config that still has the removed clipboard keys and drops them", () => {
@@ -41,7 +46,7 @@ describe("config defaults and repair", () => {
     const c = parseConfig({ notifications: { "export-done": { toast: false }, "update-ready": "yes" }, exportPrefs: { format: "ogg", mp3Kbps: 192, folder: 5 } });
     expect(c.notifications["export-done"]).toEqual({ toast: false, bell: true, sound: false });
     expect(c.notifications["update-ready"]).toEqual({ toast: true, bell: true, sound: false });
-    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "" });
+    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "", captions: "none", chapters: false });
   });
 });
 
@@ -75,5 +80,45 @@ describe("IPC argument tuples", () => {
     expect(ok("exportStart", [{ ...job, text: "" }])).toBe(false);
     expect(ok("exportReveal", ["C:/x/a.mp3", false])).toBe(true);
     expect(ok("exportReveal", [42, false])).toBe(false);
+  });
+});
+
+describe("interface language", () => {
+  it("defaults to the system language, keeps a supported one and falls back for any other", () => {
+    expect(parseConfig({}).language).toBe("system");
+    expect(parseConfig({ language: "es" }).language).toBe("es");
+    expect(parseConfig({ language: "klingon" }).language).toBe("system");
+  });
+
+  it("the renderer may choose a supported language only", () => {
+    expect(v.safeParse(ConfigPatchSchema, { language: "es" }).success).toBe(true);
+    expect(v.safeParse(ConfigPatchSchema, { language: "klingon" }).success).toBe(false);
+  });
+});
+
+describe("voice chat", () => {
+  const KEY = "sk-proj-Valid_Key-0123456789abcdef";
+  it("the voice defaults to marin, and an unknown saved voice falls back to it", () => {
+    expect(parseConfig({}).voiceChatVoice).toBe("marin");
+    expect(parseConfig({ voiceChatVoice: "cedar" }).voiceChatVoice).toBe("cedar");
+    expect(parseConfig({ voiceChatVoice: "nobody" }).voiceChatVoice).toBe("marin");
+  });
+
+  it("the renderer cannot set the voice through patchConfig", () => {
+    expect(v.safeParse(ConfigPatchSchema, { voiceChatVoice: "cedar" }).success).toBe(false);
+  });
+
+  it("setKey trims the key and accepts only the shape of a secret key", () => {
+    const parsed = v.safeParse(ARGS.voiceChatSetKey, [`  ${KEY}\n`]);
+    expect(parsed.success && parsed.output).toEqual([KEY]);
+    for (const bad of ["", "sk-short", "pk-proj-0123456789abcdef0123", "sk-proj-has space-0123456789abcdef", "sk-proj-has\nnewline-0123456789abcdef", `sk-${"a".repeat(500)}`, "x".repeat(2000)])
+      expect(v.safeParse(ARGS.voiceChatSetKey, [bad]).success).toBe(false);
+    expect(v.safeParse(ARGS.voiceChatSetKey, []).success).toBe(false);
+    expect(v.safeParse(ARGS.voiceChatSetKey, [42]).success).toBe(false);
+  });
+
+  it("the registry accepts the Realtime voices only", () => {
+    expect(validateChange({ voiceChatVoice: "verse" }).ok).toBe(true);
+    expect(validateChange({ voiceChatVoice: "af_heart" }).ok).toBe(false);
   });
 });

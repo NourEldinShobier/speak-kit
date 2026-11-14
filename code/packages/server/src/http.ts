@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ErrorCode } from "@speakkit/protocol";
 import { RequestError } from "./config";
+import { loopbackPage } from "./dev-pages";
 import { ExportFullError } from "./export";
 
 const MAX_BODY = 2 * 1024 * 1024;
@@ -42,6 +43,18 @@ export async function readBody(req: IncomingMessage, max = MAX_BODY): Promise<un
   } catch {
     throw new HttpError(400, "invalid-request", "body is not valid JSON");
   }
+}
+
+/** The body as bytes, refused above `max` (413) before more is read. */
+export async function readBytes(req: IncomingMessage, max: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let n = 0;
+  for await (const c of req as AsyncIterable<Buffer>) {
+    n += c.length;
+    if (n > max) throw new HttpError(413, "invalid-request", "body too large");
+    chunks.push(c);
+  }
+  return Buffer.concat(chunks);
 }
 
 /**
@@ -97,6 +110,9 @@ export function tokenChecker(token: string): (req: IncomingMessage) => boolean {
 }
 
 const EXTENSION_ORIGIN = "chrome-extension://";
+/** The one route a development page on this computer may call from the browser; the bearer token still decides. */
+const PAGE_CONTEXT_PATH = "/v1/capture/page-context";
+const pathOf = (url: string | undefined) => new URL(url ?? "/", "http://x").pathname;
 
 export interface GuardOptions {
   port(): number;
@@ -114,6 +130,12 @@ export function guardRequest(req: IncomingMessage, res: ServerResponse, o: Guard
   if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) throw new HttpError(403, "forbidden", "bad Host header");
   const origin = req.headers.origin;
   if (origin !== undefined) {
+    const devPage = pathOf(req.url) === PAGE_CONTEXT_PATH && loopbackPage(origin);
+    if (devPage) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      return origin;
+    }
     if (!origin.startsWith(EXTENSION_ORIGIN)) throw new HttpError(403, "forbidden", "origin not allowed");
     if (o.allowedExtensions && !o.allowedExtensions.includes(origin.slice(EXTENSION_ORIGIN.length))) throw new HttpError(403, "forbidden", "this extension is not paired");
     res.setHeader("Access-Control-Allow-Origin", origin);

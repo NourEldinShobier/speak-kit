@@ -1,8 +1,9 @@
 import type { ErrorCode, PlayerState } from "@speakkit/protocol";
 
-/** Maps an HTTP status of POST /v1/speak to the user-facing error code and message. */
-export function mapHttpError(status: number): { code: ErrorCode; message: string } {
-  if (status === 401 || status === 403) return { code: "token-rejected", message: "The Speak Kit app rejected the pairing token." };
+/** Maps an HTTP status (and parsed error body) of POST /v1/speak to the user-facing error code and message. A 404 is a token rejection only when its body says so. */
+export function mapHttpError(status: number, body?: unknown): { code: ErrorCode; message: string } {
+  const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
+  if (status === 401 || status === 403 || (status === 404 && code === "token-rejected")) return { code: "token-rejected", message: "The Speak Kit app rejected the pairing token." };
   if (status === 503 || status === 425) return { code: "engine-not-ready", message: "The voice engine is not ready yet." };
   if (status === 429) return { code: "busy", message: "Speak Kit is busy reading something else." };
   if (status === 400) return { code: "invalid-request", message: "The Speak Kit app could not understand the request." };

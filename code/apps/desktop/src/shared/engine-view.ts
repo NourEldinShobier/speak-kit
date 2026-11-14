@@ -1,5 +1,7 @@
 import type { Health } from "@speakkit/protocol";
 import type { DesktopError } from "./errors";
+import { at } from "./i18n";
+import "./i18n/packs/main";
 
 export type PillTone = "green" | "blue" | "orange" | "red" | "neutral";
 /** normal (ready), working (download, load, reading, export), asleep (unloaded), error, paused (reading paused), attention (an update waits for you). */
@@ -17,26 +19,26 @@ interface EngineView {
 
 /** One place that turns server health into words, used by the title bar pill, Home, Engines, Memory and the tray tooltip. */
 export function engineView(health: Health | null, serverError: DesktopError | null): EngineView {
-  if (!health) return serverError ? { key: "error", label: "Error", tone: "red", spinner: false } : { key: "starting", label: "Starting", tone: "neutral", spinner: true };
+  if (!health) return serverError ? { key: "error", label: at("engine.error"), tone: "red", spinner: false } : { key: "starting", label: at("engine.starting"), tone: "neutral", spinner: true };
   const e = health.engine;
   switch (e.state) {
     case "missing":
-      return { key: "missing", label: "Not downloaded", tone: "orange", spinner: false };
+      return { key: "missing", label: at("engine.missing"), tone: "orange", spinner: false };
     case "downloading":
       return {
         key: "downloading",
-        label: `Download ${Math.round((e.progress ?? 0) * 100)}%`,
+        label: at("engine.downloading", { pct: Math.round((e.progress ?? 0) * 100) }),
         tone: "blue",
         spinner: true,
       };
     case "unloaded":
-      return { key: "unloaded", label: "Unloaded", hint: "Wakes on play", tone: "neutral", spinner: false };
+      return { key: "unloaded", label: at("engine.unloaded"), hint: at("engine.unloadedHint"), tone: "neutral", spinner: false };
     case "loading":
-      return { key: "loading", label: "Loading", tone: "blue", spinner: true };
+      return { key: "loading", label: at("engine.loading"), tone: "blue", spinner: true };
     case "ready":
-      return { key: "ready", label: "Ready", tone: "green", spinner: false };
+      return { key: "ready", label: at("engine.ready"), tone: "green", spinner: false };
     case "error":
-      return { key: "error", label: "Error", tone: "red", spinner: false };
+      return { key: "error", label: at("engine.error"), tone: "red", spinner: false };
   }
 }
 
@@ -62,14 +64,14 @@ export function trayState(health: Health | null, serverError: DesktopError | nul
 
 export function trayTooltip(health: Health | null, serverError: DesktopError | null): string {
   const v = engineView(health, serverError);
-  return `Speak Kit - ${v.label}${v.hint ? ` (${v.hint.toLowerCase()})` : ""}`;
+  return v.hint ? at("tray.tipEngineHint", { label: v.label, hint: at("engine.unloadedTip") }) : at("tray.tipEngine", { label: v.label });
 }
 
 /** The line under the engine name on Home: download progress, the idle explanation, or what the engine reports. */
 export function engineDetail(engine: Health["engine"] | undefined): string {
-  if (engine?.state === "downloading") return `Downloading the model, ${Math.round((engine.progress ?? 0) * 100)}%`;
-  if (engine?.state === "unloaded") return "Kokoro-82M is on disk. It loads when you press play and unloads when idle.";
-  return engine?.detail ?? "Kokoro-82M, runs on the CPU";
+  if (engine?.state === "downloading") return at("engine.detailDownloading", { pct: Math.round((engine.progress ?? 0) * 100) });
+  if (engine?.state === "unloaded") return at("engine.detailUnloaded");
+  return engine?.detail ?? at("engine.detailDefault");
 }
 
 /** The class of the status dot next to a pill tone on Home: green has none. */

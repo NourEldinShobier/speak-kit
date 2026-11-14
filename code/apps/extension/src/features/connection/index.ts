@@ -6,3 +6,4 @@ export { launchApp } from "./launch";
 export { deriveView, headerBadge, classifyProbeError, type PopupView } from "./popup-view";
 export { useHealth } from "./hooks";
 export { ConnectionCard } from "./ConnectionCard";
+export { createPageReporter, hostOf, postPage } from "./page-report";

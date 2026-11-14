@@ -22,6 +22,7 @@ export const appState = (over: Partial<AppState> = {}): AppState => ({
   update: UPDATE_UNSUPPORTED,
   exports: [],
   exportDir: "C:/Users/test/Music/Speak Kit",
+  settingsNotice: null,
   packaged: false,
   ...over,
 });

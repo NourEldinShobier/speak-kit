@@ -6,6 +6,8 @@ import type { ToastCenter } from "./toasts";
 import { feedOverride, githubLatestRelease, isReleaseUrl, updateMode, Updates, type UpdaterLike } from "./updates";
 import { fakeRelease } from "./updates-fake";
 import { testEnv } from "./test-env";
+import { at } from "../shared/i18n";
+import "../shared/i18n/packs/main";
 
 /** First check this long after startup, then once a day while the app runs. */
 const FIRST_CHECK_MS = 30_000;
@@ -43,15 +45,20 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
       if (feedUrl) u.setFeedURL?.({ provider: "generic", url: feedUrl });
       return u;
     },
-    latestRelease: manualFake ? fakeRelease(manualFake) : () => githubLatestRelease(fetch),
+    latestRelease: manualFake ? fakeRelease(manualFake) : (early) => githubLatestRelease(fetch, early),
+    early: () => ctx.config.updateChannel === "early",
     onState: (s) => setState(s),
-    onReady: (version) => {
-      ctx.addActivity("update", "Update ready", `Speak Kit ${version} is downloaded. Restart when it suits you.`);
+    onReady: (version, notes) => {
+      if (notes.length > 0) {
+        ctx.config.whatsNew = { version, notes };
+        ctx.saveConfig();
+      }
+      ctx.addActivity("update", at("toast.updateTitle"), at("toast.updateDownloaded", { version }));
       toasts.notify({
         event: "update-ready",
         taskKey: version,
-        title: "Update ready",
-        body: `Speak Kit ${version} is ready to install. Click to choose when.`,
+        title: at("toast.updateTitle"),
+        body: at("toast.updateBody", { version }),
         onClick: () => {
           ctx.showWindow();
           ctx.sendUi({ type: "nav", page: "settings", sub: "about" });

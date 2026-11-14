@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { compareNames, plural, type SiteDefault, type SiteRule } from "@speakkit/protocol";
 import { Icon, IconButton, Select, SettingRow, TextInput } from "@speakkit/ui";
-import { Card, PageHead, ToggleGrid } from "../../shared/ui";
-import { recentWebTabs } from "./browser";
+import { Card, PageHead, ToggleGrid, ToggleRow } from "../../shared/ui";
+import { hasTabsPermission, recentWebTabs, removeTabsPermission, requestTabsPermission } from "./tabs-access";
 import { defaultSettings, type SectionProps, type Settings } from "./types";
 
 /** "https://www.News.Example.com/a?b" -> "www.news.example.com"; null when it is not a host name. */
@@ -167,6 +167,24 @@ function RulesCard({ s, upd }: Pick<SectionProps, "s" | "upd">) {
   );
 }
 
+/** Lets dictation use a per-site mode. The "tabs" permission is asked for only here, so the install shows no browsing-history warning. */
+function SiteAwareCard() {
+  const [on, setOn] = useState(false);
+  useEffect(() => void hasTabsPermission().then(setOn), []);
+  // request() must start inside the click, so it is called here before any await.
+  const change = (v: boolean) => void (v ? requestTabsPermission() : removeTabsPermission()).then(() => hasTabsPermission().then(setOn));
+  return (
+    <Card title="Site-aware dictation" id="aware-h">
+      <ToggleRow
+        title="Tell Speak Kit which site is in front"
+        desc="Only the site's name is sent, to the app on this computer, so dictation can use that site's mode. Chrome asks you to allow reading your tabs."
+        on={on}
+        onChange={change}
+      />
+    </Card>
+  );
+}
+
 /** Sites and filters. */
 export function SitesSection({ s, upd, saved }: SectionProps) {
   return (
@@ -179,6 +197,7 @@ export function SitesSection({ s, upd, saved }: SectionProps) {
       />
       <SkipCard s={s} upd={upd} />
       <RulesCard s={s} upd={upd} />
+      <SiteAwareCard />
       <Card
         title="Sites not in the list"
         id="default-h"

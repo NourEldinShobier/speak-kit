@@ -6,7 +6,7 @@ directories:
   output: release
   buildResources: dist-app-res
 
-# No asar: the engine worker runs as its own Node process and loads kokoro-js, onnxruntime and koffi from disk, so the files
+# No asar: the engine and speech workers run as their own Node processes and load kokoro-js, onnxruntime, koffi and the whisper.cpp addon from disk, so the files
 # stay unpacked next to the app (resources/app). Start-up cost is a few hundred more file reads.
 asar: false
 npmRebuild: false
@@ -24,6 +24,9 @@ files:
   - "!**/node_modules/.bin"
 
 extraResources:
+  # The command line: speakkit.cmd (Windows) and speakkit (macOS) start the app own runtime in Node mode on dist/cli/speakkit.js and pass its exit code on.
+  - from: cli-shim
+    to: bin
   # The Chrome extension, unpacked, for "Load unpacked" (Settings > Browser > Install the extension).
   - from: ../extension/dist-pack
     to: extension
@@ -48,14 +51,20 @@ mac:
   icon: dist-app-res/icon.png
   category: public.app-category.utilities
   artifactName: Speak-Kit-${version}-mac-${arch}.${ext}
-  # Not signed with a Developer ID and not notarized: no Apple Developer account yet. afterPack gives the app an ad-hoc signature,
-  # which Apple Silicon needs to run it at all. Gatekeeper still asks the user to approve the first launch.
+  # Not signed with a Developer ID and not notarized: no Apple Developer account yet. afterPack gives the app an ad-hoc signature (with the
+  # hardened runtime and these entitlements, so a Developer ID signature later changes nothing else), which Apple Silicon needs to run it at all.
+  # Gatekeeper still asks the user to approve the first launch.
   identity: null
-  hardenedRuntime: false
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
   gatekeeperAssess: false
   extendInfo:
     # Reading the selection presses Cmd+C through System Events.
     NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
+    NSMicrophoneUsageDescription: Speak Kit listens to your microphone while you hold the dictation key, and turns what you say into text.
+    # Dictation's key listener and paste keys are granted under Input Monitoring and Accessibility; macOS shows its own prompt for those.
+    NSScreenCaptureUsageDescription: Speak Kit reads the text on your screen when you ask it to read what you are looking at.
 
 dmg:
   title: Speak Kit ${version}

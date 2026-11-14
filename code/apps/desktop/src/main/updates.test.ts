@@ -7,6 +7,7 @@ import { RELEASES, RELEASES_PAGE, Updates, feedOverride, githubLatestRelease, is
 class FakeUpdater extends EventEmitter implements UpdaterLike {
   autoDownload = true;
   autoInstallOnAppQuit = true;
+  allowPrerelease = false;
   calls: string[] = [];
   checkForUpdates = async () => void this.calls.push("check");
   downloadUpdate = async () => void this.calls.push("download");
@@ -14,7 +15,7 @@ class FakeUpdater extends EventEmitter implements UpdaterLike {
   addQuitHandler = () => void this.calls.push("quit-handler");
 }
 
-function setup(mode: UpdateMode = "auto", o: { latest?: () => Promise<{ version: string; url: string }>; busy?: boolean } = {}) {
+function setup(mode: UpdateMode = "auto", o: { latest?: (early: boolean) => Promise<{ version: string; url: string }>; busy?: boolean; early?: () => boolean } = {}) {
   const u = new FakeUpdater();
   const states: UpdateState[] = [];
   const ready: string[] = [];
@@ -25,6 +26,7 @@ function setup(mode: UpdateMode = "auto", o: { latest?: () => Promise<{ version:
     currentVersion: "0.3.1",
     load: async () => u,
     ...(o.latest ? { latestRelease: o.latest } : {}),
+    ...(o.early ? { early: o.early } : {}),
     onState: (s) => states.push(s),
     onReady: (v) => ready.push(v),
     now: () => 42,
@@ -210,12 +212,51 @@ describe("manual mode (macOS)", () => {
   });
 });
 
+describe("update channel", () => {
+  it("the early channel lets the updater take pre-releases, read again at every check", async () => {
+    let early = false;
+    const t = setup("auto", { early: () => early });
+    await t.up.check();
+    expect(t.u.allowPrerelease).toBe(false);
+    t.u.emit("update-not-available", {});
+    early = true;
+    await t.up.check();
+    expect(t.u.allowPrerelease).toBe(true);
+  });
+
+  it("the manual flow asks for the early release only on the early channel", async () => {
+    const asked: boolean[] = [];
+    const t = setup("manual", { early: () => true, latest: async (e) => (asked.push(e), { version: "0.9.0-beta.1", url: `${RELEASES_PAGE}tag/v0.9.0-beta.1` }) });
+    await t.up.check();
+    expect(asked).toEqual([true]);
+    expect(t.up.state).toMatchObject({ kind: "manual", version: "0.9.0-beta.1" });
+  });
+});
+
+describe("githubLatestRelease early", () => {
+  const list = (body: unknown) => (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+  it("takes the newest release that is not a draft, pre-releases included", async () => {
+    const r = await githubLatestRelease(
+      list([
+        { tag_name: "v1.0.0-draft", html_url: `${RELEASES_PAGE}tag/x`, draft: true },
+        { tag_name: "v0.9.0-beta.2", html_url: `${RELEASES_PAGE}tag/v0.9.0-beta.2` },
+      ]),
+      true,
+    );
+    expect(r.version).toBe("0.9.0-beta.2");
+  });
+  it("rejects an empty list and a foreign page", async () => {
+    await expect(githubLatestRelease(list([]), true)).rejects.toThrow("unexpected");
+    await expect(githubLatestRelease(list([{ tag_name: "v1", html_url: "https://evil.example/" }]), true)).rejects.toThrow("unexpected");
+  });
+});
+
 describe("githubLatestRelease", () => {
   const answer = (status: number, body: unknown) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 
   it("reads the version from the tag and keeps the release page", async () => {
     const r = await githubLatestRelease(answer(200, { tag_name: "v0.4.0", html_url: `${RELEASES_PAGE}tag/v0.4.0` }));
-    expect(r).toEqual({ version: "0.4.0", url: `${RELEASES_PAGE}tag/v0.4.0` });
+    expect(r).toEqual({ version: "0.4.0", url: `${RELEASES_PAGE}tag/v0.4.0`, notes: [] });
   });
 
   it("rejects an error status and a release page outside this project", async () => {
@@ -257,5 +298,49 @@ describe("updateMode and feedOverride", () => {
     expect(feedOverride("file:///c:/x")).toBeUndefined();
     expect(feedOverride("not a url")).toBeUndefined();
     expect(feedOverride(undefined)).toBeUndefined();
+  });
+});
+
+describe("release notes", () => {
+  it("carry the release lines from available to ready and into onReady", async () => {
+    const notes: string[][] = [];
+    const u = new FakeUpdater();
+    const up = new Updates({
+      mode: "auto",
+      currentVersion: "0.3.1",
+      load: async () => u,
+      onState: () => {},
+      onReady: (_v, n) => notes.push(n),
+      now: () => 42,
+      busy: () => false,
+      onBusy: () => {},
+      beforeInstall: () => {},
+    });
+    await up.check();
+    u.emit("update-available", { version: "0.4.0", releaseNotes: "* fix(tray): keep the menu open by @dev in #9\n* feat: new page by @dev in #10" });
+    expect(up.state).toEqual({ kind: "available", version: "0.4.0", notes: ["fix(tray): keep the menu open", "feat: new page"] });
+    await up.download();
+    u.emit("update-downloaded", { version: "0.4.0" });
+    expect(up.state).toEqual({ kind: "ready", version: "0.4.0", onQuit: false, notes: ["fix(tray): keep the menu open", "feat: new page"] });
+    expect(notes).toEqual([["fix(tray): keep the menu open", "feat: new page"]]);
+  });
+
+  it("are left out of the state when the release has none", async () => {
+    const t = setup();
+    await t.up.check();
+    t.u.emit("update-available", { version: "0.4.0", releaseNotes: null });
+    expect(t.up.state).toEqual({ kind: "available", version: "0.4.0" });
+  });
+
+  it("come with the manual (macOS) announcement", async () => {
+    const t = setup("manual", { latest: async () => ({ version: "0.9.0", url: `${RELEASES_PAGE}tag/v0.9.0`, notes: ["one"] }) });
+    await t.up.check();
+    expect(t.up.state).toEqual({ kind: "manual", version: "0.9.0", url: `${RELEASES_PAGE}tag/v0.9.0`, notes: ["one"] });
+  });
+
+  it("are read from the body of the GitHub release", async () => {
+    const body = { tag_name: "v0.9.0", html_url: `${RELEASES_PAGE}tag/v0.9.0`, body: "## What's Changed\n* fix: a thing by @x in #1\n**Full Changelog**: https://x" };
+    const f = (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+    expect((await githubLatestRelease(f)).notes).toEqual(["fix: a thing"]);
   });
 });

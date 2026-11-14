@@ -41,7 +41,8 @@ vi.mock("./window-colors", () => ({ appBackground: () => "#grey", setupBackgroun
 import { MainWindow } from "./main-window";
 import type { Config } from "../shared/schemas";
 
-const make = (setupDone = true) => new MainWindow({ setupDone } as Config, { onVisible: () => {}, onHidden: () => {} });
+const make = (setupDone = true, extra: Partial<Config> = {}, busy = false) =>
+  new MainWindow({ setupDone, engines: { releaseOnClose: false }, ...extra } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy });
 
 describe("MainWindow and the macOS Dock", () => {
   it("closing the window hides the Dock icon and keeps the app alive", () => {
@@ -80,6 +81,28 @@ describe("MainWindow and the macOS Dock", () => {
   });
 });
 
+describe("MainWindow close with Close set to quit", () => {
+  it("asks first when an export or reading is running and does not quit", () => {
+    const w = make(true, { closeAction: "quit", hideTrayIcon: false }, true);
+    const ui = vi.spyOn(w, "sendUi").mockImplementation(() => {});
+    const quit = vi.spyOn(w, "quit");
+    w.create(false);
+    let prevented = false;
+    h.on["close"]!({ preventDefault: () => (prevented = true) });
+    expect(prevented).toBe(true);
+    expect(ui).toHaveBeenCalledWith({ type: "confirm-quit" });
+    expect(quit).not.toHaveBeenCalled();
+  });
+
+  it("with the tray icon hidden the same confirmation applies", () => {
+    const w = make(true, { closeAction: "hide", hideTrayIcon: true }, true);
+    const ui = vi.spyOn(w, "sendUi").mockImplementation(() => {});
+    w.create(false);
+    h.on["close"]!({ preventDefault: () => {} });
+    expect(ui).toHaveBeenCalledWith({ type: "confirm-quit" });
+  });
+});
+
 describe("MainWindow bar height and background", () => {
   it("the app window has a 38 px title bar on the window grey", () => {
     h.bg.length = h.overlay.length = 0;
@@ -91,5 +114,13 @@ describe("MainWindow bar height and background", () => {
     h.bg.length = h.overlay.length = 0;
     make(false).create(false);
     expect([h.opts?.["backgroundColor"], h.bg, h.overlay]).toEqual(["#white", ["#white"], [32]]);
+  });
+});
+
+describe("MainWindow dragging", () => {
+  it("watches the start and the end of a move so a move never resizes", () => {
+    make().create(false);
+    expect(typeof h.on["will-move"]).toBe("function");
+    expect(typeof h.on["moved"]).toBe("function");
   });
 });

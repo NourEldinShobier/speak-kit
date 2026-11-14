@@ -51,6 +51,7 @@ html[data-hidden] *::after {
   grid-template-columns: 1fr 420px 1fr;
   align-items: center;
   padding: 0 0 0 8px;
+  direction: ltr; /* physical: the native window controls keep their side in every language, so the bar does not mirror */
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -87,6 +88,8 @@ html[data-platform="darwin"] .sk-title__r {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
 }
 .sk-search {
+  --search-fill: #dcdcdc;
+  --search-ink: #3f4a5c;
   height: 30px;
   width: 420px;
   box-sizing: border-box;
@@ -94,17 +97,17 @@ html[data-platform="darwin"] .sk-title__r {
   align-items: center;
   gap: 8px;
   padding: 0 6px;
-  border: 1px solid var(--stroke-control);
+  border: 0;
   border-radius: var(--radius-control);
-  background: var(--surface-input);
-  color: var(--text-tertiary);
+  background: var(--search-fill);
+  color: var(--search-ink);
   font: inherit;
   cursor: text;
   text-align: start;
 }
 @media (hover: hover) and (pointer: fine) {
   .sk-search:hover {
-    background: var(--fill-raised-hover);
+    background: color-mix(in srgb, black 3%, var(--search-fill));
   }
 }
 .sk-search span {
@@ -113,14 +116,13 @@ html[data-platform="darwin"] .sk-title__r {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sk-search .lm-kbd,
-.sk-new .lm-kbd {
+.sk-search .lm-kbd {
   height: 16px;
   padding: 0 6px;
   border: 0;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, black 7.5%, white);
-  color: var(--text-tertiary);
+  background: #efefef;
+  color: var(--search-ink);
   font:
     500 12px/16px Inter,
     "Inter Variable",
@@ -167,7 +169,8 @@ html[data-platform="darwin"] .sk-title__r {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 2px 4px 2px 8px;
+  padding-block: 2px;
+  padding-inline: 8px 4px;
   margin-block-end: var(--panel-inset-end);
   overflow-y: auto;
 }
@@ -182,35 +185,19 @@ html[data-platform="darwin"] .sk-title__r {
   box-sizing: border-box;
   justify-content: flex-start;
 }
-.sk-new {
-  font-weight: 600;
+.sk-side__title {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding-inline: 10px;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-primary);
-}
-.sk-new__tile {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--cta);
-  box-shadow: var(--shadow-cta);
-}
-.sk-new__tile .lm-icon {
-  color: var(--text-on-accent);
-}
-.sk-new .lm-kbd {
-  height: 18px;
-  margin-inline-end: -1px;
-  font:
-    500 11px/18px Inter,
-    system-ui,
-    sans-serif;
-}
-/* 17 px between New reading and Home (8, 1 line that is not drawn, 8); the list's 2 px gaps are taken out so the rows are 17 apart. */
-.sk-side__sep {
-  height: 17px;
-  margin-block: -2px;
   flex: none;
+}
+.sk-side__head button,
+.sk-side__head input {
+  -webkit-app-region: no-drag;
 }
 .sk-side .lm-btn--icon {
   width: 28px;
@@ -218,6 +205,7 @@ html[data-platform="darwin"] .sk-title__r {
   justify-content: center;
 }
 .sk-side__head {
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -226,9 +214,37 @@ html[data-platform="darwin"] .sk-title__r {
   font-weight: 600;
   margin-bottom: 4px;
 }
+.sk-side__find {
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 10px;
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px #e5e5e5;
+  color: var(--text-tertiary);
+  flex: none;
+}
+.sk-side__find:focus-within {
+  box-shadow: 0 0 0 2px var(--text-primary);
+}
+.sk-side__find input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+}
 .sk-side__spacer {
   flex: 1;
   min-height: 12px;
+  -webkit-app-region: drag; /* the empty part of the sidebar moves the window like the title bar */
 }
 .sk-side > .lm-nav {
   flex: 1;
@@ -275,7 +291,9 @@ html[data-platform="darwin"] .sk-title__r {
 .sk-main {
   flex: 1;
   min-width: 0;
-  margin: 0 var(--panel-inset-end) var(--panel-inset-end) var(--panel-inset);
+  margin: 0;
+  margin-inline: var(--panel-inset) var(--panel-inset-end);
+  margin-block-end: var(--panel-inset-end);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-card);
   background: var(--surface-editor);

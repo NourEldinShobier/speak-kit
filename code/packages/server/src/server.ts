@@ -4,18 +4,29 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AddressInfo, Socket } from "node:net";
 import type { TtsEngine } from "@speakkit/engine";
+import { AUTOMATION_LIMITS } from "@speakkit/protocol";
 import { DEFAULT_CONTROL_DEADLINE_MS, DEFAULT_MAX_QUEUE, DEFAULT_MAX_STREAMS, DEFAULT_STREAM_IDLE_MS, parseEnv, parseOptions } from "./config";
+import type { AutomationHost } from "./automation";
 import { EngineRegistry } from "./engines";
 import { ExportManager } from "./export";
+import type { PageContextHost } from "./page-context";
 import { removeLeftovers } from "./leftovers";
 import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDeadline, type GuardOptions } from "./http";
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
+import { automationRoutes } from "./routes/automation";
+import { DevPages } from "./dev-pages";
+import { devPageRoutes } from "./routes/dev-pages";
+import { streamRoutes } from "./routes/streams";
+import { StreamSessions, type StreamsHost } from "./streams/sessions";
 import { engineRoutes } from "./routes/engines";
 import { exportRoutes } from "./routes/export";
+import { pageContextRoutes } from "./routes/page-context";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
 import { StreamQueue } from "./stream-queue";
+import { LOOKS_PER_WINDOW, MintLimiter, type VoiceChatService } from "./voice-chat";
+import { voiceChatRoutes } from "./routes/voice-chat";
 
 export interface ServerOptions {
   /** The engine (Kokoro, or the fake engine in tests). */
@@ -43,6 +54,16 @@ export interface ServerOptions {
   allowedExtensions?: string[];
   /** Called with an error the node server raises after it started listening (for example EMFILE on accept). Default: one line on stderr. */
   onError?: (e: Error) => void;
+  /** Voice chat (the OpenAI key and the minting of Realtime client secrets) lives in the host app. Without it the voice chat routes answer "unavailable". */
+  voiceChat?: VoiceChatService;
+  /** The reader, queue and exports for scripts and AI apps. Without it the automation routes answer "unsupported". */
+  automation?: AutomationHost;
+  /** Keeps the address of the page in front, reported by the browser extension. Without it the report is accepted and dropped. */
+  pageContext?: PageContextHost;
+  /** The speech engine and the dictation rules for live transcription of other apps. Without it the stream routes answer "unsupported". */
+  streams?: StreamsHost;
+  /** Heartbeat of the event stream in ms. Default 15000. */
+  heartbeatMs?: number;
 }
 
 export interface SpeakKitServer {
@@ -76,7 +97,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes, ...streamRoutes, ...devPageRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -89,7 +110,22 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
   const idle = plain.idleUnloadMs ?? env.SPEAKKIT_IDLE_MS;
   if (idle !== undefined) for (const e of engines.all()) e.setIdleUnloadMs?.(idle);
   const deadlines = { controlMs: plain.controlDeadlineMs ?? DEFAULT_CONTROL_DEADLINE_MS, streamIdleMs: plain.streamIdleMs ?? DEFAULT_STREAM_IDLE_MS };
-  return { engines, exporter, queue, version: opts.version ?? "0.0.0", deadlines };
+  return {
+    engines,
+    exporter,
+    queue,
+    version: opts.version ?? "0.0.0",
+    voiceChat: opts.voiceChat,
+    automation: opts.automation,
+    pageContext: opts.pageContext,
+    devPages: new DevPages(Date.now),
+    streams: opts.streams && new StreamSessions(opts.streams, { now: Date.now }),
+    events: { open: 0 },
+    heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
+    mintLimiter: new MintLimiter(),
+    lookLimiter: new MintLimiter(LOOKS_PER_WINDOW),
+    deadlines,
+  };
 }
 
 /** Guard, route, authorize, then run the handler; control routes under their deadline, the speak stream under none. */
@@ -99,7 +135,7 @@ function requestHandler(services: Services, authorized: (req: IncomingMessage) =
     const method = req.method ?? "GET";
     if (method === "OPTIONS") return preflight(res, origin);
     const { route, params } = resolveRoute(ROUTES, method, new URL(req.url ?? "/", "http://x").pathname);
-    if (route.auth !== false && !authorized(req)) throw new HttpError(401, "token-rejected", "missing or wrong token");
+    if (route.auth !== false && !authorized(req)) throw new HttpError(404, "token-rejected", "missing or wrong token");
     const ac = new AbortController();
     const done = route.handle({ req, res, params, signal: ac.signal }, services);
     await (route.stream ? done : withDeadline(done, services.deadlines.controlMs, ac));
@@ -182,6 +218,7 @@ export function createServer(opts: ServerOptions): SpeakKitServer {
       if (loadAtStart) engines.active.start().catch(() => {}); // failure shows in the engine status
     },
     close: async () => {
+      services.streams?.dispose();
       queue.abortAll();
       await exporter.close();
       await new Promise<void>((resolve) => {

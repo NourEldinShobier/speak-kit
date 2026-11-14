@@ -43,7 +43,7 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
   it("the four defaults are registered", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
   });
 
   it("the recorder rebinds a key, rejects a bad combination, and Escape cancels", async () => {
@@ -149,10 +149,11 @@ describe("notifications", () => {
 
 describe("export audio", () => {
   const writeNote = async (l: Launched) => {
-    await l.page.getByRole("button", { name: "New reading" }).click();
-    await l.page.getByRole("textbox", { name: "Text to read" }).fill("Exporting is simple. Each sentence is rendered once. Then the file is saved.");
-    await l.page.getByRole("button", { name: "Export audio" }).click();
+    await l.page.keyboard.press("Control+K");
+    await l.page.getByRole("combobox", { name: "Type a command or search" }).fill("export audio");
+    await l.page.keyboard.press("Enter");
     await l.page.getByRole("dialog", { name: "Export audio" }).waitFor();
+    await l.page.getByRole("textbox", { name: "Text to export" }).fill("Exporting is simple. Each sentence is rendered once. Then the file is saved.");
   };
 
   it("WAV: renders with progress, saves the file, shows where, and a toast follows when the window is hidden", async () => {
@@ -245,6 +246,19 @@ describe("export audio", () => {
     await list.getByText("1 export is rendering. Quitting stops:").waitFor();
     await list.getByText("The export is cancelled").waitFor();
   }, 60_000);
+
+  it("closing the window with Close quits set asks first while an export renders", async () => {
+    const dir = outDir();
+    const l = await start({ config: { ...DONE, closeAction: "quit", exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "700" } });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await writeNote(l);
+    await l.page.getByRole("button", { name: "Export", exact: true }).click();
+    await l.page.getByTestId("export-progress").waitFor();
+    await l.page.getByRole("button", { name: "Run in background" }).click();
+    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+    await l.page.getByRole("dialog", { name: "Quit Speak Kit?" }).getByText("1 export is rendering. Quitting stops:").waitFor();
+    expect(await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isVisible())).toBe(true);
+  }, 60_000);
 });
 
 describe("updates (electron-updater is replaced by a fake that reports a new version)", () => {
@@ -298,12 +312,36 @@ describe("palette, engines and the extension", () => {
 
   it("Install the extension reveals the folder and shows the three steps", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("link", { name: "Browser" }).click();
+    await l.page.getByRole("link", { name: "Settings" }).click();
+    await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Browser integration" }).click();
     await l.page.getByRole("button", { name: "Install from this app" }).click();
     const guide = l.page.getByTestId("install-guide");
     await guide.getByText("Load unpacked").waitFor();
     expect(await guide.locator("code").textContent()).toMatch(/extension[\\/]dist$/);
   });
+});
+
+type Status = { platform: string; states: Record<string, string>; guides: { dictation: { steps: { id: string }[] } } };
+const bridge = <T = unknown>(l: Launched, fn: string, ...a: unknown[]) =>
+  l.page.evaluate(([f, args]) => (window as unknown as Record<string, Record<string, (...x: unknown[]) => unknown>>)["speakkitPermissions"]![f as string]!(...(args as unknown[])), [
+    fn,
+    a,
+  ] as const) as Promise<T>;
+
+describe("permissions bridge", () => {
+  it("answers through the preload bridge: Windows has a microphone switch and no other permission, and a bad id is refused", async () => {
+    const l = await start({ config: DONE });
+    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    const status = await bridge<Status>(l, "status");
+    expect(status.platform).toBe(process.platform === "darwin" ? "darwin" : "win32");
+    if (process.platform === "win32") {
+      expect(status.states).toMatchObject({ accessibility: "not-needed", "input-monitoring": "not-needed", "screen-recording": "not-needed" });
+      expect(status.states.microphone).toMatch(/^(granted|denied|not-determined|restricted|unknown)$/);
+      expect(await bridge(l, "openSettings", "accessibility")).toBe(false);
+    }
+    expect(status.guides.dictation.steps.map((x: { id: string }) => x.id)).toEqual(["microphone", "input-monitoring", "accessibility"]);
+    await expect(bridge(l, "request", "camera")).rejects.toThrow(/Invalid arguments/);
+  }, 60_000);
 });
 
 describe("shutdown", () => {

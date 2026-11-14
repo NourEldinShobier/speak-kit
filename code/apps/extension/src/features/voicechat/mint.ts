@@ -1,0 +1,55 @@
+import { parseVoiceChatError, parseVoiceChatSession, parseVoiceChatStatus, type VoiceChatSession, type VoiceProblem } from "@speakkit/protocol";
+import { ignore } from "../../shared/ignore";
+import { tokenRejected } from "../../shared/rejection";
+
+/** Calls to the Speak Kit app on 127.0.0.1. The app holds the OpenAI key; this side only ever sees a short-lived client secret. */
+export interface LocalDeps {
+  fetch: typeof fetch;
+  port: number;
+  token: string;
+  /** per call; default 15 s */
+  timeoutMs?: number;
+}
+
+export type Minted = { ok: true; session: VoiceChatSession } | { ok: false; problem: VoiceProblem };
+
+const TIMEOUT_MS = 15_000;
+
+export async function call(d: LocalDeps, path: string, init: RequestInit): Promise<Response | VoiceProblem> {
+  if (!d.token) return "unpaired";
+  try {
+    const res = await d.fetch(`http://127.0.0.1:${d.port}${path}`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${d.token}` },
+      signal: AbortSignal.timeout(d.timeoutMs ?? TIMEOUT_MS),
+    });
+    return res;
+  } catch {
+    return "app-not-running";
+  }
+}
+
+/** POST /v1/voice-chat/session: a fresh client secret. Errors come back as the problem to show, never as text from the response. */
+export async function mintSession(d: LocalDeps): Promise<Minted> {
+  const res = await call(d, "/v1/voice-chat/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  if (typeof res === "string") return { ok: false, problem: res };
+  const body: unknown = await res.json().catch(ignore);
+  const code = parseVoiceChatError(body);
+  if (code) return { ok: false, problem: code }; // the app's own codes win over its HTTP status
+  if (tokenRejected(res.status, body)) return { ok: false, problem: "unpaired" };
+  if (res.ok) {
+    const session = parseVoiceChatSession(body);
+    return session ? { ok: true, session } : { ok: false, problem: "unavailable" };
+  }
+  return { ok: false, problem: "unavailable" };
+}
+
+/** GET /v1/voice-chat/status: whether the app has a key. */
+export async function voiceStatus(d: LocalDeps): Promise<{ ok: true; hasKey: boolean } | { ok: false; problem: VoiceProblem }> {
+  const res = await call(d, "/v1/voice-chat/status", {});
+  if (typeof res === "string") return { ok: false, problem: res };
+  const body: unknown = await res.json().catch(ignore);
+  if (tokenRejected(res.status, body)) return { ok: false, problem: "unpaired" };
+  const status = res.ok ? parseVoiceChatStatus(body) : undefined;
+  return status ? { ok: true, hasKey: status.hasKey } : { ok: false, problem: "unavailable" };
+}

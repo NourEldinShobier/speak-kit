@@ -1,0 +1,799 @@
+/* Settings > Dictation and the dictation history. Rows and cards come from @speakkit/ui; this file only adds what those do not have. */
+
+/* Hotkey: keycaps, then Change. */
+.dict-hotkey {
+  /* One width in every state (keycaps, recorder, messages), so nothing moves while the row changes and the text beside it keeps its column. */
+  inline-size: 360px;
+  max-inline-size: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dict-hotkey .lm-kbd {
+  block-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+.dict-hotkey__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 240px;
+  block-size: 36px;
+  box-sizing: border-box;
+  padding-inline: 12px;
+  border: 2px solid var(--text-primary);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.dict-hotkey__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--text-primary);
+}
+.dict-hotkey__chips {
+  display: inline-flex;
+  gap: 4px;
+}
+.dict-hotkey__unset {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.dict-hotkey__note {
+  flex-basis: 100%;
+  text-align: end;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.dict-hotkey__note--ok {
+  color: var(--tag-green);
+}
+.dict-hotkey__problem {
+  flex-basis: 100%;
+  text-align: end;
+  color: var(--tag-red);
+  font-size: 12px;
+}
+
+/* Speech model rows: radio, text, then the state on the right. */
+.dict-model {
+  align-items: flex-start;
+  padding-block: 13px;
+}
+.dict-model .lm-radio {
+  margin-block-start: 1px;
+}
+.dict-model .lm-row__text {
+  flex: 1;
+  min-inline-size: 0;
+}
+.dict-model .lm-row__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dict-model .lm-row__control {
+  align-self: center;
+}
+.dict-model__bar {
+  margin-block: 8px 6px;
+  max-inline-size: 380px;
+}
+.dict-installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Replacements. */
+.dict-repl {
+  gap: 12px;
+  min-block-size: 43px;
+}
+.dict-repl__from {
+  inline-size: 122px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: 6px;
+  background: var(--surface-well);
+  font-size: 12px;
+}
+.dict-repl__arrow {
+  color: var(--icon-quiet);
+  flex: none;
+}
+.dict-repl__to {
+  flex: 1;
+  font-size: 13px;
+}
+.dict-repl__del {
+  margin-inline-start: auto;
+  flex: none;
+}
+.dict-repl--add {
+  background: var(--surface-well);
+  padding-block: 10px;
+}
+.dict-repl__field {
+  inline-size: 162px;
+}
+.dict-repl__field--wide {
+  inline-size: 236px;
+}
+
+/* Test field. */
+.dict-test {
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 78px;
+  padding: 12px;
+  border: 1px solid var(--stroke-field);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  resize: vertical;
+}
+.dict-test::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* First run: one card with a title block, the explanation, and a progress bar. */
+.dict-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-inline-size: 520px;
+  padding: 16px;
+}
+.dict-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dict-card__tile {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.dict-card__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.dict-card__step,
+.dict-card__sub,
+.dict-card__hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-card__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+.dict-card__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-card__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.dict-card__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dict-card__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* History. */
+.dict-back {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dict-back:focus-visible {
+  outline: 2px solid var(--accent-default);
+  outline-offset: 2px;
+}
+.dict-hist__bar {
+  padding-inline-end: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.dict-hist__bar > .lm-field {
+  flex: 1 1 auto;
+  min-inline-size: 220px;
+  max-inline-size: 480px;
+}
+.dict-hist__search {
+  inline-size: 100%;
+}
+.dict-hist__tools {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.dict-hist__tag {
+  margin-inline-start: 8px;
+  vertical-align: 1px;
+}
+.dict-stats {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.dict-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+.dict-stats dt {
+  color: var(--text-secondary);
+}
+.dict-stats dd {
+  margin: 0;
+  font-weight: 500;
+}
+.dict-stats__apps {
+  margin: 12px 0 0;
+}
+.dict-clear {
+  color: var(--tag-red);
+}
+.dict-hist__day {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.dict-hist__row {
+  align-items: flex-start;
+  gap: 24px;
+  padding-block: 14px;
+}
+.dict-hist__when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  inline-size: 76px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+.dict-hist__app {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-size: 11px;
+}
+.dict-hist__text {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.dict-hist__acts {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  inline-size: 80px;
+  justify-content: flex-end;
+  align-items: center;
+  flex: none;
+}
+/* With a mouse the buttons appear on hover or focus; with touch they are always there. */
+@media (hover: hover) and (pointer: fine) {
+  .dict-hist__acts {
+    opacity: 0;
+  }
+  .dict-hist__row:hover .dict-hist__acts,
+  .dict-hist__row:focus-within .dict-hist__acts,
+  .dict-hist__acts[data-copied] {
+    opacity: 1;
+  }
+  .dict-hist__row:hover {
+    background: var(--surface-well);
+  }
+}
+/* Read out by screen readers, not shown. */
+.dict-hist__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dict-hist__foot,
+.dict-hist__none {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-keys {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-block-start: 12px;
+}
+
+/* Permission guide. */
+.dict-perms {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dict-perms__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-block-size: 36px;
+}
+.dict-perms__text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-size: 13px;
+}
+/* The mode explainer: a keycap per kind of press, and a badge per rule. */
+.dict-frames {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dict-frame {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 140px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.dict-frame__cap {
+  display: inline-flex;
+  gap: 6px;
+}
+.dict-frame__cap i {
+  inline-size: 44px;
+  block-size: 28px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--stroke-control);
+  background: var(--surface-card);
+  animation: dict-press 2.4s ease-in-out infinite;
+}
+.dict-frame[data-kind="double"] .dict-frame__cap i:nth-child(2) {
+  animation-delay: 0.3s;
+}
+@keyframes dict-press {
+  0%,
+  60%,
+  100% {
+    transform: none;
+    background: var(--surface-card);
+  }
+  20%,
+  45% {
+    transform: translateY(2px);
+    background: var(--text-primary);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduce-motion="off"]) .dict-frame__cap i {
+    animation: none;
+  }
+  :root:not([data-reduce-motion="off"]) .dict-frame[data-kind="hold"] .dict-frame__cap i,
+  :root:not([data-reduce-motion="off"]) .dict-frame[data-kind="double"] .dict-frame__cap i:first-child {
+    background: var(--text-primary);
+  }
+}
+.dict-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke-control);
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The fold that opens the advanced options. */
+.dict-fold {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  margin-block: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 12px;
+  background: var(--surface-card);
+  text-align: start;
+  cursor: pointer;
+  color: var(--text-primary);
+  font: inherit;
+}
+.dict-fold b {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+.dict-fold small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.dict-fold:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+.dict-meter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  block-size: 36px;
+}
+.dict-meter i {
+  inline-size: 4px;
+  block-size: 14px;
+  border-radius: 2px;
+  background: #e5e5e5;
+}
+.dict-meter i[data-on] {
+  background: #201e25;
+}
+.dict-rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dict-rule__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.dict-rule__delay {
+  inline-size: 72px;
+}
+.dict-rule__field {
+  flex: 1;
+}
+.dict-rule__empty {
+  color: var(--text-secondary);
+}
+/* History: totals, notices, views, recordings. */
+.dict-hist__head-acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dict-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-stats__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dict-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.dict-stats__grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-inline-start: 1px solid var(--stroke-hairline);
+}
+.dict-stats__grid > div:first-child {
+  border-inline-start: 0;
+}
+.dict-stats__grid dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dict-stats__grid dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dict-hist__body {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dict-hist__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.dict-hist__tag {
+  color: var(--text-secondary);
+}
+.dict-hist__mark {
+  background: var(--surface-well);
+  border-radius: 4px;
+  padding-inline: 2px;
+  color: inherit;
+}
+.dict-hist__thead,
+.dict-hist__row--side {
+  display: grid;
+  grid-template-columns: 96px 1fr 1fr 80px;
+  gap: 24px;
+  align-items: start;
+}
+.dict-hist__thead {
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  background: var(--surface-well);
+  border-block-end: 1px solid var(--stroke-hairline);
+}
+.dict-hist__text--raw {
+  color: var(--text-secondary);
+}
+.dict-hist__rec {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-block-start: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  cursor: pointer;
+}
+.dict-hist__rec:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.dict-rec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  background: var(--surface-well);
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.dict-rec__player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dict-rec__bar {
+  flex: 1;
+  min-inline-size: 120px;
+  accent-color: var(--cta);
+}
+.dict-rec__time,
+.dict-rec__kept,
+.dict-rec__meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dict-rec__err {
+  color: var(--tag-red);
+  font-size: 12px;
+}
+.dict-rec__vhead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.dict-rec__vhead b {
+  color: var(--text-primary);
+}
+.dict-rec__vnote {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.dict-rec__versions ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-rec__version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke-hairline);
+  border-radius: var(--radius-control);
+  background: var(--surface-card);
+}
+.dict-rec__vtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  font-size: 13px;
+}
+.dict-rec__vtext span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dict-rec__inuse {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.dict-rec__again {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dict-rec__again-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dict-rec__spacer {
+  flex: 1;
+}
+.dict-rec__running {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.dict-recent {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dict-recent li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.dict-recent li + li {
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.dict-recent__text {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+}
+.dict-keep {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dict-keep__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.dict-keep__list {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+/* The state of the shortcut: a pill with a ring, the text says the state so colour is never the only signal. */
+.dict-status {
+  display: inline-flex;
+  align-items: center;
+  block-size: 36px;
+  padding-inline: 16px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-label-on-white);
+  background: var(--surface-card);
+  white-space: nowrap;
+}
+.dict-status[data-tone="problem"] {
+  color: var(--destructive);
+}
+.dict-status[data-tone="off"] {
+  color: var(--text-secondary);
+}
+.dict-status__acts {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* The 960 px window: totals in two rows, side by side text stacks, header buttons wrap. */
+@media (max-width: 1000px) {
+  .dict-stats__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dict-stats__grid > div:nth-child(3) {
+    border-inline-start: 0;
+  }
+  .dict-stats__grid > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--stroke-hairline);
+  }
+  .dict-hist__thead {
+    display: none;
+  }
+  .dict-hist__row--side {
+    grid-template-columns: 76px 1fr 80px;
+  }
+  .dict-hist__row--side .dict-hist__text {
+    grid-column: 2 / 3;
+  }
+  .dict-hist__head-acts {
+    flex-wrap: wrap;
+  }
+  .dict-hist__search {
+    inline-size: auto;
+    flex: 1;
+  }
+}
+.dict-model__more {
+  margin: 0;
+  padding: 16px;
+}

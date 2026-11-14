@@ -30,3 +30,37 @@ describe("testEnv updateUrl", () => {
     expect(testEnv().updateUrl).toBe("http://127.0.0.1:9/");
   });
 });
+
+describe("testEnv openaiBaseUrl", () => {
+  it("is honoured by a source checkout in test mode", () => {
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    vi.stubEnv("SPEAKKIT_OPENAI_BASE_URL", "http://127.0.0.1:9");
+    expect(testEnv().openaiBaseUrl).toBe("http://127.0.0.1:9");
+  });
+
+  it("is ignored without test mode", () => {
+    vi.stubEnv("SPEAKKIT_TEST", "");
+    vi.stubEnv("SPEAKKIT_OPENAI_BASE_URL", "http://127.0.0.1:9");
+    expect(testEnv().openaiBaseUrl).toBeUndefined();
+  });
+
+  it("is ignored by a packaged build, even in test mode", () => {
+    app.isPackaged = true;
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    vi.stubEnv("SPEAKKIT_OPENAI_BASE_URL", "http://127.0.0.1:9");
+    expect(testEnv().openaiBaseUrl).toBeUndefined();
+  });
+});
+
+describe("testEnv installedApps", () => {
+  it("is honoured by a source checkout in test mode only", () => {
+    vi.stubEnv("SPEAKKIT_INSTALLED_APPS", "[]");
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    expect(testEnv().installedApps).toBe("[]");
+    vi.stubEnv("SPEAKKIT_TEST", "");
+    expect(testEnv().installedApps).toBeUndefined();
+    vi.stubEnv("SPEAKKIT_TEST", "1");
+    app.isPackaged = true;
+    expect(testEnv().installedApps).toBeUndefined();
+  });
+});

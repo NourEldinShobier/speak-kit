@@ -2,6 +2,7 @@ import { useReducer } from "react";
 import { Banner, Button, Modal, Select, TextInput } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import { errorText } from "../../error-text";
+import { useT } from "../../i18n";
 import type { DocMeta } from "../../../shared/library/contract";
 import { library } from "./api";
 import { countWords, initPaste, pasteReducer } from "./add-model";
@@ -19,25 +20,18 @@ interface PasteProps {
 }
 
 function PasteForm({ speed, st, dispatch }: Pick<PasteProps, "speed"> & { st: ReturnType<typeof initPaste>; dispatch: (a: Parameters<typeof pasteReducer>[1]) => void }) {
+  const { t } = useT();
   const n = countWords(st.text);
   return (
     <div className="lib-form">
-      <TextInput label="Title (optional)" value={st.title} onChange={(e) => dispatch({ type: "title", title: e.target.value })} placeholder="Taken from the first line when empty" />
+      <TextInput label={t("lib.titleOptional")} value={st.title} onChange={(e) => dispatch({ type: "title", title: e.target.value })} placeholder={t("lib.titleHint")} />
       <label className="lm-field__label" htmlFor="lib-paste">
-        Text
+        {t("lib.text")}
       </label>
-      <textarea
-        id="lib-paste"
-        className="lib-textarea"
-        rows={9}
-        value={st.text}
-        onChange={(e) => dispatch({ type: "text", text: e.target.value })}
-        placeholder="Paste or type the text to read"
-        autoFocus
-      />
+      <textarea id="lib-paste" className="lib-textarea" rows={9} value={st.text} onChange={(e) => dispatch({ type: "text", text: e.target.value })} placeholder={t("lib.pastePlaceholder")} autoFocus />
       <div className="lib-form__row">
         <span className="lib-muted" data-testid="paste-count">
-          {n} words · about {n ? clock(estimateMs(n, speed)) : "0:00"} at {speed}x
+          {t("lib.count", { n, time: n ? clock(estimateMs(n, speed)) : "0:00", speed })}
         </span>
       </div>
       {st.error && <Banner tone="error">{st.error}</Banner>}
@@ -56,16 +50,17 @@ interface FooterProps {
 
 /** Voice dropdown at the left; Cancel, Add and Add and play grouped at the right. */
 export function PasteFooter({ voices, voice, empty, onVoice, onClose, onAdd }: FooterProps) {
+  const { t } = useT();
   return (
     <div className="lib-foot">
-      {voices.length > 0 && <Select label="Voice" options={voiceOptions(voices)} value={voice} onChange={onVoice} />}
+      {voices.length > 0 && <Select label={t("lib.voice")} options={voiceOptions(voices)} value={voice} onChange={onVoice} />}
       <div className="lib-foot__actions">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button disabled={empty} onClick={() => onAdd(false)}>
-          Add
+          {t("lib.addBtn")}
         </Button>
         <Button variant="primary" iconLeft="player-play" disabled={empty} onClick={() => onAdd(true)}>
-          Add and play
+          {t("lib.addPlay")}
         </Button>
       </div>
     </div>
@@ -73,6 +68,7 @@ export function PasteFooter({ voices, voice, empty, onVoice, onClose, onAdd }: F
 }
 
 export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdded }: PasteProps) {
+  const { t } = useT();
   const [st, dispatch] = useReducer(pasteReducer, defaultVoice, initPaste);
   const empty = !countWords(st.text);
   const add = async (play: boolean) => {
@@ -85,7 +81,7 @@ export function PasteDialog({ open, speed, voices, defaultVoice, onClose, onAdde
     <Modal
       open={open}
       onClose={onClose}
-      title="Add pasted text"
+      title={t("lib.pasteTitle")}
       width={560}
       footer={<PasteFooter voices={voices} voice={st.voice} empty={empty} onVoice={(v) => dispatch({ type: "voice", voice: v })} onClose={onClose} onAdd={(play) => void add(play)} />}
     >

@@ -1,5 +1,6 @@
-import type { ExtractReply, ReadDoc } from "@speakkit/protocol";
+import type { ExtractReply, ReadDoc, VoicePage } from "@speakkit/protocol";
 import { extract, extractFieldText, fieldSelection, findMainRoot, sentenceIndexAt, type Extraction } from "../../features/reader";
+import { MAX_PAGE_CHARS, pageAddress } from "../../features/voicechat";
 import type { Ctx, ReadMode } from "./context";
 
 const uid = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -107,6 +108,19 @@ export class Docs {
     c.docs.set(doc.docId, { ex, doc, blocks: [...new Set(doc.sentences.map((s) => s.block))].sort((a, b) => a - b) });
     while (c.docs.size > MAX_DOCS) c.docs.delete(c.docs.keys().next().value!);
     return doc;
+  }
+
+  /** The page and the selection as the text of a voice conversation: paragraphs apart by a blank line. The address has no query or fragment. */
+  voicePage(): VoicePage {
+    const text = (ex: Extraction | undefined) => {
+      const out: string[] = [];
+      ex?.sentences.forEach((s, i) => (i && s.block === ex.sentences[i - 1]!.block ? (out[out.length - 1] += ` ${s.text}`) : out.push(s.text)));
+      return out.join("\n\n");
+    };
+    const range = currentSelection();
+    const whole = this.extraction(undefined);
+    const selection = text(range && this.extraction(range));
+    return { url: pageAddress(location.href), title: whole?.title ?? document.title, text: text(whole).slice(0, MAX_PAGE_CHARS + 1000), ...(selection ? { selection } : {}) };
   }
 
   /** Reply to a background 'extract' request. */

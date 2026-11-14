@@ -9,6 +9,12 @@ vi.hoisted(() => {
   (globalThis as { window?: unknown }).window = { speakkit: {}, speakkitLibrary: {} };
 });
 
+// The test calls the component as a function, outside a render, so the language hook answers in English.
+vi.mock("./i18n", async (original) => {
+  const m = await original<typeof import("./i18n")>();
+  return { ...m, useT: () => m.ENGLISH };
+});
+
 import { QuitDialog } from "./QuitDialog";
 
 const here = dirname(fileURLToPath(import.meta.url));

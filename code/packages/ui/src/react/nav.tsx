@@ -1,6 +1,7 @@
 import { Tabs as RTabs, ToggleGroup as RToggleGroup } from "radix-ui";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import type { IconName } from "../icons";
+import { onArrowKeys } from "./arrow-keys";
 import { Badge } from "./display";
 import { cx, Icon } from "./shared";
 
@@ -23,7 +24,8 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
     <RTabs.Root value={value} onValueChange={onChange} activationMode="automatic">
       <RTabs.List aria-label={label} className={cx("lm-tabs", className)}>
         {items.map((it) => (
-          <RTabs.Trigger key={it.id} value={it.id} className="lm-tab">
+          // The panels live in the page, not in this component, so the reference Radix adds to a missing panel is left out.
+          <RTabs.Trigger key={it.id} value={it.id} className="lm-tab" aria-controls={undefined}>
             {it.label}
           </RTabs.Trigger>
         ))}
@@ -79,7 +81,7 @@ export function Segmented({ items, value, onChange, label, variant = "settings",
 
 export function SidebarNav({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
   return (
-    <nav aria-label={label} className={cx("lm-nav", className)}>
+    <nav aria-label={label} className={cx("lm-nav", className)} onKeyDown={onArrowKeys(".lm-nav__item")}>
       {children}
     </nav>
   );

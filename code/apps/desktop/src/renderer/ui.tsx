@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Button, Modal } from "@speakkit/ui";
 import type { AppState, PreviewAudio } from "../shared/ipc";
 import { toDesktopError } from "../shared/errors";
 import { errorText } from "./error-text";
@@ -47,78 +46,6 @@ export function playButton(status: string): { name: "refresh" | "player-pause" |
   if (status === "finished") return { name: "refresh", label: "Read again" };
   if (status === "playing" || status === "preparing") return { name: "player-pause", label: "Pause" };
   return { name: "player-play", label: "Play" };
-}
-
-const mask = (t: string) => (t ? `${"•".repeat(14)}-${t.slice(-4)}` : "starting…");
-
-function RegenerateModal({ open, busy, onClose, onConfirm }: { open: boolean; busy: boolean; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Regenerate the pairing token?"
-      width={440}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="danger" loading={busy} onClick={onConfirm}>
-            Regenerate
-          </Button>
-        </>
-      }
-    >
-      <p className="sk-modal-text" style={{ margin: 0 }}>
-        Every paired browser stops working until you paste the new token in its options.
-      </p>
-    </Modal>
-  );
-}
-
-/** Pairing token: masked until revealed. Regenerate can ask for confirmation (Settings) or act at once (Home). */
-export function TokenField({ token, regenerate, confirmRegenerate, onCopied }: { token: string; regenerate?: boolean; confirmRegenerate?: boolean; onCopied?: () => void }) {
-  const [shown, setShown] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [ask, setAsk] = useState(false);
-  const doRegenerate = async () => {
-    setBusy(true);
-    try {
-      await api.regenerateToken();
-      setShown(false);
-    } finally {
-      setBusy(false);
-      setAsk(false);
-    }
-  };
-  return (
-    <div className="sk-token">
-      <div className="sk-token__box" data-testid="token" data-revealed={shown}>
-        {shown ? token : mask(token)}
-      </div>
-      <Button iconLeft={shown ? "eye-off" : "eye"} aria-pressed={shown} onClick={() => setShown(!shown)}>
-        {shown ? "Hide" : "Reveal"}
-      </Button>
-      <Button
-        variant="primary"
-        iconLeft="copy"
-        disabled={!token}
-        onClick={async () => {
-          await api.copy(token);
-          setCopied(true);
-          onCopied?.();
-          setTimeout(() => setCopied(false), 1500);
-        }}
-      >
-        {copied ? "Copied" : "Copy"}
-      </Button>
-      {regenerate && (
-        <Button iconLeft="refresh" disabled={busy} onClick={() => (confirmRegenerate ? setAsk(true) : doRegenerate())}>
-          Regenerate
-        </Button>
-      )}
-      {confirmRegenerate && <RegenerateModal open={ask} busy={busy} onClose={() => setAsk(false)} onConfirm={doRegenerate} />}
-    </div>
-  );
 }
 
 export function Page({ title, lead, wide, action, children }: { title: string; lead?: ReactNode; wide?: boolean; action?: ReactNode; children: ReactNode }) {

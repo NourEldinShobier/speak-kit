@@ -1,0 +1,351 @@
+/* Speech models on the Engines page. Cards, rows and buttons come from @speakkit/ui; this file adds the model cards and the language table. */
+.sk-engines-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-block-start: 24px;
+}
+.sk-engines-section h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.sk-engines-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-block-size: 36px;
+}
+.sk-engines-section__head > span {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-engines-section__lead,
+.sk-engines-section__foot {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-engines-section__actions {
+  display: flex;
+  gap: 16px;
+}
+.sk-model-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* Two cards side by side; they stack when the column is narrow (960 px window). */
+.sk-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.sk-model {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  min-inline-size: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-ring);
+  transition: box-shadow 120ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sk-model:hover {
+    box-shadow:
+      0 0 0 1px var(--stroke-field),
+      0 4px 12px rgb(0 0 0 / 0.06);
+  }
+}
+.sk-badge--dark {
+  background: var(--cta);
+  color: var(--text-on-cta);
+}
+.sk-model__facts dd .lm-progress {
+  margin-block-start: 6px;
+}
+.sk-model.is-inuse {
+  box-shadow: 0 0 0 1px var(--stroke-focus-field);
+}
+.sk-model.is-blocked {
+  opacity: 0.72;
+}
+.sk-model__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sk-model__head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.sk-model__head p,
+.sk-model__rec {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-model__rec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sk-model__facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+}
+.sk-model__facts > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: baseline;
+}
+.sk-model__facts dt {
+  color: var(--text-tertiary);
+}
+.sk-model__facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.sk-model__details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-block-size: 24px;
+  border-radius: var(--radius-control);
+}
+.sk-model__details summary:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.sk-model__details .sk-model__facts {
+  margin-block-start: 8px;
+}
+.sk-model__measure {
+  margin-inline-start: 8px;
+}
+.sk-model__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-block-start: auto;
+}
+.sk-model__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.sk-model__actions--between {
+  justify-content: space-between;
+}
+.sk-model__installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.sk-model__note,
+.sk-model__failure p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.sk-model__failure {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sk-model__failure p {
+  color: var(--tag-red);
+}
+
+/* Language table. */
+.sk-table-wrap {
+  overflow-x: auto;
+}
+.sk-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sk-table th,
+.sk-table td {
+  padding: 12px 16px;
+  text-align: start;
+  font-weight: 400;
+  color: var(--text-primary);
+  border-block-start: 1px solid var(--stroke-hairline);
+  overflow-wrap: anywhere;
+}
+.sk-table thead th {
+  border-block-start: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--surface-well);
+}
+.sk-table tbody th {
+  font-weight: 500;
+}
+.sk-table td:last-child {
+  color: var(--text-secondary);
+}
+
+/* Performance. */
+.sk-advanced {
+  inline-size: 100%;
+  text-align: start;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  align-items: center;
+  justify-content: space-between;
+}
+.sk-advanced:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: -2px;
+}
+.sk-row-note {
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 12px;
+  color: var(--tag-orange);
+}
+.sk-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.sk-rules__note,
+.sk-rule__skip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-rule {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) auto;
+  gap: 8px 16px;
+  align-items: center;
+}
+.sk-rule__skip {
+  grid-column: 1 / -1;
+  color: var(--tag-orange);
+}
+
+/* Import dialog. */
+.sk-import {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sk-import p {
+  margin: 0;
+}
+.sk-import__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.sk-import__note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.sk-import__error {
+  color: var(--destructive);
+}
+.sk-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--text-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.sk-link:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.sk-model__wide {
+  inline-size: 100%;
+  justify-content: center;
+}
+
+.sk-compare {
+  overflow-x: auto;
+  border: 1px solid var(--stroke-control);
+  border-radius: 8px;
+}
+.sk-compare table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sk-compare th,
+.sk-compare td {
+  padding: 8px 16px;
+  text-align: start;
+  vertical-align: top;
+  border-bottom: 1px solid var(--stroke-control);
+  overflow-wrap: anywhere;
+}
+.sk-compare tbody th {
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sk-compare tr:last-child > * {
+  border-bottom: 0;
+}
+.sk-compare-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.sk-compare-pick legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sk-model__hash {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.sk-compare-pick__lead {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

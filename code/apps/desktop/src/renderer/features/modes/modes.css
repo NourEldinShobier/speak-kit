@@ -1,0 +1,218 @@
+/* Modes: the list, one mode, the rewrite card. */
+.modes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+.modes-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 56px;
+  text-align: start;
+}
+.modes-row--btn {
+  all: unset;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 56px;
+  padding-inline: var(--card-pad-x, 16px);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .modes-row--btn:hover {
+    background: var(--fill-hover);
+  }
+  .modes-word:hover .vocab-row__acts {
+    opacity: 1;
+  }
+}
+.modes-row--btn:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: -2px;
+}
+.modes-list li + li {
+  border-block-start: 1px solid var(--stroke-hairline);
+}
+.modes-tile {
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--radius-control);
+  background: var(--surface-well);
+  border: 1px solid var(--stroke-hairline);
+  font-size: 12px;
+  font-weight: 600;
+}
+.modes-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  font-size: 13px;
+}
+.modes-row__text span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modes-row__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.modes-note {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-control);
+  background: var(--surface-well);
+  border: 1px solid var(--stroke-hairline);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.modes-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modes-optin {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modes-optin__list {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 18px;
+}
+.modes-apps.lm-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.modes-site-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-basis: 100%;
+}
+.modes-site-form > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.modes-site-form > button {
+  margin-block-start: 22px;
+}
+.modes-apps__label {
+  font-size: 13px;
+  font-weight: 500;
+}
+.modes-apps__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-inline-size: 0;
+}
+.modes-apps__chips em {
+  color: var(--text-secondary);
+  font-style: normal;
+  font-size: 12px;
+}
+.modes-chip-x {
+  all: unset;
+  display: inline-grid;
+  place-items: center;
+  margin-inline-start: 4px;
+  cursor: pointer;
+  color: var(--icon-quiet);
+}
+.modes-chip-x:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  border-radius: 4px;
+}
+.modes-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.modes-suggest__btn {
+  all: unset;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: var(--radius-chip);
+  background: var(--chip-gray);
+  font-size: 12px;
+}
+.modes-suggest__btn:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+}
+.modes-word {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+.modes-word__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  min-inline-size: 0;
+}
+.modes-word__text span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.modes-warn {
+  background: var(--chip-orange);
+  color: var(--tag-orange);
+}
+.modes-word:focus-within .vocab-row__acts {
+  opacity: 1;
+}
+
+@media (max-width: 1000px) {
+  .modes-row,
+  .modes-row--btn {
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+  }
+  .modes-row__chips {
+    grid-column: 2 / 3;
+    justify-content: flex-start;
+  }
+}
+
+.modes-back {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.modes-back:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}

@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { foreignMacArch, icoFromPngs, importedPackages, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, fusePlan, icoFromPngs, importedPackages, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -28,6 +29,16 @@ describe("importedPackages", () => {
     `;
     expect(importedPackages(src)).toEqual(["electron-store", "electron-updater", "koffi", "valibot", "zod"]);
   });
+
+  it("ignores comment lines that say from followed by a quoted word", () => {
+    const src = `// src/cli/reads/time.ts\n/** Seconds from "90", "90.5" or "1:30"; undefined */\nimport x from "valibot";\n * from "zod"`;
+    expect(importedPackages(src)).toEqual(["valibot"]);
+  });
+
+  it("does not take a string that is the word from for an import", () => {
+    const src = `const [a, b] = [Number(q.get("from") ?? 0), Number(q.get("to") ?? 1)]; import x from "valibot"; Array.from("ab");`;
+    expect(importedPackages(src)).toEqual(["valibot"]);
+  });
 });
 
 describe("icoFromPngs", () => {
@@ -53,5 +64,80 @@ describe("foreignMacArch", () => {
     expect(foreignMacArch("darwin_x64", "arm64")).toBe(true);
     expect(foreignMacArch("darwin_arm64", "arm64")).toBe(false);
     for (const d of ["win32_x64", "linux-x64", "sharp-wasm32"]) expect(foreignMacArch(d, "arm64")).toBe(false);
+  });
+});
+
+describe("keepWhisperPackage", () => {
+  it("keeps the loader and both macOS builds on a Mac, and nothing for Windows", () => {
+    for (const d of ["whisper.node", "node-whisper-darwin-arm64", "node-whisper-darwin-x64"]) expect(keepWhisperPackage(d, true)).toBe(true);
+    for (const d of ["node-whisper-win32-x64", "node-whisper-win32-x64-vulkan", "node-whisper-win32-x64-cuda", "node-whisper-linux-x64", "node-whisper-wasm"])
+      expect(keepWhisperPackage(d, true)).toBe(false);
+  });
+
+  it("keeps the loader, the Vulkan and the CPU build on Windows, and drops CUDA, WASM and macOS", () => {
+    for (const d of ["whisper.node", "node-whisper-win32-x64", "node-whisper-win32-x64-vulkan"]) expect(keepWhisperPackage(d, false)).toBe(true);
+    for (const d of ["node-whisper-win32-x64-cuda", "node-whisper-win32-arm64", "node-whisper-darwin-arm64", "node-whisper-wasm"]) expect(keepWhisperPackage(d, false)).toBe(false);
+  });
+});
+
+describe("the lockfile and the macOS packaging config", () => {
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
+
+  it("pins the Metal whisper builds and the koffi builds for both Mac architectures", () => {
+    const lock = read("../../../pnpm-lock.yaml");
+    for (const pkg of ["@fugood/node-whisper-darwin-arm64@1.2.0-rc.2", "@fugood/node-whisper-darwin-x64@1.2.0-rc.2", "@koromix/koffi-darwin-arm64@", "@koromix/koffi-darwin-x64@"])
+      expect(lock).toContain(pkg);
+  });
+
+  it("builds a hardened-runtime app with the entitlements the engines need and the usage descriptions the system shows", () => {
+    const yml = read("../electron-builder.yml");
+    expect(yml).toContain("hardenedRuntime: true");
+    expect(yml).toContain("entitlements: build/entitlements.mac.plist");
+    expect(yml).toContain("entitlementsInherit: build/entitlements.mac.inherit.plist");
+    for (const key of ["NSMicrophoneUsageDescription", "NSAppleEventsUsageDescription", "NSScreenCaptureUsageDescription"]) expect(yml).toContain(key);
+    expect(yml).toContain("identity: null"); // unsigned builds keep working
+    for (const file of ["../build/entitlements.mac.plist", "../build/entitlements.mac.inherit.plist"]) {
+      const plist = read(file);
+      for (const key of ["allow-jit", "allow-unsigned-executable-memory", "disable-library-validation", "device.audio-input"]) expect(plist).toContain(key);
+    }
+  });
+});
+
+describe("macSigningPlan", () => {
+  it("signs helpers with the inherited entitlements, frameworks with none, and the main app last with the full set and no --deep", () => {
+    const plan = macSigningPlan({
+      app: "/o/Speak Kit.app",
+      nested: ["/o/Speak Kit.app/Contents/Frameworks/Helper.app", "/o/Speak Kit.app/Contents/Frameworks/Electron Framework.framework"],
+      entitlements: "main.plist",
+      inherit: "inherit.plist",
+    });
+    const base = ["--force", "--sign", "-", "--options", "runtime"];
+    expect(plan).toEqual([
+      [...base, "--entitlements", "inherit.plist", "/o/Speak Kit.app/Contents/Frameworks/Helper.app"],
+      [...base, "/o/Speak Kit.app/Contents/Frameworks/Electron Framework.framework"],
+      [...base, "--entitlements", "main.plist", "/o/Speak Kit.app"],
+    ]);
+    expect(plan.flat()).not.toContain("--deep");
+  });
+
+  it("signs a loose library with no entitlements", () => {
+    expect(macSigningPlan({ app: "a.app", nested: ["x/libffmpeg.dylib"], entitlements: "m", inherit: "i" })[0]).toEqual(["--force", "--sign", "-", "--options", "runtime", "x/libffmpeg.dylib"]);
+  });
+
+  it("signs only the app when there is nothing nested", () => {
+    expect(macSigningPlan({ app: "a.app", nested: [], entitlements: "m", inherit: "i" })).toHaveLength(1);
+  });
+});
+
+describe("fusePlan", () => {
+  it("turns RunAsNode off on macOS only and hardens the other fuses everywhere", () => {
+    expect(fusePlan(true)).toEqual({ RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableCookieEncryption: true });
+    expect(fusePlan(false)).toEqual({ ...fusePlan(true), RunAsNode: true });
+  });
+
+  it("runs the macOS command line inside the app binary instead of as plain Node", () => {
+    const shim = readFileSync(new URL("../cli-shim/speakkit", import.meta.url), "utf8");
+    expect(shim).toContain("--speakkit-cli");
+    expect(shim).not.toContain("ELECTRON_RUN_AS_NODE");
   });
 });

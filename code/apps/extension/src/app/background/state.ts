@@ -2,31 +2,10 @@ import type { BgToContent, ErrorCode, PlayerState, ReadDoc } from "@speakkit/pro
 import { tokens } from "@speakkit/ui/tokens";
 import { ERROR_TEXT } from "../../features/connection";
 import { loadSettings } from "../../features/settings";
+import { ignore } from "../../shared/ignore";
 import type { ExtraBroadcast, QueueItem } from "../../shared/internal";
+import { session } from "./session";
 import { idleFor, viewFor } from "./tabs";
-
-/**
- * What the worker knows about playback. The service worker is suspended after about 30 s idle and loses module variables,
- * so everything the UI needs after a wake-up is mirrored to chrome.storage.session and read back on demand.
- */
-const SESSION_STATE = "speakkit.lastState";
-const SESSION_DOC = "speakkit.lastDoc";
-const SESSION_QUEUE = "speakkit.queue";
-const SESSION_AUTOPLAY = "speakkit.autoPlay";
-
-const session = {
-  async get<T>(key: string): Promise<T | undefined> {
-    try {
-      return (await chrome.storage.session.get(key))[key] as T | undefined;
-    } catch {
-      return undefined; // session storage unavailable: callers fall back to the idle default
-    }
-  },
-  set(key: string, value: unknown): void {
-    // Losing the mirror only costs the state after a worker restart; the in-memory value is still right.
-    chrome.storage.session.set({ [key]: value }).catch(() => {});
-  },
-};
 
 // A badge cannot read CSS variables, so its colours come from the generated token table.
 const ACCENT = tokens.light["accent-default"];
@@ -37,58 +16,44 @@ export const idle = async (): Promise<PlayerState> => {
   return { status: "idle", sentenceIndex: 0, sentenceCount: 0, elapsedMs: 0, totalMs: 0, speed: s.speed, voice: s.voice, queueLength: 0 };
 };
 
-let lastState: PlayerState | undefined;
-let queue: QueueItem[] | undefined;
-let autoPlay: boolean | undefined;
-
-/** Reads storage once. Whatever was set while the read was in flight is newer than what it returned, so the first writer wins. */
-async function cached<T>(current: () => T | undefined, set: (v: T) => void, read: () => Promise<T>): Promise<T> {
-  const have = current();
-  if (have !== undefined) return have;
-  const stored = await read();
-  const now = current();
-  if (now !== undefined) return now;
-  set(stored);
-  return stored;
+/**
+ * What the worker knows about playback. The service worker is suspended after about 30 s idle and loses module variables,
+ * so everything the UI needs after a wake-up is mirrored to chrome.storage.session and read back on demand.
+ */
+/** A value mirrored to session storage. Reads storage once; whatever was set while the read was in flight is newer than what it returned, so the first writer wins. */
+function mirror<T>(key: string, fallback: () => T | Promise<T>) {
+  let value: T | undefined;
+  return {
+    peek: () => value,
+    set(v: T) {
+      value = v;
+      void session.set(key, v);
+    },
+    async get(): Promise<T> {
+      if (value !== undefined) return value;
+      const stored = (await session.get<T>(key)) ?? (await fallback());
+      return (value ??= stored);
+    },
+  };
 }
 
-export const getState = (): Promise<PlayerState> =>
-  cached(
-    () => lastState,
-    (v) => (lastState = v),
-    async () => (await session.get<PlayerState>(SESSION_STATE)) ?? (await idle()),
-  );
+const player = mirror("speakkit.lastState", idle);
+const queue = mirror<QueueItem[]>("speakkit.queue", () => []);
+const autoPlay = mirror("speakkit.autoPlay", () => true);
+export const getState = player.get;
+export const getQueue = queue.get;
+export const setQueue = queue.set;
+export const getAutoPlay = autoPlay.get;
+export const setAutoPlay = autoPlay.set;
 
-export const getQueue = (): Promise<QueueItem[]> =>
-  cached(
-    () => queue,
-    (v) => (queue = v),
-    async () => (await session.get<QueueItem[]>(SESSION_QUEUE)) ?? [],
-  );
-export function setQueue(q: QueueItem[]): void {
-  queue = q;
-  session.set(SESSION_QUEUE, q);
-}
-
-export const getAutoPlay = (): Promise<boolean> =>
-  cached(
-    () => autoPlay,
-    (v) => (autoPlay = v),
-    async () => (await session.get<boolean>(SESSION_AUTOPLAY)) ?? true,
-  );
-export function setAutoPlay(on: boolean): void {
-  autoPlay = on;
-  session.set(SESSION_AUTOPLAY, on);
-}
-
-export const lastDoc = () => session.get<ReadDoc>(SESSION_DOC);
-export const rememberDoc = (doc: ReadDoc) => session.set(SESSION_DOC, doc);
+export const lastDoc = () => session.get<ReadDoc>("speakkit.lastDoc");
+export const rememberDoc = (doc: ReadDoc) => session.set("speakkit.lastDoc", doc);
 
 export const sendToPages = (m: BgToContent | ExtraBroadcast) => {
-  chrome.runtime.sendMessage(m).catch(() => {}); // no extension page is open to receive it
+  chrome.runtime.sendMessage(m).catch(ignore); // no extension page is open to receive it
 };
 export const sendToTab = (tabId: number | undefined, m: BgToContent) => {
-  if (tabId !== undefined) chrome.tabs.sendMessage(tabId, m).catch(() => {}); // the tab closed or has no content script
+  if (tabId !== undefined) chrome.tabs.sendMessage(tabId, m).catch(ignore); // the tab closed or has no content script
 };
 
 const BADGE_TEXT: Partial<Record<PlayerState["status"], string>> = { playing: "▶", paused: "II", error: "!" };
@@ -101,9 +66,8 @@ function badge(state: PlayerState) {
 
 export function publishState(state: PlayerState) {
   // Read the previous reader before the mirror below replaces it; after a worker restart that is storage, not memory.
-  const before = lastState ? Promise.resolve(lastState) : session.get<PlayerState>(SESSION_STATE);
-  lastState = state;
-  session.set(SESSION_STATE, state);
+  const before = player.peek() ? Promise.resolve(player.peek()) : session.get<PlayerState>("speakkit.lastState");
+  player.set(state);
   badge(state);
   sendToPages({ t: "state", state });
   sendToTab(state.tabId, { t: "state", state });
@@ -118,11 +82,14 @@ export const getTabState = async (tabId: number) => viewFor(await getState(), ta
 
 const optionalTab = (tabId: number | undefined) => (tabId === undefined ? {} : { tabId });
 
+/** Nothing is being read: the player is idle, has finished or failed. */
+export const isSettled = (s: PlayerState) => s.status === "idle" || s.status === "finished" || s.status === "error";
+
 export async function reportError(code: ErrorCode, tabId?: number) {
   const base = await getState();
   const error = { code, message: ERROR_TEXT[code] };
   // Another tab is being read: its audio keeps playing, so the failure is shown only in the tab that asked.
-  if (tabId !== undefined && base.tabId !== undefined && base.tabId !== tabId && base.status !== "idle" && base.status !== "finished" && base.status !== "error") {
+  if (tabId !== undefined && base.tabId !== undefined && base.tabId !== tabId && !isSettled(base)) {
     sendToTab(tabId, { t: "state", state: { ...idleFor(base, tabId), status: "error", error } });
     return;
   }

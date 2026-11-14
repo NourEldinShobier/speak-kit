@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Speak Kit capture</title>
+    <style>
+      html,
+      body {
+        background: transparent;
+        margin: 0;
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        block-size: 100vh;
+        padding: 8px;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="lm"></div>
+    <script type="module" src="./features/capture/capsule-main.tsx"></script>
+  </body>
+</html>

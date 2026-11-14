@@ -1,16 +1,28 @@
-import type { ErrorCode, PlayerCommand, PlayerState, SentenceStart } from "@speakkit/protocol";
+import type { ErrorCode, PlayerCommand, PlayerState, SentenceStart, VoiceDown, VoiceUp } from "@speakkit/protocol";
 import type { PlayerConfig, QueueItem } from "@speakkit/player";
 
 export type { PlayerConfig, QueueItem };
 
 /** Messages between the service worker and the offscreen player, plus extra worker requests beyond protocol/messages.ts. */
 
-export type ToOffscreen = { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig } | { to: "offscreen"; query: "queue" | "state" } | { to: "offscreen"; autoPlay: boolean };
+/** A voice chat command for the voice session in the offscreen document: what the page asked, or the result of the microphone window. */
+export type VoiceCommand = VoiceUp | { t: "mic"; ok: boolean };
+
+/** The port the voice document holds open to the worker: its heartbeat keeps the worker awake, and a closed port tells the document the worker is gone. */
+export const VOICE_DOC_PORT = "speakkit-voice-doc";
+
+export type ToOffscreen =
+  | { to: "offscreen"; voice: VoiceCommand; tabId: number; sid: number; cfg?: { port: number; token: string } }
+  | { to: "offscreen"; command: PlayerCommand; cfg: PlayerConfig }
+  | { to: "offscreen"; query: "queue" | "state" }
+  | { to: "offscreen"; autoPlay: boolean };
 
 export type FromOffscreen =
   | { from: "offscreen"; kind: "state"; state: PlayerState }
   | { from: "offscreen"; kind: "sentence-start"; start: SentenceStart; tabId?: number }
   | { from: "offscreen"; kind: "queue"; queue: QueueItem[] }
+  /** the voice session `sid` of `tabId` (the worker numbers sessions, so a late message of a dead one is ignored): what its page shows, that the microphone window is needed, or that the session is over */
+  | { from: "offscreen"; kind: "voice"; tabId: number; sid: number; msg: VoiceDown | { t: "need-mic" } | { t: "closed" } }
   /** playback has been stopped for 60 s and nothing is queued: the worker may close the document */
   | { from: "offscreen"; kind: "idle" };
 

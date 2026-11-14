@@ -1,15 +1,42 @@
 import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
+import type { AutomationInfo, CommandLineAction } from "./control/info";
 import type { DesktopError } from "./errors";
-import type { Config, ConfigPatch } from "./schemas";
+import type { Config } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
 import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
+import type { MicAccess } from "./settings/permissions";
+import type { Resources } from "./settings/resources";
+import type { SettingsNotice } from "./settings/settings-file";
+import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
 export type { Config, ConfigPatch } from "./schemas";
-export const PAGES = ["home", "library", "voices", "engines", "browser", "settings"] as const;
-export const SETTINGS_SUBS = ["general", "voice", "shortcuts", "notifications", "memory", "browser", "storage", "about"] as const;
+
+/** The answer to a change of settings made through the one validator. */
+export type SettingsResult = { ok: true } | { ok: false; message: string; shortcut?: Extract<ShortcutResult, { ok: false }> };
+
+/** What importing a settings file did: how many settings were applied, which of them differ from before, and which names were left out. */
+export type ImportOutcome = { status: "imported"; applied: number; changed: string[]; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
+export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "capture", "settings"] as const;
+export const SETTINGS_SUBS = [
+  "general",
+  "voice",
+  "shortcuts",
+  "notifications",
+  "accessibility",
+  "performance",
+  "storage",
+  "privacy",
+  "meetings",
+  "automation",
+  "experiments",
+  "browser",
+  "diagnostics",
+  "whatsnew",
+  "about",
+] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
@@ -50,6 +77,8 @@ export interface AppState {
   exports: ExportView[];
   /** Folder the export dialog starts in. */
   exportDir: string;
+  /** Bad settings repaired at start, or a file from a newer app; shown as a banner in Settings until dismissed. */
+  settingsNotice: SettingsNotice | null;
   /** False when running from source: no installer, no updates, no bundled extension. */
   packaged: boolean;
 }
@@ -79,13 +108,15 @@ export interface Metrics {
 
 export type ShortcutResult = { ok: true } | { ok: false; error: DesktopError; conflict?: ShortcutConflict };
 
-export type ExternalLink = "webstore";
-export type OpenPath = "models" | "logs";
+export type ExternalLink = "webstore" | "release-notes" | "issues" | "security";
+export type OpenPath = "models" | "logs" | "data";
 
 /** Main to renderer, besides the state stream. */
 export type UiEvent =
   | { type: "nav"; page: Page; sub?: SettingsSub }
   | { type: "confirm-quit" }
+  /** A meeting capsule asked to open a meeting in History. */
+  | { type: "open-meeting"; id: string }
   | { type: "pause" }
   | { type: "export"; text?: string }
   /** To the mini player, which owns the audio output. */
@@ -95,10 +126,21 @@ export type UiEvent =
 /** The only surface the renderer gets (window.speakkit). Every call is an ipcMain.handle on `speakkit:<name>`, validated with ARGS in schemas.ts. */
 export interface Api {
   state(): Promise<AppState>;
-  patchConfig(patch: ConfigPatch): Promise<AppState>;
+  /** A change of settings from a Settings page: checked by the settings registry, the same one the command line uses. Keys are `voice`, `speed`... or `dictation.<key>`. */
+  applySettings(change: Record<string, unknown>): Promise<SettingsResult>;
+  /** Asks for a settings file and applies the settings in it that are valid. */
+  importSettings(): Promise<ImportOutcome>;
   setLaunchAtLogin(on: boolean): Promise<AppState>;
   setPort(port: number): Promise<AppState>;
   regenerateToken(): Promise<AppState>;
+  automationInfo(): Promise<AutomationInfo>;
+  /** A new token for the command line and MCP server; the old one stops working at once. */
+  resetControlToken(): Promise<AutomationInfo>;
+  commandLine(action: CommandLineAction): Promise<AutomationInfo>;
+  /** Writes the agent skill file: a first install or an update. */
+  installAgentSkill(): Promise<AutomationInfo>;
+  /** Opens a terminal that runs the try-it command. Rejects when no terminal could be opened. */
+  testInTerminal(): Promise<void>;
   retryEngine(): Promise<AppState>;
   /** Starts the model download (and load) when it is not on disk yet. Idempotent. */
   downloadModel(): Promise<AppState>;
@@ -111,11 +153,12 @@ export interface Api {
   /** Stops the engine and deletes the downloaded model, OCR data and exports. The library and settings stay. */
   deleteDownloads(): Promise<DownloadsReport>;
   metrics(): Promise<Metrics>;
+  /** Memory per process and per model, and what this computer offers (Settings, Performance). */
+  resources(): Promise<Resources>;
   hideWindow(): Promise<void>;
   /** Really quits (after the renderer's confirmation dialog). */
   quit(): Promise<void>;
   setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
-  resetShortcuts(): Promise<AppState>;
   /** Controls the current reading (mini player, palette). */
   reader(cmd: ReaderCommand): Promise<void>;
   /** The mini player reports what its audio output is doing. */
@@ -133,16 +176,40 @@ export interface Api {
   pickFolder(current: string): Promise<string | null>;
   /** Reveals the bundled extension folder and opens the browser extensions page. Returns the folder, or null when not packaged. */
   installExtension(): Promise<string | null>;
+  /** Voice chat key: only whether one is saved. The key itself never comes back to the renderer. */
+  voiceChatStatus(): Promise<VoiceChatKeyStatus>;
+  /** Encrypts the key with the operating system and stores it; refused when the computer cannot encrypt. */
+  voiceChatSetKey(key: string): Promise<VoiceChatSaveResult>;
+  voiceChatRemoveKey(): Promise<VoiceChatKeyStatus>;
+  /** Asks OpenAI whether the saved key is accepted. */
+  voiceChatTestKey(): Promise<VoiceChatTestResult>;
+  /** The log lines since the last read; `lines` is null when the file did not grow, so the view stays as it is. */
+  diagnosticsLog(sinceSize: number): Promise<{ size: number; lines: string[] | null }>;
+  /** The redacted text Copy diagnostics puts on the clipboard. */
+  diagnosticsReport(): Promise<string>;
+  clearActivity(): Promise<AppState>;
+  dismissSettingsNotice(): Promise<AppState>;
+  micAccess(): Promise<MicAccess>;
+  /** Opens the operating system page where the microphone permission is changed; false when this system has none. */
+  openSystemSettings(which: "microphone"): Promise<boolean>;
+  /** Relaunches the app (an experiment that needs a restart). */
+  restartApp(): Promise<void>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
 
 export const METHODS = [
   "state",
-  "patchConfig",
+  "applySettings",
+  "importSettings",
   "setLaunchAtLogin",
   "setPort",
   "regenerateToken",
+  "automationInfo",
+  "resetControlToken",
+  "commandLine",
+  "installAgentSkill",
+  "testInTerminal",
   "retryEngine",
   "downloadModel",
   "voices",
@@ -153,10 +220,10 @@ export const METHODS = [
   "storage",
   "deleteDownloads",
   "metrics",
+  "resources",
   "hideWindow",
   "quit",
   "setShortcut",
-  "resetShortcuts",
   "reader",
   "readerStarted",
   "readerDone",
@@ -169,6 +236,17 @@ export const METHODS = [
   "exportReveal",
   "pickFolder",
   "installExtension",
+  "voiceChatStatus",
+  "voiceChatSetKey",
+  "voiceChatRemoveKey",
+  "voiceChatTestKey",
+  "diagnosticsLog",
+  "diagnosticsReport",
+  "clearActivity",
+  "dismissSettingsNotice",
+  "micAccess",
+  "openSystemSettings",
+  "restartApp",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

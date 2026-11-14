@@ -2,18 +2,21 @@ import { Banner, Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../shared/ipc";
 import { DOT_CLASS, engineDetail, engineView } from "../shared/engine-view";
 import { errorText } from "./error-text";
-import { api, Page, TokenField } from "./ui";
+import { useT } from "./i18n";
+import { api, Page } from "./ui";
+import { TokenField } from "./TokenField";
 
 function ServerAlerts({ s }: { s: AppState }) {
+  const { t } = useT();
   return (
     <>
       {s.serverError && (
         <Banner
           tone="error"
-          title="The server could not start"
+          title={t("home.serverFailed")}
           action={
             <Button size="sm" onClick={() => api.retryEngine()}>
-              Retry
+              {t("home.retry")}
             </Button>
           }
         >
@@ -21,8 +24,8 @@ function ServerAlerts({ s }: { s: AppState }) {
         </Banner>
       )}
       {s.portFallback && (
-        <Banner tone="warning" title={`Port ${s.config.preferredPort} is in use`}>
-          Speak Kit is using {s.port} instead. Enter {s.port} in the extension options under Port.
+        <Banner tone="warning" title={t("home.portBusy", { port: String(s.config.preferredPort) })}>
+          {t("home.portBusyBody", { actual: String(s.port) })}
         </Banner>
       )}
     </>
@@ -30,27 +33,29 @@ function ServerAlerts({ s }: { s: AppState }) {
 }
 
 function ServerStat({ s }: { s: AppState }) {
+  const { t } = useT();
   const running = !!s.port && !!s.health;
   return (
     <div className="sk-stat" data-testid="server-status">
-      <div className="sk-stat__k">Server</div>
+      <div className="sk-stat__k">{t("home.server")}</div>
       <div className="sk-stat__v">
         <span className={`sk-dot ${running ? "" : "is-err"}`} />
-        {running ? "Running" : "Stopped"}
+        {running ? t("home.running") : t("home.stopped")}
       </div>
       <div className="sk-stat__d">
-        Listening on <code data-testid="server-address">127.0.0.1:{s.port || "-"}</code>
+        {t("home.listening")} <code data-testid="server-address">127.0.0.1:{s.port || "-"}</code>
       </div>
     </div>
   );
 }
 
 function EngineStat({ s }: { s: AppState }) {
+  const { t } = useT();
   const eng = s.health?.engine;
   const v = engineView(s.health, s.serverError);
   return (
     <div className="sk-stat" data-testid="engine-status">
-      <div className="sk-stat__k">Voice engine</div>
+      <div className="sk-stat__k">{t("home.engine")}</div>
       <div className="sk-stat__v">
         <span className={`sk-dot ${DOT_CLASS[v.tone]}`} />
         {v.label}
@@ -61,7 +66,7 @@ function EngineStat({ s }: { s: AppState }) {
           <>
             {" "}
             <Button size="sm" onClick={() => api.retryEngine()}>
-              Retry
+              {t("home.retry")}
             </Button>
           </>
         )}
@@ -69,7 +74,7 @@ function EngineStat({ s }: { s: AppState }) {
           <>
             {" "}
             <Button size="sm" onClick={() => api.downloadModel()}>
-              Download
+              {t("home.download")}
             </Button>
           </>
         )}
@@ -79,28 +84,29 @@ function EngineStat({ s }: { s: AppState }) {
 }
 
 function InstallSection({ s, go }: { s: AppState; go: (p: "engines" | "browser") => void }) {
+  const { t } = useT();
   return (
-    <SettingsSection title="Install the extension" description="Add Speak Kit from the Chrome Web Store (also Edge and Brave). Then pin it to the toolbar.">
+    <SettingsSection title={t("home.installTitle")} description={t("home.installDesc")}>
       <SettingRow
-        label="Speak Kit for Chrome"
-        description={s.pairing.lastSeenMs ? "Connected" : "Not connected yet"}
+        label={t("home.chrome")}
+        description={s.pairing.lastSeenMs ? t("home.connected") : t("home.notConnected")}
         control={
           <div className="sk-row-actions">
             <Button size="sm" onClick={() => go("browser")}>
-              Pair
+              {t("home.pair")}
             </Button>
             <Button size="sm" iconLeft="external-link" onClick={() => api.openExternal("webstore")}>
-              Open Web Store
+              {t("home.openStore")}
             </Button>
           </div>
         }
       />
       <SettingRow
-        label="Engines"
-        description="Kokoro-82M is the voice engine. Manage its download and memory here."
+        label={t("home.engines")}
+        description={t("home.enginesDesc")}
         control={
           <Button size="sm" onClick={() => go("engines")}>
-            Manage
+            {t("home.manage")}
           </Button>
         }
       />
@@ -109,14 +115,15 @@ function InstallSection({ s, go }: { s: AppState; go: (p: "engines" | "browser")
 }
 
 export function Home({ s, go }: { s: AppState; go: (p: "engines" | "browser") => void }) {
+  const { t } = useT();
   return (
-    <Page title="Home" lead="Speak Kit runs a private voice server on this computer. Your browser extension talks to it.">
+    <Page title={t("page.home")} lead={t("home.lead")}>
       <ServerAlerts s={s} />
       <div className="sk-grid2">
         <ServerStat s={s} />
         <EngineStat s={s} />
       </div>
-      <SettingsSection title="Pairing token" description="Paste this token in the extension under Options > General > Pairing token.">
+      <SettingsSection title={t("home.tokenTitle")} description={t("home.tokenDesc")}>
         <div className="sk-pad">
           <TokenField token={s.token} regenerate />
         </div>

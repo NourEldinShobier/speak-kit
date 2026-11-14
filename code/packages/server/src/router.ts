@@ -1,8 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { AutomationHost } from "./automation";
 import type { EngineRegistry } from "./engines";
 import type { ExportManager } from "./export";
 import { HttpError } from "./http";
 import type { StreamQueue } from "./stream-queue";
+import type { PageContextHost } from "./page-context";
+import type { DevPages } from "./dev-pages";
+import type { StreamSessions } from "./streams/sessions";
+import type { MintLimiter, VoiceChatService } from "./voice-chat";
 
 /** What every route handler can reach. */
 export interface Services {
@@ -10,6 +15,21 @@ export interface Services {
   exporter: ExportManager;
   queue: StreamQueue;
   version: string;
+  /** Absent when the host app has no voice chat. */
+  voiceChat: VoiceChatService | undefined;
+  /** Absent when the host app lends no reader; the automation routes answer "unsupported". */
+  automation: AutomationHost | undefined;
+  /** Absent when the host app uses no page address; the route accepts the report and drops it. */
+  pageContext: PageContextHost | undefined;
+  /** Absent when the host app lends no speech engine; the stream routes answer "unsupported". */
+  streams: StreamSessions | undefined;
+  /** What development pages reported lately (memory only). */
+  devPages: DevPages;
+  /** Open event streams. */
+  events: { open: number };
+  heartbeatMs: number;
+  mintLimiter: MintLimiter;
+  lookLimiter: MintLimiter;
   deadlines: { controlMs: number; streamIdleMs: number };
 }
 

@@ -1,0 +1,109 @@
+/* The capture capsule: one pill with the target chip, the state line and the buttons. Used by the capsule window and the playground. */
+.cap-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-block-size: 52px;
+  box-sizing: border-box;
+  padding: 8px;
+  padding-inline-start: 8px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 999px;
+  background: var(--surface-card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+  color: var(--text-primary);
+  font-size: 13px;
+  max-inline-size: 100%;
+}
+.cap-pill__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  block-size: 36px;
+  box-sizing: border-box;
+  padding-inline: 12px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 999px;
+  white-space: nowrap;
+  -webkit-app-region: drag;
+}
+.cap-pill__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-inline-size: 180px;
+}
+.cap-pill__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--tag-red);
+  animation: cap-beat 1.2s ease-in-out infinite;
+}
+@keyframes cap-beat {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduce-motion="off"]) .cap-pill__dot {
+    animation: none;
+  }
+}
+.cap-pill__text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.cap-pill__text small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.cap-pill[data-tone="error"] .cap-pill__text > span:first-child {
+  color: var(--tag-red);
+  font-weight: 600;
+}
+.cap-pill__steps {
+  display: flex;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+.cap-pill__steps [data-state="active"] {
+  color: var(--text-primary);
+}
+.cap-pill__timer {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.cap-pill__btn {
+  block-size: 36px;
+  box-sizing: border-box;
+  padding-inline: 14px;
+  border: 1px solid var(--stroke-control);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cap-pill__btn:hover:not(:disabled) {
+    background: var(--fill-hover);
+  }
+}
+.cap-pill__btn:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+}
+.cap-pill__btn:disabled {
+  color: var(--text-placeholder);
+  cursor: default;
+}
+.cap-pill__btn[aria-pressed="true"] {
+  background: var(--fill-selected);
+}
+.cap-pill__btn[data-primary] {
+  background: #201e25;
+  border-color: #201e25;
+  color: var(--text-on-accent);
+}

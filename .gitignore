@@ -14,3 +14,7 @@ code/apps/extension/test-results/
 
 # desktop packaging output
 code/apps/desktop/release/
+
+# mutation testing output
+code/reports/
+code/node_modules/.stryker-tmp/

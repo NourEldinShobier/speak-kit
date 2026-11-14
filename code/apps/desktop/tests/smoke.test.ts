@@ -26,6 +26,7 @@ describe("desktop app", () => {
     await page.getByRole("button", { name: /Get started/ }).click();
     await page.getByRole("heading", { name: "Kokoro-82M is ready" }).waitFor();
     await page.getByRole("button", { name: /^Continue/ }).click();
+    await page.getByRole("button", { name: "Skip dictation" }).click();
 
     await page.getByRole("heading", { name: "Connect your browser" }).waitFor();
     const cont = page.getByRole("button", { name: /^Continue/ });
@@ -49,7 +50,7 @@ describe("desktop app", () => {
         headers: t ? { Authorization: `Bearer ${t}` } : {},
       }).then((r) => r.status);
     expect(await auth(token)).toBe(204);
-    expect(await auth("wrong")).toBe(401);
+    expect(await auth("wrong")).toBe(404);
 
     await cont.click();
     await page.getByRole("heading", { name: "You're all set" }).waitFor();
@@ -80,7 +81,7 @@ describe("desktop app", () => {
       fetch(`http://127.0.0.1:${port}/v1/auth/check`, {
         headers: { Authorization: `Bearer ${t}` },
       }).then((r) => r.status);
-    expect(await status(before)).toBe(401);
+    expect(await status(before)).toBe(404);
     expect(await status(after)).toBe(204);
     expect((await health(port)).engine.state).toBe("ready");
   });

@@ -3,6 +3,7 @@ import { Modal } from "@speakkit/ui";
 import type { ExportConflict, ExportView } from "../../../shared/export";
 import type { AppState } from "../../../shared/ipc";
 import type { MP3_KBPS } from "../../../shared/schemas";
+import { useT } from "../../i18n";
 import { api, cleanError } from "../../ui";
 import { doneView, endedView, renderingView } from "./JobViews";
 import { existsView, optionsView, type ViewProps } from "./OptionsView";
@@ -24,6 +25,8 @@ async function startExport({ s, st, dispatch }: { s: AppState; st: ExportState; 
       mp3Kbps: form.kbps as (typeof MP3_KBPS)[number],
       dir: form.dir,
       name: form.name,
+      captions: form.captions,
+      chapters: form.format === "mp3" && form.chapters,
       ...(target.exists && conflict ? { conflict } : {}),
     });
     dispatch({ type: "started", jobId: v.id });
@@ -44,7 +47,7 @@ function useExport(s: AppState, open: ExportOpen) {
 }
 
 function jobView(p: ViewProps, job: ExportView) {
-  const jobProps = { job, onClose: p.onClose, dispatch: p.dispatch };
+  const jobProps = { job, onClose: p.onClose, dispatch: p.dispatch, t: p.t };
   if (job.stage === "done") return doneView(jobProps);
   if (job.stage === "error" || job.stage === "cancelled") return endedView(jobProps);
   return renderingView(jobProps);
@@ -53,20 +56,21 @@ function jobView(p: ViewProps, job: ExportView) {
 function selectView(p: ViewProps, job: ExportView | undefined) {
   const kind = exportViewKind(p.st.phase, job);
   if (job && p.st.phase.kind === "job") return { kind, ...jobView(p, job) };
-  if (p.st.phase.kind === "exists") return { kind, ...existsView({ dispatch: p.dispatch, start: p.start, target: p.st.phase.target }) };
+  if (p.st.phase.kind === "exists") return { kind, ...existsView({ dispatch: p.dispatch, start: p.start, t: p.t, target: p.st.phase.target }) };
   return { kind, ...optionsView(p) };
 }
 
 /** Export audio: options, "file exists", rendering with progress, done. Closing while it renders keeps it running in the background. */
 export function ExportDialog({ s, open, onClose }: { s: AppState; open: ExportOpen; onClose(): void }) {
+  const { t } = useT();
   const { st, dispatch, start } = useExport(s, open);
   const jobId = st.phase.kind === "job" ? st.phase.id : null;
   const { kind, body, footer } = selectView(
-    { s, st, dispatch, start, onClose },
+    { s, st, dispatch, start, onClose, t },
     s.exports.find((e) => e.id === jobId),
   );
   return (
-    <Modal open onClose={onClose} title={exportTitle(kind)} width={560} footer={footer}>
+    <Modal open onClose={onClose} title={exportTitle(kind, t)} width={560} footer={footer}>
       {body}
     </Modal>
   );
