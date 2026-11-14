@@ -6,6 +6,7 @@ import { errorText } from "../../error-text";
 import { recordKey, resetText, showAccelerator, SHORTCUT_IDS, type ShortcutId } from "../../../shared/shortcuts";
 import { useT, type Translator } from "../../i18n";
 import { api, Page } from "../../ui";
+import { resetShortcuts } from "../../change";
 
 const Keys = ({ accelerator, platform, scope }: { accelerator: string; platform: string; scope: "app" | "global" }) => (
   <span className="sk-keys">
@@ -155,7 +156,7 @@ export function ShortcutsPage({ s }: { s: AppState }) {
           className="lm-row--control"
           label={t("shortcuts.resetAll")}
           description={t("shortcuts.resetHint", { keys: resetText(s.platform, t("shortcuts.and")) })}
-          control={<Button onClick={() => api.resetShortcuts()}>{t("shortcuts.reset")}</Button>}
+          control={<Button onClick={() => void resetShortcuts()}>{t("shortcuts.reset")}</Button>}
         />
       </SettingsSection>
       <SettingsSection title={t("shortcuts.inApp")}>

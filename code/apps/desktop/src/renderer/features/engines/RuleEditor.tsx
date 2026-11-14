@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Icon, Select, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { SpeechModelsView, SwitchRuleView } from "../../../shared/speech-models/contract";
-import { models } from "./api";
+import { patchEngines } from "./api";
 import type { Run } from "./run";
 
 interface RowProps {
@@ -34,7 +34,7 @@ export function RuleEditor({ v, run }: { v: SpeechModelsView; run: Run }) {
   const [rules, setRules] = useState<SwitchRuleView[]>(v.autoSwitch.rules);
   const save = (enabled: boolean, next: SwitchRuleView[]) => {
     setRules(next);
-    run(() => models.setAutoSwitch({ enabled, rules: next }));
+    run(() => patchEngines({ autoSwitch: { enabled, rules: next } }));
   };
   const patch = (id: string, p: Partial<SwitchRuleView>) => rules.map((r) => (r.id === id ? { ...r, ...p } : r));
   const options = installed.map((m) => ({ value: m.id, label: m.name }));

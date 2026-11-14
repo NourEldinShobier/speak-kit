@@ -2,6 +2,7 @@ import type { AppState } from "../../../shared/ipc";
 import type { Command, PaletteAction } from "./model";
 import type { ShellAction } from "../../shell-model";
 import { api } from "../../ui";
+import { change } from "../../change";
 
 interface CommandContext {
   s: AppState;
@@ -26,7 +27,7 @@ const RUNNERS: Runners = {
   "toggle-reading": () => void api.reader({ type: "toggle" }),
   export: (_a, _c, x) => x.dispatch({ type: "export", open: { text: "" } }),
   "check-updates": () => void api.updateAction("check"),
-  dnd: (_a, _c, x) => void api.patchConfig({ doNotDisturb: !x.s.config.doNotDisturb }),
+  dnd: (_a, _c, x) => void change({ doNotDisturb: !x.s.config.doNotDisturb }),
   "install-extension": (_a, _c, x) => x.dispatch({ type: "go", page: "settings", sub: "browser" }),
   "load-engine": () => void api.warmEngine(),
   preview: (a, c, x) => x.preview(a.voice, `Hello, this is ${c.title}.`),

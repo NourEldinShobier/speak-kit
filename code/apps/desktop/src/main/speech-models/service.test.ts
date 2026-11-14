@@ -1,3 +1,4 @@
+import { applyEnginesPatch } from "./patch";
 import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -323,6 +324,14 @@ describe("SpeechModels: files on disk", () => {
 });
 
 describe("SpeechModels: small settings", () => {
+  it("a registry patch applies each choice the way its own setting does", async () => {
+    const { speech, cfg } = setup();
+    await speech.init();
+    await applyEnginesPatch(speech, { device: "cpu", idleMinutes: 30, releaseOnClose: true, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
+    expect(speech.gpuWanted()).toBe(false);
+    expect(cfg.engines).toMatchObject({ device: "cpu", idleMinutes: 30, releaseOnClose: true, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
+  });
+
   it("remembers the release setting, the dismissed hint (once), and going on without a model", () => {
     const { speech, cfg, state } = setup();
     expect(speech.setReleaseOnClose(true).releaseOnClose).toBe(true);

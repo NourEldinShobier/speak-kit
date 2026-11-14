@@ -23,16 +23,23 @@ export type SystemPatch = v.InferOutput<typeof SystemSchema>;
 /** The app settings the command line may change: plain values with no side effect to run. No dictation key is listed: how dictated text is stored, rewritten and pasted stays with the Settings pages. */
 export const COMMAND_LINE_KEYS = ["voice", "speed", "controlServer"] as const;
 
+/** The folders the person picks in the operating system's chooser; the Settings pages cannot type one, so only a chooser's own answer may name them. */
+const FolderSchema = v.pipe(v.string(), v.maxLength(1024));
+const PICKED_SCHEMAS = {
+  transcripts: v.strictObject({ ...TranscriptsPatchSchema.entries, folder: v.optional(FolderSchema) }),
+  meetings: v.strictObject({ ...MeetingsPatchSchema.entries, folder: v.optional(FolderSchema) }),
+} as const;
+
 export type AreaPatches = { [A in AreaName]?: Record<string, unknown> };
 export type SettingsChange =
-  | { ok: true; app: ConfigPatch; dictation: DictationPatch; areas: AreaPatches; shortcuts: Partial<Record<ShortcutId, string>>; system: SystemPatch }
+  | { ok: true; app: ConfigPatch; dictation: DictationPatch; areas: AreaPatches; shortcuts: Partial<Record<ShortcutId, string>>; resetShortcuts: boolean; system: SystemPatch }
   | { ok: false; message: string };
 
 /**
  * The one validator for a change of settings, whoever asks: the Settings pages, the command line and an import all end up here.
  * Keys are the app's own (`voice`, `speed`), `dictation.<key>`, `<area>.<key>` for capture, transcripts, meetings and engines, `shortcuts.<id>`, `launchAtLogin` or `port`; anything else, or a value the page would refuse, is refused whole and nothing is applied.
  */
-export function validateChange(change: Readonly<Record<string, unknown>>, only?: readonly string[]): SettingsChange {
+export function validateChange(change: Readonly<Record<string, unknown>>, only?: readonly string[], picked = false): SettingsChange {
   const outside = only ? Object.keys(change).find((k) => !only.includes(k)) : undefined;
   if (outside) return { ok: false, message: `${outside} cannot be changed from the command line.` };
   const g = groupKeys(change);
@@ -43,25 +50,35 @@ export function validateChange(change: Readonly<Record<string, unknown>>, only?:
   if (!d.success) return { ok: false, message: describe(d.issues, "dictation.") };
   const sys = v.safeParse(SystemSchema, g.system);
   if (!sys.success) return { ok: false, message: describe(sys.issues) };
-  const areas = validateAreas(g.areas);
+  const reset = v.safeParse(v.optional(v.literal("default")), g.reset);
+  if (!reset.success) return { ok: false, message: 'shortcuts: only "default" is accepted.' };
+  const areas = validateAreas(g.areas, picked);
   if (!areas.ok) return areas;
   const shortcuts = validateShortcuts(g.shortcuts);
   if (!shortcuts.ok) return shortcuts;
-  return { ok: true, app: a.output, dictation: d.output, areas: areas.areas, shortcuts: shortcuts.shortcuts, system: sys.output };
+  return { ok: true, app: a.output, dictation: d.output, areas: areas.areas, shortcuts: shortcuts.shortcuts, resetShortcuts: reset.output === "default", system: sys.output };
 }
 
 type Bag = Record<string, unknown>;
 type Refused = { ok: false; message: string };
 
-/** Sorts the keys of a change by who stores them; a key that would reach the prototype is refused. */
-function groupKeys(change: Readonly<Bag>): { ok: true; app: Bag; dictation: Bag; system: Bag; areas: Record<string, Bag>; shortcuts: Bag } | Refused {
-  const g = { ok: true as const, app: {} as Bag, dictation: {} as Bag, system: {} as Bag, areas: {} as Record<string, Bag>, shortcuts: {} as Bag };
+/** Sorts the keys of a change by who stores them; a key that would reach the prototype is refused. The bare key `shortcuts` (value "default") puts every shortcut back. */
+function groupKeys(change: Readonly<Bag>): { ok: true; app: Bag; dictation: Bag; system: Bag; areas: Record<string, Bag>; shortcuts: Bag; reset?: unknown } | Refused {
+  const g: { ok: true; app: Bag; dictation: Bag; system: Bag; areas: Record<string, Bag>; shortcuts: Bag; reset?: unknown } = {
+    ok: true,
+    app: {},
+    dictation: {},
+    system: {},
+    areas: {},
+    shortcuts: {},
+  };
   for (const [key, value] of Object.entries(change)) {
     const dot = key.indexOf(".");
     const head = dot < 0 ? "" : key.slice(0, dot);
     const rest = key.slice(dot + 1);
     if (key === "__proto__" || rest === "__proto__") return { ok: false, message: `${key} is not a setting.` };
-    if (head === "dictation") g.dictation[rest] = value;
+    if (key === "shortcuts") g.reset = value;
+    else if (head === "dictation") g.dictation[rest] = value;
     else if (head === "shortcuts") g.shortcuts[rest] = value;
     else if (Object.hasOwn(AREA_SCHEMAS, head)) (g.areas[head] ??= {})[rest] = value;
     else if ((SYSTEM_KEYS as readonly string[]).includes(key)) g.system[key] = value;
@@ -70,14 +87,21 @@ function groupKeys(change: Readonly<Bag>): { ok: true; app: Bag; dictation: Bag;
   return g;
 }
 
-function validateAreas(parts: Record<string, Bag>): { ok: true; areas: AreaPatches } | Refused {
+function validateAreas(parts: Record<string, Bag>, picked: boolean): { ok: true; areas: AreaPatches } | Refused {
   const areas: Record<string, Bag> = {};
   for (const [name, patch] of Object.entries(parts)) {
-    const r = v.safeParse(AREA_SCHEMAS[name as AreaName], patch);
+    const schema = picked && name in PICKED_SCHEMAS ? PICKED_SCHEMAS[name as keyof typeof PICKED_SCHEMAS] : AREA_SCHEMAS[name as AreaName];
+    const r = v.safeParse(schema, patch);
     if (!r.success) return { ok: false, message: describe(r.issues, `${name}.`) };
     areas[name] = r.output as Bag;
   }
   return { ok: true, areas: areas as AreaPatches };
+}
+
+/** What a folder chooser stores: the folder the person picked for capture, transcripts or meetings, checked like any other setting; a refusal is its message. */
+export function checkPickedFolder(area: "capture" | "transcripts" | "meetings", folder: string): { ok: true; patch: Record<string, unknown> } | Refused {
+  const c = validateChange({ [`${area}.folder`]: folder }, undefined, true);
+  return c.ok ? { ok: true, patch: c.areas[area] ?? {} } : c;
 }
 
 function validateShortcuts(given: Bag): { ok: true; shortcuts: Partial<Record<ShortcutId, string>> } | Refused {

@@ -5,7 +5,7 @@ import { engineView } from "../../../shared/engine-view";
 import { ACTIVITY_FILTERS, activityRow, filterActivity, type ActivityFilter } from "../../../shared/settings/diagnostics";
 import { api, Page, useVisible } from "../../ui";
 import { rowAttr } from "./focus";
-import { change } from "./change";
+import { change } from "../../change";
 
 function listenerText(s: AppState): string {
   if (s.serverError) return "Not running";

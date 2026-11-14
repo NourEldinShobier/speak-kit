@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { areaChange } from "../settings/area-change";
-import { validateChange } from "./settings-registry";
+import { checkPickedFolder, validateChange } from "./settings-registry";
 
 describe("validateChange beyond app settings", () => {
   it("splits a change by who stores it", () => {
@@ -17,6 +17,7 @@ describe("validateChange beyond app settings", () => {
     });
     expect(r).toEqual({
       ok: true,
+      resetShortcuts: false,
       app: { voice: "af_bella" },
       dictation: { mode: "toggle" },
       areas: { capture: { target: "area" }, transcripts: { textDays: 90 }, meetings: { stopWhenEnds: false }, engines: { releaseOnClose: true } },
@@ -45,6 +46,15 @@ describe("validateChange beyond app settings", () => {
   it("lets the command line change only what it lists", () => {
     expect(validateChange({ "capture.target": "area" }, ["voice"])).toEqual({ ok: false, message: "capture.target cannot be changed from the command line." });
     expect(validateChange({ port: 47700 }, ["voice"]).ok).toBe(false);
+  });
+
+  it("accepts a chosen folder for transcripts and meetings only from a chooser", () => {
+    expect(validateChange({ "transcripts.folder": "D:/Talks" }).ok).toBe(false);
+    expect(validateChange({ "meetings.folder": "D:/Calls" }).ok).toBe(false);
+    expect(checkPickedFolder("transcripts", "D:/Talks")).toEqual({ ok: true, patch: { folder: "D:/Talks" } });
+    expect(checkPickedFolder("meetings", "D:/Calls")).toEqual({ ok: true, patch: { folder: "D:/Calls" } });
+    expect(checkPickedFolder("capture", "D:/Shots")).toEqual({ ok: true, patch: { folder: "D:/Shots" } });
+    expect(checkPickedFolder("capture", "x".repeat(1025)).ok).toBe(false);
   });
 
   it("restores voiceChatVoice", () => {

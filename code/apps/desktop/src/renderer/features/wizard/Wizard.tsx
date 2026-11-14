@@ -1,6 +1,6 @@
 import { lazy, Suspense, useReducer, useRef } from "react";
 import type { AppState } from "../../../shared/ipc";
-import { api } from "../../ui";
+import { change } from "../../change";
 import { ConnectStep } from "./ConnectStep";
 import { DoneStep } from "./DoneStep";
 import { DownloadStep } from "./DownloadStep";
@@ -16,7 +16,7 @@ export function Wizard({ s }: { s: AppState }) {
   const resumed = useRef(s.config.setupStep === 2).current;
   const [st, dispatch] = useReducer(wizardReducer, s.config.setupStep as WizardStep, initWizard);
   const go = (step: WizardStep) => {
-    void api.patchConfig({ setupStep: step });
+    void change({ setupStep: step });
     dispatch({ type: "go", step });
   };
   const send = (a: WizardAction) => dispatch(a);
@@ -38,8 +38,8 @@ export function Wizard({ s }: { s: AppState }) {
           copied={st.copied}
           onCopied={() => send({ type: "copied" })}
           onBack={() => go(2)}
-          onSkip={() => (void api.patchConfig({ setupStep: 4 }), send({ type: "finish-connect", skipped: true }))}
-          onNext={() => (void api.patchConfig({ setupStep: 4 }), send({ type: "finish-connect", skipped: false }))}
+          onSkip={() => (void change({ setupStep: 4 }), send({ type: "finish-connect", skipped: true }))}
+          onNext={() => (void change({ setupStep: 4 }), send({ type: "finish-connect", skipped: false }))}
         />
       );
     case 4:

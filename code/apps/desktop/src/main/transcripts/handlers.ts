@@ -1,6 +1,7 @@
 import { plainText, type Detail, type Format, type Outcome, type Transcripts } from "@speakkit/transcripts";
 import type { Picked, Push, SavedFile, SettingsView, TranscriptsBridge } from "../../shared/transcripts/contract";
 import type { TranscriptsConfig, TranscriptsPatch } from "../../shared/transcripts/settings";
+import { checkPickedFolder } from "../../shared/control/settings-registry";
 import { decodeFile, inspectFile } from "./decode";
 import type { RecordingSession } from "./mic-session";
 import type { TranscriptsPorts } from "./service";
@@ -104,7 +105,9 @@ function settingsOf(env: HandlerEnv): Part<"settings" | "patchSettings" | "choos
     chooseFolder: async () => {
       const dir = await p.dialog.pickFolder();
       if (!dir) return null;
-      cfg().folder = dir;
+      const checked = checkPickedFolder("transcripts", dir);
+      if (!checked.ok) throw new Error(checked.message);
+      Object.assign(cfg(), checked.patch);
       env.saveConfig();
       return view();
     },

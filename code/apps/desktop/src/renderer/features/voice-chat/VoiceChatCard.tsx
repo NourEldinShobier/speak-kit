@@ -4,6 +4,7 @@ import { VOICE_CHAT_MODEL, VOICE_CHAT_VOICES, type VoiceChatVoice } from "@speak
 import type { AppState } from "../../../shared/ipc";
 import { normalizeApiKey } from "../../../shared/voice-chat";
 import { api } from "../../ui";
+import { changeSystem } from "../../change";
 import { cardReducer, initCard, keyLine, KEY_HELP, NO_ENCRYPTION, type CardAction, type CardState } from "./voice-chat-model";
 
 const VOICE_OPTIONS = VOICE_CHAT_VOICES.map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }));
@@ -119,7 +120,7 @@ export function VoiceChatCard({ s }: { s: AppState }) {
       <SettingRow
         className="lm-row--control"
         label="Voice"
-        control={<Select label="Voice chat voice" value={s.config.voiceChatVoice} onChange={(v) => void api.voiceChatSetVoice(v as VoiceChatVoice)} options={VOICE_OPTIONS} />}
+        control={<Select label="Voice chat voice" value={s.config.voiceChatVoice} onChange={(v) => void changeSystem({ voiceChatVoice: v as VoiceChatVoice })} options={VOICE_OPTIONS} />}
       />
       <SettingRow label={`Model: ${VOICE_CHAT_MODEL}`} />
     </SettingsSection>

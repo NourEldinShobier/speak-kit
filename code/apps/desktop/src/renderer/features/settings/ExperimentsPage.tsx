@@ -4,7 +4,7 @@ import type { AppState } from "../../../shared/ipc";
 import { api, Page } from "../../ui";
 import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";
-import { change } from "./change";
+import { change } from "../../change";
 
 const GROUPS = ["App", "Developer"] as const;
 

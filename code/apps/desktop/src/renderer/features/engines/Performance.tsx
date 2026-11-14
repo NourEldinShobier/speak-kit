@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button, Icon, Select, SettingRow, Toggle } from "@speakkit/ui";
-import type { SpeechModelsView } from "../../../shared/speech-models/contract";
-import { models } from "./api";
+import type { DeviceValue, SpeechModelsView } from "../../../shared/speech-models/contract";
+import { models, patchEngines } from "./api";
+import type { EnginesPatch } from "../../../shared/speech-models/config";
 import { deviceLine, hardwareLine, IDLE_LABELS } from "../../speech-text";
 import { RuleEditor } from "./RuleEditor";
 import type { Run } from "./run";
@@ -23,7 +24,7 @@ function DeviceRows({ v, run }: { v: SpeechModelsView; run: Run }) {
         className="lm-row--control"
         label="Run speech on"
         description={hardwareLine(v)}
-        control={<Select label="Run speech on" value={v.device.choice} onChange={(c) => run(() => models.setDevice(c as never))} options={DEVICE_OPTIONS} />}
+        control={<Select label="Run speech on" value={v.device.choice} onChange={(c) => run(() => patchEngines({ device: c as DeviceValue }))} options={DEVICE_OPTIONS} />}
       />
       <SettingRow label="In use now" description={deviceLine(v)} />
       {v.device.cpuWarning && (
@@ -51,12 +52,19 @@ function IdleRows({ v, run }: { v: SpeechModelsView; run: Run }) {
         className="lm-row--control"
         label="Unload speech model when idle"
         description={note}
-        control={<Select label="Unload speech model when idle" value={String(v.idleMinutes)} onChange={(m) => run(() => models.setIdleMinutes(Number(m)))} options={IDLE_OPTIONS} />}
+        control={
+          <Select
+            label="Unload speech model when idle"
+            value={String(v.idleMinutes)}
+            onChange={(m) => run(() => patchEngines({ idleMinutes: Number(m) as EnginesPatch["idleMinutes"] }))}
+            options={IDLE_OPTIONS}
+          />
+        }
       />
       <SettingRow
         label="Release memory when the window closes"
         description="The window and the graphics card memory are released at once. The tray keeps running."
-        control={<Toggle aria-label="Release memory when the window closes" checked={v.releaseOnClose} onChange={(on) => run(() => models.setReleaseOnClose(on))} />}
+        control={<Toggle aria-label="Release memory when the window closes" checked={v.releaseOnClose} onChange={(on) => run(() => patchEngines({ releaseOnClose: on }))} />}
       />
     </>
   );

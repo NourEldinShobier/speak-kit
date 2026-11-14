@@ -39,7 +39,7 @@ export function setupShortcuts(ctx: Ctx, actions: Record<ShortcutId, () => void>
       apply();
       return ctx.publish();
     },
-  } satisfies Partial<Api>;
+  } satisfies Partial<Api> & { resetShortcuts(): Promise<unknown> };
 
   return {
     handlers,

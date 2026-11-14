@@ -203,7 +203,6 @@ const OPEN_PATHS = ["models", "logs", "data"] as const;
 /** Argument tuple schema per IPC method. Main validates every call with these before running the handler. */
 export const ARGS = {
   state: v.tuple([]),
-  patchConfig: v.tuple([ConfigPatchSchema]),
   applySettings: v.tuple([v.record(v.pipe(v.string(), v.maxLength(80)), v.unknown())]),
   importSettings: v.tuple([]),
   setLaunchAtLogin: v.tuple([v.boolean()]),
@@ -228,7 +227,6 @@ export const ARGS = {
   hideWindow: v.tuple([]),
   quit: v.tuple([]),
   setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),
-  resetShortcuts: v.tuple([]),
   reader: v.tuple([ReaderCommandSchema]),
   readerStarted: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
   readerDone: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
@@ -253,8 +251,11 @@ export const ARGS = {
   ]),
   voiceChatRemoveKey: v.tuple([]),
   voiceChatTestKey: v.tuple([]),
-  voiceChatSetVoice: v.tuple([v.picklist(VOICE_CHAT_VOICES)]),
-  automationInfo: v.tuple([]),
-  automationCli: v.tuple([v.picklist(["install", "remove", "test"])]),
-  automationSkill: v.tuple([]),
+  diagnosticsLog: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(0))]),
+  diagnosticsReport: v.tuple([]),
+  clearActivity: v.tuple([]),
+  dismissSettingsNotice: v.tuple([]),
+  micAccess: v.tuple([]),
+  openSystemSettings: v.tuple([v.literal("microphone")]),
+  restartApp: v.tuple([]),
 } as const;

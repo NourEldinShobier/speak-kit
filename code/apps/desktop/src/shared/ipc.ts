@@ -1,8 +1,8 @@
-import type { EngineList, Health, VoiceChatVoice, VoiceList } from "@speakkit/protocol";
+import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
 import type { AutomationInfo, CommandLineAction } from "./control/info";
 import type { DesktopError } from "./errors";
-import type { Config, ConfigPatch } from "./schemas";
+import type { Config } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
 import type { AutomationCliAction, AutomationInfo } from "./automation";
 import type { ReaderCommand, ReaderState } from "./reader";
@@ -127,7 +127,6 @@ export type UiEvent =
 /** The only surface the renderer gets (window.speakkit). Every call is an ipcMain.handle on `speakkit:<name>`, validated with ARGS in schemas.ts. */
 export interface Api {
   state(): Promise<AppState>;
-  patchConfig(patch: ConfigPatch): Promise<AppState>;
   /** A change of settings from a Settings page: checked by the settings registry, the same one the command line uses. Keys are `voice`, `speed`... or `dictation.<key>`. */
   applySettings(change: Record<string, unknown>): Promise<SettingsResult>;
   /** Asks for a settings file and applies the settings in it that are valid. */
@@ -161,7 +160,6 @@ export interface Api {
   /** Really quits (after the renderer's confirmation dialog). */
   quit(): Promise<void>;
   setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
-  resetShortcuts(): Promise<AppState>;
   /** Controls the current reading (mini player, palette). */
   reader(cmd: ReaderCommand): Promise<void>;
   /** The mini player reports what its audio output is doing. */
@@ -186,19 +184,23 @@ export interface Api {
   voiceChatRemoveKey(): Promise<VoiceChatKeyStatus>;
   /** Asks OpenAI whether the saved key is accepted. */
   voiceChatTestKey(): Promise<VoiceChatTestResult>;
-  voiceChatSetVoice(voice: VoiceChatVoice): Promise<AppState>;
-  /** Automation settings: the command line tool, the agent skill and the server limits. Actions answer with the new info. */
-  automationInfo(): Promise<AutomationInfo>;
-  automationCli(action: AutomationCliAction): Promise<AutomationInfo>;
-  /** Writes (or updates) the agent skill under the user's skills folder. */
-  automationSkill(): Promise<AutomationInfo>;
+  /** The log lines since the last read; `lines` is null when the file did not grow, so the view stays as it is. */
+  diagnosticsLog(sinceSize: number): Promise<{ size: number; lines: string[] | null }>;
+  /** The redacted text Copy diagnostics puts on the clipboard. */
+  diagnosticsReport(): Promise<string>;
+  clearActivity(): Promise<AppState>;
+  dismissSettingsNotice(): Promise<AppState>;
+  micAccess(): Promise<MicAccess>;
+  /** Opens the operating system page where the microphone permission is changed; false when this system has none. */
+  openSystemSettings(which: "microphone"): Promise<boolean>;
+  /** Relaunches the app (an experiment that needs a restart). */
+  restartApp(): Promise<void>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
 
 export const METHODS = [
   "state",
-  "patchConfig",
   "applySettings",
   "importSettings",
   "setLaunchAtLogin",
@@ -223,7 +225,6 @@ export const METHODS = [
   "hideWindow",
   "quit",
   "setShortcut",
-  "resetShortcuts",
   "reader",
   "readerStarted",
   "readerDone",
@@ -240,10 +241,13 @@ export const METHODS = [
   "voiceChatSetKey",
   "voiceChatRemoveKey",
   "voiceChatTestKey",
-  "voiceChatSetVoice",
-  "automationInfo",
-  "automationCli",
-  "automationSkill",
+  "diagnosticsLog",
+  "diagnosticsReport",
+  "clearActivity",
+  "dismissSettingsNotice",
+  "micAccess",
+  "openSystemSettings",
+  "restartApp",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

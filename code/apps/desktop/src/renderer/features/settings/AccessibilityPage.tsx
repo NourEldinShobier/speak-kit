@@ -4,7 +4,7 @@ import type { Config } from "../../../shared/schemas";
 import { KEYBOARD_MAP } from "../../../shared/settings/behaviour";
 import { Page } from "../../ui";
 import { rowAttr } from "./focus";
-import { change } from "./change";
+import { change } from "../../change";
 
 const MOTION = [
   { id: "system", label: "System" },

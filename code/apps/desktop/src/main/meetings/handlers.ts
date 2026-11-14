@@ -2,6 +2,7 @@ import { allProviders, userProvider, type Meetings, type Provider } from "@speak
 import type { AddAppResult, Device, MeetingsBridge, ProviderView, Push, SettingsView } from "../../shared/meetings/contract";
 import { BUILT_IN_PROVIDERS } from "@speakkit/meetings";
 import type { MeetingsConfig } from "../../shared/meetings/settings";
+import { checkPickedFolder } from "../../shared/control/settings-registry";
 import { checkAccelerator, normalize } from "../../shared/shortcuts";
 import type { MeetingsPorts } from "./service";
 import type { CallWatch } from "./watch";
@@ -154,7 +155,10 @@ function settingsOf(env: HandlerEnv): Pick<Handlers, "settings" | "patchSettings
     },
     chooseFolder: async () => {
       const dir = await ports.dialog.pickFolder();
-      return dir ? change(() => void (cfg().folder = dir)) : null;
+      if (!dir) return null;
+      const checked = checkPickedFolder("meetings", dir);
+      if (!checked.ok) throw new Error(checked.message);
+      return change(() => void Object.assign(cfg(), checked.patch));
     },
     openFolder: () => ports.shell.openFolder(env.folder()),
     devices: async (): Promise<{ inputs: Device[]; outputs: Device[] }> => ports.devices(),

@@ -39,6 +39,7 @@ export interface HandlerDeps {
   /** The settings of capture, transcripts, meetings and engines, stored by the feature that owns them. */
   patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
   setShortcut: Api["setShortcut"];
+  resetShortcuts(): Promise<unknown>;
   /** The settings file the person picks to import; null when cancelled. */
   pickSettingsFile(): Promise<string | null>;
   /** Asks whether an import may apply settings that reach beyond the app (their plain names); false leaves them out. */
@@ -101,8 +102,9 @@ const changeTargets = (d: HandlerDeps): ChangeTargets => ({
   patchApp: (p) => patchConfig(d, p),
   patchArea: d.patchArea,
   setShortcut: d.setShortcut,
+  resetShortcuts: d.resetShortcuts,
   setLaunchAtLogin: async (on) => applyLaunchAtLogin(d, on),
-  setVoiceChatVoice: (voice) => d.voiceChat.setVoice(voice),
+  setVoiceChatVoice: (voice) => (d.voiceChat.setVoice(voice), void d.publish()),
   setPort: async (port) => applyPort(d, port),
 });
 
@@ -135,7 +137,6 @@ export function createAppHandlers(d: HandlerDeps) {
 
   return {
     state: async () => d.publish(),
-    patchConfig: (patch) => patchConfig(d, patch),
     applySettings: (change) => applyChange(changeTargets(d), change),
     importSettings: () => importSettings({ pick: d.pickSettingsFile, read: (f) => readFile(f, "utf8"), current: () => d.config, confirm: d.confirmImport }, changeTargets(d)),
     setLaunchAtLogin: async (on) => applyLaunchAtLogin(d, on),
@@ -168,7 +169,7 @@ export function createAppHandlers(d: HandlerDeps) {
       return report;
     },
     metrics: async () => metrics(),
-    ...voiceChatHandlers(d.voiceChat, d.publish),
+    ...voiceChatHandlers(d.voiceChat),
     ...createSettingsHandlers(d),
     hideWindow: async () => mainWindow.hide(),
     quit: async () => mainWindow.quit(),

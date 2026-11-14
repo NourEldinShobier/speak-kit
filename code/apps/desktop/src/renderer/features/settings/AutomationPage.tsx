@@ -7,7 +7,7 @@ import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { CopyButton } from "../../CopyButton";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
-import { change } from "./change";
+import { change } from "../../change";
 
 const code = (text: string) => <code className="sk-code">{text}</code>;
 

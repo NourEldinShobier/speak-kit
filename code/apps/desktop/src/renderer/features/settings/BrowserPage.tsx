@@ -4,7 +4,7 @@ import { validateChange } from "../../../shared/control/settings-registry";
 import type { AppState } from "../../../shared/ipc";
 import { InstallExtension } from "../../pages";
 import { api, cleanError, Page, TokenField } from "../../ui";
-import { changeSystem } from "./change";
+import { changeSystem } from "../../change";
 
 /** The port field with its Apply button; the message of a refused port stays under the field. */
 function PortRow({ s }: { s: AppState }) {
