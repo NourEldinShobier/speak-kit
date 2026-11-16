@@ -225,7 +225,7 @@ test.describe("desktop voice chat key @slow", () => {
       const mint = fake.seen.at(-1)!;
       expect(mint).toMatchObject({ method: "POST", path: "/v1/realtime/client_secrets", auth: `Bearer ${KEYS.good}` });
       expect(JSON.parse(mint.body).session).toMatchObject({ type: "realtime", model: "gpt-realtime-2.1", audio: { output: { voice: "cedar" } } });
-      expect((await fetch(`http://127.0.0.1:${d.port}/v1/voice-chat/session`, { method: "POST" })).status).toBe(401);
+      expect((await fetch(`http://127.0.0.1:${d.port}/v1/voice-chat/session`, { method: "POST" })).status).toBe(404);
 
       // A rejected key and an account without credit read differently.
       await typeAndSave(KEYS.rejected);

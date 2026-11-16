@@ -165,13 +165,22 @@ export function fakeStorage(initial?: unknown) {
 }
 
 /** A dictation wired to fakes at every boundary, with the hotkey installed. */
-export async function rig(settings: Partial<Settings> = {}, storage = fakeStorage(), extra: Partial<DictationDeps> = {}) {
+export async function rig(settings: Partial<Settings> = { keepReady: true }, storage = fakeStorage(), extra: Partial<DictationDeps> = {}) {
   const time = fakeClock();
   const keys = fakeKeyboard();
   const rec = fakeRecorder();
   const stt = fakeTranscriber();
   const ins = fakeInserter();
-  const deps: DictationDeps = { clock: time.clock, recorder: rec.recorder, transcriber: stt.transcriber, inserter: ins.inserter, hotkeys: keys.source, storage: storage.storage, settings, ...extra };
+  const deps: DictationDeps = {
+    clock: time.clock,
+    recorder: rec.recorder,
+    transcriber: stt.transcriber,
+    inserter: ins.inserter,
+    hotkeys: keys.source,
+    storage: storage.storage,
+    settings: { keepReady: true, ...settings },
+    ...extra,
+  };
   const dictation: Dictation = createDictation(deps);
   await dictation.ready();
   const states: string[] = [];

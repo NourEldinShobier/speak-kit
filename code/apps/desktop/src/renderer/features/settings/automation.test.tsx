@@ -79,7 +79,7 @@ describe("Automation page", () => {
   it("with the server running shows Running, no warning, the sections and a named switch for every tool", () => {
     const html = renderToStaticMarkup(<AutomationPage s={state(true)} />);
     expect(html).toContain("Running");
-    expect(html).not.toContain("The local server is not running");
+    expect(html).not.toContain("The local server is off");
     for (const t of ["Command-line tool", "MCP server", "Deep links", "speakkit status --json", "control.json", "Show file", "Reset token", "Error codes", "What it can do"]) expect(html).toContain(t);
     for (const t of MCP_TOOLS) expect(html).toContain(`aria-label="${t.title}"`);
     expect(html).toMatch(/aria-label="Copy speakkit:\/\/settings\/shortcuts"/);

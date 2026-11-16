@@ -1,6 +1,8 @@
-import { SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
-import { LABS, visibleLabs, type LabId } from "../../../shared/labs";
+import { useState } from "react";
+import { Badge, Banner, Button, EmptyState, Modal } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
+import "../../../shared/settings/builtin-experiments";
+import { experiments, groupExperiments, needsRestart, toggled, visibleExperiments, type Experiment } from "../../../shared/settings/experiments";
 import { api, Page } from "../../ui";
 import { ExperimentCards, experimentCards } from "../experiments";
 import { arrowTarget, rowAttr } from "./focus";

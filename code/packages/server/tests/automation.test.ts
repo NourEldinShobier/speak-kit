@@ -70,8 +70,8 @@ describe("limits and capabilities", () => {
   });
   it("needs the token", async () => {
     const c = await open();
-    expect((await fetch(`${c.base}/v1/limits`)).status).toBe(401);
-    expect((await fetch(`${c.base}/v1/capabilities`, { headers: { Authorization: "Bearer nope" } })).status).toBe(401);
+    expect((await fetch(`${c.base}/v1/limits`)).status).toBe(404);
+    expect((await fetch(`${c.base}/v1/capabilities`, { headers: { Authorization: "Bearer nope" } })).status).toBe(404);
   });
 });
 

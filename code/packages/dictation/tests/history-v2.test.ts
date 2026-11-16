@@ -201,8 +201,8 @@ describe("numbers above the list", () => {
         { text: "four five", durationMs: 30_000 },
         { text: "", durationMs: 0 },
       ]),
-    ).toEqual({ dictations: 3, words: 5, listeningMs: 60_000, wordsPerMinute: 5 });
-    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0 });
+    ).toMatchObject({ dictations: 3, words: 5, listeningMs: 60_000, wordsPerMinute: 5 });
+    expect(historyStats([])).toMatchObject({ dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0 });
   });
 });
 

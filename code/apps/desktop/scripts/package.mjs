@@ -53,7 +53,7 @@ for (const d of ["main", "preload", "renderer", "cli"]) cpSync(path.join(desktop
 const engineDist = path.join(code, "packages/engine/dist");
 for (const f of readdirSync(engineDist)) if (f.endsWith(".js") && f !== "index.js") cpSync(path.join(engineDist, f), path.join(stage, "dist/worker", f));
 
-const built = ["dist/main/index.js", "dist/main/cli.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
+const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/cli/speakkit.js", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
 const needed = new Set(built.flatMap((f) => importedPackages(readFileSync(path.join(stage, f), "utf8"))));
 const engineDir = path.join(code, "packages/engine");
 const dependencies = {};

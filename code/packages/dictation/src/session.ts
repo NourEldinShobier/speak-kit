@@ -8,7 +8,9 @@ export const DOUBLE_TAP_MS = 300;
 /** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
 export const MAX_RECORDING_MS = MAX_TAKE_MS;
 
-type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck" | "keepReady">;
+type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "secondKey" | "mouseKey" | "rawKey" | "keepReady">>;
+/** A press of one of the shortcuts: which, and when. */
+type Press = { key: string; raw: boolean; at: number };
 
 export type Capture =
   | { kind: "idle" }
@@ -62,9 +64,11 @@ const finish = (c: { id: number; raw?: boolean }): Effect => ({ type: "finish-re
 
 function begin(session: Session, cfg: Config, press: Press): Out {
   const id = session.seq + 1;
-  const lockUntil = session.capture.kind === "armed" ? session.capture.until : -Infinity;
-  const capture: Capture = cfg.mode === "toggle" ? { kind: "toggle", id, down: true } : { kind: "hold", id, key: cfg.hotkey, pressedAt: at, lockUntil };
-  return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: prerollMs({ keepReady: cfg.keepReady, ducking: cfg.duck }) }] };
+  const armed = session.capture.kind === "armed" && session.capture.key === press.key ? session.capture.until : -Infinity;
+  const raw = press.raw ? { raw: true } : {};
+  const capture: Capture =
+    cfg.mode === "toggle" ? { kind: "toggle", id, down: true, key: press.key, ...raw } : { kind: "hold", id, key: press.key, pressedAt: press.at, lockUntil: armed, mode: cfg.mode, ...raw };
+  return { session: { capture, seq: id }, effects: [{ type: "start-recording", id, prerollMs: prerollMs({ keepReady: cfg.keepReady === true, ducking: cfg.duck }) }] };
 }
 
 /** A recording started by a command, not by a key: no key is down, so the next press of the shortcut ends it. */

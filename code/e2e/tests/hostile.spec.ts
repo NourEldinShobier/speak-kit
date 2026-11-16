@@ -75,7 +75,7 @@ test.describe("hostile clients against the real server (fake engine)", () => {
       ["POST", "/v1/engine/warm"],
       ["POST", "/v1/export"],
     ] as const) {
-      for (const headers of bad) expect(await send({ method, path, headers }), `${method} ${path} ${JSON.stringify(headers)}`).toEqual({ status: 401, code: "token-rejected" });
+      for (const headers of bad) expect(await send({ method, path, headers }), `${method} ${path} ${JSON.stringify(headers)}`).toEqual({ status: 404, code: "token-rejected" });
     }
   });
 

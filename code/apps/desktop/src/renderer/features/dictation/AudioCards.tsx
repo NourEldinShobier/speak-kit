@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, Slider, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
 import { AppSuggestions } from "../apps";

@@ -36,7 +36,7 @@ export class FakeVoiceApp {
   readonly token = "e2e-token-" + Math.random().toString(16).slice(2).padEnd(24, "0");
   port = 0;
   /** What POST /v1/voice-chat/session answers: a session, or one of the app's error codes. */
-  mode: "ok" | VoiceChatError = "ok";
+  mode: "ok" | VoiceChatErrorCode = "ok";
   hasKey = true;
   voice = "marin";
   /** What POST /v1/voice-chat/look answers: a look, or one of the app's look error codes. */
@@ -67,7 +67,7 @@ export class FakeVoiceApp {
   private async route(req: IncomingMessage, res: ServerResponse) {
     const path = (req.url ?? "").split("?")[0];
     if (path === "/v1/health") return json(res, 200, { app: "speakkit", version: "e2e", apiVersion: 1, engine: { id: "kokoro", state: "ready" } });
-    if (req.headers.authorization !== `Bearer ${this.token}`) return json(res, 401, { error: { code: "token-rejected", message: "no" } });
+    if (req.headers.authorization !== `Bearer ${this.token}`) return json(res, 404, { error: { code: "token-rejected", message: "no" } });
     if (path === "/v1/auth/check") return void res.writeHead(204).end();
     if (path === "/v1/voice-chat/status") {
       this.auth.push(req.headers.authorization);

@@ -127,7 +127,6 @@ export const AR_MAIN: Record<keyof typeof MAIN, string> = {
   "dialog.importDetail": "سيُفعَّل: {what}.",
   "dialog.leaveOut": "تركها",
   "dialog.turnOn": "تفعيلها",
-  "dialog.capturesFolder": "مجلد اللقطات",
   "filter.settings": "الإعدادات",
   "filter.wordLists": "قوائم الكلمات",
   "filter.readable": "ملفات قابلة للقراءة",

@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -50,24 +50,6 @@ describe("openConfig", () => {
     expect(c.config).toMatchObject({ setupDone: true, voice: "af_heart", speed: 1.5 });
   });
 
-  it.each([
-    ["null", "null"],
-    ["an array", "[1,2]"],
-    ["a number", "7"],
-  ])("sets aside a file that is valid JSON but %s, so it is never overwritten", async (_n, text) => {
-    writeFileSync(path.join(dir, "config.json"), text);
-    const c = await openConfig(dir);
-    expect(c.recovered).toBe(path.join(dir, "config.json.bad"));
-    expect(readFileSync(path.join(dir, "config.json.bad"), "utf8")).toBe(text);
-  });
-
-  it("keeps a wrong field out of the way of the rest and does not rewrite unknown keys it never read", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, speed: null, labs: { "verbose-log": true } }));
-    const c = await openConfig(dir);
-    expect(c.recovered).toBeNull();
-    expect(c.config).toMatchObject({ setupDone: true, speed: 1, labs: { "verbose-log": true, "hide-tray-icon": false } });
-  });
-
   it("saves changes so the next start sees them", async () => {
     const c = await openConfig(dir);
     c.config.setupDone = true;
@@ -88,32 +70,39 @@ describe("openConfig", () => {
   });
 });
 
-describe("settings file care", () => {
-  it("keeps a file with a damaged value aside as config.json.invalid, then loads the default for it", async () => {
-    const text = JSON.stringify({ setupDone: true, speed: 99, dictation: { mode: "sideways", enabled: true } });
-    writeFileSync(path.join(dir, "config.json"), text);
+describe("settings repair and backup", () => {
+  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", closeAction: "quit" });
+
+  it("names the invalid field, keeps the others, and backs up the exact original bytes once before the first save", async () => {
+    writeFileSync(path.join(dir, "config.json"), raw);
     const c = await openConfig(dir);
-    expect(c.config).toMatchObject({ speed: 1, dictation: { mode: "hold", enabled: true } });
-    expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(text);
+    expect(c.notice).toEqual({ kind: "repaired", fields: ["idleUnload"] });
+    expect(c.config).toMatchObject({ idleUnload: "5", closeAction: "quit" });
+    c.save();
+    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
+    expect(onDisk()).toMatchObject({ idleUnload: "5", configVersion: 1 });
+    writeFileSync(path.join(dir, "config.json"), "{}");
+    c.save();
+    expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
   });
 
-  it("never overwrites an earlier copy: a second damaged load keeps its own", async () => {
-    const first = JSON.stringify({ setupDone: true, speed: 99 });
-    const second = JSON.stringify({ setupDone: true, speed: 77 });
-    writeFileSync(path.join(dir, "config.json"), first);
-    await openConfig(dir);
-    writeFileSync(path.join(dir, "config.json"), second);
-    await openConfig(dir);
-    expect(readFileSync(path.join(dir, "config.json.invalid"), "utf8")).toBe(first);
-    const extra = readdirSync(dir).filter((f) => f.startsWith("config.json.invalid-"));
-    expect(extra).toHaveLength(1);
-    expect(readFileSync(path.join(dir, extra[0]!), "utf8")).toBe(second);
+  it("a healthy file is not backed up", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true }));
+    const c = await openConfig(dir);
+    expect(c.notice).toBeNull();
+    c.save();
+    expect(existsSync(path.join(dir, "config.backup.json"))).toBe(false);
   });
 
-  it("keeps nothing aside for a file that only lacks newer keys or has an unknown one", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, somethingOld: 1, dictation: { enabled: true } }));
-    await openConfig(dir);
-    expect(() => readFileSync(path.join(dir, "config.json.invalid"))).toThrow();
+  it("a file from a newer app is read, flagged and never rewritten", async () => {
+    const newer = JSON.stringify({ configVersion: 9, setupDone: true, speed: 2 });
+    writeFileSync(path.join(dir, "config.json"), newer);
+    const c = await openConfig(dir);
+    expect(c.notice).toEqual({ kind: "newer", version: 9 });
+    expect(c.config.speed).toBe(2);
+    c.config.speed = 1;
+    c.save();
+    expect(readFileSync(path.join(dir, "config.json"), "utf8")).toBe(newer);
   });
 
   it("writes keys in alphabetical order", async () => {

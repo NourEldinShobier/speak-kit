@@ -3,7 +3,7 @@ import type { HistoryItem } from "../../shared/dictation/contract";
 import { friendlyAppName } from "./app-name";
 
 const RECENT = 5;
-const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
+const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
 
 interface Deps {
   /** The whole history was cleared. */
@@ -50,14 +50,16 @@ export class HistoryFacade {
     this.#d.changed();
   }
 
-  async list(search?: string): Promise<HistoryItem[]> {
+  async list(search?: string, limit?: number): Promise<HistoryItem[]> {
     await this.#d.ready();
-    const items = (await this.#d.core()?.history.list(search ? { search } : undefined)) ?? [];
+    const items = (await this.#d.core()?.history.list(search || limit ? { ...(search && { search }), ...(limit && { limit }) } : undefined)) ?? [];
     return items.map((e) => ({
       id: e.id,
       at: e.at,
       text: e.text,
+      raw: e.raw,
       durationMs: e.durationMs,
+      expiresInMs: null,
       ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
       ...(e.kind && { kind: e.kind }),
       ...(e.outcome && { outcome: e.outcome }),

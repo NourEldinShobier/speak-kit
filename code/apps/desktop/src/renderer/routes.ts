@@ -38,10 +38,6 @@ export const MENU: { group: string; items: MenuItemDef[] }[] = [
       { page: "history", label: "History", icon: "history", lead: "What you dictated recently.", keywords: "transcripts past" },
     ],
   },
-  {
-    group: "Capture",
-    items: [{ page: "capture", label: "Capture", icon: "scan", lead: "Record the screen and your voice.", keywords: "screen record screenshot" }],
-  },
 ];
 
 export interface SettingsItemDef {

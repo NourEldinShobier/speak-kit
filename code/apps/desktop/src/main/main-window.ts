@@ -10,6 +10,19 @@ import { createSizeGuard } from "./window-size-guard";
 import { appBackground, setupBackground, titleBarSymbol } from "./window-colors";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+/** A drag onto a monitor with another scale factor does not leave the window a different size. */
+function keepSizeOnMove(w: BrowserWindow): void {
+  const guard = createSizeGuard({
+    getContentSize: () => w.getContentSize(),
+    setContentSize: (a, b) => w.setContentSize(a, b),
+    isMaximized: () => w.isMaximized(),
+    isFullScreen: () => w.isFullScreen(),
+    scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
+  });
+  w.on("will-move", guard.willMove);
+  w.on("moved", guard.moved);
+}
 const TITLE = "Speak Kit";
 /** Window hidden this long (ms): destroy it. 0 disables. */
 const HIDE_DESTROY_MS = Number(process.env.SPEAKKIT_DESTROY_MS ?? 30_000);
@@ -143,23 +156,9 @@ export class MainWindow {
       if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
     });
     w.on("minimize", () => this.#events.onHidden());
-    const guard = createSizeGuard({
-      getContentSize: () => w.getContentSize(),
-      setContentSize: (a, b) => w.setContentSize(a, b),
-      isMaximized: () => w.isMaximized(),
-      isFullScreen: () => w.isFullScreen(),
-      scaleFactor: () => screen.getDisplayMatching(w.getBounds()).scaleFactor,
-    });
-    w.on("will-move", guard.willMove);
-    w.on("moved", guard.moved);
+    keepSizeOnMove(w);
     // Closing hides to the tray; only Quit (tray menu or app.quit) really exits.
-    w.on("close", (e) => {
-      if (this.quitting) return;
-      e.preventDefault();
-      // With the tray icon hidden, a window hidden to the tray could never be reopened or quit (Windows and Linux have no Dock).
-      if (this.#config.labs["hide-tray-icon"] && process.platform !== "darwin") this.#events.onCloseWithoutTray?.();
-      else this.hide();
-    });
+    w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;
       if (!this.quitting) this.#events.onReleased?.();

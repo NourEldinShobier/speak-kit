@@ -38,7 +38,7 @@ const exportBody = { sentences: ["a"], voice: "af_heart", speed: 1 };
 
 type Case = [ErrorCode | "method-not-allowed" | "internal", number, (c: Ctx) => Promise<Response>];
 const HTTP_CASES: Case[] = [
-  ["token-rejected", 401, (c) => send(c, "GET", "/v1/auth/check", undefined, {})],
+  ["token-rejected", 404, (c) => send(c, "GET", "/v1/auth/check", undefined, {})],
   [
     "forbidden",
     403,

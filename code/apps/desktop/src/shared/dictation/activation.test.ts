@@ -102,7 +102,7 @@ describe("conflict names and accelerators", () => {
       "play-pause": "Play or pause",
       stop: "Stop reading",
     });
-    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(10);
+    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(11);
   });
 
   it("reads accelerator spellings: Ctrl, Control, Option, Shift, Super, Meta, Win, letters, digits and named keys", () => {

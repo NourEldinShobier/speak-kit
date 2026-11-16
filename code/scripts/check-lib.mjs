@@ -13,7 +13,6 @@ export const scopes = {
   player: "packages/player",
   dictation: "packages/dictation",
   server: "packages/server",
-  cli: "packages/cli",
   engine: "packages/engine",
   protocol: "packages/protocol",
   e2e: "e2e",

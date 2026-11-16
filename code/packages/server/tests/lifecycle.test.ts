@@ -119,7 +119,7 @@ describe("idle unload through the server", () => {
 describe("POST /v1/engine/warm", () => {
   it("needs the token", async () => {
     ctx = await start({ state: "unloaded" });
-    expect((await fetch(`${ctx.base}/v1/engine/warm`, { method: "POST" })).status).toBe(401);
+    expect((await fetch(`${ctx.base}/v1/engine/warm`, { method: "POST" })).status).toBe(404);
     expect(ctx.engine.loads).toBe(0);
   });
 

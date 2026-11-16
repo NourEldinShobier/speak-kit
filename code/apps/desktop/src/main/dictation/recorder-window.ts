@@ -1,6 +1,5 @@
 import type { BrowserWindow } from "electron";
 import { createSecureWindow } from "../secure-window";
-import type { RecorderPage } from "./recorder";
 
 /** The microphone is the one permission any window of the app is given, and only this window gets it, for audio only. */
 export interface RecorderWindowOptions {
@@ -32,14 +31,11 @@ export function openRecorderWindow({ page, micAllowed, partition = "speakkit-dic
   return w;
 }
 
-/** The recording page as the recorder host wants it: its web contents, and a way to close it. */
-export function openRecorderPage(options: RecorderWindowOptions): RecorderPage {
-  const w = openRecorderWindow(options);
-  return {
-    contents: w.webContents,
-    destroy: () => !w.isDestroyed() && w.destroy(),
-    get destroyed() {
-      return w.isDestroyed();
-    },
-  };
-}
+/** What the recorder host needs of its window: the page's web contents and a safe destroy. */
+export const recorderHandle = (w: BrowserWindow) => ({
+  contents: w.webContents,
+  destroy: () => !w.isDestroyed() && w.destroy(),
+  get destroyed() {
+    return w.isDestroyed();
+  },
+});

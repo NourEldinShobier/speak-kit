@@ -1,24 +1,9 @@
-/**
- * Voice chat: the Speak Kit app holds the user's OpenAI key and mints short-lived Realtime client secrets for the extension.
- * The extension connects to OpenAI over WebRTC with the secret only. Also the messages between the page, the worker and the voice document.
- *
- *   GET  /v1/voice-chat/status   -> VoiceChatStatus
- *   POST /v1/voice-chat/session  -> body {}; 200 VoiceChatSession, or an error body { code: VoiceChatError } (any HTTP status >= 400)
- */
-export const VOICE_CHAT_MODEL = "gpt-realtime-2.1" as const;
-export const VOICE_CHAT_ERRORS = ["no-key", "key-rejected", "no-credit", "rate-limited", "offline", "unavailable"] as const;
-export type VoiceChatError = (typeof VOICE_CHAT_ERRORS)[number];
+import type { VoiceChatErrorCode } from "./voice-chat-app";
 
-export interface VoiceChatStatus {
-  hasKey: boolean;
-}
-export interface VoiceChatSession {
-  clientSecret: string;
-  /** unix seconds */
-  expiresAt: number;
-  model: typeof VOICE_CHAT_MODEL;
-  voice: string;
-}
+/**
+ * Voice chat inside the extension: the messages between the page, the worker and the voice document.
+ * The wire contract with the app (key status, client secrets, error codes) is in voice-chat-app.ts.
+ */
 
 /** The page a conversation is about. `text` is paragraphs separated by a blank line; `selection` is what the user had selected. */
 export interface VoicePage {

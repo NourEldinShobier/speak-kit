@@ -24,7 +24,7 @@ export interface Io {
   launch(): Promise<boolean>;
   /** The history file read directly, for a read that must not start the app. */
   offlineHistory(q: { search?: string; limit: number }): Promise<unknown[] | null>;
-  /** The meetings and captures on disk: read, never changed. */
+  /** The meetings on disk: read, never changed. */
   reads: Sources;
   /** The settings file as stored, or undefined when there is none. */
   readConfig(): Promise<unknown>;

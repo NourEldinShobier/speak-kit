@@ -135,69 +135,6 @@ describe("kept audio", () => {
   });
 });
 
-describe("cancel and restore", () => {
-  it("keeps the cancelled audio for ten seconds and restores it into the window", async () => {
-    const r = await rig({ mode: "toggle" });
-    r.dictation.start();
-    await r.time.advance(500);
-    r.dictation.cancel();
-    await r.time.advance(2000);
-    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", restorable: true } });
-    r.dictation.restore();
-    await r.time.advance(300);
-    expect(r.ins.inserted).toHaveLength(1);
-    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
-    expect(await r.dictation.history.list()).toMatchObject([{ kind: "restored", outcome: "sent" }]);
-  });
-
-  it("a restore after ten seconds does nothing", async () => {
-    const r = await rig({ mode: "toggle" });
-    r.dictation.start();
-    await r.time.advance(500);
-    r.dictation.cancel();
-    await r.time.advance(10_001);
-    r.dictation.restore();
-    await r.time.advance(300);
-    expect(r.ins.inserted).toEqual([]);
-  });
-
-  it("a restore can be used once", async () => {
-    const r = await rig({ mode: "toggle" });
-    r.dictation.start();
-    await r.time.advance(500);
-    r.dictation.cancel();
-    await r.time.advance(500);
-    r.dictation.restore();
-    r.dictation.restore();
-    await r.time.advance(300);
-    expect(r.ins.inserted).toHaveLength(1);
-  });
-
-  it("starting a new recording drops the restorable one", async () => {
-    const r = await rig({ mode: "toggle" });
-    r.dictation.start();
-    await r.time.advance(500);
-    r.dictation.cancel();
-    await r.time.advance(500);
-    r.dictation.start();
-    r.dictation.restore();
-    await r.time.advance(100);
-    expect(r.ins.inserted).toEqual([]);
-  });
-
-  it("a cancelled recording with no sound is not restorable", async () => {
-    const r = await rig({ mode: "toggle" });
-    r.rec.state.clip = loud({ peak: 0 });
-    r.dictation.start();
-    await r.time.advance(500);
-    r.dictation.cancel();
-    await r.time.advance(500);
-    r.dictation.restore();
-    await r.time.advance(300);
-    expect(r.ins.inserted).toEqual([]);
-  });
-});
-
 describe("return to app", () => {
   it("brings the window back and pastes there", async () => {
     const r = await rig();

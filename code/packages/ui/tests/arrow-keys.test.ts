@@ -10,9 +10,7 @@ describe("arrowTarget", () => {
     expect(arrowTarget("Home", 2, 3)).toBe(0);
     expect(arrowTarget("End", 0, 3)).toBe(2);
   });
-  test("a vertical list ignores Left and Right, a row of cards takes them", () => {
-    expect(arrowTarget("ArrowRight", 0, 3, false)).toBeNull();
-    expect(arrowTarget("ArrowLeft", 1, 3, false)).toBeNull();
+  test("Left and Right move like Up and Down", () => {
     expect(arrowTarget("ArrowRight", 0, 3)).toBe(1);
     expect(arrowTarget("ArrowLeft", 1, 3)).toBe(0);
   });

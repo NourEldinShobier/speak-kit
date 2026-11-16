@@ -1,4 +1,5 @@
 import { OWN_EVENT_MARKER } from "./keymap";
+import { axApi, FW, UTF8, windowApi } from "./native-ui";
 import { handleTapEvent } from "./tap-callback";
 
 type Koffi = (typeof import("koffi"))["default"];
@@ -6,7 +7,6 @@ type Koffi = (typeof import("koffi"))["default"];
 /** What an event tap reports for one key event. `type` is a CGEventType; `flags` the CGEventFlags including device-dependent bits. */
 export interface TapEvent {
   type: number;
-  /** For mouse events the button number (0 left, 1 right, 2 middle, 3 and up the side buttons). */
   keycode: number;
   flags: number;
   userData: number;
@@ -57,9 +57,9 @@ export interface MacNative {
   inputMonitoring: { status(): AccessState; request(): boolean };
 }
 
-const FW = (name: string) => `/System/Library/Frameworks/${name}.framework/${name}`;
-const UTF8 = 0x08000100;
 const KEYBOARD_KEYCODE_FIELD = 9;
+/** NSApplicationActivateIgnoringOtherApps: the app comes to the front even though another one is active. */
+const NS_ACTIVATE_IGNORING_OTHER_APPS = 2;
 const USER_DATA_FIELD = 42;
 const HID_STATE = 1;
 const SESSION_TAP = 1;
@@ -81,7 +81,7 @@ export async function loadMacNative(): Promise<MacNative> {
 }
 
 function bind(koffi: Koffi): MacNative {
-  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...objcApi(koffi), ...activateApi(koffi), ...axApi(koffi) };
+  return { ...tapApi(koffi), ...keyApi(koffi), ...systemApi(koffi), ...windowApi(koffi), ...objcApi(koffi), ...activateApi(koffi), ...axApi(koffi) };
 }
 
 /** Attaching a mach port to the main run loop, and taking it off and freeing it again. */
@@ -128,7 +128,7 @@ function tapApi(koffi: Koffi): Pick<MacNative, "createTap"> {
             reenable: () => tap && !removed && CGEventTapEnable(tap, true),
             read: (e, t) => ({
               type: t,
-              keycode: Number(CGEventGetIntegerValueField(e, events === "mouse" ? MOUSE_BUTTON_FIELD : KEYBOARD_KEYCODE_FIELD)),
+              keycode: Number(CGEventGetIntegerValueField(e, KEYBOARD_KEYCODE_FIELD)),
               flags: Number(CGEventGetFlags(e)),
               userData: Number(CGEventGetIntegerValueField(e, USER_DATA_FIELD)),
               button: kind === "mouse" ? Number(CGEventGetIntegerValueField(e, MOUSE_BUTTON_FIELD)) : 0,
@@ -208,42 +208,6 @@ function systemApi(koffi: Koffi): Pick<MacNative, "secureInput" | "inputMonitori
   return {
     secureInput: () => IsSecureEventInputEnabled(),
     inputMonitoring: { status: () => states[IOHIDCheckAccess(IOHID_LISTEN_EVENT)] ?? "unknown", request: () => IOHIDRequestAccess(IOHID_LISTEN_EVENT) },
-  };
-}
-
-/** Accessibility: is the focused control a secure text field? Needs the Accessibility permission; without it the answer is no. */
-const AX_TIMEOUT_SECONDS = 0.25;
-
-function axApi(koffi: Koffi): Pick<MacNative, "passwordFocused"> {
-  const ax = koffi.load(FW("ApplicationServices"));
-  const cf = koffi.load(FW("CoreFoundation"));
-  const AXIsProcessTrusted = ax.func("bool AXIsProcessTrusted()");
-  const AXUIElementCreateSystemWide = ax.func("void *AXUIElementCreateSystemWide()");
-  const AXUIElementSetMessagingTimeout = ax.func("int32 AXUIElementSetMessagingTimeout(void *element, float seconds)");
-  const AXUIElementCopyAttributeValue = ax.func("int32 AXUIElementCopyAttributeValue(void *element, void *attribute, _Out_ void **value)");
-  const CFStringCreateWithCString = cf.func("void *CFStringCreateWithCString(void *alloc, const char *text, uint32 encoding)");
-  const CFEqual = cf.func("bool CFEqual(void *a, void *b)");
-  const CFRelease = cf.func("void CFRelease(void *object)");
-  const names = new Map<string, unknown>();
-  const name = (text: string) => names.get(text) ?? (names.set(text, CFStringCreateWithCString(null, text, UTF8)), names.get(text));
-  const copy = (element: unknown, attribute: string): unknown => {
-    const out: unknown[] = [null];
-    return AXUIElementCopyAttributeValue(element, name(attribute), out) === 0 ? out[0] : null;
-  };
-  return {
-    passwordFocused() {
-      if (!AXIsProcessTrusted()) return false;
-      const system = AXUIElementCreateSystemWide();
-      // A hung front app would otherwise block this thread for the default timeout (seconds); a timed-out query reads as "not a password field".
-      AXUIElementSetMessagingTimeout(system, AX_TIMEOUT_SECONDS);
-      const focused = copy(system, "AXFocusedUIElement");
-      CFRelease(system);
-      if (!focused) return false;
-      const subrole = copy(focused, "AXSubrole");
-      const secure = !!subrole && CFEqual(subrole, name("AXSecureTextField"));
-      for (const object of [subrole, focused]) if (object) CFRelease(object);
-      return secure;
-    },
   };
 }
 

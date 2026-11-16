@@ -28,6 +28,7 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
   const core = {
     history: {
       preservedAs: () => undefined,
+      status: () => "ok",
       get: async () => ({ id: "a", app: undefined }),
       audio: async () => ({ pcm: new Float32Array(1600), sampleRate: 16_000, peak: 1 }),
       addVersion: async (_id: string, v: unknown) => void versions.push(v),
@@ -45,6 +46,7 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
     push: () => pushes.push(api.parts().redo),
     refreshCount: async () => {},
     warn: () => {},
+    key: { test: false },
   });
   return { api, loads, versions, cfg, languages };
 }

@@ -16,8 +16,6 @@ export interface TrayContext {
   update: UpdateState;
   exportsRunning: number;
   doNotDisturb: boolean;
-  /** The hide-tray-icon lab is on: no icon is shown. */
-  hidden: boolean;
   shortcuts: Bindings;
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
@@ -26,9 +24,17 @@ export interface TrayContext {
   /** The system theme of the taskbar or menu bar is dark. */
   darkTaskbar?: boolean;
   /** Absent where dictation cannot run (no key hook on this platform yet). */
-  dictation?: { enabled: boolean; hotkey: string; /** Pause all shortcuts is on. */ paused?: boolean; /** Key chord of Paste last, shown beside the row. */ pasteLast?: string };
+  dictation?: {
+    enabled: boolean;
+    hotkey: string;
+    /** Pause all shortcuts is on. */ paused?: boolean;
+    /** Key chord of Paste last, shown beside the row. */ pasteLast?: string;
+    /** The last dictations, newest first. */ recent?: string[];
+  };
   /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
   recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
+  /** The downloaded speech models, for the quick switch. Absent when none is downloaded. */
+  speechModels?: { models: { id: string; name: string; inUse: boolean }[]; switching?: { name: string }; recording: boolean };
   /** Meeting recording; absent while the Meetings feature is off. `shortcut` is the optional start and stop shortcut. */
   meetings?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing"; shortcut?: string };
 }
@@ -64,6 +70,11 @@ export type TrayAction =
   | "dictation-settings"
   | "record-start"
   | "record-stop"
+  | "dictation-copy-0"
+  | "dictation-copy-1"
+  | "dictation-copy-2"
+  | "dictation-copy-3"
+  | "dictation-copy-4"
   | "meeting-start"
   | "meeting-stop"
   | "open"
@@ -114,8 +125,6 @@ export function recordToggle(phase: NonNullable<TrayContext["recorder"]>["phase"
 
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */
 export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
-
-type TrayItem = { type: "separator" } | { type: "item"; action: TrayAction; label: string; enabled: boolean; checked?: boolean; hint?: string } | { type: "models"; label: string; rows: ModelRow[] };
 
 /** The Speech model submenu: downloaded models only, the one in use marked. While one is checked before switching the old one stays in use and the switch can be cancelled; during a recording the rows are greyed. */
 export function speechModelRows(m: NonNullable<TrayContext["speechModels"]>): ModelRow[] {
@@ -172,6 +181,7 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const rows: TrayItem[] = c.notice ? [item("open", c.notice), sep, item("open", at("tray.open"))] : [item("open", at("tray.open"))];
   rows.push(...dictationRows(c, item));
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
+  rows.push(...speechModelItems(c));
   if (c.meetings) rows.push(meetingRow(c.meetings, item));
   if (reading) rows.push(item("pause", at("tray.pause"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", at("tray.resume"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));

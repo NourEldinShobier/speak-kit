@@ -1,4 +1,5 @@
-import type { AudioTrash, HistoryEntry, HistoryHit, HistoryStats, HistoryStatus, RemoveReport } from "./history";
+import type { AudioTrash, HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus, RemoveReport } from "./history";
+import type { HistoryStats } from "./history-search";
 import type { Rewriter } from "./modes/rewrite";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
 import type { CaretContext } from "./spacing";
@@ -61,8 +62,7 @@ export interface Transcriber {
 
 export interface Inserter {
   /** The foreground window now; undefined when there is none. */
-  /** The foreground window. `address`: also read the browser's address bar, which is slower and only needed to choose the mode of a dictation. */
-  target(opts?: { address?: boolean }): Promise<Target | undefined>;
+  target(): Promise<Target | undefined>;
   /** Brings the window the key was pressed in back to the front and says whether it is in front within a short time. */
   focus?(target: Target): Promise<boolean>;
   /** The character before the caret in the focused field and whether text is selected; undefined when the platform cannot read it. */
@@ -101,7 +101,7 @@ export type DictationErrorCode =
   | "mic-in-use"
   | "failed";
 
-export type Notice = { kind: "inserted" } | { kind: "copied"; reason: CopyReason } | { kind: "cancelled"; restorable?: true } | { kind: "no-speech" };
+export type Notice = { kind: "inserted" } | { kind: "cancelled"; undoable?: true } | { kind: "copied"; reason: CopyReason } | { kind: "no-speech" };
 
 export type DictationState =
   | { status: "idle"; notice?: Notice }
@@ -165,13 +165,16 @@ export interface Dictation {
   /** Inserts the newest non-empty history entry into the window in front. "empty": nothing to paste; "copied": it went to the clipboard only; "failed": not even that. */
   pasteLast(): Promise<"pasted" | "copied" | "empty" | "failed">;
   history: {
-    list(query?: { search?: string; limit?: number }): Promise<HistoryHit[]>;
+    list(query?: HistoryQuery): Promise<HistoryHit[]>;
     get(id: string): Promise<HistoryEntry | undefined>;
     /** Puts the saved text on the clipboard. */
     copy(id: string): Promise<boolean>;
+    /** Inserts the saved text again into the window in front now, the way a new dictation would; false when it could not be inserted. */
+    insert(id: string): Promise<boolean>;
     /** The last `n` texts, newest first, for "Copy recent". */
     recent(n: number): Promise<HistoryEntry[]>;
     remove(id: string): Promise<RemoveReport>;
+    removeMany(ids: readonly string[]): Promise<RemoveReport>;
     clear(): Promise<RemoveReport>;
     stats(): Promise<HistoryStats>;
     status(): HistoryStatus;

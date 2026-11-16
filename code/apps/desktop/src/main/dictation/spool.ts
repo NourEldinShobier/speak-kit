@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readdir, readFile, rename, unlink as fsUnlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Clip } from "@speakkit/dictation";
+import { ignore } from "../../shared/ignore";
 
 /** One take on disk. `recording`: the microphone was still open when the app stopped. `pending`: the recording ended and its text was not saved yet. `cancelled`: the person cancelled it; it is kept for the undo minute only and never recovered. */
 interface Manifest {
@@ -92,26 +93,9 @@ interface Options {
   unlink?: (file: string) => Promise<void>;
 }
 
-/**
- * Keeps the audio of the take in progress on disk as raw 16-bit samples next to a small manifest, so a quit or a crash in the middle of a recording or of
- * the transcription does not lose what was said. The manifest says whether the microphone was still open (`recording`) or the take was waiting for its
- * text (`pending`, the marker written when the recording ends). Disk errors never reach the dictation: a take that cannot be written is simply not kept.
- */
-export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), unlink = fsUnlink }: Options): Spool {
-  const queues = new Map<string, Promise<unknown>>();
-  let counter = 0;
-  const inOrder = (id: string, work: () => Promise<void>): Promise<void> => {
-    const next = (queues.get(id) ?? Promise.resolve()).then(work, work).catch(() => undefined);
-    queues.set(id, next);
-    return next;
-  };
+/** The folder of takes and how it touches the disk: every file operation of the spool, with the retries Windows needs. */
+function files({ dir, sleep, unlink }: Required<Pick<Options, "dir" | "sleep" | "unlink">>) {
   const file = (name: string) => path.join(dir, name);
-
-  async function writeManifest(m: Manifest): Promise<void> {
-    const tmp = `${file(manifestName(m.id))}.part`;
-    await writeFile(tmp, JSON.stringify(m));
-    await withRetry(() => rename(tmp, file(manifestName(m.id))));
-  }
 
   /** Windows can hold a file for a moment (a virus scanner, a search indexer): a few quick retries before giving up. */
   async function withRetry<T>(op: () => Promise<T>): Promise<T> {
@@ -126,36 +110,61 @@ export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((
     }
   }
 
-  async function remove(id: string): Promise<void> {
-    for (const name of [pcmName(id), manifestName(id)]) {
-      try {
-        await withRetry(() => unlink(file(name)));
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-      }
-    }
+  async function writeManifest(m: Manifest): Promise<void> {
+    const tmp = `${file(manifestName(m.id))}.part`;
+    await writeFile(tmp, JSON.stringify(m));
+    await withRetry(() => rename(tmp, file(manifestName(m.id))));
   }
 
-  async function read(id: string): Promise<Manifest | undefined> {
-    try {
-      return parse(await readFile(file(manifestName(id)), "utf8"));
-    } catch {
-      return undefined;
-    }
-  }
+  return {
+    file,
+    writeManifest,
+    async remove(id: string): Promise<void> {
+      for (const name of [pcmName(id), manifestName(id)]) {
+        try {
+          await withRetry(() => unlink(file(name)));
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+        }
+      }
+    },
+    async read(id: string): Promise<Manifest | undefined> {
+      try {
+        return parse(await readFile(file(manifestName(id)), "utf8"));
+      } catch {
+        return undefined;
+      }
+    },
+  };
+}
+
+/**
+ * Keeps the audio of the take in progress on disk as raw 16-bit samples next to a small manifest, so a quit or a crash in the middle of a recording or of
+ * the transcription does not lose what was said. The manifest says whether the microphone was still open (`recording`) or the take was waiting for its
+ * text (`pending`, the marker written when the recording ends). Disk errors never reach the dictation: a take that cannot be written is simply not kept.
+ */
+export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), unlink = fsUnlink }: Options): Spool {
+  const fs = files({ dir, sleep, unlink });
+  const queues = new Map<string, Promise<unknown>>();
+  let counter = 0;
+  const inOrder = (id: string, work: () => Promise<void>): Promise<void> => {
+    const next = (queues.get(id) ?? Promise.resolve()).then(work, work).catch(ignore);
+    queues.set(id, next);
+    return next;
+  };
 
   return {
     async begin(rate, startedAt) {
       const id = `${startedAt}-${now()}-${counter++}`;
       await inOrder(id, async () => {
         await mkdir(dir, { recursive: true });
-        await writeFile(file(pcmName(id)), Buffer.alloc(0));
-        await writeManifest({ v: 1, id, rate, startedAt, state: "recording", tries: 0 });
+        await writeFile(fs.file(pcmName(id)), Buffer.alloc(0));
+        await fs.writeManifest({ v: 1, id, rate, startedAt, state: "recording", tries: 0 });
       });
       return id;
     },
 
-    append: (id, pcm) => (safeId(id) && pcm.length ? inOrder(id, () => appendFile(file(pcmName(id)), encode(pcm))) : Promise.resolve()),
+    append: (id, pcm) => (safeId(id) && pcm.length ? inOrder(id, () => appendFile(fs.file(pcmName(id)), encode(pcm))) : Promise.resolve()),
 
     seal: (id, state = "pending") =>
       inOrder(id, async () => {
@@ -166,11 +175,11 @@ export function createSpool({ dir, now = Date.now, sleep = (ms) => new Promise((
     finish: (id) =>
       inOrder(id, async () => {
         try {
-          await remove(id);
+          await fs.remove(id);
         } catch {
           // Still locked after the retries: the manifest is rewritten as tried out, so the next start deletes the take instead of transcribing it twice.
-          const m = await read(id);
-          if (m) await writeManifest({ ...m, tries: MAX_TRIES }).catch(() => undefined);
+          const m = await fs.read(id);
+          if (m) await fs.writeManifest({ ...m, tries: MAX_TRIES }).catch(ignore);
         }
       }),
 

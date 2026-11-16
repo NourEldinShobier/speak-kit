@@ -15,8 +15,6 @@ import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDea
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
 import { automationRoutes } from "./routes/automation";
-import { PageContext } from "./page-context";
-import { pageContextRoutes } from "./routes/page-context";
 import { streamRoutes } from "./routes/streams";
 import { StreamSessions, type StreamsHost } from "./streams/sessions";
 import { engineRoutes } from "./routes/engines";
@@ -58,6 +56,8 @@ export interface ServerOptions {
   voiceChat?: VoiceChatService;
   /** The reader, queue and exports for scripts and AI apps. Without it the automation routes answer "unsupported". */
   automation?: AutomationHost;
+  /** Keeps the address of the page in front, reported by the browser extension. Without it the report is accepted and dropped. */
+  pageContext?: PageContextHost;
   /** The speech engine and the dictation rules for live transcription of other apps. Without it the stream routes answer "unsupported". */
   streams?: StreamsHost;
   /** Heartbeat of the event stream in ms. Default 15000. */
@@ -95,7 +95,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...streamRoutes, ...pageContextRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes, ...streamRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -115,7 +115,7 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
     version: opts.version ?? "0.0.0",
     voiceChat: opts.voiceChat,
     automation: opts.automation,
-    pageContext: new PageContext(Date.now),
+    pageContext: opts.pageContext,
     streams: opts.streams && new StreamSessions(opts.streams, { now: Date.now }),
     events: { open: 0 },
     heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
@@ -132,7 +132,7 @@ function requestHandler(services: Services, authorized: (req: IncomingMessage) =
     const method = req.method ?? "GET";
     if (method === "OPTIONS") return preflight(res, origin);
     const { route, params } = resolveRoute(ROUTES, method, new URL(req.url ?? "/", "http://x").pathname);
-    if (route.auth !== false && !authorized(req)) throw new HttpError(401, "token-rejected", "missing or wrong token");
+    if (route.auth !== false && !authorized(req)) throw new HttpError(404, "token-rejected", "missing or wrong token");
     const ac = new AbortController();
     const done = route.handle({ req, res, params, signal: ac.signal }, services);
     await (route.stream ? done : withDeadline(done, services.deadlines.controlMs, ac));

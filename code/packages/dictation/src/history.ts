@@ -1,3 +1,4 @@
+import { normalize, rank, type HistoryStats, historyStats } from "./history-search";
 import type { RewriteOutcome } from "./modes/rewrite";
 import type { Retention } from "./settings";
 import type { Clock, HistoryStorage } from "./types";
@@ -49,7 +50,7 @@ export interface HistoryEntry {
 export type NewEntry = Omit<HistoryEntry, "id">;
 
 export interface HistoryQuery {
-  /** Every word must appear in the text or the program name, in any case; a sounds-like spelling of a vocabulary word finds that word too. */
+  /** Every word must be found in the text or the program name, in any case and without accents; the best matches come first. A sounds-like spelling of a vocabulary word finds that word too. */
   search?: string;
   /** Other spellings for a word of the search (from the person's vocabulary). */
   aliases?: Readonly<Record<string, readonly string[]>>;
@@ -71,12 +72,16 @@ export interface RemoveReport {
 export type HistoryStatus = "ok" | "newer" | "unreadable";
 
 export interface History {
-  /** Resolves to the new entry's id, or undefined when nothing is kept (retention "off"). */
+  /** Resolves the new entry's id; undefined when retention is off. */
   add(entry: NewEntry): Promise<string | undefined>;
+  /** Corrects what is known only after the text was sent (what really happened to it). */
+  update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void>;
   /** Newest first, with expired entries already gone. */
   list(query?: HistoryQuery): Promise<HistoryHit[]>;
   get(id: string): Promise<HistoryEntry | undefined>;
   remove(id: string): Promise<RemoveReport>;
+  removeMany(ids: readonly string[]): Promise<RemoveReport>;
+  stats(): Promise<HistoryStats>;
   clear(): Promise<RemoveReport>;
   /** Drops what the retention no longer allows. */
   prune(): Promise<RemoveReport>;
@@ -133,11 +138,20 @@ function freshId(entries: HistoryEntry[], at: number): string {
   return `${at}-${n}`;
 }
 
-const words = (s: string): string[] => s.toLowerCase().match(/\S+/g) ?? [];
+// Search runs over a normalized copy of the text and program names, made once per entry and kept off the stored data.
+const keys = new WeakMap<HistoryEntry, string>();
+const keyOf = (e: HistoryEntry): string => {
+  let key = keys.get(e);
+  if (key === undefined) keys.set(e, (key = normalize([e.text, e.displayName ?? "", e.app ?? ""].join("\n"))));
+  return key;
+};
 
-function matches(e: HistoryEntry, search: string): boolean {
-  const hay = `${e.text}\n${e.app ?? ""}`.toLowerCase();
-  return words(search).every((word) => hay.includes(word));
+/** What `list` would return for stored data read straight from the file, without the app: the same shape check, retention and search. An unknown retention counts as the default. */
+export function readStoredHistory(stored: unknown, o: { now: number; retention: unknown; search?: string; limit?: number }): HistoryEntry[] {
+  const retention = typeof o.retention === "string" && o.retention in WINDOW_MS ? (o.retention as Retention) : "7d";
+  const kept = keep(parse(stored).entries, o.now, retention);
+  const found = o.search ? kept.filter((e) => rank(keyOf(e), o.search!) > 0) : kept;
+  return found.slice(0, o.limit ?? found.length);
 }
 
 interface Deps {
@@ -241,15 +255,19 @@ class Store implements History {
     const { search } = query;
     let found: HistoryHit[] = this.entries;
     if (search?.trim()) {
-      const aliases = matchTerms(this.deps.terms?.() ?? [], search);
+      const terms = matchTerms(this.deps.terms?.() ?? [], search);
       found = [];
+      const scored: { e: HistoryHit; score: number }[] = [];
       for (const e of this.entries) {
-        if (matches(e, search)) found.push(e);
+        const score = rank(keyOf(e), search, query.aliases);
+        if (score > 0) scored.push({ e, score });
         else {
-          const hit = aliases.find((a) => e.text.toLowerCase().includes(a.term.word.toLowerCase()));
-          if (hit) found.push({ ...e, via: { word: hit.term.word, heard: hit.via } });
+          const hit = terms.find((a) => e.text.toLowerCase().includes(a.term.word.toLowerCase()));
+          if (hit) scored.push({ e: { ...e, via: { word: hit.term.word, heard: hit.via } }, score: 1 });
         }
       }
+      // Entries are newest first already and the sort is stable, so equal scores stay newest first.
+      found = scored.sort((a, b) => b.score - a.score).map((x) => x.e);
     }
     return found.slice(0, query.limit ?? found.length);
   }
@@ -276,6 +294,27 @@ class Store implements History {
   }
 
   async patch(id: string, patch: Parameters<History["patch"]>[1]): Promise<void> {
+    await this.ready();
+    if (!this.entries.some((e) => e.id === id)) return;
+    this.entries = this.entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
+    await this.save();
+  }
+
+  async removeMany(ids: readonly string[]): Promise<RemoveReport> {
+    await this.ready();
+    const drop = new Set(ids);
+    const gone = this.entries.filter((e) => drop.has(e.id));
+    this.entries = this.entries.filter((e) => !drop.has(e.id));
+    await this.save();
+    return this.dispose(gone);
+  }
+
+  async stats(): Promise<HistoryStats> {
+    await this.prune();
+    return historyStats(this.entries);
+  }
+
+  async update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void> {
     await this.ready();
     if (!this.entries.some((e) => e.id === id)) return;
     this.entries = this.entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
@@ -323,20 +362,6 @@ class Store implements History {
 }
 
 export const createHistory = (deps: Deps): History => new Store(deps);
-
-export interface HistoryStats {
-  dictations: number;
-  words: number;
-  wordsPerMinute: number;
-  listeningMs: number;
-}
-
-/** The numbers above the list. Words per minute counts the time spent speaking, not the time between dictations. */
-export function historyStats(entries: readonly Pick<HistoryEntry, "text" | "durationMs">[]): HistoryStats {
-  const words = entries.reduce((n, e) => n + (e.text.match(/\S+/g)?.length ?? 0), 0);
-  const listeningMs = entries.reduce((n, e) => n + e.durationMs, 0);
-  return { dictations: entries.length, words, listeningMs, wordsPerMinute: listeningMs > 0 ? Math.round(words / (listeningMs / 60_000)) : 0 };
-}
 
 export const MAX_AUDIO_BYTES = 512 * 1024 * 1024;
 

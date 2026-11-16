@@ -14,13 +14,12 @@
     "apps/extension/src/features/voicechat/VoiceChatSection.tsx": "the options card asks the app on 127.0.0.1 whether an OpenAI key is set",
     "apps/extension/src/features/voicechat/mint.ts": "voice chat: asks the Speak Kit app on 127.0.0.1 for a short-lived OpenAI client secret and for whether a key is set",
     "apps/extension/src/features/voicechat/realtime.ts": "voice chat: trades the WebRTC offer for the answer at OpenAI, authorised by the client secret only",
-    "packages/cli/src/client.ts": "the speakkit command and its MCP server talk to the desktop app on 127.0.0.1 only",
     "packages/engine/src/worker.ts": "kokoro-js downloads the model files from Hugging Face on first use",
     "packages/player/src/chunk.ts": "player requests speech chunks from 127.0.0.1"
   },
   "hosts": {
     "api.github.com": "update check reads the latest release (electron-updater feed and the manual check)",
-    "api.openai.com": "voice chat connects to the OpenAI Realtime API (WebRTC) with a short-lived client secret; the key stays in the desktop app",
+    "api.openai.com": "voice chat: the desktop app tests the OpenAI key and mints short-lived Realtime client secrets with it (the key goes nowhere else); the extension connects to the Realtime API with that secret only",
     "chromewebstore.google.com": "link opened in the user's browser to install the extension",
     "github.com": "release page opened in the user's browser",
     "huggingface.co": "dictation: packages/engine/src/stt/download.ts fetches the speech model and the voice-gate model on first use, resumable and checked against a SHA-256; nothing else is sent",

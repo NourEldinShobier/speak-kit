@@ -47,25 +47,26 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, noti
     update: ctx.state.update,
     exportsRunning: exports.runningCount(),
     doNotDisturb: ctx.config.doNotDisturb,
-    hidden: ctx.config.labs["hide-tray-icon"],
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     darkTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
     recorder: { phase: transcripts.phase() },
     ...(m.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(m.shortcut && { shortcut: m.shortcut }) } }),
-    ...(dictation.status().supported && { dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused } }),
+    ...(dictation.status().supported && {
+      dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused, recent: dictation.history.recent() },
+    }),
+    ...speechModelsContext(dictation),
   };
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
 export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, notice, requestQuit, retryEngine }: TrayParts) {
   const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings, notice });
-  const openDictation = (page: "dictation" | "history") => () => {
-    ctx.showWindow();
-    ctx.sendUi({ type: "nav", page });
-  };
+  const openDictation = (page: "dictation" | "history") => () => (ctx.showWindow(), ctx.sendUi({ type: "nav", page }));
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
+    "paste-last": () => void dictation.controls.pasteLast(),
+    "pause-shortcuts": () => dictation.controls.setPaused(!dictation.controls.paused),
     "record-start": () => void transcripts.startRecording().then(() => ctx.showWindow()),
     "record-stop": () => void transcripts.stopRecording(),
     "meeting-start": () => void meetings()?.start(),

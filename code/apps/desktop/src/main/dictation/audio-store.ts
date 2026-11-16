@@ -9,7 +9,8 @@ export interface AudioStoreOptions {
   trash(file: string): Promise<boolean>;
   /** Called with the recordings removed to make room, so the history can forget them. */
   onEvicted(files: string[]): void;
-  limitBytes?: number;
+  /** The most the folder may hold; a function is read at every save, so a change in the settings applies to the next recording. */
+  limitBytes?: number | (() => number);
 }
 
 const safe = (id: string): string => id.replace(/[^\w.-]/g, "_");
@@ -22,12 +23,12 @@ export function encodeWav(clip: Clip): Buffer {
 
 /** Recordings as 16-bit WAV files in one folder, capped in size: the oldest go first, and the history is told which. */
 export function createAudioStore(o: AudioStoreOptions): AudioStore {
-  const limit = o.limitBytes ?? MAX_AUDIO_BYTES;
   const inside = (file: string): string => path.join(o.dir, path.basename(file)); // a name from the history can never leave the folder
   return {
     async save(id, clip) {
       try {
         await mkdir(o.dir, { recursive: true });
+        const limit = typeof o.limitBytes === "function" ? o.limitBytes() : (o.limitBytes ?? MAX_AUDIO_BYTES);
         const bytes = encodeWav(clip);
         if (bytes.length > limit) return undefined; // one recording larger than the whole limit is not kept
         const names = (await readdir(o.dir)).filter((n) => n.endsWith(".wav"));

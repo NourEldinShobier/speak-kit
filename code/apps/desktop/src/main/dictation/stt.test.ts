@@ -173,6 +173,24 @@ describe("model views", () => {
   });
 });
 
+describe("end-of-sentence pause", () => {
+  async function paused(model: string, on: boolean) {
+    const stt = new FakeStt();
+    await stt.load(model as never);
+    const t = createTranscriber({ stt, model: () => model as never, onFailedClip: () => undefined, sentencePause: () => on });
+    await t.transcribe({ clip: clip([0.5, 0.5], 1000), language: "en" });
+    return stt.calls()[0]!.samples;
+  }
+
+  it("adds 400 ms of silence for Parakeet when on", async () => {
+    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", true)).toBe(402);
+  });
+  it("adds nothing when off, or for Whisper", async () => {
+    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", false)).toBe(2);
+    expect(await paused("large-v3-turbo-q5_0", true)).toBe(2);
+  });
+});
+
 describe("transcriber and the word list", () => {
   it("sends the words to a model that reads them", async () => {
     const { stt, t } = await ready();

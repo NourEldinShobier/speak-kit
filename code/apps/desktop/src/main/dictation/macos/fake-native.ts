@@ -16,31 +16,27 @@ const initialState = () => ({
   addTypesOk: true,
   access: "granted" as "granted" | "denied" | "unknown",
   requested: 0,
+  /** Process ids `activate` was asked for; an app listed in `running` comes to the front. */
+  activated: [] as number[],
+  running: new Map<number, Frontmost>(),
 });
 
-export function fakeMacNative(opts: { refuseTap?: boolean } = {}) {
+export function fakeMacNative(opts: { refuseTap?: boolean; refuseMouseTap?: boolean } = {}) {
   const handlers: Partial<Record<"keys" | "mouse", (e: TapEvent) => boolean>> = {};
   const calls = { taps: 0, removed: 0 };
   const state = initialState();
+  const post = (item: (typeof state.posted)[number]) => state.posted.length < state.acceptPosts && (state.posted.push(item), true);
   const native: MacNative = {
     createTap(onEvent, kind = "keys") {
-      if (opts.refuseTap) throw new Error("tap refused");
+      if (opts.refuseTap || (opts.refuseMouseTap && kind === "mouse")) throw new Error("tap refused");
       calls.taps++;
       handlers[kind] = onEvent;
       return { remove: () => void calls.removed++ };
     },
     keyIsDown: (code) => state.down.has(code),
     modifierFlags: () => state.flags,
-    postKey(keycode, down, flags) {
-      if (state.posted.length >= state.acceptPosts) return false;
-      state.posted.push({ keycode, down, flags });
-      return true;
-    },
-    postUnits(units) {
-      if (state.posted.length >= state.acceptPosts) return false;
-      state.posted.push({ units: [...units] });
-      return true;
-    },
+    postKey: (keycode, down, flags) => post({ keycode, down, flags }),
+    postUnits: (units) => post({ units: [...units] }),
     secureInput: () => state.secure,
     passwordFocused: () => state.passwordFocused,
     frontmost: () => state.front,

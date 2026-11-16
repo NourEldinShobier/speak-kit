@@ -1,4 +1,4 @@
-import type { Hardware } from "@speakkit/engine";
+import { STT_MODELS, type Hardware } from "@speakkit/engine";
 import { modelState, resourceRows, type DeviceInfo, type ModelUse, type ProcessSample, type Resources } from "../shared/settings/resources";
 
 /** What the collector reads from the running app; each one is a system boundary. */
@@ -46,14 +46,14 @@ export async function collectResources(src: ResourceSources): Promise<Resources>
   const rows = resourceRows(src.processes());
   const voice = src.voice();
   const speech = src.speech();
-  const [voiceUse, speechUse, hw] = await Promise.all([modelUse("voice", voice, src.memoryOf), modelUse("speech", speech, src.memoryOf), src.hardware().catch(() => undefined)]);
+  const [voiceUse, speechUse, hw] = await Promise.all([modelUse("voice", voice, src.memoryOf), modelUse("speech", speech, src.memoryOf), src.hardware().catch(unknownDevice)]);
   const device: DeviceInfo = {
     platform: hw?.platform ?? src.platform,
     arch: hw?.arch ?? src.arch,
     cores: hw?.cores ?? null,
     ramGb: hw?.memoryGb ?? null,
     gpu: hw?.gpu?.name ?? null,
-    speechRunsOn: speechUse.state === "loaded" ? (speech.backend === "gpu" ? "graphics card" : speech.backend === "cpu" ? "CPU" : null) : null,
+    speechRunsOn: speechUse.state === "loaded" ? RUNS_ON[speech.backend ?? "none"] : null,
   };
   return { rows, totalMb: Math.round(rows.reduce((n, r) => n + r.mb, 0) * 10) / 10, models: [voiceUse, speechUse], device };
 }

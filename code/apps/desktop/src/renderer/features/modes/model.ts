@@ -1,4 +1,4 @@
-import type { Capitals, EndOfDictation, InsertMode, Mode, Term } from "@speakkit/dictation";
+import type { Capitals, EndOfDictation, InsertMode, Term, WritingMode as Mode } from "@speakkit/dictation";
 
 const KNOWN: Record<string, string> = {
   code: "Visual Studio Code",

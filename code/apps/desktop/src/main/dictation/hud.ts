@@ -17,8 +17,8 @@ export interface HudWindow {
   push(state: HudState): void;
   /** True when `contents` is this window's page (the HUD buttons report through it). */
   owns?(contents: Electron.WebContents): boolean;
-  /** Moves the window to its place on the screen and shows it without taking focus. */
-  showInactive(): void;
+  /** Moves the window to its place on the screen (top or bottom of the display under the pointer) and shows it without taking focus. */
+  showInactive(place?: "top" | "bottom"): void;
   hide(): void;
   destroy(): void;
 }
@@ -39,6 +39,8 @@ interface Deps {
   open(): HudWindow;
   /** How long a hidden window is kept for the next dictation before it is destroyed (an idle window costs a renderer process). */
   idleMs?: number | undefined;
+  /** Where the window goes; read at every show, so a change in the settings applies to the next one. */
+  place?(): "top" | "bottom";
 }
 
 /**
@@ -48,6 +50,7 @@ interface Deps {
 export class HudController implements Hud {
   readonly #open: () => HudWindow;
   readonly #idleMs: number;
+  readonly #place: () => "top" | "bottom";
   #win: HudWindow | null = null;
   #wanted = false;
   #shown = false;
@@ -55,8 +58,9 @@ export class HudController implements Hud {
   #latest: HudState | null = null;
   #idle: NodeJS.Timeout | undefined;
 
-  constructor({ open, idleMs = 20_000 }: Deps) {
+  constructor({ open, idleMs = 20_000, place = () => "bottom" }: Deps) {
     this.#open = open;
+    this.#place = place;
     this.#idleMs = idleMs;
   }
 
@@ -105,7 +109,7 @@ export class HudController implements Hud {
     w.push(this.#latest);
     if (!this.#shown) {
       this.#shown = true;
-      w.showInactive();
+      w.showInactive(this.#place());
     }
   }
 

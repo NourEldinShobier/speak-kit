@@ -79,8 +79,21 @@ export async function exitAfterCleanup(o: { saving(): Promise<unknown> | undefin
 
 const RUNNING_FILE = "instance.json";
 
-export const writeRunningVersion = (dir: string, version: string) => writeFile(path.join(dir, RUNNING_FILE), JSON.stringify({ version, pid: process.pid })).catch(() => {});
-export const clearRunningVersion = (dir: string) => rm(path.join(dir, RUNNING_FILE), { force: true }).catch(() => {});
+export async function writeRunningVersion(dir: string, version: string): Promise<void> {
+  try {
+    await writeFile(path.join(dir, RUNNING_FILE), JSON.stringify({ version, pid: process.pid }));
+  } catch {
+    /* only a newer install reads it; running without it is fine */
+  }
+}
+
+export async function clearRunningVersion(dir: string): Promise<void> {
+  try {
+    await rm(path.join(dir, RUNNING_FILE), { force: true });
+  } catch {
+    /* a stale file is replaced at the next start */
+  }
+}
 export async function readRunningVersion(dir: string): Promise<string | null> {
   try {
     const v = (JSON.parse(await readFile(path.join(dir, RUNNING_FILE), "utf8")) as { version?: unknown }).version;

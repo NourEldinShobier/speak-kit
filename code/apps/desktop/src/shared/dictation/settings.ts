@@ -11,7 +11,7 @@ import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
 
 /** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
 export type DictationModelId = (typeof DICTATION_MODELS)[number] | `custom-${string}`;
-const modelId = v.union([
+export const modelId = v.union([
   v.picklist(DICTATION_MODELS),
   v.pipe(
     v.string(),
@@ -25,9 +25,6 @@ export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
 export const OUTPUTS = ["restore", "keep", "copy"] as const;
-export const PASTE_METHODS = ["ctrl-v", "ctrl-shift-v", "shift-insert", "type", "copy"] as const;
-export type PasteMethod = (typeof PASTE_METHODS)[number];
-export const MAX_APP_RULES = 50;
 export const MAX_EXCLUSIONS = 20;
 export const MAX_KEEP_READY_MINUTES = 120;
 
@@ -93,8 +90,14 @@ const modeEntries = {
   id,
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
   apps: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)),
-  /** Websites for the mode, by name ("github.com"); a file from before they existed loads with none. */
-  sites: v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))), v.maxLength(50)), []),
+  /** Website host names; a name that is not one is dropped, a repeated one kept once. Modes saved before sites existed have none. */
+  sites: v.fallback(
+    v.pipe(
+      v.array(v.pipe(v.string(), v.transform(normalizeSite))),
+      v.transform((l) => [...new Set(l.filter(Boolean))].slice(0, 50)),
+    ),
+    [],
+  ),
   insertMode: v.picklist(["paste", "type", "copy"]),
   capitals: v.picklist(["keep", "sentence", "lower"]),
   end: v.picklist(["keep", "no-full-stop"]),
@@ -151,37 +154,45 @@ const PauseRules = v.object({
 export type PauseRules = v.InferOutput<typeof PauseRules>;
 const MOUSE_PICK = ["", "Mouse2", "Mouse3", "Mouse4", "Mouse5"] as const;
 
-const AppRule = v.object({ method: v.picklist(PASTE_METHODS), delayMs: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(5000)), 0) });
-export type AppRule = v.InferOutput<typeof AppRule>;
-const exeName = v.pipe(v.string(), v.trim(), v.toLowerCase(), v.regex(/^[a-z0-9._ -]{1,60}$/));
-// A bad rule is dropped, the rest of the table stays; the program name is kept without ".exe".
-const appRules = v.fallback(
-  v.pipe(
-    v.record(v.string(), v.unknown()),
-    v.transform((all) => {
-      const out: Record<string, AppRule> = {};
-      for (const [name, rule] of Object.entries(all)) {
-        const key = v.safeParse(exeName, name.replace(/\.exe$/i, ""));
-        const parsed = v.safeParse(AppRule, rule);
-        if (key.success && parsed.success && Object.keys(out).length < MAX_APP_RULES) out[key.output] = parsed.output;
-      }
-      return out;
-    }),
-  ),
-  {},
-);
 const exclusions = v.fallback(v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)), []);
 
 /** Persisted under `dictation` in config.json. Off until the person turns it on; every key falls back to its default, which is also how files from before dictation existed load. */
 const CORE_KEYS = {
   enabled: v.fallback(v.boolean(), false),
   hotkey,
-  mode: v.fallback(v.picklist(["hold", "toggle"]), "hold"),
+  mode: v.fallback(v.picklist(MODES), "hold"),
+  holdMs: v.fallback(v.picklist(HOLD_TIMES), 300),
+  secondHotkey: optionalHotkey(""),
+  mouseButton: v.fallback(v.picklist(MOUSE_PICK), ""),
+  rawHotkey: optionalHotkey(""),
+  pasteLastHotkey: optionalHotkey(DEFAULT_PASTE_LAST),
+  cancelKey: v.fallback(v.pipe(v.string(), v.check(validCancelKey)), "Escape"),
+  /** Hold mode only: the keys also reach the program that listens for them (push-to-talk in a chat app). */
+  shareHotkey: v.fallback(v.boolean(), false),
+  pauseRules: v.fallback(PauseRules, { mode: "off", apps: [], fullscreen: false }),
+  /** Set when a saved shortcut was refused at load and replaced: the page says so once. */
+  resetNotice: v.fallback(v.optional(v.picklist(["left-click", "clash"])), undefined),
   // An explicit language is the default: automatic detection can mistranscribe close languages, so it is something the person chooses.
   language: v.fallback(v.picklist(DICTATION_LANGUAGES), "en"),
   model: v.fallback(modelId, DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
   replacements,
+  /** Device id of the chosen microphone; empty means the system default, never a virtual input. */
+  microphone: v.fallback(v.pipe(v.string(), v.maxLength(300)), ""),
+  micExclusions: exclusions,
+  avoidBluetooth: v.fallback(v.boolean(), true),
+  /** Keep the microphone open between recordings, for the audio before the key press. */
+  keepReady: v.fallback(v.boolean(), false),
+  /** Close an idle open microphone after this many minutes; 0 keeps it open while dictation is on. */
+  keepReadyMinutes: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)), 0),
+  /** Add a little silence after the speech for models that need it to end the last sentence. */
+  sentencePause: v.fallback(v.boolean(), true),
+  output: v.fallback(v.picklist(OUTPUTS), "restore"),
+  returnToApp: v.fallback(v.boolean(), true),
+  appRules,
+  /** Stop the computer from sleeping while a recording runs. */
+  blockSleep: v.fallback(v.boolean(), true),
+  skipPauses: v.fallback(v.boolean(), false),
   terms: v.fallback(lenient(Term, MAX_TERMS, termKeys), []),
   readAs: v.fallback(
     lenient(Pronunciation, 200, (p) => [`i:${p.id}`]),
@@ -207,7 +218,7 @@ const CORE_KEYS = {
   duckSpeakersOnly: bool(true),
 };
 const MouseOne = /(^|\+)Mouse1(\+|$)/;
-const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; transformHotkey: string; cancelKey: string }): Shortcuts => ({
+export const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; transformHotkey: string; cancelKey: string }): Shortcuts => ({
   dictation: c.hotkey,
   second: c.secondHotkey,
   mouse: c.mouseButton,
@@ -235,7 +246,7 @@ export const DictationConfigSchema = v.pipe(
     for (let i = 0; i < 6; i++) {
       const clash = firstClash(hotkeySlots(out));
       if (!clash) break;
-      const drop = (["raw", "mouse", "second", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
+      const drop = (["raw", "mouse", "second", "pasteLast", "transform", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
       out = {
         ...out,
@@ -244,6 +255,7 @@ export const DictationConfigSchema = v.pipe(
         ...(drop === "mouse" && { mouseButton: "" as const }),
         ...(drop === "second" && { secondHotkey: "" }),
         ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
+        ...(drop === "transform" && { transformHotkey: "" }),
         ...(drop === "cancel" && { cancelKey: "Escape" }),
       };
     }
@@ -251,7 +263,6 @@ export const DictationConfigSchema = v.pipe(
   }),
 );
 export type DictationConfig = v.InferOutput<typeof DictationConfigSchema>;
-export { hotkeySlots };
 
 const count = (x: unknown): number => (Array.isArray(x) ? x.length : 0);
 
@@ -287,6 +298,20 @@ export const DictationPatchSchema = v.partial(
     model: modelId,
     retention: v.picklist(RETENTIONS),
     replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
+    microphone: v.pipe(v.string(), v.maxLength(300)),
+    micExclusions: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(MAX_EXCLUSIONS)),
+    avoidBluetooth: v.boolean(),
+    keepReady: v.boolean(),
+    keepReadyMinutes: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)),
+    sentencePause: v.boolean(),
+    output: v.picklist(OUTPUTS),
+    returnToApp: v.boolean(),
+    appRules: v.pipe(
+      v.record(exeName, AppRule),
+      v.check((r) => Object.keys(r).length <= MAX_APP_RULES),
+    ),
+    blockSleep: v.boolean(),
+    skipPauses: v.boolean(),
     terms: termList,
     readAs: v.pipe(
       v.array(Pronunciation),

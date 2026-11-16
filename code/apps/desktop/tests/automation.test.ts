@@ -183,7 +183,6 @@ describe("reads and the MCP bridge with the app closed", () => {
     expect(shown.out).toContain("[01:10] Them: move the launch");
     expect(shown.out).not.toContain("over plan");
     expect(JSON.parse(cli(dir, ["--json", "meetings", "search", "budget"]).out).data.hits[0].id).toBe("aaaaaa1");
-    expect(cli(dir, ["capture", "list"]).out).toBe("No captures yet.\n");
     expect(existsSync(path.join(dir, "control.json"))).toBe(false);
     expect(readFileSync(path.join(dir, "meetings", "manifest.json"), "utf8")).toBe(before);
   });
@@ -236,7 +235,7 @@ describe("every control in the main menu pages has a name", () => {
   it("visits each page and finds no button, switch, link or field without an accessible name", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const pages = ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture"];
+    const pages = ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"];
     const problems: string[] = [];
     for (const name of pages) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
@@ -326,7 +325,7 @@ describe("accessibility scan with axe", () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     const found: string[] = [];
-    for (const name of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture"]) {
+    for (const name of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"]) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
       await l.page.getByRole("heading", { level: 1 }).first().waitFor();
       await l.page.waitForTimeout(300);

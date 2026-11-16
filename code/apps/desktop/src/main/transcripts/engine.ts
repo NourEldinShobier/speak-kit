@@ -27,7 +27,7 @@ export function chunkEngine({ stt, model }: ChunkEngineDeps): (pcm: Int16Array, 
     const supported: readonly string[] = STT_MODELS.find((m) => m.id === id)?.languages ?? [];
     const lang = (supported.includes(language) ? language : "auto") as SttLanguage;
     try {
-      const t = await stt.transcribe(pcm, lang, signal);
+      const t = await stt.transcribe(pcm, lang, { signal });
       return { ok: true, text: t.text, speech: t.speech };
     } catch (e) {
       if (e instanceof EngineNotReadyError) return { ok: false, code: "engine-loading" };

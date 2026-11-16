@@ -34,8 +34,7 @@ describe("shell", () => {
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: Menu title, the four groups, Recent and Settings; no New reading and no Browser.
     const nav = l.page.getByRole("navigation", { name: "Main" });
-    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture", "Settings"])
-      expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
+    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
     for (const n of ["New reading", "Browser"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
     expect(await nav.getByText("Recent").count()).toBe(1);
     // A ready engine shows nothing in the title bar (the sidebar card says it); the bell lives there.
@@ -322,7 +321,7 @@ describe("tray and lifecycle", () => {
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
-    expect(labels.filter((n) => !/^(Dictation|Hold |Speech model)/.test(n))).toEqual([
+    expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts|Speech model)/.test(n))).toEqual([
       "Open Speak Kit",
       "Record a conversation",
       "Record a meeting",

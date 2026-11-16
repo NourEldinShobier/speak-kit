@@ -1,15 +1,14 @@
-import * as captures from "./captures";
 import * as meetings from "./meetings";
 import type { Sources } from "./disk";
 
 export { diskSources, type Sources } from "./disk";
 export { parseOffset } from "./time";
 
-/** A read of meetings or captures. Every field but `command` and `action` depends on the action. */
+/** A read of meetings. Every field but `command` and `action` depends on the action. */
 export interface ReadRequest {
-  command: "meetings" | "capture";
+  command: "meetings";
   action: string;
-  /** An id, a prefix of one, `latest` or (captures) a title. */
+  /** An id, a prefix of one, or `latest`. */
   ref?: string;
   query?: string;
   from?: number;
@@ -48,26 +47,12 @@ async function readMeetings(r: ReadRequest, src: Sources): Promise<ReadOutcome> 
     : { ok: true, data: { meeting: shown.shown }, text: meetings.showMarkdown(shown.shown) };
 }
 
-async function readCaptures(r: ReadRequest, src: Sources): Promise<ReadOutcome> {
-  const { records, root } = await src.captures();
-  if (r.action === "list") {
-    const rows = captures.list(records, r.limit);
-    return { ok: true, data: { captures: rows }, text: captures.listText(rows) };
-  }
-  if (r.action !== "show") return usage(`Unknown capture command "${r.action}". Use list or show.`);
-  if (!r.ref) return usage("capture show needs a capture: an id, a title or latest.");
-  const found = captures.pick(records, r.ref);
-  if (!found.ok) return { ok: false, code: "failed", message: found.message };
-  const shown = captures.show(found.record, root);
-  return { ok: true, data: { capture: shown }, text: captures.showText(shown) };
-}
-
 /** Answers a read from the files in the data folder. Never starts the app, loads no model and changes no file. */
 export async function runRead(r: ReadRequest, src: Sources): Promise<ReadOutcome> {
   try {
-    return await (r.command === "meetings" ? readMeetings(r, src) : readCaptures(r, src));
+    return await readMeetings(r, src);
   } catch (e) {
     // A file that cannot be read (locked, damaged, a folder where a file should be) is a failed read, never an empty one and never a crash.
-    return { ok: false, code: "failed", message: `The saved ${r.command === "meetings" ? "meetings" : "captures"} could not be read${e instanceof Error && e.message ? ` (${e.message})` : ""}.` };
+    return { ok: false, code: "failed", message: `The saved meetings could not be read${e instanceof Error && e.message ? ` (${e.message})` : ""}.` };
   }
 }

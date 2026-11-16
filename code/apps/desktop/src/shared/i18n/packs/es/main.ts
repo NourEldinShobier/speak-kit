@@ -127,7 +127,6 @@ export const ES_MAIN: Record<keyof typeof MAIN, string> = {
   "dialog.importDetail": "Activaría: {what}.",
   "dialog.leaveOut": "Dejarlos fuera",
   "dialog.turnOn": "Activarlos",
-  "dialog.capturesFolder": "Carpeta de capturas",
   "filter.settings": "Ajustes",
   "filter.wordLists": "Listas de palabras",
   "filter.readable": "Archivos legibles",

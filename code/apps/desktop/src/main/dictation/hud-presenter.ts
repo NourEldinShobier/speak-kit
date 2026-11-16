@@ -1,6 +1,9 @@
 import type { DictationState } from "@speakkit/dictation";
+import type { DictationConfig, Indicator } from "../../shared/dictation/settings";
+import type { DictationOs, InsertResult } from "./index";
+import type { Failure } from "./service-actions";
 import type { HudView } from "../../shared/dictation/contract";
-import { hotkeyText } from "../../shared/dictation/keys";
+import { hotkeyText, keyLabel } from "../../shared/dictation/keys";
 import { errorView, hudViewFor } from "./hud-view";
 import type { Hud } from "./hud";
 import { drawn } from "./hud-place";
@@ -20,6 +23,8 @@ interface Deps {
   cancelLabel?(): string;
   /** The last insert ended with the text on the clipboard only. */
   insertedAsCopy(): boolean;
+  /** The recording indicator is switched off: only what needs reading still shows. */
+  indicator?(): Indicator;
   secureInput?(): boolean;
 }
 
@@ -107,6 +112,7 @@ export class HudPresenter {
       startedAt: this.#startedAt,
       level: this.#level,
       insertedAsCopy: this.#d.insertedAsCopy(),
+      secureInput: this.#d.secureInput?.() ?? false,
       canRetry: this.#d.canRetry(),
       ...(this.#d.cancelLabel && { cancelLabel: this.#d.cancelLabel() }),
     });
@@ -137,6 +143,7 @@ export class HudPresenter {
   }
 
   #show(view: HudView | null): void {
+    if (view && !drawn(this.#d.indicator?.() ?? "bottom", view)) view = null;
     this.#shown = view;
     const hud = this.#d.hud();
     if (view) hud?.show({ kind: "view", view });

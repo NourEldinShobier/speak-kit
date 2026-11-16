@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { DEFAULT_MODE_ID, overridesShared, type Mode, type Term } from "@speakkit/dictation";
+import { DEFAULT_MODE_ID, overridesShared, type WritingMode as Mode, type Term } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
+import { AddSiteDialog, SitesCard } from "./SitesCard";
 import { ModeReplacements } from "./ModeReplacements";
-import { ModeSites } from "./ModeSites";
 import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
@@ -94,7 +94,7 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length === 1 ? "app goes" : "apps go"} back to the Default mode, and its words and replacements are removed. You cannot undo it.
+        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to the Default mode, and its words and replacements are removed. You cannot undo it.
       </p>
     </Modal>
   );
@@ -279,7 +279,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
         <Icon name="arrow-left" size={12} /> Modes
       </button>
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
-      <ModeSites mode={mode} others={others} onSites={onSites} />
+      <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
       <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <ModeReplacements mode={mode} onChange={onChange} />

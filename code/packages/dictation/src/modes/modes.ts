@@ -11,7 +11,7 @@ export interface Mode {
   name: string;
   /** Program names without ".exe", lower case. The default mode has none: it takes every program no other mode lists. */
   apps: string[];
-  /** Website names without "www.", lower case, for example "github.com". In a browser a site wins over the program's mode; it also covers the subdomains. */
+  /** Website host names such as "mail.google.com": in a supported browser these pick the mode by the page in front, ahead of `apps`. */
   sites: string[];
   insertMode: InsertMode;
   capitals: Capitals;
@@ -70,34 +70,68 @@ export function setApps(modes: readonly Mode[], id: string, apps: readonly strin
   });
 }
 
-/** The host of an address or of what the person typed (an address with or without its scheme, "www." and path gives the bare host); undefined when it is not a website name. */
-export function siteOf(text: string | undefined): string | undefined {
-  const raw = (text ?? "").trim();
-  if (!raw || /\s/.test(raw)) return undefined;
+/** A site as the person typed it ("https://Example.com/inbox") reduced to its host name; "" when it is not a host name. */
+export function normalizeSite(input: string): string {
+  const text = input.trim();
+  if (!text || /\s/.test(text)) return "";
+  let host: string;
   try {
-    const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    return host === "localhost" || /^[a-z\d-]+(\.[a-z\d-]+)+$/.test(host) ? host : undefined;
+    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`).hostname;
   } catch {
-    return undefined;
+    return "";
   }
+  host = host
+    .toLowerCase()
+    .replace(/\.$/, "")
+    .replace(/^www\./, "");
+  return host === "localhost" || /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,}$/.test(host) ? host : "";
 }
 
-/** The site is the address's host or a parent of it: "github.com" covers "gist.github.com". */
-const covers = (site: string, host: string): boolean => host === site || host.endsWith(`.${site}`);
+/** A listed site covers its own host and every host under it: "google.com" covers "mail.google.com". */
+export const siteMatches = (site: string, host: string): boolean => host === site || host.endsWith(`.${site}`);
 
-/** A site belongs to one mode: adding it to a mode takes it from any other. */
+/** Browsers that can report the page in front (the extension runs in these). Names as `exeKey` gives them, plus macOS bundle ids. */
+const PAGE_BROWSERS = new Set([
+  "chrome",
+  "msedge",
+  "brave",
+  "vivaldi",
+  "opera",
+  "arc",
+  "chromium",
+  "com.google.chrome",
+  "com.microsoft.edgemac",
+  "com.brave.browser",
+  "com.vivaldi.vivaldi",
+  "com.operasoftware.opera",
+  "company.thebrowser.browser",
+  "org.chromium.chromium",
+]);
+export const reportsPages = (exe: string | undefined): boolean => !!exe && PAGE_BROWSERS.has(exeKey(exe));
+
+/** Sites belong to one mode: giving them to a mode takes them from any other. The default mode lists no sites. */
 export function setSites(modes: readonly Mode[], id: string, sites: readonly string[]): Mode[] {
-  const mine = [...new Set(sites.map(siteOf).filter((s): s is string => !!s))];
-  return modes.map((m) => (m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((s) => !mine.includes(s)) }));
+  const mine = [...new Set(sites.map(normalizeSite).filter(Boolean))];
+  return modes.map((m) => {
+    if (m.id === DEFAULT_MODE_ID) return m;
+    return m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((x) => !mine.includes(x)) };
+  });
 }
 
-/** The mode for a window: the first that lists the website in the address bar, then the first that lists the program, else the default. */
-export function resolveMode(modes: readonly Mode[], exe: string | undefined, address?: string): Mode {
+/**
+ * The mode for the program in front, and the page in it when the browser reports one. The mode that lists the most specific matching site wins,
+ * then the first mode that lists the program, else the default.
+ */
+export function resolveMode(modes: readonly Mode[], exe: string | undefined, site?: string): Mode {
   const key = exe ? exeKey(exe) : "";
-  const host = siteOf(address);
-  const bySite = host && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.sites.some((s) => covers(s, host)));
+  const host = site && reportsPages(exe) ? normalizeSite(site) : "";
+  let bySite: Mode | undefined;
+  let longest = 0;
+  if (host)
+    for (const m of modes) {
+      if (m.id === DEFAULT_MODE_ID) continue;
+      for (const s of m.sites) if (s.length > longest && siteMatches(s, host)) [bySite, longest] = [m, s.length];
+    }
   return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
 }
 

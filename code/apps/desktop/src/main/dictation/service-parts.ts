@@ -1,11 +1,15 @@
-import type { Dictation, DictationState } from "@speakkit/dictation";
+import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
+import type { DictationConfig } from "../../shared/dictation/settings";
 import type { PauseRules } from "../../shared/dictation/settings";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
 import { createActions, type Failure } from "./service-actions";
 
 export type { Failure };
-import { DictationHistory } from "./service-history";
+import { HistoryFacade } from "./history-facade";
+import { HistoryApi, type FilePickers } from "./history-api";
+import type { DictationServiceOptions } from "./service-options";
+import type { Stt } from "./stt";
 import { ShortcutControls } from "./shortcut-controls";
 import type { ForegroundInfo } from "./types";
 
@@ -21,7 +25,6 @@ export interface PartsHost {
   rules(): PauseRules | undefined;
   /** The status changed. */
   changed(): void;
-  refreshCount(): Promise<void>;
   download(): void;
   audio(): AudioStore | undefined;
   cfg(): DictationConfig;
@@ -57,8 +60,20 @@ export function createParts(h: PartsHost) {
   });
   return {
     controls,
-    history: new DictationHistory({ ready: h.ready, core: h.core, changed: h.refreshCount }),
-    actions: createActions({ ready: h.ready, failure: h.failure, core: h.core, state: h.state, presenter: h.presenter, download: h.download, undoCancel: async () => controls.undoCancel() }),
+    history,
+    records,
+    actions: createActions({
+      ready: h.ready,
+      failure: h.failure,
+      core: h.core,
+      state: h.state,
+      presenter: h.presenter,
+      download: h.download,
+      undoCancel: async () => controls.undoCancel(),
+      copyLast: () => history.copyLast(),
+      pasteAgain: async () => void (await history.pasteLast()),
+      changed: h.changed,
+    }),
   };
 }
 

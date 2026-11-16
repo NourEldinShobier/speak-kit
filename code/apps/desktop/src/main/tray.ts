@@ -4,7 +4,7 @@ import { trayIcon } from "./icon";
 
 type TrayHandlers = Record<TrayAction, () => void>;
 
-type MenuModel = ReturnType<typeof trayMenuModel>;
+type MenuModel = TrayItem[];
 type ModelRows = Extract<MenuModel[number], { type: "models" }>["rows"];
 
 const submenuOf = (rows: ModelRows, run: TrayHandlers, switchTo: (id: string) => void): MenuItemConstructorOptions[] =>
@@ -24,6 +24,7 @@ interface TemplateArgs {
 function menuTemplate({ items, run, mac, switchTo }: TemplateArgs): MenuItemConstructorOptions[] {
   return items.map((i): MenuItemConstructorOptions => {
     if (i.type === "separator") return { type: "separator" };
+    if (i.type === "submenu") return { label: i.label, submenu: menuTemplate({ items: i.items, run, mac, switchTo }) };
     if (i.type === "models") return { label: i.label, submenu: submenuOf(i.rows, run, switchTo) };
     return {
       label: i.label,
@@ -59,25 +60,14 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
   /** The system may refuse to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
   let failed = false;
   const build = () => {
-    const t = new Tray(trayIcon("asleep", trayIconVariant(context()) === "dark"));
-    t.on("click", () => run.open());
-    // macOS opens a context menu on the normal click, which would hide the window: show it on right click only.
-    if (mac) t.on("right-click", () => menu && t.popUpContextMenu(menu));
-    tray = t;
+    tray = nativeTray(run, mac, () => menu);
+    failed = tray === null;
     shown = "";
   };
   const refresh = () => {
     if (!tray) return;
     const c = context();
-    if (c.hidden) {
-      tray?.destroy();
-      tray = null;
-      shown = "";
-      return;
-    }
-    if (!tray) mount();
-    const icon = trayIconState(c);
-    const dark = trayIconVariant(c) === "dark";
+    const [icon, dark] = [trayIconState(c), trayIconVariant(c) === "dark"];
     const tip = trayTooltipFor(c);
     const items = trayMenuModel(c);
     const key = JSON.stringify([icon, dark, tip, items]);
@@ -88,7 +78,7 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
     tray.setToolTip(tip);
     const template = menuTemplate({ items, run, mac, switchTo });
     menu = Menu.buildFromTemplate(template);
-    if (!mac) tray!.setContextMenu(menu);
+    if (!mac) tray.setContextMenu(menu);
   };
   build();
   refresh();
@@ -112,6 +102,7 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
     summary: () => summary,
     dispose: () => {
       tray?.destroy();
+      tray = null;
     },
   };
 }

@@ -10,7 +10,9 @@ describe("importMessage", () => {
   });
 
   it("names the settings left out as well", () => {
-    expect(importMessage("es", { status: "imported", applied: 2, changed: ["speed"], skipped: ["capture.folder"] })).toBe("Se importaron 2 ajustes. Cambiados: speed. Omitidos: capture.folder.");
+    expect(importMessage("es", { status: "imported", applied: 2, changed: ["speed"], skipped: ["transcripts.folder"] })).toBe(
+      "Se importaron 2 ajustes. Cambiados: speed. Omitidos: transcripts.folder.",
+    );
   });
 
   it("says only the count when nothing differed from what is set", () => {

@@ -1,10 +1,11 @@
+import type { Note } from "./sounds";
 import * as v from "valibot";
 import type { HistoryStats, InstalledApp, MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
 import { DICTATION_MODELS } from "./models";
 import { DICTATION_LANGUAGES, DictationPatchSchema, modelId } from "./settings";
 import { HUD_ACTIONS, type DictationMethod, type HudAction } from "./channels";
-import type { HistoryStats, RewriteOutcome } from "@speakkit/dictation";
+import type { RewriteOutcome } from "@speakkit/dictation";
 
 export type { DictationMethod, HudAction } from "./channels";
 export type { DictationModelId } from "./settings";
@@ -49,6 +50,24 @@ export interface DictationStatus {
   /** The model failed to download or load. */
   modelError?: string;
   historyCount: number;
+  /** This system has a mouse hook, so a mouse button can be a shortcut. */
+  mouseButtons: boolean;
+  /** `process.platform` of the app, for the options that exist on Windows only. */
+  platform: string;
+  /** Pause all shortcuts is on: keys pass through. Not saved; a restart starts unpaused. */
+  paused: boolean;
+  /** The reader's global shortcuts, so a recorder can warn about a clash before saving. */
+  readerShortcuts: Record<string, string>;
+  /** The last change was refused because the shortcut is already used. */
+  rejected?: { slot: import("./conflicts").Slot; with: import("./conflicts").Slot };
+  /** The feature that holds the microphone now, when one does. */
+  micOwner?: string;
+  /** Who held the microphone when the last dictation press was ignored. */
+  errorOwner?: string;
+  /** The state of the microphone the Audio card shows. */
+  mic: MicStatus;
+  /** Microphones the system lists, for the picker; empty until the list was asked for. */
+  devices: MicDeviceView[];
   /** "newer": history.json was written by a newer Speak Kit; it is left unchanged, a copy was made, and nothing is saved this session. "unreadable": it was not a history; a copy was made and the history starts empty. */
   historyStatus: "ok" | "newer" | "unreadable";
   /** The file name of the copy kept for a newer or unreadable history file. */
@@ -61,6 +80,8 @@ export interface DictationStatus {
   rewriteKey: boolean;
   /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
   promptDropped?: boolean;
+  /** The newest failure, kept until a dictation works again or the person dismisses it: what it was in plain words, when, and whether Try again can run the take again. */
+  lastFailure?: { code: string; text: string; at: number; retry: boolean };
   /** "Transcribe again" for one entry, while it runs or after it failed; absent otherwise. */
   redo?: { id: string; model: DictationModelId; state: "running" | "failed"; error?: "model-missing" | "failed" | "no-audio" | "busy" };
 }
@@ -91,6 +112,8 @@ export interface HistoryItem {
   rewrite?: RewriteOutcome;
   /** Milliseconds until the entry is removed; null when it is kept for ever. */
   expiresInMs: number | null;
+  /** How long the speech model took, and how much silence was cut before it ran. */
+  timings?: { transcribeMs?: number; insertMs?: number; pausesDroppedMs?: number };
   /** The entry has a kept recording. */
   recording?: boolean;
   recordingRemoved?: boolean;
@@ -100,7 +123,6 @@ export interface HistoryItem {
   /** The search matched this vocabulary word through one of its sounds-like spellings. */
   via?: { word: string; heard: string };
   /** Name of the speech model that heard it, and the language it was told (a label); absent for entries from before these were stored. */
-  model?: string;
   language?: string;
 }
 
@@ -112,7 +134,7 @@ type HudBody =
   | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string; /** Name of the key that cancels this recording, when one does. */ cancel?: string }
   | { kind: "transcribing" }
   | { kind: "pasted" }
-  | { kind: "copied"; reason: "clipboard" | "elevated" }
+  | { kind: "copied"; reason: "clipboard" | "elevated" | "secure-input" }
   | { kind: "notice"; text: string; action?: { label: string; id: HudAction } }
   | { kind: "error"; text: string; icon: "microphone-off" | "download" | "alert-triangle" | "shield-check" | "lock"; action?: { label: string; id: HudAction } };
 
@@ -130,7 +152,13 @@ export interface DictationBridge {
   historyCopy(id: string): Promise<boolean>;
   historyRemove(id: string): Promise<void>;
   historyClear(): Promise<void>;
+  historyRemoveMany(ids: string[]): Promise<void>;
   historyStats(): Promise<HistoryStats>;
+  /** Asks the microphone window to list the inputs; the answer arrives in the status. */
+  micDevices(): Promise<DictationStatus>;
+  /** Starts or stops the level meter of the Audio card; the microphone is open only while it is on. */
+  micMeter(on: boolean): Promise<void>;
+  onMicLevel(cb: (n: number) => void): () => void;
   /** The last `n` entries, newest first. */
   historyRecent(n: number): Promise<HistoryItem[]>;
   historyUseVersion(id: string, versionId: string): Promise<boolean>;
@@ -207,6 +235,8 @@ export type RecorderCommand =
   | { id: number; op: "discard" }
   | { id: number; op: "close" }
   | { id: number; op: "devices" }
+  /** Plays a short tone on the speakers; the notes come from `tonesFor`. */
+  | { id: number; op: "tone"; notes: Note[] }
   /** Applies the microphone settings at once: opens the microphone when it is to be kept ready or the level meter is on, lets it go otherwise. */
   | { id: number; op: "configure"; meter: boolean; mic: RecorderMicConfig };
 export type RecorderResult =

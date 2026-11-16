@@ -127,7 +127,6 @@ export const MAIN = definePack({
   "dialog.importDetail": "It would switch on: {what}.",
   "dialog.leaveOut": "Leave them out",
   "dialog.turnOn": "Turn them on",
-  "dialog.capturesFolder": "Folder for captures",
   "filter.settings": "Settings",
   "filter.wordLists": "Word lists",
   "filter.readable": "Readable files",

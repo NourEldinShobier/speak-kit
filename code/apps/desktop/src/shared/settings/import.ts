@@ -1,7 +1,7 @@
 import { AREA_NAMES, validateChange } from "../control/settings-registry";
 
-/** What belongs to one install and is never carried over by an import: how far setup got, the capture consent, the folder and the program a capture runs for narration. */
-const THIS_INSTALL = ["setupDone", "setupSkipped", "setupStep", "capture.consented", "capture.folder", "capture.narrationCommand"];
+/** What belongs to one install and is never carried over by an import: how far setup got. */
+const THIS_INSTALL = ["setupDone", "setupSkipped", "setupStep"];
 
 const anyOn = (v: unknown) => !!v && typeof v === "object" && Object.values(v).includes(true);
 
@@ -10,8 +10,6 @@ export const NEEDS_CONFIRMATION: Readonly<Record<string, { what: string; on(valu
   controlServer: { what: "the local control server for the command line and AI apps", on: (v) => v === true },
   experiments: { what: "experiments", on: anyOn },
   mcpTools: { what: "the tools offered to AI apps", on: anyOn },
-  "capture.experiments": { what: "capture experiments", on: anyOn },
-  "capture.inputLog": { what: "the capture input log", on: (v) => v === "events" },
   "meetings.summary": { what: "meeting summaries written by an online service", on: (v) => v === true },
   "dictation.rewrite": { what: "rewriting dictated text", on: (v) => (v as { enabled?: unknown } | null)?.enabled === true },
 };

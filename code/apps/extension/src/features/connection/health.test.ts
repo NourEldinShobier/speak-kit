@@ -76,5 +76,8 @@ describe("health client", () => {
       ok: false,
       code: "token-rejected",
     });
+    const wrong = new Response(JSON.stringify({ error: { code: "token-rejected", message: "x" } }), { status: 404 });
+    expect(await client(() => wrong).c.authCheck()).toMatchObject({ ok: false, code: "token-rejected" });
+    expect(await client(() => new Response("<html>", { status: 404 })).c.authCheck()).toMatchObject({ ok: false, code: "app-not-running" });
   });
 });

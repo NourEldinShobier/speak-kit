@@ -4,6 +4,7 @@ import { findConflict, type Slot } from "../../../shared/dictation/conflicts";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { hotkeyLabels, usesAdvancedKey } from "../../../shared/dictation/keys";
 import { interpretButton, interpretKeys, REFUSAL_TEXT, type Refusal } from "../../../shared/dictation/recorder-model";
+import { platformName } from "./api";
 import { allShortcuts, conflictText } from "./shortcuts-model";
 
 /** What the line under a recorder says. */
@@ -87,14 +88,15 @@ function useButtonCapture(active: boolean, h: { pick(key: string): void; refused
 }
 
 interface Props {
-  slot: Slot;
+  /** With `status`, the slot is checked against the other shortcuts; a recorder without them leaves both out. */
+  slot?: Slot;
   /** Accessible name of the control group, for example "Dictation shortcut". */
   label: string;
   /** The stored shortcut; "" is not set. */
   value: string;
-  status: DictationStatus;
+  status?: DictationStatus;
   /** Saves the shortcut; resolves with the status after the save. The page shows Saved only after this resolves. */
-  save(value: string): Promise<DictationStatus>;
+  save(value: string): Promise<DictationStatus | void>;
   /** "Add shortcut" or "Choose button" when nothing is set. */
   addLabel?: string;
   /** Set for a recorder that can be cleared. */
@@ -110,9 +112,11 @@ interface Props {
   disabled?: boolean;
 }
 
+const refusalText = (why: Refusal): string => (why === "needs-key" && platformName() === "darwin" ? "Use a modifier such as Command, or a key such as F9." : REFUSAL_TEXT[why]);
+
 const Chips = ({ value }: { value: string }) => (
   <span className="dict-hotkey__chips">
-    {hotkeyLabels(value).map((k) => (
+    {hotkeyLabels(value, platformName()).map((k) => (
       <Kbd key={k}>{k}</Kbd>
     ))}
   </span>
@@ -146,14 +150,14 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
   const stop = () => (setRecording(false), setNote(null));
 
   const commit = async (next: string) => {
-    const other = findConflict(allShortcuts(status), slot, next);
+    const other = slot && status ? findConflict(allShortcuts(status), slot, next) : undefined;
     if (other) return setNote({ kind: "conflict", text: conflictText(next, other) });
     if (usesAdvancedKey(next) && confirmAdvanced && !(await confirmAdvanced(next))) return stop();
     setRecording(false);
     setNote({ kind: "saving" });
     try {
       const after = await save(next);
-      if (after.rejected?.slot === slot) return setNote({ kind: "conflict", text: conflictText(next, after.rejected.with) });
+      if (after?.rejected && after.rejected.slot === slot) return setNote({ kind: "conflict", text: conflictText(next, after.rejected.with) });
       setNote(next && !mouse ? { kind: "saved" } : null);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setNote((n) => (n?.kind === "saved" ? null : n)), 2500);
@@ -164,12 +168,12 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
 
   useKeyCapture(recording && !mouse, {
     keys: (hotkey) => void commit(hotkey),
-    refused: (why) => setNote(why ? { kind: "refused", text: REFUSAL_TEXT[why] } : null),
+    refused: (why) => setNote(why ? { kind: "refused", text: refusalText(why) } : null),
     stop,
   });
-  useButtonCapture(recording && !!mouse, { pick: (key) => void commit(key), refused: (why) => setNote({ kind: "refused", text: REFUSAL_TEXT[why] }), stop });
+  useButtonCapture(recording && !!mouse, { pick: (key) => void commit(key), refused: (why) => setNote({ kind: "refused", text: refusalText(why) }), stop });
 
-  const line = note && <RecorderLine note={note} value={value} ready={status.hotkeyReady} />;
+  const line = note && <RecorderLine note={note} value={value} ready={status?.hotkeyReady ?? true} />;
   if (recording) return <RecordingRow label={label} mouse={mouse === true} stop={stop} line={line} />;
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
@@ -248,7 +252,7 @@ function RecorderLine({ note, value, ready }: { note: RecorderNote; value: strin
     case "saved":
       return (
         <span className="dict-hotkey__note dict-hotkey__note--ok" role="status">
-          <Icon name="check" size={12} /> Saved. {ready ? `Try it: press ${hotkeyLabels(value).join(" ")}.` : "Waiting for the keyboard listener to start before you can try it."}
+          <Icon name="check" size={12} /> Saved. {ready ? `Try it: press ${hotkeyLabels(value, platformName()).join(" ")}.` : "Waiting for the keyboard listener to start before you can try it."}
         </span>
       );
     case "failed":

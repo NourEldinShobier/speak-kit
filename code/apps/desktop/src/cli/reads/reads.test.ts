@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import type { Line, MeetingEntry, NoteVersion } from "@speakkit/meetings";
 import { diskSources, parseOffset, runRead, type Sources } from "./index";
 import { clock, overlapping } from "./time";
-import type { CaptureRecord } from "./captures";
 
 const entry = (id: string, over: Partial<MeetingEntry> = {}): MeetingEntry => ({
   id,
@@ -42,10 +41,9 @@ const notes: NoteVersion[] = [
   },
 ];
 
-function memory(entries: MeetingEntry[], records: CaptureRecord[] = []): Sources {
+function memory(entries: MeetingEntry[]): Sources {
   return {
     meetings: async () => ({ entries, transcript: async () => lines, notes: async (id) => (id === "aaaaaa1" ? notes : []) }),
-    captures: async () => ({ records, root: "C:\\caps" }),
   };
 }
 const two = [
@@ -179,41 +177,6 @@ describe("meetings search", () => {
   });
 });
 
-const rec = (id: string, over: Partial<CaptureRecord> = {}): CaptureRecord => ({ id, kind: "recording", title: `Capture ${id}`, at: 1000, dir: `d-${id}`, bytes: 10, chips: ["saved"], ...over });
-
-describe("capture list and show", () => {
-  const records = [
-    rec("c1", {
-      at: 1000,
-      durationMs: 4000,
-      words: [
-        { text: "this", startMs: 500, endMs: 800 },
-        { text: "button", startMs: 900, endMs: 1200 },
-        { text: "is", startMs: 2500, endMs: 2700 },
-      ],
-    }),
-    rec("c2", { at: 3000, kind: "screenshot", title: "Login page" }),
-    rec("c3", { at: 2000, finishing: true }),
-  ];
-  it("lists newest first without captures still being finished", async () => {
-    const r = await runRead({ command: "capture", action: "list" }, memory([], records));
-    expect(r.ok && (r.data as { captures: { id: string }[] }).captures.map((c) => c.id)).toEqual(["c2", "c1"]);
-    expect(await runRead({ command: "capture", action: "list" }, memory([], []))).toMatchObject({ ok: true, text: "No captures yet." });
-  });
-  it("shows one by id, folder, title or latest, with its narration grouped by second", async () => {
-    const byId = await runRead({ command: "capture", action: "show", ref: "c1" }, memory([], records));
-    expect(byId.ok && byId.text).toBe(["Capture c1", "1970-01-01 00:00 · recording · c1", "Folder: C:/caps/d-c1", "", "[00:00] this button", "[00:02] is"].join("\n"));
-    for (const ref of ["d-c1", "capture c1", "latest"]) expect((await runRead({ command: "capture", action: "show", ref }, memory([], records))).ok).toBe(true);
-    expect(await runRead({ command: "capture", action: "show", ref: "nope" }, memory([], records))).toMatchObject({ ok: false, message: 'No capture is called "nope".' });
-    expect(await runRead({ command: "capture", action: "show" }, memory([], records))).toMatchObject({ ok: false, code: "usage" });
-    expect(await runRead({ command: "capture", action: "show", ref: "latest" }, memory([], []))).toMatchObject({ ok: false, message: "There are no captures yet." });
-  });
-  it("refuses a title two captures share", async () => {
-    const same = [rec("x1", { title: "Same" }), rec("x2", { title: "Same" })];
-    expect(await runRead({ command: "capture", action: "show", ref: "same" }, memory([], same))).toMatchObject({ ok: false, message: '"same" names 2 captures. Use the id.' });
-  });
-});
-
 describe("reads from the data folder change nothing", () => {
   const dirs: string[] = [];
   afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -236,49 +199,30 @@ describe("reads from the data folder change nothing", () => {
     mkdirSync(path.join(dir, "meetings", "aaaaaa1"), { recursive: true });
     writeFileSync(path.join(dir, "meetings", "manifest.json"), JSON.stringify({ v: 1, entries: [entry("aaaaaa1")] }));
     writeFileSync(path.join(dir, "meetings", "aaaaaa1", "transcript.json"), JSON.stringify({ v: 1, lines }));
-    mkdirSync(path.join(dir, "captures"), { recursive: true });
-    writeFileSync(path.join(dir, "captures", "index.json"), "{ not json");
     const before = snapshot(dir);
     const src = diskSources(dir);
     const shown = await runRead({ command: "meetings", action: "show", ref: "latest", from: 20 }, src);
     expect(shown.ok && (shown.data as { meeting: { lines: unknown[] } }).meeting.lines.length).toBe(2);
     expect((await runRead({ command: "meetings", action: "search", query: "launch" }, src)).ok).toBe(true);
-    expect(await runRead({ command: "capture", action: "list" }, src)).toMatchObject({ ok: true, text: "No captures yet." });
     expect(snapshot(dir)).toEqual(before);
   });
 
-  it("reads an empty data folder as no meetings and no captures, and creates nothing", async () => {
+  it("reads an empty data folder as no meetings, and creates nothing", async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "sk-reads-"));
     dirs.push(dir);
     const src = diskSources(dir);
     expect(await runRead({ command: "meetings", action: "list" }, src)).toMatchObject({ ok: true, text: "No meetings yet." });
-    expect(await runRead({ command: "capture", action: "list" }, src)).toMatchObject({ ok: true, text: "No captures yet." });
     expect(readdirSync(dir)).toEqual([]);
   });
 
-  it("reports a damaged meetings list and an unreadable capture index as failed reads, and leaves the files alone", async () => {
+  it("reports a damaged meetings list as a failed read, and leaves the files alone", async () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "sk-reads-"));
     dirs.push(dir);
     mkdirSync(path.join(dir, "meetings"), { recursive: true });
     writeFileSync(path.join(dir, "meetings", "manifest.json"), "{not json");
-    mkdirSync(path.join(dir, "captures", "index.json"), { recursive: true });
     const before = snapshot(dir);
     const src = diskSources(dir);
     expect(await runRead({ command: "meetings", action: "list" }, src)).toEqual({ ok: false, code: "failed", message: "The saved meetings could not be read (the meetings list file is damaged)." });
-    const captures = await runRead({ command: "capture", action: "list" }, src);
-    expect(captures).toMatchObject({ ok: false, code: "failed" });
-    expect(captures.ok ? "" : captures.message).toMatch(/^The saved captures could not be read \(.*EISDIR.*\)\.$/);
     expect(snapshot(dir)).toEqual(before);
-  });
-
-  it("uses the capture folder named in the settings file", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "sk-reads-"));
-    dirs.push(dir);
-    const other = path.join(dir, "elsewhere");
-    mkdirSync(other);
-    writeFileSync(path.join(other, "index.json"), JSON.stringify([rec("z1", { title: "Elsewhere" })]));
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ capture: { folder: other } }));
-    const r = await runRead({ command: "capture", action: "list" }, diskSources(dir));
-    expect(r.ok && (r.data as { captures: { title: string }[] }).captures[0]?.title).toBe("Elsewhere");
   });
 });

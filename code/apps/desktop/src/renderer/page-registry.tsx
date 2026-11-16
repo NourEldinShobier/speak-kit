@@ -4,7 +4,6 @@
  */
 import { lazy, Suspense, type ComponentType, type Dispatch } from "react";
 import type { AppState } from "../shared/ipc";
-import { CapturePage } from "./features/capture";
 import { EnginesPage } from "./features/engines";
 import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
@@ -14,7 +13,6 @@ import { requestVocabularyTab } from "./vocabulary-tab";
 import { Home } from "./HomePage";
 import type { MenuPage } from "./routes";
 import type { OpenDoc, ShellAction } from "./shell-model";
-import { StubPage } from "./StubPage";
 
 export interface PageProps {
   s: AppState;
@@ -25,7 +23,8 @@ export interface PageProps {
 
 // Dictation is rarely opened: its pages, styles and code load on first use.
 const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
-const HistoryPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationHistoryPage })));
+// History holds the dictation history and the transcripts; it is rarely opened too.
+const HistoryPage = lazy(() => import("./features/transcripts").then((m) => ({ default: m.HistoryRoute })));
 const VocabularyPage = lazy(() => import("./features/vocabulary").then((m) => ({ default: m.VocabularyPage })));
 const ModesPage = lazy(() => import("./features/modes").then((m) => ({ default: m.ModesPage })));
 const later = (node: React.ReactNode) => <Suspense fallback={null}>{node}</Suspense>;
@@ -61,9 +60,14 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
   engines: ({ s }) => <EnginesPage s={s} />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
-  modes: () => <StubPage page="modes" />,
-  vocabulary: () => <StubPage page="vocabulary" />,
+  modes: () => later(<ModesPage />),
+  vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),
   history: ({ dispatch }) =>
-    later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} openMeetingSettings={() => dispatch({ type: "go", page: "settings", sub: "meetings" })} />),
-  capture: () => later(<CapturePage />),
+    later(
+      <HistoryPage
+        openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })}
+        openDictation={() => dispatch({ type: "go", page: "dictation" })}
+        openMeetingSettings={() => dispatch({ type: "go", page: "settings", sub: "meetings" })}
+      />,
+    ),
 };

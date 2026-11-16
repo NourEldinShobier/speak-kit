@@ -1,10 +1,10 @@
-import { app, ipcMain, Menu, nativeTheme, powerMonitor, safeStorage } from "electron";
+import { app, ipcMain, Menu, nativeTheme, safeStorage } from "electron";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { channel, METHODS, type Activity, type AppState, type Method } from "../shared/ipc";
 import { ARGS } from "../shared/schemas";
 import { findDeepLink, handleDeepLink, type DeepLink } from "../shared/deeplink";
-import { applyMemory } from "../shared/memory";
 import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
@@ -13,22 +13,23 @@ import { chooseProcessMode } from "./cli-mode";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { applyExternalConfig, createAppHandlers, metrics, type HandlerDeps } from "./handlers";
-import { watchSettings } from "./config-watch";
+import { createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { watchSettings } from "./settings-watch";
 import { motionNow, windowMotion } from "./window-motion";
 import { createNoticeCenter } from "./tray-notice";
 import { claimInstance, registerProtocol } from "./instance";
-import { isLaunchAtLogin, openedAtLogin, repairLaunchAtLogin } from "./login-item";
+import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
 import { registerValidatedIpc } from "./ipc-register";
 import { setupLibrary } from "./library";
 import { initLog } from "./log";
 import { MainWindow } from "./main-window";
-import { emptyPairing, watchPairing } from "./pairing";
+import { emptyPairing } from "./pairing";
+import { watchPairingActivity, watchPower } from "./watchers";
 import { ServerApi } from "./server-api";
 import { settingsChangeDeps } from "./settings-deps";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
-import { testEnv } from "./test-env";
+import { testEnv, fakeMicSwitches } from "./test-env";
 import { createScreenVision } from "./screen-vision";
 import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
@@ -46,11 +47,7 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 // A wav file the microphone window records instead of a device (dictation end-to-end run).
-const fakeMic = test.hook ? process.env.SPEAKKIT_FAKE_MIC : undefined;
-if (fakeMic) {
-  app.commandLine.appendSwitch("use-fake-device-for-media-stream");
-  app.commandLine.appendSwitch("use-file-for-fake-audio-capture", fakeMic);
-}
+fakeMicSwitches(test.fakeMic);
 const dataDir = app.getPath("userData");
 await mkdir(dataDir, { recursive: true });
 const log = initLog(dataDir);
@@ -60,16 +57,6 @@ const logsDir = path.join(dataDir, "logs");
 const sttWorker = await sttWorkerUrl(here);
 const store = await openConfig(dataDir);
 const config = store.config;
-const labs = setupLabs({
-  config,
-  dataDir,
-  setVerbose: (on) => void (log.transports.file.level = on ? "debug" : "info"),
-  afterChange: (l) => {
-    desktop?.onConfigPatch({ labs: l });
-    publish();
-  },
-  warn: (m) => log.warn(m),
-});
 
 const state: AppState = {
   version: app.getVersion(),
@@ -109,12 +96,7 @@ const addActivity = (kind: Activity["kind"], title: string, body: string) => {
 const unreadable = (what: string, file: string) =>
   addActivity("error", `${what} could not be read`, `Speak Kit started from defaults. The old file is kept as ${path.basename(file)} in ${path.dirname(file)}.`);
 if (store.recovered) unreadable("Settings", store.recovered);
-if (store.dropped.count)
-  addActivity(
-    "error",
-    `${store.dropped.count} dictation ${store.dropped.count === 1 ? "entry" : "entries"} could not be read`,
-    `Words, modes or replacements in Settings were broken or repeated and were left out.${store.dropped.copy ? ` The old file is kept as ${path.basename(store.dropped.copy)}.` : ""}`,
-  );
+for (const n of droppedNotices(store.dropped)) addActivity("error", n.title, n.body);
 
 const sinks = new Set<(s: AppState) => void>();
 const serverApi = new ServerApi(
@@ -136,6 +118,7 @@ const mainWindow: MainWindow = new MainWindow(config, {
 windowVisible = () => mainWindow.isVisible();
 windowMotion.set(motionNow(config.reduceMotion));
 const screenVision = createScreenVision();
+const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
   store: keyStore,
@@ -146,7 +129,6 @@ const voiceChat = createVoiceChat({
   // Dictation waits while a screen look or a conversation in the browser holds the microphone.
   ...micOwners.voiceChat(screenVision.look),
 });
-const automation = lateAutomation();
 const runtime: ServerRuntime = new ServerRuntime({
   state,
   config,
@@ -181,28 +163,6 @@ function onDeepLink(link: DeepLink) {
     },
     showWindow: () => mainWindow.show(),
     navigate: (sub) => mainWindow.sendUi({ type: "nav", page: "settings", sub }),
-  });
-}
-
-function watchPower() {
-  state.onBattery = powerMonitor.isOnBatteryPower();
-  const onPower = (battery: boolean) => {
-    state.onBattery = battery;
-    applyMemory(runtime.server, config, battery);
-    publish();
-  };
-  powerMonitor.on("on-battery", () => onPower(true));
-  powerMonitor.on("on-ac", () => onPower(false));
-}
-
-function watchPairingActivity() {
-  watchPairing(state.pairing, {
-    token: () => state.token,
-    port: () => state.port,
-    onChange: () => {
-      if (state.pairing.firstSeenMs === state.pairing.lastSeenMs) addActivity("pair", "Browser paired", "An extension made its first call.");
-      publish();
-    },
   });
 }
 
@@ -243,20 +203,32 @@ function startDesktop() {
     {
       parent: () => mainWindow.window,
       distDir: here,
-      requestQuit: askToQuit,
+      requestQuit: () => {
+        mainWindow.show();
+        mainWindow.sendUi({ type: "confirm-quit" });
+      },
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
       voiceEngine: () => runtime.engine,
       trayNotice: () => trayNotices.current(),
-      dictation: { dataDir, modelsDir, sttWorker, micOwner: micOwners.owner, readKey: () => keyStore.read(), hasKey: () => keyStore.has() },
+      dictation: {
+        dataDir,
+        modelsDir,
+        sttWorker,
+        micOwner: micOwners.owner,
+        micClaim: micOwners.claim,
+        pageSite: () => runtime.page.current(),
+        readKey: () => keyStore.read(),
+        hasKey: () => keyStore.has(),
+      },
       voiceChat,
     },
   );
 }
 
-const instance = await claimInstance(dataDir, process.argv, { saving: () => desktop?.finishCapture(), cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
+const instance = await claimInstance(dataDir, process.argv, { saving: () => undefined, cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
 if (!instance.mayRun) {
   app.quit();
 } else {
@@ -281,17 +253,8 @@ if (!instance.mayRun) {
   // Dock icon clicked while the window is hidden to the menu bar (the activation at launch must not defeat --hidden).
   let booted = false;
   app.on("activate", () => booted && mainWindow.show());
-  let captureSaved = false;
-  app.on("before-quit", (e) => {
+  app.on("before-quit", () => {
     mainWindow.quitting = true;
-    // A recording is saved, not thrown away, when the app quits.
-    const saving = captureSaved ? undefined : desktop?.finishCapture();
-    if (!saving) return;
-    e.preventDefault();
-    void saving.finally(() => {
-      captureSaved = true;
-      app.quit();
-    });
   });
   app.on("window-all-closed", () => {
     /* stay alive in the tray */
@@ -321,19 +284,10 @@ if (!instance.mayRun) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
-    if (config.setupDone && !process.env.SPEAKKIT_USER_DATA) repairLaunchAtLogin(config.startMinimized);
-    watchPower();
-    watchPairingActivity();
+    watchPower({ state, config, runtime, publish });
+    watchPairingActivity({ state, addActivity, publish });
     const appHandlers = createAppHandlers(handlerDeps());
-    const settingsWatch = watchSettings({
-      file: store.path,
-      config,
-      keepPort: !!process.env.SPEAKKIT_PORT,
-      apply: (patch) => applyExternalConfig(handlerDeps(), patch),
-      activity: addActivity,
-      log,
-      publish,
-    });
+    const settingsWatch = watchSettings(handlerDeps(), store.path, log);
     app.once("will-quit", () => settingsWatch.dispose());
     desktop = startDesktop();
     runtime.attachDesktop(desktop);
@@ -349,7 +303,6 @@ if (!instance.mayRun) {
     if (test.hook)
       (globalThis as Record<string, unknown>).__speakkit = {
         metrics,
-        terminals: automationPage.terminals,
         marks: () => performance.getEntriesByType("mark").map((m) => ({ name: m.name, at: Math.round(m.startTime) })),
         ...desktop.testHook(),
       };
@@ -361,7 +314,6 @@ if (!instance.mayRun) {
     await runtime.start(test.token);
     performance.mark("server:listening");
     if (boot?.kind === "pair") mainWindow.sendUi({ type: "nav", page: "settings", sub: "browser" });
-    if (boot?.kind === "lab") mainWindow.sendUi({ type: "nav", page: "settings", sub: "experiments" });
     publish();
   });
 }

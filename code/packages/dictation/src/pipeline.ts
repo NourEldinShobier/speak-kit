@@ -27,7 +27,7 @@ export interface Job {
 export type Outcome = { error: DictationErrorCode } | { notice: Notice };
 
 export interface Context {
-  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock" | "audio" | "rewriter">;
+  deps: Pick<DictationDeps, "transcriber" | "inserter" | "clock" | "keepClip" | "log" | "audio" | "rewriter">;
   history: History;
   settings: Settings;
   /** Called when the text is ready and insertion starts. */
@@ -77,20 +77,20 @@ const peakOf = (pcm: Float32Array): number => {
 };
 
 /** Transcribes a take of any length: a long one goes to the model in pieces, pieces with no sound are skipped, and the texts are joined. */
-async function hear(ctx: Context, clip: Clip): Promise<TranscribeResult & { droppedMs?: number }> {
+async function hear(ctx: Context, clip: Clip, prompt: string): Promise<TranscribeResult & { droppedMs?: number }> {
   if (ctx.settings.skipPauses) {
     const cut = skipPauses(clip.pcm, clip.sampleRate);
     if (cut.droppedMs > 0) {
-      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm });
+      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm }, prompt);
       // Trimming only helps when it kept the speech: an empty answer or a failure is tried again on the whole recording.
       if (r.ok && r.text) return { ...r, droppedMs: cut.droppedMs };
     }
   }
-  return hearAll(ctx, clip);
+  return hearAll(ctx, clip, prompt);
 }
 
-async function hearAll(ctx: Context, clip: Clip): Promise<TranscribeResult> {
-  const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language });
+async function hearAll(ctx: Context, clip: Clip, prompt: string): Promise<TranscribeResult> {
+  const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language, ...(prompt && { prompt }) });
   const pieces = chunkPcm(clip.pcm, clip.sampleRate);
   if (pieces.length === 1) return req(clip);
   const texts: string[] = [];
@@ -109,9 +109,9 @@ async function hearAll(ctx: Context, clip: Clip): Promise<TranscribeResult> {
 }
 
 /** The foreground window, or undefined when it cannot be read. */
-export async function foreground(inserter: DictationDeps["inserter"], opts?: { address?: boolean }): Promise<Target | undefined> {
+export async function foreground(inserter: DictationDeps["inserter"]): Promise<Target | undefined> {
   try {
-    return await inserter.target(opts);
+    return await inserter.target();
   } catch {
     return undefined; // an unreadable window is treated as "unknown", which copies instead of pasting
   }
@@ -191,12 +191,11 @@ async function printed(ctx: Context, job: Job, said: Said): Promise<undefined> {
     durationMs: Math.round((clip.pcm.length / clip.sampleRate) * 1000),
     ...(heard.language !== undefined && { language: heard.language }),
     ...(heard.model !== undefined && { model: heard.model }),
+    kind: "printed",
     ...(said.rewrite && { rewrite: said.rewrite }),
   });
-  if (id && ctx.settings.keepRecordings && ctx.deps.audio) await keepRecording(ctx, id, clip);
-  const done = await ctx.deps.inserter.insert({ text, plan });
-  if (!done.ok) return { error: "insert-failed" };
-  return { notice: plan.method === "copy" ? { kind: "copied", reason: plan.reason } : { kind: "inserted" } };
+  job.print?.({ ok: true, text });
+  return undefined;
 }
 
 /** Keeps the audio next to the history entry. A recording that cannot be saved leaves the entry without one; the dictation goes on. */
@@ -216,6 +215,39 @@ const rewriteStyle = (s: Pick<Settings, "lowercase" | "autoCapitalize" | "stripF
   return { capitals, stripFinalStop: s.stripFinalStop };
 };
 
+/** A take with no sound is refused and kept; one cut short is kept too, and goes on. */
+function checkClip(ctx: Context, clip: Clip): Outcome | undefined {
+  if (clip.peak < QUIET_PEAK) {
+    ctx.deps.keepClip?.(clip, "silent");
+    return { error: "mic-silent" };
+  }
+  if (clip.interrupted) ctx.deps.keepClip?.(clip, "interrupted");
+  return undefined;
+}
+
+/** The text rules of the mode in use, with the sounds-like spellings of the vocabulary. */
+function cleanUp(heard: Heard, eff: Settings, language: string): string {
+  return applyRules(heard.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: heard.language ?? language });
+}
+
+/** The speech engine's text for the take, with a made-up credit at the end removed; or why there is none. The take is kept when the engine fails. */
+async function transcribe(ctx: Context, clip: Clip, prompt: string): Promise<{ heard: Heard & { droppedMs?: number }; transcribeMs: number } | { error: DictationErrorCode }> {
+  const from = ctx.deps.clock.now();
+  const said = await hear(ctx, clip, prompt);
+  const transcribeMs = ctx.deps.clock.now() - from;
+  if (!said.ok) {
+    ctx.deps.keepClip?.(clip, "failed");
+    return { error: said.code === "failed" ? "transcribe-failed" : said.code };
+  }
+  return { heard: { ...said, text: stripTailCredit(said.text, clip.pcm, clip.sampleRate) }, transcribeMs };
+}
+
+/** The rewrite pass, when the mode asks for one, it is switched on and a writer is there; otherwise undefined. */
+async function rewriteStep(ctx: Context, eff: Settings, text: string): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
+  if (!eff.rewrite || !ctx.settings.rewrite.enabled || !ctx.deps.rewriter) return undefined;
+  return rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock, style: rewriteStyle(eff) });
+}
+
 /** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
@@ -223,26 +255,38 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const silent = checkClip(ctx, clip);
   if (silent) return silent;
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
-  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.url));
+  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.site));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
-  const heard = await ctx.deps.transcriber.transcribe({ clip, language: ctx.settings.language, ...(prompt && { prompt }) });
-  if (!heard.ok) return { error: heard.code === "failed" ? "transcribe-failed" : heard.code };
-  const language = heard.language ?? ctx.settings.language;
-  let text = applyRules(heard.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language });
+  const got = await transcribe(ctx, clip, prompt);
+  if ("error" in got) return got;
+  const { heard, transcribeMs } = got;
+  let text = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
   if (!text) return { notice: { kind: "no-speech" } };
-  if (job.print) return printed(ctx, job, { clip, heard, text });
+  const rewritten = job.raw ? undefined : await rewriteStep(ctx, eff, text);
+  if (rewritten) text = rewritten.text;
+  const rewrite = rewritten?.outcome;
+  if (job.print) return printed(ctx, job, { clip, heard, text, ...(rewrite && { rewrite }) });
   ctx.inserting();
-  let rewrite: RewriteOutcome | undefined;
-  if (eff.rewrite && ctx.settings.rewrite.enabled && ctx.deps.rewriter) {
-    const r = await rewritePass({
-      text,
-      rewriter: ctx.deps.rewriter,
-      deadlineMs: ctx.settings.rewrite.deadlineMs,
-      clock: ctx.deps.clock,
-      style: rewriteStyle(eff),
-    });
-    text = r.text;
-    rewrite = r.outcome;
+  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs, settings: eff, ...(rewrite && { rewrite }) });
+}
+
+/** Why a job that was meant to print produced no text. */
+export function failureOf(outcome: Outcome | undefined): CaptureResult {
+  if (outcome && "error" in outcome) return { ok: false, code: outcome.error };
+  return { ok: false, code: outcome ? "no-speech" : "mic-failed" };
+}
+
+/** Types the newest non-empty history entry into the window in front. The entry was saved before the dictation was inserted, so it is never older text. */
+export async function pasteLast(ctx: Pick<Context, "deps" | "history" | "settings">): Promise<"pasted" | "copied" | "empty" | "failed"> {
+  const entry = (await ctx.history.list()).find((e) => e.text.trim());
+  if (!entry) return "empty";
+  const current = await foreground(ctx.deps.inserter);
+  const plan = planPaste({ target: current, current, settings: ctx.settings, interrupted: false });
+  if (plan.method === "refuse") return "failed";
+  try {
+    if (!(await ctx.deps.inserter.insert({ text: entry.text, plan })).ok) return "failed";
+  } catch {
+    return "failed";
   }
-  return insert(ctx, job, { clip, heard, text, settings: eff, ...(rewrite && { rewrite }) });
+  return plan.method === "copy" ? "copied" : "pasted";
 }

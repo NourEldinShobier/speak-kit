@@ -32,7 +32,9 @@ const build = () => {
 export const KEY_VK: Readonly<Record<string, number>> = build();
 const VK_KEY = new Map(Object.entries(KEY_VK).map(([k, v]) => [v, k]));
 
-export const DEFAULT_HOTKEY = "ControlRight";
+/** Right Control does not exist on a MacBook keyboard; Right Option does. */
+export const defaultHotkey = (platform: string): string => (platform === "darwin" ? "AltRight" : "ControlRight");
+export const DEFAULT_HOTKEY = defaultHotkey(typeof process === "undefined" ? "win32" : process.platform);
 /** Where Paste last starts out. */
 export const DEFAULT_PASTE_LAST = "ControlLeft+AltLeft+KeyV";
 /** Home, End, Page Up and Page Down work as a whole shortcut, but they type nothing and move the cursor in every app, so they sit behind the advanced options with a warning. */

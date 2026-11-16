@@ -1,5 +1,3 @@
-import { parse } from "valibot";
-import { DictationConfigSchema } from "../../../shared/dictation/settings";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
@@ -45,19 +43,17 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: parse(DictationConfigSchema, {
-    enabled: true,
-    hotkey: "ControlLeft+AltLeft+Space",
-    mode: "hold",
-    language: "en",
-    model: "large-v3-turbo-q5_0",
-    retention: "7d",
-    replacements: [{ from: "gonna", to: "going to" }],
-  }),
+  settings: { ...DEFAULT_DICTATION, enabled: true, hotkey: "ControlLeft+AltLeft+Space", language: "en", replacements: [{ from: "gonna", to: "going to" }] },
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,
   historyCount: 128,
+  paused: false,
+  mouseButtons: true,
+  platform: "win32",
+  readerShortcuts: {},
+  mic: { kind: "ready", label: "Microphone Array" },
+  devices: [],
   historyStatus: "ok",
   historyRev: 0,
   keptRecordings: 0,
@@ -97,8 +93,16 @@ describe("Settings > Dictation", () => {
       "Alt",
       "Space",
       "Change",
-      "Hold to talk",
-      "Press to toggle",
+      "Shortcut mode",
+      "Hold or double-tap",
+      "Hold time",
+      "300 ms",
+      "Second shortcut",
+      "Mouse button",
+      "Advanced shortcut options",
+      "Dictate without processing",
+      "Paste last dictation",
+      "Restore default",
       "Skipped microphones",
       "Nothing is skipped by name.",
       "Speech model",
@@ -213,7 +217,7 @@ describe("first run card", () => {
 describe("history page", () => {
   it("shows the empty state with the hotkey, and no totals", () => {
     current.status = status({ historyCount: 0 });
-    const html = renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />);
     expect(text(html)).toContain("Nothing dictated yet");
     expect(text(html)).toContain("Hold the hotkey in any app and speak. What you dictate shows up here for 7 days.");
     expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*(<svg[^>]*>.*?<\/svg>)?\s*Copy recent/);
@@ -222,10 +226,12 @@ describe("history page", () => {
 
   it("has the lead, the search field and the two views before the entries have loaded", () => {
     current.status = status();
-    const html = renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />);
+    const html = renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />);
     const t = text(html);
-    expect(t).toContain("History What you dictated, saved on this computer for 7 days.");
     expect(html).toContain('placeholder="Search what you dictated"');
+    expect(t).toContain("Clear all");
+    expect(t).toContain("Statistics");
+    expect(t).toContain("Select");
     expect(t).toContain("Final text");
     expect(t).toContain("Side by side");
     expect(t).toContain("Copy recent");
@@ -234,31 +240,31 @@ describe("history page", () => {
 
   it("warns when the file came from a newer Speak Kit, with a way to check for updates", () => {
     current.status = status({ historyStatus: "newer" });
-    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
     expect(t).toContain("This history was saved by a newer Speak Kit");
     expect(t).toContain("left unchanged and a copy was made");
     expect(t).toContain("Check for updates");
     current.status = status();
-    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).not.toContain("newer Speak Kit");
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).not.toContain("newer Speak Kit");
   });
 
   it("tells the person when the history file could not be read, naming the kept copy", () => {
     current.status = status({ historyStatus: "unreadable", historyCopy: "history.unreadable-5.json" });
-    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
     expect(t).toContain("The history file could not be read");
     expect(t).toContain("A copy was kept as history.unreadable-5.json next to it.");
     current.status = status({ historyStatus: "unreadable" });
-    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).not.toContain("A copy was kept");
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).not.toContain("A copy was kept");
     current.status = status();
   });
 
   it("reports recordings the Recycle Bin would not take, with the count", () => {
     current.status = status({ keptRecordings: 2 });
-    const t = text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />));
+    const t = text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />));
     expect(t).toContain("A recording could not be moved to the Recycle Bin");
     expect(t).toContain("2 files are still in Speak Kit");
     current.status = status({ keptRecordings: 1 });
-    expect(text(renderToStaticMarkup(<DictationHistoryPage openDictation={() => undefined} />))).toContain("The file is still in");
+    expect(text(renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />))).toContain("The file is still in");
   });
 });
 
@@ -280,5 +286,30 @@ describe("history rows", () => {
     expect(html).toContain("data-copied");
     expect(row(false)).toContain('<span class="dict-hist__sr" role="status"></span>');
     expect(row(false)).not.toContain("data-copied");
+  });
+});
+
+describe("history rows, details and selection", () => {
+  const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report", raw: "send the report", durationMs: 3000, expiresInMs: null };
+  const html = (item: object, selection?: { checked: boolean; toggle: () => void }) =>
+    renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
+
+  it("shows the program's own name and a note for an interrupted entry that was only copied", () => {
+    const h = html({ app: "code.exe", appName: "Visual Studio Code", kind: "interrupted", outcome: "copied" });
+    expect(h).toContain("Visual Studio Code");
+    expect(h).toContain(">Cut short<");
+    expect(h).toContain(">Copied only<");
+  });
+
+  it("says when the text could not be inserted, and tags nothing for a normal entry", () => {
+    expect(html({ outcome: "failed" })).toContain(">Not inserted<");
+    expect(html({ outcome: "sent" })).not.toContain("dict-hist__tag");
+  });
+
+  it("has a named checkbox only in selection mode", () => {
+    expect(html({})).not.toContain('type="checkbox"');
+    const h = html({}, { checked: true, toggle: () => undefined });
+    expect(h).toContain('aria-label="Select: Send the report"');
+    expect(h).toContain("checked");
   });
 });

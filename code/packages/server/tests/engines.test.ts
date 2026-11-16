@@ -28,7 +28,7 @@ describe("GET /v1/engines", () => {
 
   it("requires the token", async () => {
     ctx = await start();
-    expect((await fetch(`${ctx.base}/v1/engines`)).status).toBe(401);
+    expect((await fetch(`${ctx.base}/v1/engines`)).status).toBe(404);
   });
 
   it("has no routes for choosing, installing, cancelling or removing an engine, or for cloning a voice", async () => {

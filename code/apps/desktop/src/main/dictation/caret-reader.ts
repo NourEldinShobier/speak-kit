@@ -1,7 +1,4 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import type { CaretContext } from "@speakkit/dictation";
 import { launchEnv } from "../system/launch-env";
 
@@ -95,11 +92,8 @@ export function createLineClient(start: () => LineProcess, timeoutMs: number) {
     if (proc) return proc;
     const p = (proc = start());
     p.onLine((line) => {
-      if (!ready) {
-        ready = line.trim() === "ready";
-        return;
-      }
-      waiting.shift()?.(line);
+      if (ready) waiting.shift()?.(line);
+      else ready = line.trim() === "ready";
     });
     p.onExit(() => {
       if (proc === p) proc = undefined;
@@ -124,31 +118,37 @@ export function createLineClient(start: () => LineProcess, timeoutMs: number) {
         });
         p.write(line);
       });
-      p.write("read");
-    });
-  };
-
-  return {
-    warm() {
-      if (platform === "win32") open();
     },
-    async read() {
-      try {
-        if (platform === "win32") return parseCaret(await readWindows());
-        if (platform === "darwin") return parseCaret(await Promise.race([once(MAC_SCRIPT), new Promise<string>((r) => setTimeout(() => r("unreadable"), timeoutMs))]));
-      } catch {
-        // an unreadable field is not an error
-      }
-      return undefined;
-    },
-    dispose() {
+    close() {
       proc?.kill();
       proc = undefined;
     },
   };
 }
 
-/** The real helpers: PowerShell kept alive on Windows, osascript per read on macOS. */
+export function createCaretReader({ platform, start, once, timeoutMs = 600 }: Deps): CaretReader {
+  const helper = createLineClient(start, timeoutMs);
+  const oneShot = () => Promise.race([once(MAC_SCRIPT), new Promise<string>((r) => setTimeout(() => r("unreadable"), timeoutMs))]);
+  return {
+    warm() {
+      if (platform === "win32") helper.open();
+    },
+    async read() {
+      try {
+        if (platform === "win32") return parseCaret(await helper.ask());
+        if (platform === "darwin") return parseCaret(await oneShot());
+      } catch {
+        // an unreadable field is not an error
+      }
+      return undefined;
+    },
+    dispose: helper.close,
+  };
+}
+
+const NL = String.fromCharCode(10);
+
+/** The real helpers: PowerShell kept alive on Windows (the script goes in the command line, so no file is written), osascript per read on macOS. */
 export function systemCaretReader(): CaretReader {
   return createCaretReader({
     platform: process.platform,

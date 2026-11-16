@@ -1,4 +1,4 @@
-import { isLabId, type LabId } from "./labs";
+import { SETTINGS_SUBS, type SettingsSub } from "./ipc";
 
 export type DeepLink = { kind: "launch" } | { kind: "pair" } | { kind: "settings"; page: SettingsSub } | { kind: "lab"; id: string };
 
@@ -13,9 +13,9 @@ export function parseDeepLink(raw: string): DeepLink | null {
   if (u.protocol !== "speakkit:" || u.username || u.password || u.port) return null;
   if (u.hostname === "launch") return { kind: "launch" };
   if (u.hostname === "pair") return { kind: "pair" };
-  if (u.hostname === "lab") {
-    const id = u.pathname.slice(1);
-    return isLabId(id) ? { kind: "lab", id } : null;
+  if (u.hostname === "settings") {
+    const page = u.pathname.replace(/^\/+|\/+$/g, "");
+    return (SETTINGS_SUBS as readonly string[]).includes(page) ? { kind: "settings", page: page as SettingsSub } : null;
   }
   if (u.hostname === "lab") {
     const id = u.pathname.replace(/^\/+|\/+$/g, "");
@@ -36,7 +36,7 @@ export function findDeepLink(argv: readonly string[]): DeepLink | null {
 
 interface DeepLinkActions {
   showWindow(): void;
-  navigate(sub: "browser" | "experiments"): void;
+  navigate(page: SettingsSub): void;
   /** Make sure the loopback server is running (no-op when it is). */
   ensureServer(): void;
 }

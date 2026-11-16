@@ -127,7 +127,6 @@ export const DE_MAIN: Record<keyof typeof MAIN, string> = {
   "dialog.importDetail": "Eingeschaltet würde: {what}.",
   "dialog.leaveOut": "Weglassen",
   "dialog.turnOn": "Einschalten",
-  "dialog.capturesFolder": "Ordner für Aufnahmen",
   "filter.settings": "Einstellungen",
   "filter.wordLists": "Wortlisten",
   "filter.readable": "Lesbare Dateien",

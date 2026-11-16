@@ -61,46 +61,121 @@ interface Deps {
   cleared?(): void;
   ready(): Promise<unknown>;
   core(): Dictation | undefined;
-  ready(): Promise<void>;
+  audio(): AudioStore | undefined;
+  cfg(): DictationConfig;
+  /** A dictation is recording, transcribing or inserting: the speech engine is in use. */
+  dictating(): boolean;
+  stt: Stt;
   /** Every speech model, to show the name of the one that heard an entry. */
-  catalog(): readonly { id: string; name: string }[];
-  /** The count changed. */
-  changed(): void;
+  catalog?(): readonly { id: string; name: string }[];
+  files: FilePickers;
+  /** Sends the status to the window. */
+  push(): void;
+  refreshCount(): Promise<void>;
+  warn(title: string, detail: string): void;
+  /** Whether an OpenAI key is saved, and whether the test hook is on (a scripted writer then stands in for the key). */
+  key: { hasKey?: (() => Promise<boolean>) | undefined; test: boolean };
 }
 
-/** The dictation history as the pages use it: the entries with the model that heard each, copy, delete, and the count the status shows. */
+/** What the History page and the vocabulary files need from the main process: entries, versions, recordings, notices and the two file dialogs. */
 export class HistoryApi {
-  count = 0;
-  readonly #d: Deps;
+  readonly d: Deps;
+  #kept = 0;
+  #rev = 0;
+  #redo: DictationStatus["redo"];
+  #redoAbort: AbortController | undefined;
+  #hasKey = false;
+  #promptDropped = false;
+  /** The last "Transcribe again" work, until it has finished and put the chosen model back. A cancel stops waiting for it, not the work. */
+  #settling: Promise<void> | undefined;
 
   constructor(deps: Deps) {
-    this.#d = deps;
+    this.d = deps;
   }
 
-  async refresh(): Promise<void> {
-    this.count = (
-      (await this.#d
-        .core()
-        ?.history.list()
-        .catch(() => [])) ?? []
-    ).length;
-    this.#d.changed();
+  /** What the status carries of the history beyond its size, and of the rewrite key and the word list. */
+  parts() {
+    const { core, key } = this.d;
+    return {
+      historyStatus: core()?.history.status() ?? "ok",
+      keptRecordings: this.#kept,
+      historyRev: this.#rev,
+      redo: this.#redo,
+      historyCopy: core()?.history.preservedAs(),
+      rewriteKey: this.#hasKey || (__TEST_CODE__ && key.test),
+      promptDropped: this.#promptDropped,
+    };
+  }
+
+  /** The key can be saved or removed on the Voice chat page at any time. */
+  async refreshKey(): Promise<void> {
+    this.#hasKey = (await this.d.key.hasKey?.()) ?? false;
+  }
+
+  /** The speech model cannot read the word list (true), or a change made it worth trying again (false). */
+  setPromptDropped(on: boolean): void {
+    if (this.#promptDropped === on) return;
+    this.#promptDropped = on;
+    this.d.push();
+  }
+
+  #item(e: HistoryHit, now: number): HistoryItem {
+    const left = timeLeft(e, now, this.d.cfg().retention);
+    return {
+      ...heardBy(e, this.d.catalog),
+      id: e.id,
+      at: e.at,
+      text: e.text,
+      raw: e.raw,
+      durationMs: e.durationMs,
+      expiresInMs: Number.isFinite(left) ? left : null,
+      ...(e.app && { app: e.app, appName: e.displayName ?? friendlyAppName(e.app) ?? e.app }),
+      ...(e.kind && { kind: e.kind }),
+      ...(e.timings && { timings: e.timings }),
+      ...(e.outcome && { outcome: e.outcome }),
+      ...(e.rewrite && { rewrite: e.rewrite }),
+      ...(e.audio && { recording: true }),
+      ...(e.audioRemoved && { recordingRemoved: true }),
+      ...(e.versions && { versions: e.versions }),
+      ...(e.version && { version: e.version }),
+      ...(e.via && { via: e.via }),
+    };
   }
 
   async list(search?: string): Promise<HistoryItem[]> {
-    await this.#d.ready();
-    return historyItems((await this.#d.core()?.history.list(search ? { search } : undefined)) ?? [], this.#d.catalog());
+    await this.d.ready();
+    const items = (await this.d.core()?.history.list(search ? { search } : undefined)) ?? [];
+    const now = Date.now();
+    return items.map((e) => this.#item(e, now));
+  }
+
+  async stats() {
+    await this.d.ready();
+    return (await this.d.core()?.history.stats()) ?? { dictations: 0, words: 0, wordsPerMinute: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
+  }
+
+  async recent(n: number): Promise<HistoryItem[]> {
+    await this.d.ready();
+    const now = Date.now();
+    return ((await this.d.core()?.history.recent(n)) ?? []).map((e) => this.#item(e, now));
   }
 
   async copy(id: string): Promise<boolean> {
-    await this.#d.ready();
-    return (await this.#d.core()?.history.copy(id)) ?? false;
+    await this.d.ready();
+    return (await this.d.core()?.history.copy(id)) ?? false;
   }
 
-  async remove(id: string): Promise<void> {
-    await this.#d.ready();
-    await this.#d.core()?.history.remove(id);
-    await this.refresh();
+  #noteKept(kept: string[]): void {
+    if (!kept.length) return;
+    this.#kept += kept.length;
+    this.d.warn("dictation recording kept", `${kept.length} not moved to the Recycle Bin`);
+    this.d.push();
+  }
+
+  async remove(ids: string[]): Promise<void> {
+    await this.d.ready();
+    this.#noteKept((await this.d.core()?.history.removeMany(ids))?.kept ?? []);
+    await this.d.refreshCount();
   }
 
   async clear(): Promise<void> {

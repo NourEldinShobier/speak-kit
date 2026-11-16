@@ -1,8 +1,9 @@
-import type { Mode } from "./modes/modes";
+import type { Mode as WritingMode } from "./modes/modes";
 import type { Term } from "./vocabulary/terms";
 
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
 export type InsertMode = "paste" | "type" | "copy";
+export type Mode = "hold" | "hold-only" | "toggle" | "double-tap" | "tap-or-hold";
 /** `matchCase`: only the exact capitals match; without it capital letters are ignored. */
 export type Replacement = { from: string; to: string; matchCase?: boolean | undefined };
 
@@ -56,7 +57,7 @@ export interface Settings {
   terms: Term[];
   /** Send the words to the speech model as a prompt, within a character budget. */
   prompt: boolean;
-  modes: Mode[];
+  modes: WritingMode[];
   rewrite: { enabled: boolean; deadlineMs: number };
   /** Adds a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: boolean;

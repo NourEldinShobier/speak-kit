@@ -261,7 +261,7 @@ function MeetingsPage({ meetings, setTab, openMeetingSettings, initial }: { meet
 }
 
 /** History: the Dictations tab (the existing dictation history) and the Transcripts tab. */
-export function HistoryRoute({ openSettings, openMeetingSettings }: { openSettings(): void; openMeetingSettings(): void }) {
+export function HistoryRoute({ openSettings, openDictation, openMeetingSettings }: { openSettings(): void; openDictation(): void; openMeetingSettings(): void }) {
   const push = usePush();
   const [tab, setTab] = useState<Tab>("dictations");
   const lead = useDictationLead();
@@ -283,7 +283,7 @@ export function HistoryRoute({ openSettings, openMeetingSettings }: { openSettin
   return (
     <Frame tab={tab === "meetings" ? "dictations" : tab} meetings={meetings} setTab={setTab} lead={lead}>
       <Suspense fallback={null}>
-        <DictationHistory embedded />
+        <DictationHistory embedded openSettings={openDictation} />
       </Suspense>
     </Frame>
   );

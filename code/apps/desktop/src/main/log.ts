@@ -1,5 +1,6 @@
 import log from "electron-log/main";
 import { chmod, mkdir, readdir, stat, unlink } from "node:fs/promises";
+import { ignore } from "../shared/ignore";
 import path from "node:path";
 
 const MAX_LOG_BYTES = 1024 * 1024;
@@ -73,20 +74,19 @@ export function staleLogs(files: readonly { name: string; modified: number }[], 
 export async function tidyLogs(dir: string, now = Date.now()): Promise<void> {
   try {
     await mkdir(dir, { recursive: true });
-    await chmod(dir, 0o700).catch(() => undefined);
+    await chmod(dir, 0o700).catch(ignore);
     const files = await Promise.all((await readdir(dir)).map(async (name) => ({ name, modified: (await stat(path.join(dir, name))).mtimeMs })));
-    for (const name of staleLogs(files, now)) await unlink(path.join(dir, name)).catch(() => undefined);
-    for (const f of files) if (f.name.endsWith(".log")) await chmod(path.join(dir, f.name), 0o600).catch(() => undefined);
+    for (const name of staleLogs(files, now)) await unlink(path.join(dir, name)).catch(ignore);
+    for (const f of files) if (f.name.endsWith(".log")) await chmod(path.join(dir, f.name), 0o600).catch(ignore);
   } catch {
     // a log folder that cannot be tidied must not stop the app
   }
 }
 
 /** Main-process log file `<userData>/logs/main.log` as JSON lines; electron-log rotates it to main.old.log past 1 MB. Uncaught errors are written too. */
-export function initLog(dataDir: string, verbose = false) {
+export function initLog(dataDir: string) {
   log.transports.file.resolvePathFn = () => path.join(dataDir, "logs", "main.log");
   log.transports.file.format = ({ message }) => [jsonLine(message)];
-  log.transports.file.level = verbose ? "debug" : "info";
   log.transports.file.maxSize = MAX_LOG_BYTES;
   log.transports.console.level = process.env.SPEAKKIT_USER_DATA ? "warn" : "info";
   log.hooks.push((message) => ({ ...message, data: message.data.map(redactValue) })); // before every transport, the console included

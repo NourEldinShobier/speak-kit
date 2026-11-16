@@ -29,7 +29,6 @@ const E = (text: string, icon: Extract<HudView, { kind: "error" }>["icon"], acti
   ...(action && { action }),
 });
 
-/** Words and buttons for each error the core can end in. */
 type Icon = Extract<HudView, { kind: "error" }>["icon"];
 type Button = NonNullable<Extract<HudView, { kind: "error" }>["action"]>;
 const sound = (): Button => ({ label: at("hud.soundSettings"), id: "sound-settings" });
@@ -66,9 +65,9 @@ export function failureLine(code: string, canRetry: boolean, owner?: string): { 
 }
 
 /** The short message after a dictation ended (or none). */
-function idleView(notice: Extract<DictationState, { status: "idle" }>["notice"], insertedAsCopy: boolean): HudView | null {
+function idleView(notice: Extract<DictationState, { status: "idle" }>["notice"], insertedAsCopy: boolean, secureInput = false): HudView | null {
   if (!notice) return null;
-  if (notice.kind === "inserted") return insertedAsCopy ? { kind: "copied", reason: "clipboard" } : { kind: "pasted" };
+  if (notice.kind === "inserted") return insertedAsCopy ? { kind: "copied", reason: secureInput ? "secure-input" : "clipboard" } : { kind: "pasted" };
   if (notice.kind === "copied") return { kind: "copied", reason: notice.reason === "elevated" ? "elevated" : "clipboard" };
   if (notice.kind === "cancelled") return { kind: "notice", text: at("hud.cancelled"), ...(notice.undoable && { action: { label: at("hud.undo"), id: "undo-cancel" as const } }) };
   return { kind: "notice", text: at("hud.noSpeech") };
@@ -95,11 +94,7 @@ export function hudViewFor(i: HudInput): HudView | null {
     case "error":
       return errorView(s.code, i.canRetry, s.owner);
     case "idle":
-      if (!s.notice) return null;
-      if (s.notice.kind === "inserted") return i.insertedAsCopy ? { kind: "copied", reason: "clipboard" } : { kind: "pasted" };
-      if (s.notice.kind === "copied") return { kind: "copied", reason: s.notice.reason === "elevated" ? "elevated" : "clipboard" };
-      if (s.notice.kind === "cancelled") return s.notice.restorable ? { kind: "notice", text: "Cancelled", action: { label: "Restore", id: "restore" } } : { kind: "notice", text: "Cancelled" };
-      return { kind: "notice", text: "No speech heard" };
+      return idleView(s.notice, i.insertedAsCopy, i.secureInput);
     default:
       return s satisfies never;
   }

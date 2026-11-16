@@ -1,5 +1,7 @@
 import { API_VERSION, parseHealth, parseVoiceList, type Health, type VoiceList } from "@speakkit/protocol";
 import type { ConnResult } from "../../shared/internal";
+import { ignore } from "../../shared/ignore";
+import { tokenRejected } from "../../shared/rejection";
 
 const HEALTH_TTL_MS = 3000;
 const TIMEOUT_MS = 2500;
@@ -21,6 +23,9 @@ const rejected = (): ConnResult<never> => ({
   code: "token-rejected",
   message: "The Speak Kit app rejected the pairing token.",
 });
+
+/** The JSON of an error answer; an answer that is not an error is not read. */
+const bodyOf = (res: Response): Promise<unknown> => (res.ok ? Promise.resolve(undefined) : res.json().catch(ignore));
 
 type Get = (path: string, port: number, token?: string) => Promise<Response>;
 
@@ -49,7 +54,7 @@ async function checkAuth(get: Get, deps: HealthDeps, override: { port?: number |
   try {
     const res = await get("/v1/auth/check", override.port ?? (await deps.port()), override.token ?? (await deps.token()));
     if (res.status === 204 || res.ok) return { ok: true, value: true };
-    return res.status === 401 || res.status === 403 ? rejected() : down();
+    return tokenRejected(res.status, await bodyOf(res)) ? rejected() : down();
   } catch {
     return down();
   }
@@ -58,7 +63,7 @@ async function checkAuth(get: Get, deps: HealthDeps, override: { port?: number |
 async function fetchVoices(get: Get, deps: HealthDeps): Promise<ConnResult<VoiceList>> {
   try {
     const res = await get("/v1/voices", await deps.port(), await deps.token());
-    if (res.status === 401 || res.status === 403) return rejected();
+    if (tokenRejected(res.status, await bodyOf(res))) return rejected();
     if (!res.ok) return down();
     const list = parseVoiceList(await res.json());
     return list ? { ok: true, value: list } : down();

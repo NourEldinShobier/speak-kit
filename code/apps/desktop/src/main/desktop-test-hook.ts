@@ -21,7 +21,7 @@ interface HookParts {
 }
 
 /** SPEAKKIT_TEST hooks: simulate what Playwright cannot do (global key presses, native menus, toasts). */
-export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings, installs }: HookParts) => {
+export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, meetings, installs }: HookParts) => {
   const loop = monitorEventLoopDelay({ resolution: 10 });
   loop.enable();
   return {

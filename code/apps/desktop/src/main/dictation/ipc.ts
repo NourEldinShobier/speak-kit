@@ -15,15 +15,18 @@ const handlersOf = (d: DictationService, apps: InstalledApps): Handlers => ({
   patchSettings: (patch) => d.patchSettings(patch),
   downloadModel: (id) => d.download(id),
   cancelDownload: () => d.cancelDownload(),
-  historyList: (search) => d.history.list(search),
+  historyList: (search) => d.records.list(search),
   historyCopy: (id) => d.history.copy(id),
-  historyRemove: (id) => d.history.remove(id),
-  historyClear: () => d.history.clear(),
-  retry: () => d.retry(),
+  historyRemove: (id) => d.records.remove([id]),
+  historyClear: () => d.records.clear(),
+  historyRemoveMany: (ids) => d.records.remove(ids),
+  micDevices: async () => (await d.ready, await d.mic.list(), d.status()),
+  micMeter: async (on) => (await d.ready, d.mic.setMeter(on)),
+  retry: () => d.actions.retry(),
   setPaused: async (on) => (await d.ready, d.controls.setPaused(on), d.status()),
   pasteLast: async () => (await d.ready, d.controls.pasteLast()),
   undoCancel: async () => (await d.ready, d.controls.undoCancel()),
-  openSoundSettings: () => d.openSoundSettings(),
+  openSoundSettings: () => d.actions.openSoundSettings(),
   openMicrophoneSettings: () => openMicrophoneSettings(),
   historyStats: () => d.records.stats(),
   historyRecent: (n) => d.records.recent(n),
@@ -51,6 +54,6 @@ export function registerDictationIpc(d: DictationService, isAppWindow: (contents
   });
   ipcMain.on(HUD_ACTION, (e, action) => {
     const parsed = v.safeParse(HudActionSchema, action);
-    if (parsed.success && d.ownsHud(e.sender)) d.hudAction(parsed.output);
+    if (parsed.success && d.ownsHud(e.sender)) d.actions.hudAction(parsed.output);
   });
 }

@@ -1,4 +1,5 @@
 import type { Clip, Recorder } from "@speakkit/dictation";
+import { ignore } from "../../shared/ignore";
 import type { Spool } from "./spool";
 
 export interface SpooledRecorder extends Recorder {
@@ -23,7 +24,7 @@ export function createSpooledRecorder(
   const { rate, now = Date.now, enabled = () => true } = o;
   let current: Promise<string> | undefined;
   const ids = new WeakMap<Clip, Promise<string>>();
-  const quietly = <T>(p: Promise<T>) => p.catch(() => undefined);
+  const quietly = <T>(p: Promise<T>) => p.catch(ignore);
   return {
     async start(req) {
       const r = await inner.start(req);

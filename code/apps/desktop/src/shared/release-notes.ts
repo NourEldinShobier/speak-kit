@@ -7,9 +7,14 @@ const ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">
 /** electron-updater hands over a string or a list of { note }; a release body from the GitHub API is a string. */
 function asText(raw: unknown): string {
   if (typeof raw === "string") return raw;
-  if (Array.isArray(raw)) return raw.map((x) => (x && typeof x === "object" && "note" in x && typeof x.note === "string" ? x.note : typeof x === "string" ? x : "")).join("\n");
+  if (Array.isArray(raw)) return raw.map(noteOf).join("\n");
   return "";
 }
+
+const noteOf = (x: unknown): string => {
+  if (typeof x === "string") return x;
+  return x && typeof x === "object" && "note" in x && typeof x.note === "string" ? x.note : "";
+};
 
 const fromHtml = (s: string) =>
   s

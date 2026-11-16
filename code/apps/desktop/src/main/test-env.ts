@@ -13,6 +13,7 @@ export const testEnv = () => {
   return {
     /** Installs the test hook (globalThis.__speakkit) and simulates the OS for shortcuts and toasts. */
     hook: testing,
+    fakeMic: testing ? e.SPEAKKIT_FAKE_MIC || undefined : undefined,
     fakeUpdate: on ? e.SPEAKKIT_FAKE_UPDATE || undefined : undefined,
     token: on ? e.SPEAKKIT_TOKEN || undefined : undefined,
     /** Lets the library fetch pages from this machine (the e2e web server listens on loopback). */
@@ -25,3 +26,9 @@ export const testEnv = () => {
     updateUrl: on || e.SPEAKKIT_USER_DATA ? e.SPEAKKIT_UPDATE_URL || undefined : undefined,
   };
 };
+
+export function fakeMicSwitches(file?: string): void {
+  if (!file) return;
+  app.commandLine.appendSwitch("use-fake-device-for-media-stream");
+  app.commandLine.appendSwitch("use-file-for-fake-audio-capture", file);
+}

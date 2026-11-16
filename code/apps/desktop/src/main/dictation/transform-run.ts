@@ -39,6 +39,7 @@ export function runTransform(os: DictationOs, cfg: DictationConfig): Promise<Tra
   return transformTyped({
     foreground: () => os.foreground(),
     passwordFocused: () => os.passwordFocused(),
+    hasSelection: async () => (await os.caret?.read())?.selected,
     selectAll: sendSelectAllKeys,
     copy: () => captureSelection({ clip: electronClipboard, copy: sendCopyKeys, sleep }),
     insert: (text, options) => os.insert(text, options),

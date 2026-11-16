@@ -15,9 +15,10 @@ function rig(
   const copies = [...(o.copies ?? [])];
   let reads = 0;
   const deps: TransformDeps = {
-    foreground: () => (reads++ === 0 ? (o.fg === undefined ? win() : o.fg) : o.fgAfter === undefined ? win() : o.fgAfter),
+    foreground: () => pick(reads++ === 0 ? o.fg : o.fgAfter),
     passwordFocused: () => o.password ?? false,
     secureInput: () => o.secure ?? false,
+    ...("hasSelection" in o && { hasSelection: async () => o.hasSelection }),
     selectAll: async () => void log.push("select-all"),
     copy: async () => {
       log.push("copy");
@@ -44,6 +45,36 @@ describe("transformTyped", () => {
     const r = rig({ copies: ["", "um hello", "um hello"] });
     expect(await transformTyped(r.deps)).toEqual({ status: "changed" });
     expect(r.log).toEqual(["copy", "select-all", "copy", "copy", "insert:hello:w1:paste"]);
+  });
+
+  it("selects the whole field before the first copy when the caret has no selection, so an editor that copies the line is not trusted", async () => {
+    const r = rig({ hasSelection: false, copies: ["um whole field", "um whole field"] });
+    expect(await transformTyped(r.deps)).toEqual({ status: "changed" });
+    expect(r.log).toEqual(["select-all", "copy", "copy", "insert:whole field:w1:paste"]);
+  });
+
+  it("copies the selection directly when the reader says text is selected, and falls back to the old order when it cannot tell", async () => {
+    const a = rig({ hasSelection: true, copies: ["um a", "um a"] });
+    await transformTyped(a.deps);
+    expect(a.log).toEqual(["copy", "copy", "insert:a:w1:paste"]);
+    const b = rig({ hasSelection: undefined, copies: ["", "um b", "um b"] });
+    await transformTyped(b.deps);
+    expect(b.log).toEqual(["copy", "select-all", "copy", "copy", "insert:b:w1:paste"]);
+  });
+
+  it("does not write anything when the cleaned text is empty, so the field is not wiped", async () => {
+    const r = rig({ copies: ["um ", "um "] });
+    expect(await transformTyped(r.deps)).toEqual({ status: "failed", reason: "nothing-left" });
+    expect(r.log.some((l) => l.startsWith("insert"))).toBe(false);
+  });
+
+  it("leaves a very long field alone and cleans one just under the limit", async () => {
+    const big = "um ".repeat(16_667);
+    const r = rig({ copies: [big, big] });
+    expect(await transformTyped(r.deps)).toEqual({ status: "failed", reason: "too-long" });
+    const ok = "um hi ".repeat(8_333) + "x".repeat(2);
+    const r2 = rig({ copies: [ok, ok] });
+    expect((await transformTyped(r2.deps)).status).toBe("changed");
   });
 
   it("says nothing is selected when the field is empty", async () => {

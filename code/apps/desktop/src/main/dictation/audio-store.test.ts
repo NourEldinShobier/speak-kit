@@ -36,6 +36,22 @@ describe("audio store", () => {
     expect(await readdir(dir)).toEqual([".._.._evil_name.wav"]);
   });
 
+  it("reads a limit given as a function at every save", async () => {
+    const evicted: string[][] = [];
+    let limit = 10 * (44 + 200);
+    const s = createAudioStore({ dir, trash: async (f) => (await rm(f), true), onEvicted: (f) => evicted.push(f), limitBytes: () => limit });
+    await s.save("old", clip(100));
+    await utimes(path.join(dir, "old.wav"), 1, 1);
+    await utimes(path.join(dir, "old.wav"), 1, 1);
+    await s.save("new", clip(100));
+    await utimes(path.join(dir, "new.wav"), 2, 2);
+    expect(evicted).toEqual([]);
+    limit = 2 * (44 + 200);
+    await s.save("newer", clip(100));
+    expect((await readdir(dir)).sort()).toEqual(["new.wav", "newer.wav"]);
+    expect(evicted).toEqual([["old.wav"]]);
+  });
+
   it("removes the oldest recordings when the limit is passed and tells the history which", async () => {
     const evicted: string[][] = [];
     const s = store({ limitBytes: 2 * (44 + 200), evicted });

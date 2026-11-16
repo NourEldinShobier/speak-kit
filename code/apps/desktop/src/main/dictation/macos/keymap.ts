@@ -58,6 +58,10 @@ const PAIRS: Array<[number, VirtualKey]> = [
   [36, 0x0d],
   [51, 0x08],
   [114, 0x2d],
+  [116, 0x121], // Page Up, Page Down, End and Home carry the extended offset the hotkey names use
+  [121, 0x122],
+  [119, 0x123],
+  [115, 0x124],
   [56, VK.leftShift],
   [60, VK.rightShift],
   [59, VK.leftCtrl],

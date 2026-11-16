@@ -1,6 +1,6 @@
-import { Icon } from "@speakkit/ui";
+import { Checkbox, Icon } from "@speakkit/ui";
 import type { HistoryItem } from "../../../shared/dictation/contract";
-import { appName, clockText, entryLabel, expiryText, markChanges, rewriteTag, timeText } from "./model";
+import { clockText, entryLabel, expiryText, markChanges, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
 
 export type View = "final" | "side";
 
@@ -27,6 +27,11 @@ function RowMeta({ item, deadlineMs }: { item: HistoryItem; deadlineMs: number }
         {item.recording ? <span>Recording kept</span> : null}
         {item.recordingRemoved ? <span>Recording removed to stay under the limit</span> : null}
         {tag ? <span className="dict-hist__tag">{tag}</span> : null}
+        {[...rowTags(item), ...timingTags(item)].map((t) => (
+          <span key={t} className="dict-hist__tag">
+            {t}
+          </span>
+        ))}
         {item.via ? (
           <span className="dict-hist__tag">
             Matched &ldquo;{item.via.heard}&rdquo; from your Vocabulary entry {item.via.word}
@@ -41,7 +46,12 @@ function RowWhen({ item, label, open, onToggle }: { item: HistoryItem; label: st
   return (
     <div className="dict-hist__when">
       <span>{timeText(item.at)}</span>
-      <span className="dict-hist__app">{appName(item.app)}</span>
+      <span className="dict-hist__app">{rowApp(item)}</span>
+      {item.model ? (
+        <span className="dict-hist__app" data-testid="history-model">
+          {[item.model, item.language].filter(Boolean).join(", ")}
+        </span>
+      ) : null}
       {item.recording && onToggle ? (
         <button type="button" className="dict-hist__rec" aria-expanded={open} aria-label={`Recording of: ${label}`} onClick={onToggle}>
           <Icon name="player-play" size={10} /> {clockText(item.durationMs)}
@@ -78,6 +88,7 @@ export function HistoryRow({
   open,
   onToggle,
   rewriteDeadlineMs = 4000,
+  selection,
 }: {
   item: HistoryItem;
   copied: boolean;
@@ -87,11 +98,14 @@ export function HistoryRow({
   open?: boolean;
   onToggle?: () => void;
   rewriteDeadlineMs?: number;
+  /** Selection mode: whether the entry is ticked and how to tick it. */
+  selection?: { checked: boolean; toggle: () => void };
 }) {
   const label = entryLabel(item.text);
   const marks = view === "side" ? markChanges(item.raw, item.text) : undefined;
   return (
     <div className={`lm-row dict-hist__row${view === "side" ? " dict-hist__row--side" : ""}`} data-testid="history-row" data-row={item.id}>
+      {selection && <Checkbox aria-label={`Select: ${label}`} checked={selection.checked} onChange={selection.toggle} />}
       <RowWhen item={item} label={label} open={open} onToggle={onToggle} />
       {marks ? (
         <>

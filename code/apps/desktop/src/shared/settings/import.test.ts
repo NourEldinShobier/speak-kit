@@ -52,22 +52,21 @@ describe("planImport", () => {
   it("names the areas the way the registry does and leaves out what belongs to one install", () => {
     const text = JSON.stringify({
       shortcuts: { stop: "Ctrl+Alt+S" },
-      capture: { target: "area", consented: true, folder: "D:/x", narrationCommand: "calc" },
       transcripts: { textDays: 90 },
       engines: { device: "cpu", failedDevices: [] },
       voiceChatVoice: "alloy",
     });
     expect(planImport(text)).toMatchObject({
       ok: true,
-      change: { "shortcuts.stop": "Ctrl+Alt+S", "capture.target": "area", "transcripts.textDays": 90, "engines.device": "cpu", voiceChatVoice: "alloy" },
-      skipped: ["capture.consented", "capture.folder", "capture.narrationCommand", "engines.failedDevices"],
+      change: { "shortcuts.stop": "Ctrl+Alt+S", "transcripts.textDays": 90, "engines.device": "cpu", voiceChatVoice: "alloy" },
+      skipped: ["engines.failedDevices"],
     });
   });
 
   it("lists the settings that need a confirmation and the ones that differ from what is set", () => {
-    const text = JSON.stringify({ controlServer: true, voice: "af_bella", speed: 1, capture: { inputLog: "events", target: "screen" }, meetings: { summary: true } });
-    const r = planImport(text, { controlServer: true, voice: "af_heart", speed: 1, capture: { target: "screen", inputLog: "off" } });
-    expect(r).toMatchObject({ needsConfirmation: ["capture.inputLog", "meetings.summary"], changed: ["voice", "capture.inputLog", "meetings.summary"] });
+    const text = JSON.stringify({ controlServer: true, voice: "af_bella", speed: 1, meetings: { summary: true } });
+    const r = planImport(text, { controlServer: true, voice: "af_heart", speed: 1 });
+    expect(r).toMatchObject({ needsConfirmation: ["meetings.summary"], changed: ["voice", "meetings.summary"] });
   });
 
   it("asks about the control server, experiments and tool access only when the import would switch them on", () => {
@@ -83,6 +82,6 @@ describe("planImport", () => {
   });
 
   it("does not take a prototype key inside an area", () => {
-    expect(planImport('{"voice":"a","capture":{"__proto__":{"target":"area"}}}')).toMatchObject({ change: { voice: "a" }, skipped: ["capture.__proto__"] });
+    expect(planImport('{"voice":"a","meetings":{"__proto__":{"summary":true}}}')).toMatchObject({ change: { voice: "a" }, skipped: ["meetings.__proto__"] });
   });
 });

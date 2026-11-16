@@ -47,14 +47,27 @@ async function focusApp(native: MacNative, pid: number): Promise<boolean> {
   return false;
 }
 
+const typeVia = (native: MacNative, press: (code: number, flags: number) => boolean) => async (text: string, stopped?: () => boolean) => {
+  const lines = text.replaceAll("\r\n", "\n").split("\n");
+  for (const [i, line] of lines.entries()) {
+    await yieldToLoop();
+    if (stopped?.()) return "stopped";
+    if (i > 0 && !press(MAC_KEY_RETURN, FLAG_SHIFT)) return "rejected";
+    for (const c of chunks(line)) if (!native.postUnits(c)) return "rejected";
+  }
+  return "done";
+};
+
 export function createMacInput(native: MacNative, layout?: { current(): string | undefined }): InputPort {
   const press = (code: number, flags: number) => native.postKey(code, true, flags) && native.postKey(code, false, flags);
   return {
     foreground(want): ForegroundInfo | null {
       const f = native.frontmost();
       // The window is not told apart from its app: a window switch inside one app goes unnoticed, an app switch does not.
+      if (!f) return null;
       const code = want?.layout === false ? undefined : layout?.current();
-      return f ? { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", ...(code && { layout: code }), elevated: false } : null;
+      const bounds = native.windowBounds(f.pid);
+      return { hwnd: String(f.pid), pid: f.pid, exe: f.bundleId ?? f.name, className: "", ...(code && { layout: code }), elevated: false, ...(bounds && { bounds }) };
     },
     // Secure keyboard input (below) catches apps that switch it on; this asks Accessibility whether the focused control is a password field.
     passwordFocused: () => native.passwordFocused(),
@@ -68,23 +81,15 @@ export function createMacInput(native: MacNative, layout?: { current(): string |
       ];
       return held.filter(([, bit]) => (flags & bit) !== 0).map(([name]) => name);
     },
-    pressPaste(withShift) {
-      const flags = FLAG_COMMAND | (withShift ? FLAG_SHIFT : 0);
+    // Command stands in for Ctrl; Shift+Insert has no Mac key, so it is the plain paste.
+    pressPaste(key) {
+      const flags = FLAG_COMMAND | (key === "ctrl-shift-v" ? FLAG_SHIFT : 0);
       if (press(MAC_KEY_V, flags)) return true;
       native.postKey(MAC_KEY_V, false, flags); // never leave the key down
       return false;
     },
     focus: (hwnd) => focusApp(native, Number(hwnd)),
-    async type(text, stopped) {
-      const lines = text.replaceAll("\r\n", "\n").split("\n");
-      for (const [i, line] of lines.entries()) {
-        await yieldToLoop();
-        if (stopped?.()) return "stopped";
-        if (i > 0 && !press(MAC_KEY_RETURN, FLAG_SHIFT)) return "rejected";
-        for (const c of chunks(line)) if (!native.postUnits(c)) return "rejected";
-      }
-      return "done";
-    },
+    type: typeVia(native, press),
     clipboardSequence: () => native.pasteboard.changeCount(),
     clipboardTraits() {
       const types = native.pasteboard.types();

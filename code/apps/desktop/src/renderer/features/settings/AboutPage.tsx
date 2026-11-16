@@ -156,6 +156,7 @@ export function AboutPage({ s }: { s: AppState }) {
       }
     >
       <Versions s={s} />
+      <SetupSection />
       <UpdatesSection s={s} />
       <SettingsSection title={t("s.about.network")} description={t("s.about.networkLead")}>
         <div {...rowAttr("about/network")} className="sk-pad">

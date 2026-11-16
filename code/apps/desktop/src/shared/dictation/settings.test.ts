@@ -220,6 +220,16 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], replacements: [] }]);
   });
 
+  it("gives a mode saved before websites existed an empty list, and keeps sites as host names, once each", () => {
+    const old = { id: "m1", name: "Mail", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
+    expect(v.parse(DictationConfigSchema, { modes: [old] }).modes[0]?.sites).toEqual([]);
+    const sites = ["https://www.Mail.Google.com/inbox", "mail.google.com", "bad name", 5, "", "Example.org"];
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites }] }).modes[0]?.sites).toEqual([]); // one wrong entry type falls the whole list back
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: sites.filter((x) => typeof x === "string") }] }).modes[0]?.sites).toEqual(["mail.google.com", "example.org"]);
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: "mail.google.com" }] }).modes[0]?.sites).toEqual([]);
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: Array.from({ length: 80 }, (_, i) => `s${i}.com`) }] }).modes[0]?.sites).toHaveLength(50);
+  });
+
   it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
     expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false, lowercase: true });
     expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);

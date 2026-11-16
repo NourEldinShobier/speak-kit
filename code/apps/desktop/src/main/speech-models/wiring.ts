@@ -2,7 +2,9 @@ import type { BrowserWindow } from "electron";
 import { Transfers, WhisperStt } from "@speakkit/engine";
 import type { DictationConfig, DictationModelId } from "../../shared/dictation/settings";
 import type { Ctx } from "../context";
+import type { Settings } from "@speakkit/dictation";
 import { ModelManager } from "../dictation/models";
+import { coreSettings, isRecording } from "../dictation/service-support";
 import type { Stt } from "../dictation/stt";
 import { modelFetch } from "./download-fetch";
 import { parseHardware } from "./hardware-probe";
@@ -16,10 +18,8 @@ interface Args {
   stt: Stt | undefined;
   select(id: DictationModelId): void;
   push(soon?: boolean): void;
-  supported(): boolean;
-  recording(): boolean;
-  /** The core must hear about a changed model or language. */
-  configure(): void;
+  /** The dictation service: whether it is supported and recording, and the core that must hear about a changed model or language. */
+  svc: { readonly supported: boolean; readonly state: { status: string }; readonly core: { configure(s: Partial<Settings>): void } | undefined };
 }
 
 /** The real engine (unless a test gave one): it asks the speech models service where to run, and downloads through the browser engine's fetch. */
@@ -67,7 +67,7 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
       cfg().model = id;
       cfg().language = language as DictationConfig["language"];
       a.ctx.saveConfig();
-      a.configure();
+      a.svc.core?.configure(coreSettings(cfg()));
     },
     recording: () => isRecording(a.svc.state),
     dictationSupported: () => a.svc.supported,

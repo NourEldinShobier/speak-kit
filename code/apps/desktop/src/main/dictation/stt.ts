@@ -82,6 +82,8 @@ interface TranscriberDeps {
   sentencePause?(): boolean;
   /** How long a clip of this many seconds may take. */
   deadlineMs?(clipSeconds: number): number;
+  /** The words were not sent because the model cannot read a prompt; dictation goes on without them. */
+  onPromptDropped?(): void;
   /** Every model there is (catalog and the ones the person added); the catalog alone when absent. */
   models?(): readonly SttModel[];
   /** A recording is about to be transcribed with this model: it counts as used (idle release restarts its wait). */
@@ -106,17 +108,37 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
   return "model-loading";
 }
 
-/** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
-async function heard({ stt, model, models, onUsed, deadlineMs = transcribeDeadlineMs }: TranscriberDeps, clip: Clip, language: string): Promise<TranscribeResult> {
-  const id = model();
+/** A language the model lacks becomes English (the page says so); automatic detection only on a model that detects. */
+const pickLanguage = (id: string, language: string, models?: () => readonly SttModel[]): SttLanguage => {
   const facts = (models?.() ?? STT_MODELS).find((m) => m.id === id);
-  // A language the model lacks becomes English (the page says so); automatic detection only on a model that detects.
-  const lang = (facts ? resolveLanguage(facts, language).language : "en") as SttLanguage;
-  onUsed?.(id);
+  return (facts ? resolveLanguage(facts, language).language : "en") as SttLanguage;
+};
+
+/** Kills the hung worker and loads a new one; nothing is left to kill when unloading itself fails, and the load starts a new worker either way. */
+async function restart(stt: TranscriberDeps["stt"], id: SttModelId): Promise<void> {
+  try {
+    await stt.unload();
+  } catch {
+    // Nothing is left to kill when unloading itself fails; the load below starts a new worker either way.
+  }
+  void stt.warm(id);
+}
+
+/** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
+export async function heard(
+  { stt, model, models, deadlineMs = transcribeDeadlineMs, sentencePause, onPromptDropped }: TranscriberDeps,
+  req: { clip: Clip; language: string; prompt?: string | undefined },
+): Promise<TranscribeResult> {
+  const { clip, language, prompt } = req;
+  const id = model();
+  const lang = pickLanguage(id, language, models);
+  const sent = prompt && supportsPrompt(id) ? prompt : undefined;
+  if (prompt && !sent) onPromptDropped?.();
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(new Error("transcription timed out")), deadlineMs(clip.pcm.length / clip.sampleRate));
   try {
-    const t = await stt.transcribe(to16(clip.pcm), lang, { signal: stop.signal, ...(sent && { prompt: sent }) });
+    const pcm = padTail(clip.pcm, clip.sampleRate, trailingPadMs(id, sentencePause?.() ?? false));
+    const t = await stt.transcribe(to16(pcm), lang, { signal: stop.signal, ...(sent && { prompt: sent }) });
     return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
   } catch (e) {
     if (stop.signal.aborted) await restart(stt, id);
@@ -138,6 +160,7 @@ export function createTranscriber(deps: TranscriberDeps): Transcriber {
       const keep = (code: "model-loading" | "model-failed" | "failed"): TranscribeResult => (deps.onFailedClip(clip), { ok: false, code });
       const waiting = await whyNotReady(deps);
       if (waiting) return waiting === "model-missing" ? { ok: false, code: waiting } : keep(waiting);
+      deps.onUsed?.(deps.model());
       try {
         return await heard(deps, { clip, language, prompt });
       } catch (e) {

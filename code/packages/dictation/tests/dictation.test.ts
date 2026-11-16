@@ -24,6 +24,11 @@ describe("defaults", () => {
       trailingSpace: true,
       replacements: [],
       retention: "7d",
+      holdMs: 300,
+      secondKey: "",
+      mouseKey: "",
+      rawKey: "",
+      pasteLastKey: "",
       lowercase: false,
       stripFinalStop: false,
       terms: [],
@@ -286,7 +291,7 @@ describe("toggle mode", () => {
     await r.time.advance(500);
     expect(r.rec.log).toEqual(["start:450", "stop:cancelled"]);
     expect(r.ins.inserted).toEqual([]);
-    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", restorable: true } });
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "cancelled", undoable: true } });
   });
 
   it("a custom cancel key works and Escape then passes through", async () => {

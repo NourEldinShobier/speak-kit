@@ -1,4 +1,4 @@
-import { access, writeFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Health } from "@speakkit/protocol";
@@ -10,6 +10,7 @@ import type { AppState } from "../shared/ipc";
 import { applyMemory, serverOptions } from "../shared/memory";
 import type { Config } from "../shared/schemas";
 import { lateAutomation, lateStreams } from "./automation";
+import { createActivePage } from "./page-context";
 import type { Logger } from "./context";
 import { removeDownloads } from "./downloads";
 import { listenWithFallback } from "./ports";
@@ -51,6 +52,8 @@ export class ServerRuntime {
   #d: RuntimeDeps;
   /** What scripts and AI apps may do; the server is created before the reader, which is attached later. */
   readonly automation = lateAutomation();
+  /** The page the browser extension reports; dictation reads it to pick a mode by website. */
+  readonly page = createActivePage({ now: Date.now });
   /** Live transcription for other apps; the speech engine is attached later, like the reader. */
   readonly streams = lateStreams();
   #server: Srv | null = null;
@@ -132,8 +135,6 @@ export class ServerRuntime {
       const missing = applyMemory(server, config, state.onBattery);
       if (missing.length) log.info("server has no runtime setter for:", missing.join(", "));
       log.info(`server listening on 127.0.0.1:${port}`);
-      // The command line tool finds the port here, also after a port fallback.
-      await writeFile(path.join(dataDir, "server.json"), JSON.stringify({ port })).catch((e) => log.warn("server.json not written", e instanceof Error ? e.message : e));
     } catch (e) {
       state.serverError = toDesktopError(e);
       log.error("server failed to start", e instanceof Error ? e.message : e);

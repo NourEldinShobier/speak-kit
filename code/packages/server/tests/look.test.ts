@@ -54,7 +54,6 @@ describe("POST /v1/voice-chat/look", () => {
     ["unsupported", 501],
     ["capture-failed", 502],
     ["unavailable", 503],
-    ["no-capture", 404],
   ];
   it("covers every error code of the protocol", () => {
     expect(CASES.map(([c]) => c)).toEqual([...LOOK_ERROR_CODES]);
@@ -123,7 +122,7 @@ describe("POST /v1/voice-chat/look", () => {
   it("needs the token and refuses a web page origin", async () => {
     const svc = service();
     const c = await open(svc);
-    expect((await post(c, undefined, {})).status).toBe(401);
+    expect((await post(c, undefined, {})).status).toBe(404);
     const r = await raw(c, "POST", "/v1/voice-chat/look", { Host: `127.0.0.1:${c.server.port}`, ...c.auth, Origin: "https://evil.example" }, JSON.stringify({ session: "s", scope: "window" }));
     expect(r.status).toBe(403);
     expect(svc.calls).toHaveLength(0);

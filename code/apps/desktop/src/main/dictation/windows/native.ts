@@ -46,6 +46,8 @@ export interface Win32 {
   /** GWL_STYLE, or GWL_EXSTYLE when `extended` is true. */
   windowStyle(h: Handle, extended?: boolean): number;
   address(h: Handle): string;
+  /** Outer bounds of a window in screen pixels. */
+  windowBounds(h: Handle): { x: number; y: number; width: number; height: number };
   /** Brings the window with this address (from `address`) to the front, restoring it when minimized. False when Windows refuses. */
   setForeground(address: string): boolean;
   /** Program file name and whether its token is elevated. Both null when the process cannot be opened; elevated is null when its token is closed to us (a sign it runs with more rights). */
@@ -71,7 +73,7 @@ export function loadWin32(): Promise<Win32> {
 
 async function bind(): Promise<Win32> {
   const koffi = (await import("koffi")).default;
-  return { koffi, ...keyboardApi(koffi), ...clipboardApi(koffi), ...windowApi(koffi), ...processApi(koffi), hook: hookApi(koffi) };
+  return { koffi, ...keyboardApi(koffi), ...clipboardApi(koffi), ...windowApi(koffi), ...focusApi(koffi), ...processApi(koffi), hook: hookApi(koffi) };
 }
 
 type KeyboardApi = Pick<Win32, "sendInput" | "keyIsDown" | "clipboardSequence" | "keyboardLayout" | "mapVirtualKey">;
@@ -128,7 +130,7 @@ function clipboardApi(koffi: Koffi): ClipboardApi {
   };
 }
 
-type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address" | "setForeground">;
+type WindowApi = Pick<Win32, "foregroundWindow" | "windowOwner" | "className" | "focusedControl" | "windowStyle" | "address" | "windowBounds">;
 
 function windowApi(koffi: Koffi): WindowApi {
   const user32 = koffi.load("user32.dll");
@@ -149,10 +151,7 @@ function windowApi(koffi: Koffi): WindowApi {
   const GetClassNameW = user32.func("int __stdcall GetClassNameW(void *h, _Out_ uint16_t *buf, int n)");
   const GetGUIThreadInfo = user32.func("int __stdcall GetGUIThreadInfo(uint32 tid, _Inout_ SpeakKitGuiThreadInfo *info)");
   const GetWindowLongW = user32.func("int32 __stdcall GetWindowLongW(void *h, int index)");
-  const SetForegroundWindow = user32.func("int __stdcall SetForegroundWindow(intptr h)");
-  const IsIconic = user32.func("int __stdcall IsIconic(intptr h)");
-  const ShowWindow = user32.func("int __stdcall ShowWindow(intptr h, int cmd)");
-  const SW_RESTORE = 9;
+  const GetWindowRect = user32.func("int __stdcall GetWindowRect(void *h, _Out_ SpeakKitRect *r)");
   const GWL_STYLE = -16;
   const GWL_EXSTYLE = -20;
   return {
@@ -172,6 +171,21 @@ function windowApi(koffi: Koffi): WindowApi {
     },
     windowStyle: (h, extended = false) => GetWindowLongW(h, extended ? GWL_EXSTYLE : GWL_STYLE) >>> 0,
     address: (h) => String(h ? koffi.address(h) : 0),
+    windowBounds: (h) => {
+      const r = { left: 0, top: 0, right: 0, bottom: 0 };
+      GetWindowRect(h, r);
+      return { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
+    },
+  };
+}
+
+function focusApi(koffi: Koffi): Pick<Win32, "setForeground"> {
+  const user32 = koffi.load("user32.dll");
+  const SetForegroundWindow = user32.func("int __stdcall SetForegroundWindow(intptr h)");
+  const IsIconic = user32.func("int __stdcall IsIconic(intptr h)");
+  const ShowWindow = user32.func("int __stdcall ShowWindow(intptr h, int cmd)");
+  const SW_RESTORE = 9;
+  return {
     setForeground: (address) => {
       const h = Number(address);
       if (!Number.isSafeInteger(h) || h <= 0) return false;

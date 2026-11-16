@@ -37,7 +37,7 @@ export const COMMAND_ROWS: readonly { usage: string; text: string }[] = [
   { usage: "speak <text | file | ->", text: "Reads text or a file aloud. --queue waits its turn, --print shows the sentences, --out saves audio." },
   { usage: "queue, stop, voices", text: "Shows the waiting list, stops the reading, lists voices." },
   { usage: "dictate --print", text: "Records and prints the text instead of pasting it." },
-  { usage: "history, meetings, capture", text: "Reads what you dictated, recorded or captured. Never starts Speak Kit." },
+  { usage: "history, meetings", text: "Reads what you dictated or recorded. Never starts Speak Kit." },
   { usage: "labs, settings", text: "Turns experiments on or off, reads and changes settings." },
 ];
 

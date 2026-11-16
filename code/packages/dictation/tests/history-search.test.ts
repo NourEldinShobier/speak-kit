@@ -61,6 +61,7 @@ describe("historyStats", () => {
       dictations: 4,
       words: 6,
       listeningMs: 4000,
+      wordsPerMinute: 90,
       topApps: [
         { app: "code.exe", count: 2 },
         { app: "notepad.exe", count: 1 },
@@ -69,7 +70,7 @@ describe("historyStats", () => {
     });
   });
   it("is all zero for nothing", () => {
-    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } });
+    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } });
   });
   it("counts what happened to each text; an entry from before outcomes were kept counts as pasted", () => {
     const stats = historyStats([

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
-import { Page } from "../../ui";
-import { dictation } from "./api";
-import { ClearDialog, RecordingsDialog } from "./HistoryDialogs";
-import { CopyRecent, Empty, Notices, Stats, Toolbar } from "./HistoryParts";
+import { DEFAULT_HOTKEY, hotkeyLabels } from "../../../shared/dictation/keys";
+import { dictation, platformName } from "./api";
+import { emptyHint, expiryText, focusAfterDelete, groupByDay, historyFooter, historyLead, toggled } from "./model";
+import { HistoryDialogs, type HistoryDialog } from "./HistoryDialogs";
+import { Notices } from "./HistoryParts";
 import { HistoryRow, type View } from "./HistoryRow";
-import { expiryText, focusAfterDelete, groupByDay, historyFooter, historyLead, RETENTION_OPTIONS } from "./model";
+import { Toolbar } from "./HistoryToolbar";
 import { RecordingPanel } from "./RecordingPanel";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
@@ -15,35 +16,22 @@ export { HistoryRow };
 
 const THEAD = ["Time and app", "What the model heard", "What was pasted", ""];
 
-type DayProps = {
-  g: { label: string; items: HistoryItem[] };
-  view: View;
-  s: DictationStatus;
-  copied: string | null;
-  open: string | null;
-  setOpen: (f: (o: string | null) => string | null) => void;
-  copy: (id: string) => void;
-  remove: (id: string) => void;
-  openDictation: () => void;
-};
-
-function Day({ g, view, s, copied, open, setOpen, copy, remove, openDictation }: DayProps) {
+function Empty({ s }: { s: DictationStatus | null }) {
   return (
-    <div className="lm-row dict-hist__row" data-testid="history-row" data-row={item.id}>
-      <div className="dict-hist__when">
-        <span>{timeText(item.at)}</span>
-        <span className="dict-hist__app">{appName(item.app)}</span>
-        {item.model && (
-          <span className="dict-hist__app" data-testid="history-model">
-            {[item.model, item.language].filter(Boolean).join(", ")}
-          </span>
-        )}
-      </div>
-    </section>
+    <div className="lm-card">
+      <EmptyState icon="microphone" title="Nothing dictated yet">
+        {emptyHint(s?.settings.retention ?? "7d")}
+        <div className="dict-keys">
+          {hotkeyLabels(s?.settings.hotkey ?? DEFAULT_HOTKEY, platformName()).map((k) => (
+            <Kbd key={k}>{k}</Kbd>
+          ))}
+        </div>
+      </EmptyState>
+    </div>
   );
 }
 
-/** Moves focus once the list has reloaded after a delete: to an entry id, or null for the page's own controls. */
+/** Moves focus once the list has reloaded after a delete: to an entry id, or null for the page controls. */
 function useFocusAfterReload(items: HistoryItem[]) {
   const focusNext = useRef<string | null | undefined>(undefined);
   useEffect(() => {
@@ -56,8 +44,18 @@ function useFocusAfterReload(items: HistoryItem[]) {
   return focusNext;
 }
 
+type GroupsProps = {
+  items: HistoryItem[];
+  load: () => void;
+  view: View;
+  s: DictationStatus;
+  picked: ReadonlySet<string> | null;
+  toggle: (id: string) => void;
+  openSettings: () => void;
+};
+
 /** The entries, newest first, in day groups; `copied` is the entry whose text was just copied. */
-function Groups({ items, load, view, s, openDictation }: { items: HistoryItem[]; load: () => void; view: View; s: DictationStatus; openDictation: () => void }) {
+function Groups({ items, load, view, s, picked, toggle, openSettings }: GroupsProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const groups = useMemo(() => groupByDay(items, Date.now()), [items]);
@@ -108,96 +106,118 @@ function Groups({ items, load, view, s, openDictation }: { items: HistoryItem[];
   ));
 }
 
-function HistoryMenu({ s, total, onRecordings, onClear }: { s: DictationStatus | null; total: number; onRecordings: () => void; onClear: () => void }) {
-  const retention = s?.settings.retention ?? "7d";
-  return (
-    <DropdownMenu trigger={<IconButton name="dots" label="More history actions" variant="secondary" />}>
-      <DropdownMenuItem icon="copy" disabled={total === 0} onSelect={() => void dictation.historyRecent(5).then((r) => r.forEach((i) => void dictation.historyCopy(i.id)))}>
-        Copy last five
-      </DropdownMenuItem>
-      <DropdownMenuItem icon="download" disabled={total === 0} onSelect={() => void dictation.historyExport()}>
-        Export history
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuLabel>Keep entries for</DropdownMenuLabel>
-      {RETENTION_OPTIONS.map((o) => (
-        <DropdownMenuItem key={o.value} selected={o.value === retention} onSelect={() => void dictation.patchSettings({ retention: o.value })}>
-          {o.label}
-        </DropdownMenuItem>
-      ))}
-      <DropdownMenuSeparator />
-      <DropdownMenuItem icon="microphone" onSelect={onRecordings}>
-        Keep recordings ({s?.settings.keepRecordings ? "on" : "off"})
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem icon="trash" destructive disabled={total === 0} onSelect={onClear}>
-        Clear all history
-      </DropdownMenuItem>
-    </DropdownMenu>
-  );
-}
-
-function Body({ s, items, total, load, view, openDictation }: { s: DictationStatus | null; items: HistoryItem[] | null; total: number; load: () => void; view: View; openDictation: () => void }) {
-  if (total === 0) return <Empty s={s} />;
-  if (!s) return null;
+function Head({ back, retention }: { back: () => void; retention: DictationStatus["settings"]["retention"] }) {
   return (
     <>
-      <Groups items={items ?? []} load={load} view={view} s={s} openDictation={openDictation} />
-      {items?.length === 0 && <p className="dict-hist__none">Nothing matches that search.</p>}
-      <p className="dict-hist__foot">{historyFooter(items?.length ?? 0, total, s.settings.retention)}</p>
+      <button type="button" className="dict-back" onClick={back}>
+        <Icon name="arrow-left" size={12} /> Dictation
+      </button>
+      <div className="sk-page__head">
+        <h1>Dictation history</h1>
+        <p>{historyLead(retention)}</p>
+      </div>
     </>
   );
 }
 
-/** The list and the totals, loaded again whenever the search, the count or the history revision changes. */
-function useHistoryData(s: DictationStatus | null, search: string) {
+/** The entries matching the search, reloaded when the search, the number of entries or the history revision changes. */
+function useItems(search: string, total: number, rev: number) {
   const [items, setItems] = useState<HistoryItem[] | null>(null);
-  const [stats, setStats] = useState<HistoryStats | null>(null);
-  const total = s?.historyCount ?? 0;
-  const rev = s?.historyRev ?? 0;
-  const load = useCallback(() => {
-    void dictation.historyList(search.trim() || undefined).then(setItems);
-    void dictation.historyStats().then(setStats);
-  }, [search]);
+  const load = useCallback(() => void dictation.historyList(search.trim() || undefined).then(setItems), [search]);
   useEffect(load, [load, total, rev]);
-  return { items, setItems, stats, load, total };
+  return { items, setItems, load };
 }
 
-/** History: what was dictated, searchable, with the raw text beside the final one, copy, retention and kept recordings. */
-export function DictationHistoryPage({ openDictation }: { openDictation: () => void }) {
+/** Which entries are ticked while selecting; null when selection is off. */
+function useSelection(items: HistoryItem[] | null) {
+  const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
+  return {
+    picked,
+    setPicked,
+    setSelecting: (on: boolean) => setPicked(on ? new Set() : null),
+    selectAll: () => setPicked(new Set((items ?? []).map((i) => i.id))),
+    toggle: (id: string) => setPicked((p) => toggled(p, id)),
+  };
+}
+
+/** The entries with the notes under them, or the empty state when nothing was dictated yet. */
+function Entries(p: {
+  s: DictationStatus | null;
+  items: HistoryItem[] | null;
+  load: () => void;
+  sel: ReturnType<typeof useSelection>;
+  view: View;
+  total: number;
+  retention: DictationStatus["settings"]["retention"];
+  openSettings: () => void;
+}) {
+  if (p.total === 0) return <Empty s={p.s} />;
+  if (!p.s) return null;
+  return (
+    <>
+      <Groups items={p.items ?? []} load={p.load} view={p.view} s={p.s} picked={p.sel.picked} toggle={p.sel.toggle} openSettings={p.openSettings} />
+      {p.items?.length === 0 && <p className="dict-hist__none">Nothing matches that search.</p>}
+      <p className="dict-hist__foot">{historyFooter(p.items?.length ?? 0, p.total, p.retention)}</p>
+    </>
+  );
+}
+
+/** The sentence under the History title for the dictation tab (how long entries are kept). */
+export async function historyLeadNow(): Promise<string> {
+  return historyLead((await dictation.status()).settings.retention);
+}
+
+/** The numbers the page reads from the status: how many entries, which retention, whether recordings are kept, and the revision that reloads the list. */
+function useHistoryNumbers(s: DictationStatus | null) {
+  return {
+    total: s?.historyCount ?? 0,
+    rev: s?.historyRev ?? 0,
+    retention: s?.settings.retention ?? "7d",
+    keepRecordings: s?.settings.keepRecordings ?? false,
+    audioCapMb: s?.settings.audioCapMb ?? 512,
+  };
+}
+
+/**
+ * History > Dictations: what was dictated, searchable, with the raw text beside the final one, copy, delete, bulk delete, statistics, retention and kept
+ * recordings. `embedded` leaves out the back link and the title: History puts the page under its own tabs.
+ */
+export function DictationHistoryPage({ back, embedded, openSettings }: { back?: () => void; embedded?: boolean; openSettings?: () => void }) {
   const s = useDictation();
   const [search, setSearch] = useState("");
   const [view, setView] = useState<View>("final");
-  const [asking, setAsking] = useState(false);
-  const [recordings, setRecordings] = useState(false);
-  const { items, setItems, stats, load, total } = useHistoryData(s, search);
-  const retention = s?.settings.retention ?? "7d";
+  const [dialog, setDialog] = useState<HistoryDialog>(null);
+  const { total, rev, retention, keepRecordings, audioCapMb } = useHistoryNumbers(s);
+  const { items, setItems, load } = useItems(search, total, rev);
+  const sel = useSelection(items);
+  const changed = (cleared: boolean) => {
+    if (cleared) return setItems([]);
+    sel.setPicked(new Set());
+    load();
+  };
   return (
-    <Page
-      title="History"
-      lead={historyLead(retention)}
-      action={
-        <div className="dict-hist__head-acts">
-          <CopyRecent disabled={total === 0} />
-          <HistoryMenu s={s} total={total} onRecordings={() => setRecordings(true)} onClear={() => setAsking(true)} />
-        </div>
-      }
-    >
+    <div className={embedded ? "dict-hist dict-hist--embedded" : "sk-page dict-hist"}>
+      {embedded || !back ? null : <Head back={back} retention={retention} />}
       {s ? <Notices s={s} /> : null}
-      {total > 0 ? <Stats stats={stats} retention={retention} /> : null}
-      <Toolbar search={search} setSearch={setSearch} view={view} setView={setView} empty={total === 0} />
-      <Body s={s} items={items} total={total} load={load} view={view} openDictation={openDictation} />
-      <ClearDialog
-        open={asking}
-        count={total}
-        onClose={() => setAsking(false)}
-        onConfirm={async () => {
-          await dictation.historyClear();
-          setAsking(false);
-          setItems([]);
-        }}
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        view={view}
+        setView={setView}
+        empty={total === 0}
+        retention={retention}
+        keepRecordings={keepRecordings}
+        onClear={() => setDialog("clear")}
+        onStats={() => setDialog("stats")}
+        onRecordings={() => setDialog("recordings")}
+        picked={sel.picked}
+        shown={items?.length ?? 0}
+        setSelecting={sel.setSelecting}
+        selectAll={sel.selectAll}
+        onDeleteSelected={() => setDialog("delete")}
       />
-      <RecordingsDialog open={recordings} on={s?.settings.keepRecordings ?? false} onClose={() => setRecordings(false)} />
-    </Page>
+      <Entries s={s} items={items} load={load} sel={sel} view={view} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} />
+      <HistoryDialogs dialog={dialog} close={() => setDialog(null)} total={total} picked={sel.picked} keepRecordings={keepRecordings} audioCapMb={audioCapMb} onChanged={changed} />
+    </div>
   );
 }

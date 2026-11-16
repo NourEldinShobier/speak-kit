@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Banner, Button, Segmented, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
@@ -10,7 +9,11 @@ import { MicExclusions } from "./MicExclusions";
 import { FirstRunCard } from "./FirstRunCard";
 import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
 import { ModelList } from "./ModelList";
+import { PermissionGuide } from "./PermissionGuide";
+import { hotkeyFailedCopy } from "./permissions-model";
+import { usePermissions } from "./usePermissions";
 import { ShortcutsSections } from "./ShortcutsSection";
+import { failureTime, listenerStatus } from "./listener-model";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
@@ -33,6 +36,38 @@ function General({ s }: { s: DictationStatus }) {
         description="The language you speak."
         control={<Select label="Language" value={c.language} onChange={(language) => void patchDictation({ language: language as typeof c.language })} options={languages} />}
       />
+    </SettingsSection>
+  );
+}
+
+function StatusCard({ s }: { s: DictationStatus }) {
+  const l = listenerStatus(s);
+  const f = s.lastFailure;
+  return (
+    <SettingsSection title="Status">
+      <SettingRow
+        className="lm-row--control"
+        label="Shortcut"
+        description={l.detail}
+        control={
+          <span className="dict-status" data-tone={l.tone} role="status" aria-label={`Shortcut status: ${l.label}`}>
+            {l.label}
+          </span>
+        }
+      />
+      {f && (
+        <SettingRow
+          className="lm-row--control"
+          label="Last problem"
+          description={`${f.text}, ${failureTime(f.at, Date.now())}.`}
+          control={
+            <span className="dict-status__acts">
+              {f.retry && <Button onClick={() => dictation.hudAction("retry")}>Try again</Button>}
+              <Button onClick={() => dictation.hudAction("dismiss")}>Dismiss</Button>
+            </span>
+          }
+        />
+      )}
     </SettingsSection>
   );
 }
@@ -129,21 +164,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
           {s.modelError}
         </Banner>
       )}
-      {settingUp ? (
-        <FirstRunCard status={s} />
-      ) : (
-        <>
-          <General s={s} />
-          <MicrophoneCard s={s} />
-          <MicExclusions list={s.settings.micExclusions} />
-          <OutputCard s={s} />
-          <AppRulesCard s={s} />
-          <ModelList status={s} />
-          <Cleanup s={s} />
-          <TestField />
-          <HistoryCard s={s} open={openHistory} />
-        </>
-      )}
+      {settingUp ? <FirstRunCard status={s} /> : <Cards s={s} openHistory={openHistory} />}
     </Page>
   );
 }

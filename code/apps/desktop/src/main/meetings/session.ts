@@ -147,7 +147,7 @@ export class MeetingRecording {
     const id = this.#id;
     const lost = () => void this.#autoStop("Recording stopped because it could not be saved. What was recorded so far is kept.");
     this.#pending = this.#pending.then(async () => {
-      const r = await this.#d.core.append(id, track, pcm, at).catch(() => undefined);
+      const r = await this.#d.core.append(id, track, pcm, at).catch(ignore);
       if (!r) return lost();
       if (!r.ok)
         void this.#autoStop(

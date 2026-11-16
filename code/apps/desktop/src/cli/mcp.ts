@@ -4,7 +4,7 @@ import { CONTROL_VERSION, fail, type ControlRequest, type Reply } from "../share
 import { MCP_TOOLS, toolOn } from "../shared/control/mcp-tools";
 import { parseOffset, type ReadOutcome, type ReadRequest } from "./reads";
 
-/** What the bridge needs besides the app: the files (meetings, captures) and the person's tool switches. Both are read on every call, so a switch takes effect at once. */
+/** What the bridge needs besides the app: the files (meetings) and the person's tool switches. Both are read on every call, so a switch takes effect at once. */
 export interface McpContext {
   /** One command to the running app. */
   call(req: ControlRequest): Promise<Reply>;
@@ -31,8 +31,6 @@ const SCHEMAS: Record<string, object> = {
   meetings_list: obj({ limit }),
   meetings_search: obj({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["query"]),
   meetings_show: obj({ id: { type: "string", description: "An id, 6 or more characters of one, or latest." }, from: when, to: when, chapter: { type: "integer", minimum: 1 } }, ["id"]),
-  capture_list: obj({ limit }),
-  capture_show: obj({ id: { type: "string", description: "An id, a title or latest." } }, ["id"]),
 };
 
 /** The tool switches from the settings file. With the control server off nothing is offered: the master switch covers the files this bridge reads as well as the app. */
@@ -84,8 +82,6 @@ const BUILD: Record<string, (a: Args) => Built> = {
   meetings_list: (a) => ({ read: { command: "meetings", action: "list", ...lim(a) } }),
   meetings_search: (a) => (str(a, "query") ? { read: { command: "meetings", action: "search", query: str(a, "query"), ...lim(a) } } : "meetings_search needs a query."),
   meetings_show: meetingsShow,
-  capture_list: (a) => ({ read: { command: "capture", action: "list", ...lim(a) } }),
-  capture_show: (a) => (str(a, "id") ? { read: { command: "capture", action: "show", ref: str(a, "id") } } : "capture_show needs an id."),
 };
 
 async function callTool(name: string, args: Args, ctx: McpContext) {

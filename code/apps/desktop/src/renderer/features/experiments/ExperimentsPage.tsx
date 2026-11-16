@@ -74,17 +74,11 @@ function Card({ card }: { card: ExperimentCard }) {
   );
 }
 
-/** Early features, each off until it is turned on. The cards come from the registry, so a feature adds its own without changing this page. */
-export function ExperimentsPage() {
-  const groups = groupedCards(experimentCards());
+/** The cards features add through `registerExperiment`, listed by group below the page's own experiments. */
+export function ExperimentCards() {
   return (
-    <Page title="Experiments" lead="Early features that may change or disappear. Each one is off until you turn it on, and you can turn it off again at any time.">
-      {groups.length === 0 ? (
-        <EmptyState icon="flask" title="No experiments right now">
-          There is nothing to try in this version.
-        </EmptyState>
-      ) : null}
-      {groups.map((g) => (
+    <>
+      {groupedCards(experimentCards()).map((g) => (
         <section key={g.group} aria-label={g.group} className="exp-group">
           {g.note ? (
             <Banner tone="info" role="status">
@@ -98,6 +92,6 @@ export function ExperimentsPage() {
           ))}
         </section>
       ))}
-    </Page>
+    </>
   );
 }

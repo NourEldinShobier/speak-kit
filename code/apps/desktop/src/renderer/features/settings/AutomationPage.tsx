@@ -1,13 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
-import { Banner, Button, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
+import { Banner, Button, OptInCard, SettingRow, SettingsSection, StatusPill, Toggle } from "@speakkit/ui";
 import { ERROR_CODES } from "../../../shared/control/contract";
 import type { AutomationInfo, CommandLineAction } from "../../../shared/control/info";
 import type { AppState } from "../../../shared/ipc";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
-import { CopyButton } from "../../CopyButton";
 import { COMMAND_ROWS, commandLineView, DEEP_LINKS, ERROR_ROWS, EXIT_ROWS, MCP_CONFIG, SKILL_COMMAND, skillView, toolRows, TRY_COMMAND } from "./automation";
 import { change } from "../../change";
+
+/** A Copy button that says Copied for a moment; a clipboard that refuses leaves the label alone. */
+function CopyButton({ text, label, caption }: { text: string; label: string; caption?: string }) {
+  const { t } = useT();
+  const [done, setDone] = useState(false);
+  return (
+    <Button
+      iconLeft={done ? "check" : "copy"}
+      aria-label={label}
+      onClick={async () => {
+        try {
+          await api.copy(text);
+        } catch {
+          return;
+        }
+        setDone(true);
+        setTimeout(() => setDone(false), 1500);
+      }}
+    >
+      {done ? t("automation.copied") : (caption ?? t("automation.copy"))}
+    </Button>
+  );
+}
 
 const code = (text: string) => <code className="sk-code">{text}</code>;
 

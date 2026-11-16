@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { engineListSchema, errorBodySchema, parseHealth, parseVoiceChatError, parseVoiceChatSession, parseVoiceChatStatus, parseVoiceList } from "./schemas";
+import { engineListSchema, errorBodySchema, parseHealth, parseVoiceList } from "./schemas";
+import { parseVoiceChatError, parseVoiceChatSession, parseVoiceChatStatus } from "./voice-chat-app";
 import * as v from "valibot";
 
 const engine = { id: "kokoro", state: "downloading", progress: 0.4 };
@@ -44,10 +45,12 @@ describe("voice chat schemas", () => {
     expect(parseVoiceChatSession(ok)).toEqual(ok);
     expect(parseVoiceChatSession({ ...ok, model: "gpt-realtime" })).toBeUndefined();
     expect(parseVoiceChatSession({ ...ok, clientSecret: "" })).toBeUndefined();
+    expect(parseVoiceChatSession({ ...ok, voice: "nope" })).toBeUndefined();
   });
 
   it("reads the code of an error body and rejects an unknown code", () => {
     expect(parseVoiceChatError({ code: "no-credit" })).toBe("no-credit");
+    expect(parseVoiceChatError({ code: "no-key", error: { code: "no-key", message: "m" } })).toBe("no-key");
     expect(parseVoiceChatError({ code: "boom" })).toBeUndefined();
     expect(parseVoiceChatError({ error: { code: "no-key", message: "" } })).toBeUndefined();
   });

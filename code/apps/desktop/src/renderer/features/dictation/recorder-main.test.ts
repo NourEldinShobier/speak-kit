@@ -64,7 +64,22 @@ function browser() {
     class {
       audioWorklet = { addModule: async () => undefined };
       destination = {};
-      createGain = () => ({ gain: {}, connect: (n: unknown) => n });
+      currentTime = 1;
+      createGain = () => ({ gain: { setValueAtTime: () => undefined, linearRampToValueAtTime: () => undefined }, connect: (n: unknown) => n });
+      createOscillator = () => {
+        const tone = { hz: 0, start: 0, stop: 0, peak: 0 };
+        tones.push(tone);
+        return {
+          frequency: {
+            set value(hz: number) {
+              tone.hz = hz;
+            },
+          },
+          connect: (n: unknown) => n,
+          start: (t: number) => (tone.start = t),
+          stop: (t: number) => (tone.stop = t),
+        };
+      };
       createMediaStreamSource = node;
       close = async () => undefined;
     },
@@ -80,6 +95,7 @@ function browser() {
     },
   );
   return {
+    tones,
     opened,
     /** Sound from the newest microphone stream: `n` samples of `level`. */
     sound: (n: number, level = 0.5) => taps.at(-1)?.onmessage?.({ data: new Float32Array(n).fill(level) }),

@@ -107,8 +107,8 @@ describe("POST /v1/voice-chat/session", () => {
   it("needs the token on both routes", async () => {
     const svc = fakeService();
     const c = await open(svc);
-    expect((await post(c, {})).status).toBe(401);
-    expect((await fetch(`${c.base}/v1/voice-chat/status`)).status).toBe(401);
+    expect((await post(c, {})).status).toBe(404);
+    expect((await fetch(`${c.base}/v1/voice-chat/status`)).status).toBe(404);
     expect(svc.mints).toBe(0);
   });
 
@@ -154,6 +154,6 @@ describe("POST /v1/voice-chat/mic", () => {
   it("answers 204 when the app does not track the microphone, and needs the token", async () => {
     const c = await open(fakeService());
     expect((await send(c, '{"held":true}')).status).toBe(204);
-    expect((await send(c, '{"held":true}', {})).status).toBe(401);
+    expect((await send(c, '{"held":true}', {})).status).toBe(404);
   });
 });
