@@ -2,7 +2,7 @@
 // the app and give it an ad-hoc signature. Apple Silicon refuses to run code without a valid signature, and Electron's own
 // signature breaks once the app is renamed and filled; a real Developer ID signature replaces this later.
 const { execFileSync } = require("node:child_process");
-const { existsSync, readdirSync, rmSync } = require("node:fs");
+const { existsSync, readdirSync, rmSync, statSync } = require("node:fs");
 const path = require("node:path");
 
 const ARCHS = { 1: "x64", 3: "arm64" }; // electron-builder's Arch enum
@@ -36,7 +36,8 @@ exports.default = async function afterPack(context) {
   }
 
   // Loose native libraries are not covered by --deep: sign each before sealing the bundle.
-  const natives = readdirSync(modules, { recursive: true }).filter((f) => /\.(node|dylib)$/.test(f));
+  // Files only: a package folder can be named like one (whisper.node), and codesign refuses a folder that is not a bundle.
+  const natives = readdirSync(modules, { recursive: true }).filter((f) => /\.(node|dylib)$/.test(f) && statSync(path.join(modules, f)).isFile());
   for (const f of natives) execFileSync("codesign", ["--force", "--sign", "-", "--options", "runtime", path.join(modules, f)], { stdio: "inherit" });
   // Helpers and frameworks first (inner before outer), then the main bundle, each with its own entitlements (see electron-builder.yml).
   const frameworks = path.join(app, "Contents/Frameworks");
