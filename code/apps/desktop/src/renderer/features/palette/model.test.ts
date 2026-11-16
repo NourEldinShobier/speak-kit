@@ -21,7 +21,7 @@ describe("commands", () => {
     expect([c.title, c.icon, c.action]).toEqual(["Open Dictation", "keyboard", { type: "nav", page: "dictation" }]);
   });
   it("has a page command for every menu item and a settings command for every settings page", () => {
-    expect(all.filter((c) => c.group === "Pages")).toHaveLength(10);
+    expect(all.filter((c) => c.group === "Pages")).toHaveLength(9);
     expect(all.filter((c) => c.group === "Settings")).toHaveLength(15);
   });
   it("builds readings with minutes and voices with a Voice hint", () => {

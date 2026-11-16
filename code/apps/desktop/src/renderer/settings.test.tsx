@@ -139,8 +139,9 @@ describe("settings pages of the surface package", () => {
     expect(dev).toContain("Turn on");
     expect(dev).not.toContain("Turn off");
     const installed = pageWith("experiments", { packaged: true });
-    expect(installed).toContain("Screenshots with a corner card");
+    expect(installed).toContain("Experiments");
     expect(installed).not.toContain("Live dictation preview");
+    expect(installed).not.toContain("Caption export");
   });
 
   it("Experiments shows a turned-on experiment as On with Turn off", () => {
