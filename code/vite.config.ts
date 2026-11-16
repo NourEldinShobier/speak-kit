@@ -22,7 +22,7 @@ const tooling = ["**/scripts/**", "**/cli.ts", "**/build/**", "**/store/**", "**
 // The ubuntu unit job sets SPEAKKIT_SKIP_DESKTOP: the desktop package needs Electron and runs in the Windows job. (A CLI --exclude does not reach projects that set their own exclude.)
 const EXCLUDE = ["**/node_modules/**", "**/dist/**", "**/dist-*/**", "e2e/**", "scripts/canary/*/**", ...(process.env.SPEAKKIT_SKIP_DESKTOP ? ["apps/desktop/**"] : [])];
 
-const ALONE = ["apps/desktop/tests/dictation-os.test.ts", "apps/desktop/tests/capture.test.ts", "apps/desktop/tests/screen-vision.test.ts", "apps/desktop/tests/perf.test.ts"];
+const ALONE = ["apps/desktop/tests/dictation-os.test.ts", "apps/desktop/tests/screen-vision.test.ts", "apps/desktop/tests/perf.test.ts"];
 
 export default defineConfig({
   // Matches the existing hand-written style: wide lines, double quotes, semicolons. Fixtures are test inputs and stay byte-exact.
@@ -42,7 +42,7 @@ export default defineConfig({
   // Extension code reads __TEST__ and desktop main code reads __TEST_CODE__ (true outside a packaged build, as in apps/desktop/vite.config.ts); the packages define them for their own tests, the root run needs both.
   define: { __TEST__: "false", __TEST_CODE__: "true" },
   // The extension package runs its browser tests with 20 s; the root run has to allow the same when everything runs in parallel (the default is 5 s). Desktop specs set their own 60 s.
-  // The desktop resource and event-loop budgets measure the whole machine, and dictation-os and capture use the clipboard, the keyboard, the window in front and the real screen,
+  // The desktop resource and event-loop budgets measure the whole machine, and dictation-os uses the clipboard, the keyboard, the window in front and the real screen,
   // so those files run alone, after every other file (group order 2), against the same budgets.
   test: {
     testTimeout: 20_000,
