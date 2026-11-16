@@ -26,11 +26,13 @@ Speak Kit is a set of speaking tools for Chrome and your desktop: have pages rea
 
 **Library.** The desktop app opens PDF, EPUB, DOCX, Markdown and text files, reads them with word highlighting, and exports MP3, WAV and captions (SRT, WebVTT).
 
-**Transcripts.** Turn audio files and recorded meetings into searchable text on your computer.
+**Transcripts.** Turn audio files into text on your computer.
 
 **Command line and MCP.** `speakkit` reads text aloud, transcribes files and changes settings from a terminal, and an MCP server lets other tools use it.
 
 **Everywhere.** Global shortcuts, a mini player, a command palette, and an interface in English, Spanish, German, French and Arabic.
+
+**Coming next.** More tools are planned, such as meeting recording, and a public beta is planned soon.
 
 <p align="center">
   <img src="docs/screenshots/page-highlight.png" alt="A web page being read aloud with the current sentence and word highlighted, and the floating player at the bottom" width="720">
