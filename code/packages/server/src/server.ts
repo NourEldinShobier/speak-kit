@@ -15,8 +15,6 @@ import { HttpError, guardRequest, json, preflight, toHttp, tokenChecker, withDea
 import { render } from "./render";
 import { resolveRoute, type Route, type Services } from "./router";
 import { automationRoutes } from "./routes/automation";
-import { DevPages } from "./dev-pages";
-import { devPageRoutes } from "./routes/dev-pages";
 import { streamRoutes } from "./routes/streams";
 import { StreamSessions, type StreamsHost } from "./streams/sessions";
 import { engineRoutes } from "./routes/engines";
@@ -97,7 +95,7 @@ export function loadToken(dataDir: string, override?: string): string {
   return t;
 }
 
-const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes, ...streamRoutes, ...devPageRoutes];
+const ROUTES: readonly Route[] = [...statusRoutes, ...speakRoutes, ...engineRoutes, ...exportRoutes, ...voiceChatRoutes, ...automationRoutes, ...pageContextRoutes, ...streamRoutes];
 
 type PlainOptions = ReturnType<typeof parseOptions>;
 type Env = ReturnType<typeof parseEnv>;
@@ -118,7 +116,6 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
     voiceChat: opts.voiceChat,
     automation: opts.automation,
     pageContext: opts.pageContext,
-    devPages: new DevPages(Date.now),
     streams: opts.streams && new StreamSessions(opts.streams, { now: Date.now }),
     events: { open: 0 },
     heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,

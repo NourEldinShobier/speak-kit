@@ -88,7 +88,7 @@ function useButtonCapture(active: boolean, h: { pick(key: string): void; refused
 }
 
 interface Props {
-  /** With `status`, the slot is checked against the other shortcuts; a recorder for another feature (capture) leaves both out. */
+  /** With `status`, the slot is checked against the other shortcuts; a recorder without them leaves both out. */
   slot?: Slot;
   /** Accessible name of the control group, for example "Dictation shortcut". */
   label: string;

@@ -83,7 +83,7 @@ describe("settings import", () => {
       JSON.stringify({
         voiceChatVoice: "alloy",
         shortcuts: { stop: "Ctrl+Alt+Y" },
-        capture: { target: "window", consented: true, folder: "C:/elsewhere" },
+        setupDone: false,
         transcripts: { textDays: 90 },
         meetings: { stopWhenEnds: false },
         engines: { releaseOnClose: true },
@@ -93,18 +93,16 @@ describe("settings import", () => {
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await pickFile(l, file);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText(/^Imported 6 settings\. Changed: .*Left out: capture\.consented, capture\.folder\.$/).waitFor();
+    await l.page.getByText(/^Imported 5 settings\. Changed: .*Left out: setupDone\.$/).waitFor();
     await expect
       .poll(() => configOf(l))
       .toMatchObject({
         voiceChatVoice: "alloy",
         shortcuts: { stop: "Ctrl+Alt+Y" },
-        capture: { target: "window", consented: false },
         transcripts: { textDays: 90 },
         meetings: { stopWhenEnds: false },
         engines: { releaseOnClose: true },
       });
-    expect(configOf(l).capture.folder).not.toBe("C:/elsewhere");
   }, 60_000);
 
   it("asks before the control server, experiments and tool access are switched on, and leaves them out when declined", async () => {

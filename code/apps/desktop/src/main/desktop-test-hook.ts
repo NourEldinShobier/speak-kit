@@ -6,8 +6,6 @@ import type { setupTray } from "./desktop-tray";
 import type { createReading } from "./reader/service";
 import { dictationTestHook } from "./dictation/test-hook";
 import type { DictationService } from "./dictation/service";
-import type { CaptureService } from "./capture";
-import { captureTestHook } from "./capture/test-hook";
 import type { TranscriptsFeature } from "./transcripts";
 import type { MeetingsFeature } from "./meetings";
 
@@ -17,14 +15,13 @@ interface HookParts {
   tray: ReturnType<typeof setupTray>;
   reading: ReturnType<typeof createReading>;
   dictation: DictationService;
-  capture: CaptureService;
   transcripts: TranscriptsFeature;
   meetings(): MeetingsFeature | undefined;
   installs(): number;
 }
 
 /** SPEAKKIT_TEST hooks: simulate what Playwright cannot do (global key presses, native menus, toasts). */
-export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings, installs }: HookParts) => {
+export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, meetings, installs }: HookParts) => {
   const loop = monitorEventLoopDelay({ resolution: 10 });
   loop.enable();
   return {
@@ -45,7 +42,6 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
     trayState: () => tray.summary(),
     readText: (text: string) => reading.readText(text, "text"),
     dictation: dictationTestHook(dictation),
-    capture: captureTestHook(capture),
     transcripts: { ...transcripts.testHook, phase: () => transcripts.phase() },
     meetings: {
       denyMic: (on: boolean) => meetings()?.testHook.denyMic(on),

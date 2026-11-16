@@ -20,9 +20,9 @@ const electronProcesses = (): Plugin => ({
   },
 });
 
-// These files use what the whole machine shares: the clipboard, the keyboard and the window in front (dictation-os), the pixels of the real screen (capture),
+// These files use what the whole machine shares: the clipboard, the keyboard and the window in front (dictation-os), the pixels of the real screen,
 // and the CPU budgets (perf). Another Electron spec running beside them copies, types or covers the screen, so they run alone, after every other file.
-const ALONE = ["tests/dictation-os.test.ts", "tests/capture.test.ts", "tests/screen-vision.test.ts", "tests/perf.test.ts"];
+const ALONE = ["tests/dictation-os.test.ts", "tests/screen-vision.test.ts", "tests/perf.test.ts"];
 
 export default defineConfig({
   root: path.join(root, "src/renderer"),
@@ -33,14 +33,9 @@ export default defineConfig({
     outDir: path.join(root, "dist/renderer"),
     emptyOutDir: true,
     target: "chrome140",
-    // The app, the always-on-top mini player, the two dictation windows (the HUD pill and the hidden microphone page) and the three capture windows (capsule, picker and ink layer, hidden recorder).
+    // The app, the always-on-top mini player, the two dictation windows (the HUD pill and the hidden microphone page).
     rollupOptions: {
-      input: Object.fromEntries(
-        ["index", "mini", "hud", "recorder", "capture-capsule", "capture-overlay", "capture-recorder", "decoder", "trecorder", "mrecorder", "meeting-capsule"].map((n) => [
-          n,
-          path.join(root, `src/renderer/${n}.html`),
-        ]),
-      ),
+      input: Object.fromEntries(["index", "mini", "hud", "recorder", "decoder", "trecorder", "mrecorder", "meeting-capsule"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
     },
   },
   test: {

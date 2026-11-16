@@ -21,7 +21,7 @@ function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config
     discovery: async () => (over.running === false ? null : RUNNING),
     launch: async () => true,
     offlineHistory: async () => null,
-    reads: { meetings: async () => over.meetings ?? { entries: [], transcript: async () => [], notes: async () => [] }, captures: async () => ({ records: [], root: "" }) },
+    reads: { meetings: async () => over.meetings ?? { entries: [], transcript: async () => [], notes: async () => [] } },
     readConfig: async () => over.config,
     file: async (p) => over.files?.[p] ?? { kind: "none" },
     post: async (_d, req) => (sent.push(req), replies.shift() ?? ok({})),
@@ -185,7 +185,7 @@ describe("queue, voices and stop", () => {
   });
 });
 
-describe("meetings and capture commands", () => {
+describe("meetings commands", () => {
   const meetings: MeetingsSource = {
     entries: [
       {
@@ -211,7 +211,6 @@ describe("meetings and capture commands", () => {
     expect(parseArgs(["meetings", "show", "abcdef", "--chapter", "2"]).read).toEqual({ command: "meetings", action: "show", ref: "abcdef", chapter: 2 });
     expect(parseArgs(["meetings", "search", "budget", "review", "--limit", "5"]).read).toEqual({ command: "meetings", action: "search", query: "budget review", limit: 5 });
     expect(parseArgs(["meetings"]).read).toEqual({ command: "meetings", action: "list" });
-    expect(parseArgs(["capture", "show", "latest"]).read).toEqual({ command: "capture", action: "show", ref: "latest" });
   });
 
   it("names what is wrong with a time, a chapter or a limit", () => {
@@ -303,7 +302,7 @@ describe("capabilities and skill without the app", () => {
   it("capabilities answers from this build while the app is closed", async () => {
     const r = rig({ running: false });
     expect(await run(["--json", "capabilities"], r)).toBe(0);
-    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: true, data: { app: null, features: { meetings: true, speak: true }, commands: expect.arrayContaining(["speak", "meetings", "capture"]) } });
+    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: true, data: { app: null, features: { meetings: true, speak: true }, commands: expect.arrayContaining(["speak", "meetings"]) } });
   });
   it("skill status says whether a file is there, and install needs the app", async () => {
     const none = rig({ running: false });

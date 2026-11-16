@@ -19,7 +19,7 @@ export type SettingsResult = { ok: true } | { ok: false; message: string; shortc
 
 /** What importing a settings file did: how many settings were applied, which of them differ from before, and which names were left out. */
 export type ImportOutcome = { status: "imported"; applied: number; changed: string[]; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
-export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "capture", "settings"] as const;
+export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "settings"] as const;
 export const SETTINGS_SUBS = [
   "general",
   "voice",

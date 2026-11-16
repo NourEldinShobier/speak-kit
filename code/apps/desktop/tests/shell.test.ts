@@ -34,8 +34,7 @@ describe("shell", () => {
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: Menu title, the four groups, Recent and Settings; no New reading and no Browser.
     const nav = l.page.getByRole("navigation", { name: "Main" });
-    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Capture", "Settings"])
-      expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
+    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
     for (const n of ["New reading", "Browser"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
     expect(await nav.getByText("Recent").count()).toBe(1);
     // A ready engine shows nothing in the title bar (the sidebar card says it); the bell lives there.

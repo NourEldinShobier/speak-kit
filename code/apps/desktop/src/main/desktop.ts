@@ -30,7 +30,6 @@ import { skillText } from "../shared/control/skill";
 import { CONTROL_VERSION } from "../shared/control/contract";
 import { writeFile } from "node:fs/promises";
 import { setupControl } from "./control";
-import { setupCapture } from "./capture";
 import { registerDictationIpc } from "./dictation/ipc";
 import { testEnv } from "./test-env";
 import { fixedInstalledApps } from "./installed-apps";
@@ -73,7 +72,7 @@ interface DesktopOptions {
   /** The voice engine, for the memory it holds (Settings, Performance). */
   voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
-  voiceChat: Pick<VoiceChat, "complete" | "status" | "captureInbox">;
+  voiceChat: Pick<VoiceChat, "complete" | "status">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
@@ -166,7 +165,6 @@ function disposeAll(p: {
   updates: { dispose(): void };
   tray: { dispose(): void };
   dictation: { dispose(): unknown };
-  capture: { dispose(): void };
   transcripts: { dispose(): unknown };
   meetings: { dispose(): unknown } | undefined;
 }): Promise<void> {
@@ -177,7 +175,6 @@ function disposeAll(p: {
   p.updates.dispose();
   p.tray.dispose();
   void p.dictation.dispose();
-  p.capture.dispose();
   void p.transcripts.dispose();
   void p.meetings?.dispose();
   return controlDown;
@@ -235,7 +232,6 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   wireDictation(o.parent, dictation);
   const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
   meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
-  const capture = setupCapture(ctx, { dataDir: o.dictation.dataDir, distDir: o.distDir, parent: o.parent, dictation, inbox: o.voiceChat.captureInbox, test: o.test, micClaim: o.dictation.micClaim });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
@@ -246,7 +242,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Stores the settings of one feature area through the feature that owns it. */
-    patchArea: areaPatcher({ speech: dictation.speech, capture, transcripts, meetings: () => meetings }),
+    patchArea: areaPatcher({ speech: dictation.speech, transcripts, meetings: () => meetings }),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
@@ -263,10 +259,8 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     refreshTray: () => tray.refresh(),
     /** The tray icon is wanted but the system would not create it. */
     trayMissing: () => tray.failed(),
-    /** A capture that is recording or being saved at quit: resolves when it is saved. Undefined when none is. */
-    finishCapture: () => capture.finishForQuit(),
     /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, capture, transcripts, meetings }),
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, capture, transcripts, meetings: () => meetings, installs: () => installedByTest }),
+    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, transcripts, meetings }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, meetings: () => meetings, installs: () => installedByTest }),
   };
 }

@@ -74,7 +74,7 @@ function Card({ card }: { card: ExperimentCard }) {
   );
 }
 
-/** The cards features add through `registerExperiment` (capture, for one), listed by group below the page's own experiments. */
+/** The cards features add through `registerExperiment`, listed by group below the page's own experiments. */
 export function ExperimentCards() {
   return (
     <>

@@ -5,7 +5,6 @@ import type { ExportManager } from "./export";
 import { HttpError } from "./http";
 import type { StreamQueue } from "./stream-queue";
 import type { PageContextHost } from "./page-context";
-import type { DevPages } from "./dev-pages";
 import type { StreamSessions } from "./streams/sessions";
 import type { MintLimiter, VoiceChatService } from "./voice-chat";
 
@@ -24,7 +23,6 @@ export interface Services {
   /** Absent when the host app lends no speech engine; the stream routes answer "unsupported". */
   streams: StreamSessions | undefined;
   /** What development pages reported lately (memory only). */
-  devPages: DevPages;
   /** Open event streams. */
   events: { open: number };
   heartbeatMs: number;

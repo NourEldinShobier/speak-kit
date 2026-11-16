@@ -36,7 +36,7 @@ export interface HandlerDeps {
   onConfigPatch(patch: ConfigPatch): void;
   /** Dictation settings, stored by the dictation feature; the shortcut it clashes with when refused. */
   patchDictation(patch: DictationPatch): Promise<DictationStatus["rejected"]>;
-  /** The settings of capture, transcripts, meetings and engines, stored by the feature that owns them. */
+  /** The settings of transcripts, meetings and engines, stored by the feature that owns them. */
   patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
   setShortcut: Api["setShortcut"];
   resetShortcuts(): Promise<unknown>;

@@ -63,8 +63,6 @@ describe("which tools are on", () => {
       ["meetings_list", "List meetings", "Your data", true],
       ["meetings_search", "Search meetings", "Your data", true],
       ["meetings_show", "Read a meeting", "Your data", true],
-      ["capture_list", "List captures", "Your data", true],
-      ["capture_show", "Read a capture", "Your data", true],
     ]);
     expect(MCP_TOOLS.map((t) => t.description)).toEqual([
       "Read text aloud, now or after what is playing.",
@@ -74,8 +72,6 @@ describe("which tools are on", () => {
       "List recorded meetings. Read only.",
       "Search meeting titles, summaries and transcripts. Read only.",
       "Read one meeting, or a time range or chapter of it. Read only.",
-      "List saved captures. Read only.",
-      "Read what was said in one capture. Read only.",
     ]);
   });
   it("the setting has a default, survives a file that lacks it and ignores wrong types", () => {
@@ -123,8 +119,6 @@ describe("MCP server", () => {
       meetings_list: obj({ limit }),
       meetings_search: obj({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["query"]),
       meetings_show: obj({ id: { type: "string", description: "An id, 6 or more characters of one, or latest." }, from: when, to: when, chapter: { type: "integer", minimum: 1 } }, ["id"]),
-      capture_list: obj({ limit }),
-      capture_show: obj({ id: { type: "string", description: "An id, a title or latest." } }, ["id"]),
     });
   });
 
@@ -161,19 +155,15 @@ describe("MCP server", () => {
   });
 
   it("answers the file tools from the files, with times as clocks or seconds", async () => {
-    const r = rig({ meetings_list: true, meetings_search: true, meetings_show: true, capture_list: true, capture_show: true });
+    const r = rig({ meetings_list: true, meetings_search: true, meetings_show: true });
     await tool(r, "meetings_list", { limit: 3 });
     await tool(r, "meetings_search", { query: "budget", limit: 5 });
     await tool(r, "meetings_show", { id: "latest", from: "1:30", to: 200, chapter: 2 });
-    await tool(r, "capture_list");
-    await tool(r, "capture_show", { id: "latest" });
     expect(r.app).toEqual([]);
     expect(r.reads).toEqual([
       { command: "meetings", action: "list", limit: 3 },
       { command: "meetings", action: "search", query: "budget", limit: 5 },
       { command: "meetings", action: "show", ref: "latest", from: 90, to: 200, chapter: 2 },
-      { command: "capture", action: "list" },
-      { command: "capture", action: "show", ref: "latest" },
     ]);
   });
 
@@ -194,14 +184,13 @@ describe("MCP server", () => {
   });
 
   it("says what is wrong with arguments and with an unknown tool", async () => {
-    const r = rig({ meetings_show: true, meetings_search: true, capture_show: true });
+    const r = rig({ meetings_show: true, meetings_search: true });
     const text = async (name: string, args: object) => (await tool(r, name, args)).result.content[0]!.text;
     expect(await text("read_aloud", { text: "  " })).toBe("read_aloud needs text.");
     expect(await text("meetings_search", {})).toBe("meetings_search needs a query.");
     expect(await text("meetings_show", {})).toBe("meetings_show needs an id.");
     expect(await text("meetings_show", { id: "x", from: "soon" })).toBe("from and to take seconds, m:ss or h:mm:ss.");
     expect(await text("meetings_show", { id: "x", to: -1 })).toBe("from and to take seconds, m:ss or h:mm:ss.");
-    expect(await text("capture_show", {})).toBe("capture_show needs an id.");
     expect(await text("delete_everything", {})).toBe("Unknown tool delete_everything.");
   });
 

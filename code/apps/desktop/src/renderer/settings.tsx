@@ -22,10 +22,7 @@ import {
   WhatsNewPage,
 } from "./features/settings";
 import { MeetingsPage } from "./features/meetings";
-import { registerCaptureExperiments } from "./features/capture";
 import "./settings.css";
-
-registerCaptureExperiments();
 
 const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   general: GeneralPage,

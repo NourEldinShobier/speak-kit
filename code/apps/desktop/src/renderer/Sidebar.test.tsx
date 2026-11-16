@@ -33,25 +33,7 @@ describe("sidebar", () => {
   it("shows the Menu title, groups, Recent and Settings in order, without New reading or Browser", () => {
     const html = render("home");
     const text = html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
-    const order = [
-      "Menu",
-      "Read",
-      "Home",
-      "Library",
-      "Voice",
-      "Voices",
-      "Voice chat",
-      "Engines",
-      "Dictation",
-      "Dictation",
-      "Modes",
-      "Vocabulary",
-      "History",
-      "Capture",
-      "Capture",
-      "Recent",
-      "Settings",
-    ];
+    const order = ["Menu", "Read", "Home", "Library", "Voice", "Voices", "Voice chat", "Engines", "Dictation", "Dictation", "Modes", "Vocabulary", "History", "Recent", "Settings"];
     let at = -1;
     for (const w of order) {
       const i = text.indexOf(`|${w}|`, at + 1);

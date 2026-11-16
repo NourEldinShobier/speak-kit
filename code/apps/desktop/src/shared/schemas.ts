@@ -3,7 +3,6 @@ import { DEFAULT_PORT, DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICE
 import { normalizeApiKey } from "./voice-chat";
 import { UPDATE_ACTIONS } from "./updates";
 import { DictationConfigSchema } from "./dictation/settings";
-import { CaptureConfigSchema } from "./capture/settings";
 import { TranscriptsConfigSchema } from "./transcripts/settings";
 import { EnginesConfigSchema } from "./speech-models/config";
 import { MeetingsConfigSchema } from "./meetings/settings";
@@ -117,7 +116,6 @@ export const ConfigSchema = v.object({
   speed: fb(v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)), 1),
   voiceChatVoice: fb(v.picklist(VOICE_CHAT_VOICES), DEFAULT_VOICE_CHAT_VOICE),
   dictation: fb(DictationConfigSchema, v.parse(DictationConfigSchema, {})),
-  capture: fb(CaptureConfigSchema, v.parse(CaptureConfigSchema, {})),
   transcripts: fb(TranscriptsConfigSchema, v.parse(TranscriptsConfigSchema, {})),
   engines: fb(EnginesConfigSchema, v.parse(EnginesConfigSchema, {})),
   // A function, so every parse gets its own default object (settings are changed in place).

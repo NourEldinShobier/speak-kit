@@ -129,7 +129,6 @@ describe("importSettings", () => {
       voice: "af_bella",
       voiceChatVoice: "alloy",
       shortcuts: { stop: "Ctrl+Alt+S" },
-      capture: { target: "area", retentionDays: 30, consented: true, folder: "C:/other", narrationCommand: "calc.exe" },
       transcripts: { textDays: 90 },
       meetings: { stopWhenEnds: false },
       engines: { releaseOnClose: true, lastUsed: { m: 1 } },
@@ -137,14 +136,13 @@ describe("importSettings", () => {
     const r = await importSettings(src(JSON.stringify(file), { voice: "af_bella" }), targets);
     expect(r).toEqual({
       status: "imported",
-      applied: 8,
-      changed: ["voiceChatVoice", "shortcuts.stop", "capture.target", "capture.retentionDays", "transcripts.textDays", "meetings.stopWhenEnds", "engines.releaseOnClose"],
-      skipped: ["capture.consented", "capture.folder", "capture.narrationCommand", "engines.lastUsed"],
+      applied: 6,
+      changed: ["voiceChatVoice", "shortcuts.stop", "transcripts.textDays", "meetings.stopWhenEnds", "engines.releaseOnClose"],
+      skipped: ["engines.lastUsed"],
     });
     expect(calls).toEqual([
       ["shortcut", ["stop", "Ctrl+Alt+S"]],
       ["app", { voice: "af_bella" }],
-      ["capture", { target: "area", retentionDays: 30 }],
       ["transcripts", { textDays: 90 }],
       ["meetings", { stopWhenEnds: false }],
       ["engines", { releaseOnClose: true }],
@@ -206,8 +204,8 @@ describe("applyChange beyond app settings", () => {
     const { calls, targets } = rig();
     expect((await applyChange(targets, { "shortcuts.nothing": "Ctrl+Alt+S" })).ok).toBe(false);
     expect((await applyChange(targets, { port: 80 })).ok).toBe(false);
-    expect((await applyChange(targets, { "capture.nothing": 1 })).ok).toBe(false);
-    expect((await applyChange(targets, { "capture.__proto__": {} })).ok).toBe(false);
+    expect((await applyChange(targets, { "nothing.x": 1 })).ok).toBe(false);
+    expect((await applyChange(targets, { "nothing.__proto__": {} })).ok).toBe(false);
     expect(calls).toEqual([]);
   });
 });

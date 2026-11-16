@@ -90,8 +90,6 @@ export function createLook(deps: LookDeps) {
 
   return {
     async look({ session, scope }: LookRequest, signal: AbortSignal): Promise<LookResult> {
-      // a capture the user sent is not taken from the screen: the capture inbox answers it
-      if (scope === "capture") return fail("no-capture");
       if (!platform.supported) return fail("unsupported");
       if (busy) return fail("busy");
       busy = true;

@@ -25,12 +25,11 @@ export const USAGE = `Usage: speakkit [--json] <command>
   meetings list [--limit n] | search <words> [--limit n]
   meetings show <id|latest> [--from t] [--to t] [--chapter n]
   meetings chapters <id|latest>
-  capture list [--limit n] | show <id|title|latest>
   labs [list] | labs on <id> | labs off <id>
   capabilities                what this version can do
   skill [print | install | status]   the agent skill that teaches this tool, and its install for Claude Code
 
-Times take seconds, m:ss or h:mm:ss. Reads of history, meetings and captures never start the app and change no file.
+Times take seconds, m:ss or h:mm:ss. Reads of history and meetings never start the app and change no file.
 Exit codes: 0 done, 1 refused or failed, 2 usage, 3 not running, 4 no speech.`;
 
 export interface Parsed {
@@ -151,14 +150,14 @@ const SKILL_ACTIONS = ["print", "install", "status"] as const;
 const offset = (text: string | undefined, name: string): number | undefined | string => (text === undefined ? undefined : (parseOffset(text) ?? `${name} takes seconds, m:ss or h:mm:ss.`));
 const num = (x: number | undefined | string): number | undefined => (typeof x === "number" ? x : undefined);
 
-/** What a read names: the words to search for, or the one meeting or capture to open. */
+/** What a read names: the words to search for, or the one meeting to open. */
 function targetOf(action: string, words: string[]): { query: string } | { ref: string } | object {
   if (action === "search") return { query: words.join(" ") };
   return words.length ? { ref: words.join(" ") } : {};
 }
 
-/** `meetings` and `capture`: the action and what it needs, as a read of the files. */
-function readRequest(command: "meetings" | "capture", r: Rest): ReadRequest | string {
+/** `meetings`: the action and what it needs, as a read of the files. */
+function readRequest(command: "meetings", r: Rest): ReadRequest | string {
   const [action = "list", ...words] = r.args;
   const [limit, chapter, from, to] = [count(r.limit, "--limit"), count(r.chapter, "--chapter"), offset(r.from, "--from"), offset(r.to, "--to")];
   const problem = [limit, chapter, from, to].find((x) => typeof x === "string");
@@ -200,7 +199,7 @@ export function parseArgs(argv: readonly string[]): Parsed {
   rest.args = words;
   const base = { json, help: help || command === undefined, print: rest.print, wait: rest.wait, start: command === "start", request: null };
   if (base.help || base.start) return base;
-  if (command === "meetings" || command === "capture") {
+  if (command === "meetings") {
     const read = readRequest(command, rest);
     return typeof read === "string" ? { ...base, usage: read } : { ...base, read };
   }

@@ -4,7 +4,6 @@
  */
 import { lazy, Suspense, type ComponentType, type Dispatch } from "react";
 import type { AppState } from "../shared/ipc";
-import { CapturePage } from "./features/capture";
 import { EnginesPage } from "./features/engines";
 import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
@@ -71,5 +70,4 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
         openMeetingSettings={() => dispatch({ type: "go", page: "settings", sub: "meetings" })}
       />,
     ),
-  capture: () => later(<CapturePage />),
 };

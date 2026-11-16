@@ -8,7 +8,6 @@ describe("routes", () => {
       ["Read", ["Home", "Library"]],
       ["Voice", ["Voices", "Voice chat", "Engines"]],
       ["Dictation", ["Dictation", "Modes", "Vocabulary", "History"]],
-      ["Capture", ["Capture"]],
     ]);
   });
   it("Engines uses the cube icon and Browser is not a page", () => {

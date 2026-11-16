@@ -228,7 +228,7 @@ function startDesktop() {
   );
 }
 
-const instance = await claimInstance(dataDir, process.argv, { saving: () => desktop?.finishCapture(), cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
+const instance = await claimInstance(dataDir, process.argv, { saving: () => undefined, cleanup: () => Promise.all([desktop?.dispose(), runtime.shutdown()]) });
 if (!instance.mayRun) {
   app.quit();
 } else {
@@ -253,17 +253,8 @@ if (!instance.mayRun) {
   // Dock icon clicked while the window is hidden to the menu bar (the activation at launch must not defeat --hidden).
   let booted = false;
   app.on("activate", () => booted && mainWindow.show());
-  let captureSaved = false;
-  app.on("before-quit", (e) => {
+  app.on("before-quit", () => {
     mainWindow.quitting = true;
-    // A recording is saved, not thrown away, when the app quits.
-    const saving = captureSaved ? undefined : desktop?.finishCapture();
-    if (!saving) return;
-    e.preventDefault();
-    void saving.finally(() => {
-      captureSaved = true;
-      app.quit();
-    });
   });
   app.on("window-all-closed", () => {
     /* stay alive in the tray */
