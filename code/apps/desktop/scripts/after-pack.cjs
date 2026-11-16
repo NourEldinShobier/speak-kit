@@ -2,7 +2,7 @@
 // the app and give it an ad-hoc signature. Apple Silicon refuses to run code without a valid signature, and Electron's own
 // signature breaks once the app is renamed and filled; a real Developer ID signature replaces this later.
 const { execFileSync } = require("node:child_process");
-const { existsSync, readdirSync, rmSync, statSync } = require("node:fs");
+const { closeSync, existsSync, openSync, readdirSync, readSync, realpathSync, rmSync, statSync } = require("node:fs");
 const path = require("node:path");
 
 const ARCHS = { 1: "x64", 3: "arm64" }; // electron-builder's Arch enum
@@ -42,14 +42,31 @@ exports.default = async function afterPack(context) {
   // Helpers and frameworks first (inner before outer), then the main bundle, each with its own entitlements (see electron-builder.yml).
   const frameworks = path.join(app, "Contents/Frameworks");
   const top = existsSync(frameworks) ? readdirSync(frameworks).filter((f) => /\.(app|framework)$/.test(f)) : [];
-  // Libraries inside a framework are sealed by the framework only if they are signed first.
-  const libs = top.flatMap((f) =>
-    f.endsWith(".framework")
-      ? readdirSync(path.join(frameworks, f), { recursive: true })
-          .filter((x) => x.endsWith(".dylib"))
-          .map((x) => path.join(frameworks, f, x))
-      : [],
-  );
+  // Libraries and helper programs inside a framework (Helpers/app_shim_loader and the like) are sealed by the framework only if they are signed first.
+  // Found by their Mach-O header, once each (Versions/Current is a link to Versions/A), without the framework's own main binary.
+  const MACH_O = new Set([0xcffaedfe, 0xcefaedfe, 0xfeedfacf, 0xfeedface, 0xcafebabe, 0xbebafeca]);
+  const isMachO = (file) => {
+    const fd = openSync(file, "r");
+    try {
+      const head = Buffer.alloc(4);
+      return readSync(fd, head, 0, 4, 0) === 4 && MACH_O.has(head.readUInt32BE(0));
+    } finally {
+      closeSync(fd);
+    }
+  };
+  const libs = top.flatMap((f) => {
+    if (!f.endsWith(".framework")) return [];
+    const root = path.join(frameworks, f);
+    const own = f.slice(0, -".framework".length);
+    const seen = new Set();
+    return readdirSync(root, { recursive: true })
+      .map((x) => path.join(root, x))
+      .filter((p) => path.basename(p) !== own && statSync(p).isFile() && isMachO(p))
+      .filter((p) => {
+        const real = realpathSync(p);
+        return seen.has(real) ? false : (seen.add(real), true);
+      });
+  });
   const nested = [...libs, ...top.map((f) => path.join(frameworks, f))];
   const build = path.join(__dirname, "../build");
   const plan = macSigningPlan({ app, nested, entitlements: path.join(build, "entitlements.mac.plist"), inherit: path.join(build, "entitlements.mac.inherit.plist") });
