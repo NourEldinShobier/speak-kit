@@ -18,11 +18,16 @@ const page = (sub: Parameters<typeof Settings>[0]["sub"], config = {}) => render
 
 afterEach(() => setActiveLocale("en")); // a page in another language switches the language of text built outside a screen
 
-// The rarely opened pages load on first use: one pass starts their loads, and a tick later every page renders in full.
+// The rarely opened pages load on first use: rendering each one starts its load, and the pass repeats until every page shows its title.
 beforeAll(async () => {
   await Promise.all(LOCALES.map(loadLocale));
   for (const sub of SETTINGS_SUBS) page(sub);
-  await new Promise((r) => setTimeout(r, 200));
+  await vi.waitFor(
+    () => {
+      for (const g of SETTINGS_NAV) for (const i of g.items.filter((x) => x.id !== "performance")) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
+    },
+    { timeout: 30_000, interval: 50 },
+  );
 });
 
 describe("settings navigation", () => {
