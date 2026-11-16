@@ -114,4 +114,12 @@ describe("settings repair and backup", () => {
     const nested = Object.keys(onDisk().dictation);
     expect(nested).toEqual([...nested].sort((a, b) => a.localeCompare(b, "en")));
   });
+
+  it("ignores capture keys left by an older version", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, capture: { consent: true }, mcpTools: { capture_list: true } }));
+    const c = await openConfig(dir);
+    expect(c.recovered).toBeNull();
+    expect(c.config).toMatchObject({ setupDone: true });
+    expect(c.config).not.toHaveProperty("capture");
+  });
 });
