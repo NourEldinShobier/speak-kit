@@ -30,8 +30,6 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   hotkey: c.hotkey,
   mode: c.mode,
   holdMs: c.holdMs,
-  secondKey: c.secondHotkey,
-  mouseKey: c.mouseButton,
   rawKey: c.rawHotkey,
   pasteLastKey: c.pasteLastHotkey,
   cancelKey: c.cancelKey,
@@ -55,8 +53,6 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
 /** What the key hook listens for. */
 export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   hotkey: c.hotkey,
-  second: c.secondHotkey,
-  mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
   cancelKey: c.cancelKey,
@@ -97,7 +93,6 @@ interface StatusParts {
   models: ModelManager;
   historyCount: number;
   paused: boolean;
-  mouseButtons: boolean;
   readerShortcuts: Record<string, string>;
   rejected: DictationStatus["rejected"];
   micOwner: string | undefined;
@@ -143,7 +138,6 @@ export const dictationStatus = ({
   readerShortcuts,
   rejected,
   micOwner,
-  mouseButtons,
   mic,
   devices,
   notes,
@@ -163,7 +157,6 @@ export const dictationStatus = ({
   ...(models.error && { modelError: models.error }),
   historyCount,
   paused,
-  mouseButtons,
   platform: process.platform,
   readerShortcuts,
   ...(rejected && { rejected }),
@@ -184,7 +177,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {

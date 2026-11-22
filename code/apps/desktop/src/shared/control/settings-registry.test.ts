@@ -9,7 +9,7 @@ describe("validateChange beyond app settings", () => {
       "dictation.mode": "toggle",
       "transcripts.textDays": 90,
       "engines.releaseOnClose": true,
-      "shortcuts.stop": "ctrl+alt+s",
+      "shortcuts.record-toggle": "ctrl+alt+s",
       launchAtLogin: true,
       port: 47700,
     });
@@ -19,7 +19,7 @@ describe("validateChange beyond app settings", () => {
       app: { voice: "af_bella" },
       dictation: { mode: "toggle" },
       areas: { transcripts: { textDays: 90 }, engines: { releaseOnClose: true } },
-      shortcuts: { stop: "Ctrl+Alt+S" },
+      shortcuts: { "record-toggle": "Ctrl+Alt+S" },
       system: { launchAtLogin: true, port: 47700 },
     });
   });
@@ -29,8 +29,9 @@ describe("validateChange beyond app settings", () => {
     [{ "meetings.nothing": 1 }, "meetings."],
     [{ "engines.device": "tpu" }, "engines.device"],
     [{ "shortcuts.nothing": "Ctrl+Alt+S" }, "shortcuts.nothing: not a shortcut."],
-    [{ "shortcuts.stop": "S" }, "shortcuts.stop: not a usable shortcut."],
-    [{ "shortcuts.stop": 5 }, "shortcuts.stop: not a usable shortcut."],
+    [{ "shortcuts.stop": "Ctrl+Alt+X" }, "shortcuts.stop: not a shortcut."],
+    [{ "shortcuts.record-toggle": "S" }, "shortcuts.record-toggle: not a usable shortcut."],
+    [{ "shortcuts.record-toggle": 5 }, "shortcuts.record-toggle: not a usable shortcut."],
     [{ port: 80 }, "port"],
     [{ launchAtLogin: "yes" }, "launchAtLogin"],
     [{ "transcripts.__proto__": {} }, "transcripts.__proto__ is not a setting."],

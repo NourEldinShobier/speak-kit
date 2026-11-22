@@ -5,7 +5,6 @@ import type { Ctx } from "./context";
 import type { createExports } from "./export/service";
 import type { createReading } from "./reader/service";
 import { createTray } from "./tray";
-import { showTrayIcon } from "../shared/settings/behaviour";
 import type { createUpdates } from "./updates-service";
 import type { DictationService } from "./dictation/service";
 import type { TranscriptsFeature } from "./transcripts";
@@ -42,7 +41,6 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, notice }: Tray
     reader: ctx.state.reader,
     update: ctx.state.update,
     exportsRunning: exports.runningCount(),
-    doNotDisturb: ctx.config.doNotDisturb,
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     darkTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
@@ -77,11 +75,6 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     stop: () => reading.controller.command({ type: "stop" }),
     wake: () => void ctx.server.warm().catch(() => {}), // a failed warm-up shows as the engine state
     "restart-engine": () => void retryEngine(),
-    dnd: () => {
-      ctx.config.doNotDisturb = !ctx.config.doNotDisturb;
-      ctx.saveConfig();
-      ctx.publish();
-    },
     settings: () => {
       ctx.showWindow();
       ctx.sendUi({ type: "nav", page: "settings", sub: "general" });
@@ -96,7 +89,6 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     quit: requestQuit,
   };
   const tray = createTray(context, actions, (id) => void dictation.speech.use(id));
-  tray.setVisible(showTrayIcon(ctx.config));
   void applyLanguage(ctx.config.language, app.getPreferredSystemLanguages()).then(tray.refresh); // the menu is rebuilt in the chosen language once its table has loaded
   ctx.sinks.add(() => tray.refresh());
   nativeTheme.on("updated", tray.refresh); // the taskbar theme changed

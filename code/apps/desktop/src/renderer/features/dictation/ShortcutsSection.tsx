@@ -71,11 +71,6 @@ function AdvancedKeysDialog({ ask, close }: { ask: { hotkey: string; resolve(ok:
   );
 }
 
-function mouseNote(s: DictationStatus): string {
-  if (!s.mouseButtons) return "Mouse buttons as shortcuts are not available on this computer yet.";
-  return s.settings.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut.";
-}
-
 /** The key that cancels a recording that is running; Escape by default. */
 function CancelKeyRow({ s }: { s: DictationStatus }) {
   const c = s.settings;
@@ -115,30 +110,6 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
         description="A press shorter than this is ignored. No tone, nothing pasted."
         control={<Select label="Hold time" value={String(c.holdMs)} onChange={(ms) => void patch({ holdMs: Number(ms) as typeof c.holdMs })} options={HOLD_TIME_OPTIONS} />}
       />
-      <SettingRow
-        className="lm-row--control"
-        label="Second shortcut"
-        description="For a laptop keyboard and an external one. Either starts dictation, and the one you pressed ends it."
-        control={<HotkeyRecorder slot="second" label="Second shortcut" value={c.secondHotkey} remove status={s} save={(secondHotkey) => patch({ secondHotkey })} confirmAdvanced={confirm} />}
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Mouse button"
-        description={mouseNote(s)}
-        control={
-          <HotkeyRecorder
-            slot="mouse"
-            label="Mouse button"
-            value={c.mouseButton}
-            mouse
-            remove
-            disabled={!s.mouseButtons}
-            addLabel="Choose button"
-            status={s}
-            save={(mouseButton) => patch({ mouseButton: mouseButton as typeof c.mouseButton })}
-          />
-        }
-      />
       {(c.mode === "toggle" || c.mode === "tap-or-hold") && <CancelKeyRow s={s} />}
     </SettingsSection>
   );
@@ -174,7 +145,7 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
   );
 }
 
-/** Dictation shortcut, mode, hold time, second shortcut, mouse button, cancel key, the explainer and the other shortcuts. */
+/** Dictation shortcut, mode, hold time, cancel key, the explainer and the other shortcuts. */
 export function ShortcutsSections({ s }: { s: DictationStatus }) {
   const [ask, setAsk] = useState<{ hotkey: string; resolve(ok: boolean): void } | null>(null);
   const confirm = (hotkey: string) => new Promise<boolean>((resolve) => setAsk({ hotkey, resolve }));

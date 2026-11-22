@@ -63,12 +63,6 @@ describe("control server in the real app", () => {
     await l.app.close();
   });
 
-  it("is not started when the setting is off", async () => {
-    const l = await start({ controlServer: false });
-    await l.page.waitForTimeout(1500);
-    expect(existsSync(file(l))).toBe(false);
-  });
-
   it("the command line talks to it: status, voice, settings, history, and exit codes for usage and for an app that is not running", async () => {
     const l = await start();
     await until(() => existsSync(file(l)));

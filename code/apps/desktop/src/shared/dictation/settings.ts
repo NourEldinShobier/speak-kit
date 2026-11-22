@@ -144,7 +144,6 @@ const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTK
 const optionalHotkey = (fallback: string) => v.fallback(v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]), fallback);
 export const MODES = ["hold", "hold-only", "toggle", "double-tap", "tap-or-hold"] as const;
 export const HOLD_TIMES = [150, 200, 300, 400, 500, 750, 1000] as const;
-const MOUSE_PICK = ["", "Mouse2", "Mouse3", "Mouse4", "Mouse5"] as const;
 
 /** Persisted under `dictation` in config.json. Off until the person turns it on; every key falls back to its default, which is also how files from before dictation existed load. */
 const CORE_KEYS = {
@@ -152,13 +151,11 @@ const CORE_KEYS = {
   hotkey,
   mode: v.fallback(v.picklist(MODES), "hold"),
   holdMs: v.fallback(v.picklist(HOLD_TIMES), 300),
-  secondHotkey: optionalHotkey(""),
-  mouseButton: v.fallback(v.picklist(MOUSE_PICK), ""),
   rawHotkey: optionalHotkey(""),
   pasteLastHotkey: optionalHotkey(DEFAULT_PASTE_LAST),
   cancelKey: v.fallback(v.pipe(v.string(), v.check(validCancelKey)), "Escape"),
   /** Set when a saved shortcut was refused at load and replaced: the page says so once. */
-  resetNotice: v.fallback(v.optional(v.picklist(["left-click", "clash"])), undefined),
+  resetNotice: v.fallback(v.optional(v.literal("clash")), undefined),
   // An explicit language is the default: automatic detection can mistranscribe close languages, so it is something the person chooses.
   language: v.fallback(v.picklist(DICTATION_LANGUAGES), "en"),
   model: v.fallback(modelId, DICTATION_MODELS[0]),
@@ -198,27 +195,13 @@ const CORE_KEYS = {
   /** Percent of the current volume kept while dictating when other audio is lowered; 0 is silent, 100 changes nothing. */
   duckLevel: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)), 30),
 };
-const MouseOne = /(^|\+)Mouse1(\+|$)/;
-export const hotkeySlots = (c: { hotkey: string; secondHotkey: string; mouseButton: string; rawHotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
+export const hotkeySlots = (c: { hotkey: string; rawHotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
   dictation: c.hotkey,
-  second: c.secondHotkey,
-  mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
   cancel: c.cancelKey,
 });
 export const DictationConfigSchema = v.pipe(
-  // A saved left button as the shortcut would swallow every click: it goes back to the default and the page says why.
-  v.pipe(
-    v.unknown(),
-    v.transform((raw) => {
-      const r = raw as Record<string, unknown> | null;
-      if (r && typeof r === "object" && [r.hotkey, r.secondHotkey, r.rawHotkey, r.mouseButton].some((x) => typeof x === "string" && MouseOne.test(x))) {
-        return { ...r, hotkey: typeof r.hotkey === "string" && MouseOne.test(r.hotkey) ? DEFAULT_HOTKEY : r.hotkey, secondHotkey: "", rawHotkey: "", mouseButton: "", resetNotice: "left-click" };
-      }
-      return raw;
-    }),
-  ),
   v.object(CORE_KEYS),
   // Two shortcuts that share a key cannot both work: the optional one that clashes is cleared.
   v.transform((c) => {
@@ -226,14 +209,12 @@ export const DictationConfigSchema = v.pipe(
     for (let i = 0; i < 6; i++) {
       const clash = firstClash(hotkeySlots(out));
       if (!clash) break;
-      const drop = (["raw", "mouse", "second", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
+      const drop = (["raw", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
       out = {
         ...out,
         resetNotice: "clash" as const,
         ...(drop === "raw" && { rawHotkey: "" }),
-        ...(drop === "mouse" && { mouseButton: "" as const }),
-        ...(drop === "second" && { secondHotkey: "" }),
         ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
         ...(drop === "cancel" && { cancelKey: "Escape" }),
       };
@@ -266,8 +247,6 @@ export const DictationPatchSchema = v.partial(
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
     mode: v.picklist(MODES),
     holdMs: v.picklist(HOLD_TIMES),
-    secondHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
-    mouseButton: v.picklist(MOUSE_PICK),
     rawHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
     pasteLastHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
     cancelKey: v.pipe(v.string(), v.check(validCancelKey)),

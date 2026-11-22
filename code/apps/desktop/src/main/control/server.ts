@@ -18,8 +18,6 @@ export interface ControlServer {
   readonly running: boolean;
   start(): Promise<void>;
   stop(): Promise<void>;
-  /** A new token, written to the discovery file at once. Whoever holds the old one is refused from now on. No-op while stopped. */
-  resetToken(): Promise<void>;
 }
 
 const same = (a: string, b: string): boolean => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -84,7 +82,7 @@ async function handle(o: Options & { token(): string }, req: http.IncomingMessag
  * nothing tells a probe that a server is here. The port and the token are published in the discovery file while it runs.
  */
 export function createControlServer(o: Options): ControlServer {
-  let token = randomBytes(32).toString("hex");
+  const token = randomBytes(32).toString("hex");
   let server: http.Server | undefined;
   let port = 0;
 
@@ -106,10 +104,6 @@ export function createControlServer(o: Options): ControlServer {
       server = s;
       port = (s.address() as { port: number }).port;
       await writeDiscovery(discoveryFile(o.dataDir), { port, token, pid: process.pid, version: o.version });
-    },
-    async resetToken() {
-      token = randomBytes(32).toString("hex");
-      if (server) await writeDiscovery(discoveryFile(o.dataDir), { port, token, pid: process.pid, version: o.version });
     },
     async stop() {
       const s = server;

@@ -13,9 +13,8 @@ import { chooseProcessMode } from "./cli-mode";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
-import { createAppHandlers, metrics, type HandlerDeps } from "./handlers";
+import { createAppHandlers, type HandlerDeps } from "./handlers";
 import { watchSettings } from "./settings-watch";
-import { motionNow, windowMotion } from "./window-motion";
 import { createNoticeCenter } from "./tray-notice";
 import { claimInstance, registerProtocol } from "./instance";
 import { isLaunchAtLogin, repairLoginItem, startsHidden } from "./login-item";
@@ -116,7 +115,6 @@ const mainWindow: MainWindow = new MainWindow(config, {
   onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 windowVisible = () => mainWindow.isVisible();
-windowMotion.set(motionNow(config.reduceMotion));
 const screenVision = createScreenVision();
 const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
@@ -145,7 +143,7 @@ const runtime: ServerRuntime = new ServerRuntime({
 
 /** Many features publish in a burst (an engine event, an export tick, a settings change): the windows get one send per frame. */
 const sendState = frameBatch(() => {
-  state.launchAtLogin = isLaunchAtLogin(config.startMinimized);
+  state.launchAtLogin = isLaunchAtLogin();
   mainWindow.sendState(state);
   for (const sink of sinks) sink(state);
 });
@@ -211,7 +209,6 @@ function startDesktop() {
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       version: app.getVersion(),
-      voiceEngine: () => runtime.engine,
       trayNotice: () => trayNotices.current(),
       dictation: {
         dataDir,
@@ -302,12 +299,11 @@ if (!instance.mayRun) {
     // Test hook: native menus and global key presses cannot be driven from Playwright.
     if (test.hook)
       (globalThis as Record<string, unknown>).__speakkit = {
-        metrics,
         marks: () => performance.getEntriesByType("mark").map((m) => ({ name: m.name, at: Math.round(m.startTime) })),
         ...desktop.testHook(),
       };
 
-    if (app.isPackaged) repairLoginItem(config.startMinimized); // an update may have moved the program; the entry must start this copy
+    if (app.isPackaged) repairLoginItem(); // an update may have moved the program; the entry must start this copy
     const boot = findDeepLink(process.argv) ?? launchLink;
     mainWindow.create(startsHidden(config, process.argv, desktop.trayMissing()) && !boot);
     booted = true;

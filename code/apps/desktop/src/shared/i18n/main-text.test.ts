@@ -6,7 +6,6 @@ import { ERROR_TEXT, errorText, updateErrorText } from "../../renderer/error-tex
 import { engineView } from "../engine-view";
 import { IDLE_READER } from "../reader";
 import { activityRow } from "../settings/diagnostics";
-import { deviceLines, modelText } from "../settings/resources";
 import { DEFAULT_SHORTCUTS } from "../shortcuts";
 import { trayMenuModel, trayTooltipFor, type TrayContext } from "../tray";
 import { at, loadLocale, LOCALES, setActiveLocale, applyLanguage } from "./index";
@@ -21,7 +20,6 @@ const ctx = (over: Partial<TrayContext> = {}): TrayContext => ({
   reader: IDLE_READER,
   update: { kind: "idle", checkedAtMs: null },
   exportsRunning: 0,
-  doNotDisturb: false,
   shortcuts: DEFAULT_SHORTCUTS,
   ...over,
 });
@@ -29,12 +27,12 @@ const labels = (c: TrayContext) => trayMenuModel(c).flatMap((i) => (i.type === "
 
 describe("text the main process builds", () => {
   it("is English until a language is chosen", () => {
-    expect(labels(ctx())).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+    expect(labels(ctx())).toEqual(["Open Speak Kit", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
 
   it("follows the chosen language in the tray menu and its tooltip", async () => {
     await applyLanguage("de", []);
-    expect(labels(ctx())).toEqual(["Speak Kit öffnen", "Nicht stören", "Einstellungen", "Nach Updates suchen", "Speak Kit beenden"]);
+    expect(labels(ctx())).toEqual(["Speak Kit öffnen", "Einstellungen", "Nach Updates suchen", "Speak Kit beenden"]);
     expect(trayTooltipFor(ctx({ exportsRunning: 2 }))).toBe("Speak Kit - Exportiert 2 Dateien");
     await applyLanguage("fr", []);
     expect(trayTooltipFor(ctx({ exportsRunning: 1 }))).toBe("Speak Kit - Export de 1 fichier");
@@ -76,16 +74,8 @@ describe("text the main process builds", () => {
     expect(updateErrorText({ code: "update-offline" }, "check").title).toBe("Impossible de rechercher des mises à jour");
   });
 
-  it("translates the Settings helpers that build text", async () => {
+  it("translates the Settings helper that builds text", async () => {
     await applyLanguage("de", []);
     expect(activityRow({ id: 1, atMs: 0, kind: "error", title: "t", body: "b" })).toEqual({ title: "t", detail: "Problem: b" });
-    expect(modelText({ kind: "voice", name: "x", state: "loaded", mb: 120.4 })).toBe("Geladen, 120 MB");
-    expect(deviceLines({ platform: "win32", arch: "x64", cores: 8, ramGb: 16, gpu: null, speechRunsOn: "CPU" }).map((l) => l.value)).toEqual([
-      "Windows (x64)",
-      "8 Kerne",
-      "16 GB",
-      "Keine gefunden",
-      "CPU",
-    ]);
   });
 });

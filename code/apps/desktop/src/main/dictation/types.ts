@@ -56,8 +56,6 @@ export interface HotkeySource {
   setExtraChords?(chords: Readonly<Record<string, Chord>>): void;
   /** True while any key or mouse button is physically down (the keyboard state, not what the hook saw). */
   anyKeyDown?(): boolean;
-  /** The mouse hook is needed for mouse buttons in a chord and for clicks that end a hold. Absent where the platform has none. */
-  readonly mouse?: boolean;
   /** Calls back at each left click, on a later turn, without ever holding one back; gives the function that stops it. Undefined where there is no mouse hook or it was refused. */
   watchClicks?(onClick: () => void): (() => void) | undefined;
   start(chord: Chord, handlers: HotkeyHandlers): HotkeyStart;

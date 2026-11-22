@@ -92,8 +92,6 @@ export const DE_SHELL: Record<keyof typeof SHELL, string> = {
   "pal.exportDoes": "Öffnet den Export-Dialog, um Sprache als Audiodatei zu speichern.",
   "pal.load-engine": "Sprach-Engine jetzt laden",
   "pal.load-engineDoes": "Lädt die Sprach-Engine in den Speicher, damit die nächste Vorlesung sofort startet.",
-  "pal.dnd": "Nicht stören ein- oder ausschalten",
-  "pal.dndDoes": "Schaltet Hinweise und Töne aus oder wieder ein.",
   "pal.check-updates": "Nach Updates suchen",
   "pal.check-updatesDoes": "Sucht nach einer neueren Version von Speak Kit.",
   "pal.install-extension": "Erweiterung installieren",

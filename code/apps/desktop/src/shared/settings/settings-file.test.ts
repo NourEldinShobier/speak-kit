@@ -9,9 +9,6 @@ describe("loading settings", () => {
     expect(noticeOf(l)).toBeNull();
     expect(l.config).toMatchObject({
       appearance: "system",
-      closeAction: "hide",
-      hideTrayIcon: false,
-      reduceMotion: "system",
       updateChannel: "stable",
       experiments: {},
       configVersion: CONFIG_VERSION,
@@ -19,13 +16,13 @@ describe("loading settings", () => {
   });
 
   it("an invalid field loads as its default, is named, and asks for a backup", () => {
-    const l = loadSettings({ idleUnload: "42", closeAction: "explode", autoUpdate: false });
+    const l = loadSettings({ idleUnload: "42", updateChannel: "explode", autoUpdate: false });
     expect(l.config.idleUnload).toBe("5");
-    expect(l.config.closeAction).toBe("hide");
+    expect(l.config.updateChannel).toBe("stable");
     expect(l.config.autoUpdate).toBe(false);
-    expect(l.invalidFields).toEqual(["closeAction", "idleUnload"]);
+    expect(l.invalidFields).toEqual(["updateChannel", "idleUnload"]);
     expect(l.needsBackup).toBe(true);
-    expect(noticeOf(l)).toEqual({ kind: "repaired", fields: ["closeAction", "idleUnload"] });
+    expect(noticeOf(l)).toEqual({ kind: "repaired", fields: ["updateChannel", "idleUnload"] });
   });
 
   it("a number outside its range counts as invalid", () => {

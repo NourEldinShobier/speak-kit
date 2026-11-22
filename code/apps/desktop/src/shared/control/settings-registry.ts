@@ -19,7 +19,7 @@ const SystemSchema = v.partial(
 export type SystemPatch = v.InferOutput<typeof SystemSchema>;
 
 /** The app settings the command line may change: plain values with no side effect to run. No dictation key is listed: how dictated text is stored, rewritten and pasted stays with the Settings pages. */
-export const COMMAND_LINE_KEYS = ["voice", "speed", "controlServer"] as const;
+export const COMMAND_LINE_KEYS = ["voice", "speed"] as const;
 
 /** The folders the person picks in the operating system's chooser; the Settings pages cannot type one, so only a chooser's own answer may name them. */
 const FolderSchema = v.pipe(v.string(), v.maxLength(1024));

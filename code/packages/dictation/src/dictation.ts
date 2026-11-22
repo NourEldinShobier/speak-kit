@@ -117,8 +117,8 @@ class Runtime implements Dictation {
     const owner = this.deps.micOwner?.();
     const c = this.session.capture.kind;
     if (!owner || (c !== "idle" && c !== "armed")) return false;
-    const { hotkey, secondKey, mouseKey, rawKey } = this.settings;
-    const begins = event.type === "start" || (event.type === "key" && event.down && !!event.key && [hotkey, secondKey, mouseKey, rawKey].includes(event.key));
+    const { hotkey, rawKey } = this.settings;
+    const begins = event.type === "start" || (event.type === "key" && event.down && !!event.key && [hotkey, rawKey].includes(event.key));
     if (begins) this.flash({ error: "mic-in-use", owner });
     return begins;
   }

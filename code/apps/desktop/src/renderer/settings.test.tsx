@@ -31,11 +31,11 @@ beforeAll(async () => {
 });
 
 describe("settings navigation", () => {
-  it("lists the 14 pages in four groups", () => {
+  it("lists the 12 pages in four groups", () => {
     expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
-      ["General", ["General", "Voice and playback", "Shortcuts", "Notifications", "Accessibility"]],
+      ["General", ["General", "Voice and playback", "Shortcuts", "Accessibility"]],
       ["Device", ["Performance", "Storage", "Privacy"]],
-      ["Features", ["Automation", "Experiments"]],
+      ["Features", ["Experiments"]],
       ["App", ["Browser integration", "Diagnostics", "What is new", "About"]],
     ]);
   });
@@ -56,7 +56,7 @@ describe("General in Spanish", () => {
         <Settings s={appState({ config: parseConfig({ setupDone: true, language: "es" }) })} sub="general" />
       </LocaleProvider>,
     );
-    for (const text of ["Abrir al iniciar sesión", "Idioma", "Al cerrar la ventana", "Importar ajustes"]) expect(html).toContain(text);
+    for (const text of ["Abrir al iniciar sesión", "Idioma", "Importar ajustes"]) expect(html).toContain(text);
     expect(html).not.toContain("Launch at login");
   });
 
@@ -66,9 +66,10 @@ describe("General in Spanish", () => {
 });
 
 describe("General", () => {
-  it("shows startup, appearance and tray settings", () => {
+  it("shows the startup and language settings, and nothing about the tray or closing the window", () => {
     const html = page("general");
-    for (const text of ["Launch at login", "Start minimized to tray", "Language", "Closing the window"]) expect(html).toContain(text);
+    for (const text of ["Launch at login", "Language"]) expect(html).toContain(text);
+    for (const text of ["Start minimized", "Closing the window", "Tray icon", "Show in folder", "Run setup again"]) expect(html).not.toContain(text);
     expect(html).not.toMatch(/clipboard|copy/i); // Speak Kit never reads the clipboard
   });
 });
@@ -76,19 +77,6 @@ describe("General", () => {
 describe("Voice and playback", () => {
   it("shows the stored voice before the voice list has loaded", () => {
     expect(page("voice", { voice: "bf_emma" })).toContain("bf_emma");
-  });
-});
-
-describe("Notifications", () => {
-  it("has a toast, bell and sound switch for every event", () => {
-    const html = page("notifications");
-    for (const ev of ["Export finished", "Voice engine problem", "Update ready"]) for (const ch of ["Toast", "Bell", "Sound"]) expect(html).toContain(`aria-label="${ev}: ${ch}"`);
-  });
-
-  it("shows the default for export finished: toast and bell on, sound off", () => {
-    const html = page("notifications");
-    expect(html).toMatch(/aria-label="Export finished: Toast"[^>]*aria-checked="true"|aria-checked="true"[^>]*aria-label="Export finished: Toast"/);
-    expect(html).toMatch(/aria-label="Export finished: Sound"[^>]*aria-checked="false"|aria-checked="false"[^>]*aria-label="Export finished: Sound"/);
   });
 });
 
@@ -114,22 +102,18 @@ describe("About", () => {
 const pageWith = (sub: Parameters<typeof Settings>[0]["sub"], over: Partial<Parameters<typeof appState>[0]> = {}) => renderToStaticMarkup(<Settings s={appState(over)} sub={sub} />);
 
 describe("settings pages of the surface package", () => {
-  it("General has five basic rows and an Advanced fold that starts closed", () => {
+  it("General has two basic rows and an Advanced fold that starts closed", () => {
     const html = pageWith("general");
-    expect((html.match(/data-setting-row="general\/(launch|minimized|language|close|tray)"/g) ?? []).length).toBe(5);
+    expect((html.match(/data-setting-row="general\/(launch|language)"/g) ?? []).length).toBe(2);
     expect(html).toMatch(/aria-expanded="false"[^>]*aria-controls="advanced-general"/);
     expect(html).toContain('id="advanced-general" hidden=""');
     expect(html).not.toContain("Theme");
   });
 
-  it("the tray hint explains the way back when the tray icon is hidden", () => {
-    const html = pageWith("general", { config: parseConfig({ setupDone: true, hideTrayIcon: true }) });
-    expect(html).toContain("closing the window quits Speak Kit");
-  });
-
-  it("Accessibility lists reduce motion and the keyboard map", () => {
+  it("Accessibility lists the keyboard map and has no motion setting", () => {
     const html = pageWith("accessibility");
-    for (const t of ["Reduce motion", "Keyboard map", "Ctrl+K", "no full session with a screen reader"]) expect(html).toContain(t);
+    for (const t of ["Keyboard map", "Ctrl+K", "no full session with a screen reader"]) expect(html).toContain(t);
+    expect(html).not.toContain("Reduce motion");
   });
 
   it("Privacy states there is no telemetry and lists every network host", () => {

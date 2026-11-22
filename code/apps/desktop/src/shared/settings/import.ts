@@ -5,11 +5,9 @@ const THIS_INSTALL = ["setupDone", "setupSkipped", "setupStep"];
 
 const anyOn = (v: unknown) => !!v && typeof v === "object" && Object.values(v).includes(true);
 
-/** Settings that switch on something reaching beyond the app (a local server, an experiment, tools for AI apps, input logging, text sent out). An import that would change one to on asks first. */
+/** Settings that switch on something reaching beyond the app (an experiment, transcript notes, rewriting). An import that would change one to on asks first. */
 export const NEEDS_CONFIRMATION: Readonly<Record<string, { what: string; on(value: unknown): boolean }>> = {
-  controlServer: { what: "the local control server for the command line and AI apps", on: (v) => v === true },
   experiments: { what: "experiments", on: anyOn },
-  mcpTools: { what: "the tools offered to AI apps", on: anyOn },
   "transcripts.notes": { what: "transcript notes written by an online service", on: (v) => v === true },
   "dictation.rewrite": { what: "rewriting dictated text", on: (v) => (v as { enabled?: unknown } | null)?.enabled === true },
 };

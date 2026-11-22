@@ -25,8 +25,6 @@ describe("defaults", () => {
       replacements: [],
       retention: "7d",
       holdMs: 300,
-      secondKey: "",
-      mouseKey: "",
       rawKey: "",
       pasteLastKey: "",
       stripFinalStop: false,

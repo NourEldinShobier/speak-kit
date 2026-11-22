@@ -50,13 +50,13 @@ describe("settings import", () => {
   it("applies the valid settings of a picked file, reports the rest, and keeps what it left out", async () => {
     const l = await start({ config: { ...DONE, voice: "af_heart" } });
     const file = path.join(mkdtempSync(path.join(tmpdir(), "speakkit-import-")), "settings.json");
-    writeFileSync(file, JSON.stringify({ voice: "af_bella", speed: 99, setupDone: false, startMinimized: true, dictation: { mode: "toggle" } }));
+    writeFileSync(file, JSON.stringify({ voice: "af_bella", speed: 99, setupDone: false, autoUpdate: false, dictation: { mode: "toggle" } }));
     await openGeneral(l);
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await pickFile(l, file);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText("Imported 3 settings. Changed: voice, startMinimized, dictation.mode. Left out: speed, setupDone.").waitFor();
-    await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella", startMinimized: true, setupDone: true, dictation: { mode: "toggle" } });
+    await l.page.getByText("Imported 3 settings. Changed: voice, autoUpdate, dictation.mode. Left out: speed, setupDone.").waitFor();
+    await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella", autoUpdate: false, setupDone: true, dictation: { mode: "toggle" } });
     expect(configOf(l).speed).not.toBe(99);
   }, 60_000);
 
@@ -82,7 +82,7 @@ describe("settings import", () => {
       file,
       JSON.stringify({
         voiceChatVoice: "alloy",
-        shortcuts: { stop: "Ctrl+Alt+Y" },
+        shortcuts: { "record-toggle": "Ctrl+Alt+Y" },
         setupDone: false,
         transcripts: { textDays: 90 },
         engines: { releaseOnClose: true },
@@ -97,26 +97,27 @@ describe("settings import", () => {
       .poll(() => configOf(l))
       .toMatchObject({
         voiceChatVoice: "alloy",
-        shortcuts: { stop: "Ctrl+Alt+Y" },
+        shortcuts: { "record-toggle": "Ctrl+Alt+Y" },
         transcripts: { textDays: 90 },
         engines: { releaseOnClose: true },
       });
   }, 60_000);
 
-  it("asks before the control server, experiments and tool access are switched on, and leaves them out when declined", async () => {
-    const l = await start({ config: { ...DONE, controlServer: false } });
+  it("asks before experiments are switched on, and leaves them out when declined", async () => {
+    const l = await start({ config: DONE });
     const file = path.join(mkdtempSync(path.join(tmpdir(), "speakkit-import-")), "settings.json");
-    writeFileSync(file, JSON.stringify({ controlServer: true, voice: "af_bella" }));
+    writeFileSync(file, JSON.stringify({ experiments: { "caption-export": true }, voice: "af_bella" }));
     await openGeneral(l);
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await pickFile(l, file);
     await confirmImport(l, false);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText("Imported 1 settings. Changed: voice. Left out: controlServer.").waitFor();
-    await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella", controlServer: false });
+    await l.page.getByText("Imported 1 settings. Changed: voice. Left out: experiments.").waitFor();
+    await expect.poll(() => configOf(l)).toMatchObject({ voice: "af_bella" });
+    expect(configOf(l).experiments ?? {}).toEqual({});
     await confirmImport(l, true);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText("Imported 2 settings. Changed: controlServer.").waitFor();
-    await expect.poll(() => configOf(l).controlServer).toBe(true);
+    await l.page.getByText("Imported 2 settings. Changed: experiments.").waitFor();
+    await expect.poll(() => configOf(l).experiments).toEqual({ "caption-export": true });
   }, 60_000);
 });

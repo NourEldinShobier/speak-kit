@@ -1,32 +1,7 @@
-import type { Config } from "../schemas";
-
-/** What the close button does. With the tray icon hidden there is nothing to reopen a hidden window from, so closing quits. */
-export function effectiveCloseAction(c: Pick<Config, "closeAction" | "hideTrayIcon">, trayMissing = false): "hide" | "quit" {
-  return c.hideTrayIcon || trayMissing ? "quit" : c.closeAction;
-}
-
-/** What closing the window does right now: running work (an export, a reading) is confirmed before a quit. */
-export function closeOutcome(c: Pick<Config, "closeAction" | "hideTrayIcon">, busy: boolean, trayMissing = false): "hide" | "quit" | "confirm-quit" {
-  const a = effectiveCloseAction(c, trayMissing);
-  return a === "quit" && busy ? "confirm-quit" : a;
-}
-
-/** The tray icon is shown unless hidden by the user. */
-export const showTrayIcon = (c: Pick<Config, "hideTrayIcon">): boolean => !c.hideTrayIcon;
-
-/** Which Settings row text describes the close behaviour; the hidden tray names the way back in. */
-export function closeHint(c: Pick<Config, "closeAction" | "hideTrayIcon">): "general.closeHintHidden" | "general.closeHintKeeps" | "general.closeHintQuits" {
-  if (c.hideTrayIcon) return "general.closeHintHidden";
-  return c.closeAction === "hide" ? "general.closeHintKeeps" : "general.closeHintQuits";
-}
-
-export type MotionMode = "on" | "off";
-
-/** Reduce motion: the app's own choice wins, otherwise the operating system's. */
-export function reduceMotion(choice: Config["reduceMotion"], osPrefersReduced: boolean): MotionMode {
-  if (choice === "on") return "on";
-  if (choice === "off") return "off";
-  return osPrefersReduced ? "on" : "off";
+/** What closing the window does: it hides to the tray. Without a tray icon nothing could bring it back, so it quits; running work (an export, a reading) is confirmed before that quit. */
+export function closeOutcome(busy: boolean, trayMissing: boolean): "hide" | "quit" | "confirm-quit" {
+  if (!trayMissing) return "hide";
+  return busy ? "confirm-quit" : "quit";
 }
 
 /** The in-app keys the Accessibility page lists. Global keys come from the Shortcuts page. */

@@ -30,7 +30,7 @@ export const AUTOMATION_ERROR_CODES = [
 ] as const;
 export type AutomationErrorCode = (typeof AUTOMATION_ERROR_CODES)[number];
 
-/** One line per code, said the same way by the command line, the MCP server and the Automation page. */
+/** One line per code, said the same way by the command line and the MCP server. */
 export const AUTOMATION_ERROR_TEXT: Record<AutomationErrorCode, string> = {
   model_missing: "The speech model is not downloaded yet.",
   busy: "A recording is already running.",

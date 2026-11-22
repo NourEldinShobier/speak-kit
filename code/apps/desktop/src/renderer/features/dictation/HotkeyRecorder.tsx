@@ -3,7 +3,7 @@ import { Button, Icon, Kbd } from "@speakkit/ui";
 import { findConflict, type Slot } from "../../../shared/dictation/conflicts";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { hotkeyLabels, usesAdvancedKey } from "../../../shared/dictation/keys";
-import { interpretButton, interpretKeys, REFUSAL_TEXT, type Refusal } from "../../../shared/dictation/recorder-model";
+import { interpretKeys, REFUSAL_TEXT, type Refusal } from "../../../shared/dictation/recorder-model";
 import { platformName } from "./api";
 import { allShortcuts, conflictText } from "./shortcuts-model";
 
@@ -54,39 +54,6 @@ function useKeyCapture(active: boolean, handlers: CaptureHandlers): void {
   }, [active]);
 }
 
-/** While `active`, the next mouse button press is the shortcut. The left button is refused, and the page never sees the click. */
-function useButtonCapture(active: boolean, h: { pick(key: string): void; refused(why: Refusal): void; stop(): void }): void {
-  const pick = useEffectEvent(h.pick);
-  const refuse = useEffectEvent(h.refused);
-  const cancel = useEffectEvent(h.stop);
-  useEffect(() => {
-    if (!active) return;
-    const swallow = (e: Event) => (e.preventDefault(), e.stopPropagation());
-    const down = (e: MouseEvent) => {
-      if ((e.target as HTMLElement | null)?.closest("[data-recorder-control]")) return; // the Cancel button keeps working
-      swallow(e);
-      const r = interpretButton(e.button);
-      if (r.ok) pick(r.key);
-      else refuse(r.refusal);
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.code !== "Escape") return;
-      swallow(e);
-      cancel();
-    };
-    window.addEventListener("mousedown", down, true);
-    window.addEventListener("contextmenu", swallow, true);
-    window.addEventListener("auxclick", swallow, true);
-    window.addEventListener("keydown", key, true);
-    return () => {
-      window.removeEventListener("mousedown", down, true);
-      window.removeEventListener("contextmenu", swallow, true);
-      window.removeEventListener("auxclick", swallow, true);
-      window.removeEventListener("keydown", key, true);
-    };
-  }, [active]);
-}
-
 interface Props {
   /** With `status`, the slot is checked against the other shortcuts; a recorder without them leaves both out. */
   slot?: Slot;
@@ -97,19 +64,13 @@ interface Props {
   status?: DictationStatus;
   /** Saves the shortcut; resolves with the status after the save. The page shows Saved only after this resolves. */
   save(value: string): Promise<DictationStatus | void>;
-  /** "Add shortcut" or "Choose button" when nothing is set. */
-  addLabel?: string;
   /** Set for a recorder that can be cleared. */
   remove?: boolean;
   /** The value Restore default goes back to; the button is disabled while it is already in use. */
   restore?: string;
-  /** Records a mouse button instead of keys. */
-  mouse?: boolean;
   /** Called with the keys of a shortcut that needs the advanced warning before it is saved. */
   confirmAdvanced?: (hotkey: string) => Promise<boolean>;
   onRecording?: (on: boolean) => void;
-  /** This system cannot deliver the shortcut (no mouse hook): the buttons that start a recording are off. */
-  disabled?: boolean;
 }
 
 const refusalText = (why: Refusal): string => (why === "needs-key" && platformName() === "darwin" ? "Use a modifier such as Command, or a key such as F9." : REFUSAL_TEXT[why]);
@@ -122,16 +83,14 @@ const Chips = ({ value }: { value: string }) => (
   </span>
 );
 
-function RecordingRow({ label, mouse, stop, line }: { label: string; mouse: boolean; stop(): void; line: ReactNode }) {
+function RecordingRow({ label, stop, line }: { label: string; stop(): void; line: ReactNode }) {
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
       <div className="dict-hotkey__field" role="status" aria-live="polite">
         <i className="dict-hotkey__dot" />
-        {mouse ? "Waiting for a click" : "Press the new keys"}
+        Press the new keys
       </div>
-      <Button data-recorder-control onClick={stop}>
-        Cancel
-      </Button>
+      <Button onClick={stop}>Cancel</Button>
       {line}
     </div>
   );
@@ -141,7 +100,7 @@ function RecordingRow({ label, mouse, stop, line }: { label: string; mouse: bool
  * One shortcut as keycaps and Change, a recorder while changing, and a line for the result: refused keys, a clash with another shortcut, saving, saved,
  * could not save. The row has a fixed width so the buttons never move while the state changes.
  */
-export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "Add shortcut", remove, restore, mouse, confirmAdvanced, onRecording, disabled }: Props) {
+export function HotkeyRecorder({ slot, label, value, status, save, remove, restore, confirmAdvanced, onRecording }: Props) {
   const [recording, setRecordingState] = useState(false);
   const [note, setNote] = useState<RecorderNote | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -158,7 +117,7 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
     try {
       const after = await save(next);
       if (after?.rejected && after.rejected.slot === slot) return setNote({ kind: "conflict", text: conflictText(next, after.rejected.with) });
-      setNote(next && !mouse ? { kind: "saved" } : null);
+      setNote(next ? { kind: "saved" } : null);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setNote((n) => (n?.kind === "saved" ? null : n)), 2500);
     } catch {
@@ -166,27 +125,17 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
     }
   };
 
-  useKeyCapture(recording && !mouse, {
+  useKeyCapture(recording, {
     keys: (hotkey) => void commit(hotkey),
     refused: (why) => setNote(why ? { kind: "refused", text: refusalText(why) } : null),
     stop,
   });
-  useButtonCapture(recording && !!mouse, { pick: (key) => void commit(key), refused: (why) => setNote({ kind: "refused", text: refusalText(why) }), stop });
 
   const line = note && <RecorderLine note={note} value={value} ready={status?.hotkeyReady ?? true} />;
-  if (recording) return <RecordingRow label={label} mouse={mouse === true} stop={stop} line={line} />;
+  if (recording) return <RecordingRow label={label} stop={stop} line={line} />;
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
-      <Resting
-        label={label}
-        value={value}
-        addLabel={addLabel}
-        restore={restore}
-        remove={remove}
-        disabled={disabled === true}
-        start={() => (setNote(null), setRecording(true))}
-        commit={(v) => void commit(v)}
-      />
+      <Resting label={label} value={value} restore={restore} remove={remove} start={() => (setNote(null), setRecording(true))} commit={(v) => void commit(v)} />
       {line}
     </div>
   );
@@ -195,29 +144,27 @@ export function HotkeyRecorder({ slot, label, value, status, save, addLabel = "A
 interface RestingProps {
   label: string;
   value: string;
-  addLabel: string;
   restore: string | undefined;
   remove: boolean | undefined;
-  disabled: boolean;
   start(): void;
   commit(value: string): void;
 }
 
 /** The row when nothing is being recorded: keycaps with Change (and Restore default or Remove), or Not set with an add button. */
-function Resting({ label, value, addLabel, restore, remove, disabled, start, commit }: RestingProps) {
+function Resting({ label, value, restore, remove, start, commit }: RestingProps) {
   if (!value)
     return (
       <>
         <span className="dict-hotkey__unset">Not set</span>
-        <Button aria-label={`${addLabel}: ${label}`} disabled={disabled} onClick={start}>
-          {addLabel}
+        <Button aria-label={`Add shortcut: ${label}`} onClick={start}>
+          Add shortcut
         </Button>
       </>
     );
   return (
     <>
       <Chips value={value} />
-      <Button aria-label={`Change ${label}`} disabled={disabled} onClick={start}>
+      <Button aria-label={`Change ${label}`} onClick={start}>
         Change
       </Button>
       {restore !== undefined && (

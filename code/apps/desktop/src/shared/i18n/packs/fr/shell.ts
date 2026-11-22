@@ -92,8 +92,6 @@ export const FR_SHELL: Record<keyof typeof SHELL, string> = {
   "pal.exportDoes": "Ouvre la fenêtre d’export pour enregistrer la voix dans un fichier audio.",
   "pal.load-engine": "Charger le moteur vocal maintenant",
   "pal.load-engineDoes": "Charge le moteur vocal en mémoire pour que la prochaine lecture démarre aussitôt.",
-  "pal.dnd": "Activer ou désactiver Ne pas déranger",
-  "pal.dndDoes": "Coupe les notifications et les sons, ou les réactive.",
   "pal.check-updates": "Rechercher les mises à jour",
   "pal.check-updatesDoes": "Cherche une version plus récente de Speak Kit.",
   "pal.install-extension": "Installer l’extension",

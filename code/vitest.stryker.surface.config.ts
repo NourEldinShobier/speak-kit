@@ -11,7 +11,7 @@ export default defineConfig({
       "apps/desktop/src/shared/control/settings-registry.test.ts",
       "apps/desktop/src/main/settings-change.test.ts",
       "apps/desktop/src/shared/{release-notes,tray-notices}.test.ts",
-      "apps/desktop/src/main/{resources,single-instance,window-size-guard,window-motion}.test.ts",
+      "apps/desktop/src/main/{resources,single-instance,window-size-guard}.test.ts",
     ],
   },
 });

@@ -5,15 +5,14 @@ export const IDLE_MS: Record<IdleChoice, number> = { "1": 60_000, "5": 300_000, 
 
 /**
  * The server's runtime setters (SpeakKitServer). Optional so a missing one is reported, not fatal.
- * Load at startup is a creation option (serverOptions), not a setter.
  */
 export interface Tunable {
   setIdleUnloadMs?(ms: number): void;
   setOnBattery?(on: boolean): void;
 }
 
-export function serverOptions(c: Pick<Config, "idleUnload" | "loadAtStart">) {
-  return { idleUnloadMs: IDLE_MS[c.idleUnload], loadAtStart: c.loadAtStart };
+export function serverOptions(c: Pick<Config, "idleUnload">) {
+  return { idleUnloadMs: IDLE_MS[c.idleUnload] };
 }
 
 /** Pushes Settings > Memory to the running server. Battery saver only matters while on battery. */

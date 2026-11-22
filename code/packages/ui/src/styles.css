@@ -2307,28 +2307,28 @@ button.lm-listrow {
 }
 /* ---------- reduced motion: fades only, loops stop ---------- */
 
-/* reduced motion: fades only, loops stop; the app's own Off choice (data-reduce-motion=off) overrides the system preference */
+/* reduced motion (the system setting): fades only, loops stop */
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-reduce-motion="off"]) .lm *,
-  :root:not([data-reduce-motion="off"]) .lm *::before,
-  :root:not([data-reduce-motion="off"]) .lm *::after {
+  .lm *,
+  .lm *::before,
+  .lm *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: var(--lm-dur-instant) !important;
   }
-  :root:not([data-reduce-motion="off"]) .lm-toggle__knob,
-  :root:not([data-reduce-motion="off"]) .lm-progress__bar {
+  .lm-toggle__knob,
+  .lm-progress__bar {
     transition: none !important;
   }
   /* no press scale; colour fades stay */
-  :root:not([data-reduce-motion="off"]) .lm :active,
-  :root:not([data-reduce-motion="off"]) .lm-check__input:active + .lm-check__box {
+  .lm :active,
+  .lm-check__input:active + .lm-check__box {
     scale: 1 !important;
   }
-  :root:not([data-reduce-motion="off"]) .lm-spin,
-  :root:not([data-reduce-motion="off"]) .lm-skeleton.is-shimmer .lm-skeleton__line,
-  :root:not([data-reduce-motion="off"]) .lm-caret,
-  :root:not([data-reduce-motion="off"]) .lm-progress.is-indeterminate .lm-progress__bar {
+  .lm-spin,
+  .lm-skeleton.is-shimmer .lm-skeleton__line,
+  .lm-caret,
+  .lm-progress.is-indeterminate .lm-progress__bar {
     animation: none !important;
   }
 }
@@ -2352,14 +2352,16 @@ button.lm-listrow {
   }
 }
 
-/* Reduce motion chosen in Settings; the operating system preference is handled by the component styles */
-:root[data-reduce-motion="on"] *,
-:root[data-reduce-motion="on"] *::before,
-:root[data-reduce-motion="on"] *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
+/* Reduce motion, the system setting: no animation or smooth scrolling anywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .lx-flip:dir(rtl) {

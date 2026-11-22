@@ -50,8 +50,6 @@ export interface DictationStatus {
   /** The model failed to download or load. */
   modelError?: string;
   historyCount: number;
-  /** This system has a mouse hook, so a mouse button can be a shortcut. */
-  mouseButtons: boolean;
   /** `process.platform` of the app, for the options that exist on Windows only. */
   platform: string;
   /** Pause all shortcuts is on: keys pass through. Not saved; a restart starts unpaused. */

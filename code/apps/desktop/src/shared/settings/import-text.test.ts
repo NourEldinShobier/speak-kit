@@ -6,7 +6,7 @@ beforeAll(() => loadLocale("es"));
 
 describe("importMessage", () => {
   it("names the settings that changed", () => {
-    expect(importMessage("en", { status: "imported", applied: 4, changed: ["voice", "controlServer"], skipped: [] })).toBe("Imported 4 settings. Changed: voice, controlServer.");
+    expect(importMessage("en", { status: "imported", applied: 4, changed: ["voice", "experiments"], skipped: [] })).toBe("Imported 4 settings. Changed: voice, experiments.");
   });
 
   it("names the settings left out as well", () => {

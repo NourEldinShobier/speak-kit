@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { ACCELERATOR_SLOTS, findConflict, firstClash, HOOK_SLOTS, SLOT_NAMES } from "./conflicts";
-import { cancelVk, hotkeyLabels, isMouseKey, KEY_VK, unsupportedKey, usesAdvancedKey, validCancelKey, validHotkey } from "./keys";
-import { interpretButton, interpretKeys } from "./recorder-model";
+import { cancelVk, hotkeyLabels, KEY_VK, unsupportedKey, usesAdvancedKey, validCancelKey, validHotkey } from "./keys";
+import { interpretKeys } from "./recorder-model";
 import { DictationPatchSchema } from "./settings";
 import * as v from "valibot";
 
 describe("keys added for activation", () => {
-  it("accepts Home, End, Page Up, Page Down and Mouse 2 to 5 on their own", () => {
-    for (const k of ["Home", "End", "PageUp", "PageDown", "Mouse2", "Mouse3", "Mouse4", "Mouse5"]) expect(validHotkey(k)).toBe(true);
+  it("accepts Home, End, Page Up and Page Down on their own", () => {
+    for (const k of ["Home", "End", "PageUp", "PageDown"]) expect(validHotkey(k)).toBe(true);
   });
 
-  it("refuses the left button and a letter on its own", () => {
-    expect(validHotkey("Mouse1")).toBe(false);
+  it("refuses a letter on its own and any mouse button", () => {
     expect(validHotkey("KeyA")).toBe(false);
+    for (const k of ["Mouse1", "Mouse2", "Mouse3", "Mouse4", "Mouse5", "ControlLeft+Mouse4"]) expect(validHotkey(k)).toBe(false);
   });
 
   it("maps the dedicated navigation keys to codes the numpad keys can never produce", () => {
@@ -21,16 +21,12 @@ describe("keys added for activation", () => {
     expect(KEY_VK.End).toBe(0x123);
     expect(KEY_VK.PageUp).toBe(0x121);
     expect(KEY_VK.PageDown).toBe(0x122);
-    expect(KEY_VK.Mouse4).toBe(0x05);
   });
 
-  it("labels the new keys and tells advanced and mouse keys apart", () => {
+  it("labels the new keys and tells advanced keys apart", () => {
     expect(hotkeyLabels("PageDown")).toEqual(["Page Down"]);
-    expect(hotkeyLabels("Mouse4")).toEqual(["Mouse 4"]);
     expect(usesAdvancedKey("ControlLeft+Home")).toBe(true);
     expect(usesAdvancedKey("F9")).toBe(false);
-    expect(isMouseKey("Mouse5")).toBe(true);
-    expect(isMouseKey("F9")).toBe(false);
   });
 
   it("says Unsupported for a key it cannot match, not for a known one", () => {
@@ -39,7 +35,7 @@ describe("keys added for activation", () => {
     expect(unsupportedKey("Home")).toBe(false);
   });
 
-  it("allows Escape and single plain keys as the cancel key, not modifiers or mouse buttons", () => {
+  it("allows Escape and single plain keys as the cancel key, not modifiers or a mouse button", () => {
     expect(validCancelKey("Escape")).toBe(true);
     expect(validCancelKey("F10")).toBe(true);
     expect(validCancelKey("ControlLeft")).toBe(false);
@@ -51,32 +47,32 @@ describe("keys added for activation", () => {
 });
 
 describe("conflicts", () => {
-  const all = { dictation: "ControlRight", second: "", mouse: "", raw: "AltRight", pasteLast: "ControlLeft+AltLeft+KeyV", cancel: "Escape", "read-selection": "Ctrl+Alt+S" };
+  const all = { dictation: "ControlRight", raw: "AltRight", pasteLast: "ControlLeft+AltLeft+KeyV", cancel: "Escape", "read-selection": "Ctrl+Alt+S" };
 
   it("finds the slot that already has the shortcut", () => {
     expect(findConflict(all, "pasteLast", "ControlRight")).toBe("dictation");
-    expect(findConflict(all, "second", "AltRight")).toBe("raw");
-    expect(findConflict(all, "second", "F9")).toBeUndefined();
+    expect(findConflict(all, "pasteLast", "AltRight")).toBe("raw");
+    expect(findConflict(all, "pasteLast", "F9")).toBeUndefined();
   });
 
   it("treats an empty shortcut as no conflict", () => {
-    expect(findConflict(all, "second", "")).toBeUndefined();
+    expect(findConflict(all, "pasteLast", "")).toBeUndefined();
   });
 
   it("clashes with a reader accelerator whatever side the modifiers are on", () => {
-    expect(findConflict(all, "second", "ControlLeft+AltLeft+KeyS")).toBe("read-selection");
+    expect(findConflict(all, "pasteLast", "ControlLeft+AltLeft+KeyS")).toBe("read-selection");
     expect(findConflict(all, "raw", "ControlLeft+AltRight+KeyS")).toBe("read-selection");
   });
 
   it("clashes when one chord is part of the other on the same sides", () => {
-    expect(findConflict(all, "second", "ControlRight+F9")).toBe("dictation");
-    expect(findConflict(all, "second", "ControlLeft+AltLeft+KeyV+F9")).toBe("pasteLast");
-    expect(findConflict(all, "second", "ControlLeft+F9")).toBeUndefined();
+    expect(findConflict(all, "raw", "ControlRight+F9")).toBe("dictation");
+    expect(findConflict(all, "raw", "ControlLeft+AltLeft+KeyV+F9")).toBe("pasteLast");
+    expect(findConflict(all, "raw", "ControlLeft+F9")).toBeUndefined();
   });
 
   it("keeps the cancel key out of every chord", () => {
     expect(findConflict(all, "cancel", "AltRight")).toBe("raw");
-    expect(findConflict(all, "second", "ControlLeft+Escape")).toBe("cancel");
+    expect(findConflict(all, "raw", "ControlLeft+Escape")).toBe("cancel");
     expect(findConflict(all, "cancel", "F8")).toBeUndefined();
   });
 
@@ -91,17 +87,14 @@ describe("conflict names and accelerators", () => {
   it("names every shortcut the way the page does", () => {
     expect(SLOT_NAMES).toEqual({
       dictation: "Dictation shortcut",
-      second: "Second shortcut",
-      mouse: "Mouse button",
       raw: "Dictate without processing",
       pasteLast: "Paste last dictation",
       cancel: "Cancel key",
       "read-selection": "Read selection",
       "record-toggle": "Record a conversation",
       "play-pause": "Play or pause",
-      stop: "Stop reading",
     });
-    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(10);
+    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(7);
   });
 
   it("reads accelerator spellings: Ctrl, Control, Option, Shift, Super, Meta, Win, letters, digits and named keys", () => {
@@ -113,16 +106,16 @@ describe("conflict names and accelerators", () => {
       ["Meta+Shift+F9", "MetaRight+ShiftRight+F9"],
       ["Win+Ctrl+Space", "MetaLeft+ControlLeft+Space"],
     ] as const) {
-      expect(findConflict({ ...base, stop: accel }, "second", chord)).toBe("stop");
+      expect(findConflict({ ...base, "record-toggle": accel }, "raw", chord)).toBe("record-toggle");
     }
-    expect(findConflict({ stop: "Ctrl+Alt+S" }, "second", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
-    expect(findConflict({ stop: "Ctrl+Alt+1" }, "second", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
+    expect(findConflict({ "record-toggle": "Ctrl+Alt+S" }, "raw", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
+    expect(findConflict({ "record-toggle": "Ctrl+Alt+1" }, "raw", "ControlLeft+AltLeft+KeyD")).toBeUndefined();
   });
 
   it("does not clash an accelerator with another accelerator slot unless the keys are the same set", () => {
-    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Alt+Ctrl+X")).toBe("stop");
-    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+Y")).toBeUndefined();
-    expect(findConflict({ stop: "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+X+Y")).toBeUndefined();
+    expect(findConflict({ "record-toggle": "Ctrl+Alt+X" }, "play-pause", "Alt+Ctrl+X")).toBe("record-toggle");
+    expect(findConflict({ "record-toggle": "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+Y")).toBeUndefined();
+    expect(findConflict({ "record-toggle": "Ctrl+Alt+X" }, "play-pause", "Ctrl+Alt+X+Y")).toBeUndefined();
   });
 
   it("the cancel key clashes with a chord that contains it and with nothing else", () => {
@@ -138,7 +131,7 @@ describe("conflict names and accelerators", () => {
   });
 
   it("firstClash returns the pair in the order of the stored slots", () => {
-    expect(firstClash({ dictation: "F9", second: "F8", raw: "F8" })).toEqual(["second", "raw"]);
+    expect(firstClash({ dictation: "F9", pasteLast: "F8", raw: "F8" })).toEqual(["pasteLast", "raw"]);
     expect(firstClash({})).toBeUndefined();
     expect(firstClash({ dictation: "", raw: "" })).toBeUndefined();
   });
@@ -174,15 +167,6 @@ describe("recorder model", () => {
     expect(interpretKeys(["ControlLeft", "AltLeft", "ShiftLeft", "KeyD"], plain)).toEqual({ ok: false, refusal: "too-many" });
     expect(interpretKeys([], plain)).toEqual({ ok: false, refusal: "needs-key" });
   });
-
-  it("maps mouse buttons, and refuses the left one", () => {
-    expect(interpretButton(0)).toEqual({ ok: false, refusal: "left-click" });
-    expect(interpretButton(2)).toEqual({ ok: true, key: "Mouse2" });
-    expect(interpretButton(1)).toEqual({ ok: true, key: "Mouse3" });
-    expect(interpretButton(3)).toEqual({ ok: true, key: "Mouse4" });
-    expect(interpretButton(4)).toEqual({ ok: true, key: "Mouse5" });
-    expect(interpretButton(7)).toEqual({ ok: false, refusal: "unsupported" });
-  });
 });
 
 describe("activation config", () => {
@@ -193,9 +177,7 @@ describe("activation config", () => {
       hotkey: "F9",
       mode: "toggle",
       holdMs: 300,
-      secondHotkey: "",
       rawHotkey: "",
-      mouseButton: "",
       pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
       cancelKey: "Escape",
     });
@@ -206,7 +188,7 @@ describe("activation config", () => {
     expect(parseConfig({ dictation: { mode: "hybrid" } }).dictation.mode).toBe("hold");
   });
 
-  describe("resets a saved left button to the default of the platform and says so", () => {
+  describe("a saved shortcut with a mouse button goes back to the default of the platform", () => {
     const realPlatform = process.platform;
     afterEach(() => {
       Object.defineProperty(process, "platform", { value: realPlatform });
@@ -219,9 +201,19 @@ describe("activation config", () => {
       Object.defineProperty(process, "platform", { value: platform });
       vi.resetModules();
       const { parseConfig: parse } = await import("../schemas");
-      const c = parse({ dictation: { hotkey: "Mouse1", mouseButton: "Mouse1", secondHotkey: "ControlLeft+Mouse1" } }).dictation;
-      expect(c).toMatchObject({ hotkey, mouseButton: "", secondHotkey: "", resetNotice: "left-click" });
+      for (const saved of ["Mouse1", "Mouse4", "ControlLeft+Mouse5"]) {
+        const c = parse({ dictation: { hotkey: saved, rawHotkey: saved } }).dictation;
+        expect(c).toMatchObject({ hotkey, rawHotkey: "" });
+        expect(c.resetNotice).toBeUndefined();
+      }
     });
+  });
+
+  it("loads a file that still has a second shortcut or a mouse button, and drops both", () => {
+    const c = parseConfig({ dictation: { hotkey: "F9", secondHotkey: "F8", mouseButton: "Mouse4" } }).dictation;
+    expect(c).toMatchObject({ hotkey: "F9", rawHotkey: "" });
+    expect(c.resetNotice).toBeUndefined();
+    for (const key of ["secondHotkey", "mouseButton"]) expect(c).not.toHaveProperty(key);
   });
 
   it("clears an optional shortcut that shares a key with the dictation shortcut, and says so", () => {
@@ -248,10 +240,9 @@ describe("activation config", () => {
   it("the patch accepts a cleared optional shortcut and refuses an invalid one", () => {
     expect(v.safeParse(DictationPatchSchema, { rawHotkey: "" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { rawHotkey: "KeyA" }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { mouseButton: "Mouse1" }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { mouseButton: "Mouse4" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { rawHotkey: "Mouse4" }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { cancelKey: "ControlLeft" }).success).toBe(false);
-    for (const removed of [{ shareHotkey: true }, { pauseRules: { mode: "off", apps: [], fullscreen: false } }, { transformHotkey: "F6" }])
+    for (const removed of [{ secondHotkey: "F8" }, { mouseButton: "Mouse4" }, { shareHotkey: true }, { pauseRules: { mode: "off", apps: [], fullscreen: false } }, { transformHotkey: "F6" }])
       expect(v.safeParse(DictationPatchSchema, removed).success).toBe(false);
   });
 });

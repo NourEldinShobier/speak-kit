@@ -5,9 +5,6 @@ import { type Chord, type HotkeyEvent, type HotkeySource as OsHotkeys } from "./
 /** Every shortcut that reaches the key hook. An empty string is unset and registers nothing. */
 export interface HotkeyLayout {
   hotkey: string;
-  second: string;
-  /** A mouse button code such as "Mouse4". */
-  mouse: string;
   raw: string;
   pasteLast: string;
   cancelKey: string;
@@ -44,7 +41,7 @@ interface Deps {
   changed?(): void;
 }
 
-const EMPTY: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: CANCEL_KEY };
+const EMPTY: HotkeyLayout = { hotkey: "", raw: "", pasteLast: "", cancelKey: CANCEL_KEY };
 const chordOf = (hotkey: string): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) });
 const defaultAfter = (ms: number, fn: () => void): (() => void) => {
   const t = setTimeout(fn, ms);
@@ -134,7 +131,7 @@ class Hotkeys implements SwitchableHotkeys {
   /** The name the session knows a chord by: its shortcut string. */
   #nameOf(chord: string | undefined): string | undefined {
     const l = this.#layout;
-    return chord === undefined ? l.hotkey : { second: l.second, mouse: l.mouse, raw: l.raw }[chord];
+    return chord === undefined ? l.hotkey : { raw: l.raw }[chord];
   }
 
   readonly #onEvent = (e: HotkeyEvent): void => {
@@ -162,8 +159,6 @@ class Hotkeys implements SwitchableHotkeys {
   #extras(): Record<string, Chord> {
     const l = this.#layout;
     const out: Record<string, Chord> = {};
-    if (l.second) out.second = chordOf(l.second);
-    if (l.mouse) out.mouse = chordOf(l.mouse);
     if (l.raw) out.raw = chordOf(l.raw);
     if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast);
     return out;

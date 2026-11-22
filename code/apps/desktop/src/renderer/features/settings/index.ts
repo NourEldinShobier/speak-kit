@@ -6,11 +6,8 @@ import { lazy } from "react";
 export { GeneralPage } from "./GeneralPage";
 export { VoicePage } from "./VoicePage";
 export { ShortcutsPage } from "./ShortcutsPage";
-export { NotificationsPage } from "./NotificationsPage";
 export { PrivacyPage } from "./PrivacyPage";
-export { AutomationPage } from "./AutomationPage";
 export { SettingsFrame } from "./SettingsFrame";
-export { useMotionPreference } from "./accessibility";
 export { requestRow } from "./focus";
 export { QuickTopics, SettingsResults, SettingsSearchField } from "./SettingsSearch";
 

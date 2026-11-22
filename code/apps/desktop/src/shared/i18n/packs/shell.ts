@@ -91,8 +91,6 @@ export const SHELL = definePack({
   "pal.exportDoes": "Opens the export dialog to save speech as an audio file.",
   "pal.load-engine": "Load the voice engine now",
   "pal.load-engineDoes": "Loads the voice engine into memory so the next reading starts at once.",
-  "pal.dnd": "Toggle Do not disturb",
-  "pal.dndDoes": "Turns pop-ups and sounds off, or back on.",
   "pal.check-updates": "Check for updates",
   "pal.check-updatesDoes": "Looks for a newer version of Speak Kit.",
   "pal.install-extension": "Install the extension",

@@ -54,16 +54,11 @@ function nativeTray(run: TrayHandlers, mac: boolean, menu: () => Menu | null): T
  */
 export function createTray(context: () => TrayContext, run: TrayHandlers, switchTo: (id: string) => void = () => {}) {
   const mac = process.platform === "darwin";
-  let tray: Tray | null = null;
   let menu: Menu | null = null;
   let [shown, summary] = ["", ""];
   /** The system may refuse to create the icon (no notification area, a broken shell): the app goes on without it and says so through `failed`. */
-  let failed = false;
-  const build = () => {
-    tray = nativeTray(run, mac, () => menu);
-    failed = tray === null;
-    shown = "";
-  };
+  let tray = nativeTray(run, mac, () => menu);
+  const failed = tray === null;
   const refresh = () => {
     if (!tray) return;
     const c = context();
@@ -80,23 +75,11 @@ export function createTray(context: () => TrayContext, run: TrayHandlers, switch
     menu = Menu.buildFromTemplate(template);
     if (!mac) tray.setContextMenu(menu);
   };
-  build();
   refresh();
   return {
     refresh,
-    /** The icon was wanted and could not be created: nothing can reopen a hidden window. */
+    /** The system could not create the icon: nothing can reopen a hidden window. */
     failed: () => failed,
-    /** The icon can be hidden in Settings; showing it again rebuilds it from the current state. */
-    setVisible: (on: boolean) => {
-      if (on && !tray) {
-        build();
-        refresh();
-      } else if (!on) {
-        failed = false;
-        tray?.destroy();
-        tray = null;
-      }
-    },
     /** For tests: the native menu cannot be clicked from Playwright. */
     items: () => menu?.items ?? [],
     summary: () => summary,

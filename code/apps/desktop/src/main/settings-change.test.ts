@@ -43,10 +43,10 @@ describe("applyChange", () => {
 
   it("puts every shortcut back before it sets the ones named beside it", async () => {
     const { calls, targets } = rig();
-    expect(await applyChange(targets, { shortcuts: "default", "shortcuts.stop": "Ctrl+Alt+Q" })).toEqual({ ok: true });
+    expect(await applyChange(targets, { shortcuts: "default", "shortcuts.record-toggle": "Ctrl+Alt+Q" })).toEqual({ ok: true });
     expect(calls).toEqual([
       ["resetShortcuts", null],
-      ["shortcut", ["stop", "Ctrl+Alt+Q"]],
+      ["shortcut", ["record-toggle", "Ctrl+Alt+Q"]],
     ]);
   });
 
@@ -128,7 +128,7 @@ describe("importSettings", () => {
     const file = {
       voice: "af_bella",
       voiceChatVoice: "alloy",
-      shortcuts: { stop: "Ctrl+Alt+S" },
+      shortcuts: { "record-toggle": "Ctrl+Alt+S" },
       transcripts: { textDays: 90 },
       engines: { releaseOnClose: true, lastUsed: { m: 1 } },
     };
@@ -136,11 +136,11 @@ describe("importSettings", () => {
     expect(r).toEqual({
       status: "imported",
       applied: 5,
-      changed: ["voiceChatVoice", "shortcuts.stop", "transcripts.textDays", "engines.releaseOnClose"],
+      changed: ["voiceChatVoice", "shortcuts.record-toggle", "transcripts.textDays", "engines.releaseOnClose"],
       skipped: ["engines.lastUsed"],
     });
     expect(calls).toEqual([
-      ["shortcut", ["stop", "Ctrl+Alt+S"]],
+      ["shortcut", ["record-toggle", "Ctrl+Alt+S"]],
       ["app", { voice: "af_bella" }],
       ["transcripts", { textDays: 90 }],
       ["engines", { releaseOnClose: true }],
@@ -148,18 +148,18 @@ describe("importSettings", () => {
     ]);
   });
 
-  it("asks before switching on the control server, experiments and tool access, and says what they are", async () => {
+  it("asks before switching on experiments, and says what they are", async () => {
     asked.length = 0;
     const { calls, targets } = rig();
-    await importSettings(src('{"controlServer":true,"mcpTools":{"a":true},"voice":"af_bella"}', { controlServer: false }, true), targets);
-    expect(asked).toEqual([["the local control server for the command line and AI apps", "the tools offered to AI apps"]]);
-    expect(calls).toEqual([["app", { controlServer: true, mcpTools: { a: true }, voice: "af_bella" }]]);
+    await importSettings(src('{"experiments":{"a":true},"voice":"af_bella"}', {}, true), targets);
+    expect(asked).toEqual([["experiments"]]);
+    expect(calls).toEqual([["app", { experiments: { a: true }, voice: "af_bella" }]]);
   });
 
   it("leaves those settings out when the person declines, and applies the rest", async () => {
     const { calls, targets } = rig();
-    const r = await importSettings(src('{"controlServer":true,"voice":"af_bella"}', { controlServer: false }, false), targets);
-    expect(r).toEqual({ status: "imported", applied: 1, changed: ["voice"], skipped: ["controlServer"] });
+    const r = await importSettings(src('{"experiments":{"a":true},"voice":"af_bella"}', {}, false), targets);
+    expect(r).toEqual({ status: "imported", applied: 1, changed: ["voice"], skipped: ["experiments"] });
     expect(calls).toEqual([["app", { voice: "af_bella" }]]);
   });
 
@@ -179,9 +179,9 @@ describe("importSettings", () => {
 describe("applyChange beyond app settings", () => {
   it("sets a shortcut, the login item and the port", async () => {
     const { calls, targets } = rig();
-    expect(await applyChange(targets, { "shortcuts.stop": "Ctrl+Alt+S", launchAtLogin: true, port: 47700 })).toEqual({ ok: true });
+    expect(await applyChange(targets, { "shortcuts.record-toggle": "Ctrl+Alt+S", launchAtLogin: true, port: 47700 })).toEqual({ ok: true });
     expect(calls).toEqual([
-      ["shortcut", ["stop", "Ctrl+Alt+S"]],
+      ["shortcut", ["record-toggle", "Ctrl+Alt+S"]],
       ["login", true],
       ["port", 47700],
     ]);
@@ -189,7 +189,7 @@ describe("applyChange beyond app settings", () => {
 
   it("hands back the refusal of a shortcut and stores nothing after it", async () => {
     const { calls, targets } = rig(undefined, true);
-    const r = await applyChange(targets, { "shortcuts.stop": "Ctrl+Alt+S", voice: "a" });
+    const r = await applyChange(targets, { "shortcuts.record-toggle": "Ctrl+Alt+S", voice: "a" });
     expect(r).toMatchObject({ ok: false, message: "That shortcut cannot be used.", shortcut: { ok: false } });
     expect(calls.map((c) => c[0])).toEqual(["shortcut"]);
   });

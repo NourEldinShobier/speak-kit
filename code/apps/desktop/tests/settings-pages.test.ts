@@ -30,9 +30,9 @@ describe("settings search and the Advanced fold", () => {
     const l = await start({ config: DONE });
     await openSettings(l);
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("false");
-    await l.page.getByRole("searchbox", { name: "Search settings" }).fill("settings file");
+    await l.page.getByRole("searchbox", { name: "Search settings" }).fill("import settings");
     await l.page.keyboard.press("Enter");
-    await l.page.locator('[data-setting-row="general/settings-file"][data-focus-ring]').waitFor();
+    await l.page.locator('[data-setting-row="general/import"][data-focus-ring]').waitFor();
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("true");
   });
 
@@ -43,21 +43,6 @@ describe("settings search and the Advanced fold", () => {
     await openSettings(l, "Privacy");
     await openSettings(l, "General");
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("false");
-  });
-});
-
-describe("automation", () => {
-  it("shows the server, the command-line tool and the deep links; turning the server off shows the warning and Start server turns it back on", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Automation");
-    await l.page.getByText("speakkit status --json").waitFor();
-    await l.page.getByRole("button", { name: "Copy speakkit://settings/shortcuts" }).waitFor();
-    await l.page.getByRole("switch", { name: "Let AI apps use Speak Kit" }).click();
-    await l.page.getByText("The local server is off").waitFor();
-    expect(configOf(l).controlServer).toBe(false);
-    await l.page.getByRole("button", { name: "Start server" }).click();
-    await l.page.getByText("The local server is off").waitFor({ state: "detached" });
-    expect(configOf(l).controlServer).toBe(true);
   });
 });
 
@@ -90,16 +75,6 @@ describe("experiments", () => {
       .click();
     await card.getByRole("button", { name: "Turn off" }).waitFor();
     expect(configOf(l).experiments).toEqual({ "caption-export": true });
-  });
-});
-
-describe("accessibility", () => {
-  it("choosing Reduce sets the motion attribute on the document and saves it", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Accessibility");
-    await l.page.getByRole("radio", { name: "Reduce" }).click();
-    await l.page.waitForFunction(() => document.documentElement.getAttribute("data-reduce-motion") === "on");
-    expect(configOf(l).reduceMotion).toBe("on");
   });
 });
 
@@ -146,10 +121,11 @@ describe("settings file notices", () => {
     const l = await start({ config: { ...DONE, configVersion: 9 } });
     await openSettings(l);
     await l.page.getByTestId("settings-notice").getByText("newer version").first().waitFor();
-    await openSettings(l, "Accessibility");
-    await l.page.getByRole("radio", { name: "Reduce" }).click();
+    await openSettings(l, "General");
+    await l.page.getByRole("combobox", { name: "Language" }).click();
+    await l.page.getByRole("option", { name: "Deutsch" }).click();
     expect(configOf(l).configVersion).toBe(9);
-    expect(configOf(l).reduceMotion).toBeUndefined();
+    expect(configOf(l).language).toBeUndefined();
   });
 });
 
@@ -175,11 +151,11 @@ describe("about and privacy", () => {
   });
 });
 
-describe("the 960 px window and the tray", () => {
+describe("the 960 px window", () => {
   it("every page of this package fits the narrow window without a horizontal scrollbar", async () => {
     const l = await start({ config: DONE });
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 700));
-    for (const name of ["General", "Notifications", "Accessibility", "Performance", "Storage", "Privacy", "Experiments", "Diagnostics", "About"]) {
+    for (const name of ["General", "Accessibility", "Performance", "Storage", "Privacy", "Experiments", "Diagnostics", "About"]) {
       await openSettings(l, name);
       const over = await l.page.evaluate(() => {
         const m = document.querySelector("main")!;
@@ -196,13 +172,5 @@ describe("the 960 px window and the tray", () => {
     const notice = l.page.getByTestId("settings-notice");
     await notice.getByText("are not saved").waitFor();
     expect(await notice.getByRole("button", { name: "Dismiss" }).count()).toBe(0);
-  });
-
-  it("with the tray icon hidden the close button quits the app", async () => {
-    const l = await start({ config: { ...DONE, hideTrayIcon: true } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const closed = l.app.waitForEvent("close", { timeout: 10_000 });
-    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
-    await closed;
   });
 });

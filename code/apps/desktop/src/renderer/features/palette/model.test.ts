@@ -22,7 +22,7 @@ describe("commands", () => {
   });
   it("has a page command for every menu item and a settings command for every settings page", () => {
     expect(all.filter((c) => c.group === "Pages")).toHaveLength(9);
-    expect(all.filter((c) => c.group === "Settings")).toHaveLength(14);
+    expect(all.filter((c) => c.group === "Settings")).toHaveLength(12);
   });
   it("builds readings with minutes and voices with a Voice hint", () => {
     expect(all.find((c) => c.id === "d-d1")).toMatchObject({ group: "Readings", hint: "2 min", action: { type: "open-doc", id: "d1" } });
@@ -55,7 +55,6 @@ describe("filter", () => {
   it("offers the system actions", () => {
     expect(filterCommands(all, "clipboard")).toEqual([]);
     expect(filterCommands(all, "mp3")[0]!.action).toEqual({ type: "export" });
-    expect(filterCommands(all, "disturb")[0]!.action).toEqual({ type: "dnd" });
     expect(filterCommands(all, "chrome")[0]!.action).toEqual({ type: "install-extension" });
     expect(filterCommands(all, "global keys")[0]!.action).toEqual({ type: "nav", page: "settings", sub: "shortcuts" });
     expect(filterCommands(all, "browser integration")[0]!.action).toEqual({ type: "nav", page: "settings", sub: "browser" });
@@ -117,7 +116,6 @@ describe("command table", () => {
     expect(row("toggle-reading")).toEqual(["Actions", "Play or pause reading", "Plays or pauses the current reading.", "player-play", "resume mini player", { type: "toggle-reading" }]);
     expect(row("export")).toEqual(["Actions", "Export audio", "Opens the export dialog to save speech as an audio file.", "download", "save mp3 wav file", { type: "export" }]);
     expect(row("load-engine")).toEqual(["Actions", "Load the voice engine now", "Loads the voice engine into memory so the next reading starts at once.", "cpu", "wake warm", { type: "load-engine" }]);
-    expect(row("dnd")).toEqual(["Actions", "Toggle Do not disturb", "Turns pop-ups and sounds off, or back on.", "bell", "notifications quiet toast", { type: "dnd" }]);
     expect(row("check-updates")).toEqual(["Actions", "Check for updates", "Looks for a newer version of Speak Kit.", "refresh", "version upgrade", { type: "check-updates" }]);
     expect(row("install-extension")).toEqual([
       "Actions",
@@ -172,7 +170,7 @@ describe("ranking", () => {
     const actions = v.sections.find((s) => s.label === "Actions")!.items;
     expect(actions.every((c) => c.group === "Actions")).toBe(true);
     expect(actions.map((c) => c.id)).not.toContain("logs");
-    expect(actions).toHaveLength(8);
+    expect(actions).toHaveLength(7);
   });
 });
 

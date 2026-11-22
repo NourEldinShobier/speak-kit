@@ -23,20 +23,6 @@ export const unwrappedField = (field: object): v.GenericSchema => UNWRAPPED.get(
 
 const bool = (d: boolean) => fb(v.boolean(), d);
 
-/** Events in Settings > Notifications; each can show a Windows toast, a line in the bell, and play a sound. */
-export const NOTIFY_EVENTS = ["reading-finished", "export-done", "engine-error", "update-ready"] as const;
-export type NotifyEvent = (typeof NOTIFY_EVENTS)[number];
-export const NOTIFY_CHANNELS = ["toast", "bell", "sound"] as const;
-export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
-const channelsOf = (toast: boolean, bell: boolean, sound: boolean) => fb(v.object({ toast: bool(toast), bell: bool(bell), sound: bool(sound) }), { toast, bell, sound });
-const NotificationsSchema = v.object({
-  "reading-finished": channelsOf(false, false, false),
-  "export-done": channelsOf(true, true, false),
-  "engine-error": channelsOf(true, true, true),
-  "update-ready": channelsOf(true, true, false),
-});
-export type Notifications = v.InferOutput<typeof NotificationsSchema>;
-
 const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
   fb(
     v.pipe(
@@ -49,7 +35,6 @@ const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
 const ShortcutsSchema = v.object({
   "read-selection": accelerator("read-selection"),
   "play-pause": accelerator("play-pause"),
-  stop: accelerator("stop"),
   "record-toggle": accelerator("record-toggle"),
 });
 
@@ -68,8 +53,6 @@ const ExportPrefsSchema = fb(
 export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
 
 export const APPEARANCES = ["system", "light"] as const;
-export const CLOSE_ACTIONS = ["hide", "quit"] as const;
-export const MOTION_CHOICES = ["system", "on", "off"] as const;
 export const UPDATE_CHANNELS = ["stable", "early"] as const;
 
 const WhatsNewSchema = v.object({
@@ -86,28 +69,17 @@ export const ConfigSchema = v.object({
   /** The setup step the person was on when the window closed, so setup resumes there. */
   setupStep: fb(v.picklist([0, 1, 2, 3, 4]), 0),
   preferredPort: fb(port, DEFAULT_PORT),
-  startMinimized: bool(false),
   language: fb(v.picklist(LANGUAGE_CHOICES), "system"),
   appearance: fb(v.picklist(APPEARANCES), "system"),
-  closeAction: fb(v.picklist(CLOSE_ACTIONS), "hide"),
-  hideTrayIcon: bool(false),
-  reduceMotion: fb(v.picklist(MOTION_CHOICES), "system"),
   updateChannel: fb(v.picklist(UPDATE_CHANNELS), "stable"),
   experiments: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
-  /** MCP tools the person switched on or off; a tool not listed uses its default. */
-  mcpTools: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
   appliedMigrations: fb(v.array(v.pipe(v.string(), v.maxLength(64))), []),
   configVersion: fb(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
   idleUnload: fb(v.picklist(IDLE_CHOICES), "5"),
-  loadAtStart: bool(false),
   batterySaver: bool(true),
-  notifications: fb(NotificationsSchema, v.parse(NotificationsSchema, {})),
-  doNotDisturb: bool(false),
   autoUpdate: bool(true),
   /** The notes of the update that was downloaded last, for the What is new page once that version runs. */
   whatsNew: fb(WhatsNewSchema, () => v.parse(WhatsNewSchema, {})),
-  /** The local control server for the command line and the MCP server. */
-  controlServer: bool(true),
   shortcuts: fb(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
   exportPrefs: ExportPrefsSchema,
   // Saved ids of the form `cb_` plus 8 hex digits name voices that no longer exist; they become the default voice.
@@ -129,22 +101,13 @@ export const ConfigPatchSchema = v.partial(
     setupDone: v.boolean(),
     setupSkipped: v.boolean(),
     setupStep: v.picklist([0, 1, 2, 3, 4]),
-    startMinimized: v.boolean(),
     language: v.picklist(LANGUAGE_CHOICES),
     appearance: v.picklist(APPEARANCES),
-    closeAction: v.picklist(CLOSE_ACTIONS),
-    hideTrayIcon: v.boolean(),
-    reduceMotion: v.picklist(MOTION_CHOICES),
     updateChannel: v.picklist(UPDATE_CHANNELS),
     experiments: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
-    mcpTools: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
     idleUnload: v.picklist(IDLE_CHOICES),
-    loadAtStart: v.boolean(),
     batterySaver: v.boolean(),
-    notifications: NotificationsSchema,
-    doNotDisturb: v.boolean(),
     autoUpdate: v.boolean(),
-    controlServer: v.boolean(),
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
@@ -183,11 +146,6 @@ export const ARGS = {
   setLaunchAtLogin: v.tuple([v.boolean()]),
   setPort: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535))]),
   regenerateToken: v.tuple([]),
-  automationInfo: v.tuple([]),
-  resetControlToken: v.tuple([]),
-  commandLine: v.tuple([v.picklist(["install", "remove"])]),
-  installAgentSkill: v.tuple([]),
-  testInTerminal: v.tuple([]),
   retryEngine: v.tuple([]),
   downloadModel: v.tuple([]),
   voices: v.tuple([]),
@@ -197,8 +155,6 @@ export const ARGS = {
   openPath: v.tuple([v.picklist(OPEN_PATHS)]),
   storage: v.tuple([]),
   deleteDownloads: v.tuple([]),
-  metrics: v.tuple([]),
-  resources: v.tuple([]),
   hideWindow: v.tuple([]),
   quit: v.tuple([]),
   setShortcut: v.tuple([ShortcutIdSchema, v.pipe(v.string(), v.maxLength(64))]),

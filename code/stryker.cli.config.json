@@ -9,7 +9,6 @@
   "mutate": [
     "apps/desktop/src/cli/{run,render,speak,mcp}.ts",
     "apps/desktop/src/cli/reads/{time,index}.ts",
-    "apps/desktop/src/main/cli-path/{index,path-list}.ts",
     "apps/desktop/src/shared/control/mcp-tools.ts",
     "packages/server/src/streams/{segmenter,sessions}.ts",
     "packages/server/src/page-context.ts",

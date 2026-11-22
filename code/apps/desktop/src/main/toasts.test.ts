@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseConfig, type Notifications } from "../shared/schemas";
-import { THROTTLE_MS, ToastCenter } from "./toasts";
+import { NOTIFY_CHANNELS, THROTTLE_MS, ToastCenter } from "./toasts";
 
-function setup(over: Partial<{ notifications: Notifications; doNotDisturb: boolean; looking: boolean }> = {}) {
+function setup(over: { looking?: boolean } = {}) {
   const shown: unknown[] = [];
   const bell: string[] = [];
   let now = 1_000;
-  const prefs = { notifications: parseConfig({}).notifications, doNotDisturb: false, ...over };
   const center = new ToastCenter({
-    prefs: () => prefs,
     looking: () => over.looking ?? false,
     show: (t) => shown.push({ title: t.title, silent: t.silent }),
     bell: (_e, title) => bell.push(title),
@@ -39,13 +36,11 @@ describe("ToastCenter", () => {
     expect(t.bell).toEqual(["Export a", "Export b", "Export a"]);
   });
 
-  it("Do Not Disturb and a focused window keep the bell line and drop the toast", () => {
-    const dnd = setup({ doNotDisturb: true });
-    expect(dnd.center.notify(exp("a"))).toBe("bell-only");
-    expect(dnd.shown).toEqual([]);
-    expect(dnd.bell).toEqual(["Export a"]);
+  it("a focused window keeps the bell line and drops the toast", () => {
     const looking = setup({ looking: true });
     expect(looking.center.notify(exp("a"))).toBe("bell-only");
+    expect(looking.shown).toEqual([]);
+    expect(looking.bell).toEqual(["Export a"]);
   });
 
   it("an event with toast and bell off does nothing", () => {
@@ -55,10 +50,12 @@ describe("ToastCenter", () => {
     expect(t.bell).toEqual([]);
   });
 
-  it("toast off but bell on records only the bell", () => {
-    const n = parseConfig({}).notifications;
-    const t = setup({ notifications: { ...n, "export-done": { toast: false, bell: true, sound: false } } });
-    expect(t.center.notify(exp("a"))).toBe("bell-only");
-    expect(t.bell).toEqual(["Export a"]);
+  it("each event uses a fixed set of channels", () => {
+    expect(NOTIFY_CHANNELS).toEqual({
+      "reading-finished": { toast: false, bell: false, sound: false },
+      "export-done": { toast: true, bell: true, sound: false },
+      "engine-error": { toast: true, bell: true, sound: true },
+      "update-ready": { toast: true, bell: true, sound: false },
+    });
   });
 });

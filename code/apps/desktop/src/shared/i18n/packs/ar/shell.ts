@@ -91,8 +91,6 @@ export const AR_SHELL: Record<keyof typeof SHELL, string> = {
   "pal.exportDoes": "يفتح نافذة التصدير لحفظ الكلام في ملف صوتي.",
   "pal.load-engine": "تحميل محرك الصوت الآن",
   "pal.load-engineDoes": "يحمّل محرك الصوت في الذاكرة لتبدأ القراءة التالية فورًا.",
-  "pal.dnd": "تبديل وضع عدم الإزعاج",
-  "pal.dndDoes": "يُسكت التنبيهات والأصوات أو يعيدها.",
   "pal.check-updates": "البحث عن تحديثات",
   "pal.check-updatesDoes": "يبحث عن إصدار أحدث من Speak Kit.",
   "pal.install-extension": "تثبيت الإضافة",

@@ -455,7 +455,7 @@
   opacity: 0.5;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-reduce-motion="off"]) .tr-rec__dot {
+  .tr-rec__dot {
     animation: none;
   }
 }

@@ -62,7 +62,6 @@ const base = (over: Partial<TrayContext> = {}): TrayContext => ({
   reader: IDLE_READER,
   update: UPDATE_UNSUPPORTED,
   exportsRunning: 0,
-  doNotDisturb: false,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ...over,
 });
@@ -70,9 +69,10 @@ const reading = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READE
 
 function setup(initial: TrayContext = base()) {
   let context = initial;
-  const run = Object.fromEntries(
-    ["open", "pause", "resume", "stop", "wake", "restart-engine", "dnd", "settings", "check-updates", "restart-update", "quit"].map((a) => [a, vi.fn()]),
-  ) as never as Record<string, ReturnType<typeof vi.fn>>;
+  const run = Object.fromEntries(["open", "pause", "resume", "stop", "wake", "restart-engine", "settings", "check-updates", "restart-update", "quit"].map((a) => [a, vi.fn()])) as never as Record<
+    string,
+    ReturnType<typeof vi.fn>
+  >;
   const tray = createTray(() => context, run as never);
   return { tray, run, fake: mocks.state.trays.at(-1)!, set: (c: TrayContext) => (context = c) };
 }
@@ -90,12 +90,12 @@ describe("tray wiring", () => {
     expect(t.fake.tip).toMatch(/^Speak Kit - Ready/);
     expect(t.tray.summary()).toBe(`normal|${t.fake.tip}`);
     expect(t.tray.summary().startsWith("normal|")).toBe(true);
-    expect(labels(t)).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+    expect(labels(t)).toEqual(["Open Speak Kit", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
 
-  it("turns menu rows into native items: accelerators that do not register, a checkbox for Do not disturb, disabled rows", () => {
-    const t = setup(base({ doNotDisturb: true, health: health("loading") }));
-    expect(t.fake.menu!.items.find((i) => i.label === "Do not disturb")).toMatchObject({ type: "checkbox", checked: true });
+  it("turns a menu row with a hint into a native item whose accelerator is shown but not registered", () => {
+    const t = setup(base({ reader: reading("playing") }));
+    expect(t.fake.menu!.items.find((i) => i.label === "Pause")).toMatchObject({ accelerator: "CommandOrControl+Alt+Space", registerAccelerator: false });
   });
 
   it("on macOS the menu opens on right click only, so the plain click can show the window", () => {
@@ -146,7 +146,7 @@ describe("tray wiring", () => {
     const first = t.fake.menu;
     t.tray.refresh();
     expect(t.fake.menu).toBe(first);
-    t.set(base({ doNotDisturb: true }));
+    t.set(base({ reader: reading("playing") }));
     t.tray.refresh();
     expect(t.fake.menu).not.toBe(first);
   });
@@ -175,21 +175,5 @@ describe("tray that cannot be created", () => {
     expect(() => tray.refresh()).not.toThrow();
     expect(tray.summary()).toBe("");
     expect(mocks.state.trays).toHaveLength(0);
-  });
-
-  it("tries again when the icon is switched on, and stops reporting once it exists", () => {
-    mocks.state.fail = true;
-    const tray = createTray(() => base(), {} as never);
-    mocks.state.fail = false;
-    tray.setVisible(true);
-    expect(tray.failed()).toBe(false);
-    expect(mocks.state.trays).toHaveLength(1);
-  });
-
-  it("is not a failure when the person hid the icon", () => {
-    mocks.state.fail = true;
-    const tray = createTray(() => base(), {} as never);
-    tray.setVisible(false);
-    expect(tray.failed()).toBe(false);
   });
 });

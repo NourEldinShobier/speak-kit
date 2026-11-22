@@ -3,10 +3,10 @@ import { MAX_IMPORT_BYTES, planImport } from "./import";
 
 describe("planImport", () => {
   it("takes valid app and dictation settings, with dictation named the way the registry names it", () => {
-    const text = JSON.stringify({ voice: "af_bella", speed: 1.5, startMinimized: true, dictation: { mode: "toggle", language: "en" } });
+    const text = JSON.stringify({ voice: "af_bella", speed: 1.5, autoUpdate: false, dictation: { mode: "toggle", language: "en" } });
     expect(planImport(text)).toMatchObject({
       ok: true,
-      change: { voice: "af_bella", speed: 1.5, startMinimized: true, "dictation.mode": "toggle", "dictation.language": "en" },
+      change: { voice: "af_bella", speed: 1.5, autoUpdate: false, "dictation.mode": "toggle", "dictation.language": "en" },
       skipped: [],
     });
   });
@@ -51,30 +51,37 @@ describe("planImport", () => {
 
   it("names the areas the way the registry does and leaves out what belongs to one install", () => {
     const text = JSON.stringify({
-      shortcuts: { stop: "Ctrl+Alt+S" },
+      shortcuts: { "record-toggle": "Ctrl+Alt+S" },
       transcripts: { textDays: 90 },
       engines: { device: "cpu", failedDevices: [] },
       voiceChatVoice: "alloy",
     });
     expect(planImport(text)).toMatchObject({
       ok: true,
-      change: { "shortcuts.stop": "Ctrl+Alt+S", "transcripts.textDays": 90, "engines.device": "cpu", voiceChatVoice: "alloy" },
+      change: { "shortcuts.record-toggle": "Ctrl+Alt+S", "transcripts.textDays": 90, "engines.device": "cpu", voiceChatVoice: "alloy" },
       skipped: ["engines.failedDevices"],
     });
   });
 
   it("lists the settings that need a confirmation and the ones that differ from what is set", () => {
-    const text = JSON.stringify({ controlServer: true, voice: "af_bella", speed: 1, transcripts: { notes: true } });
-    const r = planImport(text, { controlServer: true, voice: "af_heart", speed: 1 });
+    const text = JSON.stringify({ voice: "af_bella", speed: 1, transcripts: { notes: true } });
+    const r = planImport(text, { voice: "af_heart", speed: 1 });
     expect(r).toMatchObject({ needsConfirmation: ["transcripts.notes"], changed: ["voice", "transcripts.notes"] });
   });
 
-  it("asks about the control server, experiments and tool access only when the import would switch them on", () => {
-    const on = JSON.stringify({ controlServer: true, experiments: { x: true }, mcpTools: { a: false, b: true } });
-    expect(planImport(on, { controlServer: false })).toMatchObject({ needsConfirmation: ["controlServer", "experiments", "mcpTools"] });
-    const off = JSON.stringify({ controlServer: false, experiments: { x: false }, mcpTools: { a: false } });
-    expect(planImport(off, { controlServer: true, experiments: { x: true } })).toMatchObject({ needsConfirmation: [] });
-    expect(planImport(on, { controlServer: true, experiments: { x: true }, mcpTools: { a: false, b: true } })).toMatchObject({ needsConfirmation: [] });
+  it("asks about experiments only when the import would switch one on", () => {
+    const on = JSON.stringify({ experiments: { x: true } });
+    expect(planImport(on, {})).toMatchObject({ needsConfirmation: ["experiments"] });
+    expect(planImport(JSON.stringify({ experiments: { x: false } }), { experiments: { x: true } })).toMatchObject({ needsConfirmation: [] });
+    expect(planImport(on, { experiments: { x: true } })).toMatchObject({ needsConfirmation: [] });
+  });
+
+  it("leaves out the removed automation settings of an older settings file", () => {
+    expect(planImport(JSON.stringify({ controlServer: false, mcpTools: { read_aloud: false }, voice: "af_bella" }))).toMatchObject({
+      ok: true,
+      change: { voice: "af_bella" },
+      skipped: ["controlServer", "mcpTools"],
+    });
   });
 
   it("asks before rewriting dictated text is switched on", () => {

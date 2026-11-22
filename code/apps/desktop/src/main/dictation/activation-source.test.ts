@@ -6,7 +6,7 @@ import { errorView, hudViewFor } from "./hud-view";
 import { coreSettings, hotkeyLayout } from "./service-support";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape" };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", raw: "", pasteLast: "", cancelKey: "Escape" };
 
 function rig(down = new Set<number>()) {
   let handlers: HotkeyHandlers | undefined;
@@ -57,13 +57,11 @@ describe("several shortcuts through the source", () => {
     expect(r.extras()).toEqual({});
   });
 
-  it("registers the second, mouse, raw and paste last chords once they are set, with the mouse code", () => {
+  it("registers the raw and paste last chords once they are set", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, second: "ControlLeft+KeyD", mouse: "Mouse4", raw: "AltRight", pasteLast: "ControlLeft+AltLeft+KeyV" });
+    r.hk.layout({ ...LAYOUT, raw: "AltRight", pasteLast: "ControlLeft+AltLeft+KeyV" });
     r.hk.enable(true);
     expect(r.extras()).toEqual({
-      second: { keys: [VK.leftCtrl, 0x44] },
-      mouse: { keys: [0x05] },
       raw: { keys: [VK.rightAlt] },
       pasteLast: { keys: [VK.leftCtrl, VK.leftAlt, 0x56] },
     });
@@ -71,14 +69,12 @@ describe("several shortcuts through the source", () => {
 
   it("names each chord after its own shortcut, so the core can tell which one started a recording", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, second: "F8", mouse: "Mouse5", raw: "F7" });
+    r.hk.layout({ ...LAYOUT, raw: "F7" });
     r.hk.enable(true);
-    r.push({ kind: "down", chord: "second" });
-    r.push({ kind: "up", chord: "second" });
-    r.push({ kind: "down", chord: "mouse" });
     r.push({ kind: "down", chord: "raw" });
+    r.push({ kind: "up", chord: "raw" });
     r.push({ kind: "down" });
-    expect(r.events.map((e) => `${e.key}:${e.down}`)).toEqual(["F8:true", "F8:false", "Mouse5:true", "F7:true", "ControlRight:true"]);
+    expect(r.events.map((e) => `${e.key}:${e.down}`)).toEqual(["F7:true", "F7:false", "ControlRight:true"]);
   });
 
   it("calls the paste-last handler on press only, and never reports it as a dictation key", () => {
@@ -103,10 +99,10 @@ describe("several shortcuts through the source", () => {
 
   it("never lets the keys through to other programs, whatever the hook is given", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, second: "F8" });
+    r.hk.layout({ ...LAYOUT, raw: "F8" });
     r.hk.enable(true);
     expect(r.chord()).toEqual({ keys: [VK.rightCtrl] });
-    expect(r.extras().second).toEqual({ keys: [0x77] });
+    expect(r.extras().raw).toEqual({ keys: [0x77] });
   });
 
   it("does not take a shortcut that has no dictation key", () => {
@@ -193,21 +189,29 @@ describe("settings to the hook and the core", () => {
   const cfg = (d: object) => parseConfig({ dictation: d }).dictation;
 
   it("passes every shortcut and the hold time to the core", () => {
-    expect(coreSettings(cfg({ hotkey: "F9", mode: "tap-or-hold", holdMs: 500, secondHotkey: "F8", mouseButton: "Mouse4", rawHotkey: "F7", cancelKey: "F10" }))).toMatchObject({
+    expect(coreSettings(cfg({ hotkey: "F9", mode: "tap-or-hold", holdMs: 500, rawHotkey: "F7", cancelKey: "F10" }))).toMatchObject({
       hotkey: "F9",
       mode: "tap-or-hold",
       holdMs: 500,
-      secondKey: "F8",
-      mouseKey: "Mouse4",
       rawKey: "F7",
       cancelKey: "F10",
     });
   });
 
   it("ignores removed settings that a saved file still has", () => {
-    const old = { hotkey: "F9", shareHotkey: true, mode: "hold-only", pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true }, transformHotkey: "F6" };
-    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", second: "", mouse: "", raw: "", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
+    const old = {
+      hotkey: "F9",
+      shareHotkey: true,
+      secondHotkey: "F8",
+      mouseButton: "Mouse4",
+      mode: "hold-only",
+      pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true },
+      transformHotkey: "F6",
+    };
+    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", raw: "", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
     expect(cfg(old)).not.toHaveProperty("shareHotkey");
+    expect(cfg(old)).not.toHaveProperty("secondHotkey");
+    expect(cfg(old)).not.toHaveProperty("mouseButton");
     expect(cfg(old)).not.toHaveProperty("pauseRules");
     expect(cfg(old)).not.toHaveProperty("transformHotkey");
   });

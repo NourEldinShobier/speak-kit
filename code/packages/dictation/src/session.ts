@@ -8,7 +8,7 @@ export const DOUBLE_TAP_MS = 300;
 /** A recording ends by itself at this length: a lost key release or a forgotten toggle must not buffer audio and hold the microphone for hours. */
 export const MAX_RECORDING_MS = MAX_TAKE_MS;
 
-type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "secondKey" | "mouseKey" | "rawKey" | "keepReady">>;
+type Config = Pick<Settings, "hotkey" | "cancelKey" | "mode" | "duck"> & Partial<Pick<Settings, "holdMs" | "rawKey" | "keepReady">>;
 /** A press of one of the shortcuts: which, and when. */
 type Press = { key: string; raw: boolean; at: number };
 
@@ -124,7 +124,7 @@ function control(session: Session, cfg: Config, event: Extract<SessionEvent, { t
 /** Which shortcut an event is: a capture ends with the shortcut that started it (even if the settings changed meanwhile), else any configured one. */
 function shortcutOf(c: Capture, cfg: Config, key: string): { key: string; raw: boolean } | undefined {
   if (c.kind !== "armed" && "key" in c) return key === c.key ? { key, raw: "raw" in c && c.raw === true } : undefined;
-  return key && [cfg.hotkey, cfg.secondKey, cfg.mouseKey, cfg.rawKey].includes(key) ? { key, raw: key === cfg.rawKey } : undefined;
+  return key && [cfg.hotkey, cfg.rawKey].includes(key) ? { key, raw: key === cfg.rawKey } : undefined;
 }
 
 function key(session: Session, cfg: Config, event: KeyEvent): Step {

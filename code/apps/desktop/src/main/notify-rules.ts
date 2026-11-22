@@ -1,5 +1,5 @@
 import type { EngineState } from "@speakkit/protocol";
-import type { NotifyEvent } from "../shared/schemas";
+import type { NotifyEvent } from "./toasts";
 import { at } from "../shared/i18n";
 import "../shared/i18n/packs/main";
 

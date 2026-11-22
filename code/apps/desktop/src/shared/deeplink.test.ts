@@ -33,7 +33,8 @@ describe("deep links", () => {
   });
   it("opens a settings page by name, ignoring the query so a link never changes a switch", () => {
     expect(parseDeepLink("speakkit://settings/privacy")).toEqual({ kind: "settings", page: "privacy" });
-    expect(parseDeepLink("speakkit://settings/automation/")).toEqual({ kind: "settings", page: "automation" });
+    expect(parseDeepLink("speakkit://settings/diagnostics/")).toEqual({ kind: "settings", page: "diagnostics" });
+    expect(parseDeepLink("speakkit://settings/automation")).toBeNull();
     expect(parseDeepLink("speakkit://settings/general?dictation=off&enabled=false")).toEqual({ kind: "settings", page: "general" });
     const calls: string[] = [];
     handleDeepLink({ kind: "settings", page: "privacy" }, { ensureServer: () => calls.push("server"), showWindow: () => calls.push("show"), navigate: (p) => calls.push(`nav:${p}`) });

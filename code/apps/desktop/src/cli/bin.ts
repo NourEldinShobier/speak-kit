@@ -5,7 +5,7 @@ import path from "node:path";
 import { readStoredHistory } from "@speakkit/dictation";
 import { fail, LIMITS, type Reply } from "../shared/control/contract";
 import { discoveryFile, portOpen, processAlive, readDiscovery } from "../main/control/discovery";
-import { mcpFlags, serveMcp } from "./mcp";
+import { serveMcp } from "./mcp";
 import { skillFilePath, userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
 
@@ -105,6 +105,5 @@ if (process.argv[2] === "mcp")
         return fail("not-running", "Speak Kit did not answer.");
       }
     },
-    flags: async () => mcpFlags(await io.readConfig()),
   });
 else process.exitCode = await runCli(process.argv.slice(2), io);

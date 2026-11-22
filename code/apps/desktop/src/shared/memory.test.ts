@@ -13,7 +13,7 @@ const recorder = () => {
 describe("Settings > Memory wiring", () => {
   it("maps the idle choices to milliseconds, 0 for never", () => {
     expect(IDLE_MS).toEqual({ "1": 60000, "5": 300000, "15": 900000, never: 0 });
-    expect(serverOptions({ idleUnload: "15", loadAtStart: true })).toEqual({ idleUnloadMs: 900000, loadAtStart: true });
+    expect(serverOptions({ idleUnload: "15" })).toEqual({ idleUnloadMs: 900000 });
   });
   it("pushes idle unload and battery saver to the server setters", () => {
     const { t, calls } = recorder();

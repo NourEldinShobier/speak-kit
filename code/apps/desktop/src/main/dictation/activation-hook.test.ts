@@ -145,37 +145,11 @@ describe("navigation keys", () => {
   });
 });
 
-describe("mouse buttons", () => {
-  it("installs the mouse hook only while a button is bound", () => {
+describe("clicks", () => {
+  it("installs no mouse hook before a chord is pressed", () => {
     const r = rig({ mouse: true });
     r.hook.start({ keys: [F9] }, r.handlers);
     expect(r.stats().mouseInstalls).toBe(0);
-    r.hook.setExtraChords({ mouse: { keys: [0x05] } });
-    expect(r.stats().mouseInstalls).toBe(1);
-    r.hook.setExtraChords({});
-    expect(r.stats().mouseRemoved).toBe(1);
-  });
-
-  it("swallows the button down and up as a pair and reports the chord", async () => {
-    const r = rig({ mouse: true });
-    r.hook.start({ keys: [F9] }, r.handlers);
-    r.hook.setExtraChords({ mouse: { keys: [0x05] } });
-    expect(r.click(0x05, true)).toBe(true);
-    expect(r.click(0x05, false)).toBe(true);
-    expect(r.click(0x06, true)).toBe(false);
-    expect(r.click(0x06, false)).toBe(false);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(r.events.filter((e) => e.kind === "down" || e.kind === "up")).toEqual([
-      { kind: "down", chord: "mouse" },
-      { kind: "up", chord: "mouse" },
-    ]);
-  });
-
-  it("falls back to the keyboard when the platform has no mouse hook", () => {
-    const r = rig();
-    r.hook.start({ keys: [F9] }, r.handlers);
-    r.hook.setExtraChords({ mouse: { keys: [0x05] } });
-    expect(r.hook.mouse).toBe(false);
   });
 
   it("watches clicks while a chord is held, so a click during a hold is reported as another key", async () => {

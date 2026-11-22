@@ -14,7 +14,7 @@ export interface InstalledHook {
   uninstall(): void;
 }
 
-/** A mouse button change as the low-level mouse hook reports it, already reduced to a virtual-key code (right 0x02, middle 0x04, X1 0x05, X2 0x06, left 0x01). Moves and the wheel never get here. */
+/** A mouse button change as the low-level mouse hook reports it, already reduced to a virtual-key code (right 0x02, middle 0x04, X1 0x05, X2 0x06, left 0x01). Moves and the wheel never get here. The hook only watches clicks: they end a hold or a double-tap window. */
 export interface HookClick {
   vk: VirtualKey;
   down: boolean;
@@ -62,7 +62,6 @@ const LLKHF_EXTENDED = 0x01;
 const PRIMARY = "";
 /** Keys that share their code with a numpad key: only the dedicated one (extended flag) is Home, End, Page Up, Page Down. */
 const NAV = new Set([0x21, 0x22, 0x23, 0x24]);
-const MOUSE_VKS: ReadonlySet<number> = new Set([0x02, 0x04, 0x05, 0x06]);
 
 /** The code the chord tracker sees for a key: dedicated navigation keys get the extended offset. */
 export const trackerCode = (vk: VirtualKey, flags: number): VirtualKey => (NAV.has(vk) && (flags & LLKHF_EXTENDED) !== 0 ? vk + EXTENDED : vk);
@@ -74,7 +73,7 @@ export const trackerCode = (vk: VirtualKey, flags: number): VirtualKey => (NAV.h
  * for Windows to have silently removed it. Every few seconds a health check compares the real keyboard with what the hook has seen and reinstalls
  * it when a chord key is down on the keyboard but unknown here. Keys the hook swallowed cannot be checked that way (the system never records them), so for those
  * `resync` and the caller's own hard limit are the safety net.
- * The mouse hook exists only while a mouse button is part of a chord, and briefly after a chord release so a click can end a double-tap window.
+ * The mouse hook exists only while a chord is held and briefly after its release, so a click can discard the press or end a double-tap window.
  */
 export class KeyboardHook implements HotkeySource {
   readonly #backend: HookBackend;
@@ -103,10 +102,6 @@ export class KeyboardHook implements HotkeySource {
     return this.#run !== null;
   }
 
-  get mouse(): boolean {
-    return this.#backend.installMouse !== undefined;
-  }
-
   anyKeyDown(): boolean {
     for (let vk = 1; vk < 0xff; vk++) if (vk !== 0x14 && vk !== 0x90 && vk !== 0x91 && this.#backend.keyIsDown(vk)) return true;
     return false;
@@ -119,7 +114,6 @@ export class KeyboardHook implements HotkeySource {
     this.#build(r);
     try {
       r.hook = this.#install(r);
-      this.#syncMouse(r);
     } catch {
       r.hook?.uninstall();
       return { ok: false, reason: "hook-failed" };
@@ -164,7 +158,6 @@ export class KeyboardHook implements HotkeySource {
     const r = this.#run;
     if (!r) return;
     this.#build(r);
-    this.#syncMouse(r);
   }
 
   /** Rebuilds what is believed down from the physical keyboard (after a lock, wake or desktop switch). Never reports a press. */
@@ -186,13 +179,9 @@ export class KeyboardHook implements HotkeySource {
     r.trackers.get(PRIMARY)?.grab(this.#grabbed);
   }
 
-  #usesMouse(): boolean {
-    return [this.#primary, ...Object.values(this.#extra)].some((c) => c?.keys.some((k) => MOUSE_VKS.has(k)));
-  }
-
-  /** Installs the mouse hook while a button is bound or a click could still end a double-tap window; removes it otherwise. */
+  /** Installs the mouse hook while a chord is held or a click could still end a double-tap window; removes it otherwise. */
   #syncMouse(r: Run): void {
-    const want = this.#backend.installMouse !== undefined && (this.#usesMouse() || this.#now() < r.clickUntil);
+    const want = this.#backend.installMouse !== undefined && this.#now() < r.clickUntil;
     if (want && !r.mouse) {
       try {
         r.mouse = this.#backend.installMouse!(
@@ -292,7 +281,7 @@ export class KeyboardHook implements HotkeySource {
       for (const [id, tracker] of r.trackers) this.#emit(r, id, tracker.reset());
     }
     for (const [id, tracker] of r.trackers) for (const vk of tracker.visibleHeld()) if (!this.#backend.keyIsDown(vk)) this.#emit(r, id, tracker.release(vk));
-    if (r.mouse && !this.#usesMouse() && t >= r.clickUntil) this.#syncMouse(r);
+    if (r.mouse && t >= r.clickUntil) this.#syncMouse(r);
     if (t - r.lastHealth >= this.#healthMs) {
       r.lastHealth = t;
       this.#health(r);
@@ -301,7 +290,7 @@ export class KeyboardHook implements HotkeySource {
 
   /** A chord key that is down on the real keyboard but unknown to the hook means the hook has stopped seeing keys: install it again. */
   #health(r: Run): void {
-    if (!r.mouse && this.#usesMouse()) this.#syncMouse(r);
+    if (!r.mouse) this.#syncMouse(r);
     const blind = [...r.trackers.values()].some((tracker) => tracker.unseenDown((vk) => this.#backend.keyIsDown(vk)));
     if (blind) this.#reinstall(r);
   }

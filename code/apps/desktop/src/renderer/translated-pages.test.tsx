@@ -53,19 +53,14 @@ describe("pages in Spanish", () => {
 
   it("Shortcuts, with the names of the actions", () => {
     const html = settings("shortcuts");
-    for (const text of ["Atajos", "Leer la selección", "Reproducir o pausar", "Cambiar el atajo de Detener", "Restablecer todos", "Vuelven a Ctrl+Alt+S, Space, X y R"]) expect(html).toContain(text);
+    for (const text of ["Atajos", "Leer la selección", "Reproducir o pausar", "Cambiar el atajo de Grabar una conversación", "Restablecer todos", "Vuelven a Ctrl+Alt+S, Space y R"])
+      expect(html).toContain(text);
     expect(html).not.toContain("Read selection");
   });
 
   it("Shortcuts, with a clash", () => {
-    const html = settings("shortcuts", {}, { shortcuts: { bindings: parseConfig({}).shortcuts, conflicts: { stop: { reason: "taken", accelerator: "Ctrl+Alt+X", suggestion: null } } } });
+    const html = settings("shortcuts", {}, { shortcuts: { bindings: parseConfig({}).shortcuts, conflicts: { "record-toggle": { reason: "taken", accelerator: "Ctrl+Alt+X", suggestion: null } } } });
     expect(html).toContain("Otra aplicación usa Ctrl+Alt+X.");
-  });
-
-  it("Notifications", () => {
-    const html = settings("notifications");
-    for (const text of ["Notificaciones", "No molestar", "Lectura terminada", "Problema con el motor de voz", "Campana", "Evento"]) expect(html).toContain(text);
-    expect(html).not.toContain("Reading finished");
   });
 
   it("Privacy", () => {
@@ -74,16 +69,10 @@ describe("pages in Spanish", () => {
     expect(html).not.toContain("Microphone access");
   });
 
-  it("Automation", () => {
-    const html = settings("automation", { controlServer: false });
-    for (const text of ["Automatización", "El servidor local está apagado", "Herramienta de línea de comandos", "Pruébalo", "Servidor MCP", "Enlaces profundos", "Códigos de error"])
-      expect(html).toContain(text);
-    expect(html).not.toContain("Deep links");
-  });
-
-  it("General, with the hint for what closing does", () => {
-    expect(settings("general")).toContain("Mantiene Speak Kit en la bandeja");
-    expect(settings("general", { hideTrayIcon: true })).toContain("El icono de la bandeja está oculto");
+  it("General", () => {
+    const html = settings("general");
+    for (const text of ["Abrir al iniciar sesión", "Idioma", "Importar ajustes"]) expect(html).toContain(text);
+    expect(html).not.toContain("Launch at login");
   });
 
   it("the settings search", () => {

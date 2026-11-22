@@ -16,13 +16,8 @@ function HandyToKnow({ s }: { s: AppState }) {
       />
       <SettingRow
         label="Launch at login"
-        description="Start Speak Kit when you sign in to Windows."
+        description="Start Speak Kit in the tray when you sign in to Windows."
         control={<Toggle aria-label="Launch at login" checked={s.launchAtLogin} onChange={(v) => api.setLaunchAtLogin(v)} />}
-      />
-      <SettingRow
-        label="Start in the tray"
-        description="When it starts at sign-in, stay in the tray instead of opening a window."
-        control={<Toggle aria-label="Start in the tray" checked={s.config.startMinimized} onChange={(v) => change({ startMinimized: v })} />}
       />
     </SettingsSection>
   );

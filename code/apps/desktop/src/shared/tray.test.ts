@@ -12,7 +12,6 @@ const ctx = (over: Partial<TrayContext> = {}): TrayContext => ({
   reader: IDLE_READER,
   update: { kind: "idle", checkedAtMs: null },
   exportsRunning: 0,
-  doNotDisturb: false,
   shortcuts: DEFAULT_SHORTCUTS,
   ...over,
 });
@@ -127,7 +126,7 @@ describe("tray menu, recorder", () => {
 
 describe("tray menu", () => {
   it("idle: short menu", () => {
-    expect(labels(ctx())).toEqual(["Open Speak Kit", "Do not disturb", "Settings", "Check for updates", "Quit Speak Kit"]);
+    expect(labels(ctx())).toEqual(["Open Speak Kit", "Settings", "Check for updates", "Quit Speak Kit"]);
   });
   it("reading and paused swap in Pause or Resume and Stop", () => {
     expect(labels(ctx({ reader: reader("playing") }))).toContain("Pause");
@@ -141,8 +140,7 @@ describe("tray menu", () => {
     expect(ready).toContain("Restart to update to 0.2.0");
     expect(ready).not.toContain("Check for updates");
   });
-  it("Do not disturb shows its state; update check is disabled while checking or unsupported", () => {
-    expect(trayMenuModel(ctx({ doNotDisturb: true })).find((i) => i.type === "item" && i.action === "dnd")).toMatchObject({ checked: true });
+  it("the update check is disabled while checking or unsupported", () => {
     const check = (u: TrayContext["update"]) => trayMenuModel(ctx({ update: u })).find((i) => i.type === "item" && i.action === "check-updates");
     expect(check({ kind: "checking" })).toMatchObject({ enabled: false, label: "Checking for updates..." });
     expect(check({ kind: "unsupported" })).toMatchObject({ enabled: false });

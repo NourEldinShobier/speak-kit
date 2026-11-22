@@ -24,7 +24,7 @@ describe("routes", () => {
 describe("filterSettingsNav", () => {
   const ids = (q: string) => filterSettingsNav(q).flatMap((g) => g.items.map((i) => i.id));
   it("returns every row for blank text", () => {
-    expect(ids("  ")).toHaveLength(14);
+    expect(ids("  ")).toHaveLength(12);
   });
   it("matches label or keywords, every word, any case", () => {
     expect(ids("SHORTCUTS")).toEqual(["shortcuts"]);
@@ -37,8 +37,8 @@ describe("filterSettingsNav", () => {
 });
 
 describe("settings icons", () => {
-  it("use the lock, prompt and pulse glyphs of the design", () => {
+  it("use the lock and pulse glyphs of the design", () => {
     const icon = (id: string) => SETTINGS_NAV.flatMap((g) => g.items).find((i) => i.id === id)?.icon;
-    expect([icon("privacy"), icon("automation"), icon("diagnostics")]).toEqual(["lock", "terminal", "activity"]);
+    expect([icon("privacy"), icon("diagnostics")]).toEqual(["lock", "activity"]);
   });
 });

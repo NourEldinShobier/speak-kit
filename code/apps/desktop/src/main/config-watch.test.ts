@@ -24,16 +24,16 @@ describe("watchConfigFile", () => {
   it("reports an edit made to the file with the changed fields", async () => {
     const edits: unknown[] = [];
     const w = watchConfigFile({ file, current: () => parseConfig({}), onEdit: (e) => edits.push(e), debounceMs: 30 });
-    await writeFile(file, JSON.stringify({ closeAction: "quit" }));
+    await writeFile(file, JSON.stringify({ updateChannel: "early" }));
     expect(await until(() => edits.length > 0)).toBe(true);
-    expect(edits[0]).toEqual({ kind: "changed", patch: { closeAction: "quit" }, keys: ["closeAction"], repaired: [] });
+    expect(edits[0]).toEqual({ kind: "changed", patch: { updateChannel: "early" }, keys: ["updateChannel"], repaired: [] });
     w.dispose();
   });
 
   it("says nothing when the file matches what the app holds", async () => {
     const edits: unknown[] = [];
-    const w = watchConfigFile({ file, current: () => parseConfig({ closeAction: "quit" }), onEdit: (e) => edits.push(e), debounceMs: 30 });
-    await writeFile(file, JSON.stringify({ closeAction: "quit" }));
+    const w = watchConfigFile({ file, current: () => parseConfig({ updateChannel: "early" }), onEdit: (e) => edits.push(e), debounceMs: 30 });
+    await writeFile(file, JSON.stringify({ updateChannel: "early" }));
     await new Promise((r) => setTimeout(r, 300));
     expect(edits).toEqual([]);
     w.dispose();
@@ -43,9 +43,9 @@ describe("watchConfigFile", () => {
     let bad = 0;
     const edits: unknown[] = [];
     const w = watchConfigFile({ file, current: () => parseConfig({}), onEdit: (e) => edits.push(e), onUnreadable: () => bad++, debounceMs: 30 });
-    await writeFile(file, '{"closeAction": ');
+    await writeFile(file, '{"updateChannel": ');
     await new Promise((r) => setTimeout(r, 20));
-    await writeFile(file, JSON.stringify({ closeAction: "quit" }));
+    await writeFile(file, JSON.stringify({ updateChannel: "early" }));
     expect(await until(() => edits.length > 0)).toBe(true);
     expect(bad).toBe(0);
     await writeFile(file, "{ nope");
@@ -71,7 +71,7 @@ describe("watchConfigFile", () => {
     const edits: unknown[] = [];
     const w = watchConfigFile({ file, current: () => parseConfig({}), onEdit: (e) => edits.push(e), debounceMs: 30 });
     w.dispose();
-    await writeFile(file, JSON.stringify({ closeAction: "quit" }));
+    await writeFile(file, JSON.stringify({ updateChannel: "early" }));
     await new Promise((r) => setTimeout(r, 200));
     expect(edits).toEqual([]);
   });

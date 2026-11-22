@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -20,7 +20,6 @@ afterEach(async () => {
 
 const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
-const discovery = (dir: string) => JSON.parse(readFileSync(path.join(dir, "control.json"), "utf8")) as { port: number; token: string };
 const until = async (f: () => boolean, ms = 10_000) => {
   for (const end = Date.now() + ms; Date.now() < end;) {
     if (f()) return;
@@ -36,70 +35,11 @@ const cli = (dir: string, args: string[], input?: string) => {
   });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
-const openAutomation = async (l: Launched) => {
-  await l.page.getByRole("heading", { name: "Home" }).waitFor();
-  await l.page.getByRole("link", { name: "Settings" }).click();
-  await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Automation", exact: true }).click();
-  await l.page.getByRole("heading", { name: "Automation", exact: true, level: 1 }).waitFor();
-};
 const tmp = () => {
   const d = mkdtempSync(path.join(tmpdir(), "speakkit-auto-"));
   dirs.push(d);
   return d;
 };
-
-describe("Automation page", () => {
-  it("lists the tools with a switch each, saves a choice, and pauses the switches with the server", async () => {
-    const l = await start({ config: DONE });
-    await openAutomation(l);
-    await l.page.getByText("speakkit status --json").waitFor();
-    await l.page.getByRole("button", { name: "Copy speakkit://lab/caption-export" }).waitFor();
-    const history = l.page.getByRole("switch", { name: "Search dictation history" });
-    expect(await history.getAttribute("aria-checked")).toBe("false");
-    expect(await l.page.getByRole("switch", { name: "Read aloud" }).getAttribute("aria-checked")).toBe("true");
-    await history.click();
-    await l.page.waitForFunction(() => document.querySelector('[aria-label="Search dictation history"]')?.getAttribute("aria-checked") === "true");
-    expect(configOf(l).mcpTools).toEqual({ history_search: true });
-    await l.page.getByRole("switch", { name: "Let AI apps use Speak Kit" }).click();
-    await l.page.getByText("The local server is off").waitFor();
-    expect(configOf(l).controlServer).toBe(false);
-    expect(await history.isDisabled()).toBe(true);
-    await l.page.getByRole("button", { name: "Start server" }).click();
-    await l.page.getByText("The local server is off").waitFor({ state: "detached" });
-    expect(configOf(l).controlServer).toBe(true);
-  });
-
-  it("says the command-line tool is part of the installed app when run from source", async () => {
-    const l = await start({ config: DONE });
-    await openAutomation(l);
-    await l.page.getByText("Not available").waitFor();
-    expect(await l.page.getByText("Puts a speakkit command on your PATH").count()).toBe(0);
-  });
-
-  it("Reset token gives the discovery file a new token and the old one is refused", async () => {
-    const l = await start({ config: DONE });
-    await until(() => existsSync(path.join(l.userData, "control.json")));
-    const before = discovery(l.userData);
-    await openAutomation(l);
-    await l.page.getByRole("button", { name: "Reset token" }).click();
-    await until(() => discovery(l.userData).token !== before.token);
-    const post = (token: string) => fetch(`http://127.0.0.1:${before.port}/control`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ command: "status" }) });
-    expect((await post(before.token)).status).toBe(404);
-    expect((await post(discovery(l.userData).token)).status).toBe(200);
-    expect(cli(l.userData, ["--json", "status"]).code).toBe(0);
-  });
-
-  it("names every control and holds at the 960 px window without sideways scroll", async () => {
-    const l = await start({ config: DONE });
-    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 800));
-    await openAutomation(l);
-    const unnamed = await l.page.evaluate(() =>
-      [...document.querySelectorAll("button, [role=switch], a[href]")].filter((e) => !(e.getAttribute("aria-label") || e.textContent?.trim())).map((e) => e.outerHTML.slice(0, 80)),
-    );
-    expect(unnamed).toEqual([]);
-    expect(await l.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  });
-});
 
 describe("the command line against the real app", () => {
   it("speak --print shows the sentences, queue and voices answer, and stop works", async () => {
@@ -144,24 +84,18 @@ describe("the command line against the real app", () => {
 });
 
 describe("the MCP bridge with the app closed", () => {
-  const ask = (dir: string, flags: object, method: string, params: object = {}) => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ mcpTools: flags }));
+  const ask = (dir: string, method: string, params: object = {}) => {
     const r = cli(dir, ["mcp"], `${JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })}\n`);
     return JSON.parse(r.out.trim().split("\n")[0]!).result;
   };
 
-  it("lists the tools that are on, and refuses one that is off", async () => {
-    const dir = tmp();
-    expect(ask(dir, {}, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
-    expect(ask(dir, { history_search: true }, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue", "history_search"]);
-    const off = ask(dir, {}, "tools/call", { name: "history_search", arguments: {} });
-    expect(off.isError).toBe(true);
-    expect(off.content[0].text).toBe("The tool history_search is turned off. Turn it on in Speak Kit under Settings, Automation.");
+  it("lists the reading tools and nothing that reads the person's own words", async () => {
+    expect(ask(tmp(), "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
   });
 
-  it("says Speak Kit is not running for a tool that is on", async () => {
+  it("says Speak Kit is not running for a tool call, and does not start it", async () => {
     const dir = tmp();
-    const on = ask(dir, { history_search: true }, "tools/call", { name: "history_search", arguments: {} });
+    const on = ask(dir, "tools/call", { name: "reading_queue", arguments: {} });
     expect(on.isError).toBe(true);
     expect(on.content[0].text).toBe("Speak Kit is not running.");
     expect(existsSync(path.join(dir, "control.json"))).toBe(false);
@@ -244,48 +178,7 @@ const axeViolations = async (l: Launched) => {
   });
 };
 
-describe("the agent skill row and the try-it terminal", () => {
-  it("installs the skill into the test folder, shows it as installed, and keeps Test in terminal off while the tool is not installed", async () => {
-    const l = await start({ config: DONE });
-    await openAutomation(l);
-    await l.page.getByText("Agent skill").waitFor();
-    await l.page.getByText("Not installed").first().waitFor();
-    await l.page.getByRole("button", { name: "Install", exact: true }).click();
-    await l.page.getByText("Up to date.").waitFor();
-    expect(readFileSync(path.join(l.userData, "agent-skill", "SKILL.md"), "utf8")).toContain("name: speakkit");
-    expect(await l.page.getByRole("button", { name: "Install", exact: true }).count()).toBe(0);
-    expect(await l.page.getByRole("button", { name: "Copy the skill install command" }).isVisible()).toBe(true);
-    expect(await l.page.getByRole("button", { name: "Test in terminal" }).isDisabled()).toBe(true);
-  });
-
-  it("shows an Update when the file was written by another version", async () => {
-    const l = await start({ config: DONE });
-    const file = path.join(l.userData, "agent-skill", "SKILL.md");
-    mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(file, "an older skill");
-    await openAutomation(l);
-    await l.page.getByText("Update available").waitFor();
-    await l.page.getByRole("button", { name: "Update", exact: true }).click();
-    await l.page.getByText("Up to date.").waitFor();
-    expect(readFileSync(file, "utf8")).toContain("name: speakkit");
-  });
-
-  it("shows the real discovery file path, not a made-up one", async () => {
-    const l = await start({ config: DONE });
-    await openAutomation(l);
-    await l.page.getByText(path.join(l.userData, "control.json"), { exact: true }).waitFor();
-  });
-});
-
 describe("accessibility scan with axe", () => {
-  it("finds no serious or critical violation on the Automation page at 960 px", async () => {
-    const l = await start({ config: DONE });
-    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 800));
-    await openAutomation(l);
-    await l.page.getByText("Agent skill").waitFor();
-    expect((await axeViolations(l)).filter((v) => /^(serious|critical)/.test(v))).toEqual([]);
-  });
-
   it("finds no serious or critical violation on the main pages", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();

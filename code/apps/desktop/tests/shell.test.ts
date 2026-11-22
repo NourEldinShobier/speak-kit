@@ -246,22 +246,16 @@ describe("settings", () => {
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
   });
 
-  it("Performance: idle unload, load at startup and battery saver persist to config.json; engine state and RAM are shown", async () => {
+  it("Performance: idle unload and battery saver persist to config.json; the engine state is shown", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();
     await l.page.getByRole("link", { name: "Performance" }).click();
     await l.page.getByRole("heading", { name: "Performance" }).waitFor();
     expect(await l.page.getByTestId("memory-engine").textContent()).toBe("Ready");
-    await l.page
-      .getByTestId("memory-rss")
-      .filter({ hasText: /\d+ MB/ })
-      .waitFor();
     await l.page.getByRole("combobox", { name: "Idle unload" }).click();
     await l.page.getByRole("option", { name: "After 15 minutes" }).click();
-    await l.page.getByRole("switch", { name: "Load at startup" }).click();
     await l.page.getByRole("switch", { name: "Battery saver" }).click();
-    await expect.poll(() => configOf(l)).toMatchObject({ idleUnload: "15", loadAtStart: true, batterySaver: false });
-    expect(await l.page.getByRole("switch", { name: "Load at startup" }).getAttribute("aria-checked")).toBe("true");
+    await expect.poll(() => configOf(l)).toMatchObject({ idleUnload: "15", batterySaver: false });
   });
 
   it("every settings page opens; Browser integration regenerates the token only after confirming", async () => {
@@ -290,9 +284,9 @@ describe("settings", () => {
     // Storage shows the models folder and a size bar.
     await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Storage" }).click();
     await l.page.getByTestId("storage-bar").waitFor();
-    // Idle-unload and the other General toggles are reachable by name.
+    // The General toggle is reachable by name.
     await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "General" }).click();
-    for (const n of ["Launch at login", "Start minimized to tray"]) expect(await l.page.getByRole("switch", { name: n }).count()).toBe(1);
+    expect(await l.page.getByRole("switch", { name: "Launch at login" }).count()).toBe(1);
   });
 
   it("Engines page: Kokoro unloaded wakes on play", async () => {
@@ -325,7 +319,6 @@ describe("tray and lifecycle", () => {
       "Open Speak Kit",
       "Record a conversation",
       "Load the voice engine now",
-      "Do not disturb",
       "Settings",
       "Check for updates",
       "Quit Speak Kit",

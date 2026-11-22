@@ -78,9 +78,9 @@ export class ChordTracker {
     return [{ kind: "up" }];
   }
 
-  /** A chord key (not a mouse button or an extended key) is down on the physical keyboard while this has no record of it: the hook missed its press. */
+  /** A chord key (not an extended one) is down on the physical keyboard while this has no record of it: the hook missed its press. */
   unseenDown(isDown: (vk: VirtualKey) => boolean): boolean {
-    return this.#chord.keys.some((k) => k < 0x100 && k > 0x06 && !this.#held.has(k) && isDown(k));
+    return this.#chord.keys.some((k) => k < 0x100 && !this.#held.has(k) && isDown(k));
   }
 
   /** Forgets every key believed down, for when key events may have been lost (screen lock, secure desktop, a stalled app). Reports up if the chord was down. */

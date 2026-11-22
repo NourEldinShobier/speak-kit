@@ -4,7 +4,7 @@ import { initialSession, reduce, type Effect, type Session, type SessionEvent } 
 import { fakeClock, fakeKeyboard, flush, loud, target } from "./fakes";
 
 type Cfg = Parameters<typeof reduce>[2];
-const base: Cfg = { hotkey: "H", cancelKey: "Esc", mode: "hold", duck: false, secondKey: "S", rawKey: "R" };
+const base: Cfg = { hotkey: "H", cancelKey: "Esc", mode: "hold", duck: false, rawKey: "R" };
 
 /** D<key><ms> down, U<key><ms> up, K<ms> another key down, E<ms> the cancel key down. Keys are one letter. */
 function parse(t: string): SessionEvent {
@@ -89,17 +89,17 @@ describe("shortcut modes", () => {
   });
 });
 
-describe("second and raw shortcuts", () => {
-  it("the second shortcut starts and the same shortcut ends a toggled recording", () => {
-    expect(play("DS0 US10 DS900", { ...base, mode: "toggle" }).effects).toEqual(["start", "finish"]);
+describe("raw shortcut", () => {
+  it("the raw shortcut starts and the same shortcut ends a toggled recording", () => {
+    expect(play("DR0 UR10 DR900", { ...base, mode: "toggle" }).effects).toEqual(["start", "finish-raw"]);
   });
 
   it("the other shortcut does not end a toggled recording", () => {
-    expect(play("DS0 US10 DH900", { ...base, mode: "toggle" }).effects).toEqual(["start"]);
+    expect(play("DR0 UR10 DH900", { ...base, mode: "toggle" }).effects).toEqual(["start"]);
   });
 
   it("the shortcut that started a hold owns the release", () => {
-    expect(play("DS0 US500").effects).toEqual(["start", "finish"]);
+    expect(play("DR0 UR500").effects).toEqual(["start", "finish-raw"]);
   });
 
   it("the raw shortcut finishes as raw", () => {
@@ -113,7 +113,7 @@ describe("second and raw shortcuts", () => {
   });
 
   it("a double-tap needs the same shortcut twice", () => {
-    expect(play("DH0 UH100 DS200").capture).toMatchObject({ kind: "hold", key: "S", lockUntil: -Infinity });
+    expect(play("DH0 UH100 DR200").capture).toMatchObject({ kind: "hold", key: "R", lockUntil: -Infinity });
   });
 });
 

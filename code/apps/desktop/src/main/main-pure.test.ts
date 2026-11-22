@@ -19,7 +19,7 @@ describe("pairing detection", () => {
 
 describe("config", () => {
   it("fills defaults and replaces bad values field by field", () => {
-    expect(parseConfig(undefined)).toMatchObject({ setupDone: false, preferredPort: 47615, idleUnload: "5", loadAtStart: false, batterySaver: true });
+    expect(parseConfig(undefined)).toMatchObject({ setupDone: false, preferredPort: 47615, idleUnload: "5", batterySaver: true });
     const c = parseConfig({ setupDone: true, preferredPort: "x", idleUnload: "7", speed: 99, theme: "dark" });
     expect(c).toMatchObject({ setupDone: true, preferredPort: 47615, idleUnload: "5", speed: 1 });
   });

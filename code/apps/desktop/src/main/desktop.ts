@@ -1,6 +1,4 @@
 import { app, type BrowserWindow } from "electron";
-import type { TtsEngine } from "@speakkit/engine";
-import os from "node:os";
 import path from "node:path";
 import type { Api } from "../shared/ipc";
 import type { ConfigPatch } from "../shared/schemas";
@@ -19,16 +17,7 @@ import { createExports } from "./export/service";
 import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
-import { showTrayIcon } from "../shared/settings/behaviour";
 import { createUpdates } from "./updates-service";
-import { realCommandLine } from "./cli-path/real";
-import { agentSkill } from "./agent-skill";
-import { nodeSkillFs } from "./agent-skill/real";
-import { systemTerminal, type Terminal } from "./cli-terminal";
-import { skillFilePath } from "../cli/paths";
-import { skillText } from "../shared/control/skill";
-import { CONTROL_VERSION } from "../shared/control/contract";
-import { writeFile } from "node:fs/promises";
 import { setupControl } from "./control";
 import { registerDictationIpc } from "./dictation/ipc";
 import { testEnv } from "./test-env";
@@ -44,10 +33,6 @@ import { NOTES_MODEL } from "./voice-chat/service";
 import { areaPatcher } from "./settings-areas";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
-import { cachedHardware, collectResources, speechModelName } from "./resources";
-import type { SttExtras } from "./speech-models/service";
-import { motionNow, windowMotion } from "./window-motion";
-import { memoryOf, probeThisComputer } from "./speech-models/ports";
 
 interface DesktopOptions {
   parent: () => BrowserWindow | null;
@@ -68,8 +53,6 @@ interface DesktopOptions {
   };
   /** The notice the tray menu shows while the window is closed. */
   trayNotice(): string | undefined;
-  /** The voice engine, for the memory it holds (Settings, Performance). */
-  voiceEngine(): TtsEngine | null;
   /** The OpenAI key lives with the voice chat; the transcript notes borrow it. */
   voiceChat: Pick<VoiceChat, "complete">;
 }
@@ -77,7 +60,6 @@ interface DesktopOptions {
 const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
   "read-selection": () => void reading.readSelection(),
   "play-pause": () => reading.controller.command({ type: "toggle" }),
-  stop: () => reading.controller.command({ type: "stop" }),
   "record-toggle": toggleRecording,
 });
 
@@ -120,9 +102,7 @@ function desktopHandlers(
     exports: ReturnType<typeof createExports>;
     updates: ReturnType<typeof createUpdates>;
     shortcuts: ReturnType<typeof setupShortcuts>;
-    control: ReturnType<typeof setupControl>;
     test: boolean;
-    resources: Api["resources"];
   },
 ) {
   return {
@@ -131,29 +111,9 @@ function desktopHandlers(
     ...f.updates.handlers,
     ...f.shortcuts.handlers,
     ...readerHandlers(f.reading),
-    ...f.control.handlers,
     installExtension: () => installExtension(!f.test),
-    resources: f.resources,
   } satisfies Partial<Api>;
 }
-
-/** The command-line tool, the agent skill and the terminal of the Automation page. A test run keeps the skill in its own folder and opens no window: the command that would have run is written to a file. */
-function commandLineTools(o: { test: boolean; version: string; dictation: { dataDir: string } }) {
-  const shippedDir = app.isPackaged ? path.join(process.resourcesPath, "bin") : undefined;
-  const dataDir = o.dictation.dataDir;
-  return {
-    shippedDir,
-    commandLine: realCommandLine({ platform: process.platform, shippedDir, userData: dataDir, home: os.homedir() }),
-    agentSkill: agentSkill({
-      file: o.test ? path.join(dataDir, "agent-skill", "SKILL.md") : skillFilePath(os.homedir()),
-      text: () => skillText(CONTROL_VERSION, o.version),
-      fs: nodeSkillFs,
-    }),
-    terminal: o.test ? testTerminal(path.join(dataDir, "terminal-command.txt")) : systemTerminal(process.platform),
-  };
-}
-
-const testTerminal = (file: string): Terminal => ({ open: (command, extraPath) => writeFile(file, `${extraPath ?? ""}|${command}`) });
 
 /** Stops every feature; resolves once the control server is down. */
 function disposeAll(p: {
@@ -175,28 +135,6 @@ function disposeAll(p: {
   void p.dictation.dispose();
   void p.transcripts.dispose();
   return controlDown;
-}
-
-/** Memory per process and model, read when the Performance page asks. */
-const hardware = cachedHardware(probeThisComputer);
-function readResources(ctx: Ctx, voiceEngine: DesktopOptions["voiceEngine"], dictation: DictationService) {
-  return collectResources({
-    processes: () => app.getAppMetrics().map((m) => ({ type: m.type, name: m.name, workingSetKb: m.memory.workingSetSize, cpu: m.cpu.percentCPUUsage })),
-    voice: () => ({ state: ctx.state.health?.engine.state, name: "Kokoro-82M", pid: (voiceEngine() as { workerPid?: number } | null)?.workerPid }),
-    speech: () => {
-      const stt = dictation.stt as typeof dictation.stt & SttExtras; // the real engine reports its process and backend
-      return { state: stt.status().state, name: speechModelName(ctx.config.dictation.model), pid: stt.workerPid, backend: stt.backend };
-    },
-    memoryOf,
-    hardware,
-    platform: process.platform === "darwin" ? "darwin" : "win32",
-    arch: process.arch,
-  });
-}
-
-/** The control server and the command-line tools it lends. */
-function desktopControl(ctx: Ctx, o: DesktopOptions, f: Pick<Parameters<typeof setupControl>[1], "reading" | "automation" | "dictation" | "transcripts">) {
-  return setupControl(ctx, { ...f, ...commandLineTools(o), dataDir: o.dictation.dataDir, version: o.version });
 }
 
 /**
@@ -226,10 +164,10 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
-  const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
+  const control = setupControl(ctx, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers, dataDir: o.dictation.dataDir, version: o.version });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
+    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
     /** Live transcription for other apps on the engine dictation holds. */
@@ -240,11 +178,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     patchArea: areaPatcher({ speech: dictation.speech, transcripts }),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
-      if (patch.doNotDisturb !== undefined) ctx.publish();
       if (patch.language !== undefined) void applyLanguage(patch.language, app.getPreferredSystemLanguages()).then(() => tray.refresh());
-      if (patch.hideTrayIcon !== undefined) tray.setVisible(showTrayIcon(ctx.config));
-      if (patch.reduceMotion !== undefined) windowMotion.set(motionNow(ctx.config.reduceMotion));
-      control.onConfigPatch(patch);
     },
     dictation,
     onEngineState: engineAnnouncer(ctx, toasts),
@@ -252,7 +186,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** A reading or an export is running: a quit would lose it. */
     busy: () => ctx.state.reader.status === "playing" || ctx.state.reader.status === "preparing" || exports.runningCount() > 0,
     refreshTray: () => tray.refresh(),
-    /** The tray icon is wanted but the system would not create it. */
+    /** The system would not create the tray icon. */
     trayMissing: () => tray.failed(),
     /** Resolves once the control server is down and its discovery file is gone. */
     dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, transcripts }),

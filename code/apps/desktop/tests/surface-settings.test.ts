@@ -30,40 +30,24 @@ const openSettings = async (l: Launched, page = "General") => {
 describe("settings edited outside the app", () => {
   it("a valid edit to config.json shows up in the open window and in the bell; a broken one changes nothing", async () => {
     const l = await start({ config: DONE });
-    await openSettings(l);
-    const closing = l.page.getByRole("combobox", { name: "Closing the window" });
-    await expect.poll(() => closing.textContent()).toContain("Keeps running");
+    await openSettings(l, "About");
+    const channel = l.page.getByRole("combobox", { name: "Update channel" });
+    await expect.poll(() => channel.textContent()).toContain("Stable");
 
-    writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), closeAction: "quit" }));
-    await expect.poll(() => closing.textContent(), { timeout: 10_000 }).toContain("Quits");
+    writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), updateChannel: "early" }));
+    await expect.poll(() => channel.textContent(), { timeout: 10_000 }).toContain("Early");
 
     await l.page.getByRole("button", { name: "Notifications" }).click();
     await l.page.getByText("Settings changed outside the app").waitFor();
     await l.page.keyboard.press("Escape");
 
-    writeFileSync(configFile(l), '{ "closeAction": ');
+    writeFileSync(configFile(l), '{ "updateChannel": ');
     await l.page.getByRole("button", { name: "Notifications" }).click();
     await l.page.getByText("Settings file could not be read").waitFor({ timeout: 10_000 });
-    expect(await closing.textContent()).toContain("Quits");
+    expect(await channel.textContent()).toContain("Early");
     // A file that stays broken is reported once, not on every re-read.
     await new Promise((r) => setTimeout(r, 4000));
     expect(await l.page.getByText("Settings file could not be read").count()).toBe(1);
-  }, 60_000);
-});
-
-describe("Performance resources", () => {
-  it("lists the models in memory, the processes and what this computer offers", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Performance");
-    await l.page.getByRole("heading", { name: "Models in memory" }).waitFor();
-    await expect.poll(() => l.page.getByTestId("resource-total").textContent()).toMatch(/^\d+ MB$/);
-    await l.page.getByTestId("model-voice").waitFor();
-    await l.page.getByTestId("model-speech").waitFor();
-    await l.page.getByRole("heading", { name: "By process" }).waitFor();
-    await l.page.getByTestId("resource-Speak Kit (main)").waitFor();
-    await l.page.getByRole("heading", { name: "This computer" }).waitFor();
-    expect(await l.page.getByTestId("device-0").textContent()).toMatch(/^(Windows|macOS) \(/);
-    await l.page.screenshot({ path: path.join(l.userData, "performance.png") });
   }, 60_000);
 });
 
@@ -89,17 +73,6 @@ describe("What is new", () => {
     await expect.poll(() => l.page.getByTestId("update-notes").first().innerText()).toContain("feat(tray): a notice row for problems");
     expect(await l.page.getByTestId("update-notes").first().innerText()).not.toContain("@dev");
     await expect.poll(() => configOf(l).whatsNew).toEqual({ version: "0.2.0", notes: ["feat(tray): a notice row for problems", "fix(update): keep the notes of the new version"] });
-  }, 60_000);
-});
-
-describe("an off feature", () => {
-  it("Automation shows the same card when the local server is off", async () => {
-    const l = await start({ config: { ...DONE, controlServer: false } });
-    await openSettings(l, "Automation");
-    const card = l.page.getByRole("region", { name: "The local server is off" });
-    await card.getByRole("button", { name: "Start server" }).click();
-    await card.waitFor({ state: "detached" });
-    await expect.poll(() => configOf(l).controlServer).toBe(true);
   }, 60_000);
 });
 
@@ -144,9 +117,9 @@ describe("arrow keys in lists", () => {
     await l.page.keyboard.press("End");
     expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe(await cards.last().getAttribute("data-voice"));
 
-    for (const mode of ["quit", "hide"]) {
-      writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), closeAction: mode }));
-      await expect.poll(async () => configOf(l).closeAction).toBe(mode);
+    for (const mode of ["early", "stable"]) {
+      writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), updateChannel: mode }));
+      await expect.poll(async () => configOf(l).updateChannel).toBe(mode);
       await new Promise((r) => setTimeout(r, 2500));
     }
     await l.page.getByRole("button", { name: "Notifications" }).click();

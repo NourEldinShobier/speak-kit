@@ -65,12 +65,11 @@ export const isDefault = (slot: "dictation" | "pasteLast", value: string): boole
 /** Every shortcut the recorder must keep apart, from the status. */
 export function allShortcuts(s: DictationStatus): Shortcuts {
   const c = s.settings;
-  return { dictation: c.hotkey, second: c.secondHotkey, mouse: c.mouseButton, raw: c.rawHotkey, pasteLast: c.pasteLastHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
+  return { dictation: c.hotkey, raw: c.rawHotkey, pasteLast: c.pasteLastHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
 }
 
 export const conflictText = (hotkey: string, other: Slot): string => `${hotkeyText(hotkey)} is already the ${SLOT_NAMES[other]}. Pick another shortcut.`;
 
 export const resetNoticeText = {
-  "left-click": "The saved left mouse button was reset to the default shortcut. The left button cannot be a shortcut.",
   clash: "Two shortcuts shared a key, so the extra one was cleared.",
 } as const;

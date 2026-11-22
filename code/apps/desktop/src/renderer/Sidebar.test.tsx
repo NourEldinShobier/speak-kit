@@ -67,9 +67,9 @@ describe("sidebar", () => {
   it("marks only the open page", () => {
     expect(render("home").match(/aria-current="page"/g)).toHaveLength(1);
   });
-  it("lists the 14 settings rows while in Settings, with one selected", () => {
+  it("lists the 12 settings rows while in Settings, with one selected", () => {
     const html = render("settings", "privacy");
-    expect(html.match(/href="#settings-/g)).toHaveLength(14);
+    expect(html.match(/href="#settings-/g)).toHaveLength(12);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     expect(html).toContain("Close settings");
   });

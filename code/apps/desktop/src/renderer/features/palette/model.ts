@@ -13,7 +13,6 @@ export type PaletteAction =
   | { type: "toggle-reading" }
   | { type: "export" }
   | { type: "check-updates" }
-  | { type: "dnd" }
   | { type: "install-extension" }
   | { type: "load-engine" }
   | { type: "copy-token" }
@@ -43,7 +42,6 @@ const ACTION_ROWS = [
   ["toggle-reading", "player-play", "resume mini player", "toggle-reading"],
   ["export", "download", "save mp3 wav file", "export"],
   ["load-engine", "cpu", "wake warm", "load-engine"],
-  ["dnd", "bell", "notifications quiet toast", "dnd"],
   ["check-updates", "refresh", "version upgrade", "check-updates"],
   ["install-extension", "brand-chrome", "chrome edge browser load unpacked", "install-extension"],
   ["copy-token", "copy", "browser extension key", "copy-token"],

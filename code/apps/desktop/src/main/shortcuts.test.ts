@@ -23,10 +23,10 @@ function setup(foreign: string[] = []) {
 }
 
 describe("ShortcutRegistry", () => {
-  it("registers the four defaults and runs the action on a press", () => {
+  it("registers the three defaults and runs the action on a press", () => {
     const t = setup();
     expect(t.reg.apply(DEFAULT_SHORTCUTS)).toEqual({});
-    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect([...t.live.keys()].sort()).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space"]);
     t.press("Ctrl+Alt+S");
     t.advance(1000);
     t.press("Ctrl+Alt+Space");
@@ -38,51 +38,51 @@ describe("ShortcutRegistry", () => {
   it("treats key repeat while the keys are held as one press", () => {
     const t = setup();
     t.reg.apply(DEFAULT_SHORTCUTS);
-    t.press("Ctrl+Alt+X");
+    t.press("Ctrl+Alt+R");
     t.advance(100);
-    t.press("Ctrl+Alt+X");
+    t.press("Ctrl+Alt+R");
     t.advance(400);
-    t.press("Ctrl+Alt+X");
-    expect(t.ran).toEqual(["stop", "stop"]);
+    t.press("Ctrl+Alt+R");
+    expect(t.ran).toEqual(["record-toggle", "record-toggle"]);
   });
 
   it("reports a combination another app owns, with a free alternative, and registers the rest", () => {
     const t = setup(["Ctrl+Alt+S"]);
     const c = t.reg.apply(DEFAULT_SHORTCUTS);
     expect(c).toEqual({ "read-selection": { accelerator: "Ctrl+Alt+S", reason: "taken", suggestion: "Ctrl+Alt+Shift+S" } });
-    expect(t.live.size).toBe(3);
+    expect(t.live.size).toBe(2);
   });
 
   it("flags the second of two actions that share a combination", () => {
     const t = setup();
-    const c = t.reg.apply({ ...DEFAULT_SHORTCUTS, stop: "Ctrl+Alt+S" });
-    expect(c.stop).toMatchObject({ reason: "duplicate", accelerator: "Ctrl+Alt+S" });
+    const c = t.reg.apply({ ...DEFAULT_SHORTCUTS, "record-toggle": "Ctrl+Alt+S" });
+    expect(c["record-toggle"]).toMatchObject({ reason: "duplicate", accelerator: "Ctrl+Alt+S" });
     expect(c["read-selection"]).toBeUndefined();
-    expect(t.live.size).toBe(3);
+    expect(t.live.size).toBe(2);
   });
 
   it("set() rebinds, and unregisters the old combination", () => {
     const t = setup();
     t.reg.apply(DEFAULT_SHORTCUTS);
-    const r = t.reg.set(DEFAULT_SHORTCUTS, "stop", "ctrl+alt+q");
+    const r = t.reg.set(DEFAULT_SHORTCUTS, "record-toggle", "ctrl+alt+q");
     expect(r).toEqual({ ok: true, conflicts: {} });
-    expect(t.live.has("Ctrl+Alt+X")).toBe(false);
+    expect(t.live.has("Ctrl+Alt+R")).toBe(false);
     expect(t.live.has("Ctrl+Alt+Q")).toBe(true);
   });
 
   it("set() never overrides: an app conflict restores the old set and returns the alternative", () => {
     const t = setup(["Ctrl+Alt+Q"]);
     t.reg.apply(DEFAULT_SHORTCUTS);
-    const r = t.reg.set(DEFAULT_SHORTCUTS, "stop", "Ctrl+Alt+Q");
+    const r = t.reg.set(DEFAULT_SHORTCUTS, "record-toggle", "Ctrl+Alt+Q");
     expect(r).toEqual({ ok: false, error: { code: "shortcut-taken" }, conflict: { accelerator: "Ctrl+Alt+Q", reason: "taken", suggestion: "Ctrl+Alt+Shift+Q" } });
-    expect(t.live.has("Ctrl+Alt+X")).toBe(true);
+    expect(t.live.has("Ctrl+Alt+R")).toBe(true);
   });
 
   it("set() refuses invalid keys and a combination Speak Kit already uses", () => {
     const t = setup();
     t.reg.apply(DEFAULT_SHORTCUTS);
-    expect(t.reg.set(DEFAULT_SHORTCUTS, "stop", "Alt+F4")).toEqual({ ok: false, error: { code: "shortcut-reserved" } });
-    const dup = t.reg.set(DEFAULT_SHORTCUTS, "stop", "Ctrl+Alt+S");
+    expect(t.reg.set(DEFAULT_SHORTCUTS, "record-toggle", "Alt+F4")).toEqual({ ok: false, error: { code: "shortcut-reserved" } });
+    const dup = t.reg.set(DEFAULT_SHORTCUTS, "record-toggle", "Ctrl+Alt+S");
     expect(dup).toMatchObject({ ok: false, error: { code: "shortcut-duplicate" }, conflict: { reason: "duplicate", suggestion: "Ctrl+Alt+Shift+S" } });
   });
 });

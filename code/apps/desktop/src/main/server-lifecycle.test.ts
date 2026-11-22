@@ -16,6 +16,7 @@ const { ServerRuntime } = await import("./server-lifecycle");
 afterEach(() => {
   created.length = 0;
   delete process.env.SPEAKKIT_ENGINE;
+  delete process.env.SPEAKKIT_FAKE_STATE;
 });
 
 function runtime(dataDir = "d") {
@@ -23,7 +24,7 @@ function runtime(dataDir = "d") {
   const state = { port: 0, serverError: null, health: null, version: "1.0.0", onBattery: false } as unknown as AppState;
   const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const publish = vi.fn(() => state);
-  const config = { preferredPort: 47615, idleUnload: "5", batterySaver: false, loadAtStart: false, setupDone: false } as unknown as Config;
+  const config = { preferredPort: 47615, idleUnload: "5", batterySaver: false, setupDone: false } as unknown as Config;
   const api = { health: vi.fn(async () => null) };
   const deps = {
     state,
@@ -41,6 +42,13 @@ function runtime(dataDir = "d") {
 }
 
 describe("ServerRuntime", () => {
+  it("loads an unloaded engine at startup", async () => {
+    process.env.SPEAKKIT_FAKE_STATE = "unloaded";
+    const { rt } = runtime();
+    await rt.start();
+    await vi.waitFor(() => expect(rt.engine?.status().state).toBe("ready"));
+  });
+
   it("reports an error the server raises after it started as a server error, without throwing", async () => {
     const { rt, state, log, publish } = runtime();
     await rt.start();

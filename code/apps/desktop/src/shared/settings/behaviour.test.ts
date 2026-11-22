@@ -1,41 +1,6 @@
-import { beforeAll, describe, expect, it } from "vite-plus/test";
-import { closeHint, closeOutcome, effectiveCloseAction, KEYBOARD_MAP, reduceMotion, showTrayIcon } from "./behaviour";
-import { loadLocale, translate } from "../i18n";
+import { describe, expect, it } from "vite-plus/test";
+import { closeOutcome, KEYBOARD_MAP } from "./behaviour";
 import { NETWORK_HOSTS } from "./network";
-
-beforeAll(() => loadLocale("es"));
-
-describe("close and tray", () => {
-  it("closing hides by default and quits when asked", () => {
-    expect(effectiveCloseAction({ closeAction: "hide", hideTrayIcon: false })).toBe("hide");
-    expect(effectiveCloseAction({ closeAction: "quit", hideTrayIcon: false })).toBe("quit");
-  });
-
-  it("a hidden tray icon always quits so a window is never lost", () => {
-    expect(effectiveCloseAction({ closeAction: "hide", hideTrayIcon: true })).toBe("quit");
-    expect(showTrayIcon({ hideTrayIcon: true })).toBe(false);
-    expect(showTrayIcon({ hideTrayIcon: false })).toBe(true);
-  });
-
-  it("the hint says how to get back in when the tray is hidden", () => {
-    expect(translate("en", closeHint({ closeAction: "hide", hideTrayIcon: true }))).toBe(
-      "The tray icon is hidden, so closing the window quits Speak Kit. Start it again from the Start menu or Launchpad.",
-    );
-    expect(translate("en", closeHint({ closeAction: "quit", hideTrayIcon: false }))).toBe("Closing the window quits Speak Kit and stops the extension and the shortcuts.");
-    expect(translate("es", closeHint({ closeAction: "hide", hideTrayIcon: false }))).toBe(
-      "Mantiene Speak Kit en la bandeja para que la extensión y los atajos sigan funcionando. Para salir, usa el menú de la bandeja.",
-    );
-  });
-});
-
-describe("reduce motion", () => {
-  it("follows the system unless the user chose", () => {
-    expect(reduceMotion("system", true)).toBe("on");
-    expect(reduceMotion("system", false)).toBe("off");
-    expect(reduceMotion("on", false)).toBe("on");
-    expect(reduceMotion("off", true)).toBe("off");
-  });
-});
 
 describe("network table", () => {
   it("lists every host once with a reason", () => {
@@ -57,18 +22,6 @@ describe("keyboard map", () => {
   });
 });
 
-describe("closing with work running", () => {
-  it("asks before a quit that would lose an export or reading", () => {
-    expect(closeOutcome({ closeAction: "quit", hideTrayIcon: false }, true)).toBe("confirm-quit");
-    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: true }, true)).toBe("confirm-quit");
-  });
-
-  it("quits at once when idle and hides regardless of work", () => {
-    expect(closeOutcome({ closeAction: "quit", hideTrayIcon: false }, false)).toBe("quit");
-    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true)).toBe("hide");
-  });
-});
-
 describe("privacy copy", () => {
   it("names the one case where audio leaves the computer", async () => {
     const { NO_TELEMETRY } = await import("./network");
@@ -76,13 +29,13 @@ describe("privacy copy", () => {
   });
 });
 
-describe("a tray icon the system would not create", () => {
-  it("closing quits, because nothing could bring a hidden window back", () => {
-    expect(effectiveCloseAction({ closeAction: "hide", hideTrayIcon: false }, true)).toBe("quit");
-    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, false, true)).toBe("quit");
-    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true, true)).toBe("confirm-quit");
+describe("closing the window", () => {
+  it("hides to the tray, with or without work running", () => {
+    expect(closeOutcome(false, false)).toBe("hide");
+    expect(closeOutcome(true, false)).toBe("hide");
   });
-  it("changes nothing while the icon exists", () => {
-    expect(closeOutcome({ closeAction: "hide", hideTrayIcon: false }, true, false)).toBe("hide");
+  it("quits when the system would not create the tray icon, and asks first if an export or reading is running", () => {
+    expect(closeOutcome(false, true)).toBe("quit");
+    expect(closeOutcome(true, true)).toBe("confirm-quit");
   });
 });

@@ -15,7 +15,6 @@ export interface TrayContext {
   reader: ReaderState;
   update: UpdateState;
   exportsRunning: number;
-  doNotDisturb: boolean;
   shortcuts: Bindings;
   /** `process.platform`, for how keys are named in menu text. */
   platform?: string;
@@ -79,7 +78,6 @@ export type TrayAction =
   | "stop"
   | "wake"
   | "restart-engine"
-  | "dnd"
   | "settings"
   | "check-updates"
   | "restart-update"
@@ -168,11 +166,11 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   rows.push(...dictationRows(c, item));
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   rows.push(...speechModelItems(c));
-  if (reading) rows.push(item("pause", at("tray.pause"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));
-  else if (paused) rows.push(item("resume", at("tray.resume"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));
+  if (reading) rows.push(item("pause", at("tray.pause"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop")));
+  else if (paused) rows.push(item("resume", at("tray.resume"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop")));
   if (engine === "unloaded") rows.push(item("wake", at("tray.wake")));
   else if (engine === "error") rows.push(item("restart-engine", at("tray.restartEngine")));
-  rows.push(sep, item("dnd", at("notify.dnd"), { checked: c.doNotDisturb }), item("settings", at("tray.settings")));
+  rows.push(sep, item("settings", at("tray.settings")));
   if (c.update.kind === "ready") rows.push(item("restart-update", at("tray.restartUpdate", { version: c.update.version })));
   else rows.push(item("check-updates", at(c.update.kind === "checking" ? "tray.checking" : "tray.check"), { enabled: c.update.kind !== "checking" && c.update.kind !== "unsupported" }));
   rows.push(sep, item("quit", at("tray.quit")));

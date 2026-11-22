@@ -8,7 +8,6 @@ import { Settings } from "./settings";
 import { Sidebar } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { UpdatingCard } from "./UpdateCard";
-import { useMotionPreference } from "./features/settings";
 import { StartupState, Wizard } from "./features/wizard";
 import { LocaleProvider, useT } from "./i18n";
 import { PAGE_REGISTRY } from "./page-registry";
@@ -104,7 +103,6 @@ function DocumentLanguage() {
 }
 
 function Shell({ s }: { s: AppState }) {
-  useMotionPreference(s.config.reduceMotion);
   const player = usePreview(s.config.speed);
   const [st, dispatch] = useReducer(shellReducer, undefined, initShell);
   const { page, sub } = currentLoc(st);

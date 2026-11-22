@@ -183,7 +183,6 @@ export class DictationService {
       historyCount: this.history.count,
       notes: this.records.parts(),
       paused: this.controls.paused,
-      mouseButtons: this.os?.hotkey.mouse === true,
       readerShortcuts: { ...this.#ctx.config.shortcuts },
       rejected: this.#rejected,
       micOwner: this.#o.micOwner?.(),

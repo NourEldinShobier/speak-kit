@@ -30,8 +30,8 @@ describe("accelerators", () => {
 
 describe("conflicts", () => {
   it("finds two actions on one accelerator, whatever the spelling", () => {
-    const b = { ...DEFAULT_SHORTCUTS, stop: "alt+ctrl+s" };
-    expect([...duplicateIds(b)].sort()).toEqual(["read-selection", "stop"]);
+    const b = { ...DEFAULT_SHORTCUTS, "record-toggle": "alt+ctrl+s" };
+    expect([...duplicateIds(b)].sort()).toEqual(["read-selection", "record-toggle"]);
     expect(duplicateIds(DEFAULT_SHORTCUTS).size).toBe(0);
   });
 
@@ -73,6 +73,6 @@ describe("recorder", () => {
 
 describe("resetText", () => {
   it("lists every default key", () => {
-    expect(resetText("win32")).toBe("Ctrl+Alt+S, Space, X and R");
+    expect(resetText("win32")).toBe("Ctrl+Alt+S, Space and R");
   });
 });

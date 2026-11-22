@@ -9,8 +9,6 @@ const DEFAULTS = {
   hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
   mode: "hold",
   holdMs: 300,
-  secondHotkey: "",
-  mouseButton: "",
   rawHotkey: "",
   pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
   cancelKey: "Escape",

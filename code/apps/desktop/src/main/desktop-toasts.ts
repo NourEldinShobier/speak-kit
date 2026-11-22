@@ -1,10 +1,9 @@
 import { Notification } from "electron";
 import type { Activity } from "../shared/ipc";
-import type { NotifyEvent } from "../shared/schemas";
 import type { Ctx } from "./context";
 import type { EngineState } from "@speakkit/protocol";
 import { noticeFor } from "./notify-rules";
-import { ToastCenter } from "./toasts";
+import { ToastCenter, type NotifyEvent } from "./toasts";
 
 const BELL_KIND: Record<NotifyEvent, Activity["kind"]> = {
   "reading-finished": "reading",
@@ -24,7 +23,6 @@ export interface ShownToast {
 export function createDesktopToasts(ctx: Ctx, test: boolean) {
   const shown: ShownToast[] = [];
   const toasts = new ToastCenter({
-    prefs: () => ({ notifications: ctx.config.notifications, doNotDisturb: ctx.config.doNotDisturb }),
     looking: ctx.looking,
     show: (t) => {
       if (test) shown.push(t);

@@ -89,10 +89,10 @@ export class ServerRuntime {
     this.#firstEngine = false;
     this.#lastEngineState = engine.status().state;
     this.#unsubEngine = engine.onStatus(() => void this.#onEngineEvent());
-    // Setup finished but the model is gone: fetch it again. Otherwise stay lazy unless the user asked for load at startup.
-    const refetch = this.#d.config.setupDone && engine.status().state === "missing" && !this.#keepMissing;
+    // The model loads at startup. A model that is missing is fetched only after setup, and not after the person deleted the models.
+    const refetch = this.#d.config.setupDone && !this.#keepMissing;
     this.#keepMissing = false;
-    if (this.#d.config.loadAtStart || refetch) this.startEngine();
+    if (engine.status().state !== "missing" || refetch) this.startEngine();
     return engine;
   }
 

@@ -59,7 +59,6 @@ export function PrivacyPage({ s }: { s: AppState }) {
     <Page title={t("privacy.title")} lead={t("privacy.lead")}>
       <SettingsSection title={t("privacy.data")}>
         <SettingRow {...rowAttr("privacy/telemetry")} label={t("privacy.telemetry")} description={NO_TELEMETRY} control={<span>{t("privacy.telemetryOff")}</span>} />
-        <SettingRow label={t("privacy.library")} description={t(s.platform === "darwin" ? "privacy.libraryMac" : "privacy.libraryWin")} />
       </SettingsSection>
       <SettingsSection title={t("privacy.permissions")}>
         <SettingRow

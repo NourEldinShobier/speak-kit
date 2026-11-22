@@ -6,9 +6,9 @@ const label = (p: string) => p[0]!.toUpperCase() + p.slice(1);
 
 describe("settings search", () => {
   it("finds a row behind the Advanced fold", () => {
-    const g = searchSettings("settings file", label);
+    const g = searchSettings("import settings", label);
     expect(g[0]).toMatchObject({ page: "general" });
-    expect(g[0]!.rows[0]).toMatchObject({ id: "general/settings-file", advanced: true });
+    expect(g[0]!.rows[0]).toMatchObject({ id: "general/import", advanced: true });
   });
 
   it("every typed word must match and an empty query finds nothing", () => {

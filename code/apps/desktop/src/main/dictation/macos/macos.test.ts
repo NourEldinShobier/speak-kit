@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { createInserter } from "../inserter";
 import type { ClipboardPort } from "../restore-guard";
 import { VK, type HotkeyEvent } from "../types";
+import type { HookClick } from "../keyboard-hook";
 import { installMouseTapHook, installTapHook } from "./hook";
 import { chunks, createMacInput } from "./input";
 import { fakeMacNative } from "./fake-native";
@@ -151,23 +152,39 @@ describe("macOS hotkey through the event tap", () => {
   });
 });
 
-describe("macOS mouse buttons through the mouse tap", () => {
+describe("macOS mouse tap", () => {
   const X1_DOWN = { type: 25, button: 3 };
   const X1_UP = { type: 26, button: 3 };
 
-  it("makes a side button a hold-to-talk key and swallows it", async () => {
-    const t = started([0x05]);
-    expect(t.result).toEqual({ ok: true });
-    expect(t.fake.sendMouse(X1_DOWN)).toBe(true);
-    expect(t.fake.sendMouse(X1_UP)).toBe(true);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  it("reports each button change as a click and swallows only what the decision says", () => {
+    const fake = fakeMacNative();
+    const clicks: HookClick[] = [];
+    installMouseTapHook(
+      fake.native,
+      (c) => (clicks.push(c), c.vk === 0x05),
+      () => undefined,
+    );
+    expect(fake.sendMouse(X1_DOWN)).toBe(true);
+    expect(fake.sendMouse(X1_UP)).toBe(true);
+    expect(fake.sendMouse({ type: 1, button: 0 })).toBe(false);
+    expect(clicks).toEqual([
+      { vk: 0x05, down: true, extra: 0, flags: 0 },
+      { vk: 0x05, down: false, extra: 0, flags: 0 },
+      { vk: 0x01, down: true, extra: 0, flags: 0 },
+    ]);
   });
 
   it("passes on events that are no button change", () => {
-    const t = started([0x05]);
-    expect(t.fake.sendMouse({ type: 5, button: 3 })).toBe(false);
-    expect(t.fake.sendMouse({ type: 25, button: 9 })).toBe(false);
+    const fake = fakeMacNative();
+    const clicks: HookClick[] = [];
+    installMouseTapHook(
+      fake.native,
+      (c) => (clicks.push(c), true),
+      () => undefined,
+    );
+    expect(fake.sendMouse({ type: 5, button: 3 })).toBe(false);
+    expect(fake.sendMouse({ type: 25, button: 9 })).toBe(false);
+    expect(clicks).toEqual([]);
   });
 
   it("passes the click on, removes the tap and reports the fault when the decision throws", async () => {
@@ -394,20 +411,8 @@ describe("macOS insert through the inserter", () => {
   });
 });
 
-describe("macOS mouse buttons as hotkeys", () => {
-  const SIDE_BUTTON = 3; // button number 3 is the first side button, reported as Mouse4
-  const MOUSE4 = 0x05;
-
-  it("is available, and a bound side button holds the dictation down and up, swallowed as a pair", async () => {
-    const t = started([MOUSE4]);
-    expect(t.platform.hotkey.mouse).toBe(true);
-    expect(t.fake.sendMouse({ type: 25, button: SIDE_BUTTON })).toBe(true);
-    expect(t.fake.sendMouse({ type: 26, button: SIDE_BUTTON })).toBe(true);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
-  });
-
-  it("does not open the mouse tap while no button is bound", () => {
+describe("macOS mouse tap during a hold", () => {
+  it("is not opened before a press", () => {
     const t = started([VK.rightAlt]);
     expect(t.fake.calls.taps).toBe(1);
   });
@@ -425,7 +430,10 @@ describe("macOS mouse buttons as hotkeys", () => {
     const fake = fakeMacNative({ refuseMouseTap: true });
     const platform = createMacPlatformWith(fake.native);
     const events: HotkeyEvent[] = [];
-    expect(platform.hotkey.start({ keys: [VK.rightAlt, MOUSE4] }, { onEvent: (e) => void events.push(e) })).toEqual({ ok: true });
+    expect(platform.hotkey.start({ keys: [VK.rightAlt] }, { onEvent: (e) => void events.push(e) })).toEqual({ ok: true });
+    fake.send({ type: FLAGS, keycode: RIGHT_OPTION, flags: RIGHT_OPTION_BIT });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(events).toEqual([{ kind: "down" }]);
     expect(fake.calls.taps).toBe(1);
     expect(platform.hotkey.active).toBe(true);
   });

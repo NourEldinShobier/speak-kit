@@ -4,7 +4,7 @@ import { createHotkeys, type HotkeyLayout, type SwitchableHotkeys } from "./hotk
 import { ShortcutControls } from "./shortcut-controls";
 import type { HotkeyHandlers, HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", second: "ControlRight", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape" };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", raw: "ControlRight", pasteLast: "", cancelKey: "Escape" };
 
 function rig() {
   let handlers: HotkeyHandlers | undefined;
@@ -29,8 +29,8 @@ describe("pausing shortcuts during a recording", () => {
     await r.subscribe();
     r.hk.enable(true);
     r.push({ kind: "down" });
-    r.push({ kind: "down", chord: "second" });
-    r.push({ kind: "up", chord: "second" });
+    r.push({ kind: "down", chord: "raw" });
+    r.push({ kind: "up", chord: "raw" });
     r.events.length = 0;
     r.hk.pause(true);
     expect(r.events.map((e) => [e.key, e.down])).toEqual([["ControlLeft+AltLeft+Space", false]]);

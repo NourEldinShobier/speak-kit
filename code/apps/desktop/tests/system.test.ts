@@ -40,33 +40,33 @@ const until = async (f: () => Promise<boolean> | boolean, ms = 15_000) => {
 };
 
 describe("global shortcuts (the OS is simulated; a real key press cannot be sent from here)", () => {
-  it("the four defaults are registered", async () => {
+  it("the three defaults are registered", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Alt+X"]);
+    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space"]);
   });
 
   it("the recorder rebinds a key, rejects a bad combination, and Escape cancels", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await settings(l, "Shortcuts");
-    const row = l.page.locator('[data-shortcut="stop"]');
-    await row.getByRole("button", { name: "Change Stop shortcut" }).click();
+    const row = l.page.locator('[data-shortcut="record-toggle"]');
+    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
     await l.page.getByTestId("recording").waitFor();
     await l.page.keyboard.press("Escape");
     await l.page.getByTestId("recording").waitFor({ state: "detached" });
 
-    await row.getByRole("button", { name: "Change Stop shortcut" }).click();
+    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
     await l.page.keyboard.press("KeyA"); // no modifier
     await l.page.getByTestId("shortcut-problem").getByText("Use Ctrl or Alt together with another key.").waitFor();
     await l.page.keyboard.press("Control+Alt+KeyQ");
     await row.getByText("Q", { exact: true }).waitFor();
-    await expect.poll(() => configOf(l).shortcuts.stop).toBe("Ctrl+Alt+Q");
+    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+Q");
     expect(await hook<string[]>(l, "registeredShortcuts")).toContain("Ctrl+Alt+Q");
-    expect(await hook<string[]>(l, "registeredShortcuts")).not.toContain("Ctrl+Alt+X");
+    expect(await hook<string[]>(l, "registeredShortcuts")).not.toContain("Ctrl+Alt+R");
 
     await l.page.getByRole("button", { name: "Reset" }).click();
-    await expect.poll(() => configOf(l).shortcuts.stop).toBe("Ctrl+Alt+X");
+    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+R");
   });
 
   it("a combination another app owns is reported with one alternative and never taken silently", async () => {
@@ -74,13 +74,13 @@ describe("global shortcuts (the OS is simulated; a real key press cannot be sent
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
     await hook(l, "foreignShortcuts", ["Ctrl+Alt+Q"]);
     await settings(l, "Shortcuts");
-    const row = l.page.locator('[data-shortcut="stop"]');
-    await row.getByRole("button", { name: "Change Stop shortcut" }).click();
+    const row = l.page.locator('[data-shortcut="record-toggle"]');
+    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
     await l.page.keyboard.press("Control+Alt+KeyQ");
     const problem = row.getByTestId("shortcut-problem");
     await problem.getByText("Another app is using it.").waitFor();
     await problem.getByRole("button", { name: "Use Ctrl+Alt+Shift+Q" }).click();
-    await expect.poll(() => configOf(l).shortcuts.stop).toBe("Ctrl+Alt+Shift+Q");
+    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+Shift+Q");
   });
 
   it("a conflict at start-up shows on its row", async () => {
@@ -123,27 +123,11 @@ describe("mini player and tray", () => {
     expect(await hook<string>(l, "trayState")).toMatch(/^normal\|/);
   }, 90_000);
 
-  it("the tray menu has the short model: Do not disturb toggles, wake appears when the engine sleeps", async () => {
+  it("the tray menu has the short model: wake appears when the engine sleeps", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const labels = async () => (await hook<{ label: string; checked?: boolean }[]>(l, "trayItems")).filter((i) => i.label);
-    expect((await labels()).find((i) => i.label === "Do not disturb")!.checked).toBe(false);
-    await hook(l, "clickTray", "Do not disturb");
-    await expect.poll(() => configOf(l).doNotDisturb).toBe(true);
-    await until(async () => (await labels()).find((i) => i.label === "Do not disturb")!.checked === true);
+    const labels = async () => (await hook<{ label: string }[]>(l, "trayItems")).filter((i) => i.label);
     expect((await labels()).map((i) => i.label)).toContain("Load the voice engine now");
-  });
-});
-
-describe("notifications", () => {
-  it("the table persists each switch and Do not disturb", async () => {
-    const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await settings(l, "Notifications");
-    await l.page.getByRole("switch", { name: "Export finished: Sound" }).click();
-    await l.page.getByRole("switch", { name: "Reading finished: Toast" }).click();
-    await l.page.getByRole("switch", { name: "Do not disturb" }).click();
-    await expect.poll(() => configOf(l)).toMatchObject({ doNotDisturb: true, notifications: { "export-done": { toast: true, bell: true, sound: true }, "reading-finished": { toast: true } } });
   });
 });
 
@@ -246,19 +230,6 @@ describe("export audio", () => {
     await list.getByText("1 export is rendering. Quitting stops:").waitFor();
     await list.getByText("The export is cancelled").waitFor();
   }, 60_000);
-
-  it("closing the window with Close quits set asks first while an export renders", async () => {
-    const dir = outDir();
-    const l = await start({ config: { ...DONE, closeAction: "quit", exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "700" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await writeNote(l);
-    await l.page.getByRole("button", { name: "Export", exact: true }).click();
-    await l.page.getByTestId("export-progress").waitFor();
-    await l.page.getByRole("button", { name: "Run in background" }).click();
-    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
-    await l.page.getByRole("dialog", { name: "Quit Speak Kit?" }).getByText("1 export is rendering. Quitting stops:").waitFor();
-    expect(await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isVisible())).toBe(true);
-  }, 60_000);
 });
 
 describe("updates (electron-updater is replaced by a fake that reports a new version)", () => {
@@ -292,15 +263,6 @@ describe("updates (electron-updater is replaced by a fake that reports a new ver
 });
 
 describe("palette, engines and the extension", () => {
-  it("system actions are in the palette: Do not disturb toggles the setting", async () => {
-    const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await l.page.keyboard.press("Control+K");
-    await l.page.getByRole("combobox").fill("disturb");
-    await l.page.keyboard.press("Enter");
-    await expect.poll(() => configOf(l).doNotDisturb).toBe(true);
-  });
-
   it("Engines lists the server's engines with their state and a Load now action", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("link", { name: "Engines" }).click();

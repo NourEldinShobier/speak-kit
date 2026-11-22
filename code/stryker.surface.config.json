@@ -9,7 +9,7 @@
     "apps/desktop/src/shared/control/settings-registry.ts",
     "apps/desktop/src/main/settings-change.ts",
     "apps/desktop/src/shared/{release-notes,tray-notices}.ts",
-    "apps/desktop/src/main/{resources,single-instance,window-size-guard,window-motion}.ts",
+    "apps/desktop/src/main/{resources,single-instance,window-size-guard}.ts",
     "!**/*.test.ts"
   ],
   "coverageAnalysis": "perTest",

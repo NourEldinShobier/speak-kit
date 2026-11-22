@@ -71,13 +71,13 @@ describe("openConfig", () => {
 });
 
 describe("settings repair and backup", () => {
-  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", closeAction: "quit" });
+  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", updateChannel: "early" });
 
   it("names the invalid field, keeps the others, and backs up the exact original bytes once before the first save", async () => {
     writeFileSync(path.join(dir, "config.json"), raw);
     const c = await openConfig(dir);
     expect(c.notice).toEqual({ kind: "repaired", fields: ["idleUnload"] });
-    expect(c.config).toMatchObject({ idleUnload: "5", closeAction: "quit" });
+    expect(c.config).toMatchObject({ idleUnload: "5", updateChannel: "early" });
     c.save();
     expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
     expect(onDisk()).toMatchObject({ idleUnload: "5", configVersion: 1 });
@@ -116,10 +116,19 @@ describe("settings repair and backup", () => {
   });
 
   it("ignores capture keys left by an older version", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, capture: { consent: true }, mcpTools: { capture_list: true } }));
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, capture: { consent: true } }));
     const c = await openConfig(dir);
     expect(c.recovered).toBeNull();
     expect(c.config).toMatchObject({ setupDone: true });
     expect(c.config).not.toHaveProperty("capture");
+  });
+
+  it("loads a file that still has the removed automation settings and ignores them", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, controlServer: false, mcpTools: { read_aloud: false, history_search: true } }));
+    const c = await openConfig(dir);
+    expect(c.recovered).toBeNull();
+    expect(c.config).toMatchObject({ setupDone: true });
+    expect(c.config).not.toHaveProperty("controlServer");
+    expect(c.config).not.toHaveProperty("mcpTools");
   });
 });

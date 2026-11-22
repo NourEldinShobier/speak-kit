@@ -41,8 +41,8 @@ vi.mock("./window-colors", () => ({ appBackground: () => "#grey", setupBackgroun
 import { MainWindow } from "./main-window";
 import type { Config } from "../shared/schemas";
 
-const make = (setupDone = true, extra: Partial<Config> = {}, busy = false) =>
-  new MainWindow({ setupDone, engines: { releaseOnClose: false }, ...extra } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy });
+const make = (setupDone = true, busy = false, trayMissing = false) =>
+  new MainWindow({ setupDone, engines: { releaseOnClose: false } } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy, trayMissing: () => trayMissing });
 
 describe("MainWindow and the macOS Dock", () => {
   it("closing the window hides the Dock icon and keeps the app alive", () => {
@@ -81,9 +81,9 @@ describe("MainWindow and the macOS Dock", () => {
   });
 });
 
-describe("MainWindow close with Close set to quit", () => {
+describe("MainWindow close without a tray icon", () => {
   it("asks first when an export or reading is running and does not quit", () => {
-    const w = make(true, { closeAction: "quit", hideTrayIcon: false }, true);
+    const w = make(true, true, true);
     const ui = vi.spyOn(w, "sendUi").mockImplementation(() => {});
     const quit = vi.spyOn(w, "quit");
     w.create(false);
@@ -94,12 +94,15 @@ describe("MainWindow close with Close set to quit", () => {
     expect(quit).not.toHaveBeenCalled();
   });
 
-  it("with the tray icon hidden the same confirmation applies", () => {
-    const w = make(true, { closeAction: "hide", hideTrayIcon: true }, true);
-    const ui = vi.spyOn(w, "sendUi").mockImplementation(() => {});
+  it("quits at once when nothing is running", () => {
+    const w = make(true, false, true);
+    const quit = vi.spyOn(w, "quit").mockImplementation(() => {});
+    vi.useFakeTimers();
     w.create(false);
     h.on["close"]!({ preventDefault: () => {} });
-    expect(ui).toHaveBeenCalledWith({ type: "confirm-quit" });
+    vi.runAllTimers();
+    vi.useRealTimers();
+    expect(quit).toHaveBeenCalledOnce();
   });
 });
 

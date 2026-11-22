@@ -21,8 +21,6 @@ const base: DictationStatus = {
     hotkey: "ControlRight",
     mode: "hold",
     holdMs: 300,
-    secondHotkey: "",
-    mouseButton: "",
     rawHotkey: "",
     pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
     cancelKey: "Escape",
@@ -40,7 +38,6 @@ const base: DictationStatus = {
   keptRecordings: 0,
   rewriteKey: false,
   paused: false,
-  mouseButtons: true,
   platform: "win32",
   readerShortcuts: { "read-selection": "Ctrl+Alt+S" },
   mic: { kind: "ready", label: "Microphone Array" },
@@ -58,39 +55,24 @@ describe("shortcuts page", () => {
   it("shows every row of the default state, with Restore default disabled and nothing set", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
     const t = text(base);
-    for (const s of [
-      "Dictation shortcut",
-      "Right Ctrl",
-      "Shortcut mode",
-      "Hold or double-tap",
-      "Hold time",
-      "300 ms",
-      "Second shortcut",
-      "Add shortcut",
-      "Mouse button",
-      "Choose button",
-      "Not set",
-      "Dictate without processing",
-      "Paste last dictation",
-    ])
+    for (const s of ["Dictation shortcut", "Right Ctrl", "Shortcut mode", "Hold or double-tap", "Hold time", "300 ms", "Add shortcut", "Not set", "Dictate without processing", "Paste last dictation"])
       expect(t).toContain(s);
     expect(buttonOf(html, "Restore the default Dictation shortcut")).toContain("disabled");
     expect(t).toContain("Hold the key to talk. Let go to insert the text.");
+    expect(t).not.toContain("Second shortcut");
+    expect(t).not.toContain("Mouse button");
   });
 
   it("gives every control an accessible name", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
-    for (const name of ["Change Dictation shortcut", "Add shortcut: Second shortcut", "Choose button: Mouse button", "Add shortcut: Dictate without processing", "Change Paste last dictation"])
-      expect(html).toContain(`aria-label="${name}"`);
+    for (const name of ["Change Dictation shortcut", "Add shortcut: Dictate without processing", "Change Paste last dictation"]) expect(html).toContain(`aria-label="${name}"`);
   });
 
-  it("shows a set second shortcut, a mouse button and a raw shortcut with Remove", () => {
-    const s = withSettings({ secondHotkey: "ControlLeft+AltLeft+KeyD", mouseButton: "Mouse4", rawHotkey: "AltRight" });
-    const t = text(s);
-    expect(t).toContain("Mouse 4");
+  it("shows a set raw shortcut with Remove", () => {
+    const t = text(withSettings({ rawHotkey: "AltRight" }));
     expect(t).toContain("Right Alt");
     expect(t).toContain("Remove");
-    expect(t).not.toContain("Choose button");
+    expect(t).not.toContain("Add shortcut");
   });
 
   it("enables Restore default once Paste last is changed", () => {
@@ -98,12 +80,12 @@ describe("shortcuts page", () => {
     expect(buttonOf(html, "Restore the default Paste last dictation")).not.toContain("disabled");
   });
 
-  it("explains the mode that is selected, and the amber banner says a saved left click was reset", () => {
-    const t = text(withSettings({ mode: "tap-or-hold", resetNotice: "left-click" }));
+  it("explains the mode that is selected, and the amber banner says a clashing shortcut was cleared", () => {
+    const t = text(withSettings({ mode: "tap-or-hold", resetNotice: "clash" }));
     expect(t).toContain("How Tap or hold works");
     expect(t).toContain("Only your shortcut ends a dictation");
     expect(t).toContain("A shortcut was reset");
-    expect(t).toContain("The left button cannot be a shortcut");
+    expect(t).toContain("Two shortcuts shared a key, so the extra one was cleared.");
   });
 
   it("shows the Cancel key in the main section for the hands-free modes only, and no Advanced fold", () => {
@@ -113,12 +95,6 @@ describe("shortcuts page", () => {
     expect(t).toContain("Escape");
     expect(text(withSettings({ mode: "tap-or-hold" }))).toContain("Cancel key");
     for (const s of ["Advanced shortcut options", "Share the shortcut with other apps", "Pause in some programs", "Clean up the field"]) expect(t).not.toContain(s);
-  });
-
-  it("says the mouse button is not available where there is no mouse hook, and turns its button off", () => {
-    const s = { ...base, mouseButtons: false };
-    expect(text(s)).toContain("Mouse buttons as shortcuts are not available on this computer yet.");
-    expect(buttonOf(renderToStaticMarkup(<ShortcutsSections s={s} />), "Choose button: Mouse button")).toContain("disabled");
   });
 
   it("says why a mode cannot be delivered on a computer without the key listener", () => {

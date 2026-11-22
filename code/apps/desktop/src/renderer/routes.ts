@@ -53,27 +53,23 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
   {
     group: "General",
     items: [
-      { id: "general", label: "General", icon: "settings", lead: "Startup, language and the tray.", keywords: "launch login tray language" },
+      { id: "general", label: "General", icon: "settings", lead: "Startup and language.", keywords: "launch login language" },
       { id: "voice", label: "Voice and playback", icon: "volume", lead: "Used for previews in this app. The extension keeps its own voice and speed.", keywords: "speed default" },
       { id: "shortcuts", label: "Shortcuts", icon: "keyboard", lead: "Global keys and in-app keys.", keywords: "global keys hotkey record ctrl alt" },
-      { id: "notifications", label: "Notifications", icon: "bell", lead: "What tells you something happened.", keywords: "toast bell sound do not disturb" },
-      { id: "accessibility", label: "Accessibility", icon: "accessible", lead: "Make Speak Kit easier to see and hear.", keywords: "contrast motion screen reader text size" },
+      { id: "accessibility", label: "Accessibility", icon: "accessible", lead: "Make Speak Kit easier to see and hear.", keywords: "keyboard contrast screen reader text size" },
     ],
   },
   {
     group: "Device",
     items: [
-      { id: "performance", label: "Performance", icon: "cpu", lead: "Memory and battery use.", keywords: "memory idle unload ram battery startup" },
+      { id: "performance", label: "Performance", icon: "cpu", lead: "Memory and battery use.", keywords: "memory idle unload ram battery" },
       { id: "storage", label: "Storage", icon: "folder", lead: "Models, audio and data on this computer.", keywords: "models disk" },
       { id: "privacy", label: "Privacy", icon: "lock", lead: "What stays on this computer.", keywords: "data local telemetry permissions" },
     ],
   },
   {
     group: "Features",
-    items: [
-      { id: "automation", label: "Automation", icon: "terminal", lead: "Let other tools control Speak Kit.", keywords: "api scripts url hooks" },
-      { id: "experiments", label: "Experiments", icon: "flask", lead: "Features that are still being tried out.", keywords: "beta labs" },
-    ],
+    items: [{ id: "experiments", label: "Experiments", icon: "flask", lead: "Features that are still being tried out.", keywords: "beta labs" }],
   },
   {
     group: "App",

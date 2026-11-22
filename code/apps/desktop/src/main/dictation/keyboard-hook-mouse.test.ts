@@ -1,16 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { createKeyboardHook, type HookBackend } from "./keyboard-hook";
+import { createKeyboardHook, type HookBackend, type HookKey } from "./keyboard-hook";
 
-const X1 = 0x05;
+const F9 = 0x78;
 
-function setup() {
+/** Starts the hook on F9 and holds it, which is when the mouse hook is wanted. */
+async function setup() {
+  let onKey: ((k: HookKey) => boolean) | null = null;
   let mouseInstalls = 0;
   let mouseRemoved = 0;
   let failMouse = false;
   let mouseFault: ((e: unknown) => void) | null = null;
   let clock = 1000;
   const backend: HookBackend = {
-    install: () => ({ uninstall() {} }),
+    install(k) {
+      onKey = k;
+      return { uninstall() {} };
+    },
     keyIsDown: () => false,
     installMouse(_click, onFault) {
       if (failMouse) throw new Error("no mouse hook");
@@ -21,8 +26,9 @@ function setup() {
   };
   const hook = createKeyboardHook(backend, { marker: 1, pollMs: 100, stallMs: 250, healthMs: 5000, now: () => clock });
   const faults: unknown[] = [];
-  hook.start({ keys: [0x78] }, { onEvent() {}, onFault: (e) => void faults.push(e) });
-  hook.setExtraChords({ mouse: { keys: [X1] } });
+  hook.start({ keys: [F9] }, { onEvent() {}, onFault: (e) => void faults.push(e) });
+  onKey!({ vk: F9, down: true, flags: 0, extra: 0 });
+  await vi.advanceTimersByTimeAsync(0);
   return {
     mouseInstalls: () => mouseInstalls,
     mouseRemoved: () => mouseRemoved,
@@ -30,6 +36,13 @@ function setup() {
     fault: (e: unknown) => mouseFault!(e),
     failMouse: (v: boolean) => (failMouse = v),
     clock: (ms: number) => (clock += ms),
+    /** Time passes in poll steps, so the event loop never looks blocked. */
+    tick: async (ms: number) => {
+      for (let left = ms; left > 0; left -= 100) {
+        clock += 100;
+        await vi.advanceTimersByTimeAsync(100);
+      }
+    },
   };
 }
 
@@ -38,7 +51,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("mouse hook resilience", () => {
   it("installs the mouse hook again after the event loop was blocked", async () => {
-    const t = setup();
+    const t = await setup();
     expect(t.mouseInstalls()).toBe(1);
     t.clock(1000);
     await vi.advanceTimersByTimeAsync(100);
@@ -47,25 +60,22 @@ describe("mouse hook resilience", () => {
   });
 
   it("reports a mouse hook fault to the owner and retries the hook at the next health check", async () => {
-    const t = setup();
+    const t = await setup();
     t.fault(new Error("dropped"));
     expect(t.faults).toHaveLength(1);
     expect(t.mouseInstalls()).toBe(1);
-    t.clock(5000);
-    await vi.advanceTimersByTimeAsync(5000);
+    await t.tick(5100);
     expect(t.mouseInstalls()).toBe(2);
   });
 
-  it("keeps trying while the system refuses the mouse hook, without touching the keyboard hook", async () => {
-    const t = setup();
+  it("keeps trying while the key is held and the system refuses the mouse hook, without touching the keyboard hook", async () => {
+    const t = await setup();
     t.failMouse(true);
     t.fault(new Error("dropped"));
-    t.clock(5000);
-    await vi.advanceTimersByTimeAsync(5000);
+    await t.tick(5100);
     expect(t.mouseInstalls()).toBe(1);
     t.failMouse(false);
-    t.clock(5000);
-    await vi.advanceTimersByTimeAsync(5000);
+    await t.tick(5100);
     expect(t.mouseInstalls()).toBe(2);
     expect(t.faults).toHaveLength(1);
   });

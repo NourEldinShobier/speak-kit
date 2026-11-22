@@ -1,6 +1,5 @@
 import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
-import type { AutomationInfo, CommandLineAction } from "./control/info";
 import type { DesktopError } from "./errors";
 import type { Config } from "./schemas";
 import type { ExportOptions, ExportTarget, ExportView } from "./export";
@@ -8,7 +7,6 @@ import type { ReaderCommand, ReaderState } from "./reader";
 import type { Bindings, ShortcutConflict, ShortcutId } from "./shortcuts";
 import type { UpdateAction, UpdateState } from "./updates";
 import type { MicAccess } from "./settings/permissions";
-import type { Resources } from "./settings/resources";
 import type { SettingsNotice } from "./settings/settings-file";
 import type { VoiceChatKeyStatus, VoiceChatSaveResult, VoiceChatTestResult } from "./voice-chat";
 
@@ -20,22 +18,7 @@ export type SettingsResult = { ok: true } | { ok: false; message: string; shortc
 /** What importing a settings file did: how many settings were applied, which of them differ from before, and which names were left out. */
 export type ImportOutcome = { status: "imported"; applied: number; changed: string[]; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
 export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "settings"] as const;
-export const SETTINGS_SUBS = [
-  "general",
-  "voice",
-  "shortcuts",
-  "notifications",
-  "accessibility",
-  "performance",
-  "storage",
-  "privacy",
-  "automation",
-  "experiments",
-  "browser",
-  "diagnostics",
-  "whatsnew",
-  "about",
-] as const;
+export const SETTINGS_SUBS = ["general", "voice", "shortcuts", "accessibility", "performance", "storage", "privacy", "experiments", "browser", "diagnostics", "whatsnew", "about"] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
@@ -97,14 +80,6 @@ export interface StorageInfo {
   otherBytes: number;
 }
 
-export interface Metrics {
-  /** Sum of working sets of every Electron process, MB. */
-  totalMb: number;
-  mainMb: number;
-  rendererMb: number;
-  otherMb: number;
-}
-
 export type ShortcutResult = { ok: true } | { ok: false; error: DesktopError; conflict?: ShortcutConflict };
 
 export type ExternalLink = "webstore" | "release-notes" | "issues" | "security";
@@ -130,14 +105,6 @@ export interface Api {
   setLaunchAtLogin(on: boolean): Promise<AppState>;
   setPort(port: number): Promise<AppState>;
   regenerateToken(): Promise<AppState>;
-  automationInfo(): Promise<AutomationInfo>;
-  /** A new token for the command line and MCP server; the old one stops working at once. */
-  resetControlToken(): Promise<AutomationInfo>;
-  commandLine(action: CommandLineAction): Promise<AutomationInfo>;
-  /** Writes the agent skill file: a first install or an update. */
-  installAgentSkill(): Promise<AutomationInfo>;
-  /** Opens a terminal that runs the try-it command. Rejects when no terminal could be opened. */
-  testInTerminal(): Promise<void>;
   retryEngine(): Promise<AppState>;
   /** Starts the model download (and load) when it is not on disk yet. Idempotent. */
   downloadModel(): Promise<AppState>;
@@ -149,9 +116,6 @@ export interface Api {
   storage(): Promise<StorageInfo>;
   /** Stops the engine and deletes the downloaded model, OCR data and exports. The library and settings stay. */
   deleteDownloads(): Promise<DownloadsReport>;
-  metrics(): Promise<Metrics>;
-  /** Memory per process and per model, and what this computer offers (Settings, Performance). */
-  resources(): Promise<Resources>;
   hideWindow(): Promise<void>;
   /** Really quits (after the renderer's confirmation dialog). */
   quit(): Promise<void>;
@@ -202,11 +166,6 @@ export const METHODS = [
   "setLaunchAtLogin",
   "setPort",
   "regenerateToken",
-  "automationInfo",
-  "resetControlToken",
-  "commandLine",
-  "installAgentSkill",
-  "testInTerminal",
   "retryEngine",
   "downloadModel",
   "voices",
@@ -216,8 +175,6 @@ export const METHODS = [
   "openPath",
   "storage",
   "deleteDownloads",
-  "metrics",
-  "resources",
   "hideWindow",
   "quit",
   "setShortcut",
