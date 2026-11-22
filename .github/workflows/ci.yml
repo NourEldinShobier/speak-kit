@@ -20,6 +20,10 @@ concurrency:
 permissions:
   contents: read
 
+# The tests never use the CUDA build of ONNX Runtime; its install script downloads a large Linux archive that has failed with a 404 and stopped every job.
+env:
+  npm_config_onnxruntime_node_install_cuda: skip
+
 jobs:
   changes:
     runs-on: ubuntu-latest
