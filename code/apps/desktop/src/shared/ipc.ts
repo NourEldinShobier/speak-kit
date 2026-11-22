@@ -29,7 +29,6 @@ export const SETTINGS_SUBS = [
   "performance",
   "storage",
   "privacy",
-  "meetings",
   "automation",
   "experiments",
   "browser",
@@ -115,8 +114,6 @@ export type OpenPath = "models" | "logs" | "data";
 export type UiEvent =
   | { type: "nav"; page: Page; sub?: SettingsSub }
   | { type: "confirm-quit" }
-  /** A meeting capsule asked to open a meeting in History. */
-  | { type: "open-meeting"; id: string }
   | { type: "pause" }
   | { type: "export"; text?: string }
   /** To the mini player, which owns the audio output. */

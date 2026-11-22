@@ -12,7 +12,6 @@ describe("settings import round trip", () => {
       port: 47615,
       voice: "af_heart",
       "dictation.mode": "hold",
-      "meetings.output": "automatic",
       "transcripts.language": stored.transcripts.language,
     });
     expect(plan.skipped).toEqual([
@@ -29,11 +28,6 @@ describe("settings import round trip", () => {
       "engines.dismissedHints",
       "engines.skippedModel",
       "engines.lastUsed",
-      "meetings.policies",
-      "meetings.apps",
-      "meetings.folder",
-      "meetings.positions",
-      "meetings.inputDevice",
     ]);
   });
 

@@ -1,11 +1,10 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { DictationState, InsertMode, MicEvent, MicStatus, Settings } from "@speakkit/dictation";
+import type { DictationState, MicEvent, MicStatus, Settings } from "@speakkit/dictation";
 import type { DictationStatus, MicDeviceView, RecorderEvent } from "../../shared/dictation/contract";
 import { firstClash, type Shortcuts } from "../../shared/dictation/conflicts";
-import { hotkeySlots, type AppRule, type DictationConfig, type DictationPatch } from "../../shared/dictation/settings";
-import type { AppOverride } from "./types";
+import { hotkeySlots, type DictationConfig, type DictationPatch } from "../../shared/dictation/settings";
 import type { ModelManager } from "./models";
 import { failureLine } from "./hud-view";
 import type { HotkeyLayout } from "./hotkey-source";
@@ -26,7 +25,6 @@ export const clock = {
     return () => clearTimeout(t);
   },
 };
-const insertModeOf = (method: AppRule["method"]): InsertMode => (method === "type" || method === "copy" ? method : "paste");
 
 export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   hotkey: c.hotkey,
@@ -45,7 +43,6 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   keepOnClipboard: c.output === "keep",
   insertMode: c.output === "copy" ? "copy" : "paste",
   returnToApp: c.returnToApp,
-  appModes: Object.fromEntries(Object.entries(c.appRules).map(([exe, r]) => [exe, insertModeOf(r.method)])),
   ...c.cleanup,
   terms: c.terms,
   prompt: c.prompt,
@@ -55,20 +52,15 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   smartSpacing: c.smartSpacing,
 });
 
-/** What the key hook listens for. Sharing the keys with other programs is only offered in Hold mode, because a hands-free mode cannot keep the other program's key held. */
+/** What the key hook listens for. */
 export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   hotkey: c.hotkey,
   second: c.secondHotkey,
   mouse: c.mouseButton,
   raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
-  transform: c.transformHotkey,
   cancelKey: c.cancelKey,
-  share: c.shareHotkey && c.mode === "hold-only",
 });
-
-/** The per-program table as paste rules for the operating system layer: which keys, and how long to wait before them. */
-export const appOverrides = (rules: Readonly<Record<string, AppRule>>): AppOverride[] => Object.entries(rules).map(([exe, r]) => ({ exe, profile: { shortcut: r.method, preDelayMs: r.delayMs } }));
 
 /** How long an idle open microphone stays open: nothing when it is released when idle, forever (-1) or for the set number of minutes when kept ready. */
 export function keepOpenMs(c: Pick<DictationConfig, "keepReady" | "keepReadyMinutes">): number {
@@ -192,7 +184,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", transformHotkey: "transform", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", secondHotkey: "second", mouseButton: "mouse", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {
@@ -207,7 +199,7 @@ export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reade
   return own.has(b) ? { slot: b, with: a } : undefined;
 }
 
-const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"] as const;
+const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "avoidBluetooth"] as const;
 
 /** True when a settings change needs the microphone window told (which input, and whether it stays open). */
 export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) => k in patch);

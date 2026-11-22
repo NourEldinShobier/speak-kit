@@ -67,31 +67,40 @@ describe("transcriber", () => {
     await loading;
   });
 
-  it("starts loading a model that is on disk but not loaded, says it is loading and keeps the audio", async () => {
+  it("loads a model that is on disk but not loaded and transcribes with it, instead of failing the recording", async () => {
     const stt = new FakeStt();
     const failed: Clip[] = [];
+    stt.say({ text: "after the reload" });
     const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c) });
-    const c = clip([0.1]);
-    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-loading" });
-    expect(failed).toEqual([c]);
-    await new Promise((r) => setTimeout(r, 10));
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en" })).toEqual({ ok: true, text: "after the reload", model: "large-v3-turbo-q5_0", language: "en" });
+    expect(failed).toEqual([]);
     expect(stt.status().state).toBe("ready");
   });
 
-  it("reports a model whose load failed with the engine's reason, instead of trying to load it on every press", async () => {
+  it("tries a model whose last load failed again at the next recording, and uses it when that works", async () => {
     const stt = new FakeStt();
     stt.say({ loadError: "the whisper addon crashed" });
     await stt.warm("large-v3-turbo-q5_0");
+    expect(stt.status().state).toBe("error");
+    const failed: Clip[] = [];
+    stt.say({ text: "second try" });
+    const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c) });
+    expect(await t.transcribe({ clip: clip([0.1]), language: "en" })).toMatchObject({ ok: true, text: "second try" });
+    expect(failed).toEqual([]);
+  });
+
+  it("reports the engine's reason when the load fails again, and keeps the audio", async () => {
+    const stt = new FakeStt();
+    stt.say({ loadError: "the whisper addon crashed" });
+    await stt.warm("large-v3-turbo-q5_0");
+    stt.say({ loadError: "the whisper addon crashed again" });
     const failed: Clip[] = [];
     const reasons: string[] = [];
     const t = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", onFailedClip: (c) => failed.push(c), onModelError: (d) => reasons.push(d) });
     const c = clip([0.1]);
     expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-failed" });
-    expect(await t.transcribe({ clip: c, language: "en" })).toEqual({ ok: false, code: "model-failed" });
-    expect(reasons).toEqual(["the whisper addon crashed", "the whisper addon crashed"]);
-    expect(failed).toEqual([c, c]);
-    await new Promise((r) => setTimeout(r, 10));
-    expect(stt.status().state).toBe("error");
+    expect(reasons).toEqual(["the whisper addon crashed again"]);
+    expect(failed).toEqual([c]);
   });
 
   it("calls an errored model that is not on disk missing, not failed", async () => {
@@ -174,20 +183,19 @@ describe("model views", () => {
 });
 
 describe("end-of-sentence pause", () => {
-  async function paused(model: string, on: boolean) {
+  async function paused(model: string) {
     const stt = new FakeStt();
     await stt.load(model as never);
-    const t = createTranscriber({ stt, model: () => model as never, onFailedClip: () => undefined, sentencePause: () => on });
+    const t = createTranscriber({ stt, model: () => model as never, onFailedClip: () => undefined });
     await t.transcribe({ clip: clip([0.5, 0.5], 1000), language: "en" });
     return stt.calls()[0]!.samples;
   }
 
-  it("adds 400 ms of silence for Parakeet when on", async () => {
-    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", true)).toBe(402);
+  it("adds 400 ms of silence for Parakeet", async () => {
+    expect(await paused("parakeet-tdt-0.6b-v3-q4_0")).toBe(402);
   });
-  it("adds nothing when off, or for Whisper", async () => {
-    expect(await paused("parakeet-tdt-0.6b-v3-q4_0", false)).toBe(2);
-    expect(await paused("large-v3-turbo-q5_0", true)).toBe(2);
+  it("adds nothing for Whisper", async () => {
+    expect(await paused("large-v3-turbo-q5_0")).toBe(2);
   });
 });
 

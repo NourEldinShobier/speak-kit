@@ -182,7 +182,7 @@ describe("the constants other code relies on", () => {
   it("fixes the sentence of every code", () => {
     expect(AUTOMATION_ERROR_TEXT).toEqual({
       model_missing: "The speech model is not downloaded yet.",
-      busy: "Dictation or a meeting is already recording.",
+      busy: "A recording is already running.",
       permission_denied: "The operating system is blocking access to the microphone.",
       too_large: "The file is over the 64 MiB limit.",
       unsupported: "This version does not have that command.",
@@ -209,7 +209,6 @@ describe("the constants other code relies on", () => {
       skill: "available",
       dictate: "parked",
       history: "parked",
-      meetings: "parked",
       "live-stream": "available",
     });
   });

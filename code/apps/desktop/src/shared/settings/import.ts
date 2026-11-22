@@ -10,7 +10,7 @@ export const NEEDS_CONFIRMATION: Readonly<Record<string, { what: string; on(valu
   controlServer: { what: "the local control server for the command line and AI apps", on: (v) => v === true },
   experiments: { what: "experiments", on: anyOn },
   mcpTools: { what: "the tools offered to AI apps", on: anyOn },
-  "meetings.summary": { what: "meeting summaries written by an online service", on: (v) => v === true },
+  "transcripts.notes": { what: "transcript notes written by an online service", on: (v) => v === true },
   "dictation.rewrite": { what: "rewriting dictated text", on: (v) => (v as { enabled?: unknown } | null)?.enabled === true },
 };
 

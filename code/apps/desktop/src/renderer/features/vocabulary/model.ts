@@ -108,7 +108,6 @@ export function cleanupRows(language: string): CleanupRow[] {
     { key: "spokenSymbols", label: "Spoken symbols", description: 'Say "question mark" to type ?', ...scoped(SYMBOL_LANGUAGES) },
     { key: "spokenFormatting", label: "Spoken formatting", description: 'Say "new line" or "bullet". Numbers and lists you say are never reworded.', ...scoped(FORMATTING_LANGUAGES) },
     { key: "autoCapitalize", label: "Capitalise sentences", description: "A capital letter at the start of each sentence." },
-    { key: "lowercase", label: "Lowercase everything", description: "For chat and search boxes. Words from your list keep their spelling." },
     { key: "stripFinalStop", label: "No full stop at the end", description: "Removes only the last character of the whole dictation, never one inside it." },
     { key: "trailingSpace", label: "Space after the text", description: "So the next dictation does not run into this one." },
   ];
@@ -129,7 +128,7 @@ export function testStages(heard: string, o: { terms: readonly Term[]; replaceme
   const trace = traceRules(heard, base);
   const raw = trace.raw;
   // The words step shows what the vocabulary alone changes; the replacements step what the replacement list adds on top, using the one pass the dictation uses.
-  const words = trace.notes.includes("noise") || trace.notes.includes("numbers-only") ? raw : applyReplacements(o.cleanup.lowercase ? raw.toLowerCase() : raw, [...own]);
+  const words = trace.notes.includes("noise") || trace.notes.includes("numbers-only") ? raw : applyReplacements(raw, [...own]);
   const stages: Stage[] = [
     { key: "heard", title: "Model heard", note: "The raw text", text: raw },
     { key: "words", title: "Words and names", note: ruleNote({ count: own.length, what: "sounds-like", before: raw, after: words }), text: words },
@@ -145,14 +144,7 @@ function ruleNote({ count, what, before, after }: { count: number; what: string;
 }
 
 function cleanupNote(c: Cleanup): string {
-  const on = [
-    c.fillers && "fillers",
-    c.spokenSymbols && "symbols",
-    c.spokenFormatting && "formatting",
-    c.autoCapitalize && "capital letter",
-    c.lowercase && "lowercase",
-    c.stripFinalStop && "no full stop",
-  ].filter(Boolean);
+  const on = [c.fillers && "fillers", c.spokenSymbols && "symbols", c.spokenFormatting && "formatting", c.autoCapitalize && "capital letter", c.stripFinalStop && "no full stop"].filter(Boolean);
   return on.length ? on.join(", ") : "All switches off";
 }
 

@@ -23,8 +23,8 @@ export const prerollMs = ({ keepReady, ducking }: PrerollInput): number => (keep
 
 const PAD_MS: ReadonlyArray<readonly [prefix: string, ms: number]> = [["parakeet", 400]];
 
-/** Silence to add after the speech so the model closes the last sentence; zero for models that do not need it or when the person turned it off. */
-export const trailingPadMs = (model: string, enabled: boolean): number => (enabled ? (PAD_MS.find(([prefix]) => model.startsWith(prefix))?.[1] ?? 0) : 0);
+/** Silence to add after the speech so the model closes the last sentence; zero for models that do not need it. */
+export const trailingPadMs = (model: string): number => PAD_MS.find(([prefix]) => model.startsWith(prefix))?.[1] ?? 0;
 
 export function padTail(pcm: Float32Array, sampleRate: number, ms: number): Float32Array {
   const extra = Math.round((sampleRate * ms) / 1000);

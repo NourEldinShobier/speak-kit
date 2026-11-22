@@ -48,7 +48,7 @@ let interrupted = false;
 /** When the microphone ended during a recording; cleared by the first sound after it comes back. */
 let gapAt: number | undefined;
 let warm: ReturnType<typeof setTimeout> | undefined;
-let config: RecorderMicConfig = { saved: "", exclusions: [], avoidBluetooth: true, keepMs: 0 };
+let config: RecorderMicConfig = { saved: "", avoidBluetooth: true, keepMs: 0 };
 let reopenedForSilence = false;
 let meterOn = false;
 const silent = new Set<string>();
@@ -80,7 +80,7 @@ async function pickDevice(): Promise<{ id: string; label: string; bluetooth: boo
   const devices = await listDevices();
   const def = (await navigator.mediaDevices.enumerateDevices()).find((d) => d.kind === "audioinput" && d.deviceId === "default");
   const defaultId = devices.find((d) => def && d.label && def.label.endsWith(d.label))?.id ?? devices[0]?.id;
-  const choice = chooseMic({ devices, saved: config.saved || undefined, defaultId, exclusions: config.exclusions, avoidBluetooth: config.avoidBluetooth, silent: [...silent] });
+  const choice = chooseMic({ devices, saved: config.saved || undefined, defaultId, avoidBluetooth: config.avoidBluetooth, silent: [...silent] });
   if (choice.kind === "none") {
     dictation.recorder.event({ type: "no-device", builtInOff: choice.reason === "built-in-off" });
     return null;
@@ -202,7 +202,7 @@ async function announceDevices(): Promise<void> {
   }
 }
 
-const sameDevice = (a: RecorderMicConfig, b: RecorderMicConfig) => a.saved === b.saved && a.avoidBluetooth === b.avoidBluetooth && a.exclusions.join("\n") === b.exclusions.join("\n");
+const sameDevice = (a: RecorderMicConfig, b: RecorderMicConfig) => a.saved === b.saved && a.avoidBluetooth === b.avoidBluetooth;
 
 /** Applies new settings at once: another microphone choice reopens, and the microphone is open exactly while it is kept ready or the level meter is on. */
 async function configure(on: boolean, mic: RecorderMicConfig): Promise<RecorderResult> {

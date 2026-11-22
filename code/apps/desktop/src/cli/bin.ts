@@ -6,7 +6,6 @@ import { readStoredHistory } from "@speakkit/dictation";
 import { fail, LIMITS, type Reply } from "../shared/control/contract";
 import { discoveryFile, portOpen, processAlive, readDiscovery } from "../main/control/discovery";
 import { mcpFlags, serveMcp } from "./mcp";
-import { diskSources, runRead } from "./reads";
 import { skillFilePath, userDataDir } from "./paths";
 import { runCli, type Io } from "./run";
 
@@ -49,7 +48,6 @@ const io: Io = {
       return null; // a file that cannot be read is not an empty history
     }
   },
-  reads: diskSources(dir),
   async readConfig() {
     try {
       return JSON.parse(await readFile(path.join(dir, "config.json"), "utf8"));
@@ -107,7 +105,6 @@ if (process.argv[2] === "mcp")
         return fail("not-running", "Speak Kit did not answer.");
       }
     },
-    read: (r) => runRead(r, io.reads),
     flags: async () => mcpFlags(await io.readConfig()),
   });
 else process.exitCode = await runCli(process.argv.slice(2), io);

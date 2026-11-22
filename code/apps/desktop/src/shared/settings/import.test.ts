@@ -64,9 +64,9 @@ describe("planImport", () => {
   });
 
   it("lists the settings that need a confirmation and the ones that differ from what is set", () => {
-    const text = JSON.stringify({ controlServer: true, voice: "af_bella", speed: 1, meetings: { summary: true } });
+    const text = JSON.stringify({ controlServer: true, voice: "af_bella", speed: 1, transcripts: { notes: true } });
     const r = planImport(text, { controlServer: true, voice: "af_heart", speed: 1 });
-    expect(r).toMatchObject({ needsConfirmation: ["meetings.summary"], changed: ["voice", "meetings.summary"] });
+    expect(r).toMatchObject({ needsConfirmation: ["transcripts.notes"], changed: ["voice", "transcripts.notes"] });
   });
 
   it("asks about the control server, experiments and tool access only when the import would switch them on", () => {
@@ -82,6 +82,10 @@ describe("planImport", () => {
   });
 
   it("does not take a prototype key inside an area", () => {
-    expect(planImport('{"voice":"a","meetings":{"__proto__":{"summary":true}}}')).toMatchObject({ change: { voice: "a" }, skipped: ["meetings.__proto__"] });
+    expect(planImport('{"voice":"a","transcripts":{"__proto__":{"notes":true}}}')).toMatchObject({ change: { voice: "a" }, skipped: ["transcripts.__proto__"] });
+  });
+
+  it("leaves out the removed meetings section of an older settings file and takes the rest", () => {
+    expect(planImport('{"voice":"a","meetings":{"enabled":true,"summary":true,"audioHours":24}}')).toMatchObject({ change: { voice: "a" }, skipped: ["meetings"] });
   });
 });

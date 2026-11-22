@@ -21,7 +21,6 @@ import {
   VoicePage,
   WhatsNewPage,
 } from "./features/settings";
-import { MeetingsPage } from "./features/meetings";
 import "./settings.css";
 
 const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
@@ -33,7 +32,6 @@ const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   performance: MemoryPage,
   storage: StoragePage,
   privacy: PrivacyPage,
-  meetings: MeetingsPage,
   automation: AutomationPage,
   experiments: ExperimentsPage,
   browser: BrowserPage,

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseConfig } from "../schemas";
 import { countDropped, DictationConfigSchema, DictationPatchSchema } from "./settings";
 
-const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, lowercase: false, stripFinalStop: false };
+const CLEANUP = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: true, stripFinalStop: false };
 const DEFAULTS = {
   enabled: false,
   hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
@@ -14,22 +14,16 @@ const DEFAULTS = {
   rawHotkey: "",
   pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
   cancelKey: "Escape",
-  shareHotkey: false,
-  pauseRules: { mode: "off", apps: [], fullscreen: false },
   language: "en",
   model: "large-v3-turbo-q5_0",
   retention: "7d",
   replacements: [],
   microphone: "",
-  micExclusions: [],
   avoidBluetooth: true,
   keepReady: false,
   keepReadyMinutes: 0,
-  sentencePause: true,
   output: "restore",
   returnToApp: true,
-  appRules: {},
-  blockSleep: true,
   skipPauses: false,
   terms: [],
   readAs: [],
@@ -39,12 +33,12 @@ const DEFAULTS = {
   rewrite: { enabled: false, deadlineMs: 4000 },
   keepRecordings: false,
   smartSpacing: false,
-  transformHotkey: "",
   sounds: { enabled: false, volume: 50 },
   indicator: "bottom",
   audioCapMb: 512,
   duckAudio: "nothing",
   duckSpeakersOnly: true,
+  duckLevel: 30,
 };
 
 describe("dictation config", () => {
@@ -82,14 +76,14 @@ describe("dictation config", () => {
 describe("settings added after the first release", () => {
   it("a file written before them loads with each at its default", () => {
     const old = parseConfig({ dictation: { enabled: true, keepRecordings: true } }).dictation;
-    expect(old).toMatchObject({ smartSpacing: false, transformHotkey: "", sounds: { enabled: false, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+    expect(old).toMatchObject({ smartSpacing: false, sounds: { enabled: false, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
   });
 
   it("keeps good values and replaces each bad one with its default", () => {
     const got = parseConfig({
-      dictation: { smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
+      dictation: { smartSpacing: true, sounds: { enabled: true, volume: 130 }, indicator: "middle", audioCapMb: 300 },
     }).dictation;
-    expect(got).toMatchObject({ smartSpacing: true, transformHotkey: "ControlLeft+AltLeft+KeyT", sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
+    expect(got).toMatchObject({ smartSpacing: true, sounds: { enabled: true, volume: 50 }, indicator: "bottom", audioCapMb: 512 });
   });
 
   it("other audio is left alone and only muted for speakers by default, a file without the fields loads that way and a bad mode falls back", () => {
@@ -99,6 +93,17 @@ describe("settings added after the first release", () => {
     const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
     expect(ok({ duckAudio: "pause", duckSpeakersOnly: false })).toBe(true);
     expect(ok({ duckAudio: "silence" })).toBe(false);
+  });
+
+  it("the lowered volume is 30 percent by default, an out of range or fractional saved value falls back to it, and a patch accepts only whole percents from 0 to 100", () => {
+    expect(parseConfig({ dictation: { enabled: true } }).dictation.duckLevel).toBe(30);
+    expect(parseConfig({ dictation: { duckLevel: 0 } }).dictation.duckLevel).toBe(0);
+    expect(parseConfig({ dictation: { duckLevel: 85 } }).dictation.duckLevel).toBe(85);
+    for (const bad of [101, -5, 12.5, "40"]) expect(parseConfig({ dictation: { duckLevel: bad } }).dictation.duckLevel).toBe(30);
+    const ok = (p: unknown) => v.safeParse(DictationPatchSchema, p).success;
+    expect(ok({ duckLevel: 100 })).toBe(true);
+    expect(ok({ duckLevel: 101 })).toBe(false);
+    expect(ok({ duckLevel: 2.5 })).toBe(false);
   });
 
   it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
@@ -112,11 +117,6 @@ describe("settings added after the first release", () => {
       { from: "ship it", to: "deploy" },
       { from: "a", to: "b", matchCase: true },
     ]);
-  });
-
-  it("a clean-up shortcut that clashes with the dictation shortcut is cleared and the page says so", () => {
-    const got = parseConfig({ dictation: { hotkey: "ControlLeft+AltLeft+KeyT", transformHotkey: "ControlLeft+AltLeft+KeyT" } }).dictation;
-    expect(got).toMatchObject({ transformHotkey: "", resetNotice: "clash" });
   });
 
   it("the renderer may change each of them and nothing else inside sounds", () => {
@@ -156,27 +156,23 @@ describe("audio and output settings", () => {
 
   it("keeps good audio and output values", () => {
     const c = parseConfig({
-      dictation: { microphone: "abc", micExclusions: ["yeti", "", "x".repeat(61), "cable"], keepReady: true, keepReadyMinutes: 30, output: "keep", sentencePause: false, blockSleep: false },
+      dictation: { microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep" },
     }).dictation;
-    expect(c).toMatchObject({ microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep", sentencePause: false, blockSleep: false });
+    expect(c).toMatchObject({ microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep" });
   });
 
-  it("drops the whole exclusion list when it has a bad entry, rather than guess", () => {
-    expect(parseConfig({ dictation: { micExclusions: ["yeti", 4] } }).dictation.micExclusions).toEqual([]);
+  it("ignores the removed sentencePause and blockSleep keys of an older config", () => {
+    const c = parseConfig({ dictation: { sentencePause: false, blockSleep: false, output: "keep" } }).dictation;
+    expect(c.output).toBe("keep");
+    expect(c).not.toHaveProperty("sentencePause");
+    expect(c).not.toHaveProperty("blockSleep");
   });
 
-  it("keeps good per-program rules, drops bad ones, and stores names without .exe in lower case", () => {
-    const c = parseConfig({
-      dictation: {
-        appRules: { "PuTTY.exe": { method: "shift-insert", delayMs: 50 }, code: { method: "type" }, bad: { method: "fly" }, "": { method: "copy" }, mstsc: { method: "ctrl-v", delayMs: 99999 } },
-      },
-    }).dictation;
-    expect(c.appRules).toEqual({ putty: { method: "shift-insert", delayMs: 50 }, code: { method: "type", delayMs: 0 }, mstsc: { method: "ctrl-v", delayMs: 0 } });
-  });
-
-  it("keeps program names that merely end in the letters exe", () => {
-    const c = parseConfig({ dictation: { appRules: { complexe: { method: "type" }, nexe: { method: "copy" }, "putty.exe": { method: "type" } } } }).dictation;
-    expect(Object.keys(c.appRules).sort()).toEqual(["complexe", "nexe", "putty"]);
+  it("ignores the removed micExclusions and appRules keys of an older config", () => {
+    const c = parseConfig({ dictation: { micExclusions: ["yeti"], appRules: { putty: { method: "type", delayMs: 10 } }, output: "keep" } }).dictation;
+    expect(c.output).toBe("keep");
+    expect(c).not.toHaveProperty("micExclusions");
+    expect(c).not.toHaveProperty("appRules");
   });
 
   it("loads a config from before skip pauses existed with it off, and keeps it on when set", () => {
@@ -185,16 +181,12 @@ describe("audio and output settings", () => {
     expect(parseConfig({ dictation: { skipPauses: "yes" } }).dictation.skipPauses).toBe(false);
   });
 
-  it("stops at 50 rules", () => {
-    const many = Object.fromEntries(Array.from({ length: 80 }, (_, i) => [`app${i}`, { method: "copy" }]));
-    expect(Object.keys(parseConfig({ dictation: { appRules: many } }).dictation.appRules)).toHaveLength(50);
-  });
-
   it("accepts them in a patch and refuses bad ones", () => {
-    expect(v.safeParse(DictationPatchSchema, { keepReady: true, output: "copy", appRules: { putty: { method: "type", delayMs: 10 } } }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { keepReady: true, output: "copy" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { output: "paste" }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { keepReadyMinutes: 500 }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { appRules: { "bad/name": { method: "type", delayMs: 0 } } }).success).toBe(false);
+    expect(v.safeParse(DictationPatchSchema, { appRules: {} }).success).toBe(false);
+    expect(v.safeParse(DictationPatchSchema, { micExclusions: [] }).success).toBe(false);
   });
 });
 
@@ -231,7 +223,12 @@ describe("vocabulary, modes and rewrite in the config", () => {
   });
 
   it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
-    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false, lowercase: true });
+    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
+    // "lowercase" was a switch once; a saved file that still has it loads and the key is gone.
+    expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
+    // A mode saved with capitals "lower" keeps its other settings and now keeps capitals as spoken.
+    const lowerMode = { id: "m1", name: "Chat", apps: [], insertMode: "paste", capitals: "lower", end: "keep", rewrite: false, terms: [] };
+    expect(v.parse(DictationConfigSchema, { modes: [lowerMode] }).modes[0]).toMatchObject({ name: "Chat", capitals: "keep" });
     expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });

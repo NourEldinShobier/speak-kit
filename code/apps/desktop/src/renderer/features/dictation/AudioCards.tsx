@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { Banner, Button, Icon, Segmented, Select, SettingRow, SettingsSection, Slider, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Segmented, Select, SettingRow, SettingsSection, Slider, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { MAX_APP_RULES, type PasteMethod } from "../../../shared/dictation/settings";
-import { AppSuggestions } from "../apps";
 import { dictation, patchDictation } from "./api";
 import { watchMeter } from "./meter-watch";
-import { KEEP_READY_MINUTES, METHOD_OPTIONS, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
+import { KEEP_READY_MINUTES, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
 
 const BARS = 24;
 /** Auto means "no saved device". The select cannot hold an empty value, so it is stored as this word and mapped back. */
@@ -50,16 +48,6 @@ function MicProblem({ s, line }: { s: DictationStatus; line: ReturnType<typeof m
 function CaptureRows({ c }: { c: DictationStatus["settings"] }) {
   return (
     <>
-      <SettingRow
-        label="End-of-sentence pause"
-        description="Adds a short silence after you stop, for the speech models that need it to finish the last sentence."
-        control={<Toggle aria-label="End-of-sentence pause" checked={c.sentencePause} onChange={(sentencePause) => void patchDictation({ sentencePause })} />}
-      />
-      <SettingRow
-        label="Keep the computer awake while recording"
-        description="Stops sleep during a recording. It is released when you stop."
-        control={<Toggle aria-label="Keep the computer awake while recording" checked={c.blockSleep} onChange={(blockSleep) => void patchDictation({ blockSleep })} />}
-      />
       <SettingRow
         label="Skip long pauses"
         description="Cuts the middle out of long pauses before the speech is decoded, which is faster on slow computers. If nothing is heard that way, the whole recording is used."
@@ -155,7 +143,7 @@ export function FeedbackCard({ s }: { s: DictationStatus }) {
       <SettingRow
         className="lm-row--control"
         label="Recording indicator"
-        description="Where the pill appears, on the screen the pointer is on. Hidden still shows failures that need you."
+        description="Where the small recording bar appears, on the screen the pointer is on. Hidden still shows failures that need you."
         control={<Select label="Recording indicator" value={c.indicator} onChange={(indicator) => void patchDictation({ indicator: indicator as typeof c.indicator })} options={INDICATOR_OPTIONS} />}
       />
       <SettingRow
@@ -170,76 +158,6 @@ export function FeedbackCard({ s }: { s: DictationStatus }) {
           description={c.sounds.volume === 0 ? "Volume 0 plays nothing." : `${c.sounds.volume} percent`}
           control={<Slider min={0} max={100} step={5} defaultValue={c.sounds.volume} aria-label="Volume" onCommit={(volume) => void patchDictation({ sounds: { ...c.sounds, volume } })} />}
         />
-      )}
-    </SettingsSection>
-  );
-}
-
-type Rules = DictationStatus["settings"]["appRules"];
-
-function RuleRow({ exe, rule: r, rules, save }: { exe: string; rule: Rules[string]; rules: Rules; save(next: Rules): void }) {
-  return (
-    <div className="lm-row dict-rule">
-      <span className="dict-rule__name">{exe}</span>
-      <Select label={`Method for ${exe}`} value={r.method} onChange={(method) => save({ ...rules, [exe]: { ...r, method: method as PasteMethod } })} options={METHOD_OPTIONS} />
-      <TextInput
-        aria-label={`Delay in milliseconds for ${exe}`}
-        inputMode="numeric"
-        value={String(r.delayMs)}
-        maxLength={4}
-        frameClassName="dict-rule__delay"
-        onChange={(e) => save({ ...rules, [exe]: { ...r, delayMs: Math.min(5000, Number(e.target.value.replace(/\D/g, "")) || 0) } })}
-      />
-      <button type="button" className="lm-btn lm-btn--icon" aria-label={`Remove rule for ${exe}`} onClick={() => save(Object.fromEntries(Object.entries(rules).filter(([k]) => k !== exe)))}>
-        <Icon name="trash" size={14} />
-      </button>
-    </div>
-  );
-}
-
-export function AppRulesCard({ s }: { s: DictationStatus }) {
-  const rules = s.settings.appRules;
-  const [name, setName] = useState("");
-  const [focused, setFocused] = useState(false);
-  const save = (next: Rules) => void patchDictation({ appRules: next });
-  const add = (typed = name) => {
-    const key = typed
-      .trim()
-      .toLowerCase()
-      .replace(/\.exe$/, "");
-    if (!key || Object.keys(rules).length >= MAX_APP_RULES) return;
-    save({ ...rules, [key]: rules[key] ?? { method: "ctrl-v", delayMs: 0 } });
-    setName("");
-  };
-  return (
-    <SettingsSection title="Insert method by app" description="Terminals, remote desktop and Java programs have built-in rules. Add a program to choose its own method and delay.">
-      {Object.entries(rules).map(([exe, r]) => (
-        <RuleRow key={exe} exe={exe} rule={r} rules={rules} save={save} />
-      ))}
-      <form
-        className="lm-row dict-rule dict-rule--add"
-        onSubmit={(e) => {
-          e.preventDefault();
-          add(name);
-        }}
-      >
-        <TextInput
-          aria-label="Program name"
-          placeholder="Program, for example putty"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onFocus={() => setFocused(true)}
-          maxLength={60}
-          className="dict-rule__field"
-        />
-        <Button type="submit" variant="primary" disabled={!name.trim()}>
-          Add
-        </Button>
-      </form>
-      {focused && (
-        <div className="lm-row dict-rule__suggest">
-          <AppSuggestions query={name} skip={Object.keys(rules)} active={focused} onPick={(a) => add(a.key)} />
-        </div>
       )}
     </SettingsSection>
   );

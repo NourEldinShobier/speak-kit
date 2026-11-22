@@ -10,7 +10,7 @@ interface MotionTarget {
 /** The script that puts the Reduce motion decision on a page, where its style sheet reads it. */
 export const motionScript = (on: boolean): string => `document.documentElement.setAttribute("data-reduce-motion", ${JSON.stringify(on ? "on" : "off")})`;
 
-/** Keeps every window of the app (the pill, the mini player, the capsules) on one Reduce motion decision: applied when a page has loaded and whenever it changes. */
+/** Keeps every window of the app (the pill and the mini player) on one Reduce motion decision: applied when a page has loaded and whenever it changes. */
 /** The page can be gone by the time the script runs. */
 function pageGone(): void {
   /* nothing to update */

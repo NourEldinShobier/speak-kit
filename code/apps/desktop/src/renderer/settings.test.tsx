@@ -31,11 +31,11 @@ beforeAll(async () => {
 });
 
 describe("settings navigation", () => {
-  it("lists the 15 pages in four groups", () => {
+  it("lists the 14 pages in four groups", () => {
     expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
       ["General", ["General", "Voice and playback", "Shortcuts", "Notifications", "Accessibility"]],
       ["Device", ["Performance", "Storage", "Privacy"]],
-      ["Features", ["Meetings", "Automation", "Experiments"]],
+      ["Features", ["Automation", "Experiments"]],
       ["App", ["Browser integration", "Diagnostics", "What is new", "About"]],
     ]);
   });

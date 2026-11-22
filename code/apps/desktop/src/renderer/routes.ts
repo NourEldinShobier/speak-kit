@@ -71,7 +71,6 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
   {
     group: "Features",
     items: [
-      { id: "meetings", label: "Meetings", icon: "video", lead: "Record and transcribe meetings.", keywords: "calendar transcript record" },
       { id: "automation", label: "Automation", icon: "terminal", lead: "Let other tools control Speak Kit.", keywords: "api scripts url hooks" },
       { id: "experiments", label: "Experiments", icon: "flask", lead: "Features that are still being tried out.", keywords: "beta labs" },
     ],

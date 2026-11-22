@@ -82,6 +82,22 @@
 .dict-model .lm-row__control {
   align-self: center;
 }
+.dict-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.dict-hint .lm-icon {
+  flex: none;
+}
+.dict-model__notice {
+  padding: 12px;
+  border-bottom: 1px solid var(--stroke-hairline);
+}
 .dict-model__bar {
   margin-block: 8px 6px;
   max-inline-size: 380px;
@@ -432,38 +448,6 @@
   white-space: nowrap;
 }
 
-/* The fold that opens the advanced options. */
-.dict-fold {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  inline-size: 100%;
-  box-sizing: border-box;
-  padding: 12px 16px;
-  margin-block: 16px;
-  border: 1px solid var(--stroke-control);
-  border-radius: 12px;
-  background: var(--surface-card);
-  text-align: start;
-  cursor: pointer;
-  color: var(--text-primary);
-  font: inherit;
-}
-.dict-fold b {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-}
-.dict-fold small {
-  display: block;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.dict-fold:focus-visible {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 2px;
-}
 .dict-meter {
   display: flex;
   align-items: center;
@@ -478,25 +462,6 @@
 }
 .dict-meter i[data-on] {
   background: #201e25;
-}
-.dict-rule {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.dict-rule__name {
-  flex: 1;
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
-}
-.dict-rule__delay {
-  inline-size: 72px;
-}
-.dict-rule__field {
-  flex: 1;
-}
-.dict-rule__empty {
-  color: var(--text-secondary);
 }
 /* History: totals, notices, views, recordings. */
 .dict-hist__head-acts {

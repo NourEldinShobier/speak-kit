@@ -1,5 +1,5 @@
 import type { MicStatus } from "@speakkit/dictation";
-import { MAX_EXCLUSIONS, type DictationConfig, type PasteMethod } from "../../../shared/dictation/settings";
+import type { DictationConfig } from "../../../shared/dictation/settings";
 
 export const OUTPUT_OPTIONS = [
   { id: "restore", label: "Paste and restore" },
@@ -12,14 +12,6 @@ export const OUTPUT_HELP: Record<DictationConfig["output"], string> = {
   keep: "Pastes the text and leaves it on your clipboard.",
   copy: "Only copies the text. Nothing is typed into the app.",
 };
-
-export const METHOD_OPTIONS: { value: PasteMethod; label: string }[] = [
-  { value: "ctrl-v", label: "Ctrl V" },
-  { value: "ctrl-shift-v", label: "Ctrl Shift V" },
-  { value: "shift-insert", label: "Shift Insert" },
-  { value: "type", label: "Type the text" },
-  { value: "copy", label: "Copy only" },
-];
 
 export const KEEP_READY_MINUTES = [
   { value: "0", label: "While dictation is on" },
@@ -51,11 +43,4 @@ export function micLine(mic: MicStatus, canOpenPrivacy: boolean): { text: string
     case "lost":
       return { text: "The microphone was lost and could not be reopened. Plug it in again.", problem: true, link: false };
   }
-}
-
-/** Adds a word to the list when it is new (any case) and the list has room; returns the list unchanged otherwise. */
-export function withExclusion(list: readonly string[], word: string): string[] {
-  const w = word.trim().slice(0, 60);
-  if (!w || list.length >= MAX_EXCLUSIONS || list.some((x) => x.toLowerCase() === w.toLowerCase())) return [...list];
-  return [...list, w];
 }

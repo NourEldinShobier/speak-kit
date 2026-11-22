@@ -9,6 +9,7 @@ import {
   entriesText,
   entryLabel,
   etaText,
+  usageHint,
   versionsCapNote,
   expiryText,
   focusAfterDelete,
@@ -116,6 +117,25 @@ describe("history text", () => {
     expect(emptyHint("off")).toBe("Hold the hotkey in any app and speak. History is off, so nothing is saved.");
     expect(entriesText(1)).toBe("1 entry");
     expect(entriesText(128)).toBe("128 entries");
+  });
+});
+
+describe("usage hint", () => {
+  it("says to hold the keys, speak and let go, for the hold modes", () => {
+    for (const mode of ["hold", "hold-only", "tap-or-hold"]) expect(usageHint(mode, true)).toEqual({ before: "Hold", after: "in any app, speak, then let go." });
+  });
+
+  it("says to double-tap to start and press once to stop in the double-tap mode", () => {
+    expect(usageHint("double-tap", true)).toEqual({ before: "Double-tap", after: "in any app to start, speak, then press it once to stop." });
+  });
+
+  it("says to press twice for the tap-to-start mode", () => {
+    expect(usageHint("toggle", true)).toEqual({ before: "Press", after: "in any app to start, speak, then press it again to stop." });
+  });
+
+  it("asks to turn dictation on first while it is off", () => {
+    expect(usageHint("hold", false).before).toBe("Turn dictation on, then hold");
+    expect(usageHint("toggle", false).before).toBe("Turn dictation on, then press");
   });
 });
 

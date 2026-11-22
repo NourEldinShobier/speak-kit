@@ -1,13 +1,12 @@
-import { Banner, Button, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { Banner, Button, Icon, Kbd, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { Cleanup } from "../vocabulary";
+import { hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation, patchDictation, platformName } from "./api";
 import { OtherAudioCard } from "./OtherAudioCard";
-import { AppRulesCard, FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
-import { MicExclusions } from "./MicExclusions";
-import { FirstRunCard } from "./FirstRunCard";
-import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS } from "./model";
+import { FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
+import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS, usageHint } from "./model";
 import { ModelList } from "./ModelList";
 import { PermissionGuide } from "./PermissionGuide";
 import { hotkeyFailedCopy } from "./permissions-model";
@@ -18,6 +17,26 @@ import { useDictation } from "./useDictation";
 import "./dictation.css";
 
 const LEAD = "Hold a key, speak, and Speak Kit types what you said into the app you are using. Speech stays on this computer.";
+
+/** One line at the top: which keys to use and how. The test field sits right under it. */
+function UsageHint({ s }: { s: DictationStatus }) {
+  const { before, after } = usageHint(s.settings.mode, s.enabled);
+  if (!s.settings.hotkey) return null;
+  return (
+    <p className="dict-hint" data-testid="dictation-hint">
+      <Icon name="info-circle" size={16} />
+      <span>
+        {before}{" "}
+        {hotkeyLabels(s.settings.hotkey, platformName()).map((k) => (
+          <Kbd key={k} small>
+            {k}
+          </Kbd>
+        ))}{" "}
+        {after}
+      </span>
+    </p>
+  );
+}
 
 function General({ s }: { s: DictationStatus }) {
   const c = s.settings;
@@ -40,34 +59,34 @@ function General({ s }: { s: DictationStatus }) {
   );
 }
 
-function StatusCard({ s }: { s: DictationStatus }) {
+/** Only when the shortcut cannot work (no microphone, no permission, the hook stopped): said at the top, where it is seen first. A healthy listener needs no card, the hint already names the keys. */
+function ProblemBanner({ s }: { s: DictationStatus }) {
   const l = listenerStatus(s);
+  // "No microphone" is also what the status says before the first check, so it stays in the Microphone card until the list is known.
+  return l.tone === "problem" && s.mic.kind !== "none" ? (
+    <Banner tone="error" title={l.label}>
+      {l.detail}
+    </Banner>
+  ) : null;
+}
+
+/** The last dictation that failed, with a way to run it again; nothing when there is none. */
+function LastProblem({ s }: { s: DictationStatus }) {
   const f = s.lastFailure;
+  if (!f) return null;
   return (
-    <SettingsSection title="Status">
+    <SettingsSection title="Last problem">
       <SettingRow
         className="lm-row--control"
-        label="Shortcut"
-        description={l.detail}
+        label={f.text}
+        description={failureTime(f.at, Date.now())}
         control={
-          <span className="dict-status" data-tone={l.tone} role="status" aria-label={`Shortcut status: ${l.label}`}>
-            {l.label}
+          <span className="dict-status__acts">
+            {f.retry && <Button onClick={() => dictation.hudAction("retry")}>Try again</Button>}
+            <Button onClick={() => dictation.hudAction("dismiss")}>Dismiss</Button>
           </span>
         }
       />
-      {f && (
-        <SettingRow
-          className="lm-row--control"
-          label="Last problem"
-          description={`${f.text}, ${failureTime(f.at, Date.now())}.`}
-          control={
-            <span className="dict-status__acts">
-              {f.retry && <Button onClick={() => dictation.hudAction("retry")}>Try again</Button>}
-              <Button onClick={() => dictation.hudAction("dismiss")}>Dismiss</Button>
-            </span>
-          }
-        />
-      )}
     </SettingsSection>
   );
 }
@@ -79,7 +98,7 @@ function TestField() {
         <h3 className="lm-section__title">Test dictation</h3>
         <p className="lm-section__desc">Click the field, hold the hotkey and speak. The text appears here the way it will in other apps.</p>
       </header>
-      <textarea className="dict-test" aria-label="Test dictation" placeholder="Try it here" rows={4} />
+      <textarea id="dict-test" className="dict-test" aria-label="Test dictation" placeholder="Try it here" rows={4} />
     </section>
   );
 }
@@ -110,28 +129,28 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
   );
 }
 
-/** Every card of the page once the speech model is set up. */
+/** Every card of the page. The speech model card comes first and says what is missing; nothing hides the rest. */
 function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void }) {
   return (
     <>
+      <ProblemBanner s={s} />
+      <UsageHint s={s} />
+      <TestField />
       <General s={s} />
-      <StatusCard s={s} />
+      <ModelList status={s} />
+      <LastProblem s={s} />
       <ShortcutsSections s={s} />
       <MicrophoneCard s={s} />
-      <MicExclusions list={s.settings.micExclusions} />
       <OutputCard s={s} />
       <FeedbackCard s={s} />
       <OtherAudioCard s={s} />
-      <AppRulesCard s={s} />
-      <ModelList status={s} />
       <Cleanup s={s} />
-      <TestField />
       <HistoryCard s={s} open={openHistory} />
     </>
   );
 }
 
-/** Settings > Dictation. While the speech model is being downloaded or loaded the page shows that card first. */
+/** Settings > Dictation. */
 export function DictationPage({ openHistory }: { openHistory: () => void }) {
   const s = useDictation();
   const permissions = usePermissions();
@@ -142,10 +161,6 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
       </Page>
     );
   const failed = hotkeyFailedCopy(platformName(), permissions?.guides.dictation.next ?? null);
-  const selected = s.models.find((m) => m.selected);
-  // The first card shows while the chosen model cannot be used yet. A second model downloading, or failing, does not take the page away.
-  const loading = !s.modelReady && !s.models.some((m) => m.progress);
-  const settingUp = s.enabled && (!selected?.installed || (loading && !s.modelError));
   return (
     <Page title="Dictation" lead={LEAD}>
       {!s.supported && (
@@ -159,12 +174,7 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
         </Banner>
       )}
       <PermissionGuide status={permissions} onAct={(id, action) => void (action === "request" ? window.speakkitPermissions?.request(id) : window.speakkitPermissions?.openSettings(id))} />
-      {!settingUp && s.modelError && (
-        <Banner tone="error" title="The speech model could not be set up">
-          {s.modelError}
-        </Banner>
-      )}
-      {settingUp ? <FirstRunCard status={s} /> : <Cards s={s} openHistory={openHistory} />}
+      <Cards s={s} openHistory={openHistory} />
     </Page>
   );
 }

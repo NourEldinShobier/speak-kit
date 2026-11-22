@@ -18,6 +18,8 @@ export const TranscriptsConfigSchema = v.object({
   /** Where "Save as" writes; empty is the Speak Kit folder in Documents. */
   folder: v.fallback(v.pipe(v.string(), v.maxLength(1024)), ""),
   language: v.fallback(v.picklist(TRANSCRIPT_LANGUAGES), "auto"),
+  /** Notes are opt-in: the text of a finished transcript leaves the computer for OpenAI only after the person turns this on. */
+  notes: v.fallback(v.boolean(), false),
 });
 export type TranscriptsConfig = v.InferOutput<typeof TranscriptsConfigSchema>;
 
@@ -29,6 +31,7 @@ export const TranscriptsPatchSchema = v.partial(
     audioDays: v.picklist(AUDIO_DAYS),
     trashDays: v.picklist(TRASH_DAYS),
     language: v.picklist(TRANSCRIPT_LANGUAGES),
+    notes: v.boolean(),
   }),
 );
 export type TranscriptsPatch = v.InferOutput<typeof TranscriptsPatchSchema>;

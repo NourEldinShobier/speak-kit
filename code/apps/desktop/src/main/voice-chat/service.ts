@@ -6,7 +6,7 @@ import type { Logger } from "../context";
 import type { KeyStore } from "./key-store";
 import { completeJson, mintClientSecret, OPENAI_BASE_URL, testKey, type OpenAiResult } from "./openai";
 
-/** The model that writes meeting notes; small, because a summary needs no more. */
+/** The model that writes transcript notes; small, because a summary needs no more. */
 export const NOTES_MODEL = "gpt-4o-mini";
 
 interface Deps {
@@ -76,7 +76,7 @@ export function createVoiceChat(d: Deps) {
       const r = await testKey(key, net());
       return r.ok ? { ok: true } : r;
     },
-    /** One JSON answer from the writer model, for the meeting notes. No saved key is "no-key"; the key goes only to OpenAI. */
+    /** One JSON answer from the writer model, for the transcript notes. No saved key is "no-key"; the key goes only to OpenAI. */
     async complete(system: string, user: string, signal: AbortSignal): Promise<OpenAiResult<string>> {
       const key = await store.read();
       if (!key) return { ok: false, code: "no-key" };

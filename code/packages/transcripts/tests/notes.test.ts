@@ -153,7 +153,7 @@ describe("notes after a transcript finishes", () => {
     const id = await imported(t);
     const r = await t.writeNotes(id);
     expect(r.ok).toBe(false);
-    expect(r).toEqual({ ok: false, failure: { code: "notes", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." } });
+    expect(r).toEqual({ ok: false, failure: { code: "notes", message: "Notes are off. Turn on writing notes in the Transcripts settings, then write them again. The transcript is unchanged." } });
     expect((await t.get(id))!.notes).toBeUndefined();
   });
 

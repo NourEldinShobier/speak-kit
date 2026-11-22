@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createSleepBlock } from "./sleep-block";
 
-function rig(opts: { enabled?: boolean; failStart?: boolean; failStop?: boolean } = {}) {
+function rig(opts: { failStart?: boolean; failStop?: boolean } = {}) {
   const calls: string[] = [];
   const warnings: string[] = [];
   const set = createSleepBlock(
@@ -16,7 +16,6 @@ function rig(opts: { enabled?: boolean; failStart?: boolean; failStop?: boolean 
         if (opts.failStop) throw new Error("gone");
       },
     },
-    () => opts.enabled ?? true,
     (why) => warnings.push(why),
   );
   return { set, calls, warnings };
@@ -36,12 +35,6 @@ describe("sleep block", () => {
     r.set(false);
     r.set(false);
     expect(r.calls).toEqual(["start", "stop 7"]);
-  });
-  it("does nothing when the setting is off", () => {
-    const r = rig({ enabled: false });
-    r.set(true);
-    r.set(false);
-    expect(r.calls).toEqual([]);
   });
   it("warns and carries on when the system refuses, and tries again at the next recording", () => {
     const r = rig({ failStart: true });

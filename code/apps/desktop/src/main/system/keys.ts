@@ -6,7 +6,6 @@ const VK_SHIFT = 0x10;
 const VK_CONTROL = 0x11;
 const VK_MENU = 0x12; // Alt
 const VK_C = 0x43;
-const VK_A = 0x41;
 const KEYUP = 2;
 
 /**
@@ -15,9 +14,6 @@ const KEYUP = 2;
  * selection is read.
  */
 export const sendCopyKeys = (): Promise<void> => sendChord("c", VK_C);
-
-/** Presses Ctrl+A (Cmd+A on macOS) the same way. */
-export const sendSelectAllKeys = (): Promise<void> => sendChord("a", VK_A);
 
 async function sendChord(letter: string, vk: number): Promise<void> {
   if (process.platform === "darwin") {

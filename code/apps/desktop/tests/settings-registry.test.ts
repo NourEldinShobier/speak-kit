@@ -85,7 +85,6 @@ describe("settings import", () => {
         shortcuts: { stop: "Ctrl+Alt+Y" },
         setupDone: false,
         transcripts: { textDays: 90 },
-        meetings: { stopWhenEnds: false },
         engines: { releaseOnClose: true },
       }),
     );
@@ -93,14 +92,13 @@ describe("settings import", () => {
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await pickFile(l, file);
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
-    await l.page.getByText(/^Imported 5 settings\. Changed: .*Left out: setupDone\.$/).waitFor();
+    await l.page.getByText(/^Imported 4 settings\. Changed: .*Left out: setupDone\.$/).waitFor();
     await expect
       .poll(() => configOf(l))
       .toMatchObject({
         voiceChatVoice: "alloy",
         shortcuts: { stop: "Ctrl+Alt+Y" },
         transcripts: { textDays: 90 },
-        meetings: { stopWhenEnds: false },
         engines: { releaseOnClose: true },
       });
   }, 60_000);

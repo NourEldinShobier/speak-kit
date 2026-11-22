@@ -121,12 +121,7 @@ function Content({ view }: { view: HudView }) {
         </>
       );
     case "pasted":
-      return (
-        <>
-          <Lead name="check" />
-          <b>{t("hud.sent")}</b>
-        </>
-      );
+      return <Lead name="check" />; // a check and nothing else: the text is already in the app
     case "copied":
       return <Copied reason={view.reason} />;
     case "notice":
@@ -143,8 +138,16 @@ function Content({ view }: { view: HudView }) {
 
 /** One dark pill that states what dictation is doing. Only the error buttons take clicks; a click anywhere else on a failure dismisses it. */
 export function Pill({ view }: { view: HudView }) {
+  const { t } = useT();
   return (
-    <div className="hud" data-kind={view.kind} dir={directionOf(resolveLocale(view.locale ?? "en", []))} role="status" onClick={() => view.kind === "error" && dictation.hudAction("dismiss")}>
+    <div
+      className="hud"
+      data-kind={view.kind}
+      {...(view.kind === "pasted" && { "aria-label": t("hud.pasted") })}
+      dir={directionOf(resolveLocale(view.locale ?? "en", []))}
+      role="status"
+      onClick={() => view.kind === "error" && dictation.hudAction("dismiss")}
+    >
       <Content view={view} />
     </div>
   );

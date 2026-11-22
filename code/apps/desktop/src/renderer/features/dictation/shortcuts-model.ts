@@ -60,18 +60,12 @@ export function explainerFrames(mode: Mode): ("hold" | "tap" | "double")[] {
   return FRAMES[mode];
 }
 
-export function shareAvailable(mode: Mode, platform: string): { ok: boolean; reason: string } {
-  if (platform !== "win32") return { ok: false, reason: "Sharing the shortcut with other apps is available on Windows only." };
-  if (mode !== "hold-only") return { ok: false, reason: "Hands-free modes cannot keep the other app's key held. Switch the mode to Hold to share the shortcut." };
-  return { ok: true, reason: "" };
-}
-
 export const isDefault = (slot: "dictation" | "pasteLast", value: string): boolean => value === (slot === "dictation" ? DEFAULT_HOTKEY : DEFAULT_PASTE_LAST);
 
 /** Every shortcut the recorder must keep apart, from the status. */
 export function allShortcuts(s: DictationStatus): Shortcuts {
   const c = s.settings;
-  return { dictation: c.hotkey, second: c.secondHotkey, mouse: c.mouseButton, raw: c.rawHotkey, pasteLast: c.pasteLastHotkey, transform: c.transformHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
+  return { dictation: c.hotkey, second: c.secondHotkey, mouse: c.mouseButton, raw: c.rawHotkey, pasteLast: c.pasteLastHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
 }
 
 export const conflictText = (hotkey: string, other: Slot): string => `${hotkeyText(hotkey)} is already the ${SLOT_NAMES[other]}. Pick another shortcut.`;
@@ -80,11 +74,3 @@ export const resetNoticeText = {
   "left-click": "The saved left mouse button was reset to the default shortcut. The left button cannot be a shortcut.",
   clash: "Two shortcuts shared a key, so the extra one was cleared.",
 } as const;
-
-/** "game.exe, Editor" as a list: trimmed, without empty entries, at most 50. */
-export const parseApps = (text: string): string[] =>
-  text
-    .split(",")
-    .map((a) => a.trim())
-    .filter(Boolean)
-    .slice(0, 50);

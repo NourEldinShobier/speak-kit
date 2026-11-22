@@ -29,7 +29,6 @@ describe("defaults", () => {
       mouseKey: "",
       rawKey: "",
       pasteLastKey: "",
-      lowercase: false,
       stripFinalStop: false,
       terms: [],
       prompt: true,

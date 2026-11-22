@@ -1,4 +1,4 @@
-import { Badge, Button, Icon, ProgressBar, Radio, SettingsSection } from "@speakkit/ui";
+import { Badge, Banner, Button, Icon, ProgressBar, Radio, SettingsSection } from "@speakkit/ui";
 import type { DictationStatus, ModelView } from "../../../shared/dictation/contract";
 import { dictation, patchDictation } from "./api";
 import { downloadText, modelLine } from "./model";
@@ -22,7 +22,7 @@ function ModelRow({ m }: { m: ModelView }) {
       <div className="lm-row__text">
         <div className="lm-row__label">
           {m.name}
-          {m.id === "large-v3-turbo-q5_0" && <Badge>Default</Badge>}
+          {m.id === "large-v3-turbo-q5_0" && <Badge>Recommended</Badge>}
           <Badge>{m.tag}</Badge>
         </div>
         {busy ? (
@@ -44,11 +44,45 @@ function ModelRow({ m }: { m: ModelView }) {
 /** "1 more model is on the Engines page." */
 export const moreLine = (n: number): string => (n === 1 ? "1 more model is on the Engines page." : `${n} more models are on the Engines page.`);
 
-/** Speech model card: pick an installed model, download another, or cancel a download. */
+/** What the card says above the list, or null when there is nothing to say: no model yet, a failure (with another try), or the chosen model not loaded yet. */
+function NoticeBanner({ status }: { status: DictationStatus }) {
+  const chosen = status.models.find((m) => m.selected) ?? status.models[0]!;
+  if (status.modelError)
+    return (
+      <Banner tone="error" title="The speech model could not be set up" action={<Button onClick={() => void dictation.downloadModel(chosen.id)}>Try again</Button>}>
+        {status.modelError}
+      </Banner>
+    );
+  if (status.models.some((m) => m.progress)) return null;
+  if (!chosen.installed)
+    return (
+      <Banner tone="info" title={status.models.some((m) => m.installed) ? `${chosen.name} is not on this computer` : "Choose a speech model"}>
+        {status.models.some((m) => m.installed)
+          ? "Download it below, or pick one that is installed."
+          : "Dictation needs a speech model on this computer. Download one below; it works offline afterwards."}
+      </Banner>
+    );
+  if (status.enabled && !status.modelReady)
+    return (
+      <Banner tone="info" title={`${chosen.name} is not loaded`}>
+        It loads by itself when you dictate, or when you turn dictation on. The first words can take a few seconds.
+      </Banner>
+    );
+  return null;
+}
+
+/** The notice in a padded strip, so the banner does not touch the card's edges. */
+function Notice({ status }: { status: DictationStatus }) {
+  const banner = NoticeBanner({ status });
+  return banner && <div className="dict-model__notice">{banner}</div>;
+}
+
+/** Speech model card: pick an installed model, download another, or cancel a download. It sits at the top of the page, since dictation needs a model first. */
 export function ModelList({ status }: { status: DictationStatus }) {
   const shown = status.models.filter((m) => !m.more || m.installed || m.selected || m.progress);
   return (
     <SettingsSection title="Speech model">
+      <Notice status={status} />
       {shown.map((m) => (
         <ModelRow key={m.id} m={m} />
       ))}

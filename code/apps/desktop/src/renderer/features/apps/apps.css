@@ -46,7 +46,3 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.dict-rule__suggest > * {
-  flex: 1;
-  min-inline-size: 0;
-}

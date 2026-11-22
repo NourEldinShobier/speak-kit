@@ -10,10 +10,9 @@ describe("prerollMs", () => {
 });
 
 describe("trailing pad", () => {
-  it("pads 400 ms for Parakeet models only, and only when enabled", () => {
-    expect(trailingPadMs("parakeet-tdt-0.6b-v3-q4_0", true)).toBe(400);
-    expect(trailingPadMs("parakeet-tdt-0.6b-v3-q4_0", false)).toBe(0);
-    expect(trailingPadMs("large-v3-turbo-q5_0", true)).toBe(0);
+  it("pads 400 ms for Parakeet models only", () => {
+    expect(trailingPadMs("parakeet-tdt-0.6b-v3-q4_0")).toBe(400);
+    expect(trailingPadMs("large-v3-turbo-q5_0")).toBe(0);
   });
   it("appends zeros after the speech", () => {
     const out = padTail(Float32Array.from([1, 2]), 1000, 3);

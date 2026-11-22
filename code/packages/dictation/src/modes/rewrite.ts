@@ -7,7 +7,7 @@ export const MAX_REWRITE_DEADLINE_MS = 15_000;
 
 /** The mode's choices about capitals and the final full stop, which the rewrite must not undo. */
 export interface RewriteStyle {
-  capitals: "sentence" | "keep" | "lower";
+  capitals: "sentence" | "keep";
   stripFinalStop: boolean;
 }
 const SENTENCE_STYLE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
@@ -64,8 +64,7 @@ export async function rewritePass(req: {
     if (answer === "deadline") return { text, outcome: "deadline" };
     if (answer === null || !answer.trim()) return { text, outcome: "failed" };
     let next = answer.trim();
-    // Lower case is restored exactly; "keep as spoken" cannot be, so a rewrite that moved capitals is dropped.
-    if (style.capitals === "lower") next = next.toLowerCase();
+    // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
     if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
     if (style.stripFinalStop) next = dropFinalStop(next);
     if (!keepsFacts(text, next)) return { text, outcome: "changed-facts" };

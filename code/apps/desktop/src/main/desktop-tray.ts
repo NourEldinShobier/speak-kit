@@ -9,7 +9,6 @@ import { showTrayIcon } from "../shared/settings/behaviour";
 import type { createUpdates } from "./updates-service";
 import type { DictationService } from "./dictation/service";
 import type { TranscriptsFeature } from "./transcripts";
-import type { MeetingsFeature } from "./meetings";
 
 interface TrayParts {
   reading: ReturnType<typeof createReading>;
@@ -17,8 +16,6 @@ interface TrayParts {
   updates: ReturnType<typeof createUpdates>;
   dictation: DictationService;
   transcripts: TranscriptsFeature;
-  /** Built after the tray (it reaches the tray only through a callback), so it is read when the menu is built. */
-  meetings(): MeetingsFeature | undefined;
   /** The notice to show in the menu, if any. */
   notice(): string | undefined;
   requestQuit(): void;
@@ -33,11 +30,10 @@ function speechModelsContext(dictation: DictationService): Pick<TrayContext, "sp
   return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
 }
 
-type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "meetings" | "notice">;
+type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "notice">;
 
 /** What the menu is built from: the shared state plus the live counts of the features. */
-function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, notice }: TrayStateParts): TrayContext {
-  const m = ctx.config.meetings;
+function trayContext(ctx: Ctx, { exports, dictation, transcripts, notice }: TrayStateParts): TrayContext {
   const note = notice();
   return {
     ...(note && { notice: note }),
@@ -51,7 +47,6 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, noti
     platform: process.platform,
     darkTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
     recorder: { phase: transcripts.phase() },
-    ...(m.enabled && meetings() && { meetings: { phase: meetings()!.phase(), ...(m.shortcut && { shortcut: m.shortcut }) } }),
     ...(dictation.status().supported && {
       dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused, recent: dictation.history.recent() },
     }),
@@ -60,8 +55,8 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, meetings, noti
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, meetings, notice, requestQuit, retryEngine }: TrayParts) {
-  const context = () => trayContext(ctx, { exports, dictation, transcripts, meetings, notice });
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, notice, requestQuit, retryEngine }: TrayParts) {
+  const context = () => trayContext(ctx, { exports, dictation, transcripts, notice });
   const openDictation = (page: "dictation" | "history") => () => (ctx.showWindow(), ctx.sendUi({ type: "nav", page }));
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
@@ -69,8 +64,6 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, tran
     "pause-shortcuts": () => dictation.controls.setPaused(!dictation.controls.paused),
     "record-start": () => void transcripts.startRecording().then(() => ctx.showWindow()),
     "record-stop": () => void transcripts.stopRecording(),
-    "meeting-start": () => void meetings()?.start(),
-    "meeting-stop": () => void meetings()?.stop(),
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
     "dictation-copy-0": () => dictation.history.copyRecent(0),

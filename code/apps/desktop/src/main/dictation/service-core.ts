@@ -49,7 +49,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
       svc.presenter.setLevel(n);
       if (svc.mic.meter) o.parent()?.webContents.send(MIC_LEVEL_EVENT, n);
     },
-    mic: () => ({ saved: cfg().microphone, exclusions: cfg().micExclusions, avoidBluetooth: cfg().avoidBluetooth, keepMs: keepOpenMs(cfg()) }),
+    mic: () => ({ saved: cfg().microphone, avoidBluetooth: cfg().avoidBluetooth, keepMs: keepOpenMs(cfg()) }),
     onEvent: h.onMicEvent,
     open: () => recorderHandle(openRecorderWindow({ page: h.page("recorder.html"), micAllowed: () => !svc.micDenied })),
   });
@@ -68,7 +68,6 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
       model: () => cfg().model,
       models: () => svc.speech.catalog(),
       onUsed: (id) => svc.speech.used(id),
-      sentencePause: () => cfg().sentencePause,
       onFailedClip: (c) => (h.failure.clip = c),
       onModelError: (d) => svc.models.report(d),
       onPromptDropped: h.onPromptDropped,

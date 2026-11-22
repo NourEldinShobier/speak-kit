@@ -26,7 +26,6 @@ export function skillText(controlVersion: number, appVersion: string): string {
     "- `speakkit dictate stop --print` ends a running recording and waits up to 60 seconds for the text.",
     "- `speakkit settings`, `speakkit settings get <key>`, `speakkit settings set <key>=<json>` read and change settings. Dictation keys start with `dictation.`.",
     "- `speakkit history [--search words] [--limit n]` lists what was dictated. It never starts the app.",
-    "- `speakkit meetings list|search <words>|show <id|latest> [--from t] [--to t] [--chapter n]|chapters <id>` reads recorded meetings. Times are seconds, m:ss or h:mm:ss. `show` takes a full id, 6 or more characters of one, or `latest`. Reads never start the app and change no file.",
     "- `speakkit labs [list]`, `speakkit labs on <id>`, `speakkit labs off <id>` turn experiments on or off.",
     "- `speakkit capabilities --json` lists what this version can do. Check it instead of comparing version numbers.",
     "",

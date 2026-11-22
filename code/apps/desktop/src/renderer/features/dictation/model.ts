@@ -246,3 +246,12 @@ export function expiryText(ms: number | null, what = "Removed"): string {
   if (ms < DAY) return `${what} in ${plural(Math.ceil(ms / HOUR), "hour")}`;
   return `${what} in ${plural(Math.ceil(ms / DAY), "day")}`;
 }
+
+/** The words around the shortcut's keys in the hint at the top of the page: what to press, and what happens next. A tap-to-start shortcut says press twice; every other mode starts by holding. */
+export function usageHint(mode: string, enabled: boolean): { before: string; after: string } {
+  const on = enabled ? "" : "Turn dictation on, then ";
+  if (mode === "double-tap") return { before: `${on}${on ? "double-tap" : "Double-tap"}`, after: "in any app to start, speak, then press it once to stop." };
+  return mode === "toggle"
+    ? { before: `${on}${on ? "press" : "Press"}`, after: "in any app to start, speak, then press it again to stop." }
+    : { before: `${on}${on ? "hold" : "Hold"}`, after: "in any app, speak, then let go." };
+}

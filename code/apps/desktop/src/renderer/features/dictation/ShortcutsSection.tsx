@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Banner, Button, Icon, Modal, Select, SettingRow, SettingsSection, TextInput, Toggle } from "@speakkit/ui";
+import { Banner, Button, Modal, Select, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { hotkeyText } from "../../../shared/dictation/keys";
 import type { DictationPatch } from "../../../shared/dictation/settings";
 import { patchDictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
-import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, parseApps, resetNoticeText, shareAvailable, shortcutLead } from "./shortcuts-model";
+import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, resetNoticeText, shortcutLead } from "./shortcuts-model";
 
 const patch = (p: DictationPatch) => patchDictation(p);
 
@@ -71,97 +71,26 @@ function AdvancedKeysDialog({ ask, close }: { ask: { hotkey: string; resolve(ok:
   );
 }
 
-const PAUSE_MODE_OPTIONS = [
-  { value: "off", label: "Never" },
-  { value: "block", label: "In these programs" },
-  { value: "allow", label: "Everywhere except these" },
-];
-
-function PauseApps({ rules, save, mac }: { rules: DictationStatus["settings"]["pauseRules"]; save: (next: Partial<typeof rules>) => void; mac: boolean }) {
-  const [apps, setApps] = useState(rules.apps.join(", "));
-  return (
-    <SettingRow
-      className="lm-row--control"
-      label="Programs"
-      description={mac ? "App identifiers separated by commas, for example com.valvesoftware.steam" : "Program file names separated by commas, for example game.exe, editor"}
-      control={<TextInput aria-label="Programs" value={apps} maxLength={800} onChange={(e) => setApps(e.target.value)} onBlur={() => save({ apps: parseApps(apps) })} />}
-    />
-  );
-}
-
-function PauseRules({ s }: { s: DictationStatus }) {
-  const r = s.settings.pauseRules;
-  const mac = s.platform === "darwin";
-  const save = (next: Partial<typeof r>) => void patch({ pauseRules: { ...r, ...next } });
-  return (
-    <>
-      <SettingRow
-        className="lm-row--control"
-        label="Pause in some programs (experimental)"
-        description="Keys pass through to the program in front while a rule matches. Test it with your games before relying on it."
-        control={<Select label="Pause in some programs" value={r.mode} onChange={(mode) => save({ mode: mode as typeof r.mode })} options={PAUSE_MODE_OPTIONS} />}
-      />
-      {r.mode !== "off" && <PauseApps rules={r} save={save} mac={mac} />}
-      <SettingRow
-        label="Pause in full-screen programs (experimental)"
-        description="A program that covers the whole screen gets every key."
-        control={<Toggle aria-label="Pause in full-screen programs" checked={r.fullscreen} onChange={(fullscreen) => save({ fullscreen })} />}
-      />
-    </>
-  );
-}
-
-function Advanced({ s }: { s: DictationStatus }) {
-  const c = s.settings;
-  const [open, setOpen] = useState(false);
-  const share = shareAvailable(c.mode, s.platform);
-  const cancels = c.mode === "toggle" || c.mode === "tap-or-hold";
-  return (
-    <>
-      <button type="button" className="dict-fold" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>
-          <b>Advanced shortcut options</b>
-          <small>Home, End, Page Up, Page Down, sharing the shortcut with other apps and pausing.</small>
-        </span>
-        <Icon name={open ? "chevron-up" : "chevron-right"} size={16} />
-      </button>
-      {open && (
-        <SettingsSection title="Advanced shortcut options">
-          <SettingRow
-            label="Home, End, Page Up and Page Down"
-            description="Pick them with Change on any shortcut above. They work as a whole shortcut, but they move the cursor in every app, so Speak Kit asks first."
-          />
-          <SettingRow
-            label="Share the shortcut with other apps"
-            description={share.ok ? "Push-to-talk in a chat app can use the same key. Off by default. Windows only." : share.reason}
-            control={<Toggle aria-label="Share the shortcut with other apps" checked={c.shareHotkey && share.ok} disabled={!share.ok} onChange={(shareHotkey) => void patch({ shareHotkey })} />}
-          />
-          {cancels && (
-            <SettingRow
-              className="lm-row--control"
-              label="Cancel key"
-              description={
-                c.cancelKey === "Escape"
-                  ? "Cancels a recording that is running. Escape stops working in other apps while you record, so pick another key if you need it there."
-                  : "Cancels a recording that is running. The key is taken only while you record."
-              }
-              control={<HotkeyRecorder slot="cancel" label="Cancel key" value={c.cancelKey} restore="Escape" status={s} save={(cancelKey) => patch({ cancelKey })} />}
-            />
-          )}
-          <PauseRules s={s} />
-          <SettingRow
-            label="Windows that run as administrator"
-            description="Windows does not let Speak Kit hear keys while an administrator window is in front, and it cannot paste into one. The text is copied instead and you get a notice. Speak Kit does not run as administrator."
-          />
-        </SettingsSection>
-      )}
-    </>
-  );
-}
-
 function mouseNote(s: DictationStatus): string {
   if (!s.mouseButtons) return "Mouse buttons as shortcuts are not available on this computer yet.";
   return s.settings.mouseButton ? "Speak Kit only sees which button was pressed. It never reads where the pointer is or the wheel." : "Use Mouse 2 to 5 as a shortcut.";
+}
+
+/** The key that cancels a recording that is running; Escape by default. */
+function CancelKeyRow({ s }: { s: DictationStatus }) {
+  const c = s.settings;
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Cancel key"
+      description={
+        c.cancelKey === "Escape"
+          ? "Cancels a recording that is running. Escape stops working in other apps while you record, so pick another key if you need it there."
+          : "Cancels a recording that is running. The key is taken only while you record."
+      }
+      control={<HotkeyRecorder slot="cancel" label="Cancel key" value={c.cancelKey} restore="Escape" status={s} save={(cancelKey) => patch({ cancelKey })} />}
+    />
+  );
 }
 
 function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) => Promise<boolean> }) {
@@ -210,6 +139,7 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
           />
         }
       />
+      {(c.mode === "toggle" || c.mode === "tap-or-hold") && <CancelKeyRow s={s} />}
     </SettingsSection>
   );
 }
@@ -240,19 +170,11 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
           />
         }
       />
-      <SettingRow
-        className="lm-row--control"
-        label="Clean up the field"
-        description="Applies your clean-up rules and replacements to the text in the field in front: the selection, or all of it when nothing is selected. Not used in password fields or terminals. Not set until you record one."
-        control={
-          <HotkeyRecorder slot="transform" label="Clean up the field" value={c.transformHotkey} remove status={s} save={(transformHotkey) => patch({ transformHotkey })} confirmAdvanced={confirm} />
-        }
-      />
     </SettingsSection>
   );
 }
 
-/** Dictation shortcut, mode, hold time, second shortcut, mouse button, the explainer, the advanced fold and the other shortcuts. */
+/** Dictation shortcut, mode, hold time, second shortcut, mouse button, cancel key, the explainer and the other shortcuts. */
 export function ShortcutsSections({ s }: { s: DictationStatus }) {
   const [ask, setAsk] = useState<{ hotkey: string; resolve(ok: boolean): void } | null>(null);
   const confirm = (hotkey: string) => new Promise<boolean>((resolve) => setAsk({ hotkey, resolve }));
@@ -267,7 +189,6 @@ export function ShortcutsSections({ s }: { s: DictationStatus }) {
       )}
       <Primary s={s} confirm={confirm} />
       <Explainer s={s} />
-      <Advanced s={s} />
       <AdvancedKeysDialog ask={ask} close={close} />
       <Others s={s} confirm={confirm} />
     </>

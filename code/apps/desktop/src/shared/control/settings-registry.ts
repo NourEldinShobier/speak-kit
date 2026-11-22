@@ -1,14 +1,13 @@
 import { VOICE_CHAT_VOICES } from "@speakkit/protocol";
 import * as v from "valibot";
 import { DictationPatchSchema, type DictationPatch } from "../dictation/settings";
-import { MeetingsPatchSchema } from "../meetings/settings";
 import { ConfigPatchSchema, type ConfigPatch } from "../schemas";
 import { SHORTCUT_IDS, checkAccelerator, normalize, type ShortcutId } from "../shortcuts";
 import { EnginesPatchSchema } from "../speech-models/config";
 import { TranscriptsPatchSchema } from "../transcripts/settings";
 
 /** The feature areas that keep their settings under their own key of the settings file; a change names them `<area>.<key>`. */
-export const AREA_SCHEMAS = { transcripts: TranscriptsPatchSchema, meetings: MeetingsPatchSchema, engines: EnginesPatchSchema } as const;
+export const AREA_SCHEMAS = { transcripts: TranscriptsPatchSchema, engines: EnginesPatchSchema } as const;
 export type AreaName = keyof typeof AREA_SCHEMAS;
 export const AREA_NAMES = Object.keys(AREA_SCHEMAS) as AreaName[];
 
@@ -26,7 +25,6 @@ export const COMMAND_LINE_KEYS = ["voice", "speed", "controlServer"] as const;
 const FolderSchema = v.pipe(v.string(), v.maxLength(1024));
 const PICKED_SCHEMAS = {
   transcripts: v.strictObject({ ...TranscriptsPatchSchema.entries, folder: v.optional(FolderSchema) }),
-  meetings: v.strictObject({ ...MeetingsPatchSchema.entries, folder: v.optional(FolderSchema) }),
 } as const;
 
 export type AreaPatches = { [A in AreaName]?: Record<string, unknown> };
@@ -36,7 +34,7 @@ export type SettingsChange =
 
 /**
  * The one validator for a change of settings, whoever asks: the Settings pages, the command line and an import all end up here.
- * Keys are the app's own (`voice`, `speed`), `dictation.<key>`, `<area>.<key>` for transcripts, meetings and engines, `shortcuts.<id>`, `launchAtLogin` or `port`; anything else, or a value the page would refuse, is refused whole and nothing is applied.
+ * Keys are the app's own (`voice`, `speed`), `dictation.<key>`, `<area>.<key>` for transcripts and engines, `shortcuts.<id>`, `launchAtLogin` or `port`; anything else, or a value the page would refuse, is refused whole and nothing is applied.
  */
 export function validateChange(change: Readonly<Record<string, unknown>>, only?: readonly string[], picked = false): SettingsChange {
   const outside = only ? Object.keys(change).find((k) => !only.includes(k)) : undefined;
@@ -97,8 +95,8 @@ function validateAreas(parts: Record<string, Bag>, picked: boolean): { ok: true;
   return { ok: true, areas: areas as AreaPatches };
 }
 
-/** What a folder chooser stores: the folder the person picked for transcripts or meetings, checked like any other setting; a refusal is its message. */
-export function checkPickedFolder(area: "transcripts" | "meetings", folder: string): { ok: true; patch: Record<string, unknown> } | Refused {
+/** What a folder chooser stores: the folder the person picked for transcripts, checked like any other setting; a refusal is its message. */
+export function checkPickedFolder(area: "transcripts", folder: string): { ok: true; patch: Record<string, unknown> } | Refused {
   const c = validateChange({ [`${area}.folder`]: folder }, undefined, true);
   return c.ok ? { ok: true, patch: c.areas[area] ?? {} } : c;
 }

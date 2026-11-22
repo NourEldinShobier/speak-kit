@@ -1,5 +1,4 @@
 import type { ControlRequest } from "../shared/control/contract";
-import { parseOffset, type ReadRequest } from "./reads";
 
 export const USAGE = `Usage: speakkit [--json] <command>
 
@@ -22,21 +21,16 @@ export const USAGE = `Usage: speakkit [--json] <command>
   history [--search words] [--limit n]
   transcribe <file> [--language auto|en|de|ar]
                               transcribe an audio file; prints the text when it is done
-  meetings list [--limit n] | search <words> [--limit n]
-  meetings show <id|latest> [--from t] [--to t] [--chapter n]
-  meetings chapters <id|latest>
   labs [list] | labs on <id> | labs off <id>
   capabilities                what this version can do
   skill [print | install | status]   the agent skill that teaches this tool, and its install for Claude Code
 
-Times take seconds, m:ss or h:mm:ss. Reads of history and meetings never start the app and change no file.
+Reads of history never start the app and change no file.
 Exit codes: 0 done, 1 refused or failed, 2 usage, 3 not running, 4 no speech.`;
 
 export interface Parsed {
   json: boolean;
   request: ControlRequest | null;
-  /** A read answered from the files in the data folder. */
-  read?: ReadRequest;
   labsList?: boolean;
   /** Return when the reading is over, not when it starts. */
   wait?: boolean;
@@ -94,9 +88,6 @@ interface Rest {
   limit: string | undefined;
   out: string | undefined;
   language: string | undefined;
-  from: string | undefined;
-  to: string | undefined;
-  chapter: string | undefined;
 }
 type Built = ControlRequest | string;
 
@@ -147,27 +138,6 @@ const BUILDERS: Record<string, (r: Rest) => Built> = {
 const PLAIN = new Set(["status", "capabilities", "pause", "resume", "queue", "voices"]);
 const SKILL_ACTIONS = ["print", "install", "status"] as const;
 
-const offset = (text: string | undefined, name: string): number | undefined | string => (text === undefined ? undefined : (parseOffset(text) ?? `${name} takes seconds, m:ss or h:mm:ss.`));
-const num = (x: number | undefined | string): number | undefined => (typeof x === "number" ? x : undefined);
-
-/** What a read names: the words to search for, or the one meeting to open. */
-function targetOf(action: string, words: string[]): { query: string } | { ref: string } | object {
-  if (action === "search") return { query: words.join(" ") };
-  return words.length ? { ref: words.join(" ") } : {};
-}
-
-/** `meetings`: the action and what it needs, as a read of the files. */
-function readRequest(command: "meetings", r: Rest): ReadRequest | string {
-  const [action = "list", ...words] = r.args;
-  const [limit, chapter, from, to] = [count(r.limit, "--limit"), count(r.chapter, "--chapter"), offset(r.from, "--from"), offset(r.to, "--to")];
-  const problem = [limit, chapter, from, to].find((x) => typeof x === "string");
-  if (typeof problem === "string") return problem;
-  if (chapter !== undefined && (from !== undefined || to !== undefined)) return "Use --chapter or --from and --to, not both.";
-  const numbers = { from: num(from), to: num(to), chapter: num(chapter), limit: num(limit) };
-  const given = Object.fromEntries(Object.entries(numbers).filter(([, v]) => v !== undefined));
-  return { command, action, ...targetOf(action, words), ...given };
-}
-
 function labsRequest(r: Rest): Pick<Parsed, "request" | "labsList" | "usage"> {
   const [action = "list", id, ...extra] = r.args;
   if (action === "list" && !id) return { request: null, labsList: true };
@@ -191,18 +161,11 @@ export function parseArgs(argv: readonly string[]): Parsed {
     limit: value(args, "--limit"),
     out: value(args, "--out"),
     language: value(args, "--language"),
-    from: value(args, "--from"),
-    to: value(args, "--to"),
-    chapter: value(args, "--chapter"),
   };
   const [command, ...words] = args;
   rest.args = words;
   const base = { json, help: help || command === undefined, print: rest.print, wait: rest.wait, start: command === "start", request: null };
   if (base.help || base.start) return base;
-  if (command === "meetings") {
-    const read = readRequest(command, rest);
-    return typeof read === "string" ? { ...base, usage: read } : { ...base, read };
-  }
   if (command === "labs") return { ...base, ...labsRequest(rest) };
   if (command === "skill") {
     const action = SKILL_ACTIONS.find((a) => a === (words[0] ?? "print"));

@@ -78,8 +78,6 @@ interface TranscriberDeps {
   onFailedClip(clip: Clip): void;
   /** Why the model cannot be used, when loading it failed (the engine's own message). */
   onModelError?(detail: string): void;
-  /** Whether to add the end-of-sentence pause for the models that need it. */
-  sentencePause?(): boolean;
   /** How long a clip of this many seconds may take. */
   deadlineMs?(clipSeconds: number): number;
   /** The words were not sent because the model cannot read a prompt; dictation goes on without them. */
@@ -92,19 +90,27 @@ interface TranscriberDeps {
 
 type Waiting = "model-loading" | "model-failed" | "model-missing";
 
-/** Why the engine cannot take a recording now; undefined when it can. Starts loading a model that is on disk but not loaded. */
+/** Longest a recording waits for a model that is on disk to finish loading before it is kept for a retry. */
+const LOAD_WAIT_MS = 45_000;
+
+/** Why the engine cannot take a recording now; undefined when it can. A model that is on disk but not loaded (released when idle, or not loaded at launch) is loaded here and waited for. */
 async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promise<Waiting | undefined> {
-  const status = stt.status();
+  let status = stt.status();
   if (status.state === "ready") return undefined;
-  if (status.state === "downloading" || status.state === "loading") return "model-loading";
+  if (status.state === "downloading") return "model-loading";
   const id = model();
   if (!(await stt.downloaded(id))) return "model-missing";
+  // The load is queued behind one already running, so this also waits for that one. After a failed load the next recording tries again (a worker
+  // that crashed or a graphics card that ran out of memory is often fine a moment later); if it fails again the engine's reason is reported.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([stt.warm(id), new Promise((r) => (timer = setTimeout(r, LOAD_WAIT_MS)))]);
+  clearTimeout(timer);
+  status = stt.status();
+  if (status.state === "ready") return undefined;
   if (status.state === "error") {
-    // Loading again on every press would only hide the reason behind "still loading"; a new attempt happens when dictation is switched on again.
     onModelError?.(status.detail ?? "The speech model could not be loaded.");
     return "model-failed";
   }
-  void stt.warm(id);
   return "model-loading";
 }
 
@@ -126,7 +132,7 @@ async function restart(stt: TranscriberDeps["stt"], id: SttModelId): Promise<voi
 
 /** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
 export async function heard(
-  { stt, model, models, deadlineMs = transcribeDeadlineMs, sentencePause, onPromptDropped }: TranscriberDeps,
+  { stt, model, models, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps,
   req: { clip: Clip; language: string; prompt?: string | undefined },
 ): Promise<TranscribeResult> {
   const { clip, language, prompt } = req;
@@ -137,7 +143,7 @@ export async function heard(
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(new Error("transcription timed out")), deadlineMs(clip.pcm.length / clip.sampleRate));
   try {
-    const pcm = padTail(clip.pcm, clip.sampleRate, trailingPadMs(id, sentencePause?.() ?? false));
+    const pcm = padTail(clip.pcm, clip.sampleRate, trailingPadMs(id));
     const t = await stt.transcribe(to16(pcm), lang, { signal: stop.signal, ...(sent && { prompt: sent }) });
     return { ok: true, text: t.speech ? t.text.trim() : "", model: id, ...(lang !== "auto" && { language: lang }) };
   } catch (e) {

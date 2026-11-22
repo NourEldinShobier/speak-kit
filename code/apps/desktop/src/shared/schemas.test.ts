@@ -22,6 +22,13 @@ describe("config defaults and repair", () => {
     expect(v.safeParse(ARGS.updateAction, ["install-on-quit"]).success).toBe(true);
   });
 
+  it("loads a saved config that still has the removed meetings section and ignores it", () => {
+    const c = parseConfig({ voice: "af_bella", meetings: { enabled: true, summary: true, audioHours: 24, apps: [{ name: "Zoom" }] } });
+    expect("meetings" in c).toBe(false);
+    expect(c.voice).toBe("af_bella");
+    expect(c.transcripts.notes).toBe(false);
+  });
+
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {
     const c = parseConfig({ shortcuts: { "read-selection": "S", stop: "alt+ctrl+q", "play-pause": 12 } });
     expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+R" });

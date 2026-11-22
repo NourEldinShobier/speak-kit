@@ -35,7 +35,7 @@ export default defineConfig({
     target: "chrome140",
     // The app, the always-on-top mini player, the two dictation windows (the HUD pill and the hidden microphone page).
     rollupOptions: {
-      input: Object.fromEntries(["index", "mini", "hud", "recorder", "decoder", "trecorder", "mrecorder", "meeting-capsule"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
+      input: Object.fromEntries(["index", "mini", "hud", "recorder", "decoder", "trecorder"].map((n) => [n, path.join(root, `src/renderer/${n}.html`)])),
     },
   },
   test: {

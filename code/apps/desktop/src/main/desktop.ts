@@ -41,7 +41,6 @@ import { DictationService, type DictationServiceOptions } from "./dictation/serv
 import { setupTranscripts } from "./transcripts";
 import { transcriptNotes } from "./transcripts/notes";
 import { NOTES_MODEL } from "./voice-chat/service";
-import { setupMeetings } from "./meetings";
 import { areaPatcher } from "./settings-areas";
 import type { VoiceChat } from "./voice-chat/service";
 import { fakeUpdater } from "./updates-fake";
@@ -71,8 +70,8 @@ interface DesktopOptions {
   trayNotice(): string | undefined;
   /** The voice engine, for the memory it holds (Settings, Performance). */
   voiceEngine(): TtsEngine | null;
-  /** The OpenAI key lives with the voice chat; the meeting notes borrow it. */
-  voiceChat: Pick<VoiceChat, "complete" | "status">;
+  /** The OpenAI key lives with the voice chat; the transcript notes borrow it. */
+  voiceChat: Pick<VoiceChat, "complete">;
 }
 
 const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
@@ -166,7 +165,6 @@ function disposeAll(p: {
   tray: { dispose(): void };
   dictation: { dispose(): unknown };
   transcripts: { dispose(): unknown };
-  meetings: { dispose(): unknown } | undefined;
 }): Promise<void> {
   const controlDown = p.control.dispose();
   p.shortcuts.unregisterAll();
@@ -176,7 +174,6 @@ function disposeAll(p: {
   p.tray.dispose();
   void p.dictation.dispose();
   void p.transcripts.dispose();
-  void p.meetings?.dispose();
   return controlDown;
 }
 
@@ -224,14 +221,12 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   );
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
-  const notes = transcriptNotes({ on: () => ctx.config.meetings.summary, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
+  const notes = transcriptNotes({ on: () => ctx.config.transcripts.notes, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
   const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
-  let meetings: ReturnType<typeof setupMeetings> | undefined;
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, meetings: () => meetings, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
   const control = desktopControl(ctx, o, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers });
-  meetings = setupMeetings(ctx, { distDir: o.distDir, parent: o.parent, dictation, voiceChat: o.voiceChat, test: o.test, onChange: () => tray.refresh() });
 
   return {
     handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, control, test: o.test, resources: () => readResources(ctx, o.voiceEngine, dictation) }),
@@ -242,7 +237,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** Called by the IPC layer: is this webContents our mini player? */
     ownsWindow: (c: Electron.WebContents) => reading.owns(c),
     /** Stores the settings of one feature area through the feature that owns it. */
-    patchArea: areaPatcher({ speech: dictation.speech, transcripts, meetings: () => meetings }),
+    patchArea: areaPatcher({ speech: dictation.speech, transcripts }),
     /** Reacts to a Settings change. */
     onConfigPatch: (patch: ConfigPatch) => {
       if (patch.doNotDisturb !== undefined) ctx.publish();
@@ -260,7 +255,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** The tray icon is wanted but the system would not create it. */
     trayMissing: () => tray.failed(),
     /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, transcripts, meetings }),
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, meetings: () => meetings, installs: () => installedByTest }),
+    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, transcripts }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest }),
   };
 }

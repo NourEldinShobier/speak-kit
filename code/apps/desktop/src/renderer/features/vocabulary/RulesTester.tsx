@@ -100,35 +100,22 @@ function FinalRow({ final, heard, terms }: { final: string; heard: string; terms
   );
 }
 
-export interface RulesTesterProps {
-  s: DictationStatus;
-  title?: string;
-  lead?: string;
-  initial?: string;
-  /** The language whose rules are tried; the dictation language when missing. */
-  language?: string;
-}
+const TITLE = "Try your rules";
 
 /** Type a sentence the way the speech model might write it and see each step. Nothing is saved, except through "Fix this". */
-export function RulesTester({
-  s,
-  title = "Try your rules",
-  lead = "Type a sentence as the model might hear it and see each step. Nothing is saved.",
-  initial = "",
-  language: forced,
-}: RulesTesterProps) {
-  const [text, setText] = useState(initial);
+export function RulesTester({ s }: { s: DictationStatus }) {
+  const [text, setText] = useState("");
   const c = s.settings;
-  const language = forced ?? (c.language === "auto" ? "en" : c.language);
+  const language = c.language === "auto" ? "en" : c.language;
   const result = useMemo(
     () => (text.trim() ? testStages(text, { terms: c.terms, replacements: c.replacements, cleanup: c.cleanup, language }) : null),
     [text, c.terms, c.replacements, c.cleanup, language],
   );
   return (
-    <section className="lm-section vocab-tester" aria-label={title}>
+    <section className="lm-section vocab-tester" aria-label={TITLE}>
       <header className="lm-section__head">
-        <h3 className="lm-section__title">{title}</h3>
-        <p className="lm-section__desc">{lead}</p>
+        <h3 className="lm-section__title">{TITLE}</h3>
+        <p className="lm-section__desc">Type a sentence as the model might hear it and see each step. Nothing is saved.</p>
       </header>
       <div className="lm-card vocab-tester__card">
         <div className="vocab-tester__in">

@@ -5,12 +5,12 @@ import { policyOf, TranscriptsPatchSchema } from "./settings";
 
 describe("transcripts settings", () => {
   it("a config from before transcripts existed gets the defaults", () => {
-    expect(parseConfig({ setupDone: true }).transcripts).toEqual({ textDays: 30, keepAudio: true, audioDays: 7, trashDays: 30, folder: "", language: "auto" });
+    expect(parseConfig({ setupDone: true }).transcripts).toEqual({ textDays: 30, keepAudio: true, audioDays: 7, trashDays: 30, folder: "", language: "auto", notes: false });
   });
 
   it("a bad field falls back to its own default and keeps the good ones", () => {
-    const c = parseConfig({ transcripts: { textDays: 45, keepAudio: "yes", audioDays: 14, trashDays: 90, folder: 5, language: "fr" } });
-    expect(c.transcripts).toEqual({ textDays: 30, keepAudio: true, audioDays: 14, trashDays: 90, folder: "", language: "auto" });
+    const c = parseConfig({ transcripts: { textDays: 45, keepAudio: "yes", audioDays: 14, trashDays: 90, folder: 5, language: "fr", notes: 1 } });
+    expect(c.transcripts).toEqual({ textDays: 30, keepAudio: true, audioDays: 14, trashDays: 90, folder: "", language: "auto", notes: false });
   });
 
   it("a settings value that is not an object is replaced by the defaults", () => {
@@ -24,7 +24,7 @@ describe("transcripts settings", () => {
   });
 
   it("the window may change retention and language, not the folder", () => {
-    expect(v.safeParse(TranscriptsPatchSchema, { textDays: 90, keepAudio: false, audioDays: 3, trashDays: 7, language: "de" }).success).toBe(true);
+    expect(v.safeParse(TranscriptsPatchSchema, { textDays: 90, keepAudio: false, audioDays: 3, trashDays: 7, language: "de", notes: true }).success).toBe(true);
     expect(v.safeParse(TranscriptsPatchSchema, { folder: "C:\\x" }).success).toBe(false);
     expect(v.safeParse(TranscriptsPatchSchema, { textDays: 12 }).success).toBe(false);
   });

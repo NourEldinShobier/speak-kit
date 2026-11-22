@@ -35,8 +35,6 @@ export interface TrayContext {
   recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
   /** The downloaded speech models, for the quick switch. Absent when none is downloaded. */
   speechModels?: { models: { id: string; name: string; inUse: boolean }[]; switching?: { name: string }; recording: boolean };
-  /** Meeting recording; absent while the Meetings feature is off. `shortcut` is the optional start and stop shortcut. */
-  meetings?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing"; shortcut?: string };
 }
 
 /** Icon variant: error beats paused beats "needs you" (update ready) beats working (download, load, reading, export) beats the engine's own state. */
@@ -75,8 +73,6 @@ export type TrayAction =
   | "dictation-copy-2"
   | "dictation-copy-3"
   | "dictation-copy-4"
-  | "meeting-start"
-  | "meeting-stop"
   | "open"
   | "pause"
   | "resume"
@@ -144,16 +140,6 @@ function speechModelItems(c: TrayContext): TrayItem[] {
   return c.dictation && m && m.models.length > 0 ? [{ type: "models", label: at("tray.models"), rows: speechModelRows(m) }] : [];
 }
 
-const MEETING_WAITING = { starting: "tray.meetingStarting", saving: "tray.meetingSaving", transcribing: "tray.meetingTranscribing" } as const;
-
-/** One row that follows the meeting recording: starts one when ready, stops it while recording, and waits (disabled) while it is saved and transcribed. */
-function meetingRow(m: NonNullable<TrayContext["meetings"]>, item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
-  const hint = m.shortcut ? { hint: m.shortcut } : {};
-  if (m.phase === "ready") return item("meeting-start", at("tray.meeting"), hint);
-  if (m.phase === "recording") return item("meeting-stop", at("tray.meetingStop"), hint);
-  return item("meeting-start", at(MEETING_WAITING[m.phase]), { enabled: false });
-}
-
 type ItemFn = (action: TrayAction, label: string, extra?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem;
 
 /** The dictation rows; none where dictation is not supported. */
@@ -182,7 +168,6 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   rows.push(...dictationRows(c, item));
   if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   rows.push(...speechModelItems(c));
-  if (c.meetings) rows.push(meetingRow(c.meetings, item));
   if (reading) rows.push(item("pause", at("tray.pause"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));
   else if (paused) rows.push(item("resume", at("tray.resume"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop"), { hint: c.shortcuts.stop }));
   if (engine === "unloaded") rows.push(item("wake", at("tray.wake")));

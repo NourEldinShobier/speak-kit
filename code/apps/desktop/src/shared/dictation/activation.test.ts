@@ -94,7 +94,6 @@ describe("conflict names and accelerators", () => {
       second: "Second shortcut",
       mouse: "Mouse button",
       raw: "Dictate without processing",
-      transform: "Clean up the field",
       pasteLast: "Paste last dictation",
       cancel: "Cancel key",
       "read-selection": "Read selection",
@@ -102,7 +101,7 @@ describe("conflict names and accelerators", () => {
       "play-pause": "Play or pause",
       stop: "Stop reading",
     });
-    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(11);
+    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(10);
   });
 
   it("reads accelerator spellings: Ctrl, Control, Option, Shift, Super, Meta, Win, letters, digits and named keys", () => {
@@ -199,7 +198,6 @@ describe("activation config", () => {
       mouseButton: "",
       pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
       cancelKey: "Escape",
-      shareHotkey: false,
     });
   });
 
@@ -237,11 +235,14 @@ describe("activation config", () => {
     expect(c.pasteLastHotkey).toBe("ControlLeft+AltLeft+KeyV");
   });
 
-  it("keeps a stored hold time only from the list and drops a bad app list but keeps the other pause rules", () => {
+  it("keeps a stored hold time only from the list", () => {
     expect(parseConfig({ dictation: { holdMs: 500 } }).dictation.holdMs).toBe(500);
     expect(parseConfig({ dictation: { holdMs: 42 } }).dictation.holdMs).toBe(300);
-    expect(parseConfig({ dictation: { pauseRules: { mode: "block", apps: ["game.exe", 5], fullscreen: true } } }).dictation.pauseRules).toEqual({ mode: "block", apps: [], fullscreen: true });
-    expect(parseConfig({ dictation: { pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true } } }).dictation.pauseRules).toEqual({ mode: "block", apps: ["game.exe"], fullscreen: true });
+  });
+
+  it("loads a file that still has the removed sharing, pause and clean-up settings, and drops them", () => {
+    const c = parseConfig({ dictation: { shareHotkey: true, pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true }, transformHotkey: "F6" } }).dictation;
+    for (const key of ["shareHotkey", "pauseRules", "transformHotkey"]) expect(c).not.toHaveProperty(key);
   });
 
   it("the patch accepts a cleared optional shortcut and refuses an invalid one", () => {
@@ -250,5 +251,7 @@ describe("activation config", () => {
     expect(v.safeParse(DictationPatchSchema, { mouseButton: "Mouse1" }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { mouseButton: "Mouse4" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { cancelKey: "ControlLeft" }).success).toBe(false);
+    for (const removed of [{ shareHotkey: true }, { pauseRules: { mode: "off", apps: [], fullscreen: false } }, { transformHotkey: "F6" }])
+      expect(v.safeParse(DictationPatchSchema, removed).success).toBe(false);
   });
 });

@@ -38,7 +38,7 @@ describe("contract", () => {
 
   it("lists the typed error codes and what this version can do, for feature detection", () => {
     expect(ERROR_CODES).toEqual(["usage", "not-running", "refused", "busy", "no-speech", "cancelled", "unsupported", "too-large", "timeout", "unauthorized", "model-missing", "queue-full", "failed"]);
-    expect(CAPABILITIES.features).toMatchObject({ print: true, raw: true, history: true, meetings: true, speak: true, queue: true, labs: true });
+    expect(CAPABILITIES.features).toMatchObject({ print: true, raw: true, history: true, speak: true, queue: true, labs: true });
     expect(CAPABILITIES.limits).toEqual({ requestBytes: 524288, replyBytes: 1048576, timeoutMs: 10000, printWaitMs: 60000, speakFileBytes: 67108864 });
   });
 });

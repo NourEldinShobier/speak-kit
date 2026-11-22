@@ -24,8 +24,6 @@ export const EXTENDED = 0x100;
 /** All keys must be down together; the one pressed last completes the chord and is the one swallowed. */
 export interface Chord {
   keys: readonly VirtualKey[];
-  /** Let the keys reach the app too (sharing the shortcut with another program that listens for it). */
-  share?: boolean;
 }
 
 export type HotkeyEvent = (

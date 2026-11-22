@@ -25,14 +25,14 @@ describe("patchViaRegistry", () => {
     fake();
     applied.length = 0;
     answer.current = { ok: true };
-    expect(await patchViaRegistry("meetings", { summary: true, folder: "x" }, { status: async () => "status" })).toBe("status");
-    expect(applied).toEqual([{ "meetings.summary": true, "meetings.folder": "x" }]);
+    expect(await patchViaRegistry("transcripts", { notes: true, folder: "x" }, { status: async () => "status" })).toBe("status");
+    expect(applied).toEqual([{ "transcripts.notes": true, "transcripts.folder": "x" }]);
   });
 
   it("throws what the registry refused with", async () => {
     fake();
-    answer.current = { ok: false, message: "meetings.summary: bad" };
-    await expect(patchViaRegistry("meetings", { summary: "x" }, { status: async () => 1 })).rejects.toThrow("meetings.summary: bad");
+    answer.current = { ok: false, message: "transcripts.notes: bad" };
+    await expect(patchViaRegistry("transcripts", { notes: "x" }, { status: async () => 1 })).rejects.toThrow("transcripts.notes: bad");
   });
 
   it("returns the status when it already explains the refusal", async () => {

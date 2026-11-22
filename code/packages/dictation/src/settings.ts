@@ -47,8 +47,6 @@ export interface Settings {
   spokenFormatting: boolean;
   autoCapitalize: boolean;
   trailingSpace: boolean;
-  /** Lower-case everything the model heard; words from the vocabulary keep their spelling. */
-  lowercase: boolean;
   /** Drop a single full stop at the very end of the dictation. */
   stripFinalStop: boolean;
   replacements: Replacement[];
@@ -87,7 +85,6 @@ export const defaultSettings: Readonly<Settings> = {
   spokenFormatting: true,
   autoCapitalize: true,
   trailingSpace: true,
-  lowercase: false,
   stripFinalStop: false,
   replacements: [],
   retention: "7d",

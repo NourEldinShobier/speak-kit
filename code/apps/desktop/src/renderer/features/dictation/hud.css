@@ -1,4 +1,7 @@
 /* The HUD pill: 40 high, dark, level bars and a timer while recording. The window is a little larger than the pill so its shadow is not cut off. */
+.hud[data-kind="pasted"] {
+  padding-inline: 12px;
+}
 .hud {
   display: flex;
   align-items: center;

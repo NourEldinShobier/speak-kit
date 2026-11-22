@@ -14,7 +14,8 @@ export function classifyOutput(label: string | undefined): OutputKind {
 /** Headphones leave other audio alone: the microphone cannot hear them. */
 export const shouldDuck = (mode: DuckMode, output: OutputKind): boolean => mode !== "nothing" && output !== "headphones";
 
-export const LOWER_LEVEL = 0.2;
+/** Percent of the current volume kept while "lower" is on, when the setting is not given. */
+export const DEFAULT_DUCK_LEVEL = 30;
 export const RAMP_DOWN_MS = 120;
 export const RAMP_UP_MS = 1000;
 
@@ -40,6 +41,8 @@ export interface DuckerDeps {
   /** Undefined where the platform has no volume control: "lower" and "mute" then do nothing. */
   volume: SystemVolume | undefined;
   mode(): DuckMode;
+  /** Percent of the current volume to lower to (0 to 100), read at each recording. */
+  level?: (() => number) | undefined;
   output(): Promise<OutputKind>;
 }
 
@@ -59,7 +62,7 @@ export function createDucker(deps: DuckerDeps): { begin(): Promise<void>; end():
       undo = () => media.play();
     } else if (mode === "lower" && volume) {
       const before = await volume.get();
-      await volume.ramp(Math.min(before, LOWER_LEVEL), RAMP_DOWN_MS);
+      await volume.ramp((before * (deps.level?.() ?? DEFAULT_DUCK_LEVEL)) / 100, RAMP_DOWN_MS);
       undo = () => volume.ramp(before, RAMP_UP_MS);
     } else if (mode === "mute" && volume) {
       if (await volume.muted()) return;

@@ -33,7 +33,7 @@ export type AutomationErrorCode = (typeof AUTOMATION_ERROR_CODES)[number];
 /** One line per code, said the same way by the command line, the MCP server and the Automation page. */
 export const AUTOMATION_ERROR_TEXT: Record<AutomationErrorCode, string> = {
   model_missing: "The speech model is not downloaded yet.",
-  busy: "Dictation or a meeting is already recording.",
+  busy: "A recording is already running.",
   permission_denied: "The operating system is blocking access to the microphone.",
   too_large: "The file is over the 64 MiB limit.",
   unsupported: "This version does not have that command.",
@@ -87,7 +87,6 @@ export const AUTOMATION_COMMANDS = {
   skill: "available",
   dictate: "parked",
   history: "parked",
-  meetings: "parked",
   "live-stream": "available",
 } as const;
 export type AutomationCommand = keyof typeof AUTOMATION_COMMANDS;

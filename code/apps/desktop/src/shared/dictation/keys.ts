@@ -37,7 +37,7 @@ export const defaultHotkey = (platform: string): string => (platform === "darwin
 export const DEFAULT_HOTKEY = defaultHotkey(typeof process === "undefined" ? "win32" : process.platform);
 /** Where Paste last starts out. */
 export const DEFAULT_PASTE_LAST = "ControlLeft+AltLeft+KeyV";
-/** Home, End, Page Up and Page Down work as a whole shortcut, but they type nothing and move the cursor in every app, so they sit behind the advanced options with a warning. */
+/** Home, End, Page Up and Page Down work as a whole shortcut, but they type nothing and move the cursor in every app, so the recorder warns before it saves them. */
 export const ADVANCED_KEYS: readonly string[] = ["Home", "End", "PageUp", "PageDown"];
 export const MOUSE_KEYS: readonly string[] = ["Mouse2", "Mouse3", "Mouse4", "Mouse5"];
 export const isMouseKey = (code: string): boolean => MOUSE_KEYS.includes(code);

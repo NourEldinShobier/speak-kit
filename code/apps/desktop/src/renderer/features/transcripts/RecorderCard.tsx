@@ -124,7 +124,7 @@ function Ready({ starting, settings, onClose }: { starting: boolean; settings: S
   );
 }
 
-/** Record a conversation: the consent reminder and Start recording; while recording, the timer, the level, the sound check and Stop and save. Microphone only: system audio belongs to meetings. */
+/** Record a conversation: the consent reminder and Start recording; while recording, the timer, the level, the sound check and Stop and save. Microphone only. */
 export function RecorderCard({ recording, settings, onClose }: { recording: RecordingView | null; settings: SettingsView | null; onClose(): void }) {
   if (recording && recording.phase !== "starting") return <Active rec={recording} />;
   return <Ready starting={recording?.phase === "starting"} settings={settings} onClose={onClose} />;

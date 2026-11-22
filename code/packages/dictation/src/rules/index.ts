@@ -8,7 +8,7 @@ export { applyReplacements } from "./replacements";
 export { FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES };
 
 export type RulesOptions = Pick<Settings, "fillers" | "spokenSymbols" | "spokenFormatting" | "autoCapitalize" | "trailingSpace" | "replacements"> &
-  Partial<Pick<Settings, "lowercase" | "stripFinalStop">> & {
+  Partial<Pick<Settings, "stripFinalStop">> & {
     /** Language of the text: a code such as "en", or "auto" when the engine did not say. */
     language: string;
   };
@@ -22,7 +22,7 @@ export const isNumbersOnly = (text: string): boolean => NUMBERS_ONLY.test(text.t
 
 export interface RulesTrace {
   raw: string;
-  /** After lower-casing and the replacement list (vocabulary spellings included). */
+  /** After the replacement list (vocabulary spellings included). */
   replacements: string;
   fillers: string;
   /** After spoken formatting and spoken symbols. */
@@ -53,7 +53,7 @@ export const dropFinalStop = (text: string): string => text.replace(/(?<!\.\p{L}
 
 /** Capitals, the final full stop and the space after the text. */
 function finish(text: string, opts: RulesOptions): string {
-  let out = opts.autoCapitalize && !opts.lowercase ? capitalize(text) : text;
+  let out = opts.autoCapitalize ? capitalize(text) : text;
   if (opts.stripFinalStop) out = dropFinalStop(out);
   if (!out.trim()) return "";
   return opts.trailingSpace && !/\s$/.test(out) ? `${out} ` : out;
@@ -66,7 +66,7 @@ export function traceRules(heard: string, opts: RulesOptions): RulesTrace {
   // Digits and their punctuation are never rewritten: only the trailing space applies.
   if (isNumbersOnly(raw)) return { raw, replacements: raw, fillers: raw, symbols: raw, final: opts.trailingSpace ? `${raw} ` : raw, notes: ["numbers-only"] };
   const spoken = languageOf(opts.language);
-  const replacements = applyReplacements(opts.lowercase ? raw.toLowerCase() : raw, opts.replacements);
+  const replacements = applyReplacements(raw, opts.replacements);
   const fillers = opts.fillers && FILLER_LANGUAGES.includes(spoken) ? stripFillers(replacements) : replacements;
   const formatted = opts.spokenFormatting ? spokenFormatting(fillers, spoken) : fillers;
   const symbols = opts.spokenSymbols ? spokenSymbols(formatted, spoken) : formatted;

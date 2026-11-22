@@ -93,16 +93,6 @@ describe("What is new", () => {
 });
 
 describe("an off feature", () => {
-  it("Meetings shows an explanation and one button that turns it on", async () => {
-    const l = await start({ config: { ...DONE, meetings: { enabled: false } } });
-    await openSettings(l, "Meetings");
-    const card = l.page.getByRole("region", { name: "Meetings are off" });
-    await card.waitFor();
-    await card.getByRole("button", { name: "Turn on" }).click();
-    await card.waitFor({ state: "detached" });
-    await expect.poll(() => configOf(l).meetings.enabled).toBe(true);
-  }, 60_000);
-
   it("Automation shows the same card when the local server is off", async () => {
     const l = await start({ config: { ...DONE, controlServer: false } });
     await openSettings(l, "Automation");

@@ -21,7 +21,7 @@ const group = (l: Launched, name: string) => l.page.getByRole("group", { name })
 describe("Dictation shortcuts page", () => {
   it("shows the default rows with nothing set, and Restore default disabled", async () => {
     const l = await start();
-    for (const t of ["Dictation shortcut", "Shortcut mode", "Hold time", "Second shortcut", "Mouse button", "Advanced shortcut options", "Dictate without processing", "Paste last dictation"])
+    for (const t of ["Dictation shortcut", "Shortcut mode", "Hold time", "Second shortcut", "Mouse button", "Dictate without processing", "Paste last dictation"])
       expect(await l.page.getByText(t, { exact: true }).first().isVisible()).toBe(true);
     expect(await l.page.getByRole("button", { name: "Restore the default Dictation shortcut" }).isDisabled()).toBe(true);
     expect(await group(l, "Second shortcut").getByText("Not set").isVisible()).toBe(true);
@@ -93,15 +93,13 @@ describe("Dictation shortcuts page", () => {
     expect(saved(l).mouseButton).toBe("");
   });
 
-  it("changes the mode and the explainer, and offers sharing only in Hold mode", async () => {
+  it("changes the mode and the explainer, and shows the Cancel key in the hands-free modes", async () => {
     const l = await start();
-    await l.page.getByRole("button", { name: "Advanced shortcut options" }).click();
-    expect(await l.page.getByRole("switch", { name: "Share the shortcut with other apps" }).isDisabled()).toBe(true);
+    expect(await l.page.getByRole("button", { name: "Advanced shortcut options" }).count()).toBe(0);
     await l.page.getByRole("combobox", { name: "Shortcut mode" }).click();
     await l.page.getByRole("option", { name: "Hold", exact: true }).click();
     await l.page.getByRole("heading", { name: "How Hold works" }).waitFor();
     expect(saved(l).mode).toBe("hold-only");
-    expect(await l.page.getByRole("switch", { name: "Share the shortcut with other apps" }).isEnabled()).toBe(true);
     await l.page.getByRole("combobox", { name: "Shortcut mode" }).click();
     await l.page.getByRole("option", { name: "Tap or hold" }).click();
     await l.page.getByRole("heading", { name: "How Tap or hold works" }).waitFor();

@@ -107,7 +107,7 @@ export class ChordTracker {
       this.#active = true;
       this.#afterRelease = false;
       this.#maskPending = this.#chord.keys.some((k) => MENU_KEYS.has(k));
-      if (MODIFIERS.has(vk) || this.#chord.share) return { swallow: false, events: [{ kind: "down" }] };
+      if (MODIFIERS.has(vk)) return { swallow: false, events: [{ kind: "down" }] };
       this.#swallowedDown.add(vk);
       return { swallow: true, events: [{ kind: "down" }] };
     }

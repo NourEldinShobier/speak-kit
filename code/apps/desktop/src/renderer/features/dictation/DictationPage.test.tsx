@@ -14,7 +14,6 @@ vi.mock("./usePermissions", () => ({ usePermissions: () => perms.status }));
 
 import { guideFor } from "../../../shared/permissions/guide";
 import { DictationPage } from "./DictationPage";
-import { FirstRunCard } from "./FirstRunCard";
 import { DictationHistoryPage, HistoryRow } from "./HistoryPage";
 
 const turbo: ModelView = {
@@ -80,6 +79,16 @@ describe("Settings > Dictation", () => {
     expect(out).toContain("The hotkey could not start"); // Windows test run: no Mac platform on the document
   });
 
+  it("shows the volume slider under While dictating only when the other audio is lowered", () => {
+    const withMode = (duckAudio: "nothing" | "lower" | "mute" | "pause", duckLevel = 30) => page(status({ settings: { ...status().settings, duckAudio, duckLevel } }));
+    const lower = withMode("lower", 45);
+    expect(text(lower)).toContain("Volume while dictating 45%");
+    expect(lower).toContain('aria-label="Volume while dictating"');
+    expect(lower).toContain('aria-valuemin="0" aria-valuemax="100"');
+    expect(lower).toContain("right:55%"); // the filled part of the track ends at 45
+    for (const mode of ["nothing", "mute", "pause"] as const) expect(withMode(mode)).not.toContain("Volume while dictating");
+  });
+
   it("shows the title before the status has arrived", () => {
     expect(text(page(null))).toContain("Dictation Hold a key, speak");
   });
@@ -99,17 +108,13 @@ describe("Settings > Dictation", () => {
       "300 ms",
       "Second shortcut",
       "Mouse button",
-      "Advanced shortcut options",
       "Dictate without processing",
       "Paste last dictation",
       "Restore default",
-      "Skipped microphones",
-      "Nothing is skipped by name.",
       "Speech model",
       "Whisper Large v3 Turbo",
       "Clean-up",
       "Remove filler words",
-      "Try a sentence",
       "Test dictation",
       "History",
       "View history",
@@ -130,11 +135,11 @@ describe("Settings > Dictation", () => {
     expect(page(status())).not.toContain("on the Engines page");
   });
 
-  it("marks the chosen model, offers Download for the one that is not on disk, and only the default carries Default", () => {
+  it("marks the chosen model, offers Download for the one that is not on disk, and only the recommended one carries Recommended", () => {
     const html = page(status());
     expect(html).toContain("Installed");
     expect(html).toContain("Download");
-    expect(html.match(/>Default</g)).toHaveLength(1);
+    expect(html.match(/>Recommended</g)).toHaveLength(1);
     expect(html).toMatch(/<input[^>]*aria-label="Whisper Large v3 Turbo"[^>]*checked/);
     expect(html).toMatch(/<input[^>]*disabled[^>]*aria-label="Parakeet v3"/);
     expect(html).not.toContain("lm-field__label"); // the tester field carries no visible label
@@ -163,10 +168,18 @@ describe("Settings > Dictation", () => {
     expect(html).toMatch(/role="switch"[^>]*disabled/);
   });
 
-  it("shows the set-up card instead of the settings while the chosen model is not installed", () => {
+  it("keeps the whole page and asks for a model, without starting a download, when none is installed", () => {
+    const t = text(page(status({ models: [{ ...turbo, installed: false }, parakeet], modelReady: false, modelInstalled: false })));
+    expect(t).toContain("Choose a speech model");
+    expect(t).toContain("Download");
+    expect(t).toContain("Clean-up");
+    expect(t).not.toContain("Set up dictation");
+  });
+
+  it("shows a download in the model's own row and keeps the rest of the page", () => {
     const t = text(page(status({ models: [{ ...turbo, installed: false, progress: { kind: "downloading", fraction: 0.63, etaSeconds: 60 } }, parakeet], modelReady: false, modelInstalled: false })));
-    expect(t).toContain("Set up dictation");
-    expect(t).not.toContain("Clean-up");
+    expect(t).toContain("Downloading 63%");
+    expect(t).toContain("Clean-up");
   });
 
   it("does not take the page away while a second model downloads", () => {
@@ -181,36 +194,36 @@ describe("Settings > Dictation", () => {
     expect(t).toContain("Clean-up");
   });
 
-  it("shows only the card when the chosen model is loading", () => {
+  it("says the chosen model is not loaded yet and keeps the page", () => {
     const t = text(page(status({ modelReady: false })));
-    expect(t).toContain("Preparing the model");
-    expect(t).not.toContain("Clean-up");
-  });
-});
-
-describe("first run card", () => {
-  const card = (s: DictationStatus) => text(renderToStaticMarkup(<FirstRunCard status={s} />));
-
-  it("step 1 shows the download with percent, size and time left", () => {
-    const t = card(status({ models: [{ ...turbo, installed: false, bytes: 466_000_000, progress: { kind: "downloading", fraction: 0.63, etaSeconds: 60 } }, parakeet], modelInstalled: false }));
-    expect(t).toContain("Step 1 of 2");
-    expect(t).toContain("63%");
-    expect(t).toContain("294 of 466 MB. About 1 minute left.");
-    expect(t).toContain("Speak Kit needs a speech model on this computer. It downloads once, then dictation works offline.");
+    expect(t).toContain("Whisper Large v3 Turbo is not loaded");
+    expect(t).toContain("Clean-up");
   });
 
-  it("step 2 says the model is being prepared and which keys to hold", () => {
-    const t = card(status({ modelReady: false }));
-    expect(t).toContain("Step 2 of 2");
-    expect(t).toContain("Getting Whisper Large v3 Turbo ready. This takes a few seconds the first time.");
-    expect(t).toContain("When it is ready, hold Ctrl Alt Space and speak.");
-  });
-
-  it("a failure offers Turn off and Try again", () => {
-    const t = card(status({ modelError: "No space left on the disk.", modelReady: false }));
+  it("offers Try again beside a failed model setup", () => {
+    const t = text(page(status({ modelError: "No space left on the disk.", modelReady: false })));
     expect(t).toContain("No space left on the disk.");
-    expect(t).toContain("Turn off");
     expect(t).toContain("Try again");
+    expect(t).toContain("Clean-up");
+  });
+
+  it("puts the hint and the test field first, then the general settings and the speech model", () => {
+    const t = text(page(status()));
+    expect(t.indexOf("Test dictation")).toBeLessThan(t.indexOf("General"));
+    expect(t.indexOf("hold")).toBeGreaterThan(-1);
+  });
+
+  it("says a lost microphone at the top, and says nothing about a healthy listener", () => {
+    const bad = text(page(status({ mic: { kind: "lost" } as never, hotkeyReady: true })));
+    expect(bad.indexOf("No microphone")).toBeLessThan(bad.indexOf("General"));
+    expect(text(page(status({ mic: { kind: "none" } as never, hotkeyReady: true }))).indexOf("No usable microphone")).toBe(-1);
+    expect(text(page(status({ hotkeyReady: true })))).not.toContain("Running");
+  });
+
+  it("puts the speech model card right after the general settings", () => {
+    const t = text(page(status()));
+    expect(t.indexOf("Speech model")).toBeGreaterThan(t.indexOf("General"));
+    expect(t.indexOf("Speech model")).toBeLessThan(t.indexOf("Clean-up"));
   });
 });
 

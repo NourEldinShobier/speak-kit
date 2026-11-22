@@ -22,13 +22,14 @@ describe("shouldDuck", () => {
   });
 });
 
-function rig(mode: DuckMode, o: { playing?: boolean; volume?: number; muted?: boolean; output?: OutputKind; fail?: boolean } = {}) {
+function rig(mode: DuckMode, o: { playing?: boolean; volume?: number; muted?: boolean; output?: OutputKind; fail?: boolean; level?: number } = {}) {
   const calls: string[] = [];
   const fail = async () => {
     if (o.fail) throw new Error("refused");
   };
   const ducker = createDucker({
     mode: () => mode,
+    level: o.level === undefined ? undefined : () => o.level!,
     output: async () => o.output ?? "speakers",
     media: {
       playing: async () => o.playing ?? true,
@@ -56,16 +57,24 @@ describe("createDucker", () => {
     await idle.ducker.end();
     expect(idle.calls).toEqual([]);
   });
-  it("lowers in 120 ms and restores to the old volume in 1 s", async () => {
+  it("lowers to 30 percent of the volume in 120 ms and restores the old volume in 1 s", async () => {
     const r = rig("lower", { volume: 0.8 });
     await r.ducker.begin();
     await r.ducker.end();
-    expect(r.calls).toEqual(["ramp 0.2 120", "ramp 0.8 1000"]);
+    expect(r.calls).toEqual(["ramp 0.24 120", "ramp 0.8 1000"]);
   });
-  it("does not raise a volume that is already lower than the target", async () => {
-    const r = rig("lower", { volume: 0.1 });
-    await r.ducker.begin();
-    expect(r.calls).toEqual(["ramp 0.1 120"]);
+  it("lowers to the level the setting gives, 0 being silent and 100 unchanged, and restores the original", async () => {
+    const half = rig("lower", { volume: 0.8, level: 50 });
+    await half.ducker.begin();
+    await half.ducker.end();
+    expect(half.calls).toEqual(["ramp 0.4 120", "ramp 0.8 1000"]);
+    const silent = rig("lower", { volume: 0.5, level: 0 });
+    await silent.ducker.begin();
+    await silent.ducker.end();
+    expect(silent.calls).toEqual(["ramp 0 120", "ramp 0.5 1000"]);
+    const same = rig("lower", { volume: 0.5, level: 100 });
+    await same.ducker.begin();
+    expect(same.calls).toEqual(["ramp 0.5 120"]);
   });
   it("mutes and unmutes, but leaves an existing mute alone", async () => {
     const r = rig("mute");

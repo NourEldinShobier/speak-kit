@@ -12,7 +12,6 @@ import type { DictationOs } from "./index";
 import { restoreTakes } from "./restore-takes";
 import type { Spool } from "./spool";
 import type { SpooledRecorder } from "./spooled-recorder";
-import { runTransform, transformToast } from "./transform-run";
 import { at } from "../../shared/i18n";
 import "../../shared/i18n/packs/main";
 
@@ -26,19 +25,6 @@ export async function recoverTakes(o: { spool: { spool: Spool; spooled: SpooledR
     warn("dictation recovery failed", String(e));
   }
 }
-
-/** The clean-up shortcut: cleans the focused field and says what happened. Only while dictation is on and the shortcut is set. */
-export async function cleanField(os: DictationOs | undefined, cfg: DictationConfig, presenter: HudPresenter): Promise<void> {
-  if (!os || !cfg.enabled || !cfg.transformHotkey || cleaning) return; // a second press while one runs would race it for the clipboard
-  cleaning = true;
-  try {
-    const toast = transformToast(await runTransform(os, cfg));
-    presenter.toast(toast.text, toast.tone);
-  } finally {
-    cleaning = false;
-  }
-}
-let cleaning = false;
 
 /** Runs `recoverTakes` once per launch, at the first start with dictation on. */
 export function createRecovery(h: { spool: { spool: Spool; spooled: SpooledRecorder }; core(): Dictation | undefined; presenter: HudPresenter; warn(title: string, detail: string): void }) {
@@ -77,15 +63,13 @@ export function onStateChange(h: {
   } else if (next.status === "idle" && (next.notice?.kind === "inserted" || next.notice?.kind === "copied")) failure.last = undefined;
 }
 
-/** After the key hook starts: warm the model, or fetch it when it is missing. At launch (quiet) with release-when-idle on, the model stays on disk and the first dictation loads it (the page says that takes longer). */
-export function prepareModel(models: ModelManager, o: { quiet: boolean; idleMinutes: number; skipped: boolean; model: DictationConfig["model"] }): void {
-  if (models.installed) {
-    if (!o.quiet || o.idleMinutes === 0) models.warm();
-  } else if (!o.skipped) void models.download(o.model);
+/** After the key hook starts: warm an installed model. A missing one is not fetched: the page asks the person to choose and download one. At launch (quiet) with release-when-idle on, the model stays on disk and the first dictation loads it. */
+export function prepareModel(models: ModelManager, o: { quiet: boolean; idleMinutes: number }): void {
+  if (models.installed && (!o.quiet || o.idleMinutes === 0)) models.warm();
 }
 
-/** Keeps the computer awake while a recording runs, when the setting is on; a failure is logged and the recording goes on. */
-export const sleepBlock = (enabled: () => boolean, warn: (why: string) => void) => createSleepBlock(powerSaveBlocker, enabled, warn);
+/** Keeps the computer awake while a recording runs; a failure is logged and the recording goes on. */
+export const sleepBlock = (warn: (why: string) => void) => createSleepBlock(powerSaveBlocker, warn);
 
 /** Starts the helper that reads the character before the caret ahead of the first dictation, when smart spacing is on. */
 export const warmCaret = (os: DictationOs | undefined, cfg: Pick<DictationConfig, "smartSpacing">): void => {

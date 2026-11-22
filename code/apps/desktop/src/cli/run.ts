@@ -7,9 +7,10 @@ import { parseArgs, USAGE, type Parsed } from "./parse";
 import { render } from "./render";
 import { followExport, followReading, followTranscription, speakSource } from "./speak";
 import { skillAction } from "./skill";
-import { runRead, type ReadOutcome, type Sources } from "./reads";
 
 export { parseArgs, render };
+
+type TextOutcome = { ok: true; data: unknown; text: string } | { ok: false; code: "usage" | "failed"; message: string };
 
 /** What a path names: nothing, a file that is too big to read, or the text of a file. */
 export type FileRead = { kind: "none" } | { kind: "too-large" } | { kind: "text"; text: string };
@@ -24,8 +25,6 @@ export interface Io {
   launch(): Promise<boolean>;
   /** The history file read directly, for a read that must not start the app. */
   offlineHistory(q: { search?: string; limit: number }): Promise<unknown[] | null>;
-  /** The meetings on disk: read, never changed. */
-  reads: Sources;
   /** The settings file as stored, or undefined when there is none. */
   readConfig(): Promise<unknown>;
   /** A path that may be a text file: refused above the file limit before anything is read. */
@@ -47,8 +46,8 @@ function emit(io: Io, r: Reply, p: Parsed): Exit {
   return exitFor(r);
 }
 
-/** A read or a labs list: the same JSON envelope as every command, or just the text for a person. */
-function emitText(io: Io, p: Parsed, o: ReadOutcome): Exit {
+/** The labs list: the same JSON envelope as every command, or just the text for a person. */
+function emitText(io: Io, p: Parsed, o: TextOutcome): Exit {
   const reply: Reply = o.ok ? ok(o.data) : fail(o.code, o.message);
   if (p.json) io.out(`${JSON.stringify(reply)}\n`);
   else (o.ok ? io.out : io.err)(`${o.ok ? o.text : o.message}\n`);
@@ -78,7 +77,7 @@ async function whenNotRunning(io: Io, p: Parsed, request: ControlRequest): Promi
 }
 
 /** The experiments the list shows: the ones everyone sees, with what the settings file says about each. */
-async function labsList(io: Io): Promise<ReadOutcome> {
+async function labsList(io: Io): Promise<TextOutcome> {
   const flags = ((await io.readConfig()) as { experiments?: Record<string, unknown> } | undefined)?.experiments ?? {};
   const rows = experiments()
     .filter((e) => e.audience === "everyone")
@@ -109,7 +108,7 @@ async function sendToApp(io: Io, d: Discovery, call: { request: ControlRequest; 
   }
 }
 
-/** The commands that never reach the app: help, start, reads from files, the labs list, a usage error. Null for the rest. */
+/** The commands that never reach the app: help, start, the labs list, a usage error. Null for the rest. */
 async function local(io: Io, p: Parsed): Promise<Exit | null> {
   if (p.help)
     return (
@@ -118,7 +117,6 @@ async function local(io: Io, p: Parsed): Promise<Exit | null> {
       EXIT.ok
     );
   if (p.start) return startApp(io, p);
-  if (p.read) return emitText(io, p, await runRead(p.read, io.reads));
   if (p.labsList) return emitText(io, p, await labsList(io));
   if (p.request) return null;
   const r = fail("usage", p.usage ?? USAGE);

@@ -21,7 +21,6 @@ function rig(over: Partial<Io> & { reply?: Reply; running?: boolean } = {}) {
     offlineHistory: async () => null,
     post: async (_d, req) => (sent.push(req), over.reply ?? ok({})),
     stdin: async () => "from stdin",
-    reads: { meetings: async () => ({ entries: [], transcript: async () => [], notes: async () => [] }) },
     readConfig: async () => undefined,
     file: async () => ({ kind: "none" }),
     sleep: async () => {},

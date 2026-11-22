@@ -4,7 +4,7 @@ import { createHotkeys, type HotkeyLayout, type SwitchableHotkeys } from "./hotk
 import { ShortcutControls } from "./shortcut-controls";
 import type { HotkeyHandlers, HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", second: "ControlRight", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: "Escape", share: false };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", second: "ControlRight", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape" };
 
 function rig() {
   let handlers: HotkeyHandlers | undefined;
@@ -50,11 +50,11 @@ describe("pausing shortcuts during a recording", () => {
     expect(r.events).toEqual([]);
   });
 
-  it("cancels the recording before the hook goes, for a manual pause and for a pause rule", () => {
+  it("cancels the recording before the hook goes, for a manual pause", () => {
     const log: string[] = [];
     const core = { cancel: () => log.push("cancel") } as unknown as Dictation;
     const hotkeys = { pause: (on: boolean) => log.push(`pause ${on}`) } as unknown as SwitchableHotkeys;
-    const c = new ShortcutControls({ hotkeys: () => hotkeys, core: () => core, presenter: {} as never, foreground: () => null, rules: () => undefined, changed: () => log.push("changed") });
+    const c = new ShortcutControls({ hotkeys: () => hotkeys, core: () => core, presenter: {} as never, changed: () => log.push("changed") });
     c.setPaused(true);
     expect(log).toEqual(["cancel", "pause true", "changed"]);
     log.length = 0;

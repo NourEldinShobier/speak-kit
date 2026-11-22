@@ -41,7 +41,6 @@ export const ES: Record<StringKey, string> = {
   "sub.performance": "Rendimiento",
   "sub.storage": "Almacenamiento",
   "sub.privacy": "Privacidad",
-  "sub.meetings": "Reuniones",
   "sub.automation": "Automatización",
   "sub.experiments": "Experimentos",
   "sub.browser": "Integración con el navegador",

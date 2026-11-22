@@ -1,5 +1,4 @@
-import type { NoteVersion } from "./store";
-import type { Failure } from "./types";
+import type { SummariseResult, WriterFailure } from "./notes";
 
 export type CompleteResult = { ok: true; text: string } | { ok: false; code: "no-key" | "key-rejected" | "no-credit" | "rate-limited" | "offline" | "unavailable" };
 
@@ -12,23 +11,16 @@ export interface NotesDeps {
   timeoutMs?: number;
 }
 
-/** One spoken line as the writer reads it. A line without `who` comes from one speaker (an imported file or a dictated recording). */
+/** One spoken line as the writer reads it. */
 export interface NoteLine {
   start: number;
   text: string;
-  who?: string;
 }
 
-export interface Notes {
-  title: string;
-  summary: string;
-  chapters: { start: number; title: string; text: string }[];
-}
+type Notes = Extract<SummariseResult, { ok: true }>["notes"];
 
-export type NotesOutcome = { ok: true; notes: Notes; writer: string } | { ok: false; failure: Failure };
-
-/** The transcript text sent to the writer is cut here (about 12k words): a longer meeting is summarised from its start and its end. */
-export const MAX_PROMPT_CHARS = 60_000;
+/** The transcript text sent to the writer is cut here (about 12k words): a longer transcript is summarised from its start and its end. */
+const MAX_PROMPT_CHARS = 60_000;
 
 const UNCHANGED = "The transcript and the audio are unchanged.";
 
@@ -42,29 +34,27 @@ export const NOTES_FAILURES: Record<string, string> = {
   unavailable: `OpenAI could not write the notes. ${UNCHANGED} Regenerate the notes to try again.`,
   unreadable: `The writer's answer could not be read. ${UNCHANGED} Regenerate the notes to try again.`,
   timeout: `Writing the notes took too long. ${UNCHANGED} Regenerate the notes to try again.`,
-  empty: "There is nothing to write notes from: no words were heard in this meeting.",
+  empty: "There is nothing to write notes from: no words were heard.",
 };
 
-const failure = (code: string): NotesOutcome => ({ ok: false, failure: { code, message: NOTES_FAILURES[code] ?? NOTES_FAILURES.unavailable! } });
+const failure = (code: string): { ok: false; failure: WriterFailure } => ({ ok: false, failure: { code, message: NOTES_FAILURES[code] ?? NOTES_FAILURES.unavailable! } });
 
-export const stamp = (sec: number): string => {
+const stamp = (sec: number): string => {
   const s = Math.max(0, Math.floor(sec));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   return `${h ? `${h}:${String(m).padStart(2, "0")}` : m}:${String(s % 60).padStart(2, "0")}`;
 };
 
-/** The transcript as the writer reads it: one line per entry with the time and who spoke. Too long is cut in the middle. */
+/** The transcript as the writer reads it: one line per entry with the time. Too long is cut in the middle. */
 export function promptText(lines: readonly NoteLine[], max = MAX_PROMPT_CHARS): string {
-  const all = lines.map((l) => `[${stamp(l.start)}] ${l.who ? `${l.who}: ` : ""}${l.text}`).join("\n");
+  const all = lines.map((l) => `[${stamp(l.start)}] ${l.text}`).join("\n");
   if (all.length <= max) return all;
   const half = Math.floor(max / 2);
-  return `${all.slice(0, half)}\n[... part of the meeting left out ...]\n${all.slice(-half)}`;
+  return `${all.slice(0, half)}\n[... part of the transcript left out ...]\n${all.slice(-half)}`;
 }
 
-const SPEAKERS = `The speakers are "You" (the person who recorded) and "Them" (everyone else on the call). `;
-const system = (lines: readonly NoteLine[]) =>
-  `You write notes for a transcript. ${lines.some((l) => l.who) ? SPEAKERS : ""}Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
+const SYSTEM = `You write notes for a transcript. Answer with JSON only: {"title": short title of at most 8 words, "summary": exactly two sentences, "chapters": [{"start": seconds from the start, "title": short title}]}. Use the language of the transcript. Write only what the transcript says.`;
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -106,8 +96,8 @@ export function chapterText(lines: readonly NoteLine[], chapters: readonly { sta
   });
 }
 
-/** The notes pass: the summary, the title and the chapters, written once from the transcript. Every failure is an outcome with a message, never a throw. */
-export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], signal?: AbortSignal): Promise<NotesOutcome> {
+/** The notes pass: the summary, the title and the chapters, written once from the transcript. Every failure is a result with a message, never a throw. */
+export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], signal?: AbortSignal): Promise<SummariseResult> {
   if (!lines.some((l) => l.text.trim())) return failure("empty");
   const own = new AbortController();
   const stop = () => own.abort();
@@ -116,7 +106,7 @@ export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], si
   const timer = setTimeout(() => own.abort(), deps.timeoutMs ?? 60_000);
   let r: CompleteResult;
   try {
-    r = await deps.complete(system(lines), promptText(lines), own.signal);
+    r = await deps.complete(SYSTEM, promptText(lines), own.signal);
   } catch {
     r = { ok: false, code: own.signal.aborted ? "offline" : "unavailable" };
   } finally {
@@ -127,44 +117,4 @@ export async function writeNotes(deps: NotesDeps, lines: readonly NoteLine[], si
   if (!r.ok) return failure(r.code);
   const notes = parseNotes(r.text, lines);
   return notes ? { ok: true, notes, writer: deps.writer } : failure("unreadable");
-}
-
-export interface VocabEntry {
-  /** What the model or the speech engine wrote. */
-  from: string;
-  /** What the person wants written. */
-  to: string;
-}
-
-const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** Replaces whole words (longest phrase first, no chains) in a text; returns the text and how many places changed. */
-export function applyVocabulary(text: string, vocab: readonly VocabEntry[]): { text: string; changed: number } {
-  const entries = vocab.filter((v) => v.from.trim()).sort((a, b) => b.from.length - a.from.length);
-  if (!entries.length) return { text, changed: 0 };
-  const by = new Map(entries.map((e) => [e.from.trim().toLowerCase(), e.to]));
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:${entries.map((e) => esc(e.from.trim())).join("|")})(?![\\p{L}\\p{N}])`, "giu");
-  let changed = 0;
-  const out = text.replace(re, (m) => {
-    const to = by.get(m.toLowerCase());
-    if (to === undefined || to === m) return m;
-    changed++;
-    return to;
-  });
-  return { text: out, changed };
-}
-
-/** The next version of the notes with the vocabulary applied to the title, the summary and every chapter. The raw transcript is not an input and is never returned. */
-export function vocabularyVersion(from: NoteVersion, vocab: readonly VocabEntry[], at: number): { version: Omit<NoteVersion, "n">; changed: number } | undefined {
-  let changed = 0;
-  const go = (s: string) => {
-    const r = applyVocabulary(s, vocab);
-    changed += r.changed;
-    return r.text;
-  };
-  const title = go(from.title);
-  const summary = go(from.summary);
-  const chapters = from.chapters.map((c) => ({ start: c.start, title: go(c.title), text: go(c.text) }));
-  if (!changed) return undefined;
-  return { version: { at, kind: "vocabulary", title, summary, chapters, writer: "Vocabulary" }, changed };
 }

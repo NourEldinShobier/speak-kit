@@ -21,7 +21,6 @@
         "src/renderer/*.tsx",
         "src/renderer/features/dictation/{hud-main.tsx,recorder-main.ts}",
         "src/renderer/features/transcripts/{decoder-main.ts,mic-main.ts}",
-        "src/renderer/features/meetings/{capsule-main.tsx,rec-main.ts}",
         "scripts/*.mjs",
         "tests/*.ts",
         "**/*.test.{ts,tsx}"

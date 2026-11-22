@@ -10,10 +10,7 @@ export interface HotkeyLayout {
   mouse: string;
   raw: string;
   pasteLast: string;
-  transform: string;
   cancelKey: string;
-  /** Let the dictation keys through to the app in front too. */
-  share: boolean;
 }
 
 export interface SwitchableHotkeys extends CoreHotkeys {
@@ -29,8 +26,6 @@ export interface SwitchableHotkeys extends CoreHotkeys {
   readonly active: boolean;
   /** The Paste last chord was pressed. */
   onPasteLast(cb: () => void): void;
-  /** The Clean up the field chord was pressed. */
-  onTransform(cb: () => void): void;
   dispose(): void;
 }
 
@@ -49,8 +44,8 @@ interface Deps {
   changed?(): void;
 }
 
-const EMPTY: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: CANCEL_KEY, share: false };
-const chordOf = (hotkey: string, share: boolean): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!), ...(share && { share: true }) });
+const EMPTY: HotkeyLayout = { hotkey: "", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: CANCEL_KEY };
+const chordOf = (hotkey: string): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) });
 const defaultAfter = (ms: number, fn: () => void): (() => void) => {
   const t = setTimeout(fn, ms);
   t.unref?.();
@@ -70,7 +65,6 @@ class Hotkeys implements SwitchableHotkeys {
   #paused = false;
   #lastFault = -Infinity;
   #pasteLast: (() => void) | undefined;
-  #transform: (() => void) | undefined;
   #waiting: (() => void) | undefined;
   #generation = 0;
   /** Shortcuts the session saw go down and not up yet. */
@@ -115,10 +109,6 @@ class Hotkeys implements SwitchableHotkeys {
     this.#pasteLast = cb;
   }
 
-  onTransform(cb: () => void): void {
-    this.#transform = cb;
-  }
-
   pause(on: boolean): void {
     if (on) {
       this.#generation++;
@@ -148,8 +138,8 @@ class Hotkeys implements SwitchableHotkeys {
   }
 
   readonly #onEvent = (e: HotkeyEvent): void => {
-    if (e.chord === "pasteLast" || e.chord === "transform") {
-      if (e.kind === "down") (e.chord === "pasteLast" ? this.#pasteLast : this.#transform)?.();
+    if (e.chord === "pasteLast") {
+      if (e.kind === "down") this.#pasteLast?.();
       return;
     }
     if (e.kind === "down" || e.kind === "up") {
@@ -172,11 +162,10 @@ class Hotkeys implements SwitchableHotkeys {
   #extras(): Record<string, Chord> {
     const l = this.#layout;
     const out: Record<string, Chord> = {};
-    if (l.second) out.second = chordOf(l.second, l.share);
-    if (l.mouse) out.mouse = chordOf(l.mouse, false);
-    if (l.raw) out.raw = chordOf(l.raw, l.share);
-    if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast, false);
-    if (l.transform) out.transform = chordOf(l.transform, false);
+    if (l.second) out.second = chordOf(l.second);
+    if (l.mouse) out.mouse = chordOf(l.mouse);
+    if (l.raw) out.raw = chordOf(l.raw);
+    if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast);
     return out;
   }
 
@@ -186,7 +175,7 @@ class Hotkeys implements SwitchableHotkeys {
     if (!this.#enabled || this.#paused || !this.#handler || !this.#layout.hotkey) return false;
     os.grab(this.#grab ? [cancelVk(this.#layout.cancelKey)] : []);
     os.setExtraChords?.(this.#extras());
-    return os.start(chordOf(this.#layout.hotkey, this.#layout.share), { onEvent: this.#onEvent, onFault: this.#onFault }).ok;
+    return os.start(chordOf(this.#layout.hotkey), { onEvent: this.#onEvent, onFault: this.#onFault }).ok;
   }
 
   /** Resumes once no key is held, so a key held through the pause never counts as a press. */

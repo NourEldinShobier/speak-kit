@@ -67,7 +67,6 @@ export const heardAs = (t: Term): string => (t.soundsLike.length ? `Heard as: ${
 export const CAPITALS: { value: Capitals; label: string }[] = [
   { value: "keep", label: "Keep as spoken" },
   { value: "sentence", label: "Capitalise sentences" },
-  { value: "lower", label: "Lowercase everything" },
 ];
 export const ENDS: { value: EndOfDictation; label: string }[] = [
   { value: "keep", label: "Keep as spoken" },

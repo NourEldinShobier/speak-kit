@@ -2,7 +2,7 @@ import { exeKey } from "../paste-plan";
 import type { InsertMode, Replacement, Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
 
-export type Capitals = "keep" | "sentence" | "lower";
+export type Capitals = "keep" | "sentence";
 export type EndOfDictation = "keep" | "no-full-stop";
 
 /** How dictation behaves in some apps: how text is inserted, capitals, the end of the sentence, its own words and an optional rewrite. */
@@ -135,7 +135,7 @@ export function resolveMode(modes: readonly Mode[], exe: string | undefined, sit
   return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
 }
 
-export type ModeSettings = Pick<Settings, "autoCapitalize" | "lowercase" | "stripFinalStop" | "insertMode" | "terms" | "replacements">;
+export type ModeSettings = Pick<Settings, "autoCapitalize" | "stripFinalStop" | "insertMode" | "terms" | "replacements">;
 
 /** Shared replacements plus a mode's own: for the same phrase (ignoring capitals) the mode's wins. */
 export function mergeReplacements(shared: readonly Replacement[], own: readonly Replacement[]): Replacement[] {
@@ -149,7 +149,6 @@ export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { re
   return {
     ...base,
     autoCapitalize: mode.capitals === "sentence",
-    lowercase: mode.capitals === "lower",
     stripFinalStop: mode.end === "no-full-stop",
     insertMode: mode.insertMode,
     terms: mergeTerms(base.terms, mode.terms),

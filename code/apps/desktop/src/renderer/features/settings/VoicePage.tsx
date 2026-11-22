@@ -5,7 +5,6 @@ import type { AppState } from "../../../shared/ipc";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
 import { change } from "../../change";
-import { CallRecordingCard } from "../meetings";
 
 export function VoicePage({ s }: { s: AppState }) {
   const { t } = useT();
@@ -39,7 +38,6 @@ export function VoicePage({ s }: { s: AppState }) {
           control={<Slider aria-label={t("voice.previewSpeed")} min={0.5} max={2} step={0.05} value={s.config.speed} onChange={(v) => change({ speed: v })} />}
         />
       </SettingsSection>
-      <CallRecordingCard />
     </Page>
   );
 }

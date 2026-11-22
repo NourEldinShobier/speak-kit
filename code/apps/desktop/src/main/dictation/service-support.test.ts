@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { DEFAULT_DICTATION } from "../../shared/dictation/settings";
-import { appOverrides, coreSettings, keepOpenMs, shouldRetryHotkey, soundSettingsUrl, touchesMicrophone, windowShown } from "./service-support";
+import { coreSettings, keepOpenMs, shouldRetryHotkey, soundSettingsUrl, touchesMicrophone, windowShown } from "./service-support";
 
 describe("soundSettingsUrl", () => {
   it("opens the microphone privacy pane when the system blocked the microphone, the sound page otherwise", () => {
@@ -36,18 +36,6 @@ describe("coreSettings", () => {
   it("hands over keep-ready and return-to-app", () => {
     expect(coreSettings({ ...DEFAULT_DICTATION, keepReady: true, returnToApp: false })).toMatchObject({ keepReady: true, returnToApp: false });
   });
-
-  it("turns the per-program table into insert modes: key variants are pastes", () => {
-    const rules = { putty: { method: "shift-insert", delayMs: 0 }, code: { method: "type", delayMs: 0 }, keepass: { method: "copy", delayMs: 0 }, wt: { method: "ctrl-shift-v", delayMs: 0 } } as const;
-    expect(coreSettings({ ...DEFAULT_DICTATION, appRules: rules }).appModes).toEqual({ putty: "paste", code: "type", keepass: "copy", wt: "paste" });
-  });
-});
-
-describe("appOverrides", () => {
-  it("gives each rule's keys and wait to the paste layer", () => {
-    expect(appOverrides({ putty: { method: "shift-insert", delayMs: 50 } })).toEqual([{ exe: "putty", profile: { shortcut: "shift-insert", preDelayMs: 50 } }]);
-    expect(appOverrides({})).toEqual([]);
-  });
 });
 
 describe("keepOpenMs", () => {
@@ -60,7 +48,7 @@ describe("keepOpenMs", () => {
 
 describe("touchesMicrophone", () => {
   it("is true for the settings that decide which microphone is open and for how long", () => {
-    for (const k of ["keepReady", "keepReadyMinutes", "microphone", "micExclusions", "avoidBluetooth"]) expect(touchesMicrophone({ [k]: 1 })).toBe(true);
+    for (const k of ["keepReady", "keepReadyMinutes", "microphone", "avoidBluetooth"]) expect(touchesMicrophone({ [k]: 1 })).toBe(true);
     expect(touchesMicrophone({ output: "copy", hotkey: "F8" })).toBe(false);
     expect(touchesMicrophone({})).toBe(false);
   });

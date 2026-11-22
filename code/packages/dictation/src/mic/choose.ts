@@ -11,9 +11,9 @@ const BLUETOOTH = /bluetooth|hands-free|handsfree|airpods|\bbuds\b|wh-1000|wf-10
 const BUILT_IN = /built-in|internal|macbook|microphone array|integrated|realtek/i;
 
 /** Guesses what a device is from its name; the system gives no transport type to a web page. */
-export function micKind(device: MicDevice, exclusions: readonly string[] = []): MicKind {
+export function micKind(device: MicDevice): MicKind {
   const label = device.label;
-  if (VIRTUAL.test(label) || exclusions.some((x) => x.trim() && label.toLowerCase().includes(x.trim().toLowerCase()))) return "virtual";
+  if (VIRTUAL.test(label)) return "virtual";
   if (BLUETOOTH.test(label)) return "bluetooth";
   return BUILT_IN.test(label) ? "built-in" : "wired";
 }
@@ -24,8 +24,6 @@ export interface ChooseInput {
   saved?: string | undefined;
   /** The system default input. */
   defaultId?: string | undefined;
-  /** Extra name fragments to never pick on their own. */
-  exclusions?: readonly string[];
   /** Prefer a built-in or wired input when the default is a headset. */
   avoidBluetooth: boolean;
   /** Inputs that only delivered silence; never picked automatically. */
@@ -52,7 +50,6 @@ export type MicChoice =
  */
 export function chooseMic(input: ChooseInput): MicChoice {
   const { devices, saved, defaultId, avoidBluetooth } = input;
-  const exclusions = input.exclusions ?? [];
   const silent = new Set(input.silent ?? []);
   const pick = (d: MicDevice, source: Exclude<MicChoice, { kind: "none" }>["source"], fellBack: boolean): MicChoice => ({
     kind: "device",
@@ -60,20 +57,20 @@ export function chooseMic(input: ChooseInput): MicChoice {
     label: d.label,
     source,
     fellBack,
-    bluetooth: micKind(d, exclusions) === "bluetooth",
+    bluetooth: micKind(d) === "bluetooth",
   });
 
   const wanted = saved ? devices.find((d) => d.id === saved) : undefined;
   if (wanted) return pick(wanted, "saved", false);
   const fellBack = !!saved;
 
-  const usable = devices.filter((d) => micKind(d, exclusions) !== "virtual" && !silent.has(d.id));
+  const usable = devices.filter((d) => micKind(d) !== "virtual" && !silent.has(d.id));
   const def = usable.find((d) => d.id === defaultId);
-  const skipDefault = def && avoidBluetooth && micKind(def, exclusions) === "bluetooth";
+  const skipDefault = def && avoidBluetooth && micKind(def) === "bluetooth";
   if (def && !skipDefault) return pick(def, "default", fellBack);
-  const builtIn = usable.find((d) => micKind(d, exclusions) === "built-in");
+  const builtIn = usable.find((d) => micKind(d) === "built-in");
   if (builtIn) return pick(builtIn, "built-in", fellBack);
-  const wired = usable.find((d) => micKind(d, exclusions) === "wired");
+  const wired = usable.find((d) => micKind(d) === "wired");
   if (wired) return pick(wired, "wired", fellBack);
   if (def) return pick(def, "bluetooth", fellBack);
   const any = usable[0];

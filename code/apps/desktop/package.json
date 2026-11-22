@@ -17,7 +17,6 @@
     "@mozilla/readability": "catalog:",
     "@speakkit/dictation": "workspace:*",
     "@speakkit/engine": "workspace:*",
-    "@speakkit/meetings": "workspace:*",
     "@speakkit/player": "workspace:*",
     "@speakkit/protocol": "workspace:*",
     "@speakkit/server": "workspace:*",

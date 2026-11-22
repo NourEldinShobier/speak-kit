@@ -15,6 +15,8 @@ interface Options {
   mode(): DuckMode;
   /** False: other audio is lowered even when the sound goes to headphones. */
   speakersOnly(): boolean;
+  /** Percent of the current volume to lower to, for "lower". */
+  level?(): number;
   platform?: NodeJS.Platform;
   /** Starts the Windows helper; replaced in tests. */
   start?: () => LineProcess;
@@ -48,6 +50,7 @@ export function createSystemDucker(o: Options): SystemDucker {
     media: parts?.media,
     volume: parts?.volume,
     mode: o.mode,
+    level: o.level,
     async output() {
       if (!o.speakersOnly() || !parts) return "speakers";
       if (!seen || now() - seen.at > OUTPUT_TTL_MS) seen = { kind: await parts.output(), at: now() };

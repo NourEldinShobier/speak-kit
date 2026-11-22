@@ -34,7 +34,6 @@ export const EN = {
   "sub.performance": "Performance",
   "sub.storage": "Storage",
   "sub.privacy": "Privacy",
-  "sub.meetings": "Meetings",
   "sub.automation": "Automation",
   "sub.experiments": "Experiments",
   "sub.browser": "Browser integration",

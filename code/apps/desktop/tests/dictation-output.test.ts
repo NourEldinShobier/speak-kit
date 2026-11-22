@@ -63,27 +63,6 @@ describe("Dictation output settings page", () => {
     await until(() => saved(l).smartSpacing === true);
   });
 
-  it("records a shortcut for cleaning up the field and clears it again", async () => {
-    const l = await start();
-    await l.page.getByRole("button", { name: "Add shortcut: Clean up the field" }).click();
-    await l.page.getByText("Press the new keys").waitFor();
-    await l.page.keyboard.down("F7");
-    await l.page.keyboard.up("F7");
-    await until(() => saved(l).transformHotkey === "F7");
-    await l.page.getByRole("button", { name: "Remove Clean up the field" }).click();
-    await until(() => saved(l).transformHotkey === "");
-  });
-
-  it("refuses a clean-up shortcut that another one already uses and says which", async () => {
-    const l = await start({ rawHotkey: "F8" });
-    await l.page.getByRole("button", { name: "Add shortcut: Clean up the field" }).click();
-    await l.page.getByText("Press the new keys").waitFor();
-    await l.page.keyboard.down("F8");
-    await l.page.keyboard.up("F8");
-    await l.page.getByText(/already the Dictate without processing/).waitFor();
-    expect(saved(l).transformHotkey ?? "").toBe("");
-  });
-
   it("keeps the layout inside a 960 px window with the new cards", async () => {
     const l = await start();
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 800));

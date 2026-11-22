@@ -3,11 +3,10 @@ import type { KeyEvent } from "@speakkit/dictation";
 import { parseConfig } from "../../shared/schemas";
 import { createHotkeys, type HotkeyLayout } from "./hotkey-source";
 import { errorView, hudViewFor } from "./hud-view";
-import { pausedFor } from "./pause-rules";
 import { coreSettings, hotkeyLayout } from "./service-support";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", second: "", mouse: "", raw: "", pasteLast: "", transform: "", cancelKey: "Escape", share: false };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", second: "", mouse: "", raw: "", pasteLast: "", cancelKey: "Escape" };
 
 function rig(down = new Set<number>()) {
   let handlers: HotkeyHandlers | undefined;
@@ -94,20 +93,6 @@ describe("several shortcuts through the source", () => {
     expect(r.events).toEqual([]);
   });
 
-  it("calls the clean-up handler on press only, as its own chord, and never as a dictation key", () => {
-    const r = rig();
-    let calls = 0;
-    let pasteLast = 0;
-    r.hk.onTransform(() => void calls++);
-    r.hk.onPasteLast(() => void pasteLast++);
-    r.hk.layout({ ...LAYOUT, transform: "ControlLeft+AltLeft+KeyT" });
-    r.hk.enable(true);
-    expect(r.extras().transform).toEqual({ keys: [0xa2, 0xa4, 0x54] });
-    r.push({ kind: "down", chord: "transform" });
-    r.push({ kind: "up", chord: "transform" });
-    expect([calls, pasteLast, r.events]).toEqual([1, 0, []]);
-  });
-
   it("reports the configured cancel key by its name", () => {
     const r = rig();
     r.hk.layout({ ...LAYOUT, cancelKey: "F10" });
@@ -116,12 +101,12 @@ describe("several shortcuts through the source", () => {
     expect(r.events[0]).toMatchObject({ key: "F10", down: true });
   });
 
-  it("shares the keys with other programs only when asked", () => {
+  it("never lets the keys through to other programs, whatever the hook is given", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, share: true, second: "F8" });
+    r.hk.layout({ ...LAYOUT, second: "F8" });
     r.hk.enable(true);
-    expect(r.chord()).toEqual({ keys: [VK.rightCtrl], share: true });
-    expect(r.extras().second).toEqual({ keys: [0x77], share: true });
+    expect(r.chord()).toEqual({ keys: [VK.rightCtrl] });
+    expect(r.extras().second).toEqual({ keys: [0x77] });
   });
 
   it("does not take a shortcut that has no dictation key", () => {
@@ -204,38 +189,6 @@ describe("pause all shortcuts", () => {
 
 const A_KEY = 0x41;
 
-describe("pause rules", () => {
-  const rules = (over: Partial<Parameters<typeof pausedFor>[0]>) => ({ mode: "off" as const, apps: [], fullscreen: false, ...over });
-
-  it("never pauses with the rules off", () => {
-    expect(pausedFor(rules({}), { exe: "game.exe", fullscreen: true })).toBe(false);
-  });
-
-  it("pauses in a blocked program, whatever the case or the .exe", () => {
-    const r = rules({ mode: "block", apps: ["Game.EXE"] });
-    expect(pausedFor(r, { exe: "game.exe", fullscreen: false })).toBe(true);
-    expect(pausedFor(r, { exe: "notepad.exe", fullscreen: false })).toBe(false);
-  });
-
-  it("pauses everywhere except the allowed programs, but not when the program is unknown or the list is empty", () => {
-    const r = rules({ mode: "allow", apps: ["notepad"] });
-    expect(pausedFor(r, { exe: "notepad.exe", fullscreen: false })).toBe(false);
-    expect(pausedFor(r, { exe: "game.exe", fullscreen: false })).toBe(true);
-    expect(pausedFor(r, { exe: null, fullscreen: false })).toBe(false);
-    expect(pausedFor(rules({ mode: "allow" }), { exe: "game.exe", fullscreen: false })).toBe(false);
-  });
-
-  it("pauses in a full-screen program when asked, independently of the list", () => {
-    expect(pausedFor(rules({ fullscreen: true }), { exe: "game.exe", fullscreen: true })).toBe(true);
-    expect(pausedFor(rules({ fullscreen: true }), { exe: "game.exe", fullscreen: false })).toBe(false);
-    expect(pausedFor(rules({ fullscreen: false }), { exe: "game.exe", fullscreen: true })).toBe(false);
-  });
-
-  it("does nothing when there is no foreground window", () => {
-    expect(pausedFor(rules({ fullscreen: true, mode: "block", apps: ["a"] }), null)).toBe(false);
-  });
-});
-
 describe("settings to the hook and the core", () => {
   const cfg = (d: object) => parseConfig({ dictation: d }).dictation;
 
@@ -251,10 +204,12 @@ describe("settings to the hook and the core", () => {
     });
   });
 
-  it("shares the keys only in Hold mode, never in a hands-free mode", () => {
-    expect(hotkeyLayout(cfg({ shareHotkey: true, mode: "hold-only" })).share).toBe(true);
-    for (const mode of ["hold", "toggle", "double-tap", "tap-or-hold"]) expect(hotkeyLayout(cfg({ shareHotkey: true, mode })).share).toBe(false);
-    expect(hotkeyLayout(cfg({ shareHotkey: false, mode: "hold-only" })).share).toBe(false);
+  it("ignores removed settings that a saved file still has", () => {
+    const old = { hotkey: "F9", shareHotkey: true, mode: "hold-only", pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true }, transformHotkey: "F6" };
+    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", second: "", mouse: "", raw: "", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
+    expect(cfg(old)).not.toHaveProperty("shareHotkey");
+    expect(cfg(old)).not.toHaveProperty("pauseRules");
+    expect(cfg(old)).not.toHaveProperty("transformHotkey");
   });
 });
 

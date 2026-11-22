@@ -4,11 +4,10 @@ import { fail, ok, type ControlRequest, type Reply } from "../shared/control/con
 import type { Discovery } from "../main/control/discovery";
 import { registerExperiment } from "../shared/settings/experiments";
 import { parseArgs, render, runCli, type FileRead, type Io } from "./run";
-import type { MeetingsSource } from "./reads/meetings";
 
 const RUNNING: Discovery = { port: 4000, token: "t".repeat(32), pid: 1, version: "0.5.3" };
 
-function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config?: unknown; skill?: string; meetings?: MeetingsSource; running?: boolean } = {}) {
+function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config?: unknown; skill?: string; running?: boolean } = {}) {
   const out: string[] = [];
   const err: string[] = [];
   const sent: ControlRequest[] = [];
@@ -21,7 +20,6 @@ function rig(over: { replies?: Reply[]; files?: Record<string, FileRead>; config
     discovery: async () => (over.running === false ? null : RUNNING),
     launch: async () => true,
     offlineHistory: async () => null,
-    reads: { meetings: async () => over.meetings ?? { entries: [], transcript: async () => [], notes: async () => [] } },
     readConfig: async () => over.config,
     file: async (p) => over.files?.[p] ?? { kind: "none" },
     post: async (_d, req) => (sent.push(req), replies.shift() ?? ok({})),
@@ -185,64 +183,11 @@ describe("queue, voices and stop", () => {
   });
 });
 
-describe("meetings commands", () => {
-  const meetings: MeetingsSource = {
-    entries: [
-      {
-        id: "abcdef1",
-        title: "Planning",
-        titleTemporary: false,
-        providerId: "z",
-        providerName: "Zoom",
-        startedAt: 0,
-        durationSec: 90,
-        status: "done",
-        audio: { you: 0, them: 0 },
-        notes: { state: "off", chapters: 0 },
-        exports: [],
-      },
-    ],
-    transcript: async () => [{ start: 5, end: 9, text: "hello", who: "You" }],
-    notes: async () => [],
-  };
-
-  it("parses ranges, chapters and limits", () => {
-    expect(parseArgs(["meetings", "show", "latest", "--from", "1:00", "--to", "2:00"]).read).toEqual({ command: "meetings", action: "show", ref: "latest", from: 60, to: 120 });
-    expect(parseArgs(["meetings", "show", "abcdef", "--chapter", "2"]).read).toEqual({ command: "meetings", action: "show", ref: "abcdef", chapter: 2 });
-    expect(parseArgs(["meetings", "search", "budget", "review", "--limit", "5"]).read).toEqual({ command: "meetings", action: "search", query: "budget review", limit: 5 });
-    expect(parseArgs(["meetings"]).read).toEqual({ command: "meetings", action: "list" });
-  });
-
-  it("names what is wrong with a time, a chapter or a limit", () => {
-    for (const [argv, usage] of [
-      [["meetings", "show", "x", "--from", "soon"], "--from takes seconds, m:ss or h:mm:ss."],
-      [["meetings", "show", "x", "--to", "1:99"], "--to takes seconds, m:ss or h:mm:ss."],
-      [["meetings", "show", "x", "--chapter", "0"], "--chapter takes a whole number above 0."],
-      [["meetings", "list", "--limit", "x"], "--limit takes a whole number above 0."],
-      [["meetings", "show", "x", "--chapter", "1", "--from", "5"], "Use --chapter or --from and --to, not both."],
-      [["labs", "on"], "Use: labs list, labs on <id> or labs off <id>."],
-    ] as const)
-      expect(parseArgs(argv).usage).toBe(usage);
-  });
-
-  it("answers from the files even when the app is not running, and never calls it", async () => {
-    const r = rig({ meetings, running: false });
-    expect(await run(["meetings", "show", "latest", "--from", "0:04"], r)).toBe(0);
-    expect(r.out.join("")).toContain("[00:05] You: hello");
-    expect(await run(["--json", "meetings", "list"], r)).toBe(0);
-    expect(JSON.parse(r.out.at(-1)!)).toMatchObject({ ok: true, version: 1, data: { meetings: [{ id: "abcdef1", title: "Planning" }] } });
-    expect(r.sent).toEqual([]);
-  });
-
-  it("exits 1 with the sentence for a meeting that is not there and 2 for a missing one", async () => {
-    const r = rig({ meetings });
-    expect(await run(["meetings", "show", "zzzzzz"], r)).toBe(1);
-    expect(r.err.join("")).toBe('No meeting has the id "zzzzzz".\n');
-    expect(await run(["meetings", "show"], r)).toBe(2);
-  });
-});
-
 describe("labs", () => {
+  it("names what is wrong with a labs command", () => {
+    expect(parseArgs(["labs", "on"]).usage).toBe("Use: labs list, labs on <id> or labs off <id>.");
+  });
+
   it("lists the experiments everyone sees with what the settings file says, and sends on and off to the app", async () => {
     registerExperiment({ id: "cli-test-lab", title: "A test lab", summary: "s", warning: "w", group: "Test", audience: "everyone", graduation: "g" });
     const r = rig({ config: { experiments: { "cli-test-lab": true, "caption-export": true } }, running: false });
@@ -302,7 +247,7 @@ describe("capabilities and skill without the app", () => {
   it("capabilities answers from this build while the app is closed", async () => {
     const r = rig({ running: false });
     expect(await run(["--json", "capabilities"], r)).toBe(0);
-    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: true, data: { app: null, features: { meetings: true, speak: true }, commands: expect.arrayContaining(["speak", "meetings"]) } });
+    expect(JSON.parse(r.out.join(""))).toMatchObject({ ok: true, data: { app: null, features: { speak: true }, commands: expect.arrayContaining(["speak", "history"]) } });
   });
   it("skill status says whether a file is there, and install needs the app", async () => {
     const none = rig({ running: false });

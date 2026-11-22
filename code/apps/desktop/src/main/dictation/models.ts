@@ -102,12 +102,13 @@ export class ModelManager {
   #reload(keepError: boolean): void {
     const id = this.#d.selected();
     if (!this.isInstalled(id) || this.#d.stt.status().state === "ready") return;
+    if (this.#d.switching?.()) return; // a switch is loading the model that will be chosen; loading the old one now would land on top of it
     const blocked = this.#d.blocked?.();
     if (blocked) return void this.report(blocked);
     void this.#d.stt.warm(id as SttModelId).then(() => {
       const s = this.#d.stt.status();
       if (s.state === "error") this.error = s.detail ?? "The speech model could not be loaded.";
-      else if (!keepError) this.error = undefined;
+      else if (!keepError || (s.state === "ready" && !this.failure)) this.error = undefined;
       this.#d.changed(true);
     });
   }

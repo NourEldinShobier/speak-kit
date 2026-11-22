@@ -74,12 +74,12 @@ describe("Checkbox / Select", () => {
 describe("OptInCard", () => {
   test("names the feature, explains it and has one button that defaults to Turn on", () => {
     const m = html(
-      <OptInCard icon="video" title="Meetings are off" onEnable={() => {}}>
-        Offers to record a call.
+      <OptInCard icon="terminal" title="Reminders are off" onEnable={() => {}}>
+        Shows a reminder every hour.
       </OptInCard>,
     );
-    expect(m).toContain('aria-label="Meetings are off"');
-    expect(m).toContain("Offers to record a call.");
+    expect(m).toContain('aria-label="Reminders are off"');
+    expect(m).toContain("Shows a reminder every hour.");
     expect(m).toMatch(/<button[^>]*type="button"[^>]*>Turn on<\/button>/);
     expect(m.match(/<button/g)).toHaveLength(1);
   });

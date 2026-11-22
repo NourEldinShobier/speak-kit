@@ -110,13 +110,13 @@ function dictationSpec() {
     });
 
     test("the Audio and Output settings are saved and the microphone list comes back", async () => {
-      const status = await rig.bridge("patchSettings", { keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+      const status = await rig.bridge("patchSettings", { keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false });
       try {
-        expect(status.settings).toMatchObject({ keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false, appRules: { putty: { method: "shift-insert", delayMs: 50 } } });
+        expect(status.settings).toMatchObject({ keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false });
         await rig.bridge("micDevices");
         await until(async () => (await rig.bridge("status")).devices.length > 0, "the microphone list", 8000);
       } finally {
-        await rig.bridge("patchSettings", { keepReady: false, keepReadyMinutes: 0, avoidBluetooth: true, appRules: {} });
+        await rig.bridge("patchSettings", { keepReady: false, keepReadyMinutes: 0, avoidBluetooth: true });
       }
     });
 
@@ -278,18 +278,19 @@ function dictationSpec() {
   });
 
   test.describe("dictation, first run @slow", () => {
-    test("turning dictation on without a model shows the download card, then the settings once it is ready", async () => {
+    test("turning dictation on without a model keeps the page and asks for a model; nothing downloads until chosen", async () => {
       const rig = await startRig({ dictation: { enabled: false } });
       try {
         await rig.hook("setInstalled", "large-v3-turbo-q5_0", false);
         await rig.page.getByRole("link", { name: "Dictation", exact: true }).click();
         await rig.page.getByRole("switch", { name: "Dictation" }).click();
-        await rig.page.getByText("Set up dictation").waitFor();
-        await expect(rig.page.getByText("Step 1 of 2")).toBeVisible();
-        await expect(rig.page.getByRole("progressbar", { name: "Speech model download" })).toBeVisible();
+        await rig.page.getByText("Choose a speech model").waitFor();
+        await expect(rig.page.getByRole("heading", { name: "Clean-up" })).toBeVisible();
+        await expect(rig.page.getByRole("progressbar", { name: /download/ })).toHaveCount(0);
+        await rig.page.getByTestId("model-large-v3-turbo-q5_0").getByRole("button", { name: "Download" }).click();
+        await expect(rig.page.getByRole("progressbar", { name: "Whisper Large v3 Turbo download" })).toBeVisible();
         await rig.hook("finishDownload");
-        await rig.page.getByRole("heading", { name: "Speech model" }).waitFor();
-        expect((await rig.bridge("status")).modelReady).toBe(true);
+        await expect.poll(async () => (await rig.bridge("status")).modelReady).toBe(true);
       } finally {
         await rig.close();
       }

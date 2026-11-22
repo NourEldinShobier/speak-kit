@@ -3,7 +3,7 @@ import { importVocabulary, type Term } from "@speakkit/dictation";
 import { changedWords, checkDraft, cleanupRows, filterTerms, importView, promptSummary, testStages, wordCount } from "./model";
 
 const t = (id: string, word: string, soundsLike: string[] = []): Term => ({ id, word, soundsLike });
-const cleanup = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: false, lowercase: false, stripFinalStop: false };
+const cleanup = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: false, stripFinalStop: false };
 
 describe("add word dialog", () => {
   const terms = [t("a", "Kubernetes")];
@@ -87,10 +87,10 @@ describe("clean-up rows by language", () => {
     expect(byKey("de").spokenFormatting?.unavailable).toBeUndefined();
   });
 
-  it("has the two new switches and the language-free ones without scope", () => {
+  it("lists the switches, with no scope on the language-free ones", () => {
     const rows = byKey("en");
-    expect(Object.keys(rows)).toEqual(["fillers", "spokenSymbols", "spokenFormatting", "autoCapitalize", "lowercase", "stripFinalStop", "trailingSpace"]);
-    expect(rows.lowercase?.scope).toBeUndefined();
+    expect(Object.keys(rows)).toEqual(["fillers", "spokenSymbols", "spokenFormatting", "autoCapitalize", "stripFinalStop", "trailingSpace"]);
+    expect(rows.autoCapitalize?.scope).toBeUndefined();
   });
 });
 

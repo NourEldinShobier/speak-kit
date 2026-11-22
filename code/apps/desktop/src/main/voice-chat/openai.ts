@@ -86,7 +86,7 @@ export interface CompleteOptions extends OpenAiOptions {
   user: string;
 }
 
-/** POST /v1/chat/completions asking for a JSON object: the text the model answered with. The meeting notes use it. */
+/** POST /v1/chat/completions asking for a JSON object: the text the model answered with. The transcript notes use it. */
 export async function completeJson(key: string, o: CompleteOptions): Promise<OpenAiResult<string>> {
   const body = {
     model: o.model,

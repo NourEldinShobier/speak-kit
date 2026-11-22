@@ -170,9 +170,9 @@ describe("speak", () => {
   });
   it("shows a host message when it gives one", async () => {
     const h = fakeHost();
-    h.fault = new AutomationFault("busy", "a meeting is recording");
+    h.fault = new AutomationFault("busy", "a recording is running");
     const c = await open(h);
-    expect(await (await call(c, "/v1/automation/speak", "POST", { text: "x" })).json()).toMatchObject({ error: { message: "a meeting is recording" } });
+    expect(await (await call(c, "/v1/automation/speak", "POST", { text: "x" })).json()).toMatchObject({ error: { message: "a recording is running" } });
   });
   it("answers 500 for a failure that is not a refusal and keeps serving", async () => {
     const h = fakeHost();

@@ -17,12 +17,12 @@ import { createDictationOs, type DictationOs, type HudWindow, type InsertResult 
 import { settle, supportsLanguage, type ModelManager } from "./models";
 import { resyncOnPower } from "./power-resync";
 import type { RecorderHost } from "./recorder";
-import { appOverrides, clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, touchesMicrophone, windowShown } from "./service-support";
+import { clock, coreSettings, dictationStatus, hotkeyLayout, isRecording, shortcutClash, touchesMicrophone, windowShown } from "./service-support";
 import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
 import { createOutputSide } from "./service-output";
-import { cleanField, createRecovery, onStateChange, prepareModel, warmCaret } from "./service-extras";
+import { createRecovery, onStateChange, prepareModel, warmCaret } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import type { Stt } from "./stt";
@@ -98,8 +98,6 @@ export class DictationService {
       core: () => this.core,
       hotkeys: () => this.#hotkeys,
       state: () => this.state,
-      foreground: () => this.os?.foreground() ?? null,
-      rules: () => (this.#cfg.enabled ? this.#cfg.pauseRules : undefined),
       changed: () => this.#push(true),
       download: () => this.#downloadFromHud(),
       audio: () => this.#audio,
@@ -131,7 +129,6 @@ export class DictationService {
     const os = (this.os =
       this.#o.os ??
       (await createDictationOs({
-        overrides: () => appOverrides(this.#cfg.appRules),
         hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, place: () => (this.#cfg.indicator === "top" ? "top" : "bottom") },
         onHudWindow: (w) => (this.#hudWindow = w),
         onTyping: (on) => this.#output.onTyping(on),
@@ -139,7 +136,6 @@ export class DictationService {
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#hook.onFault(e, recovered), changed: () => this.#push(true) });
     this.#hotkeys.onPasteLast(() => void this.controls.pasteLast());
-    this.#hotkeys.onTransform(() => void cleanField(this.os, this.#cfg, this.presenter));
     const built = buildCore({
       ctx: this.#ctx,
       o: this.#o,
@@ -164,6 +160,8 @@ export class DictationService {
 
   #onState(s: DictationState): void {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
+    // A model released while idle starts loading as soon as the person starts talking, so the load overlaps the recording.
+    if (!isRecording(this.state) && isRecording(s)) this.models.warm(true);
     onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, typing: this.#output.typing(), now: Date.now() });
     this.#output.onState(this.state, s);
     this.state = s;
@@ -236,7 +234,6 @@ export class DictationService {
     this.#ctx.saveConfig();
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.layout(hotkeyLayout(this.#cfg));
-    this.controls.watch();
     warmCaret(this.os, this.#cfg);
     if (patch.retention !== undefined) void this.history.refresh();
     if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
@@ -274,20 +271,17 @@ export class DictationService {
     warmCaret(this.os, this.#cfg);
     this.#hotkeys.layout(hotkeyLayout(this.#cfg));
     const ready = this.#hotkeys.enable(true);
-    this.controls.watch();
     this.#hook.set(!ready);
     void this.#recorder?.prepare().then(() => this.mic.refresh());
     this.#recover?.();
     await this.models.refresh();
-    const { idleMinutes, skippedModel } = this.#ctx.config.engines;
-    prepareModel(this.models, { quiet, idleMinutes, skipped: !!skippedModel, model: this.#cfg.model });
-    if (!quiet && ready) this.presenter.flashReady();
+    prepareModel(this.models, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
+    if (!quiet && ready && this.models.installed) this.presenter.flashReady();
   }
 
   async #stop(): Promise<void> {
     this.core?.cancel();
     this.#hotkeys?.enable(false);
-    this.controls.watch();
     this.#hook.set(false);
     this.#recorder?.close();
     this.mic.reset();
@@ -333,7 +327,6 @@ export class DictationService {
     this.speech.dispose();
     this.#throttle.dispose();
     await this.#output.dispose();
-    this.controls.dispose();
     this.#hotkeys?.dispose();
     this.#stopPower?.();
     this.presenter.dispose();

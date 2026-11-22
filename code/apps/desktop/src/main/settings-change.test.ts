@@ -130,21 +130,19 @@ describe("importSettings", () => {
       voiceChatVoice: "alloy",
       shortcuts: { stop: "Ctrl+Alt+S" },
       transcripts: { textDays: 90 },
-      meetings: { stopWhenEnds: false },
       engines: { releaseOnClose: true, lastUsed: { m: 1 } },
     };
     const r = await importSettings(src(JSON.stringify(file), { voice: "af_bella" }), targets);
     expect(r).toEqual({
       status: "imported",
-      applied: 6,
-      changed: ["voiceChatVoice", "shortcuts.stop", "transcripts.textDays", "meetings.stopWhenEnds", "engines.releaseOnClose"],
+      applied: 5,
+      changed: ["voiceChatVoice", "shortcuts.stop", "transcripts.textDays", "engines.releaseOnClose"],
       skipped: ["engines.lastUsed"],
     });
     expect(calls).toEqual([
       ["shortcut", ["stop", "Ctrl+Alt+S"]],
       ["app", { voice: "af_bella" }],
       ["transcripts", { textDays: 90 }],
-      ["meetings", { stopWhenEnds: false }],
       ["engines", { releaseOnClose: true }],
       ["voiceChat", "alloy"],
     ]);

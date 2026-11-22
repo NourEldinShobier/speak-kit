@@ -32,7 +32,7 @@ Speak Kit is a set of speaking tools for Chrome and your desktop: have pages rea
 
 **Everywhere.** Global shortcuts, a mini player, a command palette, and an interface in English, Spanish, German, French and Arabic.
 
-**Coming next.** More tools are planned, such as meeting recording, and a public beta is planned soon.
+**Coming next.** More tools and a public beta are planned.
 
 <p align="center">
   <img src="docs/screenshots/page-highlight.png" alt="A web page being read aloud with the current sentence and word highlighted, and the floating player at the bottom" width="720">

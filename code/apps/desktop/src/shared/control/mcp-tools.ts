@@ -14,9 +14,6 @@ export const MCP_TOOLS: readonly McpTool[] = [
   { name: "stop_reading", title: "Stop reading", description: "Stop the reading and clear the waiting list, or keep it.", group: "Reading", private: false },
   { name: "reading_queue", title: "Reading queue", description: "See what is playing and what waits.", group: "Reading", private: false },
   { name: "history_search", title: "Search dictation history", description: "Search what was dictated. Read only.", group: "Your data", private: true },
-  { name: "meetings_list", title: "List meetings", description: "List recorded meetings. Read only.", group: "Your data", private: true },
-  { name: "meetings_search", title: "Search meetings", description: "Search meeting titles, summaries and transcripts. Read only.", group: "Your data", private: true },
-  { name: "meetings_show", title: "Read a meeting", description: "Read one meeting, or a time range or chapter of it. Read only.", group: "Your data", private: true },
 ];
 
 /** Whether a tool is on: the person's choice when they made one, else on for reading text aloud and off for anything that reads their own words. */

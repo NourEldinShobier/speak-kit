@@ -14,7 +14,7 @@ export interface TranscriptsOptions {
   parent(): BrowserWindow | null;
   /** The speech engine and model are dictation's: transcripts borrow them. */
   dictation: DictationService;
-  /** The notes writer, or nothing when notes are off (the Meetings setting also governs transcripts). */
+  /** The notes writer, or nothing when notes are off. */
   notes?(): Summarise | undefined;
   /** The test hook is on: the file chooser is replaced by what the test sets, and the microphone can be refused. */
   test: boolean;

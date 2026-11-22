@@ -52,7 +52,7 @@ describe("system ducker (Windows)", () => {
   it("lowers the volume for the recording and puts it back to where it was", async () => {
     const { h, ducker } = rig("lower");
     await ducker.begin();
-    expect(h.state.volume).toBeCloseTo(0.2, 3);
+    expect(h.state.volume).toBeCloseTo(0.24, 3);
     await ducker.end();
     expect(h.state.volume).toBeCloseTo(0.8, 3);
   });
@@ -89,7 +89,7 @@ describe("system ducker (Windows)", () => {
     expect(a.h.state.volume).toBe(0.8);
     const b = rig("lower", { name: "Headphones (Hands-Free)", speakersOnly: false });
     await b.ducker.begin();
-    expect(b.h.state.volume).toBeCloseTo(0.2, 3);
+    expect(b.h.state.volume).toBeCloseTo(0.24, 3);
     expect(b.h.sent).not.toContain("name");
   });
 
@@ -162,7 +162,27 @@ describe("system ducker (macOS)", () => {
       },
     });
     await d.begin();
-    expect(volume).toBe(20);
+    expect(volume).toBe(21);
+    await d.end();
+    expect(volume).toBe(70);
+  });
+
+  it("lowers to the percent of the current volume that the setting gives", async () => {
+    let volume = 70;
+    const d = createSystemDucker({
+      mode: () => "lower",
+      speakersOnly: () => false,
+      level: () => 50,
+      platform: "darwin",
+      osa: async (s) => {
+        if (s.startsWith("output volume")) return String(volume);
+        const m = /output volume (\d+)/.exec(s);
+        if (m) volume = Number(m[1]);
+        return "";
+      },
+    });
+    await d.begin();
+    expect(volume).toBe(35);
     await d.end();
     expect(volume).toBe(70);
   });

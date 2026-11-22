@@ -5,7 +5,7 @@ import type { Store } from "./store";
 import { provisionalTitle } from "./title";
 import type { Entry, Failure } from "./types";
 
-const OFF: Failure = { code: "notes", message: "Notes are off. Turn on writing notes in the Meetings settings, then write them again. The transcript is unchanged." };
+const OFF: Failure = { code: "notes", message: "Notes are off. Turn on writing notes in the Transcripts settings, then write them again. The transcript is unchanged." };
 const NOTHING: Failure = { code: "notes", message: "There is nothing to write notes from: no words were heard." };
 const THREW: Failure = { code: "notes", message: "The notes could not be written. The transcript is unchanged." };
 

@@ -36,10 +36,10 @@ export function SummaryCard({ detail: d, reload }: { detail: Detail; reload(): v
         </Banner>
       ) : null}
       {n.doc ? (
-        <section className="lm-card mt-notes" aria-label="Summary">
-          <p className="mt-summary">{n.doc.summary}</p>
+        <section className="lm-card tr-notes" aria-label="Summary">
+          <p className="tr-notes__summary">{n.doc.summary}</p>
           <div className="tr-notes__foot">
-            <p className="mt-writer">Written by {n.doc.writer}. The transcript below is exactly what was heard.</p>
+            <p className="tr-notes__writer">Written by {n.doc.writer}. The transcript below is exactly what was heard.</p>
             {n.state === "ready" ? (
               <Button size="sm" disabled={busy} onClick={regenerate}>
                 Write notes again
@@ -57,13 +57,13 @@ export function ChapterList({ detail: d, onCopied }: { detail: Detail; onCopied(
   const chapters = d.notes?.doc?.chapters ?? [];
   if (!chapters.length) return null;
   return (
-    <section aria-label="Chapters" className="mt-chapters">
+    <section aria-label="Chapters" className="tr-chapters">
       <h2 className="cap-day">{chapters.length === 1 ? "1 chapter" : `${chapters.length} chapters`}</h2>
       <div className="lm-card tr-list" role="list">
         {chapters.map((c, i) => (
-          <div key={`${c.start}-${i}`} role="listitem" className="mt-chapter">
-            <span className="mt-chapter__time">{stamp(c.start)}</span>
-            <span className="mt-chapter__title">{c.title}</span>
+          <div key={`${c.start}-${i}`} role="listitem" className="tr-chapter">
+            <span className="tr-chapter__time">{stamp(c.start)}</span>
+            <span className="tr-chapter__title">{c.title}</span>
             <Button
               size="sm"
               aria-label={`Copy section: ${c.title}`}

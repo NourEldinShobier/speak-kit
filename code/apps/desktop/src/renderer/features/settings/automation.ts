@@ -20,7 +20,7 @@ export const ERROR_ROWS: Record<ErrorCode, string> = {
   usage: "The command was not used correctly.",
   "not-running": "Speak Kit is not running.",
   refused: "Speak Kit refused the request. The message says why.",
-  busy: "Dictation or a meeting is already recording.",
+  busy: "A recording is already running.",
   "no-speech": "No speech was heard.",
   cancelled: "The recording or export was cancelled.",
   unsupported: "This version does not have that command.",
@@ -37,7 +37,7 @@ export const COMMAND_ROWS: readonly { usage: string; text: string }[] = [
   { usage: "speak <text | file | ->", text: "Reads text or a file aloud. --queue waits its turn, --print shows the sentences, --out saves audio." },
   { usage: "queue, stop, voices", text: "Shows the waiting list, stops the reading, lists voices." },
   { usage: "dictate --print", text: "Records and prints the text instead of pasting it." },
-  { usage: "history, meetings", text: "Reads what you dictated or recorded. Never starts Speak Kit." },
+  { usage: "history", text: "Reads what you dictated. Never starts Speak Kit." },
   { usage: "labs, settings", text: "Turns experiments on or off, reads and changes settings." },
 ];
 

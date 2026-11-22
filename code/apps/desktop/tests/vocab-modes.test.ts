@@ -184,7 +184,7 @@ async function expectFile(file: string, content: string) {
 }
 
 describe("Dictation clean-up", () => {
-  it("scopes the language rules, turns one off and tries a sentence", async () => {
+  it("scopes the language rules and disables the ones a language lacks", async () => {
     const l = await start();
     await open(l, "Dictation");
     await l.page.getByRole("heading", { name: "Clean-up" }).waitFor();
@@ -195,17 +195,6 @@ describe("Dictation clean-up", () => {
     expect(await l.page.getByRole("switch", { name: "Remove filler words" }).isDisabled()).toBe(true);
     await l.page.getByRole("combobox", { name: "Rules for" }).click();
     await l.page.getByRole("option", { name: "English" }).click();
-    await l.page.getByLabel("Sentence to test").fill("um new line the price is twenty five dollars");
-    expect((await l.page.getByTestId("tester-final").textContent())?.trim()).toBe("The price is twenty five dollars");
-  });
-
-  it("turning lowercase on lowercases the tried sentence and the setting is saved", async () => {
-    const l = await start();
-    await open(l, "Dictation");
-    await l.page.getByRole("switch", { name: "Lowercase everything" }).click();
-    await l.page.getByLabel("Sentence to test").fill("Hello There");
-    await l.page.waitForFunction(() => document.querySelector('[data-testid="tester-final"]')?.textContent === "hello there");
-    expect((await settings(l)).cleanup.lowercase).toBe(true);
   });
 });
 
@@ -533,23 +522,5 @@ describe("Installed-app picker", () => {
 
     await l.page.getByRole("button", { name: "Add app" }).first().click();
     await l.page.getByRole("dialog", { name: "Add an app to Chat" }).getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use Slack" }).waitFor({ state: "detached" });
-  });
-
-  it("adds a program to the insert-method table with one click on an installed app", async () => {
-    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
-    await open(l, "Dictation");
-    await l.page.getByRole("textbox", { name: "Program name" }).focus();
-    await l.page.getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use PuTTY" }).click();
-    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("putty");
-  });
-
-  it("says so and still lets the name be typed when no list can be made", async () => {
-    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: "not json" } });
-    await open(l, "Dictation");
-    await l.page.getByRole("textbox", { name: "Program name" }).focus();
-    await l.page.getByText("No installed apps found.").waitFor();
-    await l.page.getByRole("textbox", { name: "Program name" }).fill("wezterm");
-    await l.page.getByRole("textbox", { name: "Program name" }).press("Enter");
-    await expect.poll(async () => Object.keys((await settings(l)).appRules)).toContain("wezterm");
   });
 });

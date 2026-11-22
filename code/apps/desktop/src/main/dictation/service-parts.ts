@@ -1,6 +1,5 @@
 import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
 import type { DictationConfig } from "../../shared/dictation/settings";
-import type { PauseRules } from "../../shared/dictation/settings";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
 import { createActions, type Failure } from "./service-actions";
@@ -11,7 +10,6 @@ import { HistoryApi, type FilePickers } from "./history-api";
 import type { DictationServiceOptions } from "./service-options";
 import type { Stt } from "./stt";
 import { ShortcutControls } from "./shortcut-controls";
-import type { ForegroundInfo } from "./types";
 
 /** What the service lends to the parts that act on it. */
 export interface PartsHost {
@@ -21,8 +19,6 @@ export interface PartsHost {
   core(): Dictation | undefined;
   hotkeys(): SwitchableHotkeys | undefined;
   state(): DictationState;
-  foreground(): ForegroundInfo | null;
-  rules(): PauseRules | undefined;
   /** The status changed. */
   changed(): void;
   download(): void;
@@ -41,7 +37,7 @@ export interface PartsHost {
 
 /** The pieces of the service that are not the dictation itself: pause and paste last, the history, and the buttons that act on the last dictation. */
 export function createParts(h: PartsHost) {
-  const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, foreground: h.foreground, rules: h.rules, changed: h.changed });
+  const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, changed: h.changed });
   const history = new HistoryFacade({ ready: h.ready, core: h.core, changed: h.changed, ...(h.cleared && { cleared: h.cleared }) });
   const records = new HistoryApi({
     ready: h.ready,

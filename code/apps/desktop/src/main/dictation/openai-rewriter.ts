@@ -6,7 +6,7 @@ export const REWRITE_MODEL = "gpt-4o-mini";
 
 const BASE = "Keep the meaning, the language, every number, every list item and every line break as they are. Do not add, remove or explain anything. Answer with the tidied text only.";
 
-const CASE_NOTE = { sentence: "", lower: " Write everything in lower case.", keep: " Do not change any capital or small letter." } as const;
+const CASE_NOTE = { sentence: "", keep: " Do not change any capital or small letter." } as const;
 
 /** The system prompt: the mode's choices about capitals and the final full stop are told to the model, not left to it. */
 export const instructions = (style?: RewriteStyle): string => {

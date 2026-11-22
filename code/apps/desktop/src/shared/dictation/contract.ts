@@ -211,7 +211,6 @@ export const RECORDER_RATE = 16_000;
 export interface RecorderMicConfig {
   /** Chosen device id; empty for automatic. */
   saved: string;
-  exclusions: string[];
   avoidBluetooth: boolean;
   /** How long an idle open microphone stays open: 0 closes it at once, -1 keeps it open. */
   keepMs: number;

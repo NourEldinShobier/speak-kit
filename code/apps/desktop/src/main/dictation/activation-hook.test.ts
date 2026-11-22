@@ -119,13 +119,6 @@ describe("several chords", () => {
     ]);
   });
 
-  it("lets a shared chord reach the app too", () => {
-    const r = rig();
-    r.hook.start({ keys: [F9], share: true }, r.handlers);
-    expect(r.key(F9, true)).toBe(false);
-    expect(r.key(F9, false)).toBe(false);
-  });
-
   it("takes a new set of chords while running, and drops the old ones", async () => {
     const r = rig();
     r.hook.start({ keys: [VK.rightCtrl] }, r.handlers);

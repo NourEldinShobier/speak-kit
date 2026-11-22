@@ -68,28 +68,25 @@ describe("prepareModel", () => {
     const log: string[] = [];
     return { log, m: { installed, warm: () => log.push("warm"), download: async (id: string) => void log.push(`download:${id}`) } as never };
   };
-  const model = DEFAULT_DICTATION.model;
 
   it("warms an installed model when started by the person, or at launch with idle release off", () => {
     const a = models(true);
-    prepareModel(a.m, { quiet: false, idleMinutes: 5, skipped: false, model });
+    prepareModel(a.m, { quiet: false, idleMinutes: 5 });
     const b = models(true);
-    prepareModel(b.m, { quiet: true, idleMinutes: 0, skipped: false, model });
+    prepareModel(b.m, { quiet: true, idleMinutes: 0 });
     expect([a.log, b.log]).toEqual([["warm"], ["warm"]]);
   });
 
   it("leaves an installed model on disk at launch when it is released while idle", () => {
     const a = models(true);
-    prepareModel(a.m, { quiet: true, idleMinutes: 5, skipped: false, model });
+    prepareModel(a.m, { quiet: true, idleMinutes: 5 });
     expect(a.log).toEqual([]);
   });
 
-  it("downloads a missing model unless the person skipped it", () => {
+  it("does not download a missing model: the person chooses one on the page", () => {
     const a = models(false);
-    prepareModel(a.m, { quiet: false, idleMinutes: 0, skipped: false, model });
-    const b = models(false);
-    prepareModel(b.m, { quiet: false, idleMinutes: 0, skipped: true, model });
-    expect([a.log, b.log]).toEqual([[`download:${model}`], []]);
+    prepareModel(a.m, { quiet: false, idleMinutes: 0 });
+    expect(a.log).toEqual([]);
   });
 });
 

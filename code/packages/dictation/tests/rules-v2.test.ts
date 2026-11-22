@@ -53,10 +53,6 @@ describe("replacement edge rules", () => {
 });
 
 describe("clean-up switches", () => {
-  it("lower-case keeps a vocabulary word's spelling", () => {
-    expect(run("Hello World and Cooper Netties", { lowercase: true, replacements: [rule("cooper netties", "Kubernetes")], autoCapitalize: true })).toBe("hello world and Kubernetes");
-  });
-
   it("drops one final full stop only", () => {
     const s = { stripFinalStop: true };
     expect(run("Done.", s)).toBe("Done");

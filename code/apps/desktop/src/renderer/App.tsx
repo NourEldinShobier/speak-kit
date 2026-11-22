@@ -1,4 +1,3 @@
-import { requestOpen } from "./features/meetings";
 import { useEffect, useReducer, useRef, useState, type Dispatch } from "react";
 import type { AppState, Page, SettingsSub, UiEvent } from "../shared/ipc";
 import { directionOf } from "../shared/i18n";
@@ -61,10 +60,7 @@ function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
     () =>
       api.onUi((e: UiEvent) => {
         if (e.type === "nav") dispatch({ type: "go", page: e.page, ...(e.sub ? { sub: e.sub } : {}) });
-        else if (e.type === "open-meeting") {
-          requestOpen(e.id);
-          dispatch({ type: "go", page: "history" });
-        } else if (e.type === "confirm-quit") dispatch({ type: "quit", open: true });
+        else if (e.type === "confirm-quit") dispatch({ type: "quit", open: true });
         else if (e.type === "export") dispatch({ type: "export", open: { text: e.text ?? "" } });
         else if (e.type === "pause") haltRef.current();
       }),

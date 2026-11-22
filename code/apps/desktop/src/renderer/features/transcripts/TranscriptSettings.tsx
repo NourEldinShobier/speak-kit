@@ -90,6 +90,16 @@ function Retention({ view, patch }: { view: SettingsView; patch(p: TranscriptsPa
   );
 }
 
+function NotesSwitch({ view, patch }: { view: SettingsView; patch(p: TranscriptsPatch): void }) {
+  return (
+    <SettingRow
+      label="Write notes with OpenAI"
+      description="A title, a two sentence summary and chapters for each finished transcript. Off by default. When on, the text of every finished transcript is sent to OpenAI with your key. Audio is never sent. If it fails, you keep the transcript."
+      control={<Toggle aria-label="Write notes with OpenAI" checked={view.config.notes} onChange={(notes) => patch({ notes })} />}
+    />
+  );
+}
+
 function Where({ view, set }: { view: SettingsView; set(v: SettingsView): void }) {
   return (
     <SettingRow
@@ -130,18 +140,20 @@ function InUse({ view, onDeleteAudio }: { view: SettingsView; onDeleteAudio(): v
   );
 }
 
-/** Settings > Storage > Transcripts: how long transcripts and audio are kept, the Trash period, where exports go, what is in use, and the model that is used. */
+/** Settings > Storage > Transcripts: how long transcripts and audio are kept, the Trash period, where exports go, whether notes are written, what is in use, and the model that is used. */
 export function TranscriptSettings() {
   const { tick } = usePush();
   const { view, set, failed } = useSettingsView(tick);
   const [asking, setAsking] = useState(false);
+  const save = (p: TranscriptsPatch) => void attempt(patchTranscripts(p)).then((r) => r && set(r));
   if (!view) {
     return <SettingsSection {...SECTION}>{failed ? <Banner tone="error">The transcript settings could not be loaded.</Banner> : <SettingRow label="Loading..." />}</SettingsSection>;
   }
   return (
     <>
       <SettingsSection {...SECTION}>
-        <Retention view={view} patch={(p) => void attempt(patchTranscripts(p)).then((r) => r && set(r))} />
+        <Retention view={view} patch={save} />
+        <NotesSwitch view={view} patch={save} />
         <Where view={view} set={set} />
         <InUse view={view} onDeleteAudio={() => setAsking(true)} />
       </SettingsSection>

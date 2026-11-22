@@ -524,7 +524,34 @@
   justify-content: space-between;
   gap: 16px;
 }
-.tr-notes__foot > .mt-writer {
+.tr-notes {
+  padding: 16px;
+}
+.tr-notes__summary {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.tr-notes__writer {
   min-width: 0;
   margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.tr-chapter {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+.tr-chapter__time {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tr-chapter__title {
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
 }

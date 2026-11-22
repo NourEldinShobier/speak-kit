@@ -250,7 +250,7 @@ export class HistoryApi {
     const selected = this.d.cfg().model;
     const language = supportsLanguage(model, wanted) ? wanted : "auto";
     const work = async (): Promise<TranscribeResult> => {
-      if (model !== selected) await this.d.stt.load(model);
+      await this.d.stt.load(model); // loads a released model too; a model that is already loaded is left alone
       try {
         return await heard({ stt: this.d.stt, model: () => model, onFailedClip: () => undefined }, { clip, language });
       } finally {

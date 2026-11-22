@@ -107,7 +107,7 @@ function browser() {
   };
 }
 
-const mic = (extra: Partial<RecorderMicConfig> = {}): RecorderMicConfig => ({ saved: "", exclusions: [], avoidBluetooth: true, keepMs: -1, ...extra });
+const mic = (extra: Partial<RecorderMicConfig> = {}): RecorderMicConfig => ({ saved: "", avoidBluetooth: true, keepMs: -1, ...extra });
 let nextId = 1;
 async function send(c: DistributiveOmit): Promise<RecorderResult> {
   const id = nextId++;

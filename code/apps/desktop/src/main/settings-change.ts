@@ -12,7 +12,7 @@ export interface ChangeTargets {
   /** The shortcut it clashes with when the dictation settings were refused. */
   patchDictation(patch: DictationPatch): Promise<DictationStatus["rejected"]>;
   patchApp(patch: ConfigPatch): Promise<unknown>;
-  /** Transcripts, meetings and engines keep their settings with the feature. */
+  /** Transcripts and engines keep their settings with the feature. */
   patchArea(area: AreaName, patch: Record<string, unknown>): Promise<unknown>;
   setShortcut(id: ShortcutId, accelerator: string): Promise<ShortcutResult>;
   /** Puts every shortcut back to its default. */

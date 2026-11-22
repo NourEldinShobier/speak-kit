@@ -25,8 +25,8 @@ import { patchDictation } from "./api";
 describe("patchDictation", () => {
   it("changes dictation settings through the registry under dictation.<key>", async () => {
     calls.length = 0;
-    await patchDictation({ language: "en", sentencePause: true });
-    expect(calls).toEqual([["applySettings", { "dictation.language": "en", "dictation.sentencePause": true }]]);
+    await patchDictation({ language: "en", smartSpacing: true });
+    expect(calls).toEqual([["applySettings", { "dictation.language": "en", "dictation.smartSpacing": true }]]);
   });
 
   it("passes an empty patch on as it is: it only dismisses the reset notice", async () => {

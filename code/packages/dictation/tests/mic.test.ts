@@ -29,10 +29,6 @@ describe("micKind", () => {
     const choice = chooseMic({ devices: [builtIn, headset], defaultId: "h", avoidBluetooth: true });
     expect(choice).toMatchObject({ kind: "device", id: "h", bluetooth: false });
   });
-  it("applies the person's exclusion list", () => {
-    expect(micKind(usb, ["yeti"])).toBe("virtual");
-    expect(micKind(usb, ["  "])).toBe("wired");
-  });
 });
 
 describe("chooseMic", () => {
@@ -53,7 +49,7 @@ describe("chooseMic", () => {
   });
   it("never picks a virtual or phone input on its own", () => {
     expect(chooseMic({ ...base, devices: [cable, phone, usb], defaultId: "v" })).toMatchObject({ id: "u", source: "wired" });
-    expect(chooseMic({ ...base, devices: [cable, usb], defaultId: "u", exclusions: ["yeti"] })).toEqual({ kind: "none", reason: "no-device" });
+    expect(chooseMic({ ...base, devices: [cable, phone], defaultId: "v" })).toEqual({ kind: "none", reason: "built-in-off" });
   });
   it("skips a headset default for the built-in input when asked", () => {
     expect(chooseMic({ ...base, devices: [buds, builtIn, usb], defaultId: "bt" })).toMatchObject({ id: "b", source: "built-in", bluetooth: false });

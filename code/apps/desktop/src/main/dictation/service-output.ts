@@ -10,11 +10,8 @@ const live = (s: DictationState) => s.status === "recording" || s.status === "lo
 /** What dictation does to the outside while it runs: the computer stays awake, other audio goes quiet for a recording, the cancel key is taken while text is typed, and the audio kept for a crash is bounded. */
 export function createOutputSide(h: { cfg(): DictationConfig; hotkeys(): SwitchableHotkeys | undefined; state(): DictationState; warn(title: string, detail: string): void }) {
   const { cfg, hotkeys, state } = h;
-  const sleep = sleepBlock(
-    () => cfg().blockSleep,
-    (why) => h.warn("dictation sleep block", why),
-  );
-  const ducker = createSystemDucker({ mode: () => cfg().duckAudio, speakersOnly: () => cfg().duckSpeakersOnly });
+  const sleep = sleepBlock((why) => h.warn("dictation sleep block", why));
+  const ducker = createSystemDucker({ mode: () => cfg().duckAudio, speakersOnly: () => cfg().duckSpeakersOnly, level: () => cfg().duckLevel });
   let spool: Spool | undefined;
   let typing = false;
   return {

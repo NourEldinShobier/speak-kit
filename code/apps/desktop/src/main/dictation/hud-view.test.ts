@@ -35,7 +35,7 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "pasting" }))).toEqual({ kind: "transcribing" });
   });
 
-  it("says Sent after an insert, unless the system only managed to copy", () => {
+  it("shows the check after an insert, unless the system only managed to copy", () => {
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }))).toEqual({ kind: "pasted" });
     expect(hudViewFor(input({ status: "idle", notice: { kind: "inserted" } }, { insertedAsCopy: true }))).toEqual({ kind: "copied", reason: "clipboard" });
   });

@@ -7,7 +7,6 @@ import type { createReading } from "./reader/service";
 import { dictationTestHook } from "./dictation/test-hook";
 import type { DictationService } from "./dictation/service";
 import type { TranscriptsFeature } from "./transcripts";
-import type { MeetingsFeature } from "./meetings";
 
 interface HookParts {
   shortcuts: ReturnType<typeof setupShortcuts>;
@@ -16,12 +15,11 @@ interface HookParts {
   reading: ReturnType<typeof createReading>;
   dictation: DictationService;
   transcripts: TranscriptsFeature;
-  meetings(): MeetingsFeature | undefined;
   installs(): number;
 }
 
 /** SPEAKKIT_TEST hooks: simulate what Playwright cannot do (global key presses, native menus, toasts). */
-export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, meetings, installs }: HookParts) => {
+export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs }: HookParts) => {
   const loop = monitorEventLoopDelay({ resolution: 10 });
   loop.enable();
   return {
@@ -43,23 +41,6 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
     readText: (text: string) => reading.readText(text, "text"),
     dictation: dictationTestHook(dictation),
     transcripts: { ...transcripts.testHook, phase: () => transcripts.phase() },
-    meetings: {
-      denyMic: (on: boolean) => meetings()?.testHook.denyMic(on),
-      /** Replaces what the system says about calls (who uses the microphone, which windows exist). */
-      probe: (p: { micUsers: { pid: number; exe: string }[]; windows: { pid: number; exe: string; title: string }[] } | null) =>
-        meetings()?.testHook.platform(
-          p && {
-            capabilities: () => ({ platform: "win32", systemAudio: "available", callDetection: "available", micFollowsCallApp: "unavailable", callAppOutput: "unavailable" }),
-            probe: async () => p,
-            callAppMic: async () => null,
-          },
-        ),
-      poll: () => meetings()?.pollNow(),
-      tick: () => meetings()?.tickNow(),
-      capsule: () => meetings()?.capsuleView() ?? null,
-      act: (a: Parameters<MeetingsFeature["act"]>[0]) => meetings()?.act(a),
-      phase: () => meetings()?.phase(),
-    },
     /** Main-process event-loop delay since the app started, in ms (nanoseconds from the histogram). */
     /** Starts the measurement over: the startup stalls (the window opening, the server starting) are not "idle". */
     loopReset: () => loop.reset(),

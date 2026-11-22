@@ -143,63 +143,28 @@ describe("the command line against the real app", () => {
   });
 });
 
-describe("reads and the MCP bridge with the app closed", () => {
-  const folder = () => {
-    const dir = tmp();
-    mkdirSync(path.join(dir, "meetings", "aaaaaa1"), { recursive: true });
-    const entry = {
-      id: "aaaaaa1",
-      title: "Budget review",
-      titleTemporary: false,
-      providerId: "zoom",
-      providerName: "Zoom",
-      startedAt: Date.UTC(2026, 10, 12, 10),
-      durationSec: 90,
-      status: "done",
-      audio: { you: 0, them: 0 },
-      notes: { state: "off", chapters: 0 },
-      exports: [],
-    };
-    writeFileSync(path.join(dir, "meetings", "manifest.json"), JSON.stringify({ v: 1, entries: [entry] }));
-    writeFileSync(
-      path.join(dir, "meetings", "aaaaaa1", "transcript.json"),
-      JSON.stringify({
-        v: 1,
-        lines: [
-          { start: 5, end: 9, text: "the budget is over plan", who: "You" },
-          { start: 70, end: 80, text: "move the launch", who: "Them" },
-        ],
-      }),
-    );
-    return dir;
+describe("the MCP bridge with the app closed", () => {
+  const ask = (dir: string, flags: object, method: string, params: object = {}) => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ mcpTools: flags }));
+    const r = cli(dir, ["mcp"], `${JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })}\n`);
+    return JSON.parse(r.out.trim().split("\n")[0]!).result;
   };
 
-  it("meetings list, show with a range, and search never start the app and change no file", async () => {
-    const dir = folder();
-    const before = readFileSync(path.join(dir, "meetings", "manifest.json"), "utf8");
-    expect(cli(dir, ["meetings", "list"]).out).toContain("Budget review");
-    const shown = cli(dir, ["meetings", "show", "latest", "--from", "1:00"]);
-    expect(shown.code).toBe(0);
-    expect(shown.out).toContain("[01:10] Them: move the launch");
-    expect(shown.out).not.toContain("over plan");
-    expect(JSON.parse(cli(dir, ["--json", "meetings", "search", "budget"]).out).data.hits[0].id).toBe("aaaaaa1");
-    expect(existsSync(path.join(dir, "control.json"))).toBe(false);
-    expect(readFileSync(path.join(dir, "meetings", "manifest.json"), "utf8")).toBe(before);
+  it("lists the tools that are on, and refuses one that is off", async () => {
+    const dir = tmp();
+    expect(ask(dir, {}, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
+    expect(ask(dir, { history_search: true }, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue", "history_search"]);
+    const off = ask(dir, {}, "tools/call", { name: "history_search", arguments: {} });
+    expect(off.isError).toBe(true);
+    expect(off.content[0].text).toBe("The tool history_search is turned off. Turn it on in Speak Kit under Settings, Automation.");
   });
 
-  it("the MCP bridge lists the tools that are on and answers a meeting read once its switch is on", async () => {
-    const dir = folder();
-    const ask = (flags: object, method: string, params: object = {}) => {
-      writeFileSync(path.join(dir, "config.json"), JSON.stringify({ mcpTools: flags }));
-      const r = cli(dir, ["mcp"], `${JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })}\n`);
-      return JSON.parse(r.out.trim().split("\n")[0]!).result;
-    };
-    expect(ask({}, "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
-    const off = ask({}, "tools/call", { name: "meetings_list", arguments: {} });
-    expect(off.isError).toBe(true);
-    const on = ask({ meetings_list: true }, "tools/call", { name: "meetings_list", arguments: {} });
-    expect(on.isError).toBe(false);
-    expect(JSON.parse(on.content[0].text).meetings[0].title).toBe("Budget review");
+  it("says Speak Kit is not running for a tool that is on", async () => {
+    const dir = tmp();
+    const on = ask(dir, { history_search: true }, "tools/call", { name: "history_search", arguments: {} });
+    expect(on.isError).toBe(true);
+    expect(on.content[0].text).toBe("Speak Kit is not running.");
+    expect(existsSync(path.join(dir, "control.json"))).toBe(false);
   });
 });
 

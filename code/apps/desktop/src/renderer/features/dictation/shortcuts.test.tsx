@@ -8,7 +8,7 @@ vi.hoisted(() => {
 });
 
 import { ShortcutsSections } from "./ShortcutsSection";
-import { allShortcuts, conflictText, explainerFrames, isDefault, modeRules, parseApps, shareAvailable, shortcutLead } from "./shortcuts-model";
+import { allShortcuts, conflictText, explainerFrames, isDefault, modeRules, shortcutLead } from "./shortcuts-model";
 
 const base: DictationStatus = {
   supported: true,
@@ -26,8 +26,6 @@ const base: DictationStatus = {
     rawHotkey: "",
     pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
     cancelKey: "Escape",
-    shareHotkey: false,
-    pauseRules: { mode: "off", apps: [], fullscreen: false },
     language: "auto",
     model: "large-v3-turbo-q5_0",
     retention: "7d",
@@ -108,6 +106,15 @@ describe("shortcuts page", () => {
     expect(t).toContain("The left button cannot be a shortcut");
   });
 
+  it("shows the Cancel key in the main section for the hands-free modes only, and no Advanced fold", () => {
+    expect(text(base)).not.toContain("Cancel key");
+    const t = text(withSettings({ mode: "toggle" }));
+    expect(t).toContain("Cancel key");
+    expect(t).toContain("Escape");
+    expect(text(withSettings({ mode: "tap-or-hold" }))).toContain("Cancel key");
+    for (const s of ["Advanced shortcut options", "Share the shortcut with other apps", "Pause in some programs", "Clean up the field"]) expect(t).not.toContain(s);
+  });
+
   it("says the mouse button is not available where there is no mouse hook, and turns its button off", () => {
     const s = { ...base, mouseButtons: false };
     expect(text(s)).toContain("Mouse buttons as shortcuts are not available on this computer yet.");
@@ -131,23 +138,10 @@ describe("shortcut model", () => {
     expect(modeRules("hold-only", 500)[1]?.label).toBe("Press shorter than 500 ms");
   });
 
-  it("offers sharing in Hold mode only and says why not otherwise", () => {
-    expect(shareAvailable("hold-only", "win32")).toEqual({ ok: true, reason: "" });
-    expect(shareAvailable("toggle", "win32").ok).toBe(false);
-    expect(shareAvailable("hold", "win32").reason).toContain("Hands-free modes");
-    expect(shareAvailable("hold-only", "darwin")).toEqual({ ok: false, reason: "Sharing the shortcut with other apps is available on Windows only." });
-  });
-
   it("collects every shortcut, including the reader ones, and words a conflict", () => {
     expect(allShortcuts(base)).toMatchObject({ dictation: "ControlRight", pasteLast: "ControlLeft+AltLeft+KeyV", cancel: "Escape", "read-selection": "Ctrl+Alt+S" });
     expect(conflictText("ControlRight", "dictation")).toBe("Right Ctrl is already the Dictation shortcut. Pick another shortcut.");
     expect(isDefault("dictation", "ControlRight")).toBe(true);
     expect(isDefault("pasteLast", "F9")).toBe(false);
-  });
-
-  it("reads the program list as typed: trimmed, no empty entries, at most 50", () => {
-    expect(parseApps(" game.exe , ,Editor,")).toEqual(["game.exe", "Editor"]);
-    expect(parseApps("")).toEqual([]);
-    expect(parseApps(Array.from({ length: 80 }, (_, i) => `a${i}`).join(","))).toHaveLength(50);
   });
 });

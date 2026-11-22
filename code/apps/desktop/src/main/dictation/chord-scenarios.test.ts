@@ -63,10 +63,6 @@ describe("chord tracker over built key strokes", () => {
     const grab = name.startsWith("a grabbed") ? [VK.escape] : [];
     it(name, () => expect(play({ keys: chord }, script, grab)).toEqual(answer));
   }
-
-  it("a shared chord lets the completing key reach the app too", () => {
-    expect(play({ keys: [0x78], share: true }, "+F9 -F9")).toEqual(["--:down", "--:up"]);
-  });
 });
 
 describe("repairs after lost key events", () => {

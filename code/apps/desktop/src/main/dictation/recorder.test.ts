@@ -28,7 +28,7 @@ function setup(timeoutMs = 200) {
     ipcMain: ipc as unknown as IpcMain,
     open,
     onLevel: (n) => levels.push(n),
-    mic: () => ({ saved: "dev-1", exclusions: ["yeti"], avoidBluetooth: true, keepMs: -1 }),
+    mic: () => ({ saved: "dev-1", avoidBluetooth: true, keepMs: -1 }),
     onEvent: (e) => events.push(e),
     timeoutMs,
   });
@@ -170,7 +170,7 @@ describe("recorder host microphone settings and events", () => {
     const started = s.host.start({ prerollMs: 450 });
     s.from(REC_READY);
     await vi.waitFor(() => expect(s.contents.sent).toHaveLength(1));
-    expect(s.contents.sent[0]).toMatchObject({ mic: { saved: "dev-1", exclusions: ["yeti"], avoidBluetooth: true, keepMs: -1 } });
+    expect(s.contents.sent[0]).toMatchObject({ mic: { saved: "dev-1", avoidBluetooth: true, keepMs: -1 } });
     s.from(REC_REPLY, s.contents.sent[0]!.id, { ok: true, device: { label: "Blue Yeti", bluetooth: false } });
     await started;
     expect(s.host.device).toEqual({ label: "Blue Yeti", bluetooth: false });

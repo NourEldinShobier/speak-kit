@@ -208,12 +208,7 @@ async function keepRecording(ctx: Context, id: string, clip: Clip): Promise<void
   }
 }
 
-const rewriteStyle = (s: Pick<Settings, "lowercase" | "autoCapitalize" | "stripFinalStop">): RewriteStyle => {
-  let capitals: RewriteStyle["capitals"] = "keep";
-  if (s.lowercase) capitals = "lower";
-  else if (s.autoCapitalize) capitals = "sentence";
-  return { capitals, stripFinalStop: s.stripFinalStop };
-};
+const rewriteStyle = (s: Pick<Settings, "autoCapitalize" | "stripFinalStop">): RewriteStyle => ({ capitals: s.autoCapitalize ? "sentence" : "keep", stripFinalStop: s.stripFinalStop });
 
 /** A take with no sound is refused and kept; one cut short is kept too, and goes on. */
 function checkClip(ctx: Context, clip: Clip): Outcome | undefined {

@@ -170,7 +170,7 @@ describe("import", () => {
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     try {
-      const { l, exportDir } = await app({ config: { meetings: { summary: true } }, env: { SPEAKKIT_OPENAI_BASE_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}` } });
+      const { l, exportDir } = await app({ config: { transcripts: { notes: true } }, env: { SPEAKKIT_OPENAI_BASE_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}` } });
       await l.page.getByRole("link", { name: "Voice chat" }).click();
       await l.page.getByLabel("OpenAI API key").fill("sk-proj-E2E_good_key-0123456789abcdef");
       await l.page.getByRole("button", { name: "Save", exact: true }).click();

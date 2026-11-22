@@ -41,7 +41,6 @@ export const AR: Record<StringKey, string> = {
   "sub.performance": "الأداء",
   "sub.storage": "التخزين",
   "sub.privacy": "الخصوصية",
-  "sub.meetings": "الاجتماعات",
   "sub.automation": "الأتمتة",
   "sub.experiments": "التجارب",
   "sub.browser": "التكامل مع المتصفح",

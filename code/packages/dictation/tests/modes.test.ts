@@ -83,8 +83,8 @@ describe("modes", () => {
   it("changes the switches for its apps and nothing for the default mode", () => {
     const base = { ...defaultSettings };
     expect(applyMode(base, defaultMode())).toEqual({ ...base, rewrite: false });
-    const out = applyMode(base, mode({ capitals: "lower", end: "no-full-stop", insertMode: "type", rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
-    expect(out).toMatchObject({ autoCapitalize: false, lowercase: true, stripFinalStop: true, insertMode: "type", rewrite: true });
+    const out = applyMode(base, mode({ capitals: "keep", end: "no-full-stop", insertMode: "type", rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
+    expect(out).toMatchObject({ autoCapitalize: false, stripFinalStop: true, insertMode: "type", rewrite: true });
     expect(out.terms.map((t) => t.word)).toEqual(["pnpm"]);
   });
 });
@@ -147,13 +147,13 @@ describe("modes by website", () => {
   });
 
   it("dictates with the rules of the page's mode", async () => {
-    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], capitals: "lower" });
+    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], capitals: "keep", end: "no-full-stop" });
     const r = await rig({ modes: [defaultMode(), mail] });
     r.ins.state.current = target({ exe: "chrome.exe", site: "mail.google.com" });
     r.stt.state.result = { ok: true, text: "Hello There." };
     await r.hold(1000);
     await r.time.advance(200);
-    expect(r.ins.inserted[0]?.text).toBe("hello there. ");
+    expect(r.ins.inserted[0]?.text).toBe("Hello There ");
     r.ins.state.current = target({ exe: "chrome.exe", site: "news.org" });
     await r.hold(1000);
     await r.time.advance(200);
@@ -220,10 +220,8 @@ describe("rewrite pass", () => {
     expect(keepsFacts("pay 5 now", "Pay 5 now")).toBe(true);
   });
 
-  it("keeps lower case and the missing final full stop the mode chose, whatever the writer returns", async () => {
+  it("keeps the missing final full stop the mode chose, whatever the writer returns", async () => {
     const loud: Rewriter = { rewrite: async () => "Hello There." };
-    const lower = await rewritePass({ text: "hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "lower", stripFinalStop: true } });
-    expect(lower).toEqual({ text: "hello there ", outcome: "rewritten" });
     const stop = await rewritePass({ text: "Hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: true } });
     expect(stop.text).toBe("Hello There ");
   });
