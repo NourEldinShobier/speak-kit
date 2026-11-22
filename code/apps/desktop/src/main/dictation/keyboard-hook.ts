@@ -282,8 +282,14 @@ export class KeyboardHook implements HotkeySource {
         r.mouse = null;
       }
       this.#syncMouse(r);
-      // Key events that arrived during the stall may have been dropped, including the release of the chord.
-      for (const [id, tracker] of r.trackers) this.#emit(r, id, tracker.reset());
+      // Key events that arrived during the stall may have been dropped, including the release of the chord. A chord with a key that is checkably still
+      // down on the keyboard is kept: the person is holding it, and ending it would cut the dictation off mid-sentence (opening a window at the first press
+      // after idle blocks the loop for up to a second). If its release was lost, the release of that key ends it.
+      for (const [id, tracker] of r.trackers) {
+        const held = tracker.visibleHeld();
+        if (held.length > 0 && held.every((vk) => this.#backend.keyIsDown(vk))) continue;
+        this.#emit(r, id, tracker.reset());
+      }
     }
     for (const [id, tracker] of r.trackers) for (const vk of tracker.visibleHeld()) if (!this.#backend.keyIsDown(vk)) this.#emit(r, id, tracker.release(vk));
     if (r.mouse && t >= r.clickUntil) this.#syncMouse(r);

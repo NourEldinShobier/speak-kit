@@ -175,6 +175,22 @@ describe("safety timer", () => {
     expect(t.stroke(F9, true)).toBe(true);
   });
 
+  it("keeps a chord active across a stall while its visible key is still down on the keyboard, and ends it when that key is released", async () => {
+    const t = setup();
+    t.hook.start({ keys: [VK.leftCtrl, VK.space] }, t.handlers);
+    t.stroke(VK.leftCtrl, true);
+    t.stroke(VK.space, true);
+    t.down.add(VK.leftCtrl);
+    await vi.advanceTimersByTimeAsync(100);
+    t.advanceClock(600);
+    await vi.advanceTimersByTimeAsync(101);
+    expect(t.stats()).toEqual({ installs: 2, removed: 1 });
+    expect(t.events).toEqual([{ kind: "down" }]);
+    t.down.delete(VK.leftCtrl);
+    await vi.advanceTimersByTimeAsync(101);
+    expect(t.events).toEqual([{ kind: "down" }, { kind: "up" }]);
+  });
+
   it("resync reports up for a chord that was down and forgets it", async () => {
     const t = setup();
     t.hook.start({ keys: [F9] }, t.handlers);
