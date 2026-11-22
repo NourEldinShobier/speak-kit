@@ -132,6 +132,7 @@ export class DictationService {
         hud: { page: page("hud.html"), width: 560, height: 64, bridge: true, place: () => (this.#cfg.indicator === "top" ? "top" : "bottom") },
         onHudWindow: (w) => (this.#hudWindow = w),
         onTyping: (on) => this.#output.onTyping(on),
+        onStall: (gapMs) => this.#ctx.log.warn("hotkey stall", `event loop blocked ${gapMs} ms; the hook was installed again and held keys reported as released`),
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#hook.onFault(e, recovered), changed: () => this.#push(true) });

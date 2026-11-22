@@ -86,6 +86,8 @@ interface TranscriberDeps {
   models?(): readonly SttModel[];
   /** A recording is about to be transcribed with this model: it counts as used (idle release restarts its wait). */
   onUsed?(id: string): void;
+  /** One line per recording about the engine state when it was handed over and how long the load took. */
+  log?(stage: string, why: string): void;
 }
 
 type Waiting = "model-loading" | "model-failed" | "model-missing";
@@ -164,7 +166,10 @@ export function createTranscriber(deps: TranscriberDeps): Transcriber {
   return {
     async transcribe({ clip, language, prompt }): Promise<TranscribeResult> {
       const keep = (code: "model-loading" | "model-failed" | "failed"): TranscribeResult => (deps.onFailedClip(clip), { ok: false, code });
+      const before = deps.stt.status().state;
+      const from = Date.now();
       const waiting = await whyNotReady(deps);
+      deps.log?.("engine", `${before} when the recording arrived, ${waiting ?? "ready"} after ${Date.now() - from} ms`);
       if (waiting) return waiting === "model-missing" ? { ok: false, code: waiting } : keep(waiting);
       deps.onUsed?.(deps.model());
       try {

@@ -256,6 +256,14 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
   let text = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
+  try {
+    ctx.deps.log?.(
+      "take",
+      `${Math.round((clip.pcm.length / clip.sampleRate) * 1000)} ms, peak ${clip.peak.toFixed(3)}, heard ${heard.text.trim() ? "text" : "nothing"}, transcribed in ${transcribeMs} ms${clip.interrupted ? ", interrupted" : ""}`,
+    );
+  } catch {
+    // a broken log must not hold the text up
+  }
   if (!text) return { notice: { kind: "no-speech" } };
   const rewritten = job.raw ? undefined : await rewriteStep(ctx, eff, text);
   if (rewritten) text = rewritten.text;

@@ -44,6 +44,8 @@ interface Options {
   /** After a click or key ends a double-tap window the mouse hook is no longer needed this long after the last chord release. */
   clickWatchMs?: number;
   now?: () => number;
+  /** The event loop was blocked for this many ms; the hook is installed again and held keys are reported as released. */
+  onStall?: (gapMs: number) => void;
 }
 
 interface Run {
@@ -83,12 +85,14 @@ export class KeyboardHook implements HotkeySource {
   readonly #healthMs: number;
   readonly #clickWatchMs: number;
   readonly #now: () => number;
+  readonly #onStall: ((gapMs: number) => void) | undefined;
   #run: Run | null = null;
   #primary: Chord | null = null;
   #extra: Readonly<Record<string, Chord>> = {};
   #grabbed: readonly VirtualKey[] = [];
 
-  constructor(backend: HookBackend, { marker, pollMs = 100, stallMs = 250, healthMs = 5000, clickWatchMs = 800, now = Date.now }: Options) {
+  constructor(backend: HookBackend, { marker, pollMs = 100, stallMs = 250, healthMs = 5000, clickWatchMs = 800, now = Date.now, onStall }: Options) {
+    this.#onStall = onStall;
     this.#backend = backend;
     this.#marker = marker;
     this.#pollMs = pollMs;
@@ -267,9 +271,10 @@ export class KeyboardHook implements HotkeySource {
 
   #watch(r: Run): void {
     const t = this.#now();
-    const stalled = t - r.beat > this.#stallMs;
+    const gap = t - r.beat;
     r.beat = t;
-    if (stalled) {
+    if (gap > this.#stallMs) {
+      this.#onStall?.(gap);
       if (!this.#reinstall(r)) return;
       // The mouse hook may have been dropped in the same stall.
       if (r.mouse) {

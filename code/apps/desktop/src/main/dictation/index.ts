@@ -21,6 +21,8 @@ export interface DictationOsOptions {
   versions?: ProgramVersions;
   /** Typing started or ended. */
   onTyping?(on: boolean): void;
+  /** The key listener's event loop was blocked for this many ms (Windows only). */
+  onStall?(gapMs: number): void;
 }
 
 /** Everything dictation needs from the operating system, behind one object. */
@@ -48,14 +50,14 @@ export interface DictationOs {
 }
 
 /** Each OS implementation is imported only on its own platform, so a build never loads the other one's native bindings. */
-async function loadPlatform() {
-  if (process.platform === "win32") return (await import("./windows")).createWindowsPlatform();
+async function loadPlatform(onStall?: (gapMs: number) => void) {
+  if (process.platform === "win32") return (await import("./windows")).createWindowsPlatform(onStall);
   if (process.platform === "darwin") return (await import("./macos")).createMacPlatform();
   return createUnsupportedPlatform();
 }
 
 export async function createDictationOs(options: DictationOsOptions = {}): Promise<DictationOs> {
-  const platform = await loadPlatform();
+  const platform = await loadPlatform(options.onStall);
   const versions = options.versions ?? createProgramVersions((fg) => readSystemVersion(fg));
   const inserter = createInserter({
     versions,

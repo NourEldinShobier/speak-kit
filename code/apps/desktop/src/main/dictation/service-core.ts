@@ -71,6 +71,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
       onFailedClip: (c) => (h.failure.clip = c),
       onModelError: (d) => svc.models.report(d),
       onPromptDropped: h.onPromptDropped,
+      log: (stage, why) => ctx.log.warn(`dictation stage ${stage}`, why),
     }),
     keepClip: (clip) => (h.failure.clip = clip),
     settled: (clip, done) => kept.settled(clip, done),
