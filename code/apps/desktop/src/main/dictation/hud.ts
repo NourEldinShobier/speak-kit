@@ -37,7 +37,7 @@ export interface Hud {
 
 interface Deps {
   open(): HudWindow;
-  /** How long a hidden window is kept for the next dictation before it is destroyed (an idle window costs a renderer process). */
+  /** How long a hidden window is kept for the next dictation before it is destroyed (an idle window costs a renderer process; opening one at a press blocks the main process for up to a second and delays the indicator, so the default is long). */
   idleMs?: number | undefined;
   /** Where the window goes; read at every show, so a change in the settings applies to the next one. */
   place?(): "top" | "bottom";
@@ -58,7 +58,7 @@ export class HudController implements Hud {
   #latest: HudState | null = null;
   #idle: NodeJS.Timeout | undefined;
 
-  constructor({ open, idleMs = 20_000, place = () => "bottom" }: Deps) {
+  constructor({ open, idleMs = 60 * 60_000, place = () => "bottom" }: Deps) {
     this.#open = open;
     this.#place = place;
     this.#idleMs = idleMs;
