@@ -60,7 +60,7 @@ const dropBad = <T extends v.GenericSchema>(item: T, max: number) =>
 /** Persisted under `engines` in config.json: every key falls back to its default, which is also how files from before this page existed load. */
 export const EnginesConfigSchema = v.object({
   device: v.fallback(v.picklist(DEVICE_VALUES), "auto"),
-  idleMinutes: v.fallback(v.picklist(SPEECH_IDLE_CHOICES), 15),
+  idleMinutes: v.fallback(v.picklist(SPEECH_IDLE_CHOICES), 0),
   /** Graphics cards that failed to run speech, with the driver they failed on. */
   failedDevices: dropBad(FailedDevice, 8),
   /** The outcome of timing an integrated card against the CPU, by "<card>|<driver>". */

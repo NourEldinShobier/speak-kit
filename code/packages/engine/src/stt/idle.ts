@@ -1,7 +1,7 @@
 export const IDLE_CHOICES = [5, 15, 30, 60, 0] as const;
 /** Minutes of silence before the speech model is released; 0 is never. */
 export type IdleMinutes = (typeof IDLE_CHOICES)[number];
-export const DEFAULT_IDLE_MINUTES: IdleMinutes = 15;
+export const DEFAULT_IDLE_MINUTES: IdleMinutes = 0;
 
 export interface IdleDeps {
   setTimeout(fn: () => void, ms: number): unknown;

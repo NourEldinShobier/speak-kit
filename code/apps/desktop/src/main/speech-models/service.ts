@@ -117,10 +117,13 @@ export class SpeechModels {
   /** Reads the models the person added, looks at the hardware and the disk. Safe to call again. */
   async init(): Promise<void> {
     await this.#lib.init();
-    // The probe leaves unknown what it cannot read and never rejects.
-    this.#hwReady ??= this.#d.hardware().then((h) => void (this.#hw = h));
-    await this.#hwReady;
+    await this.hardwareKnown();
     this.#d.changed();
+  }
+
+  /** Resolves once the hardware was looked at (starting that if nobody did). A load at launch waits for it: without the graphics card known, the plan is the CPU, 60 times slower. The probe leaves unknown what it cannot read and never rejects. */
+  hardwareKnown(): Promise<void> {
+    return (this.#hwReady ??= this.#d.hardware().then((h) => void (this.#hw = h)));
   }
 
   /** Catalog models and the models the person added. */

@@ -224,6 +224,7 @@ describe("SpeechModels: idle release", () => {
     await stt.load(TURBO);
     stt.busy = true;
     const unload = vi.spyOn(stt, "unload");
+    speech.setIdleMinutes(15);
     speech.idle.touch();
     expect(speech.idle.dueAt).toBeGreaterThan(0);
     speech.idle.stop();

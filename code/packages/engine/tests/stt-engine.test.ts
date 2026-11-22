@@ -91,6 +91,31 @@ describe("WhisperStt", () => {
     expect(await e.downloaded("parakeet-tdt-0.6b-v3-q4_0")).toBe(false);
   });
 
+  it("waits for beforeLoad before it asks where to run, so a load at launch knows the hardware", async () => {
+    const order: string[] = [];
+    let known!: () => void;
+    const hardware = new Promise<void>((r) => (known = r));
+    const modelsDir = await mkdtemp(join(tmpdir(), "stt-"));
+    dirs.push(modelsDir);
+    const e = new WhisperStt({
+      modelsDir,
+      workerUrl: join(import.meta.dirname, "fake-stt-worker.mjs"),
+      models,
+      vad,
+      fetch: fakeFetch,
+      beforeLoad: () => hardware,
+      gpu: () => (order.push("asked"), true),
+    });
+    engines.push(e);
+    const loading = e.load("large-v3-turbo-q5_0");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(order).toEqual([]);
+    order.push("hardware known");
+    known();
+    await loading;
+    expect(order.slice(0, 2)).toEqual(["hardware known", "asked"]);
+  });
+
   it("a second load of the same model does nothing; files on disk are not downloaded again", async () => {
     const { e, modelsDir } = await make();
     await e.load("large-v3-turbo-q5_0");

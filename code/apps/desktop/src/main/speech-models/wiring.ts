@@ -31,6 +31,7 @@ function createEngine(a: Args, speech: () => SpeechModels): Stt & SttExtras {
     modelsDir: a.o.modelsDir,
     workerUrl: a.o.sttWorker,
     gpu: () => speech().gpuWanted(),
+    beforeLoad: () => speech().hardwareKnown(),
     extraModels: () =>
       speech()
         .catalog()

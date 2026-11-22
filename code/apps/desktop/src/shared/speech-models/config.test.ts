@@ -8,7 +8,7 @@ import { DEVICE_VALUES, EnginesConfigSchema, SPEECH_IDLE_CHOICES, SPOKEN_LANGUAG
 
 const DEFAULTS = {
   device: "auto",
-  idleMinutes: 15,
+  idleMinutes: 0,
   failedDevices: [],
   timedDevices: {},
   releaseOnClose: false,
@@ -37,7 +37,7 @@ describe("engines config", () => {
 
   it("repairs bad values one at a time", () => {
     const e = v.parse(EnginesConfigSchema, { device: "tpu", idleMinutes: 7, releaseOnClose: "yes", skippedModel: true });
-    expect(e).toMatchObject({ device: "auto", idleMinutes: 15, releaseOnClose: false, skippedModel: true });
+    expect(e).toMatchObject({ device: "auto", idleMinutes: 0, releaseOnClose: false, skippedModel: true });
   });
 
   it("keeps the idle choices of the page and the never choice", () => {

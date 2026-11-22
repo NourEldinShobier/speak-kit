@@ -19,6 +19,8 @@ export interface SttOptions {
   timeIntegrated?: () => boolean;
   /** The outcome of that timing. */
   onTimed?: (winner: "gpu" | "cpu", gpuMs: number, cpuMs: number) => void;
+  /** Awaited before every load starts: the app uses it to finish looking at the hardware, so a load at launch does not pick the CPU only because the graphics card was not known yet. */
+  beforeLoad?: () => Promise<unknown>;
   /** Override the worker entry (needed when this module is bundled). */
   workerUrl?: URL | string;
   /** Injectable for tests. */
@@ -184,6 +186,7 @@ export class WhisperStt implements SpeechToText {
   async #load(m: SttModel, progress?: (fraction: number) => void): Promise<void> {
     if (this.#em.status.state === "ready" && this.#model === m) return;
     await this.#unload();
+    await this.#o.beforeLoad?.();
     const dir = this.#dir();
     const ac = (this.#abort = new AbortController());
     try {
