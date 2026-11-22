@@ -25,9 +25,9 @@ const until = async (f: () => boolean) => {
 };
 
 describe("Dictation output settings page", () => {
-  it("shows the shortcut status and no last problem when dictation is off and nothing failed", async () => {
+  it("shows no status card and no last problem when dictation is off and nothing failed", async () => {
     const l = await start();
-    expect(await l.page.getByRole("status", { name: "Shortcut status: Stopped" }).isVisible()).toBe(true);
+    expect(await l.page.getByRole("status", { name: /Shortcut status/ }).count()).toBe(0);
     expect(await l.page.getByText("Last problem", { exact: true }).count()).toBe(0);
   });
 

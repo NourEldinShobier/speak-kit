@@ -78,9 +78,13 @@ const openTranscripts = async (l: Launched) => {
 };
 
 /** An app with a folder for exports in a temp directory and the scripted speech engine. */
-async function app(over: { config?: object; env?: Record<string, string>; userData?: string } = {}) {
+async function app(over: { config?: { transcripts?: object } & Record<string, unknown>; env?: Record<string, string>; userData?: string } = {}) {
   const exportDir = tmp("export");
-  const l = await start({ config: { ...DONE, transcripts: { folder: exportDir }, ...over.config }, ...(over.userData && { userData: over.userData }), ...(over.env && { env: over.env }) });
+  const l = await start({
+    config: { ...DONE, ...over.config, transcripts: { folder: exportDir, ...over.config?.transcripts } },
+    ...(over.userData && { userData: over.userData }),
+    ...(over.env && { env: over.env }),
+  });
   await l.page.getByRole("heading", { name: "Home" }).waitFor();
   return { l, exportDir };
 }
